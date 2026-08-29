@@ -17,8 +17,6 @@ struct AppsScreen: View {
     @Environment(HomeRoute.self) private var route
     @Environment(BridgeStore.self) private var store
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var pairing = false
     @State private var query = ""
     @FocusState private var searchFocused: Bool
@@ -34,13 +32,20 @@ struct AppsScreen: View {
     // mark. Both retired — the rain is pull-to-refresh's payoff alone (user
     // ruling 2026-08-11); the bloom and the connected tile's promote lift
     // carry the connect moment now.
-    /// Bumped when a jump chip lands on a shelf — the header flashes once so
-    /// the tap has an arrival, not just a silent scroll.
-    @State private var shelfLand: [String: Int] = [:]
-    /// Bumped when a category's LAST addable app connects — the shelf header
+    /// Which slice of the catalog is on screen — All, or one category.
+    ///
+    /// Deliberately NOT remembered across visits (contrast `MarketsRoom.landing`,
+    /// which reopens on the venue you left). That room is somewhere you live; a
+    /// catalog is a directory you consult, and arriving on a three-week-old
+    /// filter hides nine tenths of it with nothing on screen saying why.
+    @State private var scope = CatalogScope(name: nil)
+    /// Bumped when a category's LAST addable app connects — the section header
     /// glows once in the category's own color and a toast names the set now
-    /// complete. Its own trigger (not `shelfLand`) so the completion glow wears
-    /// the category color while a jump stays neutral tint.
+    /// complete.
+    ///
+    /// The jump-arrival flash that used to share this shape retired with the
+    /// jump (prd §518): a chip FILTERS now, so the list itself changing is the
+    /// arrival, and a header flash on top of it was a second answer to one tap.
     @State private var shelfComplete: [String: Int] = [:]
     /// The app that just connected, by any path — the shelf row wearing this
     /// name lifts as it takes its connected seat. `connectLiftToken` fires one
@@ -254,8 +259,8 @@ struct AppsScreen: View {
                                             onConnect: onDiscoverConnect,
                                             onPair: { pairing = true })
                             }
-                            jumpChips(proxy)
-                            catalogWall
+                            scopeStrip(proxy)
+                            catalogList
                         } else {
                             searchResults
                         }
@@ -266,16 +271,47 @@ struct AppsScreen: View {
                 }
                 #if DEBUG
                 .onAppear {
-                    // `-appsShelf "<Category>"` — scroll the catalog to a
-                    // category's card headlessly (screenshot runs have no
-                    // scroll gesture; same route as a jump-chip tap). The
-                    // pager half of this hook retired with shelf paging (prd
-                    // §200): the wall shows every app in a category at once,
-                    // nothing to page.
+                    // `-appsShelf "<Category>"` — PICK a category headlessly
+                    // (screenshot runs have no tap; same route as the chip).
+                    //
+                    // It used to `scrollTo` the category's card, and the verb
+                    // changed with the control (prd §518): a chip filters now,
+                    // so the honest headless equivalent is the write the chip
+                    // makes, not a scroll to a card that no longer exists.
+                    // A name matching no chip leaves the scope on All and says
+                    // so — silently landing on All would read as the pick
+                    // having worked.
                     guard let name = UserDefaults.standard.string(forKey: "appsShelf") else { return }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                        proxy.scrollTo("card-" + name, anchor: .top)
-                        NSLog("appsShelf: \(name)")
+                        let live = scopes.contains { $0.name == name }
+                        if live { scope = CatalogScope(name: name) }
+                        NSLog("appsShelf: %@ %@ (%d apps)", name,
+                              live ? "picked" : "NO SUCH CHIP — still All",
+                              listSections.reduce(0) { $0 + $1.apps.count })
+                        proxy.scrollTo(Self.scopeAnchor, anchor: .top)
+                    }
+                }
+                .onAppear {
+                    // `-appsCatalogProbe YES` — one line per section the
+                    // catalog would draw, in order, with its row count.
+                    //
+                    // An empty or short catalog list has causes that render
+                    // identically: a category whose offers all resolve to a
+                    // DIFFERENT category (the `category(of:)` group map is the
+                    // single source of truth and a renamed group falls through
+                    // to "Life"), a scope filtering to nothing, or a genuinely
+                    // small section. Only the first two are bugs, and the
+                    // per-section counts are what separate them.
+                    guard UserDefaults.standard.bool(forKey: "appsCatalogProbe") else { return }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+                        NSLog("appsCatalog| scope=%@ chips=%d sections=%d",
+                              scope.name ?? "All", scopes.count, listSections.count)
+                        // One NSLog PER section, never a joined string — the
+                        // log reader truncates a long multi-line message
+                        // mid-document (the `-todayProbe` lesson).
+                        for section in listSections {
+                            NSLog("appsSection| %@ apps=%d", section.name, section.apps.count)
+                        }
                     }
                 }
                 #endif
@@ -307,10 +343,13 @@ struct AppsScreen: View {
         .onChange(of: connectedNames) { old, new in
             handleConnectChange(old: old, new: new)
         }
-        // The catalog is a GRID, so it takes the wide column (2026-07-25) —
-        // it answers extra width with extra columns per band, not with longer
-        // rows, which is the whole distinction `DSContentWidth` draws.
-        .dsAdaptiveContentWidth(.wide)
+        // The catalog is a LIST now (prd §518), so it takes the READING column
+        // — and that is the same distinction `DSContentWidth` draws, answered
+        // the other way. It was `.wide` because a grid spends extra width on
+        // extra columns per band; a single file of rows spends it on longer
+        // rows, and a 1040pt row holding a 44pt icon, a name and a capsule is
+        // three objects marooned at opposite edges of an inch of nothing.
+        .dsAdaptiveContentWidth(.reading)
         .dsPageBackground()
         .dsSoftScrollEdges()
         .dsScreenTitle("Apps")
@@ -475,11 +514,10 @@ struct AppsScreen: View {
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
                         Text("RSS can follow most sites.")
                             .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                            .padding(.horizontal, DS.Space.s4)
+                            .padding(.horizontal, DS.Space.s1)
                         VStack(spacing: DS.Space.s1) { appRow(rss) }
                             .padding(.vertical, DS.Space.s1)
                             .dsCard()
-                            .padding(.horizontal, DS.Space.s4)
                     }
                 }
             }
@@ -491,8 +529,11 @@ struct AppsScreen: View {
                 }
             }
             .padding(.vertical, DS.Space.s1)
+            // NO second horizontal inset (prd §518): the scroll content's own
+            // VStack already pads `s4`, so this card used to sit at twice the
+            // inset of the search field directly above it — and now at twice
+            // the inset of the catalog list it replaces on the same screen.
             .dsCard()
-            .padding(.horizontal, DS.Space.s4)
         }
     }
 
@@ -912,49 +953,99 @@ struct AppsScreen: View {
                     size: .slab, submitLabel: .search, action: {})
     }
 
-    // MARK: - The wall (prd §200 — a card per category, every app visible at once)
+    // MARK: - The catalog list (prd §518 — a directory, not a wall)
 
-    /// The category chips: a tap scrolls to that category's card. Only
-    /// categories with something to add appear — a chip always lands
-    /// somewhere.
-    @ViewBuilder
-    private func jumpChips(_ proxy: ScrollViewProxy) -> some View {
-        let live = Self.categories.filter { cat in
-            ranked.contains { category(of: $0.offer) == cat.name }
+    /// Which slice of the catalog is on screen. `nil` is **All** — every
+    /// category, in catalog order, each under its own header.
+    ///
+    /// ONE stored property on purpose. `DSSectionSwitcher` compares `active`
+    /// against the strip's own elements with `==`, so a scope that ALSO stored
+    /// its count would stop equalling its chip the moment an app connected —
+    /// the selected fill would silently drop off the strip on the one event
+    /// this screen exists to produce. Label and summary are DERIVED.
+    private struct CatalogScope: DSSectionScope {
+        /// nil is All; otherwise a `BridgeCatalog.categories` name.
+        let name: String?
+
+        /// A sentinel no category can collide with — category names are
+        /// ordinary words, and an id shared with a real chip makes both the
+        /// strip's selection and its `scrollTo` ambiguous.
+        var id: String { name ?? "\u{1}all" }
+
+        var label: String { name ?? String(localized: "All") }
+
+        /// The tooltip and the accessibility clause. A chip's short noun is
+        /// learnable but not self-explaining, and the useful second fact here
+        /// is how much sits behind it.
+        var summary: String {
+            guard let name else { return String(localized: "Every app in the catalog") }
+            let n = Self.counts[name] ?? 0
+            return n == 1 ? String(localized: "1 app") : String(localized: "\(n) apps")
         }
-        if live.count > 1 {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s2) {
-                    ForEach(live, id: \.name) { cat in
-                        Button {
-                            DSHaptic.selection()
-                            withAnimation(DS.Motion.standard) {
-                                proxy.scrollTo("card-" + cat.name, anchor: .top)
-                            }
-                            // Close the loop: the card you landed on flashes
-                            // once, so the tap arrives instead of scrolling in
-                            // silence.
-                            shelfLand[cat.name, default: 0] += 1
-                        } label: {
-                            HStack(spacing: DS.Space.s2) {
-                                Image(systemName: BridgeGlyph.symbol(for: cat.exemplar))
-                                    .dsGlyph(15, weight: .medium)
-                                    .foregroundStyle(BridgeGlyph.color(for: cat.exemplar))
-                                Text(LocalizedStringKey(cat.name))
-                                    .dsText(.callout15).fontWeight(.medium)
-                                    .foregroundStyle(DS.textPrimary)
-                            }
-                            .padding(.horizontal, DS.Space.s3)
-                            .frame(minHeight: 44)
-                            .background(DS.surfaceSheet,
-                                        in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(PressSpring())
-                        .accessibilityLabel("Jump to \(cat.name)")
-                    }
+
+        /// Counted ONCE off the static catalog, not per chip per body pass.
+        /// Counts every offer the section will DRAW, `Soon` included — a
+        /// header reading 7 over a list of 8 is the small wrongness that costs
+        /// a screen its credibility.
+        private static let counts: [String: Int] = {
+            var out: [String: Int] = [:]
+            for offer in BridgeCatalog.offers {
+                out[BridgeCatalog.category(of: offer), default: 0] += 1
+            }
+            return out
+        }()
+    }
+
+    /// The strip's scroll anchor: a pick pulls the CONTROL to the top, so the
+    /// chips stay reachable and the list below them is the thing that changed.
+    private static let scopeAnchor = "catalog-scope"
+
+    /// All, then every category with something behind it.
+    ///
+    /// A category with no offers never gets a chip — a control that filters to
+    /// an empty list is the dead control §83 bans, and a strip is the one place
+    /// on this screen where that stays invisible until somebody taps it.
+    private var scopes: [CatalogScope] {
+        [CatalogScope(name: nil)] + Self.categories.compactMap { cat in
+            ranked.contains { category(of: $0.offer) == cat.name }
+                ? CatalogScope(name: cat.name) : nil
+        }
+    }
+
+    /// The chips wearing the attention dot — a category holding a seat that
+    /// stopped working (tier 0, the one tier whose verb is Fix).
+    ///
+    /// This is what a filter strip buys that jump chips could not. Under the
+    /// wall a broken seat was findable by scrolling to its band; under a FILTER
+    /// it is invisible from every other chip, so the dot is not decoration but
+    /// the thing that keeps the filter honest. Never set for All, which draws
+    /// every section — there the row itself is already on screen saying it.
+    private var troubledScopes: Set<CatalogScope> {
+        Set(ranked.filter { $0.tier == 0 }
+                  .map { CatalogScope(name: category(of: $0.offer)) })
+    }
+
+    /// The category filter.
+    ///
+    /// TEXT chips, deliberately. `CategoryVenueSwitcher` and the sources tray
+    /// both draw `BridgeIcon`, and a strip of brand marks above a list of brand
+    /// marks is exactly the grammar collision this pass exists to end (prd
+    /// §518): the tray holds the sources you already have, the catalog holds
+    /// what you could add, and the two had been wearing one face.
+    ///
+    /// Hidden below two categories, where a filter narrows nothing.
+    @ViewBuilder
+    private func scopeStrip(_ proxy: ScrollViewProxy) -> some View {
+        let all = scopes
+        if all.count > 2 {
+            DSSectionSwitcher(sections: all, active: scope,
+                              attention: troubledScopes) { picked in
+                withAnimation(DS.Motion.standard) {
+                    scope = picked
+                    proxy.scrollTo(Self.scopeAnchor, anchor: .top)
                 }
             }
+            .id(Self.scopeAnchor)
         }
     }
 
@@ -978,115 +1069,72 @@ struct AppsScreen: View {
         }
     }
 
-    /// A section of the wall: one full-width band, or two small categories
-    /// paired onto a single 4-wide row (prd §201).
-    private enum WallBand: Identifiable {
-        case full(String, [Ranked])
-        case paired(String, [Ranked], String, [Ranked])
-        var id: String {
-            switch self {
-            case .full(let n, _): "full:" + n
-            case .paired(let a, _, let b, _): "pair:" + a + "+" + b
-            }
-        }
-    }
-
-    /// The catalog's categories walked into bands (prd §201, mockup B). A
-    /// category of two apps or fewer would waste most of a 4-wide row alone,
-    /// so a SMALL category pairs with the next small one — each keeping its
-    /// own label, a gap between (the user's "next to each other, not as one
-    /// category" rule, turned horizontal). Everything larger is a full-width
-    /// band, 4 across, its last row left-aligned. A lone small with no partner
-    /// falls back to a full band (2 tiles, trailing space) rather than
-    /// stretching — honest, and rare given the ruled order pairs Social+Mail.
-    private var wallBands: [WallBand] {
-        let sections = Self.categories.compactMap { cat -> (String, [Ranked])? in
+    /// The catalog's sections for the active scope: All gives every category in
+    /// the ruled catalog order, a picked category gives just its own.
+    ///
+    /// The order is `BridgeCatalog.categories`' — never the ranking's, and
+    /// never the strip's tap history. §201 and §322 set that order band by
+    /// band, it is the single source of truth the agent's `category:` ask
+    /// reads, and a catalog that reshuffled between visits reads as broken
+    /// (`CategoryVenueSwitcher`'s own display-order rule, one screen over).
+    private var listSections: [(name: String, apps: [Ranked])] {
+        Self.categories.compactMap { cat in
+            if let picked = scope.name, picked != cat.name { return nil }
             let apps = ranked.filter { category(of: $0.offer) == cat.name }
             return apps.isEmpty ? nil : (cat.name, apps)
         }
-        var bands: [WallBand] = []
-        var pending: (String, [Ranked])?
-        for section in sections {
-            if section.1.count <= 2 {
-                if let p = pending {
-                    bands.append(.paired(p.0, p.1, section.0, section.1))
-                    pending = nil
-                } else {
-                    pending = section
-                }
-            } else {
-                if let p = pending { bands.append(.full(p.0, p.1)); pending = nil }
-                bands.append(.full(section.0, section.1))
-            }
-        }
-        if let p = pending { bands.append(.full(p.0, p.1)) }
-        return bands
     }
 
-    /// Tiles across a full band — 4 on iPhone, 6 on iPad (2026-07-25). At the
-    /// wide column's 1040pt a 4-across band drew 240pt-wide tiles around a
-    /// 48pt icon, which is a grid pretending to be a list. A paired band
-    /// splits this in half, so the two shapes stay one rhythm.
-    private var wallColumns: Int { horizontalSizeClass == .regular ? 6 : 4 }
-
-    private var catalogWall: some View {
-        VStack(spacing: DS.Space.s3) {
-            ForEach(wallBands) { band in
-                switch band {
-                case .full(let name, let apps):
-                    bandCard { categoryColumn(name, apps: apps, columns: wallColumns) }
-                case .paired(let n1, let a1, let n2, let a2):
-                    bandCard {
-                        HStack(alignment: .top, spacing: DS.Space.s3) {
-                            categoryColumn(n1, apps: a1, columns: wallColumns / 2)
-                            categoryColumn(n2, apps: a2, columns: wallColumns / 2)
-                        }
-                    }
-                }
+    /// The catalog — one file of rows under category headers (prd §518).
+    ///
+    /// `LazyVStack` over the SECTIONS, each section's rows eager inside its own
+    /// card. Making the rows lazy instead would mean giving up the card that
+    /// groups them, and the largest section is 19 rows, which costs nothing.
+    /// What the laziness buys is the other nine sections not building until you
+    /// reach them — the wall had this backwards, an eager `ForEach` over bands
+    /// wrapping a lazy grid inside each.
+    private var catalogList: some View {
+        LazyVStack(alignment: .leading, spacing: DS.Space.s6) {
+            ForEach(listSections, id: \.name) { section in
+                categorySection(section.name, apps: section.apps)
             }
         }
-        // A connect moves its row to the strip — the wall closes the gap
-        // smoothly instead of snapping.
+        // A connect re-sorts its row into the connected tier — the list closes
+        // the gap smoothly instead of snapping.
         .animation(DS.Motion.standard, value: store.bridges.count)
     }
 
-    /// The band's rounded card shell — one shape whether it holds one category
-    /// or a pair, so the wall reads as one rhythm of bands.
-    private func bandCard<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        content()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(DS.Space.s3)
-            .background(DS.surfaceSheet, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-    }
-
-    /// One category inside a band — its label, then its apps in `columns`-wide
-    /// tiles (4 for a full band, 2 for a paired half). Carries its own scroll
-    /// anchor so a jump chip lands on it even when it shares a band.
-    private func categoryColumn(_ name: String, apps: [Ranked], columns: Int) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text(LocalizedStringKey(name))
-                .dsText(.label12).fontWeight(.bold).foregroundStyle(DS.textTertiary)
-                .landFlash(shelfLand[name] ?? 0)
-                .landFlash(shelfComplete[name] ?? 0, tint: categoryColor(name))
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2),
-                                     count: columns),
-                      alignment: .leading, spacing: DS.Space.s3) {
+    /// One category: its name and size, then its apps as rows in a card.
+    ///
+    /// The header sits ABOVE the card, where the wall's band label sat inside
+    /// it — a card full of rows IS a list, so a label inside it reads as the
+    /// first row. Sentence case, no eyebrow, and no rule under it (design law:
+    /// the app draws no lines at all).
+    private func categorySection(_ name: String, apps: [Ranked]) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text(LocalizedStringKey(name))
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
+                // What the section holds, before you scroll it. Tabular, or
+                // the digits shift the name beside them as a connect changes
+                // nothing about the count but everything about its width.
+                Text(apps.count.formatted())
+                    .dsText(.subhead13)
+                    .monospacedDigit()
+                    .foregroundStyle(DS.textTertiary)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, DS.Space.s1)
+            .landFlash(shelfComplete[name] ?? 0, tint: categoryColor(name))
+            VStack(spacing: DS.Space.s1) {
                 ForEach(Array(apps.enumerated()), id: \.element.id) { i, entry in
-                    appTile(entry).modifier(StockEntrance(index: i))
-                        // Tiles settle in as they cross the viewport edge —
-                        // scroll-driven, so it costs nothing at rest
-                        // (2026-08-04). Under Reduce Motion only the fade
-                        // survives, the chip strip's own convention.
-                        .scrollTransition(.interactive, axis: .vertical) { content, phase in
-                            content
-                                .scaleEffect(reduceMotion || phase.isIdentity ? 1 : 0.94)
-                                .opacity(phase.isIdentity ? 1 : 0.7)
-                        }
+                    appRow(entry).modifier(StockEntrance(index: i))
                 }
             }
+            .padding(.vertical, DS.Space.s1)
+            .dsCard()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .id("card-" + name)
     }
 
     /// The seat id a cell should open as a ROOM rather than push, or nil.
@@ -1124,82 +1172,18 @@ struct AppsScreen: View {
         }
     }
 
-    /// One app on the wall — icon, name underneath, home-screen style. The
-    /// verb and status line moved off the tile onto the destination it opens
-    /// (the product page's Connect/Open, or the manager's own proof line) —
-    /// a tile states WHO, tapping it says WHAT. Connected apps wear the same
-    /// status dot the old shelf row did; a Soon app dims.
-    private func appTile(_ entry: Ranked) -> some View {
-        let soon = entry.tier == 3
-        let isConnected = entry.tier == 0 || entry.tier == 2
-        let destination: HomeRoute.Node = {
-            if isConnected, let bridge = entry.bridge {
-                return .bridge(BridgeRouter.destination(forID: bridge.id))
-            }
-            return .appDetail(entry.offer.name)
-        }()
-        return catalogTap(roomSeat: roomSeat(entry), destination: destination) {
-            VStack(spacing: DS.Space.s1) {
-                BridgeIcon(name: entry.offer.name, size: DS.Mark.tile)
-                    .saturation(soon ? 0 : 1)
-                    .opacity(soon ? 0.5 : 1)
-                    .overlay(alignment: .topTrailing) {
-                        if isConnected, let bridge = entry.bridge {
-                            Circle()
-                                .fill(bridge.status.color)
-                                .frame(width: 11, height: 11)
-                                .overlay(Circle().strokeBorder(DS.themedPage, lineWidth: 2))
-                                .pulseOnChange(of: bridge.statusLine)
-                                .offset(x: 3, y: -3)
-                        }
-                    }
-                Text(entry.offer.name)
-                    .dsText(.label12)
-                    .foregroundStyle(soon ? DS.textSecondary : DS.textPrimary)
-                    .multilineTextAlignment(.center)
-                    // Names NEVER truncate (user ruling, prd §201). A
-                    // multi-word name wraps to two lines; a long single word
-                    // ("GeckoTerminal") that can't wrap shrinks to fit its
-                    // tile instead of clipping — `minimumScaleFactor` is what
-                    // makes "no truncation" true at four-per-row.
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.7)
-                    // `minHeight`, so the promise above survives Dynamic Type:
-                    // a pinned 28 makes "names NEVER truncate" false at the
-                    // first accessibility size, where two scaled lines need
-                    // roughly three times it and the tile clips instead.
-                    .frame(minHeight: 28, alignment: .top)
-            }
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-            .dsHover()
-            // A catalog tile is a CARD — you click it to go somewhere — so it
-            // takes the lift (2026-08-17). The wall is six columns wide on a
-            // Mac window, which is the densest grid of clickable objects in
-            // the app and the place a uniform hover said least.
-            .macHoverLift()
-        }
-        .buttonStyle(PressSpring())
-        .modifier(PeekPreview(
-            offer: entry.offer,
-            enabled: entry.tier == 1 && StorePreview.doc(for: entry.offer.name) != nil,
-            onConnect: {
-                if entry.offer.needsSetup {
-                    route.openSetup(forOffer: entry.offer.name)
-                } else {
-                    attemptConnect(entry.offer)
-                }
-            }))
-        // The just-connected tile lifts as the wall re-sorts it into its
-        // connected seat — a promotion you can feel, not a silent re-order.
-        .connectPromote(isTarget: entry.offer.name == justConnectedName, token: connectLiftToken)
-    }
-
-    /// One app inside a shelf — icon, name, honest subline, action capsule.
+    /// One app — icon, name, honest subline, action capsule.
+    ///
+    /// The catalog's ONE cell since prd §518, where it had been the search
+    /// results' alone and the wall drew a separate `appTile` beside it. That
+    /// split is what a list ends: the row has room for the tagline and the
+    /// live status line a 4-across tile had to push onto the screen behind it,
+    /// so the catalog now says what an app DOES before you tap it.
+    ///
     /// The row tap opens the product page for an app you could add, and
     /// MANAGEMENT for one that's connected (its store pitch already worked).
-    /// A connected tile wears the status dot the old strip carried. No rank
-    /// number: a shelf is a category, not a leaderboard.
+    /// A connected row wears the status dot the old strip carried. No rank
+    /// number: a category is not a leaderboard.
     private func appRow(_ entry: Ranked) -> some View {
         let soon = entry.tier == 3
         let isConnected = entry.tier == 0 || entry.tier == 2
@@ -1282,7 +1266,7 @@ struct AppsScreen: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s2)
-        // The just-connected row lifts as the shelf re-sorts it into its
+        // The just-connected row lifts as the list re-sorts it into its
         // connected seat — a promotion you can feel, not a silent re-order.
         .connectPromote(isTarget: entry.offer.name == justConnectedName, token: connectLiftToken)
     }

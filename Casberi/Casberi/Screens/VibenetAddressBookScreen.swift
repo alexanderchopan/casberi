@@ -268,7 +268,7 @@ struct VibenetAddressBookScreen: View {
             opened = item.address
         } label: {
             HStack(spacing: DS.Space.s3) {
-                WalletFace(address: item.address, size: 44, circular: true)
+                WalletFace(address: item.address, size: DS.Face.list, circular: true)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(watch.name(for: item.address) ?? VibenetRoom.shortAddress(item.address))
                         .dsText(.heading17)

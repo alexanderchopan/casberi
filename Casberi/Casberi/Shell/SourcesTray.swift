@@ -185,9 +185,14 @@ struct SourcesTray: View {
     fileprivate static func blockWidth(span: Int, column: CGFloat) -> CGFloat {
         CGFloat(span) * column + CGFloat(max(0, span - 1)) * DS.Space.s2
     }
-    /// Two lines of `label12` plus its own leading — the same fixed name box
-    /// `AppsScreen.appTile` uses, so a one-word and a two-word name sit on the
-    /// same baseline instead of the row jittering per cell.
+    /// Two lines of `label12` plus its own leading, so a one-word and a
+    /// two-word name sit on the same baseline instead of the row jittering
+    /// per cell.
+    ///
+    /// It used to say "the same fixed name box `AppsScreen.appTile` uses".
+    /// That tile is GONE (prd §518 — the catalog is a list of rows now, and
+    /// the tray keeping the tile grammar is the whole point of the split), so
+    /// this number is the tray's own and has nothing left to agree with.
     private static let nameHeight: CGFloat = 28
     /// The label's own margin inside its column (2026-08-16, user: "we need to
     /// put privacy pools on two rows so it doesn't touch the edge of the

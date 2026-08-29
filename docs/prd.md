@@ -79,6 +79,8 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §201 | The catalog wall goes horizontal — paired bands, four across, full names, `minimumScaleFactor(0.7)` so a long single word shrinks rather than clips | superseded by §518 (the wall is a LIST: a small category is a short section rather than half a wasted row, and a row has the width for any name in the catalog, so "no truncation" stops needing a mechanism) |
+| §200 | The catalog is a WALL — every app visible at once as category cards of icon tiles, chips that scroll to a card | amended by §518 (the wall shape alone dies, at 99 apps and because it wore the sources tray's own grammar; §200's other rulings STAND — search leads the page, the Discover deck is kept, categories never merge, and its own "search results stay a scannable list rather than a grid" is what §518 generalises to the whole screen) |
 | §494 | The five DeFi seats are right and only their door was wrong — a connected Aave opens the Wallet room rather than the wallet manager | superseded by §515 (that door works, and working exposed the defect: the room it correctly opens is the room the Wallet seat's own Open opens. Five icons, one destination. A catalog seat lands rows under a source of its own, so the five are not seats; what they read is stated on the Wallet offer and drawn by its DeFi tiles) |
 | §503 | Nonces gets no chart, and a Frames scope is refused — a frame is a PART of a move rather than something you own, so a flat list of steps says what Activity says | Frames half reversed by §504 (Activity is built from transfer logs, so a frame transaction that moved no ETH appears nowhere in the room — the scope that could not see them was its largest gap; the no-chart ruling for Nonces STANDS) |
 | §500 | A move past the bounded header window carries no time — a block number is not a clock and nothing substitutes one | amended by §504 (measured: 12 missed slots in 310,833 blocks, so a block BRACKETED between two real headers is honest to seconds; stated to the day, never extrapolated past the newest header) |
@@ -37906,3 +37908,143 @@ The user's ruling, given on seeing the first pass: *"make sure its ink black not
 `vibenet-selftest.sh` grew 12 drift guards, including an ordering guard (subject before roster before doors, parsed rather than grepped) and negatives that a card, the themed page, a divider or the discovery section may not return to the book. **Two existing §465 guards went red and were AMENDED rather than deleted** — the shared-field guard now looks for `VibenetWatchField` in the sheet, and the managing-roster guard asserts the three things the ruling actually requires (open, rename, stop watching) rather than the one implementation detail it used to name (`onOpen:`). A guarded thing that moves takes its guard with it.
 
 **UNSEEN on a device.** It compiles and the harness is green; no screenshot of the rebuilt screen has been taken, and none of the four artboards this was drawn from has been checked against a running build.
+
+## 518. The catalog is a LIST — sectioned, filtered by chips, with All (user: "would our app feel simpler if the app catalgoue was in list format?", then "i feel like it would look more professional in a list", "i feel like the app catalogue in current form competes w the Your feeds tray and is confusing which is which", then "build it, sectioned list. but probably needs an all section too", 2026-08-29)
+
+Supersedes §201 whole and amends §200: the WALL is gone. What §200 ruled
+around it stands and is untouched — the search field leads the page, the
+Discover deck is kept ("i also think we should still have the swipe discover
+cards"), categories never merge, and a name never truncates.
+
+**§200 offered a flat list as one of its three mockups and it was REJECTED,
+so the first job was working out what had changed.** Three things had. (1) The
+catalog was 56 apps then and is **99** now, which is past the size where "see
+it all at once" is a property a screen can actually deliver — the wall's own
+premise. (2) The user's second message names a cause §200 could not have seen:
+*"the app catalogue in current form competes w the Your feeds tray and is
+confusing which is which."* That is a real structural collision and not a
+matter of taste — `SourcesTray` and the wall were **the same grammar**, grids
+of brand tiles grouped by the same `BridgeCatalog.categories`, so the two
+screens differed in content and in nothing a person reads first. (3) The
+proposal is not the shape §200 rejected: chips that FILTER is a third option
+that was never mocked, and it answers the flat list's real problem (a 99-row
+scroll) without giving up categories.
+
+**The split, stated so nothing restores it:** the **tray keeps the tile grid**
+and means *the sources you already have, jump to one*; the **catalog is a list
+of rows** and means *what you could add*. Different form, different job,
+tellable apart in the first half second. Every choice below serves that split
+before it serves anything else.
+
+### 1. The chips FILTER, and All is the default
+
+They used to scroll-to (`jumpChips` → `proxy.scrollTo("card-" + name)`). They
+now select, through **`DSSectionSwitcher`** — the existing scope control Wallet
+and Vibenet already wear (§483), not a new one. Three things came free with
+it and one had to be decided.
+
+- **Free: it is TEXT.** The jump chips drew `BridgeGlyph.symbol(for:
+  cat.exemplar)` — a brand mark per chip, directly above a grid of brand marks,
+  which was the collision in miniature. `CategoryVenueSwitcher` is icon-only by
+  construction and `DSSectionSwitcher` is its text sibling, so the control that
+  fits the split was already built.
+- **Free: the selection TRAVELS.** `matchedGeometryEffect` on the active fill —
+  the 2026-07-14 source-chip ruling ("selection is an object traveling, not two
+  states blinking"), which a scroll-to chip could never express because nothing
+  about it was selected.
+- **Free, and it turned out to be load-bearing: the ATTENTION DOT.** A category
+  holding a tier-0 seat (the one tier whose verb is Fix) wears it. Under the
+  wall a broken seat was findable by scrolling to its band; **under a filter it
+  is invisible from every other chip**, so a filter without the dot would have
+  hidden the one thing on this screen that needs somebody. Never set for All,
+  which draws every section — there the row is already on screen saying it.
+- **Decided: "All" leads and is the default, and the scope is NOT remembered.**
+  The user asked for it directly ("probably needs an all section too") and the
+  reasoning holds independently: a chips-only strip has to land somewhere, so
+  it opens on an arbitrary category with ~90% of the catalog invisible, and
+  surveying the catalog costs nine taps — App-Store shelf-browsing returning as
+  taps instead of scrolls, which is what §200 escaped. **All = every category
+  section in ruled order**, which is calm because the headers break it up.
+  Deliberately unlike `MarketsRoom.landing`, which reopens on the venue you
+  left: that is a room you live in, this is a directory you consult, and
+  arriving on a three-week-old filter hides nine tenths of it with nothing on
+  screen saying why.
+
+### 2. One cell, and it is the row that already existed
+
+`appRow` has served the SEARCH RESULTS since §200 — "which stay a scannable
+list rather than a grid", in §200's own words. So the catalog already had a
+list cell and drew a second `appTile` beside it; §518 deletes the tile and
+keeps the row. What the row has room for is the point: **the tagline and the
+live status line** ("3 games in"), both of which the 4-across tile had to push
+onto the screen behind it. A tile stated WHO; a row states what an app DOES
+before you tap it — which is what "more professional" is actually asking for.
+
+Three §201 rulings die with the tile because the problem they solved was the
+tile's: paired bands (a small category no longer wastes a row — it is a short
+section), four-across, and `minimumScaleFactor(0.7)` (a row has the width for
+any name in the catalog, so "no truncation" stops needing a mechanism).
+
+### 3. What the list keeps that the wall had
+
+Every honest verb (Connect / Pair / Fix / Open / Soon), the connect bloom,
+`connectPromote`'s lift, `PeekPreview`'s long-press, the completion glow on a
+category whose last addable app connects, and `StockEntrance`. Two retire:
+the **jump-arrival flash** (a chip filters now, so the list changing IS the
+arrival, and a header flash on top of it was a second answer to one tap) and
+the tiles' `scrollTransition` (a grid of glanced tiles earns an edge scale; 99
+read rows do not).
+
+### 4. Three consequences that are not cosmetic
+
+- **The iPad column flips from `.wide` to `.reading`,** which is the same
+  `DSContentWidth` distinction answered the other way: a grid spends extra
+  width on extra columns, a single file of rows spends it on longer rows, and
+  a 1040pt row holding a 44pt icon, a name and a capsule is three objects
+  marooned at opposite edges of an inch of nothing.
+- **The laziness was backwards and is fixed.** The wall was an eager `ForEach`
+  over bands wrapping a `LazyVGrid` inside each — the same work in the wrong
+  order. It is a `LazyVStack` over SECTIONS with each section's rows eager
+  inside its own card: making the rows lazy would mean giving up the card that
+  groups them, and the largest section is 19 rows.
+- **The search results' double inset is fixed.** The scroll content's VStack
+  already pads `s4` and the results card added a second one, so search results
+  had always sat at twice the inset of the search field directly above them —
+  invisible while the thing they were compared against was a grid, obvious the
+  moment the same rows appear at the correct inset one state away.
+
+### 5. Section headers carry a count
+
+`heading17`, sentence case, above the card rather than inside it (a card full
+of rows IS a list, so a label inside reads as the first row), no rule under it.
+The count is every offer the section will DRAW, `Soon` included — a header
+reading 7 over a list of 8 is the small wrongness that costs a screen its
+credibility — and it is tabular, or the digits shift the name beside them.
+
+### 6. The probe
+
+`-appsShelf "<Category>"` PICKS a category now rather than scrolling to a card
+that no longer exists; a name matching no chip **says so** instead of silently
+leaving the scope on All, which would read as the pick having worked.
+`-appsCatalogProbe YES` NSLogs one `appsSection|` line per section with its
+count — a short catalog list has causes that render identically (a renamed
+`Offer.group` falling through `category(of:)`'s default to "Life", a scope
+filtering to nothing, or a genuinely small section) and only the first two are
+bugs.
+
+### What is deliberately NOT built
+
+**A pinned strip.** The chips scroll with the content, exactly as the jump
+chips did, so filtering from deep inside All means scrolling back up. §357's
+"a control that persists across a room change mounts on the shell" does not
+apply — this is one screen, not a room swap under an `.id()` — and pinning
+costs a `safeAreaInset` and a second decision about what else pins with it.
+Named rather than left as an oversight; revisit if the scroll-back annoys.
+
+**A flat A–Z "Settings-style" list**, mocked beside this one. It differentiates
+from the tray hardest of all (it drops the shared taxonomy entirely) and was
+not chosen: it is a lookup surface, and the catalog still has browsing to do.
+
+**UNSEEN on a device.** iOS builds green; no screenshot of the rebuilt screen
+has been taken, and neither the filter transition nor the attention dot has
+been watched on a running app.
