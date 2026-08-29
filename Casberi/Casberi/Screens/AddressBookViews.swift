@@ -833,9 +833,11 @@ struct AddressCard: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
-    /// The identity wash reads the same pour opacity the money receipt does,
-    /// which is scheme-dependent (prd §499).
-    @Environment(\.colorScheme) private var scheme
+    // `scheme` retired here 2026-08-28 with the identity wash it read the
+    // receipt's pour opacity for — the sheet is ink now (see `identityBlock`),
+    // and the same reasoning the `bridges` note below gives applies: an unread
+    // `@Environment` is a standing claim that this sheet depends on something
+    // it does not.
     // `bridges` retired here 2026-08-24 (prd §461) — it existed for one line,
     // `reconcileWalletSeats()` inside `toggleWatch`, and this card no longer
     // watches anything. An unread `@Environment` is harmless but it is also a
@@ -1083,26 +1085,24 @@ struct AddressCard: View {
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s2)
         .padding(.bottom, DS.Space.s6)
-        // AMBIENT WASH, NOT PAPER (prd §499, user: *"right now it looks like
-        // someones database"* → *"make it look like something apple or
-        // cashapp would do"*).
+        // INK, NOT A POUR (user ruling, 2026-08-28: *"i don't like the crown
+        // pours on the contact sheets they should just be ink"*).
         //
-        // The receipt paper this card wore for a few hours was §495's head
-        // borrowed from the money receipt, and it is right for an EVENT —
-        // a thing that happened once, on a torn slip. A person is not an
-        // event: boxing them in a receipt is what made the sheet read as a
-        // record rather than as somebody. The hue survives as the wash it
-        // always was underneath (§444 — the face is made of the address, so
-        // this is that person's own colour), falling to nothing behind the
-        // identity instead of terminating in a scalloped edge.
-        .background(alignment: .top) {
-            LinearGradient(colors: [pourHue.opacity(DS.receiptPourOpacity(scheme)),
-                                    pourHue.opacity(0)],
-                           startPoint: .top, endPoint: .bottom)
-                .frame(height: 300)
-                .frame(maxWidth: .infinity, alignment: .top)
-                .allowsHitTesting(false)
-        }
+        // §499 replaced §495's receipt paper here with an ambient hue wash —
+        // the person's own colour (§444, the face is made of the address)
+        // falling to nothing behind the identity. The wash is gone; the sheet
+        // takes the app's own ink like every other content surface.
+        //
+        // This is §204's Ink ruling reaching one more surface, and for its
+        // reason rather than by analogy: a tint poured behind a face is a
+        // colour with nothing to say — it is derived from the address, so it
+        // carries no state, no warning and no identity a person could learn.
+        // The face directly above it already IS that colour, at full strength
+        // and in the one place it means something.
+        //
+        // `pourHue` STAYS — it still feeds the face reveal and the copy sweep,
+        // which are moments rather than background, and which the design law
+        // is happy to spend a hue on.
     }
 
     /// The identity face — bigger than `DS.Face.profile` because this sheet's

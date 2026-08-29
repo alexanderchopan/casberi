@@ -123,6 +123,24 @@ struct AddressBookScreen: View {
                 // make, and a strip that vanished the moment you typed would
                 // take that away exactly when a long book needs it most.
                 filterSection
+                // THE FIELD SITS DIRECTLY UNDER THE STRIP (user ruling,
+                // 2026-08-28, with a screenshot: *"the search address or
+                // connect wallet should always be at the top below the filter
+                // chips … but not at the bottom of the screen"*).
+                //
+                // It used to follow the roster, on the reasoning quoted below
+                // that the roster is the repeatedly-visited half. That holds
+                // for a book with one or two wallets and fails for a real one:
+                // the roster is as tall as the number of wallets you watch, so
+                // at six it pushed the field — the only way to SEARCH a book of
+                // 171 people, and the only door to a new address — off the
+                // bottom of the screen. A control whose position depends on how
+                // much data sits above it is one you have to go looking for.
+                //
+                // Above the roster rather than below it, because both of the
+                // things this row does (find somebody, add somebody) are about
+                // the whole book, not about the five wallets.
+                inputSection
                 // THE ROSTER stands down under a filter that is not about
                 // wallets (prd §498). It is your own five addresses and they
                 // are wallets by construction, so leaving it on screen under
@@ -132,7 +150,6 @@ struct AddressBookScreen: View {
                 if !searching, rosterShown {
                     WalletRosterSection(onConnectFound: { bookSheet = .connectPicker($0) })
                 }
-                inputSection
                 if !searching {
                     // The Connected spine LEFT this screen (user ruling,
                     // 2026-08-27, with a screenshot of it: "please remove this

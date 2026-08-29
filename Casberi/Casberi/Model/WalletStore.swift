@@ -289,11 +289,55 @@ final class WalletStore {
     /// untouched on both devices.
     static func mirrorKey(_ address: String) -> String { dedupeKey(address) }
 
+    /// Addresses this app INVENTED rather than the person choosing: the demo's
+    /// three wallets and the DEBUG-only placeholder `init` seeds below.
+    ///
+    /// **They must never touch iCloud, in either direction (2026-08-28).** The
+    /// mirror is a shared key-value store keyed on the app, not on the build, so
+    /// a simulator install and a shipped phone write to the SAME place — and
+    /// every one of these addresses is minted with `updatedAt: .now`, a stamp
+    /// that BEATS a tombstone (`KeyValueMirror.mergeRemote`'s
+    /// `deletedHere >= remote.mirrorStamp`). So a demo poured on any device, or
+    /// a fresh sim install seeding "Main", pushed fixtures onto the person's
+    /// real phone, past the §170 cap via `applyMerged`'s grandfathering, and
+    /// deleting them there did not stick: the next pour re-minted a newer stamp
+    /// and they came back. Reported 2026-08-28 as a real address book holding
+    /// "Main", "Everyday", "Savings" and "Hardware" at "6 of 5".
+    ///
+    /// Named by ADDRESS rather than by a stored flag deliberately: a flag would
+    /// have to survive a CloudKit round trip and a decode written before it
+    /// existed, and these are invented literals nobody can legitimately watch.
+    static let fixtureAddresses: Set<String> = {
+        var out = Set(DemoSeedAll.demoWallets.map { dedupeKey($0.address) })
+        out.insert(dedupeKey(debugSeedAddress))
+        return out
+    }()
+
+    /// The DEBUG-only wallet `init` plants when there is nothing saved. Spelled
+    /// once, here, so the seed and the fixture list cannot drift apart.
+    static let debugSeedAddress = "0x1a2B3c4D5e6F70819283a4B5c6D7e8F901234f4f"
+
+    static func isFixture(_ address: String) -> Bool {
+        fixtureAddresses.contains(dedupeKey(address))
+    }
+
+    /// Whether THIS build/session is entitled to hold fixtures at all — a debug
+    /// install that seeds them, or a demo actually running. Everywhere else they
+    /// are litter that arrived over the wire, and `applyMerged` sweeps them.
+    static var keepsFixtures: Bool {
+        DemoState.seedsDemoData || DemoMode.isActive
+    }
+
     /// The watch list keyed for merging — by ADDRESS, never by `WatchedAddress.id`
     /// (see that property).
+    ///
+    /// Fixtures are withheld, so a demo or a debug seed can never leave this
+    /// device — see `fixtureAddresses`.
     var syncSnapshot: [String: WatchedAddress] {
         var out: [String: WatchedAddress] = [:]
-        for entry in addresses { out[Self.mirrorKey(entry.address)] = entry }
+        for entry in addresses where !Self.isFixture(entry.address) {
+            out[Self.mirrorKey(entry.address)] = entry
+        }
         return out
     }
 
@@ -326,10 +370,22 @@ final class WalletStore {
     /// The cost of the other choice is bounded and visible: a few more reads per
     /// foreground until they prune.
     func applyMerged(_ merged: [String: WatchedAddress]) {
+        // Fixtures never survive a merge on a build that has no business
+        // holding them (see `fixtureAddresses`). This is the half that HEALS a
+        // phone already carrying them: `syncSnapshot` stops the leak at the
+        // source, but the copies that already landed are only swept here, on
+        // the sync that `attach()` runs at launch. Scoped to a build that is
+        // not seeding and a demo that is not running, so pouring the demo does
+        // not have its own wallets pulled out from under it.
+        let sweepFixtures = !Self.keepsFixtures
         var standing: [WatchedAddress] = []
         var taken = Set<String>()
         for entry in addresses {
             let key = Self.mirrorKey(entry.address)
+            if sweepFixtures, Self.isFixture(entry.address) {
+                taken.insert(key)
+                continue
+            }
             // Absent from the merge means it was unwatched on another device.
             guard let winner = merged[key] else { continue }
             // Keep OUR id, take THEIR fields.
@@ -354,6 +410,10 @@ final class WalletStore {
         let arrivals = merged.filter { !taken.contains($0.key) }
             .sorted { ($0.value.stamp, $0.key) < ($1.value.stamp, $1.key) }
             .map(\.value)
+            // A fixture that arrived over the wire is never adopted, whatever
+            // its stamp — the rule that makes deleting one STICK, since a
+            // re-poured demo mints a newer stamp than the tombstone.
+            .filter { !Self.isFixture($0.address) }
             .filter { !standingResolved.contains(
                 Self.dedupeKey(resolvedForm(of: $0.address) ?? $0.address)) }
         // `standing` is already in the person's own order and is never re-sorted.
@@ -673,7 +733,7 @@ final class WalletStore {
             addresses = saved
         } else if DemoState.seedsDemoData {
             // The demo bridge's status line names this address — keep them in step.
-            addresses = [WatchedAddress(label: "Main", address: "0x1a2B3c4D5e6F70819283a4B5c6D7e8F901234f4f")]
+            addresses = [WatchedAddress(label: "Main", address: Self.debugSeedAddress)]
         } else {
             addresses = []
         }
@@ -773,6 +833,24 @@ final class WalletStore {
         let bookName = label.trimmingCharacters(in: .whitespacesAndNewlines)
         AddressBook.shared.setName(bookName.isEmpty ? Self.shortAddress(addr) : bookName,
                                    for: addr, kind: .wallet)
+        // ITS FACE, NOW (2026-08-28, user: *"i'm also just adding a new wallet
+        // and my avatar for ens doesn't show"*).
+        //
+        // `loadAvatars()` had ONE live caller — `BridgeRefresh`'s foreground
+        // sweep — so a wallet added while the app was open wore a bare
+        // identicon until the next background→foreground cycle, which on a
+        // session where you add a wallet and stay put never comes. The moment
+        // somebody adds a wallet is the moment they are looking at it.
+        //
+        // (`ENS.swift`'s own doc still says `WalletScreen.onAppear` calls this;
+        // that call is gone, and this is the door that replaces it — an add is
+        // a better trigger than a screen visit anyway, since the roster, the
+        // rail and the book all draw the face without anyone opening Wallet.)
+        //
+        // Cheap and self-limiting: `loadAvatars` skips every address already
+        // resolved this launch and `ENS.avatar` caches misses too, so this
+        // costs exactly one lookup for the wallet just added.
+        Task { @MainActor in await loadAvatars() }
         return .added
     }
 
