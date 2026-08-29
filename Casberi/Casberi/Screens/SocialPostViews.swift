@@ -502,7 +502,13 @@ struct SocialProfileCard: View {
         // row's thing sheet, a deep link — and DSTray's own adaptive default
         // read as a shade off beside them, same bug class `dsInk()` fixed for
         // the wallet "Worth a look" tray.
-        DSTray(title: shown.title, height: 560, ink: true) {
+        // Draggable past its resting height (2026-08-28). Making the footer
+        // hold its lines removes the give this tray was silently taking, and
+        // this card's length is genuinely unpredictable — a bio is any number
+        // of lines and the "elsewhere" search appends a row per hit — so a
+        // hard ceiling clips rather than compresses. DSTray's own doc names
+        // this as the answer for exactly that shape.
+        DSTray(title: shown.title, height: 560, ink: true, detents: [.height(560), .large]) {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
                 header
                 if let bio = shown.bio, !bio.isEmpty {
@@ -546,6 +552,18 @@ struct SocialProfileCard: View {
                 if let footer = bridge?.watchFooter {
                     Text(LocalizedStringKey(footer))
                         .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        // WRAPS (2026-08-28, user: the Mine sentence "runs off
+                        // the screen"). It was truncating to one line with an
+                        // ellipsis, and the cause is vertical, not horizontal:
+                        // the tray is a FIXED height detent, so when the card's
+                        // variable content (a long bio, an "elsewhere" result
+                        // list) outgrows it, SwiftUI compresses whatever it can
+                        // — and a Text with no ideal-height demand is the only
+                        // thing in this stack that yields. The bio directly
+                        // above already carries this exact modifier for the
+                        // same reason, which is why it reads fine while the
+                        // sentence beneath it does not.
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
