@@ -2854,6 +2854,23 @@ enum DemoSeedAll {
             t.counterpartyAddress = counterpartyAddress(for: "Uniswap")
             t.grantedAt = at(6, 14)
         })
+        // A MINT AND A BURN, so the two void marks have something to draw
+        // (2026-08-28, prd §516). `WalletActionMark` gives each its own glyph
+        // off the `"minted"`/`"burned"` shape the void arm stamps, and until
+        // this pair existed the demo carried only sent and received — so two
+        // of the five marks the history screen can draw were unreachable on
+        // any corpus this project can show itself. No counterparty and no
+        // amount, exactly as `WalletVerbs.voidVerb`'s own arm lands them: the
+        // other side is the void, which is not an address you can meet again.
+        for (i, m) in [(true, "Minted Casberi Genesis #12", 4.0),
+                       (false, "Burned 0.7500 PEPE", 9.0)].enumerated() {
+            out.append(row(.transaction, m.1, source: "Wallet",
+                           ref: "demo:wallet:void:\(i)", days: m.2, hour: 11 + i,
+                           content: "Base · mint") { t in
+                t.walletAddress = walletFor(move: i)
+                t.transferDirection = m.0 ? "minted" : "burned"
+            })
+        }
         // THE WALLET'S RECONCILING DEADLINES (2026-08-17). Four bridges land a
         // `dueAt` row under `source: "Wallet"` — ENS name expiry, the Bitcoin
         // halving, a staked-HYPE unlock and Aerodrome's weekly vote — and the

@@ -181,10 +181,19 @@ enum DemoCorpus {
                   content: "Base · Uniswap · gas 0.4 USDC", source: "Wallet",
                   capturedAt: ago(hours: 3), tags: ["Onchain"],
                   provenance: Provenance(app: "Wallet"), sourceRef: "wallet:0xa1"),
+            // The two DIRECTIONAL rows carry their direction (2026-08-28, prd
+            // §516) — `WalletActionMark` reads that field to give a send and a
+            // receipt different marks, and these four fixtures predate the
+            // field entirely, so on a dev sim the transactions page opened on
+            // four identical glyphs. Direction ONLY, no `transferAmount`:
+            // every other reader of this field requires both, so the stamp is
+            // inert everywhere except the mark. The swap and the Solana buy
+            // stay unstamped, which is correct — both are two-legged.
             Thing(kind: .transaction, title: "Received 500 USDC from sam.eth",
                   content: "Base · from 0x9f…21", source: "Wallet",
                   capturedAt: ago(hours: 12), tags: ["Onchain"],
-                  provenance: Provenance(app: "Wallet"), sourceRef: "wallet:0xa2"),
+                  provenance: Provenance(app: "Wallet"), sourceRef: "wallet:0xa2")
+                .stamped { $0.transferDirection = "received" },
             Thing(kind: .transaction, title: "Bought SOL",
                   content: "Solana · Jupiter · $80", source: "Wallet",
                   capturedAt: ago(hours: 30), tags: ["Onchain"],
@@ -192,7 +201,8 @@ enum DemoCorpus {
             Thing(kind: .transaction, title: "Sent 0.2 ETH to cold wallet",
                   content: "Ethereum · to 0x4d…88", source: "Wallet",
                   capturedAt: ago(hours: 48), tags: ["Onchain"],
-                  provenance: Provenance(app: "Wallet"), sourceRef: "wallet:0xa4"),
+                  provenance: Provenance(app: "Wallet"), sourceRef: "wallet:0xa4")
+                .stamped { $0.transferDirection = "sent" },
 
             // ── Fitness cluster ────────────────────────────────────────────
             Thing(kind: .screenshot, title: "Sunday five-a-side",
@@ -265,4 +275,11 @@ enum DemoCorpus {
                   capturedAt: ago(hours: 24)),
         ]
     }
+}
+
+/// A one-liner for stamping a field on a `Thing` built inside an array literal
+/// (2026-08-28, prd §516). The fixtures above are written as literals, and a
+/// `var` per row to set one property would restructure the whole list.
+private extension Thing {
+    func stamped(_ apply: (Thing) -> Void) -> Thing { apply(self); return self }
 }

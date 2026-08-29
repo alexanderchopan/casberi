@@ -369,8 +369,15 @@ enum KeptAskComposers {
         let ids = things.indices.map { "a\($0)" }
         var lines = ["act = Widget(\"\(title)\", \"\(things.count)\", [\(ids.joined(separator: ", "))])"]
         for (i, t) in things.enumerated() {
-            if let dir = t.transferDirection, !dir.isEmpty {
-                let action = dir == "received" ? "Received" : "Sent"
+            // The two DIRECTIONAL values only (prd §516). `transferDirection`
+            // is a raw string whose vocabulary grew — a mint stamps
+            // `"minted"` — and `!dir.isEmpty` would have called every one of
+            // those "Sent", with an empty amount and no counterparty beside
+            // it. A shape this row grammar has no word for keeps the generic
+            // `Row` on its own title, which already says "Minted an NFT".
+            if let dir = t.transferDirection,
+               dir == WalletActionMark.sent || dir == WalletActionMark.received {
+                let action = dir == WalletActionMark.received ? "Received" : "Sent"
                 lines.append("a\(i) = TxRow(\"\(action)\", \"\(genSafe(t.transferAmount ?? ""))\", \"\(genSafe(t.transferCounterparty ?? ""))\")")
             } else {
                 lines.append("a\(i) = Row(\"\(genSafe(t.title))\", \"\(t.kind.typeTag)\", \"\(t.source)\", \"\(shortTime(t.capturedAt))\", \"\(t.id.uuidString)\")")

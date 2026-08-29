@@ -1022,6 +1022,17 @@ harness "Retriever pure-logic self-test" "retriever self-test" "scripts/retrieve
 # misses its cache at random and re-buys the read the window exists to avoid.
 harness "Wallet-NFT pure-logic self-test" "wallet-nft self-test" "scripts/wallet-nft-selftest.sh" "the wallet-NFT logic self-test failed — run scripts/wallet-nft-selftest.sh"
 
+# The mark a transaction row leads with (prd §516, 2026-08-28). Every onchain
+# row is one ThingKind, so the wallet's own history drew a column of the
+# identical glyph; this splits it by what the row DID, from stamped fields and
+# the ref alone. Every failure renders as an ordinary row and three are
+# actively misleading: the approval namespace drifting so a GRANT goes back to
+# wearing the exchange arrow (§311 — the room does not break, it goes quiet),
+# sent and received swapped so the mark contradicts the word beside it on a
+# ledger, and the default arm claiming a shape for the swaps and self-moves it
+# exists to refuse. No build, sweep or audit can see any of it.
+harness "Wallet action-mark self-test" "wallet action mark" "scripts/wallet-action-mark-selftest.sh" "the wallet action-mark self-test failed — run scripts/wallet-action-mark-selftest.sh"
+
 harness "Obsidian pure-logic self-test" "obsidian self-test" "scripts/obsidian-selftest.sh" "the Obsidian logic self-test failed — run scripts/obsidian-selftest.sh"
 
 # The folder door on a folder-picked file (prd §408, 2026-08-19). Every failure

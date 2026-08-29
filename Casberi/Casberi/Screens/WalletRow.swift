@@ -54,7 +54,10 @@ struct WalletRow<Trailing: View>: View {
         case asset(String, tint: Color, atRisk: Bool = false)
         /// Two assets overlapped — a liquidity pool's own pair.
         case pair(String, String)
-        case kind(ThingKind, flagged: Bool = false)
+        /// A landed thing's own `KindGlyph`. `symbol` overrides the kind's
+        /// glyph for a room where the kind says nothing — see
+        /// `WalletActionMark` (prd §516); nil everywhere else.
+        case kind(ThingKind, flagged: Bool = false, symbol: String? = nil)
     }
 
     let mark: Mark
@@ -118,8 +121,8 @@ struct WalletRow<Trailing: View>: View {
             // about which pool you were looking at.
             AssetPairMark(first: first, second: second, size: Self.markSize * 0.78)
                 .frame(width: Self.markSize, height: Self.markSize)
-        case .kind(let kind, let flagged):
-            KindGlyph(kind: kind, size: Self.markSize)
+        case .kind(let kind, let flagged, let symbol):
+            KindGlyph(kind: kind, size: Self.markSize, symbol: symbol)
                 .overlay(alignment: .bottomTrailing) {
                     if flagged {
                         Image(systemName: "exclamationmark.triangle.fill")

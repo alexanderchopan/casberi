@@ -1188,9 +1188,20 @@ enum WalletIngest {
             // needed to recognise (2026-07-21). "Received CryptoPunks from
             // 0x0000…" was never the story; "Minted CryptoPunks #402" is. The
             // RAW asset is passed, not the chain-symbol-defaulted local: see
-            // `voidVerb`. No direction/amount fields — a mint has no counterparty
-            // to rename and no side to face, so it earns no TransferStage.
+            // `voidVerb`. No AMOUNT field — a mint has no counterparty to rename
+            // and no side to face, so it earns no TransferStage; every reader of
+            // `transferDirection` that could print a figure also requires
+            // `transferAmount`, which is what keeps the stamp below inert for
+            // all of them.
             title = minted
+            // THE SHAPE, STAMPED (2026-08-28, prd §516). The field's own
+            // contract calls it a raw string so that "an unknown future value
+            // from a newer synced device degrades to the title-parse fallback"
+            // — this is that clause used deliberately, and it is the only way
+            // `WalletActionMark` can give a mint its own glyph without reading
+            // the localized title. Every existing reader gates on
+            // `"sent"`/`"received"` explicitly, so none of them sees these.
+            direction = received ? WalletActionMark.minted : WalletActionMark.burned
         } else {
             let verb = received ? "Received" : "Sent"
             var t2 = amount.isEmpty ? "\(verb) \(asset)" : "\(verb) \(amount) \(asset)"
@@ -1276,6 +1287,22 @@ enum WalletIngest {
             var touched = false
             if thing.transferUSD == nil, let usd = leg.pricedUSD {
                 thing.transferUSD = usd
+                touched = true
+            }
+            // THE VOID SHAPE, for rows landed before prd §516 (2026-08-28).
+            // A mint and a burn are the two events with no direction stamped
+            // at all, so a row already in the store carries nothing that tells
+            // them apart — and the one thing that would, the title, is the one
+            // place a mark may not read. This fills it from the LEG, which is
+            // the same evidence the landing arm used: the counterparty is the
+            // void. Bounded by the read window like every other heal here, so
+            // a mint older than that keeps the generic mark forever, which is
+            // stated in `WalletActionMark`'s own header rather than papered
+            // over. Never overwrites a stamped direction.
+            if thing.transferDirection == nil,
+               WalletVerbs.isVoid(counterparty(of: leg.t, received: leg.received)) {
+                thing.transferDirection = leg.received ? WalletActionMark.minted
+                                                       : WalletActionMark.burned
                 touched = true
             }
             // Sent legs only — `isFakeOutboundTransfer` is a claim about
