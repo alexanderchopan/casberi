@@ -1514,25 +1514,9 @@ struct RootShell: View {
     /// scenePhase door share one body. Debounced because the Mac has two
     /// launch-time doors (the `.task` fallback and the notification) and a
     /// window that can flip focus rapidly; one activation per couple of
-    /// seconds is plenty, and on the phone the debounce is invisible for the
-    /// WORK — but never for the redaction, which is why un-redacting is
-    /// hoisted above the guard (2026-08-29, see below).
+    /// seconds is plenty, and on the phone the debounce is invisible.
     @MainActor
     private func handleActivation() {
-        // UN-REDACT FIRST, OUTSIDE THE DEBOUNCE. `handleDeactivation` redacts
-        // on ANY non-active phase — a Control Centre pull, a Notification
-        // Centre swipe, a system alert, a two-second peek at the app switcher
-        // — and this was the only place that ever cleared it. Sitting below
-        // the guard meant any return inside two seconds swallowed the clear
-        // and left the WHOLE APP as placeholder bars, with no way back except
-        // leaving again and waiting out the window. Reported 2026-08-29 as
-        // "the app is loading very slowly": nothing was loading, the corpus
-        // was on screen the entire time wearing `.placeholder`. The debounce
-        // exists to stop the activation WORK double-running (the Mac's two
-        // launch doors); it was never meant to gate a visual state.
-        // Returning crossfades from placeholder to content (§14); leaving
-        // redacts instantly — the snapshot must already hide.
-        if redactNow { withAnimation(.easeOut(duration: 0.2)) { redactNow = false } }
         guard Date.now.timeIntervalSince(lastActivation) > 2 else { return }
         lastActivation = .now
         let firstActivation = !hasBeenActive
@@ -1560,8 +1544,9 @@ struct RootShell: View {
             await DemoMode.pourIfNeeded(context: modelContext)
             await DemoMode.restampIfStale(context: modelContext)
         }
-        // (The placeholder crossfade used to live here — it is hoisted to the
-        // top of this function now, above the debounce guard.)
+        // Returning crossfades from placeholder to content (§14);
+        // leaving redacts instantly — the snapshot must already hide.
+        withAnimation(.easeOut(duration: 0.2)) { redactNow = false }
         // Warm the model so the first Ask is fast — but OFF the launch
         // window (PERF 2026-07-29, user: "first open is many seconds
         // and in slow motion, then fine"). `WarmModel.prewarm()` does

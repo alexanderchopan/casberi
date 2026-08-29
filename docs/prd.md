@@ -37775,6 +37775,45 @@ Three sentences fixed it, each where the question is actually asked. The placeho
 
 **UNBUILT and UNSEEN.** Authored on Linux with no Xcode and no Swift toolchain, so nothing here has been compiled and no screenshot was taken; every static audit passes. The tap to check first is Aave in the catalog on an install that had it lit — it must be gone from the shelf, gone from the connected list, and its positions still on the Wallet room's lending tile.
 
+### 515a. Amendment — the seat advertised a connect that did not exist (user, 2026-08-29, on seeing the five gone from the rebuilt catalog list: "i think it is better they are no longer there bc they didn't have a Source room, and wallet auto detects them and that bothered me bc user didn't know what they were there for")
+
+§515 removed the five and argued it STRUCTURALLY: no source of their own, so
+five icons resolve to one room. That is true and it is an implementation fact.
+Asked again the next day — the seats' absence was noticed from the outside, in
+the §518 catalog list, and reported as a possible regression — the user gave
+the reason that actually governs, and it is stronger:
+
+**The wallet DETECTS these protocols on its own, so a catalog seat advertised a
+connect action that did not exist.** There was nothing to connect. A person
+tapping "Aave" was being offered a door into something already happening
+without them, which is §83's dead control wearing a product tile — and worse
+than an ordinary dead control, because it does not read as broken. It reads as
+a feature you have failed to set up.
+
+**THE TRIPWIRE, which §515 did not state: a protocol the wallet detects
+automatically must never get a catalog seat.** §515 removed five instances; the
+rule is what stops a sixth. It has a real hook rather than being a note
+somebody has to remember — `WalletSeatStanding.rides(id:)` already answers
+"does this seat ride the watched wallets", which is the same question — so the
+next wallet-riding protocol integrated cannot take a seat by default for the
+same plausible reason the five had one. This repo's own history is that an
+unenforced rule gets re-broken; `wallet-seat-route-audit.py` is where it
+belongs, as a fourth direction beside the three §515 gave it.
+
+**Note what this does NOT reverse.** §515 stands whole — the five stay out,
+`alsoReads` keeps them findable by search, and the Wallet offer keeps stating
+what it reads. This records the reasoning behind the ruling rather than
+changing it, because the structural reason and the honesty reason imply
+different things about the NEXT seat: "it has no source room" invites somebody
+to give one a source room and restore the icon, and "the wallet already does it
+without asking" does not.
+
+**Its own evidence that the discoverability worry was unfounded.** §518's list
+made the absence noticeable — scanning names in one column is exactly when you
+see something missing that a 4-across wall of marks hid — and the user's answer
+on being shown it was that the absence is correct. The catalog is not where a
+wallet-detected protocol is discovered; the Wallet room's own DeFi tiles are.
+
 ## 516. A transaction row says what it DID (user: "this activity sheet in wallet uses the same icons for each action, but send should be different arrow than receive. mint should be something and so on. can we change them so it's not a wall of the same icon", 2026-08-28)
 
 Reported against the wallet's own history page (`WalletHistoryScreen`), and the screenshot is the argument: twelve rows, four different events between them — a send, a receipt, a mint, a swap — and one identical `⇄` glyph twelve deep down the left edge.

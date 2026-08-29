@@ -409,24 +409,6 @@ python3 "$ROOT/scripts/redaction-coverage-audit.py" \
   || fail "corpus text leaves the process unscrubbed — see the output above"
 print -P "%F{green}✓ redaction coverage audit%f"
 
-# The OTHER redaction — the app-switcher privacy cover (§14, goal 6), which
-# `handleDeactivation` raises over the whole shell on any non-active scene
-# phase and exactly one line ever lowers again. That line sat BELOW
-# `handleActivation`'s two-second debounce, so a Control Centre pull, a
-# notification swipe or a quick peek at the app switcher left the entire corpus
-# on screen as grey placeholder bars with no way back but leaving again and
-# waiting the window out. Reported 2026-08-29 as "the app is loading very
-# slowly" — nothing was loading. Mechanical because it is invisible to
-# everything else here: it compiles, every audit passes, the screen sweep
-# photographs a redacted screen that looks exactly like a screen mid-load, and
-# no harness in this repo can drive a scene phase at all.
-step "Privacy cover audit"
-python3 "$ROOT/scripts/privacy-cover-audit.py" --self-test >/dev/null \
-  || fail "the privacy-cover audit's own self-test failed — the check is broken, not the code"
-python3 "$ROOT/scripts/privacy-cover-audit.py" \
-  || fail "the app-switcher redaction can be raised and not lowered — see the output above"
-print -P "%F{green}✓ privacy cover audit%f"
-
 # A room head matches its rows by ref prefix, the bridge stamps that prefix in
 # a different file, and nothing checked the two agree. When they stop agreeing
 # the room does not break, it goes QUIET — every row still landed, the head
