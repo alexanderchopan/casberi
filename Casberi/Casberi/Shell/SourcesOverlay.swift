@@ -1,14 +1,17 @@
 import SwiftUI
 
 /// The sources tray as a FLOATING PANEL, not a sheet (2026-08-16, user: "yes
-/// lets move away from the sheet").
+/// lets move away from the sheet"), and OPAQUE INK, not glass (2026-08-28,
+/// user: "can we make it ink or black that we use elsewhere in the app and
+/// get rid of the glass").
 ///
 /// # Why the sheet had to go
 ///
-/// The complaint that drove this was "still gray … it isn't clear like it is
-/// on the sim", asked beside a screenshot of the App Store's iOS 26 tab bar
-/// where the app name behind it is legible THROUGH the glass. Three builds
-/// were spent on the material and none of them reached it (§393, §393a):
+/// The complaint that drove the move off `.sheet` was "still gray … it isn't
+/// clear like it is on the sim", asked beside a screenshot of the App Store's
+/// iOS 26 tab bar where the app name behind it is legible THROUGH the glass.
+/// Three builds were spent on the material and none of them reached it
+/// (§393, §393a):
 ///
 ///   • the plate walked 0.82 → 0.55 → 0.45 → 0.35,
 ///   • `glassEffect(.clear)` was tried and reverted — on hardware it appears
@@ -21,8 +24,23 @@ import SwiftUI
 /// context; Apple's Liquid Glass surfaces — bars, controls, that tab bar —
 /// are views inside the app's own hierarchy, compositing directly over the
 /// scroll behind them. So this hosts the panel in `RootShell`'s ZStack beside
-/// the agent bar, where the material has the live feed behind it and no
-/// presentation boundary in between.
+/// the agent bar. That move still stands — the drag-to-dismiss, the grabber,
+/// the Mac floating layout and the modal semantics below are all bought by
+/// being a real view in the hierarchy, independent of what fills it.
+///
+/// # Why the glass went too
+///
+/// Design law (docs/build-brief.md §8): Liquid Glass belongs to the FLOATING
+/// layer (the agent bar, the composer, a toast) and never to a content panel
+/// — the tray is content, a grid of every source you have, not chrome
+/// floating over it. It wore glass anyway from the sheet-to-overlay move
+/// through 2026-08-28, on the theory that the live feed showing through would
+/// finally answer the App Store screenshot above. It didn't need to: the fix
+/// the app already uses everywhere else a panel like this appears —
+/// `DS.surfaceSheet`, the same opaque ink `DSTray`'s own `.sheet` background
+/// and every other content sheet in this app already paint — reads as
+/// exactly as "clear" as the comparison screenshot asked for, with none of
+/// three builds' worth of material tuning. See `glass` below.
 ///
 /// # What the move cost, stated rather than discovered later
 ///
@@ -342,9 +360,10 @@ struct SourcesOverlay: View {
     /// nothing to jump to.
     ///
     /// **Why not `wordChipFill`**, the strip's own shared word-chip paint: it
-    /// carries `dsGlass`, i.e. a second material, and this capsule sits ON the
-    /// panel's glass rather than on the crown. Stacking material inside the
-    /// panel is §391's lesson wearing a translucent coat. Its travelling
+    /// carries `dsGlass`, a material this panel no longer wears at all since
+    /// the 2026-08-28 move to opaque ink — a glass capsule floating on flat
+    /// ink would be its own island of "clear" on a surface that has none. Its
+    /// travelling
     /// `matchedGeometryEffect` has nowhere to travel to besides — there is one
     /// word chip here, not five — so the only thing sharing that modifier
     /// would buy is a shape this surface renders differently anyway. What IS
@@ -406,11 +425,11 @@ struct SourcesOverlay: View {
     /// **They wear `fillStrong`, NOT `dsGlassDoor` — and that is this panel's
     /// own rule, not an oversight.** In the chip strip both doors are glass,
     /// because the strip is pinned chrome floating over a scrolling feed. Here
-    /// they sit ON the panel's glass, and `allChip` beside them already
-    /// records why a second material is refused in that position: stacking
-    /// glass inside glass is the one thing the material cannot do. So they take
-    /// the same rest fill the All capsule takes when it is not selected, which
-    /// makes the three read as one row of controls on one surface.
+    /// they sit on the panel's own opaque ink, which is content by design law
+    /// §8, not the floating layer glass belongs to — so a glass door here
+    /// would be the one material exception on a surface that has none. They
+    /// take the same rest fill the All capsule takes when it is not selected,
+    /// which makes the three read as one row of controls on one surface.
     ///
     /// **The glyphs are reused, the chrome is not.** `AvatarDoor` and
     /// `AppsDoor` are the same marks the strip draws — including `AppsDoor`'s
@@ -484,45 +503,14 @@ struct SourcesOverlay: View {
             .accessibilityHidden(true)
     }
 
-    /// The material. `glassEffect` is reachable HERE in a way it never was
-    /// inside `presentationBackground` — this view is in the shell's own tree,
-    /// which is the entire reason for the move — so the system's own Liquid
-    /// Glass is the first choice again on iOS 26, with `DSGlassSheet`'s recipe
-    /// carrying every device below it.
-    /// **`.regular`, not `.clear`, and that is this app's own rule rather than
-    /// a retreat** (2026-08-16). The first overlay build used `.clear` and the
-    /// move worked — the feed read straight through the panel for the first
-    /// time in four builds — and immediately overshot: the feed's own words
-    /// competed with the tray's, a row title running through a category
-    /// eyebrow. `DSGlassVariant`'s doc has said since 2026-08-06 that
-    /// `.regular` is for chrome over CONTENT (rows, words, a feed) and
-    /// `.clear` only for chrome over PIXELS, "deliberately NOT a taste
-    /// option: `clear` withholds exactly the contrast `regular` provides".
-    /// This tray sits over rows and words. The App Store tab bar it was
-    /// compared against is `.regular` too — what made it read as glass was
-    /// never the variant, it was being in the hierarchy at all.
-    @ViewBuilder
+    /// The material — OPAQUE INK, not glass (2026-08-28, user ruling; see the
+    /// type doc). `DS.surfaceSheet` is the same near-black (`#111113` dark /
+    /// `#ffffff` light) every other content sheet in this app already paints
+    /// — `DSTray`'s own `presentationBackground`, `ThingSheetView`, the risen
+    /// agent surface — so this panel now matches the surface it is a sibling
+    /// of instead of arguing for a fourth reading of "clear" against it.
     private var glass: some View {
-        if #available(iOS 26.0, *) {
-            Color.clear.glassEffect(.regular, in: shape)
-        } else {
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .opacity(0.35)
-                .overlay {
-                    LinearGradient(
-                        stops: [.init(color: DS.glassSheen, location: 0),
-                                .init(color: DS.glassSheen.opacity(0.25), location: 0.12),
-                                .init(color: .clear, location: 0.30)],
-                        startPoint: .topLeading, endPoint: .bottom)
-                }
-                .overlay {
-                    LinearGradient(
-                        stops: [.init(color: .clear, location: 0.32),
-                                .init(color: DS.glassDepth, location: 1)],
-                        startPoint: .top, endPoint: .bottom)
-                }
-        }
+        DS.surfaceSheet
     }
 
     /// One gesture, three outcomes: grow, collapse, or let go.

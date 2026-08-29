@@ -25,6 +25,15 @@ import SwiftUI
 ///
 /// # The tray is a PANEL OF GLASS, and the marks float on it (2026-08-16, user)
 ///
+/// **Superseded 2026-08-28 (user: "make it ink or black … get rid of the
+/// glass") — the panel `SourcesOverlay` hosts this content in is opaque
+/// `DS.surfaceSheet` ink now, not glass; see that file's `glass` property.**
+/// Everything below about NOT stacking a second container/tint/carve on the
+/// panel still holds — a filled slab was refused for reading as SEEN rather
+/// than READ, independent of what sits under it — so the layout is unchanged
+/// even though the material argument that first shipped it (an opaque slab
+/// being the one thing glass "cannot do") no longer applies to this surface.
+///
 /// The grid has been grouped by `BridgeCatalog.categories` since 2026-08-06.
 /// From 2026-08-10 to 2026-08-16 each category was a filled opaque card, which
 /// was the right answer to "it still looks like just a bunch of icons" — a
