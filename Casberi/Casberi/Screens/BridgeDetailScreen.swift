@@ -4,9 +4,14 @@ import Photos
 
 /// A bridge's detail — the app, what it can do (sentences), a one-line proof
 /// it's delivering, and its controls: Reconnect when broken, Pause/Resume, Remove with
-/// keep-or-purge. No "ask before acting" switch: every bridge is read-only
-/// today (nothing writes back to a source), so a writes toggle would be a
-/// dead control — it returns, gated to a real write, when agent writes ship.
+/// keep-or-purge. No "ask before acting" switch, and the reason has narrowed
+/// rather than gone away (2026-08-29): no bridge writes back to a SOURCE, so a
+/// per-bridge writes toggle would still be a dead control. The one write this
+/// app can make — Safe's co-signature (prd §425/§426) — is not governed by a
+/// standing switch by design: it is asked for per transaction, on the sheet,
+/// behind Face ID, which is a stronger consent than a toggle set once and
+/// forgotten. A writes toggle returns only if a bridge ever gains a write that
+/// runs unattended.
 struct BridgeDetailScreen: View {
     let bridgeID: String
     @Environment(BridgeStore.self) private var store

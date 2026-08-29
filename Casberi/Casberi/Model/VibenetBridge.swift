@@ -4,10 +4,16 @@ import SwiftData
 
 /// Base "vibenet" (2026-08-23) — an experimental, EPHEMERAL devnet testing
 /// EIP-8130 native account abstraction. Chain id 84538453, keyless RPC at
-/// `rpc.vibes.base.org`. Genuinely read-only in every sense: no signing key
-/// of this app's own touches it (unlike Safe's co-signer, prd §425/§426 —
-/// there is no counterpart here), no funds move, and nothing this file does
-/// can write to the chain. It reads a watched account's account-abstraction
+/// `rpc.vibes.base.org`. Genuinely read-only in every sense, and the sentence
+/// that used to say why has been narrowed rather than deleted (2026-08-29):
+/// there IS a key of this app's own now — `VibenetDeviceKey` makes one in this
+/// phone's Secure Enclave (prd §522) — and it has never touched this chain.
+/// `VibenetDeviceKey.sign` has no caller, so no signature exists to send, and
+/// nothing this file does can write to the chain. That pairing is the claim,
+/// not "there is no key", and `vibenet-selftest.sh` ties it to the three
+/// sentences the app SHOWS a person: the catalog bullet, the `canLine` below,
+/// and the reach registry's purpose. A signing path may not appear without
+/// those three moving in the same commit. It reads a watched account's account-abstraction
 /// state — is it established, which actors can act for it, is it locked —
 /// the same "riding live state, never a landed `Thing`" shape
 /// `WalletDeFi`/`SafeSigner` use, because a devnet test account has nothing

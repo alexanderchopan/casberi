@@ -187,12 +187,18 @@ enum NetworkReach {
                          "sns-sdk-proxy.bonfida.workers.dev", "lite-api.jup.ag"]),
         Endpoint(service: "Wallet DeFi & Safe",
                  reach: .whenConnected(bridge: "Wallet"),
-                 // The one SEND in this registry, and it is named in the same
-                 // breath as the reads rather than filed somewhere quieter
-                 // (prd §425). Everything else this app does is a read; if a
-                 // person is going to scan one line on this screen, it should
-                 // be the line where something leaves.
-                 purpose: "Reads your Aave, Spark and Morpho lending positions, Hyperliquid perps/spot/staked HYPE, veAERO locks on Aerodrome, and any Safe signatures awaiting you, for the wallets you watch — keyless, public data. Also reads Aave's public rate to compare against a vault you hold. If you make this phone a Safe signer and tap Sign, one 65-byte signature is sent to Safe's own service — the only thing Casberi ever sends anywhere.",
+                 // A SEND in a registry that is otherwise all reads, and it is
+                 // named in the same breath as them rather than filed somewhere
+                 // quieter (prd §425). If a person is going to scan one line on
+                 // this screen, it should be the line where something leaves.
+                 //
+                 // The superlative it used to carry ("the only thing Casberi
+                 // ever sends anywhere") is DELETED, 2026-08-29: it was true
+                 // when written and is the shape of claim that goes silently
+                 // false the day a second write ships — which is exactly the
+                 // sweep this line was found in. What is said now is a fact
+                 // about THIS send and holds however many others exist.
+                 purpose: "Reads your Aave, Spark and Morpho lending positions, Hyperliquid perps/spot/staked HYPE, veAERO locks on Aerodrome, and any Safe signatures awaiting you, for the wallets you watch — keyless, public data. Also reads Aave's public rate to compare against a vault you hold. If you make this phone a Safe signer and tap Sign, one 65-byte signature is sent to Safe's own service — a signature, never a transaction: it can never execute anything on its own.",
                  hosts: ["blue-api.morpho.org", "app.morpho.org", "app.aave.com", "app.spark.fi",
                          "api.safe.global", "api.hyperliquid.xyz"]),
         Endpoint(service: "Tokens",
@@ -270,7 +276,7 @@ enum NetworkReach {
         // constraint against ever hardcoding one of those addresses.
         Endpoint(service: "Base Vibenet",
                  reach: .whenConnected(bridge: "Base Vibenet"),
-                 purpose: "Reads a watched address's keystore state — is it established, which keys can act for it, is it locked — from vibenet, Base's devnet for testing native account abstraction (EIP-8130). Carries only the address you watch; there is no account and no key, and nothing is ever signed or sent.",
+                 purpose: "Reads a watched address's keystore state — is it established, which keys can act for it, is it locked — from vibenet, Base's devnet for testing native account abstraction (EIP-8130). Carries only the address you watch; there is no account, and nothing is ever signed or sent — a key made on this phone stays on this phone and no request here carries it.",
                  hosts: ["rpc.vibes.base.org", "api.vibes.base.org"]),
         // Ethrex Hegotá (2026-08-27) — a frame-transaction devnet. Unlike
         // vibenet above, the contracts this app reads are PREDEPLOYS at fixed

@@ -1075,10 +1075,45 @@ deny section.bare 'localized: "Queues"' "the keyed-nonce scope is named Queues a
 deny section.bare 'localized: "Lanes"'  "the keyed-nonce scope is named Lanes again — it collides with WalletFlowBand's lanes"
 deny section.bare 'localized: "Orders"' "the keyed-nonce scope is named Orders — that word is spent on trades"
 
+# THE READ PATH STAYS A READ PATH, AND THE COPY STAYS TRUE (2026-08-29).
+# `vibenet-selftest.sh` has had this guard since the day its own signer files
+# landed; Hegota had NOTHING of the kind — no signing-type grep, no write-method
+# denylist — so `HegotaBridge` could have grown a send in one commit with every
+# check here green, while three surfaces went on promising in words a person
+# reads that it never does: the catalog offer's last feature bullet, the
+# bridge's `canLine` sentence on the detail screen, and the reach registry's
+# purpose on the privacy screen.
+#
+# Both directions are failures and both are asserted. A send appearing while the
+# promises stand is the §83 lie in the place it is most expensive to tell; the
+# promises vanishing while nothing sends gives up a guarantee the seat is still
+# keeping, and nobody re-earns it. When a write really ships here, amend all
+# three sentences in the same commit and this flips to its other arm.
+#
+# Note `HegotaBridge`'s own header PROSE names the faucet and the
+# `eth_sendRawTransaction` the chain serves, which is why the denials read the
+# comment-stripped copy — a raw grep scores the paragraph explaining the rule as
+# a violation of it.
+CATALOG_H="Casberi/Casberi/Model/BridgeCatalog.swift"
+REACH_H="Casberi/Casberi/Model/NetworkReach.swift"
+for f in "$CATALOG_H" "$REACH_H"; do
+  strip_comments "$f" > "$work/$(basename $f).bare"
+done
+for m in eth_sendTransaction eth_sendRawTransaction eth_sign eth_signTransaction \
+         personal_sign eth_signTypedData SignerKey SafeSigner VibenetDeviceKey; do
+  deny HegotaBridge.swift.bare "$m" \
+    "HegotaBridge names $m — this seat must only ever read, and its copy says so on three screens"
+done
+hegota_promises=0
+grep -q 'Never signs or sends anything' "$work/BridgeCatalog.swift.bare" && hegota_promises=$((hegota_promises + 1))
+grep -q 'Read-only — this app never signs or sends anything against it' "$work/HegotaBridge.swift.bare" && hegota_promises=$((hegota_promises + 1))
+grep -q 'nothing is ever signed or sent' "$work/NetworkReach.swift.bare" && hegota_promises=$((hegota_promises + 1))
+[[ $hegota_promises -eq 3 ]] || fail "only $hegota_promises of 3 never-signs promises stand for Hegota, and nothing here can send — restore the copy or land the write with it"
+
 # This harness must stay in verify.sh's hand list (that guard fails the build
 # until it is named WITH its reason, which is the part that gets skipped).
 grep -q "hegota-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
-print "  ok   drift guards: Foundation-only, no price, no notification, the naming ruling, the frames caption and its populations"
+print "  ok   drift guards: Foundation-only, no price, no notification, the naming ruling, the frames caption and its populations, the read-only conduct guard"
 print "✓ hegota: scopes, words, spent bitmap, coins, reconciliation, fees, room head, frames, census, clock, genesis, 45 mutations, 19 drift guards"

@@ -400,7 +400,7 @@
       <div class="glance-grid">
         <a class="glance" href="#agent"><b>Keep an ask</b><span>Ask a question, keep it — it updates as your things change.</span></a>
         <a class="glance" href="#open"><b>Act on items</b><span>From your feed: open or share, in the app it came from.</span></a>
-        <a class="glance" href="#wallet"><b>Watch your wallets</b><span>Balances, activity, and what’s worth a look. Read-only, always.</span></a>
+        <a class="glance" href="#wallet"><b>Watch your wallets</b><span>Balances, activity, and what’s worth a look. Watching is read-only.</span></a>
       </div>
     </div>
 
@@ -595,7 +595,8 @@
 
     <h3 id="wallet">Wallets</h3>
     <p>Add a wallet by address, ENS, <code>.sol</code> or basename. Or connect a wallet app.</p>
-    <p><strong>It’s read-only, always.</strong> The connection asks for zero permissions, so Casberi can never trade or move funds. Name as many wallets as you like; watch up to five.</p>
+    <p><strong>Watching is read-only.</strong> The connection asks for zero permissions, so watching a wallet can never trade or move funds. Name as many wallets as you like; watch up to five.</p>
+    <p>One thing can leave, and only when you ask for it: if you make this phone an owner of a Safe, tapping Sign sends that one signature to Safe’s own service after Face ID. It can never execute a transaction, and it holds no funds.</p>
     <p>The room draws three things: <b>what you hold</b>, as one map across every wallet and chain; <b>where it moved</b>, in and out; and <b>what’s worth a look</b>.</p>
     <p>Worth a look is mostly old permissions you once gave to apps, biggest reach first. Tap one and Casberi prepares the cancellation — live amount, fee quoted. Your own wallet app does the signing.</p>
     <details class="more">
@@ -661,7 +662,7 @@
     <details><summary>Where do my things live?</summary><p>In a database on your phone. No Casberi server holds them, and iCloud sync stays off until you turn it on. Deleting is two clear choices: <strong>Delete things</strong> wipes your data (this iPhone and iCloud), <strong>Delete access</strong> removes every token and key Casberi holds.</p></details>
     <details><summary>What does it cost?</summary><p>It’s free on the App Store.</p></details>
     <details><summary>What do I need to run it?</summary><p>An iPhone, iPad, or Mac. Answers are written on your device with Apple Intelligence — nothing is billed, and no answer is sent away unless you add your own key and tap “Try with your key.” Connected apps do reach their own services to fetch your things; that traffic goes from your phone to them, never through a Casberi server.</p></details>
-    <details><summary>Can it act without asking?</summary><p>No. Typed text never saves silently, any write that leaves the app waits for a tap, and connected wallets are read-only — Casberi can never trade or move funds.</p></details>
+    <details><summary>Can it act without asking?</summary><p>No. Typed text never saves silently, and any write that leaves the app waits for a tap. Watching a wallet is read-only — it can never trade or move funds. The one thing Casberi can send is a Safe signature, and only when you tap Sign and pass Face ID; it can never execute a transaction on its own.</p></details>
   </section>
 
   <div class="doc-cta">
@@ -783,7 +784,7 @@
 {"@type":"Question","name":"Where do my things live?","acceptedAnswer":{"@type":"Answer","text":"In a database on your phone. No Casberi server holds them, and iCloud sync stays off until you turn it on. Deleting is two clear choices: Delete things wipes your data (this iPhone and iCloud); Delete access removes every token and key Casberi holds."}},
 {"@type":"Question","name":"What does it cost?","acceptedAnswer":{"@type":"Answer","text":"It is free on the App Store."}},
 {"@type":"Question","name":"What do I need to run it?","acceptedAnswer":{"@type":"Answer","text":"An iPhone. Answers are written on your phone with Apple Intelligence — nothing is billed, and no answer is sent away unless you add your own key and tap \"Try with your key.\" Connected apps do reach their own services to fetch your things; that traffic goes from your phone to them, never through a Casberi server."}},
-{"@type":"Question","name":"Can it act without asking?","acceptedAnswer":{"@type":"Answer","text":"No. Typed text never saves silently, any write that leaves the app waits for a tap, and connected wallets are read-only — Casberi can never trade or move funds."}}
+{"@type":"Question","name":"Can it act without asking?","acceptedAnswer":{"@type":"Answer","text":"No. Typed text never saves silently, and any write that leaves the app waits for a tap. Watching a wallet is read-only — it can never trade or move funds. The one thing Casberi can send is a Safe signature, and only when you tap Sign and pass Face ID; it can never execute a transaction on its own."}}
 ]}
 </script>
 </body>

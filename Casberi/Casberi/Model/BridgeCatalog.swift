@@ -604,10 +604,20 @@ enum BridgeCatalog {
         // away with the repetition; the checks now run in the read's own
         // order (established, actors, lock).
         Offer(name: "Base Vibenet", tagline: "Watch an account on Base's devnet", group: "Wallet", connectable: true,
-              summary: "Base's experimental devnet for native account abstraction (EIP-8130). No real funds, no account, no key — it only ever reads.",
+              // "no key" was true until 2026-08-29 and is not any more: the
+              // Permissions scope can make a key in this phone's Secure
+              // Enclave (prd §522). Nothing signs or sends with it yet —
+              // `VibenetDeviceKey.sign` has no caller — so the never-signs
+              // bullet STANDS and is mechanically tied to that fact by
+              // `vibenet-selftest.sh`. Both halves have to be said, because a
+              // page that says "no key" beside a Make a key button is the §83
+              // failure and a page that implies signing it cannot do is the
+              // same failure pointing the other way.
+              summary: "Base's experimental devnet for native account abstraction (EIP-8130). No real funds and no account — it only ever reads. This phone can make a key of its own for the chain, and nothing has been signed or sent with it yet.",
               features: ["Whether a watched address is established yet",
                          "Which keys — secp256k1, a passkey, a delegate — can act for it",
                          "Whether the account is locked, and whether an unlock is underway",
+                         "A key of this phone's own, made in the Secure Enclave",
                          "Never signs or sends anything — genuinely read-only"],
               needsSetup: true, added: day(2026, 8, 23)),
         Offer(name: "Ethrex Hegotá", tagline: "Watch an address on the frame-transaction devnet", group: "Wallet", connectable: true,
