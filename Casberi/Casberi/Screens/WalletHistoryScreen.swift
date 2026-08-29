@@ -158,7 +158,16 @@ private struct WalletHistoryRow: View {
     }
 
     @ViewBuilder private var liveBody: some View {
-        WalletRow(mark: .kind(thing.kind, flagged: thing.isFlagged),
+        WalletRow(mark: .kind(thing.kind, flagged: thing.isFlagged,
+                              // What this row DID, not what kind it is (prd
+                              // §516). Every row on this page is
+                              // `.transaction`, so the kind's own `⇄` was a
+                              // column of one repeated glyph — see
+                              // `WalletActionMark` for what it may read and
+                              // what it refuses to guess.
+                              symbol: WalletActionMark.symbol(
+                                        direction: thing.transferDirection,
+                                        sourceRef: thing.sourceRef)),
                   title: WalletValue.title(thing), subtitle: walletLabel, titleWraps: true) {
             Text(shortTime(thing.capturedAt))
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)

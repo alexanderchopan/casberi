@@ -10,6 +10,16 @@ struct KindGlyph: View {
     /// Override color; nil wears the kind's own hue (ruling 2026-07-05 —
     /// identity color: the shape says what it is, the hue agrees).
     var tint: Color? = nil
+    /// Override SYMBOL; nil wears the kind's own (prd §516, 2026-08-28).
+    ///
+    /// The one exception to the rule above this struct, and it is narrow: in a
+    /// room where every row is the SAME kind, that kind's symbol has stopped
+    /// distinguishing anything and is drawn a dozen times in a column. Today
+    /// only `WalletActionMark` supplies one, for a wallet's own history — a
+    /// send, a receipt, a mint and a grant, which are four different events
+    /// wearing one arrow. The HUE stays the kind's, so the column still reads
+    /// as one family; only the shape varies (§443's no-verdict-colour rule).
+    var symbol: String? = nil
 
     @Environment(\.colorScheme) private var scheme
 
@@ -22,7 +32,7 @@ struct KindGlyph: View {
             .fill(base.opacity(scheme == .light ? 0.22 : 0.16))
             .frame(width: size, height: size)
             .overlay(
-                Image(systemName: kind.symbol)
+                Image(systemName: symbol ?? kind.symbol)
                     .font(.system(size: size * 0.5,
                                   weight: scheme == .light ? .semibold : .medium))
                     .foregroundStyle(color)

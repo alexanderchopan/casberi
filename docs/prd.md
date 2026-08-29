@@ -37737,3 +37737,45 @@ Three sentences fixed it, each where the question is actually asked. The placeho
 **That row is STATED, never a toggle, and the distinction is §83's.** Bitcoin has no `WalletChainStore` id to switch — it rides neither Alchemy nor Zerion, which is the same reason it is kept out of `WalletIngest.allChains` — and it reads only when a Bitcoin address is actually watched, so a switch would govern nothing at all for everyone watching none. It is not a `Button`, so there is no tap to disappoint, and the trailing words ("When you watch one") carry the condition rather than a checkmark implying a setting. The section footer says the rest.
 
 **Standing lesson, and this is the fourth room it has been learned in** (§283's Files pixels, §313's X words, §397's Instagram covers): when a capability is reported missing, check whether the READ exists before building anything. Three of those four were a surface catching up with data the app had already gone and got; this one is a surface catching up with a door that was already open.
+
+## 516. A transaction row says what it DID (user: "this activity sheet in wallet uses the same icons for each action, but send should be different arrow than receive. mint should be something and so on. can we change them so it's not a wall of the same icon", 2026-08-28)
+
+Reported against the wallet's own history page (`WalletHistoryScreen`), and the screenshot is the argument: twelve rows, four different events between them — a send, a receipt, a mint, a swap — and one identical `⇄` glyph twelve deep down the left edge.
+
+**The cause is a design rule working exactly as written, in the one room it does not fit.** `KindGlyph` draws one symbol per `ThingKind`, "one weight, one fill, everywhere — consistency is what reads as finished", and every onchain row in this app is `ThingKind.transaction`. In a mixed feed that glyph is the row's most useful fact. In a room where every row is that kind, it is the row's only useless one: it says the thing every row already agrees on, in the slot the eye reaches before the words.
+
+So this is a **scoped exception** rather than a repeal. `KindGlyph` gains an optional `symbol`, supplied today by `WalletActionMark` alone, and only two surfaces ask for it: this page, and an address's own history (`AddressHistoryScreen`). Everywhere else a wallet row leads with a BLOCKIE (`BandRow.leader`), so the wall never forms there and nothing changes.
+
+### 1. Every answer comes from a stamped field or from the ref
+
+§363's rule, and the reason `WalletActionMark.symbol` takes `direction`/`sourceRef` rather than a title: a localized title reorders, and "Sent" and "Minted" are the two words most likely to be translated into a shape a prefix test could not match. A glyph derived from prose would be wrong in exactly the languages nobody here reads. Two inputs, both data:
+
+- **The ref** — an approval announces itself by its namespace (`wallet:approval:` / `wallet:permit2:`). This was the most wrong of the lot: a grant is the row saying somebody else can move your money, and it wore the two-way *exchange* arrow. It now wears `hand.raised`, which is what `ThingKind.approval` has always drawn.
+- **`transferDirection`** — `"sent"` → `arrow.up.right`, `"received"` → `arrow.down.left`.
+
+### 2. The mint had no fact to read, so one was stamped
+
+`WalletIngest`'s void arm (`WalletVerbs.voidVerb` — the other side is `0x…0000`) deliberately stamped no direction, on the reasoning that "a mint has no counterparty to rename and no side to face". True of the STAGE, and it left the shape existing only inside the sentence.
+
+`transferDirection` is a **raw string by its own contract**, chosen so that "an unknown future value from a newer synced device degrades to the title-parse fallback". That clause is used deliberately here: the arm stamps `"minted"` / `"burned"`, and every one of the dozen existing readers gates on `"sent"`/`"received"` explicitly, so none of them sees the new values. **No new `Thing` property, so no CloudKit Production deploy.**
+
+One reader did not gate, and it was a latent bug rather than a new one: `KeptAskComposers.activityRows` accepted any non-empty direction and printed everything that was not `"received"` as **"Sent"** — which for a mint would be a wrong verb over an empty amount with no counterparty. It gates on the two directional values now.
+
+**Rows already in the store are healed where the evidence still exists.** `WalletIngest.healLandedTransfers` — which already backfills the price and the spam flag on legs it re-reads — fills a nil direction from the LEG's own void counterparty, the same evidence the landing arm used. It is bounded by the read window like every other heal there, which is stated rather than papered over: **a mint older than that window keeps the generic mark forever**, because nothing on such a row separates a mint from a burn and the title is the one place this may not look. An honest generic mark beats a coin flip.
+
+### 3. What it refuses to answer
+
+**A swap, a wrap, a stake, a deposit and a self-move all keep `⇄`, and that is correct rather than a gap.** Each is genuinely two-legged, which is what that arrow says. They are also not separable from one another by any stamped fact: a swap stores its router in `counterpartyAddress`, a self-move stores one of your own wallets there, and telling those apart needs the watch list — which is a fact about your setup, not about the row.
+
+### 4. No colour, and that is a ruling
+
+The mark keeps the kind's own hue on every action; only the shape varies. §443 settled this for the same rows one screen over: green on an inbound transfer congratulates you for being paid back and congratulates you identically for being dusted, and red on an outbound one calls paying rent a loss. `wallet-action-mark-selftest.sh` fails the build if the file ever names a state colour.
+
+### 5. The harness, and why one is owed for eleven lines
+
+`Model/WalletActionMark.swift` is Foundation-only by design and `scripts/wallet-action-mark-selftest.sh` compiles it WHOLE and unmodified (in `verify.sh`): 30 assertions, 8 mutations, 12 drift guards. Nothing else in the tree can see any of these failures — the compiler is happy with any string that is a symbol name, the screen sweep proves a row painted and never that it painted the right glyph, and every failure renders as a perfectly ordinary row. Three are actively misleading: the approval namespace drifting so a grant silently rejoins the exchange bucket (**§311's shape exactly** — the room does not break, it goes quiet), sent and received swapped so the mark states the opposite of the word eight points to its right on a ledger, and the default arm claiming a shape for the swaps and self-moves it exists to refuse.
+
+Two assertions are the feature stated in its own terms rather than by fixture: **five actions must resolve to five different marks**, and **none of them may be the kind's own two-way arrow** — an action that collides with the generic bucket is an action that was never pulled out of it, which is the exact complaint this section answers.
+
+**Seen on a device.** All five marks were checked on the iPhone 17 Pro simulator over the demo corpus: send ↗, receipt ↙, mint (`sparkles`), burn (`flame`), grant (`hand.raised`), and `⇄` still standing on the swap, the Solana buy and the staked-HYPE unlock. Two demo gaps were closed to make that possible and are worth keeping: `DemoSeedAll.walletRoom` now seeds a mint and a burn (two of the five marks had no row to draw on any corpus this project can show itself), and `DemoCorpus`'s four dev fixtures — which predate `transferDirection` entirely — carry the field on their two directional rows. Direction only, never an amount: every other reader of that field requires both, so the stamp is inert everywhere except the mark.
+

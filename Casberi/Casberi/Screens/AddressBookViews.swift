@@ -2673,7 +2673,12 @@ struct AddressHistoryScreen: View {
                         // Corollary 3 (build 176) — see `ThingRowKeying`.
                         if let thing = row.live {
                             HStack(spacing: DS.Space.s3) {
-                                KindGlyph(kind: thing.kind, size: 26)
+                                // The action, not the kind (prd §516) — this
+                                // list is every kind `.transaction` too.
+                                KindGlyph(kind: thing.kind, size: 26,
+                                          symbol: WalletActionMark.symbol(
+                                            direction: thing.transferDirection,
+                                            sourceRef: thing.sourceRef))
                                 // The FULL title here, counterparty clause and
                                 // all — unlike the card, this screen is not
                                 // itself the counterparty, and it is where
