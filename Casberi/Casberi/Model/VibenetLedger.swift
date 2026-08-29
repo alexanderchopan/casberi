@@ -805,3 +805,233 @@ enum VibenetLockDetail {
         return String(localized: "opens \(at.formatted(.relative(presentation: .named)))")
     }
 }
+
+// MARK: - Is this account deployed? (prd §515)
+
+/// **THE GATE THAT WENT DARK, AND WHY IT IS NOT AN `eth_call` ANY MORE
+/// (2026-08-29, prd §515).**
+///
+/// `VibenetRead.account` opened with `isContractEstablished(address)` —
+/// selector `0x28a4c4cb` on the Keystore — and treated a failed call as
+/// `reached: false`. On 2026-08-29 the whole seat went dark: every watched
+/// account read *"Couldn't reach the chain"*, no row landed, and the room
+/// said *"Nothing has landed here yet"*.
+///
+/// **MEASURED against the live devnet that day**, and it was not the network:
+/// vibenet's contracts had redeployed (config `_commit` a9ae95e1b →
+/// 3a23204ca, and the chain itself reset — `eth_chainId` 0x509E455 →
+/// 0x509F455, tip 285,133 → 169,545) and **`0x28a4c4cb` IS NOT IN THE NEW
+/// KEYSTORE'S BYTECODE AT ALL** (10,420 bytes, dispatcher swept for every
+/// `PUSH4`; the selector is absent, and `eth_call` answers
+/// `execution reverted` for *every* address — the config's own
+/// `DefaultAccount` and four accounts demonstrably authorized in that same
+/// Keystore's logs included). The other five Keystore selectors this file
+/// calls all survived, so exactly one read broke and it happened to be the
+/// one every other read is gated behind.
+///
+/// **The lesson, which is the part worth keeping when today's selector is
+/// wrong again: the reachability gate must not be a call the counterparty
+/// can delete.** `eth_getCode` is JSON-RPC, not the Keystore's ABI — no
+/// redeploy can remove it — so `reached` now means "the node answered" and
+/// nothing else, which is what the word was always supposed to mean. This is
+/// also the honest reading of §463's own copy: an EIP-8130 account is
+/// counterfactual until its first transaction deploys it, so *deployed* is
+/// the fact the room was already describing.
+///
+/// **A 7702 DELEGATION COUNTS AS DEPLOYED, and getting this wrong is the
+/// trap.** Of the nine accounts this Keystore's logs name, **four carry a
+/// `0xef0100…` delegation designator rather than ordinary code** — measured
+/// the same day. `AddressKind.hasCode` deliberately skips that prefix (a
+/// delegated EOA is a person, not a contract, prd 2026-07-25) and reusing it
+/// here would mark every 7702 vibenet account *not established* while its
+/// keys, its lock and its history all read perfectly: a silent wrong answer
+/// on the one line the room leads with.
+///
+/// **STATED CEILING.** This proves an address has code, never that the
+/// Keystore holds a config for it. The two agreed on all nine sampled
+/// accounts, and where they could ever disagree the roster below it is the
+/// stronger evidence — which is why `VibenetRoom.rowLine` reads the actor
+/// count next, not this.
+enum VibenetDeployment {
+
+    /// Whether `eth_getCode`'s answer describes a deployed account.
+    ///
+    /// Nil in, false out — but note the CALLER must not collapse the two: a
+    /// nil from the node is *unreached*, and passing it here as `"0x"` is
+    /// exactly the conflation this whole type exists to end.
+    static func isDeployed(code: String?) -> Bool {
+        guard var hex = code else { return false }
+        if hex.hasPrefix("0x") || hex.hasPrefix("0X") { hex.removeFirst(2) }
+        // A node may answer "0x", "0x0", or an empty string for an address
+        // with no code; none of them is a deployment. Anything with a single
+        // non-zero nibble is real code — including a `0xef0100…` delegation,
+        // whose whole point is that it is short.
+        return hex.contains { $0 != "0" }
+    }
+
+    /// Whether this code is an EIP-7702 delegation designator rather than
+    /// ordinary account bytecode. Not a gate — the room says which KIND of
+    /// deployment it is looking at, and a delegated account is the common
+    /// case on this devnet (4 of 9 sampled).
+    static func isDelegation(code: String?) -> Bool {
+        guard var hex = code?.lowercased() else { return false }
+        if hex.hasPrefix("0x") { hex.removeFirst(2) }
+        return hex.hasPrefix("ef0100") && hex.count == 6 + 40
+    }
+
+    /// The address a 7702 account delegates to, or nil.
+    static func delegate(code: String?) -> String? {
+        guard isDelegation(code: code), var hex = code?.lowercased() else { return nil }
+        if hex.hasPrefix("0x") { hex.removeFirst(2) }
+        return "0x" + String(hex.dropFirst(6))
+    }
+}
+
+// MARK: - Has the chain underneath us been reset? (prd §515)
+
+/// **WHAT A DEVNET RESET LOOKS LIKE FROM HERE, AND WHY THE ROOM MUST SAY IT
+/// (2026-08-29, prd §515).**
+///
+/// vibenet is reset outright, not merely redeployed: on 2026-08-29 its
+/// genesis block was timestamped **the previous evening**, the tip had fallen
+/// from 285,133 to 169,545, and `eth_chainId` had stepped 0x509E455 →
+/// 0x509F455. Every account's on-chain state — its keys, its lock, its
+/// history — was gone, while the ADDRESS survived: an EIP-8130 account is
+/// counterfactual, so the same address comes back the moment it transacts
+/// again. *"Top up the account and it redeploys"* is the user's own account
+/// of it.
+///
+/// So the room's job is not to tell anyone to re-watch anything. It is to
+/// stop the two states looking alike: **a devnet that was wiped last night**
+/// and **an app that has stopped reading**. Without this they render
+/// identically — an empty room and a cheerful "it syncs on its own".
+///
+/// Pure so `scripts/vibenet-selftest.sh` compiles it; the UserDefaults half
+/// is `VibenetSeenChain` in `VibenetBridge.swift`, the split
+/// `VibenetSeenCommit` already draws.
+enum VibenetChainReset {
+
+    enum Verdict: Equatable {
+        /// Nothing stored yet — a first-ever read can never report a reset,
+        /// the rule `VibenetSeenCommit` and `AddressConnectionsSeen` already
+        /// keep. Silent by design.
+        case firstSight
+        /// Same chain, no regression. The ordinary answer.
+        case same
+        /// The chain identifier changed — proof, not inference.
+        case newChain(from: Int, to: Int)
+        /// Same identifier, but the tip is materially BELOW the highest this
+        /// device has seen. A chain cannot un-mine blocks, so this is a
+        /// reset that reused its id (or a reorg deep enough to be one).
+        case rewound(from: Int, to: Int)
+
+        var isReset: Bool {
+            switch self {
+            case .firstSight, .same:        return false
+            case .newChain, .rewound:       return true
+            }
+        }
+    }
+
+    /// How far the tip must fall below the high-water mark before it is
+    /// called a rewind. Generous on purpose: this devnet's own measured rate
+    /// is on the order of a block a second, so a few blocks of disagreement
+    /// between nodes must never be reported to anyone as a wipe. A real
+    /// reset drops the tip by six figures.
+    static let rewindFloor = 1_000
+
+    /// `storedChainID`/`storedHighWater` are what this device last saw; nil
+    /// for either means it has never looked.
+    static func verdict(storedChainID: Int?, liveChainID: Int?,
+                        storedHighWater: Int?, liveTip: Int?) -> Verdict {
+        guard let liveChainID else {
+            // The node did not say. Not knowing is not evidence of a reset —
+            // the same rule `AgentBudget` keeps about an unreadable spend.
+            return storedChainID == nil ? .firstSight : .same
+        }
+        guard let storedChainID else { return .firstSight }
+        if storedChainID != liveChainID {
+            return .newChain(from: storedChainID, to: liveChainID)
+        }
+        guard let storedHighWater, let liveTip else { return .same }
+        if storedHighWater - liveTip >= rewindFloor {
+            return .rewound(from: storedHighWater, to: liveTip)
+        }
+        return .same
+    }
+
+    /// The high-water tip to store next, given what was stored and what the
+    /// node just said. A reset RESTARTS the mark at the live tip; otherwise
+    /// it only ever climbs.
+    static func nextHighWater(stored: Int?, liveTip: Int?, verdict: Verdict) -> Int? {
+        guard let liveTip else { return stored }
+        if verdict.isReset { return liveTip }
+        guard let stored else { return liveTip }
+        return max(stored, liveTip)
+    }
+}
+
+// MARK: - What the empty vibenet room says (prd §515)
+
+/// **THE ROOM'S OWN SENTENCE WHEN IT HAS NOTHING (2026-08-29, prd §515).**
+///
+/// `RoomQuiet` (§299) generalised "a room states its CONNECTION's state" and
+/// left one channel open for a bridge that can do better: `emptyReadNote` —
+/// *a successful read that finds NOTHING explains itself*. That channel is
+/// declared on `TokenBridge`, and vibenet is not one, so this seat fell to
+/// the generic line: **"Nothing has landed here yet. It syncs on its own —
+/// this room fills as things arrive."**
+///
+/// On the day the devnet was wiped and every account went counterfactual,
+/// that sentence was wrong in the §299 way §299 was written to prevent: a
+/// cheerful "give it time" over a chain that no longer contained anything to
+/// give. Five different situations rendered as that one sentence and only
+/// one of them was "wait".
+///
+/// Pure, and deliberately says NOTHING it has not been handed: an unreached
+/// chain is never reported as an empty one (§83), and a reset is stated only
+/// where `VibenetChainReset` actually observed one — never inferred from
+/// emptiness, which is the same shape as the standing "never prune on an
+/// empty upstream read" rule.
+enum VibenetQuiet {
+
+    /// The sentence `RoomQuiet` should use instead of its generic one, or
+    /// nil to keep that one.
+    ///
+    /// - `watching`: how many accounts are watched.
+    /// - `deployed`: how many of them the last read found deployed.
+    /// - `reachedChain`: whether that read reached the node at all.
+    /// - `sawReset`: whether this device has observed a chain reset since it
+    ///   last looked (`VibenetChainReset.Verdict.isReset`).
+    static func emptyRoomNote(watching: Int, deployed: Int,
+                              reachedChain: Bool, sawReset: Bool) -> String? {
+        // Nothing watched: the generic invitation is close enough, and the
+        // room's own door already says what to do.
+        guard watching > 0 else { return nil }
+
+        // NOT KNOWING IS NOT AN ANSWER. This must come before every sentence
+        // below, all of which describe the chain's contents.
+        guard reachedChain else {
+            return String(localized: "The devnet didn't answer this read, so there's nothing to show yet — not because it's empty, but because we couldn't look. It retries on its own.")
+        }
+
+        if sawReset {
+            // The whole point: name what happened, and say the thing that is
+            // easy to get wrong — the address survives.
+            return deployed > 0
+                ? String(localized: "vibenet was reset since you last looked, so its history starts again from here. Your accounts kept their addresses and are back on the new chain.")
+                : String(localized: "vibenet was reset since you last looked — the chain it ran on is gone. Your accounts keep their addresses: each one comes back the moment it transacts again.")
+        }
+
+        if deployed == 0 {
+            // §463's explainer, at room scale. Reachable at last: before this
+            // pass an undeployed account could never be `reached`, so the
+            // sentence written for exactly this case could never be shown.
+            return watching == 1
+                ? String(localized: "The account you're watching isn't deployed on vibenet yet. It deploys with its first transaction — until then there's nothing on chain to read.")
+                : String(localized: "None of the accounts you're watching is deployed on vibenet yet. An account deploys with its first transaction — until then there's nothing on chain to read.")
+        }
+
+        return String(localized: "Nothing has happened on your accounts yet. Keys, locks and transfers land here as they happen.")
+    }
+}

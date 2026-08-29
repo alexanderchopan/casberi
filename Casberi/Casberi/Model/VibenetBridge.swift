@@ -463,7 +463,13 @@ actor VibenetTipCache {
 
 enum VibenetChain {
     static let network = "vibenet"
-    static let chainID = 84_538_453
+    /// **RETIRED AS A LITERAL (prd §515).** It read `84_538_453`, nothing
+    /// ever used it, and by 2026-08-29 the devnet had reset past it to
+    /// `84_542_549` — a stale fact nobody could notice because nobody asked
+    /// it. `chainIdentifier()` reads it live; this is the value this device
+    /// first shipped knowing, kept only so the reset ledger has a floor to
+    /// describe and never as an assertion about the chain now.
+    static let firstKnownChainID = 84_538_453
     static let rpc = "https://rpc.vibes.base.org"
 
     static func call(method: String, params: [Any]) async -> Any? {
@@ -475,6 +481,64 @@ enum VibenetChain {
 
     static func ethCall(to: String, data: String) async -> String? {
         await call(method: "eth_call", params: [["to": to, "data": data], "latest"]) as? String
+    }
+
+    /// WHY A REVERT AND A SILENCE ARE TWO ANSWERS (prd §515).
+    ///
+    /// `call` maps both a transport failure and a JSON-RPC `error` object to
+    /// nil, which is right for every caller that only wants the value — and
+    /// is how the 2026-08-29 outage stayed invisible for a day. The Keystore
+    /// had dropped `isContractEstablished`, so every `eth_call` came back
+    /// `execution reverted`, and the room reported *"Couldn't reach the
+    /// chain"* over a devnet that was answering every single request.
+    ///
+    /// Nothing on the read path is gated on this any more (see
+    /// `VibenetDeployment`) — it exists so `-vibenetProbe` can tell the two
+    /// apart in one launch, which is the diagnostic that would have named
+    /// that bug the moment it landed instead of a day later.
+    enum CallOutcome: Equatable {
+        case value(String)
+        /// The node answered, and the answer was a revert — the contract
+        /// does not have this method, or refused it.
+        case reverted(String?)
+        /// No usable answer at all.
+        case unreachable
+    }
+
+    static func ethCallOutcome(to: String, data: String) async -> CallOutcome {
+        let body: [String: Any] = ["id": 1, "jsonrpc": "2.0", "method": "eth_call",
+                                   "params": [["to": to, "data": data], "latest"]]
+        guard let root = await IngestSupport.postJSON(rpc, body: body) as? [String: Any] else {
+            return .unreachable
+        }
+        if let hex = root["result"] as? String { return .value(hex) }
+        if let error = root["error"] as? [String: Any] {
+            return .reverted(error["message"] as? String)
+        }
+        return .unreachable
+    }
+
+    /// An address's deployed code — the reachability gate (prd §515).
+    ///
+    /// Plain JSON-RPC, deliberately: `eth_getCode` belongs to the node, not
+    /// to any contract, so no redeploy can take it away. That is the whole
+    /// reason it replaced a Keystore view method here; see
+    /// `VibenetDeployment` for the measurement.
+    static func getCode(address: String) async -> String? {
+        await call(method: "eth_getCode", params: [address, "latest"]) as? String
+    }
+
+    /// The chain's own identifier, read rather than assumed (prd §515).
+    ///
+    /// It was a literal — `84_538_453` — and by 2026-08-29 it was wrong:
+    /// vibenet had reset and stepped to `84_542_549`. Nothing read the
+    /// constant, so nothing broke and nothing said so, which is exactly the
+    /// shape of fact this file's header warns about. Now it is a live read,
+    /// and the step between the two IS the reset signal.
+    static func chainIdentifier() async -> Int? {
+        guard let hex = await call(method: "eth_chainId", params: []) as? String else { return nil }
+        let n = WalletIngest.hexToInt(hex)
+        return n > 0 ? n : nil
     }
 
     static func blockNumber() async -> Int? {
@@ -687,10 +751,23 @@ enum VibenetABI {
         return String(repeating: "0", count: 64 - s.count) + s
     }
 
-    /// `isContractEstablished(address)` — 0x28a4c4cb
-    static func isEstablishedCall(_ address: String) -> String {
-        "0x28a4c4cb" + padAddress(address)
-    }
+    /// **`isContractEstablished(address)` — 0x28a4c4cb — IS GONE, and this
+    /// note is the point of the comment (prd §515).**
+    ///
+    /// It was the first call of every account read and the gate `reached`
+    /// hung on. On 2026-08-29 the Keystore redeployed (config `_commit`
+    /// a9ae95e1b → 3a23204ca) WITHOUT it: the selector appears nowhere in
+    /// the new 10,420-byte runtime, and `eth_call` answers
+    /// `execution reverted` for every address — including the config's own
+    /// `DefaultAccount` and four accounts that Keystore's own logs show as
+    /// authorized. The whole seat read "Couldn't reach the chain".
+    ///
+    /// It is DELETED rather than kept as a fallback, for `vibecheck`'s own
+    /// reason (prd §507): a call that reverts for every address buys one
+    /// failing round trip per account per pass, forever, in exchange for
+    /// nothing. `VibenetDeployment` is what replaced it.
+    ///
+    /// Do not restore it without measuring it against the live devnet first.
 
     /// `getActorConfig(address,bytes32)` — 0xd1a62df4
     static func actorConfigCall(_ address: String, actorId: String) -> String {
@@ -1206,14 +1283,17 @@ enum VibenetRead {
     /// guess.
     static func account(_ address: String, contracts: VibenetContracts,
                         tokens: [Token] = []) async -> VibenetAccountItem {
-        guard let establishedWord = await VibenetChain.ethCall(
-            to: contracts.keystore, data: VibenetABI.isEstablishedCall(address))
-        else {
+        // THE GATE (prd §515). `eth_getCode`, not a Keystore view method:
+        // this is the one call in the read that decides whether the node was
+        // reached at all, and a redeploy must never be able to delete it.
+        // See `VibenetDeployment` for the day this was measured and the
+        // 7702 trap it names.
+        guard let code = await VibenetChain.getCode(address: address) else {
             return VibenetAccountItem(address: address, reached: false, established: false,
                                       actors: [], locked: false, hasInitiatedUnlock: false,
                                       unlocksAt: nil, unlockDelay: nil)
         }
-        let established = WalletIngest.hexToDouble(establishedWord) != 0
+        let established = VibenetDeployment.isDeployed(code: code)
 
         async let eventsTask = actorEvents(account: address, keystore: contracts.keystore)
         async let lockTask = VibenetChain.ethCall(
@@ -1587,6 +1667,112 @@ enum VibenetSeenCommit {
     }
 }
 
+/// **THE CHAIN THIS DEVICE LAST SAW (prd §515).**
+///
+/// `VibenetSeenCommit`'s neighbour and its exact shape, for a stronger fact:
+/// that one notices the CONTRACTS moving, this notices the CHAIN UNDER THEM
+/// being replaced. On 2026-08-29 both happened at once and neither was
+/// visible anywhere in the app.
+///
+/// Storage only — the judgement is `VibenetChainReset`, where the harness can
+/// compile it.
+enum VibenetSeenChain {
+    private static let chainKey = "vibenet.chain.lastSeenID"
+    private static let tipKey = "vibenet.chain.highWaterTip"
+    /// The verdict of the most recent check, so the room can state it without
+    /// re-reading the chain (and without a second check ADVANCING the stored
+    /// values, which would make the reset un-sayable one pass later).
+    private static let stickyKey = "vibenet.chain.resetSeenAt"
+
+    /// Reads the chain, compares, advances, and — on a real reset — forgets
+    /// the per-address caches that describe a chain which no longer exists.
+    ///
+    /// EVERY CALL IS ALSO THE WRITE, `VibenetSeenCommit`'s rule, so a first
+    /// call can never report a reset.
+    @discardableResult
+    static func check() async -> VibenetChainReset.Verdict {
+        let liveID = await VibenetChain.chainIdentifier()
+        let liveTip = await VibenetChain.cachedTip()
+        let storedID = UserDefaults.standard.object(forKey: chainKey) as? Int
+        let storedTip = UserDefaults.standard.object(forKey: tipKey) as? Int
+        let verdict = VibenetChainReset.verdict(storedChainID: storedID, liveChainID: liveID,
+                                                storedHighWater: storedTip, liveTip: liveTip)
+        if let liveID { UserDefaults.standard.set(liveID, forKey: chainKey) }
+        if let next = VibenetChainReset.nextHighWater(stored: storedTip, liveTip: liveTip,
+                                                      verdict: verdict) {
+            UserDefaults.standard.set(next, forKey: tipKey)
+        }
+        if verdict.isReset {
+            UserDefaults.standard.set(Date(), forKey: stickyKey)
+            forgetChainState()
+        }
+        return verdict
+    }
+
+    /// Whether a reset was observed recently enough to still be the reason
+    /// this room is empty. A WINDOW, not a flag: a month later "vibenet was
+    /// reset since you last looked" is no longer the explanation for
+    /// anything, and a sentence that never expires becomes furniture.
+    static let sayItFor: TimeInterval = 7 * 86_400
+
+    static func sawResetRecently(now: Date = .now) -> Bool {
+        guard let at = UserDefaults.standard.object(forKey: stickyKey) as? Date else { return false }
+        return now.timeIntervalSince(at) < sayItFor
+    }
+
+    static func describe(_ verdict: VibenetChainReset.Verdict) -> String {
+        switch verdict {
+        case .firstSight:               return "first sight (silent by design)"
+        case .same:                     return "same chain"
+        case let .newChain(from, to):   return "RESET — chain id \(from) → \(to)"
+        case let .rewound(from, to):    return "RESET — tip rewound \(from) → \(to)"
+        }
+    }
+
+    /// **WHAT A RESET FORGETS, BY NAME (prd §515).**
+    ///
+    /// Every one of these is a snapshot OF A CHAIN THAT NO LONGER EXISTS: a
+    /// balance sampled from it, a key roster read off it, the contract set it
+    /// carried. Kept, they would be shown as the current state of a devnet
+    /// that was wiped.
+    ///
+    /// Three deliberate NON-deletions, each with its reason:
+    ///
+    /// - **The watch list stays.** An EIP-8130 account is counterfactual, so
+    ///   the address survives the reset and comes back the moment it
+    ///   transacts. Dropping it would make the person re-enter an address
+    ///   that was never wrong.
+    /// - **Landed `Thing`s stay.** The standing rule (`delete-guard-audit.py`)
+    ///   is that upstream going quiet is never licence to prune, and it holds
+    ///   doubly here: those events DID happen, they are dated by the block
+    ///   times they really had, and their refs are keyed on transaction hash
+    ///   so nothing on the new chain can collide with them.
+    /// - **`VibenetSeenCommit` stays.** It answers a different question — did
+    ///   the CONTRACTS move — and clearing it would silence the redeploy
+    ///   notice on exactly the pass that most needs it.
+    static func forgetChainState() {
+        // The contracts: a reset redeploys them, so the cached set names
+        // addresses that no longer hold code.
+        VibenetConfig.forgetCache()
+        // The room snapshot: keys, locks and rosters read off the dead chain.
+        // One empty head until the next read lands is the right cost — the
+        // alternative is drawing a wiped account's key roster as current.
+        VibenetState.forget()
+        // Which keys this device has already seen, per account. Kept, the
+        // next read would diff a fresh chain's roster against a dead one's
+        // and announce every key as revoked.
+        VibenetKeysSeen.forget()
+        // The balance curve, and the per-block backfill behind it. Note the
+        // DIVERGENCE from a redeploy, which deliberately keeps both (see
+        // `VibenetBackfillLedger.forget`'s own doc: a contract deployment
+        // does not rewrite a chain's past blocks). A RESET does exactly that
+        // — those blocks are gone — so here they go.
+        VibenetValueStore.forget()
+        VibenetBackfillLedger.forget()
+        Task { await VibenetTipCache.shared.forget() }
+    }
+}
+
 /// WHICH KEYS THIS DEVICE HAS ALREADY SEEN, per account — the ledger behind
 /// `VibenetKeyChanges`. `VibenetSeenCommit`'s neighbour and its exact shape,
 /// for its exact reason: "have you looked at this" is a fact about this
@@ -1655,6 +1841,13 @@ enum VibenetRoomSource {
         // vibenet moves under you). `VibenetRoom.demoFixture()` is the
         // snapshot instead, returned before this ever touches the network.
         if DemoMode.isActive { return VibenetRoom.demoFixture() }
+        // HAS THE CHAIN BEEN REPLACED UNDER US (prd §515) — asked FIRST, and
+        // the order is load-bearing: a reset forgets the cached contract set,
+        // so this has to run before `current()` or the pass below reads a
+        // still-fresh cache naming a Keystore that no longer holds code. It
+        // also forgets the room snapshot and the balance curve, both of which
+        // describe a chain that is gone.
+        await VibenetSeenChain.check()
         guard let contracts = await VibenetConfig.current() else {
             return VibenetRoom.compose(items: [], branch: nil, commit: nil, configReached: false)
         }

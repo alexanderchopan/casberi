@@ -134,6 +134,10 @@ strip_comments "$ROOM"   > "$TMP/room.nc.swift"
 strip_comments "$BRIDGE" > "$TMP/bridge.nc.swift"
 strip_comments "$SETUP" > "$TMP/setup.nc.swift"
 strip_comments "$BOOK"  > "$TMP/book.nc.swift"
+# prd §517 — the lookup is its own surface now.
+WATCHSHEET="Casberi/Casberi/Screens/VibenetWatchSheet.swift"
+[[ -f "$WATCHSHEET" ]] || { echo "✗ $WATCHSHEET not found"; exit 1; }
+strip_comments "$WATCHSHEET" > "$TMP/sheet.nc.swift"
 strip_comments "$FIELD" > "$TMP/watch.nc.swift"
 strip_comments "$SPINE" > "$TMP/spine.nc.swift"
 SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
@@ -153,11 +157,18 @@ strip_comments "$FEED"    > "$TMP/feed.nc.swift"
 # files document the rule by naming the very thing they must not do (the
 # Obsidian/Cursor lesson).
 
-# The book holds the MANAGING roster. `VibenetRoomCard` draws every watched
-# account as a navigable, renameable, removable row only when `onOpen` is
-# non-nil; without this the book is a screen with a field and no list.
-grep -q 'onOpen:' "$TMP/book.nc.swift" \
-  || { echo "✗ VibenetAddressBookScreen no longer passes onOpen — the roster is not in managing mode"; exit 1; }
+# The book holds the MANAGING roster, and §517 moved it out of
+# `VibenetRoomCard`'s managing mode and onto the screen itself — the ruling
+# is that the book LISTS what you watch and lets you open, rename and drop
+# each one; where those rows are drawn is not the ruling. Without all three
+# the book is a screen with a lookup and no list, which is what §465 split
+# the screens to prevent.
+grep -q 'VibenetAccountSheet(address:' "$TMP/book.nc.swift" \
+  || { echo "✗ VibenetAddressBookScreen no longer opens an account — the roster is not navigable"; exit 1; }
+grep -q 'renamingAddress = item.address' "$TMP/book.nc.swift" \
+  || { echo "✗ VibenetAddressBookScreen no longer offers rename on a row (prd §465)"; exit 1; }
+grep -q 'unwatch(item.address)' "$TMP/book.nc.swift" \
+  || { echo "✗ VibenetAddressBookScreen no longer offers stop-watching on a row (prd §465)"; exit 1; }
 
 # The setup page holds NO roster. This is the whole ruling: a VibenetRoomCard
 # back on the setup screen is the 385-line screen returning.
@@ -206,10 +217,15 @@ grep -q '"Watching"' "$TMP/watch.nc.swift" \
   || { echo "✗ a watched discovery row no longer SAYS it is watched (2026-08-28)"; exit 1; }
 
 # ONE field, shared. Copied, the two screens answer the same paste with two
-# different sentences within a release.
-for f in "$TMP/setup.nc.swift" "$TMP/book.nc.swift"; do
+# different sentences within a release. §517 MOVED the book's copy into
+# `VibenetWatchSheet` — the ruling is unchanged, its address is not: the
+# lookup is a sheet now rather than an unfold, so the sheet is where the book
+# reaches the shared control.
+for f in "$TMP/setup.nc.swift" "$TMP/sheet.nc.swift"; do
   grep -q 'VibenetWatchField' "$f" \
     || { echo "✗ $f no longer uses the shared VibenetWatchField (prd §465)"; exit 1; }
+done
+for f in "$TMP/setup.nc.swift" "$TMP/sheet.nc.swift" "$TMP/book.nc.swift"; do
   grep -q 'DSSlabField' "$f" \
     && { echo "✗ $f hand-rolls its own paste field — VibenetWatchField is the one control (prd §465)"; exit 1; }
 done
@@ -3716,6 +3732,128 @@ check("a POLICY RUN is not a key event — its key block would have to be guesse
 check("nor is a transfer or a creation",
       !VibenetEventFacts.Kind.moved.concernsKey && !VibenetEventFacts.Kind.created.concernsKey)
 
+
+// MARK: - prd §515 — the gate that went dark
+
+print("")
+print("VibenetDeployment — the reachability gate, after the Keystore dropped isContractEstablished")
+
+check("no code at all is not a deployment",
+      !VibenetDeployment.isDeployed(code: "0x"))
+check("an empty string is not a deployment either",
+      !VibenetDeployment.isDeployed(code: ""))
+check("a node answering all-zero nibbles is still no code",
+      !VibenetDeployment.isDeployed(code: "0x0000"))
+check("nil is not a deployment — but the CALLER must not reach here with one",
+      !VibenetDeployment.isDeployed(code: nil))
+check("ordinary bytecode is a deployment",
+      VibenetDeployment.isDeployed(code: "0x60806040523480156100"))
+// THE TRAP. Four of the nine accounts in the live Keystore's own logs are
+// 7702 delegations (measured 2026-08-29). `AddressKind.hasCode` deliberately
+// skips this prefix; reusing that rule here would mark every one of them "not
+// established" while its keys, lock and history all read perfectly.
+check("a 7702 delegation IS deployed — the measured majority case on this devnet",
+      VibenetDeployment.isDeployed(code: "0xef0100813035e3fc4a102ce2b4a73d78a25d1ea5afadef"))
+check("…and it is NAMED as a delegation rather than as ordinary code",
+      VibenetDeployment.isDelegation(code: "0xef0100813035e3fc4a102ce2b4a73d78a25d1ea5afadef"))
+check("the delegate address is read back off it",
+      VibenetDeployment.delegate(code: "0xEF0100813035E3FC4A102CE2B4A73D78A25D1EA5AFADEF")
+        == "0x813035e3fc4a102ce2b4a73d78a25d1ea5afadef")
+check("a designator of the wrong LENGTH is not a delegation — a prefix match alone would\n     read the first 23 bytes of ordinary code as an address",
+      !VibenetDeployment.isDelegation(code: "0xef0100813035e3fc4a102ce2b4a73d78a25d1ea5afadefdeadbeef"))
+check("ordinary code names no delegate",
+      VibenetDeployment.delegate(code: "0x60806040523480156100") == nil)
+
+print("")
+print("VibenetChainReset — has the chain been replaced under us")
+
+check("a first-ever look can never report a reset",
+      VibenetChainReset.verdict(storedChainID: nil, liveChainID: 84_542_549,
+                                storedHighWater: nil, liveTip: 100) == .firstSight)
+check("the same chain, climbing, is the ordinary answer",
+      VibenetChainReset.verdict(storedChainID: 84_542_549, liveChainID: 84_542_549,
+                                storedHighWater: 100, liveTip: 140) == .same)
+// The real one, measured: vibenet stepped 0x509E455 → 0x509F455 overnight.
+check("a changed chain id is PROOF, not inference",
+      VibenetChainReset.verdict(storedChainID: 84_538_453, liveChainID: 84_542_549,
+                                storedHighWater: 285_133, liveTip: 169_545)
+        == .newChain(from: 84_538_453, to: 84_542_549))
+check("a chain that reused its id but rewound is still a reset",
+      VibenetChainReset.verdict(storedChainID: 84_542_549, liveChainID: 84_542_549,
+                                storedHighWater: 285_133, liveTip: 169_545)
+        == .rewound(from: 285_133, to: 169_545))
+// A few blocks of disagreement between nodes must never be reported as a wipe.
+check("a tip a handful of blocks behind the high water is NOT a rewind",
+      VibenetChainReset.verdict(storedChainID: 84_542_549, liveChainID: 84_542_549,
+                                storedHighWater: 285_133, liveTip: 285_130) == .same)
+check("the floor is the boundary, and it is inclusive",
+      VibenetChainReset.verdict(storedChainID: 1, liveChainID: 1,
+                                storedHighWater: 10_000,
+                                liveTip: 10_000 - VibenetChainReset.rewindFloor)
+        == .rewound(from: 10_000, to: 10_000 - VibenetChainReset.rewindFloor))
+// NOT KNOWING IS NOT EVIDENCE. An unreachable node must never be reported as
+// a reset — that sentence would then appear on every offline open.
+check("an unreadable chain id reports the ordinary answer, never a reset",
+      VibenetChainReset.verdict(storedChainID: 84_542_549, liveChainID: nil,
+                                storedHighWater: 285_133, liveTip: nil) == .same)
+check("an unreadable tip cannot rewind anything",
+      VibenetChainReset.verdict(storedChainID: 1, liveChainID: 1,
+                                storedHighWater: 285_133, liveTip: nil) == .same)
+check("only a reset is a reset",
+      !VibenetChainReset.Verdict.firstSight.isReset
+        && !VibenetChainReset.Verdict.same.isReset
+        && VibenetChainReset.Verdict.newChain(from: 1, to: 2).isReset
+        && VibenetChainReset.Verdict.rewound(from: 9, to: 1).isReset)
+
+check("the high water only ever climbs on an ordinary pass",
+      VibenetChainReset.nextHighWater(stored: 285_133, liveTip: 200, verdict: .same) == 285_133)
+check("…and a RESET restarts it at the live tip, or the next pass reports the reset again",
+      VibenetChainReset.nextHighWater(stored: 285_133, liveTip: 169_545,
+                                      verdict: .rewound(from: 285_133, to: 169_545)) == 169_545)
+check("an unreadable tip leaves the stored mark alone",
+      VibenetChainReset.nextHighWater(stored: 285_133, liveTip: nil, verdict: .same) == 285_133)
+check("a first mark is the live tip",
+      VibenetChainReset.nextHighWater(stored: nil, liveTip: 42, verdict: .firstSight) == 42)
+
+print("")
+print("VibenetQuiet — what the empty room says instead of \"it syncs on its own\"")
+
+check("nothing watched keeps the generic invitation",
+      VibenetQuiet.emptyRoomNote(watching: 0, deployed: 0,
+                                 reachedChain: true, sawReset: false) == nil)
+// NOT KNOWING BEATS EVERY SENTENCE BELOW IT (§83): an unreached chain must
+// never be described as an empty one, reset or not.
+check("an unreached chain says so, and says it FIRST",
+      VibenetQuiet.emptyRoomNote(watching: 2, deployed: 0,
+                                 reachedChain: false, sawReset: true)?
+        .contains("couldn't look") == true)
+check("a reset with nothing deployed says the addresses survive",
+      VibenetQuiet.emptyRoomNote(watching: 1, deployed: 0,
+                                 reachedChain: true, sawReset: true)?
+        .contains("keep their addresses") == true)
+check("a reset whose accounts are BACK says that instead",
+      VibenetQuiet.emptyRoomNote(watching: 1, deployed: 1,
+                                 reachedChain: true, sawReset: true)?
+        .contains("back on the new chain") == true)
+// §463's own explainer, at room scale — unreachable until this pass, because
+// an undeployed account could never be `reached`.
+check("no reset, nothing deployed: the account deploys with its first transaction",
+      VibenetQuiet.emptyRoomNote(watching: 1, deployed: 0,
+                                 reachedChain: true, sawReset: false)?
+        .contains("first transaction") == true)
+check("…and it counts, so one account is not addressed in the plural",
+      VibenetQuiet.emptyRoomNote(watching: 1, deployed: 0,
+                                 reachedChain: true, sawReset: false)?
+        .hasPrefix("The account") == true)
+check("several undeployed accounts are addressed as several",
+      VibenetQuiet.emptyRoomNote(watching: 3, deployed: 0,
+                                 reachedChain: true, sawReset: false)?
+        .hasPrefix("None of the accounts") == true)
+check("deployed and quiet is the last case, and the only one that means \"wait\"",
+      VibenetQuiet.emptyRoomNote(watching: 1, deployed: 1,
+                                 reachedChain: true, sawReset: false)?
+        .contains("Nothing has happened") == true)
+
 if failures == 0 {
     print("✓ vibenet self-test: all assertions passed")
 } else {
@@ -4626,5 +4764,226 @@ grep -q 'guard let tip = await cachedTip() else { return nil }' "$BRIDGE" \
 # stall line must lead when it speaks.
 grep -q 'if let line = room.pulse?.line(now: now) { parts.append(line) }' "$ROOM" \
   || { echo "✗ the room no longer says when the chain has stalled"; exit 1; }
+
+# --- prd §515 mutations ------------------------------------------------------
+#
+# Each is a silent wrong answer that renders as a perfectly ordinary screen.
+
+# THE 7702 TRAP, and the sharpest mutation here. Four of the nine accounts in
+# the live Keystore's logs carry a delegation designator; reading that prefix
+# as "no code" marks every one of them "Not deployed yet" while its keys, its
+# lock and its history all draw perfectly.
+mutateLedger "a 7702 delegation must read as DEPLOYED, not as an empty account" \
+  'return hex.contains { $0 != "0" }' \
+  'return hex.count > 60 && hex.contains { $0 != "0" }'
+
+# "0x" and "" are what a node answers for an address with no code. Accepting
+# either turns the gate into a rubber stamp: every watched address reads
+# established, and the §463 explainer never shows for anyone.
+mutateLedger "an empty code answer must not read as a deployment" \
+  'guard var hex = code else { return false }' \
+  'guard var hex = code else { return false }; if hex.isEmpty { return true }'
+
+# A designator is exactly 23 bytes. A prefix match alone reads the first 23
+# bytes of ordinary bytecode that happens to start ef0100 as an address.
+mutateLedger "isDelegation must check the LENGTH, not just the prefix" \
+  'return hex.hasPrefix("ef0100") && hex.count == 6 + 40' \
+  'return hex.hasPrefix("ef0100")'
+
+# The measured signal: vibenet stepped 0x509E455 → 0x509F455 overnight.
+mutateLedger "a changed chain id must be reported as a reset" \
+  'if storedChainID != liveChainID {' \
+  'if false, storedChainID != liveChainID {'
+
+# NOT KNOWING IS NOT EVIDENCE. Reporting an unreachable node as a reset puts
+# "vibenet was wiped" on the screen of everyone who opens the app offline.
+mutateLedger "an unreadable chain id must never be reported as a reset" \
+  'return storedChainID == nil ? .firstSight : .same' \
+  'return .newChain(from: storedChainID ?? 0, to: -1)'
+
+# Without a floor, ordinary disagreement between nodes about the newest block
+# reads as a wipe — and then the sentence never goes away.
+mutateLedger "the rewind floor must be load-bearing, not decorative" \
+  'if storedHighWater - liveTip >= rewindFloor {' \
+  'if storedHighWater - liveTip >= 0 {'
+
+# If the mark does not restart, the tip stays below it forever and every
+# single pass from then on reports the same reset again.
+mutateLedger "a reset must RESTART the high-water mark at the live tip" \
+  'if verdict.isReset { return liveTip }' \
+  'if verdict.isReset { return max(stored ?? liveTip, liveTip) }'
+
+# §83, in the sentence that would be believed: an unreached chain described as
+# an empty one.
+mutateLedger "the unreached case must come BEFORE every sentence about the chain's contents" \
+  'guard reachedChain else {' \
+  'guard reachedChain || sawReset else {'
+
+# The half of the reset sentence that is easy to get wrong and expensive to be
+# wrong about — somebody re-entering an address that was never wrong.
+mutateLedger "a reset with nothing deployed must say the addresses survive" \
+  'return deployed > 0' \
+  'return deployed >= 0'
+
+
+# --- prd §517: the book is rows on ink, and the lookup is a sheet ------------
+#
+# Reported as "gross": the page called itself Address Book while listing
+# vibenet accounts, the lookup unfolded IN PLACE so eight strangers sat above
+# the user's own account, and five type sizes shared three positions. Every
+# guard below fails invisibly — the screen builds and renders either way.
+
+# THE LOOKUP IS A SHEET. As an unfold it could push the roster down the page,
+# which is the ordering half of the report; as a sheet that is structurally
+# impossible. A discovery section reaching the book again is the unfold back.
+grep -q 'VibenetWatchSheet' "$TMP/book.nc.swift" \
+  || { echo "✗ the book no longer opens the watch sheet — the lookup has nowhere to be"; exit 1; }
+grep -q 'VibenetDiscoverySection' "$TMP/book.nc.swift" \
+  && { echo "✗ the discovery list is back on the book — prd §517: it unfolds above your own"; \
+       echo "  accounts, which is the ordering complaint that moved it to a sheet"; exit 1; }
+grep -q 'VibenetDiscoverySection' "$TMP/sheet.nc.swift" \
+  || { echo "✗ the watch sheet no longer carries discovery — nobody has a devnet address to paste"; exit 1; }
+
+# WATCHED ACCOUNTS LEAD. Nothing may be composed above the roster but the one
+# line naming the network — that is the whole of "where you are".
+python3 - "$TMP/book.nc.swift" <<'GUARD' || exit 1
+import sys
+src = open(sys.argv[1]).read()
+try:
+    body = src.index("var body: some View {")
+    subject = src.index("subjectLine", body)
+    roster = src.index("rosterSection", body)
+    doors = src.index("doorsSection", body)
+except ValueError:
+    print("✗ the book's body no longer composes subject / roster / doors — prd §517")
+    sys.exit(1)
+if not (subject < roster < doors):
+    print("✗ the book no longer leads with what you watch — prd §517: on the reported")
+    print("  screen the user's own account sat below eight strangers'")
+    sys.exit(1)
+GUARD
+
+# INK, AND NO CARDS (user ruling, 2026-08-29). `dsInk()` is DS.inkGround —
+# pure black in dark — and the roster is rows on that ground. A slab section
+# here is the card the ruling removed; the themed page is the grey it named.
+grep -q 'dsInk()' "$TMP/book.nc.swift" \
+  || { echo "✗ the book is off ink again — 2026-08-29: 'make sure its ink black not the grayish black'"; exit 1; }
+if grep -qE 'dsSlabSection|dsPageBackground|VibenetRoomCard' "$TMP/book.nc.swift"; then
+  echo "✗ a card or the themed page is back on the book — 2026-08-29: 'we don't use cards"
+  echo "  so i don't think you need those around things'"
+  exit 1
+fi
+
+# NO HAIRLINES, EVER (§8 law, zero exceptions). The rows have nothing between
+# them but rhythm, so a separator here would be the first line in the app.
+if grep -qE 'Divider\(\)|listRowSeparator\(\.visible\)' "$TMP/book.nc.swift" "$TMP/sheet.nc.swift"; then
+  echo "✗ a divider reached the vibenet book — §8: nothing draws a line"
+  exit 1
+fi
+
+# THE VERBS ARE ROWS, not a wrapping run of 12pt chips. §470 chose FlowLayout
+# to stop the fifth door leaving the screen; §517 gives each the full width
+# instead, which stops the clipping AND the "text in weird places" read.
+python3 - "$TMP/detail.nc.swift" <<'GUARD' || exit 1
+import sys
+src = open(sys.argv[1]).read()
+try:
+    start = src.index("private var doorsSection: some View {")
+except ValueError:
+    print("✗ doorsSection is gone from VibenetAccountDetail")
+    sys.exit(1)
+body = src[start:src.index("\n    /// One verb.", start)]
+if "FlowLayout" in body:
+    print("✗ the verb run is a FlowLayout of chips again — prd §517: rows, one rung, one left edge")
+    sys.exit(1)
+for needed in ("Copy address", "Copy account state", "Manage on Base", "Devnet faucet"):
+    if needed not in body:
+        print(f"✗ the verb '{needed}' left doorsSection — the rows must carry every door the chips did")
+        sys.exit(1)
+GUARD
+
+# The copies keep their two different clipboard verbs. An ADDRESS is
+# `copySensitive` (§277: no expiry, rides Universal Clipboard); the debug
+# DOCUMENT is the plain `copy`, whose whole purpose is to travel.
+grep -q 'DSPasteboard.copySensitive(item.address)' "$TMP/detail.nc.swift" \
+  || { echo "✗ the address copy is no longer the sensitive verb (§277)"; exit 1; }
+
+# --- prd §515: the gate that went dark ---------------------------------------
+#
+# On 2026-08-29 the whole seat read "Couldn't reach the chain" over a devnet
+# answering every request: the Keystore had redeployed WITHOUT
+# `isContractEstablished(address)` (0x28a4c4cb — measured absent from the new
+# 10,420-byte runtime, reverting for every address including the config's own
+# DefaultAccount), and that call was the gate `reached` hung on. Every guard
+# below pins one half of the fix.
+
+# THE GATE IS `eth_getCode` AND MUST STAY THAT WAY. It belongs to the node,
+# not to any contract, so no redeploy can delete it — which is the entire
+# reason it replaced a Keystore view method. A gate that a counterparty can
+# remove is not a gate.
+grep -q 'guard let code = await VibenetChain.getCode(address: address) else {' "$TMP/bridge.nc.swift" \
+  || { echo "✗ the account read no longer gates on eth_getCode — a redeploy can black the seat out again"; exit 1; }
+grep -q 'let established = VibenetDeployment.isDeployed(code: code)' "$TMP/bridge.nc.swift" \
+  || { echo "✗ establishment is no longer decided by VibenetDeployment"; exit 1; }
+
+# THE DEAD SELECTOR MUST NOT COME BACK. It reverts for every address on the
+# current chain, so restoring it as a fallback buys one failing round trip per
+# account per pass forever in exchange for nothing (`vibecheck`'s own ruling,
+# prd §507). Comment-stripped: the source documents the removal by naming the
+# selector, so a raw grep would flag the explanation as the offence.
+grep -q '0x28a4c4cb' "$TMP/bridge.nc.swift" \
+  && { echo "✗ isContractEstablished is back — it reverts for every address; measure it before restoring"; exit 1; }
+
+# A REVERT AND A SILENCE ARE TWO ANSWERS. `call` collapses both to nil, which
+# is right for a value read and is how this outage stayed invisible for a day;
+# the probe must keep being able to tell them apart.
+grep -q 'case reverted(String?)' "$TMP/bridge.nc.swift" \
+  || { echo "✗ CallOutcome no longer separates a revert from an unreachable host"; exit 1; }
+
+# THE RESET CHECK RUNS BEFORE THE CONFIG READ, and the order is load-bearing:
+# a reset forgets the cached contract set, so running it after `current()`
+# reads a still-fresh cache naming a Keystore that no longer holds code.
+python3 - "$TMP/bridge.nc.swift" <<'GUARD' || exit 1
+import sys
+src = open(sys.argv[1]).read()
+try:
+    reset = src.index("await VibenetSeenChain.check()")
+    config = src.index("guard let contracts = await VibenetConfig.current() else {")
+except ValueError:
+    print("✗ the reset check or the config read moved out of VibenetRoomSource.compose")
+    sys.exit(1)
+if reset > config:
+    print("✗ the reset check runs AFTER the config read — it would read a cache naming a dead Keystore")
+    sys.exit(1)
+GUARD
+
+# WHAT A RESET FORGETS, AND WHAT IT MUST NOT. The watch list survives (an
+# EIP-8130 account is counterfactual, so the address comes back), and landed
+# rows survive (the standing never-prune-on-a-quiet-upstream rule; those
+# events really happened and their refs are keyed on transaction hash).
+grep -q 'VibenetKeysSeen.forget()' "$TMP/bridge.nc.swift" \
+  || { echo "✗ a reset no longer forgets the seen-keys ledger — the next read would announce every key as revoked"; exit 1; }
+grep -q 'VibenetValueStore.forget()' "$TMP/bridge.nc.swift" \
+  || { echo "✗ a reset no longer forgets the balance curve — it would chart a chain that is gone"; exit 1; }
+python3 - "$TMP/bridge.nc.swift" <<'GUARD' || exit 1
+import re, sys
+src = open(sys.argv[1]).read()
+start = src.index("static func forgetChainState() {")
+body = src[start:src.index("\n    }", start)]
+for banned, why in (("VibenetWatch", "the watch list — the address survives a reset"),
+                    ("context.delete", "landed rows — never prune on an upstream that went quiet"),
+                    ("VibenetSeenCommit", "the redeploy ledger — a different question")):
+    if banned in body:
+        print(f"✗ forgetChainState now clears {why}")
+        sys.exit(1)
+GUARD
+
+# The room's empty sentence must keep reaching the room. `RoomQuiet`'s
+# `emptyRead` channel is declared on `TokenBridge` and vibenet is not one, so
+# this seat fell to the generic "it syncs on its own" — over a wiped chain.
+grep -q 'vibenetEmptyNote' "$TMP/feed.nc.swift" \
+  || { echo "✗ FeedScreen no longer feeds vibenet's own reason into RoomQuiet"; exit 1; }
+grep -q 'VibenetQuiet.emptyRoomNote(' "$TMP/feed.nc.swift" \
+  || { echo "✗ the vibenet empty-room note is no longer composed by VibenetQuiet"; exit 1; }
 
 echo "✓ vibenet-selftest: drift guards, assertions and mutations all passed"

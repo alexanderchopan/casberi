@@ -37779,3 +37779,89 @@ Two assertions are the feature stated in its own terms rather than by fixture: *
 
 **Seen on a device.** All five marks were checked on the iPhone 17 Pro simulator over the demo corpus: send ↗, receipt ↙, mint (`sparkles`), burn (`flame`), grant (`hand.raised`), and `⇄` still standing on the swap, the Solana buy and the staked-HYPE unlock. Two demo gaps were closed to make that possible and are worth keeping: `DemoSeedAll.walletRoom` now seeds a mint and a burn (two of the five marks had no row to draw on any corpus this project can show itself), and `DemoCorpus`'s four dev fixtures — which predate `transferDirection` entirely — carry the field on their two directional rows. Direction only, never an amount: every other reader of that field requires both, so the stamp is inert everywhere except the mark.
 
+## 515. Vibenet went dark, and the chain being reset was only half of it (user: "VIBNET sitll isn't working it says 'nothing has landed here'", then "oh, this is becasue the chain was reset!", "but also what happens is onchain state resets", "so i had to top up my accounts to make them redeploy", "i have an address that is redeployed and it says couldn't reach the chain", 2026-08-29)
+
+Reported as an empty room. The chain HAD been reset — the user diagnosed that themselves and they were right — but a reset alone does not explain what was on screen, and chasing only the reset would have shipped a better sentence over a seat that still read nothing.
+
+### 1. The Keystore redeployed without the method every read was gated behind
+
+`VibenetRead.account` opened with `isContractEstablished(address)` — selector `0x28a4c4cb` on the Keystore — and mapped a failed `eth_call` to `reached: false`. **MEASURED against the live devnet on 2026-08-29:** the redeployed Keystore's runtime is 10,420 bytes and that selector is **not in it at all** (dispatcher swept for every `PUSH4`), so `eth_call` answers `execution reverted` for *every* address — the config's own `DefaultAccount` and `CanonicalHighRatePayerAccount` included, and four accounts that Keystore's own logs show as authorized. The other five Keystore selectors this file calls (`getActorConfig`, `getPolicyManager`, `getPolicyCommitment`, `getLockStatus`, `getChangeSequences`) all survived and all answer. **Exactly one read broke, and it was the one everything else hung behind.**
+
+So every watched account read "Couldn't reach the chain", nothing landed, and the room said "Nothing has landed here yet" — over a devnet that was serving every single request.
+
+**The lesson, and the part worth keeping when today's selector is wrong again: the reachability gate must not be a call the counterparty can delete.** `eth_getCode` belongs to the node, not to any contract; no redeploy can remove it. `reached` now means "the node answered" and nothing else, which is what the word was always supposed to mean.
+
+It is also the honest reading of what §463's own copy already claimed: an EIP-8130 account is counterfactual until its first transaction deploys it, so *deployed* is the fact the room was describing. **That explainer could never once have been shown** — `undeployedExplainer` requires `item.reached`, and before this pass an undeployed account could never be reached. The sentence written for exactly this case was unreachable from the day it shipped.
+
+`0x28a4c4cb` is **deleted, not kept as a fallback**, on `vibecheck`'s own reasoning (§507): a call that reverts for every address buys one failing round trip per account per pass, forever, in exchange for nothing.
+
+**THE 7702 TRAP, and it is the sharpest thing here.** Of the nine accounts this Keystore's logs name, **four carry a `0xef0100…` delegation designator rather than ordinary bytecode** — measured the same day. `AddressKind.hasCode` deliberately skips that prefix (a delegated EOA is a person, not a contract — 2026-07-25), and reusing it here would have marked every 7702 vibenet account *not established* while its keys, its lock and its history all drew perfectly: a silent wrong answer on the one line the room leads with. `VibenetDeployment.isDeployed` counts any non-zero nibble, and `isDelegation` checks the LENGTH as well as the prefix, or the first 23 bytes of ordinary code beginning `ef0100` read as an address.
+
+**STATED CEILING:** this proves an address has code, never that the Keystore holds a config for it. The two agreed on all nine sampled accounts, and where they could disagree the actor roster below is the stronger evidence — which is why `rowLine` reads the key count next, not this.
+
+### 2. A revert and a silence are two answers, and collapsing them is how this hid for a day
+
+`VibenetChain.call` maps a transport failure and a JSON-RPC `error` object both to nil. That is right for a caller that only wants a value, and it is why an outage in which **the chain answered every request** rendered as "couldn't reach the chain". `ethCallOutcome` separates `.value` / `.reverted(message)` / `.unreachable`. Nothing on the read path is gated on it — the gate is `eth_getCode` now — so it exists for `-vibenetProbe`, which is the diagnostic that would have named this the moment it landed instead of a day later.
+
+### 3. The chain really was reset, and the room now says so
+
+Measured the same day: genesis re-dated to the previous evening, tip **285,133 → 169,545**, `eth_chainId` stepped **0x509E455 → 0x509F455**, config `_commit` a9ae95e1b → 3a23204ca. `VibenetChain.chainID` was a literal — `84_538_453` — nothing read it, and it had been wrong for a day with nothing able to notice. It is a live read now, and **the step between the two IS the signal**.
+
+`VibenetChainReset` is the judgement (Foundation-only, harness-compiled), `VibenetSeenChain` the storage — `VibenetSeenCommit`'s exact shape, for a stronger fact: that one notices the CONTRACTS moving, this notices the CHAIN UNDER THEM being replaced. Two signals: a changed chain id is proof; a tip materially below the high-water mark catches a reset that reused its id. Three rules, each of which renders plausibly when broken:
+
+- **A first-ever look can never report a reset** — `VibenetSeenCommit`/`AddressConnectionsSeen`'s standing rule.
+- **Not knowing is not evidence.** An unreachable node reports the ordinary answer; the alternative puts "vibenet was wiped" on the screen of everyone who opens the app offline.
+- **The floor is 1,000 blocks**, because this devnet mines about a block a second and ordinary disagreement between nodes about the newest block must never be reported as a wipe. A real reset drops the tip by six figures.
+- **A reset RESTARTS the high-water mark**, or the tip stays below it forever and every pass from then on reports the same reset again.
+
+**What a reset forgets, by name** (`DemoMode.exit`'s rule — never a blanket wipe): the cached contract set, the room snapshot, the seen-keys ledger, the balance curve and its backfill ledger. This DIVERGES from a redeploy deliberately — `VibenetBackfillLedger.forget`'s own doc says a contract deployment does not rewrite a chain's past blocks, and a reset does exactly that. **Three deliberate non-deletions**: the watch list stays (the address is counterfactual and survives — *"i had to top up my accounts to make them redeploy"*, and they came back at the same addresses, so dropping the list would make somebody re-enter an address that was never wrong); landed `Thing`s stay (the standing never-prune-on-a-quiet-upstream rule, doubly here — those events really happened, they are dated by the block times they really had, and their refs are keyed on transaction hash so nothing on the new chain can collide); and `VibenetSeenCommit` stays, because it answers a different question.
+
+### 4. The room's empty sentence
+
+§299 generalised "a room states its CONNECTION's state" and left one channel open for a bridge that can do better — `emptyReadNote`, *a successful read that finds NOTHING explains itself*. That channel is declared on `TokenBridge`, and **vibenet is not one**, so this seat fell to the generic **"Nothing has landed here yet. It syncs on its own — this room fills as things arrive."** On the day the devnet was wiped, that is §299's own failure in a room §299 could not reach: a cheerful "give it time" over a chain that no longer contained anything to give.
+
+`VibenetQuiet.emptyRoomNote` is five situations that rendered as that one sentence, and only one of them meant "wait": nothing watched (keep the invitation), the chain unreached (say so, and say it FIRST — §83), a reset with the accounts back, a reset with them still counterfactual, all watched accounts undeployed (§463's explainer at room scale), and deployed-and-quiet. **The reset sentence's load-bearing half is that the addresses survive**, because that is what somebody would otherwise act on wrongly.
+
+### What this cost, and one thing it did not fix
+
+`vibenet-selftest.sh` grew ~35 assertions, 9 mutations and 11 drift guards — including the ordering guard that the reset check runs BEFORE the config read (a reset forgets the cached contract set, so running it after reads a still-fresh cache naming a Keystore that no longer holds code), and a comment-stripped negative that `0x28a4c4cb` never returns.
+
+**The address book's redesign is NOT in this section.** The same session reported that screen as *"gross"* — the page called itself "Address Book" while listing vibenet accounts, "Find another account" unfolded eight strangers' addresses above the user's own account in four type sizes, and the verbs were a wrapping run of 12pt blue text. That is its own ruling and its own pass.
+
+## 517. The vibenet book is rows on ink, and finding another account is a sheet (user: "also in the address book the behavior is weird and the font sizes are all different when in vibenet set up", then "can we fix that design please. how woudl apple design that page", "it's not clear for user where they are or what to do. and it's a lot of text in weird places.. they have an address they are watching but may want ot watch another it's just not really clear, adn then when you lick find another account it opens inline and all different font sizes. presumably the watched accout would be at top. this whole thing is gross and needs a redesign", then "make sure its ink black not the grayish black you have and we don't use cards so i don't think you need those around things", 2026-08-29)
+
+Two screenshots came with it, and everything in the report is visible in them. Four faults, and they compounded rather than merely coexisting.
+
+### 1. The page did not say where you were
+
+Its title was **"Address Book"** — the name of a DIFFERENT screen, which it also links to, three rows down — while its subject is vibenet accounts. §465 named this screen for the thing it replaced rather than for the thing it is. It is **"Accounts"** now, with one line under it naming the network, and the shared book is a row like any other.
+
+### 2. The thing you watch was not at the top
+
+The page led with the paste field, then a demos link, then "Find another account". Tapping that **unfolded the discovery list IN PLACE**, so on the reported screen eight strangers' addresses sat ABOVE the one account the user actually watches — which was the last thing on the page, under everything.
+
+`VibenetWatchSheet` is the fix, and the fix is structural rather than a reordering: **a lookup that is not on the screen cannot push your accounts down it.** §472 had already been here once — the discovery list was "only while nothing is watched", which made finding a second account impossible, so §476 made it a collapsed door instead. That door solved the space problem and left the ordering one, because collapsed or not it still expands between the field and the roster. A sheet solves both, and gives the lookup a surface where it is the subject.
+
+### 3. Five type sizes in three positions
+
+The field's own label rung, the demos link, the discovery heading, each discovered row's address and its "Created 9 hours ago", the roster card's heading tier, and the verb run's 12pt chips. What is left is the ramp's ordinary row anatomy — `heading17` name, `mono12` address, `subhead13` state — repeated, plus one `label12` section word.
+
+**The verb run is the sharpest of these** and it gets its own fix. Explorer / Manage on Base / Copy address / Copy account state / Devnet faucet were a `FlowLayout` of `label12` chips wrapping onto two lines under the card: 12pt tint words sharing no left edge with anything above them, three of which leave the app and two of which silently change the clipboard. §470 chose `FlowLayout` over an `HStack` because a fifth `.fixedSize()` chip pushed the trailing door off a phone's width — a correct diagnosis and the smaller of the two available fixes, since wrapping stops the clipping and keeps the run. **Rows stop both**: full width, one left edge, one rung, and a trailing glyph that says which KIND of verb it is, which the chips could only say by which symbol happened to follow the words.
+
+### 4. Two quiet verbs spelled as floating blue text
+
+§476 had already ruled that this screen must have ONE way of saying "here is something else you can do" rather than two, and made both "Find another account" and "Full address book" tint text links. That was right about the count and wrong about the shape: **a bare tint sentence floating between sections belongs to neither of them**, which is exactly what "a lot of text in weird places" describes. Both are rows now, and the one primary act is a real button — plus a `+` in the toolbar, which is a deliberate duplicate: the button is what somebody standing in a short roster finds, the toolbar item is what somebody at the bottom of a long one reaches for.
+
+### Ink, and no cards
+
+The user's ruling, given on seeing the first pass: *"make sure its ink black not the grayish black you have and we don't use cards so i don't think you need those around things."*
+
+`dsInk()` — `DS.inkGround`, pure black in dark, the theme's absolute floor — rather than `dsPageBackground`'s `#111113`. And the roster is **rows on that ground**, not `VibenetRoomCard`'s managing mode: the rows ARE the content, so there is nothing for a card to be a card around, and the card's own headline tier could only restate the row beneath it. **Nothing draws a line either** (§8, zero exceptions): the faces and the vertical rhythm do the separating. The only filled shapes left on the screen are two genuine controls — the address field and the watch button.
+
+**What the card carried and the rows had to keep**: the state sentence is `VibenetRoom.rowLine`, the room's own, so a row can never disagree with the sheet it opens; the provenance line (§468) survives as a footer, because it is the one sentence on the screen about the READ rather than about an account, and without it a stale roster wears a confident face. **A dot's colour is added and is not free**: an UNREACHED account gets the neutral grey, never a state colour — that is a fact about our reading, not about the account (§83), and it is the same distinction §515 had just spent a whole pass on one file over.
+
+### What this cost
+
+`vibenet-selftest.sh` grew 12 drift guards, including an ordering guard (subject before roster before doors, parsed rather than grepped) and negatives that a card, the themed page, a divider or the discovery section may not return to the book. **Two existing §465 guards went red and were AMENDED rather than deleted** — the shared-field guard now looks for `VibenetWatchField` in the sheet, and the managing-roster guard asserts the three things the ruling actually requires (open, rename, stop watching) rather than the one implementation detail it used to name (`onOpen:`). A guarded thing that moves takes its guard with it.
+
+**UNSEEN on a device.** It compiles and the harness is green; no screenshot of the rebuilt screen has been taken, and none of the four artboards this was drawn from has been checked against a running build.

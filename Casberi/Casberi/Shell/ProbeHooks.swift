@@ -6151,20 +6151,34 @@ enum ProbeHooks {
                 }
                 NSLog("[Casberi] vibenet| config branch=%@ commit=%@ keystore=%@",
                       contracts.branch ?? "?", contracts.commit ?? "?", contracts.keystore)
+                // WHICH CHAIN THIS IS (prd §515) — printed BEFORE any account,
+                // because on 2026-08-29 every line below it was a true report
+                // about a chain that had been wiped the night before, and
+                // nothing on any screen said so.
+                let liveChain = await VibenetChain.chainIdentifier()
+                let verdict = await VibenetSeenChain.check()
+                NSLog("[Casberi] vibenet| chain id=%@ tip=%@ verdict=%@",
+                      liveChain.map(String.init) ?? "UNREACHABLE",
+                      (await VibenetChain.cachedTip()).map(String.init) ?? "UNREACHABLE",
+                      VibenetSeenChain.describe(verdict))
                 let addresses = VibenetWatch.shared.addresses
                 guard !addresses.isEmpty else {
                     NSLog("[Casberi] vibenet| watch EMPTY — nothing to read")
                     return
                 }
                 for address in addresses {
-                    guard let word = await VibenetChain.ethCall(
-                        to: contracts.keystore, data: VibenetABI.isEstablishedCall(address))
-                    else {
-                        NSLog("[Casberi] vibenet| %@ established=UNREACHABLE", address)
+                    // The gate, as shipped: `eth_getCode`, never a Keystore
+                    // view method (prd §515).
+                    guard let code = await VibenetChain.getCode(address: address) else {
+                        NSLog("[Casberi] vibenet| %@ deployed=UNREACHABLE — the node did not answer eth_getCode", address)
                         continue
                     }
-                    let established = WalletIngest.hexToDouble(word) != 0
-                    NSLog("[Casberi] vibenet| %@ established=%@", address, established ? "YES" : "no")
+                    let established = VibenetDeployment.isDeployed(code: code)
+                    NSLog("[Casberi] vibenet| %@ deployed=%@ shape=%@", address,
+                          established ? "YES" : "no",
+                          VibenetDeployment.isDelegation(code: code)
+                              ? "7702→" + (VibenetDeployment.delegate(code: code) ?? "?")
+                              : (established ? "contract" : "counterfactual"))
 
                     guard let ids = await VibenetRead.actorIDs(account: address, keystore: contracts.keystore)
                     else {

@@ -8905,7 +8905,27 @@ struct FeedScreen: View {
         }
         return RoomQuiet.words(source: source, seat: mapped,
                                statusLine: seat?.statusLine ?? "",
-                               emptyRead: TokenBridge(rawValue: source)?.emptyReadNote)
+                               emptyRead: TokenBridge(rawValue: source)?.emptyReadNote
+                                   ?? vibenetEmptyNote)
+    }
+
+    /// vibenet's own reason for being empty (prd §515).
+    ///
+    /// `RoomQuiet`'s `emptyRead` channel is declared on `TokenBridge` and
+    /// vibenet is not one, so this seat fell to the generic "it syncs on its
+    /// own" — on a devnet that had been wiped overnight, which is §299's own
+    /// failure in a room §299 could not reach. Read off the last saved
+    /// snapshot, never a live call: this runs in a view body.
+    private var vibenetEmptyNote: String? {
+        guard source == VibenetIdentity.source else { return nil }
+        let room = VibenetState.saved
+        return VibenetQuiet.emptyRoomNote(
+            watching: VibenetWatch.shared.addresses.count,
+            deployed: room?.items.filter(\.established).count ?? 0,
+            // No snapshot at all is not "unreachable" — it is a seat that has
+            // never completed a read here, which the sentence below covers.
+            reachedChain: room.map { $0.items.contains(where: \.reached) } ?? true,
+            sawReset: VibenetSeenChain.sawResetRecently())
     }
 
     /// The empty room.

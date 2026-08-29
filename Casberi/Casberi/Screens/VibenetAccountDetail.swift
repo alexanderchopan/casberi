@@ -1325,48 +1325,53 @@ struct VibenetAccountDetail: View {
 
     // MARK: - Doors
 
-    /// Real buttons, not menu items — the verbs worth a tap without a
-    /// long-press.
+    /// **THE VERBS ARE ROWS (prd §517, 2026-08-29).**
     ///
-    /// **`FlowLayout`, not an `HStack` (prd §470).** Every door here is
-    /// `.fixedSize()`, so a fifth one ("Copy account state") pushed the run
-    /// past a phone's width and the trailing door simply left the screen —
-    /// and the row was already four wide on an undeployed account, which is
-    /// exactly when the faucet door matters most. Flowing wraps instead of
-    /// clipping, and it is the same layout the key rows' own chips use one
-    /// section up, so nothing new is introduced to read.
+    /// They were a `FlowLayout` of `label12` chips — five of them, wrapping
+    /// onto two lines under the card — and that run is what the redesign
+    /// report meant by *"a lot of text in weird places"*: 12pt tint words
+    /// with no left edge in common with anything above them, three of which
+    /// leave the app and two of which silently change the clipboard.
+    ///
+    /// §470 chose `FlowLayout` over an `HStack` because a fifth
+    /// `.fixedSize()` chip pushed the trailing door off the screen. That
+    /// diagnosis was right and the fix was the smaller of the two available:
+    /// wrapping stops the clipping and keeps the run. Rows stop both — every
+    /// verb gets the full width, one left edge, one type rung, and a
+    /// trailing glyph that says which KIND of verb it is (a door out, a
+    /// copy), which the chips could only say by which SF Symbol happened to
+    /// follow the words.
+    ///
+    /// Still real buttons and still no menu — these are worth a tap without
+    /// a long-press. And still no write anywhere: every one is a hand-off or
+    /// a paste (§463).
     private var doorsSection: some View {
-        FlowLayout(spacing: DS.Space.s3) {
+        VStack(alignment: .leading, spacing: 0) {
             // Shown ONLY while the account is undeployed, and only when the
             // live config actually named a faucet. `faucetAddress` has been
             // parsed since this seat shipped and read by nothing — the one
             // door the state above can offer, since an account deploys on its
             // first transaction and a devnet address needs funds to make one.
             // A hand-off to the explorer, never a write.
+            //
+            // It LEADS, because when it is here it is the only row that
+            // changes anything about the state the card just described.
             if VibenetRoom.undeployedExplainer(item) != nil,
                let faucet = VibenetConfig.cached()?.faucetAddress,
                let url = URL(string: VibenetExplorer.address(faucet)) {
                 Link(destination: url) {
-                    HStack(spacing: 4) {
-                        Text(String(localized: "Devnet faucet"))
-                        Image(systemName: "arrow.up.right")
-                    }
-                    .dsText(.label12).fontWeight(.semibold)
-                    .foregroundStyle(Self.mark)
-                    .lineLimit(1)
-                    .fixedSize()
+                    verbRow(String(localized: "Devnet faucet"),
+                            glyph: "arrow.up.right", tint: Self.mark)
                 }
+                .buttonStyle(PressSpring())
+                .dsHover()
             }
             Link(destination: URL(string: VibenetExplorer.address(item.address))!) {
-                HStack(spacing: 4) {
-                    Text(String(localized: "Explorer"))
-                    Image(systemName: "arrow.up.right")
-                }
-                .dsText(.label12).fontWeight(.semibold)
-                .foregroundStyle(Self.mark)
-                .lineLimit(1)
-                .fixedSize()
+                verbRow(String(localized: "View on the explorer"),
+                        glyph: "arrow.up.right", tint: Self.mark)
             }
+            .buttonStyle(PressSpring())
+            .dsHover()
             // The one door onto WRITING, and it is deliberately somebody
             // else's. Base's own console creates accounts, mints keys,
             // composes transactions and subscribes a session key; this app
@@ -1376,15 +1381,10 @@ struct VibenetAccountDetail: View {
             // key on an app whose whole posture is that it has none). A
             // hand-off costs nothing and never goes stale.
             Link(destination: URL(string: VibenetExplorer.console)!) {
-                HStack(spacing: 4) {
-                    Text(String(localized: "Manage on Base"))
-                    Image(systemName: "arrow.up.right")
-                }
-                .dsText(.label12).fontWeight(.semibold)
-                .foregroundStyle(DS.textSecondary)
-                .lineLimit(1)
-                .fixedSize()
+                verbRow(String(localized: "Manage on Base"), glyph: "arrow.up.right")
             }
+            .buttonStyle(PressSpring())
+            .dsHover()
             Button {
                 DSHaptic.tap()
                 // `DSPasteboard`, not a bare `UIPasteboard.general.string`
@@ -1392,35 +1392,21 @@ struct VibenetAccountDetail: View {
                 // expiry and rides Universal Clipboard to every other device
                 // on the account, which is the default §277 introduced this
                 // type to stop. An address is that doc's own named
-                // `copySensitive` case, and every other address copy in the
-                // app already goes through it — this one call site was the
-                // straggler.
+                // `copySensitive` case.
                 DSPasteboard.copySensitive(item.address)
             } label: {
-                HStack(spacing: 4) {
-                    Text(String(localized: "Copy address"))
-                    Image(systemName: "doc.on.doc")
-                }
-                .dsText(.label12).fontWeight(.semibold)
-                .foregroundStyle(DS.textSecondary)
-                .lineLimit(1)
-                .fixedSize()
+                verbRow(String(localized: "Copy address"), glyph: "doc.on.doc")
             }
+            .buttonStyle(PressSpring())
+            .dsHover()
             // THE RAW READ, FOR SOMEBODY DEBUGGING (prd §470). Everything
             // this app knows about the account — actorIds, scope as the hex
             // word the contract stores, expiry as the unix integer — in the
             // one place §463 allows spec internals to go: a paste that is
-            // asked for explicitly and competes with nothing on screen. See
-            // `VibenetAccountDebug`.
+            // asked for explicitly and competes with nothing on screen.
             //
             // `copy`, not `copySensitive`: this is a DOCUMENT whose whole
-            // purpose is to travel to wherever the debugging is happening,
-            // which `DSPasteboard`'s own doc names as the case for the
-            // cross-device verb ("copying a note on the phone and pasting it
-            // on the Mac is a real thing people do, and this app runs on
-            // both"). The single-value copies on each key row stay
-            // `copySensitive` — those are the "an address, a sign-in code"
-            // case, this is the note.
+            // purpose is to travel to wherever the debugging is happening.
             Button {
                 DSHaptic.tap()
                 DSPasteboard.copy(VibenetAccountDebug.text(
@@ -1428,16 +1414,32 @@ struct VibenetAccountDetail: View {
                     name: VibenetWatch.shared.name(for: item.address),
                     now: .now))
             } label: {
-                HStack(spacing: 4) {
-                    Text(String(localized: "Copy account state"))
-                    Image(systemName: "curlybraces")
-                }
-                .dsText(.label12).fontWeight(.semibold)
-                .foregroundStyle(DS.textSecondary)
-                .lineLimit(1)
-                .fixedSize()
+                verbRow(String(localized: "Copy account state"), glyph: "curlybraces")
             }
+            .buttonStyle(PressSpring())
+            .dsHover()
         }
         .padding(.top, DS.Space.s2)
+    }
+
+    /// One verb. `callout15` — the app's ordinary row rung — rather than the
+    /// chips' `label12`, because a row that has the width of the card has no
+    /// reason to whisper, and the run's smallness was half of why it read as
+    /// stray text rather than as a list of things you can do.
+    private func verbRow(_ title: String, glyph: String, tint: Color? = nil) -> some View {
+        HStack(spacing: DS.Space.s2) {
+            Text(title)
+                .dsText(.callout15)
+                .foregroundStyle(tint ?? DS.textPrimary)
+                .lineLimit(1)
+            Spacer(minLength: DS.Space.s2)
+            Image(systemName: glyph)
+                .accessibilityHidden(true)
+                .dsGlyph(12, weight: .semibold)
+                .foregroundStyle(tint ?? DS.textTertiary.opacity(0.6))
+        }
+        .padding(.vertical, DS.Space.s3)
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
     }
 }
