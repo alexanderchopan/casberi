@@ -1,0 +1,18 @@
+{
+  "_commit": "3a23204ca",
+  "keys": {
+    "eip8130.CanonicalHighRatePayerAccount": "0x8130d6819734515f958965efd2d212541d44fa57",
+    "eip8130.DefaultAccount": "0x813035e3fc4a102ce2b4a73d78a25d1ea5afadef",
+    "eip8130.DelegateAuthenticator": "0x8130015119757e0b1f9985f723091a851598ade1",
+    "eip8130.Keystore": "0x813011b7a5f25f8433ac1e0993de06cb2d1500ac",
+    "eip8130.P256Authenticator": "0x8130c89f65750431b564a4730397552a11cea256",
+    "eip8130.PolicyManager": "0x8130faa29d2675d05d01d387c576c6525f280ac1",
+    "eip8130.SessionPolicy": "0x81306283dfd94fcde1a3ad4b7bedf1c5cd0f5e55",
+    "eip8130.WebAuthnAuthenticator": "0x813007b6b1b48e75d91dec5927ab515d12a0f1d0",
+    "entryPointV06": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+    "faucetAddress": "0xFEdBF7fB9716409586BCc74175B2704Bdf919EF0",
+    "nfv": "0x81a6C7626Ce9EbC3f4Bf898CBaa5599e993652a0",
+    "usdv": "0x1eb657FD80bfc3C03e6C5f485E65ec698dC205A8",
+    "vibecheck": "0x0848FaFBA3E62699C2CfecB5f506c82079E88dC0"
+  }
+}

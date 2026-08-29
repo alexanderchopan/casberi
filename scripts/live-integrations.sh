@@ -788,9 +788,23 @@ for l in reversed(logs):
     seen.add(l["transactionHash"])
     if len(seen)>=25: break
 typed=framed=paired=payer=keys=stategas=0
+# THE CENSUS, and it costs NOTHING — these transactions are already in hand and
+# every previous run threw their shape away after taking one Bool from it.
+# Baselines are what this chain actually served on 2026-08-29, measured, not
+# what the app reads: the app already parses past `data`, `flags`,
+# `executionGasLimit` and `stateGasLimit`, so a read-set baseline would report
+# four fields as news every night and be switched off within a week.
+KNOWN_TYPES={"0x0","0x1","0x2","0x3","0x4","0x6"}
+KNOWN_FRAME={"data","executionGasLimit","flags","mode","stateGasLimit","to","value"}
+KNOWN_FRAMERECEIPT={"gasUsed","logs","stateGasUsed","status"}
+newtypes=set(); newkeys=set()
 for h in list(seen):
     tx=call("eth_getTransactionByHash",[h]) or {}
-    if tx.get("type")!="0x6": continue
+    t=(tx.get("type") or "").lower()
+    # A transaction type nobody has seen is Hegotá shipping something, and it
+    # is the one signal here that cannot be mistaken for anything else.
+    if t and t not in KNOWN_TYPES: newtypes.add(t)
+    if t!="0x6": continue
     typed+=1
     r=call("eth_getTransactionReceipt",[h]) or {}
     # **`frames` is on the TRANSACTION, `frameReceipts` on the receipt.** Read
@@ -800,6 +814,15 @@ for h in list(seen):
     # a check that cries wolf gets turned off within a week.
     fr=tx.get("frames") or []
     rr=r.get("frameReceipts") or []
+    # `frames` and `frameReceipts` are Hegotá's OWN objects, so every key on
+    # them is theirs and the baseline has no standard-Ethereum noise in it —
+    # which is why the unknown-key check is scoped to these two and not to the
+    # transaction or the receipt, where ~20 ordinary fields plus whatever a
+    # client adds would drown the signal.
+    for f in fr:
+        newkeys |= {"frame."+k for k in f.keys()} - {"frame."+k for k in KNOWN_FRAME}
+    for f in rr:
+        newkeys |= {"receipt."+k for k in f.keys()} - {"receipt."+k for k in KNOWN_FRAMERECEIPT}
     # §504 recorded "revisit the day stateGasUsed goes non-zero" as a note
     # somebody had to remember. This is that note as an alarm: the frame
     # strip weights its widths by execution gas alone, which is correct only
@@ -814,11 +837,12 @@ for h in list(seen):
     if fr and len(fr)==len(rr): paired+=1
     if r.get("payer"): payer+=1
     if isinstance(tx.get("nonceKeys"),list): keys+=1
-print(f"{len(logs)} {typed} {framed} {paired} {payer} {keys} {stategas}")
+print(f"{len(logs)} {typed} {framed} {paired} {payer} {keys} {stategas} "
+      f"{','.join(sorted(newtypes)) or '-'} {','.join(sorted(newkeys)) or '-'}")
 PY
 )
   if [[ -n "$heg_frames" ]]; then
-    read -r flogs ftyped fframed fpaired fpayer fkeys fstate <<< "$heg_frames"
+    read -r flogs ftyped fframed fpaired fpayer fkeys fstate fnewtypes fnewkeys <<< "$heg_frames"
     if [[ "$fframed" -gt 0 ]]; then
       pass "Hegotá — frame transactions still carry frames ($fframed of $ftyped sampled; payer on $fpayer, nonceKeys on $fkeys)"
       if [[ "${fstate:-0}" -gt 0 ]]; then
@@ -838,6 +862,30 @@ PY
       fail "Hegotá — $ftyped type-0x6 transactions carry NO frames array; the Frames scope goes silently empty"
     else
       warn "Hegotá — no type-0x6 transaction among the newest sampled transfers ($flogs logs); the frame shape is unverified tonight"
+    fi
+
+    # 6. **WHAT HEGOTÁ ADDED.** Every row above asks whether what the seat
+    #    already reads still works, which is a REGRESSION check against a
+    #    hand-named list and is blind by construction to an addition: a new
+    #    transaction type or a new field on a frame lands, satisfies all of it,
+    #    and the nightly prints green while a capability goes unnoticed.
+    #
+    #    Both rows are WARN and neither is a bug — they are the note somebody
+    #    would otherwise have to remember to go and look for, which is exactly
+    #    what §504's `stateGasUsed` line already is one row up.
+    #
+    #    **STATED CEILING**: the sample is transactions that emitted a vault
+    #    Transfer log, so a new type that moves no value is invisible here.
+    #    This catches what shows up in the traffic the seat already reads.
+    if [[ "$fnewtypes" != "-" ]]; then
+      warn "Hegotá — transaction type(s) nobody has seen before: $fnewtypes (the seat reads 0x6 and treats everything else as legacy)"
+    else
+      pass "Hegotá — no unfamiliar transaction type among the newest sampled transfers"
+    fi
+    if [[ "$fnewkeys" != "-" ]]; then
+      warn "Hegotá — new field(s) on their own frame objects: $fnewkeys — read them, then widen the baseline in this file"
+    else
+      pass "Hegotá — frames and frameReceipts carry the same fields they did on 2026-08-29"
     fi
   else
     warn "Hegotá — the frame-shape walk did not complete"
@@ -901,6 +949,40 @@ PY2
       fail "vibenet — the config no longer names ${vibe_shape#MISSING:}; every read in the room is built from these" ;;
     *)
       warn "vibenet — the contracts config did not parse as the shape the app expects" ;;
+  esac
+
+  # WHAT vibenet ADDED, which every row above is structurally blind to. The
+  # shape check just above is an ALLOWLIST — the six eip8130 names plus
+  # usdv/nfv, each asserted present — so a contract vibenet deploys tomorrow
+  # satisfies all of it and prints green. This compares the WHOLE config
+  # against a checked-in snapshot instead, so a key nobody has seen before is
+  # the finding rather than the blind spot.
+  #
+  # The baseline is what EXISTED when we last looked, never what the app
+  # reads: the app already ignores `entryPointV06`, so a read-set baseline
+  # would report it as news every night forever. Accept a change with
+  # `scripts/support/vibenet-config-diff.py --accept` once it has been read.
+  # Its own self-test FIRST, and not as decoration: the diff carries a drift
+  # guard tying its read-set to the inline list above, and a guard that never
+  # runs proves nothing — this repo's most repeated lesson. It is pure and
+  # needs no network, so it costs nothing on a night the endpoint is down.
+  if ! python3 scripts/support/vibenet-config-diff.py --self-test >/dev/null 2>&1; then
+    fail "vibenet — the config diff's own self-test FAILED; its verdict below cannot be trusted"
+  fi
+  vibe_diff=$(python3 scripts/support/vibenet-config-diff.py 2>/dev/null)
+  case "$vibe_diff" in
+    OK\ *)
+      pass "vibenet — nothing new in the contracts config since we last looked (${vibe_diff#OK })" ;;
+    DIFF\ *)
+      # NEVER a failure. Every one of these is vibenet doing what vibenet does;
+      # the point is that somebody reads it, decides, and accepts the snapshot.
+      warn "vibenet — the contracts config CHANGED: ${vibe_diff#DIFF } — read it, then --accept" ;;
+    NOSNAPSHOT*)
+      warn "vibenet — no config snapshot recorded yet; run vibenet-config-diff.py --accept" ;;
+    UNREACHABLE*)
+      : ;;  # the row above already warned; saying it twice reads as two problems
+    *)
+      warn "vibenet — the config diff did not run (${vibe_diff:-no output})" ;;
   esac
 
   # THE TWO TOKEN SHAPES, and the reason this row exists at all: USDV's
