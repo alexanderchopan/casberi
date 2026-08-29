@@ -43,7 +43,10 @@ Three deliberate NON-checks, so this can't become a lint that cries wolf:
     written (§327 was a block another session parked and dropped), and a gap
     harms nobody — only a citation OF a gap does, which is check C.
 
-Usage:  scripts/prd-index-audit.py [--self-test]
+Usage:  scripts/prd-index-audit.py [--self-test | --next]
+        --next prints the next section number nobody has taken, counting
+        uncommitted claims as taken — the door checks A and C were both
+        walked through.
 Exit 0 = clean.
 """
 
@@ -249,6 +252,130 @@ def collect_citations(paths, skip):
     return out
 
 
+def sibling_claims():
+    """Numbers taken in ANOTHER checkout of this repo — the ceiling, closed.
+
+    `--next` reading one working tree was not a theoretical limit: it was
+    demonstrated within the hour of shipping, twice. One session wrote an entry
+    in its own git worktree (invisible here, so this tool would have handed the
+    number out again) and another had a number taken out from under it between
+    two messages.
+
+    A claim is by definition WORK IN PROGRESS, so only a worktree's CHANGED and
+    untracked files are read — an unmodified file holds the same citations the
+    main tree already has and can contribute nothing new. Measured on this repo:
+    61 files instead of 11,111, 2.5s instead of 14.5s. A sibling's own
+    `docs/prd.md` is read for HEADINGS rather than citations, because an entry
+    appended but not committed there is the strongest claim there is and the one
+    a reader of HEAD cannot see at all.
+
+    CONSERVATIVE ON PURPOSE. A stale worktree can hold an abandoned claim, which
+    reserves a number nobody will ever write. That is the right way to be wrong:
+    section numbers are free and a collision costs a renumbering across every
+    citation, so over-reserving is cheap and under-reserving is the bug.
+
+    FAILS SOFT, always. No git, a pruned worktree, an unreadable file — every
+    one of those skips silently and leaves the single-tree answer standing. A
+    helper that refuses to answer is a helper nobody runs.
+    """
+    import subprocess
+    try:
+        listing = subprocess.run(["git", "worktree", "list", "--porcelain"],
+                                 cwd=ROOT, capture_output=True, text=True,
+                                 timeout=20).stdout
+    except (OSError, subprocess.SubprocessError):
+        return {}
+    trees = [l.split(" ", 1)[1] for l in listing.splitlines() if l.startswith("worktree ")]
+    out = {}
+    for wt in trees:
+        root = pathlib.Path(wt)
+        if root == ROOT or not root.is_dir():
+            continue
+        try:
+            status = subprocess.run(
+                ["git", "-C", wt, "status", "--porcelain", "--untracked-files=all"],
+                capture_output=True, text=True, timeout=20).stdout
+        except (OSError, subprocess.SubprocessError):
+            continue
+        for line in status.splitlines():
+            # A DELETED file cannot hold a claim, and its path may not exist.
+            if line[:2] in (" D", "D ", "DD"):
+                continue
+            name = line[3:].strip().strip('"')
+            f = root / name
+            if f.suffix not in CITER_SUFFIXES or not f.is_file():
+                continue
+            try:
+                text = f.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            if name == "docs/prd.md":
+                for m in SECTION_HEADING.finditer(text):
+                    out.setdefault(m.group(2), set()).add(f"{root.name}: entry written")
+            else:
+                for m in SECTION_REF.finditer(text):
+                    if m.group(1) and m.group(1).strip() + " " in FOREIGN_DOC_PREFIXES:
+                        continue
+                    out.setdefault(m.group(2), set()).add(f"{root.name}: cited")
+    return out
+
+
+def next_free(ledger_text, citations, siblings=None):
+    """The next section number nobody has taken — headings AND live claims.
+
+    WHY THIS IS HERE AND NOT A NOTE. Checks A and C catch a bad number AFTER it
+    lands; this is the door they were both walked through. Every collision this
+    file documents (§236, §237, §238, §294, §340, §355) is one session picking
+    "the next free §" while another session's claim sat in uncommitted work it
+    could not see — and it happened twice more on 2026-08-28, when two live
+    sessions each took a number blind within one hour, and a third spent sixteen
+    comments citing §494 because that number LOOKED free and had in fact been a
+    shipped ruling since 2026-08-26. (Numbers are named here WITHOUT the § form
+    where they have no heading yet: check C reads this file too, so citing an
+    unwritten number in this docstring fails the very audit it documents —
+    which is exactly what the first cut of this function did.)
+
+    A number is TAKEN if it has a heading, or if anything in the working tree
+    cites it — an uncommitted claim is a claim. That second half is the whole
+    point: a heading-only reading is exactly what every colliding session did.
+
+    STATED CEILING, and it is real: this reads THIS working tree. A session
+    working in its own git worktree (or on another machine) is invisible here,
+    so the number this prints is the best answer available on this checkout and
+    never a lock. Say the number you take out loud to the other sessions.
+
+    Gaps are REPORTED and never recommended. Several numbers (§224-§226 and
+    §327 among them) were parked and dropped, and a fresh-looking gap may
+    belong to a session still running; handing one out is how a dead claim
+    becomes a live collision.
+    """
+    heads = headings(ledger_text)
+    resolvable = defined(ledger_text)
+    claimed = {}
+    for path, num in citations:
+        if num in resolvable or num in KNOWN_DANGLING:
+            continue
+        claimed.setdefault(num, set()).add(path)
+
+    def as_int(num):
+        digits = re.match(r"\d+", num)
+        return int(digits.group(0)) if digits else 0
+
+    siblings = siblings or {}
+    # KNOWN_DANGLING excluded for the same reason it is in the loop above:
+    # a stale ship worktree citing the retired numbering scheme was
+    # reserving §327 against a number that will never have a heading.
+    elsewhere = {n: w for n, w in siblings.items()
+                 if n not in resolvable and n not in KNOWN_DANGLING}
+    taken = ({as_int(n) for n in resolvable} | {as_int(n) for n in claimed}
+             | {as_int(n) for n in elsewhere})
+    taken.discard(0)
+    top = max(taken)
+    gaps = [n for n in range(1, top) if n not in taken]
+    return (top + 1, sorted(claimed.items(), key=lambda kv: as_int(kv[0])),
+            gaps, len(heads), sorted(elsewhere.items(), key=lambda kv: as_int(kv[0])))
+
+
 def self_test():
     """Each case is a failure that has really shipped in this repo."""
     index = ("## Superseded index\n\n| Ruling | What | Changed by |\n|---|---|---|\n"
@@ -308,7 +435,64 @@ def self_test():
         mark = "ok  " if flagged == should_flag else "FAIL"
         verb = "flags " if should_flag else "passes"
         print(f"  {mark} {verb} {why}")
+
+    # --next, proven on the one property that is its whole reason to exist: an
+    # uncommitted claim counts as TAKEN. A heading-only reading of this fixture
+    # answers §62 — the number another session is already writing comments
+    # against — which is the collision, handed out by the tool meant to prevent
+    # it. The gap at §60 must NOT be offered, and §525 (KNOWN_DANGLING) must not
+    # push the answer into the 500s.
+    ledger = index + "## §59 — Ladder\n\n## §61 — Doors\n"
+    claims = [("Casberi/Casberi/Model/Thing.swift", "62"),
+              ("scripts/cloudkit-schema.sh", "525")]
+    nxt, claimed, gaps, _, elsewhere = next_free(
+        ledger, claims, siblings={"64": {"other-tree: entry written"},
+                                  "61": {"x: cited"},
+                                  "525": {"stale-ship-tree: cited"}})
+    for why, got in (("counts an entry written in ANOTHER worktree as taken",
+                      nxt == 65 and [n for n, _ in elsewhere] == ["64"]),
+                     ("ignores a sibling claim that already has a heading here",
+                      "61" not in [n for n, _ in elsewhere]),
+                     ("ignores a stale worktree citing a KNOWN_DANGLING number",
+                      "525" not in [n for n, _ in elsewhere] and nxt == 65),
+                     ("offers the number after the highest claim once siblings are gone",
+                      next_free(ledger, claims)[0] == 63),
+                     ("names the claim so nobody takes it twice", [n for n, _ in claimed] == ["62"]),
+                     ("reports the gap without offering it", 60 in gaps and nxt != 60),
+                     ("ignores a KNOWN_DANGLING citation", nxt < 500)):
+        if not got:
+            ok = False
+        print(f"  {'ok  ' if got else 'FAIL'} --next {why}")
     return ok
+
+
+if "--next" in sys.argv:
+    if not self_test():
+        print("✗ prd index: SELF-TEST FAILED — not answering with a number the "
+              "audit cannot stand behind")
+        sys.exit(1)
+    nxt, claimed, gaps, count, elsewhere = next_free(
+        LEDGER.read_text(encoding="utf-8"), collect_citations(CITERS, skip=LEDGER),
+        siblings=sibling_claims())
+    print(f"next free section: §{nxt}")
+    print(f"  {count} sections written")
+    if claimed:
+        print("  claimed but unwritten (someone is mid-work — do NOT take these):")
+        for num, paths in claimed:
+            where = ", ".join(sorted(paths)[:3])
+            more = f" +{len(paths) - 3} more" if len(paths) > 3 else ""
+            print(f"    §{num} — cited by {where}{more}")
+    if elsewhere:
+        print("  taken in ANOTHER checkout on this machine (do NOT take these):")
+        for num, where in elsewhere:
+            print(f"    §{num} — {', '.join(sorted(where))}")
+    if gaps:
+        print(f"  gaps, reported only, never reuse: {', '.join('§' + str(g) for g in gaps[-6:])}")
+    print("  CEILING: this reads working trees on THIS machine. A checkout "
+          "elsewhere is invisible, and an entry that exists only as an "
+          "uncommitted append is invisible to anyone reading HEAD — so say the "
+          "number you take out loud.")
+    sys.exit(0)
 
 
 if "--self-test" in sys.argv:
