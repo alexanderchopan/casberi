@@ -196,7 +196,9 @@ struct VibenetAddressBookScreen: View {
                 // instead, which is the shape Alexander ruled for it
                 // ("N accounts and balance, then the keys, then the
                 // events") and which this screen must not disturb.
-                VibenetRoomCard(room: room, onRemove: unwatch, onRename: { address in
+                VibenetRoomCard(room: room, onRemove: unwatch,
+                                onWatched: { Task { await load() } },
+                                onRename: { address in
                     renameText = watch.name(for: address) ?? ""
                     renamingAddress = address
                 }, onOpen: { address in

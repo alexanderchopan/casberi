@@ -134,6 +134,7 @@ strip_comments "$ROOM"   > "$TMP/room.nc.swift"
 strip_comments "$BRIDGE" > "$TMP/bridge.nc.swift"
 strip_comments "$SETUP" > "$TMP/setup.nc.swift"
 strip_comments "$BOOK"  > "$TMP/book.nc.swift"
+strip_comments "$FIELD" > "$TMP/watch.nc.swift"
 strip_comments "$SPINE" > "$TMP/spine.nc.swift"
 SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
@@ -166,11 +167,43 @@ if grep -q 'VibenetRoomCard' "$TMP/setup.nc.swift"; then
   exit 1
 fi
 
-# The setup page offers the first address ONLY while disconnected. Two fields
-# writing one list, one tap apart, is the duplication the split exists to end —
-# and it renders perfectly, so nothing else can see it.
-grep -q 'if !connected' "$TMP/setup.nc.swift" \
-  || { echo "✗ VibenetScreen no longer gates its paste field on being disconnected (prd §465)"; exit 1; }
+# THE SETUP PAGE LETS YOU PICK SEVERAL, AND NEVER NAVIGATES ITSELF (user
+# ruling, 2026-08-28 — amends §465). The guard here used to be the opposite:
+# `if !connected` had to gate the field, because §465 read two fields writing
+# one list as duplication. It also meant one tap on a list of five devnet
+# accounts removed the other four and left the page, reported as "after you
+# follow one address you can't choose any of the others… they need to be able
+# to select multiple before going to the feed."
+#
+# So the field and the list are unconditional now, and the ONLY route to the
+# room is `RoomDoor` — a tap of the person's, not a consequence of the last
+# thing they touched. That is what these two check: a `sourceRequest` written
+# by this screen is the auto-route returning, and it fails invisibly (the room
+# opens, correctly, at exactly the wrong moment).
+if grep -q 'chrome.sourceRequest' "$TMP/setup.nc.swift"; then
+  echo "✗ VibenetScreen routes to the room itself again — 2026-08-28: connecting is"
+  echo "  picking several, and the RoomDoor is the only way on."
+  exit 1
+fi
+if grep -qE 'if +!connected' "$TMP/setup.nc.swift"; then
+  echo "✗ VibenetScreen gates its paste field on being disconnected again — 2026-08-28:"
+  echo "  a connect page whose answer to 'I watched one' is to remove the list can only"
+  echo "  ever connect one thing."
+  exit 1
+fi
+
+# A discovery row must SAY whether you already took it. `VibenetWatch.add`
+# refuses a duplicate, so without this a second tap on a row you have is the
+# dead control §83 bans — and the only feedback for a tap that worked and one
+# that did nothing is the same row, unchanged.
+# Anchored to the ROW's own two halves, never a bare `isWatching`: the paste
+# field in the same file has said "Already watching" since it shipped, so a
+# file-wide grep for that call passes whether or not the LIST marks anything.
+grep -q 'disabled(watching)' "$TMP/watch.nc.swift" \
+  || { echo "✗ a watched discovery row is tappable again — 2026-08-28: add() refuses it,"; \
+       echo "  so the tap does nothing and reads exactly like a tap that worked"; exit 1; }
+grep -q '"Watching"' "$TMP/watch.nc.swift" \
+  || { echo "✗ a watched discovery row no longer SAYS it is watched (2026-08-28)"; exit 1; }
 
 # ONE field, shared. Copied, the two screens answer the same paste with two
 # different sentences within a release.

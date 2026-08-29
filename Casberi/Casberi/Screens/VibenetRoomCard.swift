@@ -119,6 +119,21 @@ struct VibenetRoomCard: View {
     @State private var accountHistories: [String: [VibenetValueSample]] = [:]
     let room: VibenetRoom
     var onRemove: (String) -> Void
+    /// An address was just watched from THIS card's empty state — the
+    /// discovery list §479 put there so an empty room is not a dead end.
+    ///
+    /// It shipped as a no-op (`onWatched: {}`), which made that list a dead
+    /// control (§83) in the one place it was added to be a way out: the card
+    /// is composed from a `VibenetRoom` VALUE its parent holds, so watching an
+    /// account changed nothing on screen — the headline went on saying
+    /// "Nothing watched on vibenet yet" over an account that was now watched,
+    /// and every further tap on the list looked equally inert. Reported as
+    /// both "after you follow one address you can't choose any of the others"
+    /// and "it says it's not connected after i do connect it".
+    ///
+    /// The parent re-reads; this card never does, because a card recomposing
+    /// its own source is how the two get to disagree.
+    var onWatched: () -> Void = {}
     /// Raised by the context menu's "Name this account…" — the alert itself
     /// lives on the SCREEN (a text-entry alert needs `@State` a card
     /// re-composed from a value type shouldn't own), so this just reports
@@ -895,7 +910,7 @@ struct VibenetRoomCard: View {
                         .dsText(.heading17)
                         .foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    VibenetDiscoverySection(onWatched: {})
+                    VibenetDiscoverySection(onWatched: onWatched)
                 }
             }
 

@@ -148,11 +148,22 @@ struct VibenetWatchField: View {
 /// pasting an address by hand.
 ///
 /// It exists because of the empty state's own problem: **nobody arrives at
-/// a devnet already holding an address for it.** Drawn only while nothing
-/// is watched — the moment there's a real card on screen, a list of
-/// strangers' addresses is clutter, not help.
+/// a devnet already holding an address for it.**
+///
+/// **A ROW SAYS WHETHER YOU ALREADY TOOK IT (user ruling, 2026-08-28).**
+/// The list used to draw every row identically, trailing "Watch", however
+/// many of them you had watched — and `add` refuses a duplicate, so a second
+/// tap on a row you already took did precisely nothing: the dead control §83
+/// bans, and half of the report *"after you follow one address you can't
+/// choose any of the others"*, since the only feedback for a tap that worked
+/// and a tap that did nothing was the same row, unchanged. Picking several is
+/// the act this list is for, so the list has to show the picking.
 struct VibenetDiscoverySection: View {
     @Environment(BridgeStore.self) private var store
+    /// Observed, not read once — a row's trailing word is a fact about the
+    /// watch list, so it has to redraw when the list does. Watching from the
+    /// paste field above marks its row here too, for the same reason.
+    @Bindable private var watch = VibenetWatch.shared
 
     var onWatched: () -> Void
 
@@ -203,13 +214,22 @@ struct VibenetDiscoverySection: View {
     }
 
     /// One row, shared by a discovered account and the fixed peek address —
-    /// same face, same short-address line, same trailing "Watch" verb, so
-    /// the peek option reads as one more real account rather than a
-    /// visually distinct special case.
+    /// same face, same short-address line, same trailing verb, so the peek
+    /// option reads as one more real account rather than a visually distinct
+    /// special case.
+    ///
+    /// A row you have taken says so and stops being tappable. `.disabled` is
+    /// enough here and would not be on a button that painted its own
+    /// background (§83's own corollary — that dims the LABEL, not a
+    /// background you drew): the whole control is text, and the text changes.
     private func discoveryRow(address: String, subtitle: String?) -> some View {
-        Button {
+        let watching = watch.isWatching(address)
+        return Button {
             DSHaptic.tap()
             guard VibenetWatch.shared.add(address) else { return }
+            // Registered HERE, in the control, not left to each embedder:
+            // three screens draw this list and a seat that forgot to register
+            // reads perfectly right up until the catalog disagrees with it.
             VibenetBridge.registerBridge(store: store)
             onWatched()
         } label: {
@@ -231,15 +251,26 @@ struct VibenetDiscoverySection: View {
                     }
                 }
                 Spacer(minLength: DS.Space.s2)
-                Text(String(localized: "Watch"))
-                    .dsText(.label12).fontWeight(.semibold)
-                    .foregroundStyle(Self.mark)
-                    .lineLimit(1)
-                    .fixedSize()
+                if watching {
+                    Label(String(localized: "Watching"), systemImage: "checkmark")
+                        .labelStyle(.titleAndIcon)
+                        .dsText(.label12).fontWeight(.semibold)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                        .fixedSize()
+                } else {
+                    Text(String(localized: "Watch"))
+                        .dsText(.label12).fontWeight(.semibold)
+                        .foregroundStyle(Self.mark)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(watching)
+        .animation(DS.Motion.standard, value: watching)
     }
 
     /// Once per appearance — never re-run by the embedding screen's own
