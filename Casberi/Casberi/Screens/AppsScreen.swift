@@ -418,8 +418,20 @@ struct AppsScreen: View {
 
     // MARK: - Search (App Store grammar — 40+ apps is past what chips can hold)
 
-    /// Every offer whose name, tagline, or category matches the query — a flat
-    /// list you scan, in the same ranked tier order the shelves use.
+    /// Every offer whose name, tagline, category — or the named things it
+    /// reads — matches the query. A flat list you scan, in the same ranked tier
+    /// order the shelves use.
+    ///
+    /// `alsoReads` is what makes "aave" findable (prd §515). Those five had
+    /// seats of their own until §515 and lost them for landing no rows of their
+    /// own; searching for one now answers with the seat that really reads it,
+    /// which is a better answer than the one it replaced — that seat opened
+    /// somebody else's room.
+    ///
+    /// Matched with `hasPrefix` on WHOLE names rather than `contains` over the
+    /// joined list: substring-matching a list of proper nouns makes short
+    /// queries hit things they do not name ("a", "eth"), and a person typing a
+    /// protocol types its first letters.
     private var searchHits: [Ranked] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
         guard !q.isEmpty else { return [] }
@@ -427,6 +439,7 @@ struct AppsScreen: View {
             entry.offer.name.lowercased().contains(q)
                 || entry.offer.tagline.lowercased().contains(q)
                 || category(of: entry.offer).lowercased().contains(q)
+                || entry.offer.alsoReads.contains { $0.lowercased().hasPrefix(q) }
         }
     }
 
@@ -1283,6 +1296,15 @@ struct AppsScreen: View {
         }
     }
 
+    /// The verb a wallet-riding seat wears while it is dark (prd §515) — nil
+    /// for every ordinary bridge, which keeps Connect.
+    private func walletSeatVerb(_ offer: BridgeCatalog.Offer) -> CapsuleVerb? {
+        guard let id = BridgeRouter.id(forOffer: offer.name),
+              WalletSeatStanding.rides(id: id) else { return nil }
+        return CapsuleVerb(WalletSeatStanding.verb(
+            watched: WalletStore.shared.addresses.count))
+    }
+
     @ViewBuilder
     private func capsule(_ entry: Ranked) -> some View {
         switch entry.tier {
@@ -1304,7 +1326,15 @@ struct AppsScreen: View {
                 // Setup bridges collect input first — Connect raises their
                 // form (a pasted key, a sign-in) or pushes their manager (a
                 // watch list); the connect happens there, with proof (§218).
-                VerbCapsule(verb: .connect) {
+                //
+                // Except a WALLET-RIDING seat (prd §515), which has no connect
+                // to make: its sweep runs for every watched address whether the
+                // seat exists or not, so the word is `Watch` while there is no
+                // address and `Automatic` once there is. The destination does
+                // not move — every one of these still has somewhere real to go
+                // (its own screen, or the addresses it reads) — only the claim
+                // the word makes changes.
+                VerbCapsule(verb: walletSeatVerb(entry.offer) ?? .connect) {
                     route.openSetup(forOffer: entry.offer.name)
                 }
             } else {

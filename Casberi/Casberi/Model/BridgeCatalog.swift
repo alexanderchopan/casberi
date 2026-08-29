@@ -39,6 +39,19 @@ enum BridgeCatalog {
         /// visual language before and after they connect. Empty for the
         /// other 54 offers, whose one-sentence hook already says it all.
         var features: [String] = []
+        /// Named things this offer reads that have no seat of their own
+        /// (prd §515) — the protocols, venues or formats it covers. Two jobs,
+        /// both of which the five retired DeFi seats used to do badly: catalog
+        /// SEARCH matches these, so typing "aave" finds the seat that really
+        /// reads it instead of one that misleads you; and the product page
+        /// lists them, so the capability is stated where it is true rather than
+        /// asserted by an icon that opens somebody else's room.
+        ///
+        /// A name belongs here ONLY while it has no seat — an entry that also
+        /// ships as an offer would put one thing in the catalog twice, which is
+        /// the defect §515 removed, arriving from the other side.
+        var alsoReads: [String] = []
+
         /// True when connecting needs the person's input first (feed URLs,
         /// a pasted token) — Connect opens the bridge's setup screen instead
         /// of firing a permission ask. Setup bridges skip onboarding's
@@ -158,13 +171,15 @@ enum BridgeCatalog {
                 "Warns if the wallet starts delegating its control.",
                 "Catches transfers that look like address-poisoning scams.",
                 "Tracks what you've paid in gas.",
-                // Aave/Morpho/Uniswap/Hyperliquid/Aerodrome each carry their
-                // own tile since 2026-07-30, so naming them here would sell
-                // the same thing twice. Spark has no tile of its own yet and
-                // would otherwise go unmentioned anywhere — hence the one
-                // name left in this bullet.
-                "Shows your DeFi positions, Spark's included.",
+                // NAMED, since §515 retired their seats: these five are read
+                // for every watched wallet and each draws its own tile in the
+                // Wallet room, so this is the one place in the catalog that
+                // says so. The old comment here declined to name them because
+                // the seats did — "sell the same thing twice" — which was the
+                // right diagnosis and the wrong half to keep.
+                "Shows your DeFi positions — Aave, Morpho, Uniswap, Hyperliquid, Aerodrome and Spark.",
               ],
+              alsoReads: ["Aave", "Morpho", "Uniswap", "Hyperliquid", "Aerodrome", "Spark"],
               needsSetup: true),
         // Wallet group by ruling (user, 2026-07-21, prd §162). Privacy Pools
         // rides the watched wallets the Peer way: no account exists to
@@ -398,54 +413,29 @@ enum BridgeCatalog {
                          "Ethereum, Base, Arbitrum, Optimism, Polygon and Gnosis Chain"
               ],
               needsSetup: true, added: day(2026, 7, 30)),
-        // The five DeFi protocols the wallet has been reading all along
-        // (2026-07-30), seated in the catalog beside Peer/0xBow/Gnosis
-        // Pay/Safe. NOT a new integration and NOT a new request: every one of
-        // these sweeps already runs unconditionally for every watched wallet
-        // inside `WalletIngest.refresh` — the seat gates nothing, it says the
-        // protocol is part of this person's life. Which is why each is
-        // EVIDENCE-gated (`WalletSeatEvidence`): the seat lights the day a
-        // real position is seen, never merely because a wallet is watched.
-        // Connect and Open both route to the wallet manager (the Gnosis Pay
-        // rule, `BridgeRouter`) — there is no setting to set, and the live
-        // book already has a home in the Wallet feed's own DeFi tiles, so a
-        // screen here would only duplicate it.
-        Offer(name: "Aave",        tagline: "Your lending position, watched",       group: "Wallet",    connectable: true,
-              summary: "Aave is where a lot of onchain lending happens: collateral posted, borrowed against.\n\nWatch the wallet and your position lands with a warning while there's still time to act. Read-only: nothing supplies, borrows, repays, or withdraws.",
-              features: ["Warns before a position gets close to liquidation",
-                         "Ethereum, Base, Arbitrum, Optimism and Polygon",
-                         "No account, no key — read from each chain's public RPC"
-              ],
-              needsSetup: true, added: day(2026, 7, 30)),
-        Offer(name: "Morpho",      tagline: "Your markets and vaults, watched",     group: "Wallet",    connectable: true,
-              summary: "Morpho is isolated markets and vaults rather than one pool — powerful, and easy to lose track of.\n\nWatch the wallet and every position lands with its health factor's trajectory. Read-only: nothing supplies, borrows, repays, or withdraws.",
-              features: ["Warns when a position drifts close to liquidation, and which way it's trending",
-                         "Tells you when a vault you're in materially reallocates",
-                         "Notices when a vault's rate falls behind Aave's for the same asset"
-              ],
-              needsSetup: true, added: day(2026, 7, 30)),
-        Offer(name: "Uniswap",     tagline: "Your liquidity, in or out of range",   group: "Wallet",    connectable: true,
-              summary: "A concentrated-liquidity position stops earning the moment price leaves its range, and nothing tells you.\n\nWatch the wallet and yours land, V3 and V4 together. Read-only: nothing swaps, adds, removes, or collects.",
-              features: ["Alerts both ways — out of range, and back in",
-                         "Shows uncollected fees, and marks the milestones as they add up",
-                         "Ethereum, Base, Arbitrum, Optimism and Polygon"
-              ],
-              needsSetup: true, added: day(2026, 7, 30)),
-        Offer(name: "Hyperliquid", tagline: "Your positions, as they turn",         group: "Wallet",    connectable: true,
-              summary: "Hyperliquid moves fast enough that a fill-by-fill feed would be noise — one measured wallet made 2,000 trades in three hours. So this watches what actually changes.\n\nNo account, no key, read-only: nothing here opens, closes, or adjusts a position.",
-              features: ["Lands a position opening and closing — never the fills in between",
-                         "Warns when a position drifts close to liquidation",
-                         "Counts down your staked HYPE's unlock",
-                         "Sub-accounts included"
-              ],
-              needsSetup: true, added: day(2026, 7, 30)),
-        Offer(name: "Aerodrome",   tagline: "Never miss the weekly vote",           group: "Wallet",    connectable: true,
-              summary: "A veAERO lock earns by voting every week, in a window that closes whether you remembered or not. Watch the wallet and that deadline lands as a real date.\n\nNo account, no key, read-only: nothing here votes, locks, or claims.",
-              features: ["Reminds you before the weekly vote window closes — read live",
-                         "Counts down a lock's expiry, and stays quiet about permanent locks",
-                         "Shows how much of a decaying lock's voting power is left"
-              ],
-              needsSetup: true, added: day(2026, 7, 30)),
+        // THE FIVE THAT ARE NOT SEATS (prd §515, 2026-08-29) — Aave, Morpho,
+        // Uniswap, Hyperliquid and Aerodrome had offers here from 2026-07-30
+        // until this date, and the reason they are gone is the one test that
+        // separates a seat from a reading: **a catalog seat lands rows under a
+        // source of its own.** All five stamp `source: "Wallet"`, so
+        // `BridgeRouter.roomSource` answered "Wallet" for every one of them and
+        // Open went exactly where the Wallet seat's own Open goes — five icons,
+        // one destination, and that destination already had an icon. Connect was
+        // worse: there is nothing to connect (each sweep runs unconditionally
+        // for every watched wallet inside `WalletIngest.refresh`), so it pushed
+        // the wallet manager, a screen that cannot say why you are on it. A
+        // person who tapped Aave with seven addresses watched got a door to a
+        // room, a book and a chains row, and no answer at all.
+        //
+        // The capability did not go anywhere — it is stated on the Wallet offer
+        // above, in its DeFi bullet and its `alsoReads` list, which is what a
+        // catalog search for "aave" now resolves to. The comment on that bullet
+        // used to say naming them there would "sell the same thing twice"; it
+        // was right that it was twice, and wrong about which half to keep.
+        //
+        // Peer, 0xBow, Railgun, Safe, Altana, Gnosis Pay and ether.fi keep their
+        // seats and pass the same test: every one lands rows under its own
+        // source, so its icon is the only door to a room nothing else opens.
         Offer(name: "ether.fi",    tagline: "Your staked ETH, and the card",     group: "Wallet",    connectable: true,
               summary: "Unstaking hands you a claim ticket that queues about ten days, then waits silently. ether.fi Cash is the other half: a Visa card that settles onchain.\n\nWatch the wallet and both land. Read-only: claiming and spending happen in ether.fi's own app.",
               features: ["Tells you the moment your ETH is actually claimable",

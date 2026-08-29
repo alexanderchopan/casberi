@@ -4945,23 +4945,15 @@ enum DemoSeedAll {
         ("Ethrex Hegotá", "1 address watched", "Reads an address's coins, transfers and who paid for them."),
         ("Gnosis Pay", "Rides your wallet", "Reads what the card settled onchain."),
         ("ether.fi", "Rides your wallet", "Reads what the card settled onchain."),
-        // The five wallet-riding PROTOCOLS (2026-08-26, prd §484). They were
-        // the largest hole in the demo — five connectable offers in the
-        // catalog's biggest group, every one of them read on a real wallet by
-        // `WalletWatch.liveState` every foreground pass, and none of them
-        // claimed here. Their rows are not rows: each lands under
-        // `source: "Wallet"` or nothing at all, so `demo-selftest.py` check E
-        // cannot see them and they are named in its `KNOWN_ROWLESS_SEAT`,
-        // where check M proves each one's BOOK instead. Aave, Morpho and
-        // Aerodrome have drawn in the demo since §351; Uniswap and
-        // Hyperliquid joined `WalletDemoState` in this pass, so all five now
-        // say something in the Positions scope rather than merely appearing
-        // in the catalog.
-        ("Aave", "Rides your wallet", "Reads your collateral and debt."),
-        ("Morpho", "Rides your wallet", "Reads your positions and vault deposits."),
-        ("Hyperliquid", "Rides your wallet", "Reads your open positions and staked HYPE."),
-        ("Aerodrome", "Rides your wallet", "Reads your veAERO locks."),
-        ("Uniswap", "Rides your wallet", "Reads your liquidity, in range or out."),
+        // (Aave, Morpho, Uniswap, Hyperliquid and Aerodrome were claimed here
+        // from §484 until §515 retired their seats. They are not seats any
+        // more — all five land under `source: "Wallet"`, so their icons were
+        // second doors to the Wallet room — and a demo that claims a seat the
+        // catalog does not offer is the same fake status from the other side.
+        // What they read is still furnished and still shown: `WalletDemoState`
+        // gives all five a book, and the Positions scope draws it. The demo
+        // parity checks moved with them, out of `KNOWN_ROWLESS_SEAT`/check M
+        // and into check N, which proves that book directly.)
         // The four exchanges (2026-08-26, prd §484). NOT "Rides your wallet" —
         // an exchange is a read-only KEY, the one thing the demo will not fake
         // (see `ExchangeBridge.demoBalances`), so the proof line states the

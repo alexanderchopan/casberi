@@ -78,44 +78,11 @@ enum StorePreview {
             "r1 = Row(\"2 of 3 signatures collected on a transfer to maya.eth — your signature is needed\", \"Transaction\", \"Wallet\", \"now\")",
             "r2 = Row(\"Your Safe gained a new owner (alice.eth)\", \"Transaction\", \"Wallet\", \"Thu\")",
         ]
-        // The risk crossing is the ONLY Aave row that ever lands — no supply,
-        // borrow, repay or withdraw event becomes a thing, so a preview
-        // showing activity would be fiction.
-        case "Aave": [
-            "root = Stack([w])",
-            "w = Widget(\"Your position\", null, [r1])",
-            "r1 = Row(\"Your Aave position on Base is close to liquidation — health factor 1.31\", \"Transaction\", \"Wallet\", \"now\")",
-        ]
-        case "Morpho": [
-            "root = Stack([w])",
-            "w = Widget(\"Markets and vaults\", null, [r1, r2])",
-            "r1 = Row(\"Lent 5,000 USDC on Morpho\", \"Transaction\", \"Wallet\", \"2h\")",
-            "r2 = Row(\"Your Steakhouse USDC vault moved into wstETH markets — now 41% of the vault\", \"Transaction\", \"Wallet\", \"Yesterday\")",
-        ]
-        case "Uniswap": [
-            "root = Stack([w])",
-            "w = Widget(\"Your liquidity\", null, [r1, r2])",
-            "r1 = Row(\"Your WETH/USDC position on Base drifted out of range — it stopped earning fees\", \"Transaction\", \"Wallet\", \"now\")",
-            "r2 = Row(\"Collected $340 in fees on Uniswap\", \"Transaction\", \"Wallet\", \"Thu\")",
-        ]
-        // Never the fills between: one measured wallet made 2,000 in three and
-        // a half hours. The close row says "last seen up" rather than a
-        // realized PnL, which this API can't hand back honestly.
-        case "Hyperliquid": [
-            "root = Stack([w])",
-            "w = Widget(\"Positions\", null, [r1, r2])",
-            "r1 = Row(\"Opened ETH long on Hyperliquid — 10x, entry $3,412\", \"Transaction\", \"Wallet\", \"now\")",
-            "r2 = Row(\"Closed BTC short on Hyperliquid — held 6 days, last seen up ~$1,240\", \"Transaction\", \"Wallet\", \"Yesterday\")",
-        ]
-        // The vote deadline is read live off the Voter, never computed — and
-        // it carries month+day because a weekday alone was ambiguous for a
-        // date days out. A permanent lock has no expiry and gets no row.
-        case "Aerodrome": [
-            "root = Stack([w])",
-            "w = Widget(\"Your locks\", null, [r1, r2])",
-            "r1 = Row(\"veAERO #64821 hasn't voted — Aerodrome voting closes Wed, Aug 6, 4:00 PM\", \"Link\", \"Wallet\", \"now\")",
-            "r2 = Row(\"veAERO #64821 (2,690 AERO) expires Jul 25\", \"Link\", \"Wallet\", \"2h\")",
-        ]
+        // (Aave, Morpho, Uniswap, Hyperliquid and Aerodrome had previews here
+        // until prd §515 retired their seats. A preview is reached only from a
+        // product page, and those five have none — the same reading now lands
+        // through the Wallet room's DeFi tiles, which draw the real position
+        // rather than a written one.)
         // The queued row names no date on purpose — ether.fi finalizes in
         // batches at its own pace, so any ETA would be invented; the row
         // retitles itself the moment it really is claimable. Cash spends carry

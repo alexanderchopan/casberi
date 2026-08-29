@@ -128,13 +128,15 @@ struct AppDetailScreen: View {
                 Text(offer.name).dsText(.heading22).foregroundStyle(DS.textPrimary)
                 Text(LocalizedStringKey(offer.tagline)).dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 actionButton.padding(.top, DS.Space.s2)
+                walletSeatStanding
             }
             Spacer(minLength: 0)
         }
     }
 
     /// The product page's action — the SAME honest capsule verbs as the Apps
-    /// chart (shared `VerbCapsule`): Fix / Connect / Open / Soon.
+    /// chart (shared `VerbCapsule`): Fix / Connect / Watch / Automatic / Open /
+    /// Soon.
     @ViewBuilder
     private var actionButton: some View {
         if bridge?.status == .attention {
@@ -158,7 +160,10 @@ struct AppDetailScreen: View {
             }
         } else if offer.connectable {
             if offer.needsSetup {
-                VerbCapsule(verb: .connect) { openSetup() }
+                // A WALLET-RIDING seat says `Watch` / `Automatic`, never
+                // Connect (prd §515) — there is nothing to connect, and the
+                // sentence under it says what the app has already looked for.
+                VerbCapsule(verb: walletSeatVerb ?? .connect) { openSetup() }
             } else {
                 VerbCapsule(verb: .connect) {
                     doConnect()
@@ -166,6 +171,43 @@ struct AppDetailScreen: View {
             }
         } else {
             VerbCapsule(verb: .soon)
+        }
+    }
+
+    /// This seat's `BridgeStore` id, when it has one.
+    private var seatID: String? { BridgeRouter.id(forOffer: offer.name) }
+
+    /// The verb a wallet-riding seat wears while it is dark — nil for every
+    /// ordinary bridge, which keeps Connect.
+    private var walletSeatVerb: CapsuleVerb? {
+        guard let id = seatID, WalletSeatStanding.rides(id: id) else { return nil }
+        return CapsuleVerb(WalletSeatStanding.verb(
+            watched: WalletStore.shared.addresses.count))
+    }
+
+    /// What a wallet-riding seat has actually found, said out loud (prd §515).
+    ///
+    /// THIS IS THE ANSWER TO THE QUESTION THE PAGE USED TO RAISE. The app reads
+    /// every one of these protocols for every watched address already, and knew
+    /// perfectly well whether it had seen yours — it just never said so
+    /// anywhere, so tapping Connect and landing on a roster of addresses was
+    /// the whole of the reply. It renders in both states: dark, it says what is
+    /// missing; connected, it says where it was found, which is the receipt the
+    /// seat's own status line only half gives.
+    @ViewBuilder private var walletSeatStanding: some View {
+        if let id = seatID,
+           let line = WalletSeatStanding.line(
+               id: id,
+               watched: WalletStore.shared.addresses.count,
+               seen: store.walletSeatCount(id: id) ?? 0) {
+            // `Text(line)`, not `LocalizedStringKey(line)` — the sentence is
+            // already localized and composed; handing it back as a key would
+            // look up a string nobody wrote and fall through to the literal,
+            // which works by accident and stops working in any language.
+            Text(line)
+                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, DS.Space.s1)
         }
     }
 

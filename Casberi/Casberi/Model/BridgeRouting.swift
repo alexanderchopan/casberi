@@ -392,24 +392,13 @@ enum BridgeRouter {
         // comes here at all: the spends live in the feed, where every other
         // landed thing lives, so it opens that room (`roomSource(forID:)`).
         Row(offer: "Gnosis Pay", id: "gnosispay", destination: .wallet),
-        // The five DeFi protocols seated 2026-07-30 have no screen of their
-        // own for the same two reasons Gnosis Pay doesn't — watching a wallet
-        // is the only real action, and the generic `BridgeDetailScreen`'s
-        // Remove would be a dead control against a seat that re-registers
-        // itself next foreground. They add a third: their live book already
-        // has a home in the Wallet feed's own DeFi tiles, so a screen here
-        // would only duplicate it. If one ever grows something to manage that
-        // the feed can't carry, it earns its own screen then — that's what
-        // Peer/0xBow/Safe have.
-        //
-        // So CONNECT lands here, on the wallet manager. OPEN does not, since
-        // 2026-08-26: it goes to that DeFi tile in the Wallet room, which is
-        // the thing the tile advertised (`roomSource(forID:)`).
-        Row(offer: "Aave",        id: "aave",        destination: .wallet),
-        Row(offer: "Morpho",      id: "morpho",      destination: .wallet),
-        Row(offer: "Uniswap",     id: "uniswap",     destination: .wallet),
-        Row(offer: "Hyperliquid", id: "hyperliquid", destination: .wallet),
-        Row(offer: "Aerodrome",   id: "aerodrome",   destination: .wallet),
+        // (Aave, Morpho, Uniswap, Hyperliquid and Aerodrome had rows here
+        // until prd §515. They are not seats any more: all five land under
+        // `source: "Wallet"`, so this table pointed Connect at the wallet
+        // manager — a screen that cannot say why you are on it — and Open at
+        // the Wallet room, which the Wallet seat's own Open already opens.
+        // What the wallet reads for you is stated on the Wallet offer now;
+        // `roomSource` below carries the rule that kept them out.)
         Row(offer: "ether.fi",    id: "etherfi",     destination: .wallet),
         // Read-only exchange seats (prd §163) — Wallet group by ruling: their
         // balances merge into the combined total, so they belong beside the
@@ -522,6 +511,14 @@ enum BridgeRouter {
         rows.first { $0.id == id }?.destination ?? .detail(id: id)
     }
 
+    /// A catalog offer's `BridgeStore` id — the join the catalog screens need
+    /// to ask a seat about itself before it is connected (prd §515: which verb
+    /// a wallet-riding seat wears, and what its page says under it). Nil for an
+    /// offer with no row, which is every offer that registers no seat.
+    static func id(forOffer name: String) -> String? {
+        rows.first { $0.offer == name }?.id
+    }
+
     /// The ROOM a connected seat opens INSTEAD of pushing a screen, keyed by
     /// `BridgeStore` id — a real `Thing.source`, never the catalog name. That
     /// is `RoomDoor`'s rule and it matters for the same reason: the two differ
@@ -539,11 +536,15 @@ enum BridgeRouter {
     /// one exists only once a real position has been SEEN — which leaves
     /// "show me it" as the only honest thing Open can mean here.
     ///
-    /// The five DeFi protocols all land `source: "Wallet"` (prd §349), so they
-    /// open the Wallet room, where their live book already has a home in the
-    /// DeFi tiles. Gnosis Pay and ether.fi land under sources of their own and
-    /// open those — the same rule, and their rows' own comment already said
-    /// the spends "live in the feed, where every other landed thing lives".
+    /// It had seven entries until prd §515 and has two. The five DeFi
+    /// protocols (Aave, Morpho, Uniswap, Hyperliquid, Aerodrome) all land
+    /// `source: "Wallet"` (prd §349) — so what this table did for them was
+    /// point Open at the room the WALLET seat's own Open opens, which is
+    /// §494's fix working exactly as designed and revealing that the seat, not
+    /// the door, was the mistake. They are not offers any more. Gnosis Pay and
+    /// ether.fi land under sources of their own and stay: their rows' comment
+    /// already said the spends "live in the feed, where every other landed
+    /// thing lives", and no other seat opens those rooms.
     ///
     /// Two routes are deliberately UNCHANGED. **Connect** still lands on the
     /// manager (`destination(forOffer:)` above): watching a wallet is the only
@@ -569,10 +570,13 @@ enum BridgeRouter {
     /// no dead end.
     static func roomSource(forID id: String) -> String? {
         switch id {
-        // `WalletIngest` stamps this literal on every row of all five; there
-        // is no constant to read, and `WalletScreen`'s own `RoomDoor` spells
-        // it the same way.
-        case "aave", "morpho", "uniswap", "hyperliquid", "aerodrome": "Wallet"
+        // NOTHING MAY ANSWER "Wallet" HERE (prd §515). A seat whose rows land
+        // under another seat's source has no room of its own, so its icon is
+        // a second door to a room that already has one — which is exactly what
+        // Aave, Morpho, Uniswap, Hyperliquid and Aerodrome were until they
+        // stopped being offers. The rule is mechanical — `setup-copy-audit.py`
+        // check 7e: a catalog seat lands rows under a source of its own, or it
+        // is not a seat.
         case "gnosispay": GnosisPayBridge.sourceName
         case "etherfi":   EtherFiCash.source
         default: nil

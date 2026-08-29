@@ -557,6 +557,70 @@ def audit_seat_rooms(routing_src: str, store_src: str, stamped: set,
     return findings
 
 
+# ── check 7e — two seats, one room (prd §515, 2026-08-29) ──────────────────
+#
+# Check 7c asks whether a seat's door names a REAL room. This asks the harder
+# question underneath it: whether that room is the seat's OWN.
+#
+# Aave, Morpho, Uniswap, Hyperliquid and Aerodrome each had a catalog seat from
+# 2026-07-30 to §515, and all five land `source: "Wallet"` — so §494 wired their
+# Open through `roomSource` and it landed, correctly and uselessly, in the room
+# the Wallet seat's own Open opens. Five icons, one room, and a Connect that
+# connected nothing because these sweeps run for every watched wallet whether a
+# seat exists or not. §494 read the defect as a wrong door; it was a wrong seat.
+#
+# **The rule: a catalog seat lands rows under a source of its own.** The
+# checkable half of that is stated from the catalog side — a `roomSource`
+# literal that names ANOTHER offer's own room is one seat opening another
+# seat's room. A seat opening the source it is named for (`case "peer":
+# "Peer"`) is exactly right and must never be flagged.
+#
+# Plus a tripwire under the five, because this seating has now been questioned
+# twice by the same person (§494, §515) and re-added seats are how a ruling
+# gets undone by memory: none of the five may return as an Offer, a router Row
+# or a WalletSeat. `BridgeStore.retiredWalletSeats` names them as bare strings
+# and is deliberately not one of those three shapes.
+#
+# STATED CEILING, inherited from 7c: only a LITERAL can be resolved from text,
+# so a case answering with a constant (`EtherFiCash.source`) is skipped — and a
+# seat added with NO `roomSource` case at all is invisible here, since which
+# source a sweep stamps is not a fact any text check can read.
+RETIRED_SEAT_IDS = {"aave", "morpho", "uniswap", "hyperliquid", "aerodrome"}
+ROUTER_OFFER_ROW_RE = re.compile(r'Row\(offer:\s*"([^"]+)",\s*id:\s*"([^"]+)"')
+OFFER_NAME_RE = re.compile(r'Offer\(name:\s*"([^"]+)"')
+
+
+def audit_seat_room_ownership(routing_src: str, store_src: str, catalog_src: str):
+    findings = []
+    cases = room_source_cases(routing_src)
+    if cases is None:
+        return ["BridgeRouting.swift: BridgeRouter.roomSource(forID:) is gone — "
+                "check 7e can no longer see which room a seat opens"]
+    offer_of = {sid: offer for offer, sid in ROUTER_OFFER_ROW_RE.findall(routing_src)}
+    offers = set(OFFER_NAME_RE.findall(catalog_src))
+    for sid, value in cases:
+        lit = re.fullmatch(r'"([^"]+)"', value)
+        if not lit:
+            continue                   # a constant — see the ceiling above
+        room = lit.group(1)
+        if room in offers and room != offer_of.get(sid):
+            findings.append(f"BridgeRouting.swift: seat “{sid}” opens “{room}”, "
+                            f"which is another seat's own room — two icons, one "
+                            f"room (§515: a seat lands rows under a source of "
+                            f"its own)")
+    seated = (set(OFFER_NAME_RE.findall(catalog_src))
+              | set(WALLET_SEAT_ID_RE.findall(store_src))
+              | {sid for _, sid in ROUTER_OFFER_ROW_RE.findall(routing_src)})
+    for sid in sorted(RETIRED_SEAT_IDS):
+        for name in (sid, sid.capitalize()):
+            if name in seated:
+                findings.append(f"“{name}” is seated again — §515 retired it: it "
+                                f"lands rows under Wallet's source, so its icon "
+                                f"is a second door to Wallet's room")
+                break
+    return findings
+
+
 def audit_token_sources(tokens_src: str, stamped: set):
     """`TokenBridge.source` is `rawValue` for all of them — prove it.
 
@@ -957,6 +1021,74 @@ def self_test() -> bool:
     else:
         print("  ✓ catches roomSource() disappearing")
 
+    # ── check 7e — two seats, one room (prd §515) ─────────────────────────
+    catalog_7e = ('Offer(name: "Wallet", tagline: "…"\n'
+                  'Offer(name: "Peer", tagline: "…"\n')
+    routing_7e_ok = ('    static func roomSource(forID id: String) -> String? {\n'
+                     '        switch id {\n'
+                     '        case "peer": "Peer"\n'
+                     '        case "gnosispay": GnosisPayBridge.sourceName\n'
+                     '        default: nil\n'
+                     '        }\n'
+                     '    }\n'
+                     '        Row(offer: "Peer", id: "peer", destination: .wallet),\n'
+                     '        Row(offer: "Gnosis Pay", id: "gnosispay", destination: .wallet),\n')
+    seats_7e = ('WalletSeat(id: "peer", name: "Peer",\n'
+                'WalletSeat(id: "gnosispay", name: "Gnosis Pay",\n')
+    if audit_seat_room_ownership(routing_7e_ok, seats_7e, catalog_7e):
+        print("  ✗ flagged a seat opening the room it is named for"); ok = False
+    else:
+        print("  ✓ passes a seat that opens its OWN room")
+
+    # The §515 shape itself: a seat whose rows land under another seat's source.
+    routing_7e_bad = routing_7e_ok.replace('case "peer": "Peer"',
+                                           'case "peer": "Wallet"')
+    f = audit_seat_room_ownership(routing_7e_bad, seats_7e, catalog_7e)
+    if not any("two icons, one room" in x for x in f):
+        print("  ✗ missed a seat opening another seat's room"); ok = False
+    else:
+        print("  ✓ catches two seats sharing one room")
+
+    # A room that is nobody's seat is 7c's business, not this check's — flagging
+    # it here would fire on every correctly-routed source that has no offer.
+    if audit_seat_room_ownership(routing_7e_ok.replace('case "peer": "Peer"',
+                                                       'case "peer": "Voice"'),
+                                 seats_7e, catalog_7e):
+        print("  ✗ 7e judged a room that names no offer"); ok = False
+    else:
+        print("  ✓ leaves a room with no offer of its own to check 7c")
+
+    # The tripwire: one of the five coming back, in each of its three shapes.
+    for label, cat, rout, seat in (
+            ("an offer", catalog_7e + 'Offer(name: "Aave", tagline: "…"\n',
+             routing_7e_ok, seats_7e),
+            ("a router row", catalog_7e,
+             routing_7e_ok + '        Row(offer: "Aave", id: "aave", destination: .wallet),\n',
+             seats_7e),
+            ("a wallet seat", catalog_7e, routing_7e_ok,
+             seats_7e + 'WalletSeat(id: "aave", name: "Aave",\n')):
+        f = audit_seat_room_ownership(rout, seat, cat)
+        if not any("seated again" in x for x in f):
+            print(f"  ✗ missed a retired seat returning as {label}"); ok = False
+        else:
+            print(f"  ✓ catches a retired seat returning as {label}")
+
+    # A retired id named as a plain string (BridgeStore.retiredWalletSeats, which
+    # exists to take the seat off an install that already had one) is NOT a seat.
+    if audit_seat_room_ownership(routing_7e_ok, seats_7e
+                                 + 'let retiredWalletSeats = ["aave", "morpho"]\n',
+                                 catalog_7e):
+        print("  ✗ flagged the retired-seat sweep's own list"); ok = False
+    else:
+        print("  ✓ passes the retired-seat list that removes them")
+
+    # The function going away must be a finding here too, or a refactor turns
+    # this check off with nothing to say so.
+    if not audit_seat_room_ownership("enum BridgeRouter {}", seats_7e, catalog_7e):
+        print("  ✗ a missing roomSource() passed 7e silently"); ok = False
+    else:
+        print("  ✓ catches roomSource() disappearing (7e)")
+
     f = audit_room_doors("fixture.swift",
                          'RoomDoor(name: "Contacts", source: "Contacts")',
                          {"Contacts", "Peer"}, {"Contacts", "You"})
@@ -1076,6 +1208,12 @@ def main() -> int:
 
     catalog_findings, offers = audit_catalog(strip_comments(open(CATALOG).read()))
     findings += catalog_findings
+
+    # Check 7e — whether the room a seat opens is the seat's own (prd §515).
+    findings += audit_seat_room_ownership(
+        strip_comments(open(os.path.join(MODEL, "BridgeRouting.swift")).read()),
+        strip_comments(open(os.path.join(MODEL, "BridgeStore.swift")).read()),
+        strip_comments(open(CATALOG).read()))
 
     # The door verbs that serve many screens from one table.
     tables = 0
