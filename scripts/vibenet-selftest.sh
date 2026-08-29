@@ -3557,6 +3557,13 @@ check("the zero address is not an address",
       VibenetLogData.address("0x" + String(repeating: "0", count: 64), at: 0) == nil)
 check("uint64 refuses a word too large to hold, rather than trapping on the conversion",
       VibenetLogData.uint64("0x" + String(repeating: "f", count: 64), at: 0) == nil)
+// All-Fs (~1.16e77) clears even a wildly loosened threshold, so it cannot
+// tell a real margin from a rubber-stamp one. This word is ~5e19 — past
+// UInt64.max (~1.84e19) so it would trap if ever handed to UInt64(_:), but
+// small enough to sail through a threshold raised much past the real one.
+check("a word past UInt64.max but under a loosened threshold still refuses",
+      VibenetLogData.uint64(
+        "0x000000000000000000000000000000000000000000000002b5e3af16b1880000", at: 0) == nil)
 check("and converts one that fits",
       VibenetLogData.uint64("0x" + word0, at: 0) == 42)
 // The dynamic `bytes` envelope: offset word, length word, payload.
@@ -4509,11 +4516,11 @@ mutateLedger "backfill samples must reach BACK from the tip, never forward from 
   'var block = tip - span' \
   'var block = tip'
 
-mutateLedger "a hashed actorId must name NO kind — a dead key we cannot see gets no guess" \
+mutate "a hashed actorId must name NO kind — a dead key we cannot see gets no guess" \
   'VibenetActorId.address(fromActorId: actorId) == nil ? nil : .delegate' \
   'VibenetActorId.address(fromActorId: actorId) == nil ? .delegate : nil'
 
-mutateLedger "the single-chain clause must disappear once a second chain is really read" \
+mutate "the single-chain clause must disappear once a second chain is really read" \
   'guard standings.count < 2, let sequences' \
   'guard standings.count < 3, let sequences'
 

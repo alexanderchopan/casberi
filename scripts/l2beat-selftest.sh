@@ -198,8 +198,10 @@ else
   echo "✗ the directory lost its search — 105 rows, and the only search is on the connect screen"
   exit 1
 fi
-guard 'TextField(String(localized: "Search chains"), text: $query)' "$TMP/dirscreen.nc" \
-  "the directory's search field is gone or no longer bound to the query"
+guard 'DSSlabField(placeholder: String(localized: "Search chains"),' "$TMP/dirscreen.nc" \
+  "the directory's search field is gone"
+guard 'text: $query, actionLabel: "",' "$TMP/dirscreen.nc" \
+  "the directory's search field is no longer bound to the query"
 guard 'if !searching {' "$TMP/dirscreen.nc" \
   "the order buttons no longer stand down for a search — an ordering of three matches"
 guard 'private var bands: [Band]' "$TMP/dirscreen.nc" \

@@ -220,7 +220,10 @@ struct VibenetEventFacts: Equatable {
     static func logID(_ sourceRef: String?) -> String? {
         guard let sourceRef else { return nil }
         let parts = sourceRef.split(separator: ":", omittingEmptySubsequences: false)
-        guard parts.count == 4, parts[0] == "vibenet" else { return nil }
+        // The namespace check lives in `transactionHash` below, which this
+        // always calls next on the same string — duplicating it here could
+        // only ever agree with it.
+        guard parts.count == 4 else { return nil }
         guard let hash = transactionHash(sourceRef) else { return nil }
         guard let index = Int(parts[3]), index >= 0 else { return nil }
         return "\(hash):\(index)"
