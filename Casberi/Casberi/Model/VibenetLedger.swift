@@ -806,10 +806,10 @@ enum VibenetLockDetail {
     }
 }
 
-// MARK: - Is this account deployed? (prd §515)
+// MARK: - Is this account deployed? (prd §515a)
 
 /// **THE GATE THAT WENT DARK, AND WHY IT IS NOT AN `eth_call` ANY MORE
-/// (2026-08-29, prd §515).**
+/// (2026-08-29, prd §515a).**
 ///
 /// `VibenetRead.account` opened with `isContractEstablished(address)` —
 /// selector `0x28a4c4cb` on the Keystore — and treated a failed call as
@@ -887,10 +887,10 @@ enum VibenetDeployment {
     }
 }
 
-// MARK: - Has the chain underneath us been reset? (prd §515)
+// MARK: - Has the chain underneath us been reset? (prd §515a)
 
 /// **WHAT A DEVNET RESET LOOKS LIKE FROM HERE, AND WHY THE ROOM MUST SAY IT
-/// (2026-08-29, prd §515).**
+/// (2026-08-29, prd §515a).**
 ///
 /// vibenet is reset outright, not merely redeployed: on 2026-08-29 its
 /// genesis block was timestamped **the previous evening**, the tip had fallen
@@ -971,9 +971,9 @@ enum VibenetChainReset {
     }
 }
 
-// MARK: - What the empty vibenet room says (prd §515)
+// MARK: - What the empty vibenet room says (prd §515a)
 
-/// **THE ROOM'S OWN SENTENCE WHEN IT HAS NOTHING (2026-08-29, prd §515).**
+/// **THE ROOM'S OWN SENTENCE WHEN IT HAS NOTHING (2026-08-29, prd §515a).**
 ///
 /// `RoomQuiet` (§299) generalised "a room states its CONNECTION's state" and
 /// left one channel open for a bridge that can do better: `emptyReadNote` —

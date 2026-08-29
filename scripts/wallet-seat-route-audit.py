@@ -15,6 +15,18 @@ Both directions are checked because they fail differently and both failed here:
   CONNECT  nil  -> the button does nothing at all (a dead control, s83)
   OPEN     nil  -> `destination(forID:)` falls to `.detail(id:)`, the generic
                    page, so the seat opens something that is not its room
+
+A THIRD direction since prd s515 (2026-08-29): every wallet-riding seat must
+also have an entry in `WalletSeatStanding.seats`, which is where its product
+page gets the word for what the sweep looks for ("No Gnosis Pay card seen
+yet"). A seat missing from there wears the right verb and says NOTHING under
+it, which is the state s515 removed -- a page that raises a question and does
+not answer it. Silent, because a nil sentence renders as no sentence.
+
+Whether the room a seat opens is the seat's OWN is `setup-copy-audit.py`
+check 7e: the s515 rule that a catalog seat lands rows under a source of its
+own, which is why Aave, Morpho, Uniswap, Hyperliquid and Aerodrome stopped
+being seats at all.
 """
 import os, re, sys, pathlib
 
@@ -26,7 +38,7 @@ def strip_comments(s):
     s = re.sub(r'^\s*//.*$', '', s, flags=re.M)
     return s
 
-def check(store_src, route_src):
+def check(store_src, route_src, standing_src=None):
     problems = []
     store = strip_comments(store_src)
     route = strip_comments(route_src)
@@ -61,6 +73,27 @@ def check(store_src, route_src):
                 f'{name} ({sid}) has NO Open route: `roomSource(forID: "{sid}")` is nil and '
                 f'there is no `Row(offer: "{name}")`, so Open falls to `.detail(id:)` -- the '
                 f'generic page, not the room its rows land in.')
+
+    # The sentence its product page says under the verb (prd s515).
+    if standing_src is not None:
+        stand = strip_comments(standing_src)
+        block = re.search(r'static let seats: \[Seat\] = \[(.*?)\n    \]', stand, re.S)
+        if not block:
+            problems.append("could not find `WalletSeatStanding.seats` -- "
+                            "the standing half of this check is blind")
+        else:
+            spoken = set(re.findall(r'Seat\(id:\s*"([^"]+)"', block.group(1)))
+            for sid, name in seats:
+                if sid not in spoken:
+                    problems.append(
+                        f'{name} ({sid}) has no `WalletSeatStanding.seats` entry, so its '
+                        f'product page wears the Automatic verb and says nothing under it '
+                        f'-- the unanswered question s515 removed.')
+            for sid in sorted(spoken - {s for s, _ in seats}):
+                problems.append(
+                    f'`WalletSeatStanding.seats` names "{sid}", which is not a wallet '
+                    f'seat -- a stale entry describing a seat that no longer rides the '
+                    f'wallets.')
     return problems
 
 def selftest():
@@ -119,6 +152,25 @@ def selftest():
     # Blindness must be loud, never green.
     cases.append((bool(check("", ROUTE_OK)), "an unparseable seat table fails rather than passing"))
 
+    # The standing half (prd s515).
+    STAND_OK = '''
+    static let seats: [Seat] = [
+        Seat(id: "peer", thing: "Peer trade"),
+        Seat(id: "gnosispay", thing: "Gnosis Pay card"),
+    ]
+'''
+    cases.append((not check(STORE_OK, ROUTE_OK, STAND_OK), "a seat that also speaks passes"))
+    cases.append((any("says nothing under it" in x
+                      for x in check(STORE_OK, ROUTE_OK,
+                                     STAND_OK.replace('Seat(id: "peer"', 'Seat(id: "peerX"', 1))),
+                  "a seat with no standing entry is flagged"))
+    cases.append((any("not a wallet seat" in x
+                      for x in check(STORE_OK, ROUTE_OK, STAND_OK.replace(
+                          '    ]', '        Seat(id: "aave", thing: "Aave position"),\n    ]'))),
+                  "a standing entry for a retired seat is flagged"))
+    cases.append((any("blind" in x for x in check(STORE_OK, ROUTE_OK, "enum WalletSeatStanding {}")),
+                  "a missing standing table fails rather than passing"))
+
     bad = [n for ok, n in cases if not ok]
     for ok, n in cases:
         print(("  \u2713 " if ok else "  \u2717 ") + n)
@@ -131,9 +183,11 @@ if __name__ == "__main__":
         sys.exit(selftest())
     os.chdir(pathlib.Path(__file__).resolve().parents[1])
     probs = check(load("Casberi/Casberi/Model/BridgeStore.swift"),
-                  load("Casberi/Casberi/Model/BridgeRouting.swift"))
+                  load("Casberi/Casberi/Model/BridgeRouting.swift"),
+                  load("Casberi/Casberi/Model/WalletSeatStanding.swift"))
     for p in probs:
         print("\u2717 " + p)
     if not probs:
-        print("\u2713 wallet-seat routes: every seat has a Connect door and an Open door")
+        print("\u2713 wallet-seat routes: every seat has a Connect door, an Open door "
+              "and a sentence")
     sys.exit(1 if probs else 0)

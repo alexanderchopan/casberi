@@ -3733,7 +3733,7 @@ check("nor is a transfer or a creation",
       !VibenetEventFacts.Kind.moved.concernsKey && !VibenetEventFacts.Kind.created.concernsKey)
 
 
-// MARK: - prd §515 — the gate that went dark
+// MARK: - prd §515a — the gate that went dark
 
 print("")
 print("VibenetDeployment — the reachability gate, after the Keystore dropped isContractEstablished")
@@ -4765,7 +4765,7 @@ grep -q 'guard let tip = await cachedTip() else { return nil }' "$BRIDGE" \
 grep -q 'if let line = room.pulse?.line(now: now) { parts.append(line) }' "$ROOM" \
   || { echo "✗ the room no longer says when the chain has stalled"; exit 1; }
 
-# --- prd §515 mutations ------------------------------------------------------
+# --- prd §515a mutations ------------------------------------------------------
 #
 # Each is a silent wrong answer that renders as a perfectly ordinary screen.
 
@@ -4908,7 +4908,7 @@ GUARD
 grep -q 'DSPasteboard.copySensitive(item.address)' "$TMP/detail.nc.swift" \
   || { echo "✗ the address copy is no longer the sensitive verb (§277)"; exit 1; }
 
-# --- prd §515: the gate that went dark ---------------------------------------
+# --- prd §515a: the gate that went dark ---------------------------------------
 #
 # On 2026-08-29 the whole seat read "Couldn't reach the chain" over a devnet
 # answering every request: the Keystore had redeployed WITHOUT

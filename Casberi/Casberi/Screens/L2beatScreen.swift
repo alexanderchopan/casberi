@@ -6,6 +6,22 @@ import SwiftUI
 /// The search here is INSTANT AND OFFLINE — it runs over the bundled directory
 /// (`L2beatDirectory`, regenerated at ship time by `scripts/l2beat-snapshot.py`), so naming
 /// the chains you use needs no network at all. The live read then supersedes it.
+///
+/// THE SHAPE (2026-08-29, reported as *"it looks totally messy like it was just thrown
+/// together with the thing to watch at the bottom"*). The two tiers this seat has — incidents
+/// everywhere, and the full assessment for chains you name — were interleaved rather than
+/// stated: the free tier's own verb was the LAST control on the page, the browse door was a
+/// bare blue text link between a sync error and a centered gray note, and the watch shelf
+/// drew below all of it, wearing its add slot a screen away from the field that slot exists
+/// to focus. Four blocks now, each one act, top to bottom:
+///
+///   1. who L2BEAT are and how this connects (`BridgeSetupHeader`),
+///   2. the way back to what landed (`RoomDoor`),
+///   3. THE STANDING FACTS — the registry tier's one slot, then the chains you watch,
+///   4. THE ACT — name a chain, or walk all 105, then what the last read said.
+///
+/// Nothing here draws over nothing: every block below the header is gated on the state it
+/// describes, which is what the shelf was missing.
 struct L2beatScreen: View {
 	@Environment(\.modelContext) private var modelContext
 	@Environment(BridgeStore.self) private var store
@@ -42,10 +58,31 @@ struct L2beatScreen: View {
 					.listRowSeparator(.hidden)
 			}
 
+			// STATE FIRST, THEN THE ACTS. The registry tier is what this seat IS for
+			// somebody who never names a chain, and it used to be the last thing on the
+			// screen — a filled primary button below the field, the browse link and two
+			// notes, which is §190's "a screen's one filled block, so it reads as THE
+			// verb" with the verb buried.
+			followSection.listRowSeparator(.hidden)
+
+			// THE STANDING FACTS SIT TOGETHER, ABOVE THE ACTS — what arrives on its own,
+			// then the chains you named — and the finder follows. The shelf used to sit
+			// last, so its own add slot (a dashed circle whose whole job is to focus the
+			// field) was stranded a screen below the field it focuses; the wallet manager
+			// has read this way round since §182.
+			//
+			// GATED ON THE WATCH LIST, never on `connected` — the TokenWatch/Stocktwits
+			// rule, which this screen and its Walletbeat twin both missed. Following is a
+			// connected state with nothing named, so the shelf drew that lone dashed slot
+			// under "Watching 0 · tap for its assessment, hold to stop watching" — gesture
+			// copy for rows that do not exist, which is §83's dead control wearing prose.
+			if !watched.isEmpty {
+				rosterSection
+			}
+
 			watchSection.listRowSeparator(.hidden)
 
 			if connected {
-				rosterSection
 				BridgeDisconnectSection(
 					bridgeID: L2beatWatch.seatID,
 					name: L2beatWatch.source,
@@ -77,6 +114,41 @@ struct L2beatScreen: View {
 
 	// MARK: - Sections
 
+	/// The registry tier — ONE SLOT, TWO STATES.
+	///
+	/// Following costs nothing and needs nothing named, so it is the screen's primary verb
+	/// until it is done. Before this it was the LAST control on the page and then, once on,
+	/// it became a centered gray sentence floating between the finder and the shelf — a
+	/// filled slab and a centered note are two shapes and two alignments for one fact, which
+	/// is most of what made this page read as thrown together.
+	///
+	/// The on state is a `DSCheckList` and not a `DSSlabNote`: following is a capability that
+	/// has been GRANTED, which is exactly the claim that component's checkmark makes — so the
+	/// line leads with the STATE and only then says what it brings. Worded the other way round
+	/// ("incidents arrive on their own…") it would be a list of what ARRIVES, which that
+	/// component's own doc reserves the neutral bullet for, after Stripe's setup screen put a
+	/// granted scope and a kind of news under one checkmark and made them read as one list.
+	/// It also leaves the screen's one gray sentence for the search's own no-match answer.
+	private var followSection: some View {
+		Section {
+			if following {
+				DSCheckList(lines: [
+					"Following L2BEAT — their incidents arrive for every chain they cover."
+				])
+			} else {
+				DSSlabButton(title: String(localized: "Follow the incidents"), action: follow)
+			}
+		}
+		.dsSlabSection()
+	}
+
+	/// Naming a chain: type it, or walk the whole registry. ONE BLOCK, in that order.
+	///
+	/// What was here instead: the field, then the sync result splitting it from a bare blue
+	/// "Browse all 105" — the one shape §190 names as what the slab replaced ("a headed
+	/// section with a blue text link") — then two notes, with the shelf's own add slot
+	/// stranded below all of it. The two ways to find a chain now sit together, and the read's
+	/// result reports at the end of the block instead of cutting through the middle of it.
 	private var watchSection: some View {
 		Section {
 			VStack(alignment: .leading, spacing: DS.Space.s2) {
@@ -98,41 +170,36 @@ struct L2beatScreen: View {
 
 				if queryField.trimmingCharacters(in: .whitespaces).count >= 2, hits.isEmpty {
 					// L2BEAT covers 105 chains and there are far more in the world, so "no
-					// match" is a common answer and must not read as an error.
-					DSSlabNote(text: String(localized: "L2BEAT doesn't cover that one. It assesses \(L2beatDirectory.projects.count) chains so far."))
+					// match" is a common answer and must not read as an error. It no longer
+					// carries the count: the door directly beneath it states it, and saying it
+					// twice two lines apart is the wordiness §315 exists to stop.
+					DSSlabNote(text: String(localized: "L2BEAT doesn't cover that one."))
 				}
 
+				// A DOOR, in the shape every other push on this screen wears — and it states
+				// what stands behind it (`DSSlabDoor`'s own rule), which is the fact somebody
+				// deciding whether to walk it wants.
+				DSSlabDoor(
+					title: String(localized: "Browse every chain"),
+					detail: "\(L2beatDirectory.projects.count)",
+					action: { browsing = true })
+
+				// LAST in the block, not between the field and the door: this reports on the
+				// READ, which nobody on this screen asked for, so an unreachable host must not
+				// cut the finder in half — which is how a connection error came to read as the
+				// browse link being broken.
 				BridgeSyncStatusRows(
 					syncing: syncing,
 					syncingLine: String(localized: "Reading L2BEAT…"),
 					result: result,
 					resultIsError: resultIsError)
-
-				Button(action: { DSHaptic.tap(); browsing = true }) {
-					HStack(spacing: DS.Space.s2) {
-						Text(String(localized: "Browse all \(L2beatDirectory.projects.count)"))
-							.dsText(.subhead13).fontWeight(.semibold)
-							.foregroundStyle(DS.tint)
-						Spacer()
-					}
-				}
-				.buttonStyle(.plain)
-
-				if following {
-					DSSlabNote(text: String(localized: "Incidents arrive on their own, for every chain L2BEAT covers."))
-				} else {
-					// The free tier, and the reason it has its own button: the incidents are
-					// about the whole registry, so there is nothing to name before they can
-					// arrive.
-					DSSlabButton(title: String(localized: "Follow the incidents"), action: follow)
-				}
 			}
 		}
 		.dsSlabSection()
 	}
 
 	private var rosterSection: some View {
-		AssetRosterShelf(note: rosterNote) {
+		AssetRosterShelf(note: rosterNote, count: watched.count) {
 			ForEach(watched.keyed) { row in
 				if let thing = row.live { rosterSlot(thing) }
 			}

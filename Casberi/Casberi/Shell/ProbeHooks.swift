@@ -6151,7 +6151,7 @@ enum ProbeHooks {
                 }
                 NSLog("[Casberi] vibenet| config branch=%@ commit=%@ keystore=%@",
                       contracts.branch ?? "?", contracts.commit ?? "?", contracts.keystore)
-                // WHICH CHAIN THIS IS (prd §515) — printed BEFORE any account,
+                // WHICH CHAIN THIS IS (prd §515a) — printed BEFORE any account,
                 // because on 2026-08-29 every line below it was a true report
                 // about a chain that had been wiped the night before, and
                 // nothing on any screen said so.
@@ -6168,7 +6168,7 @@ enum ProbeHooks {
                 }
                 for address in addresses {
                     // The gate, as shipped: `eth_getCode`, never a Keystore
-                    // view method (prd §515).
+                    // view method (prd §515a).
                     guard let code = await VibenetChain.getCode(address: address) else {
                         NSLog("[Casberi] vibenet| %@ deployed=UNREACHABLE — the node did not answer eth_getCode", address)
                         continue

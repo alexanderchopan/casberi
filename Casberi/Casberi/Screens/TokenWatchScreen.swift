@@ -150,7 +150,7 @@ struct TokenWatchScreen: View {
     /// unwatches, and in "My order" also moves it to the front.
     private var rosterSection: some View {
         let items = orderedWatched
-        return AssetRosterShelf(note: rosterNote) {
+        return AssetRosterShelf(note: rosterNote, count: watched.count) {
             ForEach(items.keyed) { row in
                 // Corollary 3 (build 176) — see `ThingRowKeying`.
                 if let thing = row.live { rosterSlot(thing, in: items) }

@@ -160,7 +160,7 @@ struct StocktwitsScreen: View {
     /// unwatches (the thing IS the watch, so unwatching deletes it, and its
     /// sourceRef leaving the store lets a re-add resolve).
     private var watchlistSection: some View {
-        AssetRosterShelf(note: rosterNote) {
+        AssetRosterShelf(note: rosterNote, count: watched.count) {
             ForEach(watched.keyed) { row in
                 // Corollary 3 (build 176) — see `ThingRowKeying`.
                 if let thing = row.live { rosterSlot(thing) }

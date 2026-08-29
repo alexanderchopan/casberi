@@ -171,7 +171,17 @@ struct PredictionPreviewSheet: View {
                 Spacer(minLength: 0)
 
                 if alreadyFollowed {
-                    DSSlabNote(text: "You're following this market.")
+                    // ONE CONTROL, ONE SHAPE (2026-08-29). This branch was a
+                    // `DSSlabNote` — so the same fact was a filled primary slab
+                    // in one state and a CENTERED gray sentence in the other:
+                    // two shapes and two alignments for one control, which is
+                    // what made the L2BEAT and Walletbeat connect pages read as
+                    // thrown together. A `DSCheckList` line is what following
+                    // actually is here, a capability granted, which is the claim
+                    // that component's checkmark makes; and it leaves the
+                    // screen's one gray sentence for the no-trading promise
+                    // below, which is the sentence that has to be read.
+                    DSCheckList(lines: ["You're following this market."])
                 } else {
                     DSSlabButton(title: "Follow this market", systemImage: "plus") { follow() }
                 }

@@ -508,8 +508,14 @@ def check_l_seat_names_resolve_at_runtime(files_text):
 # unrelated "Aerodrome vote closes" row title and a "Coinbase" counterparty
 # name), while M demands the specific fixture the seat's card is drawn from.
 # An entry here without a fixture fails; a fixture that is deleted fails.
+#
+# The DeFi five left this set on 2026-08-29 (prd §515) — not because they stopped
+# being furnished, but because they stopped being SEATS: all five land under
+# `source: "Wallet"`, so their catalog icons were second doors to the Wallet
+# room, and a demo claiming a seat the catalog no longer offers is fake status
+# arriving from the demo's side. Their books are asserted by check N instead,
+# which is the same assertion without the seat.
 KNOWN_ROWLESS_SEAT = {
-    "Aave", "Morpho", "Hyperliquid", "Aerodrome", "Uniswap",
     "Coinbase", "Kraken", "Binance", "Gemini Exchange",
     # Ethrex Hegotá (prd §500) — rowless for a different reason from the nine
     # above. Those ride the wallet and land under `source: "Wallet"`; this seat
@@ -535,11 +541,6 @@ KNOWN_ROWLESS_SEAT = {
 # fixture nothing reads furnishes nothing, and that half-wired state is
 # exactly what a seat table would still have claimed as connected.
 ROWLESS_SEAT_FIXTURE = {
-    "Aave":            ("WalletWarnings", r'protocolName:\s*"Aave"'),
-    "Morpho":          ("WalletWarnings", r's\.morpho\s*=\s*MorphoDeFi\.Book\('),
-    "Hyperliquid":     ("WalletWarnings", r's\.hyperliquid\s*=\s*HyperliquidDeFi\.Book\('),
-    "Aerodrome":       ("WalletWarnings", r's\.aerodrome\s*=\s*AerodromeDeFi\.Book\('),
-    "Uniswap":         ("WalletWarnings", r's\.uniswap\s*=\s*UniswapLiquidity\.Book\('),
     # Scoped to the `demoBalances` table BODY, never the whole file: every one
     # of these venue cases also appears in the real read above it
     # (`Holding(… venue: .kraken)`), so a file-wide grep would keep passing
@@ -608,6 +609,46 @@ def check_m_rowless_seats_are_furnished(files_text):
     portfolio = strip_comments(files_text["WalletPortfolio"])
     check("M · demoFixture merges the exchange balances",
           "ExchangeBridge.demoBalances" in portfolio, True)
+
+
+# The five protocols that are furnished and are NOT seats (prd §515,
+# 2026-08-29) — Aave, Morpho, Uniswap, Hyperliquid and Aerodrome.
+#
+# `WalletDemoState.state` is the only door they have (`DemoMode` reaches no
+# network), and the Wallet room's DeFi tiles draw it. Until §515 that fixture
+# was asserted only through check M, as a side effect of each having a seat —
+# so retiring the seats would have quietly retired the assertion with them, and
+# a demo whose Positions scope had gone empty would look exactly like a wallet
+# with no positions. Same patterns, held to directly.
+#
+# The second half is the tripwire, and it is the mirror of `setup-copy-audit.py`
+# check 7e: none of the five may return to `seatTable`. A demo seat is a claim
+# that the catalog offers the thing, and the catalog does not.
+RETIRED_PROTOCOL_FIXTURE = {
+    # Matched on `protocolName:` rather than a book assignment because Aave and
+    # Spark share one array and one type; the other four each own a field.
+    "Aave":        ("WalletWarnings", r'protocolName:\s*"Aave"'),
+    "Morpho":      ("WalletWarnings", r's\.morpho\s*=\s*MorphoDeFi\.Book\('),
+    "Hyperliquid": ("WalletWarnings", r's\.hyperliquid\s*=\s*HyperliquidDeFi\.Book\('),
+    "Aerodrome":   ("WalletWarnings", r's\.aerodrome\s*=\s*AerodromeDeFi\.Book\('),
+    "Uniswap":     ("WalletWarnings", r's\.uniswap\s*=\s*UniswapLiquidity\.Book\('),
+}
+
+
+def check_n_retired_protocols_still_draw(files_text):
+    """Check N — the five protocols §515 unseated still have their demo book,
+    and have not crept back into the seat table."""
+    names, _ = extract_seat_table(files_text["DemoSeedAll"])
+    if names is None:
+        check("N · seatTable found", False, True)
+        return
+    for name in sorted(RETIRED_PROTOCOL_FIXTURE):
+        file_key, pattern = RETIRED_PROTOCOL_FIXTURE[name]
+        clean = strip_comments(files_text[file_key])
+        check(f'N · unseated "{name}" still has its demo book',
+              re.search(pattern, clean) is not None, True)
+        check(f'N · unseated "{name}" is not a demo seat',
+              name in (names or []), False)
 
 
 def check_e_seat_names_have_rows(files_text):
@@ -1229,6 +1270,7 @@ def run_checks(files_text):
     check_l_seat_names_resolve_at_runtime(files_text)
     check_e_seat_names_have_rows(files_text)
     check_m_rowless_seats_are_furnished(files_text)
+    check_n_retired_protocols_still_draw(files_text)
     check_f_shape_coverage(files_text)
     check_g_catalog_offers_have_demo_seats(files_text)
     check_k_legacy_seats_match_their_rows(files_text)
@@ -1353,11 +1395,26 @@ def self_test():
     # and the third is the half-wired state that would otherwise pass every
     # other check in this file: the balances declared and nothing reading
     # them, so the seats read connected and the crown never changes.
+    # Check N's two, which used to be check M's (prd §515 moved the DeFi five
+    # out of the seat table and their assertion with them). The failure is the
+    # same one it always was — a fixture deleted or renamed while a surface goes
+    # on claiming to draw it — and the second is now its opposite: the seat
+    # coming back.
     ok &= verify_fixture(
         "a deleted DeFi demo book is caught",
         lambda f: f.__setitem__("WalletWarnings", f["WalletWarnings"].replace(
             "s.uniswap = UniswapLiquidity.Book(", "s.uniswapX = UniswapLiquidity.Book(", 1)),
-        check_m_rowless_seats_are_furnished, True)
+        check_n_retired_protocols_still_draw, True)
+
+    ok &= verify_fixture(
+        "an unseated protocol creeping back into the seat table is caught",
+        # The §515 rule from the demo's side: a demo seat claims the catalog
+        # offers the thing, and for these five it does not.
+        lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
+            '("Peer", "Rides your wallet",',
+            '("Aave", "Rides your wallet", "Reads your collateral and debt."),\n'
+            '        ("Peer", "Rides your wallet",', 1)),
+        check_n_retired_protocols_still_draw, True)
 
     ok &= verify_fixture(
         "a dropped exchange venue is caught",
@@ -1388,8 +1445,10 @@ def self_test():
         # The other direction: the fixture survives, the SEAT goes — so the
         # demo furnishes a card for an app its catalog says is not connected,
         # which is check G's failure arriving through the exemption set.
+        # BINANCE since §515 took the DeFi five out of this set: the fixture
+        # must name a seat the set still holds, or it proves nothing.
         lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
-            '("Hyperliquid", "Rides your wallet",', '("HyperliquidX", "Rides your wallet",', 1)),
+            '("Binance", "Read-only key",', '("BinanceX", "Read-only key",', 1)),
         check_m_rowless_seats_are_furnished, True)
 
     ok &= verify_fixture(

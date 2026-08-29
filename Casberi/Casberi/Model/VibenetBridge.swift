@@ -463,7 +463,7 @@ actor VibenetTipCache {
 
 enum VibenetChain {
     static let network = "vibenet"
-    /// **RETIRED AS A LITERAL (prd §515).** It read `84_538_453`, nothing
+    /// **RETIRED AS A LITERAL (prd §515a).** It read `84_538_453`, nothing
     /// ever used it, and by 2026-08-29 the devnet had reset past it to
     /// `84_542_549` — a stale fact nobody could notice because nobody asked
     /// it. `chainIdentifier()` reads it live; this is the value this device
@@ -483,7 +483,7 @@ enum VibenetChain {
         await call(method: "eth_call", params: [["to": to, "data": data], "latest"]) as? String
     }
 
-    /// WHY A REVERT AND A SILENCE ARE TWO ANSWERS (prd §515).
+    /// WHY A REVERT AND A SILENCE ARE TWO ANSWERS (prd §515a).
     ///
     /// `call` maps both a transport failure and a JSON-RPC `error` object to
     /// nil, which is right for every caller that only wants the value — and
@@ -518,7 +518,7 @@ enum VibenetChain {
         return .unreachable
     }
 
-    /// An address's deployed code — the reachability gate (prd §515).
+    /// An address's deployed code — the reachability gate (prd §515a).
     ///
     /// Plain JSON-RPC, deliberately: `eth_getCode` belongs to the node, not
     /// to any contract, so no redeploy can take it away. That is the whole
@@ -528,7 +528,7 @@ enum VibenetChain {
         await call(method: "eth_getCode", params: [address, "latest"]) as? String
     }
 
-    /// The chain's own identifier, read rather than assumed (prd §515).
+    /// The chain's own identifier, read rather than assumed (prd §515a).
     ///
     /// It was a literal — `84_538_453` — and by 2026-08-29 it was wrong:
     /// vibenet had reset and stepped to `84_542_549`. Nothing read the
@@ -752,7 +752,7 @@ enum VibenetABI {
     }
 
     /// **`isContractEstablished(address)` — 0x28a4c4cb — IS GONE, and this
-    /// note is the point of the comment (prd §515).**
+    /// note is the point of the comment (prd §515a).**
     ///
     /// It was the first call of every account read and the gate `reached`
     /// hung on. On 2026-08-29 the Keystore redeployed (config `_commit`
@@ -1283,7 +1283,7 @@ enum VibenetRead {
     /// guess.
     static func account(_ address: String, contracts: VibenetContracts,
                         tokens: [Token] = []) async -> VibenetAccountItem {
-        // THE GATE (prd §515). `eth_getCode`, not a Keystore view method:
+        // THE GATE (prd §515a). `eth_getCode`, not a Keystore view method:
         // this is the one call in the read that decides whether the node was
         // reached at all, and a redeploy must never be able to delete it.
         // See `VibenetDeployment` for the day this was measured and the
@@ -1667,7 +1667,7 @@ enum VibenetSeenCommit {
     }
 }
 
-/// **THE CHAIN THIS DEVICE LAST SAW (prd §515).**
+/// **THE CHAIN THIS DEVICE LAST SAW (prd §515a).**
 ///
 /// `VibenetSeenCommit`'s neighbour and its exact shape, for a stronger fact:
 /// that one notices the CONTRACTS moving, this notices the CHAIN UNDER THEM
@@ -1729,7 +1729,7 @@ enum VibenetSeenChain {
         }
     }
 
-    /// **WHAT A RESET FORGETS, BY NAME (prd §515).**
+    /// **WHAT A RESET FORGETS, BY NAME (prd §515a).**
     ///
     /// Every one of these is a snapshot OF A CHAIN THAT NO LONGER EXISTS: a
     /// balance sampled from it, a key roster read off it, the contract set it
@@ -1841,7 +1841,7 @@ enum VibenetRoomSource {
         // vibenet moves under you). `VibenetRoom.demoFixture()` is the
         // snapshot instead, returned before this ever touches the network.
         if DemoMode.isActive { return VibenetRoom.demoFixture() }
-        // HAS THE CHAIN BEEN REPLACED UNDER US (prd §515) — asked FIRST, and
+        // HAS THE CHAIN BEEN REPLACED UNDER US (prd §515a) — asked FIRST, and
         // the order is load-bearing: a reset forgets the cached contract set,
         // so this has to run before `current()` or the pass below reads a
         // still-fresh cache naming a Keystore that no longer holds code. It

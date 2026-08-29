@@ -175,26 +175,6 @@ final class BridgeStore {
                    can: ["Reads the pending signature queue for any Safe you watch, or that watches you as a signer.",
                          "Alerts on a change to a Safe's owners, threshold, or modules.",
                          "Read-only — signing always happens in your own Safe app."]),
-        WalletSeat(id: "aave", name: "Aave",
-                   count: { WalletDeFi.evidence.count(in: $0) }, noun: "wallet",
-                   can: ["Reads your Aave collateral and debt for the wallets you watch, from the public chain.",
-                         "Warns when a position drifts close to liquidation.",
-                         "Read-only — never supplies, borrows, repays, or withdraws."]),
-        WalletSeat(id: "morpho", name: "Morpho",
-                   count: { MorphoDeFi.evidence.count(in: $0) }, noun: "wallet",
-                   can: ["Reads your Morpho positions and vault deposits for the wallets you watch, from Morpho's public API.",
-                         "Warns when a position drifts close to liquidation, and when a vault reallocates.",
-                         "Read-only — never supplies, borrows, repays, or withdraws."]),
-        WalletSeat(id: "hyperliquid", name: "Hyperliquid",
-                   count: { HyperliquidDeFi.evidence.count(in: $0) }, noun: "wallet",
-                   can: ["Reads your open positions, spot balances and staked HYPE for the wallets you watch, from Hyperliquid's public API.",
-                         "Warns when a position drifts close to liquidation.",
-                         "Read-only — never opens, closes, or adjusts a position."]),
-        WalletSeat(id: "aerodrome", name: "Aerodrome",
-                   count: { AerodromeDeFi.evidence.count(in: $0) }, noun: "wallet",
-                   can: ["Reads your veAERO locks for the wallets you watch, from Base's public chain.",
-                         "Reminds you before the weekly vote closes, and before a lock expires.",
-                         "Read-only — never votes, locks, or claims."]),
         // ONE ether.fi seat, not two (user ruling 2026-07-31). The unstake
         // queue and Cash were seated separately because they're separate
         // products on separate chains — but to a person they are one company
@@ -222,11 +202,14 @@ final class BridgeStore {
                          "Tells you the moment queued ETH becomes claimable.",
                          "Lands each card purchase, and warns when the credit line nears its limit.",
                          "Read-only — never stakes, claims, spends, or borrows."]),
-        WalletSeat(id: "uniswap", name: "Uniswap",
-                   count: { UniswapLiquidity.evidence.count(in: $0) }, noun: "wallet",
-                   can: ["Reads your liquidity positions and uncollected fees for the wallets you watch, from the public chain.",
-                         "Tells you when a position moves out of range, and when it comes back.",
-                         "Read-only — never swaps, adds, removes, or collects."]),
+        // (Aave, Morpho, Uniswap, Hyperliquid and Aerodrome were seats here
+        // until prd §515. They land no rows of their own — all five stamp
+        // `source: "Wallet"` — so their icons were second doors to a room the
+        // Wallet seat already opens, and their Connect connected nothing. The
+        // evidence marks they read STAY, because the Wallet room's own DeFi
+        // tiles and `WalletDemoState` still read them; only the seats are
+        // gone. `retiredWalletSeats` below takes them off an install that
+        // already registered one.)
     ]
 
     /// Writes the wallet-riding seats' truth — the one place it's written.
@@ -255,6 +238,35 @@ final class BridgeStore {
                               proof: proof,
                               can: seat.can)
         }
+        for id in Self.retiredWalletSeats { remove(id) }
+    }
+
+    /// Seats that USED to ride the watched wallets and no longer exist
+    /// (prd §515). A registered seat is persisted, and `reconcileWalletSeats`
+    /// only ever considers ids still in `walletSeats` — so on an install that
+    /// had already lit Aave, dropping the entry leaves the seat standing
+    /// forever, with a Connect that connects nothing and an Open that opens
+    /// somebody else's room. Retiring one is therefore two edits, not one.
+    ///
+    /// Swept every reconcile rather than once behind a done-flag: this runs on
+    /// every foreground, `remove` is a no-op for an id that is not there, and
+    /// a seat can arrive later from another device through CloudKit — a
+    /// one-shot migration would let that one through.
+    private static let retiredWalletSeats = ["aave", "morpho", "uniswap",
+                                             "hyperliquid", "aerodrome"]
+
+    /// How many watched addresses a wallet-riding seat has really been SEEN at
+    /// — the same number `reconcileWalletSeats` gates on, for a screen that
+    /// wants to state it rather than merely act on it (prd §515). Nil for an id
+    /// that does not ride the wallets.
+    ///
+    /// Reads a persisted mark and never the network, like the reconcile itself,
+    /// so it is safe from a view's body. It says "seen", never "held": evidence
+    /// is stamp-never-unstamp, so 0 means nothing has been observed, not that
+    /// there is nothing there (`WalletSeatEvidence` rule 1).
+    func walletSeatCount(id: String) -> Int? {
+        guard let seat = Self.walletSeats.first(where: { $0.id == id }) else { return nil }
+        return seat.count(Self.watchedForms())
     }
 
     /// Every spelling of every watched wallet, lowercased — the typed form

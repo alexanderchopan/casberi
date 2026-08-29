@@ -8909,7 +8909,7 @@ struct FeedScreen: View {
                                    ?? vibenetEmptyNote)
     }
 
-    /// vibenet's own reason for being empty (prd §515).
+    /// vibenet's own reason for being empty (prd §515a).
     ///
     /// `RoomQuiet`'s `emptyRead` channel is declared on `TokenBridge` and
     /// vibenet is not one, so this seat fell to the generic "it syncs on its
