@@ -38738,3 +38738,480 @@ the real tokens — the paper, the pour height, the tooth and the type ramp — 
 not against a running app. The one thing worth checking first is whether the
 lift reads as the paper having a top or as a grey band, in both themes, on a
 real display; it is a one-number change either way.
+## 523. This phone can hold a vibenet signing key, and the write it cannot yet make (user: "user feedback i get is that we should add write capabilities. is there a way to do that without us having to maintain a server?", then "FUCK YES THIS IS SO COOL", 2026-08-29)
+
+Reported as user feedback asking for write capability without a server. The
+answer is that three server-free write patterns already ship here — a pasted
+token with a write scope, OAuth PKCE (Spotify/Reddit/Slack/Dropbox), and a
+signature that is its own authorization (`SafeSigner`, §425/§426) — and that
+the cheapest place to prove the third is Base's **vibenet devnet**, where the
+money is fake and there is a faucet.
+
+**WHY THIS CHAIN.** `SignerKey` had to keep a raw secp256k1 scalar in a generic
+password because `.privateKeyUsage` governs a Secure Enclave `kSecClassKey`,
+the Enclave speaks P-256, and a Safe verifies P-256 only through a WebAuthn
+signer contract §425 did not build. Vibenet ships a **P256Authenticator as a
+first-class contract**, so the Enclave's own curve is the curve:
+`VibenetDeviceKey` generates in hardware and **has no export path because there
+is nothing to export** — the Keychain holds an Enclave-wrapped
+`dataRepresentation`, useless to anything that is not this Secure Enclave. A
+stronger promise than `SignerKey` can make, which is why its no-export guard
+counts `kSecReturnData` occurrences (the one call that decrypts) rather than
+every `SecItemCopyMatching`; `presence()` is an honest attribute-only query and
+must not be mistaken for a reader of the private half.
+
+`.biometryCurrentSet` is kept, so **re-enrolling Face ID destroys the key**
+(§427 inherited whole: a changed enrolled set is a changed AUTHORITY the chain
+cannot see). Therefore `presence()` splits none / present / **destroyed** and
+must answer without raising a prompt — a destroyed key and a cancelled prompt
+give the identical system error and send a person to opposite places.
+
+**THE LADDER IS THE FEATURE** (`VibenetSigner`, Foundation-only, compiled WHOLE
+by `scripts/vibenet-signer-selftest.sh` — 13 mutations, 6 drift guards). Twelve
+refusals, three of which mean something is WRONG; every other one renders as
+the same absent button, so each names itself. Order is the design and the
+harness pins it: destroyed-before-absent (a destroyed key keeps its cached
+public half, so testing absence first offers to make a new one while an account
+still authorizes a key this phone can never produce), the **chain rail** before
+any read, cannot-say never collapsed into no, expiry `0` read as
+`Keystore.sol`'s "never" rather than 1970, and simulation LAST with both
+"reverts" and "could not run" refusing. `chainID` is the measured 84538453 and
+mainnet is refused by name — signing on a real chain is impossible, not merely
+unintended.
+
+**THE JOIN IS ON `actorData`, NOT ON A HASH — and measuring is what showed it.**
+The obvious design (hash the public key into an `actorId`, look for it) is the
+wrong shape: reading every `ActorAuthorized` event this chain has ever emitted
+(16) plus a real transaction shows **the `actorId` is supplied by the caller**,
+in the `AuthorizeActor` payload's first word —
+`abi.encode(bytes32 actorId, address authenticator, uint256 expiry, uint256 scope, bytes actorData)`.
+There is no preimage function to find, and two clients may authorize one key
+under two ids and both be right. A build that hashed and searched would answer
+"this account doesn't list your key" about accounts it can sign for, silently,
+forever, with every other check green. `actorData` carries the key material (a
+K1 actor's is `address(1)` plus flags; a policy-gated one appends the
+PolicyManager and a 32-byte commitment), so the match is a `contains` on our
+`x || y` and the record's own `actorId` is read off the same row. Guarded as a
+NEGATIVE grep that `VibenetSigner` never reaches for a hash.
+
+**THE TRANSACTION ENCODER IS BUILT AND PROVEN — and the proof is the point.**
+`VibenetTransaction.senderSigningPreimage` produces the bytes that get signed,
+and a wrong field order, a stray leading zero, a flattened `calls` or the wrong
+type byte yields a signature that is well-formed and recovers to a DIFFERENT
+address: green build, right screen, wrong transaction. §425 answers that class
+by asking the Safe for `getTransactionHash` and declining on disagreement, and
+**vibenet publishes no counterpart** — which is why this was first written down
+as unbuildable, and that was wrong. A real transaction carries its decoded
+fields, its 65-byte `senderAuth` and the `from` that sent it, so encoding the
+hash and RECOVERING THE SIGNER either matches that address or does not.
+**Sixteen candidate encodings were tried and exactly one recovered it**
+(2026-08-29, the only type-`0x79` transaction in the first 40 blocks): channel
+`0` for Local, per-change tag `0x00` for AuthorizeActor, `calls` PHASED rather
+than flat. One match in sixteen is not a coincidence. The Swift encoder
+reproduces that 613-byte preimage and its hash
+`0x96c32d89…d85f4ca9` byte for byte;
+`scripts/support/vibenet-tx-vectors.py` re-derives it from the chain and
+`vibenet-signer-selftest.sh` pins it, mutation-proven nine ways.
+
+**Two of those nine mutations survived first, and both were the FIXTURE'S
+fault** — the standing lesson, earned again: a fixture only tests the rule it
+names if it fails that rule and passes every other one. `payer` could not be
+seen at all because the proven transaction was not sponsored, so dropping the
+field was a no-op (asserted structurally instead: two Fields differing only in
+`payer` must not sign the same bytes). And the RLP boundary check was VACUOUS
+because **`0x80 + 56 == 0xb8`** — the short-form header byte for a 56-byte item
+IS the long-form marker, so "first byte == 0xb8" cannot tell the two encodings
+apart. It asserts the encoded LENGTH now.
+
+**THE P-256 WIRE FORMAT IS MEASURED TOO — by asking the contract, which
+retracts this entry's own earlier "cannot be checked".** The spec leaves a
+configured actor's `sender_auth` data authenticator-specific and no P-256 actor
+has ever been authorized on this chain, so the first reading was that there was
+nothing to check an encoder against. There was: `P256Authenticator` exposes
+`authenticate(bytes32,bytes)` — selector `0x30ba1adf`, recovered by hashing
+candidate signatures against the selectors in its own bytecode — and that is a
+VIEW call, so a software P-256 key can sign a hash and every candidate layout
+can be tried against the deployed contract for the price of an `eth_call`.
+Measured: `r || s || x || y` (128 bytes) **reverts**; `r || s || x || y ||
+<1 byte>` (129) **returns a non-zero word**; 130 and 160 **revert**. So 129 is
+the length, not a minimum, and the trailing byte's VALUE is ignored (0x00
+through 0xff answer identically) — it is padding, and `padByte` is a zero so
+nothing implies a field the contract does not read.
+
+**The word it returns is the actor id, and that was measured rather than
+assumed**: one key over two messages returns the same word, two keys return
+different words, and a signature presented for the WRONG message returns
+**zero** — so a non-zero answer is a real verification and not an echo. The
+word is `keccak256(x || y)`, confirmed independently for two keys, and
+deliberately NOT `keccak256(0x04 || x || y)`, which is how a public key is
+usually framed and produces a different, plausible-looking word the contract
+disagrees with. This is the join §523 wanted: an account accepts this phone
+when it authorizes `actorID(publicKey:)`. It stays the CANONICAL id rather than
+the only one, because the id is caller-supplied at authorize time, so a nil
+lookup still means cannot-say rather than no.
+
+Pinned in the harness against the contract's own answer, mutation-proven four
+more ways (order transposed, length off by one, the 0x04 tag, a short key
+accepted). **26 mutations across the two halves, all caught.**
+
+**AND THE DESIGN QUESTION ANSWERED ITSELF ON CHAIN — no send was needed.**
+The open question was who signs an account CREATION, since the account does not
+exist yet: an ordinary wallet (which would mean Casberi needs a second,
+seed-phrase-shaped key, and "Face ID is the key" becomes "…once you set up a
+different key first"), or the account-to-be signing with the key that is about
+to own it. It reads as unanswerable and is not: **all seven creations on this
+chain set `sender` to the new account itself, and THREE OF THEM are signed by a
+P-256 key** — authenticator `0x8130c89f…`, 129 bytes, `r ‖ s ‖ x ‖ y ‖ 00`,
+exactly the format probed out of the contract. The earlier claim in this entry
+that "no P-256 actor has ever been authorized on this chain" was WRONG, and
+wrong for an instructive reason: a Create embeds its initial actors WITHOUT
+emitting `ActorAuthorized`, so a census of that event cannot see them. Reading
+one event and concluding about a whole chain is the mistake.
+
+Better still, the sponsored one names `payer` = the FAUCET with metadata
+"Sponsored transaction" — so an account signs its own creation with Face ID and
+**pays nothing**, with no prerequisite of any kind.
+
+**THE ENCODER IS PROVEN AGAINST SOMEBODY ELSE'S SIGNATURE**, which is the
+strongest form available: re-encoding those three creations and verifying their
+REAL P-256 signatures against the hash we compute passes **3/3**, and a
+one-byte disagreement anywhere would break it. That fixture is pinned in the
+harness and re-verified on every run, so the encoder cannot drift silently. The
+Create entry is `rlp([0x00, userSalt, code, initialActors])` with each actor
+`[actorId, authenticator, scope, policyData]`, and the account's own first
+actorId is `keccak256(x || y)` of the key that signed it — the same derivation,
+now seen in real data rather than in a probe.
+
+**THIS PHONE CAN NOW STATE ITS OWN ON-CHAIN IDENTITY** before it has been
+authorized anywhere: `VibenetDeviceKey.actorID()` is `keccak256(x || y)` of the
+Enclave key, which is the chain's own convention rather than ours, so
+`-vibenetKeyProbe` prints an id that can be compared against an account's actor
+list by eye and the ladder is asked with a real id instead of a nil that would
+always answer `.actorDataUnreadable`. Two files now derive that id, which is how
+two derivations drift, so the second is guarded by SHAPE — it must keccak the
+raw 64 bytes and never the `0x04`-tagged form, the one wrong answer that would
+look right. Guard proven able to fail.
+
+**THE COUNTERFACTUAL ADDRESS IS SOLVED (cloud pass, verified locally 7/7).**
+
+    leaf_i     = keccak256(actorId(32) ‖ authenticator(20) ‖ scope(2, BE) ‖ policyData)
+    commitment = keccak256(leaf_0 ‖ … ‖ leaf_n)          -- actors sorted by actorId
+    salt       = keccak256(userSalt ‖ commitment)
+    address    = keccak256(0xff ‖ KEYSTORE ‖ salt ‖ keccak256(HEADER ‖ code))[12:]
+    HEADER(n)  = 61 <n:2> 60 0E 60 00 39 61 <n:2> 60 00 F3      -- 14 bytes
+
+**Two layers are why ~4,000 flat-concatenation candidates all missed**, and both
+produce a plausible wrong answer rather than an obvious one: the actors fold
+through PER-ACTOR LEAF HASHES and then a hash of the concatenated leaves, not a
+flat concat and not their RLP; and the CREATE2 init-code hash is
+`keccak256(HEADER ‖ code)`, **not** `keccak256(code)`. That second one is a
+genuine decoy — `AccountCreated`'s own second word IS `keccak256(code)`, sitting
+right there in the event, looking exactly like the value CREATE2 wants, and
+wrong. Both are pinned as mutations.
+
+`scope` is **two bytes** and that was proven rather than assumed: the deployed
+`Keystore.computeAddress` (selector `0x500fa70e`,
+`computeAddress(bytes32,bytes,(bytes32,address,uint16,bytes)[])`) agrees byte
+for byte on a fresh parameter set, which a one-byte encoding could not. Verified
+three ways in total — 7/7 real creations, the node's own acceptance (a wrong
+sender is refused "create address does not match the sender", a right one
+advances to "insufficient funds"), and that view call.
+
+**SPONSORSHIP IS A SERVICE, and its type byte was proven by recovery.**
+`AA_PAYER_TYPE = 0x7A` — all three sponsored transactions' `payerAuth` recover
+to the faucet under `0x7A` and to garbage under `0x79`/`0x7B`. The flow is
+JSON-RPC at `POST api.vibes.base.org/api/vibenet/account/payer`:
+`payer_getTerms` (offers `sponsored`, quota 1000, or pay-in-USDV),
+then sign `senderAuth` with `payer` set to the faucet and `payerAuth` empty,
+then `payer_signTransaction` returns the transaction with `payerAuth` filled
+(measured live: 85 bytes, `K1_AUTHENTICATOR ‖ r ‖ s ‖ v`). So **an account
+signs itself into existence with Face ID and a third party pays**, with the
+whole exchange being two HTTP calls.
+
+Corrections to earlier readings in this entry: there are **three** sponsored
+creations, not one, and the seven are scattered (blocks 7030 … 324494) rather
+than clustered early — a single 100k-block `eth_getLogs` finds only four, which
+is how a census undercounts without appearing to.
+
+**Still unmeasured**: a non-empty `policyData` (every observed actor has
+`scope: 0` and empty policy data, so the 52-byte `manager ‖ commitment` path is
+spec-derived only), non-zero scope semantics, and the unsorted-actors rejection.
+
+**WHAT IS STILL NOT BUILT.**
+Measured for whoever picks this up: `AA_TX_TYPE` is **0x79** (off a real
+transaction's `type`, not the spec text, which omits it); the envelope is
+`0x79 || rlp([chain_id, sender, nonce_key, nonce_sequence, valid_after,
+valid_before, max_priority_fee_per_gas, max_fee_per_gas, gas_limit,
+account_changes, calls, metadata, payer, sender_auth, payer_auth])`; the sender
+signing hash is the same list **through `payer`**, excluding both auth fields;
+`account_changes` entries are `rlp([0x00, user_salt, code, initial_actors])`,
+`rlp([0x01, channel, sequence, changes, auth])`, `rlp([0x02, target])`; `calls`
+is phases of `rlp([to, data])`. **`payer` + `payerAuth` is the Sponsorship
+card from Base's console, as a wire field.**
+
+**THE COMPOSER IS BUILT AND CHECKED AGAINST A REAL CREATION.**
+`VibenetCreate.plan` turns an intent into the address, the actor id and the
+bytes to sign, and is asserted against tx `0xee57134d…`: same address, same
+actor id, and that creation's REAL P-256 signature verifies against the
+preimage it produces. Two defects it caught in its own first draft, both the
+same shape — inventing a fact rather than being handed one. It assumed a
+creation carries one empty call to the new account itself; the real ones target
+something else entirely, and `calls` is SIGNED OVER, so a fabricated entry is a
+signature over a transaction nobody asked for. And the proxy body is 93 bytes
+with the target spliced in, not the canonical 45-byte minimal proxy, which
+would give a different init-code hash and therefore a different address.
+`keystore`, `defaultAccount` and `authenticator` are parameters off the live
+map, never literals, for the redeploy reason this seat states everywhere.
+
+Two harness lessons the same pass: a mutation aimed at a file the mutator does
+not COPY reports ANCHOR-MISSING and reads as "the source moved" — the sibling
+harness's `mutateFacts` ruling, earned again, so the composer has its own
+file-named mutator. And `plan`'s three length guards are EARLY EXITS rather
+than the protection: removing them survives, because `actorID`, `derive` and
+`leaf` each re-check downstream. That is recorded in both files instead of
+keeping a mutation that cannot fail, which would claim coverage this harness
+does not have. **35 mutations, all caught.**
+
+**AN ACCOUNT WAS ACTUALLY CREATED — the whole path, end to end, on chain.**
+Account `0x6c7d8a1751d20a4b957868753673922c60897ae1`, transaction
+`0xe8e39e1b…`, receipt status `0x1`, 93 bytes of code at the derived address.
+Signed by a **P-256 key acting as the account itself** (`senderAuth` 149 bytes
+prefixed with the P256Authenticator) and **paid for by the faucet** — so the
+thing this feature promises is not a design intention any more, it has
+happened: an account signs itself into existence with the Face ID curve and
+costs its owner nothing. A software P-256 key stood in for the Enclave, which
+is the only part the Enclave changes; every byte around it is what the app
+composes.
+
+**Two operational facts that cost several attempts and are written down so they
+cost nobody else any.** The payer service's parameter is
+**`signedTransaction`**, not `transaction` — and every wrong name produces the
+IDENTICAL error as a missing one (`Cannot read properties of undefined (reading
+'replace')`), so the message says nothing about which mistake was made; sending
+`params: []` and getting the same error is what isolated it. And
+**`validBefore: 0` is accepted**: the terms advertise `maxExpiry: 15`, which
+reads as a requirement to set a short expiry and is not one — every epoch-second
+value tried was refused as "already expired", while no-expiry works, matching
+every real transaction on the chain.
+
+A bug of ours worth the same note: the first attempt recomputed `validBefore`
+inside the function that built the body, which was called once for the digest
+and once for the bytes — so the signature covered a different transaction than
+the one sent. **Any field derived from a clock must be computed ONCE and passed
+in**, which is the same discipline `BriefLedger`/`AppVisit` already follow for
+taking `now` as a parameter.
+
+**THE APP CAN NOW MAKE AN ACCOUNT** — `VibenetSend` is the one file that
+signs, the only caller of `VibenetDeviceKey.sign`, and the only place
+`eth_sendRawTransaction` appears. It derives the address, asks the payer
+service for terms, RE-PLANS with the payer in place (that field is inside the
+signed body, so asking for sponsorship after signing would sign the wrong
+transaction), takes one Face ID, and broadcasts.
+
+**The three read-only promises are retired, and that is the point of the
+guard.** The catalog bullet, `canLine` and the reach purpose all said this seat
+never signs; keeping them while a signing path existed would be the §83 failure
+on the exact screens where somebody decides whether to trust it. What replaces
+them is the part still true and worth saying — the key is made in the Secure
+Enclave, cannot be exported by anything including us, and costs a Face ID every
+time. The reach purpose now says a signature leaves and the key never does.
+
+**One shared literal made a conduct guard answer for the wrong seat, TWICE.**
+Hegotá's catalog bullet and its reach purpose carry the same sentences as
+vibenet's and are still TRUE, so a file-wide grep kept counting promises
+vibenet had honestly given up — the guard stayed red after a correct rewrite.
+Both checks are anchored to their own seat's block now. Worth remembering as a
+shape rather than a bug: **a conduct guard keyed on PROSE must be anchored to
+the thing it guards**, because prose is exactly the thing two seats will share.
+
+**THE ENCLAVE PATH RAN ON REAL HARDWARE, AND IT FOUND A REAL BUG.** Every
+other check here is static or simulated; no simulator has a Secure Enclave, so
+`VibenetDeviceKey` had never once executed. A signed Mac Catalyst build
+(`-vibenetKeyMake YES`, an M3) exercised it: key created, 64-byte public half,
+`presence=present`, actor id derived, a second create correctly REFUSED rather
+than silently replacing, and the ladder advancing from `noKey` to
+`notAnAuthenticator` — the next rung, and the true one.
+
+**The bug it caught could only be caught this way.** `create` passed the SAME
+access control to the Enclave key AND to the keychain item holding that key's
+`dataRepresentation`. `.privateKeyUsage` governs a Secure Enclave
+`kSecClassKey`; the blob is a GENERIC PASSWORD, and `SignerKey`'s doc already
+says so in as many words — this file's own doc had claimed the flag was
+"REQUIRED here", which was wrong in precisely the way the sibling file warns
+about. The effect was that `SecItemAdd` demanded user presence to WRITE and
+failed `-25293` (errSecAuthFailed) on any run nobody is standing in front of.
+**Two protections, not one**: the access control belongs on the KEY (biometry
+per signature, erased on re-enrollment) and the item holding its wrapper needs
+device-only accessibility and nothing more — the blob is worthless to anything
+that is not this Secure Enclave.
+
+**A bare command-line binary MASKED it.** Compiled standalone, `create` fails
+`-34018` (errSecMissingEntitlement) before it ever reaches the access control,
+which reads as "this harness cannot test keychains" and is true — and hides a
+different failure underneath. The lesson generalises past this file: **an
+entitlement-dependent path tested without entitlements reports the harness's
+problem, never the code's.**
+
+`-vibenetKeyMake YES|delete` exists for exactly this, and `delete` is offered
+beside `YES` deliberately: it writes to the real keychain, so what makes it
+safe to run is that undoing it is one argument away. The test key was created
+and removed in the same session; the keychain is clean.
+
+**THE VERB EXISTS ON A SCREEN.** `createAccountRow` LEADS the Accounts scope —
+above the roster, on the user's ruling, because a verb under a list of twenty is
+a verb nobody finds — and says what the tap does ("This phone becomes its first
+key") rather than only what it is called. It lives in the ROOM and not the
+address book, also on their ruling: that book's names ledger is SHARED with the
+real one, so a devnet account created there would land beside mainnet wallets, a
+confusion built in on purpose for renaming and exactly wrong for making.
+
+`VibenetCreateSheet` is `SafeSignBlock`'s anatomy — a phase model, a NAMED
+reason for every non-ready state, and no button until what could go wrong has
+been ruled out. Three things it does deliberately: it states the facts BEFORE
+the ask (which network, what the key is, who pays), because a person is
+authorizing a specific transaction while they still have the choice; it offers a
+control for exactly ONE refusal (`noKey`, which it can fix) and states the rest
+without a button that cannot help; and it asks the payer FIRST, so "the faucet
+pays, nothing from you" is on screen before Face ID rather than discovered
+after. A missing sponsor is said too — the account would need funds — because
+that is a worse surprise arriving late.
+
+The rungs past the local ones are treated as not-applicable here rather than as
+refusals, and that is a real distinction: `notAnAuthenticator` and
+`actorDataUnreadable` are about an account that does not exist yet, so a key
+that is present and undamaged is all this act requires.
+
+**DRIVING IT FOUND THREE DEFECTS NO STATIC CHECK COULD SEE**, which is the
+argument for opening a screen you have only ever compiled.
+
+1. **The tap read as dead.** `makeKey`'s catch set `.refused(.noKey)` whatever
+   went wrong, so the sheet repeated the sentence the person had just acted on
+   and the real reason went to a toast that scrolls away. On a simulator there
+   is no enrolled biometric, so `create` throws `.noBiometry` — pressing the
+   button changed nothing on screen. The reason is stated in the sheet now,
+   under the control that produced it.
+2. **A void below the content** — a fixed 480pt tray over a two-line refusal,
+   the §480 fault the key sheet had already fixed once. The tray follows its
+   phase now.
+3. **It was barebones** (user: *"the UI is a bit barebones"*, *"the 'make a
+   key' link is super tiny"*). It had a bare title where every other sheet in
+   this app has `DSSheetHead` — the disc, a stamp, the title, and one sentence
+   saying what it means now, on torn paper. That component exists precisely to
+   stop a sheet reading as a jumble of text, and this one was not using it. The
+   refusal now IS the head's sentence rather than loose text beneath it, and
+   the one action is a full-width control: it is the only thing the screen asks
+   for, so a `label12` link for it read as a footnote.
+
+**Nothing is left to discover.** What remains is wiring: build a `Fields` from
+a real intent, ask the Enclave for a signature over `senderSigningPreimage`,
+call the payer service for sponsorship, and broadcast. The broadcast envelope's
+own field order is the one spec-derived rather than recovery-proven part, and
+that is survivable because it fails LOUDLY — a wrong signing hash is a valid
+signature over the wrong transaction, while a wrong envelope is refused by the
+node before anything happens.
+
+**WHAT SHIPPED.** The key, the ladder, the harness, and one row —
+`VibenetThisPhoneRow`, leading the Permissions scope (no sixth chip: a scope
+answers *what am I looking at* and signing answers *what am I doing*, and a
+chip that is empty for everyone without a key is a scope that is usually a
+lie). It offers **Make a key** and nothing else, because making a key is a real
+local act and every use of it is not (§83). `VibenetDeviceKey.sign` therefore
+has **no caller**, which is what keeps the seat's three "never signs, never
+sends" promises true and is guarded as such.
+
+**UNVERIFIED, and structurally so: no simulator has a Secure Enclave**, so
+every path in `VibenetDeviceKey` runs its unavailable branch and no sim sweep
+can exercise one of them. The harness is the only proof, which is why it is
+mutation-proven thirteen ways.
+
+Same pass, on the user's own rulings: the account detail's doors became ONE
+list called **Actions** ("those are just other versions of 'do'"), and
+`verbRow`'s **icon LEADS and owns its column** — it used to trail, putting the
+only thing distinguishing one verb from the next a card-width from the word it
+belongs to. Every text line starts at one indent, so the next glyph down is the
+next row.
+
+## 525. Hegotá's write path, measured off the wire (2026-08-29)
+
+Read-only measurement of the Ethrex Hegotá devnet (chainId 3151908), taken so
+the answers exist before anything is built against them. **Nothing here is
+built**; the seat stays a reader and its conduct guard is untouched.
+
+**Everything below is proven by byte-exact round-trip, not by reading a spec.**
+`debug_getRawTransaction` IS exposed on that node (`eth_getRawTransactionByHash`
+is not), so the envelope was read off the wire. Across the whole chain — 787
+transactions in ~335k blocks, found by scanning every block rather than
+sampling — **356/356 frame transactions re-encode byte-identical**, 356/356
+hashes match the RPC's, and 324/324 signatures recover to their declared signer.
+
+    0x06 || rlp([chain_id, nonce_keys, nonce_seq, sender, frames, signatures,
+                 max_priority_fee_per_gas, max_fee_per_gas, max_fee_per_blob_gas,
+                 blob_versioned_hashes, recent_root_references])
+    frame     = [mode, flags, target, [execution_gas, state_gas], value, data]
+    signature = [scheme, signer, msg, signature]
+    sig_hash  = keccak256(0x06 || rlp(envelope))
+
+**`v ‖ r ‖ s` — the recovery byte comes FIRST**, and `v ∈ {0,1}` only, never
+27/28. `r ‖ s ‖ v` recovers nothing. This is the reverse of the usual layout and
+is the single easiest thing here to get wrong while looking right.
+
+**The elision rule is per-ENTRY, not per-transaction**, which is what makes it
+sharp: 304 signature entries with an empty `msg` sign the `sig_hash` with their
+own bytes elided to empty, while 20 entries carrying a 32-byte `msg` sign that
+digest directly **with their bytes still committed to the hash**. One
+transaction carries both kinds and both recover.
+
+**THE FORK BOUNDARY, and the highest-risk item.** A frame's `limits` is a bare
+scalar in blocks 127–244,624 and a two-element `[execution, state]` list in
+291,781–330,427, with no overlap and no mixing inside a transaction. That is a
+fork, **not accepted polymorphism** — build the 2-list form. The wrong shape
+changes the RLP and therefore the `sig_hash`, so the signature simply fails.
+
+**SPONSORSHIP IS NOTHING LIKE VIBENET'S.** There is no `payer` field in the
+envelope and no second signature: `payer` exists only on the receipt and is set
+AT RUNTIME by whichever frame executes `APPROVE` (`0xAA`) with a payment scope
+from `flags` bits 0–1, so the nonce increment and balance deduction happen
+*during* execution. A transaction ending with no payer is invalid. **Measured:
+`payer == sender` on all 356**, so the sponsorship path is first-class in the
+protocol and has never once been exercised here.
+
+**FACE ID IS PLAUSIBLE HERE AND NOT PROVEN, which is the difference from §523.**
+Two independent grounds say non-secp256k1 auth is real: `P256VERIFY` at
+`0x…0100` is live and correct (an `eth_call` with a locally generated P-256
+signature returns 1, a corrupted message returns empty), and **33 frame
+transactions carry ZERO signatures** and executed with a payer set — every one
+of those senders has contract code, so authentication is the account's own
+VERIFY-frame program rather than a protocol signature. But signature `scheme`
+`0x1` is the ONLY value ever observed (324/324); `0x0` ARBITRARY and `0x2` P256
+are defined by the spec and **unobserved**, so their wire encoding is unproven.
+§523's Face ID path is proven 3/3 against real transactions; this one is a
+hypothesis.
+
+**Faucet:** `POST faucet.hegota.ethrex.xyz/api/claim` with `{"address":"0x…"}`,
+tested end-to-end (1 ETH landed). **Rate limited to 60 minutes per SOURCE IP,
+not per address** — a second claim for a different address 429s immediately.
+
+**Five things that fail silently**, each a wrong answer that renders as an
+ordinary one: `to`/`value`/`input`/`r`/`s`/`v`/`yParity` are null on every
+type-`0x6` transaction and mean nothing, while **the RECEIPT's `to` is
+synthesized as the sender** (356/356) — the same field disagreeing between two
+RPCs; `gas` is not a wire field at all but `sum(execution_gas)` plus a variable
+intrinsic, equal to neither `sum(exec)` nor `sum(exec+state)` on any
+transaction; receipt `status` is DERIVED (it matched `AND(frame statuses)` 356
+times, but consensus carries only per-frame statuses); a zero-length `msg` is
+MEANINGFUL rather than absent, selecting "sign the sig_hash", and an all-zero
+32-byte `msg` is a different reserved thing; and `nonce` is a lossy projection
+of keyed nonces (EIP-8250), so two transactions from one sender with the same
+`nonce` on disjoint key sets are both valid in either order.
+
+**Where the published spec and the chain disagree, the chain won** and it is
+recorded here because a future reader will hit the same fork: the EIP-8141 draft
+shows a nested `fees` list where the chain uses three flat fields, and ethrex
+`main` as published has a single frame gas limit where the chain uses the
+two-element form. The faucet's own `/eips` guide matches the measurement
+exactly, including the `v`-first layout.
+
+**Not established:** no transaction was constructed or submitted, so "the node
+accepts an envelope we built" is untested; payer ≠ sender never exercised; the
+ARBITRARY and P256 signature-entry encodings unobserved; the UTXO frame's inner
+grammar (mode 5) undecoded.

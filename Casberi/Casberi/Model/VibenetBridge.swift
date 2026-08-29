@@ -403,7 +403,7 @@ enum VibenetBridge {
                 : String(localized: "\(addresses.count) addresses watched"),
             can: [
                 String(localized: "Reads which keys can act for a watched address — and whether it's locked — on Base's vibenet devnet, where native account abstraction (EIP-8130) is being tested."),
-                String(localized: "Read-only — this app never signs or sends anything against it."),
+                String(localized: "Reading needs no key. Making an account signs with a key held in this phone's Secure Enclave — it never leaves, and it asks for Face ID every time."),
             ])
     }
 

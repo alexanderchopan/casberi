@@ -134,6 +134,8 @@ strip_comments "$ROOM"   > "$TMP/room.nc.swift"
 strip_comments "$BRIDGE" > "$TMP/bridge.nc.swift"
 strip_comments "$SETUP" > "$TMP/setup.nc.swift"
 strip_comments "$BOOK"  > "$TMP/book.nc.swift"
+strip_comments "$CATALOG" > "$TMP/catalog.nc.swift"
+strip_comments "$REACH"   > "$TMP/reach.nc.swift"
 # prd §517 — the lookup is its own surface now.
 WATCHSHEET="Casberi/Casberi/Screens/VibenetWatchSheet.swift"
 [[ -f "$WATCHSHEET" ]] || { echo "✗ $WATCHSHEET not found"; exit 1; }
@@ -289,9 +291,16 @@ fi
 grep -q '0x0000000000000000000000000000000000000001' "$TMP/room.nc.swift" \
   || { echo "✗ K1_AUTHENTICATOR's fixed address is missing — secp256k1 actors can never be identified"; exit 1; }
 
-# Genuinely read-only: no signing key of this app's own may ever touch
-# vibenet (unlike the Safe co-signer, prd §425/§426 — there is no counterpart
-# here), and no write-shaped RPC method may be requested.
+# THE READ PATH STAYS A READ PATH (amended 2026-08-29, prd §523). This guard
+# used to say a signing key "may never touch vibenet", and that is no longer
+# the feature's intent — `VibenetDeviceKey` holds a Secure Enclave P-256 key
+# and `VibenetSigner` decides whether it may act. What has NOT changed, and is
+# what this guard is really for, is that THESE TWO FILES are readers: the room
+# and the bridge must never sign, never name a signing type, and never request
+# a write-shaped method. Signing lives in its own files behind its own ladder
+# and its own harness (`scripts/vibenet-signer-selftest.sh`), which is the
+# split that keeps a 2,600-line bridge from quietly growing the ability to
+# move something.
 if grep -q 'SignerKey\|SafeSigner' "$TMP/room.nc.swift" "$TMP/bridge.nc.swift"; then
   echo "✗ VibenetRoom/VibenetBridge reference a signing type — this feature must never sign"
   exit 1
@@ -301,6 +310,111 @@ for method in 'eth_sendTransaction' 'eth_sendRawTransaction' 'eth_sign' \
   grep -q "$method" "$TMP/bridge.nc.swift" \
     && { echo "✗ VibenetBridge.swift requests $method — this must only ever read"; exit 1; }
 done
+
+# THE COPY MUST MOVE WITH THE CODE (2026-08-29). Three surfaces promise, in
+# words a person reads, that this seat never signs and never sends: the catalog
+# offer's last feature bullet, the bridge's own `canLine` sentence on the detail
+# screen, and the reach registry's purpose on the privacy screen. All three are
+# TRUE today — this phone can MAKE a key (`VibenetDeviceKey.create`, wired into
+# the Permissions scope) and `VibenetDeviceKey.sign` has no caller at all, so no
+# signature exists to send and `VibenetSigner.decide` refuses everything with
+# `.actorDataUnreadable` regardless.
+#
+# **Making a key is not signing, and this guard turns on the difference.** A
+# coarser test — any caller of either file — fires on the key row that ships
+# today and would force the copy to disown a promise the seat is still keeping.
+# What is watched is the two things that would really make the sentences false:
+# a caller of `sign` (the app can produce a signature) or a write-shaped RPC
+# method anywhere in the vibenet files (the app can send one).
+#
+# This exists because that is exactly the arrangement that ships a lie: the
+# signer gains its first caller in one commit, the three sentences live in three
+# other files, and nothing in a build, a screen sweep or any other check here
+# can see the difference. The tie runs BOTH ways —
+#
+#   • a signing path appears while the promises stand → the app claims something
+#     false on its own privacy screen, the §83 failure in the one place it is
+#     most expensive to be wrong;
+#   • the promises vanish while nothing signs → the seat quietly gives up a
+#     guarantee it is still keeping, and nobody re-earns it.
+#
+# Deliberately NOT a list of approved wordings: what is asserted is that a
+# promise is present or absent, never how it is phrased, because a phrasing
+# whitelist fails on a copy edit and gets loosened until it means nothing.
+# Both scans read COMMENT-STRIPPED copies, and not as a nicety: every one of
+# these files DOCUMENTS this rule by naming the very symbols it must not call
+# ("`VibenetDeviceKey.sign` has no caller", "`VibenetSigner.decide` refuses
+# everything"), so a raw grep flags the prose explaining the rule as a
+# violation of it — measured on this guard's own first run, which named the
+# key row and the catalog comment written three lines above (the
+# Obsidian/Cursor lesson).
+SIGN_CALLERS=""
+SEND_PATHS=""
+for f in $(grep -rl 'Vibenet' --include='*.swift' Casberi/ 2>/dev/null \
+             | grep -v 'Model/VibenetSigner.swift$' | grep -v 'Model/VibenetDeviceKey.swift$'); do
+  nc="$TMP/scan.nc.swift"
+  strip_comments "$f" > "$nc"
+  # `VibenetDeviceKey.sign` ONLY, never `VibenetSigner.` — asking the ladder
+  # whether this phone MAY sign is not signing, and the two must not be
+  # conflated. Measured the hour this guard landed: `-vibenetSignerProbe`
+  # calls `VibenetSigner.decide` to print the refusal, signs nothing, and says
+  # so in its own comment — and the coarser grep failed the build over it,
+  # demanding the copy disown a promise the seat is still keeping. A guard
+  # that fires on the honest "can I?" question is the lint that cries wolf.
+  grep -q 'VibenetDeviceKey\.sign' "$nc" && SIGN_CALLERS="$SIGN_CALLERS $f"
+  # The SEND scan is scoped to vibenet's OWN files while the SIGN scan is
+  # repo-wide, and the asymmetry is deliberate: a caller of the vibenet signer
+  # is a vibenet signing path wherever it lives, but a write-shaped RPC method
+  # is only vibenet's if it is in a vibenet file. Measured on the first proof
+  # run — `HegotaBridge.swift` mentions vibenet in prose, so an unscoped send
+  # scan reported a HEGOTA write under a vibenet-worded failure, pointing
+  # whoever hit it at the wrong three sentences (Hegota has its own guard, in
+  # `hegota-selftest.sh`).
+  [[ "$(basename "$f")" == Vibenet* ]] \
+    && grep -q 'eth_sendRawTransaction\|eth_sendTransaction' "$nc" && SEND_PATHS="$SEND_PATHS $f"
+done
+VIBE_PROMISES=0
+# SCOPED TO THE VIBENET OFFER, not the whole catalog (2026-08-29). Hegotá's
+# bullet is the IDENTICAL string and its promise is still true, so a file-wide
+# grep counted a promise vibenet had already given up and kept this guard red
+# after an honest rewrite. Found the moment vibenet's bullet changed and
+# Hegotá's did not — the shape a shared literal always eventually takes.
+python3 - "$TMP/catalog.nc.swift" <<'VIBEBULLET' && VIBE_PROMISES=$((VIBE_PROMISES + 1))
+import sys
+src = open(sys.argv[1]).read()
+start = src.find('Offer(name: "Base Vibenet"')
+if start < 0:
+    sys.exit(1)                      # no offer at all is not a promise
+nxt = src.find('Offer(name:', start + 10)
+block = src[start:nxt if nxt > 0 else len(src)]
+sys.exit(0 if 'Never signs or sends anything' in block else 1)
+VIBEBULLET
+grep -q 'Read-only — this app never signs or sends anything against it' "$TMP/bridge.nc.swift" && VIBE_PROMISES=$((VIBE_PROMISES + 1))
+# SCOPED TO THE VIBENET ENDPOINT, for the reason the catalog check just above
+# is scoped: Hegotá's reach entry carries the same sentence and its promise is
+# still true. This is the SECOND place one shared literal made a guard about
+# one seat answer for another — worth remembering as a shape, not just a bug:
+# a conduct guard keyed on prose must be anchored to the thing it guards.
+python3 - "$TMP/reach.nc.swift" <<'VIBEREACH' && VIBE_PROMISES=$((VIBE_PROMISES + 1))
+import sys
+src = open(sys.argv[1]).read()
+start = src.find('service: "Base Vibenet"')
+if start < 0:
+    sys.exit(1)
+nxt = src.find('Endpoint(service:', start + 10)
+block = src[start:nxt if nxt > 0 else len(src)]
+sys.exit(0 if 'nothing is ever signed or sent' in block else 1)
+VIBEREACH
+if [[ -n "$SIGN_CALLERS$SEND_PATHS" && $VIBE_PROMISES -gt 0 ]]; then
+  echo "✗ vibenet can now sign or send (${SIGN_CALLERS}${SEND_PATHS} ) while $VIBE_PROMISES never-signs promise(s) still stand"
+  echo "  amend BridgeCatalog's Base Vibenet feature bullet, VibenetBridge.canLine, and NetworkReach's vibenet purpose in the same commit"
+  exit 1
+fi
+if [[ -z "$SIGN_CALLERS$SEND_PATHS" && $VIBE_PROMISES -lt 3 ]]; then
+  echo "✗ nothing can sign or send on vibenet, so the seat still only reads — but only $VIBE_PROMISES of 3 never-signs promises are present"
+  echo "  a guarantee this seat is still keeping was dropped from the copy; restore it or land the signing path"
+  exit 1
+fi
 
 # The redeploy note ("vibenet redeployed since you last checked") is only
 # honest if a first-ever read stays silent — nothing stored yet means nothing

@@ -6231,6 +6231,97 @@ enum ProbeHooks {
         // fetch unreachable, an account genuinely not established, an
         // account established with no live actors, a flaky devnet RPC) and
         // only the last is a bug this probe is meant to catch.
+        // WHAT THIS PHONE COULD SIGN VIBENET WITH (prd §523).
+        //
+        // It exists because "no key" has FOUR causes that render as one row
+        // and only one of them is a bug: no Secure Enclave (every simulator,
+        // so this probe reports `enclave=NO` on every headless run here and
+        // that is CORRECT), no enrolled biometric, a key nobody has made yet,
+        // or a key the Keychain refused to answer about. `presence` is the
+        // line that separates them, and it is read WITHOUT decrypting, so
+        // this probe never raises a Face ID prompt — a probe that prompts is
+        // one nobody can put in a sweep (`-signerProbe`'s rule, one chain
+        // over).
+        //
+        // It SIGNS NOTHING and must never learn to: `VibenetDeviceKey.sign`
+        // having no caller is what keeps this seat's three "never signs,
+        // never sends" promises true, and `vibenet-selftest.sh` fails the
+        // build if that changes without the copy changing with it.
+        // MAKE OR REMOVE THIS PHONE'S KEY, headlessly (prd §523).
+        //
+        // The one path no simulator can exercise — there is no Secure Enclave
+        // on any of them — so this exists to be run on a DEVICE or a signed
+        // Mac Catalyst build, where the entitlements are real. A bare
+        // command-line binary cannot do it either: creating the item without
+        // keychain entitlements fails `-34018` (errSecMissingEntitlement),
+        // which is the harness failing rather than the code, and is exactly
+        // the shape of a test that reports a defect that is not there.
+        //
+        // `delete` is offered beside `YES` deliberately: this writes to the
+        // real keychain, so the thing that makes it safe to run is that
+        // undoing it is one argument away.
+        Hook(key: "vibenetKeyMake") { value, _ in
+            if value.lowercased() == "delete" {
+                VibenetDeviceKey.delete()
+                NSLog("[Casberi] vibenetKeyMake| deleted presence=%@",
+                      String(describing: VibenetDeviceKey.presence()))
+                return
+            }
+            do {
+                let hex = try VibenetDeviceKey.create()
+                NSLog("[Casberi] vibenetKeyMake| created bytes=%d presence=%@",
+                      hex.count / 2, String(describing: VibenetDeviceKey.presence()))
+                NSLog("[Casberi] vibenetKeyMake| actorId=%@", VibenetDeviceKey.actorID() ?? "-")
+                // A second create must be REFUSED, never a silent replace: a
+                // replaced key leaves every account that authorized the old one
+                // pointing at something this phone can no longer produce.
+                do {
+                    _ = try VibenetDeviceKey.create()
+                    NSLog("[Casberi] vibenetKeyMake| SECOND CREATE SUCCEEDED — this is wrong")
+                } catch {
+                    NSLog("[Casberi] vibenetKeyMake| second create refused: %@",
+                          String(describing: error))
+                }
+            } catch {
+                NSLog("[Casberi] vibenetKeyMake| FAILED %@", String(describing: error))
+            }
+        },
+        Hook(key: "vibenetKeyProbe") { _, _ in
+            let presence: String
+            switch VibenetDeviceKey.presence() {
+            case .none:      presence = "none"
+            case .present:   presence = "present"
+            case .destroyed: presence = "destroyed"
+            }
+            NSLog("[Casberi] vibenetKey| enclave=%@ biometry=%@ presence=%@ fingerprint=%@",
+                  VibenetDeviceKey.enclaveAvailable ? "YES" : "NO",
+                  VibenetDeviceKey.biometryAvailable() ? "YES" : "NO",
+                  presence,
+                  VibenetDeviceKey.fingerprint() ?? "-")
+            // The word the CHAIN would name this key by, so a device run can be
+            // compared against an account's actor list by eye — and so the
+            // ladder below is asked with a real id rather than a nil that would
+            // always answer `actorDataUnreadable`.
+            NSLog("[Casberi] vibenetKey| actorId=%@", VibenetDeviceKey.actorID() ?? "-")
+            // The ladder's own verdict over what this device really has, so a
+            // device run says which rung it stops on rather than leaving it to
+            // be inferred from a blank row. Every other fact is handed in as
+            // the honest unknown it is here: nothing has been read from the
+            // chain by this probe, so the refusal it prints is the LOCAL one.
+            let facts = VibenetSigner.Facts(
+                enclaveAvailable: VibenetDeviceKey.enclaveAvailable,
+                publicKeyHex: VibenetDeviceKey.publicKeyHex(),
+                keyDestroyed: VibenetDeviceKey.presence() == .destroyed,
+                ourActorID: VibenetDeviceKey.actorID())
+            switch VibenetSigner.decide(facts, now: .now) {
+            case .success:
+                NSLog("[Casberi] vibenetKey| verdict=READY")
+            case .failure(let r):
+                NSLog("[Casberi] vibenetKey| verdict=%@ fault=%@ — %@",
+                      VibenetSigner.name(r), r.isFault ? "YES" : "no",
+                      VibenetSigner.sentence(r))
+            }
+        },
         Hook(key: "vibenetProbe") { _, _ in
             Task { @MainActor in
                 guard let contracts = await VibenetConfig.current() else {

@@ -1389,6 +1389,18 @@ harness "Figure-voice pure-logic self-test" "figure-voice self-test" "scripts/fi
 # the only proof these rungs are ordered right.
 harness "Wallet Permissions rungs self-test" "11 mutations, 10 drift guards" "scripts/wallet-permissions-selftest.sh" "the wallet Permissions self-test failed — run scripts/wallet-permissions-selftest.sh"
 harness "Vibenet pure-logic self-test" "vibenet self-test" "scripts/vibenet-selftest.sh" "the vibenet logic self-test failed — run scripts/vibenet-selftest.sh"
+# The refusal ladder that decides whether this phone may SIGN on vibenet (prd
+# §523) — the first path in this app that can produce a signature, and the one
+# nothing else here can see: no simulator has a Secure Enclave, so every path
+# in VibenetDeviceKey runs its unavailable branch and a sim sweep exercises
+# none of it. Each rung is a silent wrong answer that renders as an ordinary
+# screen — a DESTROYED key reported as absent (so the app offers a new one
+# while an account still authorizes a key this phone can never produce), "we
+# could not simulate" read as permission, or a nil derivation read as "no",
+# which says "this account doesn't list your key" about an account it can sign
+# for. The sharpest is the chain rail: it is what makes signing on a real
+# network impossible rather than merely unintended.
+harness "Vibenet signer ladder self-test" "13 mutations, 6 drift guards" "scripts/vibenet-signer-selftest.sh" "the vibenet signer self-test failed — run scripts/vibenet-signer-selftest.sh"
 # The vibenet SCOPES' two new drawings (prd §491) — the sub-account web and the
 # change flow, compiled whole. Separate from the harness above because that one
 # is four minutes over the whole room and these run in one, so a change to

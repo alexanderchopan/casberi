@@ -1345,8 +1345,22 @@ struct VibenetAccountDetail: View {
     /// Still real buttons and still no menu — these are worth a tap without
     /// a long-press. And still no write anywhere: every one is a hand-off or
     /// a paste (§463).
+    /// **ONE LIST, CALLED ACTIONS** (user ruling, 2026-08-29: *"those are just
+    /// other versions of 'do' so we can call this actions or something"*).
+    ///
+    /// An earlier cut split these into things you DO here and doors ELSEWHERE,
+    /// and the split does not survive contact: a door out is an action with a
+    /// different destination, not a different kind of thing. What states the
+    /// difference is the row itself — a leaving verb carries a trailing arrow
+    /// — rather than a second heading that makes the reader hold two
+    /// categories to find one verb.
     private var doorsSection: some View {
         VStack(alignment: .leading, spacing: 0) {
+            Text(String(localized: "Actions"))
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+                .accessibilityAddTraits(.isHeader)
+                .padding(.bottom, DS.Space.s1)
             // Shown ONLY while the account is undeployed, and only when the
             // live config actually named a faucet. `faucetAddress` has been
             // parsed since this seat shipped and read by nothing — the one
@@ -1361,14 +1375,14 @@ struct VibenetAccountDetail: View {
                let url = URL(string: VibenetExplorer.address(faucet)) {
                 Link(destination: url) {
                     verbRow(String(localized: "Devnet faucet"),
-                            glyph: "arrow.up.right", tint: Self.mark)
+                            glyph: "drop.fill", tint: Self.mark, door: true)
                 }
                 .buttonStyle(PressSpring())
                 .dsHover()
             }
             Link(destination: URL(string: VibenetExplorer.address(item.address))!) {
                 verbRow(String(localized: "View on the explorer"),
-                        glyph: "arrow.up.right", tint: Self.mark)
+                        glyph: "square.grid.2x2", tint: Self.mark, door: true)
             }
             .buttonStyle(PressSpring())
             .dsHover()
@@ -1381,7 +1395,7 @@ struct VibenetAccountDetail: View {
             // key on an app whose whole posture is that it has none). A
             // hand-off costs nothing and never goes stale.
             Link(destination: URL(string: VibenetExplorer.console)!) {
-                verbRow(String(localized: "Manage on Base"), glyph: "arrow.up.right")
+                verbRow(String(localized: "Manage on Base"), glyph: "slider.horizontal.3", door: true)
             }
             .buttonStyle(PressSpring())
             .dsHover()
@@ -1426,20 +1440,55 @@ struct VibenetAccountDetail: View {
     /// chips' `label12`, because a row that has the width of the card has no
     /// reason to whisper, and the run's smallness was half of why it read as
     /// stray text rather than as a list of things you can do.
-    private func verbRow(_ title: String, glyph: String, tint: Color? = nil) -> some View {
-        HStack(spacing: DS.Space.s2) {
+    /// One verb. `callout15` — the app's ordinary row rung — rather than the
+    /// chips' `label12`, because a row that has the width of the card has no
+    /// reason to whisper.
+    ///
+    /// **THE ICON LEADS AND OWNS ITS COLUMN** (user ruling, 2026-08-29). It
+    /// used to trail, which put the only thing distinguishing one verb from
+    /// the next at the far right edge, a whole card-width away from the word
+    /// it belongs to — and left the rows starting at an indent nothing else in
+    /// the room shares. Now the glyph sits in a fixed leading column, the
+    /// title starts at `Self.verbIndent`, and the next glyph down is the next
+    /// row. Nothing ever enters the icon's column.
+    ///
+    /// `door` is what separates a verb that ACTS here from one that leaves:
+    /// the leaving ones keep a trailing arrow, so the difference is stated by
+    /// the row rather than by which SF Symbol happened to be chosen.
+    private func verbRow(_ title: String,
+                         glyph: String,
+                         tint: Color? = nil,
+                         door: Bool = false) -> some View {
+        HStack(spacing: DS.Space.s3) {
+            ZStack {
+                Circle()
+                    .fill((tint ?? DS.textPrimary).opacity(tint == nil ? 0.08 : 0.16))
+                    .frame(width: Self.verbDisc, height: Self.verbDisc)
+                Image(systemName: glyph)
+                    .accessibilityHidden(true)
+                    .dsGlyph(12, weight: .semibold)
+                    .foregroundStyle(tint ?? DS.textSecondary)
+            }
             Text(title)
                 .dsText(.callout15)
                 .foregroundStyle(tint ?? DS.textPrimary)
                 .lineLimit(1)
             Spacer(minLength: DS.Space.s2)
-            Image(systemName: glyph)
-                .accessibilityHidden(true)
-                .dsGlyph(12, weight: .semibold)
-                .foregroundStyle(tint ?? DS.textTertiary.opacity(0.6))
+            if door {
+                Image(systemName: "arrow.up.right")
+                    .accessibilityHidden(true)
+                    .dsGlyph(11, weight: .semibold)
+                    .foregroundStyle(DS.textTertiary.opacity(0.6))
+            }
         }
-        .padding(.vertical, DS.Space.s3)
+        .padding(.vertical, DS.Space.s2)
         .frame(minHeight: 44)
         .contentShape(Rectangle())
     }
+
+    /// The icon column, and therefore the one indent every verb's text keeps.
+    /// `DS.Mark.row` rather than a literal that happens to equal it — a row's
+    /// leading identity is exactly what this is, and the ramp is where that
+    /// size is allowed to change.
+    private static let verbDisc: CGFloat = DS.Mark.row
 }

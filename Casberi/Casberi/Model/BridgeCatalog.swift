@@ -605,20 +605,22 @@ enum BridgeCatalog {
         // order (established, actors, lock).
         Offer(name: "Base Vibenet", tagline: "Watch an account on Base's devnet", group: "Wallet", connectable: true,
               // "no key" was true until 2026-08-29 and is not any more: the
-              // Permissions scope can make a key in this phone's Secure
-              // Enclave (prd §522). Nothing signs or sends with it yet —
-              // `VibenetDeviceKey.sign` has no caller — so the never-signs
-              // bullet STANDS and is mechanically tied to that fact by
-              // `vibenet-selftest.sh`. Both halves have to be said, because a
-              // page that says "no key" beside a Make a key button is the §83
-              // failure and a page that implies signing it cannot do is the
-              // same failure pointing the other way.
-              summary: "Base's experimental devnet for native account abstraction (EIP-8130). No real funds and no account — it only ever reads. This phone can make a key of its own for the chain, and nothing has been signed or sent with it yet.",
+              // THE NEVER-SIGNS BULLET IS GONE, and it had to go (prd §523,
+              // 2026-08-29): `VibenetSend` gives `VibenetDeviceKey.sign` its
+              // first caller, so the seat can now make an account. Saying
+              // otherwise would be the §83 failure on the page where somebody
+              // decides whether to connect. What replaces it is the part that
+              // is still true and is the whole point — the key is made in the
+              // Secure Enclave, cannot leave it, and costs a Face ID every
+              // time it is used. `vibenet-selftest.sh` ties this bullet to the
+              // code both ways: it may not claim read-only while a signing
+              // path exists, and it may not give up the claim while none does.
+              summary: "Base's experimental devnet for native account abstraction (EIP-8130). No real funds. Watch any address and read its keystore state, or make an account of your own that this phone signs for with a key held in its Secure Enclave.",
               features: ["Whether a watched address is established yet",
                          "Which keys — secp256k1, a passkey, a delegate — can act for it",
                          "Whether the account is locked, and whether an unlock is underway",
-                         "A key of this phone's own, made in the Secure Enclave",
-                         "Never signs or sends anything — genuinely read-only"],
+                         "An account of your own, signed for by a key that never leaves this phone",
+                         "Face ID every time it signs — and the devnet's faucet pays the gas"],
               needsSetup: true, added: day(2026, 8, 23)),
         Offer(name: "Ethrex Hegotá", tagline: "Watch an address on the frame-transaction devnet", group: "Wallet", connectable: true,
               summary: "Hegotá is a public devnet testing frame transactions — a chain that publishes what most chains hide. No real funds, no account, no key — it only ever reads.",

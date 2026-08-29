@@ -276,7 +276,7 @@ enum NetworkReach {
         // constraint against ever hardcoding one of those addresses.
         Endpoint(service: "Base Vibenet",
                  reach: .whenConnected(bridge: "Base Vibenet"),
-                 purpose: "Reads a watched address's keystore state — is it established, which keys can act for it, is it locked — from vibenet, Base's devnet for testing native account abstraction (EIP-8130). Carries only the address you watch; there is no account, and nothing is ever signed or sent — a key made on this phone stays on this phone and no request here carries it.",
+                 purpose: "Reads a watched address's keystore state — is it established, which keys can act for it, is it locked — from vibenet, Base's devnet for testing native account abstraction (EIP-8130). A read carries only the address you watch. Making an account also sends one signed transaction: what leaves is a signature, never the key that made it — that key is held in this phone's Secure Enclave and cannot be exported by anything, including us.",
                  hosts: ["rpc.vibes.base.org", "api.vibes.base.org"]),
         // Ethrex Hegotá (2026-08-27) — a frame-transaction devnet. Unlike
         // vibenet above, the contracts this app reads are PREDEPLOYS at fixed

@@ -134,6 +134,11 @@ struct VibenetRoomCard: View {
     /// The parent re-reads; this card never does, because a card recomposing
     /// its own source is how the two get to disagree.
     var onWatched: () -> Void = {}
+
+    /// The create sheet. One presentation, on the row that raises it — a
+    /// second `.sheet` on this screen is the self-dismissing bug this codebase
+    /// has paid for three times.
+    @State private var creating = false
     /// Raised by the context menu's "Name this account…" — the alert itself
     /// lives on the SCREEN (a text-entry alert needs `@State` a card
     /// re-composed from a value type shouldn't own), so this just reports
@@ -582,6 +587,20 @@ struct VibenetRoomCard: View {
             }
             if shows(.permissions) {
                 if section == nil { sectionHeader(String(localized: "Keys")) }
+                // THIS PHONE'S OWN KEY LEADS THE SCOPE (prd §522).
+                //
+                // Above the census rather than inside it, because the census
+                // answers "what can act for these accounts" and this answers
+                // "what can THIS DEVICE do" — the second question is the one
+                // somebody opens Permissions with once they have a key, and
+                // burying it in a list of other people's authenticators is how
+                // §386p's panel lost its own subject.
+                //
+                // Drawn in every shape of this scope, scoped or not: the key
+                // belongs to the phone and not to whichever account happens to
+                // be selected, so narrowing the room must not narrow it away.
+                VibenetThisPhoneRow()
+                    .padding(.horizontal, DSRoomChassis.contentInset)
                 // The census card stands down under its own scope — the
                 // capability rungs ARE that census, drawn in the slot above.
                 if !promoted(.permissions) { keysCard }
@@ -2332,6 +2351,17 @@ struct VibenetRoomCard: View {
         let links = VibenetAccountMapping.links(room.items)
         card {
             VStack(alignment: .leading, spacing: 0) {
+                // MAKING ONE LEADS THE LIST (user ruling, 2026-08-29: create
+                // goes "above the existing accounts, not below the list b/c
+                // user may have many"). A verb under a roster of twenty is a
+                // verb nobody finds.
+                //
+                // In the ROOM rather than the address book, also on the user's
+                // ruling: that book's names ledger is SHARED with the real one,
+                // so a devnet account created there would land beside mainnet
+                // wallets — a confusion built in on purpose for renaming and
+                // exactly wrong for making.
+                createAccountRow
                 ForEach(Array(drawn.enumerated()), id: \.element.id) { index, item in
                     // The last ROW is only the last thing in the card when
                     // there are no links folded under it — otherwise its
@@ -2359,6 +2389,56 @@ struct VibenetRoomCard: View {
                         .padding(.top, DS.Space.s2)
                         .padding(.horizontal, DSRoomChassis.contentInset)
                 }
+            }
+        }
+    }
+
+    /// The one verb this room has. It says what the tap DOES — the phone's key
+    /// becomes the account's first key — because "Create an account" alone
+    /// hides the only fact that matters about it.
+    @ViewBuilder
+    private var createAccountRow: some View {
+        Button {
+            DSHaptic.selection()
+            creating = true
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                ZStack {
+                    Circle().fill(Self.mark.opacity(0.18))
+                        .frame(width: DS.Mark.row, height: DS.Mark.row)
+                    Image(systemName: "plus")
+                        .dsGlyph(12, weight: .semibold)
+                        .foregroundStyle(Self.mark)
+                }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(String(localized: "Create an account"))
+                        .dsText(.heading17)
+                        .foregroundStyle(Self.mark)
+                        .lineLimit(1)
+                    Text(String(localized: "This phone becomes its first key"))
+                        .dsText(.label11)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: DS.Space.s2)
+                Image(systemName: "chevron.right")
+                    .accessibilityHidden(true)
+                    .dsGlyph(11, weight: .semibold)
+                    .foregroundStyle(Self.mark.opacity(0.6))
+            }
+            .padding(.vertical, DS.Space.s2)
+            .padding(.horizontal, DSRoomChassis.contentInset)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .dsHover()
+        .sheet(isPresented: $creating) {
+            VibenetCreateSheet { address in
+                // Watching it is what puts it in the room. The sheet does not
+                // know what a watch list is, and this closure is the only place
+                // the two meet.
+                _ = VibenetWatch.shared.add(address)
+                onWatched()
             }
         }
     }
