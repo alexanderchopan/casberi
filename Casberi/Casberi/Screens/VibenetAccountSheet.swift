@@ -212,8 +212,7 @@ struct VibenetAccountSheet: View {
                     secondary: item.actors.count == 1
                         ? String(localized: "1 key")
                         : String(localized: "\(item.actors.count) keys"),
-                    sentence: accountSentence(item),
-                    hue: DS.brandHue(for: VibenetIdentity.source) ?? Color.fixed("#0052ff"))
+                    sentence: accountSentence(item))
     }
 
     /// The note editor, as a `DSTray` (design law: trays are never

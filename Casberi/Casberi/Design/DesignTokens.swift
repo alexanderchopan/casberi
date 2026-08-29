@@ -574,11 +574,33 @@ enum DS {
         static let hero: CGFloat = 60
     }
 
-    // MARK: - Receipt pour  (prd §369, 2026-08-12)
+    // MARK: - Receipt pour  (prd §369, 2026-08-12; INK since 2026-08-29)
 
-    /// A money receipt's source identity, as the hue it pours from the top of
-    /// its own paper — `MainSurface.crownPour`'s idiom scoped to a card, so ten
-    /// money sheets read as ten places instead of ten rows.
+    /// **THE POUR IS INK NOW — `pourInk` below is what every paper pours, and
+    /// this palette no longer reaches one** (user ruling, 2026-08-29: *"i am
+    /// wondering if the app would be cleaner if we made them ink … so we can
+    /// keep the shape and pour, but not have colors like blue"*, then, of the
+    /// three cards proposed as exceptions: *"i don't think any of those you
+    /// said keep its color need to keep color"*).
+    ///
+    /// Kept, not deleted, and the distinction is the whole of why this doc
+    /// survives: `MoneyReceipt.Hue` is still COMPUTED — `MoneyReceiptSource`
+    /// still decides that a Railgun unshield is a `.shield` and a Gnosis Pay
+    /// swipe is a `.card`, and `money-receipt-selftest.sh` still proves it
+    /// nine ways. What changed is that no view PAINTS with the answer. Ripping
+    /// the enum out would delete a working classification, its harness and its
+    /// reasoning to save a switch nobody renders; leaving it standing costs a
+    /// function and keeps the day this is reversed a one-line day.
+    ///
+    /// Its ONE live caller is `DSStamp.shielded`, which takes `.shield` as the
+    /// stamp's INK — a word, not a wash. That is deliberately outside this
+    /// ruling: the ruling is about colour poured BEHIND content, and a stamp
+    /// is the content. Nothing else may call it.
+    ///
+    /// The original reasoning, kept because it is what the ink ruling
+    /// overturned rather than contradicted — the pour encoded identity, and
+    /// identity is exactly the thing the disc directly above it already says
+    /// at full strength:
     ///
     /// **It encodes identity, with ONE named exception.** Every case but
     /// `.risk` is a place, never gain, loss, size or plain urgency — those
@@ -617,20 +639,33 @@ enum DS {
         }
     }
 
-    /// How much of that hue actually lands. Low by design — a pour is a place,
-    /// and a wash that competes with the amount above it has stopped being one.
-    /// Lighter in light theme, where a hue over white reads far hotter than the
-    /// same hue over black.
+    /// **THE POUR, AND THERE IS ONLY ONE** (2026-08-29) — the neutral that
+    /// replaced every hue above, on the money receipt, on all seven `§495`
+    /// sheet heads, on the price card and on the two page washes.
     ///
-    /// Also the intensity `PriceObjectCard` washes ITS OWN colour at — that
-    /// card is not a `MoneyReceipt` and never calls `receiptPour(_:)` above,
-    /// it computes direction from `TokenChartStyle.accent(up:scheme:)`
-    /// instead (audited 2026-08-24: the two share only this one dial, "how
-    /// loud does a card's top wash get", never the identity-vs-direction
-    /// decision — that split is intentional, see `PriceObjectCard.pour`).
-    static func receiptPourOpacity(_ scheme: ColorScheme) -> Double {
-        scheme == .dark ? 0.20 : 0.13
-    }
+    /// **The alpha is baked into the colour on purpose.** Every previous pour
+    /// took a `ColorScheme` and picked a number, which is what made
+    /// `receiptPourOpacity` a shared dial four unrelated views had to remember
+    /// to reach for — and `Color.adaptive` already answers the same question
+    /// one layer down, in the place the rest of this file answers it. So the
+    /// gradient is `pourInk` → `pourInk.opacity(0)` and no view needs the
+    /// environment at all.
+    ///
+    /// **Why a lift in dark and a shade in light, rather than one ink.** The
+    /// pour's job is to give the paper a TOP — the thing that stops a card
+    /// reading as text on a page (§495's "a jumble of text"). Light falls from
+    /// above, so on a dark paper that is white arriving and on a white paper
+    /// it is shadow; pouring black onto `#1a1a1c` would have drawn the top of
+    /// the card as a hole, which is `ThemeStore.bleeds`' own reason for
+    /// refusing to pour black in the light theme (§204's `Ink` case) read in
+    /// the mirror.
+    ///
+    /// **Measured against what it replaces**: a saturated hue at 0.20 and a
+    /// neutral at 0.20 are not the same loudness — chroma carries most of the
+    /// old pour's weight — so matching the number would have swapped a colour
+    /// for a grey BAND. `0x14` (0.078) is where the lift still reads as the
+    /// paper having a top and stops reading as a header.
+    static let pourInk = Color.adaptive(dark: "#ffffff14", light: "#0000000d")
 
     // MARK: - Radii  (brief §8 is law; control/pill fill the gaps §8 omits)
 

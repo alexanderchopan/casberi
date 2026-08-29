@@ -1029,15 +1029,21 @@ struct HegotaRoomFigure: View {
 /// in the row strip, the sheet strip and the frame's own sheet, so the mapping
 /// is learned once and then read everywhere.
 enum HegotaModeStyle {
-    /// **THE ROOM'S OWN HUE — the pour behind every Hegotá sheet head.**
+    /// **THE ROOM'S OWN HUE — and it no longer pours** (2026-08-29).
     ///
-    /// `dsReceiptPaper` needs a colour or it draws the plain raised surface
-    /// with nothing saying which room the paper came out of, and the catalog
-    /// gives this seat no brand mark to take one from: `DS.brandHue(for:)`
-    /// answers nil for a devnet, which is right — there is no logo to be
-    /// faithful to. So the pour is not invented, it is BORROWED from the room:
-    /// this is already `hue(.utxo)`, the colour of the object this chain
-    /// exists to publish.
+    /// It was the colour behind every Hegotá sheet head, on the reasoning
+    /// that `dsReceiptPaper` needed a colour or it drew a plain raised
+    /// surface with nothing saying which room the paper came out of — and
+    /// since the catalog gives this seat no brand mark (`DS.brandHue` answers
+    /// nil for a devnet, which is right: there is no logo to be faithful to)
+    /// the pour was BORROWED from `hue(.utxo)` rather than invented.
+    ///
+    /// The ink ruling took the pour and left the borrowing intact: every
+    /// paper pours `DS.pourInk` now, and "which room did this come out of" is
+    /// answered by the sheet you are standing in and the mode disc on it. The
+    /// constant STAYS because `hue(.utxo)` is it — the vault segment, the
+    /// strips and the frame discs all still draw this cyan, and those are
+    /// marks rather than washes.
     ///
     /// `hue(.utxo)` reads it below rather than repeating the literal, or the
     /// pour and the vault segment drift into two cyans that are nearly the
@@ -1930,7 +1936,7 @@ struct HegotaMoveSheet: View {
     ///
     /// This sheet opened with eight bare left-aligned blocks on the tray
     /// surface — the "jumble of text" §495 named in the vibenet room, and the
-    /// same answer applies: a raised surface, a pour of the room's hue, and
+    /// same answer applies: a raised surface, a pour (ink since 2026-08-29), and
     /// the receipt silhouette that makes a head read as one moment rather than
     /// as a column of facts.
     ///
@@ -1963,7 +1969,7 @@ struct HegotaMoveSheet: View {
                     .padding(.top, DS.Space.s4)
             }
         }
-        .dsReceiptPaper(hue: HegotaModeStyle.room)
+        .dsReceiptPaper()
     }
 
     /// **The transaction's standing, summarised from the steps below it.**
@@ -2345,7 +2351,7 @@ struct HegotaFrameSheet: View {
                     .padding(.top, 2)
             }
         }
-        .dsReceiptPaper(hue: tone)
+        .dsReceiptPaper()
     }
 
     /// Where the step sat, and whether it carried money — the two facts the
@@ -2837,7 +2843,7 @@ struct HegotaAccountSheet: View {
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
             splitBar
         }
-        .dsReceiptPaper(hue: HegotaModeStyle.room)
+        .dsReceiptPaper()
     }
 
     /// The WHOLE address, not the short form: this is the one screen where
@@ -3054,7 +3060,7 @@ struct HegotaCoinSheet: View {
                  : String(localized: "sent to you by \(WalletStore.shortAddress(coin.source))"))
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
         }
-        .dsReceiptPaper(hue: HegotaModeStyle.room)
+        .dsReceiptPaper()
     }
 
     /// **Spent or not — stated only when the sweep has proved a set.**

@@ -1046,7 +1046,7 @@ struct AddressCard: View {
     ///
     /// §495 gave every other sheet in the app one head — a subject disc and a
     /// stamp, then the name, then supporting lines, all on the money receipt's
-    /// own raised paper with the room's hue poured down it. This card was the
+    /// own raised paper with a pour down it. This card was the
     /// last identity sheet still drawing its head bare on the page, which is
     /// exactly what "a jumble of text" described one room over.
     ///

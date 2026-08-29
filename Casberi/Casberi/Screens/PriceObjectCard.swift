@@ -74,11 +74,18 @@ struct PriceObjectCard<Evidence: View>: View {
         .padding(.vertical, DS.Space.s6)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(alignment: .top) {
-            // The pour is DIRECTION, and it stands down the moment the read is
-            // no longer current: a green wash over a price we cannot vouch for
-            // is colour making a claim the card is simultaneously withdrawing.
-            LinearGradient(colors: [pour.opacity(DS.receiptPourOpacity(scheme)),
-                                    pour.opacity(0)],
+            // INK, like every other paper (2026-08-29) — see `DS.pourInk`.
+            //
+            // This pour was DIRECTION rather than identity, which is why it
+            // was proposed as one of three exceptions the ink ruling should
+            // spare; the user's answer was that none of the three needed to
+            // keep its colour. It costs nothing here, and that is the reason
+            // it went quietly: the direction is already stated twice on this
+            // card in the places a reader actually looks — the signed figure
+            // and the capsule beside it, both still coloured — so the wash
+            // was a third telling, at the weakest possible strength, and
+            // removing it takes no fact off the screen.
+            LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
                            startPoint: .top, endPoint: .bottom)
                 .frame(height: 150)
                 .frame(maxWidth: .infinity, alignment: .top)
@@ -147,16 +154,4 @@ struct PriceObjectCard<Evidence: View>: View {
                 in: Capsule(style: .continuous))
     }
 
-    /// Deliberately NOT `DS.receiptPour(_:)` — this card has no
-    /// `MoneyReceipt.Hue`, and a price's identity already lives in
-    /// `subjectMark`/the name beside it. This wash answers a different
-    /// question (which way did it move), which is exactly why it borrows
-    /// only `receiptPourOpacity`'s intensity dial and not the identity
-    /// function beside it (see that token's own doc).
-    private var pour: Color {
-        guard object.freshness.isLive, let move = object.move, !move.isFlat else {
-            return DS.textPrimary.opacity(0.06)
-        }
-        return TokenChartStyle.accent(up: move.change > 0, scheme: scheme)
-    }
 }

@@ -145,11 +145,16 @@ struct BridgeSetupHeader: View {
                 }
             }
             .padding(DS.Space.s3)
+            // The connected header's own ground. INK since 2026-08-29, and
+            // note what it keeps: the fill is still GATED ON `connected`, so
+            // it goes on saying the thing it was built to say — this screen
+            // is done — in form rather than in colour. The hue was never what
+            // carried that; the presence of a raised ground was.
             .background {
-                if connected, let hue = DS.washHue(for: name) {
+                if connected {
                     RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
                         .fill(LinearGradient(
-                            colors: [hue.opacity(0.18), hue.opacity(0.02)],
+                            colors: [DS.pourInk, DS.pourInk.opacity(0.15)],
                             startPoint: .topLeading, endPoint: .bottomTrailing))
                         .transition(.opacity)
                 }
@@ -179,23 +184,29 @@ struct BridgeSetupHeader: View {
 }
 
 extension View {
-    /// A faint wash of the app's hue down from a setup screen's top — a hint
-    /// of the brand, so arriving from the product page's bold wash doesn't
-    /// drop to a bare gray form (mock review 2026-07-16). Deliberately about
-    /// a third of the product page's strength, and it fades out above the
-    /// action area: the connected header wash and the connect bloom stay the
-    /// reward, and primary controls never sit on brand color (two near-match
-    /// blues read as a mistake). Hueless apps get nothing — the same ruling
-    /// every wash follows.
+    /// A setup screen's own top — INK since 2026-08-29 (`DS.pourInk`).
+    ///
+    /// It was a third of the product page's brand wash, and its whole stated
+    /// reason was continuity: "so arriving from the product page's bold wash
+    /// doesn't drop to a bare gray form" (mock review 2026-07-16). That
+    /// reason survives the ink ruling intact and is why this wash was not
+    /// simply deleted — the product page above it now pours the same ink, so
+    /// the two still hand off to each other, at a strength neither has to
+    /// tune against the other.
+    ///
+    /// **`name` is kept in the signature on purpose.** Nothing reads it
+    /// today, and about thirty screens pass it. Removing it is a thirty-file
+    /// edit that buys nothing and costs the day this becomes per-app again;
+    /// keeping it is one unused parameter that says what this wash is ABOUT.
+    ///
+    /// The connect bloom is untouched and still blooms the app's real colour.
     func bridgeSetupWash(name: String) -> some View {
         background(alignment: .top) {
-            if let hue = DS.washHue(for: name) {
-                LinearGradient(colors: [hue.opacity(0.30), hue.opacity(0)],
-                               startPoint: .top, endPoint: .bottom)
-                    .frame(height: 300)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    .ignoresSafeArea(edges: .top)
-            }
+            LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: 300)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .ignoresSafeArea(edges: .top)
         }
     }
 }

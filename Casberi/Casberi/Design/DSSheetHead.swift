@@ -48,9 +48,6 @@ struct DSSheetHead<Disc: View>: View {
     /// What it means NOW, in a sentence. The receipt's own closing line, and
     /// the part that makes a head an answer rather than a label.
     var sentence: String?
-    /// The pour behind the paper — the room's own hue, the way a money
-    /// receipt takes the transaction's. nil draws the plain raised surface.
-    var hue: Color?
     /// Whether the paper is TORN along its bottom edge.
     ///
     /// On a money receipt this carries state (§363: torn means final, flat
@@ -127,7 +124,7 @@ struct DSSheetHead<Disc: View>: View {
         //
         // The head was drawn bare on the page and read as "a jumble of text"
         // beside Wallet's, whose whole legibility comes from being an OBJECT:
-        // a raised surface, a pour of the room's hue at the top, and the
+        // a raised surface, a pour at the top (ink since 2026-08-29), and the
         // scalloped bottom edge that makes it a receipt rather than a card.
         // `ReceiptPaper` is that silhouette and is reused rather than
         // re-drawn, so the two rooms cannot drift into two papers.
@@ -136,7 +133,7 @@ struct DSSheetHead<Disc: View>: View {
         // is about a LIST's rows and a room's readings, and this is a single
         // object standing for a single moment — which is exactly what §363
         // argued when it gave the receipt its paper in the first place.
-        .dsReceiptPaper(hue: hue, torn: torn)
+        .dsReceiptPaper(torn: torn)
     }
 }
 
@@ -156,7 +153,6 @@ struct DSSheetHead<Disc: View>: View {
 /// check still green. `DSSheetHead` is itself the first caller, so the shared
 /// path is the one every existing sheet already runs.
 struct DSReceiptPaper: ViewModifier {
-    var hue: Color?
     /// HOW FAR THE TEETH HAVE CUT: 0 flat, 1 fully torn — a fraction, not a
     /// flag (2026-08-28).
     ///
@@ -174,9 +170,8 @@ struct DSReceiptPaper: ViewModifier {
     ///
     /// Every other caller passes 0 or 1 through the `torn:` convenience
     /// below, where the silhouette is decoration rather than state — see
-    /// `dsReceiptPaper(hue:torn:)`.
+    /// `dsReceiptPaper(torn:)`.
     var tear: CGFloat = 1
-    @Environment(\.colorScheme) private var scheme
 
     func body(content: Content) -> some View {
         content
@@ -184,14 +179,22 @@ struct DSReceiptPaper: ViewModifier {
             .padding(.top, DS.Space.s6)
             .padding(.bottom, DS.Space.s6 + (ReceiptPaper.tooth + 2) * tear)
             .frame(maxWidth: .infinity, alignment: .leading)
+            // THE POUR IS INK, AND EVERY PAPER GETS ONE (2026-08-29, user
+            // ruling — `DS.pourInk`'s own doc carries the reasoning and the
+            // words it was ruled in).
+            //
+            // It took a `Color?` and the nil meant "no pour at all", which
+            // was the honest answer while the colour was a claim: a room with
+            // no brand hue had nothing true to pour. A neutral makes no
+            // claim, so there is nothing left for a caller to opt out of —
+            // and the option is REMOVED rather than defaulted, because a
+            // paper without a top is the "jumble of text" §495 exists to fix
+            // and no sheet should be able to choose it by omission.
             .background(alignment: .top) {
-                if let hue {
-                    LinearGradient(colors: [hue.opacity(DS.receiptPourOpacity(scheme)),
-                                            hue.opacity(0)],
-                                   startPoint: .top, endPoint: .bottom)
-                        .frame(height: 150)
-                        .frame(maxWidth: .infinity, alignment: .top)
-                }
+                LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(height: 150)
+                    .frame(maxWidth: .infinity, alignment: .top)
             }
             .background(DS.surfaceRaised)
             .clipShape(ReceiptPaper(tear: tear))
@@ -209,13 +212,13 @@ extension View {
     /// fraction below instead. The two doors are separate so the distinction
     /// stays legible: nothing about a vibenet key sheet's edge is claiming to
     /// mean anything, and nothing should read it as though it does.
-    func dsReceiptPaper(hue: Color?, torn: Bool = true) -> some View {
-        modifier(DSReceiptPaper(hue: hue, tear: torn ? 1 : 0))
+    func dsReceiptPaper(torn: Bool = true) -> some View {
+        modifier(DSReceiptPaper(tear: torn ? 1 : 0))
     }
 
     /// The paper mid-cut — for the one caller whose edge carries state and
     /// animates between the two.
-    func dsReceiptPaper(hue: Color?, tear: CGFloat) -> some View {
-        modifier(DSReceiptPaper(hue: hue, tear: tear))
+    func dsReceiptPaper(tear: CGFloat) -> some View {
+        modifier(DSReceiptPaper(tear: tear))
     }
 }

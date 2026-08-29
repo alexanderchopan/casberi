@@ -38,22 +38,36 @@ struct AppDetailScreen: View {
     // there is the glyph's green). The wash keeps asking DS.washHue itself.
     private var brand: Color { BridgeGlyph.signalColor(for: offer.name) }
 
-    /// The app's identity hue washed down from the top — nil for a hueless
-    /// app (the gray fallback is a fill, not an identity: same ruling the
-    /// thing-sheet wash follows), so those pages stay pure page.
-    @ViewBuilder private var brandWash: some View {
-        if let hue = DS.washHue(for: offer.name) {
-            // Bold, not a film (user ruling 2026-07-13): the app's page
-            // opens on its color, flowing into the page.
-            LinearGradient(stops: [
-                .init(color: hue, location: 0),
-                .init(color: hue, location: 0.3),
-                .init(color: hue.opacity(0), location: 1),
-            ], startPoint: .top, endPoint: .bottom)
-                .frame(height: 360)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .ignoresSafeArea(edges: .top)
-        }
+    /// The page's own top, washed down from it — INK since 2026-08-29
+    /// (`DS.pourInk`, whose doc carries the ruling).
+    ///
+    /// **This was the loudest colour in the app** and it is the one the ink
+    /// pass most changes: `DS.washHue(for:)` at FULL strength for the first
+    /// 30% of 360pt, so a product page opened on a slab of the app's brand
+    /// (user ruling 2026-07-13: "bold, not a film" — the page opens on its
+    /// color). It is also the one where the argument for colour was
+    /// strongest, and it still lost on the ruling's own terms: the brand is
+    /// stated by the tile at the top of this page, at full saturation, in the
+    /// one element that IS the app's identity. The wash was the same fact
+    /// again, forty times larger, and next to a catalogue of sixty apps it is
+    /// what made moving between two of them read as changing skins.
+    ///
+    /// **Two things were deleted with the colour, deliberately.** The nil arm
+    /// (a hueless app got no wash at all, so ChatGPT and X pages had no top
+    /// while Stripe's had a purple one — that asymmetry cannot exist once the
+    /// wash makes no claim), and the 0.3 hold, which existed to make a
+    /// saturated hue read as a band rather than a fade. Ink needs no hold.
+    ///
+    /// The `connectBloom` below is UNTOUCHED and still blooms the app's real
+    /// colour: that is a moment, not a background — the same line
+    /// `AddressBookViews` drew when its own pour went to ink and the face
+    /// reveal kept its hue.
+    private var brandWash: some View {
+        LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
+                       startPoint: .top, endPoint: .bottom)
+            .frame(height: 360)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .ignoresSafeArea(edges: .top)
     }
 
     var body: some View {

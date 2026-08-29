@@ -106,10 +106,7 @@ struct VibenetEventCard: View {
                         },
                         title: title,
                         secondary: subtitle,
-                        sentence: consequence(now: now),
-                        // The room's own hue pours behind the paper, the way
-                        // a money receipt takes the transaction's.
-                        hue: Self.mark)
+                        sentence: consequence(now: now))
 
             // WHAT THIS KEY MAY DO — chips, the shape the design settled on
             // after a grid was drawn and refused ("the chips look better, the

@@ -108,7 +108,7 @@ struct MoneyReceiptCard: View {
         // that kept it here was the Bool: the tear ANIMATES on a receipt, so
         // the shared modifier had to learn a fraction before its own origin
         // could call it.
-        .dsReceiptPaper(hue: DS.receiptPour(receipt.hue), tear: tear)
+        .dsReceiptPaper(tear: tear)
         .onAppear {
             tear = torn ? 1 : 0
             settled = true
