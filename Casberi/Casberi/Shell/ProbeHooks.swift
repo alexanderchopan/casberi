@@ -1440,16 +1440,34 @@ enum ProbeHooks {
                 // measures a different thing than the code it reports on is
                 // worse than no probe.
                 let things = WalletBackgroundRefresh.sweepCorpus(context) ?? []
-                let (plans, photos) = NotifySweep.plans(things: things)
+                let (corpusPlans, photos) = NotifySweep.plans(things: things)
+                // The two devnets (prd §522), composed the same way production
+                // composes them and reported APART from the corpus count —
+                // `planned=` counting them together would hide the case this
+                // probe exists for, which is that a devnet plan has a
+                // completely different reason to be missing (no reset observed,
+                // nothing tracked, no frame reverted) than a corpus one.
+                let devnetPlans = DevnetNotify.plans()
+                let plans = corpusPlans + devnetPlans
                 let s = Notifications.settings
-                NSLog("[Casberi] notify| corpus=%d planned=%d alarms=%@ arrivals=%@ whisper=%@ asked=%@",
-                      things.count, plans.count,
+                NSLog("[Casberi] notify| corpus=%d planned=%d devnet=%d alarms=%@ arrivals=%@ whisper=%@ asked=%@",
+                      things.count, corpusPlans.count, devnetPlans.count,
                       s.alarms ? "on" : "off", s.arrivals ? "on" : "off",
                       s.whisper ? "on" : "off", Notifications.hasAsked ? "YES" : "NO")
                 // Why nothing planned, when nothing planned. One NSLog per
                 // line (the `-todayProbe` truncation lesson).
                 for line in NotifySweep.skipCensus(things: things) {
                     NSLog("[Casberi] notifySkip| %@", line)
+                }
+                // Why the devnets said nothing, when they said nothing — the
+                // same reasoning `notifySkip|` carries for the corpus, and the
+                // reason this seat needs it MORE: silence is the healthy answer
+                // almost every day (no reset, nothing tracked, no reverted
+                // frame), and only a drifted read is a bug. `-notifyProbe` on a
+                // device with vibenet watched and NOTHING here is the shape
+                // that says the gathering broke.
+                for line in DevnetNotify.census() {
+                    NSLog("[Casberi] notifyDevnet| %@", line)
                 }
                 let ledger = Notifications.ledger
                 let cal = Calendar.current

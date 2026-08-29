@@ -84,6 +84,39 @@ enum NotifyKind: String, Sendable, CaseIterable {
     /// disclosing its own vulnerability does not push you a notification, and
     /// the wallet you are about to open is the last place you would look.
     case walletIncident
+    /// A DEVNET THIS APP WATCHES WAS RESET (2026-08-29, prd §522).
+    ///
+    /// Both experimental chains here are relaunched from genesis as a matter
+    /// of course, and when it happens every reading the room holds describes a
+    /// chain that no longer exists — while the seat renders perfectly, because
+    /// all three hosts answer quickly and with nothing. §515a is the user's own
+    /// account of finding out: the room read "nothing has landed here", and the
+    /// real answer was that the chain had been wiped overnight and every
+    /// account needed topping up to redeploy.
+    ///
+    /// ONE kind for both seats, because the news reads the same whichever chain
+    /// it was — the `runningLow` ruling, where four different numbers share a
+    /// kind for exactly that reason. The body names the chain; the plan carries
+    /// its source, so the right-hand slot carries its mark.
+    case chainReset
+    /// A vibenet account whose timelock the person ASKED to track has finished
+    /// unlocking (2026-08-29, prd §522).
+    ///
+    /// §473 built the countdown as a Live Activity and stopped there: its
+    /// `staleDate` IS the unlock instant, so the tile greys out at exactly the
+    /// moment it becomes worth knowing about and nothing ever says the window
+    /// opened. The consent is already given — this fires only for an address
+    /// somebody turned tracking on for, never for one they merely watch, which
+    /// is §473's own ruling carried forward rather than reopened.
+    case unlockReady
+    /// A frame REVERTED inside a Hegotá transaction that otherwise succeeded
+    /// (2026-08-29, prd §522).
+    ///
+    /// The one thing this chain publishes that no receipt anywhere else can
+    /// say. A transaction's receipt reads success; one of its EIP-8141 frames
+    /// can still have reverted inside it, and the room has counted those since
+    /// §504 without the fact ever leaving the room.
+    case frameReverted
     // — arrival
     case moneyIn
     case payoutPaid
@@ -98,7 +131,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .disputeOpened, .deadlineNear, .positionAtRisk, .approvalGranted,
              .poolProofNeeded, .poolCleared, .paymentsSilent, .priceRose,
              .appRejected, .agentRunFailed, .runningLow, .safeSignatureNeeded,
-             .walletIncident:
+             .walletIncident, .chainReset, .unlockReady, .frameReverted:
             return .alarm
         case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained:
             return .arrival
@@ -146,11 +179,25 @@ enum NotifyKind: String, Sendable, CaseIterable {
         // rejection is a decision somebody made about you.
         case .appRejected:      return 65
         case .paymentsSilent:   return 60    // revenue stopped; nothing to click
+        // A devnet wiped under you. ABOVE `poolCleared` because something is
+        // asked of you (accounts redeploy on their next transaction, and until
+        // then every reading is of a chain that is gone) and BELOW
+        // `paymentsSilent` because no real money is involved either way — a
+        // devnet reset must never win a batch against revenue that stopped.
+        case .chainReset:       return 55
         case .poolCleared:      return 50    // good news, act whenever
+        // `poolCleared`'s exact shape — funds that were held are available
+        // again, act whenever — ranked just under it because that one is real
+        // money and this is a devnet's timelock.
+        case .unlockReady:      return 48
         case .priceRose:        return 40    // recurring money, already charged
         // Something you asked to run did not finish — worth knowing, not
         // urgent: nothing is moving or at risk, a rerun costs a tap.
         case .agentRunFailed:   return 35
+        // `agentRunFailed`'s shape one rung down: something you sent did not
+        // fully do what it said, nothing is moving or at risk, and the whole
+        // transaction still succeeded.
+        case .frameReverted:    return 30
         // The lowest alarm on purpose — "do this soon" rather than "something
         // is wrong right now". Ranked under a price rise (money already
         // left, so at least that one is definite) but still a real severity,
@@ -168,6 +215,61 @@ enum NotifyKind: String, Sendable, CaseIterable {
     /// a liquidation proximity has no stated clock, only a live market price.
     var isTimeSensitive: Bool {
         self == .disputeOpened || self == .deadlineNear
+    }
+
+    /// The title line — deliberately a small closed set of plain sentences, so
+    /// the lock screen reads as one voice rather than eight bridges each
+    /// shouting their own noun. The row's own title is the body.
+    ///
+    /// Lives here rather than in `NotifySweep` (moved 2026-08-29, prd §522) so
+    /// there is ONE authority a harness can read: `NotifyDevnet` below composes
+    /// whole plans, and a headline it could not reach would have meant a second
+    /// copy of three strings in a file no check compiles.
+    ///
+    /// A headline never repeats what the body already leads with — see
+    /// `.appRejected` and `.walletIncident`, both of which say who decided
+    /// rather than what was decided.
+    var headline: String {
+        switch self {
+        case .disputeOpened:    return String(localized: "Money challenged")
+        case .deadlineNear:     return String(localized: "Due soon")
+        case .positionAtRisk:   return String(localized: "Close to liquidation")
+        case .approvalGranted:  return String(localized: "Something new can move your funds")
+        case .safeSignatureNeeded: return String(localized: "Your signature is needed")
+        // Says the fact the row cannot: that this is YOUR wallet. The body
+        // already leads with Walletbeat's own severity word and the incident's
+        // own title, so repeating either here would say one thing twice.
+        case .walletIncident:   return String(localized: "Security problem in a wallet you use")
+        case .poolProofNeeded:  return String(localized: "Privacy Pools needs a response")
+        case .poolCleared:      return String(localized: "Clear to withdraw")
+        case .paymentsSilent:   return String(localized: "Payments went quiet")
+        case .priceRose:        return String(localized: "A subscription went up")
+        // Deliberately not "Rejected": the ROW's title already leads with the
+        // exact verdict ("Metadata rejected · Casberi 1.4") and rides in the
+        // body, so a headline repeating it would say one word twice. This says
+        // who decided, which the row doesn't.
+        case .appRejected:      return String(localized: "App Review turned it down")
+        case .agentRunFailed:   return String(localized: "A Cursor agent run failed")
+        case .runningLow:       return String(localized: "Running low")
+        // Names WHAT happened, never which chain — the plan carries its
+        // source, so the mark says vibenet or Hegotá, and the body names it in
+        // words. One kind, two seats (see `NotifyKind.chainReset`).
+        case .chainReset:       return String(localized: "A devnet was reset")
+        // THE ROOM'S OWN WORDS ("Ready to unlock" — `VibenetRoom`), not a
+        // synonym. A notification that names a state differently from the
+        // screen it opens is one you have to translate on arrival.
+        case .unlockReady:      return String(localized: "Ready to unlock")
+        // Not "A transaction failed": the transaction SUCCEEDED, and saying
+        // otherwise on a lock screen is the §83 fake status in the one place
+        // there is no surrounding screen to contradict it.
+        case .frameReverted:    return String(localized: "A step reverted")
+        case .moneyIn:          return String(localized: "Money arrived")
+        case .payoutPaid:       return String(localized: "Paid out")
+        case .likesReceived:    return String(localized: "Liked your post")
+        case .repliesReceived:  return String(localized: "Someone replied")
+        case .followersGained:  return String(localized: "New follower")
+        case .whisper:          return String(localized: "Your day")
+        }
     }
 }
 
@@ -393,6 +495,232 @@ struct NotifyLedger {
     }
 
     func reset() { defaults.removeObject(forKey: Self.key) }
+}
+
+
+// MARK: - The two devnets (prd §522)
+
+/// The judgement behind three notifications neither devnet seat could send.
+///
+/// **WHY THIS IS NOT IN `NotifySweep`.** That file is the one place a LANDED
+/// ROW becomes a notification and its own doc says so — but both of these
+/// seats fail that premise, from opposite directions. Hegotá lands no `Thing`
+/// at all by design (§500: its subject is chain state, not news), so nothing
+/// it learns could ever have reached a lock screen and no audit here could
+/// report that as a gap. vibenet lands rows, but its two chain-wide facts — a
+/// timelock ending, the chain itself being wiped — belong to no row, so the
+/// corpus sweep cannot see them either. `Notifications.likes` is the standing
+/// precedent for a notification with nothing behind it in the corpus; this is
+/// the second, with the same reasoning one gathering step further out.
+///
+/// **§500 RULED THAT HEGOTÁ DOES NO NOTIFICATIONS, and it is amended in exactly
+/// one place.** That rule is about the room's CONTENT — no balance, coin, lane
+/// or move is urgent, because the asset is test ETH and nothing can move
+/// against you — and it still holds, attention dots included. A RELAUNCH is not
+/// content: it is the statement that every reading the room holds describes a
+/// chain that no longer exists, and §515a (two days after §500, so unavailable
+/// to it) is a person losing an evening to exactly that on the sibling devnet.
+/// `frameReverted` sits INSIDE §500's reasoning and ships on an explicit
+/// instruction — it is the first thing to re-litigate here, and it is one
+/// deletion: this kind, `plan(frame:)`, and `DevnetNotify.frames()`.
+///
+/// **PURE, and in THIS file rather than beside the bridges**, so
+/// `scripts/notify-selftest.sh` compiles it WHOLE. Every rule below is a
+/// silent wrong notification if it drifts, and nothing in this repo can make
+/// a devnet reset, a timelock elapse or a frame revert on demand — so the
+/// harness is not the best proof these rules hold, it is the only one.
+///
+/// **STATED CEILING: none of this reaches the network.** All three read state
+/// a FOREGROUND pass already wrote, so the announcement rides the next notify
+/// sweep after the seat's own read observed the fact — not the background task,
+/// which deliberately drives no bridge refresh (`WalletBackgroundRefresh`'s own
+/// budget note). Adding two keyless chain reads to a task measured in seconds
+/// would risk the throttle that governs every other alarm in the app, and the
+/// facts here keep: a reset stays sayable for a week, a timelock for 36 hours.
+enum NotifyDevnet {
+
+    /// The two seats, closed. Each carries its own copy so the words live
+    /// where the harness can read them.
+    enum Seat: String, Sendable, CaseIterable {
+        case vibenet, hegota
+
+        /// **MUST equal `VibenetIdentity.source` / `HegotaIdentity.source`.**
+        /// It routes the deep link and picks the brand mark for the right-hand
+        /// slot, and a wrong string fails at neither — the notification arrives
+        /// with a blank slot and opens the All feed. Tied to both constants by
+        /// a drift guard in `notify-selftest.sh`.
+        var source: String {
+            switch self {
+            case .vibenet: return "Base Vibenet"
+            case .hegota:  return "Ethrex Hegotá"
+            }
+        }
+
+        /// `casberi://feed/source/…`, percent-encoded: both names carry a space
+        /// and one carries an accent, and an unencoded string is one
+        /// `URL(string:)` hands back as nil — a tap that opens the app on
+        /// whatever room it was already showing, which reads as the
+        /// notification being broken rather than as a bad link.
+        var link: String {
+            let path = source.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? source
+            return "casberi://feed/source/" + path
+        }
+    }
+
+    /// How long after a reset it is still the reason anything looks wrong.
+    /// The same week `VibenetSeenChain.sayItFor` keeps saying it in the room —
+    /// a notification that outlived that sentence would land somebody in a room
+    /// that no longer explains itself.
+    static let resetWindow: TimeInterval = 7 * 86_400
+
+    /// How fresh a chain event must be to be news — the same 36 hours
+    /// `NotifySweep.newsWindow` gives every landed row, restated because this
+    /// file is Foundation-only and that one is not. The harness asserts the two
+    /// agree.
+    static let newsWindow: TimeInterval = 36 * 3600
+
+    // MARK: A devnet was reset
+
+    struct Reset: Sendable, Equatable {
+        var seat: Seat
+        /// Unique to THIS reset, so a second relaunch is new news and the same
+        /// one is never announced twice. **Never a bare timestamp**: the sticky
+        /// record is re-read on every sweep, so a key that moved with the clock
+        /// would fire on every pass forever.
+        var key: String
+        /// When THIS DEVICE observed it — never when the chain restarted, which
+        /// we cannot know and must not imply.
+        var observedAt: Date
+        /// How many addresses are watched on that seat.
+        var watching: Int
+    }
+
+    static func plan(reset r: Reset, now: Date) -> NotifyPlan? {
+        // NOBODY WATCHING, NOTHING TO SAY — a reset is only news about someone
+        // who had something on that chain. `VibenetQuiet.emptyRoomNote`'s first
+        // guard, for the same reason.
+        guard r.watching > 0 else { return nil }
+        // Never announce an observation from the future (a clock that moved
+        // under us), and never one the room has stopped explaining.
+        let age = now.timeIntervalSince(r.observedAt)
+        guard age >= 0, age <= resetWindow else { return nil }
+        let body: String
+        switch r.seat {
+        case .vibenet:
+            // The half that is easy to get wrong, and the user's own account of
+            // it (§515a): the ADDRESS survives. An EIP-8130 account is
+            // counterfactual, so it comes back the moment it transacts.
+            body = String(localized: "vibenet was reset since you last looked, so its history starts again from here. Your accounts keep their addresses.")
+        case .hegota:
+            body = String(localized: "Ethrex Hegotá was relaunched from genesis, so everything it held is gone. The addresses you watch are still yours.")
+        }
+        return NotifyPlan(id: "devnet:reset:\(r.seat.rawValue):\(r.key)",
+                          kind: .chainReset,
+                          title: NotifyKind.chainReset.headline,
+                          body: body,
+                          link: r.seat.link,
+                          occurredAt: r.observedAt,
+                          source: r.seat.source)
+    }
+
+    // MARK: A timelock finished
+
+    struct Unlock: Sendable, Equatable {
+        var address: String
+        /// The name the person gave it, or its short form — resolved by the
+        /// caller, because a name is app state and this file holds none.
+        var name: String
+        var unlocksAt: Date
+        /// Did somebody turn tracking ON for this address (§473's control)?
+        ///
+        /// **A FIELD, not an assumption about the caller.** §473's whole ruling
+        /// is that an unlock is a thing that happened on the chain, possibly to
+        /// an account somebody merely watches, so putting it on their lock
+        /// screen because we noticed would be spending the most personal
+        /// surface the OS has on something nobody asked about. A caller that
+        /// forgot to filter would be indistinguishable from one that did; this
+        /// way the rule is asserted rather than trusted.
+        var tracked: Bool
+    }
+
+    static func plan(unlock u: Unlock, now: Date) -> NotifyPlan? {
+        guard u.tracked else { return nil }
+        let since = now.timeIntervalSince(u.unlocksAt)
+        // Not yet — the Live Activity is still counting, and saying so.
+        guard since >= 0 else { return nil }
+        // Stale news is not news: a pass that has not run for days must not
+        // announce a window that opened last week.
+        guard since <= newsWindow else { return nil }
+        // The instant is IN THE ID, so a re-locked account that starts a second
+        // unlock is announced again while one already told about is not.
+        let stamp = Int(u.unlocksAt.timeIntervalSince1970)
+        return NotifyPlan(id: "vibenet:unlock:\(u.address.lowercased()):\(stamp)",
+                          kind: .unlockReady,
+                          title: NotifyKind.unlockReady.headline,
+                          // The room's own reading, in its own words.
+                          body: String(localized: "\(u.name) finished its timelock on vibenet."),
+                          link: Seat.vibenet.link,
+                          occurredAt: u.unlocksAt,
+                          source: Seat.vibenet.source)
+    }
+
+    // MARK: A frame reverted inside a transaction that succeeded
+
+    struct RevertedFrame: Sendable, Equatable {
+        var name: String
+        var txHash: String
+        /// Frames whose receipt said `false` — never the ones that could not be
+        /// PAIRED with a receipt, which the room draws hollow for the same
+        /// reason: not knowing is not a failure.
+        var failed: Int
+        var total: Int
+        /// Value moved INTO the watched address rather than out of it. Somebody
+        /// else's transaction, so its failed step is not news about you.
+        var incoming: Bool
+        /// The block's OWN measured timestamp.
+        ///
+        /// **Never an interpolated one, and nil is a refusal rather than a
+        /// default.** `HegotaClock` estimates a time for a block outside the
+        /// header window, and those estimates are accurate to seconds — but
+        /// they exist precisely for OLD blocks, and an undated move announced
+        /// as news could be a year of chain history arriving at once. Anything
+        /// inside the news window sits among the newest blocks this sweep read
+        /// a header for, so requiring a measured stamp costs nothing real.
+        var at: Date?
+    }
+
+    static func plan(frame f: RevertedFrame, now: Date) -> NotifyPlan? {
+        guard !f.incoming, f.failed > 0, f.total >= f.failed else { return nil }
+        guard let at = f.at else { return nil }
+        let age = now.timeIntervalSince(at)
+        guard age >= 0, age <= newsWindow else { return nil }
+        // Singular and plural spelled out rather than interpolated into one
+        // string — a count folded into a sentence is the one place a
+        // translation cannot fix the grammar.
+        let body = f.failed == 1
+            ? String(localized: "A step reverted inside a transaction from \(f.name) that otherwise succeeded.")
+            : String(localized: "\(f.failed) steps reverted inside a transaction from \(f.name) that otherwise succeeded.")
+        return NotifyPlan(id: "hegota:frame:\(f.txHash.lowercased())",
+                          kind: .frameReverted,
+                          title: NotifyKind.frameReverted.headline,
+                          body: body,
+                          link: Seat.hegota.link,
+                          occurredAt: at,
+                          source: Seat.hegota.source)
+    }
+
+    /// Everything the two devnets have to say, given what their last read left
+    /// behind. Order is stable (resets, then unlocks, then frames) so a sweep
+    /// that has to collapse always collapses the same way; `NotifyRules
+    /// .collapse` then keeps the worst alarm and counts the rest, which is what
+    /// stops a chain reset that touched four watched addresses being four
+    /// buzzes.
+    static func plans(resets: [Reset] = [], unlocks: [Unlock] = [],
+                      frames: [RevertedFrame] = [], now: Date = Date()) -> [NotifyPlan] {
+        resets.compactMap { plan(reset: $0, now: now) }
+            + unlocks.compactMap { plan(unlock: $0, now: now) }
+            + frames.compactMap { plan(frame: $0, now: now) }
+    }
 }
 
 

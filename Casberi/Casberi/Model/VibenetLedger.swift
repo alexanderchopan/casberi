@@ -931,6 +931,23 @@ enum VibenetChainReset {
             case .newChain, .rewound:       return true
             }
         }
+
+        /// A key that identifies THIS reset, for the notification ledger
+        /// (2026-08-29, prd §522). Nil when nothing was reset.
+        ///
+        /// **Built from the observation, never from the clock.** The sticky
+        /// record this feeds is re-read on every sweep, so a key carrying a
+        /// timestamp would make the same reset new news on every pass, forever
+        /// — and the ledger's whole job is "fires once, ever". Both endpoints
+        /// are in it because a rewind reuses its chain id, so `to` alone would
+        /// silence a second wipe that happened to land near the first.
+        var notifyKey: String? {
+            switch self {
+            case .firstSight, .same:        return nil
+            case let .newChain(from, to):   return "id-\(from)-\(to)"
+            case let .rewound(from, to):    return "tip-\(from)-\(to)"
+            }
+        }
     }
 
     /// How far the tip must fall below the high-water mark before it is

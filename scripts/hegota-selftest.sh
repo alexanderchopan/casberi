@@ -1051,10 +1051,22 @@ need HegotaRoomCard.swift.bare "frameRows = 5" \
 deny coins.bare "usd" "HegotaCoins reaches for a dollar figure — test ETH has no price"
 deny coins.bare "priceValue" "HegotaCoins reaches for a price — test ETH has no price"
 
-# NOTHING HERE IS WORTH A LOCK SCREEN, and the scope strip says so by carrying
-# no dot. A notification would be the same overclaim one surface out.
+# NOTHING IN THE ROOM IS WORTH A LOCK SCREEN, and the scope strip says so by
+# carrying no dot. §500's rule, and it still holds for the room's CONTENT: no
+# balance, coin, lane or move is urgent, because the asset is test ETH and
+# nothing can move against you.
+#
+# §522 amended it in exactly one place and these two guards are what keep the
+# amendment honest: a devnet RELAUNCH is not room content — it is the statement
+# that every reading here describes a chain that no longer exists — so it is
+# composed in `NotifyDevnet` off `HegotaLiveState`, and neither room model may
+# reach the sweep. If either of these starts to fail, the rule has been widened
+# from "the chain was wiped" to "something in the room happened", which is the
+# overclaim §500 wrote the sentence for.
 deny section.bare "NotifySweep" "the scope model reaches the notification sweep — nothing in this room is urgent"
 deny coins.bare   "NotifySweep" "the coin model reaches the notification sweep — nothing in this room is urgent"
+# …and the room draws no dot for any of it (§500's other half, unchanged).
+deny section.bare "NotifyKind" "the scope model reaches a notification kind — the strip must stay dotless"
 
 # THE NAMING RULING (2026-08-27), as a mechanical guard rather than a memory:
 # the label is the literal term. Checked on the comment-stripped copy precisely

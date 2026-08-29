@@ -90,7 +90,19 @@ enum WalletBackgroundRefresh {
         guard let context = SharedStore.live?.mainContext else { return }
         guard let things = sweepCorpus(context) else { return }
         let (plans, photos) = NotifySweep.plans(things: things)
-        await Notifications.submit(plans, photos: photos)
+        // **THE TWO DEVNETS SPEAK HERE TOO (prd §522).** Neither can be reached
+        // by a corpus sweep: Hegotá lands no `Thing` at all by design (§500),
+        // and vibenet's two chain-wide clocks — a timelock ending, the chain
+        // being wiped — belong to no row. Merged into the SAME submit rather
+        // than sent on their own, so a devnet alarm competes in one batch with
+        // every other alarm (`NotifyRules.collapse` keeps the worst and counts
+        // the rest) instead of arriving as a second buzz beside a dispute — and
+        // so `notify-selftest.sh`'s "only one file submits" guard stays true.
+        let devnet = DevnetNotify.plans()
+        await Notifications.submit(plans + devnet, photos: photos)
+        // AFTER the submit, never before: pruning first would drop an entry in
+        // the same pass that was about to announce it.
+        DevnetNotify.prune()
         // The whisper is re-scheduled on every sweep so its content is as fresh
         // as the last run before it fires — see `Notifications.scheduleWhisper`
         // for why a repeating trigger would be wrong.

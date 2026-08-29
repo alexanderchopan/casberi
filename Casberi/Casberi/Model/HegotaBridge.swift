@@ -690,6 +690,16 @@ final class HegotaLiveState {
     private(set) var genesisAt: Date?
 
     private static let genesisKey = "hegota.genesis.v1"
+    /// The relaunch this device has OBSERVED but not yet been told about
+    /// (prd §522) — the genesis hash we saw, and when we first saw it.
+    ///
+    /// Two keys rather than one because the notification needs both: the hash
+    /// is the ledger's identity (a SECOND relaunch is new news, the same one is
+    /// not) and the date is what makes it stop being news. Stamped ONCE per
+    /// distinct hash, so a sweep every foreground does not keep moving the
+    /// moment we claim to have noticed.
+    private static let restartHashKey = "hegota.genesis.restartHash"
+    private static let restartAtKey = "hegota.genesis.restartAt"
 
     private var inFlight = false
 
@@ -731,6 +741,34 @@ final class HegotaLiveState {
         if known == nil, genesis != .differentChain, let hash {
             UserDefaults.standard.set(hash, forKey: Self.genesisKey)
         }
+        // **THE RELAUNCH, RECORDED SO SOMETHING CAN SAY IT (prd §522).** Until
+        // this the finding lived in memory and on one card, so the one state
+        // that makes every reading in this room describe a chain that no longer
+        // exists could only be discovered by opening the room. The date is
+        // stamped on FIRST sight of a given hash and never again — this runs
+        // once per sweep, and re-stamping would move the moment we claim to
+        // have noticed forward forever, which is exactly what would keep it
+        // permanently "news".
+        if genesis == .restarted, let hash {
+            if UserDefaults.standard.string(forKey: Self.restartHashKey) != hash {
+                UserDefaults.standard.set(hash, forKey: Self.restartHashKey)
+                UserDefaults.standard.set(Date(), forKey: Self.restartAtKey)
+            }
+        }
+    }
+
+    /// The relaunch this device has observed, for the notification sweep
+    /// (prd §522) — nil when there has not been one, or when the person has
+    /// already accepted it as the new baseline.
+    ///
+    /// **A READ, never a claim**, `VibenetSeenChain.observedReset`'s rule: it
+    /// consults no ledger and clears nothing, so a sweep on every foreground
+    /// costs two `UserDefaults` reads and decides nothing on its own.
+    static func observedRestart() -> (key: String, at: Date)? {
+        guard let hash = UserDefaults.standard.string(forKey: restartHashKey),
+              let at = UserDefaults.standard.object(forKey: restartAtKey) as? Date
+        else { return nil }
+        return (hash, at)
     }
 
     /// Accept the relaunched chain as the new baseline.
@@ -741,6 +779,11 @@ final class HegotaLiveState {
     /// describe a history that no longer exists.
     func acceptRestart() {
         UserDefaults.standard.removeObject(forKey: Self.genesisKey)
+        // The observation goes with the baseline it described (prd §522) —
+        // keeping it would leave a notification pending about a chain the
+        // person has just told us to treat as the current one.
+        UserDefaults.standard.removeObject(forKey: Self.restartHashKey)
+        UserDefaults.standard.removeObject(forKey: Self.restartAtKey)
         genesis = .unknown
         accounts = []
         readAt = nil

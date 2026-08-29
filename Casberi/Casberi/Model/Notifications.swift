@@ -269,7 +269,15 @@ enum Notifications {
     /// The same `brand-<name>` convention `BridgeIcon` uses, so the mark on the
     /// lock screen is byte-identical to the one in the Apps catalog.
     private static func brandAsset(_ name: String) -> UIImage? {
+        // DIACRITICS ARE FOLDED (2026-08-29, prd §522). Asset names in this
+        // catalog are plain ASCII — "Ethrex Hegotá" is filed as
+        // `brand-ethrex-hegota` — so a source whose name carries an accent
+        // resolved to nothing and fell straight to rung 3, an honest blank slot
+        // for a mark that was sitting right there. Found the moment a devnet
+        // gained a notification; it would have been just as true of any future
+        // seat with an accent in its name.
         let asset = "brand-" + name.lowercased()
+            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "en_US_POSIX"))
             .replacingOccurrences(of: " ", with: "-")
             .replacingOccurrences(of: ".", with: "")
         return UIImage(named: asset)

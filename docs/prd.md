@@ -79,6 +79,9 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §500 | Hegotá does **no notifications** — no attention dots ever, because nothing in that room is urgent (nothing can move against you; the asset is test ETH) | amended by §522 (the room's CONTENT rule stands and the dots stay off; what §500 could not have weighed is §515a, two days later — a devnet relaunch is not room content but the statement that everything the room shows describes a chain that no longer exists. The reverted-frame notification IS inside §500's reasoning and was built on an explicit instruction; it is the first thing to re-litigate here) |
+| §306 | The classification lives in ONE file that reads what LANDED, so the never-fires list is reviewable in one screen | amended by §522 (two devnet seats carry facts no row holds — Hegotá lands no `Thing` at all, and a chain reset or an elapsed timelock belongs to no row — so `NotifyDevnet` is a second, harness-compiled door into the SAME submit; the headline also moved onto `NotifyKind` so the pure half can compose whole plans) |
+| §473 | The timelock's Live Activity is a CONTROL, never automatic, and its `staleDate` is the unlock instant | amended by §522 (the control stands, and becomes a persisted consent record: the moment the delay ends now reaches the lock screen, for a tracked address and no other — plus the relaunch bug where a surviving activity read as untracked) |
 | §201 | The catalog wall goes horizontal — paired bands, four across, full names, `minimumScaleFactor(0.7)` so a long single word shrinks rather than clips | superseded by §518 (the wall is a LIST: a small category is a short section rather than half a wasted row, and a row has the width for any name in the catalog, so "no truncation" stops needing a mechanism) |
 | §200 | The catalog is a WALL — every app visible at once as category cards of icon tiles, chips that scroll to a card | amended by §518 (the wall shape alone dies, at 99 apps and because it wore the sources tray's own grammar; §200's other rulings STAND — search leads the page, the Discover deck is kept, categories never merge, and its own "search results stay a scannable list rather than a grid" is what §518 generalises to the whole screen) |
 | §494 | The five DeFi seats are right and only their door was wrong — a connected Aave opens the Wallet room rather than the wallet manager | superseded by §515 (that door works, and working exposed the defect: the room it correctly opens is the room the Wallet seat's own Open opens. Five icons, one destination. A catalog seat lands rows under a source of its own, so the five are not seats; what they read is stated on the Wallet offer and drawn by its DeFi tiles) |
@@ -38372,3 +38375,226 @@ thing separating that row from Gmail's identical line.
 here was seen on a device or a simulator. Every finding is a duplication two
 files could be shown to make, and none of them is a judgement about how the
 result looks.
+
+## 522. The two devnets could not reach a lock screen — Hegotá structurally, vibenet almost (user: "how would you improve notifications for hegota and vibenet", then "do all", 2026-08-29)
+
+`Model/NotifyPlan.swift`'s new `NotifyDevnet` (the judgement), `Model/DevnetNotify.swift`
+(the gathering), `VibenetUnlockBook` in `VibenetUnlockActivityDriver.swift`,
+`VibenetChainReset.Verdict.notifyKey`, `VibenetSeenChain.observedReset()`,
+`HegotaLiveState.observedRestart()`, three new `NotifyKind`s.
+
+**THE FINDING, AND IT IS STRUCTURAL ON ONE SIDE.** `NotifySweep` classifies a
+LANDED ROW by its `sourceRef` prefix and says so in its own doc — that is what
+makes §306's never-fires list enforceable in one screen. Both devnet seats fail
+that premise, from opposite directions. **Hegotá lands no `Thing` at all** by
+design (§500: its subject is chain state, not news, and `HegotaRoomSource`
+composes off `HegotaLiveState` instead), so **not one thing this seat learns
+could ever have reached a lock screen** — and no audit in this repo could have
+reported that as a gap, because every one of them asks about rows. vibenet does
+land rows and had exactly ONE alarm, §468's admin key, plus a key expiry riding
+the generic `deadlineNear` for free; its two remaining clocks belong to no row,
+so the corpus sweep could not see them either. §500's rowless design is kept
+whole — `Notifications.likes` is the standing precedent for a notification with
+nothing behind it in the corpus, and this is the second, with the same reasoning
+one gathering step further out.
+
+### 1. A devnet was reset — both seats, and the one item with a report behind it
+
+§515a is the user's own account of finding out: vibenet's room read *"nothing has
+landed here"*, and the real answer was that the chain had been wiped overnight —
+*"so i had to top up my accounts to make them redeploy"*. **Both bridges already
+DETECT it** (`VibenetChainReset.verdict` off the chain id and the high-water tip,
+`HegotaGenesis.verdict` off the genesis hash) and both only ever said it inside
+the room, which you have to open to see. It is the one state where every reading
+the seat holds describes a chain that no longer exists while the seat renders
+perfectly, because all the hosts answer quickly and with nothing.
+
+**ONE kind for both seats** (`chainReset`), the `runningLow` ruling — four
+different numbers share a kind because the news reads the same — with the body
+naming the chain and the plan carrying its source so the mark says which. The
+vibenet body leads with the half that is easy to get wrong and that §515a spells
+out: **the ADDRESS survives**, because an EIP-8130 account is counterfactual and
+comes back the moment it transacts.
+
+**Three refusals, each a guard.** Nobody watching, nothing to say
+(`VibenetQuiet.emptyRoomNote`'s own first rule — a reset is only news about
+someone who had something there). An observation from the FUTURE never fires. And
+a reset stops being news at exactly the week `VibenetSeenChain.sayItFor` stops
+saying it in the room, so a notification can never outlive the sentence it opens.
+
+**THE KEY IS THE WHOLE OF "ONCE, EVER", AND IT MUST NOT BE A TIMESTAMP.** The
+sticky record is re-read on every sweep, so a key that moved with the clock would
+fire forever. `Verdict.notifyKey` is built from the observation — `id-<from>-<to>`
+/ `tip-<from>-<to>` — and carries BOTH endpoints because a rewind reuses its chain
+id, so keying on the destination alone would silence a second wipe that landed
+near the first. Hegotá's is its seen genesis hash, stamped ONCE per distinct hash
+(this runs every sweep; re-stamping would push the moment we claim to have
+noticed forward forever, which is what would keep it permanently "news") and
+forgotten by `acceptRestart`, since keeping it would leave a notification pending
+about a chain the person has just told us to treat as current.
+
+### 2. The timelock that ended, on the account somebody ASKED to track
+
+§473 built the countdown as a Live Activity and stopped there, and its own
+correctness is what created the hole: `staleDate` **is** the unlock instant, so
+the tile greys itself out at exactly the moment the fact becomes worth knowing
+and nothing ever says the window opened. `NotifyKind.unlockReady`'s headline is
+the room's OWN words ("Ready to unlock") rather than a synonym — a notification
+that names a state differently from the screen it opens is one you translate on
+arrival.
+
+**§473's ruling is kept, not reopened**: an unlock is something that happened on
+the chain, possibly to an account somebody merely watches, so only an address
+tracking was turned ON for may reach a lock screen. That fact lived in the
+driver's in-memory dictionary and **died with the process**, so `VibenetUnlockBook`
+persists it — Foundation-only and outside the `#if`, because the book is the
+record of a decision rather than a piece of ActivityKit, and a Catalyst build
+that cannot draw a Live Activity must still be able to forget one. `tracked` is a
+FIELD on the pure input rather than an assumption about the caller, so the rule
+is asserted; a caller that forgot to filter would otherwise be indistinguishable
+from one that did.
+
+**A shipped bug found on the way**, and it is §473's, not this pass's: a Live
+Activity survives the app being killed and `live` did not, so after a relaunch
+every tracked account read as untracked — the control offered "Track" for a
+countdown already on the lock screen, and taking it requested a SECOND activity
+while the first had no handle left to end it. `rehydrate()` picks them up from
+`Activity.activities` once per process. And `finish` forgets the book FIRST and
+unconditionally, because consent is withdrawn whether or not a handle survives —
+returning early on a missing one would leave the notification armed for an
+account somebody had just stopped tracking.
+
+### 3. A frame reverted inside a transaction that succeeded
+
+The one thing this chain publishes that no receipt anywhere else can say. §504
+has counted these since it shipped and the fact never left the room. **Every move
+here came from a transaction that SUCCEEDED, and that is provable rather than
+assumed**: the room's moves are reconstructed from EIP-7708 transfer logs, and a
+reverted transaction emits none — so a move existing is proof the transaction was
+accepted, which is exactly what makes a failed frame inside it worth saying. The
+headline is "A step reverted" and never "A transaction failed", the §83 line in
+the one surface with no surrounding screen to contradict it.
+
+**Four refusals.** An incoming move is somebody else's transaction. Only
+`succeeded == false` counts — a frame that could not be paired with a receipt is
+drawn hollow by the room for the same reason, since not knowing whether a step
+worked is not knowing that it failed. More failures than frames is a parse bug,
+not a notification (`HegotaRoom.split`'s own rule). And an **UNDATED move never
+fires**: `HegotaClock` will estimate a time for a block outside the header
+window and those estimates are honest to seconds, but they exist for OLD blocks,
+so announcing one is how a year of chain history arrives at once. Anything inside
+the news window sits among the newest blocks the sweep read a header for, so
+demanding a measured stamp costs nothing real.
+
+**STATED CEILING, and it follows from the same fact that makes the feature
+possible**: a frame that reverted in a transaction which moved no value at all is
+invisible here, because there is no log to have found it by. It under-reports and
+never over-reports, which is the right direction to be wrong on a lock screen.
+
+### 4. Where the judgement lives, and why it is not in `NotifySweep`
+
+The rules are `NotifyDevnet`, in `NotifyPlan.swift` — the Foundation-only file
+`notify-selftest.sh` compiles WHOLE. `DevnetNotify` reads app state and hands it
+over as values, making no decision it could get wrong on its own, and a drift
+guard fails the build if a threshold ever appears in it. The split is
+`StripeRoom`/`PostHogRoom`'s and it earns itself the same way, only harder:
+nothing in this repo can make a devnet reset, a timelock elapse or a frame revert
+on demand, so **the harness is not the best proof these rules hold, it is the
+only one**.
+
+**ONE submit.** The devnet plans are merged into `runNotifySweep`'s existing
+`Notifications.submit` rather than sent on their own, so a devnet alarm competes
+in the same batch as every other alarm — `NotifyRules.collapse` keeps the worst
+and counts the rest — instead of arriving as a second buzz beside a dispute. It
+is also what keeps the harness's standing "only one file submits" guard true,
+which is the guard that makes §306's never-fires list reviewable at all.
+
+**The headline moved onto `NotifyKind`** and `NotifySweep.headline` forwards to
+it (amends §306's file split). `NotifyDevnet` composes whole plans, and a
+headline it could not reach would have meant either a second copy of three
+strings in a file no check compiles or a plan built without its own title. One
+authority, in the half a harness can read — and a fixture now asserts EVERY kind
+answers, not only the ones a switch happened to list.
+
+**Where all three sit on the ladder**, both boundaries each, because a test
+naming one side passes with a kind ranked off the end: `paymentsSilent` >
+`chainReset` > `poolCleared` > `unlockReady` > `priceRose`, and `agentRunFailed`
+> `frameReverted` > `runningLow`. A devnet must never outrank real money in
+either direction. None of the three is time-sensitive: a reset states no clock, a
+reverted step states no clock, and an unlock's clock has already RUN OUT — the
+window is open, nothing is closing.
+
+### 5. The defect this exposed one file over
+
+`Notifications.brandAsset` lowercases a source name and swaps spaces for dashes,
+and this catalog's asset names are plain ASCII — "Ethrex Hegotá" is filed as
+`brand-ethrex-hegota`. So **an accented source resolved to nothing and fell
+straight to rung 3**, an honest blank slot for a mark that was sitting right
+there, indistinguishable from a source we never drew. Diacritics are folded now,
+which is as true of any future seat with an accent in its name.
+
+### 6. What was deliberately NOT built
+
+**Test ETH arriving as `moneyIn`.** Both rooms already refuse to call a devnet
+balance money — vibenet corrected exactly that for its key events when
+`MoneyReceiptSource` rendered "In your wallet" over one — and a "Money arrived"
+headline over test ETH is §83 with a system alert behind it. **Anything you did
+yourself**: a session key you minted, a revoke you performed, an unlock you
+started. §468 already ruled it and it is the reason the volume is honest. **Nonce
+counters, balances and coin totals** — state, not events (§216). **Sponsorship
+divergence** (`payer != sender`), which is tempting because §500 measured it as
+equal on every transaction seen so far, so a divergence really is rare and real —
+but on a devnet it is interesting rather than urgent, and it stays in the room.
+
+### 6a. §500 said Hegotá does no notifications, and it was found DURING the build
+
+Not before it — the proposal that became this entry was written from the code,
+and `hegota-selftest.sh`'s guard ("NOTHING HERE IS WORTH A LOCK SCREEN … a
+notification would be the same overclaim one surface out") only surfaced while
+its neighbours were being read. That is §418's lesson biting a third time:
+**read a mature room's most recent ledger entry before proposing anything for
+it, because the code cannot tell you which of its gaps were deliberate.**
+
+The rule is not treated as one thing, because §500 gives its reason and the
+reason splits. **"Nothing in this room is urgent"** is about the room's CONTENT
+— it is the same sentence that turns off Risk, Positions, Permissions and the
+attention dots, all on the ground that the asset is test ETH and nothing can
+move against you. A **relaunch is not content**: it is the statement that every
+reading the room holds describes a chain that no longer exists, and §515a — two
+days AFTER §500 was written, and therefore not available to it — is a person
+losing an evening to exactly that on the sibling devnet. So the reset amends
+§500 and the attention dots stay off, which is the part of the rule that was
+really about urgency.
+
+**The reverted frame is INSIDE §500's reasoning and is shipped anyway, on an
+explicit "do all".** Being told about it changes nothing you can act on, no
+money is at stake, and the room's own frames card already says it — every one of
+which is what §500 meant. It is recorded here as the first thing a future
+session should re-litigate in this room, and it is one deletion: the kind, its
+`NotifyDevnet.plan(frame:)`, `DevnetNotify.frames()`, and their fixtures.
+
+### 7. What this costs, and what it does not do
+
+No request, no new `Thing` field, **no CloudKit deploy**, no new host in
+`NetworkReach`. Every read is of state a foreground pass already wrote:
+`VibenetSeenChain`'s sticky reset, `HegotaLiveState`'s persisted accounts, the
+unlock book. **STATED CEILING: the background task reaches neither devnet.** It
+deliberately drives no bridge refresh (its budget is seconds, and an expired
+`BGAppRefreshTask` is one iOS throttles next time), so the announcement rides the
+next notify sweep AFTER a foreground read observed the fact. Adding two keyless
+chain reads to that task was considered and refused: it would put the throttle
+that governs every other alarm in the app at risk to save a delay the facts
+already tolerate, since a reset stays sayable for a week and a timelock for
+thirty-six hours.
+
+`notify-selftest.sh` grew the devnet fixtures, fourteen mutations and twenty
+drift guards, and every one of the guards was mutation-proven against a mirror of
+the real tree before it landed — including the two that tie the seat names to the
+sources their bridges really stamp, the two that tie both windows to the
+constants they mirror, and the one that keeps every threshold out of the
+gathering half. `vibenet-selftest.sh` gained six assertions and three mutations
+for `notifyKey`. **UNMEASURED on a device**: no notification from either seat has
+ever been delivered, and no simulator runs a `BGAppRefreshTask` at all —
+`-notifyProbe` now reports `devnet=` beside `planned=` and prints a
+`notifyDevnet|` census per seat, because silence here is the healthy answer
+almost every day and only a drifted read is a bug.

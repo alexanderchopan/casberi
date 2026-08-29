@@ -1683,6 +1683,10 @@ enum VibenetSeenChain {
     /// re-reading the chain (and without a second check ADVANCING the stored
     /// values, which would make the reset un-sayable one pass later).
     private static let stickyKey = "vibenet.chain.resetSeenAt"
+    /// Which reset that sticky date belongs to (prd §522) — the notification
+    /// ledger's key, so the same wipe is announced once and a SECOND wipe is
+    /// announced again. Written and cleared together with the date.
+    private static let resetKeyKey = "vibenet.chain.resetKey"
 
     /// Reads the chain, compares, advances, and — on a real reset — forgets
     /// the per-address caches that describe a chain which no longer exists.
@@ -1704,6 +1708,13 @@ enum VibenetSeenChain {
         }
         if verdict.isReset {
             UserDefaults.standard.set(Date(), forKey: stickyKey)
+            // The key rides ALONGSIDE the date rather than replacing it: the
+            // room asks "was there a reset recently" and the notification asks
+            // "which one, and have I said it", and those are different
+            // questions with different lifetimes.
+            if let key = verdict.notifyKey {
+                UserDefaults.standard.set(key, forKey: resetKeyKey)
+            }
             forgetChainState()
         }
         return verdict
@@ -1718,6 +1729,22 @@ enum VibenetSeenChain {
     static func sawResetRecently(now: Date = .now) -> Bool {
         guard let at = UserDefaults.standard.object(forKey: stickyKey) as? Date else { return false }
         return now.timeIntervalSince(at) < sayItFor
+    }
+
+    /// The reset this device last observed, for the notification sweep
+    /// (prd §522) — nil when there has not been one.
+    ///
+    /// **A READ, never a claim.** It does not consult the ledger and does not
+    /// clear anything: `NotifyDevnet` decides whether it is still news and
+    /// `NotifyLedger` decides whether it has already been said, which is what
+    /// keeps this callable from a sweep that runs on every foreground.
+    /// A date with no key is a reset observed by a build that predates this,
+    /// and is deliberately silent rather than announced under an invented key.
+    static func observedReset() -> (key: String, at: Date)? {
+        guard let at = UserDefaults.standard.object(forKey: stickyKey) as? Date,
+              let key = UserDefaults.standard.string(forKey: resetKeyKey)
+        else { return nil }
+        return (key, at)
     }
 
     static func describe(_ verdict: VibenetChainReset.Verdict) -> String {

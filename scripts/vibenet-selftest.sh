@@ -3849,6 +3849,31 @@ check("an unreadable tip leaves the stored mark alone",
 check("a first mark is the live tip",
       VibenetChainReset.nextHighWater(stored: nil, liveTip: 42, verdict: .firstSight) == 42)
 
+// The notification's identity for a reset (prd §522). Every failure here is a
+// silent wrong notification: a nil where there was a wipe means nobody is ever
+// told, and a key that moves with the clock means the same wipe is announced on
+// every sweep for a week.
+check("a quiet chain has no reset to announce",
+      VibenetChainReset.Verdict.firstSight.notifyKey == nil
+        && VibenetChainReset.Verdict.same.notifyKey == nil)
+check("a reset carries a key, so the ledger can spend it once",
+      VibenetChainReset.Verdict.newChain(from: 1, to: 2).notifyKey != nil
+        && VibenetChainReset.Verdict.rewound(from: 9, to: 1).notifyKey != nil)
+check("the SAME reset always yields the same key — this is re-read every sweep",
+      VibenetChainReset.Verdict.newChain(from: 1, to: 2).notifyKey
+        == VibenetChainReset.Verdict.newChain(from: 1, to: 2).notifyKey)
+check("a SECOND reset is a different key, so it is new news",
+      VibenetChainReset.Verdict.newChain(from: 1, to: 2).notifyKey
+        != VibenetChainReset.Verdict.newChain(from: 2, to: 3).notifyKey)
+// BOTH endpoints are in it because a rewind REUSES its chain id — keying on the
+// destination alone would silence a second wipe that landed near the first.
+check("a rewind to the same tip from a different high water is a different key",
+      VibenetChainReset.Verdict.rewound(from: 285_133, to: 100).notifyKey
+        != VibenetChainReset.Verdict.rewound(from: 400_000, to: 100).notifyKey)
+check("a new chain and a rewind can never collide on one key",
+      VibenetChainReset.Verdict.newChain(from: 1, to: 2).notifyKey
+        != VibenetChainReset.Verdict.rewound(from: 1, to: 2).notifyKey)
+
 print("")
 print("VibenetQuiet — what the empty room says instead of \"it syncs on its own\"")
 
@@ -4903,6 +4928,19 @@ mutateLedger "the unreached case must come BEFORE every sentence about the chain
 mutateLedger "a reset with nothing deployed must say the addresses survive" \
   'return deployed > 0' \
   'return deployed >= 0'
+
+# prd §522 — the key that makes a reset announceable exactly once. A nil here is
+# a wipe nobody is ever told about; a key that collides is a second wipe
+# silently swallowed.
+mutateLedger "an ordinary pass must carry NO reset key" \
+  'case .firstSight, .same:        return nil' \
+  'case .firstSight, .same:        return "same"'
+mutateLedger "a rewind must key on BOTH endpoints — its chain id is reused" \
+  'case let .rewound(from, to):    return "tip-\(from)-\(to)"' \
+  'case let .rewound(_, to):       return "tip-\(to)"'
+mutateLedger "a new chain and a rewind must never collide on one key" \
+  'case let .newChain(from, to):   return "id-\(from)-\(to)"' \
+  'case let .newChain(from, to):   return "tip-\(from)-\(to)"'
 
 
 # --- prd §517: the book is rows on ink, and the lookup is a sheet ------------

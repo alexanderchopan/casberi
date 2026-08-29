@@ -395,39 +395,13 @@ enum NotifySweep {
         return nil
     }
 
-    /// The title line — deliberately a small closed set of plain sentences, so
-    /// the lock screen reads as one voice rather than eight bridges each
-    /// shouting their own noun. The row's own title is the body.
-    static func headline(_ kind: NotifyKind) -> String {
-        switch kind {
-        case .disputeOpened:    return String(localized: "Money challenged")
-        case .deadlineNear:     return String(localized: "Due soon")
-        case .positionAtRisk:   return String(localized: "Close to liquidation")
-        case .approvalGranted:  return String(localized: "Something new can move your funds")
-        case .safeSignatureNeeded: return String(localized: "Your signature is needed")
-        // Says the fact the row cannot: that this is YOUR wallet. The body
-        // already leads with Walletbeat's own severity word and the incident's
-        // own title, so repeating either here would say one thing twice.
-        case .walletIncident:   return String(localized: "Security problem in a wallet you use")
-        case .poolProofNeeded:  return String(localized: "Privacy Pools needs a response")
-        case .poolCleared:      return String(localized: "Clear to withdraw")
-        case .paymentsSilent:   return String(localized: "Payments went quiet")
-        case .priceRose:        return String(localized: "A subscription went up")
-        // Deliberately not "Rejected": the ROW's title already leads with the
-        // exact verdict ("Metadata rejected · Casberi 1.4") and rides in the
-        // body, so a headline repeating it would say one word twice. This says
-        // who decided, which the row doesn't.
-        case .appRejected:      return String(localized: "App Review turned it down")
-        case .agentRunFailed:   return String(localized: "A Cursor agent run failed")
-        case .runningLow:       return String(localized: "Running low")
-        case .moneyIn:          return String(localized: "Money arrived")
-        case .payoutPaid:       return String(localized: "Paid out")
-        case .likesReceived:    return String(localized: "Liked your post")
-        case .repliesReceived:  return String(localized: "Someone replied")
-        case .followersGained:  return String(localized: "New follower")
-        case .whisper:          return String(localized: "Your day")
-        }
-    }
+    /// **MOVED onto `NotifyKind` (2026-08-29, prd §522) and forwarded from
+    /// here.** The devnet plans are composed in `NotifyDevnet`, inside the
+    /// Foundation-only file the harness compiles WHOLE — so leaving the
+    /// headlines in this file meant either a second copy of three of them or a
+    /// plan built without its own title. One authority, in the half that can be
+    /// tested; this keeps every existing caller and every fixture working.
+    static func headline(_ kind: NotifyKind) -> String { kind.headline }
 
     /// Rung 1 of the attachment ladder, and it asks only for what a row really
     /// holds. A social row's avatar is remote and already hydrated; a
