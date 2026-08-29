@@ -2388,7 +2388,7 @@ struct GitHubStarContent: View {
 
     /// "owner/repo" parsed from the repo's html_url.
     private var repoPath: String? {
-        GitHubFeedFetch.repoPath(fromWebURL: thing.content)
+        GitHubLinks.repoPath(fromWebURL: thing.content)
     }
 
     /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI

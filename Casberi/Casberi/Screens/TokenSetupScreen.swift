@@ -26,6 +26,23 @@ struct TokenSetupScreen: View {
     @State private var watchResult: String?
     @State private var watchResultIsError = false
 
+    /// GitHub only — watching a PERSON, the same way (prd §519, 2026-08-29).
+    /// Its own field and its own in-flight flag, but it SHARES the result
+    /// above: `connect-shape-audit`'s rule is that the sync result reports at
+    /// the END of its block, because it appears and disappears on its own and
+    /// anything under it is shoved down by a background event — so a second
+    /// status row between the two fields would make a repo error read as the
+    /// person field being broken. One result is also unambiguous, since each
+    /// sentence names its own subject.
+    @State private var personField = ""
+    @State private var watchingPerson = false
+    /// The face of whoever just landed — proof that reads "this person
+    /// arrived", not "a row arrived". `BridgeSyncStatusRows.faces` has existed
+    /// since 2026-07-14 with NO caller anywhere in the app; this is its first.
+    /// Its `faceFallback` is a BRIDGE name for `BridgeIcon`, not an SF Symbol
+    /// — a dead avatar URL falls back to GitHub's own mark, never a glyph.
+    @State private var watchFaces: [String] = []
+
     /// GitHub's feed selection — one connection, several streams the person
     /// turns on (the wallet's holdings/NFTs idea, generalized). Only read on
     /// the GitHub branch; harmless to bind for every bridge.
@@ -559,19 +576,32 @@ struct TokenSetupScreen: View {
         .dsSlabSection()
     }
 
-    /// GitHub only — watch a repo without starring or subscribing to it on
-    /// GitHub itself (2026-07-16). The watch lands as a thing immediately;
-    /// deleting it in the sheet unwatches it (feed swipes stay read-only).
+    /// GitHub only — watch a repo, or a person, without starring, subscribing
+    /// or following on GitHub itself (2026-07-16; the person half is prd §519,
+    /// 2026-08-29). Either watch lands as a thing immediately; deleting it in
+    /// the sheet unwatches it (feed swipes stay read-only).
+    ///
+    /// ONE SECTION, TWO FIELDS, ONE NOTE — deliberately, and not only to stay
+    /// inside §315's note budget: the two are the same act on two subjects,
+    /// and the sentence under them ("private to this device") is the same
+    /// promise about both. Splitting them would state that promise twice and
+    /// invite the two statements to drift apart.
     private var watchSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 DSSlabField(placeholder: String(localized: "owner/repo or a GitHub URL"),
                             text: $watchField, actionLabel: String(localized: "Watch"),
                             action: watchRepo)
-                BridgeSyncStatusRows(syncing: watching,
-                                     syncingLine: String(localized: "Looking it up…"),
-                                     result: watchResult, resultIsError: watchResultIsError)
-                DSSlabNote(text: "Private to \(DS.device) — it never touches your GitHub account.")
+                DSSlabField(placeholder: String(localized: "A username, or a GitHub profile URL"),
+                            text: $personField, actionLabel: String(localized: "Watch"),
+                            action: watchPerson)
+                BridgeSyncStatusRows(syncing: watching || watchingPerson,
+                                     syncingLine: watchingPerson
+                                        ? String(localized: "Looking them up…")
+                                        : String(localized: "Looking it up…"),
+                                     result: watchResult, resultIsError: watchResultIsError,
+                                     faces: watchFaces, faceFallback: bridge.rawValue)
+                DSSlabNote(text: "Private to \(DS.device) — nobody is followed or notified, and nothing shows on your GitHub account.")
             }
         }
         .dsSlabSection()
@@ -583,6 +613,7 @@ struct TokenSetupScreen: View {
         DSHaptic.tap()
         watching = true
         watchResultIsError = false
+        watchFaces = []
         Task {
             let resolved = await GitHubRepoWatch.resolve(q, token: token)
             watching = false
@@ -597,6 +628,38 @@ struct TokenSetupScreen: View {
                 return
             }
             watchField = ""
+            watchResult = String(localized: "Watching \(thing.title)")
+            await sync()
+        }
+    }
+
+    /// Watch a person (prd §519). The repo verb's shape exactly, with two
+    /// differences that are both about honesty: the failure sentence names the
+    /// two ways a paste can fail here (a profile URL and a REPO URL look
+    /// alike, and `GitHubLinks.personLogin` refuses the second rather than
+    /// quietly watching its owner), and the success carries their face.
+    private func watchPerson() {
+        let q = personField.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty, !watchingPerson, let token = TokenVault.get(bridge.tokenKey) else { return }
+        DSHaptic.tap()
+        watchingPerson = true
+        watchResultIsError = false
+        watchFaces = []
+        Task {
+            let resolved = await GitHubPersonWatch.resolve(q, token: token)
+            watchingPerson = false
+            guard let resolved else {
+                watchResult = String(localized: "No such account on GitHub — a username, or a link to a profile.")
+                watchResultIsError = true
+                return
+            }
+            guard let thing = GitHubPersonWatch.add(resolved, context: modelContext) else {
+                watchResult = String(localized: "\(resolved.login) is already watched.")
+                watchResultIsError = true
+                return
+            }
+            personField = ""
+            watchFaces = [resolved.avatarURL].compactMap { $0 }
             watchResult = String(localized: "Watching \(thing.title)")
             await sync()
         }

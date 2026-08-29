@@ -218,8 +218,10 @@ enum GitHubFeedFetch {
     }
 
     /// Every enabled feed, combined, plus new releases from directly-watched
-    /// repos (2026-07-16 — `GitHubRepoWatch`, independent of the feed picker
-    /// the way a specific watched wallet address is independent of "Tokens").
+    /// repos (2026-07-16 — `GitHubRepoWatch`) and the recent activity of
+    /// directly-watched people (prd §519 — `GitHubPersonWatch`). Both watches
+    /// are independent of the feed picker, the way a specific watched wallet
+    /// address is independent of "Tokens".
     /// nil ONLY when the token itself is rejected (so the caller retires a
     /// dead token); a single feed failing contributes nothing but never
     /// fails the whole refresh.
@@ -230,7 +232,8 @@ enum GitHubFeedFetch {
         // moment a feed or a watch is on.)
         let feeds = Array(GitHubFeeds.enabledFromDefaults())
         let watchedRepos = GitHubRepoWatch.watchedRepos(context: context)
-        guard !feeds.isEmpty || !watchedRepos.isEmpty else { return [] }
+        let watchedPeople = GitHubPersonWatch.watchedPeople(context: context)
+        guard !feeds.isEmpty || !watchedRepos.isEmpty || !watchedPeople.isEmpty else { return [] }
         guard let identity = await login(token: token) else { return nil }
         let login = identity.login
 
@@ -251,8 +254,20 @@ enum GitHubFeedFetch {
             mergeReleases ? mergedReleases(watchedRepos: watchedRepos, token: token)
             : (watchedRepos.isEmpty ? [] : releasesFor(watchedRepos, token: token))
 
+        // The people watched directly (prd §519) — independent of the feed
+        // picker, the way a watched repo's releases are, and for the same
+        // reason: a watch is a specific thing somebody asked for, not a stream
+        // they switched on. `activityLogins` is what keeps the contributions
+        // feed and a watch of your OWN account from reading one endpoint twice.
+        let activityPeople = GitHubLinks.activityLogins(
+            watched: watchedPeople, ownLogin: login,
+            contributionsOn: feeds.contains(.contributions))
+        async let peopleActivity: [Thing] =
+            activityPeople.isEmpty ? [] : eventsFor(activityPeople, token: token)
+
         var things = await feedBatches.flatMap { $0 }
         things += await extraReleases
+        things += await peopleActivity
         if let alert = identity.alert { things.append(alert) }
         return things
     }
@@ -599,24 +614,9 @@ enum GitHubFeedFetch {
         var things: [Thing] = []
         var pushTargets: [(thing: Thing, repo: String, sha: String)] = []
         for ev in events {
-            guard let id = ev["id"] as? String, let type = ev["type"] as? String,
-                  let repo = (ev["repo"] as? [String: Any])?["name"] as? String,
-                  let payload = ev["payload"] as? [String: Any],
-                  let line = contributionLine(type, repo: repo, payload: payload)
-            else { continue }
-            let t = thing(.link, title: line, content: "https://github.com/\(repo)",
-                         ref: "gh:event:\(id)", feed: .contributions,
-                         at: IngestSupport.isoDate(ev["created_at"]))
-            // The event's own actor — you, since this is your events feed.
-            // Measured 2026-08-14: `actor.avatar_url` here comes back as
-            // `…/u/<id>?` with an empty query, unlike the `?v=4` every other
-            // account object serves. It resolves fine and `imageURL` keeps it
-            // as-is; don't "clean" the trailing `?` without re-measuring.
-            stampWho(t, ev["actor"])
-            things.append(t)
-            if type == "PushEvent", let sha = payload["head"] as? String, !sha.isEmpty {
-                pushTargets.append((t, repo, sha))
-            }
+            guard let built = eventThing(ev, tag: GitHubFeed.contributions.tag) else { continue }
+            things.append(built.thing)
+            if let push = built.push { pushTargets.append((built.thing, push.repo, push.sha)) }
         }
         // The real commit message beats the branch-name fallback — capped so a
         // busy pusher doesn't fan out dozens of extra calls on every refresh
@@ -689,6 +689,95 @@ enum GitHubFeedFetch {
         }
     }
 
+    /// The tag a WATCHED PERSON's activity wears (prd §519). Deliberately NOT
+    /// `.contributions`' own tag: that feed's blurb says "your own recent
+    /// public activity" and means it, so filing somebody else's pushes under
+    /// it makes the one tag that answers "what have I been doing" stop
+    /// answering it. One word, sentence case, and the row carries the actor's
+    /// face, so WHO is already on screen.
+    static let activityTag = "Activity"
+
+    /// One events-feed entry, worded into a row — the shape BOTH the
+    /// contributions feed and the watched-people pass land, so the two can
+    /// never word the same event differently.
+    ///
+    /// The ref is `gh:event:<id>` for both, deliberately. A GitHub event id is
+    /// unique across GitHub, so an event this app can reach twice — you watch
+    /// someone whose push also shows up in your own feed, or you watch
+    /// yourself with the contributions feed off — lands ONCE, wearing whichever
+    /// tag reached it first (`TokenIngest.refresh` inserts the ref into
+    /// `existing` as it goes, so this holds WITHIN a pass as well as across
+    /// passes). Giving the watched-people pass a ref namespace of its own would
+    /// land the same push as two rows instead.
+    ///
+    /// Returns the push target alongside, rather than looking a commit message
+    /// up itself: whether that second call is worth making is the CALLER's
+    /// decision, and the two callers answer differently (see `eventsFor`).
+    private static func eventThing(_ ev: [String: Any], tag: String)
+        -> (thing: Thing, push: (repo: String, sha: String)?)? {
+        guard let id = ev["id"] as? String, let type = ev["type"] as? String,
+              let repo = (ev["repo"] as? [String: Any])?["name"] as? String,
+              let payload = ev["payload"] as? [String: Any],
+              let line = contributionLine(type, repo: repo, payload: payload)
+        else { return nil }
+        let t = thing(.link, title: line, content: "https://github.com/\(repo)",
+                      ref: "gh:event:\(id)", tag: tag,
+                      at: IngestSupport.isoDate(ev["created_at"]))
+        // The event's own actor — you on the contributions feed, the person
+        // you watch on the other one. Measured 2026-08-14: `actor.avatar_url`
+        // here comes back as `…/u/<id>?` with an empty query, unlike the `?v=4`
+        // every other account object serves. It resolves fine and `imageURL`
+        // keeps it as-is; don't "clean" the trailing `?` without re-measuring.
+        stampWho(t, ev["actor"])
+        var push: (repo: String, sha: String)?
+        if type == "PushEvent", let sha = payload["head"] as? String, !sha.isEmpty {
+            push = (repo, sha)
+        }
+        return (t, push)
+    }
+
+    /// What the people you watch have been doing (prd §519) — the same public
+    /// events endpoint the contributions feed reads, once per person.
+    ///
+    /// EXACTLY ONE REQUEST PER WATCHED PERSON, and the commit-message
+    /// follow-up the contributions feed makes is deliberately NOT made here.
+    /// That call replaces a push row's branch-name line with the real subject,
+    /// which is worth up to fifteen extra requests for ONE account — but it
+    /// multiplies by the number of people watched, so a person watching twenty
+    /// maintainers would spend hundreds of requests a sweep to reword rows
+    /// about repositories that aren't theirs. "Pushed to main in owner/repo" is
+    /// true and says who and where; the cost is one line of detail, stated here
+    /// rather than discovered in a rate-limit alert.
+    ///
+    /// A person whose feed fails contributes nothing, the way a failed feed
+    /// does — never a failure of the whole refresh.
+    private static func eventsFor(_ logins: [String], token: String) async -> [Thing] {
+        let batches = await IngestSupport.boundedGather(logins, maxConcurrent: 4) { login in
+            await events(for: login, token: token) ?? []
+        }
+        return batches.flatMap { $0 }
+    }
+
+    /// One watched person's public events. nil ONLY when GitHub refused the
+    /// read — an account that simply hasn't done anything answers with an
+    /// empty array, and the two must stay tellable apart or `-ghPeopleProbe`
+    /// reports a broken endpoint every time it meets a quiet account.
+    private static func events(for login: String, token: String) async -> [Thing]? {
+        guard let events = await IngestSupport.getJSON(
+            "\(api)/users/\(login)/events?per_page=30", auth: "Bearer \(token)")
+                as? [[String: Any]] else { return nil }
+        return events.compactMap { eventThing($0, tag: activityTag)?.thing }
+    }
+
+    /// `-ghPeopleProbe`'s read — the SHIPPED path, titles only, landing
+    /// nothing. Titles rather than a count on purpose: a count cannot show
+    /// that the wording came out right, and `contributionLine` is where a
+    /// silently-wrong row would come from.
+    @MainActor
+    static func eventsProbe(login: String, token: String) async -> [String]? {
+        await events(for: login, token: token)?.map(\.title)
+    }
+
     /// Repos you watch on GitHub — the subscriptions list, as things.
     private static func following(token: String) async -> [Thing]? {
         guard let items = await IngestSupport.getJSON(
@@ -753,32 +842,10 @@ enum GitHubFeedFetch {
     /// "owner/repo" and the number, parsed from a github.com issue or pull
     /// URL — issues and PRs share the same comments endpoint.
     private static func issuePath(_ content: String) -> (String, Int)? {
-        guard let parts = webURLPathParts(content), parts.count >= 4,
+        guard let parts = GitHubLinks.webURLPathParts(content), parts.count >= 4,
               parts[2] == "issues" || parts[2] == "pull",
               let number = Int(parts[3]) else { return nil }
         return ("\(parts[0])/\(parts[1])", number)
-    }
-
-    /// A github.com web URL's path components — EXACT host match only
-    /// (never a substring check, which would accept a spoofed host like
-    /// "github.com.evil.example"). Also accepts a scheme-less URL
-    /// ("github.com/owner/repo", a common paste) by retrying with
-    /// "https://" prepended, since `URL(string:)` leaves `host` nil
-    /// without a scheme.
-    static func webURLPathParts(_ raw: String) -> [String]? {
-        func parts(of s: String) -> [String]? {
-            guard let url = URL(string: s),
-                  url.host == "github.com" || url.host == "www.github.com"
-            else { return nil }
-            return url.pathComponents.filter { $0 != "/" }
-        }
-        return parts(of: raw) ?? parts(of: "https://\(raw)")
-    }
-
-    /// "owner/repo" out of a github.com web URL, scheme-less or not.
-    static func repoPath(fromWebURL raw: String) -> String? {
-        guard let parts = webURLPathParts(raw), parts.count >= 2 else { return nil }
-        return "\(parts[0])/\(parts[1])"
     }
 
     // MARK: - Release notes (read live — 2026-07-16)
@@ -793,7 +860,7 @@ enum GitHubFeedFetch {
         guard thing.isLive else { return nil }
         guard let ref = thing.sourceRef, ref.hasPrefix("gh:release:") else { return nil }
         let id = ref.dropFirst("gh:release:".count)
-        guard let path = repoPath(fromWebURL: thing.content) else { return nil }
+        guard let path = GitHubLinks.repoPath(fromWebURL: thing.content) else { return nil }
         guard let rel = await IngestSupport.getJSON("\(api)/repos/\(path)/releases/\(id)",
                                    auth: "Bearer \(token)") as? [String: Any],
               let body = (rel["body"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -910,8 +977,17 @@ enum GitHubFeedFetch {
     /// door back to filing a face as art.
     private static func thing(_ kind: ThingKind, title: String, content: String,
                               ref: String, feed: GitHubFeed, at: Date?) -> Thing {
+        thing(kind, title: title, content: content, ref: ref, tag: feed.tag, at: at)
+    }
+
+    /// The same row, tagged by hand — for the two passes that are NOT feeds:
+    /// a directly-watched repo's releases already ride `.releases`, and a
+    /// watched person's activity rides `activityTag` (prd §519), which is a
+    /// tag no `GitHubFeed` owns because no feed produces it.
+    private static func thing(_ kind: ThingKind, title: String, content: String,
+                              ref: String, tag: String, at: Date?) -> Thing {
         Thing(kind: kind, title: IngestSupport.titleLine(title), content: content,
               source: "GitHub", capturedAt: at ?? .now,
-              tags: [feed.tag], sourceRef: ref)
+              tags: [tag], sourceRef: ref)
     }
 }

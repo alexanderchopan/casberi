@@ -31,7 +31,7 @@ enum GitHubRepoWatch {
     static func resolve(_ query: String, token: String) async -> Resolved? {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return nil }
-        let slug = GitHubFeedFetch.repoPath(fromWebURL: q) ?? q
+        let slug = GitHubLinks.repoPath(fromWebURL: q) ?? q
         guard slug.split(separator: "/").count == 2,
               let repo = await IngestSupport.getJSON("https://api.github.com/repos/\(slug)",
                                    auth: "Bearer \(token)") as? [String: Any],

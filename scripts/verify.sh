@@ -1125,6 +1125,16 @@ harness "Feed-reading pure-logic self-test" "feed-reading self-test" "scripts/fe
 # values and the strings `GitHubFeeds.notificationAsk` stamps, which cannot
 # import each other and would otherwise drift into the head silently vanishing.
 harness "GitHub room pure-logic self-test" "github-room self-test" "scripts/github-room-selftest.sh" "the GitHub room self-test failed — run scripts/github-room-selftest.sh"
+# The GitHub person watch (prd §519). What a pasted string ADDRESSES, which no
+# build and no screen sweep can see and which fails as a watch that looks like
+# it worked: a repo URL read as its owner watches somebody nobody asked for, a
+# loosely-matched host trusts a spoof, and an unvalidated login goes straight
+# into `/users/<login>/events`. It also guards the two ref prefixes staying
+# distinct — `watchedRepos` and `watchedPeople` scan the same rows — and
+# `activityLogins`, whose two directions are each a silent failure: drop your
+# own account unconditionally and watching yourself reads nothing forever;
+# never drop it and one endpoint is read twice every sweep.
+harness "GitHub person-watch pure-logic self-test" "github-person self-test" "scripts/github-person-selftest.sh" "the GitHub person self-test failed — run scripts/github-person-selftest.sh"
 
 harness "Radicle pure-logic self-test" "radicle self-test" "scripts/radicle-selftest.sh" "the Radicle logic self-test failed — run scripts/radicle-selftest.sh"
 # Walletbeat (prd §419). Catches the silent wrong answer this seat is built around: a

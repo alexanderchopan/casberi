@@ -460,7 +460,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .readwise:
             String(localized: "Paste a read-only token and every highlight you've saved becomes searchable here, arriving on its own from then on.")
         case .github:
-            String(localized: "Sign in with GitHub — or paste a token — and the feeds you pick keep arriving, plus any repo you watch. Watching here is private.")
+            String(localized: "Sign in with GitHub — or paste a token — and the feeds you pick keep arriving, plus any repo or person you watch. Watching here is private.")
         case .todoist:
             String(localized: "Paste a read-only token and your open tasks keep arriving with their due dates. Nothing here completes, edits, or adds a task.")
         case .raindrop:
@@ -526,7 +526,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // 2026-07-31): the seven feeds were the seven switch rows beneath it,
         // and "never touching your GitHub account" is the private-watch field's
         // own slab note verbatim. "Privately" carries what's left.
-        case .github:   "Reads the GitHub feeds you pick, plus any repos you watch privately."
+        case .github:   "Reads the GitHub feeds you pick, plus any repos and people you watch privately."
         case .todoist:  "Reads your open tasks."
         case .raindrop: "Reads your bookmarks."
         case .calcom:   "Reads your bookings."
@@ -1253,8 +1253,10 @@ enum TokenIngest {
 
     /// GitHub — the feeds the person turned on (Stars, New releases, Gists,
     /// Contributions, Watched repos, Notifications, and the original Issues &
-    /// PRs), plus any repos watched directly (`GitHubRepoWatch`). Each is a
-    /// GET or two against GitHub's own API; `GitHubFeedFetch` builds the things.
+    /// PRs), plus any repos watched directly (`GitHubRepoWatch`) and the
+    /// activity of any people watched directly (`GitHubPersonWatch`, prd §519).
+    /// Each is a GET or two against GitHub's own API; `GitHubFeedFetch` builds
+    /// the things.
     @MainActor
     private static func github(_ token: String, context: ModelContext) async -> [Thing]? {
         await GitHubFeedFetch.all(token: token, context: context)

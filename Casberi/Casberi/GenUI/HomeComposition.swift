@@ -130,6 +130,13 @@ enum HomeComposition {
             "Runway",                                     // Stripe, Cloudflare
             "Shielded",                                   // Privacy Pools
             "Trending", "Watching", "Watchlist",          // discovery, watches
+            // A watched GitHub person's pushes and releases (prd §519). STATE
+            // by this set's own rule — it says what a row IS, never what it is
+            // about. Deliberately NOT a §308 facet either: "activity" is among
+            // the most ordinary words in the language, and gating it behind a
+            // named source would still leave it filtering half the corpus's
+            // vocabulary for a tag one bridge stamps.
+            "Activity",                                   // GitHub, watched people
         // Walletbeat (prd §419). What a row IS, never what it is about: the kind of
         // wallet, the kind of incident, and whether it is still open. The wallet NAMES
         // this room also stamps are deliberately absent — "Rabby" really is a subject

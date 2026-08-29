@@ -38159,3 +38159,136 @@ scores one occurrence and fails the guard; the fixed tree scores two and passes.
 
 **UNSEEN on a device** — it is a swipe, so no static check and no screen sweep
 can exercise it. iOS build green, harness green.
+
+## 519. GitHub could follow repos and not people (user: "for github do we have a way to follow people and repos?", then "yes please do", 2026-08-29)
+
+**Repos: two ways. People: none.** The seat mirrored the account's own stars
+and subscriptions (`GitHubFeed.stars` / `.following`), and `GitHubRepoWatch`
+had since 2026-07-16 offered the private half — paste `owner/repo`, the watch
+lands as a thing, its releases arrive, and GitHub is never told. The person
+half was simply missing, and its absence was invisible from the code: the ONLY
+per-user read in the file, `/users/<login>/events`, is the contributions feed,
+and `login` there is always the token's own account. The endpoint that answers
+"what has this person been doing" was already in the file, called once, for
+one account.
+
+**Following on GitHub is public AND it notifies.** That is the whole argument
+for building this the way `GitHubRepoWatch` is built rather than calling
+`PUT /user/following/<login>`: a Casberi watch is tracked on this device, so
+keeping an eye on a maintainer, a competitor, or somebody you are about to
+hire never appears anywhere — and the person is not told. The watch IS the
+thing (the TokenWatch precedent): it lands immediately as proof, and deleting
+it in the sheet unwatches it, so there is no second store to drift.
+
+### 1. A REPO URL IS REFUSED, NOT READ AS ITS OWNER
+
+`github.com/torvalds` and `github.com/torvalds/linux` differ by one path
+component, and reading the owner out of the second is the failure this feature
+would most plausibly ship with: the watch resolves, the row lands, the activity
+arrives every sweep, and none of it is what was asked for. `GitHubLinks
+.personLogin` accepts exactly one path component, or a bare login, or an
+`@login`, and refuses everything else — including the login alphabet, which is
+the one rule here that is security rather than manners: the login is
+interpolated straight into `/users/<login>/events`, so a `/` or a `..` reaching
+it addresses an endpoint nobody asked for. Letters, digits and hyphens, never
+leading or trailing a hyphen, at most GitHub's own documented 39.
+
+Deliberately NOT a reserved-path list ("settings", "explore", …): GitHub
+answers 404 for those and the resolve fails honestly, while a hand-kept list
+goes stale and starts refusing real accounts.
+
+### 2. THE TWO URL PARSERS MOVED INTO ONE FOUNDATION-ONLY FILE
+
+`webURLPathParts` and `repoPath(fromWebURL:)` moved from `GitHubFeedFetch` into
+the new `Model/GitHubLinks.swift`, and this is a move rather than a copy on
+purpose: the person parse needs the same exact-host rule, and two readings of
+one URL drift — after which a repo link and a profile link disagree about which
+host they trust, which is the one disagreement here that is a hole rather than
+a blemish. The move also buys the repo parser the coverage it never had:
+`GitHubFeeds.swift` touches `Thing`, so no harness could ever compile it, and
+`GitHubLinks.swift` is Foundation-only and is compiled WHOLE by
+`scripts/github-person-selftest.sh` (51 assertions, 10 mutations).
+
+### 3. ONE EVENT, ONE ROW — THE SHARED `gh:event:` REF
+
+A watched person's activity and your own contributions land through one
+builder (`eventThing`) under one ref namespace. A GitHub event id is unique
+across GitHub, so an event this app can reach twice — you watch somebody whose
+push also shows up in your feed, or you watch yourself with the contributions
+feed off — lands ONCE, wearing whichever tag reached it first
+(`TokenIngest.refresh` inserts each ref into `existing` as it goes, so this
+holds within a pass as well as across passes). A ref namespace of its own would
+have landed the same push as two rows.
+
+`GitHubLinks.activityLogins` is the other half of that arithmetic, and BOTH its
+directions are silent failures. Your own account is dropped only when the
+contributions feed is ON — that feed already reads exactly this endpoint for
+exactly this account, `mergedReleases`' reasoning one endpoint over. Dropping
+it unconditionally would make watching yourself with the feed OFF read nothing
+at all, forever, with nothing on screen to say why; never dropping it spends a
+request a sweep for rows the dedupe throws away.
+
+### 4. THE TAG IS `Activity`, NOT `Contributions`
+
+`.contributions`' blurb says "your own recent public activity" and means it, so
+filing somebody else's pushes under it makes the one tag that answers "what
+have I been doing" stop answering it. `Activity` is a tag no `GitHubFeed` owns,
+because no feed produces it — the harness asserts it collides with none of
+them. WHO is already on screen: the row stamps `authorHandle` /
+`authorAvatarURL`, and `GitHub` has been in `ShapedRows.faceSources` since
+2026-08-12, so the leading slot draws the person's face.
+
+That is also the one deliberate divergence from the repo watch:
+`GitHubRepoWatch.add` still files the repo OWNER's avatar as the row's ART,
+which is the defect the 2026-08-14 pass fixed for `stars` and `following` and
+did not carry here. The person watch stamps a FACE from the start. The repo
+watch is left alone — changing it needs a heal for rows already landed
+(`add` bypasses the refresh loop, so `ArtlessBackfill` never reaches them), and
+that is a different pass.
+
+### 5. THE COST IS ONE REQUEST PER WATCHED PERSON, AND IT IS STATED
+
+The contributions feed follows a push event up with a second call for the real
+commit subject, capped at 15. `eventsFor` deliberately does NOT: that cap is
+per-account, and here it would multiply by the number of people watched, so
+somebody watching twenty maintainers would spend hundreds of requests a sweep
+to reword rows about repositories that are not theirs. "Pushed to main in
+owner/repo" is true and says who and where. The cost of the omission is one
+line of detail, written down here rather than discovered in a rate-limit alert
+(`GitHubRateLimit`, §2026-08-09, is what would have surfaced it).
+
+Nothing else costs anything: no new `Thing` field, so **no CloudKit Production
+deploy**, and no new host — `api.github.com` has been in `NetworkReach` since
+the seat shipped.
+
+### 6. ONE SECTION, TWO FIELDS, ONE NOTE
+
+The setup screen's watch section takes a person beside the repo rather than
+growing a section of its own. Not only to stay inside §315's note budget: the
+two are the same act on two subjects, and the sentence under them is the same
+promise about both — split, it would be stated twice and the two statements
+would drift. The success line carries the person's face through
+`BridgeSyncStatusRows.faces`, a parameter that had existed since 2026-07-14
+with no caller anywhere in the app; this is its first.
+
+### 7. PROBES
+
+`-ghWatchPerson "<username|@username|profile URL>"` watches somebody headlessly
+and NSLogs the PARSE apart from the LOOKUP, because they fail for opposite
+reasons — a refused parse means the string was a repo URL or an impossible
+login and nothing was ever requested, a failed lookup means GitHub says no such
+account. `-ghPeopleProbe YES` reports the pass phase by phase, one NSLog per
+person (the `-todayProbe` truncation lesson), because **`0 landed` is the
+HEALTHY answer here** and has five causes that render as one silence: nobody
+watched, no token, the only person watched is YOU with the contributions feed
+already reading you, a genuinely quiet account, or GitHub refusing the events
+endpoint. Only the last is a bug, and the `fetching=` line separates the third
+from the rest in one launch. `eventsProbe` reports TITLES rather than a count:
+a count cannot show that the wording came out right, and `contributionLine` is
+where a silently-wrong row would come from.
+
+**UNMEASURED against a live account** — no GitHub token is stored on this host,
+so no watch has ever been resolved and no events feed has ever been read by
+this code. Every read is a GET returning nil on failure, and a person whose
+feed fails contributes nothing rather than failing the refresh, so it degrades
+to today's behaviour throughout.

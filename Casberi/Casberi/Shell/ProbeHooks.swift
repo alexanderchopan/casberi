@@ -5017,6 +5017,76 @@ enum ProbeHooks {
                       r.likelyBlocked ? " (access may be off)" : "")
             }
         },
+        // `-ghWatchPerson "<username|@username|profile URL>"` — watch a GitHub
+        // person headlessly (prd §519). Declared BEFORE `-ghPeopleProbe`:
+        // hooks run in list order, so one launch can watch somebody and then
+        // report the pass that reads them. NSLogs the PARSE separately from
+        // the LOOKUP, because they fail for opposite reasons — a refused parse
+        // means the string was a repo URL or an impossible login (nothing was
+        // requested), a failed lookup means GitHub said no such account.
+        Hook(key: "ghWatchPerson") { spec, context in
+            let q = spec.trimmingCharacters(in: .whitespaces)
+            guard let parsed = GitHubLinks.personLogin(from: q) else {
+                NSLog("ghWatchPerson: %@ → REFUSED by the parse (a repo URL, a foreign host, or not a login)", q)
+                return
+            }
+            NSLog("ghWatchPerson: %@ → login=%@", q, parsed)
+            guard let token = TokenVault.get(TokenBridge.github.tokenKey) else {
+                NSLog("ghWatchPerson: no stored token — connect via -tokenBridge \"GitHub:<token>\""); return
+            }
+            Task { @MainActor in
+                guard let resolved = await GitHubPersonWatch.resolve(q, token: token) else {
+                    NSLog("ghWatchPerson: %@ → GitHub has no such account (or the token was refused)", parsed)
+                    return
+                }
+                guard let thing = GitHubPersonWatch.add(resolved, context: context) else {
+                    NSLog("ghWatchPerson: %@ → already watched", resolved.login); return
+                }
+                NSLog("ghWatchPerson: watching %@ (login=%@ face=%@) → %@",
+                      thing.title, resolved.login,
+                      resolved.avatarURL == nil ? "none" : "yes",
+                      GitHubLinks.personRef(resolved.login))
+            }
+        },
+        // `-ghPeopleProbe YES` — the watched-people activity pass, phase by
+        // phase (prd §519). One NSLog per person (the `-todayProbe`
+        // truncation lesson).
+        //
+        // It exists because `0 landed` is the HEALTHY answer here and has FIVE
+        // causes that render as one silence: nobody watched, no token, the
+        // only person watched is YOU with the contributions feed already
+        // reading you (so this pass correctly reads nothing), a genuinely
+        // quiet account, or GitHub refusing the events endpoint. Only the last
+        // is a bug. The `fetching=` line is what separates the third from the
+        // rest in a single launch.
+        Hook(key: "ghPeopleProbe") { _, context in
+            Task { @MainActor in
+                let watched = GitHubPersonWatch.watchedPeople(context: context)
+                let feeds = GitHubFeeds.enabledFromDefaults()
+                NSLog("ghPeople| watched=%d [%@] contributionsFeed=%@",
+                      watched.count, watched.joined(separator: ", "),
+                      feeds.contains(.contributions) ? "on" : "off")
+                guard let token = TokenVault.get(TokenBridge.github.tokenKey) else {
+                    NSLog("ghPeople| no stored token — connect via -tokenBridge \"GitHub:<token>\""); return
+                }
+                guard let identity = await GitHubFeedFetch.login(token: token) else {
+                    NSLog("ghPeople| token REFUSED by GitHub — nothing can be read"); return
+                }
+                let fetching = GitHubLinks.activityLogins(
+                    watched: watched, ownLogin: identity.login,
+                    contributionsOn: feeds.contains(.contributions))
+                NSLog("ghPeople| you=%@ fetching=%d [%@]%@",
+                      identity.login, fetching.count, fetching.joined(separator: ", "),
+                      fetching.count < watched.count
+                        ? " (your own account is already read by the contributions feed)" : "")
+                for login in fetching {
+                    let rows = await GitHubFeedFetch.eventsProbe(login: login, token: token)
+                    NSLog("ghPersonRow| %@ → %@", login,
+                          rows.map { "\($0.count) events, newest: \($0.first ?? "—")" }
+                            ?? "UNREADABLE (GitHub refused /users/\(login)/events)")
+                }
+            }
+        },
         // `-ghFeeds "stars,releases,gists"` sets which GitHub feeds are on
         // (comma list of feed keys or titles) — headless staging of the picker.
         Hook(key: "ghFeeds") { spec, _ in
