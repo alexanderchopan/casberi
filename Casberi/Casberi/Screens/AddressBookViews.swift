@@ -250,6 +250,29 @@ struct AddressBookRow: View {
                             .foregroundStyle(DS.textTertiary)
                             .accessibilityLabel(Text("Has a note"))
                     }
+                    // ONE OF YOUR OWN FIVE (2026-08-29, prd §511) — an INERT
+                    // mark, never the star.
+                    //
+                    // §511 dissolved the pinned Watching block and made these
+                    // rows part of the A–Z list, which leaves the book needing
+                    // to say which rows the app actually READS; without it the
+                    // only way to find out is to run the filter, which is a
+                    // control answering a question the list should already have
+                    // answered.
+                    //
+                    // A glyph and not a star, and that distinction is §461's
+                    // whole ruling: a star is a CONTROL on a row, and a control
+                    // on every row showing a person is what turned four earlier
+                    // designs into second address books. This one cannot be
+                    // tapped, sits beside the note glyph it is modelled on, and
+                    // spends the tint because in a list of hundreds it is the
+                    // one thing worth finding.
+                    if watched {
+                        Image(systemName: "eye.fill")
+                            .dsGlyph(11)
+                            .foregroundStyle(DS.tint)
+                            .accessibilityLabel(Text("Watching"))
+                    }
                 }
             }
             Spacer(minLength: DS.Space.s2)
@@ -833,6 +856,11 @@ struct AddressCard: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
+    /// The sentence and the undo an unwatch owes (prd §511) — see
+    /// `overflowMenu`. Re-added deliberately: §461 retired this card's
+    /// `bridges` environment on the grounds that an unread `@Environment` is a
+    /// standing claim about a dependency that is not real, and this one IS.
+    @Environment(ShellChrome.self) private var chrome
     // `scheme` retired here 2026-08-28 with the identity wash it read the
     // receipt's pour opacity for — the sheet is ink now (see `identityBlock`),
     // and the same reasoning the `bridges` note below gives applies: an unread
@@ -1141,10 +1169,58 @@ struct AddressCard: View {
             if canRename {
                 Button { beginRename() } label: { Label("Rename", systemImage: "pencil") }
             }
-            // §446's watch row is GONE (prd §461) — see the retirement note at
-            // `isWatching`. It was here because the pinned bar could only carry
-            // one verb; the reason it is not here now is that this card carries
-            // no watch decision at all.
+            // THE WATCH VERB IS BACK, AS A MENU ROW (2026-08-29, prd §511),
+            // partially reversing §461's removal of §446's pinned watch bar.
+            //
+            // §461 was right that a READING surface must not fetch, and the
+            // pinned bar it deleted was a full-width control on a card whose
+            // job is to state. What the deletion cost only became visible once
+            // §498 gave the book its single omnibox: watching then had exactly
+            // ONE entrance in the whole app — the paste preview — and
+            // `previewAddress` only fires for an address or a resolvable ENS
+            // name. So an address ALREADY in your book could not be watched at
+            // all: typing its name surfaced the row and offered nothing, and
+            // the only route was to copy the address out of the card and paste
+            // it back into the field you had just left.
+            //
+            // A secondary verb in an overflow menu is not the bar §461
+            // deleted. It is also where §202's own note already said this
+            // belonged — "inside a group the watch verb belongs on the
+            // address's own card".
+            //
+            // **BOTH directions, one implementation.** Stopping a watch prunes
+            // this wallet's landed rows, decides whether the book entry leaves
+            // with it, and owes a sentence and an undo for both — so it is
+            // `WalletUnwatch.perform` here exactly as it is on the book row. A
+            // second copy would be two answers to one question.
+            //
+            // The pair is what makes the verb discoverable at all under §511:
+            // a plain TAP on a row opens this card, where both directions are
+            // named in words. Before it, unwatching was a swipe or a
+            // long-press and nothing else — reported as *"it's not clear how
+            // you unwatch an address, I guess you long press"*.
+            //
+            // Absent, never disabled, in the two states Watch cannot act: the
+            // roster is full, or the row is a contact or social profile with no
+            // chain to read.
+            if isWatched {
+                Button(role: .destructive) {
+                    WalletUnwatch.perform(current, context: modelContext, chrome: chrome)
+                } label: { Label("Stop watching", systemImage: "eye.slash") }
+            } else if WalletStore.shared.canWatchMore, !current.kind.isMonogram {
+                Button {
+                    // The BOOK's address, which is the resolved form — the same
+                    // identity this card has been showing (§212). A PLACEHOLDER
+                    // name is not carried across as a roster label: it would
+                    // pin `…44b1` as a chosen word and defeat §511's fold on
+                    // the way back out.
+                    let placeholder = WalletStore.isAutoName(current.name, for: current.address)
+                    if WalletStore.shared.add(current.address,
+                                              label: placeholder ? "" : current.name) {
+                        DSHaptic.success()
+                    }
+                } label: { Label("Watch", systemImage: "eye") }
+            }
             // THE DOOR OUT (prd §446). It was a settings-shaped row in a card
             // at the foot of the sheet, drawn at the weight the security
             // notice above it wore; a link into somebody else's website is a
@@ -1156,10 +1232,26 @@ struct AddressCard: View {
                     openURL(url)
                 } label: { Label(link.label, systemImage: "arrow.up.right") }
             }
-            if isInBook {
+            // NOT OFFERED FOR A WATCHED ADDRESS (prd §511). `WalletStore.add`
+            // guarantees every watched wallet is also a book entry, so removing
+            // the entry under a live watch leaves a wallet the app reads and
+            // cannot name — and the very next sync would file it again under a
+            // placeholder, which is a verb that undoes itself. Stop watching
+            // first; the fold above takes the placeholder with it.
+            if isInBook, !isWatched {
                 Button(role: .destructive) {
                     rename(to: "")
                 } label: { Label("Remove from book", systemImage: "trash") }
+            }
+            // AN EPHEMERAL ROW'S ONE VERB (prd §511). `isInBook` is false for a
+            // social row, so every branch above is already gated off — which is
+            // why this card had no verb at all for the people a starter pack
+            // just followed. See `SocialUnfollow` for why the row is listed in
+            // the first place and why unfollowing takes the posts with it.
+            if !AddressBookPeople.unfollowable(current).isEmpty {
+                Button(role: .destructive) {
+                    SocialUnfollow.perform(current, context: modelContext, chrome: chrome)
+                } label: { Label("Unfollow", systemImage: "person.badge.minus") }
             }
         } label: {
             Image(systemName: "ellipsis")
@@ -2505,7 +2597,27 @@ struct AddressCard: View {
     /// cascade — which since §443 includes every row the card split, since a
     /// split row has no counterparty clause left to rewrite.
     private func rename(to name: String) {
-        book.setName(name, for: entry.address)
+        // A WATCHED WALLET IS RENAMED THROUGH THE ROSTER (2026-08-29, prd §511).
+        //
+        // `WalletStore.rename` writes BOTH — the roster label and, through its
+        // own cascade, the book — while `book.setName` writes only the book.
+        // Until §511 that gap was covered by the pinned block's own rename
+        // alert, which called the roster door; deleting the block made this
+        // card the only place a watched wallet is named, and going through the
+        // book alone would leave `WatchedAddress.label` stale forever.
+        //
+        // It is not cosmetic: that label is what the face rail's caption, the
+        // feed's wallet tags and a self-transfer's title all read, so the app
+        // would show the new name in the book and the old one everywhere money
+        // is described.
+        let store = WalletStore.shared
+        if let watch = store.addresses.first(where: {
+            store.scopeMatches(entry.address, scope: $0.address)
+        }) {
+            store.rename(watch.id, to: name)
+        } else {
+            book.setName(name, for: entry.address)
+        }
         let changed = CounterpartyRetitle.applyCurrentName(for: entry.address,
                                                            in: modelContext)
         DSHaptic.success()

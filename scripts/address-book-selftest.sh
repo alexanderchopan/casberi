@@ -56,7 +56,17 @@ SCREEN="Casberi/Casberi/Screens/WalletScreen.swift"
 # rather than deleted, the same rule this harness's own header states for
 # `address-sky-selftest.sh`'s retirement.
 FIELD="Casberi/Casberi/Screens/WalletWatchField.swift"
-ROSTER="Casberi/Casberi/Screens/WalletRosterSection.swift"
+# §511 DELETED `WalletRosterSection.swift` with the pinned block it drew — the
+# five are ordinary rows of the book now, found through the `Watching` chip.
+# What survived it is the unwatch verb (the fold, the prune, the sentence, the
+# undo) and the chain read's own status, which is not a row; `$UNWATCH` is that
+# file, and `$UNFOLLOW` is its social twin. Guards that used to name `$ROSTER`
+# for a roster-shaped fact now name `$UNWATCH` or `$BOOKSCREEN` — moved file
+# rather than deleted, the rule this harness's own header states for
+# `address-sky-selftest.sh`'s retirement.
+UNWATCH="Casberi/Casberi/Screens/WalletWatching.swift"
+UNFOLLOW="Casberi/Casberi/Screens/SocialUnfollow.swift"
+PEOPLE="Casberi/Casberi/Model/AddressBookPeople.swift"
 # The BOOK — everyone else, as a room. §461 split these; before it, both of
 # these were one screen, which is why most of the guards below moved file
 # rather than changing.
@@ -72,7 +82,7 @@ CONN="Casberi/Casberi/Model/AddressConnections.swift"
 # The shell — where the rail is built and the route node resolved (§461).
 SHELL_MAIN="Casberi/Casberi/Shell/MainSurface.swift"
 ROUTE="Casberi/Casberi/Shell/HomeRoute.swift"
-for f in "$SHAPE" "$BOOK" "$ACTIVITY" "$SCREEN" "$FIELD" "$ROSTER" "$BOOKSCREEN" "$VIEWS" "$GROUPS" "$BAR" "$FLIGHT" "$SOURCE" "$CONN" "$SHELL_MAIN" "$ROUTE"; do
+for f in "$SHAPE" "$BOOK" "$ACTIVITY" "$SCREEN" "$FIELD" "$UNWATCH" "$UNFOLLOW" "$PEOPLE" "$BOOKSCREEN" "$VIEWS" "$GROUPS" "$BAR" "$FLIGHT" "$SOURCE" "$CONN" "$SHELL_MAIN" "$ROUTE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -96,7 +106,9 @@ PY
 strip_comments "$FLIGHT" > "$TMP/flight-bare.swift"
 strip_comments "$SCREEN" > "$TMP/screen-bare.swift"
 strip_comments "$FIELD"  > "$TMP/field-bare.swift"
-strip_comments "$ROSTER" > "$TMP/roster-bare.swift"
+strip_comments "$UNWATCH" > "$TMP/unwatch-bare.swift"
+strip_comments "$UNFOLLOW" > "$TMP/unfollow-bare.swift"
+strip_comments "$PEOPLE" > "$TMP/people-bare.swift"
 strip_comments "$BOOKSCREEN" > "$TMP/book-bare.swift"
 strip_comments "$GROUPS" > "$TMP/groups-bare.swift"
 strip_comments "$VIEWS"  > "$TMP/views-bare.swift"
@@ -170,12 +182,92 @@ grep -q 'outcome(ofAdding:' "$TMP/field-bare.swift" \
   || { echo "✗ nothing watches anything — WalletWatchField is the only place that may (§461/§466)"; exit 1; }
 grep -q 'outcome(ofAdding:' "$TMP/screen-bare.swift" \
   && { echo "✗ WalletScreen calls outcome(ofAdding:) directly again — that call belongs to WalletWatchField alone, or the setup screen and the book answer a paste two different ways (§466)"; exit 1; }
-grep -q 'outcome(ofAdding:' "$TMP/roster-bare.swift" \
-  && { echo "✗ WalletRosterSection calls outcome(ofAdding:) directly again — see above (§466)"; exit 1; }
+grep -q 'outcome(ofAdding:' "$TMP/unwatch-bare.swift" \
+  && { echo "✗ the unwatch file words a refusal itself — that door belongs to WalletWatchField (§466)"; exit 1; }
 grep -q 'outcome(ofAdding:' "$TMP/book-bare.swift" \
-  && { echo "✗ the address book watches an address — a reading surface may not change what the app fetches (§461)"; exit 1; }
+  && { echo "✗ the address book words a refusal itself — the outcome-wording door belongs to WalletWatchField (§461/§466)"; exit 1; }
 grep -q 'outcome(ofAdding:' "$TMP/views-bare.swift" \
-  && { echo "✗ the address card watches an address again — §461 deleted the star and the pinned watch bar together"; exit 1; }
+  && { echo "✗ the address card words a refusal itself — see above (§461/§466)"; exit 1; }
+
+# ── §511: THE TWO WATCH DOORS, COUNTED ──────────────────────────────────────
+#
+# The three greps above were the whole of §461's negative and they stopped
+# meaning what they say. `outcome(ofAdding:)` is only the WORDING door; the
+# call that actually enrols an address is `add`, and §498 put one in the book
+# (the paste preview's capsule) while §511 put one on the address card (the
+# overflow menu's Watch row). Both are deliberate, both are argued in their own
+# files — and a guard that passes because a new door chose a different spelling
+# is green for the wrong reason, which is the failure this repo spends harnesses
+# to avoid.
+#
+# So they are COUNTED, not forbidden: exactly one each, and a second watch door
+# appearing silently in either file fails the build. Occurrences, never lines —
+# `grep -c` counts lines, and a second call appended to the same line is exactly
+# how the equivalent guard in `safetx-selftest.sh` was first defeated.
+count_of() { python3 -c "import sys;print(open(sys.argv[1]).read().count(sys.argv[2]))" "$1" "$2"; }
+[[ "$(count_of "$TMP/book-bare.swift" 'WalletStore.shared.add(')" == "2" ]] \
+  || { echo "✗ the book has other than exactly two watch doors — §498's paste-preview capsule and §511's row menu, and nothing else"; exit 1; }
+[[ "$(count_of "$TMP/views-bare.swift" 'WalletStore.shared.add(')" == "1" ]] \
+  || { echo "✗ the address card has other than exactly one watch door — §511 allows the overflow menu's Watch row and nothing else"; exit 1; }
+# The card may only ADD. Stopping a watch carries a corpus prune, §511's
+# keep-or-fold decision and an undo, and a second copy of that is two answers to
+# one question.
+# The card and the book row both OFFER the unwatch; neither may implement it.
+# It prunes the corpus, decides whether the book entry leaves with the watch and
+# owes a sentence and an undo for both, and a second copy would get one of those
+# subtly differently.
+grep -q 'FollowPrune.removeWallet' "$TMP/views-bare.swift" "$TMP/book-bare.swift" \
+  && { echo "✗ a screen implements the unwatch itself — it belongs to WalletUnwatch alone (§511)"; exit 1; }
+grep -q 'WalletUnwatch.perform(' "$TMP/views-bare.swift" \
+  || { echo "✗ the address card cannot stop a watch — a plain tap is the discoverable door §511 added (§511)"; exit 1; }
+grep -q 'WalletUnwatch.perform(' "$TMP/book-bare.swift" \
+  || { echo "✗ the book row cannot stop a watch (§511)"; exit 1; }
+
+# ── §511: ONE CONSEQUENCE, ONE WORD ─────────────────────────────────────────
+#
+# The report this fixes was a vocabulary bug, not a model bug: the roster's
+# destructive verb and the book's were both spelled "Remove" and meant two
+# different things, so unwatching read as a delete that had failed. Each failure
+# below renders as a perfectly ordinary menu.
+grep -q 'Label("Stop watching"' "$TMP/book-bare.swift" \
+  || { echo "✗ the watch verb is not 'Stop watching' — the bare 'Remove' is the book's word for a different consequence (§511)"; exit 1; }
+grep -q 'Label("Stop watching"' "$TMP/views-bare.swift" \
+  || { echo "✗ the address card's watch verb is not 'Stop watching' (§511)"; exit 1; }
+grep -qE 'Label\("Remove", ' "$TMP/views-bare.swift" \
+  && { echo "✗ the address card says the bare 'Remove' again (§511)"; exit 1; }
+grep -q 'Label("Remove from book"' "$TMP/book-bare.swift" \
+  || { echo "✗ the book row's destructive verb no longer names the book — 'Remove' beside the roster's own means nothing (§511)"; exit 1; }
+grep -qE 'Label\("Remove", ' "$TMP/book-bare.swift" \
+  && { echo "✗ the book says the bare 'Remove' again (§511)"; exit 1; }
+
+# ── §511: THE FOLD, THE SENTENCE, THE UNDO ──────────────────────────────────
+#
+# The keep-or-fold decision must come from the harnessed function, or it is the
+# screen's own and nothing above can test it — and this decision DELETES a book
+# entry, so an untested version of it silently discards names.
+grep -q 'AddressBookShape.unwatchKeepsEntry(' "$TMP/unwatch-bare.swift" \
+  || { echo "✗ the unwatch decides for itself whether it keeps the name — that decision deletes book entries and belongs in AddressBookShape, where it can be tested (§511)"; exit 1; }
+# An unwatch that keeps the name DEMOTES the row into a lettered section that is
+# usually scrolled off screen. Silently, that is indistinguishable from a delete
+# that failed — which is exactly how it was reported.
+grep -q 'chrome.flash(' "$TMP/unwatch-bare.swift" \
+  || { echo "✗ an unwatch says nothing — it deletes landed rows and can delete the book entry with them (§511)"; exit 1; }
+grep -q 'action: .init(label:' "$TMP/unwatch-bare.swift" \
+  || { echo "✗ the unwatch toast carries no Undo (§511)"; exit 1; }
+grep -q 'FollowPrune.removeWallet' "$TMP/unwatch-bare.swift" \
+  || { echo "✗ an unwatch no longer prunes the wallet's landed rows (§387)"; exit 1; }
+# The discoverable door. §461 made these rows bare, which is right for the
+# resting state and left unwatching reachable only by two gestures nothing on
+# screen mentions.
+# THE INERT MARK (§511). With the pinned block gone the book must say which
+# rows the app actually READS, or the only way to find out is to run a filter —
+# a control answering a question the list should already have answered. A glyph
+# and never the star: a star is a CONTROL on a row, which is exactly what §461
+# deleted.
+grep -q '"eye.fill"' "$TMP/views-bare.swift" \
+  || { echo "✗ a watched row is indistinguishable from every other row (§511)"; exit 1; }
+grep -q 'Button(action: onToggleWatch)' "$VIEWS" \
+  || { echo "✗ the row's star is gone entirely — the parameter is what keeps AddressGroupScreen on one anatomy (§461)"; exit 1; }
 grep -qE 'star\.fill|"star"' "$TMP/book-bare.swift" \
   && { echo "✗ a star is back on a book row (§461)"; exit 1; }
 # …and the row's own star is drawn only when a caller passes the closure, so
@@ -184,8 +276,8 @@ grep -qE 'star\.fill|"star"' "$TMP/book-bare.swift" \
 # what makes that safe.
 grep -q 'onToggleWatch' "$TMP/book-bare.swift" \
   && { echo "✗ the book passes a watch toggle to its rows (§461)"; exit 1; }
-grep -q 'onToggleWatch' "$TMP/screen-bare.swift" "$TMP/roster-bare.swift" \
-  && { echo "✗ the roster passes a watch toggle to its rows — membership is the row's existence there, not a star on it (§461)"; exit 1; }
+grep -q 'onToggleWatch' "$TMP/screen-bare.swift" "$TMP/unwatch-bare.swift" \
+  && { echo "✗ a screen passes a watch toggle to its rows — §511 merged the lists and did NOT bring the star back (§461)"; exit 1; }
 # The flight's ends are RAMP tokens the caller passes, and since §448 they are
 # REQUIRED: the old defaults named the star flight's own anchors, and a default
 # pointing at an anchor nothing publishes draws nothing at all — silently,
@@ -216,37 +308,73 @@ grep -qE '\b[ab]\.(width|height|size)\b' "$TMP/flight-bare.swift" \
 # with the whole name, a subline and a filled star. Every guard here defends a
 # failure that renders as a perfectly ordinary list.
 
-# THE ROSTER DRAWS NO READINGS (§461). It is the same row anatomy as the book —
-# one spelling, §448's ruling, unchanged — with `activity` nil, which is what
-# drops "12 together · 4 days ago". A recency phrase is a reading, and the
-# roster is a list of what the app is permitted to read.
-grep -q 'private var watchedEntries: \[AddressBook.Entry\]' "$ROSTER" \
-  || { echo "✗ the roster is gone, or stopped being entries (moved to WalletRosterSection, §466)"; exit 1; }
-grep -q 'activity: nil' "$TMP/roster-bare.swift" \
-  || { echo "✗ the roster draws activity again — history belongs to the book room (§461)"; exit 1; }
-
-# THE BOOK IS EVERYONE ELSE, SEARCHING INCLUDED (§461) — reversing §448's one
-# exception. That exception existed because both lived on one screen and a
-# search had to be able to find your own wallets; with the roster on its own
-# screen a watched entry appearing here is the duplication §448 deleted the
-# shelf for, one screen apart instead of one scroll. The search says where it
-# went rather than answering nothing, which is the second half of the rule.
+# ONE LIST (§511), reversing §461's exclusion and restoring §448's own reading
+# of the same question: "a search that also filtered them out would be a search
+# that cannot find the wallets you watch". With no block above, excluding them
+# here would mean the book cannot find the addresses you care most about.
 grep -q 'book.search(query).filter { !isWatched($0) }' "$TMP/book-bare.swift" \
-  || { echo "✗ the book no longer excludes your own watched wallets — they are the roster's subject and would be drawn twice (§461)"; exit 1; }
+  && { echo "✗ the book excludes your own watched wallets again — §511 deleted the block they used to be drawn in, so they would be nowhere (§511)"; exit 1; }
 grep -q 'is one of your own wallets' "$TMP/book-bare.swift" \
-  || { echo "✗ searching the book for a wallet you watch answers 'nothing matches' about an address you plainly have (§83/§461)"; exit 1; }
-# The head must name what it LISTS. It read "Saved · book.count", which stopped
-# being true the moment the watched rows moved to their own section: 27 over a
-# list of 24.
-grep -q 'Everyone else · \\(count)' "$TMP/book-bare.swift" \
-  || { echo "✗ the book's head no longer names or counts what it actually lists (§448)"; exit 1; }
+  && { echo "✗ the search still sends somebody to another screen for a row that is right here (§511)"; exit 1; }
+grep -q 'WalletRosterSection' "$TMP/book-bare.swift" \
+  && { echo "✗ the pinned Watching block is back — the book is two lists again (§511)"; exit 1; }
+grep -q 'WalletWatchSyncSection()' "$TMP/book-bare.swift" \
+  || { echo "✗ the chain read's status is gone — 'reading onchain activity' has no row to be, and a book that is still loading looks finished (§511)"; exit 1; }
+# The head must name what it LISTS. "Everyone else" was true only while the five
+# sat above; under a narrowing chip it says the count and NOT the population's
+# name, because the lit chip is already the name (§366's read-it-twice).
+grep -q 'Everyone · \\(count)' "$TMP/book-bare.swift" \
+  || { echo "✗ the book's head no longer names or counts what it actually lists (§448/§511)"; exit 1; }
+grep -q 'Everyone else' "$TMP/book-bare.swift" \
+  && { echo "✗ the head still says 'Everyone else' over a list that holds everyone (§511)"; exit 1; }
+
+# ── §511: THE WATCHING CHIP AND ITS CAP ─────────────────────────────────────
+grep -q 'watching: watchedCount' "$TMP/book-bare.swift" \
+  || { echo "✗ the chip strip never learns how many are watched — the Watching chip would never be offered (§511)"; exit 1; }
+grep -q 'AddressBookShape.watchingLabel(watchedCount' "$TMP/book-bare.swift" \
+  || { echo "✗ the Watching chip stopped carrying the cap — deleting the block deleted the only other place the app said how many of the five are spent (§511)"; exit 1; }
+grep -q 'watched: isWatched($0)' "$TMP/book-bare.swift" \
+  || { echo "✗ the chip filters on something other than the roster's own answer (§511)"; exit 1; }
+
+# ── §511: A SOCIAL ROW HAS A VERB ───────────────────────────────────────────
+#
+# A starter pack WATCHES everyone in it, so those rows are the roster of what is
+# filling the feed. Every write door is shut for an ephemeral row by
+# construction (`isInBook` is false), which is why the book listed forty people
+# and offered nothing to do about any of them — §83's dead row, forty times.
+grep -q 'SocialUnfollow.perform(' "$TMP/book-bare.swift" \
+  || { echo "✗ a followed account cannot be unfollowed from the book row (§511)"; exit 1; }
+grep -q 'SocialUnfollow.perform(' "$TMP/views-bare.swift" \
+  || { echo "✗ a followed account cannot be unfollowed from its card (§511)"; exit 1; }
+
+# RENAMING A WATCHED WALLET GOES THROUGH THE ROSTER (§511). The card is the only
+# place a watched wallet is named now that the pinned block is gone, and
+# `book.setName` writes only the book — so this door alone would leave
+# `WatchedAddress.label` stale forever, and the label is what the face rail's
+# caption, the feed's wallet tags and a self-transfer's title all read. The book
+# would show the new name and every place money is described the old one.
+grep -q 'store.rename(watch.id, to: name)' "$TMP/views-bare.swift" \
+  || { echo "✗ renaming a watched wallet no longer updates the roster label — the book and the feed would disagree about its name (§511)"; exit 1; }
+# ONE ACT: the row IS the watch, so unfollowing must take the posts with it —
+# §286's path, never a copy of it.
+grep -q 'HandleBridge(rawValue: pair.source)?.removeName(' "$TMP/unfollow-bare.swift" \
+  || { echo "✗ the unfollow no longer routes through HandleBridge.removeName — it would edit a list and leave the posts in the feed forever (§286/§511)"; exit 1; }
+grep -q 'SocialTopics.pruneAuthor' "$TMP/unfollow-bare.swift" \
+  && { echo "✗ the unfollow prunes the corpus itself — removeName resolves Nostr's pubkey first and reads the remaining topics, and a second copy would drop one of those (§511)"; exit 1; }
+# THE LEDGER STAYS CLOSED (§498). A pack of forty must never write forty entries.
+grep -qE 'setName\(|\.remove\(' "$TMP/people-bare.swift" \
+  && { echo "✗ the ephemeral half writes the book — a starter pack would put forty entries in somebody's ledger and sync them (§498/§511)"; exit 1; }
+grep -q 'static func unfollowable(' "$PEOPLE" \
+  || { echo "✗ the rows a verb can act on are decided somewhere else now (§511)"; exit 1; }
+grep -q 'SocialRoom.hasRoster(source)' "$TMP/people-bare.swift" \
+  || { echo "✗ unfollowable no longer gates on a roster existing — Twitch's rows are read off the corpus and have nothing to be removed from (§511)"; exit 1; }
 
 # NEGATIVE, comment-stripped: the shelf may not come back. `DS.Face.shelf` is
 # the ramp rung it was drawn at and this screen is the only place it was ever
 # used at this size.
-grep -qE 'DS.Face.shelf' "$TMP/screen-bare.swift" "$TMP/roster-bare.swift" "$TMP/book-bare.swift" \
+grep -qE 'DS.Face.shelf' "$TMP/screen-bare.swift" "$TMP/unwatch-bare.swift" "$TMP/book-bare.swift" \
   && { echo "✗ the watched shelf is back — §448 deleted it because it drew every watched wallet a second time, with its name truncated (§448)"; exit 1; }
-grep -qE 'rosterSlot|emptyRosterSlot|rosterSlotWidth' "$TMP/screen-bare.swift" "$TMP/roster-bare.swift" "$TMP/book-bare.swift" \
+grep -qE 'rosterSlot|emptyRosterSlot|rosterSlotWidth' "$TMP/screen-bare.swift" "$TMP/unwatch-bare.swift" "$TMP/book-bare.swift" \
   && { echo "✗ the roster shelf's slots are back (§448)"; exit 1; }
 
 # ── §448: THE FEWEST WORDS ──────────────────────────────────────────────────
@@ -293,8 +421,6 @@ grep -q 'defaults.set(true, forKey: seededKey)' "$SOURCE" \
 # ONE ROW ANATOMY. Two spellings of the book row is two books.
 grep -q 'struct AddressBookRow: View' "$VIEWS" \
   || { echo "✗ the shared row is gone; the manager and the group screen would each draw their own"; exit 1; }
-grep -q 'AddressBookRow(entry: entry' "$ROSTER" \
-  || { echo "✗ the roster no longer draws the shared row (moved to WalletRosterSection, §466)"; exit 1; }
 grep -q 'AddressBookRow(entry: entry' "$BOOKSCREEN" \
   || { echo "✗ the book room no longer draws the shared row"; exit 1; }
 grep -q 'AddressBookRow(entry: entry' "$GROUPS" \
@@ -781,6 +907,72 @@ check("the line claims a reading, not a write",
       AddressDeck.line(count: 12).lowercased().contains("read")
         && !AddressDeck.line(count: 12).lowercased().contains("named"))
 
+// The Watching chip (prd §511). It is offered only over a roster that exists,
+// its label carries the cap the deleted block used to state, and `watched`
+// travels beside `kind` rather than inside it — §461's ruling in the type
+// system, and the reason no row can ever toggle it.
+check("the watching chip needs a roster",
+      AddressBookShape.availableFilters(kinds: ["wallet"], watching: 0) == [.all, .wallets])
+check("the watching chip appears with one watched address",
+      AddressBookShape.availableFilters(kinds: ["wallet"], watching: 1)
+        == [.all, .watching, .wallets])
+check("watching leads the narrowing chips",
+      AddressBookShape.availableFilters(kinds: ["social", "wallet"], watching: 2)
+        == [.all, .watching, .wallets, .social])
+check("watching takes a watched row of any kind",
+      Filter.watching.matches(kind: "contract", watched: true))
+check("watching refuses an unwatched wallet",
+      !Filter.watching.matches(kind: "wallet", watched: false))
+check("no other chip reads watched",
+      Filter.wallets.matches(kind: "wallet", watched: false)
+        && Filter.wallets.matches(kind: "wallet", watched: true))
+check("a watching selection whose roster emptied falls back to all",
+      AddressBookShape.settledFilter(.watching, kinds: ["wallet"], watching: 0) == .all)
+check("the chip label carries the cap",
+      AddressBookShape.watchingLabel(3, limit: 5).contains("3")
+        && AddressBookShape.watchingLabel(3, limit: 5).contains("5"))
+
+print("")
+print("Unwatching — keep the name, or take it with the watch (prd §511)")
+// The ordinary case, and the whole reason the fold exists: a bare pasted
+// address whose book entry is the placeholder `WalletStore.add` minted.
+check("a placeholder name with nothing else leaves with the watch",
+      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true) == false)
+check("a name somebody typed keeps the row",
+      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: false))
+check("a group keeps an unnamed row",
+      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, groups: ["Work"]))
+check("a note keeps an unnamed row",
+      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, note: "paid me in March"))
+check("a verified provenance keeps an unnamed row",
+      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, provenance: "Farcaster · @jesse"))
+// A network tag records a MEETING, and meetings do not repeat — nothing would
+// ever put it back.
+check("a network tag keeps an unnamed row",
+      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, networks: ["vibenet"]))
+// Blank is not authorship. Without these an empty group name or a whitespace
+// note pins an unnamed address in the book forever, with nothing on screen to
+// say why.
+check("an empty group name is not authorship",
+      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, groups: [""]) == false)
+check("a whitespace note is not authorship",
+      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, note: "   ") == false)
+check("a whitespace provenance is not authorship",
+      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, provenance: " ") == false)
+check("an empty network list is not authorship",
+      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, groups: [], networks: []) == false)
+// A fixture only tests the rule it names if it FAILS that rule and passes every
+// other one — the standing lesson this repo has paid for four times. The typed
+// name must be carrying this on its own.
+check("the typed-name case is not carried by some other field",
+      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: false, groups: [],
+                                         note: "", provenance: "", networks: []))
+// …and each keep-fixture above must be the ONLY thing keeping its row: every
+// one of them is a placeholder name with empty everything else.
+check("each keeper is alone in its fixture",
+      AddressBookShape.unwatchKeepsEntry(isPlaceholderName: true, groups: [], note: "",
+                                         provenance: "", networks: []) == false)
+
 print("")
 if failures > 0 { print("\(failures) failure(s)"); exit(1) }
 print("all assertions pass")
@@ -909,7 +1101,7 @@ mutate "a chip is offered over a population that is not there" \
 # the strip while still filtering, so the book reads as empty with nothing on
 # screen to explain it.
 mutate "a selection outlives the population it filters" \
-  'availableFilters(kinds: kinds).contains(selected) ? selected : .all' \
+  'availableFilters(kinds: kinds, watching: watching).contains(selected) ? selected : .all' \
   'selected'
 
 # THE DECK (prd §502) — each renders as a perfectly ordinary row of faces.
@@ -929,6 +1121,49 @@ mutate "the deck claims a write it has not made" \
   'String(localized: "\(count) addresses read")' \
   'String(localized: "\(count) addresses named")'
 # A fan wide enough that the top card clips the one behind it.
+# ── §511: the fold that DELETES a book entry ────────────────────────────────
+#
+# Every one of these renders as a perfectly ordinary list — the row is simply
+# there, or simply not — and the direction that fails silently is the expensive
+# one: a name nobody can retype, gone with a watch somebody stopped.
+mutate "a typed name stops keeping the row" \
+  'if !isPlaceholderName { return true }' \
+  'if false { return true }'
+mutate "an empty group name counts as authorship" \
+  'if (groups ?? []).contains(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {' \
+  'if !(groups ?? []).isEmpty {'
+mutate "a whitespace note counts as authorship" \
+  'if let note, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }' \
+  'if let note, !note.isEmpty { return true }'
+mutate "a verified provenance stops keeping the row" \
+  'if let provenance, !provenance.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return true
+        }' \
+  'if provenance == nil, provenance != nil {
+            return true
+        }'
+mutate "a network tag stops keeping the row" \
+  'if (networks ?? []).contains(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+            return true
+        }' \
+  'if (networks ?? []).isEmpty, !(networks ?? []).isEmpty {
+            return true
+        }'
+mutate "the fold keeps everything, so the second gesture is back" \
+  'if !isPlaceholderName { return true }' \
+  'if true { return true }'
+
+# ── §511: the Watching chip ─────────────────────────────────────────────────
+mutate "the Watching chip is offered over an empty roster" \
+  'if filter == .watching { return watching > 0 }' \
+  'if filter == .watching { return true }'
+mutate "watching stops being separate from kind" \
+  'case .watching: return watched' \
+  'case .watching: return kind == "wallet"'
+mutate "the chip label drops the cap" \
+  'String(localized: "Watching \(count)/\(limit)")' \
+  'String(localized: "Watching \(count)")'
+
 mutate "the fan swings wide enough to clip" \
   'private static let tilts: [Double] = [-6, 3, -2, 5, -4]' \
   'private static let tilts: [Double] = [-26, 13, -2, 25, -14]'

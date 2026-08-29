@@ -49,17 +49,34 @@ PLAN="Casberi/Casberi/Model/WalletConnectPlan.swift"
 SCREEN="Casberi/Casberi/Screens/WalletScreen.swift"
 # §466 moved the field ConnectWalletRow lives inside — and with it,
 # showConnectPicker — off WalletScreen and into WalletWatchField, shared with
-# the roster section the book now hosts. The picker's own single-sheet
+# the roster section the book then hosted. The picker's own single-sheet
 # discipline still holds on BOTH hosts; see the guards below.
+#
+# **§511 DELETED THAT ROSTER SECTION** (`WalletRosterSection.swift`) with the
+# pinned block it drew, so the guards that named it are re-pointed rather than
+# dropped — "a guarded function that moves files takes its guard with it".
+# Where they land is decided by what each one was actually protecting, and it
+# is NOT one file:
+#
+#   · the NEGATIVE (no host may watch a connected account itself) followed the
+#     hosting, and the host is now `AddressBookScreen`, which embeds its own
+#     `ConnectWalletRow` directly — so the book's code joins the loop, and
+#     `ConnectWalletRow` itself joins it too, since it is the one file every
+#     host reaches this through and nothing had ever checked it;
+#   · the WIRING guard followed the spelling. The roster carried a
+#     `onConnectFound:` parameter it never read — dead since §498 moved the
+#     watch field out — and the live route was always the book's own
+#     `ConnectWalletRow(onFound:)`. The guard now names the surviving door,
+#     which is the one that can actually break.
 FIELD="Casberi/Casberi/Screens/WalletWatchField.swift"
-ROSTER="Casberi/Casberi/Screens/WalletRosterSection.swift"
+CONNECTROW="Casberi/Casberi/Screens/ConnectWalletRow.swift"
 BOOKSCREEN="Casberi/Casberi/Screens/AddressBookScreen.swift"
 SHEET="Casberi/Casberi/Screens/WalletConnectPickerSheet.swift"
 STORE="Casberi/Casberi/Model/WalletStore.swift"
 ENSF="Casberi/Casberi/Model/ENS.swift"
 BRIDGE="Casberi/Casberi/Model/WalletConnectBridge.swift"
 SAFE="Casberi/Casberi/Model/SafeBridge.swift"
-for f in "$PLAN" "$SCREEN" "$FIELD" "$ROSTER" "$BOOKSCREEN" "$SHEET" "$STORE" "$ENSF" "$BRIDGE" "$SAFE"; do
+for f in "$PLAN" "$SCREEN" "$FIELD" "$CONNECTROW" "$BOOKSCREEN" "$SHEET" "$STORE" "$ENSF" "$BRIDGE" "$SAFE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -75,13 +92,19 @@ done
 # Obsidian/Cursor lesson, earned again here on this guard's first run).
 CODE=$(mktemp /tmp/wcplan-code.XXXXXX)
 FIELDCODE=$(mktemp /tmp/wcplan-field.XXXXXX)
-trap 'rm -f "$CODE" "$FIELDCODE"' EXIT
+BOOKCODE=$(mktemp /tmp/wcplan-book.XXXXXX)
+ROWCODE=$(mktemp /tmp/wcplan-row.XXXXXX)
+trap 'rm -f "$CODE" "$FIELDCODE" "$BOOKCODE" "$ROWCODE"' EXIT
 grep -vE '^[[:space:]]*(//|\*|/\*)' "$SCREEN" > "$CODE"
 grep -vE '^[[:space:]]*(//|\*|/\*)' "$FIELD" > "$FIELDCODE"
-# The negative check now covers every host that could reach a connected
-# account — the field itself (where ConnectWalletRow lives since §466) and
-# the roster section that embeds it, not just WalletScreen.
-for f in "$CODE" "$FIELDCODE" "$ROSTER"; do
+grep -vE '^[[:space:]]*(//|\*|/\*)' "$BOOKSCREEN" > "$BOOKCODE"
+grep -vE '^[[:space:]]*(//|\*|/\*)' "$CONNECTROW" > "$ROWCODE"
+# The negative check covers every host that could reach a connected account:
+# WalletScreen, the field where ConnectWalletRow lives (§466), the BOOK, which
+# embeds its own copy of that row since §498 and is the surviving host §511's
+# deleted roster section used to be — and the row itself, which every one of
+# them reaches this through and which nothing had ever checked.
+for f in "$CODE" "$FIELDCODE" "$BOOKCODE" "$ROWCODE"; do
   grep -qE 'wallet\.(add|outcome\(ofAdding:)[^)]*account\.address' "$f" \
     && { echo "✗ $f watches a connected account directly — the watch cap"; \
          echo "  will drop the overflow with no word to anyone (prd §376)"; exit 1; }
@@ -102,8 +125,10 @@ grep -q 'case .connectPicker' "$BOOKSCREEN" \
        echo "  own connect flow would have nowhere to land (§466)"; exit 1; }
 grep -q 'onConnectFound: { sheetRoute = .connectPicker(\$0) }' "$SCREEN" \
   || { echo "✗ WalletScreen no longer wires the field's found accounts to its own sheet (§466)"; exit 1; }
-grep -q 'onConnectFound: { bookSheet = .connectPicker(\$0) }' "$BOOKSCREEN" \
-  || { echo "✗ the book no longer wires the roster's found accounts to its own sheet (§466)"; exit 1; }
+# The book's own connect row, which is the live door since §511 deleted the
+# roster section that carried a second (and never-read) `onConnectFound:`.
+grep -q 'ConnectWalletRow(onFound: { bookSheet = .connectPicker(\$0) }' "$BOOKSCREEN" \
+  || { echo "✗ the book no longer wires its connect row's found accounts to its own sheet (§466/§511)"; exit 1; }
 
 # The sheet must open on the PLAN's preselection, never its own. A sheet that
 # ticks its own boxes can tick more than the Add button will take.

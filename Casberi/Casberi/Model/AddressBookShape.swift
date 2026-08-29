@@ -228,12 +228,18 @@ enum AddressBookShape {
     /// and importing the book's enum would drag `@Observable` in behind it.
     /// A drift guard ties these literals to the enum's own cases.
     enum BookFilter: String, CaseIterable, Sendable {
-        case all, wallets, keys, contacts, social
+        /// `watching` leads the narrowing chips (2026-08-29, prd §511) because
+        /// it REPLACES a pinned section: the five addresses this app reads used
+        /// to sit in a block above the book, and they are ordinary rows in it
+        /// now. Declaration order is strip order, so it sits where that block
+        /// did.
+        case all, watching, wallets, keys, contacts, social
 
         /// The capsule's word.
         var label: String {
             switch self {
             case .all:      return String(localized: "All")
+            case .watching: return String(localized: "Watching")
             case .wallets:  return String(localized: "Wallets")
             case .keys:     return String(localized: "Keys")
             case .contacts: return String(localized: "Contacts")
@@ -250,9 +256,18 @@ enum AddressBookShape {
         /// state EVERY vibenet entry sits in for life, since detection is
         /// gated off for devnets (§496). Dropping either would file real
         /// wallets outside the wallet chip, which reads as rows going missing.
-        func matches(kind: String) -> Bool {
+        /// **`watched` is passed APART from `kind`, and that separation is
+        /// §461's ruling in the type system.** Watching is not a kind — it is
+        /// membership of a capped roster — so there is deliberately no
+        /// `Kind.watched` case for a row to carry, no attribute for a row to
+        /// toggle, and nothing here that any screen showing people could turn
+        /// into a second address book. A filter is a property of the LIST; a
+        /// star would be a control on the ROW, and only the second is what §461
+        /// deleted.
+        func matches(kind: String, watched: Bool = false) -> Bool {
             switch self {
             case .all:      return true
+            case .watching: return watched
             case .wallets:  return kind == "wallet" || kind == "smartAccount" || kind == "unknown"
             case .keys:     return kind == "key"
             case .contacts: return kind == "contact"
@@ -271,10 +286,27 @@ enum AddressBookShape {
     /// A chip with no members is never offered: a control whose only possible
     /// outcome is an empty list is §83's dead control, and on a fresh book
     /// four of the five would be exactly that.
-    static func availableFilters(kinds: [String]) -> [BookFilter] {
+    static func availableFilters(kinds: [String], watching: Int = 0) -> [BookFilter] {
         BookFilter.allCases.filter { filter in
-            !filter.narrows || kinds.contains(where: { filter.matches(kind: $0) })
+            if filter == .watching { return watching > 0 }
+            return !filter.narrows || kinds.contains(where: { filter.matches(kind: $0) })
         }
+    }
+
+    /// The Watching chip's own word, which carries the CAP (2026-08-29, prd
+    /// §511) — "Watching 3/5", never a bare "Watching".
+    ///
+    /// The cap had one home and it was the pinned section's header ("3 of 5").
+    /// Deleting that section deletes the only place the app said how many of
+    /// the five are spent, and a limit nobody is told about is discovered by
+    /// being refused. This chip is where it goes, because it is the one control
+    /// on the screen that is about exactly that population.
+    ///
+    /// **The chip is not the place the limit is ENFORCED** — it narrows a list
+    /// and nothing else — so this is a fact printed on a control, never a
+    /// disabled one.
+    static func watchingLabel(_ count: Int, limit: Int) -> String {
+        String(localized: "Watching \(count)/\(limit)")
     }
 
     /// The filter that should stand, given the one selected and what the book
@@ -285,8 +317,9 @@ enum AddressBookShape {
     /// strand the screen: remove the last key while `keys` is selected and the
     /// chip disappears from the strip while still filtering the list, so the
     /// book reads as empty with nothing on screen explaining why.
-    static func settledFilter(_ selected: BookFilter, kinds: [String]) -> BookFilter {
-        availableFilters(kinds: kinds).contains(selected) ? selected : .all
+    static func settledFilter(_ selected: BookFilter, kinds: [String],
+                              watching: Int = 0) -> BookFilter {
+        availableFilters(kinds: kinds, watching: watching).contains(selected) ? selected : .all
     }
 
     // MARK: - The recency phrase (prd §440)
@@ -357,6 +390,64 @@ enum AddressBookShape {
             formatter.setLocalizedDateFormatFromTemplate("yyyy")
         }
         return formatter.string(from: date)
+    }
+
+    // MARK: - Unwatching
+
+    /// Whether stopping a watch KEEPS the address in the book, or takes it out
+    /// with the watch (2026-08-29, prd §511).
+    ///
+    /// **The problem it answers.** Watching and naming are two facts and §461
+    /// is right to split them — a name you gave a counterparty must survive you
+    /// no longer reading their wallet. But `WalletStore.add` files EVERY
+    /// watched wallet in the book, and for a bare pasted address it files it
+    /// under a placeholder it minted itself (`…44b1`). For that wallet the book
+    /// entry is not a second fact at all: it is the residue of the watch. So
+    /// removing it took two gestures spelled with the same word — a swipe on
+    /// the roster, then a long-press in the list it silently reappeared in —
+    /// which reads as a delete that failed rather than as a demotion.
+    ///
+    /// **The rule is AUTHORSHIP, not attribute.** A name somebody typed, a
+    /// group they filed it in, a note they wrote, a provenance the app verified
+    /// through a door (§169), or a network tag saying it was met somewhere else
+    /// are all things this app cannot recreate, and every one of them keeps the
+    /// row. A placeholder name and nothing else is ours, and leaves with the
+    /// watch.
+    ///
+    /// **It errs toward KEEPING in every uncertain direction**, because the two
+    /// mistakes are not equal: a row that stays is one long-press from gone,
+    /// and a row that goes takes with it a name nobody can retype.
+    ///
+    /// `isPlaceholderName` is passed IN rather than derived here on purpose —
+    /// the test is `WalletStore.isAutoName`, which carries two dead spellings
+    /// for books already on disk and belongs beside the function that mints
+    /// them. Taking the answer as a parameter is what keeps this file
+    /// Foundation-only, and what makes every fixture below mean something.
+    static func unwatchKeepsEntry(isPlaceholderName: Bool,
+                                  groups: [String]? = nil,
+                                  note: String? = nil,
+                                  provenance: String? = nil,
+                                  networks: [String]? = nil) -> Bool {
+        // A name somebody typed is the whole reason the book outlives the
+        // roster. Asked first because it is the common keep.
+        if !isPlaceholderName { return true }
+        // Blank strings are not authorship. A group list holding one empty
+        // name, or a note that is whitespace, would otherwise pin an unnamed
+        // address in the book forever with nothing on screen to explain why.
+        if (groups ?? []).contains(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+            return true
+        }
+        if let note, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
+        if let provenance, !provenance.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return true
+        }
+        // Met somewhere that is not this roster — a vibenet watch, an import.
+        // Dropping the entry would drop that tag, and nothing would ever put
+        // it back: the tag records a meeting, and meetings do not repeat.
+        if (networks ?? []).contains(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+            return true
+        }
+        return false
     }
 }
 

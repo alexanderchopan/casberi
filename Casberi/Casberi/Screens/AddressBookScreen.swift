@@ -46,6 +46,9 @@ struct AddressBookScreen: View {
     @Bindable private var wallet = WalletStore.shared
     @Environment(HomeRoute.self) private var route
     @Environment(\.modelContext) private var modelContext
+    /// For the sentence and the undo an unwatch owes (prd §511) —
+    /// `WalletUnwatch.perform`.
+    @Environment(ShellChrome.self) private var chrome
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var query = ""
@@ -141,15 +144,18 @@ struct AddressBookScreen: View {
                 // things this row does (find somebody, add somebody) are about
                 // the whole book, not about the five wallets.
                 inputSection
-                // THE ROSTER stands down under a filter that is not about
-                // wallets (prd §498). It is your own five addresses and they
-                // are wallets by construction, so leaving it on screen under
-                // Keys or Contacts would be a block of wallets sitting above a
-                // list that just promised to hide them — the strip reading as
-                // broken rather than as a filter.
-                if !searching, rosterShown {
-                    WalletRosterSection(onConnectFound: { bookSheet = .connectPicker($0) })
-                }
+                // THE ROSTER BLOCK IS GONE (prd §511). The five addresses this
+                // app reads are ordinary rows in the list below now, found
+                // through the `Watching` chip — see `WalletWatching.swift` for
+                // the whole argument. What survives is the chain read's own
+                // status, which is not a row and has nowhere to file itself in
+                // a lettered list.
+                //
+                // It is NOT gated on the filter the way the block was: a block
+                // of wallets sitting above a list that just promised to hide
+                // them read as a broken strip, but "reading onchain activity"
+                // is true whichever chip is lit.
+                if !searching { WalletWatchSyncSection() }
                 if !searching {
                     // The Connected spine LEFT this screen (user ruling,
                     // 2026-08-27, with a screenshot of it: "please remove this
@@ -430,7 +436,17 @@ struct AddressBookScreen: View {
                 // text you typed. Absent when the cap is full or the address
                 // is already watched: §83, rather than a button that explains
                 // itself after the tap.
-                if wallet.canWatchMore, !isWatchedAddress(address) {
+                if isWatchedAddress(address) {
+                    // A FACT, not a control (prd §511). The capsule was simply
+                    // absent here, which is right under §83 for a button that
+                    // cannot act — but absence answers nothing, and the two
+                    // reasons for it are different: this address is already one
+                    // of your five, or all five are spoken for. The header
+                    // saying "5 of 5" is four hundred points up a scrolled list.
+                    previewFactPill(String(localized: "Watching"))
+                } else if !wallet.canWatchMore {
+                    previewFactPill(String(localized: "Watching \(WalletStore.watchLimit) of \(WalletStore.watchLimit)"))
+                } else {
                     Button {
                         watchPreview(address)
                     } label: {
@@ -450,6 +466,19 @@ struct AddressBookScreen: View {
             .dsWell()
             .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
         }
+    }
+
+    /// A stated reason where the Watch capsule would have been. Deliberately
+    /// not a disabled button: a disabled control invites a tap and then
+    /// explains itself, which is the §83 shape this replaces rather than joins.
+    private func previewFactPill(_ text: String) -> some View {
+        Text(text)
+            .dsText(.label12).fontWeight(.semibold)
+            .foregroundStyle(DS.textTertiary)
+            .padding(.horizontal, DS.Space.s3)
+            .padding(.vertical, 7)
+            .background(DS.fillFaint, in: Capsule())
+            .monospacedDigit()
     }
 
     /// Whether the preview's address is already one of the watched five —
@@ -475,6 +504,22 @@ struct AddressBookScreen: View {
         query = ""
         fieldFocused = false
         refreshReadings()
+    }
+
+    /// Starts watching a row that is ALREADY in the book (2026-08-29, prd
+    /// §511) — the direction §498's single omnibox could not reach, because
+    /// `previewAddress` only fires for an address or a resolvable name, so
+    /// typing a contact's NAME surfaced their row and offered nothing.
+    ///
+    /// A PLACEHOLDER name is not carried across as a roster label: it would pin
+    /// `…44b1` as a word somebody chose, and defeat the fold on the way back
+    /// out.
+    private func watchEntry(_ entry: AddressBook.Entry) {
+        let placeholder = WalletStore.isAutoName(entry.name, for: entry.address)
+        if WalletStore.shared.add(entry.address, label: placeholder ? "" : entry.name) {
+            DSHaptic.success()
+            refreshReadings()
+        }
     }
 
     /// THE DECK A PASTED LIST MAKES (2026-08-27, prd §502).
@@ -532,8 +577,11 @@ struct AddressBookScreen: View {
     }
 
     /// The one line under the preview's name — what the book already knows.
-    /// No watch facts here, deliberately: this room cannot watch (§461), so a
-    /// "already watching" clause would describe a verb the field doesn't have.
+    ///
+    /// No watch facts in THIS line: since §498 the room does watch, and since
+    /// §511 it states the two reasons it can't — but both of those belong on
+    /// the trailing pill, where the verb they are standing in for would be.
+    /// Saying it here as well is §366's read-it-twice.
     private func previewFact(address: String, known: AddressBook.Entry?) -> String {
         var parts: [String] = []
         if address != draft { parts.append(WalletStore.shortAddress(address)) }
@@ -613,7 +661,8 @@ struct AddressBookScreen: View {
     /// control, so the strip stands down below two narrowing options.
     @ViewBuilder
     private var filterSection: some View {
-        let filters = AddressBookShape.availableFilters(kinds: presentKinds)
+        let filters = AddressBookShape.availableFilters(kinds: presentKinds,
+                                                        watching: watchedCount)
         if filters.filter(\.narrows).count >= 2 {
             Section {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -627,7 +676,17 @@ struct AddressBookScreen: View {
                                     bookFilter = (bookFilter == filter) ? .all : filter
                                 }
                             } label: {
-                                chipLabel(filter.label, tinted: bookFilter == filter,
+                                // THE WATCHING CHIP CARRIES THE CAP (prd §511)
+                                // — "Watching 3/5". Deleting the pinned block
+                                // deleted the only place the app ever said how
+                                // many of the five are spent, and a limit
+                                // nobody is told about is one you discover by
+                                // being refused.
+                                chipLabel(filter == .watching
+                                          ? AddressBookShape.watchingLabel(watchedCount,
+                                                                           limit: WalletStore.watchLimit)
+                                          : filter.label,
+                                          tinted: bookFilter == filter,
                                           selected: bookFilter == filter)
                             }
                             .buttonStyle(.plain)
@@ -814,16 +873,16 @@ struct AddressBookScreen: View {
         query.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// Everyone else — the person's own watched wallets are LEFT OUT, searching
-    /// included (prd §461).
+    /// EVERYONE, watched included (prd §511) — reversing §461's exclusion, and
+    /// restoring §448's original reading of the same question.
     ///
-    /// This reverses §448's one exception ("the Watching section folds away the
-    /// moment you type, so a search that also filtered them out would be a
-    /// search that cannot find the wallets you watch"). That reasoning was
-    /// right while both lived on one screen; with the roster on its own screen,
-    /// a watched wallet appearing here would be the duplication §448 deleted the
-    /// shelf for, one screen apart instead of one scroll. The search says so
-    /// rather than answering nothing — see `emptyBookLine`.
+    /// §461 left the watched five out because they had a block of their own
+    /// above, so a row appearing in both was the duplication §448 had just
+    /// deleted a shelf for. With the block gone there is no second place for
+    /// them to be, and excluding them here would mean the book cannot find the
+    /// addresses you care most about — which is exactly what §448 said before
+    /// the split, in its own words: "a search that also filtered them out would
+    /// be a search that cannot find the wallets you watch."
     /// The rows the list draws — the ledger's own entries plus the off-chain
     /// half, searched, then narrowed by the chip (prd §498).
     ///
@@ -834,7 +893,7 @@ struct AddressBookScreen: View {
     /// population disappeared underneath it cannot strand the screen on an
     /// empty list.
     private func visibleEntries() -> [AddressBook.Entry] {
-        let owned = book.search(query).filter { !isWatched($0) }
+        let owned = book.search(query)
         let q = draft.lowercased()
         // Contacts and social rows carry only a name and a provenance — no
         // address, no groups, no note — so they are matched on what they have
@@ -849,9 +908,26 @@ struct AddressBookScreen: View {
         // block. The book entry is always the base, so nothing persisted can
         // be shadowed by a name match.
         let merged = AddressBookPeople.fold(book: owned, people: others)
-        let settled = AddressBookShape.settledFilter(bookFilter, kinds: presentKinds)
+        let settled = settledFilter
         guard settled.narrows else { return merged }
-        return merged.filter { settled.matches(kind: $0.kind.rawValue) }
+        // `watched` travels beside `kind`, never inside it — §461's ruling in
+        // the type system (see `BookFilter.matches`).
+        return merged.filter { settled.matches(kind: $0.kind.rawValue, watched: isWatched($0)) }
+    }
+
+    /// How many of the five are spent — the Watching chip's own population, and
+    /// the number its label carries. Computed off `WalletStore` rather than off
+    /// the book, because the roster is the authority on its own membership and a
+    /// watch can stand under a spelling the book re-keyed (2026-07-25).
+    private var watchedCount: Int { wallet.addresses.count }
+
+    /// The filter actually in force. Spelled once (prd §511): three readers had
+    /// their own `settledFilter` call, and a fourth arriving with a different
+    /// argument list is how a chip starts filtering a list nobody else agrees
+    /// is filtered.
+    private var settledFilter: AddressBookShape.BookFilter {
+        AddressBookShape.settledFilter(bookFilter, kinds: presentKinds,
+                                       watching: watchedCount)
     }
 
     /// Every kind the book can currently offer a chip for — the LEDGER's own
@@ -860,15 +936,6 @@ struct AddressBookScreen: View {
     /// chips appear and vanish under the thumb.
     private var presentKinds: [String] {
         Array(book.kindsPresent) + people.map(\.kind.rawValue)
-    }
-
-    /// Whether the watched roster belongs on screen under the current filter —
-    /// see the call site. `settledFilter` rather than `bookFilter` so a
-    /// selection that has quietly fallen back to All brings the roster back
-    /// with it rather than leaving the screen headless.
-    private var rosterShown: Bool {
-        let settled = AddressBookShape.settledFilter(bookFilter, kinds: presentKinds)
-        return settled == .all || settled == .wallets
     }
 
     /// Matched through the resolution cache, not by raw string (2026-07-25): a
@@ -880,12 +947,12 @@ struct AddressBookScreen: View {
 
     /// The rows, as the shape layer sees them.
     ///
-    /// `watched` is FALSE for every row by construction now — the watched
-    /// entries never reach this list. The field stays on `AddressBookShape.Row`
-    /// rather than being deleted: it is what `.recent` orders by, it is proven
-    /// by that harness's own fixtures, and the day a watched entry can appear
-    /// here again the ordering is still right. Passing `isWatched` rather than
-    /// a literal `false` keeps the two in step with no second rule to maintain.
+    /// `watched` is REAL again (prd §511) — the watched entries are rows of
+    /// this list now, so `.recent`'s hoist of them is live rather than dormant,
+    /// and the Watching chip filters on the same answer. §461 left this reading
+    /// `isWatched` rather than a literal `false` precisely so that the day a
+    /// watched entry could appear here again the ordering would already be
+    /// right; this is that day, and the line did not have to change.
     private func shapeRows(_ entries: [AddressBook.Entry]) -> [AddressBookShape.Row] {
         entries.map {
             AddressBookShape.Row(id: $0.id, name: $0.name, addedAt: $0.addedAt,
@@ -979,15 +1046,21 @@ struct AddressBookScreen: View {
 
     /// The head of the list — its count and its sort (prd §212).
     ///
-    /// It names what it LISTS (prd §448). "Everyone else" was true when the
-    /// watched rows sat in a section above; it is true here for the same
-    /// reason, one screen over — this book is everyone who is not one of your
-    /// own five.
+    /// It names what it LISTS (prd §448), and since §511 what it lists is
+    /// EVERYONE: "Everyone else" was true only while the watched five sat in a
+    /// block above, and that block is gone.
+    ///
+    /// Under a narrowing chip it says the count and NOT the population's name,
+    /// because the lit chip two rows up is already the name — saying it twice
+    /// is §366's read-it-twice, and the Watching chip's own label carries a cap
+    /// this head has no business repeating.
     private func bookListHeader(count: Int, searching: Bool) -> some View {
         HStack(spacing: DS.Space.s2) {
             Text(searching
                  ? String(localized: "\(count) matching")
-                 : String(localized: "Everyone else · \(count)"))
+                 : settledFilter.narrows
+                   ? String(localized: "\(count) shown")
+                   : String(localized: "Everyone · \(count)"))
                 .dsText(.label12).fontWeight(.semibold)
                 .foregroundStyle(DS.textSecondary)
                 .monospacedDigit()
@@ -1065,9 +1138,11 @@ struct AddressBookScreen: View {
     /// It names the screen that does hold it instead.
     private var emptyBookLine: String {
         if !draft.isEmpty {
-            if let mine = book.search(query).first(where: { isWatched($0) }) {
-                return String(localized: "\(mine.name) is one of your own wallets — it's on the Addresses screen.")
-            }
+            // §461's "it's on the Addresses screen" line is DELETED, not
+            // reworded (prd §511): the watched five are rows of this list now,
+            // so a search that matches one finds it, and a sentence sending
+            // somebody to another screen for a row that is right here is worse
+            // than no sentence.
             return String(localized: "No name, address or group here matches “\(draft)”.")
         }
         return String(localized: "No names yet. Name an address and every transfer reads by that name.")
@@ -1080,19 +1155,25 @@ struct AddressBookScreen: View {
     /// than writing anything, so it stays a door (the design law's "swipe verbs
     /// are reads").
     ///
-    /// **No star** (prd §461) — `AddressBookRow.onToggleWatch` is nil, which
-    /// that view already treats as "draw no star at all". Watching is not a
-    /// property of a person any more; it is membership of the roster on the
-    /// Addresses screen.
+    /// **Still no star** (prd §461, unchanged by §511) —
+    /// `AddressBookRow.onToggleWatch` is nil, which that view treats as "draw
+    /// no star at all". The watched five are rows of this list now, and a row
+    /// says it is watched with an INERT mark: a star is a control, and a
+    /// control on every row is precisely what §461 deleted. The verb lives in
+    /// the swipe, the menu and the card.
     private func bookRow(_ entry: AddressBook.Entry, colliding: Bool, row: Int) -> some View {
         let groups = book.groupNames
+        let watched = isWatched(entry)
+        // The social half's own verb (prd §511) — see `SocialUnfollow`. Empty
+        // for every persisted row and for Twitch, which keeps no local roster.
+        let following = AddressBookPeople.unfollowable(entry)
         return Button {
             DSHaptic.selection()
             bookSheet = .entry(entry)
         } label: {
             AddressBookRow(entry: entry,
                            activity: activity[entry.id],
-                           watched: false,
+                           watched: watched,
                            colliding: colliding)
         }
         .buttonStyle(.plain)
@@ -1134,6 +1215,22 @@ struct AddressBookScreen: View {
             AddressMark(entry: entry, size: DS.Face.list)
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            // STOPPING A WATCH IS A WRITE, so it never gets a full swipe (§212)
+            // — it prunes this wallet's landed rows and, in the folded case,
+            // the book entry with them.
+            if watched {
+                Button(role: .destructive) {
+                    WalletUnwatch.perform(entry, context: modelContext, chrome: chrome)
+                } label: {
+                    Label("Stop watching", systemImage: "eye.slash")
+                }
+            } else if !following.isEmpty {
+                Button(role: .destructive) {
+                    SocialUnfollow.perform(entry, context: modelContext, chrome: chrome)
+                } label: {
+                    Label("Unfollow", systemImage: "person.badge.minus")
+                }
+            }
             Button {
                 DSHaptic.tap()
                 bookSheet = .move(entry)
@@ -1143,6 +1240,34 @@ struct AddressBookScreen: View {
             .tint(DS.tint)
         }
         .contextMenu {
+            // ONE CONSEQUENCE, ONE WORD (prd §511). This menu's destructive row
+            // says "Remove from book" and means the name; the watch verb says
+            // "Stop watching" and means the reading. Both spelled the same
+            // everywhere — the bare "Remove" for two different outcomes is what
+            // made unwatching read as a delete that had failed.
+            if watched {
+                Button(role: .destructive) {
+                    WalletUnwatch.perform(entry, context: modelContext, chrome: chrome)
+                } label: {
+                    Label("Stop watching", systemImage: "eye.slash")
+                }
+            } else if wallet.canWatchMore, !entry.kind.isMonogram {
+                // Absent, never disabled, when the roster is full or the row is
+                // a contact with no chain to read (§83). The Watching chip's
+                // own label says how many of the five are spent.
+                Button {
+                    watchEntry(entry)
+                } label: { Label("Watch", systemImage: "eye") }
+            }
+            // A SOCIAL ROW'S ONE VERB (prd §511). Until this landed the book
+            // listed everyone a starter pack had just followed and offered
+            // nothing to do about any of them, because every write door is shut
+            // for an ephemeral row by construction.
+            if !following.isEmpty {
+                Button(role: .destructive) {
+                    SocialUnfollow.perform(entry, context: modelContext, chrome: chrome)
+                } label: { Label("Unfollow", systemImage: "person.badge.minus") }
+            }
             Button {
                 DSPasteboard.copySensitive(entry.address)
                 DSHaptic.success()
@@ -1157,10 +1282,23 @@ struct AddressBookScreen: View {
             } label: {
                 Label("Groups", systemImage: "folder")
             }
-            Button(role: .destructive) {
-                book.remove(entry.address)
-            } label: {
-                Label("Remove", systemImage: "trash")
+            // NOT OFFERED FOR A WATCHED ADDRESS (prd §511): `WalletStore.add`
+            // guarantees every watched wallet is also a book entry, so removing
+            // the entry under a live watch leaves a wallet the app reads and
+            // cannot name — and the next sync files it again under a
+            // placeholder, which is a verb that undoes itself. Stop watching
+            // first; the fold takes the placeholder with it.
+            //
+            // "Remove from book", NEVER the bare "Remove" — the watch verb
+            // above says "Stop watching" and means something else, and the
+            // card's own menu has said this since §446. One consequence, one
+            // spelling, everywhere.
+            if !watched {
+                Button(role: .destructive) {
+                    book.remove(entry.address)
+                } label: {
+                    Label("Remove from book", systemImage: "trash")
+                }
             }
         }
     }
