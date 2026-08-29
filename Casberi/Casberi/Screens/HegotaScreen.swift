@@ -163,10 +163,13 @@ struct HegotaScreen: View {
         }
     }
 
-    /// POP FIRST — `sourceRequest` is read by `MainSurface`, which sits behind
-    /// this pushed stack, so asking before popping changes a room nobody is
-    /// looking at (vibenet's own lesson).
+    /// CLOSE, POP, ASK — `RoomDoor`'s order (vibenet's own lesson, plus the
+    /// close it was missing). This screen is RAISED as the connect sheet, so
+    /// `route.path` is the stack behind it and `sourceRequest` moves a room
+    /// the form is still covering; without the close the tap does nothing
+    /// anyone can see. Nil-write when nothing is raised.
     private func openRoom() {
+        route.closeConnectForm()
         route.path = []
         chrome.sourceRequest = HegotaIdentity.source
     }

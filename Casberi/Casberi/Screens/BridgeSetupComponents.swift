@@ -680,7 +680,8 @@ struct RecentThingsSection: View {
 /// is the part that is easy to get wrong and was already commented as such in
 /// Vibenet's hand-rolled copy: `sourceRequest` alone switches the room BEHIND
 /// this pushed screen, which from the front looks exactly like a tap that did
-/// nothing. Pop first, then ask. One implementation, seventeen callers.
+/// nothing. Close the raised form, pop, then ask — in that order, for the
+/// reasons spelled out at the call. One implementation, every caller.
 ///
 /// Gated by the CALLER on the bridge's own connected/watching state, never on
 /// whether anything has landed yet — `PredictionVenueConnect`'s teach-well
@@ -713,9 +714,32 @@ struct RoomDoor: View {
         Section {
             Button {
                 DSHaptic.tap()
-                // POP FIRST. `sourceRequest` is read by `MainSurface`, which
-                // sits behind this pushed stack — asking before popping
-                // changes the room nobody is looking at.
+                // CLOSE THE SHEET, THEN POP, THEN ASK — and the first of the
+                // three is the one §460 forgot.
+                //
+                // A connect screen is RAISED at least as often as it is
+                // pushed (`Destination.raisedByConnect` is true for every
+                // destination but the wallet family), and inside that sheet
+                // `route.path` is the stack BEHIND it. So the original two
+                // lines popped a stack nobody could see and switched the room
+                // nobody could see, leaving the form sitting on top of both:
+                // from the front, a control that does nothing — the §83 dead
+                // control this type exists to delete, arriving through the one
+                // door §460 never checked. Reported 2026-08-28 ("several of
+                // the 'view feed' buttons seem dead") and true of EVERY caller
+                // whose seat keeps its sheet up after connecting
+                // (`finishesOnConnect == false`, which is most of them).
+                //
+                // The hand-rolled door this generalized already knew — see
+                // `HandleSetupScreen.seeInFeedSection`, which has closed the
+                // form since 2026-07-25 for exactly this reason — and the rule
+                // was lost in the move to one implementation. That is the
+                // standing lesson: folding N call sites into one type carries
+                // the BEHAVIOUR of the best of them, not just the label.
+                //
+                // Unconditional, because it is a nil-write when nothing is
+                // raised — so the pushed path behaves exactly as before.
+                route.closeConnectForm()
                 route.path = []
                 chrome.sourceRequest = source
             } label: {
