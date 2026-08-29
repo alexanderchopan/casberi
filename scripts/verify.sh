@@ -327,6 +327,27 @@ step "Setup copy audit"
 "$ROOT/scripts/setup-copy-audit.py" || fail "a connect page drifted past its copy budget — see the output above"
 print -P "%F{green}✓ setup copy audit%f"
 
+# The connect family's ARRANGEMENT, after §315 made its WORDS mechanical.
+# Static, no build. Same reason, one layer over: on 2026-08-29 the L2BEAT
+# connect page was reported as "totally messy like it was just thrown together
+# with the thing to watch at the bottom" and every check here was green over
+# it — and its Walletbeat twin carried all five defects line for line, so the
+# drift had already propagated once by copy-paste, which is the shape a script
+# catches and a reading does not. Three checks, each MEASURED against the clean
+# tree before it was kept (a check that fires on healthy code gets turned off
+# within a week, and then the rule is back in memory where it started): one
+# control is one shape, the sync result reports LAST in its block, and a
+# control below a connect screen's identity area is a slab and not a blue text
+# link. Two more were built, measured and REFUSED in the script's own header —
+# the shelf-gate check reports five findings on a clean tree and none of them
+# is real, so that one defect is PREVENTED instead, by `AssetRosterShelf`
+# refusing to draw at count 0, which this audit's fourth check guards.
+step "Connect shape audit"
+"$ROOT/scripts/connect-shape-audit.py" --self-test >/dev/null \
+  || fail "the connect shape audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/connect-shape-audit.py" || fail "a connect page's arrangement drifted — see the output above"
+print -P "%F{green}✓ connect shape audit%f"
+
 # Keeps every Keychain write device-only and non-syncing (prd §277). Static,
 # no build. The failure it catches is invisible at runtime — a key stored with
 # the wrong accessibility works perfectly and also rides an encrypted backup

@@ -252,7 +252,7 @@ struct WalletbeatScreen: View {
 	}
 
 	private var rosterSection: some View {
-		AssetRosterShelf(note: rosterNote) {
+		AssetRosterShelf(note: rosterNote, count: watched.count) {
 			ForEach(watched.keyed) { row in
 				if let thing = row.live { rosterSlot(thing) }
 			}

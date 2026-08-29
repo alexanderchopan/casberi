@@ -25,9 +25,39 @@ struct AssetRosterShelf<Content: View>: View {
     /// "Watching 4 · tap for its chart, hold to unwatch" — the shelf states
     /// its own gestures, since a shelf can't show a swipe hint.
     let note: String
+    /// HOW MANY ROWS THE CALLER REALLY HAS, and the shelf DRAWS NOTHING at
+    /// zero (2026-08-29).
+    ///
+    /// A guard here rather than a lint, because the lint was measured and
+    /// refused: a check comparing a shelf's gate against the collection its
+    /// `ForEach` walks reports FIVE findings on a clean tree and none of them
+    /// is real — `TokenWatchScreen` iterates a derived `items` while correctly
+    /// gating on the `watched` it is derived from, which from outside is
+    /// indistinguishable from the bug. A check that cries wolf gets turned off
+    /// within a week, so this moves into the type instead, where it cannot be
+    /// got wrong at all.
+    ///
+    /// THE BUG IT ENDS: `L2beatScreen` and `WalletbeatScreen` gated their
+    /// shelves on `connected`, which is true for somebody FOLLOWING a registry
+    /// who has named nothing — so both drew a lone dashed `AssetRosterAddSlot`
+    /// under "Watching 0 · tap for its assessment, hold to stop watching",
+    /// gesture copy for rows that do not exist (§83's dead control wearing
+    /// prose). Reported 2026-08-29 as *"totally messy … with the thing to
+    /// watch at the bottom"*. Every call site is also gated, and that stays —
+    /// belt and braces, since the gate is what keeps a `Section`'s spacing out
+    /// of the list as well.
+    ///
+    /// It is the row count, NOT `content`'s child count, which a `ViewBuilder`
+    /// cannot report: the trailing add slot means the content is never empty,
+    /// which is exactly why the empty case was invisible.
+    let count: Int
     @ViewBuilder var content: () -> Content
 
     var body: some View {
+        if count > 0 { shelf }
+    }
+
+    private var shelf: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: DS.Space.s3) {

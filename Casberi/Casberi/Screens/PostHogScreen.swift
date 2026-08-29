@@ -244,7 +244,7 @@ struct PostHogScreen: View {
     // MARK: - The roster
 
     private var rosterSection: some View {
-        AssetRosterShelf(note: rosterNote) {
+        AssetRosterShelf(note: rosterNote, count: watched.count) {
             ForEach(watched.keyed) { row in
                 // Corollary 3 (build 176) — see `ThingRowKeying`.
                 if let thing = row.live { rosterSlot(thing) }
