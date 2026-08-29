@@ -37497,3 +37497,45 @@ Reported as a new install showing four CardPointers offers — Amazon, Shell, Ub
 Check K gained the matching assertion: a shape listed as retired must no longer be seeded, or the migration deletes rows out from under a live demo.
 
 **And the head had no chrome.** `CardPointersRoomCard` shipped without the `.padding(s4)` / `.dsWidgetSurface()` / `.padding(.horizontal, s4)` / `.padding(.top, s2)` every other room card wears — `FeedScreen.insightSection` sets `.listRowInsets(EdgeInsets())`, so a head card is edge-to-edge unless it pads itself. The headline sat flush against the screen and `WalletRunwayRail` ran under both bezels, clipping the last deadline dot, which is the one mark whose position is the whole reading.
+
+## 514. The Permissions scope lists what it counts, and the NFT slot gets denser instead of taller (user: "the permissions tab doesn't show my permissions in the list. shouldn't it?", then "on NFTs if a user picks more than 4 to show can we make the slot in the wallet that shows 4 resize to show five or six somehow? maybe we show them in tiles in a three by three grid or something?", 2026-08-28)
+
+Two reports against a real wallet on a real device, in two scopes of the same room. Both are a surface failing to carry data the app had already read — the §397 shape.
+
+### 1. The card counted six things and listed none of them
+
+Reported with a screenshot: the Permissions scope drew **"Who can act for you · 6 · Can act as your wallet · …51d3 · …51d3 and 4 more"** over an otherwise empty page.
+
+**The claim the code made and could not keep.** `WalletPermissions.namesShown` says of the two holders a rung names: *"The remainder is not hidden — the list below carries every holder."* That was true of token grants, which `WalletApprovalExposureCard` lists in full, and **false of every other kind**. The scope's list half was `walletApprovalsSection` and nothing else, gated on `!walletLive.exposure.isEmpty` — so on a wallet with acting parties and no live ERC-20 approvals, which is an ordinary wallet, the card named two of six and the other four were unreachable anywhere in the app.
+
+The four are the ones the card exists for. §490 built this rung ladder precisely because *"a whole class of holder has NO AMOUNT AT ALL"* — a Safe module, an EIP-7702 delegate, an Altana root credential — so a money-ranked list structurally cannot carry them. Having made that argument, the pass then shipped only the money-ranked list.
+
+`Screens/WalletActingPartiesRows.swift` is the missing half. It draws **above** the approvals rows: §490's whole ordering claim is reach, unbounded first, and a delegate sorted under the capped grants would contradict the card a centimetre above it. It is **a list and not a control** — §112/§293's shape, guarded as a negative grep that the file never reaches `openURL`, a `Button` or a `sheet`. There is no honest destination for a row: a delegate is undone by re-delegating from the wallet app that set it and a module by the Safe's own owners, so a chevron here would be §83's dead control. The row takes its sentence from `Power.phrase`, so a row and the count above it can never describe one holder differently.
+
+**Both §293 ceilings are stated in the list**, because that is the one place their absence is invisible: an account whose installed modules cannot be enumerated has NO holders to contribute, so it looks exactly like an account with nothing installed.
+
+### 2. `…51d3 · …51d3` — the same delegate, counted once per wallet
+
+`WalletActingParties.read` answers **per account**, and it must: a party is a fact about one address. So six of your wallets delegating to one contract produce six holders whose names are the same string. The rung's doc says its number is *"how many things have that power"* — six delegations to one contract are ONE thing with that power over six accounts, and the card was reading the flattening's shape rather than the wallet's.
+
+`WalletPermissions.merged` collapses on **(power, acting address)** and unions the accounts. Three rules, each of which renders plausibly when broken:
+
+- **Never on the display name.** Two contracts one registry labels alike would fold, which is the wrong-name-on-a-permissions-notice failure §239 states.
+- **Never on `Party.id`**, which embeds the network and the safe — so the same delegate read on two chains, the ordinary case, would stay two holders.
+- **Only UNPRICED holders merge.** A priced grant is a distinct grant with its own amount that §292 has already ranked; folding two would drop an amount or invent a sum, which is `Rung.usd`'s own all-or-nothing rule one level up.
+
+A merged holder **says which wallets it acts for**, or the merge has hidden a fact rather than tidied one. Every wallet is named rather than "and 2 more": §170 caps the watch list at five, so the longest that line can get is five names.
+
+### 3. The NFT slot: a denser grid, not a taller box
+
+§493 fixed the quad at four cells, so a wallet with six picked collections saw four pieces and the drawing said nothing about the rest — §307's silent-truncation class in the one place that is meant to BE the reading.
+
+**The literal ask was to resize the slot, and the answer is no.** `DSRoomChassis.visualSlot` is the fixed figure box every Wallet scope shares (§483) — Holdings' treemap, Risk's strip and this — and a room whose figure box changes height per scope is the reflow that ruling spent itself avoiding. What changes is how the box is divided: **2×2 up to four, 3×3 past it, nine and no further.** A fourth column puts the cell under 90pt inside a 210pt box, which is a contact sheet rather than a shelf, and `WalletNFTCollectionRows` already carries every piece past what the grid holds.
+
+The arithmetic is `NFTGrid`, in the Foundation-only picks file rather than beside the view, because every way it can be wrong renders as an ordinary shelf: a row of two under a row of three reads as a feature ("this one is bigger") rather than as the end of a list; a cell side counting one gap per cell instead of `n − 1` overflows a fixed box and clips the last row, which is exactly what the wider gap had just been fixed for; and a density decided from the CAPPED list rather than the held one is the right answer by luck. Drift guards hold the view to it, and hold the slot to the chassis' own unmultiplied constant.
+
+### What this cost, and the fixture lesson again
+
+`wallet-permissions-selftest.sh` grew 18 mutations and 20 drift guards; `wallet-nft-selftest.sh` grew 20 assertions, 8 mutations and 6 guards.
+
+**One mutation survived its first run**, and the cause is the standing one. The "unpriced holders only" rule was spelled twice — once in the guard, once in the line that records a holder for later merging — so breaking one half left the other doing the work and the harness stayed green. It is one named condition now (`let mergeable = holder.usd == nil`), which is what makes the rule breakable in one place and therefore testable. A rule spelled twice is a rule half of which has no test.

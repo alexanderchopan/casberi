@@ -326,3 +326,84 @@ struct NFTPickBook: Codable, Equatable, Sendable {
         Set(picks(wallet: wallet).compactMap { NFTPickKey.split($0)?.network }).sorted()
     }
 }
+
+/// THE SHELF'S GRID (prd §514, 2026-08-28, user: *"if a user picks more than 4
+/// to show can we make the slot in the wallet that shows 4 resize to show five
+/// or six somehow? maybe we show them in tiles in a three by three grid"*).
+///
+/// The quad was fixed at 2x2 / four cells, so a wallet with six picked
+/// collections saw four pieces and nothing said the other two existed inside
+/// the drawing — §307's silent-truncation shape, in a slot whose whole job is
+/// to be the reading. The grid gets DENSER instead of taller.
+///
+/// **The SLOT does not resize, and that is the answer to the literal ask.**
+/// `DSRoomChassis.visualSlot` is the fixed box every scope's figure draws into
+/// (§483) — Holdings' treemap, Risk's strip and this share it, and a room whose
+/// figure box changes height per scope is the reflow §483 spent its whole
+/// ruling avoiding. What changes is how the box is divided.
+///
+/// **Two densities and no more.** 2x2 up to four, 3x3 past it. A fourth column
+/// puts the cell under 90pt wide inside a 210pt box, which is a contact sheet
+/// rather than a shelf, and the list below already carries every piece — so
+/// past nine the drawing stops and the rows do the work, exactly as they did
+/// past four.
+///
+/// Foundation-only, in this file rather than beside the view, because it is
+/// arithmetic that renders plausibly when it is wrong: a row of two under a row
+/// of three reads as a feature, and a cell side that ignores the gaps overflows
+/// a fixed box and gets clipped.
+enum NFTGrid {
+    /// The most cells the drawing will ever hold — three squared.
+    static let maxCells = 9
+
+    /// How many across, for a given number of pieces to show.
+    ///
+    /// Counts the pieces AVAILABLE, not the pieces drawn, so the density is
+    /// decided before the cap is applied — deriving it from the capped list
+    /// would make five pieces ask for three columns and then be handed nine
+    /// cells' worth of them, which is the same number by luck rather than by
+    /// rule.
+    static func columns(available: Int) -> Int { available > 4 ? 3 : 2 }
+
+    /// How many the drawing shows. Squared rather than `columns * rows`
+    /// because the rows follow from the count.
+    static func cap(available: Int) -> Int {
+        let c = columns(available: available)
+        return c * c
+    }
+
+    /// The shown pieces in rows of `columns`.
+    ///
+    /// Generic over the element so the harness can prove the chunking with
+    /// plain integers — the pairing is the one piece of arithmetic here that
+    /// can be wrong in a way that still renders (three pieces as 2+1 versus
+    /// 1+2, which puts the odd cell in the wrong corner).
+    static func rows<T>(_ shown: [T], columns: Int) -> [[T]] {
+        guard columns > 0 else { return [] }
+        return stride(from: 0, to: shown.count, by: columns).map {
+            Array(shown[$0..<min($0 + columns, shown.count)])
+        }
+    }
+
+    /// How many empty cells the LAST row needs so its art stays the same size
+    /// as every other row's.
+    ///
+    /// Without it a final row of one draws a single cell across the full width
+    /// under a row of three, which reads as a feature ("this one is bigger")
+    /// rather than as the end of a list.
+    static func padding(lastRow count: Int, columns: Int) -> Int {
+        guard columns > 0, count > 0, count < columns else { return 0 }
+        return columns - count
+    }
+
+    /// One cell's side, along either axis: the box, less every gap between the
+    /// cells, divided by them.
+    ///
+    /// The gaps are `n - 1`, not `n`. Spelling it `box / n - gap` is the error
+    /// that renders — the grid overflows a fixed box by one gap and the last
+    /// row is clipped, which is what the wider gap had just been fixed for.
+    static func side(box: CGFloat, gap: CGFloat, count: Int) -> CGFloat {
+        guard count > 0 else { return 0 }
+        return (box - gap * CGFloat(count - 1)) / CGFloat(count)
+    }
+}

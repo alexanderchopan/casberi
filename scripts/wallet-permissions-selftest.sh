@@ -142,6 +142,74 @@ check(WalletPermissions.foldedCount(six) == 3, "the fold counts the 3 holders be
 check(WalletPermissions.foldedCount(Array(six.prefix(4))) == nil, "nothing folded is nil")
 check(WalletPermissions.rungsShown == 4, "four rungs drawn")
 
+// ── ONE HOLDER PER THING THAT CAN ACT (prd §514) ─────────────────────────────
+//
+// The report: "6 · Can act as your wallet" naming `…51d3 · …51d3`, because
+// `WalletActingParties.read` answers per ACCOUNT and six of your wallets
+// delegate to one contract. Six delegations to one contract are one thing with
+// that power, and the rung claims to count things.
+func party(_ p: P, _ name: String, key: String, on account: String,
+           _ note: String? = nil) -> WalletPermissions.Holder {
+    .init(power: p, name: name, usd: nil, note: note, key: key, accounts: [account])
+}
+
+let sameDelegate = WalletPermissions.merged([
+    party(.actsAsWallet, "...51d3", key: "0x51d3", on: "0xaaa"),
+    party(.actsAsWallet, "...51d3", key: "0x51d3", on: "0xbbb"),
+    party(.actsAsWallet, "...51d3", key: "0x51d3", on: "0xccc"),
+])
+check(sameDelegate.count == 1, "one delegate on three wallets is ONE holder")
+check(sameDelegate.first?.accounts == ["0xaaa", "0xbbb", "0xccc"],
+      "and it says which three, in the order they were seen")
+check(WalletPermissions.rungs(sameDelegate).first?.count == 1,
+      "so the rung counts 1, not 3")
+
+// The same CONTRACT under two different powers is two things — the merge is
+// per (power, key), never per key alone, or a module that is also a delegate
+// would lose the more dangerous of its two rungs.
+check(WalletPermissions.merged([
+    party(.actsAsWallet, "x", key: "0x1", on: "0xaaa"),
+    party(.movesWithoutSignature, "x", key: "0x1", on: "0xaaa"),
+]).count == 2, "one address under two powers stays two holders")
+
+// Two DIFFERENT contracts that resolve to the same registry label must not
+// fold — the whole reason identity is the address and not the name.
+check(WalletPermissions.merged([
+    party(.actsAsWallet, "Safe", key: "0x1", on: "0xaaa"),
+    party(.actsAsWallet, "Safe", key: "0x2", on: "0xaaa"),
+]).count == 2, "one label over two addresses stays two holders")
+
+// The same wallet twice (one delegate read per chain) contributes ONE account.
+check(WalletPermissions.merged([
+    party(.actsAsWallet, "d", key: "0x1", on: "0xAAA"),
+    party(.actsAsWallet, "d", key: "0x1", on: "0xaaa"),
+]).first?.accounts == ["0xAAA"],
+      "the same wallet on two chains is named once, case-insensitively")
+
+// A PRICED grant never merges: §292 has ranked it and its amount is its own.
+let twoGrants = WalletPermissions.merged([
+    h(.cappedAmount, "Uniswap", 10), h(.cappedAmount, "Uniswap", 20),
+])
+check(twoGrants.count == 2, "two priced grants to one spender stay two")
+check(WalletPermissions.rungs(twoGrants).first?.usd == 30, "and their total is still the sum")
+
+// Ranked order survives the merge — the two names a rung shows are still the
+// two biggest.
+check(WalletPermissions.merged([
+    h(.cappedAmount, "big", 100), h(.cappedAmount, "small", 1),
+]).map(\.name) == ["big", "small"], "the merge preserves §292's ranking")
+
+// ── the two halves of the scope ──────────────────────────────────────────────
+//
+// Split on `accounts`, so a grant can never appear in the acting list AND in
+// the approvals list below it.
+check(WalletPermissions.actingHolders([
+    party(.actsAsWallet, "d", key: "0x1", on: "0xaaa"),
+    h(.cappedAmount, "Uniswap", 10),
+    h(.wholeCollection, "OpenSea"),
+]).map(\.name) == ["d"], "only the holders that name a wallet are the acting half")
+check(WalletPermissions.actingHolders([]).isEmpty, "nothing in, nothing out")
+
 // ── an empty wallet ──────────────────────────────────────────────────────────
 check(WalletPermissions.rungs([]).isEmpty, "nothing in, nothing out")
 
@@ -218,6 +286,26 @@ mutate "a token rung stops expecting a figure, so a failed price read goes silen
 mutate "a rung names more holders than it can draw" \
   "names: group.prefix(namesShown).map(\\.name)" "names: group.map(\\.name)"
 
+# prd §514 — the duplication the merge exists to end, and the three ways the
+# merge itself can be wrong while still rendering a plausible card.
+mutate "the same delegate on six wallets counted six times again" \
+  "let mergeable = holder.usd == nil" "let mergeable = false"
+mutate "the merge folds two powers together, losing the more dangerous rung" \
+  "let id = \"\\(holder.power.rawValue)|\\(holder.key)\"" \
+  "let id = holder.key"
+mutate "the merge keys on the DISPLAY NAME, folding two contracts one registry labels alike" \
+  "let id = \"\\(holder.power.rawValue)|\\(holder.key)\"" \
+  "let id = \"\\(holder.power.rawValue)|\\(holder.name)\""
+mutate "a merged holder stops saying which of your wallets it acts for" \
+  "accounts: already.accounts + fresh)" "accounts: already.accounts)"
+mutate "two priced grants to one spender collapse, and a real amount is dropped" \
+  "let mergeable = holder.usd == nil" "let mergeable = true"
+mutate "the same wallet, read once per chain, is named twice on one row" \
+  "!already.accounts.contains { \$0.caseInsensitiveCompare(account) == .orderedSame }" \
+  "false"
+mutate "a grant is offered to the acting list as well as to the approvals list" \
+  "holders.filter { !\$0.accounts.isEmpty }" "holders"
+
 # ── drift guards: the wiring the compiled arithmetic cannot prove ────────────
 strip() { sed -E 's://.*::' "$1" | sed -E '/^[[:space:]]*\/\/\//d'; }
 
@@ -255,8 +343,51 @@ strip "$MAP" | grep -A 2 'static func power(for grant:' | grep -q 'if grant.forA
 grep -q 'usd: nil,' "$MAP" \
   || fail "an acting party can now carry a dollar amount"
 
+# prd §514 — the LIST half. `namesShown` promises "the list below carries
+# every holder", and until this it carried only the token grants: a Safe
+# module, a delegate and a keystore credential were counted by the card and
+# listed by nothing, which is how a wallet with six delegates and no approvals
+# drew a count over an empty page.
+ROWS="Casberi/Casberi/Screens/WalletActingPartiesRows.swift"
+[ -f "$ROWS" ] || fail "the acting-parties list is gone — the card's names fold into nothing again"
+grep -q 'walletActingSection' "$FEED" \
+  || fail "the Permissions scope no longer draws the acting-parties list"
+# Acting BEFORE approvals, or the unbounded holders sort under the capped ones
+# and contradict the card directly above them.
+# Blank lines are squeezed out first: `strip` turns a comment into an empty
+# line, so a bare `-A 2` counts the prose rather than the code under it.
+# Anchored on the ROW switch, not the head switch — `case .permissions:` also
+# names the drawing one level up, and an unanchored grep reads that block's
+# closing brace as this one's first row.
+order=$(strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 2 '^            case .permissions:$')
+print -r -- "$order" | sed -n '2p' | grep -q 'walletActingSection' \
+  || fail "the acting list no longer leads the Permissions scope's rows"
+print -r -- "$order" | sed -n '3p' | grep -q 'walletApprovalsSection' \
+  || fail "the approvals list no longer follows it in the Permissions scope"
+
+# A LIST, NOT A CONTROL (§112/§293): nothing here signs, revokes or opens.
+# A delegate is undone from the wallet app that set it, so a chevron here
+# would be §83's dead control.
+strip "$ROWS" | grep -qE 'openURL|Button|onTap|sheet' \
+  && fail "the acting-parties list grew a control — §112: it is an inventory with no verb"
+
+# The row's sentence is the RUNG's, so a row and the count above it can never
+# describe the same holder differently.
+grep -q 'holder.power.phrase' "$ROWS" \
+  || fail "the row stopped taking its sentence from the rung it is counted in"
+# ...and it must say which of your wallets, or the merge has hidden a fact
+# rather than tidied one.
+grep -q 'holder.accounts.map' "$ROWS" \
+  || fail "a merged holder no longer names the wallets it acts for"
+# §293's ceiling: an account whose modules cannot be listed says so, because an
+# empty list and an unreadable one look identical.
+grep -q 'modulesUnreadable' "$ROWS" \
+  || fail "the unreadable-modules ceiling is no longer stated in the list"
+grep -q 'keystorePartial' "$ROWS" \
+  || fail "the capped-keystore ceiling is no longer stated in the list"
+
 # The card speaks as ONE sentence (§299), like the risk bars two scopes over.
 grep -q 'accessibilityElement(children: .combine)' "$CARD" \
   || fail "the card stopped speaking as one ordered sentence"
 
-print "  ok   11 mutations, 10 drift guards"
+print "  ok   18 mutations, 20 drift guards"

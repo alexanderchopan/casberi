@@ -34,7 +34,17 @@ enum WalletPermissionsSource {
                                  // card exists is that a money-ranked card
                                  // would have to invent a zero to place them.
                                  usd: nil,
-                                 note: nil))
+                                 note: note(for: party.kind),
+                                 // THE ACTING ADDRESS, NOT THE NAME (prd
+                                 // §514). `Party.address` is the contract for
+                                 // a module or a delegate and the 32-byte key
+                                 // id for a keystore credential — identity in
+                                 // both cases. `Party.id` would be wrong here:
+                                 // it embeds the network and the safe, so the
+                                 // same delegate on two chains, which is the
+                                 // ordinary case, would stay two holders.
+                                 key: party.address.lowercased(),
+                                 accounts: [account.address]))
             }
         }
 
@@ -47,9 +57,31 @@ enum WalletPermissionsSource {
                              // arrived — a priced collection would put a
                              // figure on the one rung that must not have one.
                              usd: grant.forAll ? nil : grant.usd,
-                             note: nil))
+                             note: nil,
+                             // A GRANT NEVER MERGES WITH ANOTHER GRANT. Its
+                             // own id, so an unpriced operator grant held by
+                             // two wallets stays two rows: §292 ranks grants
+                             // and this file must not quietly re-count them.
+                             // The duplication `merged` exists for is on the
+                             // acting half alone.
+                             key: grant.id,
+                             accounts: []))
         }
-        return out
+        // ONE HOLDER PER THING THAT CAN ACT — see `WalletPermissions.merged`.
+        return WalletPermissions.merged(out)
+    }
+
+    /// The one fact a rung's row can add that `Power.phrase` cannot carry: a
+    /// session key's expiry.
+    ///
+    /// Every other kind's sentence is exactly its rung's, so repeating it here
+    /// would print the same clause twice on one row. A key with NO expiry says
+    /// so — that is the notable half of §402's pair, and silence there would
+    /// read as "we did not look".
+    static func note(for kind: WalletActingParties.Party.Kind) -> String? {
+        guard case .altanaKey(false, let expiry) = kind else { return nil }
+        guard let expiry else { return String(localized: "No expiry") }
+        return String(localized: "Until \(expiry.formatted(date: .abbreviated, time: .omitted))")
     }
 
     /// A grant's rung. `forAll` is tested BEFORE `unlimited` because an

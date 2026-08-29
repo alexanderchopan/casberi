@@ -129,13 +129,89 @@ enum WalletPermissions {
         /// One short fact the rung can carry when it has room ("installed
         /// 14 Mar"). nil is ordinary.
         let note: String?
+        /// IDENTITY, for `merged` (prd §514). The acting contract or key id
+        /// for a party; the grant's own id for a grant.
+        ///
+        /// Deliberately NOT the name: two of your wallets delegating to the
+        /// same contract produce two holders whose names are identical
+        /// strings, and merging on a display name would also fold two
+        /// genuinely different contracts that happen to share a registry
+        /// label. Defaulted to the name so an existing construction site is
+        /// unchanged — and a caller that does not set it gets no merging,
+        /// which is the old behaviour rather than a wrong one.
+        let key: String
+        /// WHICH OF YOUR WALLETS this can act for, in first-seen order.
+        ///
+        /// Empty for a token grant: `WalletApprovalExposure` ranks a grant by
+        /// what is at stake and does not carry the wallet it was granted
+        /// from, so an empty list here means "not stated", never "none". The
+        /// acting half fills it, which is the whole point — a delegate named
+        /// twice with no account beside it is the report this came from.
+        let accounts: [String]
 
-        init(power: Power, name: String, usd: Double? = nil, note: String? = nil) {
+        init(power: Power,
+             name: String,
+             usd: Double? = nil,
+             note: String? = nil,
+             key: String? = nil,
+             accounts: [String] = []) {
             self.power = power
             self.name = name
             self.usd = usd
             self.note = note
+            self.key = key ?? name
+            self.accounts = accounts
         }
+    }
+
+    /// ONE HOLDER PER THING THAT CAN ACT, however many of your wallets it acts
+    /// for (prd §514, 2026-08-28).
+    ///
+    /// Reported against a real wallet: the card read *"6 · Can act as your
+    /// wallet"* and named `…51d3 · …51d3` — the same delegate contract, once
+    /// per watched address that delegates to it. `WalletActingParties.read`
+    /// answers PER ACCOUNT and must (a party is a fact about one address), so
+    /// the flattening is where the same contract has to stop being counted
+    /// twice. Six delegations to one contract are ONE thing with that power,
+    /// which is what the rung claims to count.
+    ///
+    /// **Only UNPRICED holders merge.** A priced grant is a distinct grant
+    /// with its own amount that §292 has already ranked, and folding two would
+    /// either drop an amount or invent a sum — the rung's own all-or-nothing
+    /// rule (`Rung.usd`) one level up. Unpriced holders have no amount to
+    /// lose, which is exactly the class that duplicates.
+    ///
+    /// Order is preserved: the first sighting keeps its position, so §292's
+    /// ranking survives and the two names a rung shows are still its first
+    /// two.
+    static func merged(_ holders: [Holder]) -> [Holder] {
+        var out: [Holder] = []
+        var seen: [String: Int] = [:]
+        for holder in holders {
+            // Spelled as one named condition rather than twice inline: it is
+            // the whole rule, and a guard that repeats half of it is a rule a
+            // mutation can break in one place and leave standing in the other
+            // (caught by this file's own harness on its first run).
+            let mergeable = holder.usd == nil
+            let id = "\(holder.power.rawValue)|\(holder.key)"
+            guard mergeable, let at = seen[id] else {
+                if mergeable { seen[id] = out.count }
+                out.append(holder)
+                continue
+            }
+            let already = out[at]
+            let fresh = holder.accounts.filter { account in
+                !already.accounts.contains { $0.caseInsensitiveCompare(account) == .orderedSame }
+            }
+            guard !fresh.isEmpty else { continue }
+            out[at] = Holder(power: already.power,
+                             name: already.name,
+                             usd: already.usd,
+                             note: already.note,
+                             key: already.key,
+                             accounts: already.accounts + fresh)
+        }
+        return out
     }
 
     /// One drawn row.
@@ -198,6 +274,21 @@ enum WalletPermissions {
                         hasUnpriced: priced.count < group.count,
                         note: group.count == 1 ? group[0].note : nil)
         }
+    }
+
+    /// The holders that can act as an ACCOUNT, rather than move a token — the
+    /// list half of this scope (prd §514).
+    ///
+    /// Split on `accounts` rather than on `power`, and the difference is real:
+    /// an unlimited token grant and a Safe module share no rung, but an
+    /// operator grant (`wholeCollection`) and a delegate could be filed
+    /// together by rung alone if the rungs are ever re-cut. What actually
+    /// separates the two halves is where they came from — the acting read
+    /// names the wallet, `WalletApprovalExposure` does not — and the approvals
+    /// card below already lists every grant, so a holder appearing in both
+    /// lists is the one outcome to avoid.
+    static func actingHolders(_ holders: [Holder]) -> [Holder] {
+        holders.filter { !$0.accounts.isEmpty }
     }
 
     /// Everything that can be priced, summed — the eyebrow's figure.

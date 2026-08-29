@@ -191,52 +191,60 @@ struct WalletNFTShelfCard: View {
             .padding(.horizontal, DS.Space.s4)
     }
 
-    /// **A QUAD OF FOUR COLLECTIONS, one cover each** (2026-08-26, prd §483 —
-    /// user: *"the chart is four large NFTs in a quad b/c they can pick four
-    /// to show"*, then *"it can be a quad of the collections"*).
+    /// **THE PICKED PIECES, DRAWN IN THE SLOT** (2026-08-26, prd §483 — user:
+    /// *"the chart is four large NFTs in a quad b/c they can pick four to
+    /// show"*; corrected to pieces by §493, and to an adaptive grid by §514).
     ///
-    /// Four COLLECTIONS rather than four pieces, which is what keeps §387's
-    /// pick unit intact: a pick names a contract, never a token id, because
-    /// *"show my Squiggles" is a sentence someone means* and picking three
-    /// specific tokens out of a collection is filing. So the quad shows the
-    /// picks themselves, and the cover is simply the first piece that came
-    /// back for each — the shelf's own read, grouped, with no second fetch and
-    /// no new stored state.
+    /// Pieces rather than one cover per collection, which does NOT bend §387's
+    /// pick unit: a pick names a CONTRACT, never a token id, because *"show my
+    /// Squiggles" is a sentence someone means* — and what gets DISPLAYED is
+    /// simply the pieces those picks bring back. Pick by collection, show the
+    /// art. No second fetch and no new stored state; this is the shelf's own
+    /// cached read.
     ///
-    /// **Four, and the fifth is a count, never a scroll.** The strip this
-    /// replaces scrolled horizontally inside a room that already scrolls
-    /// vertically, so the pieces past the third were reachable only by a
-    /// gesture nothing announced. A quad is the whole reading at once; if
-    /// there are more collections than fit, the slot says so in words and the
-    /// list directly below carries every one of them.
+    /// **The whole reading at once, never a scroll.** The strip this replaced
+    /// scrolled horizontally inside a room that already scrolls vertically, so
+    /// the pieces past the third were reachable only by a gesture nothing
+    /// announced. Past what the grid holds, the list directly below carries
+    /// every piece that came back.
     private var strip: some View {
-        let shown = Array(pieces.prefix(Self.quadCap))
-        // **2x2, NOT 1x4** (user, 2026-08-26: *"on wallet the nfts should be
-        // in a 2x2 in the slot"*).
+        // **THE GRID GETS DENSER, THE SLOT DOES NOT GROW** (prd §514,
+        // 2026-08-28, user: *"if a user picks more than 4 to show can we make
+        // the slot in the wallet that shows 4 resize to show five or six
+        // somehow? maybe we show them in tiles in a three by three grid"*).
         //
-        // The row drew four cells across a 402pt screen — ~87pt each — inside
-        // a slot 210pt tall, so the art was small AND the slot carried ~120pt
-        // of dead space beneath it. A grid spends the height the slot already
-        // reserves: each cell roughly doubles in area and the drawing fills
-        // its box, which is what every other scope's figure is being held to.
+        // Four cells were fixed, so a wallet holding six picked collections
+        // saw four pieces and the drawing said nothing about the rest —
+        // §307's silent-truncation shape in the one place that is meant to BE
+        // the reading. Past four it goes to 3x3, and the arithmetic deciding
+        // that lives in `NFTGrid` where the harness can compile it: a row of
+        // two under a row of three renders perfectly and is wrong.
         //
-        // A `LazyVGrid` is deliberately NOT used — there are at most four
+        // The slot itself is untouched. `DSRoomChassis.visualSlot` is the box
+        // every scope's figure shares (§483) and a room whose figure box
+        // changes height per scope is the reflow that ruling exists to avoid.
+        let columns = NFTGrid.columns(available: pieces.count)
+        let shown = Array(pieces.prefix(NFTGrid.cap(available: pieces.count)))
+        let rows = NFTGrid.rows(shown, columns: columns)
+        let cell = CGSize(width: Self.cellWidth(columns: columns),
+                          height: Self.cellHeight(rows: rows.count))
+        // A `LazyVGrid` is deliberately NOT used — there are at most nine
         // cells, all on screen, so laziness buys nothing and costs a sizing
-        // pass; two `HStack`s in a `VStack` settle their frame immediately,
-        // which is `coverSide`'s own reason for being spelled rather than
-        // measured.
+        // pass; stacked `HStack`s settle their frame immediately, which is
+        // `coverSide`'s own reason for being spelled rather than measured.
         return VStack(spacing: Self.quadGap) {
-            ForEach(Array(Self.pairs(shown).enumerated()), id: \.offset) { _, row in
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                 HStack(spacing: Self.quadGap) {
                     ForEach(row) { piece in
-                        quadCell(piece)
+                        quadCell(piece, cell: cell)
                     }
-                    // A LAST ROW OF ONE KEEPS ITS CELL HALF-WIDTH. Without
-                    // this, three pieces draw one cell across the full width
-                    // under two half-width ones, which reads as a feature
-                    // ("this one is bigger") rather than as the end of a list.
-                    if row.count == 1 {
-                        Color.clear.frame(width: Self.cellWidth, height: Self.cellHeight)
+                    // A SHORT LAST ROW KEEPS ITS CELLS THE SAME SIZE. Without
+                    // this, one piece draws a cell across the full width under
+                    // a full row, which reads as a feature ("this one is
+                    // bigger") rather than as the end of a list.
+                    ForEach(0..<NFTGrid.padding(lastRow: row.count, columns: columns),
+                            id: \.self) { _ in
+                        Color.clear.frame(width: cell.width, height: cell.height)
                     }
                 }
             }
@@ -253,18 +261,14 @@ struct WalletNFTShelfCard: View {
         // The pick model is UNTOUCHED and needs no amendment: §387 picks a
         // CONTRACT ("show my Squiggles"), and what is DISPLAYED is the pieces
         // those picks bring back. Pick by collection, show the art.
-        // **THE GRID IS SQUARE AND CENTRED, and both halves of that are the
-        // gear.** NFT art is square, and the slot is 210pt tall, so two rows
-        // fix the cell at ~101pt on a side — which means a cell stretched to
-        // the full column width would be a 181x101 landscape box holding a
-        // square picture, i.e. the dead space moved rather than removed.
         //
-        // Sizing the cells square makes the grid 210pt wide, and CENTRING it
-        // is what clears the room's settings gear: that control is an overlay
-        // on this slot's top-trailing corner, and a full-width top row draws
-        // straight under it (measured — the gear sat on the second tile).
-        // Holdings buys the same clearance with `.padding(.top, DS.Face.shelf)`
-        // because a treemap can lose height; art cannot lose a row.
+        // **CENTRED, and that is the gear.** The room's settings control is an
+        // overlay on this slot's top-trailing corner, and a full-width top row
+        // draws straight under it (measured — the gear sat on the second
+        // tile). At two columns the cells are square and the grid is 210pt
+        // wide, which clears it; at three the cells fill the width the way the
+        // quadrants did, and the gear covers a corner of one piece, which is
+        // the trade the 2x2 already made ("fine if the gear covers one").
         .frame(maxWidth: .infinity)
         .padding(.horizontal, DSRoomChassis.inset)
     }
@@ -279,69 +283,43 @@ struct WalletNFTShelfCard: View {
             .capitalized
     }
 
-    /// How many pieces the fixed slot draws.
-    ///
-    /// **A DISPLAY cap, so the list below must carry the rest** — the pick is
-    /// unlimited and the fetch returns up to `WalletNFTShelf.pieceCap` (24), so
-    /// a quad that simply stopped at four would drop twenty pieces with nothing
-    /// saying so (§307's silent-truncation class). `WalletNFTCollectionRows`
-    /// lists every piece that came back.
-    private static let quadCap = 4
-
-    /// One cover per PICKED COLLECTION, in the order the pieces came back, up
-    /// to four. Grouped rather than fetched: `pieces` is already the shelf's
-    /// cached read for exactly this pick book.
-    private var coverGroups: [(collection: String, cover: WalletNFTShelf.NFTPiece, count: Int)] {
-        var order: [String] = []
-        var byCollection: [String: [WalletNFTShelf.NFTPiece]] = [:]
-        for piece in pieces {
-            if byCollection[piece.collection] == nil { order.append(piece.collection) }
-            byCollection[piece.collection, default: []].append(piece)
-        }
-        return order.compactMap { name in
-            guard let held = byCollection[name], let cover = held.first else { return nil }
-            return (name, cover, held.count)
-        }
-    }
-
     /// One quarter of the quad. The door is the piece's own OpenSea page.
     @ViewBuilder
-    private func quadCell(_ piece: WalletNFTShelf.NFTPiece) -> some View {
+    private func quadCell(_ piece: WalletNFTShelf.NFTPiece, cell: CGSize) -> some View {
         // A piece on a chain OpenSea doesn't list (Robinhood) has no door, so
         // it draws as a picture and not as a control — §83, and §275
         // specifically: a verb that looks live and lands nowhere is worse than
         // no verb.
         if let url = piece.openSeaURL {
-            Button { openURL(url) } label: { quadArt(piece) }
+            Button { openURL(url) } label: { quadArt(piece, cell: cell) }
                 // The photograph register (§384) — a picture lifts.
                 .buttonStyle(PressLift())
         } else {
-            quadArt(piece)
+            quadArt(piece, cell: cell)
         }
     }
 
-    /// One ROW of the quad, spent on art. Spelled rather than measured for
-    /// `walletVisualSlot`'s own reason: a measured height settles a frame late,
-    /// which is the same jump arriving slower.
+    /// One cell's HEIGHT — the slot divided by however many rows this many
+    /// pieces came to. Spelled rather than measured for `walletVisualSlot`'s
+    /// own reason: a measured height settles a frame late, which is the same
+    /// jump arriving slower.
     ///
-    /// Two of these plus the gap between them is what fills the slot, so this
-    /// is derived from `DSRoomChassis.visualSlot` rather than typed — the two
-    /// cannot drift, and a change to the chassis moves the art with it.
-    /// Half the slot's height, less the gap — one quadrant tall.
-    private static var cellHeight: CGFloat {
-        (DSRoomChassis.visualSlot - Self.quadGap) / 2
+    /// Derived from `DSRoomChassis.visualSlot` rather than typed, so the two
+    /// cannot drift and a change to the chassis moves the art with it.
+    private static func cellHeight(rows: Int) -> CGFloat {
+        NFTGrid.side(box: DSRoomChassis.visualSlot, gap: Self.quadGap, count: rows)
     }
 
-    /// One quadrant WIDE. Derived from the phone's own width less the room's
+    /// One cell's WIDTH. Derived from the phone's own width less the room's
     /// two insets, because the grid has to fill the box rather than sit
     /// centred in it — see `quadArt` for the ruling.
     ///
     /// Spelled from the layout rather than measured, for `visualSlot`'s
-    /// reason: a measured width settles the frame a frame late. 402 is the
-    /// design width; a wider screen simply gives each cell more, which is
-    /// what `maxWidth: .infinity` on the row already allows for.
-    private static var cellWidth: CGFloat {
-        (402 - DSRoomChassis.inset * 2 - Self.quadGap) / 2
+    /// reason. 402 is the design width; a wider screen simply gives each cell
+    /// more, which is what `maxWidth: .infinity` on the row already allows for.
+    private static func cellWidth(columns: Int) -> CGFloat {
+        NFTGrid.side(box: 402 - DSRoomChassis.inset * 2,
+                     gap: Self.quadGap, count: columns)
     }
 
     /// The air between the four covers (user, 2026-08-27: *"we can space them
@@ -353,20 +331,8 @@ struct WalletNFTShelfCard: View {
     /// which this scope had just been fixed for.
     private static var quadGap: CGFloat { DS.Space.s2 }
 
-    /// The shown pieces in rows of two.
-    ///
-    /// A free function on the type rather than a computed property so the
-    /// harness can reach it: the pairing is the one piece of arithmetic here
-    /// that can be wrong in a way that still renders (three pieces as 2+1
-    /// versus 1+2, which puts the odd cell in the wrong corner).
-    static func pairs(_ shown: [WalletNFTShelf.NFTPiece]) -> [[WalletNFTShelf.NFTPiece]] {
-        stride(from: 0, to: shown.count, by: 2).map {
-            Array(shown[$0..<min($0 + 2, shown.count)])
-        }
-    }
-
     @ViewBuilder
-    private func quadArt(_ piece: WalletNFTShelf.NFTPiece) -> some View {
+    private func quadArt(_ piece: WalletNFTShelf.NFTPiece, cell: CGSize) -> some View {
         Group {
             if let seed = piece.demoSeed {
                 // The demo's pieces are drawn, not loaded — generated art,
@@ -389,7 +355,7 @@ struct WalletNFTShelfCard: View {
         // `scaledToFill` before the clip, or a non-square source letterboxes
         // inside a landscape cell and puts the margins back one level down.
         .scaledToFill()
-        .frame(width: Self.cellWidth, height: Self.cellHeight)
+        .frame(width: cell.width, height: cell.height)
         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         .accessibilityLabel(Text(piece.collection))
     }

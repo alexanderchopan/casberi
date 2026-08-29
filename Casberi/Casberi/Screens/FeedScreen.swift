@@ -4584,6 +4584,12 @@ struct FeedScreen: View {
                 walletDeFiSection
                 walletPerpsSection
             case .permissions:
+                // THE ACTING HALF FIRST, THEN THE GRANTS (prd §514). The
+                // drawing above ranks by reach, unbounded first, and these
+                // ARE the unbounded ones — a delegate listed under the capped
+                // token grants would contradict the card a centimetre above
+                // it. It is also the half that had no list at all.
+                walletActingSection
                 walletApprovalsSection
             }
         case .ledger:
@@ -7152,6 +7158,30 @@ struct FeedScreen: View {
                             WalletPermissionsCard(holders: holders)
                     .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
                     .padding(.bottom, DS.Space.s3)
+        }
+    }
+
+    /// The `Permissions` scope's OTHER list — everything that can act as one
+    /// of your wallets (prd §514).
+    ///
+    /// Separate from `walletApprovalsSection` because the two come from
+    /// different reads and only one of them can be tapped: a grant opens its
+    /// own prepare card (live allowance, revoke calldata, a Revoke.cash door)
+    /// and a delegate has no such destination, so folding them into one list
+    /// would give half its rows a chevron and half none.
+    @ViewBuilder
+    private var walletActingSection: some View {
+        let holders = WalletPermissionsSource.holders(exposure: walletLive.exposure,
+                                                      acting: walletLive.acting)
+        if !WalletPermissions.actingHolders(holders).isEmpty
+            || walletLive.acting.contains(where: { $0.modulesUnreadable || $0.keystorePartial }) {
+            Section {
+                WalletActingPartiesRows(holders: holders, acting: walletLive.acting)
+                    .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(WalletCardStyle.rowInsets)
+            }
         }
     }
 

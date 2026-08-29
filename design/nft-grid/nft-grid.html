@@ -1,0 +1,72 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>NFT shelf — the grid gets denser (prd §494)</title>
+<style>
+  :root { --bg:#000; --ink:#fff; --ink2:#8e8e93; --slot:#0e0e10; }
+  body { margin:0; padding:32px; background:var(--bg); color:var(--ink);
+         font:14px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif; }
+  h1 { font-size:20px; font-weight:600; margin:0 0 4px; }
+  p.lede { color:var(--ink2); margin:0 0 28px; max-width:62ch; }
+  .row { display:flex; gap:28px; flex-wrap:wrap; align-items:flex-start; }
+  .case { width:402px; }
+  .case h2 { font-size:15px; font-weight:600; margin:0 0 2px; }
+  .case p { color:var(--ink2); font-size:12px; margin:0 0 10px; }
+  /* the fixed figure slot every scope shares — 402 wide, 210 tall, 16pt insets */
+  .slot { width:402px; height:210px; background:var(--slot); position:relative;
+          border-radius:14px; box-sizing:border-box; }
+  .grid { position:absolute; inset:0 16px; display:flex; flex-direction:column; gap:8px; }
+  .grid .r { display:flex; gap:8px; flex:1; }
+  .cell { border-radius:12px; overflow:hidden; }
+  .cell.blank { background:transparent; }
+  .gear { position:absolute; top:8px; right:22px; width:28px; height:28px; border-radius:50%;
+          background:rgba(255,255,255,.14); display:grid; place-items:center; font-size:13px; }
+  .meta { color:var(--ink2); font-size:11px; margin-top:8px; font-variant-numeric:tabular-nums; }
+</style>
+<h1>NFT shelf — the grid gets denser, the slot does not grow</h1>
+<p class="lede">The slot is <code>DSRoomChassis.visualSlot</code> (402 × 210), the fixed figure box
+every Wallet scope shares. Four picked pieces keep the quad; past four it goes to three across, so
+five, six and up to nine are drawn instead of silently dropped. The list below the slot still
+carries every piece.</p>
+<div class="row" id="cases"></div>
+<script>
+const W = 402, H = 210, INSET = 16, GAP = 8;
+const hues = [268, 12, 196, 42, 320, 150, 220, 96, 350];
+function art(i, w, h) {
+  const a = hues[i % hues.length], b = (a + 48) % 360;
+  return `<div class="cell" style="width:${w}px;height:${h}px;
+    background:linear-gradient(${35 + i * 20}deg,hsl(${a} 72% 46%),hsl(${b} 68% 32%))"></div>`;
+}
+function columns(n) { return n > 4 ? 3 : 2; }
+function cap(n) { const c = columns(n); return c * c; }
+function side(box, gap, count) { return count > 0 ? (box - gap * (count - 1)) / count : 0; }
+function render(n, note) {
+  const cols = columns(n), shown = Math.min(n, cap(n));
+  const rowCount = Math.ceil(shown / cols);
+  const cw = side(W - INSET * 2, GAP, cols), ch = side(H, GAP, rowCount);
+  let rows = '';
+  for (let r = 0; r < rowCount; r++) {
+    let cells = '';
+    const start = r * cols, end = Math.min(start + cols, shown);
+    for (let i = start; i < end; i++) cells += art(i, cw, ch);
+    for (let p = end - start; p < cols; p++)
+      cells += `<div class="cell blank" style="width:${cw}px;height:${ch}px"></div>`;
+    rows += `<div class="r">${cells}</div>`;
+  }
+  const dropped = n - shown;
+  return `<div class="case">
+    <h2>${n} picked piece${n === 1 ? '' : 's'}</h2>
+    <p>${note}</p>
+    <div class="slot"><div class="grid">${rows}</div><div class="gear">⚙</div></div>
+    <div class="meta">${cols} across · ${rowCount} row${rowCount === 1 ? '' : 's'} ·
+      cell ${cw.toFixed(0)}×${ch.toFixed(0)}pt${dropped > 0 ? ` · ${dropped} in the list below` : ''}</div>
+  </div>`;
+}
+document.getElementById('cases').innerHTML = [
+  render(3, 'Short last row keeps its cell size — the odd one is not made bigger.'),
+  render(4, 'The shipped quad, unchanged.'),
+  render(5, 'Past four: three across. This is what was being dropped.'),
+  render(6, 'Two full rows of three.'),
+  render(9, 'The ceiling. A fourth column would put the cell under 90pt in a 210pt box.'),
+  render(14, 'Nine drawn, the rest in the list — said, not silent.'),
+].join('');
+</script>

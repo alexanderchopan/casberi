@@ -108,6 +108,33 @@ grep -q "getContractsForOwner" "$TMP/shelf.nc" \
   || fail "WalletNFTShelf no longer reads getContractsForOwner"
 ok "the one detection read lives in WalletNFTShelf"
 
+# 1b. THE GRID IS `NFTGrid`'s AND NOT THE VIEW'S (prd §514). The arithmetic is
+#     in a Foundation-only file so the assertions above can compile it; a view
+#     that goes back to spelling its own columns, cap or cell side is the same
+#     drawing with no test behind it — and every way it can be wrong renders as
+#     an ordinary shelf.
+CARD="Casberi/Casberi/Screens/WalletNFTShelfCard.swift"
+strip_comments "$CARD" > "$TMP/card.nc"
+grep -q 'NFTGrid.columns(available:' "$TMP/card.nc" \
+  || fail "the shelf decides its own column count again"
+grep -q 'NFTGrid.cap(available:' "$TMP/card.nc" \
+  || fail "the shelf caps its own cells again"
+grep -q 'NFTGrid.side(box:' "$TMP/card.nc" \
+  || fail "the shelf sizes its own cells again"
+grep -q 'NFTGrid.padding(lastRow:' "$TMP/card.nc" \
+  || fail "a short last row no longer keeps its cells' size"
+ok "the shelf's grid is NFTGrid's arithmetic"
+
+# 1c. The SLOT does not grow. `DSRoomChassis.visualSlot` is the fixed box every
+#     scope's figure shares (§483), and a room whose figure box changes height
+#     per scope is the reflow that ruling exists to avoid — which is why the
+#     answer to "make the slot resize" was a denser grid.
+grep -q 'DSRoomChassis.visualSlot' "$TMP/card.nc" \
+  || fail "the shelf no longer derives its height from the shared figure slot"
+grep -qE 'visualSlot *[*+]' "$TMP/card.nc" \
+  && fail "the shelf grew its own taller slot — §483's figure box is shared"
+ok "the figure slot is the chassis', unmultiplied"
+
 # 2. THE NARROW READ IS ACTUALLY NARROW. `getNFTsForOwner` with no
 #    `contractAddresses[]` filter is the 2026-07-19 shelf that got cut: every
 #    piece on every chain, every time. It renders identically to the picked
@@ -613,6 +640,52 @@ check("isNFT names both NFT categories and nothing else",
       WalletNFTOrigin.isNFT("erc721") && WalletNFTOrigin.isNFT("erc1155")
         && !WalletNFTOrigin.isNFT("erc20") && !WalletNFTOrigin.isNFT("external"))
 
+// ── THE SHELF'S GRID (prd §514) ──────────────────────────────────────────────
+//
+// The slot is a fixed 210pt box every scope's figure shares, so the drawing
+// gets denser rather than taller. Every failure here renders as a perfectly
+// ordinary shelf: a row of two under a row of three (which reads as "this one
+// is bigger"), a grid one gap wider than its box (whose last column is
+// clipped), or a density decided from the capped list rather than the real one
+// (which is the same answer by luck).
+check("four or fewer is a quad", NFTGrid.columns(available: 1) == 2
+        && NFTGrid.columns(available: 4) == 2)
+check("five goes to three across", NFTGrid.columns(available: 5) == 3)
+check("and no further", NFTGrid.columns(available: 24) == 3)
+check("the cap is the columns squared",
+      NFTGrid.cap(available: 4) == 4 && NFTGrid.cap(available: 5) == 9
+        && NFTGrid.cap(available: 100) == 9)
+check("nine is the ceiling", NFTGrid.maxCells == 9)
+
+// The chunking. Three at two across is 2+1 and never 1+2 — the odd cell goes
+// in the LAST corner, or the drawing reads as a feature rather than the end of
+// a list.
+check("three in twos is 2 then 1",
+      NFTGrid.rows([1, 2, 3], columns: 2) == [[1, 2], [3]])
+check("five in threes is 3 then 2",
+      NFTGrid.rows([1, 2, 3, 4, 5], columns: 3) == [[1, 2, 3], [4, 5]])
+check("nine in threes is three full rows",
+      NFTGrid.rows(Array(1...9), columns: 3) == [[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+check("nothing in, nothing out", NFTGrid.rows([Int](), columns: 3).isEmpty)
+check("a zero-column grid draws nothing rather than dividing by it",
+      NFTGrid.rows([1, 2], columns: 0).isEmpty && NFTGrid.side(box: 100, gap: 8, count: 0) == 0)
+
+// A short last row is padded so its art stays the size of every other row's.
+check("a last row of one under three needs two blanks",
+      NFTGrid.padding(lastRow: 1, columns: 3) == 2)
+check("a last row of two under three needs one",
+      NFTGrid.padding(lastRow: 2, columns: 3) == 1)
+check("a full row needs none", NFTGrid.padding(lastRow: 3, columns: 3) == 0)
+check("an empty row needs none", NFTGrid.padding(lastRow: 0, columns: 3) == 0)
+
+// The gaps are n-1, not n. Spelling it `box / n - gap` is the error that
+// overflows a fixed box by one gap and clips the last row.
+check("two cells across a 210 box with an 8 gap are 101 each",
+      NFTGrid.side(box: 210, gap: 8, count: 2) == 101)
+check("three across the same box are 64⅔",
+      abs(NFTGrid.side(box: 210, gap: 8, count: 3) - 194.0 / 3) < 0.001)
+check("one cell is the whole box", NFTGrid.side(box: 210, gap: 8, count: 1) == 210)
+
 print(failures == 0 ? "\nAll assertions passed." : "\n\(failures) FAILED")
 exit(failures == 0 ? 0 : 1)
 SWIFT
@@ -797,6 +870,28 @@ mutate_origin "the holdings arm no longer decisive" \
 mutate_origin "erc1155 dropped from the NFT definition" \
   'category == "erc721" || category == "erc1155"' \
   'category == "erc721"'
+
+# 20. prd §514 — the grid. Each of these renders as an ordinary shelf.
+mutate "the grid stuck at a quad, so a fifth pick is never drawn" \
+  'available > 4 ? 3 : 2' '2'
+mutate "the density decided from the DRAWN list rather than the held one" \
+  'available > 4 ? 3 : 2' 'available > 9 ? 3 : 2'
+mutate "the cap stops following the columns, so a 3x3 draws four" \
+  'return c * c' 'return 4'
+mutate "the last row's blanks dropped, so one piece draws full-width under three" \
+  'return columns - count' 'return 0'
+mutate "a full last row padded, pushing a phantom cell onto every grid" \
+  'guard columns > 0, count > 0, count < columns else { return 0 }' \
+  'guard columns > 0 else { return 0 }'
+mutate "the cell side counts one gap per cell, so the grid overflows its box" \
+  'return (box - gap * CGFloat(count - 1)) / CGFloat(count)' \
+  'return (box - gap * CGFloat(count)) / CGFloat(count)'
+mutate "the gaps left out of the cell side entirely" \
+  'return (box - gap * CGFloat(count - 1)) / CGFloat(count)' \
+  'return box / CGFloat(count)'
+mutate "the chunking walks by one, so every row holds a single cell" \
+  'stride(from: 0, to: shown.count, by: columns)' \
+  'stride(from: 0, to: shown.count, by: 1)'
 
 echo
 echo "wallet-nft self-test passed."
