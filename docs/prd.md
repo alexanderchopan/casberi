@@ -79,6 +79,8 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §369 | A money receipt pours its SOURCE — nine hues, so ten money sheets read as ten places instead of ten rows | amended by §524 (the pour is ink on every paper; `MoneyReceipt.Hue` is still computed and still harnessed nine ways, and no view paints with it — the disc directly above the pour already states the source at full strength, so the wash was the same fact a second time and weaker) |
+| §495 | Every sheet head is a piece of paper — a raised surface, the ROOM'S HUE poured at the top, and the receipt silhouette | amended by §524 (the paper, the pour and the silhouette all stand; only the hue goes. `dsReceiptPaper` no longer TAKES a colour, which also ends the nil arm that gave a hueless app's page no top while a branded one got a coloured one) |
 | §500 | Hegotá does **no notifications** — no attention dots ever, because nothing in that room is urgent (nothing can move against you; the asset is test ETH) | amended by §522 for ONE event (the room's CONTENT rule stands whole and the dots stay off; a devnet RELAUNCH is not room content but the statement that everything the room shows describes a chain that no longer exists — §515a, two days after §500 and therefore unavailable to it, is a person losing an evening to exactly that on the sibling devnet) |
 | §306 | The classification lives in ONE file that reads what LANDED, so the never-fires list is reviewable in one screen | amended by §522 (two devnet seats carry facts no row holds — Hegotá lands no `Thing` at all, and a chain reset or an elapsed timelock belongs to no row — so `NotifyDevnet` is a second, harness-compiled door into the SAME submit; the headline also moved onto `NotifyKind` so the pure half can compose whole plans) |
 | §473 | The timelock's Live Activity is a CONTROL, never automatic, and its `staleDate` is the unlock instant | amended by §522 (the control stands, and becomes a persisted consent record: the moment the delay ends now reaches the lock screen, for a tracked address and no other — plus the relaunch bug where a surviving activity read as untracked) |
@@ -38603,3 +38605,136 @@ ever been delivered, and no simulator runs a `BGAppRefreshTask` at all —
 `-notifyProbe` now reports `devnet=` beside `planned=` and prints a
 `notifyDevnet|` census per seat, because silence here is the healthy answer
 almost every day and only a drifted read is a bug.
+
+## 524. Ten sheets read as ten places, and the disc above each one already said so (user: "i am wondering if the app would be cleaner if we made them ink or a bit lighter like super dark gray so we can keep the shape and pour, but not have colors like blue etc", then "i don't think any of those you said keep its color need to keep color", 2026-08-29)
+
+**Every pour in the app is a neutral now, on one token.** Asked for an
+inventory of the coloured crowns and then for the change, and — shown three
+cards proposed as exceptions — asked for those too: *"the card can be the new
+color or card go away"*, and *"i want the change tho"*. So there is no
+exception, and the absence of one is the structural part of this entry.
+
+### 1. What was actually there
+
+Eight live pours, found by walking every `LinearGradient` drawn behind
+content rather than by memory:
+
+1. The shell crown (`MainSurface.crownPour`) — **already Ink by default since
+   §204**, dose 0, so it had been answering this question correctly for
+   twenty-five days.
+2. `AppDetailScreen.brandWash` — `DS.washHue(for:)` at FULL strength for the
+   first 30% of 360pt. The loudest colour in the app.
+3. `bridgeSetupWash(name:)` — the same hue at 0.30 over 300pt, deliberately
+   "about a third of the product page's strength" so arriving from that page
+   did not drop to a bare gray form.
+4. The connected `BridgeSetupHeader` card — a 0.18 → 0.02 diagonal fill.
+5. `MoneyReceiptCard` — nine source hues through `DS.receiptPour` (§369).
+6. All seven §495 sheet heads through `DSSheetHead`/`dsReceiptPaper` — three
+   vibenet in Base blue, four Hegotá in `HegotaModeStyle.room` cyan plus one
+   per-mode tone.
+7. `PriceObjectCard` — an up/down direction wash.
+8. The address contact sheet — **already ink**, ruled on 2026-08-28
+   (*"i don't like the crown pours on the contact sheets they should just be
+   ink"*).
+
+**This is the fifth step in one direction and none of the previous four was
+reverted**: §204 (the crown gains `Ink` and it leads the list), 2026-07-18 (the
+feed and the thing sheet drop their washes — full ink), 2026-08-15 (`rowSkin`
+returns nil, on seeing the bright version live: *"it all looks vibecoded now"*),
+then the address sheet. A ruling re-reached from five independent starting
+points is not a preference.
+
+### 2. The line that decides each case
+
+**Colour that says WHAT IS HAPPENING stays. Colour that says WHERE IT CAME
+FROM goes.**
+
+An identity pour is a second, weaker copy of a fact the disc or mark directly
+above it already states at full saturation — so it teaches nothing a reader
+could learn, and it costs the app the evenness that makes ten sheets read as
+one product. That is exactly `DS.receiptPour`'s own doc arguing against
+itself: it said the pour "encodes identity, with ONE named exception", and
+identity was the thing the subject disc was put there to carry.
+
+The three cards held back as exceptions were `.risk` (attention over an open
+position near liquidation), `PriceObjectCard`'s direction, and Hegotá's
+per-mode tone. Each has a real claim to colour under that line — all three say
+what is happening rather than where it came from. The ruling overrode all
+three, and on the price card the ruling is plainly right for a reason the
+proposal missed: the direction is already stated twice on that card in the
+places a reader actually looks — the signed figure and the capsule beside it,
+both still coloured — so the wash was a third telling at the weakest possible
+strength, and removing it takes no fact off the screen.
+
+### 3. `DS.pourInk`, and the three decisions inside it
+
+`Color.adaptive(dark: "#ffffff14", light: "#0000000d")`.
+
+**The alpha is baked into the colour.** Every previous pour took a
+`ColorScheme` and picked a number, which is what made `receiptPourOpacity` a
+shared dial four unrelated views had to remember to reach for — and
+`Color.adaptive` already answers the same question one layer down, in the
+place the rest of `DesignTokens` answers it. The gradient is `pourInk` →
+`pourInk.opacity(0)`, no view needs `@Environment(\.colorScheme)` for it, and
+`receiptPourOpacity` is deleted.
+
+**A lift in dark and a shade in light, rather than one ink.** The pour's job is
+to give the paper a TOP — the thing that stops a card reading as text on a
+page, which is §495's whole reason for existing. Light falls from above, so on
+a dark paper that is white arriving and on a white paper it is shadow. Pouring
+black onto `#1a1a1c` would draw the top of the card as a hole, which is
+`ThemeStore.bleeds`' own reason for refusing to pour black in the light theme
+(§204's `Ink` case) read in the mirror.
+
+**And the number is NOT the old number.** A saturated hue at 0.20 and a
+neutral at 0.20 are not the same loudness — chroma carried most of the old
+pour's weight — so matching it would have swapped a colour for a grey BAND.
+`0x14` (0.078) is where the lift still reads as the paper having a top and
+stops reading as a header.
+
+### 4. The structural half: the paper no longer takes a colour
+
+`dsReceiptPaper` took a `Color?` and **nil meant no pour at all**. That was the
+honest answer while the colour was a claim: a room with no brand mark had
+nothing true to pour, and `HegotaModeStyle.room` exists in the first place
+because `DS.brandHue` correctly answers nil for a devnet.
+
+A neutral makes no claim, so there is nothing left to opt out of — and the
+parameter is **removed rather than defaulted**. A paper without a top is the
+"jumble of text" §495 was written to fix, and no sheet should be able to
+choose that by omission. It also ends a live asymmetry nobody had named: a
+hueless app's product page had no top at all while a branded one opened on a
+slab of colour, so ChatGPT and X read as unfinished versions of Stripe.
+
+### 5. What deliberately did not change
+
+None of it is a pour: the amount's tone (green gain, amber warn), `DSStamp`'s
+pill inks, Hegotá's mode disc, the connect bloom, and the address face's own
+reveal and copy sweep. That last one is the precedent this pass followed —
+when the contact sheet went to ink, `pourHue` STAYED for the face reveal,
+because those are moments rather than background and the design law is happy
+to spend a hue on a moment.
+
+**Three things were kept standing that a later reader will mistake for
+leftovers.** `MoneyReceipt.Hue` is still computed and still proven nine ways by
+`money-receipt-selftest.sh`, and no view paints with it — `DSStamp.shielded` is
+its one live caller, taking `.shield` as a stamp's INK, which is a word rather
+than a wash. `HegotaModeStyle.room` still draws the vault segment and the frame
+discs. `bridgeSetupWash` still takes a `name:` nothing reads, because about
+thirty screens pass it and removing it buys nothing while costing the day this
+becomes per-app again. Deleting any of the three would throw away a working
+classification, its harness and its reasoning to save a switch nobody renders;
+leaving them costs one function each and makes the day this is reversed a
+one-line day.
+
+### 6. What this costs, and what is unproven
+
+No request, no new `Thing` field, **no CloudKit deploy**, no new host. The iOS
+Simulator build succeeds and `design-ramp-audit`, `design-motion-audit` and
+`money-receipt-selftest` all pass.
+
+**UNSEEN ON A DEVICE.** `0x14` was chosen against an HTML mockup rendered at
+the real tokens — the paper, the pour height, the tooth and the type ramp — and
+not against a running app. The one thing worth checking first is whether the
+lift reads as the paper having a top or as a grey band, in both themes, on a
+real display; it is a one-number change either way.
