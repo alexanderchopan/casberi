@@ -48,10 +48,31 @@ struct HegotaRoomFigure: View {
     /// right now, not a scope worth keeping.
     @State private var pickedLane: HegotaFlow.Lane?
     @State private var laneRevert: Task<Void, Never>?
-    /// How many transactions the frame anatomy draws. Six 18pt rows plus their
-    /// gaps is what the 210pt slot holds under its reserved headline row; a
-    /// seventh would be clipped by `DSRoomSlot`, which is worse than absent.
-    private static let frameRows = 6
+    /// How many transactions the frame anatomy draws.
+    ///
+    /// **The budget is 166pt and the sum is written down, because the drawing
+    /// is not the only thing in it.** `DSRoomSlot` is a hard 210pt with
+    /// `.clipped()`, less its 30pt reserved headline row AND that row's own
+    /// `DS.Space.s3` bottom pad — 14pt on iOS, and the part that is easy to
+    /// miss because it lives in the chassis rather than here. The figure
+    /// spends: caption 16 + 4 + rows + 4 + legend 16 + 4 + the population
+    /// note 16. At five rows that is 5×14 + 4×5 = 90, so the total is 150 and
+    /// the slack is 16 — which is what absorbs a step or two of Dynamic Type,
+    /// since `label12` is `.caption1`-relative and the slot is not.
+    ///
+    /// **The caption is clamped to ONE line here** for the same sum: at its
+    /// shared two-line limit the total is 166 exactly, zero slack, and the
+    /// line that goes over the edge is the last one — the population note.
+    ///
+    /// It was SIX, and the note did not exist. Adding it takes six rows to
+    /// 169 and the clip lands on the note itself, which is the one line that
+    /// exists to stop the cap being silent — the failure the old comment here
+    /// was already warning about, arriving through the disclosure rather than
+    /// through a seventh row. A fifth multiple shows the same shape as a
+    /// sixth; a clipped disclosure shows a card that lies.
+    ///
+    /// **Re-do this sum before raising it (prd §510).**
+    private static let frameRows = 5
 
     var body: some View {
         DSRoomSlot(headline: slotHeadline) { slotFigure }
@@ -256,10 +277,14 @@ struct HegotaRoomFigure: View {
     /// is what put "bar lengths are a log scale" behind a cog. Every scope's
     /// caption goes through here so the clearance is stated once rather than
     /// remembered four times.
-    @ViewBuilder private func figureCaption(_ text: String) -> some View {
+    /// `lines` is 2 for every figure but Frames, whose slot budget is spent
+    /// to the pt (see `frameRows`) — there a wrapped caption pushes the
+    /// population note off the bottom edge.
+    @ViewBuilder private func figureCaption(_ text: String,
+                                            lines: Int = 2) -> some View {
         Text(text)
             .dsText(.label12).foregroundStyle(DS.textTertiary)
-            .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            .lineLimit(lines).fixedSize(horizontal: false, vertical: true)
             .padding(.trailing, 56)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -513,8 +538,11 @@ struct HegotaRoomFigure: View {
     @ViewBuilder private var framesFigure: some View {
         if let mix = HegotaFrameMix.of(framedMoves) {
             let rows = Array(framedMoves.prefix(Self.frameRows))
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                figureCaption(framesCaption(mix))
+            // `s1`, not `s2`: the caption, the legend and the note all belong
+            // TO the drawing rather than beside it, and the three gaps are
+            // also what buys the note its room inside `frameRows`' budget.
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                figureCaption(framesCaption(mix), lines: 1)
                 VStack(spacing: 5) {
                     ForEach(rows) { move in
                         HegotaFrameStrip(frames: move.frames ?? [], height: 14,
@@ -523,12 +551,32 @@ struct HegotaRoomFigure: View {
                 }
                 framesLegend(mix)
                 if framedMoves.count > rows.count {
-                    let rest = framedMoves.count - rows.count
-                    // NAMED, never dropped — the no-silent-caps rule. A scope
-                    // drawing six of nineteen transactions without saying so
-                    // is a claim about how much you do.
-                    Text(rest == 1 ? String(localized: "1 more, in the list below")
-                                   : String(localized: "\(String(rest)) more, in the list below"))
+                    // **THE LEGEND AND THE BARS COUNT DIFFERENT POPULATIONS,
+                    // and until this line nothing said so** (prd §510). The
+                    // legend is a census over every framed transaction — it
+                    // is what the "N steps" headline is made of — while the
+                    // drawing is capped at `frameRows`. So on twelve
+                    // transactions the legend totalled nineteen steps above
+                    // six bars carrying nine of them, and a reader counting
+                    // segments against the legend could not make them agree
+                    // by any arithmetic. Reported as exactly that.
+                    //
+                    // Both facts, one line: what is drawn, and what the
+                    // counts are over. The no-silent-caps rule is the floor
+                    // here, not the whole of it — naming the remainder
+                    // without naming the census leaves the contradiction
+                    // intact.
+                    //
+                    // **"step counts", not "counts".** The legend's numbers
+                    // are STEPS and this line's are TRANSACTIONS, which is
+                    // the 19-against-12 confusion itself — a line naming
+                    // neither unit leaves the two numbers on the lower half
+                    // of the card still uncomparable.
+                    //
+                    // Short on purpose beyond that: `lineLimit(1)` and a long
+                    // localization truncate to the same silence this line
+                    // exists to end, and es/ja/ko/zh all have to fit too.
+                    Text(String(localized: "Newest \(String(rows.count)) of \(String(framedMoves.count)) · step counts cover all"))
                         .dsText(.label12).foregroundStyle(DS.textTertiary).lineLimit(1)
                 }
             }
@@ -539,8 +587,18 @@ struct HegotaRoomFigure: View {
     /// What the mix says in one line. The commonest step LEADS, because on this
     /// chain that is the sentence — an address that mostly moves UTXOs and one
     /// that mostly verifies are doing different things with the same chain.
+    ///
+    /// **Only when there IS a commonest step (prd §510).** This read
+    /// `mix.busiest` and narrated it as a superlative, which on a tie is a
+    /// winner picked by `HegotaFrameMix.of`'s alphabetical tiebreak — a
+    /// stable ORDER, never a claim. Shipped as "mostly Send steps" over a
+    /// 7–7 Send/Verify split with the legend printing both sevens two lines
+    /// down: §83's fake status, refuted on its own card, and reported as the
+    /// card not adding up. A tie is a real and interesting answer here, so it
+    /// is said rather than broken.
     private func framesCaption(_ mix: HegotaFrameMix) -> String {
-        guard let top = mix.busiest else {
+        let leaders = mix.leaders
+        guard !leaders.isEmpty else {
             return String(localized: "What your transactions ran")
         }
         let what = mix.transactions == 1
@@ -559,7 +617,24 @@ struct HegotaRoomFigure: View {
         // string transform rather than by a decision. `allcaps-audit` exempts
         // UTXO precisely because it is an initialism; lowercasing it here
         // undoes that from the other side.
-        return String(localized: "\(what) · mostly \(top.mode.label) steps")
+        //
+        // ONE mode present is not "mostly" anything — it is all of them, and
+        // saying "mostly" of a clean sweep understates the one address shape
+        // this chain makes most legible.
+        if mix.hasCommonest {
+            return String(localized: "\(what) · mostly \(leaders[0].mode.label) steps")
+        }
+        if mix.slices.count == 1 {
+            return String(localized: "\(what) · all \(leaders[0].mode.label) steps")
+        }
+        // Two tied modes are worth naming — "Send and Verify, evenly" is a
+        // real reading of an address that verifies everything it sends. Three
+        // or more is not a shape, so it is reported as the absence of one
+        // rather than as a list nobody can hold.
+        if leaders.count == 2 {
+            return String(localized: "\(what) · \(leaders[0].mode.label) and \(leaders[1].mode.label), evenly")
+        }
+        return String(localized: "\(what) · no commonest step")
     }
 
     /// The modes present, in the mix's ranked order, each with its count.

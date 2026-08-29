@@ -37384,3 +37384,89 @@ only to its ABI envelope and deliberately no further, and no watched account
 on this host has ever held a vibenet token, so the ledger's own rendering —
 the counterparty list, the reconstructed curve, the landed transfer rows — has
 been proven as arithmetic and not yet seen.
+
+## 510. The Frames card counted two populations and narrated a coin flip (user: "how does this math add up? … Is this a bug?", 2026-08-29)
+
+Reported against a screenshot reading **19 steps** / **12 transactions ·
+mostly Send steps**, over six bars, under a legend saying **Send 7 · Verify 7
+· UTXO 5**. The counts were all correct — `7 + 7 + 5 = 19`, and 12 is
+transactions, a different unit from steps — so nothing in the build, the
+sweep, `-hegotaProbe` or any audit could see anything wrong. The card was
+still unreadable, for two separate reasons, and both are honesty failures
+rather than arithmetic ones.
+
+**1. A superlative decided by the alphabet.** `HegotaFrameMix.of` breaks a
+tie on the mode's own `rawValue` so the figure is stable between opens, which
+is right for an ORDER. `framesCaption` then read `mix.busiest` — that order's
+head — and narrated it as a WINNER. Send and Verify were level at 7, `sender`
+sorts before `verify`, so the card announced "mostly Send steps" with the
+legend printing both sevens two lines below it. §83's fake status, refuted on
+its own card.
+
+The fix is a second accessor rather than a changed tiebreak, because the
+drawing and the sentence are asking different questions and the drawing's
+answer was already right: `leaders` is every slice sharing the top count, and
+`hasCommonest` is true only when there is exactly one AND more than one mode
+is present. A tie is a real reading here and is said — "Send and Verify,
+evenly" describes an address that verifies everything it sends — three or more
+is reported as the absence of a shape, and a single-mode mix says **all**,
+which is both true and stronger than "mostly".
+
+**2. The legend and the bars counted different populations, in silence.** The
+legend is a census over every framed transaction — it is what the `N steps`
+headline is made of — while the drawing has always been capped at `frameRows`.
+So the legend totalled nineteen steps above six bars carrying nine of them,
+and a reader counting segments against the legend could not make them agree by
+any arithmetic. Compounding it, segment widths are gas share rather than step
+counts (`HegotaFrameStrip`'s own documented contract), so the legend is not a
+key to the widths either.
+
+There WAS a mitigation — "N more, in the list below", written for the
+no-silent-caps rule — and it named the remainder without naming the census, so
+it left the contradiction standing. It now states both facts in one line:
+**"Newest 5 of 12 · step counts cover all"** — naming the UNIT, since the
+legend's numbers are steps and this line's are transactions, which is the
+19-against-12 confusion itself. The floor is that a cap is never
+silent; the whole of it is that the two populations are never confusable.
+
+**3. That line did not fit, which is why the fix costs a row.** `DSRoomSlot`
+is a hard 210pt with `.clipped()`, less its 30pt reserved headline row **and
+that row's own 14pt bottom pad** — 166pt, not the 180 the first cut of this
+fix assumed, because the pad lives in the chassis rather than in the figure.
+At six rows the note goes over the edge, and the line that goes over is the
+one that exists to stop the cap being silent. The row cap is **five**, the
+three internal gaps are `s1`, and the caption is clamped to one line here
+(at its shared two-line limit the total is 166 exactly — zero slack): 150pt,
+16pt of slack, which is what absorbs a step or two of Dynamic Type since
+`label12` is `.caption1`-relative and the slot is not. The arithmetic is
+written into the constant's own doc with an instruction to re-do the sum
+before raising it, because the old comment there was already warning about
+exactly this failure and described it arriving through a seventh row rather
+than through the disclosure.
+
+**Guarded, not remembered.** `HegotaFrameMix` is Foundation-only, so
+`hegota-selftest.sh` compiles the leader rule WHOLE — including a three-way
+fixture, since a two-way one passes a `leaders` that returns every slice by
+accident (the standing rule: a fixture only tests the rule it names if it
+FAILS that rule and passes every other one) — mutation-proven three ways.
+Four drift guards cover the view half, which no `swiftc` harness can reach:
+the caption must read `mix.leaders`, must never read `mix.busiest`, the
+drawing must name its population, and the row cap must stay five.
+
+**The demo already had the bug and now demonstrates the fix.** Its fixture is
+five framed transactions — every figure in it read off the chain on
+2026-08-27 — tallying UTXO 3, Verify 3, Sender 2, so the card has been saying
+"mostly UTXO steps" over a 3–3 tie on the screen every screenshot sweep
+photographs, and now says "UTXO and Verify, evenly". The POPULATION note is
+not exercised there and is not made to be: five framed transactions is exactly
+`frameRows`, so nothing is capped, and a sixth would have to be invented
+against a fixture whose whole contract is that every number in it is real.
+That branch is proven by the drift guard and by reading, not by a screenshot.
+
+**Not changed, deliberately:** the gas weighting, the tiebreak in `of(_:)`,
+and the legend's population. The headline, the caption and the legend all
+describe the whole census and agree with each other; the bars are the sample,
+and the sample is what says so.
+
+**UNBUILT** — authored on Linux with no Xcode and no Swift toolchain, so
+`verify.sh` and the harness have not run; all 28 static audits pass.

@@ -497,6 +497,29 @@ struct HegotaFrameMix: Equatable, Sendable {
 
     var busiest: Slice? { slices.first }
 
+    /// The modes that SHARE the top count — one normally, several on a tie
+    /// (prd §510).
+    ///
+    /// **`busiest` is the head of the drawing's ORDER; this is the CAPTION's
+    /// question, and they are not the same question.** `of(_:)` breaks a tie
+    /// on the mode's own name so the figure is stable between opens, which is
+    /// right for an
+    /// ORDER and wrong for a SUPERLATIVE: on a 7–7 Send/Verify split the
+    /// caption read "mostly Send steps" because `sender` sorts before
+    /// `verify`, while the legend one line below printed both sevens. A
+    /// winner decided by the alphabet, contradicted on the same card, is §83's
+    /// fake status — so a caption asks for the leaders and says "evenly" when
+    /// there is more than one.
+    var leaders: [Slice] {
+        guard let top = slices.first else { return [] }
+        return Array(slices.prefix { $0.count == top.count })
+    }
+
+    /// True only when ONE mode really is commonest. A single-mode mix is
+    /// deliberately not "mostly" anything either — it is all of them, and the
+    /// caption says so.
+    var hasCommonest: Bool { leaders.count == 1 && slices.count > 1 }
+
     /// Compose over the transactions whose frames were actually read.
     ///
     /// Returns nil when there is nothing to draw. **A transaction with exactly

@@ -5559,34 +5559,6 @@
         }
       }
     },
-    "%@ more, in the list below" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ más, en la lista de abajo"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "他%@件は下のリストに"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "아래 목록에 %@개 더"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "还有 %@ 个，见下方列表"
-          }
-        }
-      }
-    },
     "%@ moved no value" : {
       "localizations" : {
         "es" : {
@@ -8725,6 +8697,34 @@
         }
       }
     },
+    "%@ · %@ and %@, evenly" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · %@ y %@, por igual"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · %@と%@が同数"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · %@과 %@ 동일"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · %@ 与 %@ 持平"
+          }
+        }
+      }
+    },
     "%@ · %@ of your own" : {
       "localizations" : {
         "en" : {
@@ -9137,6 +9137,34 @@
         }
       }
     },
+    "%@ · all %@ steps" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · todos los pasos son %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · すべて%@ステップ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 모두 %@ 단계"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 全部为 %@ 步骤"
+          }
+        }
+      }
+    },
     "%@ · as of %@" : {
       "localizations" : {
         "en" : {
@@ -9325,6 +9353,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ · 主要是 %@ 步骤"
+          }
+        }
+      }
+    },
+    "%@ · no commonest step" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · sin paso predominante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 最多のステップなし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 최다 단계 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 无最常见步骤"
           }
         }
       }
@@ -24792,34 +24848,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "90 天内还有 1 个"
-          }
-        }
-      }
-    },
-    "1 more, in the list below" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 más, en la lista de abajo"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "他1件は下のリストに"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "아래 목록에 1개 더"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "还有 1 个，见下方列表"
           }
         }
       }
@@ -61914,6 +61942,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "新内容会在发生时自动送达，无需你动手。"
+          }
+        }
+      }
+    },
+    "Newest %@ of %@ · step counts cover all" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ más recientes de %@ · pasos de todas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最新%@/%@件 · ステップ数は全件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최신 %@/%@개 · 단계 수는 전체 기준"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最新 %@/%@ 个 · 步骤计数涵盖全部"
           }
         }
       }

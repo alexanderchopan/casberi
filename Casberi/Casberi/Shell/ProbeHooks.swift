@@ -6105,6 +6105,17 @@ enum ProbeHooks {
                           mix.transactions, mix.total, mix.failed, mix.unknown,
                           mix.slices.map { "\($0.mode.rawValue):\($0.count)" }
                               .joined(separator: ","))
+                    // **`leaders` is what the CAPTION reads and `slices` is
+                    // what the drawing reads** (prd §510), and they answer
+                    // differently on a tie — which is the one caption failure
+                    // a screenshot cannot be read for, because "mostly Send
+                    // steps" over a 7–7 split looks exactly like a real
+                    // superlative until you count the legend beneath it.
+                    // Logged apart from `mix=` for that reason.
+                    NSLog("[Casberi] hegotaFramesLead| commonest=%@ leaders=%@",
+                          mix.hasCommonest ? "YES" : "NO",
+                          mix.leaders.map { "\($0.mode.rawValue):\($0.count)" }
+                              .joined(separator: ","))
                 }
                 NSLog("[Casberi] hegotaScopes| %@",
                       HegotaRoom.sections(accounts).map(\.rawValue).joined(separator: ","))

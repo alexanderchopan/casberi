@@ -581,6 +581,28 @@ check(mix.slices.count == 2, "one slice per distinct mode")
 // a figure that reshuffles over identical data reads as broken.
 let tied = HegotaFrameMix.of([framed("0xt", [.verify, .utxo])])!
 check(tied.slices.map(\.mode) == [.utxo, .verify], "a tie breaks by name, not by chance")
+// ...and the ORDER that tiebreak produces must never be narrated as a WINNER.
+// The shipped caption read `busiest` as a superlative, so a 7–7 Send/Verify
+// split said "mostly Send steps" — `sender` sorts before `verify` — directly
+// above a legend printing both sevens. `leaders` is the caption's question.
+check(tied.leaders.count == 2, "a tie has TWO leaders, not a winner picked by the alphabet")
+check(!tied.hasCommonest, "a tie has no commonest step")
+check(mix.leaders.count == 1 && mix.hasCommonest,
+      "a real winner is still one leader")
+// The fixture must FAIL the rule it names and pass every other one: this one
+// is tied on the top count while a THIRD mode sits below it, so a `leaders`
+// that simply returned every slice would pass a two-way fixture by accident.
+let threeWay = HegotaFrameMix.of([framed("0x1", [.utxo, .verify, .sender, .sender, .utxo, .verify]),
+                                  framed("0x2", [.general])])!
+check(threeWay.leaders.count == 3,
+      "every mode sharing the top count is a leader — and the one below it is not")
+check(threeWay.leaders.allSatisfy { $0.count == 2 },
+      "a leader shares the TOP count, never merely appears")
+// A single-mode mix is not "mostly" anything either. `hasCommonest` is false
+// so the caption can say "all", which is both true and a stronger reading.
+let sweep = HegotaFrameMix.of([framed("0xw", [.utxo, .utxo])])!
+check(sweep.leaders.count == 1 && !sweep.hasCommonest,
+      "one mode present is ALL of them, never 'mostly' one of them")
 // A self-payment is ONE transaction here too.
 check(HegotaFrameMix.of([framed("0xs", [.utxo]),
                          framed("0xs", [.utxo], incoming: true)])!.transactions == 1,
@@ -806,6 +828,16 @@ mutate() {
   print "  ok   catches  $why"
 }
 
+# THE TIE, three ways. Each renders as a perfectly ordinary caption asserting a
+# winner the legend beneath it refutes — the shipped bug, reported as the card
+# not adding up.
+mutate "the caption's leader set collapses to the drawing's first slice (a tie narrated as a winner)" \
+  HegotaRoom.swift 's/return Array\(slices\.prefix \{ \$0\.count == top\.count \}\)/return [top]/'
+mutate "every slice counts as a leader (a clear winner reported as a tie)" \
+  HegotaRoom.swift 's/return Array\(slices\.prefix \{ \$0\.count == top\.count \}\)/return slices/'
+mutate "a single-mode mix claims a commonest step (\"mostly\" said of all of them)" \
+  HegotaRoom.swift 's/leaders\.count == 1 && slices\.count > 1/leaders.count == 1/'
+
 mutate "a conditional scope moved ahead of an unconditional one (the strip's head reflows)" \
   HegotaSection.swift 's/\[\.home, \.activity, \.accounts, \.frames, \.coins, \.nonces, \.sponsors\]/[.home, .coins, .activity, .accounts, .frames, .nonces, .sponsors]/'
 mutate "home no longer leads" \
@@ -995,6 +1027,24 @@ need HegotaRoomCard.swift.bare "head.hasRead" \
 need HegotaScreen.swift.bare "unwatchedExamples" \
   "the examples are gated on !connected again — watching one loses the other for good"
 
+# THE FRAMES CAPTION AND ITS LEGEND, as guards rather than as memory. Both
+# were reported from a device as "how does this math add up" and neither is
+# reachable by any other check here: the counts were always correct, so the
+# build, the sweep and every probe pass while the card contradicts itself.
+need HegotaRoomCard.swift.bare "mix.leaders" \
+  "the frames caption reads the drawing's first slice again — a tie renders as a winner the legend refutes"
+deny HegotaRoomCard.swift.bare "mix.busiest" \
+  "the frames caption is built from busiest again — that property is the drawing's head, never a superlative"
+# The legend is a census over EVERY framed transaction while the bars are
+# capped at `frameRows`, so the card must say which population each covers.
+# Without it the legend totals nineteen steps above six bars carrying nine.
+need HegotaRoomCard.swift.bare "step counts cover all" \
+  "the drawing no longer names its population — the legend and the bars count different things in silence"
+# The note has to FIT, or the one line stopping the cap being silent is itself
+# clipped by DSRoomSlot's 210pt. The arithmetic is in the constant's own doc.
+need HegotaRoomCard.swift.bare "frameRows = 5" \
+  "the frame row cap moved without re-doing the 180pt sum — six rows plus the population note clips at 185"
+
 # NO PRICE, EVER. This is test ETH; an amount here is a quantity, never a value.
 # A fiat conversion on this card would be §83's fake status in the one place a
 # reader has no way to check us.
@@ -1018,5 +1068,5 @@ deny section.bare 'localized: "Orders"' "the keyed-nonce scope is named Orders �
 grep -q "hegota-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
-print "  ok   drift guards: Foundation-only, no price, no notification, the naming ruling"
-print "✓ hegota: scopes, words, spent bitmap, coins, reconciliation, fees, room head, frames, census, clock, genesis, 42 mutations, 15 drift guards"
+print "  ok   drift guards: Foundation-only, no price, no notification, the naming ruling, the frames caption and its populations"
+print "✓ hegota: scopes, words, spent bitmap, coins, reconciliation, fees, room head, frames, census, clock, genesis, 45 mutations, 19 drift guards"
