@@ -271,17 +271,6 @@ if print -r -- "$devnet_code" | grep -qE 'TimeInterval|86_400|3600'; then
 else
   printf '  ✓ the gathering half holds no thresholds of its own\n'
 fi
-# An unpaired frame is drawn hollow by the room, and must never be counted as a
-# failure: not knowing whether a step worked is not knowing that it failed.
-guard "an unpaired frame is never counted as a failure" \
-      '\$0\.succeeded == false' "$DEVNET"
-# An interpolated block time exists for OLD blocks (§509). Announcing one as
-# news is how a year of chain history arrives at once.
-if print -r -- "$devnet_code" | grep -q 'estimatedAt'; then
-  printf '  ✗ DRIFT: the frame read reaches an INTERPOLATED timestamp (§522 — measured only)\n'; fail=1
-else
-  printf '  ✓ a reverted frame is dated by a measured header or not announced\n'
-fi
 
 echo "── compiling the shipped file whole ──"
 work="$(mktemp -d)"
@@ -470,7 +459,7 @@ ok(NotifyRules.deadlinePhrase(cal.date(byAdding: .day, value: -1, to: at(9))!,
 // Hegotá lands no `Thing` at all (§500) and vibenet's two chain-wide clocks
 // belong to no row, so `NotifySweep.classify` structurally cannot reach any of
 // this — and nothing in this repo can make a devnet reset, a timelock elapse or
-// a frame revert on demand. These fixtures are not the best proof the rules
+// a timelock elapse on demand. These fixtures are not the best proof the rules
 // hold; they are the only one.
 let dnow = at(12)
 
@@ -521,32 +510,6 @@ ok(NotifyDevnet.plan(unlock: unlock(opensAt: at(11, 30)), now: dnow)!.id != du1.
    "a SECOND unlock at a new instant is new news")
 ok(du1.body.contains("Treasury"), "the body names the account")
 
-func frame(failed: Int = 1, total: Int = 3, incoming: Bool = false,
-           at when: Date? = at(11), hash: String = "0xAB") -> NotifyDevnet.RevertedFrame {
-    NotifyDevnet.RevertedFrame(name: "0x12…34", txHash: hash, failed: failed,
-                              total: total, incoming: incoming, at: when)
-}
-ok(NotifyDevnet.plan(frame: frame(), now: dnow) != nil,
-   "a reverted step in a transaction you sent is news")
-ok(NotifyDevnet.plan(frame: frame(incoming: true), now: dnow) == nil,
-   "somebody else's transaction is not news about you")
-ok(NotifyDevnet.plan(frame: frame(failed: 0), now: dnow) == nil, "nothing reverted, nothing to say")
-ok(NotifyDevnet.plan(frame: frame(at: nil), now: dnow) == nil,
-   "an UNDATED move never fires — a year of chain history must not arrive as today's news")
-ok(NotifyDevnet.plan(frame: frame(at: dnow.addingTimeInterval(-40 * 3600)), now: dnow) == nil,
-   "a revert older than the news window never fires")
-ok(NotifyDevnet.plan(frame: frame(failed: 4, total: 3), now: dnow) == nil,
-   "more failures than frames is a parse bug, not a notification")
-ok(NotifyDevnet.plan(frame: frame(hash: "0xAB"), now: dnow)!.id
-   == NotifyDevnet.plan(frame: frame(hash: "0xab"), now: dnow)!.id,
-   "the id is case-folded, so one transaction can never announce itself twice")
-ok(NotifyDevnet.plan(frame: frame(failed: 1), now: dnow)!.body.hasPrefix("A step"),
-   "one revert reads in the singular")
-ok(NotifyDevnet.plan(frame: frame(failed: 2), now: dnow)!.body.hasPrefix("2 steps"),
-   "two read in the plural")
-ok(NotifyDevnet.plan(frame: frame(), now: dnow)!.body.contains("succeeded"),
-   "the body says the transaction SUCCEEDED — the whole reading, and the §83 line")
-
 // Each seat's door must PARSE. Both names carry a space and one an accent, so
 // an unencoded link is one `URL(string:)` hands back as nil — a tap that opens
 // the app on whatever room it was already showing.
@@ -556,12 +519,11 @@ for seat in NotifyDevnet.Seat.allCases {
 }
 
 // Composed together, in a stable order, and then batched like any other alarm.
-let dAll = NotifyDevnet.plans(resets: [reset(.vibenet)], unlocks: [unlock()],
-                              frames: [frame()], now: dnow)
-ok(dAll.count == 3, "all three compose together")
-ok(dAll.map(\.kind) == [.chainReset, .unlockReady, .frameReverted], "…in a stable order")
+let dAll = NotifyDevnet.plans(resets: [reset(.vibenet)], unlocks: [unlock()], now: dnow)
+ok(dAll.count == 2, "both compose together")
+ok(dAll.map(\.kind) == [.chainReset, .unlockReady], "…in a stable order")
 let dCollapsed = NotifyRules.collapse(dAll)
-ok(dCollapsed.count == 1, "three devnet alarms collapse to one, like any other alarm")
+ok(dCollapsed.count == 1, "two devnet alarms collapse to one, like any other alarm")
 ok(dCollapsed[0].kind == .chainReset, "…and the reset is the one that survives")
 
 // ── where the three sit on the ladder, both boundaries each ─────────────────
@@ -573,11 +535,7 @@ ok(NotifyKind.poolCleared.severity > NotifyKind.unlockReady.severity,
    "real money out of a pool outranks a devnet's timelock")
 ok(NotifyKind.unlockReady.severity > NotifyKind.priceRose.severity,
    "…which still outranks a charge already taken")
-ok(NotifyKind.agentRunFailed.severity > NotifyKind.frameReverted.severity,
-   "a run that did not finish outranks a step that reverted inside one that did")
-ok(NotifyKind.frameReverted.severity > NotifyKind.runningLow.severity,
-   "…and a reverted step outranks a balance merely getting low")
-for k: NotifyKind in [.chainReset, .unlockReady, .frameReverted] {
+for k: NotifyKind in [.chainReset, .unlockReady] {
     ok(k.cls == .alarm, "\(k) is an alarm")
     ok(k.severity > 0, "\(k) has a real severity, not the default 0 that ties with arrivals")
     ok(!k.isTimeSensitive, "\(k) never breaks a Focus — none of them states a clock still running")
@@ -699,20 +657,10 @@ mutate "an unlock fires while its timelock is still running" \
        's/guard since >= 0 else \{ return nil \}//'
 mutate "one unlock announces itself again after a re-lock (the instant leaves the id)" \
        's/:\\\(stamp\)//'
-mutate "somebody else's transaction reverting is announced as yours" \
-       's/guard !f\.incoming, f\.failed > 0/guard f.failed > 0/'
-mutate "an UNDATED move is dated to now, so old chain history arrives as news" \
-       's/guard let at = f\.at else \{ return nil \}/let at = f.at ?? now/'
 mutate "stale news fires — the devnet window widens past every sweep" \
        's/static let newsWindow: TimeInterval = 36 \* 3600/static let newsWindow: TimeInterval = 3600 * 3600/'
-mutate "one transaction announces itself twice (the id stops case-folding)" \
-       's/f\.txHash\.lowercased\(\)/f.txHash/'
-mutate "two reverted steps read in the singular" \
-       's/f\.failed == 1/f.failed > 0/'
 mutate "a devnet reset outranks a dispute" \
        's/case \.chainReset:       return 55/case .chainReset:       return 200/'
-mutate "a reverted step ties with the arrivals it must outrank" \
-       's/case \.frameReverted:    return 30/case .frameReverted:    return 0/'
 mutate "a kind loses its headline, so a notification arrives with an empty title" \
        's/case \.chainReset:       return String\(localized: "A devnet was reset"\)/case .chainReset:       return ""/'
 

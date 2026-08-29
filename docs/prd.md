@@ -79,7 +79,7 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
-| §500 | Hegotá does **no notifications** — no attention dots ever, because nothing in that room is urgent (nothing can move against you; the asset is test ETH) | amended by §522 (the room's CONTENT rule stands and the dots stay off; what §500 could not have weighed is §515a, two days later — a devnet relaunch is not room content but the statement that everything the room shows describes a chain that no longer exists. The reverted-frame notification IS inside §500's reasoning and was built on an explicit instruction; it is the first thing to re-litigate here) |
+| §500 | Hegotá does **no notifications** — no attention dots ever, because nothing in that room is urgent (nothing can move against you; the asset is test ETH) | amended by §522 for ONE event (the room's CONTENT rule stands whole and the dots stay off; a devnet RELAUNCH is not room content but the statement that everything the room shows describes a chain that no longer exists — §515a, two days after §500 and therefore unavailable to it, is a person losing an evening to exactly that on the sibling devnet) |
 | §306 | The classification lives in ONE file that reads what LANDED, so the never-fires list is reviewable in one screen | amended by §522 (two devnet seats carry facts no row holds — Hegotá lands no `Thing` at all, and a chain reset or an elapsed timelock belongs to no row — so `NotifyDevnet` is a second, harness-compiled door into the SAME submit; the headline also moved onto `NotifyKind` so the pure half can compose whole plans) |
 | §473 | The timelock's Live Activity is a CONTROL, never automatic, and its `staleDate` is the unlock instant | amended by §522 (the control stands, and becomes a persisted consent record: the moment the delay ends now reaches the lock screen, for a tracked address and no other — plus the relaunch bug where a surviving activity read as untracked) |
 | §201 | The catalog wall goes horizontal — paired bands, four across, full names, `minimumScaleFactor(0.7)` so a long single word shrinks rather than clips | superseded by §518 (the wall is a LIST: a small category is a short section rather than half a wasted row, and a row has the width for any name in the catalog, so "no truncation" stops needing a mechanism) |
@@ -38381,7 +38381,8 @@ result looks.
 `Model/NotifyPlan.swift`'s new `NotifyDevnet` (the judgement), `Model/DevnetNotify.swift`
 (the gathering), `VibenetUnlockBook` in `VibenetUnlockActivityDriver.swift`,
 `VibenetChainReset.Verdict.notifyKey`, `VibenetSeenChain.observedReset()`,
-`HegotaLiveState.observedRestart()`, three new `NotifyKind`s.
+`HegotaLiveState.observedRestart()`, two new `NotifyKind`s — and a third, built
+and then cut on its own reasoning (section 3).
 
 **THE FINDING, AND IT IS STRUCTURAL ON ONE SIDE.** `NotifySweep` classifies a
 LANDED ROW by its `sourceRef` prefix and says so in its own doc — that is what
@@ -38464,32 +38465,36 @@ unconditionally, because consent is withdrawn whether or not a handle survives �
 returning early on a missing one would leave the notification armed for an
 account somebody had just stopped tracking.
 
-### 3. A frame reverted inside a transaction that succeeded
+### 3. A frame reverted inside a transaction — built, and then CUT
 
-The one thing this chain publishes that no receipt anywhere else can say. §504
-has counted these since it shipped and the fact never left the room. **Every move
-here came from a transaction that SUCCEEDED, and that is provable rather than
-assumed**: the room's moves are reconstructed from EIP-7708 transfer logs, and a
-reverted transaction emits none — so a move existing is proof the transaction was
-accepted, which is exactly what makes a failed frame inside it worth saying. The
-headline is "A step reverted" and never "A transaction failed", the §83 line in
-the one surface with no surrounding screen to contradict it.
+It looked like the strongest item here and it is the weakest, and the reasoning
+generalises past this room. §504 has counted these since it shipped: a
+transaction's receipt reads success while one of its EIP-8141 frames reverted
+inside it, which is the one thing this chain publishes that no receipt anywhere
+else can say. It was built — kind, plan, gatherer, fixtures, guards — and then
+deleted before it ever ran on a device.
 
-**Four refusals.** An incoming move is somebody else's transaction. Only
-`succeeded == false` counts — a frame that could not be paired with a receipt is
-drawn hollow by the room for the same reason, since not knowing whether a step
-worked is not knowing that it failed. More failures than frames is a parse bug,
-not a notification (`HegotaRoom.split`'s own rule). And an **UNDATED move never
-fires**: `HegotaClock` will estimate a time for a block outside the header
-window and those estimates are honest to seconds, but they exist for OLD blocks,
-so announcing one is how a year of chain history arrives at once. Anything inside
-the news window sits among the newest blocks the sweep read a header for, so
-demanding a measured stamp costs nothing real.
+**§306's own "did you already know?" test settles it**, the same test that keeps
+a landed row from notifying. Somebody who just sent a frame transaction on an
+experimental devnet IS the person building against it: at the desk, in the
+tooling, probably watching the explorer. Both surviving notifications have the
+opposite property — a chain wipe and a timelock ending happen without you and
+while you are elsewhere.
 
-**STATED CEILING, and it follows from the same fact that makes the feature
-possible**: a frame that reverted in a transaction which moved no value at all is
-invisible here, because there is no log to have found it by. It under-reports and
-never over-reports, which is the right direction to be wrong on a lock screen.
+Two more, each pointing the same way. **It cannot be acted on**: which frame,
+which mode, what it was calling, what gas it burned all live in the room, so the
+buzz is a redirect rather than information. And **volume runs the wrong way** —
+a reset is rare and consequential, while a developer's reverts arrive across
+many foregrounds, and `NotifyRules.collapse` only batches within ONE sweep. That
+is §306's eleven-alarms failure spent on the least valuable of the three.
+
+**What it cost to build it anyway was worth it**: the frame work is what found
+the self-transfer fold below, and the "an undated move never fires" rule it
+needed is the reason `RevertedFrame`'s successor would start from a measured
+header. The ceiling it discovered is recorded here rather than lost — a frame
+that reverted in a transaction which moved no value at all is invisible to this
+room's reads, because those are transfer logs and there would be no log to have
+found it by.
 
 ### 4. Where the judgement lives, and why it is not in `NotifySweep`
 
@@ -38498,9 +38503,8 @@ The rules are `NotifyDevnet`, in `NotifyPlan.swift` — the Foundation-only file
 over as values, making no decision it could get wrong on its own, and a drift
 guard fails the build if a threshold ever appears in it. The split is
 `StripeRoom`/`PostHogRoom`'s and it earns itself the same way, only harder:
-nothing in this repo can make a devnet reset, a timelock elapse or a frame revert
-on demand, so **the harness is not the best proof these rules hold, it is the
-only one**.
+nothing in this repo can make a devnet reset or a timelock elapse on demand, so
+**the harness is not the best proof these rules hold, it is the only one**.
 
 **ONE submit.** The devnet plans are merged into `runNotifySweep`'s existing
 `Notifications.submit` rather than sent on their own, so a devnet alarm competes
@@ -38516,13 +38520,12 @@ strings in a file no check compiles or a plan built without its own title. One
 authority, in the half a harness can read — and a fixture now asserts EVERY kind
 answers, not only the ones a switch happened to list.
 
-**Where all three sit on the ladder**, both boundaries each, because a test
-naming one side passes with a kind ranked off the end: `paymentsSilent` >
-`chainReset` > `poolCleared` > `unlockReady` > `priceRose`, and `agentRunFailed`
-> `frameReverted` > `runningLow`. A devnet must never outrank real money in
-either direction. None of the three is time-sensitive: a reset states no clock, a
-reverted step states no clock, and an unlock's clock has already RUN OUT — the
-window is open, nothing is closing.
+**Where both sit on the ladder**, both boundaries each, because a test naming
+one side passes with a kind ranked off the end: `paymentsSilent` > `chainReset` >
+`poolCleared` > `unlockReady` > `priceRose`. A devnet must never outrank real
+money in either direction. Neither is time-sensitive: a reset states no clock,
+and an unlock's clock has already RUN OUT — the window is open, nothing is
+closing.
 
 ### 5. The defect this exposed one file over
 
@@ -38562,16 +38565,18 @@ attention dots, all on the ground that the asset is test ETH and nothing can
 move against you. A **relaunch is not content**: it is the statement that every
 reading the room holds describes a chain that no longer exists, and §515a — two
 days AFTER §500 was written, and therefore not available to it — is a person
-losing an evening to exactly that on the sibling devnet. So the reset amends
-§500 and the attention dots stay off, which is the part of the rule that was
-really about urgency.
+losing an evening to exactly that on the sibling devnet. So the relaunch amends
+§500 in that one place and everything else about the rule stands, dots included.
 
-**The reverted frame is INSIDE §500's reasoning and is shipped anyway, on an
-explicit "do all".** Being told about it changes nothing you can act on, no
-money is at stake, and the room's own frames card already says it — every one of
-which is what §500 meant. It is recorded here as the first thing a future
-session should re-litigate in this room, and it is one deletion: the kind, its
-`NotifyDevnet.plan(frame:)`, `DevnetNotify.frames()`, and their fixtures.
+**Everything §500 really meant was right**, which section 3 above is the record
+of: the reverted frame was inside its reasoning, it was built anyway, and it was
+cut on §306's own test rather than on §500's authority — two independent rules
+arriving at the same answer, which is the strongest form the ledger has.
+
+`hegota-selftest.sh`'s two deny guards now carry that split in their own words:
+neither room model may reach the sweep, and if either starts to fail the rule
+has been widened from "the chain was wiped" back to "something in the room
+happened", which is the overclaim §500 wrote the sentence for.
 
 ### 7. What this costs, and what it does not do
 
@@ -38587,7 +38592,7 @@ that governs every other alarm in the app at risk to save a delay the facts
 already tolerate, since a reset stays sayable for a week and a timelock for
 thirty-six hours.
 
-`notify-selftest.sh` grew the devnet fixtures, fourteen mutations and twenty
+`notify-selftest.sh` grew the devnet fixtures, nine mutations and eighteen
 drift guards, and every one of the guards was mutation-proven against a mirror of
 the real tree before it landed — including the two that tie the seat names to the
 sources their bridges really stamp, the two that tie both windows to the

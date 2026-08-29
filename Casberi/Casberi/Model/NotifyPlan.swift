@@ -109,14 +109,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
     /// somebody turned tracking on for, never for one they merely watch, which
     /// is §473's own ruling carried forward rather than reopened.
     case unlockReady
-    /// A frame REVERTED inside a Hegotá transaction that otherwise succeeded
-    /// (2026-08-29, prd §522).
-    ///
-    /// The one thing this chain publishes that no receipt anywhere else can
-    /// say. A transaction's receipt reads success; one of its EIP-8141 frames
-    /// can still have reverted inside it, and the room has counted those since
-    /// §504 without the fact ever leaving the room.
-    case frameReverted
     // — arrival
     case moneyIn
     case payoutPaid
@@ -131,7 +123,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .disputeOpened, .deadlineNear, .positionAtRisk, .approvalGranted,
              .poolProofNeeded, .poolCleared, .paymentsSilent, .priceRose,
              .appRejected, .agentRunFailed, .runningLow, .safeSignatureNeeded,
-             .walletIncident, .chainReset, .unlockReady, .frameReverted:
+             .walletIncident, .chainReset, .unlockReady:
             return .alarm
         case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained:
             return .arrival
@@ -194,10 +186,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
         // Something you asked to run did not finish — worth knowing, not
         // urgent: nothing is moving or at risk, a rerun costs a tap.
         case .agentRunFailed:   return 35
-        // `agentRunFailed`'s shape one rung down: something you sent did not
-        // fully do what it said, nothing is moving or at risk, and the whole
-        // transaction still succeeded.
-        case .frameReverted:    return 30
         // The lowest alarm on purpose — "do this soon" rather than "something
         // is wrong right now". Ranked under a price rise (money already
         // left, so at least that one is definite) but still a real severity,
@@ -259,10 +247,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
         // synonym. A notification that names a state differently from the
         // screen it opens is one you have to translate on arrival.
         case .unlockReady:      return String(localized: "Ready to unlock")
-        // Not "A transaction failed": the transaction SUCCEEDED, and saying
-        // otherwise on a lock screen is the §83 fake status in the one place
-        // there is no surrounding screen to contradict it.
-        case .frameReverted:    return String(localized: "A step reverted")
         case .moneyIn:          return String(localized: "Money arrived")
         case .payoutPaid:       return String(localized: "Paid out")
         case .likesReceived:    return String(localized: "Liked your post")
@@ -516,13 +500,24 @@ struct NotifyLedger {
 /// **§500 RULED THAT HEGOTÁ DOES NO NOTIFICATIONS, and it is amended in exactly
 /// one place.** That rule is about the room's CONTENT — no balance, coin, lane
 /// or move is urgent, because the asset is test ETH and nothing can move
-/// against you — and it still holds, attention dots included. A RELAUNCH is not
-/// content: it is the statement that every reading the room holds describes a
-/// chain that no longer exists, and §515a (two days after §500, so unavailable
-/// to it) is a person losing an evening to exactly that on the sibling devnet.
-/// `frameReverted` sits INSIDE §500's reasoning and ships on an explicit
-/// instruction — it is the first thing to re-litigate here, and it is one
-/// deletion: this kind, `plan(frame:)`, and `DevnetNotify.frames()`.
+/// against you — and it stands whole, attention dots included. A RELAUNCH is
+/// not content: it is the statement that every reading the room holds describes
+/// a chain that no longer exists, and §515a (two days after §500, so
+/// unavailable to it) is a person losing an evening to exactly that on the
+/// sibling devnet.
+///
+/// **A REVERTED FRAME WAS BUILT AND THEN CUT, and the reason generalises.** It
+/// is the one thing this chain publishes that no receipt elsewhere can say, so
+/// it looks like the strongest case here and is the weakest: §306's own "did
+/// you already know?" test settles it, because somebody who just sent a frame
+/// transaction on an experimental devnet IS the person building against it —
+/// at the desk, in the tooling, probably watching the explorer. Both
+/// notifications above have the opposite property: a chain wipe and a timelock
+/// ending happen without you and while you are elsewhere. It also could not be
+/// acted on (which frame, which mode, what gas — all of that is in the room a
+/// notification would only redirect to) and it runs the wrong way on volume,
+/// since batching collapses within ONE sweep and a developer's reverts arrive
+/// across many.
 ///
 /// **PURE, and in THIS file rather than beside the bridges**, so
 /// `scripts/notify-selftest.sh` compiles it WHOLE. Every rule below is a
@@ -664,62 +659,16 @@ enum NotifyDevnet {
                           source: Seat.vibenet.source)
     }
 
-    // MARK: A frame reverted inside a transaction that succeeded
-
-    struct RevertedFrame: Sendable, Equatable {
-        var name: String
-        var txHash: String
-        /// Frames whose receipt said `false` — never the ones that could not be
-        /// PAIRED with a receipt, which the room draws hollow for the same
-        /// reason: not knowing is not a failure.
-        var failed: Int
-        var total: Int
-        /// Value moved INTO the watched address rather than out of it. Somebody
-        /// else's transaction, so its failed step is not news about you.
-        var incoming: Bool
-        /// The block's OWN measured timestamp.
-        ///
-        /// **Never an interpolated one, and nil is a refusal rather than a
-        /// default.** `HegotaClock` estimates a time for a block outside the
-        /// header window, and those estimates are accurate to seconds — but
-        /// they exist precisely for OLD blocks, and an undated move announced
-        /// as news could be a year of chain history arriving at once. Anything
-        /// inside the news window sits among the newest blocks this sweep read
-        /// a header for, so requiring a measured stamp costs nothing real.
-        var at: Date?
-    }
-
-    static func plan(frame f: RevertedFrame, now: Date) -> NotifyPlan? {
-        guard !f.incoming, f.failed > 0, f.total >= f.failed else { return nil }
-        guard let at = f.at else { return nil }
-        let age = now.timeIntervalSince(at)
-        guard age >= 0, age <= newsWindow else { return nil }
-        // Singular and plural spelled out rather than interpolated into one
-        // string — a count folded into a sentence is the one place a
-        // translation cannot fix the grammar.
-        let body = f.failed == 1
-            ? String(localized: "A step reverted inside a transaction from \(f.name) that otherwise succeeded.")
-            : String(localized: "\(f.failed) steps reverted inside a transaction from \(f.name) that otherwise succeeded.")
-        return NotifyPlan(id: "hegota:frame:\(f.txHash.lowercased())",
-                          kind: .frameReverted,
-                          title: NotifyKind.frameReverted.headline,
-                          body: body,
-                          link: Seat.hegota.link,
-                          occurredAt: at,
-                          source: Seat.hegota.source)
-    }
-
     /// Everything the two devnets have to say, given what their last read left
-    /// behind. Order is stable (resets, then unlocks, then frames) so a sweep
-    /// that has to collapse always collapses the same way; `NotifyRules
+    /// behind. Order is stable (resets, then unlocks) so a sweep that has to
+    /// collapse always collapses the same way; `NotifyRules
     /// .collapse` then keeps the worst alarm and counts the rest, which is what
     /// stops a chain reset that touched four watched addresses being four
     /// buzzes.
     static func plans(resets: [Reset] = [], unlocks: [Unlock] = [],
-                      frames: [RevertedFrame] = [], now: Date = Date()) -> [NotifyPlan] {
+                      now: Date = Date()) -> [NotifyPlan] {
         resets.compactMap { plan(reset: $0, now: now) }
             + unlocks.compactMap { plan(unlock: $0, now: now) }
-            + frames.compactMap { plan(frame: $0, now: now) }
     }
 }
 
