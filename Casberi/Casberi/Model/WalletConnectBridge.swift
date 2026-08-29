@@ -217,6 +217,13 @@ enum WalletConnectBridge {
         "arb-mainnet":   "eip155:42161",
         "opt-mainnet":   "eip155:10",
         "matic-mainnet": "eip155:137",
+        // Verified 2026-08-28 by asking each chain itself: `eth_chainId`
+        // answers 0x3e7 (999) on `hyperliquid-mainnet` and 0x8f (143) on
+        // `monad-mainnet`, and Zerion's `/chains/` reports the same two
+        // `external_id`s — two independent sources, which is the bar this
+        // table's own doc sets for adding a row.
+        "hyperliquid-mainnet": "eip155:999",
+        "monad-mainnet":  "eip155:143",
     ]
 
     /// Ethereum mainnet — the floor a proposal falls back to if the chain

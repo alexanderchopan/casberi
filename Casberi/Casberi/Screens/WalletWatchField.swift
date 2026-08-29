@@ -58,7 +58,15 @@ struct WalletWatchField: View {
 
     var body: some View {
         VStack(spacing: DS.Space.s2) {
-            DSSlabField(placeholder: String(localized: "Paste an address, or an ENS name"),
+            // The placeholder is the only place most people learn what this
+            // field takes, and it named ENS alone while `watch()` has accepted
+            // a Bitcoin address since 2026-07-27 and `looksLikeAddress` has
+            // armed for one just as long (prd §512a). Nothing was broken — a
+            // pasted BTC address watched correctly — but nobody had a reason
+            // to try it. Bitcoin is named and Solana is not, deliberately: a
+            // `.sol` name resolves through the same "or a name" clause, while
+            // Bitcoin has no name service here and so no other way in.
+            DSSlabField(placeholder: String(localized: "Paste an address — 0x, Bitcoin, or a name"),
                         text: $newAddress,
                         actionLabel: String(localized: "Watch"),
                         focus: $addressFieldFocused,

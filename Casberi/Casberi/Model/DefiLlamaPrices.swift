@@ -27,6 +27,13 @@ enum DefiLlamaPrices {
     private static let chainKey: [String: String] = [
         "eth-mainnet": "ethereum", "base-mainnet": "base", "arb-mainnet": "arbitrum",
         "opt-mainnet": "optimism", "matic-mainnet": "polygon", "solana-mainnet": "solana",
+        // Measured 2026-08-28 against real tokens on each (WHYPE 0.99
+        // confidence, WMON/USDC/CHOG likewise). DeFiLlama names HyperEVM
+        // `hyperliquid` — a THIRD spelling for one chain, after Alchemy's
+        // `hyperliquid-mainnet` and Zerion's `hyperevm`. It also answers to
+        // `hyperevm`, but `hyperliquid` is the key its own `/chains` listing
+        // publishes, so that is the one kept.
+        "hyperliquid-mainnet": "hyperliquid", "monad-mainnet": "monad",
     ]
 
     /// One priced coin as DeFiLlama returns it — the price plus the confidence

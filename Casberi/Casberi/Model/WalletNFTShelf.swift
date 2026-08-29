@@ -61,8 +61,18 @@ enum WalletNFTShelf {
     /// Alchemy's NFT API is EVM-only, so a Solana-only wallet contributes no
     /// collections; the picker says so in words rather than showing an empty
     /// grid.
+    ///
+    /// **Monad is here and HyperEVM is NOT, and the split was measured, not
+    /// assumed (2026-08-28, prd §512):** `getContractsForOwner` answers 200 on
+    /// `monad-mainnet` and **400** on `hyperliquid-mainnet` — Alchemy serves
+    /// that chain's RPC, transfers and Portfolio and not its NFT API. Listing
+    /// it anyway would spend a request per watched wallet per pass to be told
+    /// no, forever, and — because a failed read is honestly reported as "we
+    /// could not see" rather than "you hold nothing" — would put a permanent
+    /// unreadable row in the picker for a chain that simply has no read.
     static let networks = ["eth-mainnet", "base-mainnet", "arb-mainnet",
-                           "opt-mainnet", "matic-mainnet", "robinhood-mainnet"]
+                           "opt-mainnet", "matic-mainnet", "monad-mainnet",
+                           "robinhood-mainnet"]
 
     /// Alchemy network id → OpenSea's own chain path, for a piece's door.
     ///
@@ -71,10 +81,18 @@ enum WalletNFTShelf {
     /// tap rather than a link to an OpenSea page that would 404 — §83, and the
     /// §275 lesson specifically (a verb that looks live and lands nowhere is
     /// worse than no verb).
+    ///
+    /// Monad's slug came from OpenSea's OWN `/api/v2/chains` listing
+    /// (2026-08-28, `chain: "monad"`), not from the chain's name — the same
+    /// listing spells Polygon `polygon` while the shipped row above says
+    /// `matic`, which is the standing proof that a slug here cannot be
+    /// inferred. HyperEVM is on that listing too (`hyperevm`) and still gets
+    /// no row, because `networks` above has no HyperEVM read at all: a door
+    /// for pieces that can never be fetched is a map entry nothing reaches.
     private static let openSeaPath: [String: String] = [
         "eth-mainnet": "ethereum", "base-mainnet": "base",
         "arb-mainnet": "arbitrum", "opt-mainnet": "optimism",
-        "matic-mainnet": "matic",
+        "matic-mainnet": "matic", "monad-mainnet": "monad",
     ]
 
     /// How long a collection or piece read stays good for.

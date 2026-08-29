@@ -137,6 +137,14 @@ enum WalletGas {
         "arb-mainnet":   "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
         "opt-mainnet":   "0x4200000000000000000000000000000000000006",
         "matic-mainnet": "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270",
+        // WHYPE / WMON, both read back off their own chain via `symbol()`
+        // (2026-08-28) — see `WalletIngest.wrappedNativeContract`, which
+        // carries the same two addresses for the chart route. Kept spelled out
+        // twice rather than shared: that table is the CHART's route and this
+        // one is the FEE's price, and folding them would tie a gas total to a
+        // Dexscreener slug it has nothing to do with.
+        "hyperliquid-mainnet": "0x5555555555555555555555555555555555555555",
+        "monad-mainnet": "0x3bd359c1119da7da1d913d1c4d2b7c461115433a",
     ]
 
     @MainActor private static var priceCache: [String: (price: Double, at: Date)] = [:]

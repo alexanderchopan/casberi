@@ -47,6 +47,16 @@ enum WalletIngest {
         Chain(network: "arb-mainnet",  explorer: "https://arbiscan.io/tx/",               symbol: "ETH",   displayName: "Arbitrum"),
         Chain(network: "opt-mainnet",  explorer: "https://optimistic.etherscan.io/tx/",   symbol: "ETH",   displayName: "Optimism"),
         Chain(network: "matic-mainnet",explorer: "https://polygonscan.com/tx/",           symbol: "MATIC", displayName: "Polygon"),
+        // HyperEVM and Monad (2026-08-28, prd §512). Both explorers are Etherscan-family
+        // and were checked on a REAL hash and a REAL address (200 on both
+        // `/tx/<hash>` and `/address/<addr>`), which is what
+        // `explorerAddressURL`'s `/tx/` → `/address/` rewrite rests on — a
+        // Blockscout-style explorer would answer the first and 404 the second.
+        // `hyperliquid-mainnet` is Alchemy's id for HyperEVM, chain id 999;
+        // see `WalletChainStore.selectable` for why the row is not called
+        // "Hyperliquid".
+        Chain(network: "hyperliquid-mainnet", explorer: "https://hyperevmscan.io/tx/",    symbol: "HYPE",  displayName: "HyperEVM"),
+        Chain(network: "monad-mainnet", explorer: "https://monadscan.com/tx/",            symbol: "MON",   displayName: "Monad"),
         Chain(network: "solana-mainnet", explorer: "https://solscan.io/tx/",              symbol: "SOL",   displayName: "Solana",
               kind: .solana, nativeDecimals: 9),
         Chain(network: "robinhood-mainnet", explorer: "https://robinhoodchain.blockscout.com/tx/", symbol: "ETH", displayName: "Robinhood"),
@@ -2478,6 +2488,12 @@ enum WalletIngest {
     private static let chainSlug: [String: String] = [
         "eth-mainnet": "ethereum", "base-mainnet": "base", "arb-mainnet": "arbitrum",
         "opt-mainnet": "optimism", "matic-mainnet": "polygon",
+        // Measured 2026-08-28: GeckoTerminal AND Dexscreener both spell these
+        // "monad" and "hyperevm" — note HyperEVM's slug is NOT Alchemy's
+        // `hyperliquid` id, and GeckoTerminal carries a separate `hyperliquid`
+        // network (the L1) that would route a HyperEVM token's chart at the
+        // wrong book.
+        "hyperliquid-mainnet": "hyperevm", "monad-mainnet": "monad",
         // Solana rides free: both chart tiers `TokenChart` falls through
         // (GeckoTerminal, then Dexscreener) spell it "solana", so an SPL cell's
         // tap opens a real chart the same way an ERC-20 cell's does.
@@ -2496,6 +2512,13 @@ enum WalletIngest {
         "arb-mainnet": "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
         "opt-mainnet": "0x4200000000000000000000000000000000000006",
         "matic-mainnet": "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270",
+        // Both read back off their own chain via `symbol()` (2026-08-28) —
+        // WHYPE and WMON — rather than taken from a docs page: Monad's widely
+        // quoted `0x760A…5701` is the TESTNET deployment and answers nothing
+        // on mainnet, which would have left every MON cell chartless with no
+        // error anywhere.
+        "hyperliquid-mainnet": "0x5555555555555555555555555555555555555555",
+        "monad-mainnet": "0x3bd359c1119da7da1d913d1c4d2b7c461115433a",
         // Base58 is case-SENSITIVE (project rule) — never lowercase this one.
         "solana-mainnet": "So11111111111111111111111111111111111111112",
     ]

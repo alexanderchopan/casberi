@@ -45,6 +45,13 @@ enum ZerionAPI {
     static let networkFor: [String: String] = [
         "ethereum": "eth-mainnet", "base": "base-mainnet", "arbitrum": "arb-mainnet",
         "optimism": "opt-mainnet", "polygon": "matic-mainnet", "solana": "solana-mainnet",
+        // 2026-08-28 (prd §512). Zerion's own ids, read off `/v1/chains/` and checked
+        // against a live wallet on each (positions AND transactions), never
+        // guessed from the display name: HyperEVM is `hyperevm` here while
+        // Alchemy calls the same chain `hyperliquid-mainnet`, and the two
+        // spellings sitting either side of one entry is exactly the drift this
+        // table exists to hold.
+        "hyperevm": "hyperliquid-mainnet", "monad": "monad-mainnet",
     ]
 
     /// One fungible holding as Zerion hands it over — already decimal-adjusted

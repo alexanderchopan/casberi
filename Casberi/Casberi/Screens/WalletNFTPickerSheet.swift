@@ -108,7 +108,11 @@ struct WalletNFTPickerSheet: View {
             Text(String(localized: "Nothing to show yet"))
                 .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(DS.textPrimary)
-            Text(String(localized: "No collections were found on Ethereum, Base, Arbitrum, Optimism, Polygon or Robinhood. Solana NFTs can't be read yet."))
+            // Monad joined `WalletNFTShelf.networks` with the chain itself
+            // (prd §512). HyperEVM is deliberately not named — Alchemy's NFT
+            // API 400s there, so it is not a chain we looked at and found
+            // nothing on, and listing it would claim a read we never made.
+            Text(String(localized: "No collections were found on Ethereum, Base, Arbitrum, Optimism, Polygon, Monad or Robinhood. Solana and HyperEVM NFTs can't be read yet."))
                 .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }

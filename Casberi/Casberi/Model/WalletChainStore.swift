@@ -29,12 +29,33 @@ final class WalletChainStore {
     /// `SolanaActivity`, not `getAssetTransfers`, which stays EVM-only (hence
     /// `WalletIngest.transferChains`). Solana is a full chain here now; the
     /// split lives in HOW each half is read, not in what a person gets.
+    ///
+    /// HyperEVM and Monad (2026-08-28, prd §512) join as full EVM chains, MEASURED
+    /// end-to-end before landing here rather than added on their reputation:
+    /// Zerion serves both (`hyperevm` / `monad` chain ids — positions AND
+    /// transactions, so holdings and activity both arrive on the primary
+    /// read), Alchemy answers `eth_chainId`, `alchemy_getAssetTransfers` and
+    /// the Portfolio `by-address` call on `hyperliquid-mainnet` /
+    /// `monad-mainnet` (the last is the one that matters — a chain the
+    /// Portfolio endpoint refuses 400s the WHOLE holdings read, and both were
+    /// checked with the new id beside `eth-mainnet` in one body), and
+    /// DeFiLlama prices both (`hyperliquid:` / `monad:`) for the backstop.
+    ///
+    /// **`hyperliquid-mainnet` is Alchemy's name for HyperEVM (chain id 999),
+    /// and it is NOT the Hyperliquid L1.** `HyperliquidDeFi` already reads the
+    /// other half — perps, spot and staked HYPE off `api.hyperliquid.xyz`,
+    /// which has no EVM RPC and no address model this pipeline could touch.
+    /// Two reads, two halves of one product; the picker says "HyperEVM"
+    /// because that is the chain a token balance lives on, and calling the row
+    /// "Hyperliquid" would claim the perps book is in it.
     static let selectable: [(id: String, name: String)] = [
         ("eth-mainnet",      "Ethereum"),
         ("base-mainnet",     "Base"),
         ("arb-mainnet",      "Arbitrum"),
         ("opt-mainnet",      "Optimism"),
         ("matic-mainnet",    "Polygon"),
+        ("hyperliquid-mainnet", "HyperEVM"),
+        ("monad-mainnet",    "Monad"),
         ("solana-mainnet",   "Solana"),
         ("robinhood-mainnet","Robinhood"),
     ]
@@ -47,38 +68,63 @@ final class WalletChainStore {
     /// nothing — the holdings read routes each address to the chains its own
     /// SHAPE can live on (`WalletIngest.networks(for:)`), so a `0x…` wallet
     /// never spends a request on Solana and vice versa.
+    ///
+    /// HyperEVM and Monad are ON, unlike Robinhood, and the difference is
+    /// COST rather than taste: both are mapped in `ZerionAPI.networkFor`, and
+    /// Zerion's positions/transactions calls ask for every mapped chain in ONE
+    /// request per wallet whatever this set says (the toggle filters the
+    /// answer, `WalletIngest.collectCandidatesZerion`) — so switching them on
+    /// spends nothing on the read that actually runs. Robinhood has no Zerion
+    /// mapping, so it costs a real extra chain in the Alchemy body and stays
+    /// a chain you turn on. The only marginal cost here is the Alchemy
+    /// transfer FALLBACK, two requests per chain per wallet, and only when
+    /// Zerion is unreachable.
     static let defaultNetworkIDs = ["eth-mainnet", "base-mainnet", "arb-mainnet",
-                                    "opt-mainnet", "matic-mainnet", "solana-mainnet"]
+                                    "opt-mainnet", "matic-mainnet",
+                                    "hyperliquid-mainnet", "monad-mainnet",
+                                    "solana-mainnet"]
 
     private var selected: [String] { didSet { persist() } }
 
     /// One-time seed of a chain added AFTER a person already chose their set.
     /// A saved set that predates an option doesn't mean "off" — it means never
     /// asked; treating the two the same would leave every existing wallet
-    /// unable to read a `.sol` name it can now resolve. Seeded once, so turning
-    /// Solana back off afterwards sticks.
-    private static let solanaSeededKey = "wallet.chains.solanaSeeded.v1"
+    /// unable to read a `.sol` name it can now resolve. Seeded once each, so
+    /// turning a seeded chain back off afterwards sticks.
+    ///
+    /// A LIST rather than the single Solana flag it started as (2026-08-28):
+    /// two more chains arrived at once, and a second copy of the same one-off
+    /// `if` is how the third gets forgotten. Every entry that is ON by default
+    /// must be here — a chain in `defaultNetworkIDs` with no seed row reaches
+    /// only installs made after it landed, silently, which is exactly the
+    /// state Solana was in before its own flag existed. Solana keeps its
+    /// original key spelling so a device that already seeded it is not asked
+    /// twice.
+    private static let seeded: [(id: String, key: String)] = [
+        ("solana-mainnet",      "wallet.chains.solanaSeeded.v1"),
+        ("hyperliquid-mainnet", "wallet.chains.hyperevmSeeded.v1"),
+        ("monad-mainnet",       "wallet.chains.monadSeeded.v1"),
+    ]
 
     private init() {
-        if let data = UserDefaults.standard.data(forKey: Self.key),
+        let defaults = UserDefaults.standard
+        if let data = defaults.data(forKey: Self.key),
            let saved = try? JSONDecoder().decode([String].self, from: data), !saved.isEmpty {
             // Only ids still selectable survive (a chain retired from the list
             // shouldn't linger in the saved set).
             let known = Set(Self.allNetworkIDs)
             selected = saved.filter { known.contains($0) }
             if selected.isEmpty { selected = Self.defaultNetworkIDs }
-            let defaults = UserDefaults.standard
-            if !defaults.bool(forKey: Self.solanaSeededKey) {
-                defaults.set(true, forKey: Self.solanaSeededKey)
-                if !selected.contains("solana-mainnet") {
-                    selected = Self.allNetworkIDs.filter {
-                        selected.contains($0) || $0 == "solana-mainnet"
-                    }
+            for seed in Self.seeded where !defaults.bool(forKey: seed.key) {
+                defaults.set(true, forKey: seed.key)
+                guard !selected.contains(seed.id) else { continue }
+                selected = Self.allNetworkIDs.filter {
+                    selected.contains($0) || $0 == seed.id
                 }
             }
         } else {
             selected = Self.defaultNetworkIDs   // a fresh wallet reads the defaults
-            UserDefaults.standard.set(true, forKey: Self.solanaSeededKey)
+            for seed in Self.seeded { defaults.set(true, forKey: seed.key) }
         }
     }
 

@@ -41,10 +41,28 @@ struct WalletConnectionScreen: View {
                     .buttonStyle(.plain)
                     .dsListCardRow()
                 }
+                // Bitcoin is watched and has been since 2026-07-27, and this
+                // screen was the only place that could say so and didn't —
+                // reported as "bitcoin doesn't show as an address for the
+                // wallet to watch" (prd §512a). It is STATED, never a toggle:
+                // `BitcoinBridge` rides neither Alchemy nor Zerion, so it has
+                // no `WalletChainStore` id to switch, and it reads only when a
+                // Bitcoin address is actually watched — a switch would govern
+                // nothing for everyone who watches none, which is the dead
+                // control §83 bans. Not a `Button`, so there is no tap to
+                // disappoint; the trailing words carry the condition.
+                HStack(spacing: DS.Space.s3) {
+                    Text("Bitcoin")
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Spacer()
+                    Text("When you watch one")
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                }
+                .dsListCardRow()
             } header: {
                 Text("Chains").dsText(.label12).foregroundStyle(DS.textSecondary)
             } footer: {
-                Text("Read each watched wallet across these chains only — turn off the ones you don't use.")
+                Text("Read each watched wallet across these chains only — turn off the ones you don't use. Paste a Bitcoin address and it's read too, from its own public API.")
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
             }
             Section {

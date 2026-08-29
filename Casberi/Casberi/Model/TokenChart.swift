@@ -218,6 +218,12 @@ struct TokenChart {
         "arbitrum": "arb-mainnet",
         "optimism": "opt-mainnet",
         "polygon": "matic-mainnet",
+        // The inverse of `WalletIngest.chainSlug`'s two 2026-08-28 entries.
+        // `hyperevm` is the Dexscreener/GeckoTerminal slug; `hyperliquid`
+        // there is the L1 and is deliberately absent, since routing an L1
+        // book at an EVM contract address answers with the wrong market.
+        "hyperevm": "hyperliquid-mainnet",
+        "monad": "monad-mainnet",
     ]
 
     /// Alchemy's Prices API historical endpoint — real candles for the EVM
