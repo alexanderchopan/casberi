@@ -38292,3 +38292,83 @@ so no watch has ever been resolved and no events feed has ever been read by
 this code. Every read is a GET returning nil on failure, and a person whose
 feed fails contributes nothing rather than failing the refresh, so it degrades
 to today's behaviour throughout.
+
+## 521. The rooms said the same thing twice (2026-08-29)
+
+A sweep for verboseness and redundancy, asked for across the app and named for
+the wallet. Four findings, all of them a surface saying something a surface
+beside it already said.
+
+**1. The Permissions scope stated one dollar figure twice.**
+`WalletPermissionsCard` leads the scope with "$8,924 in reach" and
+`WalletApprovalExposureCard` headlined "7 spenders can move $8,924" a
+centimetre below it. Not two readings that happened to agree — the same sum by
+construction: `WalletPermissions.totalUSD` sums the very grants the exposure
+card ranks, and the acting parties beside them carry no amount to add (§490's
+own rule, and the reason that card exists). ONE SCOPE, ONE FIGURE: the
+headline retires; the yellow "Approvals" header stays, since it is what
+separates this list from the acting-parties list above it, and "Revoking is
+free apart from gas. Start at the top." stays, since it is the only
+instruction on the card.
+
+**It also removed a §83 case that could render today.** The card draws on
+`!exposure.isEmpty`, which is TRUE when every grant is unpriced, while
+`spenderCount` and `total` count priced rows alone — so an all-unpriced
+exposure headlined **"0 spenders can move $0"** over a list of live grants, a
+reassurance on the rows that earned it least. The "Worth a look" tray guards
+that exact case explicitly (`!exposure.priced.isEmpty`) and says why in a
+comment; the card never did. `WalletApprovalExposure.headline` STAYS — the
+tray's walk row quotes it, and `wallet-viz-selftest` pins it.
+
+**2. The two directory rooms carried the verb twice, in two words.**
+L2BEAT and Walletbeat share a head shape: headline, note, link, footnote. The
+note said "Name the chains you use to add…" and the button one line below it
+said "Watch the chains you use" — the same act, twice, in two different verbs.
+Two costs, and the second is worse than the wasted line: a reader has to decide
+whether naming and watching are one thing or two, which is §511's "one
+consequence, one word" broken inside a single card. **The verb is the button's
+alone now and the note spends its whole line on what following does not
+cover** — who can stop your transactions, where a wallet's keys are made. The
+note also dropped its own restatement of the attribution the footnote carries
+("and L2BEAT's assessment of each arrives too"), which had put the source's
+name in all four of the head's text slots, on a screen whose chip strip
+already has that source lit. That is §452's reasoning exactly: it deleted the
+source-name eyebrow from these two cards, and the name simply moved into the
+sentences.
+
+Both harnesses PINNED the old wording, so the rulings are amended rather than
+the guards deleted: they assert the note says what the upgrade ADDS and that
+it leaves the verb to the button, and `walletbeat-selftest`'s mutation now
+pins the new clause.
+
+**3. A catalogue row spent its only line repeating the name above it.**
+§518 made the catalog a LIST this morning, and a row now draws the tagline
+under the name; the tiles it replaced drew no tagline at all, so no tagline had
+ever been read next to its own name. Twelve did: "Farcaster / Track any
+Farcaster account", "Dropbox / Your Dropbox, without the notifications",
+"Bookmarks / Import your bookmarks". Rewritten to say what the seat brings —
+and the three social ones deliberately DIVERGE rather than converging on "Any
+account", which would have made three adjacent rows identical. GitHub's is the
+user's own wording ("your work and your follows"). Mirrored into the website's
+`data-tag` cells and `docs.html` in the same pass, per the standing rule; that
+sync also repaired a Safe tagline the two had already drifted apart on.
+
+**4. Sentence case: clean, one exception.** 3,675 localized strings checked
+mechanically — no ALL-CAPS eyebrows, no letter-spacing, and no Title Case
+beyond proper nouns and acronyms. The single break was **"Address Book"** in
+ten places, now "Address book". Two of the ten are in `VibenetRoomCard.swift`
+and are LEFT: a concurrent session held that file uncommitted, and taking work
+out from under a live session is a worse outcome than a label that disagrees
+for an afternoon. Finish them when that lands.
+
+**What was looked at and left alone.** The wallet tiles' own copy (§483 swept
+it three days ago and it is terse); "Who can act for you" over rows reading
+"Acts for Main and …4f4f", which is not a restatement but the other half of
+the report, naming WHICH wallets; and `iCloud Mail`'s "Your @icloud.com
+inbox, findable", where the repeated word is the domain and it is the only
+thing separating that row from Gmail's identical line.
+
+**Stated ceiling: this was a code sweep, not a screenshot sweep.** Nothing
+here was seen on a device or a simulator. Every finding is a duplication two
+files could be shown to make, and none of them is a judgement about how the
+result looks.

@@ -72,18 +72,28 @@ struct WalletApprovalExposureCard: View {
                     .dsText(.label12).fontWeight(.semibold)
                     .foregroundStyle(Self.mark)
 
-                Text(WalletApprovalExposure.headline(spenders: exposure.spenderCount,
-                                                     total: exposure.total))
-                    .dsText(.heading22)
-                    .foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, DS.Space.s2)
-
+                // **THE HEADLINE RETIRED HERE (2026-08-29).** It read
+                // "7 spenders can move $8,924" — the same figure the scope's
+                // own lead drawing states as "$8,924 in reach" a centimetre
+                // above it, since `WalletPermissions.totalUSD` sums the very
+                // grants this card ranks and the acting parties beside them
+                // carry no amount to add. One scope, one figure.
+                //
+                // It also removes a §83 case that could render today: the card
+                // draws on `!exposure.isEmpty`, which is true when every grant
+                // is UNPRICED, while `spenderCount` and `total` count priced
+                // rows alone — so an all-unpriced exposure headlined
+                // "0 spenders can move $0" over a list of live grants. The
+                // "Worth a look" tray already guards that case explicitly
+                // (`!exposure.priced.isEmpty`) and this card never did.
+                //
+                // `WalletApprovalExposure.headline` stays: the tray's walk row
+                // still quotes it, and the harness still pins it.
                 Text(String(localized: "Revoking is free apart from gas. Start at the top."))
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, DS.Space.s1)
+                    .padding(.top, DS.Space.s2)
 
                 // Enumerated for the entrance stagger only (2026-08-03, prd
                 // §297). `exposure.all` is already ranked by what's at stake,

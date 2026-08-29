@@ -465,7 +465,7 @@ struct SourcesOverlay: View {
             // `person.text.rectangle` is the same glyph both rails draw
             // (§461), so the three doors to one screen cannot read as three
             // different destinations.
-            door(label: String(localized: "Address Book"), action: onOpenAddressBook) {
+            door(label: String(localized: "Address book"), action: onOpenAddressBook) {
                 Image(systemName: "person.text.rectangle")
                     .dsGlyph(17, weight: .medium)
                     .foregroundStyle(DS.textPrimary)

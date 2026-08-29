@@ -132,7 +132,7 @@ struct VibenetScreen: View {
     /// count and not a roster: the roster is what §465 moved.
     private var bookDoorSection: some View {
         Section {
-            DSSlabDoor(title: String(localized: "Address Book"),
+            DSSlabDoor(title: String(localized: "Address book"),
                        detail: watch.addresses.count == 1
                            ? String(localized: "1 account")
                            : String(localized: "\(watch.addresses.count) accounts")) {

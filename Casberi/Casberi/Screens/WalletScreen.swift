@@ -109,7 +109,7 @@ struct WalletScreen: View {
     /// narrower count this door used to carry.
     private var bookDoorSection: some View {
         Section {
-            DSSlabDoor(title: String(localized: "Address Book"),
+            DSSlabDoor(title: String(localized: "Address book"),
                        detail: book.count == 1
                            ? String(localized: "1 name")
                            : String(localized: "\(book.count) names")) {

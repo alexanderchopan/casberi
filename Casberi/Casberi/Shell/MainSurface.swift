@@ -463,7 +463,7 @@ struct MainSurface: View {
                 // choice. `addTitle`/`onAdd` deliberately left nil.
                 addTitle: nil,
                 onAdd: nil,
-                bookTitle: String(localized: "Address Book"),
+                bookTitle: String(localized: "Address book"),
                 onOpenBook: { route.push(.vibenetAddressBook) })
             .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
         }

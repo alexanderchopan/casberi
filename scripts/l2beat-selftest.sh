@@ -869,15 +869,20 @@ check("a quiet window is a real answer",
       L2beatRoom.headline(calm).contains("No incidents"))
 check("the note names how many chains, not just how many incidents",
       L2beatRoom.newsNote(calm).contains("7"))
-check("the note always states the upgrade",
-      L2beatRoom.newsNote(calm).contains("Name the chains"))
+// THE REASON, NOT THE VERB (2026-08-29). The button one line below the note is the
+// instruction; the note carries what naming a chain ADDS, which is the only thing on
+// this card the button cannot say.
+check("the note always states what the upgrade adds",
+      L2beatRoom.newsNote(calm).contains("who can stop your transactions"))
+check("the note leaves the verb to the button",
+      !L2beatRoom.newsNote(calm).contains("Name the chains"))
 // "none landed" and "none exist" are different claims, and only the second would be a
 // clean bill of health for every chain L2BEAT covers.
 let nothing = room([])
 check("nothing landed reads as the read not having run",
       L2beatRoom.headline(nothing).contains("Reading"))
 check("nothing landed offers the upgrade anyway",
-      L2beatRoom.newsNote(nothing).contains("Name the chains"))
+      L2beatRoom.newsNote(nothing).contains("Watching the chains you use"))
 check("a room with no items and no news has no coverage note",
       L2beatRoom.coverageNote(nothing) == nil)
 check("a capped room says how many it is showing",

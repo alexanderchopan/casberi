@@ -837,11 +837,15 @@ check("no incident landed reads as reading, not as none exist",
 check("no incident landed never claims a quiet window",
       WalletbeatRoom.headline(nothingRead).contains("No wallet security") == false)
 
-// The second line is always the upgrade — what following does NOT cover.
-check("the followed note names the upgrade",
-      WalletbeatRoom.note(openOne).contains("Name the wallet apps you use"))
+// The second line is always the upgrade — what following does NOT cover. THE REASON,
+// NOT THE VERB (2026-08-29): the button one line below is the instruction, and the note
+// carried it too, in a different word ("Name" against the button's "Watch").
+check("the followed note says what the upgrade adds",
+      WalletbeatRoom.note(openOne).contains("where its keys are made"))
 check("the followed note before anything lands still names the upgrade",
-      WalletbeatRoom.note(nothingRead).contains("Name the wallet apps you use"))
+      WalletbeatRoom.note(nothingRead).contains("Watching the wallet you use"))
+check("the followed note leaves the verb to the button",
+      !WalletbeatRoom.note(openOne).contains("Name the wallet apps"))
 
 // It never names a wallet: the incidents are rows directly beneath, and promoting one of
 // thirty-two into the headline reads as a warning about software you may not use.
@@ -1300,7 +1304,7 @@ mutate "open must outrank recent" room \
 mutate "the recent window must be reported" room \
   'if news.recent > 0 {' 'if news.recent > 99 {'
 mutate "the followed note must carry the upgrade" room \
-  "Name the wallet apps you use and Walletbeat's review of each arrives too" \
+  "Watching yours adds where its keys are made, and who sees your addresses" \
   "Walletbeat publishes these on their own schedule"
 mutate "a followed room must still attribute" room \
   "Walletbeat's reading, not ours · every wallet they cover" \

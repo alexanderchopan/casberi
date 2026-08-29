@@ -2664,7 +2664,7 @@ struct FeedScreen: View {
                     // would point at the book door beside it.
                     addTitle: nil,
                     onAdd: nil,
-                    bookTitle: String(localized: "Address Book"),
+                    bookTitle: String(localized: "Address book"),
                     onOpenBook: { route.push(.addressBook) })
                     // `DSRoomChassis`, which Vibenet reads too — see that
                     // type for why these gaps stopped being two hand-tuned

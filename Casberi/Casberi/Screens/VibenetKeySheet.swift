@@ -324,7 +324,7 @@ struct VibenetKeySheet: View {
                 // with no address inside it, so there is nothing here to
                 // file). No verb draws for those kinds — not a disabled one
                 // (§83) — the copy test simply excludes them.
-                door(String(localized: "Add to Address Book"),
+                door(String(localized: "Add to Address book"),
                      symbol: "person.crop.circle.badge.plus") {
                     let book = AddressBook.shared
                     let accountName = VibenetWatch.shared.name(for: item.address)

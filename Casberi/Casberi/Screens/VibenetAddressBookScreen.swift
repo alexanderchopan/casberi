@@ -191,7 +191,7 @@ struct VibenetAddressBookScreen: View {
             // What actually happens, in the words of the things it happens to
             // — never "this cannot be undone", which is true of most taps and
             // tells you nothing about this one.
-            Text(String(localized: "It's the only account you watch, so vibenet disconnects: the chip leaves the source strip. The names you gave your accounts stay in your Address Book."))
+            Text(String(localized: "It's the only account you watch, so vibenet disconnects: the chip leaves the source strip. The names you gave your accounts stay in your Address book."))
         }
         .alert(
             String(localized: "Name this account"),
@@ -376,7 +376,7 @@ struct VibenetAddressBookScreen: View {
                 DSHaptic.selection()
                 route.push(.addressBook)
             } label: {
-                doorRow(String(localized: "Full Address Book"),
+                doorRow(String(localized: "Full Address book"),
                         glyph: "chevron.right", tinted: false)
             }
             .buttonStyle(PressSpring())

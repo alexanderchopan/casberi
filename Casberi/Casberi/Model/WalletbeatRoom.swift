@@ -224,14 +224,20 @@ struct WalletbeatRoom: Equatable {
 		return String(localized: "No wallet security incidents in the last 30 days")
 	}
 
-	/// The second line. Always the UPGRADE, because the head's job here is to say what
-	/// following does not cover: incidents are about wallets in general, and a review of
-	/// the wallet in your pocket needs you to name it.
+	/// The second line. Always the UPGRADE — but the REASON to take it, never the
+	/// instruction, because the button directly beneath it is the instruction (2026-08-29).
+	///
+	/// It carried both until this: the note said "Name the wallet apps you use…" and the
+	/// button one line down said "Watch the wallet apps you use" — the same act, twice,
+	/// in two different verbs. Two costs, and the second is the worse one: the words are
+	/// wasted, and a reader has to decide whether naming and watching are one thing or
+	/// two (§511's "one consequence, one word"). The verb is now the button's alone and
+	/// the note spends its whole line on what following does not cover.
 	static func newsNote(_ room: WalletbeatRoom) -> String {
 		guard let news = room.news, news.total > 0 else {
-			return String(localized: "Walletbeat's security incidents arrive here. Name the wallet apps you use to add their reviews.")
+			return String(localized: "Security incidents arrive here. Watching the wallet you use adds a review of it too.")
 		}
-		return String(localized: "\(news.total) landed so far. Name the wallet apps you use and Walletbeat's review of each arrives too — where its keys are made, who sees your addresses.")
+		return String(localized: "\(news.total) landed so far. Watching yours adds where its keys are made, and who sees your addresses.")
 	}
 
 	/// What the room's one button says.

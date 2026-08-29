@@ -164,7 +164,7 @@ enum BridgeCatalog {
               summary: "Your events land alongside everything else — and you can add one by asking."),
         Offer(name: "Reminders",   tagline: "Lists stay in reach",                   group: "Schedule",  connectable: true,
               summary: "Your reminders join your things and stay findable — and you can add one by asking."),
-        Offer(name: "Wallet",      tagline: "Track any wallet's activity",          group: "Wallet",    connectable: true,
+        Offer(name: "Wallet",      tagline: "Any address — holdings and moves",          group: "Wallet",    connectable: true,
               summary: "Paste a wallet address — 0x…, a Bitcoin address, an ENS name, or a .sol name — and its onchain activity lands in your feed like anything else.\n\nRead-only, public data, no server: watching an address can never trade or move funds.",
               features: [
                 "Flags new token approvals, including through Permit2.",
@@ -383,7 +383,7 @@ enum BridgeCatalog {
         // settle into the person's own wallet, so the seat is a switch over
         // the watched list. That mechanism argument is now Wallet's own
         // argument too — it no longer distinguishes the two groups.)
-        Offer(name: "Peer",        tagline: "Your Peer trades, as they settle",      group: "Wallet",    connectable: true,
+        Offer(name: "Peer",        tagline: "Your trades, as they settle",      group: "Wallet",    connectable: true,
               summary: "Peer trades settle onchain into your own wallet. Watch it and each fill lands as it settles — \"Bought 25 USDC with Venmo on Peer\".\n\nNo account, no key, read-only: nothing here ever starts a trade.",
               features: ["Which token, how much, and the payment app that paid for it",
                          "Peer's design keeps the Venmo or PayPal side off the chain, so it's never seen here either",
@@ -403,7 +403,7 @@ enum BridgeCatalog {
         // audit governs the SCREEN's intro and this is the product page.
         // Whatever this offer claims about signing has to move in the same
         // commit as the code that signs.
-        Offer(name: "Safe",        tagline: "Your Safe's queue — and this phone as a signer", group: "Wallet",    connectable: true,
+        Offer(name: "Safe",        tagline: "The signature queue, and this phone as a signer", group: "Wallet",    connectable: true,
               summary: "Watch a Safe — or just your own wallet, if it's one of the signers — and its pending signature queue lands in your feed.\n\nThis phone can also be one of the Safe's owners. Make a key here, add it from your other wallet, set the threshold to 2, and your computer can't spend without your phone's yes.",
               features: ["Finds every Safe you're a signer on, not just the ones you watch",
                          "Says when yours is the signature still missing",
@@ -495,7 +495,7 @@ enum BridgeCatalog {
               features: ["Fetched straight from the store's public catalog by \(DS.device)",
                          "Some big stores block automated reads — it says so when one does"],
               needsSetup: true),
-        Offer(name: "Deals",       tagline: "The best deals, as they drop",          group: "Shopping",  connectable: true,
+        Offer(name: "Deals",       tagline: "The best prices, as they drop",          group: "Shopping",  connectable: true,
               summary: "Follow the deal aggregators — Slickdeals, DealNews — and their newest deals land in your feed as products, each already priced in the headline. Fetched straight from each source's public feed by \(DS.device): no account, read-only — nothing here buys anything.",
               needsSetup: true),
         Offer(name: "Open Food Facts", tagline: "Scan a grocery barcode",           group: "Shopping",  connectable: true,
@@ -541,11 +541,11 @@ enum BridgeCatalog {
         // reasonably expect the same here and be wrong. Same shape as
         // Privacy.com's "Requires a paid Privacy plan" — a cost precondition
         // belongs in the offer, not discovered after connecting.
-        Offer(name: "Grok",        tagline: "Try with your key, on Grok",            group: "Agent",     connectable: true,
+        Offer(name: "Grok",        tagline: "Try it with your own key",            group: "Agent",     connectable: true,
               summary: "Any answer re-runs on Grok, straight from \(DS.device), only when you tap — the same \"Try with your key\" every agent here powers.\n\nNeeds credits on your xAI team — there's no free tier, and a key without them can't answer.",
               needsSetup: true, added: day(2026, 7, 31)),
-        Offer(name: "GitHub",      tagline: "Stars, releases, issues — your GitHub", group: "Work",      connectable: true,
-              summary: "Pick the feeds you want — starred repos, new releases, gists, your contributions, watched repos, and the issues and pull requests that involve you. Connects with a read-only token you make in GitHub settings — it stays in \(DS.device)'s Keychain.",
+        Offer(name: "GitHub",      tagline: "Your work, and what you follow", group: "Work",      connectable: true,
+              summary: "Pick the feeds you want — starred repos, new releases, gists, your contributions, watched repos, and the issues and pull requests that involve you. Watch a repo or a person privately too, without starring or following them on GitHub. Connects with a read-only token you make in GitHub settings — it stays in \(DS.device)'s Keychain.",
               needsSetup: true),
         Offer(name: "GitLab",      tagline: "The issues and MRs assigned to you",     group: "Work",      connectable: true,
               summary: "Every issue and merge request assigned to you, across every project, joins your things. Connects with a read-only personal access token from gitlab.com — it stays in \(DS.device)'s Keychain.",
@@ -766,7 +766,7 @@ enum BridgeCatalog {
         // Social, with Bluesky (user ruling 2026-07-17, reversing the
         // 2026-07-14 "onchain network" shelving): Farcaster is a social account
         // first — it browses beside Bluesky, and its detail eyebrow says so.
-        Offer(name: "Farcaster",   tagline: "Track any Farcaster account",           group: "Network",   connectable: true,
+        Offer(name: "Farcaster",   tagline: "Any account — casts, channels, likes",           group: "Network",   connectable: true,
               summary: "An open social protocol — casts are public, so this connects with just a username: your own or anyone's, plus /channels by name. An account's likes and mentions can land too.\n\nNo password, nothing stored but the name.",
               needsSetup: true),
         // Telegram RETURNS (prd §456, 2026-08-23), reversing §57's 2026-07-14
@@ -783,7 +783,7 @@ enum BridgeCatalog {
                          "Your chats, from an export, only if you ask for them",
                          "Read on \(DS.device); no account, no key, nothing sent to Telegram"],
               needsSetup: true, added: day(2026, 8, 23)),
-        Offer(name: "Bluesky",     tagline: "Track any Bluesky account",             group: "Network",   connectable: true,
+        Offer(name: "Bluesky",     tagline: "Any account — posts, feeds, likes",             group: "Network",   connectable: true,
               summary: "Built on an open protocol — posts are public, so this connects with just a handle: your own or anyone's, and mentions of them can land too.\n\nNo password, nothing stored but the name.\n\nLikes arrive with sign-in, later.",
               needsSetup: true),
         // Network, beside Farcaster/Bluesky (2026-07-27): a third open,
@@ -791,7 +791,7 @@ enum BridgeCatalog {
         // no key. Connects by npub, raw hex pubkey, or a NIP-05 identifier
         // ("name@domain.com") instead of a username, since Nostr has no
         // global directory to search.
-        Offer(name: "Nostr",       tagline: "Track any Nostr account",               group: "Network",   connectable: true,
+        Offer(name: "Nostr",       tagline: "Any account, as it posts",               group: "Network",   connectable: true,
               summary: "Notes on Nostr are public, so this connects with an npub, a raw pubkey, or a name@domain identifier — your own or anyone's.\n\nNo password, nothing stored but the identity. Read from whichever public relays answer.",
               features: ["#hashtags by name, too",
                          "An account's reactions and mentions can land"],
@@ -888,7 +888,7 @@ enum BridgeCatalog {
         // link, never "shared with me" — the reasoning the user gave for
         // building this at all: a stranger sharing something with you can
         // never make it appear here.
-        Offer(name: "Dropbox",     tagline: "Your Dropbox, without the notifications", group: "Storage", connectable: true,
+        Offer(name: "Dropbox",     tagline: "Your files, without the notifications", group: "Storage", connectable: true,
               summary: "Name a folder and what's inside lands in your feed, synced with Dropbox's own change feed — so deletes arrive too.\n\nRead-only: nothing here writes to your Dropbox.",
               features: ["Never shared links, never \u{201c}shared with me\u{201d} — only the folder you name"],
               needsSetup: true, added: day(2026, 7, 27)),
@@ -911,7 +911,7 @@ enum BridgeCatalog {
         // Format), so one offer, one parser, one screen covers both —
         // Safari's Reading List rides along as a folder inside that same
         // file, for free.
-        Offer(name: "Bookmarks",   tagline: "Import your bookmarks",                 group: "Reading",   connectable: true,
+        Offer(name: "Bookmarks",   tagline: "Safari and Chrome, imported",                 group: "Reading",   connectable: true,
               summary: "Your bookmarks live inside your browser, which hands them over only as a file.\n\nExport from Safari or Chrome, bring it here, and they become findable links with folders kept as tags.",
               features: ["Safari's Reading List rides along as its own folder",
                          "Re-imports add only what's new"],

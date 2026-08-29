@@ -526,7 +526,7 @@ grep -q 'AddressBookShape.lastPhrase(activity.lastAt)' "$TMP/views-bare.swift" \
 # it survives the next move.
 grep -qs 'route.push(.addressBook)' "$SHELL_MAIN" "Casberi/Casberi/Screens/FeedScreen.swift" \
   || { echo "✗ the wallet rail's address-book slot is gone — the room would be reachable only from the roster (§461)"; exit 1; }
-grep -q 'bookTitle: String(localized: "Address Book")' "$SHELL_MAIN" \
+grep -q 'bookTitle: String(localized: "Address book")' "$SHELL_MAIN" \
   || { echo "✗ the rail's book door lost its name — the slot is captionless, so the label IS its only naming (VoiceOver and the Mac tooltip)"; exit 1; }
 grep -q 'route.push(.addressBook)' "$SCREEN" \
   || { echo "✗ the setup screen lost its door to the book — with nothing watched the rail does not draw, so this is the only way in (§461/§466)"; exit 1; }
