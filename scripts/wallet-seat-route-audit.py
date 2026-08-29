@@ -23,6 +23,26 @@ yet"). A seat missing from there wears the right verb and says NOTHING under
 it, which is the state s515 removed -- a page that raises a question and does
 not answer it. Silent, because a nil sentence renders as no sentence.
 
+A FOURTH direction since prd s515a (2026-08-29): a protocol the wallet reads
+ON ITS OWN must never also ship as a catalog offer. s515 removed five such
+seats; this is what stops a sixth, and it closes the rule from the side that
+would re-create it.
+
+The hook is `BridgeCatalog.Offer.alsoReads`, whose own doc has stated the rule
+in prose since s515 -- "A name belongs here ONLY while it has no seat ... which
+is the defect s515 removed, arriving from the other side" -- with NOTHING
+enforcing it. That is this repo's standing failure mode: a written rule gets
+re-broken, which is why every other load-bearing rule here is a script.
+
+`alsoReads` is the right hook and `WalletSeatStanding.rides(id:)` is NOT, which
+is worth stating because s515a's first cut named the wrong one. `rides` answers
+"does this seat ride the watched wallets", which is TRUE of Peer, Gnosis Pay,
+Privacy Pools and Railgun -- seats that correctly exist, because each lands
+rows under a source of its own. Riding the wallets is not the disqualifier;
+being read on the person's behalf while landing nothing of your own is, and
+`alsoReads` is the list of exactly those. Derived from source, so a protocol
+added there tomorrow is covered with no list to maintain.
+
 Whether the room a seat opens is the seat's OWN is `setup-copy-audit.py`
 check 7e: the s515 rule that a catalog seat lands rows under a source of its
 own, which is why Aave, Morpho, Uniswap, Hyperliquid and Aerodrome stopped
@@ -38,7 +58,7 @@ def strip_comments(s):
     s = re.sub(r'^\s*//.*$', '', s, flags=re.M)
     return s
 
-def check(store_src, route_src, standing_src=None):
+def check(store_src, route_src, standing_src=None, catalog_src=None):
     problems = []
     store = strip_comments(store_src)
     route = strip_comments(route_src)
@@ -94,6 +114,27 @@ def check(store_src, route_src, standing_src=None):
                     f'`WalletSeatStanding.seats` names "{sid}", which is not a wallet '
                     f'seat -- a stale entry describing a seat that no longer rides the '
                     f'wallets.')
+
+    # FOURTH direction (prd s515a): a protocol the wallet reads on its own may
+    # not also be an offer. Note this is a CATALOG rule, not a seat rule -- it
+    # never reads `seats` above, so it fires for a name nobody made a seat of.
+    if catalog_src is not None:
+        cat = strip_comments(catalog_src)
+        offers = set(re.findall(r'Offer\(name:\s*"([^"]+)"', cat))
+        if not offers:
+            problems.append("parsed zero catalog offers -- "
+                            "the alsoReads half of this check is blind")
+        else:
+            also = set()
+            for grp in re.findall(r'alsoReads:\s*\[([^\]]*)\]', cat):
+                also |= set(re.findall(r'"([^"]+)"', grp))
+            for name in sorted(also & offers):
+                problems.append(
+                    f'"{name}" is named in an `alsoReads` list AND ships as a catalog '
+                    f'offer -- one thing in the catalog twice. The wallet already reads '
+                    f'it, so its seat advertises a connect that does not exist (s515a). '
+                    f'Drop the offer, or drop the `alsoReads` entry if it really does '
+                    f'land rows under a source of its own.')
     return problems
 
 def selftest():
@@ -171,6 +212,33 @@ def selftest():
     cases.append((any("blind" in x for x in check(STORE_OK, ROUTE_OK, "enum WalletSeatStanding {}")),
                   "a missing standing table fails rather than passing"))
 
+    # The alsoReads half (prd s515a). The fixture pairs a Wallet offer that
+    # READS five protocols with a catalog that does not sell them.
+    CAT_OK = '''
+        Offer(name: "Wallet", tagline: "Track any wallet", group: "Wallet",
+              alsoReads: ["Aave", "Morpho", "Uniswap"], connectable: true),
+        Offer(name: "Peer", tagline: "Fills", group: "Wallet", connectable: true),
+'''
+    cases.append((not check(STORE_OK, ROUTE_OK, STAND_OK, CAT_OK),
+                  "a read-on-your-behalf protocol with no seat passes"))
+    # The s515 defect arriving from the other side: one of them gains an offer.
+    cat_dupe = CAT_OK.replace(
+        '        Offer(name: "Peer"',
+        '        Offer(name: "Aave", tagline: "Lending", group: "Wallet", connectable: true),\n        Offer(name: "Peer"')
+    p4 = check(STORE_OK, ROUTE_OK, STAND_OK, cat_dupe)
+    cases.append((any("in the catalog twice" in x for x in p4),
+                  "a protocol that is BOTH read and sold is flagged"))
+    cases.append((any('"Aave"' in x for x in p4),
+                  "...and the finding names which one"))
+    # A seat that rides the wallets but lands its OWN rows must NOT be flagged
+    # -- the false positive that `WalletSeatStanding.rides` would have caused.
+    cases.append((not any("in the catalog twice" in x
+                          for x in check(STORE_OK, ROUTE_OK, STAND_OK, CAT_OK)),
+                  "a wallet-riding seat with its own source is left alone"))
+    # Blindness must be loud, never green.
+    cases.append((any("blind" in x for x in check(STORE_OK, ROUTE_OK, STAND_OK, "// no offers")),
+                  "an unparseable catalog fails rather than passing"))
+
     bad = [n for ok, n in cases if not ok]
     for ok, n in cases:
         print(("  \u2713 " if ok else "  \u2717 ") + n)
@@ -184,10 +252,11 @@ if __name__ == "__main__":
     os.chdir(pathlib.Path(__file__).resolve().parents[1])
     probs = check(load("Casberi/Casberi/Model/BridgeStore.swift"),
                   load("Casberi/Casberi/Model/BridgeRouting.swift"),
-                  load("Casberi/Casberi/Model/WalletSeatStanding.swift"))
+                  load("Casberi/Casberi/Model/WalletSeatStanding.swift"),
+                  load("Casberi/Casberi/Model/BridgeCatalog.swift"))
     for p in probs:
         print("\u2717 " + p)
     if not probs:
         print("\u2713 wallet-seat routes: every seat has a Connect door, an Open door "
-              "and a sentence")
+              "and a sentence, and nothing the wallet reads is also sold")
     sys.exit(1 if probs else 0)

@@ -37790,15 +37790,33 @@ without them, which is §83's dead control wearing a product tile — and worse
 than an ordinary dead control, because it does not read as broken. It reads as
 a feature you have failed to set up.
 
-**THE TRIPWIRE, which §515 did not state: a protocol the wallet detects
-automatically must never get a catalog seat.** §515 removed five instances; the
-rule is what stops a sixth. It has a real hook rather than being a note
-somebody has to remember — `WalletSeatStanding.rides(id:)` already answers
-"does this seat ride the watched wallets", which is the same question — so the
-next wallet-riding protocol integrated cannot take a seat by default for the
-same plausible reason the five had one. This repo's own history is that an
-unenforced rule gets re-broken; `wallet-seat-route-audit.py` is where it
-belongs, as a fourth direction beside the three §515 gave it.
+**THE TRIPWIRE, which §515 did not state: a protocol the wallet reads on its
+own must never also ship as a catalog offer.** §515 removed five instances; the
+rule is what stops a sixth. Landed the same day as
+`wallet-seat-route-audit.py`'s FOURTH direction, beside the three §515 gave it.
+
+**The hook is `BridgeCatalog.Offer.alsoReads`, and naming the wrong one first
+is the trap worth recording.** This entry's first cut said
+`WalletSeatStanding.rides(id:)`, on the reasoning that it already answers "does
+this seat ride the watched wallets". It does — and that is TRUE of Peer, Gnosis
+Pay, Privacy Pools and Railgun, every one of which correctly has a seat,
+because each lands rows under a source of its own. Riding the wallets is not
+the disqualifier. **Being read on the person's behalf while landing nothing of
+your own is**, and `alsoReads` is the list of exactly those, derived from
+source so a protocol added there tomorrow is covered with no list to maintain.
+A check built on `rides` would have fired on four healthy seats on its first
+run, which is the lint that cries wolf.
+
+**The rule was already WRITTEN and already unenforced**, which is the whole
+argument for the check: `alsoReads`' own doc has said since §515 that "a name
+belongs here ONLY while it has no seat — an entry that also ships as an offer
+would put one thing in the catalog twice, which is the defect §515 removed,
+arriving from the other side." Nothing read that sentence. This repo's history
+is that an unenforced rule gets re-broken, which is why every other
+load-bearing rule here is a script. Mutation-proven against the real tree four
+ways: Aave restored as an offer, an existing seat added to `alsoReads`, a clean
+tree staying silent, and an unreadable catalog failing loudly rather than
+green.
 
 **Note what this does NOT reverse.** §515 stands whole — the five stay out,
 `alsoReads` keeps them findable by search, and the Wallet offer keeps stating
