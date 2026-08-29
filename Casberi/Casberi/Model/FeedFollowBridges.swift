@@ -613,6 +613,12 @@ enum FeedFollowIngest {
         return post.hasVideo ? String(localized: "Video") : String(localized: "Photo")
     }
 
+    /// How long to wait before the one retry a newly-resolved follow gets.
+    /// Long enough to be a different moment to the throttled host, short
+    /// enough that somebody watching the field does not read the pause as a
+    /// hang — see `fetchAndParse`, which is the only caller.
+    private static let firstFetchRetry: TimeInterval = 2
+
     /// Resolving/fetching/parsing one entry — no shared state, so every
     /// followed entry can run concurrently instead of one round trip at a
     /// time (2026-07-13).
@@ -631,7 +637,34 @@ enum FeedFollowIngest {
         // genuinely need: a Substack on its own domain and a podcast feed on
         // whatever host the show publishes from are both hosts the reach
         // registry structurally cannot name (prd §289).
-        switch await FeedFreshness.fetch(url, as: kind.source) {
+        //
+        // A REFUSED FIRST FETCH IS RETRIED ONCE, and the reason is measured
+        // rather than defensive. YouTube's `feeds/videos.xml` answers a client
+        // it has decided to throttle with a plain 404 or 500 —
+        // `FeedFreshness.troubleAfter` records the 2026-08-05 measurement of
+        // exactly that, and 2026-08-28 measured it again on the report that
+        // prompted this: NASA's channel feed came back 404/500 on four of four
+        // bursts, two control channels failed and succeeded in the same
+        // windows, and the same NASA URL answered 200 with a full body the
+        // moment the requests were paced a minute apart. Nothing about that
+        // feed is wrong.
+        //
+        // This is the ONE fetch somebody is standing in front of. A background
+        // pass can lose a round and try again in an hour; the pass that
+        // follows a name just typed cannot, because the setup screen reports
+        // its failure back as a sentence and the person deletes a follow that
+        // was about to work.
+        //
+        // Scoped to the FIRST fetch — `resolvedFeedURL != nil` is true only on
+        // the pass that resolved this follow — so a steady-state sync over
+        // twenty feeds never doubles its requests, and a genuinely dead feed
+        // costs one extra request the day it is added and none ever after.
+        var outcome = await FeedFreshness.fetch(url, as: kind.source)
+        if case .failed = outcome, resolvedFeedURL != nil {
+            try? await Task.sleep(for: .seconds(firstFetchRetry))
+            outcome = await FeedFreshness.fetch(url, as: kind.source)
+        }
+        switch outcome {
         case .fresh(let data):
             // Telegram is the one arm whose body is not XML — a channel's own
             // web page rather than a feed document (prd §456). It forks HERE

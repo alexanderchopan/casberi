@@ -1215,11 +1215,27 @@ struct HandleSetupScreen: View {
             return
         }
         guard let added else {
-            // A channels-only Farcaster connection has no username to blame —
-            // nil there is the node not answering, not a spelling.
-            result = bridge == .farcaster && accountNames.isEmpty
-                ? String(localized: "Couldn't reach Farcaster — try again.")
-                : String(localized: "Couldn't find that \(bridge.nameNoun) — check the spelling.")
+            // nil is "nothing was reachable", and for the four feed-follow
+            // bridges that is usually not a spelling mistake. A follow whose
+            // feed URL is already stored has PROVED its name: for YouTube the
+            // channel page answered and named its own id, for the others the
+            // URL is a template over what was typed. So when nothing reached
+            // and something is resolved, the host refused us — YouTube
+            // answers a throttled client a plain 404 or 500 (measured, see
+            // `FeedFollowIngest.fetchAndParse`) — and the follow is saved,
+            // will be retried on the next pass, and will fill in. Blaming the
+            // spelling there sends somebody to delete a follow that works.
+            //
+            // A channels-only Farcaster connection has no username to blame
+            // either — nil there is the node not answering.
+            if let kind = bridge.feedKind,
+               kind.store.entries.contains(where: { !$0.feedURL.isEmpty }) {
+                result = String(localized: "Saved — \(bridge.rawValue) didn't answer just now. It'll fill in on the next refresh.")
+            } else if bridge == .farcaster, accountNames.isEmpty {
+                result = String(localized: "Couldn't reach Farcaster — try again.")
+            } else {
+                result = String(localized: "Couldn't find that \(bridge.nameNoun) — check the spelling.")
+            }
             resultIsError = true
             return
         }
