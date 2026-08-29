@@ -110,10 +110,19 @@ enum DemoCorpus {
     static func clear(_ context: ModelContext) -> Int {
         let fixtures = Set(things().map { "\($0.source)\u{0}\($0.title)" })
         guard let all = try? context.fetch(FetchDescriptor<Thing>()) else { return 0 }
+        // The refs these fixtures DO carry (prd §510a). The empty-ref rule below
+        // is the general one and it silently exempted the four wallet rows,
+        // which have carried `wallet:0xa1…a4` since this seeder was written —
+        // so `-demoSeed clear` reported a number that was four short and left
+        // them behind every time, in the one seeder whose rows can reach a
+        // released install (a dev simulator signed into the same iCloud account
+        // mirrors them like anything else). EXACT refs, never a `wallet:`
+        // prefix: `WalletIngest` writes `wallet:<uid>` for every real transfer.
+        let fixtureRefs = Set(things().compactMap(\.sourceRef))
         let mine = all.filter { thing in
             guard thing.isLive else { return false }
             let ref = thing.sourceRef ?? ""
-            guard ref.isEmpty else { return false }
+            guard ref.isEmpty else { return fixtureRefs.contains(ref) }
             return fixtures.contains("\(thing.source)\u{0}\(thing.title)")
         }
         for thing in mine { context.delete(thing) }

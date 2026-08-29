@@ -201,6 +201,7 @@ marks chronological position within the pair.
 | §369 | §363 | the money receipt collided with the social sheet, which opened the §364–§368 category series and keeps the bare number by document order (2026-08-12 integration merge) |
 | §377a | §377 | the quick-action fix collided with the All-feed fold, which cites §377 nine times across five files and opens the §377–§379 series; the quick action cites it once and is the earlier of the pair (2026-08-14 integration merge) |
 | §467 | §464 | the vibenet room/event-sheet session collided with the Safe rings ruling, which is the one that reached the ledger and therefore keeps the bare number by document order; the vibenet half was never written down at all — see §467 (2026-08-25) |
+| §510a | §510 | the bare number went to the Frames-card fix, which reached the ledger first and cites §510 three times; the demo-teardown session took the letter (2026-08-28/29 integration merge) |
 | §482 (amendment) | A short address under a face is only the last four digits, with no ellipsis | reversed by §495 (the short form only ever appears where a NAME would have been — it is the fallback half of `name(for:) ?? shortAddress(…)` at all fourteen call sites — so the ellipsis is what stops "9a0b" reading as a name somebody chose; the 66pt width argument did not survive measurement at ~34pt) |
 
 ## 1. Thesis
@@ -37470,3 +37471,29 @@ and the sample is what says so.
 
 **UNBUILT** — authored on Linux with no Xcode and no Swift toolchain, so
 `verify.sh` and the harness have not run; all 28 static audits pass.
+## 510a. The demo rows that could not be left behind (user: "cardpointers is showing up in my feed on a new install even tho i haven't connected it… also its not rendering properly", then "i can't even remove cardpointers from my feed, it think i am not connected but is showing me stuff", 2026-08-28)
+
+Reported as a new install showing four CardPointers offers — Amazon, Shell, Uber, Hilton — for a seat that had never been connected, with no way to remove them. They are `DemoSeedAll.cardPointers()`'s own four rows, verbatim.
+
+**The cause is `DemoSeedAll.refPrefixes`, and this is the FIFTH instance of the class it already documents at length.** That list is the one thing `clear` and `restampIfStale` both walk, so a seeded ref missing from it fails twice and silently: the row outlives every demo exit, and it freezes in place while the other ~400 rows are shifted forward. Four families were missing:
+
+- **CardPointers' four offers** (`cardpointers:offer:demo1…4`),
+- **Altana's six keys** (`altana:key:<chain>:<address>:<keyid>` — the real shape, by §403's own ruling),
+- **the wallet's three reconciling deadlines** (§—, 2026-08-17: `aerodrome:vote:`, `hyperliquid:unlock:`, `wallet:ensexpiry:`), added in the same session as the last fix to this list and never added to it.
+
+**CloudKit is the half that makes "new install" true.** The store is mirrored, so the orphans survive locally AND in the zone; a fresh install pulls them back out looking exactly like real synced rows. And nothing offers a door: a seat that was never connected has no Disconnect, which is the second half of the report and is correct behaviour applied to rows that should not exist.
+
+**Scoping rules kept, one per family.** CardPointers keeps a `demo` segment inside the real shape, so nothing real collides. Altana's scope is the demo ADDRESS, and the prefix is built by `AltanaKeystore.ref(…, keyID: "")` rather than spelled by hand — a prefix re-typed beside its builder is where the two start disagreeing. Two of the three wallet deadlines are scoped by the demo wallet; the ENS one cannot be (`wallet:ensexpiry:` keys on the NAME), so it is an exact ref carrying the PostHog/Stocktwits accepted risk — somebody watching `casberi.eth` themselves loses that row on demo exit.
+
+**Fixing the list reaches nothing already landed**, so `DemoSeedAll.sweepEscapedRows` is the repair, run once as migration v7. It deletes only `escapedPrefixes` — never the whole list, which would take a legitimately seeded demo apart — and refuses while a demo is live, since in that state these rows ARE the demo on screen.
+
+**The guard that existed and was blind.** `demo-selftest.py` check K has asserted this exact rule since 2026-08-17 and reported green over all four, because it matched `ref:` followed by a LITERAL — and not one of the four writes its ref that way: CardPointers and the deadlines pass a variable out of a tuple table, Altana passes a function call. It now scans every namespaced literal anywhere in the seeder (5 known ref FRAGMENTS registered by name, each saying which prefix assembles it) and requires every computed `ref:` expression to declare the prefix that covers it. Mutation-proven three ways against the real tree, one per shape that shipped. **Standing lesson: a check that names the right rule can still be looking at the wrong syntax — mutate the real tree in the shape the bug actually took, not the shape the check was written against.**
+
+**A rename is a teardown change, and nobody had ever treated it as one.** `refPrefixes` has only ever known the CURRENT spelling, and this seeder re-spells refs regularly — every time for a good reason (§349's Peer/Privacy Pools, §401's Radicle, §495's vibenet hashes: a gate keyed on a real ref shape cannot be satisfied by a `demo:` row). Each rename orphaned whatever the previous build had already landed, permanently and in the zone. Retired shapes, now swept as `retiredPrefixes`:
+
+- **Radicle's demo repository id before §401** (`rad:z3gqcJUoA1n9HaHKufZs5FCSGazv5`), which shipped while `refPrefixes` carried no radicle entry at all. Radicle is a **Work** seat, which is what put a Work chip on an install whose only other rows were CardPointers'. The RID was MEASURED — a real repository — so the prefix keeps the `:demo` row segment: somebody genuinely following that repo must not lose their rows.
+- **`DemoCorpus`'s four wallet rows** under both spellings it shipped (`wallet:0xa1…a4`, `zerion:0xa1…a4`) and its one `bankr:ask-01`. EXACT refs, never a `wallet:` prefix — `WalletIngest` writes `wallet:<uid>` for every real transfer. That seeder is DEBUG-only and reaches a released install by one route: a dev simulator signed into the same iCloud account, which mirrors its rows like anything else. **Its own `clear` never removed them either** — the rule is "no `sourceRef` and a matching source+title", and these four have carried a ref since the file was written, so `-demoSeed clear` reported a number four short every time.
+
+Check K gained the matching assertion: a shape listed as retired must no longer be seeded, or the migration deletes rows out from under a live demo.
+
+**And the head had no chrome.** `CardPointersRoomCard` shipped without the `.padding(s4)` / `.dsWidgetSurface()` / `.padding(.horizontal, s4)` / `.padding(.top, s2)` every other room card wears — `FeedScreen.insightSection` sets `.listRowInsets(EdgeInsets())`, so a head card is edge-to-edge unless it pads itself. The headline sat flush against the screen and `WalletRunwayRail` ran under both bezels, clipping the last deadline dot, which is the one mark whose position is the whole reading.

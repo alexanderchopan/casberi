@@ -365,7 +365,7 @@ struct RootShell: View {
                 // One-time migrations run once per install (bump the version
                 // when adding one) — steady-state launches skip the scans.
                 let migrationsKey = "migrations.version"
-                let migrationsCurrent = 6
+                let migrationsCurrent = 7
                 let migrationsStored = UserDefaults.standard.integer(forKey: migrationsKey)
                 if migrationsStored < migrationsCurrent {
                     if migrationsStored < 1 {
@@ -462,6 +462,32 @@ struct RootShell: View {
                         for thing in wallet where thing.sourceRef?.hasPrefix("wallet:safe") == true {
                             thing.source = SafeBridge.sourceName
                         }
+                    }
+                    if migrationsStored < 7 {
+                        // One-time sweep (prd §510a, 2026-08-28) — the demo rows that
+                        // outlived every exit. Four families landed under real
+                        // namespaces and were never added to
+                        // `DemoSeedAll.refPrefixes`, so `clear` walked past
+                        // them: CardPointers' four offers, Altana's keys, and
+                        // the wallet's three reconciling deadlines. Reported
+                        // as a NEW install showing CardPointers offers for a
+                        // seat that had never been connected — which is the
+                        // CloudKit half of the bug, since the store mirrors
+                        // and a fresh install pulls the orphans back out of
+                        // the zone looking exactly like real synced rows. No
+                        // door existed to remove them: a seat that was never
+                        // connected offers no Disconnect.
+                        //
+                        // It also sweeps the shapes the demo USED to write and
+                        // no longer does — `refPrefixes` has only ever known
+                        // the current spelling, so every rename (Radicle's
+                        // measured repository id, `DemoCorpus`'s wallet rows)
+                        // orphaned whatever the previous build had landed.
+                        //
+                        // Fixing the prefix list alone reaches nothing already
+                        // landed, so this is the repair for devices that have
+                        // them today. It refuses while a demo is live.
+                        _ = DemoSeedAll.sweepEscapedRows(modelContext)
                     }
                     modelContext.saveHonestly()
                     UserDefaults.standard.set(migrationsCurrent, forKey: migrationsKey)

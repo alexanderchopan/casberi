@@ -1035,6 +1035,46 @@ def check_i_wallet_counterparties_are_named(files_text):
 # ref whose real head is `off:`. Caught on this check's first run.
 LITERAL_HEAD = r'"([^"\\]*)'
 
+# Literal namespaces that are never a `Thing.sourceRef`: bundled sample art
+# (`RemoteImageLoader` resolves that scheme in DEBUG), permalinks, and the
+# note ids a Nostr row carries as its `content`.
+NON_REF_LITERALS = ("http", "sample:", "nostr:note", "obsidian://", "casberi:")
+
+# Argument labels and properties that hold a namespaced string which is not a
+# ref. Matched against the 40 characters before the literal.
+NON_REF_LABELS = ("content:", "externalLink", "previewImageURL",
+                  "authorAvatarURL", "url:", "link:")
+
+# Ref FRAGMENTS — a literal that is assembled into a ref at the call site, so
+# the whole ref never appears in the source and no prefix can match this half.
+# Each entry names the prefix that covers the assembled form; a new one is a
+# conscious "this is a piece, not a ref".
+KNOWN_REF_FRAGMENT = {
+    # `vibenet()` writes `ref: "vibenet:\(ref)"` over these four event tails
+    # (prd §495 gave them real transaction hashes), and `"vibenet:"` covers the
+    # assembled ref.
+    "actor:0x7c1d4e9a2b6f83c05d17e4a9b820f36cd15e7a48b93c206df41e85a7cb90d24f:0": "vibenet:",
+    "actor:0x3f8b25c6d017a94e5b83f2016cd74a9e8b520371fc6ad9e04b18752c3ae6f091:1": "vibenet:",
+    "actor:0x5a2c9e18b7043fd61c85920ae3b47d6f0c19a5e8347b26df10a95c8e2b4713a9:0": "vibenet:",
+    "locked:0x9e04a71b3c8d526f0a94e7128bd35c6f807a1e29d4b60358cf9a2e714d80b365:0": "vibenet:",
+    # The demo repository id, interpolated INTO `radicle:\(kind):\(rid):…`,
+    # which `radicle:patch:rad:zDEMO`/`radicle:issue:rad:zDEMO` cover.
+    "rad:zDEMOheartwood0000000000001": "radicle:",
+}
+
+# `ref:` arguments built by a function. The value is the prefix in
+# `refPrefixes`/`escapedPrefixes` that covers what the function returns — which
+# a text check cannot derive, and which is exactly why Altana's six rows sat
+# uncovered from the day they landed.
+KNOWN_COMPUTED_REF = {
+    "AltanaKeystore.ref": "altana:key:",
+    "Corpus.importReceiptRef": "import:receipt:",
+    "L2beatWatch.chainRef": "l2beat:chain:",
+    "WalletbeatWatch.walletRef": "walletbeat:wallet:",
+    "PostHogWatch.metricRef": "posthog:metric:",
+    "StockWatch.symbolRef": "stocktwits:sym:",
+}
+
 
 def check_k_seeded_refs_are_cleared(files_text):
     """Every ref the seeder writes must be covered by a `refPrefixes` entry.
@@ -1067,29 +1107,115 @@ def check_k_seeded_refs_are_cleared(files_text):
     other."""
     text = strip_comments(files_text["DemoSeedAll"])
 
-    block = re.search(r"static let refPrefixes = \[(.*?)\]\n", text, re.DOTALL)
-    if not block:
-        check("K refPrefixes list is findable", False, True)
+    # TWO lists since 2026-08-28: `refPrefixes` ends `] + escapedPrefixes`, and
+    # the second holds the four families that had escaped it. Both are read, or
+    # every entry in the second reads as missing.
+    block = re.search(r"static let refPrefixes = \[(.*?)\]\s*\+\s*escapedPrefixes",
+                      text, re.DOTALL)
+    escaped = re.search(r"static let escapedPrefixes: \[String\] = \[(.*?)\n    \]",
+                        text, re.DOTALL)
+    # THIRD list (prd §510a): shapes the seeder USED to write. It is swept but
+    # never seeded, so its entries are legitimate ref literals that no current
+    # prefix covers — the scan below would report every one of them as a
+    # finding if the declaration were left inside the body it walks.
+    retired = re.search(r"static let retiredPrefixes: \[String\] = \[(.*?)\n    \]",
+                        text, re.DOTALL)
+    if not block or not escaped or not retired:
+        check("K all three prefix lists are findable",
+              bool(block) and bool(escaped) and bool(retired), True)
         return
     # Literal entries only. An entry like `PostHogWatch.metricRef("signed_up")`
     # is a computed ref, and the seeder writes it the same computed way, so
-    # neither side is a literal and both are skipped together.
-    prefixes = [p for p in re.findall(LITERAL_HEAD, block.group(1)) if p]
+    # neither side is a literal and both are skipped together — which is the
+    # gap `KNOWN_COMPUTED_REF` closes below.
+    declared = block.group(1) + escaped.group(1)
+    # `":" in p` drops the `", "` separators the head regex also matches when
+    # several entries share a line.
+    retired_prefixes = [p for p in re.findall(LITERAL_HEAD, retired.group(1))
+                        if p and ":" in p]
+    prefixes = [p for p in re.findall(LITERAL_HEAD, declared) if p]
+    # The computed entries, by the function that builds them.
+    prefix_builders = set(re.findall(r"([A-Za-z_][A-Za-z0-9_.]*)\s*\(", declared))
 
-    # Refs the seeder actually writes. Everything after the list itself, so the
+    # Refs the seeder actually writes. Everything after BOTH lists, so the
     # prefix declarations are not mistaken for seeded refs.
-    body = text[block.end():]
+    body = text[max(escaped.end(), retired.end()):]
     uncovered = []
     for m in re.finditer(r'\bref:\s*' + LITERAL_HEAD, body):
         head = m.group(1)
         if not head:
             continue
         if not any(head.startswith(p) or p.startswith(head) for p in prefixes):
-            line = body[:m.start()].count("\n") + text[:block.end()].count("\n") + 1
+            line = body[:m.start()].count("\n") + text[:max(escaped.end(), retired.end())].count("\n") + 1
             uncovered.append(f"{head}… (line {line})")
 
     check("K every seeded ref is covered by refPrefixes",
           uncovered or "none", "none")
+
+    # ---- The two blind spots this check had until 2026-08-28 (prd §510a) -----
+    #
+    # The scan above matches `ref:` followed by a LITERAL, which is how most of
+    # the seeder writes a ref and is not how any of the four escaped families
+    # wrote theirs. `cardPointers()` and the wallet's three deadlines put their
+    # refs in a TUPLE TABLE and pass `ref: ref` / `ref: d.ref`; Altana's are
+    # built by `AltanaKeystore.ref(...)`. All four were invisible here — the
+    # check reported green over exactly the bug it exists to prevent — and the
+    # cost was a user on a NEW install seeing four CardPointers offers for a
+    # seat they had never connected, with no door to remove them.
+    #
+    # So: every namespaced literal ANYWHERE in the seeder body, minus the
+    # positions that legitimately hold a non-ref string.
+    for m in re.finditer(r'"([a-z0-9]+:[^"\n]*)', body):
+        value = m.group(1)
+        head = value.split("\\(")[0]
+        if value.startswith(NON_REF_LITERALS):
+            continue
+        # A `content:`/`externalLink`/image URL is a namespaced string that is
+        # not a ref. Judged by what precedes the literal, which is coarse and
+        # is why the prefixes above carry the load; this half only has to be
+        # quiet enough to stay switched on.
+        if any(label in body[max(0, m.start() - 40):m.start()] for label in NON_REF_LABELS):
+            continue
+        if head in KNOWN_REF_FRAGMENT:
+            continue
+        if not any(head.startswith(p) or p.startswith(head) for p in prefixes):
+            line = body[:m.start()].count("\n") + text[:max(escaped.end(), retired.end())].count("\n") + 1
+            uncovered.append(f"{head}… (line {line})")
+
+    check("K every seeded ref literal is covered, wherever it is written",
+          uncovered or "none", "none")
+
+    # And the computed half. A `ref:` argument that is neither a literal nor a
+    # plain local name cannot be resolved by a text check, so it must SAY which
+    # prefix covers it — an entry here is a conscious "this builder's output
+    # starts with that". Without this, `AltanaKeystore.ref(...)` reads as an
+    # opaque expression and its six rows outlive every exit unnoticed.
+    unexplained = []
+    for m in re.finditer(r"\bref:\s*([A-Za-z_][A-Za-z0-9_.]*)\s*\(", body):
+        expr = m.group(1)
+        covering = KNOWN_COMPUTED_REF.get(expr)
+        if covering is None:
+            line = body[:m.start()].count("\n") + text[:max(escaped.end(), retired.end())].count("\n") + 1
+            unexplained.append(f"{expr}(…) (line {line})")
+        elif expr in prefix_builders:
+            # The list builds its entry with the SAME function, so the two
+            # cannot disagree — the strongest form of coverage there is.
+            continue
+        elif not any(p.startswith(covering) or covering.startswith(p) for p in prefixes):
+            unexplained.append(f"{expr}(…) claims {covering!r}, no such prefix")
+
+    check("K every computed ref names the prefix that covers it",
+          unexplained or "none", "none")
+
+    # A "retired" shape that the seeder still writes is not retired — and
+    # `sweepEscapedRows` walks that list unconditionally, so the migration
+    # would delete rows out from under a demo somebody is standing in. Compared
+    # against the seeder body, which is everything after the three lists.
+    still_written = sorted({
+        p for p in retired_prefixes
+        if re.search(r'"' + re.escape(p), body)
+    })
+    check("K no retired shape is still seeded", still_written or "none", "none")
 
 
 def run_checks(files_text):
@@ -1139,6 +1265,50 @@ def self_test():
     """Prove each check can actually fail — a check that cannot fail proves
     nothing (the `swiftdata-liveness-audit.py` lesson, restated here)."""
     ok = True
+
+    # The three shapes check K was BLIND to until 2026-08-28 — each one shipped,
+    # and each rendered as an ordinary row nothing could tell from a real one.
+    ok &= verify_fixture(
+        "a ref written in a TUPLE TABLE, uncovered, is caught",
+        # CardPointers passes `ref: ref` out of its own table, so the old
+        # `ref:`-followed-by-a-literal scan never saw these four refs at all.
+        lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
+            '"cardpointers:offer:demo",', "", 1)),
+        check_k_seeded_refs_are_cleared, True)
+
+    ok &= verify_fixture(
+        "an uncovered ref built from a demo wallet is caught",
+        # The wallet's three reconciling deadlines, passed as `ref: d.ref`.
+        lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
+            '"aerodrome:vote:\\(demoWallet):",', "", 1)),
+        check_k_seeded_refs_are_cleared, True)
+
+    ok &= verify_fixture(
+        "a ref built by a FUNCTION with no covering prefix is caught",
+        # Altana's six keys. Dropping both entries leaves `AltanaKeystore.ref`
+        # an opaque expression the literal scan cannot reach — which is the
+        # state it shipped in.
+        lambda f: f.__setitem__("DemoSeedAll", re.sub(
+            r"        AltanaKeystore\.ref\(chain: demoAltanaChain[\s\S]*?keyID: \"\"\),\n",
+            "", f["DemoSeedAll"])),
+        check_k_seeded_refs_are_cleared, True)
+
+    ok &= verify_fixture(
+        "a 'retired' shape the seeder still writes is caught",
+        # `sweepEscapedRows` walks `retiredPrefixes` unconditionally, so a
+        # shape listed there while still being seeded means the migration
+        # deletes rows out from under a live demo.
+        # `1claw:policy:demo` is already in `refPrefixes` and is still written
+        # by `infra()`, so listing it as retired changes exactly one thing —
+        # which is what makes this fixture test the rule it names.
+        lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
+            '        "bankr:ask-01",', '        "bankr:ask-01", "1claw:policy:demo",', 1)),
+        check_k_seeded_refs_are_cleared, True)
+
+    ok &= verify_fixture(
+        "a clean tree is NOT flagged by the widened scan",
+        lambda f: None,
+        check_k_seeded_refs_are_cleared, False)
 
     ok &= verify_fixture(
         "DEBUG-guarded seedDemo is caught",

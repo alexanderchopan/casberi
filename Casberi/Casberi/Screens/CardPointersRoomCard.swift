@@ -35,6 +35,16 @@ struct CardPointersRoomCard: View {
                 WalletRunwayRail(dates: room.deadlines)
             }
         }
+        // The head chrome every other room card in this app wears, and this
+        // one shipped without (prd §510a, 2026-08-28, from a user screenshot). `FeedScreen
+        // .insightSection` sets `.listRowInsets(EdgeInsets())`, so a head card
+        // is edge-to-edge unless it pads itself: the headline sat flush against
+        // the screen and the rail ran under both bezels, clipping its last
+        // deadline dot — the one mark whose position is the whole reading.
+        .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .dsWidgetSurface()
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s2)
     }
 }

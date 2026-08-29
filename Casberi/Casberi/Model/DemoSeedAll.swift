@@ -262,7 +262,109 @@ enum DemoSeedAll {
                               // (2026-08-17) — scoped to the demo FOLDER, never
                               // the bare `dropbox:` prefix, which would take a
                               // real connected folder's rows with it.
-                              "dropbox:demo/"]
+                              "dropbox:demo/"] + escapedPrefixes
+
+    /// The four families that were MISSING from `refPrefixes` until 2026-08-28 (prd §510a),
+    /// hoisted into their own list because `sweepEscapedRows` has to name
+    /// exactly these and nothing else — and naming them twice is how the two
+    /// halves of a repair start disagreeing.
+    ///
+    /// Found from a user report: a new install showed four CardPointers offers
+    /// for a seat that had never been connected, with no way to remove them (a
+    /// disconnected seat offers no Disconnect verb). Each joins a real
+    /// namespace for the `peer:demo` reason `refPrefixes` gives above — and
+    /// `clear` walks that list, so every one of them outlived every exit,
+    /// indistinguishable from a real synced row, and froze in place besides
+    /// (`restampIfStale` walks the same list). The fifth instance of exactly
+    /// this class.
+    static let escapedPrefixes: [String] = [
+        // CardPointers keeps a "demo" segment inside the real
+        // `cardpointers:offer:` shape, so nothing a real account could land
+        // collides with it.
+        "cardpointers:offer:demo",
+        // Altana's keys carry the REAL `altana:key:<chain>:<address>:<keyid>`
+        // shape (the seed's own comment says why), so the scope here is the
+        // ADDRESS — built by the bridge's own function with an empty key id
+        // rather than spelled by hand, since a prefix re-typed beside the
+        // builder is where the two start disagreeing.
+        AltanaKeystore.ref(chain: demoAltanaChain, address: demoWallet, keyID: ""),
+        AltanaKeystore.ref(chain: demoAltanaChain,
+                           address: demoAltanaSecondAccount, keyID: ""),
+        // The wallet's three reconciling deadlines (2026-08-17) — landed under
+        // `source: "Wallet"` with the real bridges' shapes so each bridge
+        // reconciles its own row. Two are scoped by the demo WALLET, which is
+        // exact. The ENS one cannot be: `wallet:ensexpiry:` keys on the NAME,
+        // so it is listed as an exact ref and carries the PostHog/Stocktwits
+        // accepted risk — somebody watching `casberi.eth` themselves would lose
+        // that row on demo exit.
+        "aerodrome:vote:\(demoWallet):",
+        "hyperliquid:unlock:\(demoWallet):",
+        "wallet:ensexpiry:casberi.eth",
+    ]
+
+    /// Ref shapes the demo used to write and no longer does (prd §510a).
+    ///
+    /// **`refPrefixes` has only ever known the CURRENT spelling**, and this
+    /// seeder has re-spelled refs repeatedly — every time for a good reason
+    /// (§349's Peer/Privacy Pools, §401's Radicle, §495's vibenet hashes: a
+    /// gate keyed on a real ref shape cannot be satisfied by a `demo:` row).
+    /// Each of those renames orphaned whatever the PREVIOUS build had already
+    /// landed: `clear` walks today's list, the old rows match nothing in it,
+    /// and they outlive every exit — on the device and, because the store is
+    /// mirrored, in the CloudKit zone that a fresh install pulls from.
+    ///
+    /// So a rename is a teardown change too, and the entry is retired here
+    /// rather than deleted. Every one is scoped tightly enough that nothing
+    /// real can match it.
+    static let retiredPrefixes: [String] = [
+        // Radicle's demo repository id, before §401 replaced it with a
+        // deliberately fake `zDEMO…` one. This RID was MEASURED — a real
+        // repository — which is exactly why the `:demo` row segment is kept in
+        // the prefix: somebody genuinely following this repo must not lose
+        // their rows. Two entries because the kind sits before the rid.
+        "radicle:patch:rad:z3gqcJUoA1n9HaHKufZs5FCSGazv5:demo",
+        "radicle:issue:rad:z3gqcJUoA1n9HaHKufZs5FCSGazv5:demo",
+        // `DemoCorpus`'s four wallet rows, under both spellings it shipped
+        // ("Zerion" was the source before the wallet read was ours). EXACT
+        // refs, never a `wallet:` prefix — `WalletIngest` writes `wallet:<uid>`
+        // for every real transfer, and a prefix here would empty a real
+        // wallet room. That seeder is DEBUG-only, so these reach a released
+        // install by ONE route: a dev simulator signed into the same iCloud
+        // account, which mirrors them like anything else.
+        "wallet:0xa1", "wallet:0xa2", "wallet:0xa3", "wallet:0xa4",
+        "zerion:0xa1", "zerion:0xa2", "zerion:0xa3", "zerion:0xa4",
+        // …and its one Bankr fixture, from before that seat existed.
+        "bankr:ask-01",
+    ]
+
+    /// The repair for installs that already carry them (prd §510a, 2026-08-28).
+    ///
+    /// Fixing `refPrefixes` fixes every exit from today on and reaches NOTHING
+    /// already on a device — the exit that dropped these rows has already run,
+    /// and the store is CloudKit-mirrored, so on a fresh install they arrive
+    /// from the zone looking exactly like real synced rows. That is what the
+    /// report described: four CardPointers offers on an install that had never
+    /// connected the seat, and no door to remove them, because a seat that was
+    /// never connected offers no Disconnect.
+    ///
+    /// Deletes `escapedPrefixes` and `retiredPrefixes` — never the whole
+    /// `refPrefixes` list, which would take a legitimately seeded demo apart —
+    /// and refuses while a demo is live, since in that state these rows are
+    /// exactly the demo the person is looking at. Returns the number removed.
+    @MainActor
+    @discardableResult
+    static func sweepEscapedRows(_ context: ModelContext) -> Int {
+        guard !DemoMode.isActive else { return 0 }
+        let sweep = escapedPrefixes + retiredPrefixes
+        let all = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
+        let orphans = all.filter { thing in
+            guard let ref = thing.sourceRef else { return false }
+            return sweep.contains { ref.hasPrefix($0) }
+        }
+        for thing in orphans { context.delete(thing) }
+        if !orphans.isEmpty { context.saveHonestly() }
+        return orphans.count
+    }
 
     // MARK: - Entry point
 
@@ -2934,7 +3036,7 @@ enum DemoSeedAll {
         ]
         out += keys.map { k in
             row(.link, k.0, source: "Altana",
-                ref: AltanaKeystore.ref(chain: "BNB Smart Chain", address: demoWallet,
+                ref: AltanaKeystore.ref(chain: demoAltanaChain, address: demoWallet,
                                         keyID: demoAltanaKeyIDValue(k.1)),
                 days: k.3, hour: 10,
                 content: AltanaKeystore.explorerURL(address: demoWallet),
@@ -2952,7 +3054,7 @@ enum DemoSeedAll {
         ]
         out += keys2.map { k in
             row(.link, k.0, source: "Altana",
-                ref: AltanaKeystore.ref(chain: "BNB Smart Chain", address: demoAltanaSecondAccount,
+                ref: AltanaKeystore.ref(chain: demoAltanaChain, address: demoAltanaSecondAccount,
                                         keyID: demoAltanaKeyIDValue(k.1)),
                 days: k.3, hour: 11,
                 content: AltanaKeystore.explorerURL(address: demoAltanaSecondAccount),
@@ -3258,6 +3360,12 @@ enum DemoSeedAll {
 
     /// The demo's second Altana account — snapshot-only, never watched.
     private static let demoAltanaSecondAccount = "0x9e8d7c6b5a49382716059483726150493827160f"
+
+    /// The chain the demo's Altana keys sit on. Hoisted because `refPrefixes`
+    /// builds its teardown scope from the SAME `AltanaKeystore.ref`, and a
+    /// chain name spelled twice is a slug that eventually differs — which
+    /// here means the rows silently outlive the demo again.
+    static let demoAltanaChain = "BNB Smart Chain"
 
     private static func seedAltanaKeystore() {
         let now = Date.now
