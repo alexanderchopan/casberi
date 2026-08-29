@@ -442,6 +442,22 @@ grep -q 'struct AddressMoveSheet: View' "$GROUPS" \
 grep -q 'swipeActions(edge: .trailing, allowsFullSwipe: false)' "$BOOKSCREEN" \
   || { echo "✗ the book's swipe gained a full swipe — a full swipe commits without a second beat, which for a write is exactly what §212 forbids"; exit 1; }
 
+# ONE DESTRUCTIVE VERB PER ROW, on the swipe as well as in the menu
+# (2026-08-29). Reported as "why do the address book items have a swipe to move
+# but not to remove": a plain named row is neither watched nor followed, so both
+# of the swipe's destructive arms were skipped and the gesture carried `Move…`
+# alone — a move-only affordance on the one population whose verb it is.
+#
+# COUNTED, never asserted by presence: the phrase is in the context menu too, so
+# a bare `grep -q` here passes green with the swipe arm deleted. Counted by
+# OCCURRENCE and not by line (`grep -c` counts lines, and one line carrying both
+# is how the equivalent guard in `safetx-selftest.sh` was first defeated).
+removes=$(grep -o 'Label("Remove from book"' "$TMP/book-bare.swift" | wc -l | tr -d ' ')
+[ "$removes" -ge 2 ] \
+  || { echo "✗ the book names 'Remove from book' $removes time(s) — the swipe and the long-press menu must each carry it, or an unwatched row's swipe is Move-only again"; exit 1; }
+grep -q 'Label("Remove from book", systemImage: "trash")' "$TMP/book-bare.swift" \
+  || { echo "✗ the book's remove verb lost its mark (§511)"; exit 1; }
+
 # NEGATIVE, on comment-stripped copies: §435's money ruling. The manager is a
 # PEOPLE screen and the feed's crown owns the money reading, once.
 for f in "$TMP/screen-bare.swift" "$TMP/book-bare.swift" "$TMP/groups-bare.swift"; do

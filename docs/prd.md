@@ -38105,3 +38105,57 @@ not chosen: it is a lookup surface, and the catalog still has browsing to do.
 **UNSEEN on a device.** iOS builds green; no screenshot of the rebuilt screen
 has been taken, and neither the filter transition nor the attention dot has
 been watched on a running app.
+
+## 520. The name's own verb joins the swipe, so the gesture stops being Move-only (user: "why do the address book items have a swip to move but not to remove", 2026-08-29)
+
+Not a bug report so much as a reading of the screen, and the reading was right
+for exactly one population.
+
+The book row's trailing swipe already carried a destructive verb: `Stop
+watching` for a watched row, `Unfollow` for a starter-pack row (§511). A plain
+named row — not watched, not followed — is neither, so both arms were skipped
+and the swipe carried `Move…` alone. From outside that is a move-only
+affordance on the one population whose own verb it is, while the rows either
+side of it in the same list, under the same gesture, each had one. `Remove from
+book` existed only in the long-press menu, which §511 had already noted is the
+half nobody finds.
+
+### The ruling
+
+**One destructive verb per row, on the swipe as well as in the menu.** The three
+arms are MUTUALLY EXCLUSIVE, and that is §511's "one consequence, one word" as a
+shape rather than as a vocabulary: a swipe offering two destructive buttons asks
+the reader to choose between two outcomes inside a gesture already committed to
+one, which is precisely the two-Removes confusion that ruling deleted. So a row
+is watched, or followed, or in the book, and gets the verb for the thing it is.
+
+**`following` is empty for every persisted row**, so the new arm is exactly the
+set `book.remove` can act on. An ephemeral social row (§498) is not in the book
+at all, and offering to remove it would be the §83 dead control — a button whose
+whole effect is nothing.
+
+**Still not offered for a watched address**, the same gate the menu uses and for
+the menu's own reason (§511): `WalletStore.add` guarantees every watched wallet
+is also a book entry, so removing the name under a live watch leaves a wallet
+the app reads and cannot name, and the next sync files it again under a
+placeholder — a verb that undoes itself.
+
+**§212 is untouched and is what makes this safe to put on a swipe at all.**
+`allowsFullSwipe: false` stands: the gesture REVEALS the button, it never
+commits it, so the second beat the design law asks of a write is still there.
+`Move…` remains a door onto the filing sheet and writes nothing itself.
+
+### The guard, and why presence was not enough
+
+`scripts/address-book-selftest.sh` COUNTS `Remove from book` rather than testing
+for it. The phrase is in the context menu too, so a bare `grep -q` here passes
+green with the swipe arm deleted — the guard that is satisfied for the wrong
+reason, which this repo has now been caught by in `safetx-selftest.sh` and in
+§511's own watch-door check. Counted by OCCURRENCE and never by line, since
+`grep -c` counts lines and one line carrying both defeats it.
+
+Mutation-proven against the exact state the report describes: the tree at HEAD
+scores one occurrence and fails the guard; the fixed tree scores two and passes.
+
+**UNSEEN on a device** — it is a swipe, so no static check and no screen sweep
+can exercise it. iOS build green, harness green.

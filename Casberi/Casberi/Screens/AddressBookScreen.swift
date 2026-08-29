@@ -1152,8 +1152,14 @@ struct AddressBookScreen: View {
     ///
     /// **Tap** opens the card. **Long-press** offers the verbs. **Drag** files
     /// it into a group, and the swipe's `Move…` opens the filing sheet rather
-    /// than writing anything, so it stays a door (the design law's "swipe verbs
-    /// are reads").
+    /// than writing anything, so that verb stays a door (the design law's
+    /// "swipe verbs are reads").
+    ///
+    /// The swipe's OTHER verb is destructive and there is exactly one of it per
+    /// row — `Stop watching`, `Unfollow`, or `Remove from book`, chosen by
+    /// which population the row belongs to (2026-08-29). §212 is kept by
+    /// `allowsFullSwipe: false`: the gesture reveals the button, it never
+    /// commits it.
     ///
     /// **Still no star** (prd §461, unchanged by §511) —
     /// `AddressBookRow.onToggleWatch` is nil, which that view treats as "draw
@@ -1229,6 +1235,40 @@ struct AddressBookScreen: View {
                     SocialUnfollow.perform(entry, context: modelContext, chrome: chrome)
                 } label: {
                     Label("Unfollow", systemImage: "person.badge.minus")
+                }
+            } else {
+                // ONE DESTRUCTIVE VERB PER ROW, and this is the third of them
+                // (2026-08-29, user: "why do the address book items have a
+                // swipe to move but not to remove"). A plain named row — not
+                // watched, not followed — had a swipe carrying `Move…` alone, so
+                // the gesture read as a move-only affordance while the two
+                // populations either side of it both carried a destructive verb
+                // right there. The name's own verb now sits where they sit.
+                //
+                // THE THREE ARMS ARE MUTUALLY EXCLUSIVE on purpose, which is
+                // §511's "one consequence, one word" as a shape: a swipe
+                // offering two destructive buttons asks the reader to pick
+                // between two outcomes inside a gesture already committed to
+                // one, which is the two-Removes confusion that ruling deleted.
+                // `following` is empty for every persisted row, so this arm is
+                // exactly the set `book.remove` can act on — an ephemeral
+                // social row is not in the book, and offering to remove it is
+                // the §83 dead control.
+                //
+                // NOT offered for a watched address, the same gate the menu
+                // uses and for the menu's own reason (§511): `WalletStore.add`
+                // guarantees every watched wallet is also a book entry, so
+                // removing the name under a live watch leaves a wallet the app
+                // reads and cannot name, and the next sync files it again under
+                // a placeholder — a verb that undoes itself. Stop watching
+                // first; the fold takes the placeholder with it.
+                //
+                // Still no full swipe (§212): the gesture REVEALS the button,
+                // it never commits it.
+                Button(role: .destructive) {
+                    book.remove(entry.address)
+                } label: {
+                    Label("Remove from book", systemImage: "trash")
                 }
             }
             Button {
