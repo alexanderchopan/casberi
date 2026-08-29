@@ -42,7 +42,28 @@ struct WalletRosterSection: View {
 
     var body: some View {
         Section {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                // **NO CONTAINER AROUND THESE ROWS** (2026-08-28). They sat in
+                // a `VStack`, left behind when the watch field and connect row
+                // moved out the day before — and a stack inside a `Section`
+                // collapses everything it holds into ONE List row. Every
+                // consequence of that was reported as a separate bug: each
+                // `rosterRow`'s `.swipeActions` attached to that single cell,
+                // so one swipe drew a Remove capsule PER WALLET side by side
+                // ("how it says remove twice") and slid the whole block, sync
+                // status line included, because there was only ever one row to
+                // slide. Removing a wallet by swipe was correspondingly
+                // impossible: the gesture never belonged to a row, so it could
+                // not name which wallet it meant.
+                //
+                // The rows are direct children of the `Section` now, which is
+                // what makes each one a row with its own swipe, its own
+                // separator and its own identity. Spacing comes from the List,
+                // as it does for every other section in this book.
+                //
+                // **THE TRIPWIRE:** anything added here goes in as a sibling
+                // row. Wrapping these in a stack again — for spacing, for a
+                // background, for an entrance — silently rebuilds this bug, and
+                // it looks completely correct until somebody swipes.
                 // **THE WATCH FIELD AND ITS CONNECT ROW LEFT THIS SECTION**
                 // (user ruling, 2026-08-27, on a device: *"this looks like
                 // crap there should only be one address field and one connect
@@ -67,11 +88,16 @@ struct WalletRosterSection: View {
                     BridgeSyncStatusRows(syncing: syncing,
                                          syncingLine: String(localized: "Reading onchain activity…"),
                                          result: result, resultIsError: resultIsError)
+                        // Its own, now that the section carries none — see the
+                        // note below the `ForEach`.
+                        .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
+                                                  bottom: 0, trailing: DS.Space.s4))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 }
                 ForEach(Array(watchedEntries.enumerated()), id: \.element.id) { index, entry in
                     rosterRow(entry, row: index)
                 }
-            }
         } header: {
             if !watchedEntries.isEmpty || wallet.canWatchMore {
                 // "WATCHING", not "Your wallets" (user ruling, 2026-08-27, on
@@ -100,10 +126,20 @@ struct WalletRosterSection: View {
         // widget with an address book underneath rather than as an address
         // book. Matching the book's own row insets is what makes the faces
         // line up down one column with the rows below.
-        .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
-                                  bottom: 0, trailing: DS.Space.s4))
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
+        //
+        // **APPLIED PER ROW, NEVER ON THE SECTION (2026-08-28).** These three
+        // sat on the `Section` — and `rosterRow` already set two of them on
+        // each row, so they were spelled twice. A section-level row modifier
+        // wraps the whole section, and with a `.swipeActions` on each row
+        // inside it the swipe geometry is computed against that wrapper rather
+        // than against the row: one swipe slid the ENTIRE section, header row
+        // included, and drew a Remove capsule per row stacked side by side at
+        // one height. Reported with a screenshot ("how it says remove twice")
+        // and reproduced on a clean install with two real wallets, so it is
+        // nothing to do with the demo data in the same report.
+        //
+        // The sync status row is not a `rosterRow` and never carried its own,
+        // so it takes them here where it is built.
         .alert("Name this wallet",
                isPresented: Binding(get: { renamingID != nil },
                                     set: { if !$0 { renamingID = nil } })) {
@@ -157,6 +193,8 @@ struct WalletRosterSection: View {
         .listRowBackground(Color.clear)
         .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
                                   bottom: 0, trailing: DS.Space.s4))
+        // Was inherited from the section until 2026-08-28; see the note there.
+        .listRowSeparator(.hidden)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .destructive) {
                 remove(entry)
