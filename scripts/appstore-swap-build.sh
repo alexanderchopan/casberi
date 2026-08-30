@@ -66,6 +66,23 @@ done
 
 T="$(jwt)"
 
+# A submission for this platform that's READY_FOR_REVIEW and has no
+# submittedDate yet — the shape of both a submission this run just created
+# and a STRANDED one left behind by an earlier run that died partway through
+# step 5 below. Used twice: once so a re-run doesn't report "nothing to
+# swap" and walk away from an unfinished submission (the build already
+# matches, so step 1's early exit would otherwise never look further), and
+# once inside step 5 itself so a retried create can't produce a duplicate.
+review_submission_id() {
+  curl -fsS -H "Authorization: Bearer $T" \
+    "$API/apps/$APP_ID/reviewSubmissions?filter%5Bplatform%5D=$PLATFORM&filter%5Bstate%5D=READY_FOR_REVIEW&limit=10" \
+    | jq_ "
+d=json.load(sys.stdin).get('data',[]);
+hits=[x['id'] for x in d if x['attributes'].get('submittedDate') is None];
+print(hits[0] if hits else '')
+"
+}
+
 # ── 1 · the version, and whether it may still be changed ────────────────────
 VJSON="$(curl -fsS -H "Authorization: Bearer $T" \
   "$API/apps/$APP_ID/appStoreVersions?filter%5Bplatform%5D=$PLATFORM&filter%5BversionString%5D=$VERSION&limit=1")"
@@ -84,85 +101,196 @@ esac
 CUR="$(curl -fsS -H "Authorization: Bearer $T" "$API/appStoreVersions/$VER_ID/build" \
   | jq_ "d=json.load(sys.stdin).get('data'); print(d['attributes']['version'] if d else 'none')")"
 echo "attached  build $CUR"
-[ "$CUR" = "$BUILD" ] && { echo "✓ already on build $BUILD — nothing to swap"; exit 0; }
 
-# ── 2 · the replacement build must exist and be usable ──────────────────────
-BJSON="$(curl -fsS -H "Authorization: Bearer $T" \
-  "$API/builds?filter%5Bapp%5D=$APP_ID&filter%5Bversion%5D=$BUILD&filter%5BpreReleaseVersion.platform%5D=$PLATFORM&limit=1")"
-BUILD_ID="$(printf '%s' "$BJSON" | jq_ "d=json.load(sys.stdin)['data']; print(d[0]['id'] if d else '')")"
-BUILD_STATE="$(printf '%s' "$BJSON" | jq_ "d=json.load(sys.stdin)['data']; print(d[0]['attributes'].get('processingState','?') if d else '')")"
-[ -n "$BUILD_ID" ] || { echo "✗ no $PLATFORM build $BUILD found — has it finished uploading?"; exit 1; }
-echo "target    build $BUILD — $BUILD_STATE  ($BUILD_ID)"
-[ "$BUILD_STATE" = "VALID" ] || { echo "✗ build $BUILD is $BUILD_STATE, not VALID — wait for processing"; exit 1; }
-
-# ── 3 · the open review submission, which blocks the swap ───────────────────
-SUB_ID="$(curl -fsS -H "Authorization: Bearer $T" \
-  "$API/apps/$APP_ID/reviewSubmissions?filter%5Bplatform%5D=$PLATFORM&filter%5Bstate%5D=WAITING_FOR_REVIEW,IN_REVIEW,UNRESOLVED_ISSUES,READY_FOR_REVIEW&limit=1" \
-  | jq_ "d=json.load(sys.stdin).get('data',[]); print(d[0]['id'] if d else '')")"
-if [ -n "$SUB_ID" ]; then
-  echo "open sub  $SUB_ID — will be CANCELLED (this gives up the queue position)"
-else
-  echo "open sub  none"
-fi
-
-if [ "$DRY" = "1" ]; then echo "— dry run, nothing changed —"; exit 0; fi
-
-if [ -n "$SUB_ID" ]; then
-  curl -fsS -X PATCH -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
-    -d "{\"data\":{\"type\":\"reviewSubmissions\",\"id\":\"$SUB_ID\",\"attributes\":{\"canceled\":true}}}" \
-    "$API/reviewSubmissions/$SUB_ID" >/dev/null
-  echo "✓ cancelled the open submission"
-fi
-
-# ── 4 · point the version at the new build ─────────────────────────────────
-#
-# RETRIED, because cancelling is not instant (measured 2026-08-12, build 311).
-# The cancel above returns 200 while the version is still leaving
-# WAITING_FOR_REVIEW, and a PATCH issued into that window answers **409
-# Conflict** — which reads as "this version cannot take a new build" when it
-# actually means "ask again in a moment". The version settles to
-# DEVELOPER_REJECTED and the identical call then returns 204.
-#
-# This is the worst place in the script to fail, which is why it retries rather
-# than reporting: the queue position is already forfeited by the line above, so
-# an abort here leaves the version cancelled AND still carrying the old build —
-# the one state that is worse than either doing nothing or finishing.
-for attempt in 1 2 3 4 5 6 7 8 9 10; do
-  CODE="$(curl -s -o /dev/null -w '%{http_code}' -X PATCH \
-    -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
-    -d "{\"data\":{\"type\":\"builds\",\"id\":\"$BUILD_ID\"}}" \
-    "$API/appStoreVersions/$VER_ID/relationships/build")"
-  [ "$CODE" = "204" ] && break
-  if [ "$CODE" != "409" ]; then
-    echo "✗ could not attach build $BUILD (HTTP $CODE)"
-    echo "  the submission IS cancelled — re-run this command once the version"
-    echo "  shows DEVELOPER_REJECTED to finish the swap."
-    exit 1
+STRANDED_SUB=""
+if [ "$CUR" = "$BUILD" ]; then
+  STRANDED_SUB="$(review_submission_id)"
+  if [ -z "$STRANDED_SUB" ]; then
+    echo "✓ already on build $BUILD — nothing to swap"
+    exit 0
   fi
-  [ "$attempt" = "10" ] && { echo "✗ still 409 after 10 tries — see the note above"; exit 1; }
-  echo "  409 — version still transitioning, retrying ($attempt)"
-  sleep 6
-done
-echo "✓ $PLATFORM $VERSION now carries build $BUILD"
+  # The build already matches, so nothing above needs doing — but a prior
+  # run's step 5 (further down) got the build attached and then died before
+  # finishing the resubmit, leaving this. Left alone it sits forever: every
+  # future run of this command hits this same early branch and reports
+  # "nothing to swap" without ever looking at it.
+  echo "  build matches, but found an unfinished review submission"
+  echo "  ($STRANDED_SUB) — finishing it instead of leaving it stuck."
+  [ "$DRY" = "1" ] && { echo "— dry run, nothing changed —"; exit 0; }
+fi
 
-if [ "$NOSUB" = "1" ]; then
-  echo ""
-  echo "— --no-submit: stopping here, the version is NOT back in review —"
-  echo "  It carries build $BUILD and is editable. Finish the metadata, then"
-  echo "  submit from App Store Connect (or re-run this without --no-submit)."
-  exit 0
+if [ -z "$STRANDED_SUB" ]; then
+  # ── 2 · the replacement build must exist and be usable ────────────────────
+  BJSON="$(curl -fsS -H "Authorization: Bearer $T" \
+    "$API/builds?filter%5Bapp%5D=$APP_ID&filter%5Bversion%5D=$BUILD&filter%5BpreReleaseVersion.platform%5D=$PLATFORM&limit=1")"
+  BUILD_ID="$(printf '%s' "$BJSON" | jq_ "d=json.load(sys.stdin)['data']; print(d[0]['id'] if d else '')")"
+  BUILD_STATE="$(printf '%s' "$BJSON" | jq_ "d=json.load(sys.stdin)['data']; print(d[0]['attributes'].get('processingState','?') if d else '')")"
+  [ -n "$BUILD_ID" ] || { echo "✗ no $PLATFORM build $BUILD found — has it finished uploading?"; exit 1; }
+  echo "target    build $BUILD — $BUILD_STATE  ($BUILD_ID)"
+  [ "$BUILD_STATE" = "VALID" ] || { echo "✗ build $BUILD is $BUILD_STATE, not VALID — wait for processing"; exit 1; }
+
+  # ── 3 · the open review submission, which blocks the swap ─────────────────
+  SUB_ID="$(curl -fsS -H "Authorization: Bearer $T" \
+    "$API/apps/$APP_ID/reviewSubmissions?filter%5Bplatform%5D=$PLATFORM&filter%5Bstate%5D=WAITING_FOR_REVIEW,IN_REVIEW,UNRESOLVED_ISSUES,READY_FOR_REVIEW&limit=1" \
+    | jq_ "d=json.load(sys.stdin).get('data',[]); print(d[0]['id'] if d else '')")"
+  if [ -n "$SUB_ID" ]; then
+    echo "open sub  $SUB_ID — will be CANCELLED (this gives up the queue position)"
+  else
+    echo "open sub  none"
+  fi
+
+  if [ "$DRY" = "1" ]; then echo "— dry run, nothing changed —"; exit 0; fi
+
+  if [ -n "$SUB_ID" ]; then
+    curl -fsS -X PATCH -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
+      -d "{\"data\":{\"type\":\"reviewSubmissions\",\"id\":\"$SUB_ID\",\"attributes\":{\"canceled\":true}}}" \
+      "$API/reviewSubmissions/$SUB_ID" >/dev/null
+    echo "✓ cancelled the open submission"
+  fi
+
+  # ── 4 · point the version at the new build ─────────────────────────────────
+  #
+  # RETRIED, because cancelling is not instant (measured 2026-08-12, build 311).
+  # The cancel above returns 200 while the version is still leaving
+  # WAITING_FOR_REVIEW, and a PATCH issued into that window answers **409
+  # Conflict** — which reads as "this version cannot take a new build" when it
+  # actually means "ask again in a moment". The version settles to
+  # DEVELOPER_REJECTED and the identical call then returns 204.
+  #
+  # This is the worst place in the script to fail, which is why it retries rather
+  # than reporting: the queue position is already forfeited by the line above, so
+  # an abort here leaves the version cancelled AND still carrying the old build —
+  # the one state that is worse than either doing nothing or finishing.
+  for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    CODE="$(curl -s -o /dev/null -w '%{http_code}' -X PATCH \
+      -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
+      -d "{\"data\":{\"type\":\"builds\",\"id\":\"$BUILD_ID\"}}" \
+      "$API/appStoreVersions/$VER_ID/relationships/build")"
+    [ "$CODE" = "204" ] && break
+    if [ "$CODE" != "409" ]; then
+      echo "✗ could not attach build $BUILD (HTTP $CODE)"
+      echo "  the submission IS cancelled — re-run this command once the version"
+      echo "  shows DEVELOPER_REJECTED to finish the swap."
+      exit 1
+    fi
+    [ "$attempt" = "10" ] && { echo "✗ still 409 after 10 tries — see the note above"; exit 1; }
+    echo "  409 — version still transitioning, retrying ($attempt)"
+    sleep 6
+  done
+  echo "✓ $PLATFORM $VERSION now carries build $BUILD"
+
+  if [ "$NOSUB" = "1" ]; then
+    echo ""
+    echo "— --no-submit: stopping here, the version is NOT back in review —"
+    echo "  It carries build $BUILD and is editable. Finish the metadata, then"
+    echo "  submit from App Store Connect (or re-run this without --no-submit)."
+    exit 0
+  fi
 fi
 
 # ── 5 · resubmit — the reviewSubmissions pair, NOT appStoreVersionSubmissions ─
-NEW_SUB="$(curl -fsS -X POST -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
-  -d "{\"data\":{\"type\":\"reviewSubmissions\",\"attributes\":{\"platform\":\"$PLATFORM\"},\"relationships\":{\"app\":{\"data\":{\"type\":\"apps\",\"id\":\"$APP_ID\"}}}}}" \
-  "$API/reviewSubmissions" | jq_ "print(json.load(sys.stdin)['data']['id'])")"
-curl -fsS -X POST -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
-  -d "{\"data\":{\"type\":\"reviewSubmissionItems\",\"relationships\":{\"reviewSubmission\":{\"data\":{\"type\":\"reviewSubmissions\",\"id\":\"$NEW_SUB\"}},\"appStoreVersion\":{\"data\":{\"type\":\"appStoreVersions\",\"id\":\"$VER_ID\"}}}}}" \
-  "$API/reviewSubmissionItems" >/dev/null
-curl -fsS -X PATCH -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
-  -d "{\"data\":{\"type\":\"reviewSubmissions\",\"id\":\"$NEW_SUB\",\"attributes\":{\"submitted\":true}}}" \
-  "$API/reviewSubmissions/$NEW_SUB" >/dev/null
+#
+# RETRIED AND VERIFIED-BEFORE-RETRIED, unlike step 4 above which can simply
+# resend an idempotent PATCH. These three calls are not all idempotent, so a
+# bare retry loop here would risk the failure it exists to prevent.
+#
+# Shipped without any of this once (2026-08-29, build 446): a bare
+# `curl -fsS` on each of the three calls under `set -euo pipefail`. The
+# create POST answered 409 Conflict, curl aborted the whole script, and the
+# investigation afterward found the object HAD been created server-side — a
+# reviewSubmission sitting in READY_FOR_REVIEW with zero items and
+# submittedDate null. Re-running the script did nothing: step 1's "already
+# on build $BUILD — nothing to swap" fires before this section is ever
+# reached, so the stranded submission would have sat there forever. That
+# early exit now checks for exactly this shape first (see STRANDED_SUB
+# above).
+#
+# So each call below CHECKS for the effect it's trying to have before
+# deciding a 409 means "try again" — a blind resend of a POST that actually
+# landed would create a duplicate submission or double-attach a version,
+# which is worse than the stall this replaces.
+if [ -n "$STRANDED_SUB" ]; then
+  NEW_SUB="$STRANDED_SUB"
+else
+  NEW_SUB="$(review_submission_id)"
+fi
+
+if [ -n "$NEW_SUB" ]; then
+  echo "review sub $NEW_SUB (existing, unsubmitted) — finishing it"
+else
+  BODY="$(mktemp)"
+  CODE="$(curl -s -o "$BODY" -w '%{http_code}' -X POST -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
+    -d "{\"data\":{\"type\":\"reviewSubmissions\",\"attributes\":{\"platform\":\"$PLATFORM\"},\"relationships\":{\"app\":{\"data\":{\"type\":\"apps\",\"id\":\"$APP_ID\"}}}}}" \
+    "$API/reviewSubmissions")"
+  if [ "$CODE" = "200" ] || [ "$CODE" = "201" ]; then
+    NEW_SUB="$(jq_ "print(json.load(sys.stdin)['data']['id'])" < "$BODY")"
+    echo "review sub $NEW_SUB (created)"
+  elif [ "$CODE" = "409" ]; then
+    echo "  create-submission answered 409 — checking whether it landed anyway"
+    sleep 3
+    NEW_SUB="$(review_submission_id)"
+    if [ -z "$NEW_SUB" ]; then
+      echo "✗ create-submission 409'd and no submission appeared — re-run this command"
+      rm -f "$BODY"; exit 1
+    fi
+    echo "  it did: $NEW_SUB"
+  else
+    echo "✗ create-submission failed (HTTP $CODE)"; cat "$BODY"; rm -f "$BODY"; exit 1
+  fi
+  rm -f "$BODY"
+fi
+
+item_attached() {
+  curl -fsS -H "Authorization: Bearer $T" "$API/reviewSubmissions/$NEW_SUB/items" 2>/dev/null \
+    | jq_ "
+d=json.load(sys.stdin).get('data',[]);
+vers=[i.get('relationships',{}).get('appStoreVersion',{}).get('data',{}).get('id') for i in d];
+print('yes' if '$VER_ID' in vers else 'no')
+" 2>/dev/null
+}
+
+if [ "$(item_attached)" = "yes" ]; then
+  echo "  version already attached to $NEW_SUB"
+else
+  for attempt in 1 2 3; do
+    CODE="$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
+      -d "{\"data\":{\"type\":\"reviewSubmissionItems\",\"relationships\":{\"reviewSubmission\":{\"data\":{\"type\":\"reviewSubmissions\",\"id\":\"$NEW_SUB\"}},\"appStoreVersion\":{\"data\":{\"type\":\"appStoreVersions\",\"id\":\"$VER_ID\"}}}}}" \
+      "$API/reviewSubmissionItems")"
+    [ "$CODE" = "201" ] && break
+    if [ "$CODE" != "409" ]; then echo "✗ attach-item failed (HTTP $CODE)"; exit 1; fi
+    if [ "$(item_attached)" = "yes" ]; then
+      echo "  409, but it's actually attached — continuing"
+      break
+    fi
+    [ "$attempt" = "3" ] && { echo "✗ attach-item still 409 after 3 tries"; exit 1; }
+    echo "  409 attaching the version, retrying ($attempt)"
+    sleep 5
+  done
+fi
+
+submission_submitted() {
+  curl -fsS -H "Authorization: Bearer $T" "$API/reviewSubmissions/$NEW_SUB" 2>/dev/null \
+    | jq_ "a=json.load(sys.stdin)['data']['attributes']; print('yes' if a.get('submittedDate') else 'no')" 2>/dev/null
+}
+
+if [ "$(submission_submitted)" = "yes" ]; then
+  echo "  already marked submitted"
+else
+  for attempt in 1 2 3; do
+    CODE="$(curl -s -o /dev/null -w '%{http_code}' -X PATCH -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
+      -d "{\"data\":{\"type\":\"reviewSubmissions\",\"id\":\"$NEW_SUB\",\"attributes\":{\"submitted\":true}}}" \
+      "$API/reviewSubmissions/$NEW_SUB")"
+    { [ "$CODE" = "200" ] || [ "$CODE" = "204" ]; } && break
+    if [ "$CODE" != "409" ]; then echo "✗ submit failed (HTTP $CODE)"; exit 1; fi
+    if [ "$(submission_submitted)" = "yes" ]; then
+      echo "  409, but it's actually submitted — continuing"
+      break
+    fi
+    [ "$attempt" = "3" ] && { echo "✗ submit still 409 after 3 tries"; exit 1; }
+    echo "  409 submitting, retrying ($attempt)"
+    sleep 5
+  done
+fi
 echo "✓ resubmitted for review ($NEW_SUB)"
 
 FINAL="$(curl -fsS -H "Authorization: Bearer $T" "$API/appStoreVersions/$VER_ID" \
