@@ -274,6 +274,13 @@ struct Composer: View {
     /// The first-ever kept ask earns its own line, sibling to "Your first
     /// thing" (RootShell) — persisted so it fires exactly once per install.
     @AppStorage("composer.firstKeptAsk.done") private var firstKeptAskDone = false
+    /// The Bankr offer's shared dismissal, held here purely as an OBSERVATION
+    /// — see `agentChoiceHeader`. `BankrOfferBanner.offers` is the rule and
+    /// stays the only place it is spelled, but it reads `UserDefaults`
+    /// statically, which SwiftUI does not track; without this the banner would
+    /// fade on Not now and leave its padding behind until something unrelated
+    /// invalidated this body.
+    @AppStorage(BankrOfferBanner.dismissedKey) private var bankrOfferDismissed = false
     /// The keepable text of a synthesis answer — a synthesis is one Insight
     /// carrying the prose (RootShell's proseDoc). Only that shape is worth
     /// keeping: a lookup answer IS the things, which already live in the feed;
@@ -3621,7 +3628,13 @@ struct Composer: View {
         // it was written for, reported as "i still don't see it in the daily
         // brief". `askChips` already carries the same flag for the same
         // reason: the brief is the one answer state that keeps its chrome.
-        if let onConnectBankr, restChrome(keepBrief: true) {
+        // `BankrOfferBanner.offers` for the same reason the Wallet room asks
+        // it: the paddings below are applied to the banner, not inside it, so
+        // once the offer is waved off (or Bankr is connected) the view draws
+        // nothing and its `s3` bottom padding stays behind as dead air at the
+        // top of the rest surface.
+        if let onConnectBankr, restChrome(keepBrief: true),
+           !bankrOfferDismissed, BankrOfferBanner.offers {
             BankrOfferBanner(onConnect: onConnectBankr)
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.bottom, DS.Space.s3)

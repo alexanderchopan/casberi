@@ -568,6 +568,16 @@ struct FeedScreen: View {
     /// The balance line's window (prd §155). Narrowed to what the record can
     /// actually answer each render; the choice persists across launches.
     @State private var balanceRange: WalletRange = .watched
+    /// The Bankr offer's shared dismissal, held here purely as an OBSERVATION.
+    ///
+    /// `BankrOfferBanner.offers` is the rule and stays the only place it is
+    /// spelled — but it is a static read of `UserDefaults`, which SwiftUI does
+    /// not track, so tapping Not now inside the banner would fade the banner
+    /// out and leave its now-empty `Section` (and that section's spacing)
+    /// standing above the crown until something else happened to invalidate
+    /// this body. This property is what makes the write land here too, so the
+    /// gap closes with the fade rather than on the next unrelated render.
+    @AppStorage(BankrOfferBanner.dismissedKey) private var bankrOfferDismissed = false
     /// The wallet switcher's selection fill — ONE capsule that slides from
     /// the old chip to the new (the source chips' own ruling, 2026-07-14:
     /// "selection is an object traveling, not two states blinking").
@@ -4453,6 +4463,61 @@ struct FeedScreen: View {
                 ? Array(all.prefix(Self.walletTodayRows))
                 : []
 
+            // The Bankr offer (prd §529 amendment), at the head of the room
+            // where an onchain agent is the obvious next thing — and in a
+            // Section of its OWN, above the fixed slot rather than inside it.
+            //
+            // **THE SLOT IS CLIPPED AT A FIXED HEIGHT AND THAT IS THE WHOLE
+            // REASON THIS IS A SEPARATE SECTION.** `DSRoomSlot` pins
+            // `DSRoomChassis.visualSlot` as both its min and its max and
+            // `.clipped()`s, so that the rail and the toggle land at the same
+            // y on every scope (user ruling, prd §483: *"this bar … should be
+            // in a fixed position on each page, it should not move"*). A
+            // banner drawn inside that box does not move anything down — it
+            // takes the room's crown apart, which is exactly how it shipped:
+            // the move line cut in half, the sparkline and the range chips
+            // gone.
+            //
+            // **DRAWN ON EVERY SCOPE, not just Home**, which is what keeps
+            // that same ruling true now that something sits above the slot: a
+            // banner on Home alone would seat Home's rail a banner lower than
+            // every other scope's, the identical complaint one row up.
+            //
+            // The gate is the watch list rather than the crown's four inputs
+            // it used to ride inside: "already has a wallet" is what §529
+            // actually means by it, it is true in every scope, and it costs no
+            // portfolio walk. Draws nothing once Bankr is connected or once
+            // the offer has been waved off — see `BankrOfferBanner`.
+            //
+            // `BankrOfferBanner.offers` is asked BEFORE the `Section` is
+            // emitted rather than left to the view's own guard, because a view
+            // that renders nothing is not a section that takes no room — an
+            // empty `Section` still takes the list's spacing, which is this
+            // room's own recorded lesson two blocks down ("a zero-height box is
+            // not an absent one"). Without it every person who tapped Not now
+            // keeps a banner-shaped gap above their crown forever.
+            if !wallet.addresses.isEmpty, !bankrOfferDismissed, BankrOfferBanner.offers {
+                Section {
+                    BankrOfferBanner { route.pushBridge(.bankr) }
+                        // `inset + contentInset`, which is where the CROWN's
+                        // own text lands one row down — the slot applies
+                        // `contentInset` inside the row's `WalletCardStyle`
+                        // leading, and this banner has no slot to inherit it
+                        // from. Spelled as the sum of the two tokens rather
+                        // than as 27 so it tracks either if one is re-tuned
+                        // (`DSRoomChassis.contentInset`'s own reasoning). At a
+                        // bare `inset` the banner's words sat 11pt left of the
+                        // figure directly beneath them, which is the kind of
+                        // misalignment you see before you can name it.
+                        .listRowInsets(EdgeInsets(
+                            top: 0,
+                            leading: DSRoomChassis.inset + DSRoomChassis.contentInset,
+                            bottom: DSRoomChassis.contentGap,
+                            trailing: DSRoomChassis.inset + DSRoomChassis.contentInset))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+            }
             // The hero, and the only block with no header of its own: a title
             // above the first thing on a screen is noise (see
             // `walletGroupHeader` for the whole ruling).
@@ -6560,13 +6625,17 @@ struct FeedScreen: View {
                 // taking the List's own background and insets, which would
                 // undo both the card geometry and the entrance below.
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
-                // The Bankr offer (prd §529), at the head of the room where an
-                // onchain agent is the obvious next thing — and INSIDE the
-                // gate above, so it is only ever offered to somebody who
-                // already has a wallet. It shares one dismissal with the risen
-                // agent's copy, so "not now" is an answer about Bankr rather
-                // than about a screen. Draws nothing once Bankr is connected.
-                BankrOfferBanner { route.pushBridge(.bankr) }
+                // The Bankr offer used to draw HERE, and it could not (prd
+                // §529 amendment). This block is the figure inside
+                // `DSRoomSlot` — a box that is `minHeight == maxHeight ==
+                // DSRoomChassis.visualSlot` and `.clipped()`, on purpose, so
+                // the rail and the toggle land at the same y in every scope.
+                // A ~200pt banner in front of the crown therefore did not push
+                // the crown down, it ATE the slot: the delta line was cut in
+                // half along the box's bottom edge and the sparkline and the
+                // range chips were clipped away entirely. It draws in its
+                // own `Section` now, above the slot and outside the box —
+                // see the wallet shape's own note where it is emitted.
                 // Guarded as a whole for the same reason the caution block
                 // below is: the section renders whenever ANY of its four
                 // inputs exist, so a wallet whose money is entirely in
