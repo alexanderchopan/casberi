@@ -41,6 +41,10 @@ struct AccountDetailSheet: View {
     /// drives the guarantee copy today, and will drive the sync then.
     @AppStorage("icloud.sync") private var icloudSync = false
     @State private var exportURL: URL?
+    /// The address book on its own (2026-08-29). Nil on an empty book, which
+    /// is what stands the export menu down rather than offering a second file
+    /// with nothing in it (§83's dead control).
+    @State private var addressExportURL: URL?
     @State private var confirmDelete = false
     @State private var confirmDeleteAccess = false
     @State private var confirmDeleteSigner = false
@@ -114,6 +118,7 @@ struct AccountDetailSheet: View {
         .onAppear {
             guard detail == .data else { return }
             exportURL = buildExport()
+            addressExportURL = buildAddressBookExport()
             keyedAgent = AgentKey.active
             librarianOn = AgentLibrarian.isEnabled
             reach = NetworkReceiptsInsight.compose(rows: NetworkLedger.shared.receiptRows())
@@ -186,14 +191,7 @@ struct AccountDetailSheet: View {
     /// both wipes reachable (each still confirms) without the chrome.
     private var controls: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            if let exportURL {
-                ShareLink(item: exportURL) {
-                    actionLabel("Export", icon: "square.and.arrow.up",
-                                fg: .white, bg: DS.tint)
-                }
-                .buttonStyle(.plain)
-                .simultaneousGesture(TapGesture().onEnded { DSHaptic.tap() })
-            }
+            exportControl
             Button { importing = true } label: {
                 actionLabel("Import", icon: "square.and.arrow.down",
                             fg: DS.textPrimary, bg: DS.gray100)
@@ -232,6 +230,44 @@ struct AccountDetailSheet: View {
                 Text(deleteResult)
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     .settleIn()
+            }
+        }
+    }
+
+    /// Export, and the one choice it offers (2026-08-29). The capsule is
+    /// UNCHANGED while there is only one honest file to hand over: a menu
+    /// whose second item reads "Just the address book" over an empty book is
+    /// the dead control §83 bans, and it would cost a tap to say nothing.
+    ///
+    /// With names in the book the same capsule opens a two-item menu, both
+    /// real `ShareLink`s. It is a menu on TAP rather than §415's long-press
+    /// pick, and that is forced rather than chosen: `Menu`'s `primaryAction`
+    /// takes a closure, no API fires a share sheet programmatically, so a
+    /// tap-unchanged shape here would leave the second file reachable only by
+    /// a gesture nothing announces. One extra tap on a tray nobody opens twice
+    /// a day is the cheaper half of that trade.
+    @ViewBuilder private var exportControl: some View {
+        if let exportURL {
+            if let addressExportURL {
+                Menu {
+                    ShareLink(item: exportURL) {
+                        Label("Everything", systemImage: "shippingbox")
+                    }
+                    ShareLink(item: addressExportURL) {
+                        Label("Just the address book",
+                              systemImage: "person.text.rectangle")
+                    }
+                } label: {
+                    actionLabel("Export", icon: "square.and.arrow.up",
+                                fg: .white, bg: DS.tint)
+                }
+            } else {
+                ShareLink(item: exportURL) {
+                    actionLabel("Export", icon: "square.and.arrow.up",
+                                fg: .white, bg: DS.tint)
+                }
+                .buttonStyle(.plain)
+                .simultaneousGesture(TapGesture().onEnded { DSHaptic.tap() })
             }
         }
     }
@@ -990,17 +1026,50 @@ struct AccountDetailSheet: View {
         return url
     }
 
+    /// The address book alone (2026-08-29) — the names, in the SAME lossless
+    /// shape the everything file already carries them in, under the same key.
+    /// One shape, so both files read back through one importer and a book
+    /// restored from either is the same book; a slimmer book-only format would
+    /// be a second thing to keep in step with `AddressBook.importPayload`.
+    ///
+    /// It exists because "Copy all as text" — the book's only other door out —
+    /// is a pasteboard string that drops kind, provenance, note, networks and
+    /// both dates, and because the everything file is the whole corpus when
+    /// all somebody wants to move is the names they typed.
+    ///
+    /// Nil on an empty book: nothing to hand over, so nothing offers to.
+    private func buildAddressBookExport() -> URL? {
+        let payload = AddressBook.shared.exportPayload()
+        guard !payload.isEmpty else { return nil }
+        let iso = ISO8601DateFormatter()
+        guard let data = try? JSONSerialization.data(
+            withJSONObject: ["addressBook": payload,
+                             "exported": iso.string(from: .now)],
+            options: [.prettyPrinted, .sortedKeys]) else { return nil }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("casberi-addresses.json")
+        try? data.write(to: url, options: .atomic)
+        return url
+    }
+
     /// Reads a Casberi export back in. Things already present (same id) stay
     /// untouched; everything else lands as it was.
     private func importThings(from url: URL) async {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        // EITHER key makes it ours (2026-08-29). The tray hands over the whole
+        // corpus or the address book alone, so demanding `things` refused a
+        // file this app had just written with "That file isn't a Casberi
+        // export." — the honesty rule failing on our own output. The two
+        // counts below are already stated separately, so a names-only file
+        // reports itself correctly with no further change.
         guard let data = await SecurityScopedFileReader.readData(at: url),
               let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let items = root["things"] as? [[String: Any]] else {
+              root["things"] != nil || root["addressBook"] != nil else {
             importResult = "That file isn't a Casberi export."
             return
         }
+        let items = root["things"] as? [[String: Any]] ?? []
         // Names first — they're cheap, and a restore that lands the
         // transactions but not the words for them reads as a half restore.
         // Absent from files exported before 2026-08-01, which is a skip.
@@ -1065,13 +1134,15 @@ struct AccountDetailSheet: View {
         SpotlightIndex.removeAll()
         // The store doesn't own the sidecars — clear them by hand so
         // "everything" is literally true: voice audio, the background photo,
-        // and the avatar. Setting the stores' properties to nil removes the
-        // files (or defaults) and refreshes the UI.
+        // the avatar, and the name you're greeted by. Setting the stores'
+        // properties to nil removes the files (or defaults) and refreshes
+        // the UI.
         let voice = (try? FileManager.default.contentsOfDirectory(
             at: VoiceCapture.folder, includingPropertiesForKeys: nil)) ?? []
         for url in voice { try? FileManager.default.removeItem(at: url) }
         ThemeStore.shared.backgroundPhoto = nil
         ProfileStore.shared.avatar = nil
+        ProfileStore.shared.name = nil
         // The iCloud copy goes too — mirroring propagates the deletes, but a
         // zone purge is the definitive clear (it also covers things synced
         // before the toggle was last turned off). Outcome surfaces honestly.
