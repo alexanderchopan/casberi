@@ -181,7 +181,7 @@ struct Composer: View {
     /// which are also Insights). Resets on the next ask.
     @State private var currentStreamed = false
     /// True while an answer is actually being produced (model running) — the
-    /// after-answer verbs (Keep, Try with your key) wait for the settle.
+    /// after-answer verb (Keep) waits for the settle.
     @State private var inFlight = false
     /// True when the current answer came from the person's own key — it wears
     /// the badge, and the retry verb retires (one keyed try per ask).
