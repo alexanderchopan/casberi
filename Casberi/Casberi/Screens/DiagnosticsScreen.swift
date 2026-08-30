@@ -99,6 +99,29 @@ struct DiagnosticsScreen: View {
         let surfacedCount = Corpus.surfaced(all).count
         log("surfaced(all).count: \(surfacedCount) of \(all.count)")
 
+        // Round 2 (2026-08-30): the All-room and per-source-room safety
+        // nets both shipped, were both exercised (the room was actually
+        // visited), and the Vercel room still rendered empty. Both fixes
+        // lean on a `source ==` PREDICATE — the same shape every
+        // per-source `@Query` and `TokenSetupScreen`'s empty-read check
+        // already use. This isolates the one thing neither fix could rule
+        // out: whether that PREDICATE itself answers correctly on this
+        // device, independent of `@Query` entirely. `bySource` is plain
+        // Swift filtering of the array already proven correct above;
+        // `predicated` is SwiftData evaluating the identical predicate
+        // through `fetchCount`. Agreement here doesn't prove `@Query`'s
+        // live observation is healthy — it never touches `@Query` — but
+        // disagreement would mean the predicate, not the live-observation
+        // bug, is where this actually lives.
+        var counts: [String: Int] = [:]
+        for t in all { counts[t.source, default: 0] += 1 }
+        for (src, bySource) in counts.sorted(by: { $0.key < $1.key }) {
+            let predicated = (try? modelContext.fetchCount(
+                FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == src }))) ?? -1
+            let mark = predicated == bySource ? "OK" : "MISMATCH"
+            log("\(mark) source \"\(src)\": in-memory=\(bySource) predicated-fetchCount=\(predicated)")
+        }
+
         // — The cover path, step by step —
         let auth = PHPhotoLibrary.authorizationStatus(for: .readWrite)
         log("Photos access: \(authWord(auth))")
