@@ -4011,6 +4011,35 @@ struct FeedScreen: View {
                     // instead of rendering an empty page claiming to be a
                     // section — `WalletSection.resolve`'s rule, one room over.
                     VibenetRoomCard(room: room, onRemove: { _ in },
+                                    // An address just watched from THIS card's
+                                    // own empty-state discovery list (§479).
+                                    // The card is composed from a `VibenetRoom`
+                                    // VALUE this screen holds, off
+                                    // `VibenetState.saved` — a flat UserDefaults
+                                    // snapshot with no observation, unlike
+                                    // `VibenetWatch.shared` (@Observable). So
+                                    // watching alone (already done by the
+                                    // control itself) changes nothing this
+                                    // screen has read; the room needs both
+                                    // halves `VibenetScreen.watched()` does for
+                                    // the identical tap: read the chain now
+                                    // (`compose()` also writes the snapshot
+                                    // `card()` reads), then bump
+                                    // `chrome.refreshPulse` — the existing
+                                    // "bridge state changed, no row proves it"
+                                    // term `headIdentity` already keys on
+                                    // (`WalletFeedTiles`'s arrival-rain and the
+                                    // pull-to-refresh gesture use it the same
+                                    // way) — once the read lands, so this
+                                    // screen's memoised head actually
+                                    // recomputes instead of waiting on some
+                                    // unrelated change to move it.
+                                    onWatched: {
+                                        Task {
+                                            _ = await VibenetRoomSource.compose()
+                                            chrome.refreshPulse += 1
+                                        }
+                                    },
                                     onOpenKeys: { newKeyIDs in
                                         feedSheet = .vibenetKeys(room.items, newKeyIDs: newKeyIDs)
                                     },
