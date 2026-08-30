@@ -4741,7 +4741,24 @@ struct Composer: View {
                 //
                 // `q`, not `currentQuestion`: a newer ask could have overtaken,
                 // but this closure already guarded `gen` above.
-                if askedByTyping && !(turns.isEmpty && TodayBrief.matches(q)) {
+                //
+                // NOT while `pendingKeyedFollowUp` (2026-08-30) — this refocus
+                // and the free answer's `inFlight = false` land in the same
+                // synchronous block, so both terms of `askSurfaceShowing`
+                // (`!inFlight` and `fieldFocused`) can flip true in the SAME
+                // SwiftUI update. That hides the document column again right
+                // as it happens — and because the column is what CARRIES the
+                // `onChange(of: inFlight)` watcher that fires the keyed
+                // follow-up, a view removed in the same update its own
+                // watched value changes can miss that change entirely. Net
+                // effect: the free answer showed, askWithKey() never ran, no
+                // error anywhere — "displays for a few seconds, no Bankr part
+                // arrives." Holding off the refocus until the keyed follow-up
+                // has actually started (askWithKey() sets `inFlight` true
+                // again immediately) keeps the column mounted through the
+                // handoff, so the watcher is there to see the transition.
+                if askedByTyping && !(turns.isEmpty && TodayBrief.matches(q))
+                    && !pendingKeyedFollowUp {
                     fieldFocused = true
                 }
                 // Everything past here is the VERB ROW's bookkeeping, and it
