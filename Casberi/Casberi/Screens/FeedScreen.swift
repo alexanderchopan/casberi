@@ -6560,6 +6560,13 @@ struct FeedScreen: View {
                 // taking the List's own background and insets, which would
                 // undo both the card geometry and the entrance below.
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
+                // The Bankr offer (prd §529), at the head of the room where an
+                // onchain agent is the obvious next thing — and INSIDE the
+                // gate above, so it is only ever offered to somebody who
+                // already has a wallet. It shares one dismissal with the risen
+                // agent's copy, so "not now" is an answer about Bankr rather
+                // than about a screen. Draws nothing once Bankr is connected.
+                BankrOfferBanner { route.pushBridge(.bankr) }
                 // Guarded as a whole for the same reason the caution block
                 // below is: the section renders whenever ANY of its four
                 // inputs exist, so a wallet whose money is entirely in

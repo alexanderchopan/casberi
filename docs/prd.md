@@ -39636,3 +39636,147 @@ them, and the first tap should not be a decision.
 **UNSEEN on a device.** Every change here is a grouping and weight judgement; no static
 check can see one, and the block's proportions — three rows of unequal height, the first
 carrying the settled app-icon strip — were reasoned about and compiled, never looked at.
+
+## 529. Bankr becomes a first-class agent — a conversation, an in-app sign-up, and a permission that can act (2026-08-29)
+
+Asked what the app's new write capabilities change for the catalog's agent seats. The
+answer for six of the seven providers is nothing: they are models behind a key and they
+answer questions. The answer for **Bankr** is that nothing changed in Bankr and everything
+changed in what our promise about it costs.
+
+### 1. The promise stopped being a wall and became a rule
+
+Bankr is not a model behind a key — it is an agent WITH A WALLET, and its API takes plain
+English (`POST /agent/prompt` → poll `/agent/job/<id>`). "Do a limit order for XYZ" has
+always been a thing that endpoint would accept. The only thing that has ever stopped it is
+a sentence this app puts at the top of every prompt (`ANSWER ONLY…`, shipped 2026-07-16).
+
+While this app could not itself cause a transaction, that sentence described the world. Now
+that Safe's co-signature (§425) and the two devnet sends (§523, §525) exist, it describes a
+CHOICE — and a choice with no surface is one the next feature breaks by accident. This is
+that shape made explicit rather than left latent.
+
+**The capability was always reachable and is now named.** `BankrAgent.canAct` is off by
+default, cleared when the key is cleared (`AgentKey.clear`), and NOT inherited by a newly
+pasted key.
+
+### 2. Two verbs, because we cannot classify the third
+
+"Show me my automations" is a read. "Do a limit order" is a write. On the wire they are the
+same thing — free text to a remote agent — and the classification happens inside somebody
+else's model, AFTER we have sent it. **No parsing on this side can tell them apart**, and
+guessing would be the §83 fake status in the one place believing it costs money.
+
+So the person classifies, exactly as Find and Ask split the composer (§215): **Ask** carries
+the answer-only prefix and sends straight away; **Do** drops it and confirms first. The verb
+you tap IS the consent, and it is a fact you know and we do not.
+
+**The confirmation reads back YOUR WORDS, never a parsed transaction.** Bankr replies in
+sentences, so nothing here can state what a job will do before it does it — a sheet reading
+"1.0 ETH → 3,200 USDC" would be a number this app invented. It shows the instruction as
+typed and says plainly that Bankr decides the rest, and that Casberi can neither check it
+beforehand nor undo it.
+
+### 3. Corpus text never rides an acting instruction
+
+The answer path has always pasted numbered candidates into the Bankr prompt, and that
+file's own comment records that Bankr grounds on the wallet and never on them. On the
+ACTING path they therefore buy nothing and carry a real hazard: **a page you saved is text
+somebody else wrote, sitting in a message to an agent that can trade.** `act` sends the
+instruction alone. The answer path is deliberately left unchanged rather than quietly
+narrowed.
+
+### 4. The sign-up happens in the app, and passkeys are why
+
+This seat's setup is not a paste, it is an errand — make an account, mint a key, come back
+— and every step of it used to happen in Safari with Casberi in the background. That was
+most of a new person's first experience of the feature, spent outside the app.
+
+`DSWebSheet` opens both doors in-app. **`SFSafariViewController` runs the system's own
+passkey UI against the same iCloud Keychain Safari uses**, so signing up with Face ID
+inside the sheet is byte-for-byte what happens in Safari, with Safari's own session. Casberi
+reads nothing — not a keystroke, not a cookie, not the page. A `PasteButton` makes the key's
+return one tap, through the system rather than through us, so no paste banner is raised and
+no clipboard is read that we were not handed.
+
+**Deliberately NOT `ASWebAuthenticationSession`** (which the OAuth bridges use): that type
+ends on a redirect to our own scheme, and shows a consent alert saying the site and app will
+share information about you. Neither is true here, and putting a false sentence in front of
+somebody at the moment they are deciding whether to trust this is the wrong trade.
+**Deliberately NOT `WKWebView`**, which does not share Safari's session and whose passkey
+support is not the system's. Unavailable on Mac Catalyst, where the fallback opens the real
+browser and loses nothing — a Mac has a browser window you can leave open beside the app.
+
+**The limit, stated so it is not re-litigated:** creating a passkey NATIVELY from our own
+code needs the associated-domains entitlement plus an `apple-app-site-association` file on
+`bankr.bot` naming this app. We cannot add ourselves to it. What Bankr's cooperation would
+buy is the removal of the final paste — a "Connect with Bankr" OAuth button, which would
+also let THEM scope the grant (read vs trade) instead of us promising it. That is theirs to
+build; nothing on our side can fake it, and this ships without it.
+
+### 5. An act leaves a receipt, an answer does not
+
+A successful **Do** lands a `.run` thing — the kind `Thing.swift` declared and left unused
+"until bridges prove writes" — keyed `bankr:job:<id>`, carrying the instruction as its title
+and Bankr's own report as its content. No new stored property, so **no CloudKit deploy**. An
+**Ask** lands nothing: an answer is an answer, and the corpus is for things that happened.
+
+`NetworkReach` splits Bankr out of the shared agent-key line, because that sentence ("your
+question and the matched things") stopped describing it. A shared purpose would be wrong on
+exactly the seat where being wrong costs the most, on the screen that exists so a promise
+can be checked rather than believed.
+
+### 6. What is NOT built
+
+No classification of an instruction's risk, no spending cap, no allowlist of what Bankr may
+be told to do — all of them would be this app asserting knowledge of somebody else's model.
+No structured confirmation, pending measurement. No timeout treated as a failure: a job that
+outruns the poll may still be running, and telling somebody their order did not happen when
+we merely stopped watching is the worse of the two wrong answers.
+
+**UNMEASURED, and more so than most.** No Bankr key has ever been stored on this host, so no
+prompt has been sent, no job payload has been read, and no instruction has been acted on.
+`-bankrProbe "<question>"` asks and dumps the RAW job envelope keys; `-bankrProbe
+"act:<instruction>"` really acts and really spends — a different WORD, not a flag, for
+`-librarianProbe run`'s reason. **If the envelope carries anything structured — a hash, an
+order id, a status — the receipt can stop being a transcript and the confirmation can stop
+being an echo.** Until that is measured, neither pretends to be more than it is.
+
+### 7. "Any agent offchain. Bankr onchain." — the offer, and where it stands
+
+The seat existed and nobody could find it. Bankr sat sixty-odd deep in the Agent group,
+which is the wrong shape for the one provider whose difference is a CAPABILITY rather than
+a price: every other agent seat answers better, Bankr answers about your wallet and acts.
+Somebody who never opens the catalog can never learn that from the catalog.
+
+`BankrOfferBanner` is one view drawn in two places — the risen agent (where "which agent am
+I talking to?" is the live question) and the head of the Wallet room (where an onchain agent
+is the obvious next thing) — and **one dismissal shared between them**, because "not now" is
+an answer about Bankr and not about a screen. Extracted rather than written twice for this
+project's standing reason: two copies of one piece of copy drift, and then two surfaces make
+different promises about the same thing.
+
+**It states the on-device half first and keeps it whole.** The default is not being sold
+against — answers run here, on your own things, and that stays true whether or not Bankr is
+ever connected. The sentence offers a second thing rather than framing the first as a lack.
+**The on-device clause is CONDITIONAL on the model existing**: Apple Intelligence is absent
+on most of the fleet, and "answers run on this iPhone" printed over a device with no model
+is §83's fake status in the app's own voice. The offer stands without it, because Bankr's
+pitch was never "better than the local model", it was "reaches your wallet".
+
+**Three retirements**, since chrome is priced by frequency of use (`AgentBar`'s rest ruling)
+and a banner inside a surface you opened to do something else is expensive: it goes when
+Bankr is connected, when the person says Not now, and it is never drawn by a host that has
+no door to open (`onConnectBankr` is nil-able for exactly that reason — a CTA that does
+nothing is the dead control §83 bans). The Wallet copy sits INSIDE that room's existing
+gate, so it is only ever offered to somebody who already has a wallet.
+
+**NOT put in the sources tray's top row**, asked and declined. That row — avatar, apps, all,
+address book — is NAVIGATION, and §518 has just finished separating that grammar from the
+tray's tiles ("the sources you already have") and the catalog's rows ("what you could add").
+A single vendor in the shell's own furniture blurs the split again and invites the question
+it cannot answer: why Bankr there and not Claude. The banner reaches the same person in the
+two places where the offer is about something they are actually doing.
+
+**UNSEEN on a device.** Both placements are layout and weight judgements no static check can
+see, and the Wallet one sits at the head of the app's densest card.
