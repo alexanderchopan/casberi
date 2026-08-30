@@ -2454,7 +2454,7 @@ struct RootShell: View {
     /// unchanged, now hosted as a persistent ZStack layer instead of a sheet.
     private var agentSurface: some View {
         Composer(isOpen: .constant(true), draft: $draft, embedded: true,
-                 onCommit: saveDraft, onCommitVoice: saveVoice,
+                 onCommitVoice: saveVoice,
                  answer: answerDocument,
                  answerWithKey: keyedAnswerDocument,
                  knownSources: { bridges.bridges.map(\.name) },
@@ -2539,17 +2539,6 @@ struct RootShell: View {
             sceneState.filter.source = source
             sceneState.filter.tag = tag
         }
-    }
-
-    private func saveDraft() {
-        guard let thing = Capture.thing(from: draft) else { return }
-        modelContext.insert(thing)
-        modelContext.saveHonestly()
-        SpotlightIndex.index([thing])
-        land(thing)
-        // A pasted URL saves instantly with its address as its face; the real
-        // page title arrives a beat later (best-effort, never blocks the save).
-        Task { @MainActor in await LinkTitle.enrich(thing, context: modelContext) }
     }
 
     /// A local file dropped in from Finder/Safari/Mail — genuinely a Mac-only

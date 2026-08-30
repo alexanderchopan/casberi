@@ -45,9 +45,6 @@ struct Composer: View {
     /// Reports the content's natural height (embedded only) so the hosting sheet
     /// can hug it — no stranded empty space.
     var onHeight: (CGFloat) -> Void = { _ in }
-    /// Commit keeps a pasted draft (M6: save writes to us). Tags ride only
-    /// as #hashtags inside the text itself (prd §178 — no filing chips).
-    var onCommit: () -> Void
     /// A finished voice note: transcript + the audio file's sourceRef.
     var onCommitVoice: (String, String) -> Void = { _, _ in }
     /// Answers a query, returning the final AnswerStream document (engine
@@ -454,9 +451,6 @@ struct Composer: View {
     /// When this open began — the zero of every `risePhase|` line.
     @State private var riseT0: Date?
     @State private var voice = VoiceCapture()
-    /// True when the draft arrived by paste — the one typed-ish path that
-    /// still captures (pasting is bringing a thing in, not talking).
-    @State private var pasted = false
     /// DEBUG: guards the one-shot auto-send used to screenshot the in-app
     /// answer render without a physical keyboard.
     @State private var didAutoSend = false
@@ -868,9 +862,9 @@ struct Composer: View {
     }
 
     /// Tag completions for the word being typed — your real tags, prefix-
-    /// matched on the draft's last token (2+ chars, typed path only).
+    /// matched on the draft's last token (2+ chars).
     private var tagMatches: [String] {
-        guard hasDraft, !pasted, !answering else { return [] }
+        guard hasDraft, !answering else { return [] }
         guard let last = draft.split(separator: " ").last.map(String.init),
               last.count >= 2 else { return [] }
         let lower = last.lowercased()
@@ -2386,15 +2380,6 @@ struct Composer: View {
                     .padding(.top, DS.Space.s2)
             }
 
-            // Parse card — only for PASTED content (the capture path): it
-            // previews what keeping will write. Typed words get answers, not
-            // filing previews.
-            if hasDraft && !answering && pasted {
-                ParseCard(draft: draft)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.top, DS.Space.s3)
-            }
-
               }
               .frame(maxWidth: .infinity, alignment: .leading)
               .padding(.top, DS.Space.s3)
@@ -2807,8 +2792,6 @@ struct Composer: View {
         if isOpen, !didAutoSend,
            let d = UserDefaults.standard.string(forKey: "composerDraft") {
             didAutoSend = true
-            // fillDraft, not `pasted = false`: onChange runs AFTER this
-            // block, so a post-hoc reset was clobbered right back to true.
             fillDraft(d)
             return
         }
@@ -2823,7 +2806,6 @@ struct Composer: View {
                 try? await Task.sleep(for: .milliseconds(70))
             }
             try? await Task.sleep(for: .milliseconds(700))
-            pasted = false
             commit()
             return
         }
@@ -2882,9 +2864,6 @@ struct Composer: View {
 
     // MARK: - Actions
 
-    /// Names what pasting would capture — "Paste link" beats "Paste" when the
-    /// clipboard holds a URL. Detection never reads the pasteboard, so no
-    /// system banner fires until the person chooses.
     private func close() {
         if isRecording { voice.stop(keep: false) }   // the chevron discards
         fieldFocused = false
@@ -2894,7 +2873,6 @@ struct Composer: View {
         pendingHandoff = false
         risingFramePainted = false
         riseT0 = nil
-        pasted = false
         chipsAppeared = false
         turns = []
         currentQuestion = ""
@@ -2964,14 +2942,13 @@ struct Composer: View {
     private func scheduleLiveRead(immediate: Bool = false) {
         liveReadTask?.cancel()
         let query = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        // A paste is a capture on its way to being kept, not a phrase to
-        // search for — `takeChips` already withholds Find for one, so a live
-        // read would be work nothing displays. A HANDOFF is the same trade for
-        // a different reason: the draft is a seeded question already on its way
-        // to commit, and the band that would show these scopes is hidden for
-        // the whole window — so the read is a corpus walk nothing can display,
-        // paid on the main actor while the open is still animating.
-        guard !query.isEmpty, !pasted, !handingOff else {
+        // A paste is searchable exactly like typed text now (2026-08-30) —
+        // only the HANDOFF exclusion survives: the draft is a seeded question
+        // already on its way to commit, and the band that would show these
+        // scopes is hidden for the whole window — so the read is a corpus
+        // walk nothing can display, paid on the main actor while the open is
+        // still animating.
+        guard !query.isEmpty, !handingOff else {
             liveScopes = []
             liveCount = nil
             droppedScopes = []
@@ -4089,19 +4066,11 @@ struct Composer: View {
                         // does: when "Ask <agent>" is the one control that
                         // may submit this draft, return goes through it too
                         // (2026-08-30) — otherwise a keyboard would offer a
-                        // silent way past the chip the send dot no longer
-                        // is. EXCEPT a paste: the dot survives there
-                        // specifically so "Keep" stays return key's own
-                        // default (the standing rule, unchanged by any of
-                        // today's work — a paste SAVES), and asking about a
-                        // pasted link stays a deliberate reach for the chip,
-                        // not something return key switches to silently.
-                        if hasDraft { (offerKeyedAsk && !pasted) ? askDirectly() : commit() }
+                        // silent way past the chip the send dot no longer is.
+                        if hasDraft { offerKeyedAsk ? askDirectly() : commit() }
                         return
                     }
                     if prefilled { prefilled = false }
-                    else if looksPasted(old: old, new: new) { pasted = true }
-                    if new.isEmpty { pasted = false }
                     detectDraftDate()
                     scheduleLiveRead()
                 }
@@ -4111,43 +4080,31 @@ struct Composer: View {
             // submit the draft — grey and waiting when the field is empty
             // (tap = focus the field), springing to tint the moment there's
             // something to send. A visible affordance beats a control that
-            // pops out of nowhere (v2 pass, 2026-07-12). With typed text it
-            // wears the word "Ask" (2026-07-16): the verb was invisible, and
-            // "does typing save?" was a real question — the label answers
-            // it. A live recording keeps the bare arrow: stopping SAVES the
-            // voice note, and an "Ask" label there would lie.
+            // pops out of nowhere (v2 pass, 2026-07-12). It wears the word
+            // "Ask" (2026-07-16): the verb was invisible, and "does typing
+            // save?" was a real question — the label answers it (2026-08-30:
+            // and the honest answer is now simply no, pasted included — a
+            // paste stopped saving anything the same day, so there is no
+            // second state left for this label to get wrong). A live
+            // recording keeps the bare arrow: stopping SAVES the voice note,
+            // and an "Ask" label there would lie.
             //
-            // HIDDEN while `offerKeyedAsk`, EXCEPT for a paste (2026-08-30,
-            // user: "the blue send button to not show when asking" /
-            // "ask bankr no matter what"). For ordinary typed text with a key
-            // configured, "Ask <agent>" is the one control that submits this
-            // draft, and a second, more prominent button doing the same
+            // HIDDEN while `offerKeyedAsk` (2026-08-30, user: "the blue send
+            // button to not show when asking") — for a real question with a
+            // key configured, "Ask <agent>" is the one control that submits
+            // this draft, and a second, more prominent button doing the same
             // thing is exactly the "which one do I tap" confusion this chip
-            // exists to end. A paste is different: `offerKeyedAsk` now shows
-            // "Ask <agent>" there too (asking about a pasted link is a real
-            // thing to want), but pasting still has its OWN separate verb —
-            // "Keep" — and that would otherwise have no control left at all,
-            // since the dot it lives on is what this hides. `pasted` keeps
-            // the dot around FOR that reason alone, wearing its existing
-            // "Keep" label so the two verbs (save it / ask about it) sit side
-            // by side rather than one silently replacing the other.
-            if !offerKeyedAsk || pasted {
+            // exists to end. No paste exception any more: nothing left for
+            // the dot to preserve there once paste stopped being its own
+            // capture path — a pasted draft is submitted exactly like a
+            // typed one now, by whichever one control is showing.
+            if !offerKeyedAsk {
             Button {
                 if hasDraft || isRecording { commit() } else { fieldFocused = true }
             } label: {
                 HStack(spacing: DS.Space.s1) {
                     if hasDraft && !isRecording {
-                        // The label names the ACTION, and for a paste that
-                        // action is Keep, not Ask (2026-08-11). It read "Ask"
-                        // in both states while `commit()` routed a paste to
-                        // the capture path — a control that says one thing and
-                        // does another, which is the honesty rule's own first
-                        // clause, on the button whose comment above says it
-                        // exists precisely because "does typing save?" was a
-                        // real question. It answered it wrongly for half its
-                        // states. Now Keep saves and Ask answers, and the word
-                        // is checkable against what happens.
-                        Text(pasted ? "Keep" : "Ask")
+                        Text("Ask")
                             .dsText(.label12).fontWeight(.semibold)
                     }
                     Image(systemName: "arrow.up")
@@ -4164,7 +4121,7 @@ struct Composer: View {
                 .dsHover()
             }
             .buttonStyle(PressSpring())
-            .accessibilityLabel(hasDraft && !isRecording ? (pasted ? "Keep" : "Ask") : "Send")
+            .accessibilityLabel(hasDraft && !isRecording ? "Ask" : "Send")
             .modifier(SendTooltip(glyphOnly: !(hasDraft && !isRecording)))
             }
         }
@@ -4187,56 +4144,13 @@ struct Composer: View {
     /// A question is the Ask button's job — the Send-to band sits out so the
     /// one honest exit is obvious. Conservative: a trailing "?" or a leading
     /// question word.
-    /// Did this edit ARRIVE as a paste, rather than being typed?
     ///
-    /// It matters more than it looks: `pasted` is what routes `commit()` to
-    /// the capture path, and the capture path SAVES. The standing rule is that
-    /// typed text never saves (things enter only via paste, mic, share,
-    /// screenshots, drop, bridges), so a false positive here breaks that rule
-    /// outright — you ask a question and get a note you never asked for.
-    ///
-    /// The old test was `new.count - old.count > 8`, i.e. "more than eight
-    /// characters appeared at once, so it must be a paste". That is not true of
-    /// any modern iOS keyboard: **QuickPath/swipe typing commits a whole word
-    /// at a time**, predictive-text taps insert a whole word, and autocorrect
-    /// replaces one. Any word over eight characters — "something", "yesterday",
-    /// "screenshots" — flipped this true mid-sentence, and the question was
-    /// then filed as a note instead of answered (reported 2026-08-11: "i just
-    /// typed into the composer a question, and it saved it as a written note
-    /// but didn't answer me").
-    ///
-    /// So the test is now about SHAPE, not size. A keyboard commits one word
-    /// per burst; a paste brings something a keyboard cannot produce in a
-    /// single edit: several words at once, a line break, or a URL. The length
-    /// floor survives only as a backstop for a very long single token, well
-    /// past any word a keyboard would commit.
-    ///
-    /// When in doubt this returns FALSE — answering is non-destructive and
-    /// saving is not, so an ambiguous edit gets asked rather than filed.
-    private func looksPasted(old: String, new: String) -> Bool {
-        guard new.count > old.count else { return false }
-        // The run that just arrived. Common-prefix/suffix rather than a plain
-        // tail slice, because iOS edits mid-string too (autocorrect, or typing
-        // before the caret's end).
-        let head = zip(old, new).prefix { $0 == $1 }.count
-        let tail = zip(old.reversed(), new.reversed()).prefix { $0 == $1 }.count
-        let lower = new.index(new.startIndex, offsetBy: head)
-        let upper = new.index(new.endIndex, offsetBy: -min(tail, new.count - head))
-        guard lower < upper else { return false }
-        let run = String(new[lower..<upper])
-        let trimmed = run.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count > 8 else { return false }
-        // A line break or a URL is a paste — no keyboard commits either as one
-        // edit (the return key is intercepted above as the SEND gesture).
-        if run.contains("\n") || trimmed.contains("://") { return true }
-        // Several words at once. A swipe-typed word arrives with at most a
-        // trailing space, so the TRIMMED run holds no interior whitespace.
-        if trimmed.contains(where: \.isWhitespace) { return true }
-        // A single token far longer than anything a keyboard commits — a bare
-        // domain, a hash, a long id.
-        return trimmed.count > 40
-    }
-
+    /// `looksPasted` (the edit-shape heuristic this file used to guess
+    /// whether a draft arrived by paste) is gone with the flag it fed
+    /// (2026-08-30, "paste should not save") — there is no capture path left
+    /// for a false positive to misroute a typed question into, so the whole
+    /// question the heuristic existed to answer no longer has a wrong answer
+    /// to avoid.
     private var draftIsQuestion: Bool {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if text.hasSuffix("?") { return true }
@@ -4355,9 +4269,10 @@ struct Composer: View {
     private var takeChips: some View {
         // Three independent gates, so each is purely ADDITIVE — the older
         // two bands' own visibility rules are byte-for-byte what they were.
-        // Find sits out for a PASTE: that's a capture path on its way to being
-        // kept, not a phrase to search for.
-        let offerFind = !pasted
+        // Find no longer sits out for a paste (2026-08-30) — paste stopped
+        // being its own capture path the same day ("paste should not save"),
+        // so pasted text is searchable exactly like typed text now.
+        let offerFind = true
         let offerSend = !answering && !draftIsQuestion
         // The ask-time keyed tap (restored 2026-08-30) — `offerKeyedAsk`,
         // shared with the send dot's own visibility so the two agree on
@@ -4524,35 +4439,19 @@ struct Composer: View {
     /// that's what was explicitly tapped) — set only by `askDirectly()`.
     /// "Ask <agent>" is an unambiguous statement of intent: the person
     /// tapped a control whose whole label says what it does, so it must
-    /// never fall through to a DIFFERENT verb (saving a note, navigating
-    /// away) based on a guess about the text — that guess is exactly what
-    /// `looksPasted`/`NavigateCommand` are, useful for the PLAIN send dot
-    /// (which has to infer intent from the text alone) and beside the
-    /// point once intent is already stated by which control was tapped.
-    /// `isRecording` is the one branch `forceAsk` does NOT skip — there is
-    /// no committed text to ask about yet while a voice capture is still
-    /// running, force or not.
+    /// never fall through to a DIFFERENT verb (navigating away) based on a
+    /// guess about the text — that guess is exactly what `NavigateCommand`
+    /// is, useful for the PLAIN send dot (which has to infer intent from the
+    /// text alone) and beside the point once intent is already stated by
+    /// which control was tapped. `isRecording` is the one branch `forceAsk`
+    /// does NOT skip — there is no committed text to ask about yet while a
+    /// voice capture is still running, force or not.
     private func commit(forceAsk: Bool = false) {
         if isRecording {
             // Voice is a capture path — send keeps the piece.
             if let piece = voice.stop(keep: true) {
                 onCommitVoice(piece.transcript, piece.sourceRef)
             }
-            close()
-        } else if !forceAsk, pasted, !draftIsQuestion {
-            // Paste is a capture path — send keeps what came in. But
-            // `looksPasted` is a GUESS from the field's own edit deltas, not a
-            // real paste signal (nothing in this file reads UIPasteboard) — it
-            // fires on any edit landing several words at once, which ordinary
-            // typing does too: autocorrect, dictation, and predictive-text
-            // word taps all commit a multi-word run in one edit. A draft that
-            // reads as a real question is asked rather than silently filed
-            // and closed, however it landed in the field. Reported
-            // 2026-08-30: "Ask Bankr" intermittently did nothing — no answer,
-            // no error, straight back to an empty composer — because a
-            // false-positive here sent a typed question through the capture
-            // branch before the ask ever started.
-            onCommit()
             close()
         } else if !forceAsk, let intent = NavigateCommand.parse(draft, tags: tagPool,
                                                      sources: knownSources()) {
@@ -4867,34 +4766,6 @@ private struct SendTooltip: ViewModifier {
     }
 }
 
-/// The parse card — what keeping the pasted draft will write (kind + title
-/// preview). No candidate-tag chips (prd §178 — the filing surface retired;
-/// a #hashtag typed in the text itself still rides in via Capture).
-struct ParseCard: View {
-    let draft: String
-
-    private var isLink: Bool { Capture.detectURL(in: draft) != nil }
-    private var kindLabel: String { isLink ? "Link" : "Note" }
-    private var titlePreview: String {
-        let line = draft.split(separator: "\n", maxSplits: 1).first.map(String.init) ?? draft
-        return line.count > 60 ? String(line.prefix(60)) + "…" : line
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(spacing: DS.Space.s2) {
-                Chip(text: kindLabel, style: .tint)
-                Text(titlePreview)
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
-            }
-            .mountIn()
-        }
-        .padding(DS.Space.s3)
-        .dsWell()
-    }
-}
-
 /// A pill chip — the composer's and shell's smallest interactive unit.
 struct Chip: View {
     /// `neutral` is a word you can tap, `tint` is one the app is nudging you
@@ -4931,9 +4802,9 @@ struct Chip: View {
         .fixedSize(horizontal: true, vertical: false)
         .background(wash, in: Capsule(style: .continuous))
         // Folded in HERE rather than at each call site, the same reasoning
-        // `dsListCardRow` states: every Chip but `ParseCard`'s status badge is
-        // the label of a Button, so a screen that reaches for one gets Mac
-        // hover with no separate decision. No tooltip — a chip is a word.
+        // `dsListCardRow` states: every Chip is the label of a Button, so a
+        // screen that reaches for one gets Mac hover with no separate
+        // decision. No tooltip — a chip is a word.
         .dsHover()
     }
 
