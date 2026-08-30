@@ -45,7 +45,31 @@ struct BankrOfferBanner: View {
     /// must not draw one.
     let onConnect: () -> Void
 
-    @AppStorage("agent.bankrOfferDismissed") private var dismissed = false
+    @AppStorage(BankrOfferBanner.dismissedKey) private var dismissed = false
+
+    /// The shared dismissal, as one string rather than three literals — the
+    /// property wrapper above, `offers` below, and any future caller all name
+    /// the same key by construction. A second spelling of it is a banner that
+    /// is dismissed on one surface and not on another, which is precisely the
+    /// thing this view exists as one copy to prevent.
+    static let dismissedKey = "agent.bankrOfferDismissed"
+
+    /// Whether this view would draw anything at all.
+    ///
+    /// **A CALLER IN A `List` MUST ASK BEFORE EMITTING A `Section`**, because
+    /// a view that renders nothing is not a section that takes no room: an
+    /// empty `Section` still takes the list's own spacing, so the Wallet room
+    /// would keep a banner-shaped gap above its crown for everybody who had
+    /// already waved the offer off. (That is this room's own lesson, recorded
+    /// on the scope-visual slot: "an empty `Section` still takes list spacing,
+    /// so a zero-height box is not an absent one.")
+    ///
+    /// It reads the SAME two facts the body does, in the same order, so the
+    /// two can never disagree about whether there is anything to show.
+    static var offers: Bool {
+        !UserDefaults.standard.bool(forKey: dismissedKey)
+            && !AgentKey.isConfigured(.bankr)
+    }
 
     var body: some View {
         if !dismissed, !AgentKey.isConfigured(.bankr) {
@@ -54,7 +78,14 @@ struct BankrOfferBanner: View {
                     // The mark, because the sentence names a product most
                     // people have not heard of. The seat's own bundled brand
                     // asset, so this claims nothing the catalog doesn't.
-                    BridgeIcon(name: "Bankr", size: DS.Mark.row, circular: true)
+                    // `DS.Face.row`, not `DS.Mark.row` — the two are the same
+                    // 26pt by construction, but `circular: true` makes this a
+                    // FACE (it stands in the slot an avatar would), and the
+                    // face ramp is the one that governs it. Not `rowCircle`:
+                    // that rung is optical compensation for a circle in a
+                    // MIXED column of squircle marks, and this one is alone
+                    // beside a heading.
+                    BridgeIcon(name: "Bankr", size: DS.Face.row, circular: true)
                     Text("Any agent offchain. Bankr onchain.")
                         .dsText(.heading17).foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)

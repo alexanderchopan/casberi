@@ -656,6 +656,19 @@ struct StartFigureMark: View {
     }
 
     var body: some View {
+        // SILENT TO VOICEOVER ON PURPOSE (prd §299's accessibility rule, whose
+        // audit flagged this). These figures are the one drawing in the app
+        // that is guaranteed to carry no fact: "generic shape only — no
+        // number, no label, no plausible data" is this type's own §83 rule
+        // three paragraphs up, and it is what makes them safe to show before
+        // anything has been read. So there is nothing here to describe that
+        // the card's own title and `cost:` line do not already say, and a
+        // label invented for them ("a rising curve") would be the first time
+        // this mark claimed anything at all.
+        figureBody.accessibilityHidden(true)
+    }
+
+    @ViewBuilder private var figureBody: some View {
         switch figure {
         case .treemap:
             // The Files room's own hero, at card scale: one dominant cell and
