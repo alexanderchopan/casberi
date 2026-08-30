@@ -834,6 +834,19 @@ harness "Cloudflare pure-logic self-test" "cloudflare self-test" "scripts/cloudf
 # That promise was prose in the source; here it is mechanical.
 harness "Cursor pure-logic self-test" "cursor self-test" "scripts/cursor-selftest.sh" "the Cursor logic self-test failed — run scripts/cursor-selftest.sh"
 
+# Bankr got a second verb that can ACT (2026-08-29, prd §529) — the one keyed
+# agent in this catalog with a wallet behind it, so a wrong guard here is not
+# a bad answer, it is money moving. Four things a build or a screen sweep
+# cannot see: the answer path must never reach the acting verb; corpus text
+# must never ride an instruction; the permission dies with the key, or it
+# silently re-arms on the next paste; and the answer-only rail must be on
+# exactly one of the two prompts — get that backwards and a Do silently
+# behaves as an Ask, the confirmation sheet still rises, the person taps
+# "Send it", and nothing they asked for happens. Every failure renders as a
+# perfectly ordinary screen. `-bankrProbe`/`-bankrAct` are the live proof;
+# this is the proof that runs on every build.
+harness "Bankr pure-logic self-test" "bankr self-test" "scripts/bankr-selftest.sh" "the Bankr logic self-test failed — run scripts/bankr-selftest.sh"
+
 # Circle x402 (2026-08-06). Unlike the harnesses above this bridge IS
 # measurable — the directory is keyless — and that is exactly why it needs one:
 # a live curl proves the wire shape and proves nothing about the arithmetic
