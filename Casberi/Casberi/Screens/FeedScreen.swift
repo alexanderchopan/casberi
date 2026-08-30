@@ -1174,7 +1174,14 @@ struct FeedScreen: View {
     /// would make the verb silently fail on exactly the rows the search-only
     /// rule exists to keep OUT of a river you didn't build.
     private var feedThings: [Thing] {
-        Pinboard.isPinnedRoom(source) ? things : Corpus.surfaced(things)
+        // A non-All room reads `sourceRoomFallbackSnapshot` in preference to
+        // `things` — see the `.task(id: scenePhase)` safety net below. Stays
+        // nil (so this is a no-op) unless that task actually found a live
+        // `@Query` disagreeing with a raw fetch on the same store.
+        if source != "All", let fallback = sourceRoomFallbackSnapshot {
+            return Pinboard.isPinnedRoom(source) ? fallback : Corpus.surfaced(fallback)
+        }
+        return Pinboard.isPinnedRoom(source) ? things : Corpus.surfaced(things)
     }
 
     /// `rawOverride` is the escape hatch the safety-net refresh below uses:
@@ -1226,6 +1233,13 @@ struct FeedScreen: View {
     /// `@State` on the promise that someone else guards is how both crashes
     /// happened. `visible` filters `.live` itself now — see below.
     @State private var debouncedAllSnapshot: [Thing]?
+    /// The same safety net as `debouncedAllSnapshot`, for every OTHER room
+    /// (2026-08-30 follow-up — the All room's fix alone left a per-source
+    /// room, e.g. Vercel, still stuck: it has its own separate `@Query`, so
+    /// it carries the identical FB14619787 exposure). Nil until a mismatch
+    /// is actually found; see the `.task(id: scenePhase)` below and
+    /// `feedThings`, the one place this is read.
+    @State private var sourceRoomFallbackSnapshot: [Thing]?
     /// The wallet apps the person said they use, for the Walletbeat room's
     /// incident rows (prd §422). Derived from the room's own rows rather than
     /// fetched — §419's decision to make the watch a `Thing` is what makes that
@@ -3693,6 +3707,28 @@ struct FeedScreen: View {
             let next = liveVisible(rawOverride: raw)
             allSnapshotKey = snapshotSignature(next)
             debouncedAllSnapshot = next
+        }
+        // The per-source half of the same safety net (2026-08-30 follow-up):
+        // a source room (Vercel, and every other one) carries its OWN
+        // `@Query`, unbounded and predicated on `source` (see the init's
+        // "else" branch above) — a completely separate live-observation
+        // instance from the All room's, so the fix above does not reach it.
+        // Same shape: one cheap SQL `COUNT` scoped to this source, per
+        // foreground activation, and only on a genuine mismatch does it run
+        // a real fetch and populate `sourceRoomFallbackSnapshot`. Excludes
+        // Pinboard (its `@Query` is predicated on `pinnedAt`, not `source`,
+        // so a source-scoped count would compare the wrong thing) and All
+        // (already covered above).
+        .task(id: scenePhase) {
+            guard source != "All", !Pinboard.isPinnedRoom(source), scenePhase == .active
+            else { return }
+            let probe = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == source })
+            guard let rawCount = try? modelContext.fetchCount(probe), rawCount != things.count
+            else { return }
+            let fetch = FetchDescriptor<Thing>(
+                predicate: #Predicate<Thing> { $0.source == source },
+                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+            sourceRoomFallbackSnapshot = try? modelContext.fetch(fetch)
         }
         // THE HEAD IS COMPUTED HERE, NOT IN THE BODY (PERF 2026-08-21).
         //
