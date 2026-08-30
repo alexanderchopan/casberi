@@ -47,12 +47,27 @@ enum VibenetSend {
     enum Failure: Error, Equatable {
         case noKey
         case cannotCompose
+        /// The payer answered and had nothing on offer. **A real answer**,
+        /// and on a creation a final one — see `createAccount`.
         case noSponsor
+        /// Nobody answered the payer at all. Deliberately NOT `noSponsor`
+        /// (prd §530): not knowing whether the faucet would pay is not the
+        /// faucet declining, and the two send a person to do different
+        /// things — wait, or try again.
+        case sponsorUnreadable
         /// The payer service refused. Carries its own words, because the one
         /// thing measured about this endpoint is that its errors are worth
         /// reading and its parse failure is worth nothing.
         case payerRefused(String)
+        /// The node refused the transaction, **in the node's own words**. The
+        /// string is the chain's, never ours: `insufficient funds`, `nonce too
+        /// low`, `create address does not match the sender` are three
+        /// different next steps, and this app spent them all on one sentence
+        /// until prd §530.
         case broadcastRefused(String)
+        /// No answer from the chain at all. Never reported as a refusal —
+        /// blaming the node for a dropped connection is the §515a mistake.
+        case chainUnreachable
         case signingRefused
     }
 
@@ -66,10 +81,31 @@ enum VibenetSend {
 
     // MARK: - Sponsorship
 
-    /// Ask what a payer would offer. nil when nothing is on offer, which is a
-    /// real answer rather than a failure — the quota is finite and this is a
-    /// devnet.
-    static func sponsoredPayer(for account: Data, gasLimit: UInt64) async -> Data? {
+    /// WHAT A PAYER SAID — three answers, not two (prd §530).
+    ///
+    /// This read used to hand back `Data?`, which folded *the faucet has
+    /// nothing for you* into *nobody answered*. Both render as an absent
+    /// sponsor, and they are not the same fact: one is the devnet's finite
+    /// quota doing its job, the other is a service that blinked. The creation
+    /// sheet stated the first as a fact for both — "Nobody is sponsoring — the
+    /// account needs funds first" — on a screen whose whole subject is who
+    /// pays.
+    /// **`declined`, never `none`** — deliberately. This value is held in an
+    /// `Optional` by the sheet ("the check hasn't run yet"), and a case spelled
+    /// `none` there is the Swift footgun where `.none` silently resolves to
+    /// `Optional.none` instead of this case. A name that cannot be confused is
+    /// cheaper than a comment warning about the one that can.
+    enum PayerOffer: Equatable {
+        case sponsored(Data)
+        /// The service answered, and offered nothing. A real answer.
+        case declined
+        /// Nobody answered, or the answer did not parse. NOT an offer of
+        /// nothing, and never reported as one.
+        case unreadable
+    }
+
+    /// Ask what a payer would offer.
+    static func payerOffer(for account: Data, gasLimit: UInt64) async -> PayerOffer {
         let body: [String: Any] = [
             "jsonrpc": "2.0", "id": 1, "method": "payer_getTerms",
             "params": [["chainId": VibenetSigner.chainID,
@@ -80,16 +116,18 @@ enum VibenetSend {
         ]
         guard let root = await IngestSupport.postJSON(payerEndpoint, body: body) as? [String: Any],
               let result = root["result"] as? [String: Any],
-              let options = result["options"] as? [[String: Any]] else { return nil }
+              let options = result["options"] as? [[String: Any]] else { return .unreadable }
         // "sponsored" only. The other option is paying in USDV, which is a
         // different act with a different consent and is not taken silently.
         for option in options where (option["kind"] as? String) == "sponsored" {
             if let payer = option["payer"] as? String,
                let data = VibenetTransaction.data(fromHex: payer), data.count == 20 {
-                return data
+                return .sponsored(data)
             }
         }
-        return nil
+        // The service answered and named no sponsor we can use. That is an
+        // offer of nothing, which is a real answer.
+        return .declined
     }
 
     /// Hand the payer a transaction we have signed and get it back with
@@ -115,29 +153,57 @@ enum VibenetSend {
 
     // MARK: - The one write
 
-    /// Broadcast. **The only write verb in this app's vibenet code**, and it
-    /// appears exactly once so the conduct guard has one thing to count.
+    /// Broadcast. **The only write verb in this app's vibenet code**, and the
+    /// method literal appears exactly once so the conduct guard has one thing
+    /// to count.
     ///
-    /// **THE NODE'S OWN WORDS SURVIVE** (prd §530, 2026-08-30). This read
-    /// `VibenetChain.call`, which maps a JSON-RPC `error` object onto the same
-    /// nil as an unreachable host — so "The network refused it: the node
-    /// refused the transaction" was the ONLY sentence this screen could ever
-    /// show, whatever went wrong, and it names nothing anybody can act on.
-    /// That is the screen in the 2026-08-30 report. `callOutcome` keeps the
-    /// message; `NodeRefusal` explains it where it can and quotes it where it
-    /// cannot.
+    /// ## THE NODE'S OWN WORDS (prd §530)
+    ///
+    /// This rode `VibenetChain.call`, which maps a transport failure, a
+    /// non-200 and a JSON-RPC `error` object all to nil — so every possible
+    /// refusal arrived as one sentence, *"the node refused the transaction"*,
+    /// naming none of them. That is §515a's lesson in the WRITE path, where it
+    /// costs more: a read that goes quiet is annoying, a write refused with no
+    /// reason cannot be acted on by the person holding the phone.
+    ///
+    /// `postJSONBody`, not `postJSON`, and that is the load-bearing half: a
+    /// node commonly answers a rejected send with **HTTP 400 and the reason in
+    /// the body**, and every other helper in `IngestSupport` gates the body on
+    /// a 200 — so the one thing worth having was thrown away before any parse
+    /// could reach it.
+    ///
+    /// `VibenetChain.call` is deliberately NOT extended to do this: that
+    /// function is the read path's, `VibenetBridge.swift` is guarded as a
+    /// reader, and `vibenet-selftest.sh` fails the build if a write-shaped
+    /// method appears in it.
     static func broadcast(rawTransaction raw: String) async throws -> String {
-        switch await VibenetChain.callOutcome(method: "eth_sendRawTransaction", params: [raw]) {
-        case .value(let result):
-            guard let hash = result as? String else {
-                throw Failure.broadcastRefused(NodeRefusal.sentence(nil))
+        let body: [String: Any] = ["id": 1, "jsonrpc": "2.0",
+                                   "method": "eth_sendRawTransaction", "params": [raw]]
+        let answered = await IngestSupport.postJSONBody(VibenetChain.rpc, body: body,
+                                                        service: VibenetIdentity.source)
+        guard let root = answered.json as? [String: Any] else {
+            // A status with no readable body is still the node answering, and
+            // saying so beats claiming it refused something it may never have
+            // read. Status 0 is no response at all.
+            if answered.status > 0 {
+                throw Failure.broadcastRefused(
+                    String(localized: "the node answered \(String(answered.status)) and nothing readable"))
             }
-            return hash
-        case .refused(let message):
-            throw Failure.broadcastRefused(NodeRefusal.sentence(message))
-        case .unreachable:
-            throw Failure.broadcastRefused(NodeRefusal.sentence(nil))
+            throw Failure.chainUnreachable
         }
+        if let hash = root["result"] as? String, !hash.isEmpty { return hash }
+        if let error = root["error"] as? [String: Any] {
+            // `message` is where every node this chain runs puts it; `data` is
+            // where a revert reason sometimes ends up instead. Neither is
+            // invented: a refusal with no words says exactly that.
+            let words = (error["message"] as? String) ?? (error["data"] as? String) ?? ""
+            throw Failure.broadcastRefused(words.isEmpty
+                ? String(localized: "the node refused it and gave no reason")
+                : words)
+        }
+        // JSON, no result, no error — the node is answering something this
+        // app does not understand, which is not the same as refusing.
+        throw Failure.chainUnreachable
     }
 
     // MARK: - The receipt
@@ -225,7 +291,41 @@ enum VibenetSend {
                                              maxPriorityFeePerGas: maxPriorityFeePerGas)
         else { throw Failure.cannotCompose }
 
-        let payer = await sponsoredPayer(for: draft.address, gasLimit: gasLimit)
+        // WHY THIS CAN REFUSE BEFORE THE FACE ID (prd §530).
+        //
+        // An empty `payer` means the SENDER pays — and the sender here is an
+        // account derived seconds ago from a salt this call generated at
+        // random a few lines above. It holds nothing and cannot: nobody could
+        // have funded an address nobody had ever seen. So an unsponsored
+        // creation that costs anything is refused by the node EVERY TIME, and
+        // the old flow found that out only after asking for a Face ID, signing
+        // with it, and broadcasting — surfacing as *"The network refused it:
+        // the node refused the transaction"*, which named neither the cause
+        // nor the one thing that would fix it.
+        //
+        // `Failure.noSponsor` was declared for exactly this state and had no
+        // thrower; `VibenetCreateSheet` has carried its sentence since the day
+        // it shipped, and the screen's own "Gas" line says the same fact
+        // BEFORE the tap. This is the code catching up with the copy.
+        //
+        // The condition is the FEE, not the sponsorship: a transaction that
+        // costs nothing needs nobody to pay it, so a zero-fee creation is
+        // still allowed to go unsponsored. That keeps the claim exactly true
+        // rather than roughly true — the defaults are non-zero, so this is
+        // the path every real creation takes.
+        let feePayable = maxFeePerGas > 0 || maxPriorityFeePerGas > 0
+        var payer: Data?
+        switch await payerOffer(for: draft.address, gasLimit: gasLimit) {
+        case .sponsored(let address):
+            payer = address
+        case .declined:
+            if feePayable { throw Failure.noSponsor }
+        case .unreadable:
+            // NOT `noSponsor`: telling somebody the faucet said no, when the
+            // faucet was never reached, sends them away to wait for a quota
+            // that may be full. Two silences, two sentences.
+            if feePayable { throw Failure.sponsorUnreadable }
+        }
 
         // Re-plan with the payer in place: `payer` is INSIDE the signed body,
         // so asking for sponsorship after signing would sign the wrong

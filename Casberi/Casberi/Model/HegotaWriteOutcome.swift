@@ -1,6 +1,6 @@
 import Foundation
 
-/// WHAT THE FAUCET ACTUALLY SAID (prd §530, 2026-08-30).
+/// WHAT THE FAUCET ACTUALLY SAID (prd §531, 2026-08-30).
 ///
 /// `POST faucet.hegota.ethrex.xyz/api/claim` rides
 /// `IngestSupport.postJSON`, which returns nil for ANY non-200 — so the
@@ -19,7 +19,11 @@ import Foundation
 /// **The sentence lives here rather than in the sheet** for the reason the
 /// broken branch above demonstrates: a refusal spelled per-screen drifts from
 /// the shape it is classifying, and then a screen tests for text that cannot
-/// occur. `NodeRefusal` is the same ruling for the signed half.
+/// occur.
+///
+/// The SIGNED half of this seat's writes is §530's, not this file's: a node's
+/// refusal reaches the screen in the node's own words from
+/// `HegotaSend.broadcast`. This file is the faucet alone.
 
 // MARK: - The faucet
 

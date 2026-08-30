@@ -33,7 +33,7 @@ KNOWN_NON_REACH=(
   # Hegota's EXPLORER only — a permalink the PERSON's browser opens on a
   # transaction row.
   #
-  # **The faucet used to sit here and no longer may** (prd §530, 2026-08-30).
+  # **The faucet used to sit here and no longer may** (prd §531, 2026-08-30).
   # This entry said "the seat deliberately never touches it — the setup screen
   # links out so the person claims their own", which was true when it was
   # written and stopped being true on 2026-08-29, when §525 landed

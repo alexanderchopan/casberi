@@ -479,49 +479,10 @@ enum VibenetChain {
     static let rpc = "https://rpc.vibes.base.org"
 
     static func call(method: String, params: [Any]) async -> Any? {
-        if case .value(let result) = await callOutcome(method: method, params: params) {
-            return result
-        }
-        return nil
-    }
-
-    /// ANY call, keeping what the node said (prd §530, 2026-08-30).
-    ///
-    /// `CallOutcome` below has drawn the revert/silence distinction for
-    /// `eth_call` since §515a — and only for `eth_call`, so the WRITE path went
-    /// on collapsing every refusal into `call`'s nil and reporting "the node
-    /// refused the transaction" for all of them. Same lesson, same file, one
-    /// method over; this is where it generalises.
-    static func callOutcome(method: String, params: [Any]) async -> Outcome {
         let body: [String: Any] = ["id": 1, "jsonrpc": "2.0", "method": method, "params": params]
-        // `postJSONAnyStatus`, not `postJSON`: a node answering its `error`
-        // object with a 4xx or 5xx would otherwise have that error dropped by
-        // the very helper meant to carry it (prd §530).
-        let answer = await IngestSupport.postJSONAnyStatus(rpc, body: body)
-        guard let root = answer.json as? [String: Any] else { return .unreachable }
-        if let result = root["result"], !(result is NSNull) {
-            return .value(result)
-        }
-        // A STRING error is an error too. Reading only the dictionary form
-        // reported "no answer from the chain" for a node that plainly refused
-        // — and would have diverged from the Hegotá twin written the same day.
-        if let error = root["error"] {
-            if let object = error as? [String: Any] {
-                return .refused(object["message"] as? String)
-            }
-            return .refused(error as? String)
-        }
-        return .unreachable
-    }
-
-    /// The generic answer: a value, a refusal in the node's own words, or
-    /// nothing at all. `CallOutcome` below is `eth_call`'s narrower view of the
-    /// same three states — it promises a `String` value, which every read of it
-    /// relies on — so this exists rather than widening that one.
-    enum Outcome {
-        case value(Any)
-        case refused(String?)
-        case unreachable
+        guard let root = await IngestSupport.postJSON(rpc, body: body) as? [String: Any],
+              let result = root["result"], !(result is NSNull) else { return nil }
+        return result
     }
 
     static func ethCall(to: String, data: String) async -> String? {
@@ -550,21 +511,17 @@ enum VibenetChain {
         case unreachable
     }
 
-    /// ONE walk, not two (the §418 duplicate-parser rule): this is
-    /// `callOutcome` with `eth_call`'s own parameters, so the read diagnostic
-    /// and the write path can never disagree about what the node said.
     static func ethCallOutcome(to: String, data: String) async -> CallOutcome {
-        switch await callOutcome(method: "eth_call", params: [["to": to, "data": data], "latest"]) {
-        case .value(let any):
-            // A non-String result is not an `eth_call` answer; this view has
-            // always treated it as no answer and still does.
-            guard let hex = any as? String else { return .unreachable }
-            return .value(hex)
-        case .refused(let message):
-            return .reverted(message)
-        case .unreachable:
+        let body: [String: Any] = ["id": 1, "jsonrpc": "2.0", "method": "eth_call",
+                                   "params": [["to": to, "data": data], "latest"]]
+        guard let root = await IngestSupport.postJSON(rpc, body: body) as? [String: Any] else {
             return .unreachable
         }
+        if let hex = root["result"] as? String { return .value(hex) }
+        if let error = root["error"] as? [String: Any] {
+            return .reverted(error["message"] as? String)
+        }
+        return .unreachable
     }
 
     /// An address's deployed code — the reachability gate (prd §515a).

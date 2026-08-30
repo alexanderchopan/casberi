@@ -32,12 +32,19 @@ enum HegotaSend {
     enum Failure: Error, Equatable {
         case noKey
         /// The faucet's own verdict, carried whole rather than flattened to a
-        /// string (prd §530). The rate limit is the refusal this service was
+        /// string (prd §531). The rate limit is the refusal this service was
         /// MEASURED to make on an ordinary day, and it is not a fault — a
         /// screen has to be able to tell it apart from a real one, which a
         /// sentence it has to grep cannot do.
         case faucet(HegotaFaucetVerdict)
+        /// The chain refused it, **in the node's own words** (prd §530). Ours
+        /// were a placeholder that named none of the causes: `insufficient
+        /// funds`, `nonce too low` and a malformed frame are three different
+        /// next steps and were one dead end.
         case broadcastRefused(String)
+        /// No host answered at all. Never reported as a refusal — see
+        /// `broadcast`, and §515a for the read-path version of this mistake.
+        case chainUnreachable
         case signingRefused
     }
 
@@ -49,29 +56,27 @@ enum HegotaSend {
 
     /// Ask the faucet to fund `address`. No key, no signature — this is the
     /// network's own gift, not an act this phone's key performs.
-    /// **`postJSONAnyStatus`, NOT `postJSON`** (prd §530, 2026-08-30) — and
-    /// the difference is the whole of this function's honesty.
+    /// **`postJSONBody`, NOT `postJSON`** (prd §531, 2026-08-30) — the same
+    /// helper §530 added for the broadcast below, and here for the same reason
+    /// one step further: this service's refusals are the thing worth reading.
     ///
     /// `postJSON` returns nil for ANY non-200, so the measured rate limit (one
     /// claim per source IP per hour, §525) arrived here indistinguishable from
     /// a dead host and was reported as `"no answer"`. The key sheet then tested
     /// that text for `"429"` to decide whether to say "already claimed this
-    /// hour" — a branch that could never once have been true, over the one
-    /// refusal this faucet was known to make.
-    ///
-    /// `postJSONStatus` would separate those two and is still not enough: it
-    /// drops the BODY on a non-200, so the faucet's own `{"msg":"invalid
-    /// address"}` would survive only if the service happened to send it with a
-    /// 200. Reading the refusal is the whole point, so the body comes back at
-    /// whatever status.
+    /// hour" — **a branch that could never once have been true**, over the one
+    /// refusal this faucet is known to make on an ordinary day. `postJSONStatus`
+    /// would separate those two and is still not enough: it drops the BODY on a
+    /// non-200, so the faucet's own `{"msg":"invalid address"}` survives only if
+    /// it happens to arrive with a 200.
     static func claimFaucet(for address: String) async throws -> Claimed {
         let body: [String: Any] = ["address": address]
-        let answer = await IngestSupport.postJSONAnyStatus(faucetClaimEndpoint, body: body,
-                                                           service: HegotaIdentity.source)
-        let root = answer.json as? [String: Any]
+        let answered = await IngestSupport.postJSONBody(faucetClaimEndpoint, body: body,
+                                                        service: HegotaIdentity.source)
+        let root = answered.json as? [String: Any]
         // Measured shapes: 200 with {"msg":"sent","txhash":"0x…"}, 200 with
         // {"msg":"invalid address"}, and a bare 429 for the hourly limit.
-        let verdict = HegotaFaucetVerdict.of(status: answer.status,
+        let verdict = HegotaFaucetVerdict.of(status: answered.status,
                                              msg: root?["msg"] as? String,
                                              txHash: root?["txhash"] as? String)
         if case .sent(let hash) = verdict { return Claimed(transactionHash: hash) }
@@ -154,26 +159,52 @@ enum HegotaSend {
     // MARK: - The one write that signs
 
     /// Broadcast. The only write verb in this app's Hegotá code that follows a
-    /// signature — appearing exactly once, so the conduct guard has one thing
-    /// to count.
-    /// **THE NODE'S OWN WORDS SURVIVE** (prd §530, 2026-08-30). This used to
-    /// read `HegotaRPC.call`, which maps a JSON-RPC `error` object onto the
-    /// same nil as a dead host — so every possible cause reached the screen as
-    /// the single sentence "the node refused the transaction", which names
-    /// nothing and can be acted on in no way. `callOutcome` keeps the message;
-    /// `NodeRefusal` explains it where it can and quotes it where it cannot.
+    /// signature — the method literal appearing exactly once, so the conduct
+    /// guard has one thing to count.
+    ///
+    /// ## THE NODE'S OWN WORDS (prd §530), and the same fix vibenet took
+    ///
+    /// This rode `HegotaRPC.call`, which maps a transport failure, a non-200
+    /// and a JSON-RPC `error` object all to nil — so every refusal arrived as
+    /// one placeholder sentence naming none of them. Sending is the path where
+    /// that costs most: a read that goes quiet is annoying, a write refused
+    /// with no reason cannot be acted on.
+    ///
+    /// `postJSONBody`, not `postJSON`: a node commonly answers a rejected send
+    /// with **HTTP 400 and the reason in the body**, and every other helper in
+    /// `IngestSupport` gates the body on a 200 — throwing away the one thing
+    /// worth having before any parse could reach it.
+    ///
+    /// **A host that REFUSED has answered**, so the walk stops there rather
+    /// than asking two more nodes the same rejected transaction and reporting
+    /// the last one's silence instead of the first one's reason — `HegotaRPC.
+    /// call`'s own rule, which matters more here than on any read.
     static func broadcast(rawTransaction raw: String) async throws -> String {
-        switch await HegotaRPC.callOutcome(method: "eth_sendRawTransaction", params: [raw]) {
-        case .value(let result):
-            guard let hash = result as? String else {
-                throw Failure.broadcastRefused(NodeRefusal.sentence(nil))
+        let body: [String: Any] = ["id": 1, "jsonrpc": "2.0",
+                                   "method": "eth_sendRawTransaction", "params": [raw]]
+        var answeredWithStatus = 0
+        for host in HegotaRPC.hosts {
+            let answered = await IngestSupport.postJSONBody(host, body: body,
+                                                            service: HegotaIdentity.source)
+            guard let root = answered.json as? [String: Any] else {
+                // Nothing readable from this host — the next one may be up.
+                answeredWithStatus = max(answeredWithStatus, answered.status)
+                continue
             }
-            return hash
-        case .refused(let message):
-            throw Failure.broadcastRefused(NodeRefusal.sentence(message))
-        case .unreachable:
-            throw Failure.broadcastRefused(NodeRefusal.sentence(nil))
+            if let hash = root["result"] as? String, !hash.isEmpty { return hash }
+            if let error = root["error"] as? [String: Any] {
+                let words = (error["message"] as? String) ?? (error["data"] as? String) ?? ""
+                throw Failure.broadcastRefused(words.isEmpty
+                    ? String(localized: "the node refused it and gave no reason")
+                    : words)
+            }
+            answeredWithStatus = max(answeredWithStatus, answered.status)
         }
+        if answeredWithStatus > 0 {
+            throw Failure.broadcastRefused(
+                String(localized: "every node answered \(String(answeredWithStatus)) and nothing readable"))
+        }
+        throw Failure.chainUnreachable
     }
 
     // MARK: - Send a simple value transfer

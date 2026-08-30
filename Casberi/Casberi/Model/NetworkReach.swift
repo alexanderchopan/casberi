@@ -289,7 +289,7 @@ enum NetworkReach {
                  purpose: "Reads a watched address's balance, its transfers, the unspent coins it holds in the chain's UTXO vault and who paid for its transactions, from Hegot\u{00e1} — a public devnet testing frame transactions. A read carries only the address you watch. Sending also sends one signed transaction: what leaves is a signature, never the key that made it — that key is a plain scalar held on this device, not the Secure Enclave, because Hegot\u{00e1}'s money has no value to protect. Asking the faucet for test ETH sends the address you are asking for, and nothing else; it needs no key and no signature.",
                  hosts: ["rpc1.hegota.ethrex.xyz", "rpc2.hegota.ethrex.xyz",
                          "rpc3.hegota.ethrex.xyz",
-                         // Added 2026-08-30 (prd §530). It had been in the
+                         // Added 2026-08-30 (prd §531). It had been in the
                          // reach audit's non-reach denylist since the seat
                          // shipped, on the then-true reasoning that this app
                          // only ever linked out to it — and stayed there for a

@@ -427,23 +427,22 @@ enum IngestSupport {
         return (try? JSONSerialization.jsonObject(with: data), http.statusCode)
     }
 
-    /// **The body EVEN WHEN THE STATUS IS NOT 200** (prd §530, 2026-08-30).
+    /// Like `postJSONStatus`, but decodes the body **even when the status is
+    /// not 200** (2026-08-30, prd §530).
     ///
-    /// Every other helper here drops a non-200 body, which is right when the
-    /// body is the ANSWER — a failed read has nothing to say. It is wrong when
-    /// the body is the REFUSAL, and this app has two such callers: a faucet
-    /// that answers `{"msg":"invalid address"}` and a JSON-RPC node that
-    /// answers `{"error":{"message":"nonce too low"}}`. Through `postJSON`
-    /// both of those reach the screen as the same shrug, which is exactly the
-    /// class §530 exists to end — the reason was on the wire and was thrown
-    /// away one layer below the person who needed it.
+    /// Every other helper here gates the body on a 200, which is right for a
+    /// REST bridge — a 404 has nothing worth reading. It is wrong for
+    /// JSON-RPC, where a node that refuses a transaction commonly answers
+    /// `400` with the reason in an `error` object, and where that reason is
+    /// the only thing anybody can act on. `run` dropping it is how a broadcast
+    /// refusal became "the node refused the transaction" with no cause
+    /// attached.
     ///
-    /// `status` is 0 on a transport error (no response at all), the same
-    /// convention `postJSONStatus` uses. The body is whatever parsed, at any
-    /// status, and nil when nothing did.
-    static func postJSONAnyStatus(_ url: String, auth: String? = nil, body: [String: Any],
-                                  headers: [String: String] = [:],
-                                  service: String? = nil) async -> (json: Any?, status: Int) {
+    /// `status` is 0 on a transport failure (no response at all), which stays
+    /// distinct from a node that answered with a refusal — the whole point.
+    static func postJSONBody(_ url: String, auth: String? = nil, body: [String: Any],
+                             headers: [String: String] = [:],
+                             service: String? = nil) async -> (json: Any?, status: Int) {
         guard let u = URL(string: url),
               let payload = try? JSONSerialization.data(withJSONObject: body) else { return (nil, 0) }
         var request = URLRequest(url: u)

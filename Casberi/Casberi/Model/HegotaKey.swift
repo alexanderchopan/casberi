@@ -78,7 +78,7 @@ enum HegotaKey {
     /// `presence()` above answers `.none` the moment the cached address is
     /// missing and never asks the keychain at all, which is right for a screen
     /// (an account with no known address is nothing a person can use) and is
-    /// exactly the blind spot that made the §530 duplicate permanent: the item
+    /// exactly the blind spot that made the §531 duplicate permanent: the item
     /// was there, nothing could see it, and every "Create an account" bounced
     /// off it. Attribute-only, so it decrypts nothing and raises no prompt.
     static func keychainHoldsItem() -> Bool {
@@ -108,7 +108,7 @@ enum HegotaKey {
     // MARK: - Making one
 
     /// **A KEY CAN OUTLIVE EVERY MEMORY OF IT, AND THAT USED TO BE A DEAD
-    /// END** (prd §530, 2026-08-30).
+    /// END** (prd §531, 2026-08-30).
     ///
     /// `presence()` is derived from the CACHED ADDRESS in `UserDefaults`, and
     /// the two halves of this key do not have the same lifetime: deleting the

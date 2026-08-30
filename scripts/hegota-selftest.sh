@@ -1160,6 +1160,24 @@ if [[ -z "$HEGOTA_SIGN_CALLERS" && $hegota_promises -lt 3 ]]; then
   fail "Hegota's never-signs promises are retired ($hegota_promises of 3 stand) but nothing calls HegotaKey.sign — restore the copy or land the write with it"
 fi
 
+# THE WRITE PATH SAYS WHY IT FAILED (prd §530) — vibenet's guard, one chain
+# over, because this file carried the IDENTICAL placeholder line. `HegotaSend`
+# touches SwiftData, so no harness here can compile it and these greps are the
+# only checks that reach it; both failures are invisible to everything else.
+SENDF="Casberi/Casberi/Model/HegotaSend.swift"
+[[ -f "$SENDF" ]] || fail "$SENDF not found"
+strip_comments "$SENDF" > "$work/send.bare"
+deny send.bare "the node refused the transaction" \
+  "HegotaSend broadcasts a placeholder refusal again — prd §530: the reason must be the node's own words"
+grep -qF 'IngestSupport.postJSONBody' "$work/send.bare" \
+  || fail "HegotaSend no longer reads the broadcast body — a 400 carrying the node's reason would be dropped before any parse"
+deny send.bare 'HegotaRPC.call(method: "eth_sendRawTransaction"' \
+  "HegotaSend broadcasts through HegotaRPC.call again — that function discards the node's error object"
+# ANCHORED to end-of-line: the unanchored form is satisfied by a RENAMED case,
+# which is how vibenet's twin survived its own mutation on its first run.
+grep -qE 'case chainUnreachable[[:space:]]*$' "$work/send.bare" \
+  || fail "HegotaSend can no longer tell an unreached node from a refusing one (§515a)"
+
 # This harness must stay in verify.sh's hand list (that guard fails the build
 # until it is named WITH its reason, which is the part that gets skipped).
 grep -q "hegota-selftest.sh" "$VERIFY" \

@@ -1411,14 +1411,15 @@ harness "Vibenet signer ladder self-test" "13 mutations, 6 drift guards" "script
 # bytes, a keccak that IS the RPC's own transaction hash, and a signing hash
 # matching one computed from the chain's data rather than from ours.
 #
-# It also holds BOTH of this seat's write OUTCOMES (prd §530): what the faucet
-# said, and what a node said when it refused. Neither write can be exercised
-# from a harness — the faucet allows one claim per source IP per hour and the
-# broadcast needs a key and a live node — so the classification of what came
-# back is the only part of either that can ever be proven, and it is exactly
-# where the 2026-08-30 report lived: every refusal, from both writes, reached
-# the screen as one sentence that named nothing.
-harness "Hegota frame transaction self-test" "15 mutations, real on-chain vectors, and both write outcomes" "scripts/hegota-tx-selftest.sh" "the hegota transaction self-test failed — run scripts/hegota-tx-selftest.sh"
+# It also holds the FAUCET's verdict (prd §531) — what the service said when it
+# refused. The claim cannot be exercised from a harness (it allows one per
+# source IP per hour), so the classification of what came back is the only part
+# of it that can ever be proven, and it is where half the 2026-08-30 report
+# lived: the rate limit, this faucet's one expected refusal, arrived at the
+# screen as "no answer" and the sheet's own branch for it could never fire.
+# The signed BROADCAST's guards are §530's and live in `hegota-selftest.sh`;
+# they are deliberately not duplicated here.
+harness "Hegota frame transaction self-test" "11 mutations, real on-chain vectors, and the faucet verdict" "scripts/hegota-tx-selftest.sh" "the hegota transaction self-test failed — run scripts/hegota-tx-selftest.sh"
 # The vibenet SCOPES' two new drawings (prd §491) — the sub-account web and the
 # change flow, compiled whole. Separate from the harness above because that one
 # is four minutes over the whole room and these run in one, so a change to

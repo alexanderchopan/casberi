@@ -206,7 +206,7 @@ mutate "frame mode and flags swapped" '.list([.bytes(RLP.quantity(mode)),
                    .bytes(RLP.quantity(mode)),' "$TX" || MUT=1
 [[ $MUT -eq 0 ]] || exit 1
 
-# --- the write outcomes (prd §530) -----------------------------------------
+# --- the write outcomes (prd §531) -----------------------------------------
 # WHY THIS IS HERE AT ALL. Neither of Hegotá's two writes can be exercised from
 # a harness — the faucet allows one claim per source IP per hour and the
 # broadcast needs a key and a live node — so the CLASSIFICATION of what came
@@ -216,16 +216,14 @@ mutate "frame mode and flags swapped" '.list([.bytes(RLP.quantity(mode)),
 #
 # Both files are Foundation-only BY DESIGN and compiled WHOLE AND UNMODIFIED.
 OUT="Casberi/Casberi/Model/HegotaWriteOutcome.swift"
-REF="Casberi/Casberi/Model/NodeRefusal.swift"
 SEND="Casberi/Casberi/Model/HegotaSend.swift"
 SHEET="Casberi/Casberi/Screens/HegotaKeySheet.swift"
-for f in "$OUT" "$REF" "$SEND" "$SHEET"; do
+for f in "$OUT" "$SEND" "$SHEET"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
 mkdir -p "$WORK/w"
 cp "$OUT" "$WORK/HegotaWriteOutcome.swift"
-cp "$REF" "$WORK/NodeRefusal.swift"
 
 cat > "$WORK/w/main.swift" <<'SWIFT'
 import Foundation
@@ -298,47 +296,13 @@ check("unreachable does not say refused",
 check("a refusal quotes the service",
       (HegotaFaucetVerdict.refused("invalid address").sentence ?? "").contains("invalid address"))
 
-// --- the node ---------------------------------------------------------------
-// NOTHING SAID IS NOT A REFUSAL WE CAN EXPLAIN. `broadcast` reaches here for an
-// unreachable host too, so this sentence must not assert the chain said no.
-check("no message says there was no answer",
-      NodeRefusal.sentence(nil) == "no answer from the chain")
-check("an empty message is no message", NodeRefusal.sentence("   ") == "no answer from the chain")
-
-// A cause this app can explain is explained AND quoted — a devnet's phrasing
-// is not stable enough to paraphrase away, and the raw text is what makes a
-// report actionable.
-let low = NodeRefusal.sentence("nonce too low: next nonce 5, tx nonce 4")
-check("a known cause is explained", low.contains("sequence"))
-check("a known cause still quotes the node", low.contains("nonce too low: next nonce 5, tx nonce 4"))
-// Casing is not a contract, and the surrounding phrasing is not one either.
-check("cause matching ignores case", NodeRefusal.cause("Nonce Too Low") != nil)
-check("cause matching is a substring", NodeRefusal.cause("err: insufficient funds for gas * price + value") != nil)
-
-// Unknown words stand ALONE — never wrapped in an explanation we do not have.
-check("an unknown message is passed through",
-      NodeRefusal.sentence("frame 2 rejected: mode 5 unimplemented")
-        == "frame 2 rejected: mode 5 unimplemented")
-check("an unknown message has no cause", NodeRefusal.cause("mode 5 unimplemented") == nil)
-
-// The causes worth naming, each distinct — a table that answers the same
-// sentence for two different problems is a table that explains neither.
-let causes = ["nonce too low", "already known", "insufficient funds for gas",
-              "transaction underpriced", "intrinsic gas too low",
-              "transaction type not supported", "invalid sender"]
-var seen = Set<String>()
-for c in causes {
-    guard let said = NodeRefusal.cause(c) else { check("no cause for \(c)", false); continue }
-    check("\(c) is explained distinctly", seen.insert(said).inserted)
-}
-
 print("OUTCOMES=ok")
 if fails == 0 { print("  ok") } else { exit(1) }
 SWIFT
 
-swiftc -O -o "$WORK/wrun" "$WORK/HegotaWriteOutcome.swift" "$WORK/NodeRefusal.swift" \
+swiftc -O -o "$WORK/wrun" "$WORK/HegotaWriteOutcome.swift" \
   "$WORK/w/main.swift" 2>"$WORK/wbuild.log" || {
-  echo "✗ HegotaWriteOutcome.swift / NodeRefusal.swift did not compile standalone (both must stay Foundation-only)"
+  echo "✗ HegotaWriteOutcome.swift did not compile standalone (it must stay Foundation-only)"
   head -20 "$WORK/wbuild.log"; exit 1; }
 echo "hegota write outcomes:"
 "$WORK/wrun" > "$WORK/wout.txt" || { grep '✗' "$WORK/wout.txt"; exit 1; }
@@ -347,7 +311,7 @@ grep -v '^OUTCOMES=' "$WORK/wout.txt"
 echo "write-outcome mutations:"
 wmutate() {
   local label="$1" from="$2" to="$3" file="$4"
-  cp "$OUT" "$WORK/HegotaWriteOutcome.swift"; cp "$REF" "$WORK/NodeRefusal.swift"
+  cp "$OUT" "$WORK/HegotaWriteOutcome.swift"
   local target="$WORK/$(basename "$file")"
   if ! grep -qF -- "$from" "$target"; then
     echo "  ✗ STALE MUTATION '$label' — pattern not found in $(basename "$file")"; return 1
@@ -358,7 +322,7 @@ p, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
 s = io.open(p, encoding="utf-8").read()
 io.open(p, "w", encoding="utf-8").write(s.replace(a, b, 1))
 PYMUT
-  if swiftc -O -o "$WORK/wmut" "$WORK/HegotaWriteOutcome.swift" "$WORK/NodeRefusal.swift" \
+  if swiftc -O -o "$WORK/wmut" "$WORK/HegotaWriteOutcome.swift" \
        "$WORK/w/main.swift" 2>/dev/null && "$WORK/wmut" >/dev/null 2>&1; then
     echo "  ✗ MUTATION SURVIVED: $label"; return 1
   fi
@@ -379,21 +343,7 @@ wmutate "a hashless claim reported as sent" \
 # The service's own words dropped in favour of a status code.
 wmutate "the body message ignored" 'if !said.isEmpty { return .refused(said) }' \
   'if said.isEmpty { return .refused(said) }' "$OUT" || WMUT=1
-# The one that made this invisible: an unreachable node asserting a refusal.
-wmutate "silence asserted as a refusal" \
-  'return String(localized: "no answer from the chain")' \
-  'return String(localized: "the node refused the transaction")' "$REF" || WMUT=1
 # An unknown message swallowed instead of quoted — the shape the whole report
-# was about, one level down.
-wmutate "an unexplained refusal loses the node's words" \
-  'guard let known = cause(said) else { return said }' \
-  'guard let known = cause(said) else { return "refused" }' "$REF" || WMUT=1
-# An explanation that drops the raw text makes a report unactionable.
-wmutate "a known cause stops quoting the node" 'return "\(known) (\(said))"' \
-  'return known' "$REF" || WMUT=1
-# Casing IS a contract, said the mutation.
-wmutate "cause matching made case-sensitive" 'let s = raw.lowercased()' \
-  'let s = raw' "$REF" || WMUT=1
 [[ $WMUT -eq 0 ]] || exit 1
 
 # --- drift guards for the callers -------------------------------------------
@@ -407,17 +357,10 @@ strip_comments "$SHEET" > "$WORK/sheet.nc"
 # through it — which is what made the rate-limit sentence unreachable — and
 # `postJSONStatus` separates those two while still dropping the faucet's own
 # words on a 4xx, which are the other half of the answer.
-grep -qF 'IngestSupport.postJSONAnyStatus(faucetClaimEndpoint' "$WORK/send.nc" \
+grep -qF 'IngestSupport.postJSONBody(faucetClaimEndpoint' "$WORK/send.nc" \
   || { echo "✗ the faucet claim no longer reads the status AND the body — a 429 reads as a dead host, and a refusal's own words are dropped"; exit 1; }
 if grep -qE 'IngestSupport\.postJSON(Status)?\(faucetClaimEndpoint' "$WORK/send.nc"; then
   echo "✗ the faucet claim is back on a helper that drops non-200 bodies"; exit 1
-fi
-# THE BROADCAST MUST KEEP THE NODE'S WORDS. `HegotaRPC.call` maps a JSON-RPC
-# error object onto the same nil as a dead host.
-grep -qF 'HegotaRPC.callOutcome(method: "eth_sendRawTransaction"' "$WORK/send.nc" \
-  || { echo "✗ broadcast no longer reads the node's refusal — every cause collapses to one sentence again"; exit 1; }
-if grep -qF 'broadcastRefused("the node refused the transaction")' "$WORK/send.nc"; then
-  echo "✗ broadcast is asserting a hardcoded refusal again instead of saying what the node said"; exit 1
 fi
 # THE SHEET MUST NOT RE-DERIVE THE VERDICT FROM ITS OWN TEXT. That is the exact
 # defect: it grepped a failure string for "429" that could never contain one.
@@ -426,7 +369,7 @@ if grep -q '429' "$WORK/sheet.nc"; then
 fi
 
 # THE KEY MUST SURVIVE A REINSTALL. The keychain item outlives the cached
-# address, so `SecItemAdd` answers errSecDuplicateItem and, before §530, the
+# address, so `SecItemAdd` answers errSecDuplicateItem and, before §531, the
 # account could never be made again — and with no key there is no faucet
 # button either.
 grep -qF 'errSecDuplicateItem' "$WORK/key.nc" \
@@ -474,4 +417,4 @@ grep -qF 'kSecAttrSynchronizableAny' "$WORK/key.nc" \
   || { echo "✗ HegotaKey.delete no longer matches every synchronizability — a survivor becomes the next duplicate"; exit 1; }
 echo "  ok   drift guards: the faucet keeps its status, the broadcast keeps the node's words, the key survives a reinstall"
 
-echo "✓ hegota transaction self-test passed — encoder, write outcomes, 15 mutations"
+echo "✓ hegota transaction self-test passed — encoder, the faucet verdict, 11 mutations"

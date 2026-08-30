@@ -23,7 +23,11 @@ struct VibenetCreateSheet: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var phase: Phase = .checking
-    @State private var payer: String?
+    /// What the faucet said, in its own three answers (prd §530). It was a
+    /// `String?` address, so "the payer service didn't answer" and "the payer
+    /// has nothing for you" were one state — and this screen stated the second
+    /// as a fact for both, on the one line whose whole subject is who pays.
+    @State private var offer: VibenetSend.PayerOffer?
     /// Why making a key failed, said where the tap was. Re-asserting `.noKey`
     /// instead — which this screen did at first — repeats the sentence the
     /// person just acted on and reads as a dead control.
@@ -196,15 +200,14 @@ struct VibenetCreateSheet: View {
                 caption(String(localized: "What this does"))
                 fact(String(localized: "Network"), String(localized: "Base vibenet \u{00B7} devnet"))
                 fact(String(localized: "First key"), String(localized: "This phone"))
-                // WHO PAYS is said plainly and only when it is known. A missing
-                // payer is not silence — it means the person's own account
-                // needs funds, which is a different sentence and a worse
-                // surprise if it arrives after the fact.
-                fact(String(localized: "Gas"),
-                     payer == nil
-                     ? String(localized: "Nobody is sponsoring \u{2014} the account needs funds first")
-                     : String(localized: "Paid by the devnet's faucet"))
-                if payer != nil {
+                // WHO PAYS is said plainly and only when it is known — and
+                // "we couldn't ask" is now its own sentence rather than being
+                // reported as a refusal (prd §530). A missing payer is not
+                // silence: it means this creation cannot go through at all,
+                // which is a fact worth having before the tap rather than
+                // after a Face ID.
+                fact(String(localized: "Gas"), gasSentence)
+                if isSponsored {
                     fact(String(localized: "From you"), String(localized: "Nothing"))
                 }
             }
@@ -316,6 +319,30 @@ struct VibenetCreateSheet: View {
         }
     }
 
+    /// Is a faucet really on offer — the only state in which this creation
+    /// costs the person nothing.
+    private var isSponsored: Bool {
+        guard let offer else { return false }
+        if case .sponsored = offer { return true }
+        return false
+    }
+
+    /// The three answers, said apart, plus the check still running. Unwrapped
+    /// FIRST rather than matched through the Optional: `PayerOffer` is spelled
+    /// so no case can collide with `Optional.none`, and this keeps the match
+    /// on the enum itself where it plainly means what it reads as.
+    private var gasSentence: String {
+        guard let offer else { return String(localized: "Checking\u{2026}") }
+        switch offer {
+        case .sponsored:
+            return String(localized: "Paid by the devnet's faucet")
+        case .declined:
+            return String(localized: "Nobody is sponsoring \u{2014} a new account has nothing to pay with")
+        case .unreadable:
+            return String(localized: "Couldn't reach the sponsor to ask")
+        }
+    }
+
     private func fact(_ key: String, _ value: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
             Text(key)
@@ -358,8 +385,7 @@ struct VibenetCreateSheet: View {
             }
         }
         if case .ready = phase, let address = draftAddress(contracts) {
-            payer = await VibenetSend.sponsoredPayer(for: address, gasLimit: 300_000)
-                .map { "0x" + VibenetTransaction.hex($0) }
+            offer = await VibenetSend.payerOffer(for: address, gasLimit: 300_000)
         }
     }
 
@@ -451,7 +477,15 @@ struct VibenetCreateSheet: View {
         switch f {
         case .noKey:            return String(localized: "This phone has no key yet.")
         case .cannotCompose:    return String(localized: "Couldn't put the transaction together.")
-        case .noSponsor:        return String(localized: "Nobody is sponsoring right now.")
+        case .noSponsor:
+            // The one refusal that is not a fault. A brand-new account holds
+            // nothing by construction, so without a sponsor there is nothing
+            // to pay with — said plainly, and said INSTEAD of a Face ID.
+            return String(localized: "Nobody is sponsoring right now, and a new account has nothing to pay with. Try again later.")
+        case .sponsorUnreadable:
+            return String(localized: "Couldn't reach the sponsor to ask who pays, so nothing was signed.")
+        case .chainUnreachable:
+            return String(localized: "Couldn't reach the network, so nothing was sent.")
         case .signingRefused:   return String(localized: "Face ID didn't confirm, so nothing was signed.")
         case .payerRefused(let why):     return String(localized: "The sponsor refused: \(why)")
         case .broadcastRefused(let why): return String(localized: "The network refused it: \(why)")

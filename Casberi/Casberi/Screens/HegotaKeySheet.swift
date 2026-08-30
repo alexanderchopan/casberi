@@ -296,7 +296,7 @@ struct HegotaKeySheet: View {
                 faucetFailed = false
                 faucetResult = String(localized: "Sent \u{2014} \(claim.transactionHash.prefix(10))\u{2026}")
             } catch let f as HegotaSend.Failure {
-                // THE VERDICT SAYS IT, not this screen (prd §530). The old
+                // THE VERDICT SAYS IT, not this screen (prd §531). The old
                 // branch here grepped the failure TEXT for "429" — which
                 // `postJSON` had already thrown away, so the friendly
                 // rate-limit sentence could never once have been reached over
@@ -329,7 +329,7 @@ struct HegotaKeySheet: View {
         case .selfCheck:
             return String(localized: "The new key didn't check out \u{2014} nothing was saved.")
         case .locked(let status):
-            // Distinct from a refused WRITE (prd §530): this is the keychain
+            // Distinct from a refused WRITE (prd §531): this is the keychain
             // declining to be READ, which `create()` now reaches when there is
             // an item it cannot open — and the remedy is a locked device, not
             // a broken app. Never worded as a fault we can fix from here.

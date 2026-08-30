@@ -6103,7 +6103,7 @@ enum ProbeHooks {
                   rejected.joined(separator: ",").isEmpty ? "-" : rejected.joined(separator: ","),
                   HegotaWatch.shared.addresses.count)
         },
-        // `-hegotaKeyProbe YES|claim` — THE WRITE SIDE (prd §530, 2026-08-30),
+        // `-hegotaKeyProbe YES|claim` — THE WRITE SIDE (prd §531, 2026-08-30),
         // which had no headless door at all and is where both halves of the
         // 2026-08-30 report live ("cannot create account or claim from faucet
         // on hegota").
@@ -6454,6 +6454,75 @@ enum ProbeHooks {
                 NSLog("[Casberi] vibenetKey| verdict=%@ fault=%@ — %@",
                       VibenetSigner.name(r), r.isFault ? "YES" : "no",
                       VibenetSigner.sentence(r))
+            }
+        },
+        // WHAT A CREATION WOULD DO, WITHOUT DOING IT (prd §530).
+        //
+        // `-vibenetCreateProbe YES` walks `createAccount`'s own sequence up to
+        // — and deliberately NOT including — the signature: the contract map,
+        // this phone's key, the derived address, and what the payer says. It
+        // signs nothing, sends nothing, and raises no Face ID prompt, so it
+        // can sit in a headless sweep (`-signerProbe`'s rule, two chains over).
+        //
+        // It exists because "Create with Face ID" failing has SIX causes that
+        // render as one red sentence, and only two of them are bugs: the
+        // config unreadable, no key on this phone, an address that will not
+        // derive, the faucet having nothing left, the payer service not
+        // answering, or the node genuinely refusing the bytes. `wouldRefuse=`
+        // is the line that separates them — it says whether this creation is
+        // refused BEFORE the prompt, which is the state the shipped flow found
+        // out only after burning a Face ID on a transaction that could not
+        // land.
+        //
+        // **The address printed is NOT the address a real creation makes.**
+        // The salt is fixed at zero here, exactly as `VibenetCreateSheet`'s
+        // own `draftAddress` does, because the real one is random per tap —
+        // this is a question about the network's willingness, never about an
+        // account.
+        Hook(key: "vibenetCreateProbe") { _, _ in
+            Task { @MainActor in
+                guard let c = await VibenetConfig.current() else {
+                    NSLog("[Casberi] vibenetCreate| config=UNREADABLE — nothing else can be asked")
+                    return
+                }
+                NSLog("[Casberi] vibenetCreate| config=ok keystore=%@ defaultAccount=%@ authenticator=%@",
+                      c.keystore, c.defaultAccount ?? "-", c.p256Authenticator)
+                guard let keystore = VibenetTransaction.data(fromHex: c.keystore),
+                      let defaultAccount = c.defaultAccount.flatMap(VibenetTransaction.data(fromHex:)),
+                      let auth = VibenetTransaction.data(fromHex: c.p256Authenticator) else {
+                    NSLog("[Casberi] vibenetCreate| contracts=UNPARSEABLE")
+                    return
+                }
+                guard let publicKey = VibenetDeviceKey.publicKeyXY() else {
+                    // The healthy answer on every simulator — there is no
+                    // Secure Enclave on any of them.
+                    NSLog("[Casberi] vibenetCreate| key=NONE (no key on this phone; expected on a simulator)")
+                    return
+                }
+                guard let plan = VibenetCreate.plan(keystore: keystore,
+                                                    defaultAccount: defaultAccount,
+                                                    authenticator: auth,
+                                                    publicKeyXY: publicKey,
+                                                    userSalt: Data(repeating: 0, count: 32),
+                                                    gasLimit: 300_000,
+                                                    maxFeePerGas: 0x3b9a_ca00,
+                                                    maxPriorityFeePerGas: 0xf4240) else {
+                    NSLog("[Casberi] vibenetCreate| plan=NIL — the address would not derive")
+                    return
+                }
+                NSLog("[Casberi] vibenetCreate| draftAddress=0x%@ actorId=0x%@ preimage=%dB (salt fixed at zero — a real creation's address differs)",
+                      VibenetTransaction.hex(plan.address),
+                      VibenetTransaction.hex(plan.actorID),
+                      plan.preimage.count)
+                switch await VibenetSend.payerOffer(for: plan.address, gasLimit: 300_000) {
+                case .sponsored(let payer):
+                    NSLog("[Casberi] vibenetCreate| payer=sponsored 0x%@ wouldRefuse=no",
+                          VibenetTransaction.hex(payer))
+                case .declined:
+                    NSLog("[Casberi] vibenetCreate| payer=declined wouldRefuse=noSponsor — a new account has nothing to pay with, so this is refused before the Face ID")
+                case .unreadable:
+                    NSLog("[Casberi] vibenetCreate| payer=unreadable wouldRefuse=sponsorUnreadable — the service never answered, which is NOT the faucet declining")
+                }
             }
         },
         Hook(key: "vibenetProbe") { _, _ in
