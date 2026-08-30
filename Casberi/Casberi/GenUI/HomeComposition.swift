@@ -130,6 +130,12 @@ enum HomeComposition {
             "Runway",                                     // Stripe, Cloudflare
             "Shielded",                                   // Privacy Pools
             "Trending", "Watching", "Watchlist",          // discovery, watches
+            // ENS (prd §534). What a followed name's row IS right now, never
+            // what it is about — "Grace" is the window after expiry only its
+            // owner can still renew, "Registered" is a watched name somebody
+            // else just claimed. The name itself ("nick.eth") is still a real
+            // subject and stays out of this set.
+            "Grace", "Registered",
             // A watched GitHub person's pushes and releases (prd §519). STATE
             // by this set's own rule — it says what a row IS, never what it is
             // about. Deliberately NOT a §308 facet either: "activity" is among
