@@ -40144,6 +40144,49 @@ Both platforms compile, every static audit is green, and the weight-resolution
 claim above is measured. **Nothing here has been seen on a device or a
 simulator** — no screenshot was taken of any screen in the new ramp.
 
+## 533. Category chips get a user-set order, past the 2026-08-11 constant (2026-08-29)
+
+The strip's CATEGORY chips (Wallet, Markets, Work, Agents, Life, Social, Media,
+Reading, Notes, Voice, Shopping) sat in a hand-authored order nothing let the
+person change — the 2026-08-11 ruling that gave the strip its order in the
+first place. Everything else in the strip earns its slot: a source chip is
+ranked by `ChipMemory` (visits, decaying), "All" is pinned first as the
+baseline, Pinned sits second. The category chips alone answered to nothing but
+a constant, and the person holding the phone is the one that constant was
+decided for.
+
+`Model/CategoryOrder.swift` now holds the order, backed by UserDefaults, with
+a Settings screen (`CategoryOrderSheet` — native `List` drag-to-reorder, plus
+Reset) to edit it. `MainSurface` sorts by it instead of the old constant and
+re-freezes the strip when it changes, since Settings is pushed in-scene and no
+foreground fires on the way back. The learned half is untouched — `computedChips`
+still ranks seats by `ChipMemory` and folds them, and this order applies over
+the finished list exactly as the constant did; `ShellChrome.chipOrder` (Mac's
+⌘1–⌘9) stays derived from the drawn strip, so the shortcuts remain positional
+against what's on screen for free.
+
+**Not a drag on the strip itself** — the strip is a horizontal `ScrollView`
+and a chip's long press is already the §384 room peek, so a drag there would
+fight two arbitrations at once (the one `BoardDragDriver` lost before it
+retired, and the strip's own gesture). A settings screen costs no gesture code
+at all.
+
+**Two reconcile rules keep a stored order safe to sort by**, since it's a list
+of names written by a build that is now old: a name not in `defaultOrder` is
+DROPPED (else a renamed-out category keeps a slot nothing can fill, and
+"All"/"Pinned" — split off ahead of the sort — could silently claim one); a
+name in `defaultOrder` and missing from the stored list is APPENDED in default
+order (else a category added to the catalog after somebody last rearranged
+their strip is invisible to this file, falls to `rank`'s `Int.max` tail, and
+sits behind everything forever with nothing on screen to say why).
+
+Guarded by `scripts/category-order-selftest.sh`, wired into `verify.sh`:
+`CategoryOrder.swift` is Foundation-only and compiled WHOLE AND UNMODIFIED,
+mutation-tested. It exists because every failure here renders as a perfectly
+ordinary strip in a slightly wrong order — `xcodebuild` is happy, the static
+audits are text checks, and a screen sweep proves a strip painted, never that
+it painted the right sequence.
+
 ## 534. ENS becomes a seat — follow a name you don't own, and know the whole ladder it walks (user: "how can we add ENS app as a seat and lean into it so user can follow names and when they expire?", 2026-08-29)
 
 **§515a's tripwire almost refused this outright.** That ruling bans a catalog
