@@ -3178,49 +3178,6 @@ struct Composer: View {
         commit()
     }
 
-    /// The keyed verb, wearing a provider picker when there is a choice to
-    /// make (2026-08-06). A plain tap is unchanged — it asks whichever agent
-    /// the label names — and a long press offers every configured one.
-    ///
-    /// A `Menu` with a `primaryAction` rather than a separate chevron control:
-    /// the row is already the busiest in the app, and a second control for
-    /// something most people will never touch would cost more than it buys.
-    /// With one key configured there is nothing to choose, so it stays exactly
-    /// the Button it always was — a menu offering a single item is a dead
-    /// control wearing an affordance.
-    @ViewBuilder
-    private func keyedVerb<Content: View>(action: @escaping () -> Void,
-                                         @ViewBuilder label: () -> Content) -> some View {
-        let configured = AgentKey.configured
-        if configured.count > 1 {
-            Menu {
-                ForEach(configured) { provider in
-                    Button {
-                        askProvider = provider
-                        action()
-                    } label: {
-                        // The active one is named as such rather than just
-                        // ticked: "Claude" and "Claude (usual)" answer
-                        // different questions, and the second is the one
-                        // somebody scanning this menu is actually asking.
-                        if provider == (askProvider ?? AgentKey.active) {
-                            Label(String(localized: "\(provider.agent) (usual)"),
-                                  systemImage: "checkmark")
-                        } else {
-                            Text(provider.agent)
-                        }
-                    }
-                }
-            } label: {
-                label()
-            } primaryAction: {
-                action()
-            }
-        } else {
-            Button(action: action) { label() }
-        }
-    }
-
     /// The BYO-key retry: the same question, re-answered by the person's own
     /// agent key (Claude, ChatGPT, Gemini, or Venice). The on-device answer
     /// settles into the thread first, so the two sit side by side — the tap
@@ -4242,8 +4199,21 @@ struct Composer: View {
     /// one easy to miss, is exactly the confusion this was built to end.
     /// Shared by `takeChips`' `offerKeyed` and the send dot itself so the two
     /// can never drift apart and show neither, or both.
+    ///
+    /// No longer gated on `draftIsQuestion` (2026-08-30, user: "it should say
+    /// ask bankr always... that way it's not confusing") — that heuristic is
+    /// an exact first-word match ("what"/"how's"/…) and every gap in it
+    /// ("wahjts my balance", "what's" briefly missing) read as Bankr itself
+    /// being broken rather than as a word list not recognizing the draft.
+    /// Any typed text with a key configured offers the ask now, question or
+    /// not — simpler to reason about and immune to the whole class of gap.
+    /// Still excludes a NavigateCommand match: tapping "Ask <agent>" on
+    /// "show my links" would silently navigate instead of asking (commit()'s
+    /// own branch order), and a chip that does something other than what it
+    /// says is the honesty rule's own first clause.
     private var offerKeyedAsk: Bool {
-        !pasted && draftIsQuestion && AgentKey.isConfigured
+        !pasted && hasDraft && AgentKey.isConfigured
+            && NavigateCommand.parse(draft, tags: tagPool, sources: knownSources()) == nil
     }
 
     /// The typed-draft band (2026-07-16, fourth form — see TakeTool), in the
@@ -4323,9 +4293,13 @@ struct Composer: View {
         let offerSend = !answering && !draftIsQuestion
         // The ask-time keyed tap (restored 2026-08-30) — `offerKeyedAsk`,
         // shared with the send dot's own visibility so the two agree on
-        // when this chip is the one way to submit. `offerSend`'s own
-        // `!draftIsQuestion` already keeps Send-to out of this row for a
-        // question, so the two never crowd.
+        // when this chip is the one way to submit. No longer scoped to a
+        // question (see `offerKeyedAsk`'s own doc), so it CAN now sit
+        // beside Send-to for ordinary typed text with a key configured —
+        // deliberately: "ask my agent about this" and "jump this to another
+        // app" are both legitimate for a non-question draft, and offering
+        // both is not the same confusion two controls doing the identical
+        // thing was.
         let offerKeyed = offerKeyedAsk
         // `!handingOff` — a seeded question fills the draft on its way to the
         // commit, and this band flashing Find/Send-to over it was the second
@@ -4371,22 +4345,37 @@ struct Composer: View {
                         }
 
                         if offerKeyed {
-                        keyedVerb(action: askDirectly) {
-                            HStack(spacing: DS.Space.s2) {
-                                Image(systemName: "key.fill")
-                                    .accessibilityHidden(true)
-                                    .dsGlyph(14, weight: .medium)
-                                Text("Ask \(askProvider?.agent ?? AgentKey.active?.agent ?? "your key")")
-                                    .dsText(.callout15).fontWeight(.semibold)
+                        // Every configured agent gets its OWN chip now
+                        // (2026-08-30, user: "if other agents are present
+                        // have them there too") — the long-press picker
+                        // (`keyedVerb`) hid every provider but one behind a
+                        // gesture nothing on screen advertised; with several
+                        // keys connected, which one a plain tap would ask
+                        // was invisible until you tried it. One chip per
+                        // provider is unambiguous instead: the name on the
+                        // chip is the agent that chip asks, always, tap or
+                        // return key alike, no hidden second gesture.
+                        ForEach(AgentKey.configured) { provider in
+                            Button {
+                                askProvider = provider
+                                askDirectly()
+                            } label: {
+                                HStack(spacing: DS.Space.s2) {
+                                    Image(systemName: "key.fill")
+                                        .accessibilityHidden(true)
+                                        .dsGlyph(14, weight: .medium)
+                                    Text("Ask \(provider.agent)")
+                                        .dsText(.callout15).fontWeight(.semibold)
+                                }
+                                .foregroundStyle(DS.tint)
+                                .padding(.horizontal, DS.Space.s3 + 2)
+                                .frame(minHeight: 40)
+                                .background(DS.tintDim, in: Capsule(style: .continuous))
+                                .dsHover()
                             }
-                            .foregroundStyle(DS.tint)
-                            .padding(.horizontal, DS.Space.s3 + 2)
-                            .frame(minHeight: 40)
-                            .background(DS.tintDim, in: Capsule(style: .continuous))
-                            .dsHover()
+                            .buttonStyle(PressSpring())
+                            .accessibilityLabel("Ask \(provider.agent) with your key")
                         }
-                        .buttonStyle(PressSpring())
-                        .accessibilityLabel("Ask with your key")
                         }
 
                         if offerSend {
