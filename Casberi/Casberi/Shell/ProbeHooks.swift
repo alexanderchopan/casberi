@@ -1092,6 +1092,15 @@ enum ProbeHooks {
         Hook(key: "stripeProbe") { _, _ in
             Task { await StripeIngest.probe() }
         },
+        // `-dodoPaymentsProbe YES` reads the STORED Dodo Payments key
+        // (connect first via `-tokenBridge "Dodo Payments:<live_…>"`) and
+        // NSLogs the RAW shapes per endpoint — HTTP status, and one line per
+        // payment/refund/dispute/subscription with the title (or raw fields)
+        // it would land wearing. The measure tool for an UNMEASURED API.
+        // Reads only, and never advances the tracked-status maps.
+        Hook(key: "dodoPaymentsProbe") { _, _ in
+            Task { await DodoPaymentsFetch.probe() }
+        },
         // `-stripeRoomProbe YES` — the Stripe ROOM HEAD's reading, line by line
         // (2026-08-04, prd §298). One NSLog per line (the `-todayProbe`
         // truncation lesson). Spends nothing: it composes the card off landed
