@@ -1,0 +1,43 @@
+{
+  "autoMode": {
+    "environment": [
+      "### Org-wide",
+      "**Organization**: None configured",
+      "**Cloud provider(s)**: None configured (uses Apple/GitHub/AT Protocol/Farcaster/L2BEAT/Safe APIs; no AWS/GCP/Azure evidence)",
+      "**Repository visibility**: PUBLIC — github.com/alexanderchopan/casberi (confirmed via gh: visibility public; CLAUDE.md corroborates: 'PUBLIC GitHub remote origin ... public by the user's choice, confirmed 2026-08-02'). Every commit is world-readable immediately (auto-push post-commit hook). No secrets/keys may ever be committed.",
+      "**Internal sharing / snippet hosting**: None configured — treat public paste/gist services as outside the trust boundary",
+      "**Secrets management**: macOS login Keychain via `scripts/dev-keys.sh` (service `casberi-dev.<name>`); repo rule: fetch keys ONLY inline via command substitution, never into echo/cat/a printed variable; `op read` marker found in secrets-manager scan (1Password CLI) — no corroborating usage count",
+      "**Default / protected branches**: `main` is default; branch protection via Ruleset `rules` (active) per gh — classic 'Protected branches' listing is empty but the ruleset supersedes that (rulesets are used instead of classic protection in this repo)",
+      "**CI/CD deploy targets**: GitHub Actions on `ubuntu-latest` for static checks (`.github/workflows/static-checks.yml`); TestFlight/App Store Connect for app releases via `scripts/testflight.sh` (Developer Program enrollment active; App Store v1 not yet submitted)",
+      "**Network posture**: Mixed — many keyless public API reads (L2BEAT, Farcaster Snapchain, Bluesky AppView, GitHub API, web3.bio, Alchemy RPCs, App Store Connect); one real outbound write path to `api.safe.global` (Safe transaction co-signer, conduct-guarded to POST-only on that host)",
+      "**Source control**: The trusted repo (github.com/alexanderchopan/casberi) and its `origin` remote only — as scoped by Trusted repo and Repository visibility above",
+      "**Trusted internal domains**: None configured",
+      "**Trusted cloud buckets**: None configured",
+      "**Key internal services**: api.safe.global (Safe Transaction Service — signature submission only, keyless); api.l2beat.com / l2beat.com (keyless risk/stage data); api.appstoreconnect.apple.com (App Store Connect, read-only by repo convention — key carries write-capable role but app enforces GET-only)",
+      "**Internal package registry**: None configured",
+      "**Sensitive data locations & audiences**: macOS login Keychain (`casberi-dev.*` service, dev API keys); on-device iOS Keychain (device-only, non-synchronizable secrets incl. the Safe co-signer private key); user's personal corpus data (screenshots, voice notes, chats, wallet/financial data) synced via CloudKit — audience is the device owner only, redacted via SecretScan before any egress to model providers/Spotlight/MCP",
+      "**Data retention / declassification**: None configured",
+      "**Sensitive remote targets**: any namespace/host/container carrying `prod`/`production` as a whole word or segment; additionally per this repo's own docs, CloudKit **Production** environment is a distinct, higher-stakes deploy target requiring explicit schema promotion (`cktool import-schema` + CloudKit Console) — treat CloudKit Production schema pushes with the same caution as a prod deploy",
+      "**Protected deployment namespaces / environments**: CloudKit Production container (separate from Development; schema changes there are irreversible-by-design — fields can't be removed once deployed) — fall back to the Sensitive remote targets heuristic otherwise",
+      "**Protected IaC scopes**: IAM, RBAC, networking, quota, and node-pool resources; anything whose name or tag carries `prod` or `production` as a whole word or name segment; no cloud IaC evidence in this repo",
+      "### User-specific",
+      "**Primary use of Claude Code**: iOS app development (solo, personal project) — building/testing/auditing the Casberi app via xcodebuild, simulator scripting, and mechanical audit scripts under `scripts/`",
+      "**Trusted repo**: `~/Developer/casberi` (the canonical working copy per CLAUDE.md — NOT the deprecated iCloud Drive copy) and its `origin` remote (github.com/alexanderchopan/casberi, PUBLIC). Public repo means: only this repo's own work belongs there — no secrets, ever (enforced by the auto-push-on-commit hook and SecretScan tripwire)",
+      "**Org-specific CLIs**: None configured — routine CLIs are `xcodebuild`, `xcrun simctl`, `scripts/*.sh`/`*.py` (verify.sh, perf.sh, verify-mac.sh, nightly-mac.sh, dev-keys.sh, l2beat-snapshot.py, and the many `*-audit.py`/`*-selftest.sh` mechanical checks) — all routine under this repo's `scripts/` prefix"
+    ],
+    "allow": [
+      "$defaults",
+      "Bash(scripts/verify.sh)",
+      "Bash(scripts/verify-mac.sh)",
+      "Bash(scripts/perf.sh)",
+      "Bash(scripts/dev-keys.sh list)",
+      "Bash(scripts/*-audit.py --self-test)"
+    ],
+    "soft_deny": [
+      "$defaults",
+      "Bash(scripts/dev-keys.sh get:*)",
+      "Bash(scripts/dev-keys.sh set:*)"
+    ],
+    "hard_deny": []
+  }
+}
