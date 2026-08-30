@@ -37,7 +37,17 @@ struct HowItWorksSheet: View {
     ///
     /// The CTA used to be "Browse the catalog" and land in a wall of ~40 apps
     /// (prd §217, 2026-07-25), then "Try it" landing on the fork. It is
-    /// **"Try the demo"** now and it lands in a furnished app.
+    /// **"Try a demo"** now and it lands in a furnished app.
+    ///
+    /// The article is INDEFINITE (user, 2026-08-29). "The demo" presupposes a
+    /// specific artifact the reader is assumed to know about, on the first
+    /// screen they have ever seen — the one place nothing can be assumed. The
+    /// ambiguity this does NOT resolve is the word "demo" itself, which can
+    /// still be read as a canned tour somebody has to sit through rather than
+    /// as sample data they can look around in; that was weighed and the
+    /// shorter label kept, so if this CTA ever measures as under-tapped, the
+    /// lever to try is naming the OUTCOME ("Try it with sample data") rather
+    /// than adjusting the article again.
     ///
     /// The reasoning that moved it (2026-08-07): every previous CTA handed
     /// someone a DECISION as their first act — which of forty apps, or which
@@ -230,7 +240,7 @@ struct HowItWorksSheet: View {
                         DSHaptic.success()
                         enterDemo()
                     } label: {
-                        Text("Try the demo")
+                        Text("Try a demo")
                             .dsText(.body17)
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)

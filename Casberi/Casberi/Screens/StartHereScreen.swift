@@ -10,13 +10,20 @@ import SwiftData
 /// hero and the whole continuity memory stayed invisible until a corpus
 /// existed.
 ///
-/// **Why three, and why these three.** Casberi has more than one audience, and
-/// forcing a single first source means half of new users get a demo of
+/// **Why more than one, and why these.** Casberi has more than one audience,
+/// and forcing a single first source means half of new users get a demo of
 /// something they didn't come for (user, 2026-07-25: "we have users that are
-/// here for crypto wallets, what if they don't care about photos"). So the fork
-/// covers the three real ones: your own files (a folder), money (a wallet),
-/// reading (someone to follow). Three is a fork you answer in a second; forty
-/// is a wall you have to survey.
+/// here for crypto wallets, what if they don't care about photos"). A short
+/// fork is one you answer in a second; forty is a wall you have to survey.
+///
+/// It covered THREE audiences until §527 — your own files (a folder), money (a
+/// wallet), reading (someone to follow) — and covers two, because the third
+/// answer is now "Show me all the apps" rather than a card. The reading arm was
+/// the one to go and the reasoning is on §527 below; the short version is that
+/// it was the least "my own things" of the three, on a screen reached by
+/// tapping "Start with my own things", and its audience is the one the catalog
+/// serves best (Bluesky, Farcaster, Nostr, RSS, Substack, YouTube, Podcasts and
+/// Telegram are all seats, where the arm offered a three-segment form).
 ///
 /// **Why a folder, not screenshots (2026-07-28).** The first card used to be
 /// "Show me my screenshots" (Photos permission → the screenshot library).
@@ -37,11 +44,54 @@ import SwiftData
 /// ever redesigned: **the moment a card grows a toggle it is a settings page
 /// again** and should be deleted a second time.
 ///
-/// Pick-ONE, not do-any: a screen where you can do three things is a screen you
-/// can get stuck on, and the whole point is to be out of onboarding looking at
-/// your own things. The escape hatch is "Browse the catalog instead" rather
-/// than "Skip" — skip lands you nowhere, this lands you where the old CTA went,
-/// so nothing is lost for someone who came to browse.
+/// Pick-ONE, not do-any: a screen where you can do several things is a screen
+/// you can get stuck on, and the whole point is to be out of onboarding looking
+/// at your own things. The last answer is "Show me all the apps" rather than
+/// "Skip" — skip lands you nowhere, this lands you where the old CTA went, so
+/// nothing is lost for someone who came to browse.
+///
+/// **What §527 changed (2026-08-29): the screen reads as ONE question again.**
+/// Reported as a menu — "it kind of presents a bunch of options: connect 1-3
+/// things, show demo, browse catalogue … instead of feeling like 5 total
+/// things it is 3". The count was real and none of it was in the fork's own
+/// design; it was drift, two locally-correct changes each adding a competing
+/// object. The demo card had the SAME `card(…)` shape as the three arms, so it
+/// read as a fourth answer (which §217's own amendment ruled out), and the
+/// catalog link was promoted from bare text to a full-width prominent pill on
+/// 2026-08-23 to fix a real legibility bug, landing it in primary-CTA grammar.
+///
+/// The changes, and the fork's grammar is untouched by all of them:
+///
+///   • **The arms are ONE SLAB**, not separate cards. A grouping, never a
+///     merge — every arm is still drawn, same shape, same weight, in
+///     `StartAppetite`'s order. Collapsing them into a single "connect
+///     something" card would either pick one arm for everybody (the thing
+///     §217 exists to refuse) or defer the identical choices to a second
+///     screen, which is more taps for the same menu.
+///   • **The demo card is DELETED.** It only ever rendered for somebody who,
+///     one screen earlier, was shown "Try a demo" as the primary CTA and
+///     tapped the small secondary link instead — so it re-asked a question
+///     they had just answered. (Its copy was the best-written demo line in
+///     the app; if the greeting's CTA ever needs to name the outcome rather
+///     than the object, that wording is in this file's history.)
+///   • **The FOLLOW card is deleted too**, and `StartFollowScreen` with it —
+///     an unreachable screen that three drift guards still watched would be
+///     worse than a removed one. Its measured placeholders (theverge.com,
+///     vitalik.eth, the NASA feed) are recorded in §527 and in git; re-measure
+///     rather than re-typing them if that form ever returns.
+///   • **The exit moved INSIDE the slab as the last answer**, saying "Show me
+///     all the apps" in the arms' own voice. Pinned below as chrome it was a
+///     peer of the demo the person had just declined rather than part of the
+///     question they had just said yes to — which is what made the screen feel
+///     like five things. It belongs in the slab because it is the same KIND of
+///     answer as the arms (your own things, longer route), which is exactly
+///     what the demo card was not; that asymmetry is why one was folded in and
+///     the other deleted.
+///
+/// The result is ONE object on the screen — a question and its answers — and
+/// the two onboarding screens no longer wear the same "stacked cards plus a
+/// bottom CTA" layout, which was itself part of why the second one didn't
+/// announce that it was asking something rather than explaining something.
 ///
 /// **What §422 changed (2026-08-20), and what it deliberately didn't.** Three
 /// things, none of them structural: the subline names the hand-over for
@@ -66,6 +116,12 @@ struct StartHereScreen: View {
     @Environment(BridgeStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var arrived = false
+    /// False until a moment after the slab has landed, when the figures draw
+    /// themselves (prd §527). SEPARATE from `arrived` on purpose: keyed to the
+    /// same flag the marks would animate WITH the slab's own entrance, and two
+    /// things moving at once reads as one busy frame rather than as a card that
+    /// arrives and then fills in.
+    @State private var figuresAlive = false
     /// The files card is the one option that does its work HERE rather than
     /// handing off to a screen, so it needs its own in-place state — the
     /// system picker is a hop, not an instant.
@@ -78,11 +134,6 @@ struct StartHereScreen: View {
     /// its way somewhere.
     @State private var pickingFolder = false
     @State private var connectingFolder = false
-    @State private var showFollow = false
-    /// The demo card acts in place like the files card — seeding ~330 rows
-    /// and their bridge state is fast but not instant, and a card that looked
-    /// inert while working would read as a dead control.
-    @State private var enteringDemo = false
     /// Which arm leads (prd §422). Read ONCE, as this screen is first made,
     /// rather than per body pass — a fork whose cards reshuffle under
     /// somebody's thumb is worse than one that never reorders at all.
@@ -130,28 +181,57 @@ struct StartHereScreen: View {
                 // produced themselves. `StartAppetite.defaultOrder`, i.e. the
                 // screen exactly as §217 shipped it, whenever there is no
                 // signal — which is most people.
-                ForEach(Array(order.enumerated()), id: \.element) { index, arm in
-                    armCard(arm)
-                        .startArrive(arrived, delay: 0.15 + Double(index) * 0.10)
-                }
-
-                // The fourth answer — and it is HIDDEN once the demo has been
-                // seen, which is the common case now that it is the greeting's
-                // own CTA. This screen's main job since 2026-08-07 is to catch
-                // someone LEAVING the demo, and offering to re-enter the thing
-                // they just chose to leave is a door back into a room they
-                // walked out of.
-                if !DemoMode.hasSeen {
-                    card(figure: .sparkle, hue: .orange,
-                         title: "Just show me what it looks like",
-                         line: "Sample data from every source. Leave it any time.",
-                         cost: "Nothing to connect",
-                         busy: enteringDemo) {
-                        DSHaptic.tap()
-                        enterDemo()
+                // ONE SLAB, EVERY answer inside it (prd §527, 2026-08-29). The
+                // arms used to be separate `dsWidgetSurface` cards with the
+                // catalog exit pinned below as chrome, and the screen read as
+                // a MENU rather than as one question — reported exactly that
+                // way ("it kind of presents a bunch of options … maybe we
+                // should make it feel like it is one, not a menu of three").
+                //
+                // **A grouping, never a merge.** Every arm is still drawn, in
+                // the same shape, at the same weight, in `StartAppetite`'s
+                // order — §217's audience reasoning is untouched, and
+                // collapsing them into a single "connect something" card would
+                // either pick one arm for everybody or defer the identical
+                // choices to a second screen. What changes is that the eye
+                // meets ONE object.
+                //
+                // **The exit is INSIDE, as the last answer.** It was pinned
+                // chrome (`safeAreaInset`) and therefore a peer of the demo the
+                // person had just declined rather than part of the question
+                // they had just said yes to — which is what made the screen
+                // feel like five things. It belongs here because it is the same
+                // KIND of answer as the arms (your own things, by a longer
+                // route), which is exactly what the demo card was not; that
+                // asymmetry is the whole reason one was folded in and the other
+                // deleted.
+                //
+                // **The trade, stated rather than discovered later**: it stops
+                // being pinned, so at large Dynamic Type it can scroll out of
+                // sight and somebody who cannot answer the question has to
+                // scroll to find the way out. That cost was weighed and refused
+                // while the fork had THREE tall arms; at two the screen is
+                // short enough to fit without scrolling at the default size,
+                // which is what changed the answer. If a third arm ever
+                // returns, re-weigh this before adding it.
+                //
+                // **It arrives as one element**, deliberately: a slab whose
+                // rows staggered in would be several arrivals wearing one edge,
+                // which says the opposite of what the grouping is for. The
+                // per-row `startArrive` stagger went with the separate cards.
+                //
+                // No divider between rows — the design law's no-hairlines rule
+                // has zero exceptions, so the rows are separated by air alone,
+                // which is what a grouped list looks like here anyway.
+                VStack(spacing: 0) {
+                    ForEach(order, id: \.self) { arm in
+                        armCard(arm)
                     }
-                    .startArrive(arrived, delay: 0.15 + Double(order.count) * 0.10)
+                    catalogRow
                 }
+                .padding(DS.Space.s2)
+                .dsWidgetSurface()
+                .startArrive(arrived, delay: 0.15)
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.bottom, DS.Space.s8)
@@ -160,23 +240,20 @@ struct StartHereScreen: View {
         .scrollIndicators(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
-        // The cards scroll UNDER the "See all N apps" link below
-        // (`safeAreaInset(edge: .bottom)`), and that link is deliberately bare
-        // secondary text rather than a button — so with nothing dissolving the
-        // content as it arrives, a card passing beneath put gray text straight
-        // on top of a moving tile (2026-08-10). Every other scrolling screen in
-        // the app already wears this; this one was simply missed.
+        // Added 2026-08-10 because the cards scrolled UNDER a pinned catalog
+        // link and put gray text on top of a moving tile. **That link is inside
+        // the slab since §527, so nothing is pinned and nothing can scroll
+        // beneath anything** — this stays as the app-wide treatment every other
+        // scrolling screen wears, not as a fix for a bug that no longer has a
+        // way to happen.
         //
-        // The fix is the scroll edge and NOT glass on the link: a glass capsule
-        // would fix the legibility by promoting the link to button weight,
-        // which is exactly what the sibling ruling in `HowItWorksSheet`
-        // ("Text, not a second button: two equal buttons is a decision") exists
-        // to prevent on this same fork.
+        // Worth keeping the history: the 2026-08-23 answer to that same bug was
+        // to promote the link to a full-width prominent pill, which fixed the
+        // legibility by giving an escape hatch primary-CTA weight. The soft
+        // edge was always the right half of that fix and the pill the wrong
+        // one; §527 kept the first and undid the second.
         .dsSoftScrollEdges()
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(isPresented: $showFollow) {
-            StartFollowScreen(onStart: onStart)
-        }
         .fileImporter(isPresented: $pickingFolder, allowedContentTypes: [.folder]) { outcome in
             guard case .success(let url) = outcome else { return }
             let scoped = url.startAccessingSecurityScopedResource()
@@ -188,53 +265,27 @@ struct StartHereScreen: View {
                 onStart(nil)
             }
         }
-        .safeAreaInset(edge: .bottom) {
-            // Named by what it DOES, not by what it isn't (2026-08-07). It read
-            // "Browse the catalog instead", which was written when this link
-            // was only an escape hatch from onboarding — it is now also the
-            // main route for someone arriving here from the demo who already
-            // knows which app they want, and "instead" framed that person's
-            // deliberate choice as a way out of the real one.
-            //
-            // The COUNT is gone again (user, 2026-08-11): "See all 96 apps" made
-            // the number the argument, and a number is a claim to survey rather
-            // than a destination to go to. This says where the tap lands, in the
-            // app's own noun for that surface (the 2026-07-16 naming ruling: it
-            // is "the catalog", never a store).
-            //
-            // Glass now (2026-08-23, user-reported bug, with a screenshot): bare
-            // secondary text scrolling right up to the screen edge went
-            // illegible the moment a card passed beneath it — the soft scroll
-            // edge fades content but doesn't lift the label above it, so the
-            // link and the demo card's own "Nothing to connect" line rendered
-            // on top of each other, unreadable either way. This is FLOATING
-            // chrome (`safeAreaInset`, never content), which is exactly the
-            // design law's floating layer — the same treatment HowItWorksSheet's
-            // "Try the demo" wears one screen earlier in this same fork. The
-            // superseded reasoning against a second equal-weight button
-            // (`HowItWorksSheet`'s "two buttons is a decision" ruling) doesn't
-            // apply here: this screen's decision is the three cards above, and
-            // a link nobody can read isn't lower-weight, it's broken.
-            Button {
-                DSHaptic.tap()
-                onStart(.apps)
-            } label: {
-                Text("Browse the catalog")
-                    .dsText(.body17)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: 48)
-                    .dsGlassProminent(tint: DS.textSecondary, cornerRadius: DS.Radius.pill)
-                    .contentShape(Capsule())
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.bottom, DS.Space.s2)
-        }
         .tint(DS.tint)
         .onAppear {
-            if reduceMotion { arrived = true }
-            else { withAnimation(DS.Motion.standard) { arrived = true } }
+            if reduceMotion {
+                // No entrance at all: the slab and its figures are simply
+                // there. `StartFigureMark` also refuses its own animations
+                // under Reduce Motion, so this is belt and braces rather than
+                // the only guard — but it matters, because without it the
+                // figures would sit at their resting scale forever.
+                arrived = true
+                figuresAlive = true
+            } else {
+                withAnimation(DS.Motion.standard) { arrived = true }
+                // One beat behind the slab, so the card arrives and THEN fills
+                // in. Unstructured and parentless like every other fire-once
+                // task here; if the screen goes first, the flag it would have
+                // set goes with it.
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(240))
+                    figuresAlive = true
+                }
+            }
         }
         #if DEBUG
         // `-startPick folder|wallet|follow|catalog` fires one card after a
@@ -252,8 +303,19 @@ struct StartHereScreen: View {
                 switch pick {
                 case "folder":  pickingFolder = true
                 case "wallet":  onStart(.bridge(.wallet))
-                case "follow":  showFollow = true
-                case "demo":    enterDemo()
+                // `follow` and `demo` are deliberately GONE (§527) rather than
+                // silently falling through to the catalog: neither has a door
+                // on this screen any more, and a probe arm for a door that does
+                // not exist is a check that certifies nothing. The demo's own
+                // doors — the greeting's CTA and the Settings row — keep
+                // `-howItWorksCTA` and `-demoEnter`; following a handle is now
+                // the Bluesky / Farcaster / RSS seats' own setup screens, with
+                // their own hooks (`-bskyHandle`, `-fcName`, `-rssFeed`).
+                // falling through to the catalog: the demo has no door on this
+                // screen any more, and a probe arm for a door that does not
+                // exist is a check that certifies nothing. The demo's own
+                // doors — the greeting's CTA and the Settings row — keep
+                // `-howItWorksCTA` and `-demoEnter`.
                 default:        onStart(.apps)
                 }
             }
@@ -304,14 +366,6 @@ struct StartHereScreen: View {
                 // vitalik.eth" chip.
                 DSHaptic.tap()
                 onStart(.bridge(.wallet))
-            }
-        case .follow:
-            card(figure: .faces, hue: .purple,
-                 title: "Follow someone I read",
-                 line: "A Bluesky or Farcaster handle, or a feed.",
-                 cost: "No sign-in") {
-                DSHaptic.tap()
-                showFollow = true
             }
         }
     }
@@ -371,21 +425,121 @@ struct StartHereScreen: View {
         }
     }
 
-    /// Furnish the app and land in the feed.
+    /// The last answer: everything the arms don't shortcut to.
     ///
-    /// `onStart(nil)` rather than a node: the tap has already produced
-    /// something to look at, which is exactly the case the nil arm exists for.
-    private func enterDemo() {
-        guard !enteringDemo else { return }
-        enteringDemo = true
-        DemoMode.begin(store: store)
-        // Claim the mode, hand back, and let the pour happen where it can be
-        // SEEN — same split as the greeting's CTA, and the reason is the same:
-        // a feed revealed already full reads as a screenshot.
-        onStart(nil)
+    /// **Why it is a row and not a card, and why it is last.** It is the same
+    /// KIND of answer as the arms — your own things, by a longer route — which
+    /// is what earned it a place inside the slab where the demo card did not
+    /// (sample data is a different kind of thing entirely). But it is the
+    /// broadest and slowest answer, so it takes no figure mark, no `cost:` line
+    /// and no `heading22`: VOICE says it belongs to this question, WEIGHT says
+    /// it is not the headline. Leading with it would make the catalog the first
+    /// thing a new person meets, which is precisely the wall §217 exists to
+    /// avoid ("forty is a wall you have to survey"), and would also put a fixed
+    /// row above arms that `StartAppetite` took trouble to order.
+    ///
+    /// **It goes through `card(…)`, the arms' own builder** (user, 2026-08-29:
+    /// "it should have the same styling … it should have the app catalogue icon
+    /// and same indentation and font sizes as the other two"). The first cut of
+    /// this row was bare `callout15` text with no mark, and that was an
+    /// inconsistency in this file's own argument: folding it into the slab was
+    /// justified by its being the SAME KIND of answer as the arms, and then it
+    /// was drawn as a different kind of thing. A markless row inside a slab of
+    /// marked ones also just reads as an afterthought — or as a layout bug,
+    /// since its text starts where nothing else's does.
+    ///
+    /// **A FULL PEER, hue included** (user, 2026-08-29). The first cut drew it
+    /// neutral so the colour could still whisper "this one is different"; that
+    /// was the last residue of treating it as a lesser exit, which is the thing
+    /// this whole pass exists to stop. It is one of three answers and it looks
+    /// like one. Purple is the free slot — blue is the folder, green the wallet,
+    /// and purple was the deleted follow arm's — so nothing had to be invented
+    /// or re-tuned to make room for it.
+    ///
+    /// `start-fork-selftest.sh` therefore expects `StartAppetite.Arm.allCases`
+    /// PLUS ONE `card(figure:` call site — the +1 is this row and nothing else,
+    /// so a card belonging to no answer still fails the build, which is the
+    /// shape both deleted cards had.
+    ///
+    /// **The wording, and three retired alternatives.** "Show me all the apps"
+    /// since §527 (user, 2026-08-29: "even if we change 'browse the catalogue'
+    /// to 'show me all the apps' that alone is clearer"). It replaced "Browse
+    /// the catalog", which was wrong twice over — and the 2026-07-16 naming
+    /// ruling is untouched by the change: the catalog is still the catalog
+    /// everywhere inside the app, never a store.
+    ///
+    ///   1. It named OUR SURFACE rather than the outcome, on the second screen
+    ///      of a first run. Step 1 of the greeting does teach the word, but the
+    ///      common path here is via the DEMO — whose whole design intent is that
+    ///      people tap the CTA rather than study three step cards — so the
+    ///      teaching is routed around for most arrivals. It is also a shopping
+    ///      word (a catalog is what a store mails you), an odd frame for an app
+    ///      whose pitch is that nothing costs anything.
+    ///   2. It was in a DIFFERENT VOICE from the answers above it, so it read as
+    ///      a peer of the demo the person had just declined rather than as part
+    ///      of the question they had just said yes to. That was the real
+    ///      complaint ("so now user is thinking there is demo option, browse
+    ///      catalogue, and these three other things").
+    ///
+    /// Retired, each for a stated reason: **"…instead"** (deleted 2026-08-07 —
+    /// it framed a deliberate choice as a way out of the real one, and that
+    /// reasoning survives the rewording); **a COUNT**, "See all 96 apps" (user,
+    /// 2026-08-11 — the number becomes the argument, and a number is a claim to
+    /// survey rather than a destination to go to; only the NOUN moved back, the
+    /// count must not); and **"Just show me the apps"** (weighed 2026-08-29 —
+    /// "all" is load-bearing, since completeness is the whole reason to tap this
+    /// rather than an arm, and "my files"/"all the apps" is the contrast).
+    ///
+    /// **First person is deliberate, and an earlier objection to it was wrong.**
+    /// It was ruled out on the grounds that matching the arms' voice would make
+    /// this another answer — the thing deleting the demo card fixed. That does
+    /// not transfer: the demo card was an answer of a different kind, this one
+    /// is not, so belonging to the list is honest here and was not there.
+    private var catalogRow: some View {
+        card(figure: .catalog, hue: .purple,
+             title: "Show me all the apps",
+             line: "Everything you can connect, in one list.",
+             // **"Get started" is a DELIBERATE relaxation of this slot's rule,
+             // ruled by the user (2026-08-29), and it is recorded rather than
+             // quietly taken so the next reader does not mistake it for the new
+             // contract.** Everywhere else `cost:` is a FACT ABOUT THE NEXT TAP
+             // — "Opens the Files picker", "No account needed" — and it exists
+             // so somebody can tell at a glance which answer wants a system
+             // permission. The standing objection is not that a CTA is vague
+             // but that it makes the slot UNSCANNABLE: once one entry is not a
+             // cost, a reader cannot tell whether the next one means "this asks
+             // nothing of you" or "the author had nothing to say".
+             //
+             // The reading that makes it right here, and it is the one the
+             // rule-bound alternatives all missed: **a cost line for this row
+             // keeps landing in the DEMO's territory.** Every truthful "this
+             // asks nothing of you" phrasing — "Just a look", "Nothing to
+             // connect yet" — describes browsing without committing, which is
+             // what the demo IS ("Just show me what it looks like", one screen
+             // back). The catalog is the opposite: it is where somebody stops
+             // looking and starts connecting. So the honest tag is what KIND of
+             // act this is rather than what it costs, and the kind is "this is
+             // where you begin properly" (user: "it's not just a look, just a
+             // look was the demo"). The two arms above are shortcuts with one
+             // specific ask each; this is the whole list.
+             //
+             // Two phrasings were rejected on the way here and one is worth
+             // keeping as a trap: **"Nothing to set up" is FALSE** (user: "it's
+             // a list of things to set up"). It read as a claim about the
+             // DESTINATION when the slot describes the TAP — and the general
+             // lesson is that a cost line phrased as an ABSENCE drifts into
+             // making claims about what is on the other side of the door.
+             //
+             // TRIPWIRE: this is the ONE row allowed a non-cost here. A second
+             // one means the slot has stopped being a cost line and the two
+             // arms' entries should be re-read as decoration.
+             cost: "Get started") {
+            DSHaptic.tap()
+            onStart(.apps)
+        }
     }
 
-    /// One shape for all three, so the fork reads as one decision rather than
+    /// One shape for every arm, so the fork reads as one decision rather than
     /// three offers of different weight. No chevron and no toggle: each of
     /// these is a button that DOES something (see the tripwire above).
     /// `cost` is the three-word answer to "what will this ask of me?" — a
@@ -404,7 +558,7 @@ struct StartHereScreen: View {
                     if busy {
                         ProgressView().tint(hue)
                     } else {
-                        StartFigureMark(figure: figure, hue: hue)
+                        StartFigureMark(figure: figure, hue: hue, alive: figuresAlive)
                     }
                 }
                 .frame(width: 54, height: 54)
@@ -430,10 +584,14 @@ struct StartHereScreen: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(DS.Space.s4)
+            .padding(DS.Space.s3)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .dsWidgetSurface()
-            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget,
+            // NO surface of its own since §527 — the slab this sits in owns
+            // the one edge, and a card inside a card is two claims to the same
+            // elevation rung. The press affordance is `PressSpring` alone,
+            // which is what a row inside a grouped container gets everywhere
+            // else in the app.
+            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.control,
                                            style: .continuous))
         }
         .buttonStyle(PressSpring())
@@ -442,7 +600,7 @@ struct StartHereScreen: View {
 }
 
 /// What a card's tap PRODUCES, drawn as the figure that room will wear.
-enum StartFigure { case treemap, curve, faces, sparkle }
+enum StartFigure { case treemap, curve, faces, sparkle, catalog }
 
 /// The mark on a fork card — the figure the source becomes, not a glyph for
 /// the category it belongs to.
@@ -472,45 +630,96 @@ enum StartFigure { case treemap, curve, faces, sparkle }
 struct StartFigureMark: View {
     let figure: StartFigure
     let hue: Color
+    /// False = the figure at rest · true = it has drawn itself (prd §527).
+    ///
+    /// **This overturns this type's own "NO ENTRANCE OF THEIR OWN" rule, and
+    /// the reason is that the rule's PREMISE stopped being true.** It read: "the
+    /// cards already arrive on `startArrive`'s stagger, so an animated figure
+    /// would be a second entrance on the same element". Since §527 the cards do
+    /// not arrive individually at all — the SLAB arrives, as one element — so
+    /// there is no per-card entrance for this to be a second of, and the figures
+    /// were the one thing on the screen that stayed inert.
+    ///
+    /// It is ONE beat, fired once, a moment AFTER the slab lands so the two read
+    /// as a single arc rather than as two entrances competing. Nothing loops,
+    /// nothing repeats, nothing is triggered by data: this is a drawing showing
+    /// how it was made, which is what makes it delight rather than decoration —
+    /// and §83 is untouched, since a generic shape drawing itself still claims
+    /// nothing about what YOUR wallet holds or YOUR folder contains.
+    var alive: Bool = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// One curve for the whole beat, so no figure can drift out of step with
+    /// another. `delay` staggers the parts WITHIN a figure, never between cards.
+    private func beat(_ delay: Double) -> Animation? {
+        reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.72).delay(delay)
+    }
 
     var body: some View {
         switch figure {
         case .treemap:
             // The Files room's own hero, at card scale: one dominant cell and
             // a smaller tail, which is what a real folder's treemap looks like.
+            //
+            // It TILES ITSELF: each cell grows from its own bottom edge, in the
+            // order a treemap really packs them — the big one first, then the
+            // tail — so the mark performs the thing the room does rather than
+            // sitting there as a picture of it.
             HStack(spacing: 2.5) {
                 RoundedRectangle(cornerRadius: 2.5, style: .continuous)
                     .fill(hue)
                     .frame(width: 16, height: 27)
+                    .scaleEffect(y: alive ? 1 : 0.05, anchor: .bottom)
+                    .animation(beat(0), value: alive)
                 VStack(spacing: 2.5) {
                     RoundedRectangle(cornerRadius: 2.5, style: .continuous)
                         .fill(hue.opacity(0.62))
+                        .scaleEffect(y: alive ? 1 : 0.05, anchor: .bottom)
+                        .animation(beat(0.07), value: alive)
                     RoundedRectangle(cornerRadius: 2.5, style: .continuous)
                         .fill(hue.opacity(0.36))
+                        .scaleEffect(y: alive ? 1 : 0.05, anchor: .bottom)
+                        .animation(beat(0.13), value: alive)
                 }
                 .frame(width: 10, height: 27)
             }
         case .curve:
             // The balance line, with its endpoint emphasised the way the real
             // sparkline emphasises the latest sample.
+            //
+            // It DRAWS ITSELF left to right, and the dot lands only once the
+            // stroke has reached it — a sparkline's endpoint marks the latest
+            // sample, so a dot sitting there before the line arrives is marking
+            // a sample that has not been drawn yet.
             StartCurveShape()
+                .trim(from: 0, to: alive ? 1 : 0)
                 .stroke(hue, style: StrokeStyle(lineWidth: 2.5, lineCap: .round,
                                                 lineJoin: .round))
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.55), value: alive)
                 .overlay(alignment: .topTrailing) {
                     Circle().fill(hue).frame(width: 6.5, height: 6.5)
                         .offset(x: 1.5, y: -1.5)
+                        .scaleEffect(alive ? 1 : 0)
+                        .animation(beat(0.46), value: alive)
                 }
                 .frame(width: 30, height: 24)
         case .faces:
             // A roster: people, overlapping, the way every follow room draws
             // them. The ring is the CARD's fill, so the stack reads as lifted
             // off the surface rather than as three flat discs.
+            //
+            // They ARRIVE ONE AFTER ANOTHER, which is what a roster filling
+            // looks like. (No arm draws this today — the follow card went with
+            // §527 — but the case is kept whole so a future arm inherits the
+            // beat rather than being the one inert figure on the screen.)
             HStack(spacing: -5) {
-                ForEach(Array([1.0, 0.72, 0.46].enumerated()), id: \.offset) { _, dose in
+                ForEach(Array([1.0, 0.72, 0.46].enumerated()), id: \.offset) { index, dose in
                     Circle()
                         .fill(hue.opacity(dose))
                         .frame(width: 15, height: 15)
                         .overlay(Circle().stroke(DS.surfaceSheet, lineWidth: 2.5))
+                        .scaleEffect(alive ? 1 : 0)
+                        .animation(beat(Double(index) * 0.07), value: alive)
                 }
             }
         case .sparkle:
@@ -519,6 +728,25 @@ struct StartFigureMark: View {
             Image(systemName: "sparkles")
                 .dsGlyph(24)
                 .foregroundStyle(hue)
+        case .catalog:
+            // THE REAL APPS-DOOR GLYPH, not a figure (§527). Every other case
+            // here previews the shape a room becomes, and this one deliberately
+            // does not: the catalog is not a room and has no figure to show, so
+            // the honest mark is the door's own — `TopDoors`' `square.grid.2x2`,
+            // which `HowItWorksSheet`'s step 1 already wears for exactly this
+            // reason ("so they recognize it in the shell later"). A figure here
+            // would preview a reading the catalog never draws.
+            //
+            // It is the one mark that must NOT be taken apart to animate: four
+            // hand-drawn squares popping in would look better and would stop
+            // being `TopDoors`' actual symbol, which is the whole reason this
+            // case exists. So it takes the beat as a whole — a scale, no more.
+            Image(systemName: "square.grid.2x2.fill")
+                .dsGlyph(24)
+                .foregroundStyle(hue)
+                .scaleEffect(alive ? 1 : 0.4)
+                .opacity(alive ? 1 : 0)
+                .animation(beat(0.05), value: alive)
         }
     }
 }
@@ -540,274 +768,6 @@ private struct StartCurveShape: Shape {
             if index == 0 { path.move(to: scaled) } else { path.addLine(to: scaled) }
         }
         return path
-    }
-}
-
-/// The third card's form. A segmented picker over one field rather than a
-/// network sniffer: `alice.bsky.social`, `dwr` and an RSS URL are genuinely
-/// ambiguous, and guessing wrong on the very first thing someone types is a
-/// worse first impression than asking. §186's ruling applies — a connect screen
-/// is allowed to be a form, because knowing the steps is the point.
-struct StartFollowScreen: View {
-    var onStart: (HomeRoute.Node?) -> Void
-
-    /// The three keyless follow paths — no account, no key, no permission, so
-    /// this whole screen can produce real rows without asking for anything.
-    private enum Network: String, CaseIterable, Identifiable {
-        case bluesky = "Bluesky", farcaster = "Farcaster", feed = "Feed"
-        var id: String { rawValue }
-        var noun: String {
-            switch self {
-            case .bluesky:   "handle"
-            case .farcaster: "username"
-            case .feed:      "feed URL"
-            }
-        }
-        /// A REAL name, measured against the live service, never a
-        /// plausible-looking fake (prd §422).
-        ///
-        /// `alice.bsky.social` / `alice` / `example.com/feed.xml` taught the
-        /// SHAPE of the answer and left the stall exactly where it was:
-        /// somebody who doesn't already have a name in mind still faces an
-        /// empty field with no way forward, and that field is where this arm
-        /// loses people. §217's own amendment blessed the fix and named its
-        /// shape — "a greyed `nasa.gov` in the Follow form's Feed field … it
-        /// removes a decision rather than adding one, since the real stall is
-        /// the empty field after the card, not the card."
-        ///
-        /// **Re-measure before changing one.** A placeholder that resolves to
-        /// nothing is worse than a fake, because it is a name somebody will
-        /// actually type. Measured 2026-08-20:
-        ///   • `nasa.gov` does NOT resolve on Bluesky — which is exactly what
-        ///     the amendment suggested, so the blessed example was wrong for
-        ///     two of the three arms; `theverge.com` resolves.
-        ///   • `vitalik.eth` is fid 5650 on Farcaster (user's own pick).
-        ///   • `https://www.nasa.gov/feed/` serves `application/rss+xml`.
-        ///
-        /// All three are institutions or public figures posting publicly, and
-        /// none is `dwr` (standing rule: never in a demo).
-        var example: String {
-            switch self {
-            case .bluesky:   "theverge.com"
-            case .farcaster: "vitalik.eth"
-            case .feed:      "https://www.nasa.gov/feed/"
-            }
-        }
-
-        /// What the one-tap door calls the example — nil for Farcaster, which
-        /// already has a STRICTLY BETTER door in that slot
-        /// (`FarcasterPackDoor`: a whole hand-picked list, with faces, behind
-        /// a sheet you can look at before committing). Two doors on one form
-        /// would be the second question §217's tripwire keeps off this
-        /// screen; Farcaster's placeholder carries the real name instead.
-        ///
-        /// A feed is entered as a URL and named by its host: a door reading
-        /// "Follow https://www.nasa.gov/feed/" is a field value wearing a
-        /// verb.
-        var exampleName: String? {
-            switch self {
-            case .bluesky:   "theverge.com"
-            case .farcaster: nil
-            case .feed:      "nasa.gov"
-            }
-        }
-
-        /// The catalog seat whose mark rides this arm's toast (prd §384).
-        var mark: String {
-            switch self {
-            case .bluesky:   "Bluesky"
-            case .farcaster: "Farcaster"
-            case .feed:      "RSS"
-            }
-        }
-    }
-
-    @Environment(\.modelContext) private var modelContext
-    @Environment(ShellChrome.self) private var chrome
-    @State private var network: Network = .bluesky
-    @State private var name = ""
-    @State private var working = false
-    @FocusState private var fieldFocused: Bool
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                Text("Who do you read?")
-                    .dsText(.heading34).fontWeight(.heavy)
-                    .foregroundStyle(DS.textPrimary)
-                    .padding(.top, DS.Space.s2)
-                Text("Their posts land in your feed. No account, no password — a public name is all this takes.")
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Picker("Network", selection: $network) {
-                    ForEach(Network.allCases) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.segmented)
-
-                Text("Their \(network.noun)")
-                    .dsText(.callout15)
-                    .foregroundStyle(DS.textSecondary)
-                BridgeFieldRow(placeholder: network.example,
-                               text: $name,
-                               buttonLabel: "Follow",
-                               focus: $fieldFocused,
-                               action: { follow(name) })
-                // Every arm now has exactly ONE door in this slot (prd §422),
-                // which is the symmetry that was missing: Farcaster had a
-                // starter pack and the other two had an empty field.
-                Text("or")
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                // Farcaster's pack (2026-08-08) — this screen otherwise
-                // requires already knowing a name, which is exactly the
-                // wall a starter pack exists to route around. Shown only
-                // for Farcaster: Bluesky's own pack lives one screen later,
-                // on its setup screen, once connected.
-                if network == .farcaster {
-                    // Syncs the moment the follow lands (sheet still open,
-                    // "Followed N" showing) but only ENDS onboarding once
-                    // the tray actually closes — calling `onStart` while the
-                    // sheet is still presented would tear down this screen
-                    // out from under it, the dismiss-during-transition class
-                    // of bug this codebase's SwiftData liveness corollaries
-                    // exist to avoid (see CLAUDE.md's build-142 note).
-                    FarcasterPackDoor(
-                        onImport: { _ in
-                            Task { @MainActor in _ = await FarcasterIngest.refresh(context: modelContext) }
-                        },
-                        onDismissAfterFollow: { onStart(nil) }
-                    )
-                } else if let named = network.exampleName {
-                    exampleDoor(named)
-                }
-            }
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.bottom, DS.Space.s8)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .scrollIndicators(.hidden)
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        // The follow form's own scroll, same treatment — it has no bottom
-        // inset of its own, but it does sit under the shell's agent bar like
-        // every other screen, which is the pairing this modifier was widened
-        // for in 2026-07-23.
-        .dsSoftScrollEdges()
-        .navigationBarTitleDisplayMode(.inline)
-        .tint(DS.tint)
-        .onAppear { fieldFocused = true }
-        #if DEBUG
-        // `-startFollow "<Bluesky|Farcaster|Feed>:<name>"` runs this arm
-        // headlessly — splits on the FIRST colon so a feed URL keeps its own.
-        .onAppear {
-            guard let spec = UserDefaults.standard.string(forKey: "startFollow"),
-                  let cut = spec.firstIndex(of: ":") else { return }
-            let net = String(spec[spec.startIndex..<cut])
-            name = String(spec[spec.index(after: cut)...])
-            network = Network.allCases.first { $0.rawValue.lowercased() == net.lowercased() } ?? .bluesky
-            let typed = name
-            Task { @MainActor in
-                try? await Task.sleep(for: .seconds(1))
-                follow(typed)
-            }
-        }
-        #endif
-    }
-
-    /// The one-tap example (prd §422). It really follows, and the label
-    /// names exactly whom — the same act the wallet arm's "Peek at
-    /// vitalik.eth" chip has performed since §202, and the same slot and row
-    /// shape `FarcasterPackDoor` wears for the third network. A door that
-    /// only FILLED the field would leave the person one tap short of the
-    /// rows, which is the stall this exists to remove.
-    private func exampleDoor(_ named: String) -> some View {
-        Button {
-            DSHaptic.tap()
-            follow(network.example)
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                BridgeIcon(name: network.mark, size: DS.Mark.list, circular: false)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Follow \(named)")
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    // Says it is an EXAMPLE rather than a recommendation —
-                    // this screen is establishing trust, and a stranger's
-                    // name presented as a suggestion is a claim about taste
-                    // we have no grounds for (§83).
-                    Text("An example, so you can watch rows land")
-                        .dsText(.label12).foregroundStyle(DS.textTertiary)
-                }
-                Spacer(minLength: 0)
-            }
-            .dsListCardRow()
-        }
-        .buttonStyle(.plain)
-        .disabled(working)
-    }
-
-    /// A feed is entered as a URL and spoken about by its host.
-    private func spoken(_ handle: String) -> String {
-        guard network == .feed, let host = URL(string: handle)?.host() else { return handle }
-        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
-    }
-
-    /// Registers the follow, LEAVES, and lets the sync land rows into a feed
-    /// that is already on screen (prd §422).
-    ///
-    /// **Why the order flipped** — the same reasoning as `connectFolder`, and
-    /// it bites harder here: a first sync of a busy account is seconds, all
-    /// of which were spent on a disabled form, and the feed then appeared
-    /// pre-filled. Watching your own follow arrive is the whole proof.
-    ///
-    /// The follow is registered BEFORE the hand-off, so it is durable even
-    /// if the sync that follows reaches nothing. The environment values are
-    /// copied into locals first (this screen is torn down by `onStart`), and
-    /// the `Task` is unstructured, so nothing cancels it.
-    ///
-    /// A failure still says so rather than stranding anyone: by then they
-    /// are in the feed, where the catalog door is.
-    private func follow(_ handle: String) {
-        let who = handle.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !who.isEmpty, !working else { return }
-        working = true
-        DSHaptic.tap()
-        let context = modelContext
-        let shell = chrome
-        let net = network
-        switch net {
-        case .bluesky:   BlueskyStore.shared.add(who)
-        case .farcaster: FarcasterStore.shared.add(who)
-        case .feed:      RSSStore.shared.add(who)
-        }
-        onStart(nil)
-        // ONE toast, at the hand-off, wearing the network's own mark (§384).
-        // Deliberately no second toast when the rows land: the rows landing
-        // IS the report, and saying it twice spends the moment this change
-        // exists to create.
-        shell.flash("Following \(spoken(who))", mark: net.mark)
-        Task { @MainActor in
-            let landed: Int?
-            switch net {
-            case .bluesky:
-                landed = await BlueskyIngest.refresh(context: context)
-            case .farcaster:
-                landed = await FarcasterIngest.refresh(context: context)
-            case .feed:
-                // A follow the person just made, so it waits its turn rather
-                // than being dropped by a foreground sweep that happens to be
-                // mid-pass — the onboarding fork's whole job is to show
-                // something arriving.
-                landed = await RSSIngest.refresh(context: context, waitForInFlight: true)
-            }
-            NSLog("[Casberi] startFollow: %@ %@ → %@", net.rawValue, who,
-                  landed.map { "\($0) in" } ?? "FAILED")
-            if landed == nil {
-                shell.flash("Couldn't reach \(net.rawValue) — try again from the catalog",
-                            tone: .failure)
-            }
-        }
     }
 }
 
