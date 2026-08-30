@@ -504,9 +504,18 @@ enum BridgeCatalog {
         Offer(name: "Venice",      tagline: "Private answers with your key",         group: "Agent",     connectable: true,
               summary: "Venice keeps chats on your own device by design, so there's nothing to read in — instead, your Venice key powers \"Try with your key\": any answer re-runs on Venice's private API, straight from \(DS.device), only when you tap.",
               needsSetup: true),
-        Offer(name: "Bankr",       tagline: "Answers that know your wallet",        group: "Agent",     connectable: true,
-              summary: "Bankr is an agent with a wallet, so its answers can weigh what you hold and what the market is doing — not just what you saved.\n\nMake it a read-only key: every question says answer only, and nothing here trades, sends, or swaps.",
+        // The summary stopped saying "nothing here trades" on 2026-08-29
+        // (prd §529). It was true when written and went false the day Bankr
+        // gained a second verb — the same sweep a3ad3d99 ran over the wallet
+        // copy when Safe's co-signer shipped, one seat over. The split is
+        // stated rather than blurred: asking is still answer-only and always
+        // will be, acting is a switch that starts off, and the strongest fact
+        // is last, because it is the one that holds whatever this app does.
+        Offer(name: "Bankr",       tagline: "Your wallet's agent — ask it, or tell it", group: "Agent", connectable: true,
+              summary: "Bankr is an agent with a wallet, so its answers can weigh what you hold and what the market is doing — not just what you saved.\n\nAsking is answer only, always. Telling it to do something is a separate switch that starts off, and every instruction asks you before it goes. A read-only key can't act whatever you switch on.",
               features: ["Powers \"Try with your key\" — any answer re-runs on Bankr",
+                         "Ask about your wallet, or tell it what to do",
+                         "Acting is off until you turn it on, and confirms each time",
                          "Straight from \(DS.device), only when you tap"],
               needsSetup: true),
         // 1Claw is the agents' vault (2026-07-17, prd 111): grants, not

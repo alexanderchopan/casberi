@@ -138,10 +138,19 @@ enum BankrAgent {
     /// `AgentAnswer.bankrAnswer` is the caller that pastes numbered candidates
     /// in beneath this, which is the ONE thing the acting path never does.
     static func ask(_ question: String, extra: String = "") async -> Result<Reply, Failure> {
-        let prompt = extra.isEmpty
+        await run(prompt: askPrompt(question, extra: extra))
+    }
+
+    /// The asking prompt, split out so a harness can see it (2026-08-29).
+    /// `actingPrompt`'s twin, and the pair is the whole feature: this one
+    /// carries the answer-only rail and that one deliberately does not. Kept
+    /// as separate named functions rather than one with a flag, because a
+    /// boolean argument is one typo away from sending an instruction under the
+    /// rail (a Do that silently behaves as an Ask) or a question without it.
+    static func askPrompt(_ question: String, extra: String = "") -> String {
+        extra.isEmpty
             ? "\(answerOnlyPrefix)\n\nQuestion: \"\(question)\""
             : "\(answerOnlyPrefix)\n\nQuestion: \"\(question)\"\n\n\(extra)"
-        return await run(prompt: prompt)
     }
 
     /// Do — the acting path. Two guards before a byte leaves, both in the

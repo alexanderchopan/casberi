@@ -229,7 +229,7 @@ struct BankrChatScreen: View {
                           title: IngestSupport.titleLine(instruction),
                           content: report,
                           source: "Bankr",
-                          tags: ["Agent"],
+                          tags: ["Agent run"],
                           sourceRef: "bankr:job:\(jobID)")
         context.insert(thing)
         try? context.save()

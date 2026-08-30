@@ -3614,7 +3614,14 @@ struct Composer: View {
     /// door existing at all: `onConnectBankr` is nil for any host that cannot
     /// push, and a CTA that does nothing is the dead control §83 bans.
     @ViewBuilder private var agentChoiceHeader: some View {
-        if let onConnectBankr, restChrome(keepBrief: false) {
+        // `keepBrief: true`, and that is a FIX not a preference (2026-08-29):
+        // §386d made the bar's own tap open the brief, so the surface a person
+        // actually lands on has `answering == true` — and `keepBrief: false`
+        // is false there. The banner was therefore gated off on the one screen
+        // it was written for, reported as "i still don't see it in the daily
+        // brief". `askChips` already carries the same flag for the same
+        // reason: the brief is the one answer state that keeps its chrome.
+        if let onConnectBankr, restChrome(keepBrief: true) {
             BankrOfferBanner(onConnect: onConnectBankr)
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.bottom, DS.Space.s3)
