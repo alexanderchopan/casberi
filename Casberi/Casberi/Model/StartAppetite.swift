@@ -35,14 +35,14 @@ enum StartAppetite {
     /// the demo has been seen, which is precisely the case this type exists
     /// for, so it can never be in a list this orders.
     enum Arm: String, CaseIterable, Hashable {
-        case files, wallet, follow
+        case files, wallet
     }
 
     /// The order the fork has always drawn in, and the answer whenever there
     /// is no signal — which is the COMMON case, not a fallback: somebody who
     /// skipped the demo, or walked it without opening a single room, gets
     /// exactly the screen §217 shipped.
-    static let defaultOrder: [Arm] = [.files, .wallet, .follow]
+    static let defaultOrder: [Arm] = [.files, .wallet]
 
     /// Catalog category → the arm it argues for, or nil for the four that
     /// argue for none. See the type's doc for why nil is a real answer here
@@ -54,13 +54,18 @@ enum StartAppetite {
         // does not read as crypto-only, but for "what did you come for?"
         // they are one answer.
         case "Wallet", "Markets":  .wallet
-        // Somebody else's writing: the two categories whose rooms fill with
-        // what other people published.
-        case "Social", "Reading":  .follow
         // Your own things. "Life" is the catalog's own bucket for Photos,
         // Schedule, Storage, Mail and People — the miscellany a folder
         // holds — and Notes is what you wrote.
         case "Life", "Notes":      .files
+        // Social and Reading map to NOTHING since §527 took the follow arm
+        // out. They are deliberately absent rather than folded into `.files`:
+        // somebody who spent the demo in Bluesky has told us they came for
+        // other people's writing, which is a real signal and an argument for
+        // NEITHER remaining arm — and pointing it at the folder card would be
+        // the guess-dressed-as-a-preference this map exists to refuse. They
+        // score nothing, the default order stands, and "Show me all the apps"
+        // is where that person's answer actually lives.
         default:                   nil
         }
     }

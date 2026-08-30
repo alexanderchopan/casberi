@@ -125,7 +125,8 @@ at all.
 | §112 | Wallet: reads and previews in-app, signatures always elsewhere | narrowed by §425 |
 | §425 | The Safe co-signer: the key, the rail, the six refusals | amended by §426, §427 |
 | §426 | Building §425: the flag, the pin, the sixth fixture | amended by §427 |
-| §217 | The onboarding fork: three verbs, and a held-open placeholder example | amended by §424 |
+| §217 | The onboarding fork: three verbs, and a held-open placeholder example | amended by §424, §527 |
+| §424 | The onboarding fork: watch it arrive, a real name, an order that answers you | amended by §527 |
 | §36 | Bridge selection ruling: live data only | amended by §420 |
 | §402 | Altana keystore: read Ethereum only, and stay silent on first sight | amended by §403 |
 | §419 | Walletbeat: the seat exists only while a wallet is watched | amended by §421, §430 |
@@ -39289,3 +39290,285 @@ asked for, the same "you are its source" reasoning §523 used).
 management and the faucet only — a destination-address input is a real second
 piece of UI, stated as absent rather than silently partial), and the fresh
 signed proof above.
+
+## 527. The onboarding fork reads as one question again: the arms group, the demo card goes, the catalog capsule stops shouting (user: "it kind of presents a bunch of options: connect 1-3 things, show demo, browse catalogue … maybe we should give user option to connect 1 thing or make it feel like it is one not a menu of three … so instead of feeling like 5 total things it is 3", then "i think it works as Try a demo", 2026-08-29)
+
+Three changes to `StartHereScreen` and one word on `HowItWorksSheet`. This amends §217
+and §424, and reverses one half of the 2026-08-23 legibility fix recorded in
+`StartHereScreen`'s own inset. **No card grew a toggle and no card grew a second
+question**, so §217's tripwire is untouched.
+
+**The count was real and none of it was in the fork's design.** Today a new person meets
+three arm cards, then a demo card, then a full-width glass pill — and on the screen
+before, three step cards, a glass CTA and a text link. The complaint was that this reads
+as a menu of five. It does, and both of the extra objects arrived as drift: each was a
+locally-correct change that added a competing element, and neither was weighed against
+the screen as a whole.
+
+**0. THE FOLLOW ARM IS DELETED, so the fork asks TWO and the exit is the third answer**
+(user: "i think we should remove one of the three options we ask people to choose from eg
+files / wallet / read so that 'show me all the apps' is 1-3"). This is the one change here
+that costs something real — a named audience loses its shortcut — so the reasoning is
+recorded rather than the outcome alone. Three arms were weighed and the choice was put to
+the user with each cost stated:
+
+  • **Files** is the only arm with a system-permission hop ("Opens the Files picker"), so
+    it is the highest-friction first tap on a screen whose job is a cheap first proof, and
+    the only one with a real failure path. But §217 swapped screenshots→files precisely
+    because it proves "this app holds anything", and without it the fork reads as crypto
+    or social — the narrowing §217 refused.
+  • **Wallet** is the most specialised audience. But it is also the cheapest arm to
+    complete — "No account needed", and §202's peek chip watches vitalik.eth in one tap —
+    so it likely has the highest completion of the three, for a core audience.
+  • **Follow**, chosen. Two reasons, and the first is the one that generalises: **it is the
+    least "my own things"**, on a screen reached by tapping "Start with my own things".
+    Files are yours and a wallet is yours; a stranger's posts are a subscription. The arm
+    was answering a different question from the one the screen had just promised to
+    answer. Second, its audience is the one the catalog serves BEST — Bluesky, Farcaster,
+    Nostr, RSS, Substack, YouTube, Podcasts and Telegram are all seats — so pushing them
+    one tap over costs them least, and what they meet there is a real choice among eight
+    rather than a three-segment form.
+
+**`StartFollowScreen` is deleted with it, not left unreachable.** A screen nothing routes
+to, still watched by three drift guards, is worse than a removed one: the guards keep
+passing while guarding nothing, which is coverage that reads as real and is not.
+`FarcasterPackDoor` survives — `HandleSetupScreen` uses it too — and the `-startPick
+follow` probe arm goes rather than falling through to the catalog. **§424's measured
+placeholders are recorded here so they are re-measurable rather than lost**: `theverge.com`
+resolved on Bluesky, `vitalik.eth` was fid 5650 on Farcaster, and
+`https://www.nasa.gov/feed/` served `application/rss+xml`, all on 2026-08-20. **Re-measure;
+do not re-type.** §424's standing rule is why — a placeholder that resolves to nothing is
+worse than an obvious fake, because it is a name somebody will actually type.
+
+**`StartAppetite` keeps its shape and Social/Reading now map to NOTHING.** The tempting
+wrong answer is to fold them into `.files` on the grounds that a feed is your stuff too. It
+is not: somebody who spent the demo in Bluesky told us they came for other people's
+writing, which argues for NEITHER remaining arm, and pointing it at the folder card is the
+guess-dressed-as-a-preference that map exists to refuse (§424). Mutation-proven — folding
+Social into `.files` turns the harness red.
+
+**1. THE ARMS ARE ONE SLAB — a grouping, never a merge.** The literal reading of
+the request ("give user option to connect 1 thing") was weighed and REFUSED, because
+collapsing the arms does one of two things and both are worse: it picks a single first
+source for everybody, which is exactly what §217 exists to refuse (user, 2026-07-25: "we
+have users that are here for crypto wallets, what if they don't care about photos"), or
+it defers the identical three choices to a second screen, which is more taps for the same
+menu and turns the first screen into three abstract nouns — connect / demo / browse —
+where none of them is a verb with a visible outcome. That is the screen §96 deleted.
+
+What was actually wrong is that three separate `dsWidgetSurface` cards are three objects.
+One slab with three rows inside is ONE object with three answers, which is the thing the
+request was reaching for, and it costs no choice: every arm is still drawn, in the same
+shape, at the same weight, in `StartAppetite`'s order. **It arrives as a single element**,
+deliberately — a slab whose rows staggered in would be three arrivals wearing one edge,
+saying the opposite of what the grouping is for — so the per-row `startArrive` stagger
+went with the separate cards and one entrance sits on the slab. **No divider between
+rows**: the design law's no-hairlines rule has zero exceptions, so the rows separate by
+air, which is what a grouped list looks like here anyway.
+
+A second reason surfaced only by reading the greeting beside the fork: **both screens were
+"three stacked cards plus a bottom CTA".** The greeting's three are explanation you cannot
+tap; the fork's three are a question. Nothing signalled that the second set was a
+different KIND of thing, which is its own contribution to the menu feeling. The slab makes
+the fork announce itself.
+
+**2. THE DEMO CARD IS DELETED**, and the argument is about who could ever see it. Since
+2026-08-07 the greeting's primary CTA enters the demo and a small secondary link pushes
+this fork. `DemoMode.hasSeen` already hid the card for anyone arriving from the demo — so
+the only person it ever rendered for is somebody who, seconds earlier, was shown a
+full-width "Try a demo" button and deliberately tapped the grey link underneath. **It
+re-asked a question they had just answered.** After this each option lives in exactly one
+place: the demo on the greeting, your own things here, the catalog as the way out.
+
+The `-startPick demo` probe arm goes with it rather than falling through to the catalog: a
+probe for a door that does not exist certifies nothing. `-howItWorksCTA` and `-demoEnter`
+are unaffected and remain the demo's headless doors.
+
+**Worth recording because it is the better copy:** that card's own wording — "Just show me
+what it looks like" / "Sample data from every source. Leave it any time." — names the
+OUTCOME and never uses the word "demo", where the greeting's button names the object. If
+the CTA ever measures as under-tapped, that is the lever, not the article.
+
+**3a. "Browse the catalog" → "SHOW ME ALL THE APPS"** (user: "but is it clear what 'browse
+the catalogue' means … even if we change 'browse the catalogue' to 'show me all the apps'
+that alone is clearer"). Two faults, and the 2026-07-16 naming ruling is NOT one of them —
+the catalog is still the catalog everywhere inside the app, never a store.
+
+The first is the same fault as "the demo": **it named our surface rather than the
+outcome**, on the second screen of a first run. Step 1 of the greeting does teach the word
+("pick your apps from the catalog"), but the common path to this screen is via the demo,
+whose whole design intent is that people tap the CTA rather than study three step cards —
+so the teaching is routed around for most arrivals. "Catalog" is also a shopping word (a
+catalog is what a store mails you), which is an odd frame for an app whose pitch is that
+nothing costs anything. The 2026-08-11 count ruling stands whole; only the NOUN moved,
+since "apps" came out with the number and did not need to.
+
+The second is the one that actually matters, and it is the user's own diagnosis: **it was
+in a different VOICE from the three answers above it**, so it read as a peer of the demo
+they had just declined rather than as part of the question they had just said yes to
+("so now user is thinking there is demo option, browse catalogue, and these three other
+things"). The person taps "Start with my own things", and screen 2 then asks the question
+fresh AND offers a door that is not "my own things" — the tree is real in the code (two
+doors, then three answers) and simply was not legible.
+
+**Three alternatives were offered and declined, each against a standing ruling.**
+"…instead" was deleted on 2026-08-07 because it framed a deliberate choice as a way out of
+the real one, and that reasoning survives the rewording. **First** would make the wall the
+lead answer (§217) and override the arm ordering. And **"Just show me the apps"** loses the
+word doing the work: completeness is the whole reason to tap this rather than an arm, and
+"my files" / "all the apps" is the contrast the parallel is built on.
+
+**First person is deliberate, and an earlier recommendation against it was wrong.** It was
+ruled out here on the grounds that matching the cards' voice would make this a fourth
+answer — the thing deleting the demo card had just fixed. That reasoning does not transfer:
+the demo card was a fourth answer of a DIFFERENT KIND (sample data, not your things), while
+the catalog is the same kind as the three arms — your own things by a longer route — so
+belonging to the list is honest here and was not there. The two jobs then ride separate
+channels: **voice** says it belongs to this question, **weight** (a quiet capsule, never a
+card) says it is not the headline answer. Trying to carry both on weight alone is what left
+it reading as a second offer.
+
+**The wording alone was the recommendation; the user then asked for the structural half
+too, and the arithmetic had changed under it.** Moving the exit into the slab was designed,
+weighed and withdrawn earlier in the same session on one ground: it stops being pinned
+chrome, so at large Dynamic Type somebody who cannot answer the question has to scroll to
+find the way out. That was the right call against THREE tall arms. At two — after the arm
+removal above, which happened in between — the screen is short enough to fit at the default
+size without scrolling, and the cost mostly evaporated. **Recorded because the reversal was
+not a change of mind about the trade but a change in the thing being traded**: if a third
+arm ever returns, re-weigh this before adding it.
+
+One thing stayed unbuilt: a third subline branch acknowledging the "Start with my own
+things" arrival, as maintenance for a sentence the label change already earns.
+
+**3b. THE EXIT MOVES INSIDE THE SLAB, as the last answer** (user: "i think show me all the
+apps should be in the slab"). It stops being `safeAreaInset` chrome and becomes the final
+row of the one object on the screen — which is what makes the whole pass add up, because
+voice alone could only say it *belonged* to the question while position kept insisting it
+was a peer of the demo.
+
+**The test for what may go in the slab, and it is the pass's most reusable line: is it the
+same KIND of answer?** The catalog is — your own things, by a longer route — which is
+exactly what the demo card was not, and that asymmetry is the entire reason one was folded
+in and the other deleted. A row that answers a different question does not become part of
+the question by being drawn inside its edge.
+
+**It wears the arms' own shape, and the first cut of it did not** (user: "why not make show
+me all the apps look the same style as the other two … it should have the app catalogue
+icon and same indentation and font sizes as the other two"). It was drawn as bare
+`callout15` text with no mark, on the reasoning that voice could say it belonged while
+weight said it was not the headline. That was **an inconsistency in this ruling's own
+argument**: folding it into the slab was justified by its being the same KIND of answer,
+and it was then drawn as a different kind of thing. A markless row inside a slab of marked
+ones reads as an afterthought, or as a layout bug, since its text starts where nothing
+else's does. Same `card(…)` builder, same indentation, same type rungs.
+
+**A full peer, hue included.** The first cut drew it neutral so the colour could still
+whisper "this one is different"; that was the last residue of treating it as a lesser exit,
+which is the thing this whole pass exists to stop, and the user cut it. Purple is the free
+slot — blue is the folder, green the wallet, purple was the deleted follow arm's — so
+nothing had to be invented or re-tuned. Its MARK is where the difference legitimately
+lives: every other `StartFigure` previews the shape a room becomes, and
+the catalog is not a room, so the honest mark is **the door's own glyph** — `TopDoors`'
+`square.grid.2x2`, which `HowItWorksSheet`'s step 1 already wears precisely "so they
+recognize it in the shell later". A figure there would preview a reading the catalog never
+draws.
+
+It is **last, never first** — leading with it makes the catalog the first thing a new
+person meets, which is the wall §217 exists to avoid, and puts a fixed row above arms
+`StartAppetite` took trouble to order. The harness expects `Arm.allCases` **plus exactly
+one** `card(figure:` call site, so a card belonging to no answer still fails the build.
+
+**Its `cost:` line is "Get started", a DELIBERATE relaxation of that slot's rule (user's
+ruling, recorded rather than quietly taken).** Everywhere else `cost:` is a fact about the
+next tap — "Opens the Files picker", "No account needed" — so somebody can tell at a
+glance which answer wants a system permission. The standing objection to a CTA there is not
+vagueness but that it makes the slot UNSCANNABLE: once one entry is not a cost, a reader
+cannot tell whether the next one means "this asks nothing of you" or "the author had
+nothing to say". **TRIPWIRE: this is the one row allowed a non-cost. A second means the
+slot has stopped being a cost line, and the arms' entries should be re-read as
+decoration.**
+
+**Two rejected phrasings, and both are worth more than the one that shipped.** "Nothing to
+set up" went in first and is simply **FALSE** — "it's a list of things to set up". It read
+as a claim about the DESTINATION when the slot describes the TAP, and the general lesson
+generalises past this screen: **a cost line phrased as an ABSENCE drifts into making claims
+about what is on the other side of the door.** Then "Just a look" was recommended as the
+truthful replacement and refused for the reason that actually settles the whole question —
+**it is the DEMO's territory** ("Just show me what it looks like", one screen back). Every
+truthful "this asks nothing of you" phrasing describes browsing without committing, which
+is what the demo IS; the catalog is where somebody stops looking and starts connecting. So
+the slot could not be filled honestly with a cost at all, which is why the CTA is right
+here and nowhere else. The rule-bound alternatives were each internally consistent and each
+pointed at the wrong product.
+
+**What this retires.** On 2026-08-23 the link went from bare secondary text to a full-width
+48pt `dsGlassProminent` pill, to fix a real reported bug (text scrolling under a passing
+card, both illegible). That commit read `HowItWorksSheet`'s ruling ("Text, not a second
+button: two equal buttons is a decision") as superseded here. **It was not superseded, it
+was only ever in tension with the legibility bug** — and the bug is now structurally
+unreachable, since nothing is pinned for content to scroll beneath. `dsSoftScrollEdges()`
+stays as the app-wide treatment rather than as that fix; the soft edge was always the right
+half and the pill the wrong one.
+
+**3c. THE FIGURES DRAW THEMSELVES** (user: "lets add some surprise and delight to this
+screen"). One beat, fired once, a moment after the slab lands: the treemap TILES itself
+bottom-up in the order a treemap really packs (big cell, then the tail), the balance curve
+DRAWS itself left to right with its endpoint dot landing only once the stroke reaches it,
+and the catalog glyph springs in whole.
+
+**It overturns `StartFigureMark`'s own "NO ENTRANCE OF THEIR OWN" rule, and the reason is
+that the rule's PREMISE stopped being true in this same pass.** It read: "the cards already
+arrive on `startArrive`'s stagger, so an animated figure would be a second entrance on the
+same element." Since the arms became one slab the cards do not arrive individually at all —
+the slab does — so there is no per-card entrance for this to be a second of, and the
+figures were the one inert thing left on the screen. **A rule whose premise you have just
+deleted is not a rule you are breaking.**
+
+Four constraints, each of which is why this is delight rather than decoration: it fires
+ONCE and nothing loops (a `repeatForever` breathe is what `design-motion-audit` was written
+to catch); it is one beat BEHIND the slab, because keyed to the same flag the marks move
+WITH the card and two things at once read as one busy frame rather than as a card that
+arrives and then fills in; it honours Reduce Motion in both places, the mark refusing its
+own animations and the screen setting the flag straight to true, since without the second
+the figures would sit at their resting scale forever; and **§83 is untouched** — a generic
+shape drawing itself still claims nothing about what your wallet holds or your folder
+contains, which is `StartFigureMark`'s other and more important rule.
+
+The endpoint dot's timing is the one detail worth keeping: a sparkline's dot marks the
+LATEST sample, so a dot sitting there before the line arrives is marking a sample that has
+not been drawn yet. The catalog glyph is deliberately NOT taken apart into four popping
+squares — that would look better and would stop being `TopDoors`' actual symbol, which is
+the entire reason that case exists. `.faces` keeps its beat though no arm draws it today,
+so a future arm inherits it rather than being the one inert figure.
+
+**UNSEEN in motion.** No simulator run and no device: the timings (0.42s spring, 0.55s
+draw, 240ms behind the slab, 70ms inter-cell) were reasoned about and compiled, never
+watched.
+
+**4. "Try the demo" → "TRY A DEMO"** (user's call, taken against a recommendation). The
+definite article presupposes a specific artifact the reader is assumed to know about, on
+the first screen they have ever seen. **What the indefinite article does NOT fix, and this
+is the part to remember if the CTA under-performs**: the ambiguity lives in the word
+"demo", not in the article — it can still be read as a canned tour somebody must sit
+through rather than as sample data to look around in, which is the misread that makes
+people SKIP rather than the one that makes them confused. "Try it with sample data" was
+proposed, weighed and set aside for the shorter label; it is the lever to try next, and
+the fork card's retired copy above is its source.
+
+**Not changed, deliberately:** the greeting itself (its three steps are explanation, not
+options, and its two doors are already correctly weighted primary/secondary); merging the
+two onboarding screens (the greeting explains the model, which has to land before the
+fork's question makes sense — merged you get three explanation cards, three arms and two
+CTAs on one screen); promoting "Start with my own things" to an equal button (asked
+directly, and it would reverse §217's amendment — the two doors are not equal-cost, so
+equal weight would misstate them; the pair is disambiguated by wording, not weight); and
+the `StartFigure.sparkle` case, kept though nothing draws it now.
+
+**Guarded by the existing `start-fork-selftest.sh`**, which passes unchanged — every one of
+its assertions is about `StartAppetite`'s ordering, the leave-first positional check and
+the measured placeholders, none of which this touches. That is the honest report and also
+the ceiling: **this pass is UNSEEN on a device.** Every change here is a weight and
+grouping judgement, no static check can see one, and the slab's proportions in particular
+(three tall rows in one surface, separated by air rather than a line) were reasoned about
+and compiled, never looked at.

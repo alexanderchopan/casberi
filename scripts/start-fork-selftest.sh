@@ -53,10 +53,18 @@ trap 'rm -rf "$TMP"' EXIT
 # rediscover it.
 #
 # The stripper tracks string literals rather than cutting at the first `//`,
-# and that is load-bearing here specifically: one of the values it must NOT
-# corrupt is `"https://www.nasa.gov/feed/"`, which contains `//` inside a
-# string. A naive stripper truncates the very literal the positive guard is
-# about to look for, and the guard then fails against correct code.
+# which matters for any URL literal in these files: a naive stripper truncates
+# the very literal a positive guard is about to look for, and the guard then
+# fails against correct code.
+#
+# **Its proof is a FIXTURE, not an anchor in production source (§527).** It used
+# to grep the stripped fork for `"https://www.nasa.gov/feed/"` — a real literal
+# that really did contain `//` — and that read correctly right up until §527
+# deleted the follow form the literal lived in, at which point the harness
+# failed with a message about a broken stripper while the stripper was fine.
+# A check whose subject can be moved by an unrelated edit reports the wrong
+# thing at exactly the moment somebody is least able to tell. The fixture below
+# carries both hazards on purpose and can never be edited out from under it.
 strip_comments() {
   python3 - "$1" <<'PY'
 import sys
@@ -121,10 +129,25 @@ strip_comments "$SEED"  > "$TMP/seed.stripped.swift"
 # The stripper is itself a check, so prove it works before trusting it — a
 # stripper that returned an empty file would make every negative guard below
 # pass vacuously, which is a check satisfied for the wrong reason.
-grep -q 'https://www.nasa.gov/feed/' "$TMP/fork.stripped.swift" \
+cat > "$TMP/stripper-fixture.swift" <<'FIXTURE'
+// a leading comment that must go
+let keep = "https://www.nasa.gov/feed/"   // a trailing comment that must go
+/* a block
+   comment that must go */
+let alsoKeep = "trailing slashes // inside a literal"
+FIXTURE
+strip_comments "$TMP/stripper-fixture.swift" > "$TMP/stripper-fixture.out"
+grep -q 'https://www.nasa.gov/feed/' "$TMP/stripper-fixture.out" \
   || { echo "✗ the comment stripper ate a string literal containing '//' — every"; \
        echo "  positive guard below would now fail against correct code"; exit 1; }
-grep -q 'struct StartFollowScreen' "$TMP/fork.stripped.swift" \
+grep -q 'trailing slashes // inside a literal' "$TMP/stripper-fixture.out" \
+  || { echo "✗ the comment stripper truncated a literal at an interior '//'"; exit 1; }
+grep -q 'must go' "$TMP/stripper-fixture.out" \
+  && { echo "✗ the comment stripper left comment text behind — every negative guard"; \
+       echo "  below would fire against the prose explaining the rule"; exit 1; }
+# …and that it produced usable source from the real files, not an empty one:
+# a stripper returning nothing makes every negative guard pass vacuously.
+grep -q 'struct StartHereScreen' "$TMP/fork.stripped.swift" \
   || { echo "✗ the comment stripper produced no usable source"; exit 1; }
 
 # --- drift guards: the signal's three links ---------------------------------
@@ -157,15 +180,19 @@ grep -q 'BridgeCatalog.category(forSource:)' "$TMP/fork.stripped.swift" \
        echo "  a hand list here goes stale the day a seat is added"; exit 1; }
 
 # --- drift guards: leave-first (the change §422 exists for) ------------------
-# Both acting arms must hand back to the feed BEFORE awaiting their sync, or
-# the rows are revealed already landed instead of watched arriving. Checked
+# The acting arm must hand back to the feed BEFORE awaiting its sync, or the
+# rows are revealed already landed instead of watched arriving. Checked
 # POSITIONALLY rather than by presence: `onStart(nil)` and a `Task` both exist
 # in either order, and the whole feature is which comes first.
+#
+# ONE arm since §527, not two: the follow arm went with the third card, and its
+# `follow(_ handle:)` was the other subject here. The rule is unchanged and so
+# is this check's shape — if a second acting arm is ever added, add it to the
+# tuple below rather than trusting it to inherit the rule.
 python3 - "$TMP/fork.stripped.swift" <<'PY'
 import re, sys
 src = open(sys.argv[1]).read()
-for fn, label in (("private func connectFolder()", "the files arm"),
-                  ("private func follow(_ handle: String)", "the follow arm")):
+for fn, label in (("private func connectFolder()", "the files arm"),):
     at = src.find(fn)
     if at < 0:
         sys.exit(f"✗ {label}: '{fn}' not found — the harness is stale, not the code")
@@ -187,24 +214,65 @@ for fn, label in (("private func connectFolder()", "the files arm"),
     # screen down, and an `@Environment` read afterwards is a dead view's storage.
     if not re.search(r"let\s+shell\s*=\s*chrome", body):
         sys.exit(f"✗ {label} uses `chrome` after teardown without capturing it first")
-print("  ✓ both acting arms hand back before their sync, capturing the environment first")
+print("  ✓ the acting arm hands back before its sync, capturing the environment first")
 PY
 
-# --- drift guards: the examples are REAL ------------------------------------
-# A placeholder that resolves to nothing is worse than an obvious fake, because
-# it is a name somebody will actually type. These three were measured against
-# the live services on 2026-08-20 (see `Network.example`'s own doc); the fakes
-# they replaced must not come back.
-for real in 'theverge.com' 'vitalik.eth' 'https://www.nasa.gov/feed/'; do
-  grep -qF "$real" "$TMP/fork.stripped.swift" \
-    || { echo "✗ the follow form lost its measured example '$real' — re-measure before"; \
-         echo "  replacing it; an example that resolves to nothing is worse than a fake"; exit 1; }
-done
-for fake in 'alice.bsky.social' 'example.com/feed.xml'; do
-  grep -qF "$fake" "$TMP/fork.stripped.swift" \
-    && { echo "✗ a fake placeholder ('$fake') is back in the follow form — it teaches the"; \
-         echo "  shape of the answer and leaves the empty field exactly where it was"; exit 1; }
-done
+# --- drift guards: the fork asks ONE question (§527) -------------------------
+# The screen carries exactly the arms `StartAppetite` orders and nothing else
+# wearing the same `card(…)` shape. Two things were deleted for the same
+# reason — they read as extra answers to a question that has two — and both
+# come back the same way, by somebody adding a `card(` call:
+#
+#   • the DEMO card, which only ever rendered for a person who had just tapped
+#     past "Try a demo" on the screen before, so it re-asked a question they
+#     had answered seconds earlier;
+#   • the FOLLOW card, whose audience the catalog serves better than a form
+#     with three segments could.
+#
+# ONE card call site PER ARM and no more. Counted against `StartAppetite.Arm`
+# rather than against a literal, so adding an arm needs no edit here while a
+# card that belongs to no arm is caught the day it lands — which is precisely
+# what both deleted cards were.
+python3 - "$TMP/fork.stripped.swift" "$APPETITE" <<'PY'
+import re, sys
+src = open(sys.argv[1]).read()
+appetite = open(sys.argv[2]).read()
+
+# Call sites are every `card(figure:` that is not the declaration itself.
+calls = len(re.findall(r"(?<!func )card\(figure:", src))
+
+m = re.search(r"enum Arm[^{]*\{\s*case ([^\n]+)", appetite)
+if not m:
+    sys.exit("✗ could not read StartAppetite.Arm — the harness is stale, not the code")
+arms = [a.strip() for a in m.group(1).split(",") if a.strip()]
+
+# One per arm, PLUS EXACTLY ONE for the catalog row — the last answer in the
+# slab, which wears the arms' own shape (§527) and is the only card that is not
+# an arm. Any further call site is an answer belonging to nothing, which is what
+# the demo card was and what made the screen read as a menu of five.
+expected = len(arms) + 1
+if calls != expected:
+    sys.exit(f"✗ the fork draws {calls} `card(figure:` call sites, expected {expected}\n"
+             f"  ({len(arms)} arms — {', '.join(arms)} — plus the catalog row).\n"
+             f"  An extra one is an answer at the same visual weight as the real ones\n"
+             f"  belonging to no question, which is exactly what the demo card was.")
+print(f"  ✓ {calls} cards: one per arm plus the catalog row, nothing else")
+PY
+# The escape hatch names the OUTCOME and is in the arms' own voice, so it reads
+# as belonging to the question rather than as a peer of the demo (§527). The
+# retired label named our surface instead, on the second screen of a first run.
+grep -qF 'Show me all the apps' "$TMP/fork.stripped.swift" \
+  || { echo "✗ the exit no longer says 'Show me all the apps' (§527) — it must name"; \
+       echo "  what the tap produces, in the same voice as the arms above it"; exit 1; }
+grep -qF 'Browse the catalog' "$TMP/fork.stripped.swift" \
+  && { echo "✗ 'Browse the catalog' is back — it names our surface rather than the"; \
+       echo "  outcome, and the common path here routes around the screen that"; \
+       echo "  teaches the word (§527)"; exit 1; }
+# A COUNT must never return to that label (user, 2026-08-11): a number is a
+# claim to survey rather than a destination to go to.
+grep -qE 'See all [0-9]+ apps|all \\\(.*count.*\) apps' "$TMP/fork.stripped.swift" \
+  && { echo "✗ a count is back in the catalog label — 2026-08-11: the number becomes"; \
+       echo "  the argument, and a number is a claim to survey"; exit 1; }
 # The standing rule, mechanical for the first time: never dwr, anywhere in a
 # demo or an onboarding suggestion.
 grep -qiE '\bdwr\b' "$TMP/fork.stripped.swift" \
@@ -223,7 +291,13 @@ func order(_ visits: [String: Int], _ cat: [String: String]) -> [StartAppetite.A
 }
 
 let D = StartAppetite.defaultOrder
-check(D == [.files, .wallet, .follow], "default order is files, wallet, follow")
+check(D == [.files, .wallet], "default order is files, wallet")
+// TWO arms since §527 — the follow card went to "Show me all the apps", whose
+// catalog serves that audience better than a three-segment form. Asserted as a
+// count so a third arm cannot be added without this harness being read: every
+// ordering fixture below is written against a two-arm default and several of
+// them stop discriminating the moment that changes.
+check(StartAppetite.Arm.allCases.count == 2, "the fork has exactly two arms (§527)")
 
 // No signal at all — somebody who skipped the demo, or walked it without
 // opening a single room. This is the COMMON case, not a fallback.
@@ -234,80 +308,93 @@ check(order(["Photos": 0], ["Photos": "Life"]) == D, "zero counts ⇒ default or
 // invented into an arm.
 check(order(["Nonesuch": 40], [:]) == D, "an unknown source orders nothing")
 
-// One appetite, stated loudly.
-check(order(["Wallet": 9], ["Wallet": "Wallet"]) == [.wallet, .files, .follow],
+// One appetite, stated loudly. Note the wallet is the ONLY arm whose lead is
+// distinguishable from the default: `.files` leads `defaultOrder` already, so
+// every fixture from here on that means to prove a signal was READ has to
+// prove `.wallet` leads. A "files-heavy demo leads with files" check would be
+// the "right result for the wrong reason" trap in its purest form — it passes
+// against a function that ignores its arguments entirely.
+check(order(["Wallet": 9], ["Wallet": "Wallet"]) == [.wallet, .files],
       "a wallet-heavy demo leads with the wallet")
-check(order(["Bluesky": 9], ["Bluesky": "Social"]) == [.follow, .files, .wallet],
-      "a social-heavy demo leads with follow")
 
 // Markets is money too — §322 keeps Wallet and Markets far apart on the
 // catalog wall so the app doesn't read as crypto-only, but for "what did you
 // come for?" they are one answer. Deleting this mapping is a live mutation.
 check(order(["Kalshi": 6, "Stocktwits": 5], ["Kalshi": "Markets", "Stocktwits": "Markets"])
-        == [.wallet, .files, .follow],
+        == [.wallet, .files],
       "time spent in market rooms argues for the wallet card")
-// …and Reading is the follow card's other half.
-check(order(["RSS": 7], ["RSS": "Reading"]) == [.follow, .files, .wallet],
-      "time spent in reading rooms argues for the follow card")
 
-// THE PARTIAL MAP, and the fixture is built so it can actually fail. A demo
-// spent entirely in Work/Agents/Media/Shopping says nothing about whether
-// somebody's own things live in a folder, a wallet or a feed. Testing that
-// alone would be the "right result for the wrong reason" trap — an unmapped
-// category yields the default order, and `.files` already leads it — so the
-// fixture pairs a LOUD unmapped category with a QUIET mapped one: if Work
-// were ever mapped to `.files`, files would outscore follow and lead.
-check(order(["Linear": 9, "Bluesky": 1], ["Linear": "Work", "Bluesky": "Social"])
-        == [.follow, .files, .wallet],
+// SOCIAL AND READING ARGUE FOR NOTHING (§527), and this is the fixture that
+// proves it rather than assuming it. When the follow arm existed they were its
+// two halves; with it gone they are unmapped, and the tempting wrong answer is
+// to fold them into `.files` on the grounds that a feed is "your stuff too".
+// It is not — somebody who spent the demo in Bluesky told us they came for
+// other people's writing, which argues for NEITHER remaining arm, and pointing
+// it at the folder card would be the guess-dressed-as-a-preference the map
+// exists to refuse.
+//
+// Built so it can actually FAIL: a LOUD social category against a QUIET wallet
+// one. If Social were mapped to `.files`, files would score 9 against the
+// wallet's 1 and lead — which is also `defaultOrder`, so the assertion below
+// flips. Testing a lone social visit would not discriminate at all.
+check(order(["Bluesky": 9, "Wallet": 1], ["Bluesky": "Social", "Wallet": "Wallet"])
+        == [.wallet, .files],
+      "Social argues for no arm even when it dominates the visits")
+check(order(["RSS": 9, "Wallet": 1], ["RSS": "Reading", "Wallet": "Wallet"])
+        == [.wallet, .files],
+      "Reading argues for no arm even when it dominates the visits")
+
+// THE PARTIAL MAP, same shape and the same reason. A demo spent entirely in
+// Work/Agents/Media/Shopping says nothing about whether somebody's own things
+// live in a folder or a wallet.
+check(order(["Linear": 9, "Wallet": 1], ["Linear": "Work", "Wallet": "Wallet"])
+        == [.wallet, .files],
       "an unmapped category scores nothing even when it dominates the visits")
 check(order(["Claude": 9, "Wallet": 1], ["Claude": "Agents", "Wallet": "Wallet"])
-        == [.wallet, .files, .follow],
+        == [.wallet, .files],
       "Agents argues for no arm")
 
 // VISITS, not distinct rooms. One room read nine times beats three rooms
 // glanced at once each — the person who did the former was reading. Under a
-// `+= 1` accumulation this fixture inverts, which is what makes it a test.
-// Note `.follow` scores 3 here and therefore sits SECOND, ahead of the
-// unscored `.files` — the assertion is that wallet leads, not that follow is
-// buried, and writing it the other way round was this harness's own first
-// mistake.
-check(order(["Wallet": 9, "Bluesky": 1, "Farcaster": 1, "RSS": 1],
-            ["Wallet": "Wallet", "Bluesky": "Social", "Farcaster": "Social", "RSS": "Reading"])
-        == [.wallet, .follow, .files],
+// `+= 1` accumulation this fixture inverts, which is what makes it a test:
+// the wallet's 9 becomes 1 and loses to the folder's 3.
+check(order(["Wallet": 9, "Photos": 1, "Obsidian": 1, "Calendar": 1],
+            ["Wallet": "Wallet", "Photos": "Life", "Obsidian": "Notes", "Calendar": "Life"])
+        == [.wallet, .files],
       "nine visits to one room beat three rooms visited once each")
 
 // Ties keep the default relative order — checked on a tie that is NOT zero,
-// so it exercises the comparator rather than the early-out above. Wallet and
-// follow both score 4 and so keep their default order (wallet, then follow);
-// files scored nothing and goes last.
-check(order(["Wallet": 4, "Bluesky": 4], ["Wallet": "Wallet", "Bluesky": "Social"])
-        == [.wallet, .follow, .files],
+// so it exercises the comparator rather than the early-out above. Both arms
+// score 4, so the default order stands; reverse the tiebreak and it inverts.
+check(order(["Wallet": 4, "Photos": 4], ["Wallet": "Wallet", "Photos": "Life"])
+        == [.files, .wallet],
       "an equal score keeps the default relative order")
 
 // TOTAL ORDER: identical input, identical output, every time. A fork whose
 // cards reshuffle between draws reads as broken.
-let mixed = ["Wallet": 3, "Bluesky": 3, "Photos": 3, "Obsidian": 1]
-let cats = ["Wallet": "Wallet", "Bluesky": "Social", "Photos": "Life", "Obsidian": "Notes"]
+let mixed = ["Wallet": 3, "Kalshi": 3, "Photos": 3, "Obsidian": 1]
+let cats = ["Wallet": "Wallet", "Kalshi": "Markets", "Photos": "Life", "Obsidian": "Notes"]
 let first = order(mixed, cats)
 for _ in 0..<200 {
     check(order(mixed, cats) == first, "ordering is deterministic across draws")
 }
-check(first.count == 3 && Set(first).count == 3, "every arm is drawn exactly once")
+check(first.count == 2 && Set(first).count == 2, "every arm is drawn exactly once")
 
 // Every arm is always present, whatever the input — this orders, it never
-// hides, which is what keeps §217's "one decision, not three offers of
-// different weight" intact.
+// hides, which is what keeps §217's "one decision, not offers of different
+// weight" intact.
 check(Set(order(["Wallet": 99], ["Wallet": "Wallet"])) == Set(StartAppetite.Arm.allCases),
       "no arm is ever dropped")
 
 // The category map's own contract.
 check(StartAppetite.arm(forCategory: "Wallet") == .wallet, "Wallet ⇒ wallet")
 check(StartAppetite.arm(forCategory: "Markets") == .wallet, "Markets ⇒ wallet")
-check(StartAppetite.arm(forCategory: "Social") == .follow, "Social ⇒ follow")
-check(StartAppetite.arm(forCategory: "Reading") == .follow, "Reading ⇒ follow")
 check(StartAppetite.arm(forCategory: "Life") == .files, "Life ⇒ files")
 check(StartAppetite.arm(forCategory: "Notes") == .files, "Notes ⇒ files")
-for none in ["Work", "Agents", "Media", "Shopping", "", "wallet"] {
+// Social and Reading join the unmapped set since §527 — listed here beside
+// the four that were always unmapped so the map's whole contract reads in one
+// place rather than the change living only in a comment.
+for none in ["Social", "Reading", "Work", "Agents", "Media", "Shopping", "", "wallet"] {
     check(StartAppetite.arm(forCategory: none) == nil, "'\(none)' argues for no arm")
 }
 
@@ -368,14 +455,19 @@ mutate "counting distinct rooms instead of visits" \
 mutate "Markets no longer arguing for the wallet" \
   'case "Wallet", "Markets":  .wallet' 'case "Wallet":  .wallet'
 
-mutate "Reading no longer arguing for the follow card" \
-  'case "Social", "Reading":  .follow' 'case "Social":  .follow'
-
 mutate "an unmapped category invented into an arm" \
   "default:                   nil" "default:                   .files"
 
+# The §527 mutation, and the one this pass exists for: folding Social back into
+# the folder card. It is the tempting wrong answer now that the follow arm is
+# gone — "a feed is your stuff too" — and it renders as a perfectly ordinary
+# fork that simply leads with the wrong card for every reader in the demo.
+mutate "Social folded into the files card" \
+  "        case \"Life\", \"Notes\":      .files" \
+  "        case \"Life\", \"Notes\", \"Social\", \"Reading\":      .files"
+
 mutate "the default order rewritten" \
-  "static let defaultOrder: [Arm] = [.files, .wallet, .follow]" \
-  "static let defaultOrder: [Arm] = [.follow, .wallet, .files]"
+  "static let defaultOrder: [Arm] = [.files, .wallet]" \
+  "static let defaultOrder: [Arm] = [.wallet, .files]"
 
 echo "✓ onboarding-fork self-test passed"
