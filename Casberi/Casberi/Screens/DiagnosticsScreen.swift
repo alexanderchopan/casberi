@@ -83,6 +83,22 @@ struct DiagnosticsScreen: View {
             log("Newest: \(newest.kind.typeTag) · \(newest.source) · \(short(newest.capturedAt))")
         }
 
+        // Every room's empty-state gate ultimately asks `Corpus.hasSurfaced`
+        // (2026-08-30 field report: things exist per the raw fetch above, but
+        // every room — All, Wallet's own row list, a freshly-poured demo —
+        // renders as empty on one specific device, surviving a full delete +
+        // reinstall). This runs `hasSurfaced`/`surfaced` on the EXACT SAME
+        // array `all` above, already proven non-empty, to separate two very
+        // different bugs that look identical from the feed: the FILTER
+        // logic disagreeing with a raw fetch (a code bug, reachable here),
+        // vs. the live `@Query` a room actually renders from disagreeing
+        // with a fresh fetch on the same store (a binding/store bug, NOT
+        // reachable from this screen — this call cannot rule that out, only
+        // rule the filter itself in or out).
+        log("hasSurfaced(all): \(Corpus.hasSurfaced(all) ? "YES — filter is not the cause" : "NO — filter itself excludes every thing here")")
+        let surfacedCount = Corpus.surfaced(all).count
+        log("surfaced(all).count: \(surfacedCount) of \(all.count)")
+
         // — The cover path, step by step —
         let auth = PHPhotoLibrary.authorizationStatus(for: .readWrite)
         log("Photos access: \(authWord(auth))")
