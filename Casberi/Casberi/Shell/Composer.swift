@@ -4223,7 +4223,15 @@ struct Composer: View {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if text.hasSuffix("?") { return true }
         let first = text.split(separator: " ").first.map(String.init) ?? ""
-        return ["what", "who", "when", "where", "why", "how", "how's",
+        // Every question word's own contraction, not just "how's" (2026-08-30
+        // — "what's my balance", no "?", never matched: "what's" wasn't on
+        // this list while its sibling "how's" was, an inconsistency rather
+        // than a deliberate omission. This is still an EXACT first-word
+        // match, not fuzzy — a typo (e.g. "wahjts my balance") still won't
+        // match anything here, and ending a question with "?" is the one
+        // reliable way around that regardless of the first word.
+        return ["what", "what's", "who", "who's", "when", "when's",
+                "where", "where's", "why", "why's", "how", "how's",
                 "did", "does", "do", "is", "are", "can", "show", "find"].contains(first)
     }
 
