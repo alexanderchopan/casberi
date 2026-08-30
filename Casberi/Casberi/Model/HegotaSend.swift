@@ -32,7 +32,14 @@ enum HegotaSend {
     enum Failure: Error, Equatable {
         case noKey
         case faucetRefused(String)
+        /// The chain refused it, **in the node's own words** (prd §530). Ours
+        /// were a placeholder that named none of the causes: `insufficient
+        /// funds`, `nonce too low` and a malformed frame are three different
+        /// next steps and were one dead end.
         case broadcastRefused(String)
+        /// No host answered at all. Never reported as a refusal — see
+        /// `broadcast`, and §515a for the read-path version of this mistake.
+        case chainUnreachable
         case signingRefused
     }
 
@@ -138,14 +145,52 @@ enum HegotaSend {
     // MARK: - The one write that signs
 
     /// Broadcast. The only write verb in this app's Hegotá code that follows a
-    /// signature — appearing exactly once, so the conduct guard has one thing
-    /// to count.
+    /// signature — the method literal appearing exactly once, so the conduct
+    /// guard has one thing to count.
+    ///
+    /// ## THE NODE'S OWN WORDS (prd §530), and the same fix vibenet took
+    ///
+    /// This rode `HegotaRPC.call`, which maps a transport failure, a non-200
+    /// and a JSON-RPC `error` object all to nil — so every refusal arrived as
+    /// one placeholder sentence naming none of them. Sending is the path where
+    /// that costs most: a read that goes quiet is annoying, a write refused
+    /// with no reason cannot be acted on.
+    ///
+    /// `postJSONBody`, not `postJSON`: a node commonly answers a rejected send
+    /// with **HTTP 400 and the reason in the body**, and every other helper in
+    /// `IngestSupport` gates the body on a 200 — throwing away the one thing
+    /// worth having before any parse could reach it.
+    ///
+    /// **A host that REFUSED has answered**, so the walk stops there rather
+    /// than asking two more nodes the same rejected transaction and reporting
+    /// the last one's silence instead of the first one's reason — `HegotaRPC.
+    /// call`'s own rule, which matters more here than on any read.
     static func broadcast(rawTransaction raw: String) async throws -> String {
-        guard let hash = await HegotaRPC.call(method: "eth_sendRawTransaction",
-                                              params: [raw]) as? String else {
-            throw Failure.broadcastRefused("the node refused the transaction")
+        let body: [String: Any] = ["id": 1, "jsonrpc": "2.0",
+                                   "method": "eth_sendRawTransaction", "params": [raw]]
+        var answeredWithStatus = 0
+        for host in HegotaRPC.hosts {
+            let answered = await IngestSupport.postJSONBody(host, body: body,
+                                                            service: HegotaIdentity.source)
+            guard let root = answered.json as? [String: Any] else {
+                // Nothing readable from this host — the next one may be up.
+                answeredWithStatus = max(answeredWithStatus, answered.status)
+                continue
+            }
+            if let hash = root["result"] as? String, !hash.isEmpty { return hash }
+            if let error = root["error"] as? [String: Any] {
+                let words = (error["message"] as? String) ?? (error["data"] as? String) ?? ""
+                throw Failure.broadcastRefused(words.isEmpty
+                    ? String(localized: "the node refused it and gave no reason")
+                    : words)
+            }
+            answeredWithStatus = max(answeredWithStatus, answered.status)
         }
-        return hash
+        if answeredWithStatus > 0 {
+            throw Failure.broadcastRefused(
+                String(localized: "every node answered \(String(answeredWithStatus)) and nothing readable"))
+        }
+        throw Failure.chainUnreachable
     }
 
     // MARK: - Send a simple value transfer

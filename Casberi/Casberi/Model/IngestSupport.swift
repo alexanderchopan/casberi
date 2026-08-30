@@ -427,6 +427,33 @@ enum IngestSupport {
         return (try? JSONSerialization.jsonObject(with: data), http.statusCode)
     }
 
+    /// Like `postJSONStatus`, but decodes the body **even when the status is
+    /// not 200** (2026-08-30, prd §530).
+    ///
+    /// Every other helper here gates the body on a 200, which is right for a
+    /// REST bridge — a 404 has nothing worth reading. It is wrong for
+    /// JSON-RPC, where a node that refuses a transaction commonly answers
+    /// `400` with the reason in an `error` object, and where that reason is
+    /// the only thing anybody can act on. `run` dropping it is how a broadcast
+    /// refusal became "the node refused the transaction" with no cause
+    /// attached.
+    ///
+    /// `status` is 0 on a transport failure (no response at all), which stays
+    /// distinct from a node that answered with a refusal — the whole point.
+    static func postJSONBody(_ url: String, auth: String? = nil, body: [String: Any],
+                             headers: [String: String] = [:],
+                             service: String? = nil) async -> (json: Any?, status: Int) {
+        guard let u = URL(string: url),
+              let payload = try? JSONSerialization.data(withJSONObject: body) else { return (nil, 0) }
+        var request = URLRequest(url: u)
+        request.httpMethod = "POST"
+        request.httpBody = payload
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        apply(auth: auth, headers: headers, to: &request)
+        guard let (data, http) = await send(request, service: service) else { return (nil, 0) }
+        return (try? JSONSerialization.jsonObject(with: data), http.statusCode)
+    }
+
     /// A JSON-RPC BATCH: an ARRAY of calls in one request, answered with an
     /// array of results (2026-07-16, Solana activity). `postJSON` above takes a
     /// dictionary body and so can't express this — and the batch is the whole

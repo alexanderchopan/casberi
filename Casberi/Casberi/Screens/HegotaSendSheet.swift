@@ -242,6 +242,8 @@ struct HegotaSendSheet: View {
                     errorText = String(localized: "Signing was cancelled or refused.")
                 case .noKey:
                     errorText = String(localized: "No key on this phone.")
+                case .chainUnreachable:
+                    errorText = String(localized: "Couldn't reach the chain, so nothing was sent.")
                 default:
                     errorText = String(localized: "Couldn't send.")
                 }

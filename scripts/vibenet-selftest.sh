@@ -5217,4 +5217,95 @@ grep -q 'vibenetEmptyNote' "$TMP/feed.nc.swift" \
 grep -q 'VibenetQuiet.emptyRoomNote(' "$TMP/feed.nc.swift" \
   || { echo "✗ the vibenet empty-room note is no longer composed by VibenetQuiet"; exit 1; }
 
+# ---------------------------------------------------------------------------
+# THE WRITE PATH SAYS WHY IT FAILED (prd §530).
+#
+# `VibenetSend.swift` imports SwiftData, so no harness here can compile it —
+# these are the only checks that can reach it at all, and both failures they
+# guard are INVISIBLE to everything else: the build is happy, the sheet paints
+# a perfectly good red sentence, and the screen sweep proves a tray rendered.
+#
+# Reads a COMMENT-STRIPPED copy, because the file DOCUMENTS both rules by
+# quoting the broken sentence it replaced and by naming the function it must
+# not ride — a raw grep flags the prose explaining the fix as the fix being
+# absent (the Obsidian/Cursor lesson).
+# ---------------------------------------------------------------------------
+SEND="Casberi/Casberi/Model/VibenetSend.swift"
+[[ -f "$SEND" ]] || { echo "✗ $SEND not found"; exit 1; }
+strip_comments "$SEND" > "$TMP/send.nc.swift"
+
+# 1. THE NODE'S OWN WORDS. The placeholder is what a person actually saw:
+#    "The network refused it: the node refused the transaction" — a sentence
+#    that names none of `insufficient funds`, `nonce too low` or `create
+#    address does not match the sender`, which are three different next steps.
+if grep -qF 'the node refused the transaction' "$TMP/send.nc.swift"; then
+  echo "✗ VibenetSend broadcasts a placeholder refusal again — prd §530: the reason must be the node's own words"
+  exit 1
+fi
+# 2. AND IT MUST BE ABLE TO READ THEM. `VibenetChain.call` maps a transport
+#    failure, a non-200 and a JSON-RPC error object all to nil, so riding it
+#    puts the reason out of reach however good the copy is. A node commonly
+#    answers a rejected send with 400 and the reason in the BODY, which is why
+#    this is `postJSONBody` and not `postJSON`.
+grep -qF 'IngestSupport.postJSONBody' "$TMP/send.nc.swift" \
+  || { echo "✗ VibenetSend no longer reads the broadcast body — a 400 carrying the node's reason would be dropped before any parse"; exit 1; }
+if grep -qE 'VibenetChain\.call\(method: "eth_sendRawTransaction"' "$TMP/send.nc.swift"; then
+  echo "✗ VibenetSend broadcasts through VibenetChain.call again — that function discards the node's error object"
+  exit 1
+fi
+# 3. UNREACHABLE IS NOT REFUSED. §515a's whole lesson, in the write path:
+#    blaming the chain for a dropped connection is a claim about something
+#    that never happened.
+#    ANCHORED to end-of-line: `grep -F 'case chainUnreachable'` is satisfied
+#    by `case chainUnreachableXX`, so the loose form survived its own mutation
+#    on this guard's first run — the shape this repo has been caught by before
+#    (a guard must prove the condition is the WHOLE condition).
+grep -qE 'case chainUnreachable[[:space:]]*$' "$TMP/send.nc.swift" \
+  || { echo "✗ VibenetSend can no longer tell an unreached node from a refusing one (§515a)"; exit 1; }
+
+# 4. A CREATION REFUSES BEFORE THE FACE ID. An empty payer means the SENDER
+#    pays, and the sender is an account derived from a salt generated moments
+#    earlier — it cannot hold anything, so the node refuses every time. That
+#    was found only after asking for a Face ID, signing with it, and
+#    broadcasting.
+#
+#    `noSponsor` was declared for exactly this and had NO thrower for the
+#    life of the feature, while the sheet carried its sentence the whole
+#    time — so the presence of the case proves nothing and the THROW is what
+#    is asserted.
+grep -qE 'throw Failure\.noSponsor' "$TMP/send.nc.swift" \
+  || { echo "✗ nothing throws Failure.noSponsor — an unsponsored creation would burn a Face ID on a transaction the node refuses every time (prd §530)"; exit 1; }
+grep -qE 'throw Failure\.sponsorUnreadable' "$TMP/send.nc.swift" \
+  || { echo "✗ nothing throws Failure.sponsorUnreadable — a payer service that never answered would be reported as the faucet declining"; exit 1; }
+
+# 5. AND IT REFUSES *BEFORE*, WHICH IS THE WHOLE POINT. Order, not presence:
+#    the same two throws sitting AFTER the signature still spend somebody's
+#    Face ID before telling them nothing could have come of it. Checked by
+#    line number because there is no other way to say "earlier than" in a
+#    text check, and because a guard that only proves the words appear is the
+#    guard this repo has been burned by twice.
+python3 - "$TMP/send.nc.swift" <<'ORDER' || exit 1
+import sys
+lines = open(sys.argv[1]).read().splitlines()
+def first(needle):
+    for i, line in enumerate(lines):
+        if needle in line:
+            return i
+    return None
+# MAX, not min: both refusals must precede the signature. Under `min`, moving
+# one of them after the sign line leaves the other satisfying the check while
+# half the flow still spends a Face ID before refusing.
+refusal = max(x for x in (first("throw Failure.noSponsor"),
+                          first("throw Failure.sponsorUnreadable")) if x is not None)
+signature = first("VibenetDeviceKey.sign(")
+if signature is None:
+    print("✗ VibenetSend no longer signs — this guard has nothing to order against")
+    sys.exit(1)
+if refusal > signature:
+    print("✗ the sponsorship refusal now happens AFTER the signature — a Face ID would be spent on a creation that cannot land (prd §530)")
+    sys.exit(1)
+ORDER
+
+echo "write-path guards ✓"
+
 echo "✓ vibenet-selftest: drift guards, assertions and mutations all passed"

@@ -39780,3 +39780,108 @@ two places where the offer is about something they are actually doing.
 
 **UNSEEN on a device.** Both placements are layout and weight judgements no static check can
 see, and the Wallet one sits at the head of the app's densest card.
+
+## 530. "The network refused it: the node refused the transaction" — the write path could not say why, and one refusal it should have made before the Face ID (user: "error creating new account in vibenet", 2026-08-30)
+
+Reported as a screenshot: "Create with Face ID", and under it, in red, **"The network
+refused it: the node refused the transaction."** Two defects, and the second is
+the one that most likely produced that exact screen.
+
+**1. THE SENTENCE NAMED NOTHING, BECAUSE THE CODE NEVER HAD IT.**
+`VibenetSend.broadcast` rode `VibenetChain.call`, which maps a transport
+failure, a non-200 status and a JSON-RPC `error` object **all to nil** — so the
+reason was thrown away one layer below the copy, and no wording could have
+recovered it. `"the node refused the transaction"` was a placeholder standing in
+for `insufficient funds`, `nonce too low`, `intrinsic gas too low` and `create
+address does not match the sender`: four different next steps, spent on one dead
+end. **This is §515a's lesson in the WRITE path**, where it costs more — that
+outage made a room say "Couldn't reach the chain" over a devnet answering every
+request, which is annoying; a write refused with no reason cannot be acted on at
+all by the person holding the phone.
+
+The load-bearing half of the fix is **`IngestSupport.postJSONBody`**, new here:
+every other helper in that file gates the decoded body on a 200, which is right
+for a REST bridge (a 404 has nothing worth reading) and wrong for JSON-RPC,
+where **a node commonly answers a rejected send with HTTP 400 and the reason in
+the body**. So the one thing worth having was dropped by the transport before
+any parse could reach it. `broadcast` builds its own request rather than
+extending `VibenetChain.call`: that function belongs to the read path,
+`VibenetBridge.swift` is guarded as a reader, and `vibenet-selftest.sh` fails the
+build if a write-shaped method appears in it. **`chainUnreachable` is a separate
+failure from `broadcastRefused`** — blaming the node for a dropped connection is
+a claim about something that never happened.
+
+**2. AN UNSPONSORED CREATION CANNOT SUCCEED, AND THE FLOW FOUND OUT AFTER
+SPENDING A FACE ID.** An empty `payer` means the SENDER pays. The sender is an
+account derived seconds earlier from a salt `createAccount` generates at random
+in the same call — so it holds nothing and **cannot**: nobody could have funded
+an address nobody had ever seen. Every unsponsored creation that costs anything
+is therefore refused by the node, every time. The flow asked for a Face ID,
+signed with it, broadcast, and reported the unreadable sentence above.
+
+**`Failure.noSponsor` was declared for exactly this state and had no thrower for
+the life of the feature**, while `VibenetCreateSheet` carried its sentence from
+the day it shipped and the screen's own "Gas" line said the fact *before* the
+tap: "Nobody is sponsoring — the account needs funds first." The copy was right
+and nothing in the code agreed with it. This is the code catching up.
+
+**The condition is the FEE, not the sponsorship** — a transaction costing nothing
+needs nobody to pay it, so a zero-fee creation may still go unsponsored. That
+keeps the claim exactly true rather than roughly true; the shipped defaults are
+non-zero, so the guard is on the path every real creation takes.
+
+**3. THE PAYER HAS THREE ANSWERS, NOT TWO.** `sponsoredPayer` returned `Data?`,
+folding *the faucet has nothing for you* into *nobody answered*. Both render as
+an absent sponsor and they are not the same fact: one is a finite devnet quota
+doing its job, the other is a service that blinked, and they send a person to do
+different things — wait, or try again. `PayerOffer` is `sponsored`/`declined`/
+`unreadable`, and the sheet's Gas line now says all three apart (plus "Checking…"
+while the read is in flight). **Spelled `declined`, never `none`**: the value is
+held in an `Optional`, and a case named `none` there is the Swift footgun where
+`.none` resolves to `Optional.none` instead. A name that cannot be confused beats
+a comment warning about the one that can.
+
+**4. HEGOTÁ CARRIED THE IDENTICAL LINE**, so it takes the identical fix (§309's
+rule: one ruling, four instances). Its walk stops at the first host that
+REFUSED — a host that refused has answered, and walking on would ask two more
+nodes the same rejected transaction and report the last one's silence instead of
+the first one's reason, which is `HegotaRPC.call`'s own rule and matters more on
+a write than on any read.
+
+**`-vibenetCreateProbe YES`** is the cheap instrument that would have named this
+in one launch (§318's standing lesson: build the instrument before the plausible
+fix). It walks `createAccount`'s own sequence up to — and deliberately NOT
+including — the signature: config, key, derived address, and what the payer says,
+ending on `wouldRefuse=`. It signs nothing, sends nothing and raises no prompt,
+so it can sit in a headless sweep. It exists because a failed creation has SIX
+causes rendering as one red sentence and only two are bugs: config unreadable, no
+key, an address that will not derive, the faucet empty, the payer service silent,
+or the node genuinely refusing the bytes. **The address it prints is NOT a real
+creation's** — the salt is fixed at zero, as `VibenetCreateSheet.draftAddress`
+already does, because the real one is random per tap.
+
+**Guarded mechanically, because `VibenetSend.swift` imports SwiftData and no
+harness here can compile it** — these greps are the only checks that reach that
+file at all, and every failure they cover is invisible to everything else (the
+build is happy, the sheet paints a perfectly good red sentence, and a screen
+sweep proves a tray rendered). Five guards in `vibenet-selftest.sh`, four in
+`hegota-selftest.sh`, mutation-proven against the shipped file that produced the
+report. **Two of them were wrong on their first run, both the shapes this repo
+keeps paying for**: `grep -F 'case chainUnreachable'` is satisfied by `case
+chainUnreachableXX`, so the guard survived its own mutation (a guard must prove
+the condition is the WHOLE condition); and the ordering fixture — *the refusal
+must precede the signature* — was caught by a DIFFERENT guard, because the
+mutation had deleted a throw rather than moving it. **A fixture only tests the
+rule it names if it fails that rule and passes every other one.** The ordering
+check also takes the LATER of the two refusals, not the earlier: under `min`,
+moving one past the sign line leaves the other satisfying it while half the flow
+still spends a Face ID before refusing.
+
+**UNMEASURED, and this is the honest grade.** Authored on Linux with no Xcode and
+no Swift toolchain, so nothing here has been compiled and `verify.sh` has not
+run; the session's network policy refuses `rpc.vibes.base.org`, so no broadcast
+was made and **the node's real words for this account are still unknown.** What
+is fixed for certain is that the next attempt states them. Every added path fails
+safe: an unreadable answer reports unreachable rather than inventing a refusal,
+and the new refusal happens before anything is signed, so its worst case is
+declining to send a transaction that could not have landed.
