@@ -767,8 +767,23 @@ struct Composer: View {
     /// above, seen from the document's side. Separate from `restChrome` so the
     /// two can't disagree about when the brief yields: this is the one
     /// condition where an answer exists and is deliberately not drawn.
+    ///
+    /// `!inFlight` (2026-08-30) closes the second half of the Bankr bug — the
+    /// commit()-time blur fixes the window BEFORE an answer settles, but the
+    /// settle-time re-focus (`askedByTyping`, in commit()'s own Task) fires
+    /// the MOMENT the free on-device answer finishes, which for a keyed
+    /// follow-up is BEFORE the keyed request has even started (askWithKey()
+    /// runs afterward, off the `inFlight` watcher). Without this, that
+    /// re-focus satisfied this condition again immediately, hiding the
+    /// document a second time — so the free answer flashed briefly and then
+    /// Bankr's own answer streamed into a view nobody could see, which is
+    /// exactly "briefly shows then switches to empty composer." `inFlight`
+    /// covers BOTH phases (askWithKey() sets it true again before the free
+    /// answer's settle work finishes), so the ask surface can only replace a
+    /// document once nothing is actually running — the genuinely idle case
+    /// this was written for.
     private var askSurfaceShowing: Bool {
-        answering && fieldFocused && !hasDraft && !isRecording
+        answering && fieldFocused && !hasDraft && !isRecording && !inFlight
     }
 
     /// One ask chip's staggered rise-in on open (delight, 2026-07-12).
