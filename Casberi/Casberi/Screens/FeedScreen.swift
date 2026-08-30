@@ -149,6 +149,10 @@ struct FeedScreen: View {
     // This window's stack and detail pane (per-window since `SceneState`).
     @Environment(HomeRoute.self) private var route
     @Environment(PadDetailSelection.self) private var detail
+    /// The safety-net refresh's trigger (see the `.task(id: scenePhase)`
+    /// below) — a signal that changes independently of `@Query`'s own
+    /// health, unlike `corpusRevision`.
+    @Environment(\.scenePhase) private var scenePhase
 
     init(source: String, isActive: Bool, nearActive: Bool = true, rowBudget: Int? = nil) {
         self.source = source
@@ -1173,8 +1177,15 @@ struct FeedScreen: View {
         Pinboard.isPinnedRoom(source) ? things : Corpus.surfaced(things)
     }
 
-    private func liveVisible() -> [Thing] {
-        feedThings.filter { thing in
+    /// `rawOverride` is the escape hatch the safety-net refresh below uses:
+    /// when supplied, it stands in for `feedThings` (still run through
+    /// `Corpus.surfaced`/pin-room handling the same way `feedThings` itself
+    /// does) so the SAME filtering rules apply whether the source array
+    /// came from the live `@Query` or from a raw fetch that bypassed it.
+    private func liveVisible(rawOverride: [Thing]? = nil) -> [Thing] {
+        let base = rawOverride.map { Pinboard.isPinnedRoom(source) ? $0 : Corpus.surfaced($0) }
+            ?? feedThings
+        return base.filter { thing in
             // The pinned room's membership is decided entirely by the `@Query`
             // above (`pinnedAt != nil`), so there is no source to match against
             // — and matching one is how this room shipped EMPTY (2026-08-10):
@@ -3641,6 +3652,45 @@ struct FeedScreen: View {
             } catch { return }   // superseded by a newer emission
             guard !Task.isCancelled else { return }
             let next = liveVisible()
+            allSnapshotKey = snapshotSignature(next)
+            debouncedAllSnapshot = next
+        }
+        // SAFETY NET (2026-08-30, field report — a known SwiftData/CloudKit
+        // bug, FB14619787): `@Query`'s live observation can permanently stop
+        // firing after the corpus is restored from CloudKit on a fresh
+        // install. The store genuinely has the data — a raw `fetch()` proves
+        // it, and it survives even a full reinstall — but `@Query`'s own
+        // `things` never picks it up, so `liveVisible()`'s default path
+        // (which reads `things` via `feedThings`) inherits the same
+        // blindness, and the `.task(id: corpusRevision)` above can't recover
+        // either: it depends on `@Query` itself noticing something changed
+        // so the body re-evaluates, which is exactly the notification this
+        // bug drops.
+        //
+        // Keyed on `scenePhase`, not `corpusRevision` — a signal that
+        // changes independently of `@Query`'s own health, so this keeps
+        // firing even when everything downstream of `things` is stuck.
+        // Checked once per foreground activation only (this bug's own
+        // reproduction is specifically "on launch"), never a tight poll: one
+        // SQL `COUNT` (`Corpus.count`, the same helper `corpusRevision`
+        // uses), and a full raw fetch only on an actual mismatch — for the
+        // overwhelming majority of installs, where `@Query` is healthy, this
+        // is a no-op every single time.
+        //
+        // Compared against `things.count` CAPPED at the room's own fetch
+        // limit, never the raw count directly — `things` is bounded at
+        // `allRoomFetchLimit`, so on any corpus larger than that an
+        // uncapped comparison would read as a permanent mismatch and run
+        // the expensive fallback on every foreground, defeating the bound
+        // `things` exists to enforce.
+        .task(id: scenePhase) {
+            guard source == "All", filter.tag == "All", scenePhase == .active else { return }
+            let cappedRaw = min(Corpus.count(in: modelContext), Self.allRoomFetchLimit)
+            guard cappedRaw != things.count else { return }
+            guard let raw = try? modelContext.fetch(FetchDescriptor<Thing>(
+                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))
+            else { return }
+            let next = liveVisible(rawOverride: raw)
             allSnapshotKey = snapshotSignature(next)
             debouncedAllSnapshot = next
         }
