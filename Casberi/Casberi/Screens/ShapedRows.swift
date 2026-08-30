@@ -1879,7 +1879,7 @@ struct SenderInitial: View {
             .frame(width: size, height: size)
             .overlay(
                 Text(letter)
-                    .font(.system(size: size * 0.5, weight: .semibold, design: .rounded))
+                    .font(.custom(DSFont.semibold, fixedSize: size * 0.5))
                     .foregroundStyle(.white)
             )
             .accessibilityLabel("From \(Self.displayName(of: sender))")

@@ -71,7 +71,7 @@ struct AssetMark: View {
                     .frame(width: size, height: size)
                     .overlay(
                         Text(monogram)
-                            .font(.system(size: size * 0.40, weight: .semibold, design: .rounded))
+                            .font(.custom(DSFont.semibold, fixedSize: size * 0.40))
                             .foregroundStyle(tint ?? DS.textSecondary)
                             .minimumScaleFactor(0.7)
                             .lineLimit(1)

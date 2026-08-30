@@ -1,13 +1,78 @@
 import SwiftUI
 
-/// The SF type ramp. Ported 1:1 from the prototype's `.t-*` classes, which are
-/// the concrete visual spec. Brief §8 named the original size ramp
-/// 34/22/17/15/13/12/10; the reading band (17/15/13 → 18/16/14, see below) was
-/// raised a point each on 2026-07-25 so running text reads less like a manual.
+/// The type ramp — **FIVE SIZES, ONE FAMILY** (prd §532, 2026-08-29).
 ///
-/// Dynamic Type: every style scales with the person's text-size setting via
-/// UIFontMetrics, anchored to its nearest system text style — the ramp keeps
-/// its proportions while honoring accessibility sizes.
+/// ## What changed and why
+///
+/// This file used to carry sixteen distinct point sizes (9 · 10 · 11 · 12 · 13
+/// · 14 · 16 · 18 · 20 · 22 · 24 · 28 · 34 · 40 · 48 · 148), and **1,562 of the
+/// app's ~1,900 `dsText` calls sat in five rungs spanning 11–18pt** — steps of
+/// one and two points, which is 8–14% and therefore below the threshold where a
+/// size step reads as RANK. It reads as wobble instead, which this file's own
+/// `rowTitle17` note already said in as many words ("17 and 18 don't separate,
+/// they wobble") and then never generalised: `label11` shipped one point under
+/// `label12` for months, in the same rows.
+///
+/// The ramp is now the usual five, at a ratio of about 1.5 throughout:
+///
+///     12  caption   metadata, chips, tags, timestamps
+///     17  body      running text, row titles (semibold), a row's figure (bold)
+///     24  title     a card's name
+///     40  head      the one head on a tray, a sheet or a room
+///     64  crown     money, one per surface (§506)
+///
+/// Steps: 1.42 · 1.41 · 1.67 · 1.60. The span from caption to crown is 5.3×,
+/// against roughly 4.4× before — **further apart AND fewer**, which is the whole
+/// move. Hierarchy that used to be attempted with a point or two of size is
+/// carried by the three ink tiers (`DS.textPrimary`/`Secondary`/`Tertiary`) and
+/// by weight, which is a bigger vocabulary than the sizes ever were: five sizes
+/// × three tiers × four weights.
+///
+/// **The crown had to move 48 → 64.** Left at 48 it sits 1.2× from a 40pt head
+/// — the same crowding this pass exists to delete, relocated to the top of the
+/// ramp. At 64 the biggest number in the app is unmistakably the biggest thing
+/// in the app, and §506's "one crown per surface" gets easier to hold.
+///
+/// ## The family
+///
+/// **Figtree, which was already the brand** — `website/styles.css` has embedded
+/// it as a variable TTF and set the whole site in it since the site existed,
+/// while the app ran on SF. The marketing surface and the product disagreed
+/// about what the brand looks like, and the product was the one that was wrong.
+/// The five static weights in `Shared/Fonts/` are instanced from **that same
+/// file**, so the app and the site are byte-identical rather than merely
+/// similar.
+///
+/// It is OFL-licensed (free commercially, embeddable, the font itself may not
+/// be resold), 200KB for five weights, and it carries `tnum` — tabular figures,
+/// which a money app cannot do without and which `dsTabularDigits` needs.
+///
+/// `Shared/` is synchronized into all three targets, so the app, the share
+/// extension and the widgets all carry the font and all read this file. Each
+/// registers it in its own `Info.plist` under `UIAppFonts`; an extension does
+/// not inherit the host app's registration.
+///
+/// **`rounded` is gone.** SF Rounded was the display face and SF Pro Text the
+/// functional one (the 2026-07-09 rule); with one family there is no second
+/// face to switch to, which is what prd §190 ("we have different fonts", fixed
+/// with ONE font) was reaching for. `monospaced` survives and still resolves to
+/// SF Mono — Figtree has no monospaced cut, and a mono rung is a second FAMILY
+/// on purpose, for log lines and device codes.
+///
+/// **It fails safe.** `Font.custom` falls back to the system face if
+/// registration ever fails, so a broken bundle is plain-looking, never blank.
+///
+/// ## Dynamic Type
+///
+/// Unchanged in shape: every style scales via `UIFontMetrics` against its
+/// nearest system text style, and the scaled result is handed to
+/// `Font.custom(_:fixedSize:)` — `fixedSize` precisely BECAUSE the scaling has
+/// already happened here, where `size:` would scale it a second time.
+///
+/// **Accessibility Bold Text is not free with a custom family.** SF answers
+/// `legibilityWeight` by itself; Figtree does not, so the modifier maps the
+/// weight up a step when the setting is on. Without that mapping the setting
+/// silently does nothing, which is the dead-control class §83 bans.
 struct DSTextStyle {
     let size: CGFloat
     let weight: Font.Weight
@@ -15,12 +80,9 @@ struct DSTextStyle {
     let lineHeight: CGFloat
     /// Anchor for Dynamic Type scaling.
     var relative: UIFont.TextStyle = .body
+    /// SF Mono rather than the brand family — log lines, device codes, the one
+    /// place character grouping matters more than the brand does.
     var monospaced = false
-    /// SF Rounded, for the DISPLAY tier only (2026-07-09) — the big headings
-    /// read warmer and more personal, which suits a cover that says "this is
-    /// YOUR week." Functional text (body, rows, labels) stays SF Pro Text,
-    /// which scans crisper at UI sizes and keeps the app feeling native.
-    var rounded = false
 
     /// SwiftUI `lineSpacing` is additive over the font's intrinsic leading; this
     /// approximates the CSS line-height without measuring UIFont metrics.
@@ -30,173 +92,147 @@ struct DSTextStyle {
     /// `dsText` view modifier — e.g. a segment inside a concatenated `Text`
     /// (`Text + Text`), which requires `Text`'s own `.font(_:)` overload to
     /// stay `Text`-typed rather than erasing to `some View`.
+    ///
+    /// Deliberately does NOT read `legibilityWeight`: it is a plain computed
+    /// property with no view context to read an environment from. A concatenated
+    /// segment therefore keeps its ramp weight under Accessibility Bold Text —
+    /// stated here rather than discovered later.
     var scaledFont: Font {
         let scaled = UIFontMetrics(forTextStyle: relative).scaledValue(for: size)
-        return Font.system(size: scaled, weight: weight,
-                            design: monospaced ? .monospaced : rounded ? .rounded : .default)
+        return DSFont.font(size: scaled, weight: weight, monospaced: monospaced)
+    }
+}
+
+/// The family, and the weight→face table (prd §532).
+///
+/// **Five faces, resolved BY NAME rather than by trait.** The five statics are
+/// instanced with typographic family/subfamily names (name IDs 16/17) so
+/// CoreText groups them under one "Figtree" family — which is what lets the
+/// app's `.dsText(.x).fontWeight(.y)` idiom keep working at its ~250 call
+/// sites. A rung's OWN weight never depends on that grouping: it names the
+/// PostScript face outright, so it is exact whatever CoreText decides.
+enum DSFont {
+    /// PostScript names, as generated into `Shared/Fonts/`.
+    static let regular   = "Figtree-Regular"
+    static let medium    = "Figtree-Medium"
+    static let semibold  = "Figtree-SemiBold"
+    static let bold      = "Figtree-Bold"
+    static let extraBold = "Figtree-ExtraBold"
+
+    /// Only five weights are shipped, so lighter-than-regular maps to regular
+    /// and heavier-than-extrabold maps to extrabold. Nothing in the ramp asks
+    /// for either, but a `.fontWeight` override at a call site can.
+    static func name(for weight: Font.Weight) -> String {
+        switch weight {
+        case .ultraLight, .thin, .light: return regular
+        case .regular:                   return regular
+        case .medium:                    return medium
+        case .semibold:                  return semibold
+        case .bold:                      return bold
+        case .heavy, .black:             return extraBold
+        default:                         return regular
+        }
+    }
+
+    /// One step up the shipped ladder — the Accessibility Bold Text answer.
+    static func bolder(_ weight: Font.Weight) -> Font.Weight {
+        switch weight {
+        case .ultraLight, .thin, .light, .regular: return .medium
+        case .medium:                              return .semibold
+        case .semibold:                            return .bold
+        default:                                   return .heavy
+        }
+    }
+
+    static func font(size: CGFloat, weight: Font.Weight, monospaced: Bool) -> Font {
+        monospaced
+            ? .system(size: size, weight: weight, design: .monospaced)
+            : .custom(name(for: weight), fixedSize: size)
     }
 }
 
 extension DSTextStyle {
-    // Prototype class → style. Names read as intent, not pixel counts.
-    // Tracking is ZERO on both display rungs (2026-07-30). They carried +0.34
-    // and +0.22 — positive letter-spacing, ported straight from the prototype
-    // CSS, at exactly the two sizes where SF's own optical face wants letters
-    // pulled TOGETHER rather than pushed apart. It also sat against §8's own
-    // law ("no letter-spacing... `.kerning()` is banned"), which the rest of
-    // the ramp already honours — every other rung here is 0. Nothing else about
-    // these two changes: same size, same weight, same rounded face.
-    static let heading34 = DSTextStyle(size: 34, weight: .bold,     tracking: 0,    lineHeight: 41, relative: .largeTitle, rounded: true)
-    /// The LEDE rung (2026-07-31) — the day brief's opening sentence, and
-    /// nothing else. It exists because the two display rungs either side of it
-    /// are both wrong for a sentence: `heading22` is the card-and-tray TITLE
-    /// rung (`DSTray`, `GenWidget`), so the brief's headline read as a label
-    /// over the hero's `price40` rather than as the day said in words — same
-    /// rounded bold face, eight points apart, one visual unit. And
-    /// `heading34` is the COVER rung, sized for two-to-four-word statements: a
-    /// real lede ("One overdue, six more due by Aug 25.")
-    /// runs three or four lines there and pushes the money hero — the crown by
-    /// ruling — clean off the first screen. 28 keeps the crown visible while
-    /// putting a full step of air between the sentence and the number.
-    ///
-    /// **It sets a SENTENCE, never a figure** (prd §506, 2026-08-28). This said "one
-    /// caller, deliberately" and had thirteen, which would be fine — a lede is
-    /// a lede on any sheet, and nine of them were exactly that — except that
-    /// three were NUMBERS: a request count and two tray totals, all
-    /// `monospacedDigit`. That is the flattening the original line was
-    /// reaching for and named wrongly. A figure at 28 sits between `stat24`
-    /// and `price40` matching neither, in an app whose crown is `price48`, so
-    /// the money ramp reads as four rungs where it has three. Those three
-    /// moved to `stat24`; the rule is the kind of content, not the number of
-    /// callers.
-    static let heading28 = DSTextStyle(size: 28, weight: .bold,     tracking: 0,    lineHeight: 34, relative: .title1, rounded: true)
-    static let heading22 = DSTextStyle(size: 22, weight: .bold,     tracking: 0,    lineHeight: 28, relative: .title2, rounded: true)
-    /// The LONG-FORM rung (2026-08-02) — running prose that is the whole
-    /// point of the surface it sits on: a social post's own words when there
-    /// are enough of them to be a paragraph rather than a statement, a note
-    /// body (§366/§399), a sheet's lead summary.
-    ///
-    /// It read "and nothing else" until prd §506 (2026-08-28) and had seven callers by
-    /// then, every one of them a body of prose leading its sheet — the rung
-    /// generalised honestly and the sentence simply never caught up. What it
-    /// is NOT is a size for labels, figures or rows: it is regular weight at
-    /// 20pt, so anything short set in it reads as a paragraph that stopped.
-    ///
-    /// It is the one rung ABOVE the reading band that is not display type, and
-    /// that's the whole point. A post leads the sheet in the title's slot
-    /// (`ThingSheetView.titleBlock`), so it wants to sit above `body17`; but
-    /// `heading22` — the rung it used to fall back to, with no upper bound —
-    /// is bold SF Rounded, a title face, and a 900-character cast set end to
-    /// end in it reads as a wall: sustained bold flattens word shapes, and
-    /// this file's own 2026-07-09 rule already says rounded is the display
-    /// tier while running text stays SF Pro Text. So: 20pt REGULAR, SF Pro
-    /// Text, with the reading band's open leading (`body17` is 18/26; a post
-    /// is the whole screen's payload, so it gets one more point and two more
-    /// of line height). Hierarchy still by size alone — nothing here is a
-    /// trick the ramp doesn't already use.
-    static let reading20 = DSTextStyle(size: 20, weight: .regular,  tracking: 0,    lineHeight: 30, relative: .title3)
-    // Reading-band pass (2026-07-25). The app leaned on 13/15/17 for nearly
-    // all its running text — a lot of real sentences (row sublines, wallet
-    // metadata, DeFi stats) sat at 13pt, which read dense and document-like
-    // ("like a technical manual", user). Each of these four rungs steps up one
-    // point AND opens its line-height, so the reading band is both larger and
-    // airier. The DISPLAY tier (heading22/34), MONEY rungs (price*/stat24), and
-    // the micro-caption floor (label12/11, tab10) are deliberately untouched —
-    // moving those would flatten the hierarchy the feed and wallet lean on.
-    // Names keep their original pixel suffix as stable identifiers (the ~485
-    // call sites are unchanged); the comment above the ramp already says "names
-    // read as intent, not pixel counts".
-    /// Also the app's ROW TITLE — a row's name is a heading for the line it
-    /// leads, and the wallet room's own `rowTitle17` folded into this on
-    /// 2026-08-03 (see the note where it used to live, below the money rungs).
-    /// SF Pro Text, NOT rounded: prd §190 fixed the complaint *"we have
-    /// different fonts"* with ONE font, and Typography's 2026-07-09 rule keeps
-    /// rounded in the display tier while body, rows and labels stay Text. So a
-    /// row title says "tappable" by WEIGHT — semibold against the subline's
-    /// regular — never by a second typeface.
-    static let heading17 = DSTextStyle(size: 18, weight: .semibold, tracking: 0,    lineHeight: 24, relative: .headline)
-    static let body17    = DSTextStyle(size: 18, weight: .regular,  tracking: 0,    lineHeight: 26, relative: .body)
-    static let callout15 = DSTextStyle(size: 16, weight: .regular,  tracking: 0,    lineHeight: 23, relative: .subheadline)
-    static let subhead13 = DSTextStyle(size: 14, weight: .regular,  tracking: 0,    lineHeight: 21, relative: .footnote)
-    static let label12   = DSTextStyle(size: 12, weight: .medium,   tracking: 0,    lineHeight: 16, relative: .caption1)
-    static let tab10     = DSTextStyle(size: 10, weight: .medium,   tracking: 0,    lineHeight: 12, relative: .caption2)
-    static let mono12    = DSTextStyle(size: 12, weight: .regular,  tracking: 0,    lineHeight: 16, relative: .caption1, monospaced: true)
+    // ============================================================= 64 · CROWN
+    /// The one figure that IS the surface — the wallet total, a room's headline
+    /// number. **One per card, sheet or room** (§506): the hierarchy this makes
+    /// is WITHIN a surface, and you never see two crowns at once, so a second
+    /// room having its own flattens nothing while a second on the SAME surface
+    /// is the real defect.
+    static let price48 = DSTextStyle(size: 64, weight: .heavy, tracking: 0, lineHeight: 64, relative: .largeTitle)
 
-    // Rungs added by the Dynamic Type pass (2026-07-21). Each one existed
-    // already as a raw `.system(size:)` somewhere — frozen while its
-    // neighbours grew. They are here rather than folded into the nearest
-    // existing rung so the fix costs nothing visually: same size, same
-    // weight, now scaled.
-    /// The row's project tag — one step under `label12`.
-    static let label11   = DSTextStyle(size: 11, weight: .medium,   tracking: 0,    lineHeight: 15, relative: .caption2)
-    /// Monospaced body — command cards, diagnostic log lines.
-    static let mono13    = DSTextStyle(size: 13, weight: .regular,  tracking: 0,    lineHeight: 18, relative: .footnote, monospaced: true)
+    // ============================================================== 40 · HEAD
+    /// The head of a tray, a sheet or a room — the rung that says WHERE YOU
+    /// ARE. Line height is 1.0: a head is one or two words and tight leading is
+    /// what makes two lines read as one object rather than as a paragraph.
+    static let heading34 = DSTextStyle(size: 40, weight: .heavy, tracking: 0, lineHeight: 40, relative: .largeTitle)
+    /// The day brief's opening sentence. Same rung as the head — a lede IS the
+    /// head of the document it opens, and §506 already ruled it "sets a
+    /// SENTENCE, never a figure".
+    static let heading28 = DSTextStyle(size: 40, weight: .heavy, tracking: 0, lineHeight: 40, relative: .largeTitle)
+    /// Money at head size — a figure that leads a card without being its crown.
+    static let price40 = DSTextStyle(size: 40, weight: .heavy, tracking: 0, lineHeight: 40, relative: .largeTitle)
     /// A device-flow user code: the one string on its screen, read aloud off
     /// the glass and typed into another device. Monospaced so the character
-    /// groups stay even, and display-sized because it IS the screen.
-    static let monoCode34 = DSTextStyle(size: 34, weight: .bold,    tracking: 0,    lineHeight: 41, relative: .largeTitle, monospaced: true)
+    /// groups stay even, and head-sized because it IS the screen.
+    static let monoCode34 = DSTextStyle(size: 40, weight: .bold, tracking: 0, lineHeight: 44, relative: .largeTitle, monospaced: true)
 
-    // The Big money rungs (prd §102, 2026-07-17) — token money's three
-    // deliberate off-ramp sizes: the sheet's hero price, its stat cards, the
-    // fat feed row's price. Display-tier rounded bold, and routed through
-    // this ramp precisely so they SCALE with Dynamic Type like everything
-    // else (raw `.font(.system(size:))` froze while neighbors grew).
-    /// The CROWN rung (prd §157, 2026-07-21) — one step above `price40`, for
-    /// the single biggest figure on its surface. A money app's confidence
-    /// lives in its numerals, and at 40 beside its own caption the wallet's
-    /// combined total read as one more label.
-    ///
-    /// **One per SURFACE, not one in the app** (prd §506, 2026-08-28). This said
-    /// "nothing else earns this size; a second user would flatten the
-    /// hierarchy it exists to make" and by then had seven callers — the wallet
-    /// crown, two vibenet totals and four hegota cards. The prose was wrong
-    /// about the danger rather than the code being wrong about the rung: the
-    /// hierarchy this makes is WITHIN one surface (the figure against its own
-    /// caption and rows), and you never see two crowns at once, so a second
-    /// room having its own flattens nothing. The rule that actually holds is
-    /// the countable one: on any one card, sheet or room, exactly one figure
-    /// may take this. A second on the same surface is the real defect, and it
-    /// is the one no grep can see — `HegotaRoomCard` carries four correctly
-    /// because they are four cards.
-    static let price48 = DSTextStyle(size: 48, weight: .bold, tracking: 0, lineHeight: 52, relative: .largeTitle, rounded: true)
-    static let price40 = DSTextStyle(size: 40, weight: .bold, tracking: 0, lineHeight: 44, relative: .largeTitle, rounded: true)
-    static let stat24  = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2, rounded: true)
-    static let price16 = DSTextStyle(size: 16, weight: .bold, tracking: 0, lineHeight: 20, relative: .callout, rounded: true)
-    // `rowTitle17` lived here and is GONE (2026-08-03). It was the wallet
-    // room's private row-title rung (prd §212, 2026-07-25) at size 17 — and it
-    // was authored at its literal NAME on the same day the reading-band pass
-    // moved `body17` and `heading17` from 17 to 18, so it shipped a full point
-    // under the room's own body text. A wallet-manager row's name sat 1pt below
-    // the field above it and the door below it: invisible as hierarchy, visible
-    // as a mistake, and read by the user as the screen having "three different
-    // sizes" when 17 and 18 don't separate, they wobble.
-    //
-    // Correcting it to 18 made it byte-identical to `heading17` — same size,
-    // same semibold, same SF Pro Text — which is a duplicate rung, exactly the
-    // drift a named ramp exists to prevent. So it folded into `heading17`,
-    // which the app ALREADY titles rows with: a person in `FollowImportSheet`,
-    // a language, a starter pack, and — decisively — `entry.name` in
-    // `AddressBookViews`, the same address-book entry the wallet manager was
-    // rendering one point smaller two screens away.
-    //
-    // Its one piece of reasoning worth keeping is recorded on `heading17`
-    // above: SF Pro Text, never the rounded money face, per prd §190.
+    // ============================================================= 24 · TITLE
+    /// A card's name.
+    static let heading22 = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2)
+    /// A stat card's figure — the same rung, because a card's number and a
+    /// card's name are peers.
+    static let stat24 = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2)
 
-    // Small decorative accents (2026-07-24 drift fix) — each already existed
-    // as a raw `.system(size:)` on real Text, unscaled and unnamed.
+    // ============================================================== 17 · BODY
+    /// A row's title — a heading for the line it leads. Says "tappable" by
+    /// WEIGHT (semibold against the subline's regular), never by a second face.
+    static let heading17 = DSTextStyle(size: 17, weight: .semibold, tracking: 0, lineHeight: 24, relative: .headline)
+    /// Running text.
+    static let body17 = DSTextStyle(size: 17, weight: .regular, tracking: 0, lineHeight: 25, relative: .body)
+    /// Was a rung of its own at 16 — two points under `body17`, which reads as
+    /// inconsistency rather than as rank. Kept as a NAME (the ~300 call sites
+    /// are unchanged and the intent still reads) at the body size.
+    static let callout15 = DSTextStyle(size: 17, weight: .regular, tracking: 0, lineHeight: 25, relative: .body)
+    /// Long-form prose that is the whole point of its surface — a note body, a
+    /// post's own words, a sheet's lead summary. Regular weight with the band's
+    /// most open leading; what separates it from `body17` is air and ink, not a
+    /// size nobody could see.
+    static let reading20 = DSTextStyle(size: 17, weight: .regular, tracking: 0, lineHeight: 27, relative: .body)
+    /// A row's figure. Bold at the body size — the face and the weight carry
+    /// it, so a row is TWO sizes rather than four.
+    static let price16 = DSTextStyle(size: 17, weight: .bold, tracking: 0, lineHeight: 22, relative: .callout)
+    /// Monospaced body — command cards, diagnostic log lines.
+    static let mono13 = DSTextStyle(size: 17, weight: .regular, tracking: 0, lineHeight: 24, relative: .body, monospaced: true)
+
+    // =========================================================== 12 · CAPTION
+    /// Running metadata — a sentence that is not the subject of its surface.
+    static let subhead13 = DSTextStyle(size: 12, weight: .regular, tracking: 0, lineHeight: 17, relative: .caption1)
+    /// A label, chip, tag or timestamp — medium, because a caption that is a
+    /// NAME rather than a sentence needs the weight to hold at this size.
+    static let label12 = DSTextStyle(size: 12, weight: .medium, tracking: 0, lineHeight: 16, relative: .caption1)
+    /// Was 11 — one point under `label12`, in the same rows, for months.
+    static let label11 = DSTextStyle(size: 12, weight: .medium, tracking: 0, lineHeight: 16, relative: .caption2)
+    static let tab10 = DSTextStyle(size: 12, weight: .medium, tracking: 0, lineHeight: 16, relative: .caption2)
+    /// Monospaced caption.
+    static let mono12 = DSTextStyle(size: 12, weight: .regular, tracking: 0, lineHeight: 16, relative: .caption1, monospaced: true)
     /// The streaming-response "still writing" dot (GenRenderer).
-    static let indicator9    = DSTextStyle(size: 9,  weight: .regular, tracking: 0, lineHeight: 12, relative: .caption2)
+    static let indicator9 = DSTextStyle(size: 12, weight: .regular, tracking: 0, lineHeight: 16, relative: .caption2)
     /// A token's fallback avatar initial when no logo art exists (GenRenderer).
-    static let badgeInitial11 = DSTextStyle(size: 11, weight: .bold, tracking: 0, lineHeight: 15, relative: .caption2)
-    /// The onboarding step card's giant background numeral — accessibility-hidden,
-    /// sighted-only decoration, so nothing else earns this size (mirrors `price48`'s reasoning).
-    static let flourish148 = DSTextStyle(size: 148, weight: .heavy, tracking: 0, lineHeight: 150, relative: .largeTitle, rounded: true)
+    static let badgeInitial11 = DSTextStyle(size: 12, weight: .bold, tracking: 0, lineHeight: 16, relative: .caption2)
 
-    // Widget/Live Activity rungs (2026-07-24 drift fix) — CasberiWidgets.swift
-    // couldn't reach this file before it lived in Shared/, so every widget
-    // label was a raw, unscaled size. Sizes/weights are unchanged from what
-    // shipped; only the plumbing changed. `heading17` and `label11` already
-    // covered two of the widget's sizes exactly and are reused as-is.
+    // ======================================================== OUTSIDE THE FIVE
+    /// The onboarding step card's giant background numeral — accessibility-
+    /// hidden, sighted-only decoration with no reading job at all. The one
+    /// honest exemption from the five.
+    static let flourish148 = DSTextStyle(size: 148, weight: .heavy, tracking: 0, lineHeight: 150, relative: .largeTitle)
+
+    // ============================================== WIDGETS — THEIR OWN SCALE
+    // A widget is not a phone screen. A small tile is ~155pt across and its
+    // text is sized by the tile rather than by the reader's distance from it,
+    // so the five sizes above do not govern here and forcing them would
+    // overflow every family. **The FAMILY does govern** — these all render in
+    // Figtree like everything else, so a tile and the app it opens are the same
+    // product. Sizes and weights are unchanged from what shipped.
     /// The Live Activity's "Recording" chrome label and its lock-screen timer.
     static let widgetChrome15  = DSTextStyle(size: 15, weight: .semibold, tracking: 0, lineHeight: 20, relative: .subheadline)
     /// Dynamic Island's compact-trailing timer.
@@ -211,19 +247,15 @@ extension DSTextStyle {
     static let widgetTitle17   = DSTextStyle(size: 17, weight: .bold, tracking: 0, lineHeight: 22, relative: .callout)
     /// The default-family hero widget's subline.
     static let widgetSubline12 = DSTextStyle(size: 12, weight: .regular, tracking: 0, lineHeight: 16, relative: .caption1)
-    /// The medium widget's treemap cell terms (2026-08-03) — semibold so a
-    /// one-word theme reads against its own cell's fill at a glance.
+    /// The medium widget's treemap cell terms — semibold so a one-word theme
+    /// reads against its own cell's fill at a glance.
     static let widgetTreemapTerm12 = DSTextStyle(size: 12, weight: .semibold, tracking: 0, lineHeight: 15, relative: .caption1)
     /// The medium widget's recent-item row title, under the treemap.
     static let widgetRecentTitle12 = DSTextStyle(size: 12, weight: .semibold, tracking: 0, lineHeight: 16, relative: .caption1)
-    /// The LARGE family's headline (2026-08-14) — the brief's sentence gets the
-    /// room the medium tile never had. A rung above `widgetTitle17` rather than
-    /// reusing it, because at large size that reads as a caption of the tile
-    /// rather than as its subject.
+    /// The LARGE family's headline — the brief's sentence gets the room the
+    /// medium tile never had.
     static let widgetHeadline20 = DSTextStyle(size: 20, weight: .bold, tracking: 0, lineHeight: 25, relative: .title3)
-    /// A widget's own figure — the wallet tile's total. The only place a widget
-    /// prints a number in the largest type on the tile, which is exactly why the
-    /// staleness stamp beside it is not optional (see `WidgetStamp`).
+    /// A widget's own figure — the wallet tile's total.
     static let widgetFigure24  = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2)
 }
 
@@ -231,14 +263,15 @@ private struct DSTextModifier: ViewModifier {
     let style: DSTextStyle
     // Reading the size category invalidates the view when the setting changes.
     @Environment(\.sizeCategory) private var sizeCategory
+    // …and the Bold Text setting, which a custom family has to answer itself.
+    @Environment(\.legibilityWeight) private var legibilityWeight
 
     func body(content: Content) -> some View {
         let scaled = UIFontMetrics(forTextStyle: style.relative)
             .scaledValue(for: style.size)
+        let weight = legibilityWeight == .bold ? DSFont.bolder(style.weight) : style.weight
         content
-            .font(Font.system(size: scaled, weight: style.weight,
-                              design: style.monospaced ? .monospaced
-                                    : style.rounded ? .rounded : .default))
+            .font(DSFont.font(size: scaled, weight: weight, monospaced: style.monospaced))
             .tracking(style.tracking)
             .lineSpacing(style.lineSpacing)
     }
@@ -262,12 +295,13 @@ extension View {
     /// default size, which is why it survived every ramp pass.
     ///
     /// The anchor is derived from the size rather than passed per call site,
-    /// and that is deliberate: `relative:` is a real judgement (`heading17`
-    /// anchors to `.headline`, `subhead13` to `.footnote`) and 150 hand-made
-    /// judgements is how a ramp drifts. A glyph is chosen to match the text
-    /// beside it, so its size already implies the rung — the table below is the
-    /// ramp's own size→anchor mapping read backwards, and a glyph therefore
-    /// scales on the same curve as the label it was drawn to match.
+    /// and that is deliberate: `relative:` is a real judgement and 150 hand-made
+    /// judgements is how a ramp drifts.
+    ///
+    /// **A glyph stays an SF SYMBOL and therefore stays SF** (prd §532) — the
+    /// brand family has no symbol set, so this is the one place two families
+    /// deliberately sit side by side. It is also the thing to re-eyeball first
+    /// on a device: SF's optical metrics no longer match the text beside them.
     func dsGlyph(_ size: CGFloat, weight: Font.Weight = .semibold) -> some View {
         modifier(DSGlyphModifier(size: size, weight: weight))
     }
@@ -279,9 +313,7 @@ private struct DSGlyphModifier: ViewModifier {
     @Environment(\.sizeCategory) private var sizeCategory
 
     /// The ramp's own rungs, read backwards: which text style does a glyph of
-    /// this size sit beside? `tab10`/`label11` → caption2, `label12` →
-    /// caption1, `subhead13` → footnote, `callout15` → subheadline, and the
-    /// reading band and up → body.
+    /// this size sit beside?
     private var anchor: UIFont.TextStyle {
         switch size {
         case ..<12:   return .caption2
@@ -310,6 +342,9 @@ private struct DSGlyphModifier: ViewModifier {
 /// run changes how every one of those rows has always been set. Applied only
 /// where a per-second label would otherwise reflow under the eye, it fixes a
 /// defect that exists nowhere else.
+///
+/// It survives the move to Figtree because Figtree ships `tnum` — verified in
+/// the font's own GSUB table before the family was adopted (prd §532).
 private struct TabularDigits: ViewModifier {
     let on: Bool
 

@@ -148,7 +148,7 @@ struct StartHereScreen: View {
                     // A question about THEM, not a configuration step — the
                     // difference between this screen and the one that died.
                     Text("What should I start with?")
-                        .dsText(.heading34).fontWeight(.heavy)
+                        .dsText(.heading34)
                         .foregroundStyle(DS.textPrimary)
                         .minimumScaleFactor(0.8)
                         .fixedSize(horizontal: false, vertical: true)

@@ -5511,7 +5511,7 @@ private struct GenDayLede: View {
             if !el.str(4).isEmpty {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
                     Text(el.str(4))
-                        .font(.system(size: 74, weight: .light, design: .rounded))
+                        .font(.custom(DSFont.regular, fixedSize: 74))
                         .monospacedDigit()
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1).minimumScaleFactor(0.5)

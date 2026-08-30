@@ -342,7 +342,11 @@ struct SourcesTray: View {
     /// written and deleted within the hour: it cost 76pt of resting height
     /// (about a whole row) to protect chips from a control that no longer
     /// overlaps them.
-    private static let chromeHeight: CGFloat = DS.Space.s6
+    /// +12 since prd §532: `DSTray`'s title moved from the card-title rung
+    /// to the head rung, so its line box grew 28 → 40. A deficit CLIPS and
+    /// slack does not (see `DSTray`'s own note), so the delta is added here
+    /// rather than discovered as a card with no bottom edge.
+    private static let chromeHeight: CGFloat = DS.Space.s6 + 12
 
     /// The empty tray's own height (2026-08-18) — a sentence, a gap, and the
     /// catalog door, plus the bottom pad every other height already carries.
@@ -358,7 +362,7 @@ struct SourcesTray: View {
     ///
     /// Summed from the pieces rather than measured, so it cannot drift when
     /// the type ramp moves: `subhead13`'s own line, `s4`, the button, the pad.
-    private static let emptyLine: CGFloat = 21     // subhead13.lineHeight
+    private static let emptyLine: CGFloat = 17     // subhead13.lineHeight
     private static let emptyDoorHeight: CGFloat = 48
     private static let emptyHeight: CGFloat =
         emptyLine + DS.Space.s4 + emptyDoorHeight + chromeHeight

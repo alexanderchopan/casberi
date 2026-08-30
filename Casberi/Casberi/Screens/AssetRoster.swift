@@ -176,7 +176,7 @@ struct TickerDisc: View {
             .frame(width: size, height: size)
             .overlay {
                 Text(shown)
-                    .font(.system(size: size * 0.30, weight: .bold, design: .rounded))
+                    .font(.custom(DSFont.bold, fixedSize: size * 0.30))
                     .foregroundStyle(DS.textSecondary)
                     .monospacedDigit()
                     .lineLimit(1)

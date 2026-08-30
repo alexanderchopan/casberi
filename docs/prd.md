@@ -40031,3 +40031,115 @@ safe — a classification that comes out wrong yields a worse sentence, never a
 worse act — but **the fix for the reported bug is unverified on a device**,
 and the one check that would settle it in a single launch is
 `-hegotaKeyProbe YES` on a build installed over an existing one.
+## 532. Five sizes, one family: the type ramp becomes the brand (user: "i think we are now coming into our own with a design langugage based on ink. i don't yet feel like we are using fonts in a unique way on trays and other places … i would think the headers have extreme proportions and the tiny text in places all be same size b/c of equal importance", then "lets go extreme", then "i think we need display on the face", "we don't want serif", "is it possible to use Figtree font and still have dynaimc text?", 2026-08-29)
+
+§524 made every pour a neutral by deleting near-duplicates. The type ramp had
+the same disease in the same shape, and this is that treatment.
+
+### 1. What was actually there
+
+**Sixteen distinct point sizes** in the app — 9 · 10 · 11 · 12 · 13 · 14 · 16 ·
+18 · 20 · 22 · 24 · 28 · 34 · 40 · 48 · 148 — and **1,562 of ~1,900 `dsText`
+calls inside five rungs spanning 11–18pt**: `label11` 11, `label12` 12,
+`subhead13` 14, `callout15` 16, `body17` 18. Steps of one and two points, which
+is 8–14%, below where a size step reads as RANK. It reads as wobble.
+
+`Typography.swift` had already said this about itself. The `rowTitle17` note
+(2026-08-03) reads *"17 and 18 don't separate, they wobble"* — and then the file
+went on shipping `label11` one point under `label12`, in the same feed rows, for
+months. A single band row used FOUR sizes (18 · 16 · 12 · 11), two of them
+adjacent. Meanwhile `DSTray`'s title was `heading22`, the same rung a card title
+takes, so a tray never announced itself as a place.
+
+### 2. The five
+
+    12  caption   metadata, chips, tags, timestamps
+    17  body      running text, row titles (semibold), a row's figure (bold)
+    24  title     a card's name
+    40  head      the one head on a tray, a sheet or a room
+    64  crown     money, one per surface (§506)
+
+Steps 1.42 · 1.41 · 1.67 · 1.60; caption-to-crown 5.3×, against ~4.4× before.
+**Further apart AND fewer** — that pairing is the whole move, and the first cut
+of this pass missed it by raising captions to 13 while taking the head only to
+28, which compressed the ends while looking tidier. Asked to go further, the
+answer was not a bigger head number but a smaller caption and a longer span.
+
+**The crown had to move 48 → 64.** A 52pt head was drawn and refused: it
+outranks `price48` and inverts the money hierarchy. Left at 48 the crown also
+sits 1.2× from a 40pt head — the same crowding this pass exists to delete,
+relocated to the top of the ramp.
+
+Rung NAMES are unchanged, so the ~1,900 call sites are untouched; the file
+already said names read as intent, not pixel counts (`subhead13` was 14,
+`body17` was 18). Duplicates now exist by construction (`callout15` == `body17`,
+`label11` == `label12`) and folding them is a separate mechanical pass, not this
+one — a values-only change is reviewable and reversible in one file.
+
+**Widgets keep their own scale, and that is a carve-out with a reason**: a small
+tile is ~155pt across and its text is sized by the tile, not by the reader's
+distance from it. They take the FAMILY and not the sizes. `flourish148` is the
+other exemption — an accessibility-hidden background numeral with no reading job.
+
+### 3. Figtree, which was already the brand
+
+`website/styles.css` has embedded Figtree as a variable TTF and set the whole
+site in it since the site existed, while the app ran on SF. **The marketing
+surface and the product disagreed about what the brand looks like**, and the
+product was the one that was wrong. The five statics in `Shared/Fonts/` are
+instanced from THAT FILE, so the two are byte-identical rather than similar.
+
+Three faces were drawn at 40pt before choosing: SF Rounded (today's), SF Pro
+Display, and New York — Apple's system serif, which ships inside iOS behind
+`design: .serif` and was worth showing only because it was free. Ruled out.
+
+Measured before adoption rather than assumed:
+
+* **`tnum` is present** in the font's own GSUB table, so `dsTabularDigits`
+  (§501) survives — a money app cannot adopt a family without tabular figures.
+* **`.fontWeight()` overrides resolve.** This is the app's own idiom at ~250
+  sites, and it is NOT free with a custom family: a face whose family name is
+  "Figtree Medium" cannot be reached by asking "Figtree" for medium. The five
+  statics carry typographic family/subfamily names (IDs 16/17) plus correct
+  `usWeightClass`, so CoreText groups them. Rendered widths of one string at
+  40pt through `Font.custom(...).weight(w)` are **byte-identical** to naming the
+  face outright at all five weights (345.0 · 347.0 · 350.0 · 353.0 · 356.0).
+  A rung's own weight never depends on that grouping — it names the PostScript
+  face — so the grouping only has to carry the overrides.
+* **Accessibility Bold Text is not free either.** SF answers `legibilityWeight`
+  by itself; a custom family does not, so the modifier maps the weight up a
+  step. Without it that setting silently does nothing, which is the dead control
+  §83 bans.
+
+`rounded` is DELETED from `DSTextStyle`: with one family there is no second face
+to switch to, which is what §190 (*"we have different fonts"*, fixed with ONE
+font) was reaching for. `monospaced` survives and still resolves to SF Mono —
+Figtree has no monospaced cut, and a log line wants character grouping more than
+it wants the brand. `Shared/` synchronizes into all three targets, so app, share
+extension and widgets all carry the font; each registers it in its OWN
+`Info.plist`, because an extension does not inherit the host's registration.
+
+### 4. What it costs, stated rather than discovered
+
+* **No optical sizing.** SF silently swaps Text/Display around 20pt; Figtree has
+  one design, so small text runs slightly looser and tracking is ours to tune.
+* **SF Symbols no longer share metrics with the text beside them.** `dsGlyph` is
+  unchanged and still correct — a symbol is an SF symbol and stays SF — but it
+  is the first thing to re-eyeball on a device.
+* **`DSTray`'s head grew 28 → 40pt of line box**, so `SourcesTray.chromeHeight`
+  gains 12: a deficit clips and slack does not, per `DSTray`'s own note.
+* **A long tray title wraps at 40.** "Choose what to watch", "Keys and
+  permissions" and "Follow a starter pack" are ~20 characters and take two lines
+  on a phone. UNVERIFIED on a device; if it reads badly the answer is to reword
+  those three titles as names, not to weaken the rung.
+
+`DSSheetHead` also splits three roles that shared one rung: the lead drops to
+the caption, the secondary reading stays at body, the fine print drops to the
+caption's regular weight. Before this the lead, the secondary and the sentence
+were all `callout15` at one ink tier — three jobs, one voice.
+
+### 5. Grade
+
+Both platforms compile, every static audit is green, and the weight-resolution
+claim above is measured. **Nothing here has been seen on a device or a
+simulator** — no screenshot was taken of any screen in the new ramp.

@@ -109,11 +109,14 @@ struct DSSheetHead<Disc: View>: View {
             VStack(alignment: .leading, spacing: 1) {
                 if let lead {
                     Text(lead)
-                        .dsText(.callout15)
-                        .foregroundStyle(DS.textSecondary)
+                        // Whose sheet this is — a caption, not a sentence.
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
                 }
                 Text(title)
-                    .dsText(.heading22)
+                    // The head rung (prd §532) — this line IS the subject of
+                    // the sheet, so it takes the largest words in the app.
+                    .dsText(.heading34)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)

@@ -218,7 +218,7 @@ struct HowItWorksSheet: View {
                         // screen an identity the fork can never be mistaken for
                         // in its first seconds regardless.
                         Text("What you can do")
-                            .dsText(.heading34).fontWeight(.heavy)
+                            .dsText(.heading34)
                             .foregroundStyle(DS.textPrimary)
                             .minimumScaleFactor(0.8)
                             .fixedSize(horizontal: false, vertical: true)

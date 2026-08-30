@@ -9175,7 +9175,7 @@ struct FeedScreen: View {
     private func quietState(_ words: RoomQuiet.Words) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(words.headline)
-                .dsText(.heading34).fontWeight(.heavy)
+                .dsText(.heading34)
                 .foregroundStyle(DS.textPrimary)
                 .settleIn()
             Text(words.detail)
@@ -9212,7 +9212,7 @@ struct FeedScreen: View {
     private var invitationState: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Let's fill this feed.")
-                .dsText(.heading34).fontWeight(.heavy)
+                .dsText(.heading34)
                 .foregroundStyle(DS.textPrimary)
                 .settleIn()
             Text("Connect an app and things start landing on their own.")

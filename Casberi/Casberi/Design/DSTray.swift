@@ -47,7 +47,10 @@ struct DSTray<Content: View>: View {
             // The title doubles as its own catalog key — a title that isn't a
             // key just renders verbatim, so dynamic titles stay safe.
             Text(LocalizedStringKey(title))
-                .dsText(.heading22)
+                // THE HEAD RUNG (prd §532) — a tray is a place, and at the
+                // card-title rung it read as a taller card. 40 against the
+                // 12pt caption inside it is 3.3×.
+                .dsText(.heading34)
                 .foregroundStyle(DS.textPrimary)
             content()
         }
