@@ -884,7 +884,7 @@ enum HegotaBridge {
                 : String(localized: "\(addresses.count) addresses watched"),
             can: [
                 String(localized: "Reads a watched address's balance, its transfers, the coins it holds in the chain's vault and who paid for its transactions, on Hegotá — a public devnet testing frame transactions."),
-                String(localized: "Read-only — this app never signs or sends anything against it."),
+                String(localized: "Reading needs no key. Sending on the devnet signs with a key held on this device — a plain scalar, not the Secure Enclave, because there is nothing of value here to protect."),
             ])
     }
 

@@ -1401,6 +1401,16 @@ harness "Vibenet pure-logic self-test" "vibenet self-test" "scripts/vibenet-self
 # for. The sharpest is the chain rail: it is what makes signing on a real
 # network impossible rather than merely unintended.
 harness "Vibenet signer ladder self-test" "13 mutations, 6 drift guards" "scripts/vibenet-signer-selftest.sh" "the vibenet signer self-test failed — run scripts/vibenet-signer-selftest.sh"
+# The EIP-8141 frame transaction, for the one chain here whose transactions are
+# not ordinary transactions (prd §525). A wrong field order, a stray leading
+# zero, the wrong `limits` shape or a mis-applied elision rule produces a
+# signature that is well-formed and authorises a DIFFERENT transaction — and
+# nothing else can see it: the build is happy and no harness can reach that
+# chain. So the fixtures are real transactions taken off the wire, and the
+# assertions are the three a wrong encoder cannot pass — byte-identical raw
+# bytes, a keccak that IS the RPC's own transaction hash, and a signing hash
+# matching one computed from the chain's data rather than from ours.
+harness "Hegota frame transaction self-test" "7 mutations, real on-chain vectors" "scripts/hegota-tx-selftest.sh" "the hegota transaction self-test failed — run scripts/hegota-tx-selftest.sh"
 # The vibenet SCOPES' two new drawings (prd §491) — the sub-account web and the
 # change flow, compiled whole. Separate from the harness above because that one
 # is four minutes over the whole room and these run in one, so a change to

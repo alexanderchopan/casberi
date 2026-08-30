@@ -286,7 +286,7 @@ enum NetworkReach {
         // retry, not an outage.
         Endpoint(service: "Ethrex Hegot\u{00e1}",
                  reach: .whenConnected(bridge: "Ethrex Hegot\u{00e1}"),
-                 purpose: "Reads a watched address's balance, its transfers, the unspent coins it holds in the chain's UTXO vault and who paid for its transactions, from Hegot\u{00e1} — a public devnet testing frame transactions. Carries only the address you watch; there is no account and no key, and nothing is ever signed or sent.",
+                 purpose: "Reads a watched address's balance, its transfers, the unspent coins it holds in the chain's UTXO vault and who paid for its transactions, from Hegot\u{00e1} — a public devnet testing frame transactions. A read carries only the address you watch. Sending also sends one signed transaction: what leaves is a signature, never the key that made it — that key is a plain scalar held on this device, not the Secure Enclave, because Hegot\u{00e1}'s money has no value to protect.",
                  hosts: ["rpc1.hegota.ethrex.xyz", "rpc2.hegota.ethrex.xyz",
                          "rpc3.hegota.ethrex.xyz"]),
         // Altana (prd §403). Reach is WALLET, not "Altana": the seat rides the

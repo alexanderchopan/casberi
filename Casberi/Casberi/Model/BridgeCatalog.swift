@@ -622,13 +622,23 @@ enum BridgeCatalog {
                          "An account of your own, signed for by a key that never leaves this phone",
                          "Face ID every time it signs — and the devnet's faucet pays the gas"],
               needsSetup: true, added: day(2026, 8, 23)),
+        // THE NEVER-SIGNS BULLET IS GONE (prd §525, 2026-08-29), the same
+        // day and the same reason as vibenet's: `HegotaSend` gives
+        // `HegotaKey.sign` its first caller, so saying this seat only ever
+        // reads would be the §83 failure on the page where somebody decides
+        // whether to connect. What replaces it is the part that is different
+        // from vibenet and has to be SAID as different — this key is a plain
+        // secp256k1 scalar in the Keychain, not an Enclave key, on the user's
+        // own ruling that a devnet with worthless money does not need
+        // hardware-backed non-export. `hegota-selftest.sh` ties this bullet to
+        // the code both ways.
         Offer(name: "Ethrex Hegotá", tagline: "Watch an address on the frame-transaction devnet", group: "Wallet", connectable: true,
-              summary: "Hegotá is a public devnet testing frame transactions — a chain that publishes what most chains hide. No real funds, no account, no key — it only ever reads.",
+              summary: "Hegotá is a public devnet testing frame transactions — a chain that publishes what most chains hide. No real funds. Watch any address, or make a key of your own to sign and send on the devnet directly.",
               features: ["The coins an address holds, not just a balance",
                          "What each transaction did, frame by frame",
                          "Who paid the gas, when it wasn't you",
                          "Sends running in parallel on their own nonces",
-                         "Never signs or sends anything — genuinely read-only"],
+                         "A key of your own — stored on this device, not the Secure Enclave, because the money here is worthless"],
               needsSetup: true, added: day(2026, 8, 27)),
         Offer(name: "Linear",      tagline: "Your issues stay in reach",             group: "Work",      connectable: true,
               summary: "The issues assigned to you join your things and surface when they matter. Connects with a personal API key from Linear settings — it stays in \(DS.device)'s Keychain.",

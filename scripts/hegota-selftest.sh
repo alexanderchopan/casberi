@@ -1075,40 +1075,90 @@ deny section.bare 'localized: "Queues"' "the keyed-nonce scope is named Queues a
 deny section.bare 'localized: "Lanes"'  "the keyed-nonce scope is named Lanes again — it collides with WalletFlowBand's lanes"
 deny section.bare 'localized: "Orders"' "the keyed-nonce scope is named Orders — that word is spent on trades"
 
-# THE READ PATH STAYS A READ PATH, AND THE COPY STAYS TRUE (2026-08-29).
-# `vibenet-selftest.sh` has had this guard since the day its own signer files
-# landed; Hegota had NOTHING of the kind — no signing-type grep, no write-method
-# denylist — so `HegotaBridge` could have grown a send in one commit with every
-# check here green, while three surfaces went on promising in words a person
-# reads that it never does: the catalog offer's last feature bullet, the
-# bridge's `canLine` sentence on the detail screen, and the reach registry's
-# purpose on the privacy screen.
+# THE READ PATH STAYS A READ PATH FOR THIS FILE — AND THE COPY STAYS TRUE
+# (amended 2026-08-29, prd §525). This guard used to say Hegota could never
+# send at all, three sentences and a denylist enforcing it. That stopped being
+# the feature's intent the same afternoon vibenet's did: `HegotaKey` holds a
+# device-stored secp256k1 scalar (a deliberately WEAKER promise than vibenet's
+# Enclave key — the user's own ruling that a devnet with worthless money does
+# not need hardware-backed non-export) and `HegotaSend` is the one file that
+# signs and sends with it. What has NOT changed, and is what this guard is
+# really for, is that `HegotaBridge.swift` — the room and the sync sweep — is a
+# READER: it must never sign, never name a signing type, and never request a
+# write-shaped method. Signing lives in its own files behind their own harness
+# (`scripts/hegota-tx-selftest.sh`), the same split that keeps a big bridge file
+# from quietly growing the ability to move something.
 #
-# Both directions are failures and both are asserted. A send appearing while the
-# promises stand is the §83 lie in the place it is most expensive to tell; the
-# promises vanishing while nothing sends gives up a guarantee the seat is still
-# keeping, and nobody re-earns it. When a write really ships here, amend all
-# three sentences in the same commit and this flips to its other arm.
+# The three COPY surfaces must move WITH the code, exactly as vibenet's do: the
+# catalog offer's last feature bullet, the bridge's own `can:` sentence on the
+# detail screen, and the reach registry's purpose on the privacy screen. All
+# three are TRUE now — reading needs no key, and a key that exists is described
+# honestly as a plain device-stored scalar rather than an Enclave key. The tie
+# runs both ways: a signing path appearing while the OLD read-only sentences
+# still stood would be the §83 lie in the place it is most expensive to tell;
+# the sentences vanishing while nothing signs would give up a guarantee the
+# seat still keeps.
 #
-# Note `HegotaBridge`'s own header PROSE names the faucet and the
-# `eth_sendRawTransaction` the chain serves, which is why the denials read the
-# comment-stripped copy — a raw grep scores the paragraph explaining the rule as
-# a violation of it.
+# SCOPED TO HEGOTÁ'S OWN OFFER AND ITS OWN REACH ENTRY, not the whole file —
+# vibenet's sibling guard hit this exact bug twice (prd §523): both seats once
+# carried the word-identical sentences, so an unscoped grep kept one seat's
+# retired promise alive by finding the OTHER seat's still-true one. Anchored
+# here from the start rather than learned the same way twice.
 CATALOG_H="Casberi/Casberi/Model/BridgeCatalog.swift"
 REACH_H="Casberi/Casberi/Model/NetworkReach.swift"
 for f in "$CATALOG_H" "$REACH_H"; do
   strip_comments "$f" > "$work/$(basename $f).bare"
 done
 for m in eth_sendTransaction eth_sendRawTransaction eth_sign eth_signTransaction \
-         personal_sign eth_signTypedData SignerKey SafeSigner VibenetDeviceKey; do
+         personal_sign eth_signTypedData SignerKey SafeSigner VibenetDeviceKey \
+         HegotaKey HegotaSend; do
   deny HegotaBridge.swift.bare "$m" \
-    "HegotaBridge names $m — this seat must only ever read, and its copy says so on three screens"
+    "HegotaBridge names $m — this file must only ever read; signing lives in HegotaKey/HegotaSend"
 done
+
+HEGOTA_SIGN_CALLERS=""
+for f in $(grep -rl 'Hegota' --include='*.swift' Casberi/ 2>/dev/null \
+             | grep -v 'Model/HegotaKey.swift$' | grep -v 'Model/HegotaTransaction.swift$'); do
+  nc="$work/hg-scan.nc.swift"
+  strip_comments "$f" > "$nc"
+  grep -q 'HegotaKey\.sign' "$nc" && HEGOTA_SIGN_CALLERS="$HEGOTA_SIGN_CALLERS $f"
+done
+
+python3 - "$work/BridgeCatalog.swift.bare" <<'PYCAT' > "$work/hegota-catalog-promise.txt" || true
+import sys
+src = open(sys.argv[1]).read()
+start = src.find('Offer(name: "Ethrex Hegot')
+if start < 0:
+    print("NONE"); sys.exit(0)
+nxt = src.find('Offer(name:', start + 10)
+block = src[start:nxt if nxt > 0 else len(src)]
+print("STANDS" if "Never signs or sends anything" in block else "RETIRED")
+PYCAT
+CATALOG_PROMISE="$(cat "$work/hegota-catalog-promise.txt" 2>/dev/null || echo NONE)"
+
+python3 - "$work/NetworkReach.swift.bare" <<'PYREACH' > "$work/hegota-reach-promise.txt" || true
+import sys
+src = open(sys.argv[1]).read()
+start = src.find('service: "Ethrex Hegot')
+if start < 0:
+    print("NONE"); sys.exit(0)
+nxt = src.find('Endpoint(service:', start + 10)
+block = src[start:nxt if nxt > 0 else len(src)]
+print("STANDS" if "nothing is ever signed or sent" in block else "RETIRED")
+PYREACH
+REACH_PROMISE="$(cat "$work/hegota-reach-promise.txt" 2>/dev/null || echo NONE)"
+
 hegota_promises=0
-grep -q 'Never signs or sends anything' "$work/BridgeCatalog.swift.bare" && hegota_promises=$((hegota_promises + 1))
+[[ "$CATALOG_PROMISE" == "STANDS" ]] && hegota_promises=$((hegota_promises + 1))
 grep -q 'Read-only — this app never signs or sends anything against it' "$work/HegotaBridge.swift.bare" && hegota_promises=$((hegota_promises + 1))
-grep -q 'nothing is ever signed or sent' "$work/NetworkReach.swift.bare" && hegota_promises=$((hegota_promises + 1))
-[[ $hegota_promises -eq 3 ]] || fail "only $hegota_promises of 3 never-signs promises stand for Hegota, and nothing here can send — restore the copy or land the write with it"
+[[ "$REACH_PROMISE" == "STANDS" ]] && hegota_promises=$((hegota_promises + 1))
+
+if [[ -n "$HEGOTA_SIGN_CALLERS" && $hegota_promises -gt 0 ]]; then
+  fail "Hegota can now sign ($HEGOTA_SIGN_CALLERS) while $hegota_promises never-signs promise(s) still stand — amend the catalog bullet, HegotaBridge's can: line, and NetworkReach's purpose in the same commit"
+fi
+if [[ -z "$HEGOTA_SIGN_CALLERS" && $hegota_promises -lt 3 ]]; then
+  fail "Hegota's never-signs promises are retired ($hegota_promises of 3 stand) but nothing calls HegotaKey.sign — restore the copy or land the write with it"
+fi
 
 # This harness must stay in verify.sh's hand list (that guard fails the build
 # until it is named WITH its reason, which is the part that gets skipped).

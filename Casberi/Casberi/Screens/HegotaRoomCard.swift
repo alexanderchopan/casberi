@@ -1493,7 +1493,53 @@ struct HegotaRoomList: View {
 
     // MARK: Accounts
 
+    /// This phone's own key, leading the Accounts scope — same placement
+    /// ruling as vibenet's create row (user, 2026-08-29: a verb belongs above
+    /// the list it acts on, not buried under it). `@State` rather than a
+    /// binding from the shell: opening it is a question about right now, the
+    /// same lifetime `pickedLane` already uses one view up.
+    @State private var showingKeySheet = false
+
+    @ViewBuilder private var thisPhoneRow: some View {
+        Button {
+            DSHaptic.selection()
+            showingKeySheet = true
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                ZStack {
+                    Circle().fill(HegotaModeStyle.room.opacity(0.18))
+                        .frame(width: DS.Mark.row, height: DS.Mark.row)
+                    Image(systemName: "key.fill")
+                        .dsGlyph(12, weight: .semibold)
+                        .foregroundStyle(HegotaModeStyle.room)
+                }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(String(localized: "This phone's key"))
+                        .dsText(.heading17)
+                        .foregroundStyle(HegotaModeStyle.room)
+                        .lineLimit(1)
+                    Text(HegotaKey.presence() == .present
+                         ? String(localized: "Sign and send on the devnet")
+                         : String(localized: "Make one to sign and send"))
+                        .dsText(.label11)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: DS.Space.s2)
+                Image(systemName: "chevron.right")
+                    .accessibilityHidden(true)
+                    .dsGlyph(11, weight: .semibold)
+                    .foregroundStyle(HegotaModeStyle.room.opacity(0.6))
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .dsHover()
+        .sheet(isPresented: $showingKeySheet) { HegotaKeySheet() }
+    }
+
     @ViewBuilder private var accountsList: some View {
+        thisPhoneRow
         ForEach(shown) { account in
             Button {
                 DSHaptic.selection()

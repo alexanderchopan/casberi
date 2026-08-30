@@ -42,67 +42,21 @@ enum VibenetTransaction {
     /// names `AA_TX_TYPE` and does not give its value.
     static let txType: UInt8 = 0x79
 
-    /// Lowercase, no `0x`. Local rather than shared because this file is
-    /// deliberately compilable by a harness with nothing else in it.
-    static func hex(_ data: some Sequence<UInt8>) -> String {
-        data.map { String(format: "%02x", $0) }.joined()
-    }
-
-    static func data(fromHex hex: String) -> Data? {
-        var s = Substring(hex)
-        if s.hasPrefix("0x") || s.hasPrefix("0X") { s = s.dropFirst(2) }
-        guard s.count % 2 == 0, !s.isEmpty else { return nil }
-        var out = Data(capacity: s.count / 2)
-        var i = s.startIndex
-        while i < s.endIndex {
-            let j = s.index(i, offsetBy: 2)
-            guard let b = UInt8(s[i..<j], radix: 16) else { return nil }
-            out.append(b)
-            i = j
-        }
-        return out
-    }
+    static func hex(_ data: some Sequence<UInt8>) -> String { RLP.hex(data) }
+    static func data(fromHex hex: String) -> Data? { RLP.data(fromHex: hex) }
 
     // MARK: - RLP
 
-    /// The two RLP shapes, and nothing else. An enum rather than `Any` so a
-    /// caller cannot hand in a type this encoder would have to guess about.
-    indirect enum Item {
-        case bytes(Data)
-        case list([Item])
-    }
+    /// RLP moved to `RLP` the day Hegotá needed it too (prd §525). These are
+    /// aliases rather than a second copy: two encoders of one format
+    /// eventually disagree, and here a disagreement is a signature over a
+    /// different transaction. The harness's pinned 613-byte preimage and its
+    /// proven signing hash are what keep the move honest.
+    typealias Item = RLP.Item
 
-    /// Canonical big-endian with **no leading zeros, and zero is EMPTY**. This
-    /// is the rule most easily got wrong and it changes the hash: RLP quantity
-    /// encoding has exactly one representation per value, and `0x00` is not
-    /// it — `validAfter: 0` must contribute `0x80` (empty string), never
-    /// `0x00`. Mutation-proven.
-    static func quantity(_ value: UInt64) -> Data {
-        guard value != 0 else { return Data() }
-        var v = value
-        var out = [UInt8]()
-        while v > 0 { out.insert(UInt8(v & 0xff), at: 0); v >>= 8 }
-        return Data(out)
-    }
+    static func quantity(_ value: UInt64) -> Data { RLP.quantity(value) }
 
-    static func encode(_ item: Item) -> Data {
-        switch item {
-        case .bytes(let d):
-            // A single byte below 0x80 is its own encoding — the one case with
-            // no prefix at all.
-            if d.count == 1, d[0] < 0x80 { return d }
-            return header(d.count, offset: 0x80) + d
-        case .list(let items):
-            let body = items.reduce(into: Data()) { $0 += encode($1) }
-            return header(body.count, offset: 0xc0) + body
-        }
-    }
-
-    private static func header(_ length: Int, offset: UInt8) -> Data {
-        if length < 56 { return Data([offset + UInt8(length)]) }
-        let lenBytes = quantity(UInt64(length))
-        return Data([offset + 55 + UInt8(lenBytes.count)]) + lenBytes
-    }
+    static func encode(_ item: Item) -> Data { RLP.encode(item) }
 
     // MARK: - The shapes
 

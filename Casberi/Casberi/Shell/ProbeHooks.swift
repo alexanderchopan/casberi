@@ -6286,6 +6286,61 @@ enum ProbeHooks {
                 NSLog("[Casberi] vibenetKeyMake| FAILED %@", String(describing: error))
             }
         },
+        // WHAT THIS PHONE COULD SIGN HEGOTÁ WITH — the same probe shape as
+        // vibenet's, for a key that is deliberately weaker (prd §525): a plain
+        // secp256k1 scalar, not an Enclave key. Reads presence without
+        // decrypting, so it raises no prompt and can sit in a headless sweep.
+        Hook(key: "hegotaKeyProbe") { _, _ in
+            let presence: String
+            switch HegotaKey.presence() {
+            case .none:      presence = "none"
+            case .present:   presence = "present"
+            case .destroyed: presence = "destroyed"
+            }
+            NSLog("[Casberi] hegotaKey| biometry=%@ presence=%@ address=%@",
+                  HegotaKey.biometryAvailable() ? "YES" : "NO",
+                  presence, HegotaKey.address() ?? "-")
+        },
+        // MAKE OR REMOVE THIS PHONE'S HEGOTÁ KEY, headlessly. Writes to the
+        // real keychain, so `delete` is offered beside `YES` for the same
+        // reason `-vibenetKeyMake` offers it — undoing it is one argument
+        // away.
+        Hook(key: "hegotaKeyMake") { value, _ in
+            if value.lowercased() == "delete" {
+                HegotaKey.delete()
+                NSLog("[Casberi] hegotaKeyMake| deleted presence=%@",
+                      String(describing: HegotaKey.presence()))
+                return
+            }
+            do {
+                let addr = try HegotaKey.create()
+                NSLog("[Casberi] hegotaKeyMake| created address=%@ presence=%@",
+                      addr, String(describing: HegotaKey.presence()))
+                do {
+                    _ = try HegotaKey.create()
+                    NSLog("[Casberi] hegotaKeyMake| SECOND CREATE SUCCEEDED — this is wrong")
+                } catch {
+                    NSLog("[Casberi] hegotaKeyMake| second create refused: %@",
+                          String(describing: error))
+                }
+                // THE DECISIVE CHECK: sign 32 bytes and confirm the signature
+                // recovers to the address we just made. This is the exact
+                // shape of proof the vibenet key's own signed-run bug needed —
+                // a compile is not evidence a keychain write under a real
+                // access control succeeds, and neither is a create() that
+                // returns without also proving sign() works.
+                let digest = [UInt8](repeating: 0x11, count: 32)
+                do {
+                    let sig = try HegotaKey.sign(hash: digest, reason: "Probe self-check")
+                    NSLog("[Casberi] hegotaKeyMake| signed OK, %d bytes (self-check passed inside sign())",
+                          sig.count)
+                } catch {
+                    NSLog("[Casberi] hegotaKeyMake| SIGN FAILED %@", String(describing: error))
+                }
+            } catch {
+                NSLog("[Casberi] hegotaKeyMake| FAILED %@", String(describing: error))
+            }
+        },
         Hook(key: "vibenetKeyProbe") { _, _ in
             let presence: String
             switch VibenetDeviceKey.presence() {

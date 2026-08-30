@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 /// MAKING AN ACCOUNT, AS A SHEET (prd §523, 2026-08-29).
 ///
@@ -19,6 +20,7 @@ struct VibenetCreateSheet: View {
     var onCreated: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
 
     @State private var phase: Phase = .checking
@@ -404,6 +406,9 @@ struct VibenetCreateSheet: View {
                                                            defaultAccount: defaultAccount,
                                                            authenticator: auth)
             DSHaptic.success()
+            // What you did lands in the corpus (prd §523) — a real gap this
+            // sheet shipped with: `landReceipt` existed and had no caller.
+            VibenetSend.landReceipt(sent, in: modelContext)
             phase = .done(account: "0x" + VibenetTransaction.hex(sent.account))
         } catch {
             phase = .ready

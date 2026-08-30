@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 /// SENDING ON VIBENET (prd §523, 2026-08-29) — the one place this app can
 /// write to a chain, and the only caller of `VibenetDeviceKey.sign`.
@@ -122,6 +123,52 @@ enum VibenetSend {
             throw Failure.broadcastRefused("the node refused the transaction")
         }
         return hash
+    }
+
+    // MARK: - The receipt
+
+    /// WHAT YOU DID LANDS IN THE CORPUS (prd §523, user ruling).
+    ///
+    /// This seat deliberately lands NO `Thing` for anything it WATCHES —
+    /// `VibenetBridge`'s own doc says a devnet test account has nothing worth a
+    /// corpus row, and that stays true. A write is the other thing: it is news,
+    /// you are its source, and it should be searchable and keepable like
+    /// anything else you did. So the rule is not "vibenet lands rows" but
+    /// **"your own writes land rows"**, which is a distinction the ref carries:
+    /// `vibenet:create:<txHash>` exists only for a transaction this phone sent.
+    ///
+    /// `.transaction` with a `transferAmount` of nothing on purpose: a creation
+    /// moves no money, and a receipt that shows "0" where an amount goes reads
+    /// as a transfer of zero rather than as an act that had no amount. What it
+    /// states instead is who paid, which is the fact that makes it remarkable.
+    @MainActor
+    static func landReceipt(_ sent: Sent, in context: ModelContext) {
+        let ref = "vibenet:create:\(sent.transactionHash)"
+        // The dedupe every bridge here does. A re-landed row is this path's
+        // historical bug class, and `Thing.sourceRef` carries no unique
+        // constraint to catch it for us.
+        let existing = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref })
+        if let found = try? context.fetch(existing), !found.isEmpty { return }
+
+        let account = "0x" + VibenetTransaction.hex(sent.account)
+        let thing = Thing(
+            kind: .transaction,
+            title: String(localized: "Made a vibenet account"),
+            content: VibenetExplorer.tx(sent.transactionHash),
+            source: VibenetIdentity.source,
+            capturedAt: .now,
+            tags: sent.payer == nil ? ["Account"] : ["Account", "Sponsored"],
+            sourceRef: ref)
+        thing.walletAddress = account
+        // The sentence a receipt closes on. Who paid is the whole of what makes
+        // this act unusual, and it is stated only when it is KNOWN — an
+        // unsponsored creation says nothing rather than implying the person
+        // paid something we did not measure.
+        thing.summary = sent.payer == nil
+            ? String(localized: "Signed by this phone's key. It answers to that key and nothing else.")
+            : String(localized: "Signed by this phone's key, and the devnet's faucet paid the gas.")
+        context.insert(thing)
+        try? context.save()
     }
 
     // MARK: - Make an account

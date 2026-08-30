@@ -407,6 +407,7 @@ grep -qF '96c32d8901d632f6b97b4c79300d46b5daba7667de24724da15de0cbd85f4ca9' scri
 cp "$TXFILE" "$WORK/VibenetTransaction.swift"
 cp Casberi/Casberi/Model/Keccak256.swift "$WORK/Keccak256.swift"
 cp Casberi/Casberi/Model/VibenetCreate.swift "$WORK/VibenetCreate.swift"
+cp Casberi/Casberi/Model/RLP.swift "$WORK/RLP.swift"
 mkdir -p "$WORK/txmain"
 cat > "$WORK/txmain/main.swift" <<'SWIFT'
 import Foundation
@@ -648,7 +649,7 @@ check("sender changes what gets signed",
 print("PREIMAGE=" + pre.map { String(format: "%02x", $0) }.joined())
 if fails == 0 { print("  ok") } else { exit(1) }
 SWIFT
-swiftc -O -o "$WORK/txrun" "$WORK/VibenetTransaction.swift" "$WORK/Keccak256.swift" "$WORK/VibenetCreate.swift" "$WORK/VibenetSigner.swift" "$WORK/txmain/main.swift" 2>"$WORK/tx.log" || {
+swiftc -O -o "$WORK/txrun" "$WORK/VibenetTransaction.swift" "$WORK/Keccak256.swift" "$WORK/VibenetCreate.swift" "$WORK/VibenetSigner.swift" "$WORK/RLP.swift" "$WORK/txmain/main.swift" 2>"$WORK/tx.log" || {
   echo "✗ VibenetTransaction.swift did not compile standalone (it must stay Foundation-only)"
   head -20 "$WORK/tx.log"; exit 1; }
 echo "vibenet transaction:"
@@ -703,6 +704,7 @@ CREATE
 createmutate() {
   local label="$1" from="$2" to="$3"
   cp Casberi/Casberi/Model/VibenetCreate.swift "$WORK/VibenetCreate.swift"
+cp Casberi/Casberi/Model/RLP.swift "$WORK/RLP.swift"
   cp "$TXFILE" "$WORK/VibenetTransaction.swift"
   if ! grep -qF -- "$from" "$WORK/VibenetCreate.swift"; then
     echo "  ✗ STALE MUTATION '$label' — pattern not found in VibenetCreate.swift"
@@ -715,8 +717,37 @@ s = io.open(p, encoding="utf-8").read()
 io.open(p, "w", encoding="utf-8").write(s.replace(a, b, 1))
 PYC
   if swiftc -O -o "$WORK/cm" "$WORK/VibenetTransaction.swift" "$WORK/Keccak256.swift" \
-       "$WORK/VibenetCreate.swift" "$WORK/VibenetSigner.swift" "$WORK/txmain/main.swift" 2>/dev/null \
+       "$WORK/VibenetCreate.swift" "$WORK/VibenetSigner.swift" "$WORK/RLP.swift" "$WORK/txmain/main.swift" 2>/dev/null \
      && "$WORK/cm" >/dev/null 2>&1; then
+    echo "  ✗ MUTATION SURVIVED: $label"; return 1
+  fi
+  echo "  ✓ caught: $label"; return 0
+}
+
+# A THIRD mutator, for the shared RLP encoder — same file-named rule as
+# `createmutate`. RLP moved out of `VibenetTransaction` the day Hegotá needed
+# it (prd §525), and these two mutations went STALE the moment it did: they
+# name lines that no longer live in the file `txmutate` copies. That is the
+# guard working, and it is why each mutator says which file it touches.
+rlpmutate() {
+  local label="$1" from="$2" to="$3"
+  cp Casberi/Casberi/Model/RLP.swift "$WORK/RLP.swift"
+  cp "$TXFILE" "$WORK/VibenetTransaction.swift"
+  cp Casberi/Casberi/Model/VibenetCreate.swift "$WORK/VibenetCreate.swift"
+  if ! grep -qF -- "$from" "$WORK/RLP.swift"; then
+    echo "  ✗ STALE MUTATION '$label' — pattern not found in RLP.swift"
+    return 1
+  fi
+  python3 - "$WORK/RLP.swift" "$from" "$to" <<'PYR'
+import sys, io
+p, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
+s = io.open(p, encoding="utf-8").read()
+io.open(p, "w", encoding="utf-8").write(s.replace(a, b, 1))
+PYR
+  if swiftc -O -o "$WORK/rm" "$WORK/VibenetTransaction.swift" "$WORK/Keccak256.swift" \
+       "$WORK/VibenetCreate.swift" "$WORK/VibenetSigner.swift" "$WORK/RLP.swift" \
+       "$WORK/txmain/main.swift" 2>/dev/null \
+     && "$WORK/rm" >/dev/null 2>&1; then
     echo "  ✗ MUTATION SURVIVED: $label"; return 1
   fi
   echo "  ✓ caught: $label"; return 0
@@ -735,7 +766,7 @@ p, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
 s = io.open(p, encoding="utf-8").read()
 io.open(p, "w", encoding="utf-8").write(s.replace(a, b, 1))
 PY2
-  if swiftc -O -o "$WORK/txm" "$WORK/VibenetTransaction.swift" "$WORK/Keccak256.swift" "$WORK/VibenetCreate.swift" "$WORK/VibenetSigner.swift" "$WORK/txmain/main.swift" 2>/dev/null \
+  if swiftc -O -o "$WORK/txm" "$WORK/VibenetTransaction.swift" "$WORK/Keccak256.swift" "$WORK/VibenetCreate.swift" "$WORK/VibenetSigner.swift" "$WORK/RLP.swift" "$WORK/txmain/main.swift" 2>/dev/null \
      && "$WORK/txm" > "$WORK/m.out" 2>/dev/null \
      && python3 - "$WORK/m.out" <<'H2' >/dev/null 2>&1
 import sys, sha3
@@ -749,7 +780,7 @@ H2
   echo "  ✓ caught: $label"; return 0
 }
 # Zero encoded as 0x00 instead of empty — the classic, and it changes the hash.
-txmutate "zero encoded as 0x00"     'guard value != 0 else { return Data() }' \
+rlpmutate "zero encoded as 0x00"    'guard value != 0 else { return Data() }' \
                                     'guard value != 1 else { return Data() }' || TXMUT=1
 # The type byte.
 txmutate "type byte changed"        'static let txType: UInt8 = 0x79' \
@@ -773,8 +804,8 @@ txmutate "channel is no longer Local" 'var channel: UInt64 = 0' 'var channel: UI
 txmutate "entry tag moved"           '.list([.bytes(quantity(0x01)), .bytes(quantity(channel)),' \
                                      '.list([.bytes(quantity(0x02)), .bytes(quantity(channel)),' || TXMUT=1
 # RLP long-form boundary.
-txmutate "RLP short/long boundary"   'if length < 56 { return Data([offset + UInt8(length)]) }' \
-                                     'if length < 57 { return Data([offset + UInt8(length)]) }' || TXMUT=1
+rlpmutate "RLP short/long boundary" 'if length < 56 { return Data([offset + UInt8(length)]) }' \
+                                    'if length < 57 { return Data([offset + UInt8(length)]) }' || TXMUT=1
 txmutate "P-256 order transposed"    'return r + s + publicKeyXY + Data([padByte])' \
                                      'return publicKeyXY + r + s + Data([padByte])' || TXMUT=1
 txmutate "P-256 length no longer 129" 'return r + s + publicKeyXY + Data([padByte])' \

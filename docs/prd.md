@@ -39215,3 +39215,77 @@ exactly, including the `v`-first layout.
 accepts an envelope we built" is untested; payer ≠ sender never exercised; the
 ARBITRARY and P256 signature-entry encodings unobserved; the UTXO frame's inner
 grammar (mode 5) undecoded.
+
+## 526. Hegotá can sign and send too, and the vibenet receipt gap this pass closed along the way (2026-08-29)
+
+Continuation of §525 in the same session, on the user's explicit ruling that
+Hegotá's key may be a plain exportable secp256k1 scalar rather than an Enclave
+key — *"its devnet so exportable key is fine"* — which is what unblocked
+signing there at all: the Enclave speaks P-256 and this chain has only ever
+seen scheme `0x1` (secp256k1).
+
+**`HegotaTransaction` reproduced a real transaction on the FIRST try.** Given
+two real vectors (a modern-form transaction and a mixed-elision one) by a
+second discovery pass, the encoder was byte-identical to the wire, its keccak
+matched the real transaction hash, and its signing hash matched one computed
+independently from the chain's own data — no iteration needed. **`RLP` moved
+out of `VibenetTransaction` into its own file the moment a second chain needed
+it** (the §418 duplicate-parser lesson, paid forward rather than repeated): the
+extraction is proven lossless because vibenet's own 35 mutations, including its
+proven-against-the-chain hash, still pass unchanged afterward.
+
+**`HegotaKey` is `SignerKey`'s shape with its own service** — never shared with
+the Safe signer, because that key is one owner of a Safe holding real funds and
+a devnet bug must never be able to reach it. `HegotaSend` composes the
+canonical two-frame shape (a `self_verify` prefix, then a SENDER frame) and
+signs with the measured `v‖r‖s` layout.
+
+**A signed run caught a real bug, and it generalizes.** `HegotaKey.create`'s
+first cut used `kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly` — the same
+constant `VibenetDeviceKey` uses — and failed `-25308`
+(`errSecInteractionNotAllowed`) on a real Catalyst run. The two keys only LOOK
+alike: vibenet's Enclave key generation with `.biometryCurrentSet` triggers a
+biometric interaction that establishes that protection class for free, and
+`HegotaKey` has no such step — nothing in its flow touches biometry at write
+time, by design, since the whole point is a plain scalar with no Enclave.
+`SignerKey` — the proven, shipped key of this exact shape — already answers
+this with `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`, and matching its
+constant is matching its whole reasoning, not a smaller number for its own
+sake. Caught by running it, not by reading it: nothing here would have found
+this from a compile.
+
+**The end-to-end signed proof itself is UNFINISHED, and that is stated rather
+than papered over.** After the fix, both `HegotaKey.create` and (on the same
+Mac, in the same session) a RE-RUN of the already-proven `VibenetDeviceKey`
+signing path began failing with `enclaveRefused`/`-25308` again — evidence this
+is a transient state of the local signed Catalyst binary (plausibly the local
+ad-hoc code signature rotating across the many rebuilds this session performed)
+rather than a defect in either key, since the failure now reproduces on a path
+proven working earlier THE SAME DAY. A plain `security add-generic-password`
+against the login keychain succeeded in the same window, ruling out a
+system-wide keychain lock. The fix is principled and matches proven precedent;
+the fresh signed confirmation is the one thing this pass could not close.
+
+**Two copy promises retired, mirroring §523's amendment exactly**, and one
+guard defect fixed the same way §523's was: `hegota-selftest.sh`'s conduct
+check used to demand three sentences stand UNCONDITIONALLY. It now checks both
+directions — a sign path existing while the promises stand, or the promises
+retired while nothing signs — scoped to Hegotá's own catalog block and its own
+reach entry rather than the whole file, because vibenet's sibling guard hit the
+cross-seat false-positive TWICE already and this one is anchored correctly from
+the start.
+
+**`landReceipt` shipped in §523 and had NO CALLER — found while extending the
+same pattern to Hegotá.** `VibenetSend.landReceipt` existed, was harnessed
+nowhere because it needs no harness (it is plumbing, not logic), and
+`VibenetCreateSheet.create()` never called it — so a created vibenet account
+would NOT have landed in the corpus despite the ledger's own §523 entry saying
+it does. Wired in the same pass that added Hegotá's equivalent
+(`HegotaSend.landReceipt`, covering both a signed send and a keyless faucet
+claim — the claim carries no signature of yours but is still something you
+asked for, the same "you are its source" reasoning §523 used).
+
+**Not built:** no UI trigger for `HegotaSend.sendValue` (the sheet offers key
+management and the faucet only — a destination-address input is a real second
+piece of UI, stated as absent rather than silently partial), and the fresh
+signed proof above.
