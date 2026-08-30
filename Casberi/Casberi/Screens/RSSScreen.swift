@@ -52,7 +52,7 @@ struct RSSScreen: View {
             BridgeSetupHeader(
                 name: "RSS",
                 mode: .noAccount,
-                intro: "No account and no server — paste a feed's address and its posts arrive, fetched by this \(DS.device) itself. No ranking, nothing skipped.",
+                intro: "Paste a site or feed address below, and its posts arrive. No ranking, nothing skipped.",
                 connected: !rss.feeds.isEmpty)
             // The way back to what arrived (§460).
             if !rss.feeds.isEmpty {

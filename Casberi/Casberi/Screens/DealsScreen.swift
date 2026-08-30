@@ -16,7 +16,7 @@ struct DealsScreen: View {
             BridgeSetupHeader(
                 name: "Deals",
                 mode: .noAccount,
-                intro: "No account and no key — today's discounts arrive from each aggregator's own public feed, in no order but theirs. Nothing here buys anything.")
+                intro: "Turn on the aggregators below, and today's discounts arrive. Nothing here buys anything.")
             if deals.connected {
                 RoomDoor(name: "Deals", source: "Deals")
                     .listRowSeparator(.hidden)

@@ -27,7 +27,7 @@ struct HuggingFaceScreen: View {
             BridgeSetupHeader(
                 name: "Hugging Face",
                 mode: .noAccount,
-                intro: "No account and no key — name the people and orgs you follow and their new models, datasets and Spaces arrive. Only a repo that did not exist before lands: downloads and likes are counts, not news.",
+                intro: "Name the people and orgs you follow below, and their new models, datasets and Spaces arrive. Downloads and likes are counts, not news.",
                 connected: hf.connected)
             // The door leads the connected page, never trails it — see
             // `RoomDoor`. Below a watchlist that grows with every author

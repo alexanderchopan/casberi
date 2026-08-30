@@ -154,9 +154,9 @@ struct PackageWatchScreen: View {
     private var registryIntro: String {
         switch registry {
         case .npm:
-            String(localized: "No account and no key — watch a package and new releases arrive from the public registry. Download counts are never fetched: a tally isn't news.")
+            String(localized: "Watch a package below, and new releases arrive from the public registry. Download counts are never fetched: a tally isn't news.")
         case .pypi:
-            String(localized: "No account and no key — watch a package and new releases arrive from the public index. Download counts are never fetched: a tally isn't news.")
+            String(localized: "Watch a package below, and new releases arrive from the public index. Download counts are never fetched: a tally isn't news.")
         }
     }
 

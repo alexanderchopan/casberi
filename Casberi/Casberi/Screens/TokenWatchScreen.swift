@@ -54,9 +54,23 @@ struct TokenWatchScreen: View {
 
     var body: some View {
         List {
-            // No header coin card, no section furniture (prd §185) — the
-            // omnibox is the screen's first act, the wallet manager's own
-            // opening. The nav title already says Tokens.
+            // A short header, not the old "no header" §185 treatment — see
+            // the family-wide pass that put every "type something to watch
+            // it" screen (Wallet, Stocktwits, RSS, Vibenet, …) on one shape:
+            // identity + mode chip + one action sentence, THEN the omnibox.
+            // §185's actual point (no section furniture, no product re-pitch,
+            // the omnibox leads) survives — only the identity row came back.
+            BridgeSetupHeader(
+                name: "Tokens",
+                mode: .noAccount,
+                intro: "Watch a token below by name, symbol, address, or link.",
+                connected: !watched.isEmpty)
+            // The way back to your things (§460) — the same door every other
+            // screen in the family carries.
+            if !watched.isEmpty {
+                RoomDoor(name: "Tokens", source: "Tokens")
+                    .listRowSeparator(.hidden)
+            }
             addSection.listRowSeparator(.hidden)
             if !watched.isEmpty {
                 rosterSection

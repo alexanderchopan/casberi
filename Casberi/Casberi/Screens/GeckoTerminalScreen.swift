@@ -27,7 +27,7 @@ struct GeckoTerminalScreen: View {
             BridgeSetupHeader(
                 name: "GeckoTerminal",
                 mode: .noAccount,
-                intro: "No account and no key — pick your chains and whatever is trending on them arrives. The ranking is GeckoTerminal's own, by 24-hour volume and price move, never ours.",
+                intro: "Pick your chains below, and whatever is trending on them arrives. The ranking is GeckoTerminal's own, never ours.",
                 connected: gecko.connected)
             if gecko.connected {
                 RoomDoor(name: "GeckoTerminal", source: "GeckoTerminal")

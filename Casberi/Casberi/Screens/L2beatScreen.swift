@@ -49,7 +49,7 @@ struct L2beatScreen: View {
 			BridgeSetupHeader(
 				name: "L2BEAT",
 				mode: .noAccount,
-				intro: "Follow L2BEAT and the incidents they record across every chain arrive in your feed. Name the chains you use and each one's full risk assessment comes too — their judgments, never ours.",
+				intro: "Follow L2BEAT below, and name the chains you use — their incidents and full risk assessments arrive, their judgments, never ours.",
 				connected: connected,
 				flipTrigger: flipTrigger)
 
