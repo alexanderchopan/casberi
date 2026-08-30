@@ -241,9 +241,14 @@ struct SettingsScreen: View {
                     badge: ("key.fill", keyed ? DS.confirm : DS.textSecondary),
                     action: { detail = .key }),
             // The one persistent explainer of the model (2026-07-11) — for
-            // a new person after the coach lines retire. "How it works", not
-            // "About" (About reads as version/legal).
-            RowSpec(title: "How it works",
+            // a new person after the coach lines retire. NOT "About", which
+            // reads as version/legal.
+            //
+            // "What you can do" since §528 (2026-08-29), moved in step with the
+            // sheet's own header so the screen has ONE name rather than two.
+            // It was "How it works", which named a mechanism over content that
+            // is three things you do.
+            RowSpec(title: "What you can do",
                     value: String(localized: "New here? Start here"),
                     badge: ("questionmark.circle", DS.textSecondary),
                     action: { howItWorksOpen = true }),

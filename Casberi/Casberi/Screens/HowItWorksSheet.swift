@@ -193,7 +193,31 @@ struct HowItWorksSheet: View {
                     // the Home cover's voice; this is the first screen a
                     // new person meets.
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        Text("How it works")
+                        // "What you can do", not "How it works" (user,
+                        // 2026-08-29: "how do we not say 'how it works' twice
+                        // … maybe 'what you can do'"). Two reasons, and the
+                        // second is the one that generalises.
+                        //
+                        // (1) It matches what it heads. All three steps are
+                        // phrased as things YOU DO — "Connect your apps",
+                        // "Ask anything" — so the old label named a mechanism
+                        // over content that reads as actions.
+                        // (2) It stopped being a heading and became a LABEL.
+                        // Once the steps are one block, the header sits
+                        // directly on top of the thing it names and the two
+                        // say the same word; the Settings row that opens this
+                        // sheet said it a third time. One name for the screen,
+                        // used in both places (`AccountScreen`'s row moved with
+                        // it), rather than a heading echoing its own section.
+                        //
+                        // The small tension, recorded rather than argued away:
+                        // §528 made these read as one SEQUENCE and this labels
+                        // them as a list of capabilities. The numerals still
+                        // carry the order, so it is a tension and not a
+                        // contradiction — and the falling-icon rain gives this
+                        // screen an identity the fork can never be mistaken for
+                        // in its first seconds regardless.
+                        Text("What you can do")
                             .dsText(.heading34).fontWeight(.heavy)
                             .foregroundStyle(DS.textPrimary)
                             .minimumScaleFactor(0.8)
@@ -206,10 +230,39 @@ struct HowItWorksSheet: View {
                     .padding(.top, DS.Space.s2)
                     .arrive(arrived, delay: 0.1)
 
-                    ForEach(Array(points.enumerated()), id: \.element.id) { i, point in
-                        stepCard(i, point)
-                            .arrive(arrived, delay: 0.25 + Double(i) * 0.1)
+                    // ONE BLOCK, three beats (prd §528, 2026-08-29). The
+                    // steps were three separate `dsWidgetSurface` cards, so a
+                    // screen that offers THREE things — how it works, try it,
+                    // get started — presented five: step 1, step 2, step 3, the
+                    // CTA and the link (user: "those are five things … how can
+                    // we make them feel like three").
+                    //
+                    // **The steps are one thing and this screen's own TITLE
+                    // says so.** They are the answer to "How it works" — a
+                    // SEQUENCE, not alternatives — so one container is not a
+                    // compression of three offers into one, it is the shape
+                    // they always had drawn correctly for the first time.
+                    //
+                    // **It must not look like the fork's slab**, one screen
+                    // later, or the two screens stop announcing which of them
+                    // is asking something: that one is marked, tappable rows
+                    // with tinted square figures, this one is numbered rows
+                    // whose numerals lead. Numbers are what make it unmistakably
+                    // an explanation rather than a set of answers, which is why
+                    // dropping them (considered) was refused.
+                    //
+                    // Arrives as ONE element, the fork's ruling for the same
+                    // reason: a block whose rows staggered in is three arrivals
+                    // wearing one edge, which says the opposite of what the
+                    // grouping is for.
+                    VStack(spacing: 0) {
+                        ForEach(Array(points.enumerated()), id: \.element.id) { i, point in
+                            stepRow(i, point)
+                        }
                     }
+                    .padding(DS.Space.s2)
+                    .dsWidgetSurface()
+                    .arrive(arrived, delay: 0.25)
                 }
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.bottom, DS.Space.s4)
@@ -335,29 +388,38 @@ struct HowItWorksSheet: View {
     /// corner (clipped by the card), the glyph in a big tinted chip, the
     /// title at heading-22. The numeral duplicates the reading order for
     /// sighted users only, so it hides from accessibility.
-    private func stepCard(_ index: Int, _ point: Point) -> some View {
-        // The numeral is an OVERLAY, not a ZStack sibling (2026-07-25). At
-        // `flourish148` it is 148pt tall, so as a sibling it set a FLOOR on
-        // every card's height — invisible while the cards were tall, but the
-        // moment the glyph moved beside the words (below) cards 2 and 3 had
-        // less content than the numeral and got padded out with ~200pt of dead
-        // space each. An overlay sizes to its parent and never expands it, so
-        // the numeral can stay huge while each card hugs its own words.
-        contentStack(index, point)
-            .overlay(alignment: .topTrailing) {
-                Text(verbatim: "\(index + 1)")
-                    .dsText(.flourish148)
-                    .foregroundStyle(point.hue.opacity(0.16))
-                    .offset(x: DS.Space.s3, y: -DS.Space.s8 - DS.Space.s3)
-                    .accessibilityHidden(true)
-                    .allowsHitTesting(false)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-            .dsWidgetSurface()
+    /// One step, as a row inside the shared block (prd §528).
+    ///
+    /// **The giant corner numeral is GONE, and its own doc is why it could
+    /// go.** It read: "The numeral is information (the sequence), not
+    /// decoration" — true while the steps were three separate cards, where
+    /// nothing else said they were ordered. Inside one block, top-to-bottom
+    /// says it, so a 148pt numeral bleeding off each card's corner became the
+    /// most decorative thing on the screen while still claiming to be
+    /// information. The number survives at reading size in the leading slot,
+    /// where it does the same job in a tenth of the space — and where it is
+    /// also what stops this block being mistaken for the fork's answers.
+    ///
+    /// That deletion takes three fiddly workarounds with it: the numeral had to
+    /// be an `overlay` rather than a ZStack sibling (as a sibling its 148pt set
+    /// a height FLOOR on every card, padding cards 2 and 3 with ~200pt of dead
+    /// space), the card needed a `clipShape` to crop the bleed, and every title
+    /// carried a `.padding(.trailing, DS.Space.s6)` so its last word would not
+    /// collide with the numeral. None of it is needed now.
+    private func stepRow(_ index: Int, _ point: Point) -> some View {
+        HStack(alignment: .top, spacing: DS.Space.s3) {
+            Text(verbatim: "\(index + 1)")
+                .dsText(.heading22)
+                .foregroundStyle(point.hue)
+                .frame(width: 18, alignment: .center)
+                // The row's own title says the step; the numeral is the
+                // ordering, which VoiceOver gets from the reading order.
+                .accessibilityHidden(true)
+            contentStack(index, point)
+        }
+        .padding(DS.Space.s3)
     }
 
-    /// The card's words and glyph — split out so the numeral above can overlay
-    /// it without either one sizing the other.
     private func contentStack(_ index: Int, _ point: Point) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
                 // Glyph BESIDE the words, not stacked above them (2026-07-25).
@@ -369,13 +431,18 @@ struct HowItWorksSheet: View {
                 // reading scale on purpose, and shrinking it back here to win
                 // space would undo a ruling to fix a layout problem.
                 HStack(alignment: .top, spacing: DS.Space.s3) {
+                    // The glyph is the SHELL'S OWN mark for the door this step
+                    // names — step 1 wears `TopDoors`' grid, step 3 the agent
+                    // bar's sparkles — so it is a teaching device and stays.
+                    // It sits in a TINTED CIRCLE rather than the rounded square
+                    // it used to wear (§528): the square is the fork's figure
+                    // anatomy one screen later, and the two blocks have to be
+                    // tellable apart at a glance.
                     Image(systemName: point.glyph)
-                        .dsGlyph(23)
+                        .dsGlyph(20)
                         .foregroundStyle(point.hue)
-                        .frame(width: 50, height: 50)
-                        .background(point.hue.opacity(0.16),
-                                    in: RoundedRectangle(cornerRadius: DS.Radius.control,
-                                                         style: .continuous))
+                        .frame(width: 40, height: 40)
+                        .background(point.hue.opacity(0.16), in: Circle())
                     VStack(alignment: .leading, spacing: DS.Space.s1) {
                         Text(point.title)
                             .dsText(.heading22)
@@ -387,14 +454,10 @@ struct HowItWorksSheet: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    // Clears the giant numeral in the corner — without this the
-                    // title's last word collides with it on the narrower column.
-                    .padding(.trailing, DS.Space.s6)
                 }
                 if index == 0 { catalogStrip }
             }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(DS.Space.s4)
     }
 
     /// The onboarding rain, settled: a row of the same real brands, each

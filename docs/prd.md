@@ -39572,3 +39572,67 @@ the ceiling: **this pass is UNSEEN on a device.** Every change here is a weight 
 grouping judgement, no static check can see one, and the slab's proportions in particular
 (three tall rows in one surface, separated by air rather than a line) were reasoned about
 and compiled, never looked at.
+
+## 528. The greeting is three things too: one block of steps, one demo, one way to start (user: "there are four things for a user to see, steps 1, 2, 3 and then demo or skip. those are five things. how can we make them feel like three? … 1 could be (connect apps, read as feeds, ask an agent), then demo, then skip", then "basically we are telling the user they can How it works, Try it, or Get Started in some way", 2026-08-29)
+
+§527's move, applied one screen earlier and for a slightly different reason. `HowItWorksSheet`
+drew its three steps as three separate `dsWidgetSurface` cards, so a screen that offers
+THREE things presented five: step 1, step 2, step 3, the CTA, the link.
+
+**The framing that settled it is the user's, and it is worth keeping as a way of reading any
+screen: what is this screen OFFERING?** Here — how it works, try it, get started. Once said
+that way the answer is obvious, because **the screen's own title already named the first
+one**: the three steps are the answer to "How it works". They are a SEQUENCE, not
+alternatives, so putting them in one container is not compressing three offers into one, it
+is drawing the shape they always had.
+
+**1. ONE BLOCK, three beats.** Same slab treatment as §527's arms, arriving as one element
+for the same reason (a block whose rows stagger in is three arrivals wearing one edge).
+
+**It deliberately does NOT look like the fork's slab**, and that constraint is the whole
+design problem here rather than an afterthought: §527's own entry celebrates that the two
+onboarding screens stopped wearing the same layout, so making this one a slab of rows
+threatened to undo that in the same session. Three things keep them apart. **The NUMERALS
+LEAD** — numbered rows are unmistakably an explanation, where the fork's rows are answers —
+which is why dropping the numbers (designed, mocked) was refused. The glyph chips became
+**CIRCLES**, since the rounded square is the fork's figure anatomy. And the **icon rain**
+plays only here, which the user named as the real differentiator; true, with the caveat that
+it unmounts after ~3.6s, so the first two carry it from then on.
+
+**2. THE GIANT CORNER NUMERAL IS GONE, and its own doc is the argument.** It read: "The
+numeral is information (the sequence), not decoration." That was true while the steps were
+three separate cards, where nothing else said they were ordered. **Inside one block,
+top-to-bottom says it** — so a 148pt numeral bleeding off each card's corner became the most
+decorative thing on the screen while still claiming to be information. The number survives
+at `heading22` in the leading slot, doing the same job in a tenth of the space. **A rule
+whose premise you have just deleted is not a rule you are breaking** (§527's figure-entrance
+reversal, same session, same shape).
+
+Its deletion takes three workarounds with it, all of which existed only to accommodate it:
+the numeral had to be an `overlay` rather than a ZStack sibling (as a sibling its 148pt set
+a height FLOOR on every card, padding cards 2 and 3 with ~200pt of dead space — a real bug
+fixed on 2026-07-25), each card needed a `clipShape` to crop the bleed, and every title
+carried a `.padding(.trailing, DS.Space.s6)` so its last word would not collide with it.
+**Removing a decorative element deleted three layout fixes**, which is usually the sign it
+was load-bearing in the wrong direction.
+
+**3. "How it works" → "WHAT YOU CAN DO", in BOTH places.** Two reasons, and the second
+generalises. It **matches what it heads**: all three steps are phrased as things you do
+("Connect your apps", "Ask anything"), so the old label named a mechanism over content that
+reads as actions. And once the steps became one block the header **stopped being a heading
+and became a LABEL** — sitting directly on top of the thing it names, saying the same word,
+with the Settings row that opens the sheet saying it a third time. `AccountScreen`'s row
+moved with it so the screen has ONE name rather than two.
+
+**The tension, recorded rather than argued away**: this pass made the steps read as one
+sequence and the new label frames them as a list of capabilities. The numerals still carry
+the order, so it is a tension and not a contradiction.
+
+**Not done:** the two doors keep their primary/secondary weighting. The user's framing lists
+the three as peers, but §217's amendment stands — the demo costs nothing and starting with
+your own things costs a permission, an address or a handle, so equal weight would misstate
+them, and the first tap should not be a decision.
+
+**UNSEEN on a device.** Every change here is a grouping and weight judgement; no static
+check can see one, and the block's proportions — three rows of unequal height, the first
+carrying the settled app-icon strip — were reasoned about and compiled, never looked at.
