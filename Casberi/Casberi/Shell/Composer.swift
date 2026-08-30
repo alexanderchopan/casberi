@@ -3627,13 +3627,64 @@ struct Composer: View {
     }
 
     @ViewBuilder
+    /// The launcher header (2026-08-30, user: "when it opens it should show
+    /// chat interface with wallet, work, day chips") — three FIXED chips,
+    /// always the same three, always leading `askChips`, unlike everything
+    /// else in that row which is derived per-corpus. Reuses `BriefScope`'s
+    /// existing three-way split (spec: scoped-brief-spec.md) rather than
+    /// inventing a fourth vocabulary: "Wallet" is the catalog category name
+    /// that already maps to the "Money" scope (`BriefScope.catalogToScope`),
+    /// so the label matches what a person actually connected while the
+    /// question underneath still reads the scoped brief's own memory.
+    /// "Wallet" sends the deterministic kept-ask ("How's my wallet?",
+    /// `KeptAskComposers`'s own `wallet` kind) rather than the Money-scoped
+    /// BRIEF — a live balance answered by reading the chain beats an LLM
+    /// summary of it, and it's the literal question this chip exists to
+    /// answer reliably. "Day" is the existing unscoped brief
+    /// (`TodayBrief.title`) — the same ask the whisper capsule and the bare
+    /// agent-bar tap already seed, not a new one.
+    private var launcherChips: [(label: String, query: String, glyph: String)] {
+        [(String(localized: "Wallet"), "How's my wallet?", "wallet.pass.fill"),
+         (String(localized: "Work"), "How's my Work stuff?", "briefcase.fill"),
+         (String(localized: "Day"), TodayBrief.title, "sun.max.fill")]
+    }
+
     private var askChips: some View {
         // Also shown docked beneath the brief LANDING (prd §181) — the one
         // answer state that keeps its chips, so opening the agent onto the
         // brief never costs the person the "what else can I ask" row.
-        if restChrome(keepBrief: true), !dockedSuggestions.isEmpty {
+        if restChrome(keepBrief: true) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: DS.Space.s2) {
+                ForEach(Array(launcherChips.enumerated()), id: \.element.label) { i, chip in
+                    Button {
+                        DSHaptic.selection()
+                        draft = chip.query
+                        commit()
+                    } label: {
+                        HStack(spacing: DS.Space.s2) {
+                            Image(systemName: chip.glyph)
+                                .accessibilityHidden(true)
+                                .dsGlyph(13)
+                                .foregroundStyle(DS.tint)
+                            Text(chip.label)
+                                .dsText(.callout15)
+                                .foregroundStyle(DS.textPrimary)
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.vertical, DS.Space.s3)
+                        .background(DS.gray100, in: RoundedRectangle(cornerRadius: DS.Radius.control,
+                                                                     style: .continuous))
+                        .dsHover()
+                    }
+                    .buttonStyle(PressSpring())
+                    .modifier(ChipEntrance(index: i, shown: chipsAppeared, reduceMotion: reduceMotion))
+                }
+                // `launcherChips.count +` so the dynamic suggestions stagger
+                // in AFTER the three fixed chips rather than racing them —
+                // two ForEach loops each starting their own entrance index
+                // at 0 would replay the same delay twice.
                 ForEach(Array(dockedSuggestions.enumerated()), id: \.element.memoryKey) { i, ask in
                     // "While I was away?" wears its own display label ("Catch
                     // me up") but sends the canonical query — matching the
@@ -3693,7 +3744,8 @@ struct Composer: View {
                         .dsHover()
                     }
                     .buttonStyle(PressSpring())
-                    .modifier(ChipEntrance(index: i, shown: chipsAppeared, reduceMotion: reduceMotion))
+                    .modifier(ChipEntrance(index: launcherChips.count + i, shown: chipsAppeared,
+                                          reduceMotion: reduceMotion))
                 }
                 }
                 // The inset rides the CONTENT, not the ScrollView — padding the

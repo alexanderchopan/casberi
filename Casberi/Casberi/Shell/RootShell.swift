@@ -2152,49 +2152,41 @@ struct RootShell: View {
                         // registered. The heavier buzz IS that confirmation;
                         // the tray's ordinary `tap()` now sits on the tap.
                         DSHaptic.lift()
-                        // Open onto the Today brief, not the empty chips (prd
-                        // §181, user: "make daily brief be the default when a
-                        // user opens the agent"). Routed through the SAME
-                        // `askRequest` door the whisper tap and a typed "how's
-                        // my day" already use — so all three reach the one
-                        // composer and none can drift (the §132 principle).
-                        // Guarded on nil so a surface that seeded a specific
-                        // ask before the bar rose still wins; the masthead
-                        // title-travel stays whisper-only (no `risingBriefTitle`
-                        // here — a bare tap has no capsule to morph from).
-                        // THE RISE LANDS ON THE OVERVIEW (2026-08-14, prd
-                        // §386d) — this REVERSES §336's "no auto-brief on a
-                        // bare tap", and the reversal is safe for a reason
-                        // §336 could not have used: the panel now docks
-                        // BENEATH the brief instead of competing with it.
+                        // OPEN ONTO THE LAUNCHER, NOT THE BRIEF (2026-08-30,
+                        // user: "when it opens it should show chat interface
+                        // with wallet, work, day chips" — the brief may also
+                        // be getting in the way and is not related when user
+                        // wants bankr balance"). This REVERSES §386d's own
+                        // reversal of §336 a third time — the difference from
+                        // both prior rounds is that the empty state this
+                        // returns to is no longer empty: `Composer.askChips`
+                        // now leads with three FIXED launcher chips (Wallet/
+                        // Work/Day) rather than the "chips-to-have-chips" row
+                        // §386d's comment describes being deleted, and Day is
+                        // one tap away from the exact brief this used to
+                        // auto-seed — so nothing the brief answered is now
+                        // unreachable, it costs one deliberate tap instead of
+                        // being the thing you have to get past to ask
+                        // anything else. Every OTHER deliberate route to the
+                        // brief is untouched: the whisper capsule, the Daily
+                        // Brief quick action, the `casberi://brief` deep
+                        // link, the day strip, a kept `today` pill, and a
+                        // typed "how's my day" all still seed `askRequest`
+                        // themselves and open straight onto it as before.
                         //
-                        // §336's finding was real — seeding an ask here puts
-                        // the composer in `answering`, so `restChrome(keepBrief:
-                        // false)` is false and `boardShowing` could never be
-                        // true; the panel shipped in 282 and 284 and could not
-                        // draw on a single normal open. The fix then was to
-                        // stop seeding. The fix NOW is the other half of the
-                        // same conjunction: `Composer` renders the panel
-                        // inside the brief landing's own scroll, so both are
-                        // on screen at once and the rise costs no decision.
+                        // A bare tap seeds NOTHING — `chrome.askRequest` is
+                        // left exactly as it was, so a surface that already
+                        // seeded a specific ask a moment before the bar rose
+                        // still wins. The composer opens idle
+                        // (`restChrome(keepBrief: true)` true, `answering`
+                        // false) and the launcher chips draw. §336's own
+                        // finding about the panel needing `restChrome
+                        // (keepBrief: false)` to be true no longer applies
+                        // here for the same reason it stopped applying under
+                        // §386d: the panel draws inside the brief's own
+                        // landing, reached by tapping Day, not by this bare
+                        // rise.
                         //
-                        // Why re-open it at all: the overview became the app's
-                        // one daily screen this session (§386–§386c collapsed
-                        // three scoped briefs into it and cut every module
-                        // that wasn't a figure, a picture or a person), and it
-                        // sat one tap behind a rest surface whose chips had
-                        // just been deleted for being chips-to-have-chips.
-                        //
-                        // Every deliberate route to the brief is untouched: the
-                        // whisper capsule, the Daily Brief quick action, the
-                        // `casberi://brief` deep link, the day strip, a kept
-                        // `today` pill, and a typed "how's my day" all still
-                        // seed `askRequest` themselves. The guard below stays
-                        // `nil`-checked so any of those still wins if it set an
-                        // ask before the bar rose.
-                        if chrome.askRequest == nil {
-                            chrome.ask(TodayBrief.title)
-                        }
                         // Rising is SEEING — the glint's whole claim is "rise
                         // and you'll find it", so the rise itself clears it.
                         AgentNoticed.shared.markSeen()
