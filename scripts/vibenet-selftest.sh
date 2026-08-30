@@ -5116,14 +5116,23 @@ fi
 # to stop the fifth door leaving the screen; §517 gives each the full width
 # instead, which stops the clipping AND the "text in weird places" read.
 python3 - "$TMP/detail.nc.swift" <<'GUARD' || exit 1
-import sys
+import sys, re
 src = open(sys.argv[1]).read()
 try:
     start = src.index("private var doorsSection: some View {")
 except ValueError:
     print("✗ doorsSection is gone from VibenetAccountDetail")
     sys.exit(1)
-body = src[start:src.index("\n    /// One verb.", start)]
+# The end boundary used to be the next doc comment ("/// One verb."), but
+# this file is read COMMENT-STRIPPED (the Obsidian/Cursor lesson) — a
+# comment can never bound anything in a comment-stripped copy. Match the
+# closing brace at the SAME indentation as the property instead (the
+# technique the doors= extraction above already uses).
+m = re.search(r"\n    \}\n", src[start:])
+if not m:
+    print("✗ doorsSection's closing brace could not be found — prd §517")
+    sys.exit(1)
+body = src[start:start + m.end()]
 if "FlowLayout" in body:
     print("✗ the verb run is a FlowLayout of chips again — prd §517: rows, one rung, one left edge")
     sys.exit(1)
