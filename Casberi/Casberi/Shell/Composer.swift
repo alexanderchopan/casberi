@@ -3171,7 +3171,7 @@ struct Composer: View {
     /// honest about.
     private func askDirectly() {
         pendingKeyedFollowUp = true
-        commit()
+        commit(forceAsk: true)
     }
 
     /// The BYO-key retry: the same question, re-answered by the person's own
@@ -4090,8 +4090,13 @@ struct Composer: View {
                         // may submit this draft, return goes through it too
                         // (2026-08-30) — otherwise a keyboard would offer a
                         // silent way past the chip the send dot no longer
-                        // is.
-                        if hasDraft { offerKeyedAsk ? askDirectly() : commit() }
+                        // is. EXCEPT a paste: the dot survives there
+                        // specifically so "Keep" stays return key's own
+                        // default (the standing rule, unchanged by any of
+                        // today's work — a paste SAVES), and asking about a
+                        // pasted link stays a deliberate reach for the chip,
+                        // not something return key switches to silently.
+                        if hasDraft { (offerKeyedAsk && !pasted) ? askDirectly() : commit() }
                         return
                     }
                     if prefilled { prefilled = false }
@@ -4112,13 +4117,21 @@ struct Composer: View {
             // it. A live recording keeps the bare arrow: stopping SAVES the
             // voice note, and an "Ask" label there would lie.
             //
-            // HIDDEN while `offerKeyedAsk` (2026-08-30, user: "the blue send
-            // button to not show when asking") — for a real question with a
-            // key configured, "Ask <agent>" is the one control that submits
-            // this draft, and a second, more prominent button doing the same
+            // HIDDEN while `offerKeyedAsk`, EXCEPT for a paste (2026-08-30,
+            // user: "the blue send button to not show when asking" /
+            // "ask bankr no matter what"). For ordinary typed text with a key
+            // configured, "Ask <agent>" is the one control that submits this
+            // draft, and a second, more prominent button doing the same
             // thing is exactly the "which one do I tap" confusion this chip
-            // exists to end.
-            if !offerKeyedAsk {
+            // exists to end. A paste is different: `offerKeyedAsk` now shows
+            // "Ask <agent>" there too (asking about a pasted link is a real
+            // thing to want), but pasting still has its OWN separate verb —
+            // "Keep" — and that would otherwise have no control left at all,
+            // since the dot it lives on is what this hides. `pasted` keeps
+            // the dot around FOR that reason alone, wearing its existing
+            // "Keep" label so the two verbs (save it / ask about it) sit side
+            // by side rather than one silently replacing the other.
+            if !offerKeyedAsk || pasted {
             Button {
                 if hasDraft || isRecording { commit() } else { fieldFocused = true }
             } label: {
@@ -4255,13 +4268,20 @@ struct Composer: View {
     /// being broken rather than as a word list not recognizing the draft.
     /// Any typed text with a key configured offers the ask now, question or
     /// not — simpler to reason about and immune to the whole class of gap.
-    /// Still excludes a NavigateCommand match: tapping "Ask <agent>" on
-    /// "show my links" would silently navigate instead of asking (commit()'s
-    /// own branch order), and a chip that does something other than what it
-    /// says is the honesty rule's own first clause.
+    ///
+    /// No longer excludes a paste or a NavigateCommand match either
+    /// (2026-08-30, user: "it should show ask bankr no matter what") — those
+    /// exclusions existed only so the chip could never become a dead
+    /// control, which mattered while `askDirectly()` still ran through
+    /// `commit()`'s ordinary branching and could silently save or navigate
+    /// instead. `askDirectly()` now calls `commit(forceAsk: true)`, which
+    /// skips both of those branches outright, so there is no longer a wrong
+    /// outcome left for either case to guard against — the chip can show
+    /// unconditionally because it is now unconditionally correct.
+    /// `!isRecording` is the one real requirement left: there is no
+    /// committed text yet to ask about while a voice capture is running.
     private var offerKeyedAsk: Bool {
-        !pasted && hasDraft && AgentKey.isConfigured
-            && NavigateCommand.parse(draft, tags: tagPool, sources: knownSources()) == nil
+        hasDraft && !isRecording && AgentKey.isConfigured
     }
 
     /// The typed-draft band (2026-07-16, fourth form — see TakeTool), in the
@@ -4499,14 +4519,27 @@ struct Composer: View {
         close()
     }
 
-    private func commit() {
+    /// `forceAsk` (2026-08-30, user: "it should show ask bankr no matter
+    /// what... let them" — any typed text, ANY topic, always asks when
+    /// that's what was explicitly tapped) — set only by `askDirectly()`.
+    /// "Ask <agent>" is an unambiguous statement of intent: the person
+    /// tapped a control whose whole label says what it does, so it must
+    /// never fall through to a DIFFERENT verb (saving a note, navigating
+    /// away) based on a guess about the text — that guess is exactly what
+    /// `looksPasted`/`NavigateCommand` are, useful for the PLAIN send dot
+    /// (which has to infer intent from the text alone) and beside the
+    /// point once intent is already stated by which control was tapped.
+    /// `isRecording` is the one branch `forceAsk` does NOT skip — there is
+    /// no committed text to ask about yet while a voice capture is still
+    /// running, force or not.
+    private func commit(forceAsk: Bool = false) {
         if isRecording {
             // Voice is a capture path — send keeps the piece.
             if let piece = voice.stop(keep: true) {
                 onCommitVoice(piece.transcript, piece.sourceRef)
             }
             close()
-        } else if pasted, !draftIsQuestion {
+        } else if !forceAsk, pasted, !draftIsQuestion {
             // Paste is a capture path — send keeps what came in. But
             // `looksPasted` is a GUESS from the field's own edit deltas, not a
             // real paste signal (nothing in this file reads UIPasteboard) — it
@@ -4521,7 +4554,7 @@ struct Composer: View {
             // branch before the ask ever started.
             onCommit()
             close()
-        } else if let intent = NavigateCommand.parse(draft, tags: tagPool,
+        } else if !forceAsk, let intent = NavigateCommand.parse(draft, tags: tagPool,
                                                      sources: knownSources()) {
             // A place, named — go there. Reads only (a navigation), so no
             // proposal needed; the composer closes and the shell moves.
