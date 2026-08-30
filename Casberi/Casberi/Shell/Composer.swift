@@ -4437,8 +4437,19 @@ struct Composer: View {
                 onCommitVoice(piece.transcript, piece.sourceRef)
             }
             close()
-        } else if pasted {
-            // Paste is a capture path — send keeps what came in.
+        } else if pasted, !draftIsQuestion {
+            // Paste is a capture path — send keeps what came in. But
+            // `looksPasted` is a GUESS from the field's own edit deltas, not a
+            // real paste signal (nothing in this file reads UIPasteboard) — it
+            // fires on any edit landing several words at once, which ordinary
+            // typing does too: autocorrect, dictation, and predictive-text
+            // word taps all commit a multi-word run in one edit. A draft that
+            // reads as a real question is asked rather than silently filed
+            // and closed, however it landed in the field. Reported
+            // 2026-08-30: "Ask Bankr" intermittently did nothing — no answer,
+            // no error, straight back to an empty composer — because a
+            // false-positive here sent a typed question through the capture
+            // branch before the ask ever started.
             onCommit()
             close()
         } else if let intent = NavigateCommand.parse(draft, tags: tagPool,
