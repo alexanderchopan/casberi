@@ -34,6 +34,19 @@ struct WalletScreen: View {
 
     var body: some View {
         List {
+            // A short header — the family-wide pass that put every "type
+            // something to watch it" screen (Vibenet, Hegota, RSS, Tokens,
+            // Stocktwits, …) on one shape: identity + mode chip + one action
+            // sentence, THEN the acts. Wallet had none at all (prd §185/§466's
+            // "the omnibox is the screen's first act"); the identity row
+            // comes back here too, ahead of the door and the field it used to
+            // open directly on.
+            BridgeSetupHeader(
+                name: "Wallet",
+                mode: .noAccount,
+                intro: "Paste an address or ENS name below, or connect a wallet app. Watch up to five.",
+                connected: !wallet.addresses.isEmpty)
+
             // A DOOR, not a signpost (R4.5) — only once there is a room to
             // open. Matches Vibenet: a "View feed" button over an empty room
             // is a control that opens nothing worth seeing (§83).

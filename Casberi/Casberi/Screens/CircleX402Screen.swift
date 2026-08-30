@@ -33,7 +33,7 @@ struct CircleX402Screen: View {
             BridgeSetupHeader(
                 name: "Circle x402",
                 mode: .noAccount,
-                intro: "No account and no key — pick the lanes you care about and the companies selling APIs to agents land in your feed. Read-only: nothing here pays for a call.",
+                intro: "Pick the lanes you care about below, and the companies selling APIs to agents land in your feed. Nothing here pays for a call.",
                 connected: x402.connected)
             if x402.connected {
                 RoomDoor(name: "Circle x402", source: X402Ingest.source)
