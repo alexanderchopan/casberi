@@ -865,6 +865,16 @@ harness "Bankr pure-logic self-test" "bankr self-test" "scripts/bankr-selftest.s
 # getting it wrong is a 401 indistinguishable from a wrong key.
 harness "App Store Connect pure-logic self-test" "app store connect self-test" "scripts/appstoreconnect-selftest.sh" "the App Store Connect logic self-test failed — run scripts/appstoreconnect-selftest.sh"
 
+# AWS (2026-08-30) — Signature Version 4 is the single most consequential
+# piece of arithmetic in this bridge: a wrong canonical request or HMAC chain
+# order produces a well-formed Authorization header AWS refuses with a 401
+# indistinguishable from a wrong key, and there is no live account to catch
+# that against. `scripts/support/aws-sigv4-vectors.py` is a SECOND,
+# independent implementation of the published algorithm this harness checks
+# the shipped Swift against. It also enforces the conduct guard: the bridge
+# may issue only Describe*/List*/Get* actions, mechanically, not by memory.
+harness "AWS pure-logic self-test" "aws self-test" "scripts/aws-selftest.sh" "the AWS logic self-test failed — run scripts/aws-selftest.sh"
+
 harness "Circle x402 pure-logic self-test" "x402 self-test" "scripts/x402-selftest.sh" "the x402 logic self-test failed — run scripts/x402-selftest.sh"
 
 # The contract between the app and its Home Screen (prd §382, 2026-08-14).

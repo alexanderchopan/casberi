@@ -90,6 +90,12 @@ KNOWN_NON_REACH=(
   # the restricted key. Never fetched; `api.stripe.com` is the read, and it
   # IS disclosed in NetworkReach.
   dashboard.stripe.com
+  # AWS's console — where the IAM user and its key pair are created, and
+  # where every landed CloudWatch/CodePipeline/Cost Explorer row opens on
+  # tap. Never fetched by this app; the real reads are the various
+  # `*.amazonaws.com` service hosts, disclosed as a parent domain in the
+  # "AWS" NetworkReach entry.
+  console.aws.amazon.com
   # PagerDuty's and Vercel's own sites — the pages that mint the key, plus
   # (Vercel) the inspector URL a failed build opens on tap. Never fetched;
   # `api.pagerduty.com` and `api.vercel.com` are the reads, and both ARE
