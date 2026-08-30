@@ -5,11 +5,10 @@ import SwiftData
 /// "Stripe alternative" indie/AI-first products increasingly bill through.
 /// One paste of a read-only API key, plain `TokenSetupScreen`, generic
 /// dispatch — the Trello/Cloudflare tier, not Stripe's bespoke screen and
-/// room head. Grouped **Work**, beside Stripe/PostHog: this is money a
-/// BUSINESS receives, not a personal card's spending (Privacy.com/Gnosis
-/// Pay's group, "Wallet") — the request that started this file used Privacy
-/// as its point of comparison, and that reference is about the ENGINEERING
-/// SHAPE (one key, read-only, lands transactions), not the catalog group.
+/// room head. Grouped **Wallet** (user ruling, 2026-08-30) — beside
+/// Privacy.com and Gnosis Pay rather than Stripe/PostHog's "Work": the
+/// catalog files it as money in reach the way a card's spending is, not as a
+/// dev-tool integration.
 ///
 /// **Deliberate divergence from `StripeBridge`'s doctrine, stated so it isn't
 /// mistaken for an oversight.** Stripe lands an individual charge NEVER — "a

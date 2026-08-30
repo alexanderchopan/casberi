@@ -4102,6 +4102,25 @@ struct FeedScreen: View {
                             thing.authorHandle == repo.name
                         }
                     }
+                case .aws(let standing):
+                    // Opens whichever row the headline actually names — the
+                    // App Store Connect app / Cursor repo rule, one level
+                    // more literal since a standing carries the concern's
+                    // own identifying string directly.
+                    AWSRoomCard(standing: standing) {
+                        openNewest(source: AWSShape.source, in: visible) { thing in
+                            if let alarm = standing.alarmsInAlarm.first {
+                                return thing.title.contains(alarm)
+                            }
+                            if let pipeline = standing.lastFailedPipeline {
+                                return thing.authorHandle == pipeline
+                            }
+                            if let day = standing.costAnomalyDay {
+                                return thing.sourceRef == "aws:costanomaly:\(day)"
+                            }
+                            return true
+                        }
+                    }
                 case .cardPointers(let room):
                     // No callback since §487: the head stopped naming a single
                     // offer, so it has nothing to open — every offer is its own
@@ -6271,6 +6290,9 @@ struct FeedScreen: View {
         case x402(X402Room)
         case appStoreConnect(ASCRoom)
         case cursor(CursorRoom)
+        // AWS (2026-08-30) — one account, one region, so the value is the
+        // standing itself rather than a wrapper type. See `AWSRoomSource`.
+        case aws(AWSStanding)
         // Walletbeat (prd §419) — the only head here whose subject is not the
         // person's own data at all, but somebody else's review of the software
         // they use. It reads stored ratings beside the landed rows.
@@ -6396,6 +6418,10 @@ struct FeedScreen: View {
             return ASCRoomSource.compose(things: visible).map { .appStoreConnect($0) }
         case CursorRoomSource.source:
             return CursorRoomSource.compose(things: visible).map { .cursor($0) }
+        // Reads no rows at all — its subject is bridge STATE (alarms,
+        // deploys, resource counts), `ASCRoomSource`'s reason exactly.
+        case AWSShape.source:
+            return AWSRoomSource.compose(things: visible).map { .aws($0) }
         case WalletbeatRoomSource.source:
             return WalletbeatRoomSource.compose(things: visible).map { .walletbeat($0) }
         case L2beatRoomSource.source:

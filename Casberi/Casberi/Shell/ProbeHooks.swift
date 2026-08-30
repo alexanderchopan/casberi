@@ -32,6 +32,11 @@ enum ProbeHooks {
         // deliberately NOT here: they are identifiers, useless without the
         // key, and seeing them in `probeArgs:` is how a 401 gets diagnosed.
         "-ascKey",
+        // The AWS secret access key — real credential material. `-awsKey`
+        // (the access key ID) is deliberately NOT here, `-ascKeyID`'s reason:
+        // it's an identifier, useless without the secret, and seeing it in
+        // `probeArgs:` is how a refused key pair gets diagnosed.
+        "-awsSecret",
         // A real email address — PII, not a secret the app treats as one,
         // redacted for Trello's reason: anything identifying stays out of the
         // log so nobody has to remember which ones are safe. `-jiraDomain` is
@@ -797,6 +802,61 @@ enum ProbeHooks {
         Hook(key: "ascRoomProbe") { _, _ in
             for line in ASCRoomSource.probeLines() {
                 NSLog("[Casberi] ascRoom| %@", line)
+            }
+        },
+        // AWS takes THREE credentials, App Store Connect's shape — declared
+        // BEFORE `-awsProbe` since hooks run in list order and a signed
+        // request needs all three.
+        //
+        // `-awsKey <accessKeyID|clear>` — the access key ID (not a secret by
+        // itself; kept off `secretArgKeys` for App Store Connect's Key ID
+        // reason, so it stays visible in `probeArgs:` for diagnosing a 401).
+        Hook(key: "awsKey") { value, _ in
+            let id = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            if id == "clear" {
+                AWSAuth.clear()
+                NSLog("[Casberi] awsKey: cleared")
+            } else {
+                AWSAuth.setAccessKeyID(id)
+                NSLog("[Casberi] awsKey: access key ID set")
+            }
+        },
+        // `-awsSecret <secretKey|clear>` — the secret access key, real
+        // credential material, so it IS on `secretArgKeys`.
+        Hook(key: "awsSecret") { value, _ in
+            let secret = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            if secret == "clear" {
+                TokenVault.delete(AWSAuth.secretVaultKey)
+                NSLog("[Casberi] awsSecret: cleared")
+            } else {
+                TokenVault.set(secret, for: AWSAuth.secretVaultKey)
+                NSLog("[Casberi] awsSecret: stored (%d chars)", secret.count)
+            }
+        },
+        // `-awsRegion <region>` — plain text, defaults to us-east-1 if never
+        // set. Cost Explorer always reads us-east-1 regardless (a real AWS
+        // rule, not something this overrides).
+        Hook(key: "awsRegion") { value, _ in
+            AWSAuth.region = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            NSLog("[Casberi] awsRegion: %@", AWSAuth.region)
+        },
+        // `-awsProbe YES` walks the AWS read phase by phase with the STORED
+        // key pair — the `-ascProbe`/`-cursorProbe` lesson: an empty AWS room
+        // has several causes (no key pair, a refused key pair, an IAM policy
+        // that can see some services and not others, a genuinely quiet
+        // account, or shape drift in a doc-derived field map) and only the
+        // last is a bug. See `AWSIngest.diagnose`.
+        Hook(key: "awsProbe") { _, _ in
+            Task { @MainActor in await AWSIngest.diagnose() }
+        },
+        // `-awsRoomProbe YES` — the AWS room head's reading (the stored
+        // standing, then the card's own rank/headline/resource line). Spends
+        // nothing — it composes off `AWSState.standing` exactly as the room
+        // does, so it needs no key and works against whatever the last real
+        // sync left behind.
+        Hook(key: "awsRoomProbe") { _, _ in
+            for line in AWSRoomSource.probeLines() {
+                NSLog("[Casberi] awsRoom| %@", line)
             }
         },
         // `-cursorRoomProbe YES` — the Cursor room head's reading, one line at

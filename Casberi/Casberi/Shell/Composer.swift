@@ -181,7 +181,7 @@ struct Composer: View {
     /// which are also Insights). Resets on the next ask.
     @State private var currentStreamed = false
     /// True while an answer is actually being produced (model running) — the
-    /// after-answer verbs (Keep, Try with your key) wait for the settle.
+    /// after-answer verb (Keep) waits for the settle.
     @State private var inFlight = false
     /// True when the current answer came from the person's own key — it wears
     /// the badge, and the retry verb retires (one keyed try per ask).
@@ -2056,28 +2056,16 @@ struct Composer: View {
                                                     }
                                                     .buttonStyle(.plain)
                                                 }
-                                                // The BYO-key retry (prd §67) — a verb,
-                                                // never a fallback: the question and its
-                                                // matched things leave this iPhone only
-                                                // on this tap, straight to the agent's
-                                                // provider (Claude/ChatGPT/Gemini/Venice).
-                                                if !keyedCurrent, keyAvailable,
-                                                   !currentQuestion.isEmpty {
-                                                    keyedVerb(action: askWithKey) {
-                                                        // The row's one consequential verb wears
-                                                        // its weight (design pass 2026-07-21):
-                                                        // it sends the question and its matched
-                                                        // things off this iPhone and spends the
-                                                        // person's own key. It read as the
-                                                        // QUIETEST chip in the row while two
-                                                        // routine saves shouted.
-                                                        Chip(text: askProvider.map {
-                                                                String(localized: "Try with \($0.agent)")
-                                                             } ?? String(localized: "Try with your key"),
-                                                             style: .tint, glyph: "key.fill")
-                                                    }
-                                                    .buttonStyle(.plain)
-                                                }
+                                                // "Try with your key" retired 2026-08-30
+                                                // (user: "the 'try your key' to go away")
+                                                // — "Ask <agent>" is the one door to a
+                                                // keyed answer now, tapped BEFORE the
+                                                // free answer exists rather than offered
+                                                // as a second thought after it. A failed
+                                                // automatic keyed retry (askWithKey()'s
+                                                // `.failure` case) has no manual retry
+                                                // here anymore; re-asking with the "Ask
+                                                // <agent>" chip is the way back.
                                                 // The related follow-up (§177) — the next
                                                 // natural ask, offered where the thumb is,
                                                 // teaching the vocabulary at the moment it's
@@ -2910,13 +2898,12 @@ struct Composer: View {
         foundCurrent = false
         conversationIsKeyed = false
         // Cleared HERE, not just at askWithKey()'s own entry (2026-07-31):
-        // askDirectly() sets this true BEFORE commit() runs, and commit()'s
-        // voice/paste/navigate branches never set `inFlight` true at all —
-        // so a keyed tap on a draft that turns out to be a navigation
-        // command would otherwise leave this flag stranded true, and the
-        // NEXT ask's unrelated inFlight-false transition would fire
-        // askWithKey() out of context. `inFlight = false` two lines below
-        // would itself spuriously trigger the watcher on a stale flag too.
+        // `commit()` only arms this inside its own typed-question branch,
+        // after voice/paste/navigate have already been ruled out — but if
+        // it's still armed when the composer closes mid-answer, leaving it
+        // set would fire the NEXT ask's unrelated inFlight-false transition
+        // out of context. `inFlight = false` two lines below would itself
+        // spuriously trigger the watcher on a stale flag too.
         pendingKeyedFollowUp = false
         inFlight = false
         keepJustLanded = false
@@ -3162,12 +3149,15 @@ struct Composer: View {
         .padding(.horizontal, DS.Space.s4)
     }
 
-    /// The ask-time form of the same consent (2026-07-31, prd §242) — a
-    /// normal `commit()`, plus a flag so the keyed retry fires ITSELF the
-    /// moment the on-device answer settles (the `onChange(of: inFlight)`
-    /// watcher above), instead of waiting for a second, separate tap on a
-    /// chip in the settled verb row. `commit()` is unchanged and does
-    /// everything it always does — this only decides what happens next.
+    /// The ask-time keyed tap (2026-08-30, restored) — "Ask <agent>" is the
+    /// ONLY door to a keyed answer now: the plain send stays free-only, and
+    /// the settled verb row's own "Try with your key" pill is gone (it was
+    /// the same consent tap wearing a second, easy-to-miss shape once this
+    /// chip existed). A configured key answering EVERY question through
+    /// plain send was tried and reverted the same day — it removed the
+    /// explicit choice of whether a question is worth spending against the
+    /// key for, which is the opposite of what "Ask <agent>" exists to be
+    /// honest about.
     private func askDirectly() {
         pendingKeyedFollowUp = true
         commit()
@@ -4074,7 +4064,14 @@ struct Composer: View {
                     // newlines (it inserts more than one character at once).
                     if new.count - old.count == 1, new.hasSuffix("\n") {
                         draft = String(new.dropLast())
-                        if hasDraft { commit() }
+                        // The return key is the send dot's keyboard twin, so
+                        // it defers to the same rule the hidden send dot
+                        // does: when "Ask <agent>" is the one control that
+                        // may submit this draft, return goes through it too
+                        // (2026-08-30) — otherwise a keyboard would offer a
+                        // silent way past the chip the send dot no longer
+                        // is.
+                        if hasDraft { offerKeyedAsk ? askDirectly() : commit() }
                         return
                     }
                     if prefilled { prefilled = false }
@@ -4085,14 +4082,23 @@ struct Composer: View {
                 }
                 .lineLimit(1...5)
 
-            // The send dot is ALWAYS present — grey and waiting when the field
-            // is empty (tap = focus the field), springing to tint the moment
-            // there's something to send. A visible affordance beats a control
-            // that pops out of nowhere (v2 pass, 2026-07-12). With typed text
-            // it wears the word "Ask" (2026-07-16): the verb was invisible,
-            // and "does typing save?" was a real question — the label answers
+            // The send dot is present whenever plain send would actually
+            // submit the draft — grey and waiting when the field is empty
+            // (tap = focus the field), springing to tint the moment there's
+            // something to send. A visible affordance beats a control that
+            // pops out of nowhere (v2 pass, 2026-07-12). With typed text it
+            // wears the word "Ask" (2026-07-16): the verb was invisible, and
+            // "does typing save?" was a real question — the label answers
             // it. A live recording keeps the bare arrow: stopping SAVES the
             // voice note, and an "Ask" label there would lie.
+            //
+            // HIDDEN while `offerKeyedAsk` (2026-08-30, user: "the blue send
+            // button to not show when asking") — for a real question with a
+            // key configured, "Ask <agent>" is the one control that submits
+            // this draft, and a second, more prominent button doing the same
+            // thing is exactly the "which one do I tap" confusion this chip
+            // exists to end.
+            if !offerKeyedAsk {
             Button {
                 if hasDraft || isRecording { commit() } else { fieldFocused = true }
             } label: {
@@ -4127,6 +4133,7 @@ struct Composer: View {
             .buttonStyle(PressSpring())
             .accessibilityLabel(hasDraft && !isRecording ? (pasted ? "Keep" : "Ask") : "Send")
             .modifier(SendTooltip(glyphOnly: !(hasDraft && !isRecording)))
+            }
         }
         .padding(.leading, DS.Space.s2)
         .padding(.trailing, DS.Space.s2)
@@ -4137,6 +4144,7 @@ struct Composer: View {
         .background(DS.background100, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
         .shadow(color: DS.cardShadow, radius: 10, x: 0, y: 3)
         .animation(DS.Motion.standard, value: hasDraft || isRecording)
+        .animation(DS.Motion.standard, value: offerKeyedAsk)
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
     }
@@ -4202,6 +4210,17 @@ struct Composer: View {
         let first = text.split(separator: " ").first.map(String.init) ?? ""
         return ["what", "who", "when", "where", "why", "how", "how's",
                 "did", "does", "do", "is", "are", "can", "show", "find"].contains(first)
+    }
+
+    /// Whether "Ask <agent>" is the one control offering to submit this draft
+    /// (2026-08-30, user: "the blue send button to not show when asking").
+    /// The plain send dot hides whenever this is true — showing both a blue
+    /// button and a keyed chip that submit the SAME draft, one obviously and
+    /// one easy to miss, is exactly the confusion this was built to end.
+    /// Shared by `takeChips`' `offerKeyed` and the send dot itself so the two
+    /// can never drift apart and show neither, or both.
+    private var offerKeyedAsk: Bool {
+        !pasted && draftIsQuestion && AgentKey.isConfigured
     }
 
     /// The typed-draft band (2026-07-16, fourth form — see TakeTool), in the
@@ -4279,17 +4298,12 @@ struct Composer: View {
         // kept, not a phrase to search for.
         let offerFind = !pasted
         let offerSend = !answering && !draftIsQuestion
-        // The ask-time keyed tap (2026-07-31, prd §242) — the discoverability
-        // fix: today's only door to "Try with your key" is a chip in the
-        // SETTLED verb row, which means asking, reading the whole on-device
-        // answer, and noticing a chip among three others before the option
-        // is even visible. This puts the SAME consent tap where the intent
-        // already is — needs a real question (mirrors `askWithKey()`'s own
-        // "the same question" framing; a capture-a-link paste has nothing
-        // for an agent to answer) and a configured key. Mutually exclusive
-        // with Send-to by construction (that band explicitly excludes
-        // questions), so the row never crowds.
-        let offerKeyed = !pasted && draftIsQuestion && AgentKey.isConfigured
+        // The ask-time keyed tap (restored 2026-08-30) — `offerKeyedAsk`,
+        // shared with the send dot's own visibility so the two agree on
+        // when this chip is the one way to submit. `offerSend`'s own
+        // `!draftIsQuestion` already keeps Send-to out of this row for a
+        // question, so the two never crowd.
+        let offerKeyed = offerKeyedAsk
         // `!handingOff` — a seeded question fills the draft on its way to the
         // commit, and this band flashing Find/Send-to over it was the second
         // of the three surfaces one FAB tap used to paint.
@@ -4333,11 +4347,6 @@ struct Composer: View {
                         .accessibilityLabel("Find in your things")
                         }
 
-                        // Same tint-on-tintDim language "Try with your key"
-                        // already wears downstream (`Chip(style: .tint)`),
-                        // resized to this row's 40pt capsule so it scrolls
-                        // evenly beside Find and Send-to rather than reading
-                        // as a smaller, different kind of control.
                         if offerKeyed {
                         keyedVerb(action: askDirectly) {
                             HStack(spacing: DS.Space.s2) {
@@ -4437,8 +4446,19 @@ struct Composer: View {
                 onCommitVoice(piece.transcript, piece.sourceRef)
             }
             close()
-        } else if pasted {
-            // Paste is a capture path — send keeps what came in.
+        } else if pasted, !draftIsQuestion {
+            // Paste is a capture path — send keeps what came in. But
+            // `looksPasted` is a GUESS from the field's own edit deltas, not a
+            // real paste signal (nothing in this file reads UIPasteboard) — it
+            // fires on any edit landing several words at once, which ordinary
+            // typing does too: autocorrect, dictation, and predictive-text
+            // word taps all commit a multi-word run in one edit. A draft that
+            // reads as a real question is asked rather than silently filed
+            // and closed, however it landed in the field. Reported
+            // 2026-08-30: "Ask Bankr" intermittently did nothing — no answer,
+            // no error, straight back to an empty composer — because a
+            // false-positive here sent a typed question through the capture
+            // branch before the ask ever started.
             onCommit()
             close()
         } else if let intent = NavigateCommand.parse(draft, tags: tagPool,

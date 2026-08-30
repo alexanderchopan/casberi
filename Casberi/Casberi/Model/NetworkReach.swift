@@ -403,6 +403,18 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "cursor"),
                  purpose: "Lists the cloud agents you've run — the name, the repository, whether each finished, and the pull request it opened. One request, and only ever a read: Cursor's key cannot be scoped read-only, so nothing here starts, stops, follows up, or deletes an agent. Your code is never sent anywhere; the agent already ran on Cursor's side. cursor.com is the page that mints the key — opened in your browser, never called by the app.",
                  hosts: ["api.cursor.com", "cursor.com"]),
+        // AWS (2026-08-30) — the HOST varies by AWS SERVICE and by the region
+        // you type, so no fixed list of literals could ever be complete
+        // (§289's class: a host built at runtime). Declaring the parent
+        // domain covers every subdomain the same way `NetworkReach.
+        // service(forHost:)`'s suffix match already does for `g.alchemy.com`
+        // — and every AWS call also names itself to `NetworkLedger` directly
+        // (`service: "AWS"`), the §289 fallback for a host that comes from
+        // the person's own typed region.
+        Endpoint(service: "AWS",
+                 reach: .whenConnected(bridge: "aws"),
+                 purpose: "Reads CloudWatch alarms, CodePipeline deploy results, Cost Explorer, and a count of EC2/S3/RDS/Lambda resources — with a read-only IAM key pair you create and sign requests with yourself. Only ever Describe/List/Get calls: nothing here creates, changes, or deletes anything on your account. The exact host depends on the AWS region you enter (e.g. monitoring.us-east-1.amazonaws.com) — every one is a subdomain of amazonaws.com. console.aws.amazon.com is where the key pair is created — opened in your browser, never called by the app.",
+                 hosts: ["amazonaws.com"]),
         // Host is user-configurable (Sentry's EU region answers on
         // de.sentry.io, and self-hosted installs exist) — PostHog's shape
         // exactly: the default cloud host is what's disclosed, and a host the

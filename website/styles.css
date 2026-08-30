@@ -162,9 +162,9 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-jira img  { width: 100%; height: 100%; border-radius: inherit; }
 .ai-cursor    { background: #000; }
 .ai-stripe    { background: #635bff; }
-/* Dodo Payments' mark is a lime-green glyph that only reads as itself in
-   colour, same reasoning as Cloudflare's white field below. */
-.ai-dodopayments { background: #fff; }
+/* Dodo Payments' official mark is full-bleed square art with its lime-green
+   field baked in (the same treatment Privacy.com and Gnosis Pay get above) —
+   carries `.tilefull` in markup, so no background rule is needed here. */
 /* Stripe's mark is the wordmark, so its tile is full-bleed square
    artwork carrying its own purple field — same treatment as PostHog
    above, and the same as BridgeIcon gives it in the app. */
@@ -196,6 +196,9 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
    Sized up like .ai-calendar's numeral: a lone letterform reads small against
    tiles whose artwork fills 52% of the square. */
 .ai-appstoreconnect { background: #0a84ff; font-size: 23px; }
+/* AWS's own real mark (the user's saved icon file, inlined per the site's
+   no-hotlink rule), on AWS's own dark navy ("Squid Ink") ground. */
+.ai-aws { background: #232f3e; }
 /* Base's own documented blue — no bundled mark, the App Store Connect
    shape: a lone letterform for a seat with no logo to inline. */
 .ai-basevibenet { background: #0052ff; font-size: 23px; }

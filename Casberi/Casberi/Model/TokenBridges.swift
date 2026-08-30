@@ -43,6 +43,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     /// enough, so unlike ASC this still rides the generic dedupe-and-land
     /// loop in `TokenIngest.refresh` and needs no `Destination` of its own.
     case jira     = "Jira"
+    /// AWS (2026-08-30) — a read-only IAM key pair signing its own requests
+    /// (SigV4), Trello's/App Store Connect's two-values-plus shape: this
+    /// vault slot holds the SECRET access key, and the access key ID + region
+    /// live beside it in `AWSAuth`. Routes to its own `Destination`.
+    case aws      = "AWS"
 
     var id: String { rawValue }
 
@@ -72,6 +77,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .gitlab:   "gitlab"
         case .appStoreConnect: "appstoreconnect"
         case .jira:      "jira"
+        case .aws:       "aws"
         }
     }
 
@@ -143,6 +149,9 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // before this door (`TokenSetupScreen.jiraSiteSection`, Trello's
         // two-stage shape).
         case .jira:      URL(string: "https://id.atlassian.com/manage-profile/security/api-tokens")
+        // The IAM users list — where the read-only user this needs is
+        // created, and where its access key pair is generated a tab over.
+        case .aws:       URL(string: "https://console.aws.amazon.com/iam/home#/users")
         }
     }
 
@@ -165,6 +174,8 @@ enum TokenBridge: String, CaseIterable, Identifiable {
              .stripe, .trello, .cursor, .pagerduty, .appStoreConnect,
              .dodoPayments:
             String(localized: "Get your API key")
+        case .aws:
+            String(localized: "Create a read-only IAM user")
         }
     }
 
@@ -328,6 +339,13 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .jira: [
             "Create an API token — name it Casberi.",
             "Copy it and paste it below."]
+        // AWS has a real read-only IAM POLICY — unlike Cursor's or App Store
+        // Connect's key, which carry no such thing — so the step names it
+        // rather than leaving the promise to conduct alone (see `canLine`).
+        case .aws: [
+            "Give the user the AWS-managed ReadOnlyAccess policy, or narrower.",
+            "Create an access key for it — \"Application running outside AWS\".",
+            "Copy the Access Key ID and Secret Access Key below."]
         }
     }
 
@@ -374,6 +392,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // fallback and says so in words.
         case .appStoreConnect: "Or paste the .p8 contents"
         case .jira:      "API token"
+        // No prefix shown: AWS secret keys are a 40-character opaque base64
+        // string with no documented prefix (unlike the access key ID, which
+        // always starts "AKIA…" — but that field has its own placeholder on
+        // AWSScreen, not this one, since this is the SECRET half).
+        case .aws:       "Secret access key"
         }
     }
 
@@ -407,6 +430,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .gitlab:   "personal access token"
         case .appStoreConnect: "private key"
         case .jira:      "API token"
+        case .aws:       "secret access key"
         }
     }
 
@@ -442,6 +466,9 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // and PostHog's answer to the same problem.
         case .appStoreConnect: "updates"
         case .jira:      "issues"
+        // Alarms, deploys and a cost alert share no noun — ASC's and
+        // Stripe's answer to the same problem.
+        case .aws:       "updates"
         }
     }
 
@@ -546,6 +573,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             // so the promise, like Privacy's and Cursor's, is what this code
             // does rather than what the token can't.
             String(localized: "Paste a token and the issues assigned to you keep arriving with their due dates. Jira has no read-only token, so this only ever reads.")
+        // SCOPED — the person mints a genuinely read-only IAM policy on AWS's
+        // own side, which is a real grade this key can carry (Cursor's and
+        // App Store Connect's keys cannot). This file's own conduct is still
+        // the backstop; see the type doc.
+        case .aws:
+            String(localized: "Add a read-only key pair and what needs you keeps arriving — a firing alarm, a failed deploy, a spend anomaly. Give the IAM user a read-only policy; this file only ever reads regardless.")
         }
     }
 
@@ -612,6 +645,10 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // — by naming the verbs this code doesn't use. If a write is ever
         // added to `jira()`, this line has to change in the same commit.
         case .jira:      "Reads the issues assigned to you — the project, the status, and when each is due. A Jira token has the same access as your account, so this only ever reads: never transitions, comments on, or edits an issue."
+        // The IAM policy carries the promise on AWS's own side; this file's
+        // own conduct is the backstop — it issues only Describe*/List*/Get*
+        // actions and never a write, mechanically guarded (see the type doc).
+        case .aws:       "Reads CloudWatch alarms, CodePipeline deploys, Cost Explorer, and a resource inventory (EC2, S3, RDS, Lambda). Give the key a read-only IAM policy; this file only ever issues Describe/List/Get calls regardless — never a write, no matter what the policy allows."
         }
     }
 
@@ -686,6 +723,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // busy site and still land nothing if nothing is assigned to you.
         case .jira:
             String(localized: "Jira answered — no issues are assigned to you. Only issues where you're the assignee are read, so check that against the site and project you meant.")
+        // Cloudflare's/App Store Connect's reason: nothing lands until an
+        // alarm fires, a deploy fails, or spend crosses its baseline, so a
+        // healthy account reads exactly like a refused key without this.
+        case .aws:
+            String(localized: "AWS answered — nothing needs attention. Alarms, failed deploys and a cost anomaly land as they happen, so an empty read means everything is quiet.")
         default:
             nil
         }
@@ -750,6 +792,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // account, so clearing them on a reconnect would delete what the very
         // next line depends on.
         case .jira:      if !reconnecting { JiraAuth.clear() }
+        // Cleared on BOTH callers, App Store Connect's exact reasoning: a
+        // fresh key pair may name a different AWS account, and diffing a new
+        // account's alarms against the old account's ledger would announce a
+        // stranger's incident as yours.
+        case .aws:       AWSAuth.clear()
         default:         break
         }
     }
@@ -1083,6 +1130,13 @@ enum TokenIngest {
         // JWT, so `TokenVault.get(bridge.tokenKey)` alone can't establish that
         // it is really connected (see `ASCAuth.configured`).
         if bridge == .appStoreConnect { return await ASCIngest.refresh(context: context) }
+        // AWS owns its whole pass for App Store Connect's exact reason: its
+        // credential isn't one token but a key pair plus a region, so
+        // `TokenVault.get(bridge.tokenKey)` alone can't establish it is
+        // really connected (see `AWSAuth.configured`), and it DERIVES its
+        // news by diffing per-alarm/per-pipeline state ledgers and a cost
+        // baseline rather than mirroring a list.
+        if bridge == .aws { return await AWSIngest.refresh(context: context) }
         guard let token = TokenVault.get(bridge.tokenKey), !running.contains(bridge) else {
             return running.contains(bridge) ? 0 : nil
         }
@@ -1200,6 +1254,7 @@ enum TokenIngest {
         case .sentry:   ownSweepUnreachable(.sentry)
         case .pagerduty: ownSweepUnreachable(.pagerduty)
         case .appStoreConnect: ownSweepUnreachable(.appStoreConnect)
+        case .aws:      ownSweepUnreachable(.aws)
         case .jira:     await jira(token)
         }
     }
