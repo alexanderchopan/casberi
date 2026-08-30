@@ -3599,7 +3599,6 @@ struct Composer: View {
         }
     }
 
-    @ViewBuilder
     /// The launcher header (2026-08-30, user: "when it opens it should show
     /// chat interface with wallet, work, day chips") — three FIXED chips,
     /// always the same three, always leading `askChips`, unlike everything
@@ -3622,6 +3621,7 @@ struct Composer: View {
          (String(localized: "Day"), TodayBrief.title, "sun.max.fill")]
     }
 
+    @ViewBuilder
     private var askChips: some View {
         // Also shown docked beneath the brief LANDING (prd §181) — the one
         // answer state that keeps its chips, so opening the agent onto the
