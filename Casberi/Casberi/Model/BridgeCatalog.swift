@@ -761,7 +761,7 @@ enum BridgeCatalog {
                          "Failed payments, with Stripe's own retry date",
                          "Never an individual charge — and never a customer's details"],
               needsSetup: true, added: day(2026, 7, 31)),
-        Offer(name: "Dodo Payments", tagline: "Every payment, the moment it lands", group: "Work",      connectable: true,
+        Offer(name: "Dodo Payments", tagline: "Every payment, the moment it lands", group: "Wallet",    connectable: true,
               summary: "Every payment you receive lands in your feed as it succeeds, alongside refunds, disputes, and subscriptions leaving a healthy state.\n\nConnects with a key you mint read-only: it cannot charge, refund, or cancel anything.",
               features: ["A payment lands with who paid and how much",
                          "A refund, a dispute opening, a dispute closing",
