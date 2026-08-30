@@ -143,6 +143,9 @@ struct FeedScreen: View {
     /// .detailText` paints the wallet move in its direction's accent, and
     /// the accent is scheme-keyed (§83's flat-move rule lives in there too).
     @Environment(\.colorScheme) private var colorScheme
+    /// Read for exactly one decision — whether the Bankr offer can float over
+    /// the wallet slot or has to take a row of its own. See `bankrOverlays`.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     // This window's stack and detail pane (per-window since `SceneState`).
     @Environment(HomeRoute.self) private var route
     @Environment(PadDetailSelection.self) private var detail
@@ -568,6 +571,60 @@ struct FeedScreen: View {
     /// The balance line's window (prd §155). Narrowed to what the record can
     /// actually answer each render; the choice persists across launches.
     @State private var balanceRange: WalletRange = .watched
+    /// The Bankr offer's shared dismissal, held here purely as an OBSERVATION.
+    ///
+    /// `BankrOfferBanner.offers` is the rule and stays the only place it is
+    /// spelled — but it is a static read of `UserDefaults`, which SwiftUI does
+    /// not track, so tapping Not now inside the banner would fade the banner
+    /// out and leave its now-empty `Section` (and that section's spacing)
+    /// standing above the crown until something else happened to invalidate
+    /// this body. This property is what makes the write land here too, so the
+    /// gap closes with the fade rather than on the next unrelated render.
+    @AppStorage(BankrOfferBanner.dismissedKey) private var bankrOfferDismissed = false
+
+    /// Whether the Bankr offer is floating over this room's slot right now.
+    ///
+    /// Read in two places that MUST agree — the overlay that draws it, and the
+    /// crown's range chips, which stand down while it is up (see there). A
+    /// second spelling of this condition is a room where the glass is present
+    /// and the chips are still drawn underneath it, unreachable.
+    ///
+    /// `bankrOfferDismissed` is named alongside `BankrOfferBanner.offers` and
+    /// is not redundant: `offers` is the RULE and the only place it is spelled,
+    /// but it reads `UserDefaults` statically and SwiftUI does not track that,
+    /// so this property is what makes a Not now land in this body at all.
+    /// Without it the glass would fade out and the chips would stay missing
+    /// until some later unrelated render.
+    ///
+    /// The watch list is the gate §529 means by "only offered to somebody who
+    /// already has a wallet" — cheap, and true in every scope.
+    private var bankrOffering: Bool {
+        !wallet.addresses.isEmpty && !bankrOfferDismissed && BankrOfferBanner.offers
+    }
+
+    /// The offer FLOATS over the wallet slot — the normal case.
+    ///
+    /// **Not at accessibility sizes, and that is the same bug this whole pass
+    /// is about.** The overlay is safe because a banner taller than the slot
+    /// grows upward, away from the rail — but a `List` row clips to its own
+    /// bounds, so past the slot's height the growth is sheared at the TOP
+    /// instead. At AX sizes this banner is two to three times its normal
+    /// height, so that is not an edge case there, it is the case.
+    private var bankrOverlays: Bool {
+        bankrOffering && !dynamicTypeSize.isAccessibilitySize
+    }
+
+    /// …and takes a row of its own where it cannot float.
+    ///
+    /// The fixed-bar promise (§483) is what an overlay exists to keep, and at
+    /// accessibility sizes it is already gone for a reason that has nothing to
+    /// do with this banner: every scope's figure overflows the fixed slot and
+    /// is clipped by it, so the rail's position stopped being a function of
+    /// what is above it. Given that, a row that pushes the room down honestly
+    /// beats a glass card with its top cut off.
+    private var bankrFlows: Bool {
+        bankrOffering && dynamicTypeSize.isAccessibilitySize
+    }
     /// The wallet switcher's selection fill — ONE capsule that slides from
     /// the old chip to the new (the source chips' own ruling, 2026-07-14:
     /// "selection is an object traveling, not two states blinking").
@@ -4465,6 +4522,26 @@ struct FeedScreen: View {
             // `Section` still takes list spacing, so a zero-height box is not a
             // absent one, and the count of sections above the bar has to match
             // on every scope for the bar to land in the same place.
+            // …and where it cannot float, it takes a row (see `bankrFlows`).
+            // Above the slot rather than below it, because it is the same offer
+            // at the same place in the room — only the layer changes.
+            if bankrFlows {
+                Section {
+                    BankrOfferBanner { route.pushBridge(.bankr) }
+                        // `inset + contentInset` is where the crown's own text
+                        // lands one row down; the slot applies `contentInset`
+                        // inside the row's leading and this banner has no slot
+                        // to inherit it from. Spelled as the sum so it tracks
+                        // either token if one is re-tuned.
+                        .listRowInsets(EdgeInsets(
+                            top: 0,
+                            leading: DSRoomChassis.inset + DSRoomChassis.contentInset,
+                            bottom: DSRoomChassis.contentGap,
+                            trailing: DSRoomChassis.inset + DSRoomChassis.contentInset))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+            }
             if section == .home {
                 // The same one template as every scope below and as every
                 // vibenet scope (prd §495). Home is a bare view now too, so
@@ -4477,6 +4554,57 @@ struct FeedScreen: View {
                     // with every other scope's headline.
                     DSRoomSlot(headline: nil, reservesHeadline: false) {
                         walletTilesSection(visible, streamTotal: all.count, drawsChart: true)
+                    }
+                    // THE BANKR OFFER FLOATS OVER THE SLOT (prd §529
+                    // amendment, user ruling: *"if the banner was glass and
+                    // overlaid the slot in a good way … It's fine if it covers
+                    // the image, but it's not fine if it makes the slot fucked
+                    // up"*).
+                    //
+                    // It drew INSIDE this slot for one build and could not:
+                    // `DSRoomSlot` is `minHeight == maxHeight ==
+                    // DSRoomChassis.visualSlot` and `.clipped()`, on purpose,
+                    // so the account rail and the scope toggle land at the same
+                    // y on every scope (§483). A ~200pt banner in the box did
+                    // not push the crown down, it ATE the slot — the move line
+                    // sheared along the bottom edge, the sparkline and the
+                    // range chips gone.
+                    //
+                    // **AN OVERLAY IS WHAT SEPARATES COVERING FROM BREAKING,
+                    // and the two properties that make it safe are structural
+                    // rather than measured.** It is attached HERE, on the slot,
+                    // which is OUTSIDE that `.clipped()` — so the banner can
+                    // never be sheared the way the crown was. And it is
+                    // BOTTOM-aligned, so a banner taller than the box grows
+                    // UPWARD, over the room's own reading, and can never reach
+                    // down onto the rail below. No height budget to get wrong,
+                    // nothing to re-measure at large Dynamic Type: the worst
+                    // case is that it covers more of the crown, which is
+                    // exactly the trade the ruling above blesses.
+                    //
+                    // Glass, not a card: this is chrome floating over content,
+                    // which is what the floating layer is FOR (design law §8) —
+                    // and `regular` rather than `clear` because what travels
+                    // under it is a figure and a line, and the frosting is what
+                    // buys their legibility back (`DSGlassVariant`'s own rule:
+                    // `clear` is for chrome over PIXELS).
+                    //
+                    // `.offers` is asked before anything is drawn, not left to
+                    // the banner's own guard: the glass and its padding live
+                    // out here, so a dismissed offer would otherwise leave a
+                    // small empty glass tile floating over the crown forever.
+                    .overlay(alignment: .bottom) {
+                        if bankrOverlays {
+                            BankrOfferBanner { route.pushBridge(.bankr) }
+                                .padding(DSRoomChassis.contentInset)
+                                .dsGlass(cornerRadius: DS.Radius.widget)
+                                // Inset from the slot's edges so it reads as an
+                                // object floating ON the room rather than as a
+                                // band the room grew. Its edge lands on the
+                                // crown's own text column, which is what
+                                // `contentInset` is for.
+                                .padding(.horizontal, DSRoomChassis.contentInset)
+                        }
                     }
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -6560,13 +6688,17 @@ struct FeedScreen: View {
                 // taking the List's own background and insets, which would
                 // undo both the card geometry and the entrance below.
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
-                // The Bankr offer (prd §529), at the head of the room where an
-                // onchain agent is the obvious next thing — and INSIDE the
-                // gate above, so it is only ever offered to somebody who
-                // already has a wallet. It shares one dismissal with the risen
-                // agent's copy, so "not now" is an answer about Bankr rather
-                // than about a screen. Draws nothing once Bankr is connected.
-                BankrOfferBanner { route.pushBridge(.bankr) }
+                // The Bankr offer used to draw HERE, and it could not (prd
+                // §529 amendment). This block is the figure inside
+                // `DSRoomSlot` — a box that is `minHeight == maxHeight ==
+                // DSRoomChassis.visualSlot` and `.clipped()`, on purpose, so
+                // the rail and the toggle land at the same y in every scope.
+                // A ~200pt banner in front of the crown therefore did not push
+                // the crown down, it ATE the slot: the delta line was cut in
+                // half along the box's bottom edge and the sparkline and the
+                // range chips were clipped away entirely. It draws in its
+                // own `Section` now, above the slot and outside the box —
+                // see the wallet shape's own note where it is emitted.
                 // Guarded as a whole for the same reason the caution block
                 // below is: the section renders whenever ANY of its four
                 // inputs exist, so a wallet whose money is entirely in
@@ -6651,7 +6783,21 @@ struct FeedScreen: View {
                             drawsChart: drawsChart,
                             drawsReading: drawsChart,
                             chartHeight: 96,
-                            ranges: ranges,
+                            // THE CHIPS STAND DOWN UNDER THE GLASS (prd §529
+                            // amendment). The offer is bottom-aligned in this
+                            // slot and these are the bottom-most thing in it,
+                            // so they are the first thing it covers — and a
+                            // control you can see and cannot tap is worse than
+                            // one that isn't there, which is §83's own rule
+                            // about dead controls read from the other side.
+                            // The chart keeps drawing (it is the "image" the
+                            // ruling says may be covered, and the glass wants
+                            // something to sit over); only the CONTROL yields.
+                            // `active` above is untouched, so the window the
+                            // line is drawn over does not change — the person
+                            // gets their remembered range back, chips and all,
+                            // the moment the offer goes.
+                            ranges: bankrOverlays ? [] : ranges,
                             range: active,
                             onPickRange: { r in
                                 balanceRange = r
