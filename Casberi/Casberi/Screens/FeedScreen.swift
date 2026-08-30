@@ -379,6 +379,11 @@ struct FeedScreen: View {
         /// here for `hegotaMove`'s two reasons: no `Thing` to ride, and a card
         /// inside this List cannot present its own sheet.
         case hegotaAccount(HegotaAccount)
+        /// This phone's own Hegotá key (prd §525/§526) — routed here for
+        /// `hegotaAccount`'s exact reason: the row lives in `HegotaRoomList`,
+        /// which is inside this List's rows, and cannot present its own sheet.
+        case hegotaKeySheet
+        case hegotaSendSheet
         /// One UTXO, the spend that created it, and which of that spend's
         /// outputs are still unspent.
         case hegotaCoin(HegotaCoin, [HegotaCoin], Set<UInt64>)
@@ -414,6 +419,11 @@ struct FeedScreen: View {
         /// acts for + the room-wide shared-key facts, all value types
         /// captured at tap time, the `vibenetKeys` reasoning exactly.
         case vibenetKey(VibenetActor, VibenetAccountItem, [VibenetSharedKey])
+        /// Making an account whose only key is this phone (prd §523/§526).
+        /// Routed here for `vibenetKeys`' own reason: the create row lives in
+        /// `VibenetRoomCard`, which is inside this List's rows, so it cannot
+        /// present its own sheet.
+        case vibenetCreate
 
         var id: String {
             switch self {
@@ -427,12 +437,15 @@ struct FeedScreen: View {
             case .hegotaMove(let m, _): "hegotaMove:\(m.id)"
             case .hegotaFrame(let m, let i): "hegotaFrame:\(m.id)#\(i)"
             case .hegotaAccount(let a): "hegotaAccount:\(a.address)"
+            case .hegotaKeySheet: "hegotaKeySheet"
+            case .hegotaSendSheet: "hegotaSendSheet"
             case .hegotaCoin(let c, _, _): "hegotaCoin:\(c.index)"
             case .nftPicks(let address, _): "nftPicks:\(address)"
             case .person(let source, let handle): "person:\(source):\(handle)"
             case .vibenetKeys: "vibenetKeys"
             case .vibenetKey(let actor, let item, _):
                 "vibenetKey:\(VibenetKeySeenDiff.keyID(address: item.address, actorId: actor.actorId))"
+            case .vibenetCreate: "vibenetCreate"
             }
         }
     }
@@ -3093,6 +3106,10 @@ struct FeedScreen: View {
                 chrome.hegotaSection = section
                 feedSheet = nil
             }
+        case .hegotaKeySheet:
+            HegotaKeySheet(onOpenSend: { feedSheet = .hegotaSendSheet })
+        case .hegotaSendSheet:
+            HegotaSendSheet()
         case .hegotaCoin(let coin, let all, let unspent):
             HegotaCoinSheet(coin: coin, all: all, unspent: unspent)
         case .nftPicks(let address, let label):
@@ -3129,6 +3146,17 @@ struct FeedScreen: View {
                                 newKeyIDs: newKeyIDs)
         case .vibenetKey(let actor, let item, let shared):
             VibenetKeySheet(actor: actor, item: item, sharedKeys: shared)
+        case .vibenetCreate:
+            VibenetCreateSheet { address in
+                // Watching it is what puts it in the room — the sheet does
+                // not know what a watch list is, and this is the one place
+                // the two meet, DISMISS FIRST (the `.vibenetKeys` ruling
+                // above: the room re-composes behind this sheet, and asking
+                // for that while the sheet is still up lands the change
+                // under a covered screen).
+                feedSheet = nil
+                _ = VibenetWatch.shared.add(address)
+            }
         }
     }
 
@@ -3250,13 +3278,14 @@ struct FeedScreen: View {
                                accounts: HegotaRoomSource.accounts(),
                                scoped: chrome.hegotaScope,
                                section: HegotaSection.resolve(chrome.hegotaSection,
-                                                              present: chrome.hegotaSections)) { move, owner in
+                                                              present: chrome.hegotaSections),
+                               onOpenMove: { move, owner in
                     feedSheet = .hegotaMove(move, owner)
-                } onOpenAccount: { account in
+                }, onOpenAccount: { account in
                     feedSheet = .hegotaAccount(account)
-                } onOpenCoin: { coin, all, unspent in
+                }, onOpenCoin: { coin, all, unspent in
                     feedSheet = .hegotaCoin(coin, all, unspent)
-                }
+                }, onOpenKeySheet: { feedSheet = .hegotaKeySheet })
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
@@ -4040,6 +4069,7 @@ struct FeedScreen: View {
                                             chrome.refreshPulse += 1
                                         }
                                     },
+                                    onRequestCreate: { feedSheet = .vibenetCreate },
                                     onOpenKeys: { newKeyIDs in
                                         feedSheet = .vibenetKeys(room.items, newKeyIDs: newKeyIDs)
                                     },
