@@ -4537,6 +4537,23 @@ struct Composer: View {
             // before the field is cleared, because it decides whether the
             // keyboard comes back at settle (see the re-focus below).
             let askedByTyping = fieldFocused
+            // BLUR NOW, not just at `dayCard`'s own call site (2026-08-30).
+            // `askSurfaceShowing` is `answering && fieldFocused && !hasDraft
+            // && !isRecording` — and right here `answering` is about to go
+            // true while `draft` is about to go empty, so a commit that
+            // leaves focus up satisfies it immediately and hides the ENTIRE
+            // document column (turns + the live answer) for as long as focus
+            // stays up, which used to be exactly this comment's fear stated
+            // two callers away rather than fixed here. Invisible for a fast
+            // on-device answer (the window closes before anyone notices) and
+            // total for a slow keyed one — this is why "Ask Bankr" read as
+            // broken: Bankr's answer can take a minute, so the hidden window
+            // was the whole wait, not a flicker. `askedByTyping`'s own
+            // settle-time re-focus (below) restores the keyboard once the
+            // answer is actually on screen, so a typed follow-up still gets
+            // its keyboard back — just after the document can be seen, not
+            // hiding it from the moment it starts.
+            fieldFocused = false
             draft = ""              // clear the field so a follow-up is ready
             // No placeholder doc while in flight (fix 2026-07-20): the old
             // `Insight("Thinking…")` painted the answer card's full tintDim
