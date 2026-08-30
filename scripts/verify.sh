@@ -907,6 +907,10 @@ harness "Sources-tray packing self-test" "source packing self-test" "scripts/sou
 # diagnosable instead of a third mystery.
 harness "Category fold self-test" "category fold self-test" "scripts/category-fold-selftest.sh" "the category fold self-test failed — see $OUT/category-fold-selftest.log (it often passes standalone: scripts/category-fold-selftest.sh)"
 
+# The category chips' order, now that it's the person's and not a constant
+# (prd §533, 2026-08-29) — reconcile, rank, and the store's own idempotence.
+harness "Category order self-test" "category order self-test" "scripts/category-order-selftest.sh" "the category order self-test failed — see $OUT/category-order-selftest.log"
+
 # What a chip tap is allowed to FETCH (PERF 2026-08-13). Tapping an agent chip
 # used to materialise the entire store twice on the main actor — once in
 # `answerDocument` before any composer ran, once in the settle path above the

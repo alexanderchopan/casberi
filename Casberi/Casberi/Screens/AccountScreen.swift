@@ -24,6 +24,7 @@ struct SettingsScreen: View {
     @State private var diagnosticsOpen = false
     @State private var languageOpen = false
     @State private var howItWorksOpen = false
+    @State private var chipOrderOpen = false
     @State private var detail: AccountDetail?
 
     /// What the Notifications row says without being opened. Names the classes
@@ -69,6 +70,9 @@ struct SettingsScreen: View {
             .sheet(item: $detail) { AccountDetailSheet(detail: $0) }
             .sheet(isPresented: $languageOpen) { LanguagePickerSheet() }
             .sheet(isPresented: $howItWorksOpen) { HowItWorksSheet().dsPageSheet() }
+            .sheet(isPresented: $chipOrderOpen) {
+                NavigationStack { CategoryOrderSheet() }.dsPageSheet()
+            }
             .photosPicker(isPresented: $avatarPickerOpen,
                           selection: $avatarSelection, matching: .images)
             // A set photo can come off, not just be replaced — every setting
@@ -128,6 +132,9 @@ struct SettingsScreen: View {
                 }
                 if UserDefaults.standard.bool(forKey: "openHowItWorks") {
                     howItWorksOpen = true
+                }
+                if UserDefaults.standard.bool(forKey: "openChipOrder") {
+                    chipOrderOpen = true
                 }
                 if let raw = UserDefaults.standard.string(forKey: "accountDetail"),
                    let which = AccountDetail(rawValue: raw) {
@@ -226,6 +233,17 @@ struct SettingsScreen: View {
         let keyedAgent = AgentKey.active
         let keyed = keyedAgent != nil
         return [
+            // The category chips' order (prd §533) — the ONE thing about the
+            // source strip that was never earned by anything the person did.
+            // Source chips are ranked by `ChipMemory`'s tap-learning and need
+            // no setting; the categories sat in a hand-authored constant, so
+            // this hands that constant over. The trailing fact previews the
+            // setting the way Theme's and Color's do — the first three chips,
+            // in the order they will actually appear.
+            RowSpec(title: "Chip order",
+                    value: CategoryOrder.current.prefix(3).joined(separator: ", "),
+                    badge: ("arrow.up.arrow.down", DS.textSecondary),
+                    action: { chipOrderOpen = true }),
             // A binary choice earns a tap, not a tray with one empty screen's
             // worth of nothing below two chips (report 2026-07-09) — the row
             // itself flips, and the icon states which way.

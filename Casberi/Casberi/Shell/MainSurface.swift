@@ -761,20 +761,6 @@ struct MainSurface: View {
     /// Two freezes closer together than this cannot mean two different orders.
     private static let freezeCoalesce: TimeInterval = 1.0
 
-    /// The category strip's fixed order (user ruling 2026-08-11) — see
-    /// `computedChips()`'s own comment for the reasoning. "Voice" is not a
-    /// catalog category (it has no offer at all — an always-on device
-    /// capability, `KNOWN_NO_CATALOG_SEAT` in `demo-selftest.py`), so it never
-    /// folds and never appears in `CategoryFold`'s own name set, but it is
-    /// still one of the fixed positions a person actually sees in the strip.
-    /// Anything absent from this list (a category renamed out from under it,
-    /// or a legacy/unresolved source with nowhere to fold) keeps its relative
-    /// learned-order position at the tail — see the `?? Int.max` fallback.
-    private static let categoryOrder: [String] = [
-        "Wallet", "Markets", "Work", "Agents", "Life", "Social",
-        "Media", "Reading", "Notes", "Voice", "Shopping",
-    ]
-
     private func freezeChips(force: Bool = false) {
         // Coalesced (2026-08-11). A cold launch fires this TWICE within
         // milliseconds — `onAppear` and the first `.active` scenePhase — and on
@@ -1016,14 +1002,25 @@ struct MainSurface: View {
         // "wallet, markets, work, agents, life, social, media, reading, notes,
         // voice, shopping" — Wallet first because it's "more important to
         // users", Social placed "after life and before media" on request) —
-        // not the learned order every other kind of chip still earns. "All"
-        // and Pinned are untouched (never part of this ordering) and split
-        // off first so the sort below only ever touches what comes after
-        // them; a stable sort keeps their relative position exact.
+        // not the learned order every other kind of chip still earns. That
+        // ruling is now the DEFAULT rather than the only answer: it is
+        // `CategoryOrder.defaultOrder`, and Settings lets the person rearrange
+        // it (prd §533). Everything else about this line is unchanged — "All"
+        // and Pinned are untouched (never part of this ordering) and split off
+        // first so the sort below only ever touches what comes after them; a
+        // stable sort keeps their relative position exact, and a label the
+        // order has never heard of still keeps its learned-order slot at the
+        // tail (`rank`'s `Int.max`).
+        //
+        // Read ONCE per walk, not once per comparison: `current` deserializes
+        // a UserDefaults array, and an O(n log n) comparator asking for it per
+        // compare is exactly the mistake `ChipMemory.snapshot()` exists to
+        // stop (2026-07-21 audit).
+        let order = CategoryOrder.current
         let head = Array(folded.prefix(1 + pinned.count))
         let rest = Array(folded.dropFirst(1 + pinned.count))
-            .sorted { (Self.categoryOrder.firstIndex(of: $0) ?? Int.max)
-                    < (Self.categoryOrder.firstIndex(of: $1) ?? Int.max) }
+            .sorted { CategoryOrder.rank(of: $0, in: order)
+                    < CategoryOrder.rank(of: $1, in: order) }
         let labels = head + rest
         // The tray gets the SOURCES, so Pinned is dropped from its list for the
         // same reason a folded category label is: it is a room, not a source.
@@ -1474,6 +1471,15 @@ struct MainSurface: View {
             guard liveChips != nil else { return }
             chrome.chipOrder = chipLabels
         }
+        // A rearrangement in Settings (prd §533) — see
+        // `ShellChrome.chipOrderPulse` for why the strip is re-frozen rather
+        // than reading the order live. `force`d past the coalescing window:
+        // this is a deliberate act, not a lifecycle event, and coalescing it
+        // against a foreground that happened a moment earlier would drop the
+        // one refresh somebody is waiting for.
+        .onChange(of: chrome.chipOrderPulse) { _, _ in
+            withAnimation(DS.Motion.standard) { freezeChips(force: true) }
+        }
         // Every folded room's scopes — see `ShellChrome.categoryVenues`.
         .onChange(of: categoryVenues, initial: true) { _, venues in
             chrome.categoryVenues = venues
@@ -1880,6 +1886,11 @@ struct MainSurface: View {
                 // promotion verifies in one launch (seed Wallet high, watch
                 // it lead the sources behind All).
                 ChipMemory.seedFromLaunchArgs()
+                // `-categoryOrder "Life,Wallet"` seeds a rearranged strip
+                // headlessly (prd §533). Same position and same reason as the
+                // seed above: it must land before the freeze it is meant to
+                // decide.
+                CategoryOrder.seedFromLaunchArgs()
                 #endif
                 // The session's order, taken once (see `chipLabels`). AFTER the
                 // seed above, so `-chipStats` still decides what freezes —

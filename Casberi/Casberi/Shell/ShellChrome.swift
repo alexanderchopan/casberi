@@ -426,6 +426,20 @@ final class ShellChrome {
     /// valid; MainSurface keeps this in sync via `.onChange(of: chipLabels)`.
     var chipOrder: [String] = ["All"]
 
+    /// Bumped when the person rearranges the category chips in Settings
+    /// (prd §533) — `MainSurface` re-freezes the strip on it.
+    ///
+    /// A pulse rather than the order itself, and rather than reading
+    /// `CategoryOrder.current` per body pass: the strip's order is frozen for
+    /// the session on purpose (see `MainSurface.chipLabels` — a strip that
+    /// re-sorts under a thumb is the thing the freeze exists to prevent), and
+    /// a rearrangement is the one change to it the person made deliberately
+    /// and is waiting to see. Settings is PUSHED inside the same scene, so no
+    /// foreground fires on the way back and without this the new order would
+    /// not appear until the app was next backgrounded — which reads exactly
+    /// like a control that did nothing (§83).
+    var chipOrderPulse = 0
+
     /// The same order BEFORE the Markets fold — every source room, one entry
     /// each (2026-08-10).
     ///
