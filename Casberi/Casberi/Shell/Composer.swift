@@ -2056,28 +2056,16 @@ struct Composer: View {
                                                     }
                                                     .buttonStyle(.plain)
                                                 }
-                                                // The BYO-key retry (prd §67) — a verb,
-                                                // never a fallback: the question and its
-                                                // matched things leave this iPhone only
-                                                // on this tap, straight to the agent's
-                                                // provider (Claude/ChatGPT/Gemini/Venice).
-                                                if !keyedCurrent, keyAvailable,
-                                                   !currentQuestion.isEmpty {
-                                                    keyedVerb(action: askWithKey) {
-                                                        // The row's one consequential verb wears
-                                                        // its weight (design pass 2026-07-21):
-                                                        // it sends the question and its matched
-                                                        // things off this iPhone and spends the
-                                                        // person's own key. It read as the
-                                                        // QUIETEST chip in the row while two
-                                                        // routine saves shouted.
-                                                        Chip(text: askProvider.map {
-                                                                String(localized: "Try with \($0.agent)")
-                                                             } ?? String(localized: "Try with your key"),
-                                                             style: .tint, glyph: "key.fill")
-                                                    }
-                                                    .buttonStyle(.plain)
-                                                }
+                                                // "Try with your key" retired 2026-08-30
+                                                // (user: "the 'try your key' to go away")
+                                                // — "Ask <agent>" is the one door to a
+                                                // keyed answer now, tapped BEFORE the
+                                                // free answer exists rather than offered
+                                                // as a second thought after it. A failed
+                                                // automatic keyed retry (askWithKey()'s
+                                                // `.failure` case) has no manual retry
+                                                // here anymore; re-asking with the "Ask
+                                                // <agent>" chip is the way back.
                                                 // The related follow-up (§177) — the next
                                                 // natural ask, offered where the thumb is,
                                                 // teaching the vocabulary at the moment it's
@@ -3161,6 +3149,20 @@ struct Composer: View {
         .padding(.horizontal, DS.Space.s4)
     }
 
+    /// The ask-time keyed tap (2026-08-30, restored) — "Ask <agent>" is the
+    /// ONLY door to a keyed answer now: the plain send stays free-only, and
+    /// the settled verb row's own "Try with your key" pill is gone (it was
+    /// the same consent tap wearing a second, easy-to-miss shape once this
+    /// chip existed). A configured key answering EVERY question through
+    /// plain send was tried and reverted the same day — it removed the
+    /// explicit choice of whether a question is worth spending against the
+    /// key for, which is the opposite of what "Ask <agent>" exists to be
+    /// honest about.
+    private func askDirectly() {
+        pendingKeyedFollowUp = true
+        commit()
+    }
+
     /// The keyed verb, wearing a provider picker when there is a choice to
     /// make (2026-08-06). A plain tap is unchanged — it asks whichever agent
     /// the label names — and a long press offers every configured one.
@@ -4062,7 +4064,14 @@ struct Composer: View {
                     // newlines (it inserts more than one character at once).
                     if new.count - old.count == 1, new.hasSuffix("\n") {
                         draft = String(new.dropLast())
-                        if hasDraft { commit() }
+                        // The return key is the send dot's keyboard twin, so
+                        // it defers to the same rule the hidden send dot
+                        // does: when "Ask <agent>" is the one control that
+                        // may submit this draft, return goes through it too
+                        // (2026-08-30) — otherwise a keyboard would offer a
+                        // silent way past the chip the send dot no longer
+                        // is.
+                        if hasDraft { offerKeyedAsk ? askDirectly() : commit() }
                         return
                     }
                     if prefilled { prefilled = false }
@@ -4073,14 +4082,23 @@ struct Composer: View {
                 }
                 .lineLimit(1...5)
 
-            // The send dot is ALWAYS present — grey and waiting when the field
-            // is empty (tap = focus the field), springing to tint the moment
-            // there's something to send. A visible affordance beats a control
-            // that pops out of nowhere (v2 pass, 2026-07-12). With typed text
-            // it wears the word "Ask" (2026-07-16): the verb was invisible,
-            // and "does typing save?" was a real question — the label answers
+            // The send dot is present whenever plain send would actually
+            // submit the draft — grey and waiting when the field is empty
+            // (tap = focus the field), springing to tint the moment there's
+            // something to send. A visible affordance beats a control that
+            // pops out of nowhere (v2 pass, 2026-07-12). With typed text it
+            // wears the word "Ask" (2026-07-16): the verb was invisible, and
+            // "does typing save?" was a real question — the label answers
             // it. A live recording keeps the bare arrow: stopping SAVES the
             // voice note, and an "Ask" label there would lie.
+            //
+            // HIDDEN while `offerKeyedAsk` (2026-08-30, user: "the blue send
+            // button to not show when asking") — for a real question with a
+            // key configured, "Ask <agent>" is the one control that submits
+            // this draft, and a second, more prominent button doing the same
+            // thing is exactly the "which one do I tap" confusion this chip
+            // exists to end.
+            if !offerKeyedAsk {
             Button {
                 if hasDraft || isRecording { commit() } else { fieldFocused = true }
             } label: {
@@ -4115,6 +4133,7 @@ struct Composer: View {
             .buttonStyle(PressSpring())
             .accessibilityLabel(hasDraft && !isRecording ? (pasted ? "Keep" : "Ask") : "Send")
             .modifier(SendTooltip(glyphOnly: !(hasDraft && !isRecording)))
+            }
         }
         .padding(.leading, DS.Space.s2)
         .padding(.trailing, DS.Space.s2)
@@ -4125,6 +4144,7 @@ struct Composer: View {
         .background(DS.background100, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
         .shadow(color: DS.cardShadow, radius: 10, x: 0, y: 3)
         .animation(DS.Motion.standard, value: hasDraft || isRecording)
+        .animation(DS.Motion.standard, value: offerKeyedAsk)
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
     }
@@ -4190,6 +4210,17 @@ struct Composer: View {
         let first = text.split(separator: " ").first.map(String.init) ?? ""
         return ["what", "who", "when", "where", "why", "how", "how's",
                 "did", "does", "do", "is", "are", "can", "show", "find"].contains(first)
+    }
+
+    /// Whether "Ask <agent>" is the one control offering to submit this draft
+    /// (2026-08-30, user: "the blue send button to not show when asking").
+    /// The plain send dot hides whenever this is true — showing both a blue
+    /// button and a keyed chip that submit the SAME draft, one obviously and
+    /// one easy to miss, is exactly the confusion this was built to end.
+    /// Shared by `takeChips`' `offerKeyed` and the send dot itself so the two
+    /// can never drift apart and show neither, or both.
+    private var offerKeyedAsk: Bool {
+        !pasted && draftIsQuestion && AgentKey.isConfigured
     }
 
     /// The typed-draft band (2026-07-16, fourth form — see TakeTool), in the
@@ -4267,19 +4298,17 @@ struct Composer: View {
         // kept, not a phrase to search for.
         let offerFind = !pasted
         let offerSend = !answering && !draftIsQuestion
-        // The pre-send "Ask <agent>" chip retired 2026-08-30 (user: "why not
-        // just ask bankr each time, it's not clear to user") — a configured
-        // key now answers every question through the ordinary send (see
-        // `commit()`'s `pendingKeyedFollowUp` arm), so a second chip offering
-        // the same outcome the send dot already gives had nothing left to
-        // discover; two controls doing the same thing, one blue and obvious
-        // and one a chip easy to miss, was the confusion being reported, not
-        // a fix for it.
+        // The ask-time keyed tap (restored 2026-08-30) — `offerKeyedAsk`,
+        // shared with the send dot's own visibility so the two agree on
+        // when this chip is the one way to submit. `offerSend`'s own
+        // `!draftIsQuestion` already keeps Send-to out of this row for a
+        // question, so the two never crowd.
+        let offerKeyed = offerKeyedAsk
         // `!handingOff` — a seeded question fills the draft on its way to the
         // commit, and this band flashing Find/Send-to over it was the second
         // of the three surfaces one FAB tap used to paint.
         if isOpen && hasDraft && !isRecording && !handingOff,
-           offerFind || offerSend {
+           offerFind || offerSend || offerKeyed {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 if offerFind && !liveScopes.isEmpty { scopeChips }
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -4316,6 +4345,25 @@ struct Composer: View {
                         }
                         .buttonStyle(PressSpring())
                         .accessibilityLabel("Find in your things")
+                        }
+
+                        if offerKeyed {
+                        keyedVerb(action: askDirectly) {
+                            HStack(spacing: DS.Space.s2) {
+                                Image(systemName: "key.fill")
+                                    .accessibilityHidden(true)
+                                    .dsGlyph(14, weight: .medium)
+                                Text("Ask \(askProvider?.agent ?? AgentKey.active?.agent ?? "your key")")
+                                    .dsText(.callout15).fontWeight(.semibold)
+                            }
+                            .foregroundStyle(DS.tint)
+                            .padding(.horizontal, DS.Space.s3 + 2)
+                            .frame(minHeight: 40)
+                            .background(DS.tintDim, in: Capsule(style: .continuous))
+                            .dsHover()
+                        }
+                        .buttonStyle(PressSpring())
+                        .accessibilityLabel("Ask with your key")
                         }
 
                         if offerSend {
@@ -4462,20 +4510,6 @@ struct Composer: View {
             // on-device model — which never saw the keyed turn, so "which of
             // those…" was answered by a model with no idea what "those" meant.
             let stayKeyed = conversationIsKeyed && keyAvailable
-            // A configured key answers EVERY question now (2026-08-30, user:
-            // "why not just ask bankr each time, it's not clear to user") —
-            // the separate pre-send "Ask <agent>" chip and the plain send dot
-            // used to do two different things with no visible difference
-            // between them, so which one you tapped silently decided whether
-            // your key got used. Now every ordinary send arms
-            // `pendingKeyedFollowUp` (the old chip's own flag, `askDirectly()`
-            // — since removed), so the on-device answer is followed by the
-            // keyed one automatically regardless of which control was
-            // tapped. Not armed when `stayKeyed` — that branch already
-            // answers WITH the key inside this same commit, and arming it
-            // too would fire a second, redundant keyed request once
-            // `inFlight` settles.
-            if !stayKeyed { pendingKeyedFollowUp = AgentKey.isConfigured }
             // The question lift (delight, 2026-07-21): the header's entrance
             // and the berry's fade-in ride the same animated commit as the
             // rest of "a new ask just started."
