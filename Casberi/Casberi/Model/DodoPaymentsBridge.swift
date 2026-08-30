@@ -59,6 +59,11 @@ enum DodoPaymentsAccount {
 
     static let api = "https://live.dodopayments.com"
     static let dashboardURL = "https://app.dodopayments.com"
+    // The literal form `setup-copy-audit.py`'s `stamped_sources` scans for —
+    // `TokenBridge.dodoPayments.source` (the rawValue) resolves to this same
+    // string at runtime but isn't a literal the audit can see, which is
+    // exactly the silent hole `audit_token_sources` exists to catch.
+    static let source = "Dodo Payments"
 
     static var configured: Bool {
         TokenVault.get(TokenBridge.dodoPayments.tokenKey) != nil
@@ -535,7 +540,7 @@ enum DodoPaymentsIngest {
         let t = Thing(kind: kind,
                       title: IngestSupport.titleLine(shaped.title),
                       content: DodoPaymentsAccount.dashboardURL,
-                      source: TokenBridge.dodoPayments.source,
+                      source: DodoPaymentsAccount.source,
                       capturedAt: shaped.when,
                       tags: [shaped.tag] + shaped.facets,
                       sourceRef: sourceRef)
@@ -550,7 +555,7 @@ enum DodoPaymentsIngest {
 
     @MainActor
     private static func insert(_ incoming: [Thing], context: ModelContext) -> Int {
-        let existing = IngestSupport.existingSourceRefs(context, source: TokenBridge.dodoPayments.source)
+        let existing = IngestSupport.existingSourceRefs(context, source: DodoPaymentsAccount.source)
         var added = 0
         for item in incoming {
             guard let ref = item.sourceRef, !existing.contains(ref) else { continue }
