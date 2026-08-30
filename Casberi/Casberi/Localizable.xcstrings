@@ -29611,6 +29611,34 @@
         }
       }
     },
+    "Add your name" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añade tu nombre"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "名前を追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이름 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "添加名字"
+          }
+        }
+      }
+    },
     "Add your photo" : {
       "localizations" : {
         "es" : {
@@ -50851,6 +50879,34 @@
         }
       }
     },
+    "Good afternoon, %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Buenas tardes, %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@さん、こんにちは"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@님, 좋은 오후예요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@，下午好"
+          }
+        }
+      }
+    },
     "Good evening" : {
       "localizations" : {
         "es" : {
@@ -50879,6 +50935,34 @@
         }
       }
     },
+    "Good evening, %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Buenas noches, %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@さん、こんばんは"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@님, 좋은 저녁이에요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@，晚上好"
+          }
+        }
+      }
+    },
     "Good morning" : {
       "localizations" : {
         "es" : {
@@ -50903,6 +50987,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "早上好"
+          }
+        }
+      }
+    },
+    "Good morning, %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Buenos días, %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@さん、おはようございます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@님, 좋은 아침이에요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@，早上好"
           }
         }
       }
@@ -69252,6 +69364,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "只有你选中的照片可见，因此新截屏不会自动到达。"
+          }
+        }
+      }
+    },
+    "Only used to greet you. It stays on this iPhone." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo se usa para saludarte. Se queda en este iPhone."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あいさつに使うだけです。このiPhoneから出ません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "인사할 때만 사용하며, 이 iPhone에만 저장됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅用于向你打招呼，只保存在这台 iPhone 上。"
           }
         }
       }
@@ -105808,6 +105948,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你被%@最多的帖子%@ — %@，%@。"
+          }
+        }
+      }
+    },
+    "Your name" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu nombre"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたの名前"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 이름"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的名字"
           }
         }
       }

@@ -1440,8 +1440,21 @@ struct Composer: View {
     /// never a composed "Good " + word: a translator needs the sentence.
     /// Before 5am the evening word holds — "Good night" is a farewell, and a
     /// 3am open is a late evening, not a greeted dawn.
+    ///
+    /// **The name is part of the phrase, not appended to it (2026-08-29).**
+    /// Six whole sentences rather than three plus a comma and a variable: a
+    /// name goes in front in Japanese and Korean and takes an honorific there,
+    /// so "Good morning" + ", " + name is a sentence no translator can fix.
+    /// `ProfileStore.name` is nil by default and nil is not a gap — the
+    /// greeting alone is already a complete sentence, which is why nothing
+    /// asks for a name and nothing marks its absence.
     private func clockGreeting(now: Date = .now) -> String {
         let hour = Calendar.current.component(.hour, from: now)
+        if let name = ProfileStore.shared.name {
+            return hour >= 5 && hour < 12 ? String(localized: "Good morning, \(name)")
+                 : hour >= 12 && hour < 18 ? String(localized: "Good afternoon, \(name)")
+                 : String(localized: "Good evening, \(name)")
+        }
         return hour >= 5 && hour < 12 ? String(localized: "Good morning")
              : hour >= 12 && hour < 18 ? String(localized: "Good afternoon")
              : String(localized: "Good evening")
@@ -1507,6 +1520,14 @@ struct Composer: View {
                             Text(clockGreeting())
                                 .dsText(.heading22)
                                 .foregroundStyle(DS.textPrimary)
+                                // A greeting carrying a name is longer than
+                                // the two words this line was measured for, so
+                                // it SHRINKS rather than truncates — a name cut
+                                // to "Alexa…" reads as the app getting it
+                                // wrong, and the date beside it is short,
+                                // fixed, and must never be the thing that goes.
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
                                 // The capsule's words travel here (prd §167 item 1)
                                 // — the SAME id RootShell's proxy title (and,
                                 // before it, the whisper capsule's own title)
@@ -1518,6 +1539,8 @@ struct Composer: View {
                                                         .month(.abbreviated).day()))
                                 .dsText(.subhead13)
                                 .foregroundStyle(DS.textTertiary)
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
                         }
                     } else {
                         Text(question)

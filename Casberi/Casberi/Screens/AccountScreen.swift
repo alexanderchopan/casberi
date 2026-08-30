@@ -40,6 +40,8 @@ struct SettingsScreen: View {
     @State private var avatarPickerOpen = false
     @State private var avatarDialogOpen = false
     @State private var avatarSelection: PhotosPickerItem?
+    @State private var nameEditorOpen = false
+    @State private var nameDraft = ""
 
     var body: some View {
         ScrollView {
@@ -78,6 +80,34 @@ struct SettingsScreen: View {
                     withAnimation(DS.Motion.standard) { ProfileStore.shared.avatar = nil }
                 }
                 Button("Cancel", role: .cancel) {}
+            }
+            // The name, in the same grammar as the photo above it — one field,
+            // one Save, and a Remove that only exists once there is something
+            // to remove (§83: a control that can't do anything isn't offered).
+            // An alert rather than a tray: this is the address-book rename's
+            // exact shape, for the same reason it's used there — one short
+            // string, typed once, with nothing else on the screen to decide.
+            .alert("Your name", isPresented: $nameEditorOpen) {
+                TextField(String(localized: "Name"), text: $nameDraft)
+                    .textInputAutocapitalization(.words)
+                    .textContentType(.givenName)
+                Button(String(localized: "Save")) {
+                    DSHaptic.tap()
+                    withAnimation(DS.Motion.standard) {
+                        ProfileStore.shared.name = ProfileStore.preparedName(nameDraft)
+                    }
+                }
+                if ProfileStore.shared.name != nil {
+                    Button(String(localized: "Remove"), role: .destructive) {
+                        DSHaptic.tap()
+                        withAnimation(DS.Motion.standard) { ProfileStore.shared.name = nil }
+                    }
+                }
+                Button(String(localized: "Cancel"), role: .cancel) {}
+            } message: {
+                // The honest fact, where it's asked for rather than in a
+                // privacy screen nobody opens while typing.
+                Text("Only used to greet you. It stays on this iPhone.")
             }
             .onChange(of: avatarSelection) { _, item in
                 guard let item else { return }
@@ -158,6 +188,20 @@ struct SettingsScreen: View {
                     action: {
                         if ProfileStore.shared.avatar == nil { avatarPickerOpen = true }
                         else { avatarDialogOpen = true }
+                    }),
+            // Your name (2026-08-29) — the greeting's second half. Sits beside
+            // the photo rather than inside it: the A–Z field is one fact per
+            // row, and "who am I to you" is two facts, a face and a name.
+            // Unset, the row still states what it would do — no name is a
+            // complete state, not a gap ("Good afternoon" is a whole sentence).
+            RowSpec(title: "Name",
+                    value: ProfileStore.shared.name ?? String(localized: "Add your name"),
+                    badge: ("signature", DS.textSecondary),
+                    action: {
+                        // The draft opens on what's stored, so Save on an
+                        // untouched field is a no-op rather than a wipe.
+                        nameDraft = ProfileStore.shared.name ?? ""
+                        nameEditorOpen = true
                     }),
             // "Data" (user ruling 2026-08-24, reversing the 2026-07-24 ruling
             // that made it "Privacy") — still the ONE home for all of it: where
