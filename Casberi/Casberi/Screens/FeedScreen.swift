@@ -3156,6 +3156,19 @@ struct FeedScreen: View {
                 // under a covered screen).
                 feedSheet = nil
                 _ = VibenetWatch.shared.add(address)
+                // `onWatched`'s own fix, one call site over (user, 2026-08-30:
+                // "after user creates account... doesn't show a new account
+                // was created"). Watching alone changes nothing this screen
+                // has READ — the room is composed from `VibenetState.saved`,
+                // a flat UserDefaults snapshot with no observation — so the
+                // account existed, was watched, and the room kept showing its
+                // old self until something ELSE happened to touch it. Both
+                // halves, same as `onWatched`: read the chain now, then bump
+                // the term this screen's memoised head recomputes on.
+                Task {
+                    _ = await VibenetRoomSource.compose()
+                    chrome.refreshPulse += 1
+                }
             }
         }
     }

@@ -49,7 +49,8 @@ struct HegotaKeySheet: View {
                             stampWeight: headStampWeight,
                             title: headTitle,
                             secondary: headSecondary,
-                            sentence: headSentence)
+                            sentence: headSentence,
+                            inkCard: true)
                 switch phase {
                 case .noKey:
                     noKeyBody
@@ -251,6 +252,20 @@ struct HegotaKeySheet: View {
             _ = try HegotaKey.create()
             DSHaptic.success()
             refresh()
+            // The room BEHIND this sheet (user, 2026-08-30: "doesn't show a
+            // new account was created"). `refresh()` updates this sheet's own
+            // `presence`, which is all a person sees while the tray is open —
+            // but `HegotaRoomList.thisPhoneRow`, in the room underneath,
+            // isn't bound to that state at all. `FeedScreen.headIdentity`'s
+            // own doc already names the reason Hegotá's room needs this:
+            // it lands no row for anything, ever, so its corpus revision is
+            // permanently frozen and `chrome.refreshPulse` is the ONLY
+            // thing that moves its memoised head — the same fact that made
+            // the room a permanent black box once before this key existed.
+            // Making a key changes nothing `HegotaRoomSource.identity`
+            // reads either, so without this the room kept showing "Create
+            // an account" after one had just been made.
+            chrome.refreshPulse += 1
         } catch {
             keyFailure = Self.keySentence(for: error)
         }

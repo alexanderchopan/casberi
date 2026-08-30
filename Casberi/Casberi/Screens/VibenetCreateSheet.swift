@@ -21,7 +21,6 @@ struct VibenetCreateSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @Environment(ShellChrome.self) private var chrome
 
     @State private var phase: Phase = .checking
     @State private var payer: String?
@@ -29,6 +28,17 @@ struct VibenetCreateSheet: View {
     /// instead — which this screen did at first — repeats the sentence the
     /// person just acted on and reads as a dead control.
     @State private var keyFailure: String?
+    /// Why creating the account failed, said where the tap was — `create()`'s
+    /// own sibling to `keyFailure`, and for the identical reason: on failure
+    /// `phase` resets to `.ready`, the SAME screen the person was just on, and
+    /// this sheet is a modal `.sheet` presentation — `chrome.flash()`'s toast
+    /// renders inside `RootShell`'s own ZStack, which sits BEHIND any open
+    /// sheet, so it was never visible while this tray was up. The failure
+    /// read as nothing happening at all, and a re-tap failed the same
+    /// invisible way — reported as "it's like a loop." `makeKey()` beside
+    /// this already learned the exact lesson (see its own comment); this
+    /// path just never got the fix applied to it too.
+    @State private var createFailure: String?
 
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
@@ -75,7 +85,8 @@ struct VibenetCreateSheet: View {
                             stampWeight: headStampWeight,
                             title: headTitle,
                             secondary: headSecondary,
-                            sentence: headSentence)
+                            sentence: headSentence,
+                            inkCard: true)
                 switch phase {
                 case .checking:
                     ProgressView().frame(maxWidth: .infinity)
@@ -200,6 +211,7 @@ struct VibenetCreateSheet: View {
 
             Button {
                 DSHaptic.tap()
+                createFailure = nil
                 Task { await create() }
             } label: {
                 HStack(spacing: 6) {
@@ -217,10 +229,20 @@ struct VibenetCreateSheet: View {
             .disabled(phase == .working)
             .dsHover()
 
-            Text(String(localized: "Test money on an experimental network."))
-                .dsText(.label11)
-                .foregroundStyle(DS.textTertiary)
-                .frame(maxWidth: .infinity)
+            // SAID HERE, not just in a toast — see `createFailure`'s own doc.
+            // A retry that fails the same invisible way is what reads as a
+            // loop; this is what breaks it.
+            if let createFailure {
+                Text(createFailure)
+                    .dsText(.label11)
+                    .foregroundStyle(DS.destructive)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text(String(localized: "Test money on an experimental network."))
+                    .dsText(.label11)
+                    .foregroundStyle(DS.textTertiary)
+                    .frame(maxWidth: .infinity)
+            }
         }
     }
 
@@ -412,7 +434,10 @@ struct VibenetCreateSheet: View {
             phase = .done(account: "0x" + VibenetTransaction.hex(sent.account))
         } catch {
             phase = .ready
-            chrome.flash(Self.sentence(for: error))
+            // NOT `chrome.flash` — that toast renders inside `RootShell`'s own
+            // ZStack, which sits BEHIND this modal sheet, so it was never
+            // visible while the tray was open. See `createFailure`'s doc.
+            createFailure = Self.sentence(for: error)
         }
     }
 

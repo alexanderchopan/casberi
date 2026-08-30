@@ -39,7 +39,8 @@ struct HegotaSendSheet: View {
                             stampWeight: headStampWeight,
                             title: headTitle,
                             secondary: HegotaKey.address(),
-                            sentence: headSentence)
+                            sentence: headSentence,
+                            inkCard: true)
                 switch phase {
                 case .form:
                     formBody

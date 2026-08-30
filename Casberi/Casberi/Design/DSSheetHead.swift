@@ -57,6 +57,20 @@ struct DSSheetHead<Disc: View>: View {
     /// on a page — the difference the user named: *"right now it just looks
     /// like a jumble of text"*.
     var torn: Bool = true
+    /// Paint the paper itself on `DS.inkGround` instead of `DS.surfaceRaised`
+    /// (2026-08-29, user: "also see here, not ink" — vibenet's and Hegotá's
+    /// create/key/send sheets, all three `DSTray(ink: true)`).
+    ///
+    /// `DSTray`'s ink IS correct on those three — the tray's own background
+    /// genuinely is `DS.inkGround` — the fault is that this card fills nearly
+    /// the whole tray on a SHORT sheet (240–560pt), where a full-page detail
+    /// surface (`ThingSheetView`, a money receipt) has hundreds of points of
+    /// visible black margin around it and reads as "an object on ink" for
+    /// free. Shrink that margin to almost nothing and the same gray card
+    /// reads as the whole surface, not a paper resting on one. Scoped rather
+    /// than defaulted — a money receipt's `DS.surfaceRaised` card is the
+    /// established, correct look on the pages that HAVE the margin to spare.
+    var inkCard: Bool = false
 
     @Environment(\.colorScheme) private var scheme
 
@@ -133,7 +147,7 @@ struct DSSheetHead<Disc: View>: View {
         // is about a LIST's rows and a room's readings, and this is a single
         // object standing for a single moment — which is exactly what §363
         // argued when it gave the receipt its paper in the first place.
-        .dsReceiptPaper(torn: torn)
+        .dsReceiptPaper(torn: torn, base: inkCard ? DS.inkGround : DS.surfaceRaised)
     }
 }
 
@@ -172,6 +186,11 @@ struct DSReceiptPaper: ViewModifier {
     /// below, where the silhouette is decoration rather than state — see
     /// `dsReceiptPaper(torn:)`.
     var tear: CGFloat = 1
+    /// The paper's own fill, under the ink pour. `DS.surfaceRaised` for every
+    /// established caller (a money receipt, a thing sheet); `DS.inkGround`
+    /// for the three short trays `DSSheetHead.inkCard` exists for — see its
+    /// doc for why the same card reads differently at each height.
+    var base: Color = DS.surfaceRaised
 
     func body(content: Content) -> some View {
         content
@@ -196,7 +215,7 @@ struct DSReceiptPaper: ViewModifier {
                     .frame(height: 150)
                     .frame(maxWidth: .infinity, alignment: .top)
             }
-            .background(DS.surfaceRaised)
+            .background(base)
             .clipShape(ReceiptPaper(tear: tear))
             .shadow(color: DS.raisedShadow, radius: 10, y: 2)
     }
@@ -212,13 +231,13 @@ extension View {
     /// fraction below instead. The two doors are separate so the distinction
     /// stays legible: nothing about a vibenet key sheet's edge is claiming to
     /// mean anything, and nothing should read it as though it does.
-    func dsReceiptPaper(torn: Bool = true) -> some View {
-        modifier(DSReceiptPaper(tear: torn ? 1 : 0))
+    func dsReceiptPaper(torn: Bool = true, base: Color = DS.surfaceRaised) -> some View {
+        modifier(DSReceiptPaper(tear: torn ? 1 : 0, base: base))
     }
 
     /// The paper mid-cut — for the one caller whose edge carries state and
     /// animates between the two.
-    func dsReceiptPaper(tear: CGFloat) -> some View {
-        modifier(DSReceiptPaper(tear: tear))
+    func dsReceiptPaper(tear: CGFloat, base: Color = DS.surfaceRaised) -> some View {
+        modifier(DSReceiptPaper(tear: tear, base: base))
     }
 }

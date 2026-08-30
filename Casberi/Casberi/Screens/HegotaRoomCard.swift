@@ -1515,18 +1515,31 @@ struct HegotaRoomList: View {
                 ZStack {
                     Circle().fill(HegotaModeStyle.room.opacity(0.18))
                         .frame(width: DS.Mark.row, height: DS.Mark.row)
-                    Image(systemName: "key.fill")
+                    // `plus` while there's nothing yet — the same CREATE
+                    // semantic vibenet's own `createAccountRow` icon carries,
+                    // rather than `key.fill` implying a credential already
+                    // exists to manage.
+                    Image(systemName: HegotaKey.presence() == .present ? "key.fill" : "plus")
                         .dsGlyph(12, weight: .semibold)
                         .foregroundStyle(HegotaModeStyle.room)
                 }
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(String(localized: "This phone's account"))
+                    // The title is a VERB while there's no account yet — the
+                    // exact wording vibenet's own `createAccountRow` uses
+                    // (user, 2026-08-29: this row needs to say "create an
+                    // account", the same way vibenet does). A noun-phrase
+                    // label ("This phone's account") over an account that
+                    // doesn't exist yet reads as a fact rather than an
+                    // invitation, and hides the one thing this row does.
+                    Text(HegotaKey.presence() == .present
+                         ? String(localized: "This phone's account")
+                         : String(localized: "Create an account"))
                         .dsText(.heading17)
                         .foregroundStyle(HegotaModeStyle.room)
                         .lineLimit(1)
                     Text(HegotaKey.presence() == .present
                          ? String(localized: "The one account here you control")
-                         : String(localized: "Make an account you actually control"))
+                         : String(localized: "This phone becomes its key"))
                         .dsText(.label11)
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
