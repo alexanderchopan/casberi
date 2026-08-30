@@ -300,6 +300,15 @@ enum DemoSeedAll {
         "aerodrome:vote:\(demoWallet):",
         "hyperliquid:unlock:\(demoWallet):",
         "wallet:ensexpiry:casberi.eth",
+        // The ENS seat's follows (prd §534) — the Stocktwits reason exactly:
+        // `ENSWatch.follow` builds the same ref a real follow would, so a
+        // real follow of one of these three names must survive demo exit.
+        // The moment ref carries a timestamp and cannot be escaped exactly;
+        // it is scoped by name instead, which is still narrower than the
+        // bare "ens:" prefix every OTHER followed name sits under.
+        ENSName.ref(for: "nick.eth"),
+        ENSName.ref(for: "casberi.eth"),
+        "ens:registered:uma.eth:",
     ]
 
     /// Ref shapes the demo used to write and no longer does (prd §510a).
@@ -602,6 +611,9 @@ enum DemoSeedAll {
         // wallets for real through this same store.
         WalletbeatState.forgetDemo(demoWalletbeatIDs)
         WalletbeatIncidentBook.forgetDemo(demoWalletbeatSlugs)
+        // BY NAME (prd §534), same reasoning: a dev install may be reading a
+        // real "nick.eth" or "casberi.eth" through this same store.
+        ENSState.forgetDemo(["nick.eth", "casberi.eth", "uma.eth"])
         // BY NAME (prd §401), same reasoning. `L2beatState` is deliberately NOT
         // touched: the demo seeds no assessment into it — the bundled directory
         // already answers for every chain, which is exactly what a device that
@@ -1006,6 +1018,59 @@ enum DemoSeedAll {
         "trezor-shipmonk-data-breach",
     ]
 
+    // MARK: - ENS (prd §534)
+
+    /// Three followed names, each a different rung of the ladder — the same
+    /// reason `WalletbeatDirectory`'s three demo wallets cover three verdicts
+    /// rather than three copies of one. A flat "all three expiring soon" demo
+    /// would never show the feature the seat exists for: the ninety days after
+    /// expiry where only the owner can still renew.
+    ///
+    /// Real refs, spelled through `ENSName`'s own builder — and listed in
+    /// `refPrefixes` as EXACT refs, the Stocktwits/PostHog reason: a real
+    /// follow of one of these three names must survive demo exit.
+    private static func ens() -> [Thing] {
+        var out: [Thing] = []
+
+        // ACTIVE, well outside the horizon — the ordinary state most followed
+        // names sit in most of the time, so the room isn't wall-to-wall alarm.
+        out.append(row(.link, "nick.eth", source: "ENS", ref: ENSName.ref(for: "nick.eth"),
+                       days: 30, hour: 9, content: "https://app.ens.domains/name/nick.eth",
+                       tags: ["Watchlist"]) { thing in
+            thing.authorHandle = "nick.eth"
+            thing.title = ENSName.title(name: "nick.eth",
+                                        expiry: Date.now.addingTimeInterval(400 * 86_400))
+            thing.dueAt = ENSName.nextCliff(expiry: Date.now.addingTimeInterval(400 * 86_400))
+        })
+
+        // GRACE — expired inside the window only its owner can still renew.
+        // The state neither `ENSExpiry` nor any wallet screen has ever shown,
+        // and the whole reason this seat exists rather than riding the wallet.
+        let graceExpiry = Date.now.addingTimeInterval(-20 * 86_400)
+        out.append(row(.link, "casberi.eth", source: "ENS", ref: ENSName.ref(for: "casberi.eth"),
+                       days: 20, hour: 11, content: "https://app.ens.domains/name/casberi.eth",
+                       tags: ["Watchlist", "Grace"]) { thing in
+            thing.authorHandle = "casberi.eth"
+            thing.title = ENSName.title(name: "casberi.eth", expiry: graceExpiry)
+            thing.dueAt = ENSName.nextCliff(expiry: graceExpiry)
+        })
+
+        // A name you were WAITING ON, taken. The moment neither ENS.com nor a
+        // wallet screen tells anyone — this is a name nobody here owns.
+        let registeredAt = Date.now.addingTimeInterval(-3 * 86_400)
+        let registeredExpiry = registeredAt.addingTimeInterval(365 * 86_400)
+        out.append(row(.link, "uma.eth registered", source: "ENS",
+                       ref: "ens:registered:uma.eth:\(Int(registeredAt.timeIntervalSince1970))",
+                       days: 3, hour: 8,
+                       content: "https://app.ens.domains/name/uma.eth",
+                       tags: ["Registered"]) { thing in
+            thing.authorHandle = "uma.eth"
+            thing.title = "uma.eth was registered — it expires \(ENSName.dateWord(registeredExpiry, from: registeredAt))"
+        })
+
+        return out
+    }
+
     // MARK: - L2BEAT (prd §428)
 
     /// The chains the demo says you use.
@@ -1186,6 +1251,7 @@ enum DemoSeedAll {
         out += markets()
         out += walletRoom()
         out += walletbeat()
+        out += ens()
         out += l2beat()
         out += cardPointers()
         out += vibenet()
@@ -5006,6 +5072,7 @@ enum DemoSeedAll {
         ("Cursor", "Synced 1h ago", "Reads cloud agents that finished."),
         ("Radicle", "1 repo", "Reads patches and issues, keyless."),
         ("Walletbeat", "3 wallets", "Reads public wallet reviews, keyless."),
+        ("ENS", "3 names followed", "Reads when a followed name expires, keyless."),
         ("L2BEAT", "3 chains", "Reads public layer-2 risk reviews, keyless."),
         ("Sentry", "Synced 20m ago", "Reads what broke."),
         ("Vercel", "Synced 12m ago", "Reads what deployed."),

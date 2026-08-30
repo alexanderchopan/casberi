@@ -455,6 +455,10 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "OpenSea"),
                  purpose: "Fetches the newest NFT collections on the chains you watch. Public data, read-only.",
                  hosts: ["api.opensea.io"]),
+        Endpoint(service: "ENS",
+                 reach: .whenConnected(bridge: "ENS"),
+                 purpose: "Reads the registrar's own public record for the names you follow — when a name expires, and whether it's been renewed or released. Public data, read-only: nothing here registers or renews.",
+                 hosts: ["metadata.ens.domains"]),
 
         // MARK: Social — public accounts and feeds you follow
 

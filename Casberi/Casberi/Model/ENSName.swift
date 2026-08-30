@@ -1,6 +1,6 @@
 import Foundation
 
-/// A followed ENS name and the ladder it walks (2026-08-29, prd §533).
+/// A followed ENS name and the ladder it walks (2026-08-29, prd §534).
 ///
 /// `ENSExpiry` has read expiry since 2026-07-21, for names the wallet already
 /// SEES — a watched address typed as a name, or the primary name an address
@@ -258,7 +258,7 @@ enum ENSName {
     /// the reason the Altana key card is special, that "ENS knows when a name
     /// expires and not when it was registered" — that is now measurably false,
     /// so a followed name can draw a real window with both ends and a marker
-    /// where now sits, which is what §533's second goal spends it on.
+    /// where now sits, which is what §534's second goal spends it on.
     struct Facts: Equatable {
         let name: String
         /// Epoch milliseconds on the wire (`ENSExpiry` measured this; reading

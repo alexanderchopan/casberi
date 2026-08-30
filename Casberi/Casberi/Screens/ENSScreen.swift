@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// ENS, connected — follow a name and know where it stands (prd §533).
+/// ENS, connected — follow a name and know where it stands (prd §534).
 ///
 /// The screen's whole act is typing a name, which is what makes this a seat
 /// rather than another wallet-detected protocol (§515a). Keyless: ENS's own

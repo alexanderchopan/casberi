@@ -34,7 +34,7 @@ enum BridgeRouter {
         case stocktwits
         case openSea
         case geckoTerminal
-        /// ENS (prd §533) — keyless with a FOLLOW list on screen, Walletbeat's
+        /// ENS (prd §534) — keyless with a FOLLOW list on screen, Walletbeat's
         /// exact reason: as `.token` it would inherit `finishesOnConnect ==
         /// true` and the raised sheet would dismiss itself the moment the first
         /// followed name registered the seat, and the first name almost always

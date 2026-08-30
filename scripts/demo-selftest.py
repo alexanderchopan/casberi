@@ -1114,6 +1114,7 @@ KNOWN_COMPUTED_REF = {
     "WalletbeatWatch.walletRef": "walletbeat:wallet:",
     "PostHogWatch.metricRef": "posthog:metric:",
     "StockWatch.symbolRef": "stocktwits:sym:",
+    "ENSName.ref": "ens:name:",
 }
 
 

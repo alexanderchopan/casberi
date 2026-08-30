@@ -748,6 +748,16 @@ enum BridgeRefresh {
                 _ = await WalletbeatIngest.refresh(context: context)
             }
         }
+        // ENS (prd §534) — the watch lives in the corpus (the thing IS the
+        // follow), the seat gates the foreground poll the Stocktwits way: a
+        // person who never connected it pays nothing, and a disconnected seat
+        // stays disconnected.
+        if connected("ens") {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await ENSIngest.refresh(context: context)
+            }
+        }
         if connected("l2beat") {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)

@@ -1153,6 +1153,12 @@ harness "GitHub room pure-logic self-test" "github-room self-test" "scripts/gith
 # never drop it and one endpoint is read twice every sweep.
 harness "GitHub person-watch pure-logic self-test" "github-person self-test" "scripts/github-person-selftest.sh" "the GitHub person self-test failed — run scripts/github-person-selftest.sh"
 
+# ENS (prd §534). Catches the silent wrong answer this ladder is built around: a lapsed
+# name reads as "expires" for its whole ninety-day grace period (the exact bug ENSExpiry
+# shipped with), a subname is followed into a row the registrar 404s forever, or a
+# followed name and the wallet's own ENSExpiry row disagree about which one it is.
+harness "ENS pure-logic self-test" "ens self-test" "scripts/ens-selftest.sh" "the ENS logic self-test failed — run scripts/ens-selftest.sh"
+
 harness "Radicle pure-logic self-test" "radicle self-test" "scripts/radicle-selftest.sh" "the Radicle logic self-test failed — run scripts/radicle-selftest.sh"
 # Walletbeat (prd §419). Catches the silent wrong answer this seat is built around: a
 # coverage gate that stops firing draws a confident ratings bar for a wallet Walletbeat has

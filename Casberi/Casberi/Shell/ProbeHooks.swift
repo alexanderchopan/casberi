@@ -2468,6 +2468,50 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-ensFollow "<name[,name]>"` — follow each name headlessly (prd
+        // §534), NSLogging the outcome word per name (followed / adopted —
+        // the wallet already had this row / already / invalid), then runs one
+        // sync so the standing is readable in the same launch.
+        Hook(key: "ensFollow") { spec, context in
+            Task { @MainActor in
+                for raw in spec.split(separator: ",") {
+                    let name = String(raw).trimmingCharacters(in: .whitespaces)
+                    let outcome: String
+                    switch ENSWatch.follow(name, context: context) {
+                    case .followed: outcome = "followed"
+                    case .adopted:  outcome = "adopted (was a wallet-found row)"
+                    case .already:  outcome = "already"
+                    case .invalid:  outcome = "invalid"
+                    }
+                    NSLog("ensFollow: %@ — %@", name, outcome)
+                }
+                let n = await ENSIngest.refresh(context: context)
+                NSLog("ensFollow: sync — %@ new", n.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-ensProbe YES` — every followed name's reading, one NSLog line
+        // each (the `-todayProbe` truncation lesson): the stage, the next
+        // cliff `dueAt` carries, and the raw expiry — because an empty room
+        // has three causes that render as one silence (nothing followed, the
+        // registrar never answered, or a real 404) and only the middle one is
+        // a bug.
+        Hook(key: "ensProbe") { _, context in
+            Task { @MainActor in
+                _ = await ENSIngest.refresh(context: context)
+                let names = ENSWatch.followed(context: context)
+                guard !names.isEmpty else { NSLog("ensProbe: nothing followed"); return }
+                for name in names {
+                    let reading = ENSState.reading(name)
+                    let stage = reading?.expiry.map { ENSName.stage(expiry: $0) }
+                    NSLog("ensRow| %@ stage=%@ expiry=%@ registered=%@ unregistered=%@",
+                          name,
+                          stage.map { "\($0)" } ?? (reading?.unregistered == true ? "unregistered" : "unread"),
+                          reading?.expiry.map { "\($0)" } ?? "-",
+                          reading?.registered.map { "\($0)" } ?? "-",
+                          (reading?.unregistered ?? false) ? "YES" : "NO")
+                }
+            }
+        },
         // `-weatherProbe YES` — fetch today's WeatherKit forecast headless
         // (one-shot location + WeatherService) and NSLog the summary, or an
         // honest FAILED on denial/unavailability.

@@ -32,7 +32,7 @@ enum ENSExpiry {
     /// (vitalik.eth's real date) and sit in the feed forever — a deadline is
     /// news when it is near, and noise when it isn't.
     ///
-    /// The number lives in `ENSName` since 2026-08-29 (prd §533), with the rest
+    /// The number lives in `ENSName` since 2026-08-29 (prd §534), with the rest
     /// of the ladder. Two spellings of one horizon drift, and then a name is
     /// news in one room and not in the other.
     private static var horizonDays: Int { ENSName.horizonDays }
@@ -78,7 +78,7 @@ enum ENSExpiry {
                     // crossing from "expires" to "expired" does so with its
                     // date unchanged — only `now` moved past it. Reconciling on
                     // the date alone would leave it in the present tense forever.
-                    // The NEXT cliff, not the expiry (prd §533): a lapsed name
+                    // The NEXT cliff, not the expiry (prd §534): a lapsed name
                     // used to sit ninety days overdue against a date that had
                     // stopped being the question, while the moment that
                     // actually mattered — grace ending — passed unannounced.
@@ -105,13 +105,13 @@ enum ENSExpiry {
     }
 
     /// The row's words and its next deadline both come from `ENSName` since
-    /// 2026-08-29 (prd §533) — one ladder, so a name found from a wallet and a
+    /// 2026-08-29 (prd §534) — one ladder, so a name found from a wallet and a
     /// name somebody followed can never disagree about where it stands. The
     /// wording rules this function used to hold are recorded there.
     /// The names worth asking about: what the person typed, plus what each
     /// address says it goes by. Deduped, `.eth` only, lowercased.
     ///
-    /// **A name the ENS seat FOLLOWS is dropped here** (2026-08-29, prd §533).
+    /// **A name the ENS seat FOLLOWS is dropped here** (2026-08-29, prd §534).
     /// That seat owns the same name under `ens:name:<name>`, in its own room,
     /// and adopts this row when somebody follows it — so leaving the name in
     /// this list would have the two halves reconciling two rows about one

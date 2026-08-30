@@ -40143,3 +40143,84 @@ were all `callout15` at one ink tier — three jobs, one voice.
 Both platforms compile, every static audit is green, and the weight-resolution
 claim above is measured. **Nothing here has been seen on a device or a
 simulator** — no screenshot was taken of any screen in the new ramp.
+
+## 534. ENS becomes a seat — follow a name you don't own, and know the whole ladder it walks (user: "how can we add ENS app as a seat and lean into it so user can follow names and when they expire?", 2026-08-29)
+
+**§515a's tripwire almost refused this outright.** That ruling bans a catalog
+seat for any protocol the wallet already reads on its own — `ENSExpiry` has
+read a name's expiry since 2026-07-21, for any name the wallet already SEES (a
+watched address typed as a name, or the primary name it reverse-resolves to).
+A seat offering to "connect ENS" over that would be exactly the dead control
+§515a exists to prevent: a tile promising a connect action nothing needs. The
+seat clears the bar on the one thing the wallet structurally cannot do —
+**follow a name you do not own**: a friend's, a brand's, or one you're waiting
+on. That act needs somebody to type a name, which is what a seat with
+`needsSetup` is for, and it is the whole of what makes this a seat rather than
+another wallet-detected protocol.
+
+**One name, one row, in whichever room owns it.** A name found from a watched
+wallet lands under `wallet:ensexpiry:<name>`; a name somebody follows lands
+under its own source, `ens:name:<name>`. Following a wallet-found name ADOPTS
+the existing row — re-sourced in place, its history intact — rather than
+landing a second row counting down to the same moment in a second room.
+`ENSExpiry` stands down for any name the ENS seat follows, so the two halves
+can never disagree about where one name stands. Unfollowing takes the row and
+every moment stamped with it (§286's rule: a watchlist is a follow, and
+nothing explains a renewal notice about a name you no longer follow).
+
+**THE LADDER IS THE FEATURE, and it is the reason to build this at all rather
+than a second wallet feature.** A `.eth` name is not one deadline, it is four:
+it expires; for ninety days after, ONLY THE OWNER may still renew it, which
+makes a just-lapsed name the most actionable state there is and not the
+least; at grace's end it is released into a three-week decaying-premium
+auction anyone may enter; after that it is an ordinary name at an ordinary
+price. `ENSExpiry` shipped knowing only the first cliff, so a lapsed name sat
+"expires" (present tense) for the whole ninety days it had already lapsed —
+`ENSName.title` now tracks the STAGE rather than the raw date, so the tense
+crosses to "expired — the owner can still renew it" the moment it should, and
+`ENSName.nextCliff` steps `dueAt` to whichever moment is actually next (grace
+ending, or the premium decaying away) instead of leaving a stale expiry behind
+forever. That fixes `ENSExpiry`'s own wallet-found rows too, not just the
+seat's — one ladder, read by both.
+
+**What it can now say, all keylessly measured against the real metadata
+service on 2026-08-29:** the real registration date alongside the expiry (a
+window with both ends, where §404 recorded ENS as the one deadline in this app
+that could only ever show one), a renewal as its own moment, and — the one
+thing nothing else can tell you — when a name you were waiting on gets taken
+by somebody else. A subname or a non-`.eth` name is refused at the FIELD
+(`ENSName.normalized`), because the metadata service 404s a subname exactly
+the way it 404s an unregistered name, and following one would be a row that
+can never speak. `is_normalized: false` on the wire is carried through as a
+lookalike flag, for `AddressSafety` to use later.
+
+**Renewing or registering in-app was asked for and is explicitly NOT built
+this pass.** WalletConnect sessions here are proposed with `methods: []`, and
+`scripts/wc-handshake.sh` asserts that from the WALLET's side — injecting a
+single signing method into the proposal is a documented, deliberate test
+failure. A renewal is the app's first mainnet spend, and folding it into the
+existing watch session would make that sentence false for every session, not
+just this one. The honest shape, if built, is a SECOND, separately-consented
+session scoped to exactly that one signature — never a widening of the
+read-only one already granted. `rentPrice()` (the exact renewal cost, read
+live off the registrar) and the revoke-shaped "prepare, never sign" pattern
+`WalletPrepare` already ships for approvals are the obvious next goal.
+
+**Costs nothing new to run.** No new `Thing` field (so no CloudKit Production
+deploy), one host (`metadata.ens.domains`) already declared in the reach
+registry for the wallet's own reads and now declared again under its own
+`.whenConnected(bridge: "ENS")` gate. Guarded by `scripts/ens-selftest.sh` (in
+`verify.sh`): `ENSName.swift` compiled WHOLE and unmodified, 62 assertions, 10
+mutations, plus drift guards proving the two ref namespaces never overlap and
+that `ENSBridge.swift` issues no write verb anywhere — the seat's whole
+promise, enforced rather than remembered.
+
+**UNMEASURED end-to-end.** Every read (the metadata service's shape, the 404
+convention, the millisecond unit) was measured live against `vitalik.eth`,
+`nick.eth` and `casberi.eth` on 2026-08-29, but no follow has ever crossed a
+real lapse, entered grace, or watched a release — there being exactly one
+`.eth` BaseRegistrar and this project owning none of it, the harness is the
+only proof the ladder's arithmetic is right, the same ceiling `WalletbeatRating`
+and `L2beatRating` state about a third party's live registry. Built on Linux
+with no Xcode; verified to compile clean against the full iOS Simulator target
+the same day.

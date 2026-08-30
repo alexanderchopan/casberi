@@ -216,6 +216,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-readwise  { background: #1e3a8a; font-size: 24px; }
 .ai-raindrop  { background: #2f80ed; }
 .ai-walletbeat{ background: #0b0b0d; }
+.ai-ens{ background: #5284ff; }
 /* L2BEAT's mark carries its own near-black field, so the tile only matches it. */
 .ai-l2beat{ background: #1b1b1b; }
 .ai-cardpointers { background: #7e60ed; }

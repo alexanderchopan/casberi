@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// The ENS seat (2026-08-29, prd §533) — follow a name, and know where it
+/// The ENS seat (2026-08-29, prd §534) — follow a name, and know where it
 /// stands. Keyless: ENS's own metadata service answers BY NAME, one GET, no
 /// account, no key, no hashing.
 ///
