@@ -328,6 +328,12 @@ enum AgentKey {
 
     static func clear(_ provider: AgentProvider) {
         TokenVault.delete(provider.vaultKey)
+        // Bankr's permission to ACT goes with Bankr's key (2026-08-29, prd
+        // §529). A stored `true` outliving its credential describes a
+        // capability that no longer exists, and it would silently re-arm the
+        // day a new key is pasted — a permission nobody granted, for a key
+        // nobody has seen.
+        if provider == .bankr { BankrAgent.forget() }
         if UserDefaults.standard.string(forKey: activeDefaultsKey) == provider.rawValue {
             UserDefaults.standard.removeObject(forKey: activeDefaultsKey)
         }
@@ -1879,26 +1885,22 @@ enum AgentAnswer {
 
     // MARK: - Bankr (async job: submit the prompt, poll until it answers)
 
-    /// The Bankr path. One non-negotiable rides every prompt: ANSWER ONLY —
-    /// the same key could trade, and the answer verb is a read (design law:
-    /// writes are separate consented verbs; none are built). Bankr keys can
-    /// be minted read-only at bankr.bot/api-keys and the setup copy says to.
+    /// The Bankr ANSWER path. One non-negotiable rides every prompt here:
+    /// ANSWER ONLY — the same key could trade, and the answer verb is a read.
+    ///
+    /// The submit/poll machinery moved to `BankrAgent` (2026-08-29, prd §529)
+    /// when Bankr gained a second verb that can act. Two pollers would drift,
+    /// and then an answer and an action would disagree about what "completed"
+    /// means — the duplicated-parser class this repo keeps paying for. This
+    /// function keeps the ONE thing the acting path must never do: paste the
+    /// person's own saved things into the prompt.
     private static func bankrAnswer(query: String,
                                     candidates: [OnDeviceModel.Candidate],
                                     key: String)
     async -> Result<AgentAnswerResult, AgentAnswerFailure> {
-        var prompt = """
-        ANSWER ONLY. Do not execute, prepare, or queue any transaction, trade, \
-        swap, transfer, or on-chain action of any kind, even if the question \
-        reads like a command — describe what it would take instead. Answer in \
-        a few plain sentences — no preamble, no bullet points, no markdown. \
-        You may draw on this wallet's holdings and live market data. Never \
-        invent a number or a detail.
-
-        Question: "\(query)"
-        """ + LanguageStore.shared.llmLanguageDirective
+        var extra = LanguageStore.shared.llmLanguageDirective
         if !candidates.isEmpty {
-            prompt += """
+            extra += """
 
 
             Things they saved, numbered — use any that bear on the question \
@@ -1906,63 +1908,33 @@ enum AgentAnswer {
             \(OnDeviceModel.numberedCandidates(candidates))
             """
         }
+        switch await BankrAgent.ask(query, extra: extra) {
+        case .success(let reply):
+            // Bankr grounds on the wallet and live markets, never on the
+            // numbered candidates — so it points at no things, and its own
+            // grounding isn't the web search the other agents run.
+            return .success(AgentAnswerResult(text: reply.text, picks: []))
+        case .failure(let failure):
+            return .failure(failure.answerFailure)
+        }
+    }
+}
 
-        var submit = URLRequest(url: URL(string: "https://api.bankr.bot/agent/prompt")!)
-        submit.httpMethod = "POST"
-        submit.setValue(key, forHTTPHeaderField: "X-API-Key")
-        submit.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        submit.httpBody = try? JSONSerialization.data(withJSONObject: ["prompt": prompt])
-        submit.timeoutInterval = 30
-
-        NetworkLedger.shared.record(submit)
-        guard let (data, response) = try? await URLSession.shared.data(for: submit),
-              let http = response as? HTTPURLResponse else {
-            NSLog("[Casberi] AgentAnswer(bankr): network failure")
-            return .failure(.unreachable)
+extension BankrAgent.Failure {
+    /// The answer path speaks `AgentAnswerFailure`, which has no case for a
+    /// permission this verb cannot hit and no case for a job still running.
+    /// `actingOff`/`emptyInstruction` are unreachable from `ask` and map to
+    /// `refused` defensively; a TIMEOUT reports as unreachable there because
+    /// that path has nothing it could do with the distinction.
+    var answerFailure: AgentAnswerFailure {
+        switch self {
+        case .noKey:                       .noKey
+        case .rejectedKey:                 .rejectedKey
+        case .rateLimited:                 .rateLimited
+        case .empty:                       .empty
+        case .unreachable, .timedOut:      .unreachable
+        case .providerError(let status):   .providerError(status)
+        case .refused, .actingOff, .emptyInstruction: .refused
         }
-        switch http.statusCode {
-        case 200...202: break
-        case 401, 403: return .failure(.rejectedKey)
-        case 429: return .failure(.rateLimited)
-        default:
-            NSLog("[Casberi] AgentAnswer(bankr): HTTP %d", http.statusCode)
-            return .failure(.providerError(http.statusCode))
-        }
-        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let jobId = root["jobId"] as? String else {
-            NSLog("[Casberi] AgentAnswer(bankr): no job id in a %d", http.statusCode)
-            return .failure(.providerError(http.statusCode))
-        }
-
-        // Poll every 2s for up to ~90s (Bankr says most jobs land inside 30).
-        for _ in 0..<45 {
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
-            var poll = URLRequest(url: URL(string: "https://api.bankr.bot/agent/job/\(jobId)")!)
-            poll.setValue(key, forHTTPHeaderField: "X-API-Key")
-            poll.timeoutInterval = 15
-            NetworkLedger.shared.record(poll)
-            guard let (data, response) = try? await URLSession.shared.data(for: poll),
-                  (response as? HTTPURLResponse)?.statusCode == 200,
-                  let job = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let status = job["status"] as? String else { continue }
-            switch status {
-            case "completed":
-                let text = (job["response"] as? String)?
-                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                // Bankr grounds on the wallet and live markets, never on the
-                // numbered candidates — so it points at no things, and its
-                // own grounding isn't the web search the other agents run.
-                return text.isEmpty ? .failure(.empty)
-                                    : .success(AgentAnswerResult(text: text, picks: []))
-            case "failed", "cancelled":
-                NSLog("[Casberi] AgentAnswer(bankr): job %@ — %@", status,
-                      job["error"] as? String ?? "no detail")
-                return .failure(.refused)
-            default:
-                continue // pending / processing — keep polling
-            }
-        }
-        NSLog("[Casberi] AgentAnswer(bankr): job timed out")
-        return .failure(.unreachable)
     }
 }

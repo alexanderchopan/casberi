@@ -100,6 +100,14 @@ struct Composer: View {
     /// content inside an answer PUSHES a thing-view rather than presenting a
     /// sheet). nil ids, or ids that no longer resolve, render nothing.
     var resolveThing: (String) -> Thing? = { _ in nil }
+    /// Opens Bankr's setup screen (prd §529). A CLOSURE rather than a route
+    /// read, because this view is a ZStack layer inside `RootShell.shell` and
+    /// therefore sits ABOVE that view's `.environment(...)` injections — an
+    /// `@Environment(HomeRoute.self)` here would die on first read, which is
+    /// the crash `rootPresented`'s own doc records. `agentChoiceHeader` draws
+    /// only when this is non-nil, so the CTA can never be a control that does
+    /// nothing (§83).
+    var onConnectBankr: (() -> Void)? = nil
     /// Lowers the agent (docs/agent-brief.md ruling 9: staying is the
     /// default; a bare tap never ejects you — this is the ONE thing "Open in
     /// app" from inside a pushed thing-view is allowed to do to the agent
@@ -2386,6 +2394,7 @@ struct Composer: View {
             // The day, as the room's lead — the FALLBACK now (§332). It stood
             // in for a synthesis the open couldn't show; the board is that
             // synthesis, so the two never appear together.
+            agentChoiceHeader
             dayCard
             // The kept-ask pills LEFT the rest surface (user ruling
             // 2026-08-14, prd §386c: "remove climate links and hows my
@@ -3596,6 +3605,22 @@ struct Composer: View {
     /// stacked one-per-line into a tall column instead of the single docked row
     /// the design called for. A scroll row also lets the set stay generous
     /// without costing height: what doesn't fit slides.
+    /// The Bankr offer, at the top of the rest surface (prd §529). The view
+    /// and every word of it live in `BankrOfferBanner` — one copy, one
+    /// dismissal, shared with the Wallet room's head, because two copies of
+    /// one piece of copy drift and then two surfaces promise different things.
+    ///
+    /// Gated on `restChrome` so it never sits over a conversation, and on the
+    /// door existing at all: `onConnectBankr` is nil for any host that cannot
+    /// push, and a CTA that does nothing is the dead control §83 bans.
+    @ViewBuilder private var agentChoiceHeader: some View {
+        if let onConnectBankr, restChrome(keepBrief: false) {
+            BankrOfferBanner(onConnect: onConnectBankr)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.bottom, DS.Space.s3)
+        }
+    }
+
     @ViewBuilder
     private var askChips: some View {
         // Also shown docked beneath the brief LANDING (prd §181) — the one

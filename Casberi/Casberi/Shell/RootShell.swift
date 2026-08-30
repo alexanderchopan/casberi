@@ -833,6 +833,53 @@ struct RootShell: View {
             // hooks run in list order and each must read a store that is
             // already seeded.
             AgentModelStore.seedFromLaunchArgs()
+            // `-bankrCanAct YES|NO` — the acting permission, headlessly.
+            // Declared BEFORE `-bankrProbe`: hooks run in list order and the
+            // probe's acting arm reads a permission that must already be set.
+            if let raw = UserDefaults.standard.string(forKey: "bankrCanAct") {
+                BankrAgent.canAct = (raw as NSString).boolValue
+                NSLog("[Casberi] bankrCanAct: %d", BankrAgent.canAct ? 1 : 0)
+            }
+            // `-bankrProbe "<question>"` ASKS (answer-only prefix, spends a
+            // job and no money) and dumps the RAW job envelope keys —
+            // the measure tool for an API this project has never held a key
+            // for. `-bankrAct "<instruction>"` really acts and can really
+            // spend: a different ARGUMENT, not a flag on this one, for
+            // `-librarianProbe run`'s reason — a probe that spends on every
+            // headless run is one nobody can safely put in a sweep. Two args
+            // rather than one prefixed string, so no code in the tree has to
+            // parse a verb out of free text.
+            //
+            // The envelope keys are the point. If Bankr reports what it did in
+            // structured form — a hash, an order id, a status — then the
+            // conversation's receipt can stop being a transcript and start
+            // being a record, and the confirmation sheet can stop being an
+            // echo of your own words. Until that is measured, neither pretends.
+            if let text = UserDefaults.standard.string(forKey: "bankrProbe")
+                ?? UserDefaults.standard.string(forKey: "bankrAct") {
+                Task {
+                    let acting = UserDefaults.standard.string(forKey: "bankrProbe") == nil
+                    let start = Date()
+                    let outcome = acting ? await BankrAgent.act(text)
+                                         : await BankrAgent.ask(text)
+                    let ms = Int(Date().timeIntervalSince(start) * 1000)
+                    NSLog("[Casberi] bankrProbe| verb=%@ canAct=%d keyed=%d %dms",
+                          acting ? "act" : "ask", BankrAgent.canAct ? 1 : 0,
+                          AgentKey.isConfigured(.bankr) ? 1 : 0, ms)
+                    switch outcome {
+                    case .success(let reply):
+                        // Three NSLogs, not one — a joined multi-line message
+                        // gets truncated by the log reader mid-document (the
+                        // `-todayProbe` lesson).
+                        NSLog("[Casberi] bankrProbe| job=%@", reply.jobID)
+                        NSLog("[Casberi] bankrProbe| envelope=%@",
+                              reply.envelopeKeys.joined(separator: ","))
+                        NSLog("[Casberi] bankrProbe| reply=%@", reply.text)
+                    case .failure(let failure):
+                        NSLog("[Casberi] bankrProbe| failed=%@", String(describing: failure))
+                    }
+                }
+            }
             if let q = UserDefaults.standard.string(forKey: "byokProbe") {
                 Task {
                     await EmbeddingIndex.indexPending(context: modelContext)
@@ -2433,6 +2480,14 @@ struct RootShell: View {
                      guard let uuid = UUID(uuidString: idString) else { return nil }
                      return (try? modelContext.fetch(FetchDescriptor<Thing>(
                          predicate: #Predicate { $0.id == uuid })))?.first
+                 },
+                 // The Bankr door (prd §529). Lowers the agent FIRST, then
+                 // pushes: a setup screen rising under a risen agent is the
+                 // sources-tray-under-the-panel bug this file already records,
+                 // and the whole point of the offer is that you go and do it.
+                 onConnectBankr: {
+                     composerOpen = false
+                     sceneState.route.pushBridge(.bankr)
                  },
                  onLowerAgent: { composerOpen = false; keyedHistory = [] })
             .environment(\.genProjectTap) { name in

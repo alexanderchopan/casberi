@@ -660,7 +660,20 @@ enum NetworkReach {
                  reach: .onTapWithKey,
                  purpose: "Only when you tap \"Try with your key\", your question and the matched things go straight from \(DS.device) to the provider you chose. Never otherwise, never through us.",
                  hosts: ["api.anthropic.com", "api.openai.com", "generativelanguage.googleapis.com",
-                         "api.venice.ai", "api.bankr.bot", "openrouter.ai", "api.x.ai"]),
+                         "api.venice.ai", "openrouter.ai", "api.x.ai"]),
+
+        // Bankr is split out of the line above (2026-08-29, prd §529) because
+        // its reach stopped matching it. The other six providers answer a
+        // question; Bankr is an agent with a wallet, and once its acting
+        // switch is on, what leaves this device can be an instruction that
+        // moves money. A shared sentence saying "your question and the matched
+        // things" would describe the wrong thing on exactly the seat where
+        // being wrong costs the most — and this screen exists so a promise can
+        // be checked rather than believed.
+        Endpoint(service: "Bankr",
+                 reach: .onTapWithKey,
+                 purpose: "Only when you tap. Asking sends your question, prefixed answer only. If you turned acting on and confirmed an instruction, that instruction goes too — and your saved things never ride along with one.",
+                 hosts: ["api.bankr.bot"]),
     ]
 
     /// The hosts this registry accounts for — the audit script checks every

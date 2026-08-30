@@ -75,6 +75,14 @@ final class HomeRoute {
         /// Walletbeat's has one: §234's ruling that a browse belongs at the head of the
         /// room, never behind the setup screen.
         case l2beatDirectory
+        /// The Bankr conversation (prd §529).
+        ///
+        /// Its own node rather than a plain `NavigationLink` from the setup
+        /// screen, for `appDetail`'s reason one step further out: this is a
+        /// ROOM, not a setup form, and it is reached from two places — the
+        /// setup screen and the seat's connected state — so a link owned by
+        /// one of them would give the other nothing to push.
+        case bankrChat
         /// One address-book group, opened (prd §440).
         ///
         /// Keyed by the group's NAME, which is also its identity in the model
