@@ -20,6 +20,10 @@ struct HegotaKeySheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
 
+    /// Opens `HegotaSendSheet`, routed through `FeedSheetRoute` by the
+    /// caller — this file never presents a `.sheet` of its own (§468).
+    var onOpenSend: () -> Void = {}
+
     @State private var presence: HegotaKey.Presence = .none
     @State private var busy = false
     @State private var keyFailure: String?
@@ -38,7 +42,7 @@ struct HegotaKeySheet: View {
     }
 
     var body: some View {
-        DSTray(title: String(localized: "This phone's key"), height: trayHeight, ink: true) {
+        DSTray(title: String(localized: "This phone's account"), height: trayHeight, ink: true) {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
                 DSSheetHead(disc: { headDisc },
                             stamp: headStamp,
@@ -59,8 +63,12 @@ struct HegotaKeySheet: View {
 
     private var trayHeight: CGFloat {
         switch phase {
-        case .noKey:            340
-        case .ready, .working:  460
+        // +40 over the original 340: the no-account sentence now explains
+        // what gets created and why it sits with the watched accounts,
+        // which runs longer and wraps to more lines.
+        case .noKey:            380
+        // +100 for the Send section added alongside the faucet/Actions ones.
+        case .ready, .working:  560
         }
     }
 
@@ -80,9 +88,9 @@ struct HegotaKeySheet: View {
 
     private var headTitle: String {
         switch presence {
-        case .present:   String(localized: "A key on this phone")
+        case .present:   String(localized: "Your account on this phone")
         case .destroyed: String(localized: "This phone's key is gone")
-        case .none:      String(localized: "No key yet")
+        case .none:      String(localized: "No account yet")
         }
     }
 
@@ -98,7 +106,7 @@ struct HegotaKeySheet: View {
         case .destroyed:
             String(localized: "It was removed from this phone's keychain. Making a new one is safe \u{2014} nothing on a devnet is lost by it.")
         case .none:
-            String(localized: "Making one lets this phone sign and send on the devnet directly.")
+            String(localized: "This becomes an account on Hegot\u{00E1} that only this phone can sign for \u{2014} it sits beside the accounts you watch, but unlike those, you'll actually control this one: send test ETH from it, not just see what's in it.")
         }
     }
 
@@ -128,7 +136,7 @@ struct HegotaKeySheet: View {
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "key.fill").dsGlyph(13, weight: .semibold)
-                    Text(String(localized: "Make a key on this phone"))
+                    Text(String(localized: "Make an account on this phone"))
                 }
                 .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(.white)
@@ -183,6 +191,27 @@ struct HegotaKeySheet: View {
                 Text(String(localized: "One claim per hour."))
                     .dsText(.label11)
                     .foregroundStyle(DS.textTertiary)
+            }
+
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                caption(String(localized: "Send"))
+                Button {
+                    DSHaptic.tap()
+                    onOpenSend()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.up.right").dsGlyph(13, weight: .semibold)
+                        Text(String(localized: "Send test ETH"))
+                    }
+                    .dsText(.callout15).fontWeight(.semibold)
+                    .foregroundStyle(Self.mark)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, DS.Space.s3)
+                    .background(Self.mark.opacity(0.14),
+                                in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+                }
+                .buttonStyle(PressSpring())
+                .dsHover()
             }
 
             VStack(alignment: .leading, spacing: DS.Space.s2) {

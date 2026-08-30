@@ -135,10 +135,15 @@ struct VibenetRoomCard: View {
     /// its own source is how the two get to disagree.
     var onWatched: () -> Void = {}
 
-    /// The create sheet. One presentation, on the row that raises it — a
-    /// second `.sheet` on this screen is the self-dismissing bug this codebase
-    /// has paid for three times.
-    @State private var creating = false
+    /// Raises the create sheet — but not HERE. §468 (found by `vibenet-
+    /// selftest.sh` the day this row shipped, exit code the proof rather than
+    /// a review catching it): this card lives inside `FeedScreen`'s List rows,
+    /// and a `.sheet` on a row resolves to the same presenting controller as
+    /// the screen's OWN single sheet — the half-open-then-close bug this
+    /// codebase has paid for three times, about to become a fourth. Routed
+    /// through `FeedSheetRoute.vibenetCreate` instead, the same door
+    /// `onOpenKeys`/`onOpenKey` already use.
+    var onRequestCreate: () -> Void = {}
     /// Raised by the context menu's "Name this account…" — the alert itself
     /// lives on the SCREEN (a text-entry alert needs `@State` a card
     /// re-composed from a value type shouldn't own), so this just reports
@@ -2400,7 +2405,7 @@ struct VibenetRoomCard: View {
     private var createAccountRow: some View {
         Button {
             DSHaptic.selection()
-            creating = true
+            onRequestCreate()
         } label: {
             HStack(spacing: DS.Space.s3) {
                 ZStack {
@@ -2432,15 +2437,6 @@ struct VibenetRoomCard: View {
         }
         .buttonStyle(.plain)
         .dsHover()
-        .sheet(isPresented: $creating) {
-            VibenetCreateSheet { address in
-                // Watching it is what puts it in the room. The sheet does not
-                // know what a watch list is, and this closure is the only place
-                // the two meet.
-                _ = VibenetWatch.shared.add(address)
-                onWatched()
-            }
-        }
     }
 
     /// **WHO CAN ACT FOR WHOM, FOLDED INTO ACCOUNTS (2026-08-25, prd §477,

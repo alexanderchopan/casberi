@@ -1495,15 +1495,21 @@ struct HegotaRoomList: View {
 
     /// This phone's own key, leading the Accounts scope — same placement
     /// ruling as vibenet's create row (user, 2026-08-29: a verb belongs above
-    /// the list it acts on, not buried under it). `@State` rather than a
-    /// binding from the shell: opening it is a question about right now, the
-    /// same lifetime `pickedLane` already uses one view up.
-    @State private var showingKeySheet = false
+    /// the list it acts on, not buried under it).
+    ///
+    /// **Raises the key sheet through a closure, not a local `.sheet`** — the
+    /// same §468 rule vibenet's sibling row learned the hard way (caught by
+    /// `vibenet-selftest.sh`, unguarded here but the identical defect: this
+    /// list lives inside `FeedScreen`'s own List rows, and a `.sheet` here
+    /// resolves to the same presenting controller as the screen's single
+    /// sheet — the half-open-then-close bug, paid for three times before
+    /// today and almost a fourth and fifth in the same afternoon).
+    var onOpenKeySheet: () -> Void = {}
 
     @ViewBuilder private var thisPhoneRow: some View {
         Button {
             DSHaptic.selection()
-            showingKeySheet = true
+            onOpenKeySheet()
         } label: {
             HStack(spacing: DS.Space.s3) {
                 ZStack {
@@ -1514,13 +1520,13 @@ struct HegotaRoomList: View {
                         .foregroundStyle(HegotaModeStyle.room)
                 }
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(String(localized: "This phone's key"))
+                    Text(String(localized: "This phone's account"))
                         .dsText(.heading17)
                         .foregroundStyle(HegotaModeStyle.room)
                         .lineLimit(1)
                     Text(HegotaKey.presence() == .present
-                         ? String(localized: "Sign and send on the devnet")
-                         : String(localized: "Make one to sign and send"))
+                         ? String(localized: "The one account here you control")
+                         : String(localized: "Make an account you actually control"))
                         .dsText(.label11)
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
@@ -1535,7 +1541,6 @@ struct HegotaRoomList: View {
         }
         .buttonStyle(.plain)
         .dsHover()
-        .sheet(isPresented: $showingKeySheet) { HegotaKeySheet() }
     }
 
     @ViewBuilder private var accountsList: some View {
