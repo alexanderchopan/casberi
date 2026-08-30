@@ -31,7 +31,11 @@ enum ENSExpiry {
     /// Without a horizon every watched name would land a row expiring in 2048
     /// (vitalik.eth's real date) and sit in the feed forever — a deadline is
     /// news when it is near, and noise when it isn't.
-    private static let horizonDays = 90
+    ///
+    /// The number lives in `ENSName` since 2026-08-29 (prd §533), with the rest
+    /// of the ladder. Two spellings of one horizon drift, and then a name is
+    /// news in one room and not in the other.
+    private static var horizonDays: Int { ENSName.horizonDays }
 
     /// How far into the PAST an expiry still earns a row. ENS gives a lapsed
     /// name a 90-day grace period in which the owner — and only the owner — can
@@ -42,7 +46,7 @@ enum ENSExpiry {
     /// Found by verification: a watched wallet's own reverse name (`031.eth`)
     /// had expired a month earlier and landed a row reading "expires Jun 20",
     /// present tense, about something already gone.
-    private static let graceDays = 90
+    private static var graceDays: Int { ENSName.graceDays }
 
     /// Lands (or reconciles) an expiry row per readable name. Returns the
     /// number of NEW things, or nil if nothing could be read at all — the same
@@ -50,7 +54,7 @@ enum ENSExpiry {
     /// hiccup never reads as "nothing expiring".
     static func sync(context: ModelContext, addresses: [String],
                      existing: Set<String>) async -> Int? {
-        let names = await candidateNames(addresses)
+        let names = await candidateNames(addresses, context: context)
         guard !names.isEmpty else { return 0 }
         guard let horizon = Calendar.current.date(byAdding: .day, value: horizonDays, to: .now),
               let graceFloor = Calendar.current.date(byAdding: .day, value: -graceDays, to: .now)
@@ -61,20 +65,24 @@ enum ENSExpiry {
         for name in names {
             guard let expiry = await expiryDate(for: name) else { continue }
             reached = true
-            let ref = "wallet:ensexpiry:\(name)"
+            let ref = ENSName.walletRef(for: name)
             // Reconcile before landing: a renewal MOVES the date, and the row
             // has to follow it rather than keep claiming the old one (the
             // lesson `OneClawBridge` records for grants).
             if existing.contains(ref) {
-                let fresh = title(name: name, expiry: expiry)
+                let fresh = ENSName.title(name: name, expiry: expiry)
                 if let landed = try? context.fetch(
                     FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref })).first,
-                   landed.dueAt != expiry || landed.title != fresh {
+                   landed.dueAt != ENSName.nextCliff(expiry: expiry) || landed.title != fresh {
                     // The TITLE is compared too, not just the date: a row
                     // crossing from "expires" to "expired" does so with its
                     // date unchanged — only `now` moved past it. Reconciling on
                     // the date alone would leave it in the present tense forever.
-                    landed.dueAt = expiry
+                    // The NEXT cliff, not the expiry (prd §533): a lapsed name
+                    // used to sit ninety days overdue against a date that had
+                    // stopped being the question, while the moment that
+                    // actually mattered — grace ending — passed unannounced.
+                    landed.dueAt = ENSName.nextCliff(expiry: expiry)
                     landed.title = fresh
                 }
                 continue
@@ -82,13 +90,13 @@ enum ENSExpiry {
             guard expiry <= horizon, expiry >= graceFloor else { continue }
             let thing = Thing(
                 kind: .link,
-                title: title(name: name, expiry: expiry),
+                title: ENSName.title(name: name, expiry: expiry),
                 content: "https://app.ens.domains/\(name)",
                 source: "Wallet",
                 capturedAt: .now,
                 sourceRef: ref
             )
-            thing.dueAt = expiry
+            thing.dueAt = ENSName.nextCliff(expiry: expiry)
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
@@ -96,25 +104,21 @@ enum ENSExpiry {
         return reached || names.isEmpty ? added : nil
     }
 
-    /// "vitalik.eth expires Aug 14" — the date is the fact, and `dueAt` carries
-    /// it structurally for the "What's coming up?" chip to sort on. No "in N
-    /// days" in the title: a stored title would start lying the next morning.
-    ///
-    /// Past tense once the date has passed, because a name inside its grace
-    /// period has already lapsed — it just hasn't been released yet. The
-    /// reconcile pass rewrites the title as well as the date, so a row crosses
-    /// from "expires" to "expired" on its own rather than sitting in the feed
-    /// claiming the future about something that already happened.
-    private static func title(name: String, expiry: Date) -> String {
-        let when = expiry.formatted(.dateTime.month(.abbreviated).day())
-        return expiry < .now
-            ? String(localized: "\(name) expired \(when) — renewable until the grace period ends")
-            : String(localized: "\(name) expires \(when)")
-    }
-
+    /// The row's words and its next deadline both come from `ENSName` since
+    /// 2026-08-29 (prd §533) — one ladder, so a name found from a wallet and a
+    /// name somebody followed can never disagree about where it stands. The
+    /// wording rules this function used to hold are recorded there.
     /// The names worth asking about: what the person typed, plus what each
     /// address says it goes by. Deduped, `.eth` only, lowercased.
-    private static func candidateNames(_ addresses: [String]) async -> [String] {
+    ///
+    /// **A name the ENS seat FOLLOWS is dropped here** (2026-08-29, prd §533).
+    /// That seat owns the same name under `ens:name:<name>`, in its own room,
+    /// and adopts this row when somebody follows it — so leaving the name in
+    /// this list would have the two halves reconciling two rows about one
+    /// deadline, one of which the wallet would keep re-landing after the seat
+    /// had taken it. One name, one row.
+    private static func candidateNames(_ addresses: [String],
+                                       context: ModelContext) async -> [String] {
         var out: [String] = []
         var seen = Set<String>()
         func add(_ raw: String?) {
@@ -128,7 +132,8 @@ enum ENSExpiry {
         }
         for watched in WalletStore.shared.addresses { add(watched.address) }
         for address in addresses { add(await ENS.reverseName(for: address)) }
-        return out
+        let followed = Set(ENSWatch.followed(context: context))
+        return out.filter { !followed.contains($0) }
     }
 
     /// The expiry the metadata service reports, as a date. The attribute is

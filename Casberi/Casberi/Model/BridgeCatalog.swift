@@ -128,7 +128,7 @@ enum BridgeCatalog {
                 "Bluesky", "Nostr", "OpenSea", "Kalshi", "Shopify", "GeckoTerminal", "Deals",
                 "Circle x402",
                 "Open Food Facts", "Stocktwits", "Hugging Face", "Radicle", "npm", "PyPI", "Altana",
-                "Walletbeat", "L2BEAT"]
+                "Walletbeat", "L2BEAT", "ENS"]
             if keyless.contains(name) { return "No account" }
             // Instagram and Snapchat were missed here when they landed
             // (2026-07-31) and TikTok would have been missed the same way:
@@ -235,6 +235,12 @@ enum BridgeCatalog {
                          "Says how much has actually been reviewed, not just what passed",
                          "Vulnerabilities and breaches arrive as they're published"],
               needsSetup: true, added: day(2026, 8, 20)),
+        Offer(name: "ENS",         tagline: "Follow a name, know when it expires", group: "Wallet", connectable: true,
+              summary: "Follow any .eth name — a friend's, a brand's, or one you're waiting on — and it lands in your feed the moment its standing changes: expiring, lapsed and still renewable by its owner, or released for anyone to take.\n\nNo account, no key: the registrar's own public record, read straight from the chain's own metadata service.",
+              features: ["The full window a name expires in, both ends",
+                         "The ninety-day grace period only the owner can renew inside",
+                         "Says when a name you're waiting on gets taken"],
+              needsSetup: true, added: day(2026, 8, 29)),
         // WALLET group (user ruling, 2026-08-20, prd §420). Settled twice the
         // same afternoon: first to Shopping on §222's receipts-vs-account
         // line, then to Wallet on a better one — WALLET IS THE INSTRUMENTS YOU

@@ -34,6 +34,12 @@ enum BridgeRouter {
         case stocktwits
         case openSea
         case geckoTerminal
+        /// ENS (prd §533) — keyless with a FOLLOW list on screen, Walletbeat's
+        /// exact reason: as `.token` it would inherit `finishesOnConnect ==
+        /// true` and the raised sheet would dismiss itself the moment the first
+        /// followed name registered the seat, and the first name almost always
+        /// wants a second.
+        case ens
 
         /// Walletbeat is keyless with a WATCH LIST on screen, so it needs its own
         /// destination rather than riding `.token`: as `.token` it would inherit
@@ -300,6 +306,7 @@ enum BridgeRouter {
             case .stocktwits:     "stocktwits"
             case .openSea:        "opensea"
             case .geckoTerminal:  "geckoterminal"
+            case .ens:            "ens"
             case .walletbeat:     "walletbeat"
             case .l2beat:         "l2beat"
             case .cardPointers:   "cardpointers"
@@ -413,6 +420,7 @@ enum BridgeRouter {
         Row(offer: "Stocktwits", id: "stocktwits", destination: .stocktwits),
         Row(offer: "OpenSea",    id: "opensea",    destination: .openSea),
         Row(offer: "GeckoTerminal", id: "geckoterminal", destination: .geckoTerminal),
+        Row(offer: "ENS",        id: "ens",        destination: .ens),
         Row(offer: "Walletbeat", id: "walletbeat", destination: .walletbeat),
         Row(offer: "L2BEAT",     id: "l2beat",     destination: .l2beat),
         Row(offer: "CardPointers", id: "cardpointers", destination: .cardPointers),
@@ -622,6 +630,7 @@ struct BridgeDestinationView: View {
         case .stocktwits:     StocktwitsScreen()
         case .openSea:        OpenSeaScreen()
         case .geckoTerminal:  GeckoTerminalScreen()
+        case .ens:            ENSScreen()
         case .walletbeat:     WalletbeatScreen()
         case .l2beat:         L2beatScreen()
         case .cardPointers:   CardPointersScreen()
