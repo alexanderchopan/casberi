@@ -2910,13 +2910,12 @@ struct Composer: View {
         foundCurrent = false
         conversationIsKeyed = false
         // Cleared HERE, not just at askWithKey()'s own entry (2026-07-31):
-        // askDirectly() sets this true BEFORE commit() runs, and commit()'s
-        // voice/paste/navigate branches never set `inFlight` true at all —
-        // so a keyed tap on a draft that turns out to be a navigation
-        // command would otherwise leave this flag stranded true, and the
-        // NEXT ask's unrelated inFlight-false transition would fire
-        // askWithKey() out of context. `inFlight = false` two lines below
-        // would itself spuriously trigger the watcher on a stale flag too.
+        // `commit()` only arms this inside its own typed-question branch,
+        // after voice/paste/navigate have already been ruled out — but if
+        // it's still armed when the composer closes mid-answer, leaving it
+        // set would fire the NEXT ask's unrelated inFlight-false transition
+        // out of context. `inFlight = false` two lines below would itself
+        // spuriously trigger the watcher on a stale flag too.
         pendingKeyedFollowUp = false
         inFlight = false
         keepJustLanded = false
@@ -3160,17 +3159,6 @@ struct Composer: View {
         .dsText(.label12)
         .foregroundStyle(DS.textTertiary)
         .padding(.horizontal, DS.Space.s4)
-    }
-
-    /// The ask-time form of the same consent (2026-07-31, prd §242) — a
-    /// normal `commit()`, plus a flag so the keyed retry fires ITSELF the
-    /// moment the on-device answer settles (the `onChange(of: inFlight)`
-    /// watcher above), instead of waiting for a second, separate tap on a
-    /// chip in the settled verb row. `commit()` is unchanged and does
-    /// everything it always does — this only decides what happens next.
-    private func askDirectly() {
-        pendingKeyedFollowUp = true
-        commit()
     }
 
     /// The keyed verb, wearing a provider picker when there is a choice to
@@ -4279,22 +4267,19 @@ struct Composer: View {
         // kept, not a phrase to search for.
         let offerFind = !pasted
         let offerSend = !answering && !draftIsQuestion
-        // The ask-time keyed tap (2026-07-31, prd §242) — the discoverability
-        // fix: today's only door to "Try with your key" is a chip in the
-        // SETTLED verb row, which means asking, reading the whole on-device
-        // answer, and noticing a chip among three others before the option
-        // is even visible. This puts the SAME consent tap where the intent
-        // already is — needs a real question (mirrors `askWithKey()`'s own
-        // "the same question" framing; a capture-a-link paste has nothing
-        // for an agent to answer) and a configured key. Mutually exclusive
-        // with Send-to by construction (that band explicitly excludes
-        // questions), so the row never crowds.
-        let offerKeyed = !pasted && draftIsQuestion && AgentKey.isConfigured
+        // The pre-send "Ask <agent>" chip retired 2026-08-30 (user: "why not
+        // just ask bankr each time, it's not clear to user") — a configured
+        // key now answers every question through the ordinary send (see
+        // `commit()`'s `pendingKeyedFollowUp` arm), so a second chip offering
+        // the same outcome the send dot already gives had nothing left to
+        // discover; two controls doing the same thing, one blue and obvious
+        // and one a chip easy to miss, was the confusion being reported, not
+        // a fix for it.
         // `!handingOff` — a seeded question fills the draft on its way to the
         // commit, and this band flashing Find/Send-to over it was the second
         // of the three surfaces one FAB tap used to paint.
         if isOpen && hasDraft && !isRecording && !handingOff,
-           offerFind || offerSend || offerKeyed {
+           offerFind || offerSend {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 if offerFind && !liveScopes.isEmpty { scopeChips }
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -4331,30 +4316,6 @@ struct Composer: View {
                         }
                         .buttonStyle(PressSpring())
                         .accessibilityLabel("Find in your things")
-                        }
-
-                        // Same tint-on-tintDim language "Try with your key"
-                        // already wears downstream (`Chip(style: .tint)`),
-                        // resized to this row's 40pt capsule so it scrolls
-                        // evenly beside Find and Send-to rather than reading
-                        // as a smaller, different kind of control.
-                        if offerKeyed {
-                        keyedVerb(action: askDirectly) {
-                            HStack(spacing: DS.Space.s2) {
-                                Image(systemName: "key.fill")
-                                    .accessibilityHidden(true)
-                                    .dsGlyph(14, weight: .medium)
-                                Text("Ask \(askProvider?.agent ?? AgentKey.active?.agent ?? "your key")")
-                                    .dsText(.callout15).fontWeight(.semibold)
-                            }
-                            .foregroundStyle(DS.tint)
-                            .padding(.horizontal, DS.Space.s3 + 2)
-                            .frame(minHeight: 40)
-                            .background(DS.tintDim, in: Capsule(style: .continuous))
-                            .dsHover()
-                        }
-                        .buttonStyle(PressSpring())
-                        .accessibilityLabel("Ask with your key")
                         }
 
                         if offerSend {
@@ -4501,6 +4462,20 @@ struct Composer: View {
             // on-device model — which never saw the keyed turn, so "which of
             // those…" was answered by a model with no idea what "those" meant.
             let stayKeyed = conversationIsKeyed && keyAvailable
+            // A configured key answers EVERY question now (2026-08-30, user:
+            // "why not just ask bankr each time, it's not clear to user") —
+            // the separate pre-send "Ask <agent>" chip and the plain send dot
+            // used to do two different things with no visible difference
+            // between them, so which one you tapped silently decided whether
+            // your key got used. Now every ordinary send arms
+            // `pendingKeyedFollowUp` (the old chip's own flag, `askDirectly()`
+            // — since removed), so the on-device answer is followed by the
+            // keyed one automatically regardless of which control was
+            // tapped. Not armed when `stayKeyed` — that branch already
+            // answers WITH the key inside this same commit, and arming it
+            // too would fire a second, redundant keyed request once
+            // `inFlight` settles.
+            if !stayKeyed { pendingKeyedFollowUp = AgentKey.isConfigured }
             // The question lift (delight, 2026-07-21): the header's entrance
             // and the berry's fade-in ride the same animated commit as the
             // rest of "a new ask just started."
