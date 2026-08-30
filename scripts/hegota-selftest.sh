@@ -825,7 +825,7 @@ mutate() {
   if build "$work/HegotaSection.swift" "$work/HegotaCoins.swift" "$work/HegotaAccount.swift" "$work/HegotaRoom.swift" && "$work/run" >/dev/null 2>&1; then
     fail "mutation SURVIVED — $why"
   fi
-  print "  ok   catches  $why"
+  echo "  ok   catches  $why"
 }
 
 # THE TIE, three ways. Each renders as a perfectly ordinary caption asserting a
@@ -1165,5 +1165,5 @@ fi
 grep -q "hegota-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
-print "  ok   drift guards: Foundation-only, no price, no notification, the naming ruling, the frames caption and its populations, the read-only conduct guard"
-print "✓ hegota: scopes, words, spent bitmap, coins, reconciliation, fees, room head, frames, census, clock, genesis, 45 mutations, 19 drift guards"
+echo "  ok   drift guards: Foundation-only, no price, no notification, the naming ruling, the frames caption and its populations, the read-only conduct guard"
+echo "✓ hegota: scopes, words, spent bitmap, coins, reconciliation, fees, room head, frames, census, clock, genesis, 45 mutations, 19 drift guards"
