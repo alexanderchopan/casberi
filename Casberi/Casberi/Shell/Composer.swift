@@ -767,8 +767,23 @@ struct Composer: View {
     /// above, seen from the document's side. Separate from `restChrome` so the
     /// two can't disagree about when the brief yields: this is the one
     /// condition where an answer exists and is deliberately not drawn.
+    ///
+    /// `!inFlight` (2026-08-30) closes the second half of the Bankr bug — the
+    /// commit()-time blur fixes the window BEFORE an answer settles, but the
+    /// settle-time re-focus (`askedByTyping`, in commit()'s own Task) fires
+    /// the MOMENT the free on-device answer finishes, which for a keyed
+    /// follow-up is BEFORE the keyed request has even started (askWithKey()
+    /// runs afterward, off the `inFlight` watcher). Without this, that
+    /// re-focus satisfied this condition again immediately, hiding the
+    /// document a second time — so the free answer flashed briefly and then
+    /// Bankr's own answer streamed into a view nobody could see, which is
+    /// exactly "briefly shows then switches to empty composer." `inFlight`
+    /// covers BOTH phases (askWithKey() sets it true again before the free
+    /// answer's settle work finishes), so the ask surface can only replace a
+    /// document once nothing is actually running — the genuinely idle case
+    /// this was written for.
     private var askSurfaceShowing: Bool {
-        answering && fieldFocused && !hasDraft && !isRecording
+        answering && fieldFocused && !hasDraft && !isRecording && !inFlight
     }
 
     /// One ask chip's staggered rise-in on open (delight, 2026-07-12).
@@ -4208,7 +4223,15 @@ struct Composer: View {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if text.hasSuffix("?") { return true }
         let first = text.split(separator: " ").first.map(String.init) ?? ""
-        return ["what", "who", "when", "where", "why", "how", "how's",
+        // Every question word's own contraction, not just "how's" (2026-08-30
+        // — "what's my balance", no "?", never matched: "what's" wasn't on
+        // this list while its sibling "how's" was, an inconsistency rather
+        // than a deliberate omission. This is still an EXACT first-word
+        // match, not fuzzy — a typo (e.g. "wahjts my balance") still won't
+        // match anything here, and ending a question with "?" is the one
+        // reliable way around that regardless of the first word.
+        return ["what", "what's", "who", "who's", "when", "when's",
+                "where", "where's", "why", "why's", "how", "how's",
                 "did", "does", "do", "is", "are", "can", "show", "find"].contains(first)
     }
 
@@ -4537,6 +4560,23 @@ struct Composer: View {
             // before the field is cleared, because it decides whether the
             // keyboard comes back at settle (see the re-focus below).
             let askedByTyping = fieldFocused
+            // BLUR NOW, not just at `dayCard`'s own call site (2026-08-30).
+            // `askSurfaceShowing` is `answering && fieldFocused && !hasDraft
+            // && !isRecording` — and right here `answering` is about to go
+            // true while `draft` is about to go empty, so a commit that
+            // leaves focus up satisfies it immediately and hides the ENTIRE
+            // document column (turns + the live answer) for as long as focus
+            // stays up, which used to be exactly this comment's fear stated
+            // two callers away rather than fixed here. Invisible for a fast
+            // on-device answer (the window closes before anyone notices) and
+            // total for a slow keyed one — this is why "Ask Bankr" read as
+            // broken: Bankr's answer can take a minute, so the hidden window
+            // was the whole wait, not a flicker. `askedByTyping`'s own
+            // settle-time re-focus (below) restores the keyboard once the
+            // answer is actually on screen, so a typed follow-up still gets
+            // its keyboard back — just after the document can be seen, not
+            // hiding it from the moment it starts.
+            fieldFocused = false
             draft = ""              // clear the field so a follow-up is ready
             // No placeholder doc while in flight (fix 2026-07-20): the old
             // `Insight("Thinking…")` painted the answer card's full tintDim
