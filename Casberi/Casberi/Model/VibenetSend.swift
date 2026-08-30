@@ -117,12 +117,27 @@ enum VibenetSend {
 
     /// Broadcast. **The only write verb in this app's vibenet code**, and it
     /// appears exactly once so the conduct guard has one thing to count.
+    ///
+    /// **THE NODE'S OWN WORDS SURVIVE** (prd §530, 2026-08-30). This read
+    /// `VibenetChain.call`, which maps a JSON-RPC `error` object onto the same
+    /// nil as an unreachable host — so "The network refused it: the node
+    /// refused the transaction" was the ONLY sentence this screen could ever
+    /// show, whatever went wrong, and it names nothing anybody can act on.
+    /// That is the screen in the 2026-08-30 report. `callOutcome` keeps the
+    /// message; `NodeRefusal` explains it where it can and quotes it where it
+    /// cannot.
     static func broadcast(rawTransaction raw: String) async throws -> String {
-        guard let hash = await VibenetChain.call(method: "eth_sendRawTransaction",
-                                               params: [raw]) as? String else {
-            throw Failure.broadcastRefused("the node refused the transaction")
+        switch await VibenetChain.callOutcome(method: "eth_sendRawTransaction", params: [raw]) {
+        case .value(let result):
+            guard let hash = result as? String else {
+                throw Failure.broadcastRefused(NodeRefusal.sentence(nil))
+            }
+            return hash
+        case .refused(let message):
+            throw Failure.broadcastRefused(NodeRefusal.sentence(message))
+        case .unreachable:
+            throw Failure.broadcastRefused(NodeRefusal.sentence(nil))
         }
-        return hash
     }
 
     // MARK: - The receipt

@@ -6103,6 +6103,85 @@ enum ProbeHooks {
                   rejected.joined(separator: ",").isEmpty ? "-" : rejected.joined(separator: ","),
                   HegotaWatch.shared.addresses.count)
         },
+        // `-hegotaKeyProbe YES|claim` — THE WRITE SIDE (prd §530, 2026-08-30),
+        // which had no headless door at all and is where both halves of the
+        // 2026-08-30 report live ("cannot create account or claim from faucet
+        // on hegota").
+        //
+        // It exists because "Create an account" failing has SIX causes that
+        // render as one refused button and only some are bugs: there is
+        // already a key (so the row should not have offered), the cached
+        // address is gone while the KEYCHAIN ITEM SURVIVES a reinstall — the
+        // duplicate that made this permanent — the item is gone while the
+        // address remains, the keychain is locked, the curve refused, or it
+        // worked. `item=`/`address=`/`presence=` is what separates them in one
+        // launch, and it is the triple no screen shows.
+        //
+        // **`claim` is a WORD, not a flag** (`-librarianProbe run`'s ruling):
+        // the faucet allows one claim per SOURCE IP per hour, so a probe that
+        // spent it on every headless run is one nobody could put in a sweep.
+        // Bare `YES` reports and spends nothing.
+        //
+        // It DOES make a key when there isn't one, and says whether it minted
+        // or adopted — that is the act under test, not a side effect of
+        // looking, and on a devnet whose money is worthless it costs nothing
+        // and is undone by "Remove this key".
+        Hook(key: "hegotaKeyProbe") { value, context in
+            let spend = value.lowercased() == "claim"
+            Task { @MainActor in
+                let presence = HegotaKey.presence()
+                let address = HegotaKey.address()
+                // Asked WITHOUT going through `presence()`, which reports
+                // `.none` the moment the cached address is missing and so
+                // cannot see the orphaned item at all — the exact blind spot
+                // that made this bug permanent. Read BEFORE create(), because
+                // afterwards there is an item either way and the orphan is no
+                // longer distinguishable.
+                let orphaned = HegotaKey.keychainHoldsItem() && address == nil
+                NSLog("[Casberi] hegotaKey| presence=%@ address=%@ item=%@ orphaned=%@ biometry=%@",
+                      String(describing: presence),
+                      address ?? "-",
+                      HegotaKey.keychainHoldsItem() ? "YES" : "NO",
+                      orphaned ? "YES" : "NO",
+                      HegotaKey.biometryAvailable() ? "YES" : "NO")
+                if presence != .present {
+                    do {
+                        let made = try HegotaKey.create()
+                        // `orphaned`, not a comparison against the address we
+                        // read a moment ago: in the adopt case that address is
+                        // nil by definition, so comparing to it reports
+                        // "minted" for the one outcome this probe exists to
+                        // detect.
+                        NSLog("[Casberi] hegotaKey| created=%@ adopted=%@",
+                              made, orphaned ? "YES" : "NO")
+                    } catch {
+                        NSLog("[Casberi] hegotaKey| createFailed=%@", String(describing: error))
+                    }
+                }
+                guard let account = HegotaKey.address() else {
+                    NSLog("[Casberi] hegotaKey| no account — nothing to claim for")
+                    return
+                }
+                guard spend else {
+                    NSLog("[Casberi] hegotaKey| faucet=not asked (pass -hegotaKeyProbe claim to spend the hour)")
+                    return
+                }
+                do {
+                    let claim = try await HegotaSend.claimFaucet(for: account)
+                    HegotaSend.landReceipt(txHash: claim.transactionHash, kind: .claimed, in: context)
+                    NSLog("[Casberi] hegotaKey| faucet=sent tx=%@", claim.transactionHash)
+                } catch let f as HegotaSend.Failure {
+                    if case .faucet(let verdict) = f {
+                        NSLog("[Casberi] hegotaKey| faucet=%@ says=%@",
+                              String(describing: verdict), verdict.sentence ?? "-")
+                    } else {
+                        NSLog("[Casberi] hegotaKey| faucet=%@", String(describing: f))
+                    }
+                } catch {
+                    NSLog("[Casberi] hegotaKey| faucet=%@", String(describing: error))
+                }
+            }
+        },
         // `-hegotaProbe YES` — the whole read, phase by phase, then ONE LINE
         // PER ACCOUNT and one per scope (the `-todayProbe` truncation lesson:
         // a joined multi-line NSLog gets cut by the log reader).

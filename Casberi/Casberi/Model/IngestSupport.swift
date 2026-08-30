@@ -427,6 +427,34 @@ enum IngestSupport {
         return (try? JSONSerialization.jsonObject(with: data), http.statusCode)
     }
 
+    /// **The body EVEN WHEN THE STATUS IS NOT 200** (prd §530, 2026-08-30).
+    ///
+    /// Every other helper here drops a non-200 body, which is right when the
+    /// body is the ANSWER — a failed read has nothing to say. It is wrong when
+    /// the body is the REFUSAL, and this app has two such callers: a faucet
+    /// that answers `{"msg":"invalid address"}` and a JSON-RPC node that
+    /// answers `{"error":{"message":"nonce too low"}}`. Through `postJSON`
+    /// both of those reach the screen as the same shrug, which is exactly the
+    /// class §530 exists to end — the reason was on the wire and was thrown
+    /// away one layer below the person who needed it.
+    ///
+    /// `status` is 0 on a transport error (no response at all), the same
+    /// convention `postJSONStatus` uses. The body is whatever parsed, at any
+    /// status, and nil when nothing did.
+    static func postJSONAnyStatus(_ url: String, auth: String? = nil, body: [String: Any],
+                                  headers: [String: String] = [:],
+                                  service: String? = nil) async -> (json: Any?, status: Int) {
+        guard let u = URL(string: url),
+              let payload = try? JSONSerialization.data(withJSONObject: body) else { return (nil, 0) }
+        var request = URLRequest(url: u)
+        request.httpMethod = "POST"
+        request.httpBody = payload
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        apply(auth: auth, headers: headers, to: &request)
+        guard let (data, http) = await send(request, service: service) else { return (nil, 0) }
+        return (try? JSONSerialization.jsonObject(with: data), http.statusCode)
+    }
+
     /// A JSON-RPC BATCH: an ARRAY of calls in one request, answered with an
     /// array of results (2026-07-16, Solana activity). `postJSON` above takes a
     /// dictionary body and so can't express this — and the batch is the whole

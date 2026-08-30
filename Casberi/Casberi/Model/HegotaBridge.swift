@@ -40,9 +40,14 @@ enum HegotaIdentity {
     static let source = "Ethrex Hegotá"
     static let seatID = "hegota"
 
-    /// The block explorer and the faucet — opened in the person's OWN browser
-    /// on a tap, never reached by us. They are in the reach audit's non-reach
-    /// denylist for exactly that reason.
+    /// The block explorer and the faucet.
+    ///
+    /// The EXPLORER is opened in the person's own browser on a tap and never
+    /// reached by us, which is why it is in the reach audit's non-reach
+    /// denylist. **The faucet is not that any more** (prd §530): §525 gave the
+    /// key sheet a Claim button, so `HegotaSend` POSTs to it and it is
+    /// declared in `NetworkReach` like any other host this app calls. Nothing
+    /// in THIS file reaches either.
     static let explorer = "https://dora.hegota.ethrex.xyz"
     static let faucet = "https://faucet.hegota.ethrex.xyz"
 }
@@ -69,23 +74,66 @@ enum HegotaRPC {
     /// this is the only read that dates the COINS list too.
     static let timeDepth = 60
 
+    /// **A REFUSAL AND A SILENCE ARE TWO ANSWERS** (prd §530, 2026-08-30) —
+    /// vibenet's own §515a lesson, which it learned for `eth_call` and never
+    /// carried to anything else.
+    ///
+    /// `call` below maps a host that never answered and a host that answered
+    /// with a JSON-RPC `error` object onto the same nil, which is right for
+    /// every read that only wants the value. It is wrong for anything a person
+    /// is standing in front of: the node's `error.message` is the only text in
+    /// the system that says WHY, and dropping it is what left one sentence —
+    /// "the node refused the transaction" — standing for a stale sequence, an
+    /// unfunded account, a fee under the floor and a dead host alike.
+    enum Outcome {
+        case value(Any)
+        /// A host answered, and the answer was no. The message is the node's
+        /// own, nil only when it sent an error object with no readable text.
+        case refused(String?)
+        /// Nothing answered at all.
+        case unreachable
+    }
+
+    /// One JSON-RPC call, walking the hosts until one answers, keeping what it
+    /// said.
+    static func callOutcome(method: String, params: [Any]) async -> Outcome {
+        let body: [String: Any] = ["id": 1, "jsonrpc": "2.0", "method": method, "params": params]
+        for host in hosts {
+            // `postJSONAnyStatus`, not `postJSON`: a node that answers its
+            // `error` object with a 4xx or 5xx — which some gateways in front
+            // of one do — would otherwise have that error dropped by the very
+            // helper meant to carry it, and this walk would report the message
+            // as absent (prd §530).
+            let answer = await IngestSupport.postJSONAnyStatus(host, body: body,
+                                                               service: HegotaIdentity.source)
+            guard let root = answer.json as? [String: Any] else { continue }
+            if let result = root["result"], !(result is NSNull) { return .value(result) }
+            // A host that answered with an ERROR has answered — walking on
+            // would ask two more hosts the same malformed question and report
+            // "unreachable" for what is really our own bad request.
+            if let error = root["error"] {
+                if let object = error as? [String: Any] {
+                    return .refused(object["message"] as? String)
+                }
+                return .refused(error as? String)
+            }
+        }
+        return .unreachable
+    }
+
     /// One JSON-RPC call, walking the hosts until one answers.
     ///
     /// Returns nil when NO host answered, which the callers must keep distinct
     /// from a host answering with nothing: an unreached read is not evidence of
     /// an empty account, and the room says "couldn't reach the chain" rather
     /// than drawing a zero.
+    ///
+    /// ONE walk, not two: this is `callOutcome` with the reason dropped, so
+    /// the two can never disagree about what a host said (the §418
+    /// duplicate-parser rule).
     static func call(method: String, params: [Any]) async -> Any? {
-        let body: [String: Any] = ["id": 1, "jsonrpc": "2.0", "method": method, "params": params]
-        for host in hosts {
-            guard let root = await IngestSupport.postJSON(host, body: body,
-                                                          service: HegotaIdentity.source)
-                    as? [String: Any] else { continue }
-            if let result = root["result"], !(result is NSNull) { return result }
-            // A host that answered with an ERROR has answered — walking on
-            // would ask two more hosts the same malformed question and report
-            // "unreachable" for what is really our own bad request.
-            if root["error"] != nil { return nil }
+        if case .value(let result) = await callOutcome(method: method, params: params) {
+            return result
         }
         return nil
     }

@@ -31,7 +31,12 @@ enum HegotaSend {
 
     enum Failure: Error, Equatable {
         case noKey
-        case faucetRefused(String)
+        /// The faucet's own verdict, carried whole rather than flattened to a
+        /// string (prd §530). The rate limit is the refusal this service was
+        /// MEASURED to make on an ordinary day, and it is not a fault — a
+        /// screen has to be able to tell it apart from a real one, which a
+        /// sentence it has to grep cannot do.
+        case faucet(HegotaFaucetVerdict)
         case broadcastRefused(String)
         case signingRefused
     }
@@ -44,22 +49,33 @@ enum HegotaSend {
 
     /// Ask the faucet to fund `address`. No key, no signature — this is the
     /// network's own gift, not an act this phone's key performs.
+    /// **`postJSONAnyStatus`, NOT `postJSON`** (prd §530, 2026-08-30) — and
+    /// the difference is the whole of this function's honesty.
+    ///
+    /// `postJSON` returns nil for ANY non-200, so the measured rate limit (one
+    /// claim per source IP per hour, §525) arrived here indistinguishable from
+    /// a dead host and was reported as `"no answer"`. The key sheet then tested
+    /// that text for `"429"` to decide whether to say "already claimed this
+    /// hour" — a branch that could never once have been true, over the one
+    /// refusal this faucet was known to make.
+    ///
+    /// `postJSONStatus` would separate those two and is still not enough: it
+    /// drops the BODY on a non-200, so the faucet's own `{"msg":"invalid
+    /// address"}` would survive only if the service happened to send it with a
+    /// 200. Reading the refusal is the whole point, so the body comes back at
+    /// whatever status.
     static func claimFaucet(for address: String) async throws -> Claimed {
         let body: [String: Any] = ["address": address]
-        guard let root = await IngestSupport.postJSON(faucetClaimEndpoint, body: body,
-                                                      service: HegotaIdentity.source)
-                as? [String: Any] else {
-            throw Failure.faucetRefused("no answer")
-        }
-        if let msg = root["msg"] as? String, let hash = root["txhash"] as? String, msg == "sent" {
-            return Claimed(transactionHash: hash)
-        }
-        // Measured shapes: {"msg":"invalid address"} and a 429 for the
-        // one-per-hour-per-IP limit, which `postJSON` does not distinguish
-        // from any other body — so the message is whatever the service said,
-        // rather than a guessed reason.
-        let msg = (root["msg"] as? String) ?? "refused"
-        throw Failure.faucetRefused(msg)
+        let answer = await IngestSupport.postJSONAnyStatus(faucetClaimEndpoint, body: body,
+                                                           service: HegotaIdentity.source)
+        let root = answer.json as? [String: Any]
+        // Measured shapes: 200 with {"msg":"sent","txhash":"0x…"}, 200 with
+        // {"msg":"invalid address"}, and a bare 429 for the hourly limit.
+        let verdict = HegotaFaucetVerdict.of(status: answer.status,
+                                             msg: root?["msg"] as? String,
+                                             txHash: root?["txhash"] as? String)
+        if case .sent(let hash) = verdict { return Claimed(transactionHash: hash) }
+        throw Failure.faucet(verdict)
     }
 
     // MARK: - The receipt
@@ -140,12 +156,24 @@ enum HegotaSend {
     /// Broadcast. The only write verb in this app's Hegotá code that follows a
     /// signature — appearing exactly once, so the conduct guard has one thing
     /// to count.
+    /// **THE NODE'S OWN WORDS SURVIVE** (prd §530, 2026-08-30). This used to
+    /// read `HegotaRPC.call`, which maps a JSON-RPC `error` object onto the
+    /// same nil as a dead host — so every possible cause reached the screen as
+    /// the single sentence "the node refused the transaction", which names
+    /// nothing and can be acted on in no way. `callOutcome` keeps the message;
+    /// `NodeRefusal` explains it where it can and quotes it where it cannot.
     static func broadcast(rawTransaction raw: String) async throws -> String {
-        guard let hash = await HegotaRPC.call(method: "eth_sendRawTransaction",
-                                              params: [raw]) as? String else {
-            throw Failure.broadcastRefused("the node refused the transaction")
+        switch await HegotaRPC.callOutcome(method: "eth_sendRawTransaction", params: [raw]) {
+        case .value(let result):
+            guard let hash = result as? String else {
+                throw Failure.broadcastRefused(NodeRefusal.sentence(nil))
+            }
+            return hash
+        case .refused(let message):
+            throw Failure.broadcastRefused(NodeRefusal.sentence(message))
+        case .unreachable:
+            throw Failure.broadcastRefused(NodeRefusal.sentence(nil))
         }
-        return hash
     }
 
     // MARK: - Send a simple value transfer

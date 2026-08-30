@@ -79,6 +79,7 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §500 | Hegotá **never touches the faucet** — a faucet claim is a write and the seat's whole claim is that it cannot write, so it links out and the person claims their own | overtaken by §525 (the key sheet grew a Claim button that POSTs to it) and then by §530, which is where the CONSEQUENCE was paid: the faucet host had been in the reach audit's non-reach denylist on §500's reasoning, so for a day the privacy screen omitted a host the app really reached |
 | §369 | A money receipt pours its SOURCE — nine hues, so ten money sheets read as ten places instead of ten rows | amended by §524 (the pour is ink on every paper; `MoneyReceipt.Hue` is still computed and still harnessed nine ways, and no view paints with it — the disc directly above the pour already states the source at full strength, so the wash was the same fact a second time and weaker) |
 | §495 | Every sheet head is a piece of paper — a raised surface, the ROOM'S HUE poured at the top, and the receipt silhouette | amended by §524 (the paper, the pour and the silhouette all stand; only the hue goes. `dsReceiptPaper` no longer TAKES a colour, which also ends the nil arm that gave a hueless app's page no top while a branded one got a coloured one) |
 | §500 | Hegotá does **no notifications** — no attention dots ever, because nothing in that room is urgent (nothing can move against you; the asset is test ETH) | amended by §522 for ONE event (the room's CONTENT rule stands whole and the dots stay off; a devnet RELAUNCH is not room content but the statement that everything the room shows describes a chain that no longer exists — §515a, two days after §500 and therefore unavailable to it, is a person losing an evening to exactly that on the sibling devnet) |
@@ -39780,3 +39781,165 @@ two places where the offer is about something they are actually doing.
 
 **UNSEEN on a device.** Both placements are layout and weight judgements no static check can
 see, and the Wallet one sits at the head of the app's densest card.
+
+## 530. The Hegotá account that could never be made again, the faucet sentence that could never be said, and the refusal that never named anything (user: "cannot create account or claim from faucet on hegota", with a screenshot of "The network refused it: the node refused the transaction", 2026-08-30)
+
+Four defects, three of them invisible to every check in this repo, and the
+first one is the report whole: **create fails, so there is no key, so the
+faucet button does not exist.** One root cause wearing two symptoms.
+`HegotaKey`, `HegotaSend`, `HegotaRPC`, `HegotaKeySheet`, plus the sibling
+devnet's identical write defect and one disclosure that had quietly stopped
+being true. Two new Foundation-only files —
+`Model/HegotaWriteOutcome.swift`, `Model/NodeRefusal.swift` — compiled WHOLE
+by `scripts/hegota-tx-selftest.sh`. No new `Thing` field, so **no CloudKit
+deploy**.
+
+**1. THE KEYCHAIN ITEM OUTLIVES THE APP; THE CACHED ADDRESS DOES NOT.**
+`HegotaKey.presence()` is derived from `UserDefaults`, and the two halves of
+this key have different lifetimes: deleting an app wipes its defaults and
+**leaves its keychain items exactly where they were**. So after a reinstall —
+which is how this app reaches a device on every TestFlight cycle and every
+`simctl install` — the item was present and the address gone, `presence()`
+read `.none`, the room offered "Create an account", and `SecItemAdd` answered
+`errSecDuplicateItem` (`-25299`). Forever. The screen said "The keychain
+refused (code -25299)", which names a number and no remedy, and the one
+control that could have cleared it — "Remove this key" — lives in the ready
+body, reachable only once a key exists.
+
+**The fix is to ADOPT, not to replace**, and that is the whole of its
+correctness: that item IS this phone's account, it is what the chain knows,
+and it may hold faucet ETH that a fresh key would strand. Only bytes that are
+not a usable key are thrown away, and then a new one is minted in their place
+rather than left as a second dead end. `.destroyed` — the mirror case, the
+address cached and the item gone — used to throw `.alreadyExists`, so the
+sheet's own head said *"Making a new one is safe"* directly above a button
+answering *"There's already a key on this phone."* And `delete()` named no
+synchronizability, which matches only the non-synchronizable item;
+`SignerKey` — the proven key of this exact shape — has always passed
+`kSecAttrSynchronizableAny`, because a survivor of "Remove this key" is the
+next duplicate.
+
+**`presence()` is why nothing could see it, and the probe is shaped around
+that.** It answers `.none` the moment the cached address is missing and never
+asks the keychain at all — correct for a screen, and the exact blind spot that
+made this permanent. `HegotaKey.keychainHoldsItem()` is the attribute-only
+question `presence()` deliberately does not ask, and
+**`-hegotaKeyProbe YES|claim`** prints `presence=`/`address=`/`item=`
+together, because "Create an account" failing has SIX causes that render as
+one refused button and only some are bugs. **`claim` is a WORD, not a flag**
+(`-librarianProbe run`'s ruling): the faucet allows one claim per source IP
+per hour, so a probe that spent it on every headless run is one nobody could
+put in a sweep. This seat's write side had no headless door at all.
+
+**2. THE FAUCET'S ONE EXPECTED REFUSAL COULD NEVER BE SAID.**
+`IngestSupport.postJSON` returns nil for ANY non-200, so the measured hourly
+rate limit (§525) arrived as `faucetRefused("no answer")` — and
+`HegotaKeySheet` then decided whether to say "already claimed this hour" by
+grepping that failure's TEXT for `"429"`. **A branch that could not have been
+true once**, over the one refusal this service was known to make on an
+ordinary day. Now the classification is a value (`HegotaFaucetVerdict`) rather
+than a sentence a screen has to re-parse, which is the drift that caused this:
+*a refusal spelled per-screen drifts from the shape it is classifying, and
+then a screen tests for text that cannot occur.*
+
+**`postJSONStatus` was the obvious fix and was not enough**, which is the
+reusable part: it separates a 429 from a dead host and still **drops the BODY
+on a non-200**, so the faucet's own `{"msg":"invalid address"}` survives only
+if the service happens to send it with a 200 — and a node's
+`{"error":{"message":…}}` behind a gateway 5xx is lost the same way. Every
+JSON helper in `IngestSupport` was built for a body that is the ANSWER, where
+dropping a failed read is right; none was built for a body that is the
+REFUSAL. `postJSONAnyStatus` is that one, and it is what both writes ride.
+
+Two rulings inside it. **`status == 0` is read before everything**, because
+"the faucet said no" and "nothing answered" send a person to two different
+places. And **a claim with no transaction hash is not a claim** — reporting
+one would put a `hegota:claimed:` receipt in the corpus, with an explorer
+link, for money that never moved.
+
+**3. THE NODE'S REFUSAL NAMED NOTHING — and that is the screenshot.**
+`HegotaRPC.call` maps a JSON-RPC `error` object onto the same nil as a dead
+host, so `broadcast` threw one hardcoded sentence — "the node refused the
+transaction" — for a stale sequence, an unfunded account, a fee under the
+floor, an unsupported transaction type and a host that never answered alike.
+**Vibenet has the identical defect in the identical line**, and its sheet is
+what the report's screenshot shows: *"The network refused it: the node refused
+the transaction."*
+
+Vibenet had already learned this lesson and only half-applied it:
+`VibenetChain.CallOutcome` has drawn the revert-versus-silence distinction
+since §515a — **for `eth_call` only**, so the write path went on collapsing
+everything. Both chains now walk one outcome-carrying call (`callOutcome`),
+each chain's plain `call` is that same walk with the reason dropped so the two
+can never disagree, and `ethCallOutcome` forwards rather than parsing a second
+time (§418) — narrowing back to its documented `String` value rather than
+widening the type every existing reader relies on. Vibenet's walk also
+recognised only a DICTIONARY error, so a node refusing with a bare string
+reported "no answer from the chain"; both chains read both forms now, or the
+twin written in one afternoon would have diverged by the evening.
+
+**`NodeRefusal` is chain-neutral and its own file, deliberately.** Two devnets
+refusing the same way with two copies of the same table is the duplicate-parser
+mistake, and it ends the same way: two chains eventually explaining one
+refusal differently. It **never invents a reason and never hides one** — a
+recognised cause is explained AND the node's own words are kept, because a
+devnet's phrasing is not stable enough to paraphrase away and the raw text is
+what makes a report actionable; an unrecognised message stands alone; and
+where there were no words at all it says so rather than asserting a refusal
+that may have been a dead host.
+
+**4. THE FAUCET WAS UNDISCLOSED, and the denylist is why nobody noticed.**
+`faucet.hegota.ethrex.xyz` sat in `network-reach-audit.sh`'s non-reach
+denylist, under an entry whose own comment read *"the seat deliberately never
+touches it — the setup screen links out so the person claims their own."* That
+was true when it was written (§500) and stopped being true on 2026-08-29, when
+§525 gave the key sheet a Claim button that POSTs to it. The audit stayed
+green for a day, because **a denylist entry is believed and nothing re-reads
+its REASON when the code underneath it changes** — so the privacy screen
+omitted a host the app really reaches, which is the build-214 `api.stripe.com`
+failure this gate exists to prevent (§205/§289). It is in the reach registry
+now, with a purpose saying a claim carries the address you are asking for and
+nothing else; the explorer stays on the denylist, where it belongs.
+
+**Standing lesson, and the generalisable one here: a non-reach denylist entry
+is a claim about CONDUCT, and landing a write is exactly the moment to
+re-read every entry that says a host is never touched.** The audit can check
+that a host is accounted for; it cannot check that the sentence accounting for
+it is still true.
+
+**THE NEAR-MISS, recorded because it is worse than the bug.** The first cut of
+the adoption read the stored scalar and returned nil for *any* unsuccessful
+`SecItemCopyMatching` — so a LOCKED DEVICE, which answers exactly like an item
+that is not there, would have been read as "these bytes are junk" and
+`create()` would have **deleted this phone's real account and minted a
+replacement**. `SignerKey.presence()` already states the rule this broke — an
+unreadable keychain is never reported as an absent one — and it was broken in
+the one place where being wrong is unrecoverable rather than annoying.
+Adoption is three-state now (`adopted` / `unusableBytes` / `unreadable`),
+only proven-unusable bytes are ever replaced, and a harness guard fails the
+build if `delete()` appears in any other arm. **Two answers where the world
+has three is the shape to look for**, and a fix for a dead end is exactly
+where it hides: every branch wants to end in "so make a new one".
+
+**What is guarded.** `HegotaWriteOutcome` and `NodeRefusal` are compiled WHOLE
+and mutation-proven eight ways in `hegota-tx-selftest.sh` — neither write can
+be exercised from a harness (one spends the hourly budget, the other needs a
+key and a live node), so the classification is the only part of either that
+can ever be proven. Plus drift guards: the faucet must keep its HTTP status,
+the broadcast must keep the node's words, the sheet must not re-derive a
+verdict from its own text (a literal `429` in that file fails the build), and
+`create()` must still answer both the duplicate and the destroyed case. One
+assertion was written and then DELETED for the reason this repo keeps
+re-earning: `rateLimited != refused(…)` compares two different cases and can
+never fail, so it proves nothing.
+
+**UNBUILT AND UNMEASURED.** Authored on Linux with no Xcode and no Swift
+toolchain, and this environment's proxy refuses every `*.hegota.ethrex.xyz`
+host, so nothing here was compiled, `verify.sh` has not run, the harness has
+never executed, and no faucet or node answer was observed. Defect 1 is the
+one established by reading alone and is the report's own symptom; 2, 3 and 4
+are provable from the source as written. Every path fails safe — a
+classification that comes out wrong yields a worse sentence, never a worse
+act — but **the fix for the reported bug is unverified on a device**, and the
+one check that would settle it in a single launch is
+`-hegotaKeyProbe YES` on a build installed over an existing one.

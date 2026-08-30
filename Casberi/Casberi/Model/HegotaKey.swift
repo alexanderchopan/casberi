@@ -73,6 +73,26 @@ enum HegotaKey {
         return .present
     }
 
+    /// **Is there an item, regardless of what this phone remembers?**
+    ///
+    /// `presence()` above answers `.none` the moment the cached address is
+    /// missing and never asks the keychain at all, which is right for a screen
+    /// (an account with no known address is nothing a person can use) and is
+    /// exactly the blind spot that made the §530 duplicate permanent: the item
+    /// was there, nothing could see it, and every "Create an account" bounced
+    /// off it. Attribute-only, so it decrypts nothing and raises no prompt.
+    static func keychainHoldsItem() -> Bool {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var item: CFTypeRef?
+        return SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess
+    }
+
     /// The address this key signs as, cached so a row can be drawn without
     /// decrypting the scalar.
     static func address() -> String? {
@@ -87,9 +107,83 @@ enum HegotaKey {
 
     // MARK: - Making one
 
+    /// **A KEY CAN OUTLIVE EVERY MEMORY OF IT, AND THAT USED TO BE A DEAD
+    /// END** (prd §530, 2026-08-30).
+    ///
+    /// `presence()` is derived from the CACHED ADDRESS in `UserDefaults`, and
+    /// the two halves of this key do not have the same lifetime: deleting the
+    /// app wipes the defaults and **leaves the keychain item exactly where it
+    /// was**, which is Apple's documented behaviour on iOS and plainly true on
+    /// Catalyst. So a reinstall — the ordinary way this app reaches a device —
+    /// left the item present and the address gone. `presence()` read `.none`,
+    /// the room offered "Create an account", and `SecItemAdd` answered
+    /// `errSecDuplicateItem` (`-25299`) forever. The screen said "The keychain
+    /// refused (code -25299)", the account could never be made, and because
+    /// the faucet button only exists once a key does, **the faucet became
+    /// unreachable too** — one root cause wearing two reports.
+    ///
+    /// The answer is to ADOPT rather than replace. That item IS this phone's
+    /// account: it may hold faucet ETH, it is what the chain knows, and
+    /// overwriting it would strand both. Only bytes that are not a usable key
+    /// at all are thrown away, and then a fresh one is minted in their place
+    /// rather than left as a second dead end.
+    ///
+    /// `.destroyed` — the mirror case, the address cached and the item gone —
+    /// used to throw `.alreadyExists` here, so this sheet's own head said
+    /// "Making a new one is safe" over a button that answered "There's already
+    /// a key on this phone." The stale address is cleared and the mint
+    /// proceeds, which is what that sentence was always promising.
     @discardableResult
     static func create() throws -> String {
-        guard presence() == .none else { throw Failure.alreadyExists }
+        switch presence() {
+        case .present:
+            throw Failure.alreadyExists
+        case .destroyed:
+            // All that is left of a key the keychain no longer has. Nothing
+            // reads it once the item is gone, and holding it is what blocked
+            // the replacement.
+            UserDefaults.standard.removeObject(forKey: addressKey)
+        case .none:
+            break
+        }
+
+        let minted = try mint()
+        switch minted {
+        case .stored(let address):
+            return address
+        case .duplicate:
+            switch adoptStoredKey() {
+            case .adopted(let address):
+                return address
+            case .unreadable(let status):
+                // **NEVER DELETE ON A MAYBE.** A locked device or a refused
+                // access group answers exactly like an item that is not there,
+                // and deleting on that reading destroys this phone's real
+                // account — `SignerKey.presence()`'s rule (an unreadable
+                // keychain is never reported as an absent one), which the
+                // first cut of this fix broke in the one place it costs the
+                // most.
+                throw Failure.locked(status)
+            case .unusableBytes:
+                // Read, and not a key. It can sign nothing, so nothing is lost
+                // by replacing it, and leaving it would reproduce this same
+                // duplicate on every future tap.
+                delete()
+                let replacement = try mint()
+                guard case .stored(let address) = replacement else {
+                    throw Failure.keychainRefused(errSecDuplicateItem)
+                }
+                return address
+            }
+        }
+    }
+
+    private enum Minted { case stored(String), duplicate }
+
+    /// Generate a scalar and write it. Hands back `.duplicate` rather than
+    /// throwing, because a duplicate is the one keychain answer this file can
+    /// do something about.
+    private static func mint() throws -> Minted {
         guard let key = try? P256K.Recovery.PrivateKey(format: .uncompressed),
               let addr = ethereumAddress(uncompressedPublicKey: [UInt8](key.publicKey.dataRepresentation))
         else { throw Failure.curve }
@@ -125,10 +219,57 @@ enum HegotaKey {
         let status = SecItemAdd(add as CFDictionary, nil)
         scalar.resetBytes(in: 0..<scalar.count)
         add[kSecValueData as String] = nil
+        if status == errSecDuplicateItem { return .duplicate }
         guard status == errSecSuccess else { throw Failure.keychainRefused(status) }
 
         UserDefaults.standard.set(addr, forKey: addressKey)
-        return addr
+        return .stored(addr)
+    }
+
+    /// **THREE ANSWERS, NEVER TWO.** "The bytes are not a key" and "we could
+    /// not read the bytes" look identical from a nil and are opposite
+    /// instructions: the first says the item is worthless and may be replaced,
+    /// the second says we are blind and must touch nothing. Collapsing them is
+    /// how a locked device loses this phone's real account, which is
+    /// `SignerKey.presence()`'s own rule (an unreadable keychain is never
+    /// reported as an absent one) one file over.
+    private enum Adoption {
+        case adopted(String)
+        /// Read, and not a usable secp256k1 scalar.
+        case unusableBytes
+        /// Not read at all — locked, refused, or gone between the duplicate
+        /// and this query.
+        case unreadable(OSStatus)
+    }
+
+    /// The address of the key already in the keychain, cached so this phone
+    /// remembers it again.
+    ///
+    /// Reading the scalar raises no prompt: this item carries no
+    /// `SecAccessControl`, and biometry is asked for at SIGN time through
+    /// `kSecUseAuthenticationContext` instead — the same split `SignerKey`
+    /// uses.
+    private static func adoptStoredKey() -> Adoption {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        guard status == errSecSuccess, let data = item as? Data else {
+            return .unreadable(status)
+        }
+        var scalar = [UInt8](data)
+        defer { scalar.resetBytes(in: 0..<scalar.count) }
+        guard let key = try? P256K.Recovery.PrivateKey(dataRepresentation: scalar,
+                                                       format: .uncompressed),
+              let addr = ethereumAddress(uncompressedPublicKey: [UInt8](key.publicKey.dataRepresentation))
+        else { return .unusableBytes }
+        UserDefaults.standard.set(addr, forKey: addressKey)
+        return .adopted(addr)
     }
 
     static func delete() {
@@ -136,6 +277,13 @@ enum HegotaKey {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
+            // `SynchronizableAny`, `SignerKey`'s own constant. A delete query
+            // that names no synchronizability matches only the
+            // non-synchronizable item, so an item written under any other
+            // attribute survives "Remove this key" — and then the next
+            // "Create an account" hits the duplicate `create()` now adopts.
+            // Removing means removing.
+            kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
         ]
         SecItemDelete(query as CFDictionary)
         UserDefaults.standard.removeObject(forKey: addressKey)

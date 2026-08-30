@@ -28,6 +28,11 @@ struct HegotaKeySheet: View {
     @State private var busy = false
     @State private var keyFailure: String?
     @State private var faucetResult: String?
+    /// Whether `faucetResult` is a REFUSAL. A refusal set in the same tertiary
+    /// grey as a success reads as a footnote rather than as an answer — the
+    /// §83 rule that a screen must not state a failure in the voice it uses
+    /// for fine print.
+    @State private var faucetFailed = false
     @State private var faucetBusy = false
 
     private static let mark = HegotaModeStyle.room
@@ -183,7 +188,7 @@ struct HegotaKeySheet: View {
                 if let faucetResult {
                     Text(faucetResult)
                         .dsText(.label11)
-                        .foregroundStyle(DS.textTertiary)
+                        .foregroundStyle(faucetFailed ? DS.destructive : DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 // Rate-limited to one claim per source IP per hour — measured,
@@ -281,24 +286,31 @@ struct HegotaKeySheet: View {
         guard let address = HegotaKey.address() else { return }
         faucetBusy = true
         faucetResult = nil
+        faucetFailed = false
         Task {
             defer { faucetBusy = false }
             do {
                 let claim = try await HegotaSend.claimFaucet(for: address)
                 DSHaptic.success()
                 HegotaSend.landReceipt(txHash: claim.transactionHash, kind: .claimed, in: modelContext)
+                faucetFailed = false
                 faucetResult = String(localized: "Sent \u{2014} \(claim.transactionHash.prefix(10))\u{2026}")
             } catch let f as HegotaSend.Failure {
-                switch f {
-                case .faucetRefused(let why):
-                    faucetResult = why.lowercased().contains("429") || why.lowercased().contains("limit")
-                        ? String(localized: "Already claimed this hour \u{2014} try again later.")
-                        : String(localized: "The faucet refused: \(why)")
-                default:
+                // THE VERDICT SAYS IT, not this screen (prd §530). The old
+                // branch here grepped the failure TEXT for "429" — which
+                // `postJSON` had already thrown away, so the friendly
+                // rate-limit sentence could never once have been reached over
+                // the one refusal this faucet is known to make.
+                if case .faucet(let verdict) = f {
+                    faucetResult = verdict.sentence
+                    faucetFailed = true
+                } else {
                     faucetResult = String(localized: "Couldn't reach the faucet.")
+                    faucetFailed = true
                 }
             } catch {
                 faucetResult = String(localized: "Couldn't reach the faucet.")
+                faucetFailed = true
             }
         }
     }
@@ -316,7 +328,13 @@ struct HegotaKeySheet: View {
             return String(localized: "The key could not be generated.")
         case .selfCheck:
             return String(localized: "The new key didn't check out \u{2014} nothing was saved.")
-        case .locked(let status), .keychainRefused(let status):
+        case .locked(let status):
+            // Distinct from a refused WRITE (prd §530): this is the keychain
+            // declining to be READ, which `create()` now reaches when there is
+            // an item it cannot open — and the remedy is a locked device, not
+            // a broken app. Never worded as a fault we can fix from here.
+            return String(localized: "The keychain wouldn't open (code \(String(Int(status)))). Unlock this device and try again.")
+        case .keychainRefused(let status):
             return String(localized: "The keychain refused (code \(String(Int(status)))).")
         }
     }

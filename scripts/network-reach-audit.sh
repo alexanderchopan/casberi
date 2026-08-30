@@ -30,14 +30,24 @@ KNOWN_NON_REACH=(
   polygonscan.com solscan.io revoke.cash robinhoodchain.blockscout.com
   hyperevmscan.io monadscan.com
   gnosisscan.io njump.me
-  # Hegota's explorer and faucet. The explorer is a permalink the PERSON's
-  # browser opens on a transaction row. The faucet is the sharper case: it is
-  # the one door on this chain that WRITES (it mints test ETH on a POST), and
-  # the seat deliberately never touches it — the setup screen links out so the
-  # person claims their own, which is why this is a denylist entry rather than
-  # a registry one. A request to either from HegotaBridge would be a real
-  # finding, and the seat's own self-test fails the build on any write verb.
-  dora.hegota.ethrex.xyz faucet.hegota.ethrex.xyz
+  # Hegota's EXPLORER only — a permalink the PERSON's browser opens on a
+  # transaction row.
+  #
+  # **The faucet used to sit here and no longer may** (prd §530, 2026-08-30).
+  # This entry said "the seat deliberately never touches it — the setup screen
+  # links out so the person claims their own", which was true when it was
+  # written and stopped being true on 2026-08-29, when §525 landed
+  # `HegotaSend.claimFaucet` and the key sheet grew a Claim button that POSTs
+  # to it. The audit stayed green throughout, because a denylist entry is
+  # believed and nothing re-reads its REASON when the code underneath it
+  # changes — so the privacy screen omitted a host the app really reaches,
+  # which is the build-214 `api.stripe.com` failure this whole gate exists to
+  # prevent (prd §205/§289). It is in the reach registry now.
+  #
+  # Standing lesson: a denylist entry is a claim about CONDUCT, and landing a
+  # write is exactly the moment to re-read every entry that says a host is
+  # never touched.
+  dora.hegota.ethrex.xyz
   # vibenet's own explorer (VibenetExplorer) — a landed event's permalink
   # and the room's "Explorer" door, both `Link(destination:)` the person's
   # own browser opens; this app never fetches chain.base.org itself.
