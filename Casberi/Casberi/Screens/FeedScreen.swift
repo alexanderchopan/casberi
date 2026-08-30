@@ -5345,54 +5345,28 @@ struct FeedScreen: View {
                 },
                 isBoundary: { rows[$0].id == boundary })
             Section {
-                if let cover, cover.isLive { ledeListRow(cover) }
-                ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
-                    if row.id == boundary { newSinceDivider }
-                    switch row.kind {
-                    case .single(let item):
-                        // `live` before ANY read (corollary 3, build 176 —
-                        // see `ThingRowKeying`): this closure is re-evaluated
-                        // against the array it already holds when a heal's
-                        // delete lands, and `imageOnly.contains(thing.id)`
-                        // below is an argument, evaluated here, ahead of any
-                        // guard inside the builder.
-                        if let thing = item.live {
-                            // The day's promoted anchor NEVER recedes (§378
-                            // amendment, found by auditing §254 × §378): every
-                            // promotable row is ambient by construction —
-                            // `artRidesBesideIdentity` admits only social/RSS
-                            // — so without this exemption the one row §254
-                            // chose as the day's landmark was the one row
-                            // guaranteed quiet. A dimmed landmark is a
-                            // contradiction in terms, and it stays exempt
-                            // below the read boundary too: landmarks are for
-                            // wayfinding, which already-read territory needs
-                            // MORE of, not less.
-                            let anchor = wideArt.contains(thing.id)
-                            shapedListRow(thing, index: i, nextEventID: nextEventID,
-                                          position: positions[i],
-                                          imageOnly: imageOnly.contains(thing.id),
-                                          wideArt: anchor)
-                                .opacity(!anchor && isQuiet(row) ? Self.quietRow : 1)
-                        }
-                    case .bundle(let source, let word, let count, let newest, let art):
-                        bundleListRow(source: source, word: word, count: count,
-                                      newest: newest, art: art, index: i, position: positions[i])
-                            .opacity(isQuiet(row) ? Self.quietRow : 1)
-                    case .strip(let source, let word, let count, let newest, let tiles):
-                        stripListRow(source: source, word: word, count: count,
-                                     newest: newest, tiles: tiles, index: i,
-                                     position: positions[i])
-                            .opacity(isQuiet(row) ? Self.quietRow : 1)
-                    }
-                }
-                // The moment closes (prd §389). `newSinceDivider` said the
-                // same thing from ABOVE the boundary, where it had to name the
-                // date to be understood; from below, under a section already
-                // named "Since you left", the only fact left to state is that
-                // this is where you can stop.
-                if split.moment && label == Self.momentLabel { caughtUpSeam }
-            } header: {
+                // UNPINNED (2026-08-29) — the day label is a ROW, not a `header:`.
+                //
+                // `.plain` pins section headers, and this one carries no backdrop of
+                // its own — `.scrollContentBackground(.hidden)` takes away the
+                // material the system would otherwise lend the pinned one — so the
+                // label floated unreadably over whatever scrolled beneath it. Worst
+                // over the cover (`ledeListRow`), the one row in this feed that
+                // paints its own opaque surface: "Since you left" and its subline
+                // landed straight on top of the card's own title, reported from a
+                // device as a text overlay.
+                //
+                // A backdrop was the other way out and the ruling against it already
+                // exists: the 2026-07-28 twin in `daySection` strips the system's
+                // material precisely because it reads as an unwanted gray box on the
+                // one header that happens to be pinned. With no backdrop allowed,
+                // not pinning is what is left — and a day label that scrolls away
+                // with the day it names is what a day label is for.
+                //
+                // Insets are ZEROED and the leading spelled here, so the column is a
+                // value in this file rather than whatever the system hands a header
+                // slot: it lands on `shapedListRow`'s own leading, i.e. the left edge
+                // of the day's card run.
                 // No count (prd §218, 2026-07-25). §213 retired volume as news
                 // in the brief ("people do not care how many things landed"),
                 // and the widget's own tally went the same day; this header was
@@ -5454,8 +5428,58 @@ struct FeedScreen: View {
                     }
                 }
                 .textCase(nil)
-                .padding(.leading, DS.Space.s4)
+                .padding(.leading, DS.Space.s4 + DS.Space.s3)
                 .padding(.vertical, DS.Space.s1)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                if let cover, cover.isLive { ledeListRow(cover) }
+                ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
+                    if row.id == boundary { newSinceDivider }
+                    switch row.kind {
+                    case .single(let item):
+                        // `live` before ANY read (corollary 3, build 176 —
+                        // see `ThingRowKeying`): this closure is re-evaluated
+                        // against the array it already holds when a heal's
+                        // delete lands, and `imageOnly.contains(thing.id)`
+                        // below is an argument, evaluated here, ahead of any
+                        // guard inside the builder.
+                        if let thing = item.live {
+                            // The day's promoted anchor NEVER recedes (§378
+                            // amendment, found by auditing §254 × §378): every
+                            // promotable row is ambient by construction —
+                            // `artRidesBesideIdentity` admits only social/RSS
+                            // — so without this exemption the one row §254
+                            // chose as the day's landmark was the one row
+                            // guaranteed quiet. A dimmed landmark is a
+                            // contradiction in terms, and it stays exempt
+                            // below the read boundary too: landmarks are for
+                            // wayfinding, which already-read territory needs
+                            // MORE of, not less.
+                            let anchor = wideArt.contains(thing.id)
+                            shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                          position: positions[i],
+                                          imageOnly: imageOnly.contains(thing.id),
+                                          wideArt: anchor)
+                                .opacity(!anchor && isQuiet(row) ? Self.quietRow : 1)
+                        }
+                    case .bundle(let source, let word, let count, let newest, let art):
+                        bundleListRow(source: source, word: word, count: count,
+                                      newest: newest, art: art, index: i, position: positions[i])
+                            .opacity(isQuiet(row) ? Self.quietRow : 1)
+                    case .strip(let source, let word, let count, let newest, let tiles):
+                        stripListRow(source: source, word: word, count: count,
+                                     newest: newest, tiles: tiles, index: i,
+                                     position: positions[i])
+                            .opacity(isQuiet(row) ? Self.quietRow : 1)
+                    }
+                }
+                // The moment closes (prd §389). `newSinceDivider` said the
+                // same thing from ABOVE the boundary, where it had to name the
+                // date to be understood; from below, under a section already
+                // named "Since you left", the only fact left to state is that
+                // this is where you can stop.
+                if split.moment && label == Self.momentLabel { caughtUpSeam }
             }
         }
         if window.more { olderRow }
@@ -7798,6 +7822,28 @@ struct FeedScreen: View {
                 },
                 isBoundary: { dayRows[$0].id == boundary })
             Section {
+                // UNPINNED (2026-08-29) — a ROW, not a `header:`, for the reason
+                // the twin in `bundledSections` gives at length: `.plain` pins a
+                // header, this one clears the backdrop that would make a pinned one
+                // legible, and a header with neither draws on top of the rows
+                // scrolling under it. Nothing moves — the insets were already zeroed
+                // and every pad is spelled out, so the row lands where the header
+                // did.
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Text(label).dsText(.heading22).foregroundStyle(DS.textPrimary)
+                }
+                .textCase(nil)
+                .padding(.leading, DS.Space.s4)
+                // The FIRST day heading sits directly under the scope
+                // switcher, which already carries its own bottom inset — the
+                // macro pad belongs BETWEEN days, not above the first one, and
+                // spending it there opened a ~45pt dead band on Activity that
+                // Home (whose lead section is a small header) never had.
+                .padding(.top, groupIndex == 0 ? DS.Space.s1 : DS.Space.s6)
+                .padding(.bottom, DS.Space.s1)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
                 ForEach(Array(dayRows.enumerated()), id: \.element.id) { i, row in
                     if row.id == boundary { newSinceDivider }
                     switch row.kind {
@@ -7858,21 +7904,6 @@ struct FeedScreen: View {
                                              trailing: DS.Space.s4 + DS.Space.s3))
                     }
                 }
-            } header: {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(label).dsText(.heading22).foregroundStyle(DS.textPrimary)
-                }
-                .textCase(nil)
-                .padding(.leading, DS.Space.s4)
-                // The FIRST day heading sits directly under the scope
-                // switcher, which already carries its own bottom inset — the
-                // macro pad belongs BETWEEN days, not above the first one, and
-                // spending it there opened a ~45pt dead band on Activity that
-                // Home (whose lead section is a small header) never had.
-                .padding(.top, groupIndex == 0 ? DS.Space.s1 : DS.Space.s6)
-                .padding(.bottom, DS.Space.s1)
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
             }
         }
     }
@@ -8410,6 +8441,18 @@ struct FeedScreen: View {
             let slots = fresh.count + (staleExpanded ? stale.count : 0) + (hasToggle ? 1 : 0)
             let positions = cardRunPositions(count: slots)
             Section {
+                // UNPINNED (2026-08-29) — a ROW, not a `header:`; see the twin in
+                // `bundledSections`. This is the one of the four whose spacing was
+                // CHOSEN rather than carried over: it had no insets of its own, so
+                // it took whatever the system gives a header slot. It sits in the
+                // rows' own column now, with the micro pad every other quiet line
+                // in this file wears.
+                Text("To do").dsText(.heading17).foregroundStyle(DS.textPrimary).textCase(nil)
+                    .padding(.vertical, DS.Space.s1)
+                    .listRowInsets(.init(top: 0, leading: DS.Space.s4 + DS.Space.s3,
+                                         bottom: 0, trailing: DS.Space.s4 + DS.Space.s3))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 ForEach(Array(keyed(fresh).enumerated()), id: \.element.id) { i, item in
                     // Corollary 3 (build 176) — see `ThingRowKeying`.
                     if let thing = item.live {
@@ -8448,8 +8491,6 @@ struct FeedScreen: View {
                         .listRowSeparator(.hidden)
                     }
                 }
-            } header: {
-                Text("To do").dsText(.heading17).foregroundStyle(DS.textPrimary).textCase(nil)
             }
         }
         if !doneToday.isEmpty { daySection("Done", doneToday, nextEventID: nextEventID) }
@@ -9504,20 +9545,13 @@ struct FeedScreen: View {
                                          isBoundary: { rows[$0].id == boundary })
         if !rows.isEmpty {
             Section {
-                // Rows dispatch by shape (shaped feeds); the swipe stays triage —
-                // reads only, writes live in the sheet (ruling), Copy sheet-only.
-                ForEach(Array(keyed(rows).enumerated()), id: \.element.id) { i, item in
-                    // The `rows.filter(\.isLive)` above runs when this view
-                    // VALUE is made; this runs again each time the closure is
-                    // re-evaluated, which is when the delete actually lands
-                    // (corollary 3, build 176 — see `ThingRowKeying`).
-                    if let thing = item.live {
-                        if thing.id == boundary { newSinceDivider }
-                        shapedListRow(thing, index: i, nextEventID: nextEventID,
-                                      position: positions[i], replies: replies)
-                    }
-                }
-            } header: {
+                // UNPINNED (2026-08-29) — a ROW, not a `header:`. The twin in
+                // `bundledSections` carries the full reasoning; the short of it is
+                // that `.plain` pins headers, the backdrop that would make a pinned
+                // one legible was deliberately stripped below on 2026-07-28, and a
+                // header with neither pins ON TOP of the rows scrolling under it.
+                // The day's own gap and column are spelled here, so nothing depends
+                // on what the system hands a header slot.
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     Text(label)
                         .dsText(.heading22)
@@ -9532,23 +9566,29 @@ struct FeedScreen: View {
                         .contentTransition(.numericText())
                 }
                 .textCase(nil)
-                .padding(.leading, DS.Space.s4)
+                .padding(.leading, DS.Space.s4 + DS.Space.s3)
                 // Days read as clusters: the gap ABOVE a day header is the
                 // feed's biggest (2026-07-13), and since 2026-07-21 the day's
                 // rows also share one card — the header's s6 plus the card's own
                 // silhouette say "new day" without drawing a line.
                 .padding(.top, DS.Space.s6)
                 .padding(.bottom, DS.Space.s1)
-                // The system pins whichever header currently sits at the
-                // scroll position and gives IT — and only it — a material
-                // backdrop for legibility over scrolling content (Mac
-                // polish, 2026-07-28): the first day group reads with an
-                // unwanted gray box the later ones never get, since they're
-                // never the pinned one at rest. More visible under Mac
-                // Catalyst than iOS; explicit clear wins over the implicit
-                // material either way.
+                .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
-                .background(Color.clear)
+                .listRowSeparator(.hidden)
+                // Rows dispatch by shape (shaped feeds); the swipe stays triage —
+                // reads only, writes live in the sheet (ruling), Copy sheet-only.
+                ForEach(Array(keyed(rows).enumerated()), id: \.element.id) { i, item in
+                    // The `rows.filter(\.isLive)` above runs when this view
+                    // VALUE is made; this runs again each time the closure is
+                    // re-evaluated, which is when the delete actually lands
+                    // (corollary 3, build 176 — see `ThingRowKeying`).
+                    if let thing = item.live {
+                        if thing.id == boundary { newSinceDivider }
+                        shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                      position: positions[i], replies: replies)
+                    }
+                }
             }
         }
     }

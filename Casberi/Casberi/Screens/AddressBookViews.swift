@@ -2666,6 +2666,18 @@ struct AddressHistoryScreen: View {
         List {
             ForEach(months, id: \.key) { month in
                 Section {
+                    // UNPINNED (2026-08-29) — a ROW, not a `header:`. `.plain` pins
+                    // section headers and `.scrollContentBackground(.hidden)` takes
+                    // away the material the system would lend the pinned one, so the
+                    // month floated on top of the transfers scrolling under it. Same
+                    // fix, same reasoning as the feed's day headers. The Section's own
+                    // `listRowInsets` below already governs this row, so the column is
+                    // unchanged.
+                    Text(month.key.formatted(.dateTime.month(.wide).year()))
+                        .dsText(.label12).foregroundStyle(DS.textSecondary)
+                        .textCase(nil)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                     // `.keyed` per the CLAUDE.md rule against keying a ForEach
                     // on a derived array of raw `Thing` refs — see
                     // `ThingRowKeying.swift`.
@@ -2695,10 +2707,6 @@ struct AddressHistoryScreen: View {
                     }
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
-                } header: {
-                    Text(month.key.formatted(.dateTime.month(.wide).year()))
-                        .dsText(.label12).foregroundStyle(DS.textSecondary)
-                        .textCase(nil)
                 }
                 .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
                                           bottom: 0, trailing: DS.Space.s4))
