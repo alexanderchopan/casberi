@@ -768,20 +768,16 @@ struct Composer: View {
     /// two can't disagree about when the brief yields: this is the one
     /// condition where an answer exists and is deliberately not drawn.
     ///
-    /// `!inFlight` (2026-08-30) closes the second half of the Bankr bug — the
-    /// commit()-time blur fixes the window BEFORE an answer settles, but the
-    /// settle-time re-focus (`askedByTyping`, in commit()'s own Task) fires
-    /// the MOMENT the free on-device answer finishes, which for a keyed
-    /// follow-up is BEFORE the keyed request has even started (askWithKey()
-    /// runs afterward, off the `inFlight` watcher). Without this, that
-    /// re-focus satisfied this condition again immediately, hiding the
-    /// document a second time — so the free answer flashed briefly and then
-    /// Bankr's own answer streamed into a view nobody could see, which is
-    /// exactly "briefly shows then switches to empty composer." `inFlight`
-    /// covers BOTH phases (askWithKey() sets it true again before the free
-    /// answer's settle work finishes), so the ask surface can only replace a
-    /// document once nothing is actually running — the genuinely idle case
-    /// this was written for.
+    /// `!inFlight` (2026-08-30) — `commit()` blurs the field before an
+    /// answer starts (see its own comment), and nothing re-focuses it
+    /// automatically once one settles any more, so in the ordinary case
+    /// `fieldFocused` is already false while `inFlight` is true and this
+    /// term does no work. It still matters for the case that isn't ordinary:
+    /// someone can tap the empty field themselves WHILE an answer is still
+    /// running (mid-Bankr-wait, say), and without `!inFlight` that genuine
+    /// tap would hide the streaming content it's sitting on top of. The ask
+    /// surface may only replace a document once nothing is actually
+    /// running — the genuinely idle case this was written for.
     private var askSurfaceShowing: Bool {
         answering && fieldFocused && !hasDraft && !isRecording && !inFlight
     }
@@ -4597,10 +4593,6 @@ struct Composer: View {
             askGeneration += 1
             let gen = askGeneration
             let q = draft
-            // Was the person TYPING when this ask went out? Captured here,
-            // before the field is cleared, because it decides whether the
-            // keyboard comes back at settle (see the re-focus below).
-            let askedByTyping = fieldFocused
             // BLUR NOW, not just at `dayCard`'s own call site (2026-08-30).
             // `askSurfaceShowing` is `answering && fieldFocused && !hasDraft
             // && !isRecording` — and right here `answering` is about to go
@@ -4612,11 +4604,10 @@ struct Composer: View {
             // on-device answer (the window closes before anyone notices) and
             // total for a slow keyed one — this is why "Ask Bankr" read as
             // broken: Bankr's answer can take a minute, so the hidden window
-            // was the whole wait, not a flicker. `askedByTyping`'s own
-            // settle-time re-focus (below) restores the keyboard once the
-            // answer is actually on screen, so a typed follow-up still gets
-            // its keyboard back — just after the document can be seen, not
-            // hiding it from the moment it starts.
+            // was the whole wait, not a flicker. Focus is never restored
+            // automatically once the answer settles either (2026-08-30, see
+            // the settle-time comment below) — a follow-up costs one tap on
+            // the field now, the same as every tapped ask already required.
             fieldFocused = false
             draft = ""              // clear the field so a follow-up is ready
             // No placeholder doc while in flight (fix 2026-07-20): the old
@@ -4759,49 +4750,31 @@ struct Composer: View {
                 if streamed || painted { answerStream.paint(finalDoc) }
                 else if isInstantDoc(finalDoc) { answerStream.paint(finalDoc) }
                 else { answerStream.stream(finalDoc) }
-                // A TYPED ask readies the field for a follow-up. A TAPPED one
-                // does not (2026-08-11, reported: "i open the agent and click
-                // on what's going on w my money, the keyboard pops up and i
-                // can't see the entire screen or dismiss keyboard").
-                //
-                // This generalizes the carve-out below it rather than adding a
-                // second one. §181 already exempted the brief landing on the
-                // grounds that it is "a screen to take in, not a prompt to
-                // answer" — and that is equally true of every chip ask. The
-                // money/work/life chips each return a document to read, and
-                // popping a keyboard over one buries the answer the tap was
-                // for, having asked the person to dismiss something they never
-                // opened. Someone who was typing has the keyboard up already
-                // and expects to keep it; someone who tapped never asked for
-                // it, which is exactly the difference `askedByTyping` records.
-                //
-                // The escape hatch is separate and unconditional — the answer
-                // scroll view dismisses the keyboard interactively — because a
-                // keyboard with no way out is a trap however it got there, and
-                // this rule can only ever decide whether one APPEARS.
-                //
-                // `q`, not `currentQuestion`: a newer ask could have overtaken,
-                // but this closure already guarded `gen` above.
-                //
-                // NOT while `pendingKeyedFollowUp` (2026-08-30) — this refocus
-                // and the free answer's `inFlight = false` land in the same
-                // synchronous block, so both terms of `askSurfaceShowing`
-                // (`!inFlight` and `fieldFocused`) can flip true in the SAME
-                // SwiftUI update. That hides the document column again right
-                // as it happens — and because the column is what CARRIES the
-                // `onChange(of: inFlight)` watcher that fires the keyed
-                // follow-up, a view removed in the same update its own
-                // watched value changes can miss that change entirely. Net
-                // effect: the free answer showed, askWithKey() never ran, no
-                // error anywhere — "displays for a few seconds, no Bankr part
-                // arrives." Holding off the refocus until the keyed follow-up
-                // has actually started (askWithKey() sets `inFlight` true
-                // again immediately) keeps the column mounted through the
-                // handoff, so the watcher is there to see the transition.
-                if askedByTyping && !(turns.isEmpty && TodayBrief.matches(q))
-                    && !pendingKeyedFollowUp {
-                    fieldFocused = true
-                }
+                // THE SETTLE-TIME REFOCUS IS GONE (2026-08-30). It restored
+                // `fieldFocused` for a TYPED ask so the keyboard "readied the
+                // field for a follow-up" (2026-08-11, its own report: a
+                // TAPPED chip's answer had the keyboard popping up over it
+                // uninvited — `askedByTyping` existed to spare only the
+                // person who already had it up). That fix was real and
+                // stays: a tapped ask never got the keyboard back either way.
+                // What nobody connected until today is that restoring focus
+                // ALSO satisfies `askSurfaceShowing` (`answering &&
+                // fieldFocused && !hasDraft && !isRecording && !inFlight`)
+                // the instant it happens — `inFlight` had just gone false one
+                // paragraph up, so this refocus was the LAST term flipping
+                // true, and it hid the document column it had just finished
+                // filling. Two confirmed reports were this exact collision
+                // wearing different clothes: a keyed follow-up whose free
+                // answer flashed and vanished before Bankr's own answer could
+                // even start ("displays for a few seconds, no Bankr part
+                // arrives" — patched narrower, with `!pendingKeyedFollowUp`,
+                // before this was understood to be the general case), and a
+                // plain "what's going on" brief that rendered and then
+                // reverted to the idle screen on its own ("shows me and then
+                // refreshes back"). Both were this line. Restoring focus
+                // automatically is retired rather than patched a third time
+                // — a follow-up now costs one tap on the field, same as it
+                // already did for every tapped ask.
                 // Everything past here is the VERB ROW's bookkeeping, and it
                 // runs after the answer is on screen (PERF 2026-08-13).
                 //
