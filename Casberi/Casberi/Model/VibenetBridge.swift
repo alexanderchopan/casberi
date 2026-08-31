@@ -356,27 +356,28 @@ final class VibenetWatch {
         return true
     }
 
-    /// Stop watching one account — and KEEP THE NAME (2026-08-25, prd §472).
-    ///
-    /// It used to forget the name in the same breath, so a mis-tapped "Stop
-    /// watching" destroyed something the person had typed, with no undo and
-    /// (until §472) no confirmation, and re-watching the address a second
-    /// later brought back a bare `0x…44b1`. Watching and naming are two tiers
-    /// over one ledger — §461's ruling for Wallet's book, and the reason this
-    /// screen has no cap at all: a name costs nothing to keep.
+    /// Stop watching one account — AND DROP IT FROM THE ADDRESS BOOK
+    /// (2026-08-30, user ruling, amending §472). §472 kept the name on the
+    /// reasoning that a mis-tapped "Stop watching" shouldn't destroy
+    /// something the person had typed with no undo — true, and still the
+    /// reason the last-account tap alone asks first — but the standing
+    /// ruling now is that unwatching is meant to undo the watch entirely,
+    /// name included. `AddressBook.removeNetwork` is the safe half of that:
+    /// it only deletes the entry outright when vibenet was the ONLY network
+    /// this address was ever met on, so a hex keypair that is ALSO a named
+    /// mainnet wallet keeps its name.
     func remove(_ address: String) {
         addressList.removeAll { $0.caseInsensitiveCompare(address) == .orderedSame }
+        AddressBook.shared.removeNetwork(AddressBook.Network.vibenet, for: address)
     }
 
-    /// Stop watching every account. **No longer touches names (2026-08-27,
-    /// the address-book unification, amending §472's own copy).** Names live
-    /// in `AddressBook` now, the one ledger that outlives every watch — the
-    /// exact doctrine that file's header states as the reason it exists —
-    /// so disconnecting the vibenet seat is no different from unwatching a
-    /// mainnet wallet: the chip leaves the strip, the names stay in the
-    /// Address Book. `VibenetAddressBookScreen`'s last-account confirm copy
-    /// was rewritten to say so.
+    /// Stop watching every account — and the same removal, address by
+    /// address (2026-08-30, amending the 2026-08-27 "no longer touches
+    /// names" note above `remove(_:)`'s own history): disconnecting the
+    /// whole seat is unwatching every row at once, so it can't leave behind
+    /// what unwatching one row now takes with it.
     func removeAll() {
+        for address in addressList { AddressBook.shared.removeNetwork(AddressBook.Network.vibenet, for: address) }
         addressList = []
     }
 

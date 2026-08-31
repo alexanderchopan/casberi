@@ -268,13 +268,21 @@ grep -q 'onOpenBook: { route.push(.vibenetAddressBook) }' "$SHELL_SURFACE" \
 #
 # The anchor changed 2026-08-25 (prd §469): `onScope` was deleted entirely —
 # it had been unreached since `afda3c10`, and the rail's faces already scope —
-# so the guard now pins the surviving shape: the feed call site passes an
-# inert `onRemove` and NO `onOpen:` label. The negative half is what carries
-# the §463 ruling — an `onOpen:` appearing at this call site is the managing
-# roster returning to the feed room.
-grep -q 'VibenetRoomCard(room: room, onRemove: { _ in },' "$FEED" \
-  || { echo "✗ the FEED room's VibenetRoomCard call site moved — prd §465/§469: it must pass an"; echo "  inert onRemove and never onOpen (the stat-block shape §463 ruled for)"; exit 1; }
-if grep -A 1 'VibenetRoomCard(room: room, onRemove: { _ in },' "$FEED" | grep -q 'onOpen:'; then
+# so the guard pinned the surviving shape: the feed call site passes an inert
+# `onRemove` and NO `onOpen:` label.
+#
+# `onRemove` stopped being inert 2026-08-30 (reported: long-pressing "Stop
+# watching" on the single-account detail branch — drawn by `VibenetRoomCard`
+# itself once exactly one account is watched, unconditionally, whether or not
+# the caller wired the verb — did nothing, since `{ _ in }` discarded the tap).
+# `vibenetUnwatch` is real now (mirrors `VibenetAddressBookScreen.unwatch`
+# including the last-account confirm). The anchor moved with it; what this
+# guard actually protects — no `onOpen:` at this call site, i.e. no managing
+# roster back in the feed room — is unchanged and still carried by the
+# negative half below.
+grep -q 'VibenetRoomCard(room: room, onRemove: vibenetUnwatch,' "$FEED" \
+  || { echo "✗ the FEED room's VibenetRoomCard call site moved — prd §465/§469: it must pass"; echo "  onRemove: vibenetUnwatch and never onOpen (the stat-block shape §463 ruled for)"; exit 1; }
+if grep -A 1 'VibenetRoomCard(room: room, onRemove: vibenetUnwatch,' "$FEED" | grep -q 'onOpen:'; then
   echo "✗ the FEED room's VibenetRoomCard passes onOpen — prd §465 leaves the feed room's"
   echo "  stat block exactly as §463 ruled it; the managing roster lives in the book"
   exit 1

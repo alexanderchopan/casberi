@@ -646,6 +646,26 @@ final class AddressBook {
         entries[key] = entry
     }
 
+    /// The counterpart to `addNetwork` — retracts "this address was met on
+    /// <tag>" (2026-08-30, user ruling: unwatching a vibenet account removes
+    /// it from the address book). Deletes the WHOLE entry only when this was
+    /// the last tag it carried — `Network`'s own doc states a hex keypair on
+    /// vibenet and mainnet is one entry, unioned rather than split, so
+    /// retracting one network must never erase a name still doing work on
+    /// another (a watched mainnet wallet that also happens to hold devnet
+    /// funds). No-op for an address the book doesn't hold or doesn't carry
+    /// the tag.
+    func removeNetwork(_ tag: String, for address: String) {
+        let key = Self.key(for: address)
+        guard var entry = entries[key], var networks = entry.networks,
+              networks.contains(tag) else { return }
+        networks.removeAll { $0 == tag }
+        guard !networks.isEmpty else { remove(address); return }
+        entry.networks = networks
+        entry.updatedAt = .now
+        entries[key] = entry
+    }
+
     /// Sets (or clears, with nil/empty) the person's free-text note. Stamps
     /// `updatedAt` — unlike `setKind`, a note IS the person's edit. No-op
     /// when the note is unchanged, so re-opening and re-saving an identical

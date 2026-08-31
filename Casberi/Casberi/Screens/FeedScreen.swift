@@ -457,6 +457,39 @@ struct FeedScreen: View {
         }
     }
     @State private var feedSheet: FeedSheetRoute?
+    /// Non-nil while the last-account confirm sits open for a vibenet
+    /// "Stop watching" tap — see `vibenetUnwatch`/`commitVibenetUnwatch`.
+    @State private var removingLastVibenet: String?
+
+    /// "Stop watching" from the card's own long-press (prd §472's guard,
+    /// copied from `VibenetAddressBookScreen.unwatch`): the ordinary case
+    /// removes immediately, the LAST address asks first, since removing it
+    /// tears down the whole seat rather than one row.
+    private func vibenetUnwatch(_ address: String) {
+        guard VibenetWatch.shared.addresses.count > 1 else {
+            removingLastVibenet = address
+            return
+        }
+        commitVibenetUnwatch(address)
+    }
+
+    /// The removal itself, past whatever asking was owed — the same
+    /// read-now-then-bump-the-pulse pattern `onWatched` uses right below,
+    /// so the card's memoised head actually recomputes instead of going on
+    /// showing an address that was just removed.
+    private func commitVibenetUnwatch(_ address: String) {
+        DSHaptic.tap()
+        VibenetWatch.shared.remove(address)
+        if VibenetWatch.shared.connected {
+            VibenetBridge.registerBridge(store: bridges)
+        } else {
+            VibenetBridge.disconnect(store: bridges)
+        }
+        Task {
+            _ = await VibenetRoomSource.compose()
+            chrome.refreshPulse += 1
+        }
+    }
 
     /// Scope the vibenet room to one account — the Accounts card's row tap
     /// and the linked spine's node tap (prd §476), the same write
@@ -3888,6 +3921,24 @@ struct FeedScreen: View {
                 Button("Cancel", role: .cancel) { confirming = nil }
             }
         }
+        // The vibenet card's own long-press "Stop watching" on the LAST
+        // watched account — `vibenetUnwatch`'s guard, mirroring
+        // `VibenetAddressBookScreen`'s identical dialog, since removing the
+        // last address tears down the whole seat rather than one row.
+        .confirmationDialog(
+            String(localized: "Stop watching your last account?"),
+            isPresented: Binding(get: { removingLastVibenet != nil },
+                                 set: { if !$0 { removingLastVibenet = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button(String(localized: "Stop watching"), role: .destructive) {
+                if let address = removingLastVibenet { commitVibenetUnwatch(address) }
+                removingLastVibenet = nil
+            }
+            Button(String(localized: "Cancel"), role: .cancel) { removingLastVibenet = nil }
+        } message: {
+            Text(String(localized: "It's the only account you watch, so vibenet disconnects: the chip leaves the source strip, and the address leaves your Address book unless it's also a named account on another network."))
+        }
     }
 
     // MARK: - Shaped sections (one source in force = its native shape)
@@ -4185,13 +4236,22 @@ struct FeedScreen: View {
                         }
                     }
                 case .vibenet(let room):
-                    // The same card the setup screen draws. `onRemove` AND
-                    // `onRename` are deliberately inert here (their default
-                    // no-op): unwatching and naming are both setup acts,
-                    // and a destructive or state-changing verb reached from
-                    // a feed row it would silently re-compose behind is the
-                    // wrong place for either — the setup screen still
-                    // carries them. `onOpen` is left NIL here (2026-08-24,
+                    // The same card the setup screen draws. `onRemove` IS
+                    // wired here (it wasn't, and the dead "Stop watching" on
+                    // the single-account long-press — the card's own detail
+                    // branch draws that menu unconditionally once exactly one
+                    // account is watched, `VibenetRoomCard`'s
+                    // `VibenetDetailContextMenu` — read as "long-press to
+                    // stop watching does nothing" — reported and fixed
+                    // 2026-08-30): `vibenetUnwatch` mirrors
+                    // `VibenetAddressBookScreen.unwatch` including the last-
+                    // account confirm, then re-composes and bumps
+                    // `chrome.refreshPulse` the same way `onWatched` already
+                    // does below. `onRename` stays inert (its default
+                    // no-op) — a rename needs a text-entry alert that belongs
+                    // on the setup screen, not on this card, and nobody has
+                    // reported that one as broken. `onOpen` is left NIL here
+                    // (2026-08-24,
                     // corrected — see `VibenetRoomCard`'s own header doc):
                     // Wallet's own unscoped room has no per-wallet door
                     // anywhere, only scoping, so a feed-room roster tap
@@ -4218,7 +4278,7 @@ struct FeedScreen: View {
                     // last key has since been revoked falls back to Holdings
                     // instead of rendering an empty page claiming to be a
                     // section — `WalletSection.resolve`'s rule, one room over.
-                    VibenetRoomCard(room: room, onRemove: { _ in },
+                    VibenetRoomCard(room: room, onRemove: vibenetUnwatch,
                                     // An address just watched from THIS card's
                                     // own empty-state discovery list (§479).
                                     // The card is composed from a `VibenetRoom`
