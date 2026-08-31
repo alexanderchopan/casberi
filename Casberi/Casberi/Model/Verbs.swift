@@ -211,9 +211,21 @@ enum VerbDerivation {
                 let isExplorer = WalletIngest.chainName(forContent: thing.content) != nil
                 let host = url.host()?.lowercased() ?? ""
                 let isRevoke = host == "revoke.cash" || host.hasSuffix(".revoke.cash")
-                let label = isRevoke ? "Revoke.cash" : (isExplorer ? "Explorer" : "Open link")
+                // Hegotá's devnet explorer isn't in `WalletIngest.allChains`
+                // — that table drives the Zerion/Alchemy pipelines a devnet
+                // rides none of — so `isExplorer` above reads false for it
+                // and every Hegotá receipt (a send, a faucet claim) named its
+                // own permalink the generic "Open link". Matched against the
+                // exact prefix `HegotaSend.landReceipt` wrote the link from,
+                // the same discipline `chainName(forContent:)` uses for
+                // every other chain (user: "better if we write hegota
+                // explorer as the link").
+                let isHegota = thing.content.hasPrefix(HegotaIdentity.explorer)
+                let label = isRevoke ? "Revoke.cash"
+                    : isHegota ? "Hegotá Explorer"
+                    : isExplorer ? "Explorer" : "Open link"
                 out.append(Verb(label: label,
-                                icon: isExplorer || isRevoke ? "arrow.up.right" : "safari",
+                                icon: isExplorer || isRevoke || isHegota ? "arrow.up.right" : "safari",
                                 action: .openURL(url)))
             }
         case .screenshot:
