@@ -11,6 +11,15 @@ import MusicKit
 struct DiagnosticsScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    /// The LIVE room scope (2026-08-31). See the room-pipeline block in
+    /// `run()`: the one fact no fetch on this screen can supply is which room
+    /// the person is actually standing in, and it is the first thing that has
+    /// to be ruled out when rows show in All and not in their own room.
+    /// OPTIONAL on purpose: this screen is presented as a SHEET, and a
+    /// non-optional `@Environment(FeedFilter.self)` traps at runtime if the
+    /// sheet's environment does not carry one. A diagnostics screen that can
+    /// crash the app is worse than one that reports a missing reading.
+    @Environment(FeedFilter.self) private var filter: FeedFilter?
     @State private var lines: [String] = []
     @State private var running = false
 
@@ -120,6 +129,53 @@ struct DiagnosticsScreen: View {
                 FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == src }))) ?? -1
             let mark = predicated == bySource ? "OK" : "MISMATCH"
             log("\(mark) source \"\(src)\": in-memory=\(bySource) predicated-fetchCount=\(predicated)")
+        }
+
+        // Round 4 (2026-08-31): THE ROOM PIPELINE, STAGE BY STAGE.
+        //
+        // The field report is "rows show in All and the source's own room is
+        // empty", and rounds 1-3 all answered it by assuming FB14619787 (a
+        // stuck `@Query`) and shipping a fallback. Round 3's own tester data
+        // then showed the store and the `source ==` predicate BOTH healthy
+        // (22 of 22, `predicated-fetchCount` agreeing) — so the premise was
+        // wrong and three fixes were aimed at a bug that device does not
+        // have. This block exists so the next report is diagnosed instead of
+        // guessed at.
+        //
+        // It matters because the room's filter is strictly MORE PERMISSIVE
+        // than the All room's: `liveVisible` gates on
+        // `Corpus.showsInAll(thing)` for All and skips it entirely for a
+        // source room. So a row visible in All must render in its own room —
+        // UNLESS the room is scoped to something other than that source, or
+        // the room's own live query never delivered. Those are different
+        // bugs with one symptom, and only the first is visible from here.
+        //
+        // `filter.source` is the single most diagnostic value on this screen
+        // and no fetch can supply it: a folded category chip shows the
+        // CATEGORY name while `filter.source` holds a real seat, so "I am in
+        // the Vercel room" is a claim about a value nobody can see.
+        if let filter {
+            log("Room scope: filter.source=\"\(filter.source)\" filter.tag=\"\(filter.tag)\"")
+            let roomSource = filter.source
+            let roomTag = filter.tag
+            if roomSource != "All" {
+                let scoped = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                    predicate: #Predicate<Thing> { $0.source == roomSource }))) ?? []
+                let surfacedScoped = Corpus.surfaced(scoped)
+                let tagged = roomTag == "All"
+                    ? surfacedScoped
+                    : surfacedScoped.filter { $0.tags.contains(roomTag) }
+                log("This room would draw: predicate=\(scoped.count) → surfaced=\(surfacedScoped.count) → afterTag=\(tagged.count)")
+                if scoped.isEmpty && !all.isEmpty {
+                    log("→ NO ROW CARRIES source==\"\(roomSource)\" — this room is scoped to a source nothing is stamped with")
+                } else if tagged.count > 0 {
+                    log("→ the room's own data is FINE — \(tagged.count) row(s) should draw. If the room looks empty, the view is at fault, not the store")
+                }
+            } else {
+                log("This room is All — open the source's own room, then re-run this")
+            }
+        } else {
+            log("Room scope: UNREADABLE (no FeedFilter in this sheet's environment)")
         }
 
         // — The cover path, step by step —
