@@ -100,10 +100,32 @@ while i < n:
     out.append(src[i]); i += 1
 open(sys.argv[2], "w").write("".join(out))
 PY
-grep -qE 'polar:order:' "$CODE" \
-  && { echo "✗ PolarBridge.swift now builds an order-shaped sourceRef — the no-individual-orders doctrine is broken"; exit 1; }
-grep -qE '/v1/orders(\?|/)' "$CODE" \
-  && { echo "✗ PolarBridge.swift now reads /v1/orders for something other than validation — check it isn't landing orders"; exit 1; }
+# AMENDED 2026-08-31 (prd §537, user ruling): sales DO land now, so the old
+# guards — no `polar:order:` ref, no `/v1/orders` read — are gone with the
+# rule they enforced. What survives is the half of the doctrine that is still
+# true, and it is the half that would fail INVISIBLY: a `subscription_cycle`
+# renewal is the highest-volume order shape on any healthy account, so
+# admitting one buries every real sale under the machine working, and the
+# room looks busier rather than broken. Guarded as a positive assertion about
+# the set itself, not a grep for the absent word, so a renewal cannot be let
+# in by any spelling.
+grep -qE 'landableBillingReasons: Set<String> = \["purchase", "subscription_create"\]' "$CODE" \
+  || { echo "✗ PolarShape.landableBillingReasons is not exactly [purchase, subscription_create] — a renewal or a proration may now land as a sale (prd §537)"; exit 1; }
+grep -qE 'subscription_cycle' "$CODE" \
+  && { echo "✗ PolarBridge.swift now names subscription_cycle in CODE — a renewal is a tally, never a sale (prd §537)"; exit 1; }
+
+# A sale must never reach the lock screen: Polar emails you on every one, so
+# a notification fails §306's "did you already know?" test outright. Polar has
+# never appeared in NotifySweep and this keeps it that way, since landing rows
+# is exactly what makes it newly possible.
+grep -q 'Polar' "$(dirname "$0")/../Casberi/Casberi/Model/NotifySweep.swift" \
+  && { echo "✗ NotifySweep now names Polar — a sale must never notify (prd §537: Polar already emails on every one)"; exit 1; }
+
+# The customer is never read. The setup screen promises in as many words that
+# nothing here reads a customer's name or card, and the sales shape is the
+# first read that is even handed one.
+grep -qE '\["customer"\]' "$CODE" \
+  && { echo "✗ PolarBridge.swift now reads the customer object — the setup screen promises it never does"; exit 1; }
 
 # THE CONDUCT GUARD, PostHog's/Stripe's shape: no write verb, ever.
 for verb in '"PUT"' '"DELETE"' '"PATCH"' 'postJSON' 'deleteJSON'; do

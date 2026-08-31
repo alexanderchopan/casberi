@@ -710,11 +710,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // one without this sentence.
         case .dodoPayments:
             String(localized: "Dodo Payments answered — nothing in the last 30 days. Payments land as they succeed, so a new or quiet product can read empty for a while.")
-        // Stripe's own reason, unchanged: nothing lands until a dispute, a
-        // refund, or a subscription leaves a healthy state, so a healthy
-        // account reads exactly like a refused token without this.
+        // Since §537 sales land too, so an empty read no longer means "all
+        // quiet" — on a token minted before §537 it means the sales half is
+        // switched off, which is the likeliest cause by far and the one thing
+        // the person can act on. Names the fix rather than reassuring.
         case .polar:
-            String(localized: "Polar answered — nothing needs attention. Only disputes, refunds, and subscriptions leaving a healthy state land, so an empty read means everything is quiet.")
+            String(localized: "Polar answered — no sales yet, and nothing needs attention. If you connected before sales arrived here, re-mint your token with Orders (read) to see them.")
         // Cloudflare earns one for the opposite reason to Trello's: here empty
         // is the GOOD outcome and by far the most common one, and it is exactly
         // as silent as a refused token. Nothing lands until something is close

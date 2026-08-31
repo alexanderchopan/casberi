@@ -83,6 +83,13 @@ enum HomeComposition {
             "Regression", "Resolved",                     // GitHub, Sentry
             "Card", "Payment", "Pending", "Settled",      // Apple Wallet, cards
             "Price drop", "Price rise", "Refund",
+            // Polar (prd §537). STATE by this set's own rule, and the pair
+            // reads as one: "Sale" says what a row IS, "New subscriber" says
+            // which kind of sale it was — neither says what anything is
+            // ABOUT. Deliberately not facets: "sale" is among the most
+            // ordinary words in the language, so promoting it would hide
+            // every link and note about the subject (§397's `Account` rule).
+            "Sale", "New subscriber",                     // Polar
             "Paper",                                      // Hugging Face
             // Altana (prd §402) and the chain a wallet row sits on. Both are
             // STATE by this set's own rule: a key type says what a key IS and

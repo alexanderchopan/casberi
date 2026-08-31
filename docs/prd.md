@@ -79,6 +79,7 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §250 | An individual charge NEVER lands — a £9 payment is a tally wearing a currency symbol, so only money whose movement is itself the news earns a row | amended by §537 **for Polar only** (Stripe's own rule stands unchanged where §250 set it: a payment processor serving businesses at thousands of charges a day. Polar is a Merchant of Record for indie developers, where a sale is a countable event somebody remembers — so sales land, while a `subscription_cycle` RENEWAL is still refused as exactly the tally §250 describes) |
 | §500 | Hegotá **never touches the faucet** — a faucet claim is a write and the seat's whole claim is that it cannot write, so it links out and the person claims their own | overtaken by §525 (the key sheet grew a Claim button that POSTs to it) and then by §531, which is where the CONSEQUENCE was paid: the faucet host had been in the reach audit's non-reach denylist on §500's reasoning, so for a day the privacy screen omitted a host the app really reached |
 | §369 | A money receipt pours its SOURCE — nine hues, so ten money sheets read as ten places instead of ten rows | amended by §524 (the pour is ink on every paper; `MoneyReceipt.Hue` is still computed and still harnessed nine ways, and no view paints with it — the disc directly above the pour already states the source at full strength, so the wash was the same fact a second time and weaker) |
 | §495 | Every sheet head is a piece of paper — a raised surface, the ROOM'S HUE poured at the top, and the receipt silhouette | amended by §524 (the paper, the pour and the silhouette all stand; only the hue goes. `dsReceiptPaper` no longer TAKES a colour, which also ends the nil arm that gave a hueless app's page no top while a branded one got a coloured one) |
@@ -40412,3 +40413,89 @@ open Settings → Diagnostics (a production-reachable screen, prd note
 Vercel and Polar — a real predicate MISMATCH there confirms this is the
 same bug; agreement there would mean something else is going on and this
 fix doesn't touch it.
+
+## §537
+
+**Polar lands SALES (user ruling, 2026-08-31) — amending §250's doctrine
+where it was never true, and refusing it where it still is.** Reported as a
+Polar room that read "connected" and then showed nothing, on an account
+that was making money. Nothing was broken: the screen was drawing
+`TokenBridge.emptyReadNote`, which only renders after a SUCCESSFUL read
+that found nothing, and Polar's doctrine — inherited whole from
+`StripeBridge` (§250) — landed only disputes, refunds, and subscriptions
+leaving a healthy state. A healthy account was therefore empty forever, by
+design. **The doctrine working exactly as written, and still the wrong
+answer**, which is the more interesting half: the room was indistinguishable
+from a broken bridge for every user whose business is simply going fine.
+
+**Where Stripe's reasoning stops holding.** §250's rule is that an
+individual charge is "a tally wearing a currency symbol", and that is true
+of a payment PROCESSOR serving businesses at thousands of charges a day.
+Polar is a Merchant of Record for indie SaaS, open-source maintainers and
+digital products — an audience for whom a sale is a countable event
+somebody remembers, not a line in a ledger. The doctrine's own test (is
+this a tally?) returns a different answer for the same object, because the
+answer was never about the object.
+
+**The line is drawn with Polar's OWN field, never our inference.**
+`Order.billing_reason` separates a first purchase (`purchase`) and a new
+subscriber (`subscription_create`) from a RENEWAL (`subscription_cycle`),
+and **the renewal is still refused** — it is the highest-volume order shape
+on any healthy subscription account, it says nothing MRR does not already
+say better on the room head, and admitting it would bury every real sale
+under the machine working. `subscription_update` is out too, for a sharper
+reason: its amount is a prorated fragment, so drawing it as a sale price
+states a figure nobody sold anything for. That refusal is §250's spirit
+kept where it is actually true, not a compromise, and it is guarded as a
+POSITIVE assertion on the set itself (`landableBillingReasons`) rather than
+a grep for the absent word, so no spelling can let a renewal back in.
+
+**The scope cost is real, is borne by exactly the people who reported this,
+and fails SOFT.** Polar's tokens carry per-resource scopes and §250's build
+deliberately requested no `orders:read` at all — so **every already-connected
+token 403s on the sales read forever** until it is re-minted. `PolarFetch.orders`
+returns nil there, indistinguishably from a network failure and by design,
+and `refresh` treats a nil orders read as "no sales this pass" rather than a
+broken connection, so refunds, disputes and subscriptions keep landing
+untouched. Stated rather than hidden: the scope checklist gained Orders, the
+`missingScope` copy names it, and `emptyReadNote` was rewritten to name the
+re-mint as the likeliest cause instead of reassuring somebody that all is
+quiet — the previous sentence would now be actively wrong on exactly the
+devices that prompted this.
+
+**Three decisions with reasons.** (1) **A first sync backfills 25 sales, at
+their REAL dates.** The page walk is not self-bounding on first sight —
+nothing is known, so every page reads as new and it runs its full three
+pages — and landing 300 orders would bury a new connection under a year of
+history; the real `created_at` is what keeps the backfill sorting into the
+past instead of arriving as 25 things that happened today
+(`AppStoreConnectBridge`'s reviews rule, and the Hyperliquid bug it exists
+to prevent). (2) **No notification, ever** — Polar emails you on every sale,
+so one fails §306's "did you already know?" test outright; Polar has never
+appeared in `NotifySweep` and a guard now keeps it that way, since landing
+rows is precisely what made it newly possible. (3) **The customer is never
+read.** The setup screen promises in as many words that nothing here reads
+a customer's name or card, and the sales payload is the first read ever
+handed one — the title takes the PRODUCT name, which is also the subject
+somebody recognises, and a guard fails the build on any read of `customer`.
+
+The amount is `net_amount` (the pre-tax price the seller themselves set),
+falling back to `total_amount`. As a Merchant of Record Polar collects tax
+on your behalf and takes its fee outside the order, so neither field is
+"what you were paid"; `net_amount` is the closest honest reading of "what
+this sold for". A zero-amount order is REFUSED — a free-tier
+`subscription_create` is a signup, not a sale, and "Sold X · $0.00" states a
+transaction that never moved money (§83). `Sale`/`New subscriber` are ruled
+MECHANICAL, never facets: "sale" is among the most ordinary words in the
+language, and promoting it would hide every link and note about the subject
+(§397's `Account` reasoning).
+
+**Costs nothing new to run**: no new `Thing` field, so no CloudKit deploy;
+no new host; one added GET per sweep on a host already disclosed.
+**UNMEASURED against a live account** — `net_amount`-vs-`total_amount` and
+the `product.name` nesting are read from Polar's API reference, not from a
+real order — so `-polarProbe` prints the endpoint status, the raw
+`net`/`total`/`reason` per row and a `lands=` verdict, because "0 sales" has
+four causes that render as one silence (a pre-§537 token, a quiet account,
+an account whose every order is a refused renewal, and shape drift) and only
+the last is a bug.

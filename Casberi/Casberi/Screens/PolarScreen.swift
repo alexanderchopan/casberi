@@ -34,7 +34,7 @@ struct PolarScreen: View {
             BridgeSetupHeader(
                 name: "Polar",
                 mode: .pasteKey,
-                intro: "Paste a read-only token and the money that needs you keeps arriving: a dispute and its deadline, a refund, a subscription leaving a healthy state. Individual payments never land, and nothing here reads a customer's name or card.",
+                intro: "Paste a read-only token and your sales arrive as they happen, alongside the money that needs you: a dispute and its deadline, a refund, a subscription leaving a healthy state. Renewals stay out, and nothing here reads a customer's name or card.",
                 connected: hasToken,
                 flipTrigger: flipTrigger)
             if hasToken {
@@ -86,10 +86,13 @@ struct PolarScreen: View {
                     }
                 }
                 BridgeStepLines(steps: [TokenBridge.polar.steps[0]], numbered: false)
-                // The three scopes ARE the read-only promise (Stripe's own
+                // The four scopes ARE the read-only promise (Stripe's own
                 // reasoning) — a token minted with only these physically
-                // cannot refund, cancel, or create anything.
-                DSCheckList(lines: ["Refunds — read",
+                // cannot refund, cancel, or create anything. Orders joined
+                // them in §537; a token minted before that has three, which
+                // costs the sales half and nothing else (see `PolarFetch.orders`).
+                DSCheckList(lines: ["Orders — read",
+                                    "Refunds — read",
                                     "Subscriptions — read",
                                     "Organizations — read"])
                 BridgeStepLines(steps: [TokenBridge.polar.steps[1]], numbered: false)
@@ -125,7 +128,7 @@ struct PolarScreen: View {
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading Polar…"),
                                      result: result, resultIsError: resultIsError)
-                DSSlabNote(text: "Refunds, disputes and subscriptions leaving a healthy state land on their own.")
+                DSSlabNote(text: "Sales, refunds, disputes and subscriptions leaving a healthy state land on their own. Renewals stay out.")
             }
         }
         .dsSlabSection()
@@ -186,7 +189,7 @@ struct PolarScreen: View {
                 if let detail { message += String(localized: " (Polar said: \"\(detail)\".)") }
                 fail(message)
             case .missingScope(let detail):
-                var message = String(localized: "That token works, but it's missing a permission this needs. Add Refunds (read) and Subscriptions (read) to the token in Polar.")
+                var message = String(localized: "That token works, but it's missing a permission this needs. Add Orders (read), Refunds (read) and Subscriptions (read) to the token in Polar.")
                 if let detail { message += String(localized: " (Polar said: \"\(detail)\".)") }
                 fail(message)
             case .unreachable:

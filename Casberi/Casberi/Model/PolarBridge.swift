@@ -12,11 +12,28 @@ import SwiftData
 /// Wallet, a bridge that alarms rarely is Work, and this is built to be the
 /// second kind.
 ///
-/// **The doctrine, inherited whole from Stripe.** A count is exactly what the
-/// module doctrine forbids a thing to be, and an individual order is a tally
-/// wearing a currency symbol. So no order, payment or subscription renewal
-/// ever lands just for succeeding — only money whose MOVEMENT is itself the
-/// news:
+/// **The doctrine, inherited from Stripe and then AMENDED for sales (user
+/// ruling 2026-08-31, prd §537).** Stripe's rule is that an individual charge
+/// never lands, because a £9 payment is a tally wearing a currency symbol.
+/// That reasoning holds for a payment PROCESSOR serving businesses at
+/// thousands of charges a day. It does not hold here, and the difference is
+/// this bridge's own audience: Polar is a Merchant of Record for indie SaaS,
+/// open-source maintainers and digital products, where a sale is a countable
+/// event somebody remembers rather than a line in a ledger. Reported as a
+/// room that read "connected" and then showed nothing for weeks — which was
+/// the doctrine working exactly as written, and still the wrong answer.
+///
+/// So a SALE lands too, and the line between an event and a tally is drawn
+/// with Polar's OWN field rather than by our inference:
+/// `Order.billing_reason` separates a first purchase (`purchase`) and a new
+/// subscriber (`subscription_create`) from a RENEWAL (`subscription_cycle`),
+/// and the renewal is still refused — see `PolarShape.landableBillingReasons`.
+/// A renewal is the one order shape that really is a recurring tally, it is
+/// the highest-volume shape by far on any healthy account, and MRR already
+/// states it as a figure on the room head. That refusal is the doctrine's
+/// spirit kept where it is actually true, not a compromise.
+///
+/// Everything below is unchanged — money whose MOVEMENT is itself the news:
 ///
 ///   1. **A dispute opened.** Polar has no dedicated disputes endpoint — a
 ///      chargeback arrives nested on the refund it produced
@@ -43,11 +60,22 @@ import SwiftData
 ///
 /// **Read-only STRUCTURALLY, Stripe's/PostHog's grade — not Dodo's SCOPED
 /// box.** Polar's Organization Access Tokens carry real PER-RESOURCE scopes,
-/// and this bridge needs exactly three: `refunds:read`, `subscriptions:read`,
-/// and `organizations:read` (a nicety — see `validate`). A token minted with
-/// only those three physically cannot issue a refund, cancel a subscription,
-/// or create a product, whatever this file does — no `orders:read` at all,
-/// since no order is ever read (see `PolarIngest.refresh`).
+/// and this bridge needs four: `refunds:read`, `subscriptions:read`,
+/// `orders:read` (added by §537, for the sales above), and
+/// `organizations:read` (a nicety — see `validate`). A token minted with only
+/// those four physically cannot issue a refund, cancel a subscription, or
+/// create a product, whatever this file does.
+///
+/// **`orders:read` is the one scope an ALREADY-CONNECTED token will not have,
+/// and that case must fail SOFT.** Every token minted before §537 was minted
+/// against a setup screen that asked for three scopes and said in as many
+/// words that individual payments never land. Polar answers a read outside a
+/// token's scope with a 403, so `PolarFetch.orders` returns nil there, exactly
+/// as it does for a network failure — and `refresh` treats a nil orders read
+/// as "no sales this pass", never as a broken connection, so refunds,
+/// disputes and subscriptions keep landing untouched. The cost is real and is
+/// stated on the setup screen rather than hidden: until the token is
+/// re-minted with Orders (read), the sales half is simply absent.
 ///
 /// **No test-mode key to refuse, and that is a STRONGER guarantee than
 /// Stripe's prefix check, not a missing one.** Stripe's `rk_test_`/`sk_test_`
@@ -391,6 +419,21 @@ enum PolarFetch {
         return all
     }
 
+    /// The SALES read (2026-08-31, prd §537). Same page walk and same
+    /// stop-on-a-known-page early exit as `refunds`, for the same reason: the
+    /// sort is strictly `-created_at`, so once a full page holds nothing new
+    /// every order behind it is older and therefore known too.
+    ///
+    /// Returns nil on any non-200 FIRST page, which is what makes the missing
+    /// `orders:read` scope degrade quietly — see the type doc. A 403 here is
+    /// indistinguishable from a network failure by design: both mean "no
+    /// sales this pass", and neither may take the rest of the sweep down.
+    static func orders(key: String, knownRefs: () -> Set<String>) async -> [[String: Any]]? {
+        await walk(resource: "orders", key: key, sortField: "created_at", knownRefs: knownRefs) { row in
+            (row["id"] as? String).map { "polar:order:\($0)" }
+        }
+    }
+
     /// A single refund, by id — used to re-check a TRACKED disputed refund
     /// that may have scrolled out of the newest-page window (see
     /// `PolarIngest.diffDisputes`), rather than trusting the page walk alone
@@ -535,6 +578,65 @@ enum PolarShape {
                       currency: currency.isEmpty ? nil : currency.uppercased())
     }
 
+    // MARK: Sales (prd §537)
+
+    /// The billing reasons that are an EVENT rather than a tally, and the
+    /// whole of the §537 amendment in one constant.
+    ///
+    /// `subscription_cycle` — the monthly renewal — is deliberately absent,
+    /// and is the only shape here that would genuinely be "a tally wearing a
+    /// currency symbol": it is the highest-volume order shape on any healthy
+    /// subscription account, it says nothing that MRR on the room head does
+    /// not already say better, and landing it would bury the sales that are
+    /// real news under the ones that are simply the machine working.
+    /// `subscription_update` (a plan change mid-cycle) is out for the same
+    /// reason plus a sharper one: its amount is a prorated fragment, so
+    /// rendering it as a sale price states a number nobody sold anything for.
+    static let landableBillingReasons: Set<String> = ["purchase", "subscription_create"]
+
+    /// A sale. Never reads `customer` — the setup screen promises in as many
+    /// words that nothing here reads a customer's name or card, and the
+    /// product name is both the honest subject and the one somebody recognises.
+    ///
+    /// **The amount is `net_amount`, the pre-tax price you set**, falling back
+    /// to `total_amount` when Polar omits it. As a Merchant of Record Polar
+    /// collects tax on your behalf and takes its own fee outside the order, so
+    /// neither field is "what you were paid" — `net_amount` is the closest
+    /// honest reading of "what this sold for", and it is what the seller
+    /// themselves set. UNMEASURED against a live order: run `-polarProbe`.
+    ///
+    /// A zero-amount order is REFUSED. A free-tier `subscription_create` is a
+    /// signup, not a sale, and "Sold X · $0.00" is the §83 fake status —
+    /// stating a transaction that never moved money.
+    static func order(_ row: [String: Any]) -> Shaped? {
+        guard let id = row["id"] as? String, !id.isEmpty else { return nil }
+        _ = id // existence check only — the sourceRef is built by the caller
+        let reason = (row["billing_reason"] as? String) ?? "purchase"
+        guard landableBillingReasons.contains(reason) else { return nil }
+        let minor = row["net_amount"] != nil
+            ? intValue(row["net_amount"])
+            : intValue(row["total_amount"])
+        guard minor > 0 else { return nil }
+        let currency = (row["currency"] as? String) ?? ""
+        guard !currency.isEmpty else { return nil }
+
+        // The PRODUCT leads and the amount trails, §303's clamp ruling: the
+        // discriminator between one sale and the next is which product sold,
+        // so a long product name must never push the thing that varies past
+        // `titleLine`'s 80-character cut. The amount is also stamped on
+        // `priceValue`, so a clamped title never loses it outright.
+        let product = ((row["product"] as? [String: Any])?["name"] as? String)
+            .flatMap { $0.isEmpty ? nil : $0 }
+        let title = (product ?? String(localized: "Sale")) + " · \(money(minor, currency: currency))"
+        return Shaped(title: title,
+                      url: PolarAccount.dashboardURL("/sales"),
+                      tag: "Sale",
+                      facets: reason == "subscription_create" ? ["New subscriber"] : [],
+                      when: date(row["created_at"]) ?? .now,
+                      amountMinor: minor,
+                      currency: currency.uppercased())
+    }
+
     // MARK: Subscriptions
 
     static func subscriptionAlarm(_ row: [String: Any]) -> Shaped? {
@@ -596,25 +698,34 @@ enum PolarIngest {
         defer { running = false }
 
         let existingRefs = { IngestSupport.existingSourceRefs(context, source: PolarWatch.source) }
+        // Asked ONCE, before any read, so the first-sight test below can't be
+        // changed by rows this very pass is about to land.
+        let firstSightOfOrders = !existingRefs().contains { $0.hasPrefix(orderRefPrefix) }
 
         let stale = staleReading()
         async let metricsTask = stale ? PolarFetch.metrics(key: key) : nil
         async let refundsTask = PolarFetch.refunds(key: key, knownRefs: existingRefs)
         async let subsTask = PolarFetch.unhealthySubscriptions(key: key)
+        async let ordersTask = PolarFetch.orders(key: key, knownRefs: existingRefs)
 
         if let reading = await metricsTask { PolarState.set(reading) }
 
         let refunds = await refundsTask
         let subs = await subsTask
+        let orders = await ordersTask
 
         // Every read failing at once is "couldn't connect"; any one
-        // succeeding means the key works and this pass has real news.
-        guard refunds != nil || subs != nil else { return nil }
+        // succeeding means the key works and this pass has real news. Orders
+        // counts here, but its nil is NEVER on its own a failure — a token
+        // minted before §537 has no `orders:read` and 403s forever while the
+        // rest of the bridge works perfectly (see the type doc).
+        guard refunds != nil || subs != nil || orders != nil else { return nil }
 
         var landed: [Thing] = []
         if let refunds { landed.append(contentsOf: shapeRefunds(refunds)) }
         landed.append(contentsOf: await diffDisputes(refunds ?? [], key: key))
         if let subs { landed.append(contentsOf: diffSubscriptions(subs)) }
+        if let orders { landed.append(contentsOf: shapeOrders(orders, firstSight: firstSightOfOrders)) }
 
         return insert(landed, context: context)
     }
@@ -622,6 +733,31 @@ enum PolarIngest {
     private static func staleReading() -> Bool {
         guard let fetched = PolarState.reading().fetchedAt else { return true }
         return Date.now.timeIntervalSince(fetched) >= 600
+    }
+
+    /// One home for the sales ref shape — built here and matched in
+    /// `refresh`'s first-sight test, so the producer and the consumer can
+    /// never drift the way §311's did (see `scripts/ref-shape-audit.py`).
+    static let orderRefPrefix = "polar:order:"
+
+    /// How many past sales a FIRST sync brings back. Bounded because the walk
+    /// itself is not: on first sight nothing is known, so every page reads as
+    /// new and the walk runs its full three pages (300 orders) — landing all
+    /// of which would bury a new connection's feed under a year of history.
+    ///
+    /// They keep their REAL dates (`created_at`), so the backfill sorts into
+    /// history rather than arriving as 25 things that happened today —
+    /// `AppStoreConnectBridge`'s reviews rule, and the Hyperliquid bug it
+    /// exists to prevent.
+    private static let firstSightOrderCap = 25
+
+    private static func shapeOrders(_ rows: [[String: Any]], firstSight: Bool) -> [Thing] {
+        // `orders` walks newest-first, so a prefix IS the newest N.
+        let considered = firstSight ? Array(rows.prefix(firstSightOrderCap)) : rows
+        return considered.compactMap { row -> Thing? in
+            guard let id = row["id"] as? String, let shaped = PolarShape.order(row) else { return nil }
+            return thing(shaped, sourceRef: "\(orderRefPrefix)\(id)")
+        }
     }
 
     private static func shapeRefunds(_ rows: [[String: Any]]) -> [Thing] {
@@ -828,6 +964,38 @@ enum PolarIngest {
                   (row["status"] as? String) ?? "?",
                   ((row["product"] as? [String: Any])?["name"] as? String) ?? "?")
         }
+
+        // The SALES half (prd §537). Reported separately from the count
+        // because "0 sales" has four causes that render as one silence and
+        // only one is a bug: a token minted before §537 (no `orders:read`,
+        // a 403 — BY FAR the likeliest, and the endpoint status is the only
+        // place it is visible), a genuinely quiet account, an account whose
+        // every order is a `subscription_cycle` renewal this deliberately
+        // refuses, and shape drift. The per-row `reason=`/`lands=` pair is
+        // what separates the third from the fourth.
+        let (ordersBody, ordersStatus) = await IngestSupport.getJSONBody(
+            "\(PolarAccount.api)/orders/?limit=1", auth: "Bearer \(key)")
+        NSLog("[Casberi] polarProbe orders endpoint: HTTP %d (403 = token predates §537, re-mint with orders:read)", ordersStatus)
+        if ordersStatus != 200 {
+            NSLog("[Casberi] polarProbe orders endpoint reason: %@",
+                  PolarFetch.errorDetail(ordersBody) ?? "no reason field in the response body")
+        }
+        let orders = await PolarFetch.orders(key: key) { [] }
+        NSLog("[Casberi] polarProbe orders: %@", orders.map { "\($0.count) read" } ?? "UNREADABLE")
+        var wouldLand = 0
+        for row in orders ?? [] {
+            let shaped = PolarShape.order(row)
+            if shaped != nil { wouldLand += 1 }
+            NSLog("[Casberi] polarRow| order reason=%@ net=%@ total=%@ currency=%@ lands=%@ → %@",
+                  (row["billing_reason"] as? String) ?? "?",
+                  String(describing: row["net_amount"] ?? "nil"),
+                  String(describing: row["total_amount"] ?? "nil"),
+                  (row["currency"] as? String) ?? "?",
+                  shaped == nil ? "NO" : "yes",
+                  shaped?.title ?? "—")
+        }
+        NSLog("[Casberi] polarProbe orders that would land: %d of %d read",
+              wouldLand, orders?.count ?? 0)
     }
 }
 
