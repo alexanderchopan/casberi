@@ -4102,13 +4102,17 @@ struct Composer: View {
                     // newlines (it inserts more than one character at once).
                     if new.count - old.count == 1, new.hasSuffix("\n") {
                         draft = String(new.dropLast())
-                        // The return key is the send dot's keyboard twin, so
-                        // it defers to the same rule the hidden send dot
-                        // does: when "Ask <agent>" is the one control that
-                        // may submit this draft, return goes through it too
-                        // (2026-08-30) — otherwise a keyboard would offer a
-                        // silent way past the chip the send dot no longer is.
-                        if hasDraft { offerKeyedAsk ? askDirectly() : commit() }
+                        // Return is ALWAYS the free answer, never a silent
+                        // keyed ask (2026-08-31, user ruling, asked directly:
+                        // with several agents connected, deferring to
+                        // whichever one was tapped last — or the app's
+                        // default "active" provider if none ever was — spent
+                        // against a specific key nobody chose for THIS
+                        // question, with no visible sign of which agent
+                        // answered until the badge printed at the end. "Ask
+                        // <agent>" stays the one and only door to a keyed
+                        // answer — tapping its own chip, never the keyboard.
+                        if hasDraft { commit() }
                         return
                     }
                     if prefilled { prefilled = false }
@@ -4130,16 +4134,17 @@ struct Composer: View {
             // recording keeps the bare arrow: stopping SAVES the voice note,
             // and an "Ask" label there would lie.
             //
-            // HIDDEN while `offerKeyedAsk` (2026-08-30, user: "the blue send
-            // button to not show when asking") — for a real question with a
-            // key configured, "Ask <agent>" is the one control that submits
-            // this draft, and a second, more prominent button doing the same
-            // thing is exactly the "which one do I tap" confusion this chip
-            // exists to end. No paste exception any more: nothing left for
-            // the dot to preserve there once paste stopped being its own
-            // capture path — a pasted draft is submitted exactly like a
-            // typed one now, by whichever one control is showing.
-            if !offerKeyedAsk {
+            // NO LONGER HIDDEN while `offerKeyedAsk` (2026-08-31, reversing
+            // 2026-08-30's "the blue send button to not show when asking").
+            // That hiding assumed the dot and "Ask <agent>" submitted the
+            // SAME thing, so showing both was a "which one do I tap"
+            // collision — true back when a configured key could make plain
+            // send go keyed too. It no longer can (user ruling, asked
+            // directly: Return is always the free answer, no matter how many
+            // agents are connected — the only door to a keyed one is tapping
+            // its own chip). So the two are genuinely different verbs again,
+            // same as Find sitting beside them, and this is simply "Ask, on
+            // this iPhone" next to "Ask, with a key" — not a duplicate.
             Button {
                 if hasDraft || isRecording { commit() } else { fieldFocused = true }
             } label: {
@@ -4164,7 +4169,6 @@ struct Composer: View {
             .buttonStyle(PressSpring())
             .accessibilityLabel(hasDraft && !isRecording ? "Ask" : "Send")
             .modifier(SendTooltip(glyphOnly: !(hasDraft && !isRecording)))
-            }
         }
         .padding(.leading, DS.Space.s2)
         .padding(.trailing, DS.Space.s2)
@@ -4175,7 +4179,6 @@ struct Composer: View {
         .background(DS.background100, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
         .shadow(color: DS.cardShadow, radius: 10, x: 0, y: 3)
         .animation(DS.Motion.standard, value: hasDraft || isRecording)
-        .animation(DS.Motion.standard, value: offerKeyedAsk)
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
     }
@@ -4208,13 +4211,17 @@ struct Composer: View {
                 "did", "does", "do", "is", "are", "can", "show", "find"].contains(first)
     }
 
-    /// Whether "Ask <agent>" is the one control offering to submit this draft
-    /// (2026-08-30, user: "the blue send button to not show when asking").
-    /// The plain send dot hides whenever this is true — showing both a blue
-    /// button and a keyed chip that submit the SAME draft, one obviously and
-    /// one easy to miss, is exactly the confusion this was built to end.
-    /// Shared by `takeChips`' `offerKeyed` and the send dot itself so the two
-    /// can never drift apart and show neither, or both.
+    /// Whether the per-provider "Ask <agent>" chip row shows at all — one
+    /// chip per configured key, the ONE door to a keyed answer (2026-08-30).
+    ///
+    /// The plain send dot no longer hides while this is true (reversed
+    /// 2026-08-31, user ruling): it and the chips used to submit the SAME
+    /// draft to the SAME place, which made showing both a real "which one do
+    /// I tap" collision — but Return and the dot are the free answer only
+    /// now, always, however many keys are configured, so the two rows are
+    /// genuinely different verbs and both stay visible on purpose.
+    /// `takeChips`' own `offerKeyed` reads this same property, so the chip
+    /// row's presence and this property's name can never drift apart.
     ///
     /// No longer gated on `draftIsQuestion` (2026-08-30, user: "it should say
     /// ask bankr always... that way it's not confusing") — that heuristic is
