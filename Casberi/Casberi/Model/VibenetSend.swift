@@ -358,4 +358,233 @@ enum VibenetSend {
         let hash = try await broadcast(rawTransaction: raw)
         return Sent(account: plan.address, transactionHash: hash, payer: payer)
     }
+
+    // MARK: - Send value
+
+    /// Sends ETH from an account this phone already holds the ONLY key for —
+    /// `account` is a real, already-established address, never derived here
+    /// (2026-08-31, prd §533).
+    ///
+    /// **The self-call, not a value on the wire call.** `VibenetTransaction
+    /// .Call` carries no value by design — see `VibenetExecute`'s own doc for
+    /// why and how it was confirmed against the reference `DefaultAccount.sol`
+    /// rather than assumed. The one call in this transaction targets the
+    /// account itself, invoking `execute(recipient, valueWei, "")`, which is
+    /// where the real value-carrying EVM `CALL` happens.
+    ///
+    /// **The nonce is READ, not started at zero.** Unlike `createAccount`
+    /// (a brand-new counterfactual account has never sent anything, so its
+    /// nonce is 0 by construction), an established account's nonce is
+    /// whatever the chain says — `eth_getTransactionCount` at `nonceKey: 0`,
+    /// the default key `Fields` already uses. Signing over a stale or guessed
+    /// nonce is a signature over a transaction the chain will refuse, not one
+    /// that silently does the wrong thing — but refusing needlessly on a
+    /// transient read failure is still a bad send, so a failed nonce read
+    /// throws before anything is composed or signed.
+    static func sendValue(from account: Data,
+                          to recipient: Data,
+                          valueWei: Data,
+                          gasLimit: UInt64 = 200_000,
+                          maxFeePerGas: UInt64 = 0x3b9a_ca00,
+                          maxPriorityFeePerGas: UInt64 = 0xf4240) async throws -> Sent {
+        guard let publicKey = VibenetDeviceKey.publicKeyXY() else { throw Failure.noKey }
+        guard let contracts = await VibenetConfig.current(),
+              let authenticator = VibenetTransaction.data(fromHex: contracts.p256Authenticator)
+        else { throw Failure.cannotCompose }
+        guard recipient.count == 20 else { throw Failure.cannotCompose }
+
+        guard let nonceHex = await VibenetChain.call(
+                method: "eth_getTransactionCount",
+                params: ["0x" + VibenetTransaction.hex(account), "latest"]) as? String,
+              let nonce = UInt64(nonceHex.dropFirst(2), radix: 16)
+        else { throw Failure.cannotCompose }
+
+        let call = VibenetTransaction.Call(
+            to: account, data: VibenetExecute.calldata(target: recipient, value: valueWei))
+
+        let feePayable = maxFeePerGas > 0 || maxPriorityFeePerGas > 0
+        var payer: Data?
+        switch await payerOffer(for: account, gasLimit: gasLimit) {
+        case .sponsored(let address): payer = address
+        case .declined:    if feePayable { throw Failure.noSponsor }
+        case .unreadable:  if feePayable { throw Failure.sponsorUnreadable }
+        }
+
+        let fields = VibenetTransaction.Fields(
+            chainID: VibenetSigner.chainID, sender: account, nonceSequence: nonce,
+            maxPriorityFeePerGas: maxPriorityFeePerGas, maxFeePerGas: maxFeePerGas,
+            gasLimit: gasLimit, calls: [[call]], payer: payer ?? Data())
+
+        let digest = Data(Keccak256.hash([UInt8](VibenetTransaction.senderSigningPreimage(fields))))
+        let signature: Data
+        do { signature = try VibenetDeviceKey.sign(digest: digest) }
+        catch { throw Failure.signingRefused }
+        guard signature.count == 64,
+              let senderAuth = VibenetP256Auth.senderAuth(authenticator: authenticator,
+                                                          r: signature.prefix(32),
+                                                          s: signature.suffix(32),
+                                                          publicKeyXY: publicKey)
+        else { throw Failure.cannotCompose }
+
+        let mine = "0x" + VibenetTransaction.hex(
+            VibenetTransaction.encoded(fields, senderAuth: senderAuth))
+        let raw = payer == nil ? mine : try await sponsor(rawTransaction: mine)
+        let hash = try await broadcast(rawTransaction: raw)
+        return Sent(account: account, transactionHash: hash, payer: payer)
+    }
+
+    /// WHAT YOU SENT LANDS IN THE CORPUS — `landReceipt`'s own ruling, applied
+    /// to a transfer instead of a creation. Its ref is namespaced apart
+    /// (`vibenet:send:`, not `vibenet:create:`) so the two can never dedupe
+    /// against each other, and unlike a creation this one carries a real
+    /// `transferAmount`: a send moved a specific quantity, and a receipt that
+    /// omitted it would be the §83 fake status of describing an act by
+    /// everything except the number that makes it one.
+    @MainActor
+    static func landSendReceipt(_ sent: Sent, to recipient: Data, valueWei: Data,
+                                in context: ModelContext) {
+        let ref = "vibenet:send:\(sent.transactionHash)"
+        let existing = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref })
+        if let found = try? context.fetch(existing), !found.isEmpty { return }
+
+        let recipientHex = "0x" + VibenetTransaction.hex(recipient)
+        let thing = Thing(
+            kind: .transaction,
+            title: String(localized: "Sent from a vibenet account"),
+            content: VibenetExplorer.tx(sent.transactionHash),
+            source: VibenetIdentity.source,
+            capturedAt: .now,
+            tags: sent.payer == nil ? ["Send"] : ["Send", "Sponsored"],
+            sourceRef: ref)
+        thing.walletAddress = "0x" + VibenetTransaction.hex(sent.account)
+        thing.transferAmount = VibenetExecute.decimalEther(weiBigEndian: valueWei)
+        thing.summary = sent.payer == nil
+            ? String(localized: "Sent to \(recipientHex), signed by this phone's key.")
+            : String(localized: "Sent to \(recipientHex), signed by this phone's key. The devnet's faucet paid the gas.")
+        context.insert(thing)
+        try? context.save()
+    }
+
+    // MARK: - Modify owners
+
+    /// Authorizes a NEW actor on an account this phone can already sign for
+    /// (prd §534, 2026-08-31) — the one write behind both Modify Owners and
+    /// Spending Account, which differ only in what's handed in for
+    /// `newActorID`/`newAuthenticator`: a P-256 key's `keccak256(x||y)` +
+    /// the P256Authenticator for a second physical key, or
+    /// `ActorId.fromAddress(otherAccount)` + the DelegateAuthenticator for a
+    /// spending sub-account. Neither is composed here — the caller already
+    /// knows which shape it's asking for.
+    ///
+    /// **TWO Face ID prompts, not one.** `Keystore.applySignedAccountChanges`
+    /// requires its OWN admin signature over `_changesDigest`
+    /// (`VibenetAccountChanges`'s doc has the full reasoning, read from
+    /// source) — separate from the outer transaction's `sender_auth`, which
+    /// this account still owes for the transaction itself. Both happen to be
+    /// signed by the same key today (this app has authorized only one), but
+    /// they are two different claims — "I approve this exact change" and "I
+    /// authorize this transaction" — and the contract checks them
+    /// independently. UNMEASURED end to end: no `AuthorizeActor` has ever
+    /// landed from this app, on real hardware or otherwise.
+    static func authorizeActor(on account: Data,
+                               newActorID: Data,
+                               newAuthenticator: Data,
+                               scope: UInt16 = 0,
+                               policyData: Data = Data(),
+                               localEpoch: UInt32,
+                               localSequence: UInt32,
+                               gasLimit: UInt64 = 250_000,
+                               maxFeePerGas: UInt64 = 0x3b9a_ca00,
+                               maxPriorityFeePerGas: UInt64 = 0xf4240) async throws -> Sent {
+        guard let publicKey = VibenetDeviceKey.publicKeyXY() else { throw Failure.noKey }
+        guard let contracts = await VibenetConfig.current(),
+              let authenticator = VibenetTransaction.data(fromHex: contracts.p256Authenticator)
+        else { throw Failure.cannotCompose }
+
+        let payload = VibenetAccountChanges.authorizeActorPayload(
+            actorId: newActorID, authenticator: newAuthenticator, scope: scope, policyData: policyData)
+        let change = VibenetTransaction.Change.authorizeActor(payload)
+        let changeHash = VibenetAccountChanges.changeHash(
+            changeType: VibenetAccountChanges.authorizeActor, payload: payload)
+        let sequenceWord = VibenetAccountChanges.localSequenceWord(epoch: localEpoch, sequence: localSequence)
+
+        // Signature 1: THIS PHONE, as the account's admin, approving the
+        // exact digest the Keystore will recompute and check.
+        let configDigest = VibenetAccountChanges.changesDigest(
+            account: account, chainID: VibenetSigner.chainID, sequence: sequenceWord,
+            changeHashes: [changeHash])
+        let configSig: Data
+        do { configSig = try VibenetDeviceKey.sign(digest: configDigest) }
+        catch { throw Failure.signingRefused }
+        guard configSig.count == 64,
+              let configAuth = VibenetP256Auth.senderAuth(authenticator: authenticator,
+                                                          r: configSig.prefix(32),
+                                                          s: configSig.suffix(32),
+                                                          publicKeyXY: publicKey)
+        else { throw Failure.cannotCompose }
+
+        let configChange = VibenetTransaction.ConfigChange(
+            sequence: sequenceWord, changes: [change], auth: configAuth)
+
+        guard let nonceHex = await VibenetChain.call(
+                method: "eth_getTransactionCount",
+                params: ["0x" + VibenetTransaction.hex(account), "latest"]) as? String,
+              let nonce = UInt64(nonceHex.dropFirst(2), radix: 16)
+        else { throw Failure.cannotCompose }
+
+        let feePayable = maxFeePerGas > 0 || maxPriorityFeePerGas > 0
+        var payer: Data?
+        switch await payerOffer(for: account, gasLimit: gasLimit) {
+        case .sponsored(let address): payer = address
+        case .declined:   if feePayable { throw Failure.noSponsor }
+        case .unreadable: if feePayable { throw Failure.sponsorUnreadable }
+        }
+
+        let fields = VibenetTransaction.Fields(
+            chainID: VibenetSigner.chainID, sender: account, nonceSequence: nonce,
+            maxPriorityFeePerGas: maxPriorityFeePerGas, maxFeePerGas: maxFeePerGas,
+            gasLimit: gasLimit, accountChanges: [.config(configChange)], payer: payer ?? Data())
+
+        // Signature 2: the outer transaction itself — a SECOND prompt, see
+        // this function's own doc for why it is not the same claim as #1.
+        let outerDigest = Data(Keccak256.hash([UInt8](VibenetTransaction.senderSigningPreimage(fields))))
+        let outerSig: Data
+        do { outerSig = try VibenetDeviceKey.sign(digest: outerDigest) }
+        catch { throw Failure.signingRefused }
+        guard outerSig.count == 64,
+              let outerAuth = VibenetP256Auth.senderAuth(authenticator: authenticator,
+                                                         r: outerSig.prefix(32),
+                                                         s: outerSig.suffix(32),
+                                                         publicKeyXY: publicKey)
+        else { throw Failure.cannotCompose }
+
+        let mine = "0x" + VibenetTransaction.hex(
+            VibenetTransaction.encoded(fields, senderAuth: outerAuth))
+        let raw = payer == nil ? mine : try await sponsor(rawTransaction: mine)
+        let hash = try await broadcast(rawTransaction: raw)
+        return Sent(account: account, transactionHash: hash, payer: payer)
+    }
+
+    /// WHAT WAS AUTHORIZED LANDS IN THE CORPUS — same ruling as a send, a
+    /// third `sourceRef` namespace (`vibenet:authorize:`) so none of the
+    /// three can ever dedupe against another.
+    @MainActor
+    static func landAuthorizeReceipt(_ sent: Sent, newActorHex: String, in context: ModelContext) {
+        let ref = "vibenet:authorize:\(sent.transactionHash)"
+        let existing = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref })
+        if let found = try? context.fetch(existing), !found.isEmpty { return }
+
+        let thing = Thing(
+            kind: .transaction,
+            title: String(localized: "Authorized a new key on a vibenet account"),
+            content: VibenetExplorer.tx(sent.transactionHash),
+            source: VibenetIdentity.source,
+            capturedAt: .now,
+            tags: sent.payer == nil ? ["Permissions"] : ["Permissions", "Sponsored"],
+            sourceRef: ref)
+        thing.walletAddress = "0x" + VibenetTransaction.hex(sent.account)
+        thing.summary = String(localized: "\(newActorHex) can now act for this account.")
+        context.insert(thing)
+        try? context.save()
+    }
 }

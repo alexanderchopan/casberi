@@ -1370,7 +1370,7 @@ check("a single known bit",
       VibenetScope(raw: VibenetScope.sender).summary == "Sender")
 check("every known bit, in the contract's own order",
       VibenetScope(raw: VibenetScope.known).summary
-        == "Sender, Policy, Nonce, Self-payer, Sponsor-payer")
+        == "Sender, Self-payer, Sponsor-payer, Policy, Nonce")
 check("a reserved bit is COUNTED, never named",
       VibenetScope(raw: 0x0020).summary == "+1 unknown")
 check("two reserved bits",
@@ -3467,7 +3467,7 @@ let keyLine = VibenetAccountDebug.keyLine(dbgKey)
 check("the key line carries the FULL actorId, never the short form",
       keyLine.contains(dbgKey.actorId))
 check("...the raw scope word",
-      keyLine.contains("scope 0x0009"))
+      keyLine.contains("scope 0x0003"))
 check("...AND the plain wording beside it",
       keyLine.contains("Send anywhere, Pay own gas"))
 check("...the unix expiry, for the contract",

@@ -431,6 +431,10 @@ struct FeedScreen: View {
         /// `VibenetRoomCard`, which is inside this List's rows, so it cannot
         /// present its own sheet.
         case vibenetCreate
+        /// Sending from an account this phone already holds the key for
+        /// (prd §533). `account` is the value the Home scope's trigger
+        /// already knows — this route never re-derives or looks one up.
+        case vibenetSend(account: Data)
 
         var id: String {
             switch self {
@@ -453,6 +457,7 @@ struct FeedScreen: View {
             case .vibenetKey(let actor, let item, _):
                 "vibenetKey:\(VibenetKeySeenDiff.keyID(address: item.address, actorId: actor.actorId))"
             case .vibenetCreate: "vibenetCreate"
+            case .vibenetSend(let account): "vibenetSend:\(VibenetTransaction.hex(account))"
             }
         }
     }
@@ -535,6 +540,61 @@ struct FeedScreen: View {
         }
     }
 
+    /// THE ONE WRITE ACTION IN THE ROOM, in the slot the "Latest 3" preview
+    /// used to occupy (prd §533, 2026-08-31 — see the case above for why it
+    /// was replaced rather than kept).
+    ///
+    /// Gated on there being an account to send FROM, never drawn as a dead
+    /// control over nothing (§83). This app has never authorized more than
+    /// one signer per account, so "the first account this phone's key can
+    /// act for" is also the only one — `signableVibenetAccount` scans the
+    /// last saved read the same way `VibenetThisPhoneRow` already checks its
+    /// own presence, and answers nil rather than guessing when there is
+    /// none, same as every refusal `VibenetSigner` states rather than hides.
+    @ViewBuilder
+    private var vibenetSendRow: some View {
+        if let account = Self.signableVibenetAccount() {
+            Section {
+                Button {
+                    DSHaptic.selection()
+                    feedSheet = .vibenetSend(account: account)
+                } label: {
+                    HStack(spacing: DS.Space.s3) {
+                        ZStack {
+                            Circle().fill((DS.brandHue(for: "Base Vibenet") ?? DS.tint).opacity(0.18))
+                                .frame(width: DS.Mark.row, height: DS.Mark.row)
+                            Image(systemName: "arrow.up.right")
+                                .dsGlyph(12, weight: .semibold)
+                                .foregroundStyle(DS.brandHue(for: "Base Vibenet") ?? DS.tint)
+                        }
+                        Text(String(localized: "Send"))
+                            .dsText(.heading17)
+                            .foregroundStyle(DS.textPrimary)
+                        Spacer(minLength: DS.Space.s2)
+                        Image(systemName: "chevron.right")
+                            .dsGlyph(12)
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    /// The first account whose actor list already names this phone's own
+    /// key, read off the last saved chain snapshot — never a live read, the
+    /// same `VibenetRoomSource.card()`/`VibenetState.saved` rule every other
+    /// synchronous draw in this room follows, so scrolling never spends a
+    /// request.
+    private static func signableVibenetAccount() -> Data? {
+        guard let ours = VibenetDeviceKey.actorID()?.lowercased(),
+              let items = VibenetState.saved?.items else { return nil }
+        for item in items where item.actors.contains(where: { $0.actorId.lowercased() == ours }) {
+            return VibenetTransaction.data(fromHex: item.address)
+        }
+        return nil
+    }
 
     /// The x402 room's selected lane, or nil for all of it (2026-08-06).
     ///
@@ -2669,11 +2729,6 @@ struct FeedScreen: View {
     /// slower.
     private static var walletVisualSlot: CGFloat { DSRoomChassis.visualSlot }
 
-    /// How many moves Home shows. Three, matching Wallet's own crown rows:
-    /// enough to say what just happened, few enough that the scope stays one
-    /// drawing and one short list rather than becoming the stream twice.
-    private static let vibenetHomeRows = 3
-
     /// The wallet scope rail — the Address Book door, "All", and a face per
     /// watched wallet — drawn in the room's own content directly under the
     /// sparkline (prd §483, 2026-08-26, user: *"i now think these avatars and
@@ -3306,6 +3361,8 @@ struct FeedScreen: View {
                     chrome.refreshPulse += 1
                 }
             }
+        case .vibenetSend(let account):
+            VibenetSendSheet(account: account)
         }
     }
 
@@ -5021,26 +5078,22 @@ struct FeedScreen: View {
             // Days, like most rooms: unlike x402 (where every row shares
             // one sync timestamp) these are real events at real block
             // times, so a chronological grouping is honest here.
-            // **HOME'S LIST IS THE LAST FEW MOVES; ACTIVITY'S IS THE STREAM**
-            // (prd §482 amendment, Wallet's §483 rule: every scope is one
-            // drawing and one list). Home drew a chart and then nothing —
-            // half a scope — because the rows were gated to Activity alone.
+            // **HOME IS THE ONE DO; ACTIVITY IS THE STREAM (2026-08-31,
+            // amending the §482 ruling below).** Home used to repeat a
+            // "Latest 3" preview of the same rows Activity already shows in
+            // full one tap away — real duplication, not the half-a-scope
+            // problem it was built to answer. The fix isn't a better
+            // preview, it's a different second half: the one write action
+            // this room has, in the one slot with room for it.
             //
-            // Home takes three, UNGROUPED: day headings over three rows are
-            // headings over one row each, and the reading here is "the last
-            // few things", not "what happened on Monday". Activity keeps the
-            // full stream in days, and the three are NOT repeated at its top —
-            // §208's own "never say one thing twice", which is the same call
-            // Wallet made for its own crown rows.
+            // The §482 reasoning survives underneath — every scope is still
+            // one drawing and one list, and Activity's own full stream is
+            // untouched. What changed is which LIST answers Home's half.
             let vScope = VibenetSection.resolve(chrome.vibenetSection,
                                                 present: vibenetSectionPublication.sections)
             let vScoped = VibenetSection.shows(present: vibenetSectionPublication.sections)
             if vScoped && vScope == .home {
-                let latest = Array(visible.live.prefix(Self.vibenetHomeRows))
-                if !latest.isEmpty {
-                    groupedSections([(String(localized: "Latest"), latest)],
-                                    nextEventID: nextEventID)
-                }
+                vibenetSendRow
             } else if vibenetShowsRows {
                 let days = chronoGroups(visible)
                 groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))

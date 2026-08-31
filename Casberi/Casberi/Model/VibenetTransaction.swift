@@ -80,6 +80,17 @@ enum VibenetTransaction {
         static func authorizeActor(_ payload: Data) -> Change {
             Change(tag: 0x00, payload: payload)
         }
+
+        /// Tag `0x01` — `Keystore.sol`'s `ChangeType.RevokeActor`, one past
+        /// `AuthorizeActor` in the same declaration order
+        /// (`VibenetAccountChanges.revokeActor`). Unlike `AuthorizeActor`
+        /// this one is UNMEASURED against a real transaction (no revoke has
+        /// ever landed on this chain to compare against) — read from source,
+        /// not guessed, but still worth stating plainly per this file's own
+        /// rule.
+        static func revokeActor(_ payload: Data) -> Change {
+            Change(tag: 0x01, payload: payload)
+        }
     }
 
     /// One initial actor inside a Create: `[actorId, authenticator, scope,
@@ -215,6 +226,216 @@ enum VibenetTransaction {
     /// it, and the preimage length was one of the things the proof turned on.
     static func senderSigningPreimage(_ f: Fields) -> Data {
         Data([txType]) + encode(.list(signingBody(f)))
+    }
+}
+
+// MARK: - Moving value: the self-call into `DefaultAccount.execute`
+
+/// HOW ETH ACTUALLY MOVES (2026-08-31).
+///
+/// The wire-level `Call` above is deliberately `(to, data)` with no value —
+/// confirmed against the EIP-8130 spec text ("Calls carry no ETH value. ETH
+/// transfers are initiated by the account's wallet bytecode via the CALL
+/// opcode") and against the reference `DefaultAccount.sol` (Coinbase,
+/// `base/eip-8130`): `executeBatch`/`execute` take `(target, value, data)`
+/// triples and do the real value-carrying `target.call{value: value}(data)`.
+///
+/// So a plain send is a SELF-CALL: the top-level wire `Call.to` is the
+/// account's OWN address, and `Call.data` is `execute(address,uint256,bytes)`
+/// aimed at the real recipient. `DefaultAccount._isAuthorizedCaller` passes
+/// trivially (`caller == address(this)`) because the account is executing
+/// this call as itself — no actor check, no scope check, nothing this app
+/// needs to reason about beyond composing the right calldata.
+///
+/// `execute(address,uint256,bytes)` selector is `0xb61d27f6`, computed from
+/// the signature text (keccak256, first 4 bytes) rather than pasted — the
+/// same discipline `SafeCalldata.selector` already keeps for its own
+/// selectors, and for the identical reason: a mistyped constant here names a
+/// different function and every send would revert with no clue why.
+/// SHARED SOLIDITY-ABI WORD ENCODING (2026-08-31). `VibenetExecute` and
+/// `VibenetAccountChanges` both build plain `abi.encode`-shaped calldata —
+/// static head words, a dynamic `bytes` tail — and a word is a word
+/// regardless of which function it's arguing for, so the padding logic lives
+/// once here rather than twice.
+enum VibenetABIEncode {
+    /// A big-endian byte string, left-padded to 32 bytes — the ABI's static
+    /// word shape for an address (20 bytes), a `bytes32` already 32 bytes,
+    /// and a value carried as raw big-endian bytes (never a machine int:
+    /// `Fields`' own money fields are `UInt64`, too small for a wei amount
+    /// past ~18.4 ETH, so callers hand this raw bytes rather than a type that
+    /// silently truncates a real balance).
+    static func word(_ bytes: Data) -> Data {
+        guard bytes.count <= 32 else { return Data(bytes.suffix(32)) }
+        return Data(repeating: 0, count: 32 - bytes.count) + bytes
+    }
+
+    static func word(_ n: UInt64) -> Data {
+        var be = Data(count: 8)
+        var v = n
+        for i in stride(from: 7, through: 0, by: -1) { be[i] = UInt8(v & 0xff); v >>= 8 }
+        return word(be)
+    }
+
+    /// A dynamic `bytes` tail, zero-padded to a 32-byte multiple — the
+    /// suffix every ABI-encoded call with a trailing `bytes`/`string` param
+    /// carries after its length word.
+    static func padded(_ data: Data) -> Data {
+        let pad = (32 - data.count % 32) % 32
+        return pad > 0 ? data + Data(repeating: 0, count: pad) : data
+    }
+}
+
+enum VibenetExecute {
+    /// `keccak256("execute(address,uint256,bytes)")[:4]`.
+    static let selector: Data = Data(Keccak256.hash(Array("execute(address,uint256,bytes)".utf8)).prefix(4))
+
+    /// Static ABI head (address, uint256, offset-to-bytes) then the dynamic
+    /// `bytes` tail — the ordinary Solidity ABI layout for
+    /// `execute(address,uint256,bytes)`. `data` is empty for a plain value
+    /// transfer (a contract call through this same door is future work, not
+    /// this one — see `VibenetSend.sendValue`'s own doc).
+    static func calldata(target: Data, value: Data, data: Data = Data()) -> Data {
+        var out = selector
+        out += VibenetABIEncode.word(target)
+        out += value.count == 32 ? value : VibenetABIEncode.word(value)
+        out += VibenetABIEncode.word(UInt64(0x60))   // offset to the bytes tail
+        out += VibenetABIEncode.word(UInt64(data.count))
+        out += VibenetABIEncode.padded(data)
+        return out
+    }
+
+    /// Big-endian wei bytes as a decimal ETH string ("1.5", "0.000000000123",
+    /// "1000000000"), never `Double` — this app's own 1B-ETH devnet faucet
+    /// balances are already past `Double`'s exact-integer range, so a
+    /// receipt's stated amount would silently drift from what was actually
+    /// signed. Base-256-to-base-10 by repeated long division on a decimal
+    /// digit array — the textbook bignum-free conversion, since nothing here
+    /// needs arbitrary-precision arithmetic beyond printing one number once.
+    static func decimalEther(weiBigEndian: Data) -> String {
+        guard !weiBigEndian.isEmpty else { return "0" }
+        var digits: [UInt8] = [0]
+        for byte in weiBigEndian {
+            var carry = UInt16(byte)
+            for i in (0..<digits.count).reversed() {
+                let v = UInt16(digits[i]) * 256 + carry
+                digits[i] = UInt8(v % 10)
+                carry = v / 10
+            }
+            while carry > 0 { digits.insert(UInt8(carry % 10), at: 0); carry /= 10 }
+        }
+        var s = digits.map { String($0) }.joined()
+        while s.count < 19 { s = "0" + s }
+        let splitAt = s.index(s.endIndex, offsetBy: -18)
+        var whole = String(s[s.startIndex..<splitAt])
+        var frac = String(s[splitAt...])
+        while whole.count > 1, whole.hasPrefix("0") { whole.removeFirst() }
+        while frac.hasSuffix("0") { frac.removeLast() }
+        return frac.isEmpty ? whole : "\(whole).\(frac)"
+    }
+}
+
+// MARK: - Authorizing and revoking actors — the OTHER signature
+
+/// WHAT `ConfigChange.auth` ACTUALLY SIGNS (2026-08-31, prd §534).
+///
+/// **Read from `Keystore.sol` (Coinbase, `base/eip-8130`), not guessed** —
+/// exactly the lesson `VibenetDeviceKey.sign`'s own history exists to teach:
+/// a plausible preimage produces a signature that is valid arithmetic and
+/// authenticates NOTHING, failing silently on-chain while every static check
+/// here stays green.
+///
+/// The source's own doc says the scheme is deliberately **NOT EIP-712**
+/// ("to mitigate phishing attacks") — no domain separator, no `\x19\x01`
+/// prefix. It is a flat, two-level typed hash:
+///
+///     changeHash = keccak256(abi.encode(ACCOUNT_CHANGE_TYPEHASH,
+///                                       changeType, keccak256(payload)))
+///     digest = keccak256(abi.encode(SIGNED_ACCOUNT_CHANGES_TYPEHASH,
+///                                   account, chainId, sequence,
+///                                   keccak256(concat(changeHashes))))
+///
+/// `sequence` is the account's CURRENT counter, not the next one — the
+/// contract checks it matches before advancing it — and for the Local
+/// channel (`channel: 0`, the only one this app ever uses) it is the packed
+/// word `localEpoch(32, high) || localSequence(32, low)`, already sitting on
+/// `VibenetAccountItem.changeSequences` from the ordinary account read; this
+/// never costs a request of its own.
+///
+/// **Authorization is flat and admin-only** — `Keystore.
+/// applySignedAccountChanges` requires the signer's scope to be exactly 0,
+/// which is what every account this app has ever created uses for its one
+/// key, so no new scope work is needed to authorize or revoke a second one.
+///
+/// `auth` itself is the ordinary `authenticator(20) || data` blob every
+/// other signature in this file already wears — `VibenetP256Auth.senderAuth`
+/// is reused verbatim, not reimplemented.
+enum VibenetAccountChanges {
+    /// `Keystore.sol`'s `ChangeType` enum, declaration order.
+    static let authorizeActor: UInt8 = 0
+    static let revokeActor: UInt8 = 1
+
+    static let accountChangeTypeHash: Data =
+        Data(Keccak256.hash(Array("AccountChange(uint8 changeType,bytes payload)".utf8)))
+
+    static let signedAccountChangesTypeHash: Data = Data(Keccak256.hash(Array(
+        ("SignedAccountChanges(address account,uint256 chainId,uint64 sequence,AccountChange[] changes)"
+         + "AccountChange(uint8 changeType,bytes payload)").utf8)))
+
+    /// `abi.encode(bytes32 actorId, ActorConfig(authenticator,expiry,scope), bytes policyData)`.
+    /// `ActorConfig` is entirely static fields, so it inlines as three head
+    /// words rather than taking an offset of its own — the same rule that
+    /// makes `execute`'s `(address,uint256,bytes)` head three words before
+    /// its own dynamic tail. `policyData` stays empty for a plain P-256
+    /// actor (§523's own `scope: 0`, empty `policyData` convention) —
+    /// non-empty policy grants are Subscriptions' problem, not this one's.
+    static func authorizeActorPayload(actorId: Data, authenticator: Data,
+                                      expiry: UInt64 = 0, scope: UInt16 = 0,
+                                      policyData: Data = Data()) -> Data {
+        var out = VibenetABIEncode.word(actorId)
+        out += VibenetABIEncode.word(authenticator)
+        out += VibenetABIEncode.word(UInt64(expiry))
+        out += VibenetABIEncode.word(UInt64(scope))
+        out += VibenetABIEncode.word(UInt64(0xa0))   // offset to policyData: 5 head words × 32
+        out += VibenetABIEncode.word(UInt64(policyData.count))
+        out += VibenetABIEncode.padded(policyData)
+        return out
+    }
+
+    /// `abi.encode(bytes32 actorId)` — the whole payload is one static word.
+    static func revokeActorPayload(actorId: Data) -> Data { VibenetABIEncode.word(actorId) }
+
+    /// One `AccountChange`'s structural hash.
+    static func changeHash(changeType: UInt8, payload: Data) -> Data {
+        var body = accountChangeTypeHash
+        body += VibenetABIEncode.word(UInt64(changeType))
+        body += Data(Keccak256.hash([UInt8](payload)))
+        return Data(Keccak256.hash([UInt8](body)))
+    }
+
+    /// `_changesDigest` — the whole of what `ConfigChange.auth` signs.
+    /// `chainID` is this app's own `UInt64` (vibenet's real id is nowhere
+    /// near `UInt256`'s range, so no truncation risk in padding it up).
+    static func changesDigest(account: Data, chainID: UInt64, sequence: UInt64,
+                              changeHashes: [Data]) -> Data {
+        let packed = changeHashes.reduce(Data(), +)
+        let hashesHash = Data(Keccak256.hash([UInt8](packed)))
+        var body = signedAccountChangesTypeHash
+        body += VibenetABIEncode.word(account)
+        body += VibenetABIEncode.word(UInt64(chainID))
+        body += VibenetABIEncode.word(UInt64(sequence))
+        body += hashesHash
+        return Data(Keccak256.hash([UInt8](body)))
+    }
+
+    /// The Local-channel sequence word — `localEpoch<<32 | localSequence`.
+    /// Takes the two halves as plain integers rather than
+    /// `VibenetChangeSequences` (defined in `VibenetRoom.swift`, which this
+    /// file must stay independent of — `vibenet-signer-selftest.sh` compiles
+    /// this file standalone, alongside only `Keccak256`/`VibenetCreate`/
+    /// `VibenetSigner`/`RLP`). The caller reads both off
+    /// `VibenetAccountItem.changeSequences` for free — no new request.
+    static func localSequenceWord(epoch: UInt32, sequence: UInt32) -> UInt64 {
+        (UInt64(epoch) << 32) | UInt64(sequence)
     }
 }
 

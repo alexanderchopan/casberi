@@ -26,11 +26,27 @@ import Foundation
 struct VibenetScope: Equatable, Codable {
     let raw: UInt16
 
+    // CORRECTED 2026-08-31 (prd §534) — four of these five bits were
+    // WRONG, shipped, and reading real on-chain scopes with them. Found
+    // while sourcing the scope picker for Modify Owners: `Scopes.sol`
+    // (Coinbase, `base/eip-8130`, fetched directly) declares
+    // OPERATOR=0x0001, SELF_PAYER=0x0002, SPONSOR_PAYER=0x0004,
+    // POLICY=0x0008, NONCE=0x0010 — this file had `sender` right and then
+    // walked the remaining four bits in the WRONG order (policy=0x0002,
+    // nonce=0x0004, selfPayer=0x0008, sponsorPayer=0x0010), a rotation of
+    // the real assignment. A key actually holding SELF_PAYER (0x0002) read
+    // as "Send to one contract" (this file's old `policy`); a key actually
+    // holding POLICY (0x0008, gated to one manager) read as "Pay own gas"
+    // (this file's old `selfPayer`) — the exact §83 fake status this app's
+    // own culture exists to catch, on the one screen whose entire job is
+    // saying what a key may do. `isAdmin`/`grantedPlainLabels` etc. are all
+    // computed from these constants, so nothing downstream needed a second
+    // fix — the four mislabeled bits self-correct with the values below.
     static let sender: UInt16       = 0x0001
-    static let policy: UInt16       = 0x0002
-    static let nonce: UInt16        = 0x0004
-    static let selfPayer: UInt16    = 0x0008
-    static let sponsorPayer: UInt16 = 0x0010
+    static let selfPayer: UInt16    = 0x0002
+    static let sponsorPayer: UInt16 = 0x0004
+    static let policy: UInt16       = 0x0008
+    static let nonce: UInt16        = 0x0010
 
     /// Every bit this build can name. Bits 0x0020…0x8000 are reserved by
     /// `Scopes.sol` for a future scope — real, and none of this app's
@@ -73,10 +89,10 @@ struct VibenetScope: Equatable, Codable {
     /// since the spec still supplies no phrasing of its own.
     private static let named: [(bit: UInt16, label: String, plain: String)] = [
         (sender,       "Sender",        "Send anywhere"),
-        (policy,       "Policy",        "Send to one contract"),
-        (nonce,        "Nonce",         "Order its own sends"),
         (selfPayer,    "Self-payer",    "Pay own gas"),
         (sponsorPayer, "Sponsor-payer", "Pay others' gas"),
+        (policy,       "Policy",        "Send to one contract"),
+        (nonce,        "Nonce",         "Order its own sends"),
     ]
 
     /// SCOPE ZERO IS UNRESTRICTED, NOT EMPTY (prd §463) — the spec is explicit: "A value
