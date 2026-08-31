@@ -188,7 +188,9 @@ enum TokenBridge: String, CaseIterable, Identifiable {
              .dodoPayments:
             String(localized: "Get your API key")
         case .aws:
-            String(localized: "Create a read-only IAM user")
+            // "IAM" dropped to fit the 26-char door-label budget — the address
+            // beneath (console.aws.amazon.com) already says where this leads.
+            String(localized: "Create a read-only user")
         }
     }
 
