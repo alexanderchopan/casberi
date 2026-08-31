@@ -152,50 +152,6 @@ struct VibenetKeySheet: View {
                     sentence: nil)
     }
 
-    @ViewBuilder
-    private var accountRow: some View {
-        let name = VibenetWatch.shared.name(for: item.address)
-            ?? VibenetRoom.shortAddress(item.address)
-        let body = HStack(spacing: DS.Space.s3) {
-            WalletFace(address: item.address, size: DS.Face.rowCircle, circular: true)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(String(localized: "Acts for"))
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
-                Text(name)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: DS.Space.s2)
-            if onScope != nil {
-                Image(systemName: "chevron.right")
-                    .accessibilityHidden(true)
-                    .dsGlyph(11, weight: .semibold)
-                    .foregroundStyle(DS.textTertiary)
-            }
-        }
-            // **NO CARD** (user, 2026-08-26: *"Lets do headers no cards"*).
-            // This drew on a `fillFaint` slab INSIDE a presented sheet, which
-            // is a card on a card — the same shape §478 called out one level
-            // down and the same one §495 took out of the event sheet and the
-            // account detail. The row is a row.
-            .padding(.vertical, DS.Space.s2)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-
-        if let onScope {
-            Button {
-                DSHaptic.selection()
-                onScope(item.address)
-            } label: { body }
-                .buttonStyle(.plain)
-                .dsHover()
-        } else {
-            body
-        }
-    }
-
     // MARK: - 2. What it may do
 
     /// THE ANSWER THE SHEET IS OPENED WITH, promoted and captioned (§480). It
