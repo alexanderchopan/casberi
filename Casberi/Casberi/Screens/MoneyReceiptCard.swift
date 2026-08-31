@@ -72,7 +72,7 @@ struct MoneyReceiptCard: View {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(verbatim: receipt.lead)
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
                     if let party = receipt.party, !party.isEmpty {
                         Text(verbatim: party)
                             .dsText(.heading22).foregroundStyle(DS.textPrimary)
@@ -86,13 +86,13 @@ struct MoneyReceiptCard: View {
 
                 if let secondary = receipt.secondary {
                     Text(verbatim: secondary)
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 2)
                 }
 
                 Text(verbatim: receipt.sentence)
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s4)
             }

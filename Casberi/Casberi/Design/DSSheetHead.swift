@@ -125,14 +125,14 @@ struct DSSheetHead<Disc: View>: View {
             if let secondary {
                 Text(secondary)
                     .dsText(.callout15)
-                    .foregroundStyle(DS.textSecondary)
+                    .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 2)
             }
             if let sentence {
                 Text(sentence)
                     .dsText(.callout15)
-                    .foregroundStyle(DS.textSecondary)
+                    .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s4)
             }
