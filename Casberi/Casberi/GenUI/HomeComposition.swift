@@ -156,6 +156,15 @@ enum HomeComposition {
         "Layer 2", "Layer 3",                         // which layer a chain sits on
         "Stage 0", "Stage 1", "Stage 2",              // L2BEAT's own rung, not a subject
         "Milestone", "Stage",                         // which kind of record
+        // AWS bridge — landed without a ledger entry, so no prd § to cite here.
+        // "Alarm" and "Cost" are CloudWatch/Cost Explorer STATE labels stamped
+        // on a row, never what it's about (the Radicle/Walletbeat rule). "Arn"
+        // is NOT a `Thing.tags` value at all — this audit's STAMP regex matches
+        // any `tags:` parameter, and `AWSXML.textValues(in:tags:)` happens to
+        // name its own (unrelated) argument `tags` too. Ruled here rather than
+        // fixing the regex, since narrowing it to `Thing(` risks missing a real
+        // stamp built through a helper the same way.
+        "Alarm", "Cost", "Arn",
         ])
     }()
 
