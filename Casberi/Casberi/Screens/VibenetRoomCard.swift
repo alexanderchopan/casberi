@@ -204,6 +204,12 @@ struct VibenetRoomCard: View {
     /// for, and the room-wide shared-key facts the sheet's "Also on" line
     /// needs — all value types, captured at tap time.
     var onOpenKey: ((VibenetActor, VibenetAccountItem, [VibenetSharedKey]) -> Void)? = nil
+    /// AUTHORIZE A NEW KEY on the scoped account (prd §534) — same
+    /// can't-own-the-presentation reason as `onOpenKey`. Carries the account
+    /// and its current change-sequence standing, since composing the
+    /// `AuthorizeActor` batch needs both and this card already has them from
+    /// the same read that draws the scoped detail.
+    var onAuthorize: ((Data, UInt32, UInt32) -> Void)? = nil
     /// Scope the room to one account (2026-08-25, prd §476).
     ///
     /// **§469 deleted an `onScope` and it was right to.** That one fired from
@@ -534,6 +540,13 @@ struct VibenetRoomCard: View {
                     onOpenKey: onOpenKey.map { open in
                         { actor in open(actor, lead, VibenetKeyReuse.sharing(lead, in: fullItems)) }
                     },
+                    onAuthorize: onAuthorize.map { open in
+                        {
+                            guard let address = VibenetTransaction.data(fromHex: lead.address) else { return }
+                            let seq = lead.changeSequences
+                            open(address, seq?.localEpoch ?? 0, seq?.localSequence ?? 0)
+                        }
+                    },
                     newKeyIDs: keyChanges?.added ?? [])
             }
             if shows(.holdings) { holdingsCard }
@@ -838,6 +851,13 @@ struct VibenetRoomCard: View {
                 // and a 26pt chip is a mark, not a portrait.
                 showsFace: true,
                 onOpenKey: onOpenKey.map { open in { actor in open(actor, lead, shared) } },
+                onAuthorize: onAuthorize.map { open in
+                    {
+                        guard let address = VibenetTransaction.data(fromHex: lead.address) else { return }
+                        let seq = lead.changeSequences
+                        open(address, seq?.localEpoch ?? 0, seq?.localSequence ?? 0)
+                    }
+                },
                 // The card read the ledger and spent it; the detail draws the
                 // answer (prd §479). Reading it there instead would erase the
                 // marker while it was being shown.

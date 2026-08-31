@@ -435,6 +435,13 @@ struct FeedScreen: View {
         /// (prd §533). `account` is the value the Home scope's trigger
         /// already knows — this route never re-derives or looks one up.
         case vibenetSend(account: Data)
+        /// Authorizing a new key, or re-authorizing an existing one with a
+        /// different scope (prd §534) — the same route either way, since
+        /// `AuthorizeActor` is an upsert. `editing` is nil for a brand-new
+        /// key; carrying the actor being edited otherwise, so this route
+        /// never re-reads a value the caller already has on screen.
+        case vibenetAuthorize(account: Data, localEpoch: UInt32, localSequence: UInt32,
+                             editing: VibenetActor?)
 
         var id: String {
             switch self {
@@ -458,6 +465,8 @@ struct FeedScreen: View {
                 "vibenetKey:\(VibenetKeySeenDiff.keyID(address: item.address, actorId: actor.actorId))"
             case .vibenetCreate: "vibenetCreate"
             case .vibenetSend(let account): "vibenetSend:\(VibenetTransaction.hex(account))"
+            case .vibenetAuthorize(let account, _, _, let editing):
+                "vibenetAuthorize:\(VibenetTransaction.hex(account)):\(editing?.actorId ?? "new")"
             }
         }
     }
@@ -3336,7 +3345,17 @@ struct FeedScreen: View {
                                 // own detail is marked here too (prd §479).
                                 newKeyIDs: newKeyIDs)
         case .vibenetKey(let actor, let item, let shared):
-            VibenetKeySheet(actor: actor, item: item, sharedKeys: shared)
+            // A DIRECT swap, `onOpenSend`'s own precedent (Hegotá's key
+            // sheet routing straight to its send sheet) — both routes are
+            // bound through the same `feedSheet` item, so re-assigning it
+            // to a new identity is a replace, not a stacked present.
+            VibenetKeySheet(actor: actor, item: item, sharedKeys: shared, onEditScope: { editing in
+                guard let address = VibenetTransaction.data(fromHex: item.address) else { return }
+                let seq = item.changeSequences
+                feedSheet = .vibenetAuthorize(
+                    account: address, localEpoch: seq?.localEpoch ?? 0,
+                    localSequence: seq?.localSequence ?? 0, editing: editing)
+            })
         case .vibenetCreate:
             VibenetCreateSheet { address in
                 // Watching it is what puts it in the room — the sheet does
@@ -3363,6 +3382,9 @@ struct FeedScreen: View {
             }
         case .vibenetSend(let account):
             VibenetSendSheet(account: account)
+        case .vibenetAuthorize(let account, let epoch, let sequence, let editing):
+            VibenetAuthorizeSheet(account: account, localEpoch: epoch, localSequence: sequence,
+                                  editing: editing)
         }
     }
 
@@ -4392,6 +4414,11 @@ struct FeedScreen: View {
                                     },
                                     onOpenKey: { actor, item, shared in
                                         feedSheet = .vibenetKey(actor, item, shared)
+                                    },
+                                    onAuthorize: { account, epoch, sequence in
+                                        feedSheet = .vibenetAuthorize(
+                                            account: account, localEpoch: epoch,
+                                            localSequence: sequence, editing: nil)
                                     },
                                     onScope: vibenetScoper,
                                     // WHICH READING IS ON SCREEN (prd §482).

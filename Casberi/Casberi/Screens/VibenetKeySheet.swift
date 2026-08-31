@@ -62,6 +62,12 @@ struct VibenetKeySheet: View {
     /// re-composes behind this sheet, and asking for that while it is still up
     /// lands the change under a covered screen.
     var onScope: ((String) -> Void)? = nil
+    /// EDIT THIS KEY'S SCOPE (prd §534) — `AuthorizeActor` called again on
+    /// the same actorId, `VibenetSend.authorizeActor`'s own doc has the
+    /// upsert citation. nil where this phone cannot sign for the account at
+    /// all — `thisPhoneIsAdmin`'s own gate, so the door never opens onto a
+    /// sheet that can only fail.
+    var onEditScope: ((VibenetActor) -> Void)? = nil
 
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
@@ -342,6 +348,28 @@ struct VibenetKeySheet: View {
             door(String(localized: "Copy account"), symbol: "wallet.pass") {
                 DSPasteboard.copySensitive(item.address)
             }
+            // EDIT PERMISSIONS (prd §534) — gated on `thisPhoneIsAdmin`, not
+            // always drawn: `AuthorizeActor` is admin-only
+            // (`Keystore.applySignedAccountChanges` requires the SIGNER'S
+            // scope to be 0), so a door here on an account this phone
+            // cannot administer would open a sheet that could only fail.
+            if let onEditScope, thisPhoneIsAdmin {
+                door(String(localized: "Edit permissions"), symbol: "slider.horizontal.3") {
+                    onEditScope(actor)
+                }
+            }
+        }
+    }
+
+    /// Whether THIS PHONE'S own key is an unrestricted admin on `item` — the
+    /// client-side half of the gate `Keystore.applySignedAccountChanges`
+    /// enforces on-chain (scope must be exactly 0). Checked against the
+    /// account's own actor list rather than assumed: a phone that watches
+    /// many accounts is admin on some and a bystander on others.
+    private var thisPhoneIsAdmin: Bool {
+        guard let ours = VibenetDeviceKey.actorID()?.lowercased() else { return false }
+        return item.actors.contains {
+            $0.actorId.lowercased() == ours && $0.scope.isAdmin
         }
     }
 

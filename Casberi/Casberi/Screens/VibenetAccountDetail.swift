@@ -74,6 +74,12 @@ struct VibenetAccountDetail: View {
     /// plain read with NO chevron — a disclosure pointing at a sheet that
     /// cannot exist is the dead control §83 bans.
     var onOpenKey: ((VibenetActor) -> Void)? = nil
+    /// AUTHORIZE A NEW KEY on this account (prd §534) — nil where the caller
+    /// cannot present the sheet (this row is scoped to one account, so it
+    /// can only ever appear from a context that already knows which one) or
+    /// where this phone cannot sign for the account at all, matching
+    /// `onOpenKey`'s own no-dead-control rule.
+    var onAuthorize: (() -> Void)? = nil
     /// Keys this device is seeing for the FIRST time, as
     /// `VibenetKeySeenDiff.keyID`s (prd §479).
     ///
@@ -586,6 +592,35 @@ struct VibenetAccountDetail: View {
                 // account, reading the same `VibenetKeyTray.census` so a chip
                 // here and a chip there can never disagree about a count.
                 keyFilterStrip
+            }
+            // AUTHORIZE LEADS THE LIST (prd §534, the `createAccountRow`
+            // ruling one screen over: "a verb under a roster of twenty is a
+            // verb nobody finds"). Gated on `onAuthorize` rather than always
+            // drawn — a button that opens a sheet only this phone's key
+            // could ever complete, shown on an account this phone cannot
+            // sign for, is the dead control §83 bans.
+            if let onAuthorize {
+                Button {
+                    DSHaptic.selection()
+                    onAuthorize()
+                } label: {
+                    HStack(spacing: DS.Space.s3) {
+                        ZStack {
+                            Circle().fill(Self.mark.opacity(0.18))
+                                .frame(width: DS.Mark.row, height: DS.Mark.row)
+                            Image(systemName: "plus")
+                                .dsGlyph(12, weight: .semibold)
+                                .foregroundStyle(Self.mark)
+                        }
+                        Text(String(localized: "Authorize a key…"))
+                            .dsText(.heading17)
+                            .foregroundStyle(DS.textPrimary)
+                        Spacer(minLength: DS.Space.s2)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .dsHover()
             }
             ForEach(VibenetKeyGrouping.sections(filteredActors)) { section in
                 VStack(alignment: .leading, spacing: DS.Space.s3) {

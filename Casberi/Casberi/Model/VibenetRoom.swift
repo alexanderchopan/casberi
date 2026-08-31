@@ -95,6 +95,24 @@ struct VibenetScope: Equatable, Codable {
         (nonce,        "Nonce",         "Order its own sends"),
     ]
 
+    /// THE PICKER'S NAMED COMBINATIONS (prd §534) — the same six presets
+    /// Base's own console offers when authorizing or editing a key, over the
+    /// CORRECTED bit values above. Presets rather than five raw toggles: the
+    /// bits combine in ways that mean something as pairs ("Send + pay gas"
+    /// is a self-funding agent key) and a bare checkbox grid would ask
+    /// someone to already know that. `POLICY` is deliberately absent — a
+    /// gated key needs a manager/commitment this sheet does not compose
+    /// (Subscriptions' own build), so offering it here would be a control
+    /// that signs something incomplete.
+    static let presets: [(name: String, raw: UInt16)] = [
+        (String(localized: "Full control"),          0),
+        (String(localized: "Send only"),              sender),
+        (String(localized: "Send + pay gas"),         sender | selfPayer),
+        (String(localized: "Pay gas only"),           selfPayer),
+        (String(localized: "Sponsor only"),           sponsorPayer),
+        (String(localized: "Send + sequenced nonce"), sender | nonce),
+    ]
+
     /// SCOPE ZERO IS UNRESTRICTED, NOT EMPTY (prd §463) — the spec is explicit: "A value
     /// of `0x00` means unrestricted (admin), while non-zero values grant only
     /// specific contexts." This file shipped believing the opposite, calling
