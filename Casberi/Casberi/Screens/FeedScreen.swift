@@ -3884,9 +3884,21 @@ struct FeedScreen: View {
             guard source != "All", !Pinboard.isPinnedRoom(source), scenePhase == .active
             else { return }
             if things.isEmpty {
-                guard let raw = try? modelContext.fetch(FetchDescriptor<Thing>(
-                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))
-                else { return }
+                // BOUNDED, and the bound is load-bearing (2026-08-31): a
+                // legitimately empty source room is the COMMON case, not a
+                // rare one — a quiet bridge (Polar with no disputes,
+                // Cloudflare with nothing expiring) is empty by design and
+                // for life. An unbounded `fetch()` here would therefore walk
+                // the WHOLE corpus on every foreground of every such room,
+                // which is precisely the "materialised six thousand rows to
+                // draw thirty" regression this file has already paid for
+                // once. Capped at the same limit the All room's own query
+                // uses; a source whose rows all sit past that bound is not a
+                // shape this recovery can help anyway.
+                var descriptor = FetchDescriptor<Thing>(
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+                descriptor.fetchLimit = Self.allRoomFetchLimit
+                guard let raw = try? modelContext.fetch(descriptor) else { return }
                 let scoped = raw.filter { $0.source == source }
                 guard !scoped.isEmpty else { return }
                 sourceRoomFallbackSnapshot = scoped
