@@ -35,7 +35,11 @@ struct HegotaKeySheet: View {
     @State private var faucetFailed = false
     @State private var faucetBusy = false
 
-    private static let mark = HegotaModeStyle.room
+    // The app's own accent, not `HegotaModeStyle.room` — this sheet is an
+    // ordinary account/key screen, not a frame/vault reading, so it gets the
+    // same blue every other primary action in the app uses (user: "that
+    // cyan color blue or whatever it is... we don't use that anywhere else").
+    private static let mark = DS.tint
 
     private enum Phase: Equatable { case noKey, ready, working }
 

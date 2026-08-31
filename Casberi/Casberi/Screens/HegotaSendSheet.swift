@@ -25,29 +25,50 @@ struct HegotaSendSheet: View {
     @State private var errorText: String?
     @State private var sentHash: String?
 
-    private static let mark = HegotaModeStyle.room
+    // The app's own accent, not `HegotaModeStyle.room` (user: "that cyan
+    // color blue or whatever it is... we don't use that anywhere else") —
+    // this sheet is an ordinary send flow, not a frame/vault reading, so it
+    // gets the same blue every other primary action in the app uses.
+    private static let mark = DS.tint
 
     private enum Phase: Equatable { case form, done }
 
     private var phase: Phase { sentHash == nil ? .form : .done }
 
     var body: some View {
-        DSTray(title: String(localized: "Send test ETH"), height: trayHeight, ink: true) {
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                DSSheetHead(disc: { headDisc },
-                            stamp: headStamp,
-                            stampWeight: headStampWeight,
-                            title: headTitle,
-                            secondary: HegotaKey.address(),
-                            sentence: headSentence,
-                            inkCard: true)
-                switch phase {
-                case .form:
-                    formBody
-                case .done:
-                    doneBody
+        // SCROLLABLE, AND WIDENED (the `VibenetKeySheet` fix for the same
+        // class of bug, §480): a fixed height with no `ScrollView` clips
+        // dead — the head's two long sentences plus two labeled fields plus
+        // the Send button run past 460 on real device text metrics even with
+        // no error showing, so the button sat below the tray's own bottom
+        // edge with no way to reach it (user report: "the tray is clipped
+        // at top and won't reach to the bottom"). A `ScrollView` makes every
+        // reachable state reachable regardless of how the numbers are
+        // guessed, and `detents: [.height(trayHeight), .large]` gives a drag
+        // past the resting size for free — the same pair `VibenetKeySheet`
+        // already carries and this sheet, written the same week, did not.
+        DSTray(title: String(localized: "Send test ETH"), height: trayHeight, ink: true,
+               detents: [.height(trayHeight), .large]) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DS.Space.s4) {
+                    DSSheetHead(disc: { headDisc },
+                                stamp: headStamp,
+                                stampWeight: headStampWeight,
+                                title: headTitle,
+                                secondary: HegotaKey.address(),
+                                sentence: headSentence,
+                                inkCard: true)
+                    switch phase {
+                    case .form:
+                        formBody
+                    case .done:
+                        doneBody
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, DS.Space.s4)
             }
+            .scrollIndicators(.hidden)
         }
     }
 
