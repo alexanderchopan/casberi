@@ -238,7 +238,16 @@ enum HegotaSend {
                 .init(mode: 2, flags: 0x00, target: target,
                       executionGas: executionGas, stateGas: 0, value: valueWei, data: Data()),
             ],
-            signatures: [],
+            // The entry itself must be PRESENT when the digest is taken —
+            // only its `signature` bytes are elided (trap 2 in
+            // `HegotaTransaction`'s own doc). Leaving the whole array empty
+            // here and appending the entry only after signing hashes a
+            // DIFFERENT list than the one that gets broadcast — an empty
+            // `.list([])` versus a one-entry list whose signature field
+            // happens to be blank — so the node's own recomputed sigHash
+            // never matched what this phone signed, and every send came
+            // back "invalid frame transaction signature".
+            signatures: [.init(scheme: 1, signer: Data(), msg: Data(), signature: Data())],
             maxPriorityFeePerGas: maxPriorityFeePerGas,
             maxFeePerGas: maxFeePerGas,
             maxFeePerBlobGas: 0,
