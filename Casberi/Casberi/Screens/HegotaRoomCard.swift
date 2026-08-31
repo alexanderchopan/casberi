@@ -715,7 +715,7 @@ struct HegotaRoomFigure: View {
                         // parts of one total and the nesting is exactly true.
                         if scale == .linear, coinShare > 0 {
                             Capsule()
-                                .fill(Color(red: 0.30, green: 0.78, blue: 0.92))
+                                .fill(HegotaModeStyle.room)
                                 .frame(width: max(3, width * CGFloat(coinShare)))
                         }
                     }
@@ -728,7 +728,7 @@ struct HegotaRoomFigure: View {
                 // bar — visible, but far too small to read a figure off.
                 Text(String(localized: "\(HegotaFormat.eth(coins)) of it in \(String(unspent.count)) UTXOs"))
                     .dsText(.label12)
-                    .foregroundStyle(Color(red: 0.30, green: 0.78, blue: 0.92))
+                    .foregroundStyle(HegotaModeStyle.room)
                     .lineLimit(1)
             }
         }
