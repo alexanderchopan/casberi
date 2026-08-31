@@ -144,6 +144,13 @@ enum BridgeRouter {
         /// give it `finishesOnConnect == true` and dismiss the raised sheet the
         /// moment the key registered the seat.
         case stripe
+        /// Polar is a TokenBridge for its token and seat id, but its screen
+        /// has its own connected state (a revenue reading and what it
+        /// watches), so it takes its own Destination for Stripe's exact
+        /// reason — riding `.token` would give it `finishesOnConnect ==
+        /// true` and dismiss the raised sheet the moment the token
+        /// registered the seat.
+        case polar
         /// Sentry is a TokenBridge for its token and seat id, but its screen
         /// resolves a HOST and an ORGANIZATION before it can read anything —
         /// so it takes its own Destination for PostHog's reason: riding
@@ -365,6 +372,7 @@ enum BridgeRouter {
             case .appleWallet:    AppleWalletBridge.seatID
             case .posthog:        TokenBridge.posthog.bridgeID
             case .stripe:         TokenBridge.stripe.bridgeID
+            case .polar:          TokenBridge.polar.bridgeID
             case .sentry:         TokenBridge.sentry.bridgeID
             case .appStoreConnect: TokenBridge.appStoreConnect.bridgeID
             case .aws:             TokenBridge.aws.bridgeID
@@ -478,13 +486,15 @@ enum BridgeRouter {
         Row(offer: "Apple Wallet", id: AppleWalletBridge.seatID, destination: .appleWallet),
         Row(offer: "PostHog", id: "posthog", destination: .posthog),
         Row(offer: "Stripe", id: "stripe", destination: .stripe),
+        Row(offer: "Polar", id: "polar", destination: .polar),
         Row(offer: "Sentry", id: "sentry", destination: .sentry),
         Row(offer: "App Store Connect", id: "appstoreconnect", destination: .appStoreConnect),
         Row(offer: "AWS", id: "aws", destination: .aws),
         Row(offer: "npm",  id: "npm",  destination: .packages(.npm)),
         Row(offer: "PyPI", id: "pypi", destination: .packages(.pypi)),
     ] + TokenBridge.allCases.filter {
-        $0 != .posthog && $0 != .stripe && $0 != .sentry && $0 != .appStoreConnect && $0 != .aws
+        $0 != .posthog && $0 != .stripe && $0 != .polar && $0 != .sentry
+            && $0 != .appStoreConnect && $0 != .aws
     }.map {
         Row(offer: $0.rawValue, id: $0.bridgeID, destination: .token($0))
     }
@@ -689,6 +699,7 @@ struct BridgeDestinationView: View {
         case .appleWallet:    AppleWalletScreen()
         case .posthog:        PostHogScreen()
         case .stripe:         StripeScreen()
+        case .polar:          PolarScreen()
         case .sentry:         SentryScreen()
         case .appStoreConnect: AppStoreConnectScreen()
         case .aws:             AWSScreen()

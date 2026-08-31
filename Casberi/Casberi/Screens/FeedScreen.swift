@@ -4064,6 +4064,10 @@ struct FeedScreen: View {
                     StripeRoomCard(room: room) { item in
                         openBySourceRef(item.id, in: visible)
                     }
+                case .polar(let room):
+                    PolarRoomCard(room: room) { item in
+                        openBySourceRef(item.id, in: visible)
+                    }
                 case .posthog(let room):
                     PostHogRoomCard(room: room) { event in
                         openBySourceRef(PostHogWatch.metricRef(event), in: visible)
@@ -6285,6 +6289,7 @@ struct FeedScreen: View {
     private enum SourceHead {
         case runway(CloudflareRunway)
         case stripe(StripeRoom)
+        case polar(PolarRoom)
         case posthog(PostHogRoom)
         case appleWallet(AppleWalletRoom.Card)
         case x402(X402Room)
@@ -6405,6 +6410,8 @@ struct FeedScreen: View {
             return CloudflareRunwaySource.compose(things: visible).map { .runway($0) }
         case "Stripe":
             return StripeRoomSource.compose(things: visible).map { .stripe($0) }
+        case "Polar":
+            return PolarRoomSource.compose(things: visible).map { .polar($0) }
         case "PostHog":
             return PostHogRoomSource.compose(things: visible).map { .posthog($0) }
         case AppleWalletBridge.sourceName:

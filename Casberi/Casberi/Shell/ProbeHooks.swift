@@ -1152,6 +1152,15 @@ enum ProbeHooks {
         Hook(key: "stripeProbe") { _, _ in
             Task { await StripeIngest.probe() }
         },
+        // `-polarProbe YES` reads the STORED Polar token (connect first via
+        // `-tokenBridge "Polar:<token>"`) and NSLogs the RAW shapes —
+        // per-endpoint status, the resolved organization, the MRR reading,
+        // and one `polarRow|` line per refund/dispute/subscription with the
+        // title it would land wearing. The measure tool for an UNMEASURED
+        // API. Reads only, and never advances the tracked-status maps.
+        Hook(key: "polarProbe") { _, _ in
+            Task { await PolarIngest.probe() }
+        },
         // `-dodoPaymentsProbe YES` reads the STORED Dodo Payments key
         // (connect first via `-tokenBridge "Dodo Payments:<live_…>"`) and
         // NSLogs the RAW shapes per endpoint — HTTP status, and one line per
@@ -1174,6 +1183,14 @@ enum ProbeHooks {
         Hook(key: "stripeRoomProbe") { _, context in
             for line in StripeRoomSource.probeLines(context: context) {
                 NSLog("[Casberi] stripeRoom| %@", line)
+            }
+        },
+        // `-polarRoomProbe YES` — the Polar ROOM HEAD's reading, line by
+        // line (2026-08-30). Spends nothing: it composes the card off
+        // landed rows and the stored reading, exactly as the room does.
+        Hook(key: "polarRoomProbe") { _, context in
+            for line in PolarRoomSource.probeLines(context: context) {
+                NSLog("[Casberi] polarRoom| %@", line)
             }
         },
         // `-posthogRoomProbe YES` — the same for PostHog's head. Pairs with

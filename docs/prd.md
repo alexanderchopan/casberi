@@ -40267,3 +40267,101 @@ only proof the ladder's arithmetic is right, the same ceiling `WalletbeatRating`
 and `L2beatRating` state about a third party's live registry. Built on Linux
 with no Xcode; verified to compile clean against the full iOS Simulator target
 the same day.
+
+## 535. Polar becomes a room — Stripe's doctrine applied to a second Merchant of Record (user: "look at polar.sh can we add that as a room", 2026-08-30)
+
+**Polar is a developer-first Merchant of Record — the "Stripe alternative"
+indie SaaS founders and open-source maintainers increasingly bill through —
+and it gets Stripe's exact bespoke treatment (`Model/PolarBridge.swift`,
+`PolarRoom.swift`, `PolarRoomSource.swift`, `Screens/PolarScreen.swift`,
+`PolarRoomCard.swift`), not Dodo Payments' generic `TokenSetupScreen` tier.
+The word "room" in the ask is what decided that: Stripe/PostHog/AWS/Cursor's
+bespoke head-and-rail treatment is what this codebase calls a room, and
+Dodo's plain paste-a-key screen is not one.**
+
+**Grouped Work, deliberately not Wallet like `Dodo Payments` (moved there
+the same day, §"Dodo Payments moves to Wallet"). The two are the same
+CATEGORY of product and belong in different groups because they have
+different BEHAVIOR**: Dodo lands every succeeded payment ("money in reach
+reads like card spending"), Polar follows Stripe's doctrine of landing
+nothing but rare, money-moving alarms. The group follows the behavior, not
+the category label — the test for any future MoR bridge is which of these
+two shapes it actually takes.
+
+**The doctrine carries over whole, with one real structural difference found
+by reading Polar's own SDK source rather than assumed from Stripe's shape:
+Polar has no dedicated disputes endpoint at all.** A chargeback arrives
+nested on the Refund it produced (`RefundDispute`, on `Refund.dispute`) —
+but the SHAPE inside it is Stripe's, field for field: a status
+(`prevented`/`early_warning`/`needs_response`/`under_review`/`won`/`lost`),
+an evidence deadline (`evidence_due_by`), a resolution. So the flagship row
+— a dispute with a `dueAt` the room's rail draws — survives intact; only
+where it's READ from moved. Four shapes land, not Stripe's five (no
+payout-to-your-bank read: Polar's payout schedule is not a queryable
+resource, unlike Stripe's `/v1/balance`): a dispute opened, a dispute
+closed, a refund succeeded or failed, and a subscription entering or leaving
+one of four unhealthy statuses (`past_due`/`canceled`/`unpaid`/
+`incomplete_expired`) — collapsed to a healthy/unhealthy line rather than
+Stripe's binary canceled/failed, since Polar's own status enum is richer.
+Deliberately NOT built this pass, unlike Stripe: the payments-silence alarm
+and the payout-runway alert, both real but DATED additions Stripe earned
+over two separate sessions rather than core to landing a room at all —
+either can follow the identical precedent later if this bridge earns it.
+
+**Read-only by SCOPE, and narrower than Stripe's own six-scope checklist**:
+this bridge needs exactly three — `refunds:read`, `subscriptions:read`, and
+`organizations:read` (a nicety, for the name only) — no `orders:read` at
+all, because no individual order is ever read, mechanically guarded by
+`scripts/polar-selftest.sh`'s doctrine check (a comment-stripped grep for
+`polar:order:` and for `/v1/orders` outside validation). **No test-mode key
+to refuse, and that is a STRONGER guarantee than Stripe's `rk_test_`/
+`sk_test_` prefix check, not a missing one**: Polar's sandbox is a wholly
+separate host (`sandbox-api.polar.sh`) with its own token namespace, so a
+sandbox token simply 401s against `api.polar.sh` — the host boundary does
+what Stripe's prefix sniff exists to do.
+
+**The state reading is Monthly Recurring Revenue, not a cash balance** —
+Polar is subscription-first, so MRR (read off `/v1/metrics`'s `totals` for a
+single-day range, behind the same §216 ten-minute window Stripe's balance
+uses) is the figure that answers "how is this doing right now", the same
+substitution `StripeState`'s own doc makes explicit is a choice. Active
+subscriber count rides the same read. Both are UNMEASURED guesses pending a
+live probe: whether `monthly_recurring_revenue` is minor-unit cents
+(assumed, matching every other amount field on the wire) or already a major-
+unit decimal, and the nested `customer`/`product` object field names.
+
+**Costs nothing new to run.** No new `Thing` field — `dueAt`/`priceValue`/
+`priceCurrency`/`tags`/`sourceRef` are all existing, so no CloudKit
+Production deploy. `api.polar.sh`/`polar.sh` join the reach registry.
+Guarded by `scripts/polar-selftest.sh` (in `verify.sh`): `PolarRoom.swift`
+compiled WHOLE and unmodified (Foundation-only by design, so — unlike
+AWS's SigV4 pieces — no extraction is needed at all), ~45 assertions, 4
+mutations, plus the doctrine and conduct guards over a comment-stripped copy
+of `PolarBridge.swift` (the Obsidian/Cursor lesson: the type doc documents
+the no-individual-orders rule by naming the ref shape it must never build,
+so a guard on raw source would fire against the prose explaining it). The
+harness's own first run caught a real defect before this shipped: `note()`
+showed the ACTIVE SUBSCRIBER count in the branch where a dispute deadline
+already leads the headline — the wrong fact repeated instead of the MRR
+figure the headline hadn't yet said, `StripeRoom`'s "never a restatement"
+rule broken in its very first port. Fixed to show MRR when a deadline
+leads and subscribers when MRR leads, matching Stripe's balance/in-flight
+split exactly.
+
+**Not wired into the demo (`DemoSeedAll`) or `-roomInsightProbe`'s
+same-day parity check, matching AWS's own precedent (added hours earlier the
+same day, also unseeded) rather than an oversight** — demo parity for a
+fresh bridge has repeatedly been a follow-up pass in this codebase's own
+history (§386's figure-kind coverage, §484's rowless-seat check), not a
+same-day requirement, and AWS is the freshest evidence of where the current
+bar actually sits.
+
+**UNMEASURED against a live account (2026-08-30)** — built from Polar's
+public API reference and its `polar-js` SDK's TypeScript model sources (read
+for exact field names on GitHub, never copied — the wire is snake_case, the
+SDK camelCases on decode), with no token stored and no egress to
+`api.polar.sh` from this build host. Every read is a GET, every failure path
+returns nil, and the conduct guard fails the build on any write verb. Built
+on Linux with no Xcode; verified to compile clean against the full iOS
+Simulator target the same day (`xcodebuild … build` — BUILD SUCCEEDED, no
+warnings in the new files).

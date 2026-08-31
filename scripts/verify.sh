@@ -875,6 +875,16 @@ harness "App Store Connect pure-logic self-test" "app store connect self-test" "
 # may issue only Describe*/List*/Get* actions, mechanically, not by memory.
 harness "AWS pure-logic self-test" "aws self-test" "scripts/aws-selftest.sh" "the AWS logic self-test failed — run scripts/aws-selftest.sh"
 
+# Polar (2026-08-30) — Stripe's exact room-head shape applied to a second
+# Merchant of Record. Neither bridge has ever run against a live account, and
+# the failure mode is always a SILENT WRONG ANSWER: a dispute deadline placed
+# at the wrong point on the rail, an overdue window sorted last, a genuinely
+# zero MRR reading as "never read" — see the harness's own header. Also
+# guards the DOCTRINE: no individual order may ever be read for landing,
+# the whole reason this bridge follows Stripe's rule rather than Dodo
+# Payments'.
+harness "Polar pure-logic self-test" "polar self-test" "scripts/polar-selftest.sh" "the Polar logic self-test failed — run scripts/polar-selftest.sh"
+
 harness "Circle x402 pure-logic self-test" "x402 self-test" "scripts/x402-selftest.sh" "the x402 logic self-test failed — run scripts/x402-selftest.sh"
 
 # The contract between the app and its Home Screen (prd §382, 2026-08-14).

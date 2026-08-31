@@ -103,6 +103,7 @@ extension DS {
         // OpenRouter and Linear fell to the default gray on every wash surface
         // (audit, 2026-07-31). Each is icon-sampled from its own bundled mark.
         case "stripe":              return Color.fixed("#635bff")   // their documented indigo; the bundled mark samples #6050f0 against it
+        case "polar":               return Color.fixed("#3619cc")   // "Ether" — polar.sh/brand's one accent in an otherwise monochrome system
         // PostHog's mark is the hedgehog on a white field, but unlike ChatGPT's
         // white-IS-the-identity case this is a logo-on-white lockup — the brand
         // is the orange. Their documented primary; the mark's own saturated

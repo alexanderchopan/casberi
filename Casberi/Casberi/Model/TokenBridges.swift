@@ -20,6 +20,13 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     case oneclaw  = "1Claw"
     case posthog  = "PostHog"
     case stripe   = "Stripe"
+    /// Polar (2026-08-30) — a developer-first Merchant of Record, Stripe's
+    /// doctrine exactly (see `PolarAccount`'s type doc): only money whose
+    /// MOVEMENT is the news lands, never an individual payment. Grouped
+    /// **Work**, deliberately not Wallet like `dodoPayments` below — the
+    /// group follows the BEHAVIOR (alarms rarely vs. lands every payment),
+    /// not the category.
+    case polar    = "Polar"
     /// A Merchant-of-Record payment processor — the "Stripe alternative"
     /// indie/AI-first products bill through. See `DodoPaymentsAccount`'s type
     /// doc for why this bridge lands every payment (unlike Stripe's own
@@ -67,6 +74,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .oneclaw:  "oneclaw"
         case .posthog:  "posthog"
         case .stripe:   "stripe"
+        case .polar:    "polar"
         case .dodoPayments: "dodopayments"
         case .trello:   "trello"
         case .cloudflare: "cloudflare"
@@ -108,6 +116,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .oneclaw:   URL(string: "https://1claw.xyz")
         case .posthog:   URL(string: "https://us.posthog.com/settings/user-api-keys")
         case .stripe:    URL(string: "https://dashboard.stripe.com/apikeys")
+        // Polar's own redirect helper — resolves to the signed-in org's
+        // settings without needing that org's slug, which isn't known until
+        // after a token exists. The token itself lives under a "Developers"
+        // section on that page (named in the step below).
+        case .polar:     URL(string: "https://polar.sh/to/dashboard/settings")
         // The dashboard ROOT, Cursor's exact reasoning: no per-tab path is
         // confirmed (the docs describe "Developer → API Keys" in prose, never
         // a URL), and a door that 404s is worse than one that needs a tab
@@ -171,7 +184,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
              .vercel, .sentry, .jira, .cloudflare:
             String(localized: "Get your token")
         case .calcom, .linear, .bitrefill, .privacy, .oneclaw, .posthog,
-             .stripe, .trello, .cursor, .pagerduty, .appStoreConnect,
+             .stripe, .polar, .trello, .cursor, .pagerduty, .appStoreConnect,
              .dodoPayments:
             String(localized: "Get your API key")
         case .aws:
@@ -248,6 +261,13 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // failure sentence explains at the moment it actually matters.
         case .stripe: [
             "Create a RESTRICTED key with only these reads:",
+            "Copy it and paste it below."]
+        // The three scopes are NOT named here — Stripe's/PostHog's exact
+        // reasoning: this bridge owns its own screen and renders a
+        // `DSCheckList` under this step, so naming them twice is §220's "a
+        // step that was already on screen twice".
+        case .polar: [
+            "Scroll to Developers → New Token, and tick only these scopes:",
             "Copy it and paste it below."]
         // The read-only box IS named here, the Cloudflare/PagerDuty reason: a
         // `.token` bridge renders the generic `TokenSetupScreen`, which has
@@ -364,6 +384,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .oneclaw:  "ocv_…"
         case .posthog:  "phx_…"
         case .stripe:   "rk_live_…"
+        // No confirmed prefix from Polar's docs — Organization Access
+        // Tokens are described in prose with no example string shown, so a
+        // guessed prefix would read as a validation rule (the Cursor/Vercel
+        // reasoning: a placeholder showing the wrong prefix reads as a rule
+        // and would have someone believing a perfectly good token is wrong).
+        case .polar:    "Organization access token"
         // No confirmed prefix from Dodo's docs (the Cursor/Vercel reasoning)
         // — the closest fact found is "typically prefixed live_" for a live
         // key, which "typically" is too weak to assert as a validation cue.
@@ -420,6 +446,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .oneclaw:  "agent key"
         case .posthog:  "personal API key"
         case .stripe:   "restricted key"
+        case .polar:    "organization access token"
         case .dodoPayments: "API key"
         case .trello:   "token"
         case .cloudflare: "API token"
@@ -450,6 +477,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .oneclaw:  "grants"
         case .posthog:  "updates"
         case .stripe:   "updates"
+        case .polar:    "updates"
         // Payments, refunds, disputes and subscription changes have no
         // shared noun — Stripe's/PostHog's own answer to the identical
         // problem.
@@ -541,6 +569,8 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             String(localized: "Paste a read-only key, watch the metrics you care about, and only what's news arrives: a milestone crossed, a metric falling silent, a deploy you annotated.")
         case .stripe:
             String(localized: "Paste a read-only key and the money that needs you keeps arriving — a dispute and its deadline, a payout, a cancelled subscription, a failed payment.")
+        case .polar:
+            String(localized: "Paste a read-only token and the money that needs you keeps arriving — a dispute and its deadline, a refund, a subscription leaving a healthy state.")
         case .dodoPayments:
             String(localized: "Paste a read-only key and every payment you receive keeps arriving, along with refunds, disputes, and subscriptions that need attention. Nothing here charges, refunds, or cancels anything.")
         case .trello:
@@ -602,6 +632,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .oneclaw:  "Reads which vaults and secret paths the key can reach — names and permissions only. Nothing here ever reads a secret's value, signs, or spends."
         case .posthog:  "Reads the metrics you watch and your project's annotations. The key is scoped read-only — it cannot ship a flag, edit a dashboard, or write anything back."
         case .stripe:   "Reads disputes, payouts, canceled subscriptions, failed payments, and your balance. The restricted key is read-only — it cannot refund, charge, or pay out."
+        case .polar:    "Reads refunds, disputes, subscriptions leaving a healthy state, and your recurring revenue. The token is scoped read-only — it cannot refund, cancel a subscription, or create anything."
         case .dodoPayments: "Reads your payments as they succeed, plus refunds, disputes, and subscriptions leaving a healthy state. The key is read-only — it cannot charge, refund, or cancel anything."
         // The read-only promise here is the strongest of any bridge in this
         // file, because Casberi MINTS it rather than asking you to: the
@@ -677,6 +708,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // one without this sentence.
         case .dodoPayments:
             String(localized: "Dodo Payments answered — nothing in the last 30 days. Payments land as they succeed, so a new or quiet product can read empty for a while.")
+        // Stripe's own reason, unchanged: nothing lands until a dispute, a
+        // refund, or a subscription leaves a healthy state, so a healthy
+        // account reads exactly like a refused token without this.
+        case .polar:
+            String(localized: "Polar answered — nothing needs attention. Only disputes, refunds, and subscriptions leaving a healthy state land, so an empty read means everything is quiet.")
         // Cloudflare earns one for the opposite reason to Trello's: here empty
         // is the GOOD outcome and by far the most common one, and it is exactly
         // as silent as a refused token. Nothing lands until something is close
@@ -756,6 +792,10 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .oneclaw:   OneClawAccess.clear()
         case .posthog:   PostHogAccount.clear()
         case .stripe:    StripeAccount.clear()
+        // Cleared on BOTH callers, Stripe's exact reasoning: the tracked
+        // dispute/subscription status maps are readings against ONE
+        // organization, and a fresh token may name a different one.
+        case .polar:     PolarAccount.clear()
         // Cleared on BOTH callers, Stripe's/Cloudflare's reasoning: the
         // tracked dispute/subscription status maps are readings against ONE
         // account, and a fresh key may name a different one — diffing a new
@@ -1103,6 +1143,13 @@ enum TokenIngest {
         // STATE), and it sets `dueAt` on two of its shapes, which the generic
         // path has no notion of.
         if bridge == .stripe { return await StripeIngest.refresh(context: context) }
+        // Polar owns its whole pass for Stripe's exact reason: it reads
+        // refunds (diffed for their nested disputes) and a status-filtered
+        // subscription page rather than mirroring one incoming list, plus a
+        // revenue reading behind a freshness window (§216), and it sets
+        // `dueAt` on its dispute shape, which the generic path has no notion
+        // of.
+        if bridge == .polar { return await PolarIngest.refresh(context: context) }
         // Dodo Payments owns its whole pass, Stripe's reason from a different
         // angle: it reads four plain LISTS (no event log Dodo exposes), so it
         // diffs two of them against a locally tracked status map rather than
@@ -1250,6 +1297,7 @@ enum TokenIngest {
         // is what makes a future bridge impossible to add without deciding.
         case .posthog:  ownSweepUnreachable(.posthog)
         case .stripe:   ownSweepUnreachable(.stripe)
+        case .polar:    ownSweepUnreachable(.polar)
         case .dodoPayments: ownSweepUnreachable(.dodoPayments)
         case .sentry:   ownSweepUnreachable(.sentry)
         case .pagerduty: ownSweepUnreachable(.pagerduty)
