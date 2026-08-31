@@ -18,13 +18,27 @@ import SwiftData
 /// away; **Do** drops it and confirms first. Which verb you tap is a fact you
 /// know and we do not.
 ///
-/// ## THE CONFIRMATION READS BACK YOUR WORDS
+/// ## THE CONFIRMATION READS BACK YOUR WORDS, IN THE THREAD
 ///
 /// Bankr replies in sentences, so nothing here can state what a job WILL do
 /// before it does it. A sheet reading "1.0 ETH → 3,200 USDC" would be a number
 /// this app invented. It shows the instruction as typed and says plainly that
 /// Bankr decides the rest — which is the honest ceiling until `-bankrProbe`
 /// measures whether the job envelope carries anything structured.
+///
+/// It is drawn INLINE, where the answer will land, and NOT as a
+/// `confirmationDialog` (user, 2026-08-31: "i don't know why a sheet popups up
+/// in 'tell bankr'. all of this could be done on the screen"). A system dialog
+/// covers the conversation the instruction refers to — the one thing worth
+/// re-reading before you spend money — and it arrives in the OS's voice rather
+/// than this app's.
+///
+/// ## THE TURNS ARE A DOCUMENT, NOT BUBBLES
+///
+/// Flat on ink, the composer's own grammar (§532's ramp): your instruction is a
+/// heading, Bankr's reply is body, and provenance is the caption beneath it.
+/// They wore `.ultraThinMaterial` until 2026-08-31, which is glass on CONTENT —
+/// banned by the design law, which keeps glass to the floating layer.
 ///
 /// ## AN ACT LEAVES A RECEIPT, AN ANSWER DOES NOT
 ///
@@ -36,6 +50,7 @@ import SwiftData
 /// things that happened.
 struct BankrChatScreen: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var draft = ""
     @State private var turns: [Turn] = []
@@ -45,6 +60,8 @@ struct BankrChatScreen: View {
     /// Seconds into the current poll — the only progress an async job has to
     /// show, since there's no partial text to stream. Reset per send.
     @State private var elapsedSeconds = 0
+    /// Drives the mark's breathe while a job runs. Off under Reduce Motion.
+    @State private var breathing = false
 
     private var configured: Bool { AgentKey.isConfigured(.bankr) }
     private var armed: Bool {
@@ -74,6 +91,7 @@ struct BankrChatScreen: View {
                     ForEach(turns) { turn in
                         bubble(turn).id(turn.id)
                     }
+                    if let p = pending { confirmBlock(p).id(confirmAnchor) }
                     if inFlight { thinking }
                 }
                 .padding(.horizontal, DS.Space.s4)
@@ -83,25 +101,21 @@ struct BankrChatScreen: View {
                 guard let last = turns.last else { return }
                 withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo(last.id, anchor: .bottom) }
             }
+            // The confirm lands below the fold on a long thread, and an offer
+            // you cannot see is the dead control §83 bans.
+            .onChange(of: pending) {
+                guard pending != nil else { return }
+                withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo(confirmAnchor, anchor: .bottom) }
+            }
         }
         .safeAreaInset(edge: .bottom) { composer }
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
         .dsScreenTitle("Bankr")
-        .confirmationDialog("Let Bankr do this?",
-                            isPresented: Binding(get: { pending != nil },
-                                                 set: { if !$0 { pending = nil } }),
-                            titleVisibility: .visible) {
-            Button("Send it", role: .destructive) { if let p = pending { pending = nil; send(p, acting: true) } }
-            Button("Cancel", role: .cancel) { pending = nil }
-        } message: {
-            // The instruction as typed, then the ceiling. Never a parsed
-            // amount — see the type's own doc comment.
-            Text(verbatim: "\(pending ?? "")\n\n") +
-            Text("Bankr acts on this with your key. Casberi can't check what it will do first, and can't undo it.")
-        }
     }
+
+    private var confirmAnchor: String { "bankr.confirm" }
 
     // MARK: - The head
 
@@ -121,45 +135,150 @@ struct BankrChatScreen: View {
 
     // MARK: - Turns
 
-    private func bubble(_ turn: Turn) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            HStack(spacing: DS.Space.s2) {
-                Text(label(for: turn)).dsText(.subhead13).fontWeight(.semibold)
-                    .foregroundStyle(tint(for: turn))
-                Spacer(minLength: 0)
+    /// Flat on ink. Your instruction is the heading, Bankr's reply is the body,
+    /// and who answered is the caption underneath — the composer's own anatomy,
+    /// so the two conversation surfaces in this app read as one product.
+    @ViewBuilder private func bubble(_ turn: Turn) -> some View {
+        switch turn.voice {
+        case .you:
+            VStack(alignment: .leading, spacing: 2) {
+                // An act is marked on the turn itself: a transcript where an
+                // instruction and a question look the same cannot be audited
+                // afterwards.
+                if turn.acted {
+                    Text("You told Bankr to do this")
+                        .dsText(.label12).foregroundStyle(DS.attention)
+                }
+                Text(turn.text)
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
+                    .textSelection(.enabled)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+        case .bankr:
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text(turn.text)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .textSelection(.enabled)
+                provenance(acted: turn.acted)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+        case .trouble:
             Text(turn.text)
-                .dsText(.callout15)
-                .foregroundStyle(turn.voice == .trouble ? DS.attention : .primary)
+                .dsText(.body17)
+                .foregroundStyle(DS.attention)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(DS.Space.s3)
-        .background(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-            .fill(.ultraThinMaterial))
     }
 
-    private func label(for turn: Turn) -> String {
-        switch turn.voice {
-        case .you:     turn.acted ? String(localized: "You asked Bankr to do this")
-                                  : String(localized: "You")
-        case .bankr:   turn.acted ? String(localized: "Bankr — what it did")
-                                  : String(localized: "Bankr")
-        case .trouble: String(localized: "Didn't go through")
+    /// The composer's badge, worded for this screen. An act says what it DID,
+    /// because a receipt landed for it and an answer leaves nothing behind.
+    private func provenance(acted: Bool) -> some View {
+        HStack(spacing: DS.Space.s1) {
+            Image(systemName: acted ? "checkmark.seal" : "key.fill")
+                .dsGlyph(10, weight: .regular)
+            Text(acted ? "Bankr ran this with your key — kept in your things"
+                       : "Answered with your key · via Bankr")
         }
+        .dsText(.label12)
+        .foregroundStyle(DS.textTertiary)
     }
 
-    private func tint(for turn: Turn) -> Color {
-        switch turn.voice {
-        case .you:     turn.acted ? DS.attention : DS.textTertiary
-        case .bankr:   DS.textTertiary
-        case .trouble: DS.attention
-        }
-    }
-
+    /// THE MARK CARRIES THE LIVENESS (user, 2026-08-31: "are we to have bankr
+    /// logo next to 'working' b/c that looks cool"). The brand mark breathes
+    /// while the job runs, so the logo IS the status light and there is no
+    /// second blinking dot beside it — one indicator, not two.
+    ///
+    /// The elapsed count is the only progress an async job has to show: there
+    /// is no partial text to stream, and a poll that says nothing for ninety
+    /// seconds reads as a hang.
     private var thinking: some View {
-        Text(elapsedSeconds > 0 ? "Working… (\(elapsedSeconds)s)" : "Working…")
-            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+        HStack(spacing: DS.Space.s2) {
+            ZStack {
+                Circle()
+                    .fill(DS.fillFaint)
+                    .frame(width: DS.Face.row + 8, height: DS.Face.row + 8)
+                    .scaleEffect(breathing ? 1 : 0.82)
+                    .opacity(breathing ? 0.9 : 0.35)
+                BridgeIcon(name: "Bankr", size: DS.Face.row, circular: true)
+            }
+            .frame(width: DS.Face.row + 8, height: DS.Face.row + 8)
+            .animation(reduceMotion ? nil
+                       : .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
+                       value: breathing)
+            .onAppear { breathing = true }
+            .onDisappear { breathing = false }
+            .accessibilityHidden(true)
+
+            Text("Bankr is working")
+                .dsText(.heading17)
+                .foregroundStyle(DS.textPrimary)
+            Spacer(minLength: 0)
+            if elapsedSeconds > 0 {
+                Text(elapsed)
+                    .dsText(.heading17)
+                    .monospacedDigit()
+                    .foregroundStyle(DS.textPrimary)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(elapsedSeconds > 0
+                            ? Text("Bankr is working, \(elapsedSeconds) seconds")
+                            : Text("Bankr is working"))
+    }
+
+    /// m:ss — a bare seconds count past a minute reads as an error code.
+    private var elapsed: String {
+        String(format: "%d:%02d", elapsedSeconds / 60, elapsedSeconds % 60)
+    }
+
+    // MARK: - The confirm, in the thread
+
+    /// Drawn where the answer will land, never as a system dialog. It reads
+    /// back the instruction AS TYPED and states the ceiling: Bankr decides what
+    /// it does, and neither half of that can be checked here beforehand.
+    private func confirmBlock(_ instruction: String) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Text("Do it?")
+                .dsText(.heading17)
+                .foregroundStyle(DS.textPrimary)
+            Text(instruction)
+                .dsText(.body17)
+                .foregroundStyle(DS.textPrimary)
+                .textSelection(.enabled)
+            Text("Sent as written. Bankr decides what it does — Casberi can't check it first, or undo it.")
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+            HStack(spacing: DS.Space.s2) {
+                confirmVerb("Send it", filled: true) {
+                    pending = nil
+                    send(instruction, acting: true)
+                }
+                confirmVerb("Not now", filled: false) { pending = nil }
+            }
+            .padding(.top, DS.Space.s1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func confirmVerb(_ title: String, filled: Bool, action: @escaping () -> Void) -> some View {
+        Button {
+            DSHaptic.tap()
+            action()
+        } label: {
+            Text(title)
+                .dsText(.heading17)
+                .foregroundStyle(filled ? DS.inkGround : DS.textPrimary)
+                .padding(.horizontal, DS.Space.s4)
+                .frame(minHeight: 40)
+                .background(Capsule(style: .continuous)
+                    .fill(filled ? DS.textPrimary : DS.fillStrong))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - The composer
@@ -171,10 +290,17 @@ struct BankrChatScreen: View {
                 .lineLimit(1...4)
                 .padding(DS.Space.s3)
                 .background(RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
-                    .fill(.ultraThinMaterial))
+                    .fill(DS.fillFaint))
             HStack(spacing: DS.Space.s2) {
                 verb("Ask", tint: DS.tint) { send(draft, acting: false) }
-                if canAct { verb("Do", tint: DS.attention) { pending = draft.trimmingCharacters(in: .whitespacesAndNewlines) } }
+                // Do never sends: it raises the confirm IN THE THREAD, and the
+                // draft is deliberately left in the field so "Not now" costs
+                // nothing to recover from.
+                if canAct {
+                    verb("Do", tint: DS.attention) {
+                        pending = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
+                }
             }
         }
         .padding(.horizontal, DS.Space.s4)

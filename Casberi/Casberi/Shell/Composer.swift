@@ -766,9 +766,24 @@ struct Composer: View {
             && pendingAsk != nil
     }
 
+    /// THE FOCUS DOOR IS CLOSED (user, 2026-08-31: the composer "opens at first
+    /// at bottom of screen but then text is entered in middle of screen, feels
+    /// suboptimal for a user and like it's broken").
+    ///
+    /// `|| fieldFocused` used to bring the whole rest surface back — greeting,
+    /// day card, ask chips — on top of a finished answer the moment somebody
+    /// tapped the field to write a follow-up. Two things went wrong at once and
+    /// both read as breakage rather than as design: the answer VANISHED, and
+    /// the field appeared to jump from the bottom of the screen to the middle,
+    /// because what actually sits above it changed from a document anchored at
+    /// the bottom to a 40pt greeting anchored at the top.
+    ///
+    /// The rest surface is now what it says it is — what this screen shows when
+    /// it is at REST, with nothing answered and nothing answering. Tapping the
+    /// field over an answer raises the keyboard and does nothing else.
     private func restChrome(keepBrief: Bool) -> Bool {
         isOpen && !hasDraft && !isRecording && !handingOff
-            && (!answering || (keepBrief && briefLanding) || fieldFocused)
+            && (!answering || (keepBrief && briefLanding))
     }
 
     /// The ask surface is standing IN PLACE of a document — the focus door
@@ -786,9 +801,16 @@ struct Composer: View {
     /// tap would hide the streaming content it's sitting on top of. The ask
     /// surface may only replace a document once nothing is actually
     /// running — the genuinely idle case this was written for.
-    private var askSurfaceShowing: Bool {
-        answering && fieldFocused && !hasDraft && !isRecording && !inFlight
-    }
+    /// ALWAYS FALSE since 2026-08-31 — the door is closed, see `restChrome`.
+    /// An answer that exists is always drawn.
+    ///
+    /// Kept as a named constant rather than deleted at its seven call sites:
+    /// each one carries the reasoning for a real bug it was closing (the day
+    /// card that became a dead control, the rising frame mirroring the turn's
+    /// own gate, the settle-time refocus that hid a just-landed answer), and
+    /// those comments are the only written record of why. Deleting the term
+    /// deletes the record. It costs nothing at runtime.
+    private var askSurfaceShowing: Bool { false }
 
     /// One ask chip's staggered rise-in on open (delight, 2026-07-12).
     private struct ChipEntrance: ViewModifier {
