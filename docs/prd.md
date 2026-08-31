@@ -40365,3 +40365,50 @@ returns nil, and the conduct guard fails the build on any write verb. Built
 on Linux with no Xcode; verified to compile clean against the full iOS
 Simulator target the same day (`xcodebuild … build` — BUILD SUCCEEDED, no
 warnings in the new files).
+
+## §536
+
+**The per-source `@Query` safety net stopped trusting the one thing it
+still trusted (2026-08-31, field report round 3).** A second user hit the
+exact FB14619787 shape (§ round 1/2, `FeedScreen.swift`'s "SAFETY NET" /
+"per-source half" comments): a bridge (Vercel and Polar, this time,
+together, on one device) reads **connected** and its room renders **no
+feed**, and the same rows are also missing from **All** — while every
+other source on that device shows fine, and neither this device, the
+user's other devices, nor any device on this end can reproduce it.
+Round 2 shipped a per-source fallback (`sourceRoomFallbackSnapshot`) and,
+when it *still* didn't clear a stuck Vercel room, added a Diagnostics
+probe (`DiagnosticsScreen`'s per-source `bySource`-vs-`fetchCount`
+breakdown) specifically to find out why not — without yet landing a fix.
+
+Reading round 2's own fallback next to that diagnostic answers it: the
+fallback's mismatch CHECK (`modelContext.fetchCount` against
+`#Predicate<Thing> { $0.source == source }`) and its recovery FETCH used
+the identical predicate — the one thing the diagnostic exists to distrust.
+The All room's half was never exposed to this, because it never predicates
+at all: it re-derives its snapshot from an unpredicated `fetch()` filtered
+in Swift (`liveVisible(rawOverride:)`), which is exactly why "Vercel now
+shows in All" was already true after round 1 while the Vercel room itself
+stayed stuck. On a device where that predicate itself disagrees with a
+plain Swift filter over the same store — the shape the diagnostic was
+built to catch — the per-source safety net could report "0 == 0, nothing
+to do" and, even on a caught mismatch, recover into the same broken read.
+
+Fixed by never asking the predicate at all in the one shape every field
+report actually describes: a room whose live `@Query` renders **empty**.
+`FeedScreen`'s per-source `.task(id: scenePhase)` now branches on
+`things.isEmpty` — in that branch it runs the same unpredicated, sorted
+`fetch()` the All room already trusts, filters to `source` in Swift (the
+Diagnostics screen's own `bySource` shape), and populates
+`sourceRoomFallbackSnapshot` directly. The existing predicated
+`fetchCount` path is kept for the rarer PARTIAL-staleness case (some rows
+showing, newer ones missing) where the predicate has already demonstrated
+this session that it can be trusted. **UNMEASURED against the reporting
+device** — nobody on this end can reproduce FB14619787 at all — so this
+is reasoned from the diagnostic's own stated purpose and the All-room
+half's already-confirmed fix, not from a repro. Ask the reporting user to
+open Settings → Diagnostics (a production-reachable screen, prd note
+2026-07-09) and send its `bySource`/`predicated-fetchCount` lines for
+Vercel and Polar — a real predicate MISMATCH there confirms this is the
+same bug; agreement there would mean something else is going on and this
+fix doesn't touch it.

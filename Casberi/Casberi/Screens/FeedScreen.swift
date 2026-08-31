@@ -3852,9 +3852,46 @@ struct FeedScreen: View {
         // Pinboard (its `@Query` is predicated on `pinnedAt`, not `source`,
         // so a source-scoped count would compare the wrong thing) and All
         // (already covered above).
+        //
+        // CORRECTION (2026-08-31 field report round 3): this shipped, was
+        // exercised — the Vercel room was actually visited on a build that
+        // has it — and still rendered empty. Diagnostics' per-source
+        // predicate-vs-in-memory breakdown (added the same round) is why:
+        // on the affected device, `#Predicate<Thing> { $0.source == source }`
+        // itself can disagree with a plain Swift filter over an unpredicated
+        // fetch of the SAME store. That predicate is the one thing this
+        // safety net trusted — both for the mismatch CHECK (`fetchCount`)
+        // and for the recovery `fetch` itself — so on exactly the device
+        // this exists to save, it can silently confirm "0 == 0, nothing to
+        // do" while a raw fetch would show real rows, and even a caught
+        // mismatch would recover into the same broken predicate. The All
+        // room's own half above was never exposed to this: it re-derives
+        // its snapshot from an UNPREDICATED `fetch()` filtered in Swift
+        // (`liveVisible(rawOverride:)`), which is exactly why "Vercel now
+        // shows in All" was already true before this per-source half did
+        // anything.
+        //
+        // So: whenever this room's live `@Query` is rendering EMPTY — the
+        // one shape every field report actually describes ("connected, no
+        // feed") — this never asks the predicate at all. It runs the same
+        // unpredicated, capped fetch the All room already trusts and
+        // filters to `source` in Swift, the same shape Diagnostics' own
+        // `bySource` count uses. The cheap predicated `fetchCount` path
+        // below still covers the rarer PARTIAL-staleness case (some rows
+        // showing, newer ones missing) where the predicate has already
+        // demonstrated it can be trusted this session.
         .task(id: scenePhase) {
             guard source != "All", !Pinboard.isPinnedRoom(source), scenePhase == .active
             else { return }
+            if things.isEmpty {
+                guard let raw = try? modelContext.fetch(FetchDescriptor<Thing>(
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))
+                else { return }
+                let scoped = raw.filter { $0.source == source }
+                guard !scoped.isEmpty else { return }
+                sourceRoomFallbackSnapshot = scoped
+                return
+            }
             let probe = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == source })
             guard let rawCount = try? modelContext.fetchCount(probe), rawCount != things.count
             else { return }
