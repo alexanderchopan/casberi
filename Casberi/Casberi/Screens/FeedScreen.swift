@@ -274,9 +274,41 @@ struct FeedScreen: View {
             // head chain declines to compute while it is set — so nothing here
             // ever describes a truncated room, which is the entire objection
             // the paragraph above raises. Deferred, never truncated.
+            // **`propertiesToFetch` IS NOT SET HERE, AND THAT IS THE FIX
+            // (2026-08-31).** It was, from 2026-08-14 (c107a7de) until this
+            // line — seventeen days — and it is the regression behind "the
+            // room says connected and shows nothing while its rows are
+            // plainly visible in All".
+            //
+            // The combination is the problem, not either half: a
+            // `propertiesToFetch` partial fetch COMBINED WITH a `#Predicate`
+            // is a long-standing SwiftData defect that can hand back a set
+            // the predicate never selected — including an empty one — and it
+            // behaves differently across OS versions. That is why this was
+            // invisible here: the reporting device is on iOS 18.6 and this
+            // project's simulator is iOS 26, so the same binary is correct on
+            // one and wrong on the other.
+            //
+            // It also explains the exact shape of the report, which nothing
+            // else did. The All room's query above sets `propertiesToFetch`
+            // too and is FINE, because it carries no predicate — so the
+            // asymmetry lands precisely where it was seen: rows present in
+            // All, absent from their own room, with the store, the predicate
+            // and `Corpus.surfaced` all provably healthy on a plain fetch
+            // (a tester's Diagnostics: 22 of 22, `predicated-fetchCount`
+            // agreeing). Those three green readings are what a plain fetch
+            // says; this query is not a plain fetch.
+            //
+            // The cost is real and is accepted rather than hidden: a source
+            // room materialises its rows WITH the heavy inline text again,
+            // which is what c107a7de removed for bulk-import rooms. That is
+            // the configuration this app shipped for months before
+            // 2026-08-14, so it is known-good rather than merely untried —
+            // and a room that is fast and empty is not a trade worth making.
+            // If the cost has to come back, it must come back as something
+            // that cannot silently drop rows.
             var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == source },
                                            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-            d.propertiesToFetch = Self.lightColumns
             if let rowBudget { d.fetchLimit = rowBudget }
             _things = Query(d)
         }
