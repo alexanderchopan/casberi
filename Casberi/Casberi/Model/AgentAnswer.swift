@@ -1950,7 +1950,19 @@ enum AgentAnswer {
             // Bankr grounds on the wallet and live markets, never on the
             // numbered candidates — so it points at no things, and its own
             // grounding isn't the web search the other agents run.
-            return .success(AgentAnswerResult(text: reply.text, picks: []))
+            //
+            // `model: "Bankr"` (2026-08-31) is a small honest stretch of a
+            // field meant for a real model id — Bankr "picks its own model
+            // per job" (`defaultModel`'s own words) and there is no per-job
+            // id to report — but it is the cheapest fix for a real problem: a
+            // person who couldn't tell whether an answer about their own
+            // wallet balance came from the phone (which cannot see a live
+            // chain) or from Bankr (which can). `AgentKey.active?.model` for
+            // Bankr resolves to the placeholder "bankr-agent", which this
+            // value always differs from, so `provenanceBadge`'s existing
+            // "answered by something other than what you'd expect" rule
+            // fires and names it — no new field, no new call sites.
+            return .success(AgentAnswerResult(text: reply.text, picks: [], model: "Bankr"))
         case .failure(let failure):
             return .failure(failure.answerFailure)
         }
