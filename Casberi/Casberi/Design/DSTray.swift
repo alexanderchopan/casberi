@@ -86,6 +86,21 @@ struct DSTray<Content: View>: View {
         // there (2026-08-20). See `dsSizedSheet`.
         .dsSizedSheet(height)
         .presentationDragIndicator(.visible)
+        // A tray with a SECOND, larger detent (the Hegotá key/send sheets'
+        // own scroll-past-clipping fix) defaults to `.automatic` content
+        // interaction — which on a sheet with more than one detent resizes
+        // the SHEET on a content drag rather than scrolling it, until the
+        // sheet is already at its largest detent. That is exactly why the
+        // `ScrollView` those trays added still read as clipped (user: "the
+        // send tray open, clipped stuff is below the fold at the bottom") —
+        // a swipe on the body moved the tray, not the list, so a person had
+        // to already be at `.large` before scrolling did anything at all.
+        // `.scrolls` makes a drag on the content always scroll it; the
+        // grabber (`.presentationDragIndicator` above) is still there to
+        // resize the sheet itself. Scoped to multi-detent trays only — a
+        // single-height tray has nothing to scroll past, so it keeps
+        // `.automatic` (unchanged behaviour for the ~30 other trays).
+        .presentationContentInteraction(detents != nil ? .scrolls : .automatic)
         // THE SHEET'S OWN DIM, which nothing here had ever touched (2026-08-16).
         //
         // iOS draws a scrim BETWEEN the presenting content and a sheet. For an

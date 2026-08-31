@@ -51,22 +51,38 @@ struct HegotaKeySheet: View {
     }
 
     var body: some View {
-        DSTray(title: String(localized: "This phone's account"), height: trayHeight, ink: true) {
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                DSSheetHead(disc: { headDisc },
-                            stamp: headStamp,
-                            stampWeight: headStampWeight,
-                            title: headTitle,
-                            secondary: headSecondary,
-                            sentence: headSentence,
-                            inkCard: true)
-                switch phase {
-                case .noKey:
-                    noKeyBody
-                case .ready, .working:
-                    readyBody
+        // SCROLLABLE, AND DRAG-PAST (the `HegotaSendSheet`/`VibenetKeySheet`
+        // fix for the same class of bug, §480/§526): this sheet was a bare
+        // `VStack` with no `ScrollView`, so the ready phase's four stacked
+        // sections (head, faucet, Send, Actions) clipped dead against the
+        // fixed 560 the moment real device text metrics ran a line longer
+        // than guessed — the Send/Actions rows sat below the tray's own
+        // bottom edge with no way to reach them (user report: "the tray is
+        // clipped at the bottom on create account"). A `ScrollView` plus
+        // `detents: [.height(trayHeight), .large]` makes every reachable
+        // state reachable regardless of how the numbers are guessed.
+        DSTray(title: String(localized: "This phone's account"), height: trayHeight, ink: true,
+               detents: [.height(trayHeight), .large]) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DS.Space.s4) {
+                    DSSheetHead(disc: { headDisc },
+                                stamp: headStamp,
+                                stampWeight: headStampWeight,
+                                title: headTitle,
+                                secondary: headSecondary,
+                                sentence: headSentence,
+                                inkCard: true)
+                    switch phase {
+                    case .noKey:
+                        noKeyBody
+                    case .ready, .working:
+                        readyBody
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, DS.Space.s4)
             }
+            .scrollIndicators(.hidden)
         }
         .task { refresh() }
     }
@@ -299,6 +315,11 @@ struct HegotaKeySheet: View {
                 HegotaSend.landReceipt(txHash: claim.transactionHash, kind: .claimed, in: modelContext)
                 faucetFailed = false
                 faucetResult = String(localized: "Sent \u{2014} \(claim.transactionHash.prefix(10))\u{2026}")
+                // The small grey line under the button is easy to miss below
+                // the fold in a scrollable tray (user: "there is no toast
+                // when faucet is claimed") — a real toast is the confirmation
+                // that survives however far the sheet is scrolled.
+                chrome.flash(String(localized: "Test ETH sent to this account"), tone: .success)
             } catch let f as HegotaSend.Failure {
                 // THE VERDICT SAYS IT, not this screen (prd §531). The old
                 // branch here grepped the failure TEXT for "429" — which
