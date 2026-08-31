@@ -68,6 +68,17 @@ struct VibenetCreateSheet: View {
     }
 
     var body: some View {
+        // SCROLLABLE, AND WIDENED — the `VibenetKeySheet`/`HegotaSendSheet`
+        // fix for the same class of bug (§480, then the Hegotá send tray the
+        // day before this one): a fixed height with no `ScrollView` clips
+        // dead the moment real device text metrics run past the guessed
+        // number, with no way to reach whatever fell below the tray's own
+        // bottom edge — reported here exactly as it was on Hegotá's sheet,
+        // "the tray is clipped at top and won't reach to the bottom." A
+        // `ScrollView` makes every reachable state reachable regardless of
+        // how `trayHeight` is guessed, and `detents: [.height(trayHeight),
+        // .large]` gives a drag past the resting size for free.
+        //
         // INK, like the sibling devnet's sheets (2026-08-29). `dsInk()` forces
         // pure black rather than the theme-adaptive sheet, so a tray that
         // precedes or IS a detail surface reads as one continuous sheet
@@ -75,33 +86,40 @@ struct VibenetCreateSheet: View {
         // same day this screen was written; vibenet's older sheets have not
         // been converted yet, which is why the first cut of this one matched
         // the wrong siblings.
-        DSTray(title: String(localized: "Create an account"), height: trayHeight, ink: true) {
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                // THE HOUSE SHEET HEAD, not a bare title (user, 2026-08-29:
-                // "the UI is a bit barebones"). `DSSheetHead` is what makes a
-                // sheet read as an OBJECT rather than as text on a page — the
-                // subject's disc, a stamp for its state, the title, and one
-                // sentence saying what it means now. This screen had none of
-                // it and looked exactly like the "jumble of text" that
-                // component was introduced to end.
-                DSSheetHead(disc: { headDisc },
-                            stamp: headStamp,
-                            stampWeight: headStampWeight,
-                            title: headTitle,
-                            secondary: headSecondary,
-                            sentence: headSentence,
-                            inkCard: true)
-                switch phase {
-                case .checking:
-                    ProgressView().frame(maxWidth: .infinity)
-                case .refused(let refusal):
-                    refusedBody(refusal)
-                case .ready, .working:
-                    readyBody
-                case .done(let account):
-                    doneBody(account)
+        DSTray(title: String(localized: "Create an account"), height: trayHeight, ink: true,
+               detents: [.height(trayHeight), .large]) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DS.Space.s4) {
+                    // THE HOUSE SHEET HEAD, not a bare title (user,
+                    // 2026-08-29: "the UI is a bit barebones"). `DSSheetHead`
+                    // is what makes a sheet read as an OBJECT rather than as
+                    // text on a page — the subject's disc, a stamp for its
+                    // state, the title, and one sentence saying what it
+                    // means now. This screen had none of it and looked
+                    // exactly like the "jumble of text" that component was
+                    // introduced to end.
+                    DSSheetHead(disc: { headDisc },
+                                stamp: headStamp,
+                                stampWeight: headStampWeight,
+                                title: headTitle,
+                                secondary: headSecondary,
+                                sentence: headSentence,
+                                inkCard: true)
+                    switch phase {
+                    case .checking:
+                        ProgressView().frame(maxWidth: .infinity)
+                    case .refused(let refusal):
+                        refusedBody(refusal)
+                    case .ready, .working:
+                        readyBody
+                    case .done(let account):
+                        doneBody(account)
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, DS.Space.s4)
             }
+            .scrollIndicators(.hidden)
         }
         .task { await check() }
     }

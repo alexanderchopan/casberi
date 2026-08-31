@@ -287,7 +287,21 @@ enum VibenetDeviceKey {
         guard let key = try loadKey() else { throw Failure.noKey }
         let signature: P256.Signing.ECDSASignature
         do {
-            signature = try key.signature(for: digest)
+            // `RawDigest` wraps the already-hashed 32 bytes as a CryptoKit
+            // `Digest`, which is how the framework takes a pre-computed
+            // hash. Nothing re-hashes here — `key.signature(for: digest)`
+            // with `digest: Data` resolves to the `some DataProtocol`
+            // overload (`Data` conforms to `DataProtocol`, not `Digest`),
+            // which SHA-256-hashes the input AGAIN before signing and signs
+            // something else entirely. This is the exact trap `HegotaKey`'s
+            // and `SignerKey`'s own signing code already carry a comment
+            // for — paid for twice on the secp256k1 side and never carried
+            // over to this file, which shipped calling the wrong overload
+            // and produced a signature the P256Authenticator can never
+            // verify: every creation and every send failed authentication
+            // on-chain while compiling, building and reading clean, which
+            // is why no static check here could have caught it.
+            signature = try key.signature(for: RawDigest(digest))
         } catch {
             // A cancelled prompt and a destroyed key both land here, and the
             // CALLER separates them by asking `presence()` — which raises no
@@ -382,4 +396,21 @@ enum VibenetDeviceKey {
         }
         return out
     }
+}
+
+/// 32 already-hashed bytes, wearing CryptoKit's `Digest` protocol so
+/// `P256.Signing.PrivateKey.signature(for:)` picks the overload that signs
+/// them AS-IS rather than hashing them again. See `sign(digest:)`'s own
+/// comment for why this exists and what shipping without it did.
+private struct RawDigest: Digest {
+    private let bytes: Data
+    init(_ bytes: Data) { self.bytes = bytes }
+    static var byteCount: Int { 32 }
+    func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+        try bytes.withUnsafeBytes(body)
+    }
+}
+
+extension RawDigest: Sequence {
+    func makeIterator() -> Array<UInt8>.Iterator { [UInt8](bytes).makeIterator() }
 }
