@@ -72,18 +72,27 @@ import SwiftData
 /// message. Best-effort, not confirmed against a live rejection — see the
 /// UNMEASURED paragraph below.
 ///
-/// **UNMEASURED against a live account (2026-08-30)** — built from Polar's
-/// public API reference, its `polar-js` SDK's TypeScript model sources (read
-/// for exact field names, never a copy — the wire is snake_case, the SDK
-/// camelCases on decode), and its documented webhook event vocabulary. No key
-/// is stored and this build host has no egress to `api.polar.sh`. Every read
-/// is a GET, every failure path returns nil, and no write verb appears in
-/// this file. Two guesses to correct before hardening, named so a probe run
-/// can catch them: (1) `customer.name`/`customer.email` and `product.name`
-/// field spellings, assumed rather than confirmed on the nested objects; (2)
-/// whether Metrics' `monthly_recurring_revenue` is minor-unit cents (this
-/// file's assumption, matching Order's own amount fields) or already a major-
-/// unit decimal. Run `-polarProbe YES` against a real key and reconcile both.
+/// **MEASURED against a live account (2026-08-31), and it found a real bug
+/// on the first run: every collection endpoint here needs its TRAILING
+/// SLASH.** `GET /v1/refunds?limit=1` 307-redirects to `/v1/refunds/?limit=1`
+/// (Polar is built on FastAPI, whose router 307s on a trailing-slash
+/// mismatch by default) — and `IngestSupport`'s shared session, which has no
+/// redirect delegate, follows that redirect the way `URLSession` always
+/// does: by building a fresh request that DROPS the `Authorization` header,
+/// even though the redirect stays on the same host. The result is a plain,
+/// unauthenticated request that Polar correctly answers `401 Unauthorized`
+/// — indistinguishable, from the outside, from a genuinely bad token. A
+/// perfectly good Production key with every scope checked reproduced this
+/// exactly; adding the trailing slash to every collection URL below (never
+/// needed on `/refunds/{id}`, which doesn't redirect) took the same request
+/// to `200`. Caught by comparing the app's own network read against a raw
+/// `curl` of the identical URL — `curl` reproduces the same silent drop on
+/// redirect, so the tell was the bare 307 on the FIRST hop, not anything
+/// `curl -L` or the app showed after following it. One guess remains
+/// unconfirmed and named so a probe run can catch it: whether Metrics'
+/// `monthly_recurring_revenue` is minor-unit cents (this file's assumption,
+/// matching Order's own amount fields) or already a major-unit decimal. Run
+/// `-polarProbe YES` against a real key and reconcile it.
 enum PolarAccount {
 
     /// Polar is single-tenant per key, Stripe's exact shape — one account, no
@@ -278,7 +287,7 @@ enum PolarFetch {
     /// THE NAME AND SLUG, and its failure is not an error.
     static func validate(key: String) async -> Outcome {
         let (json, status) = await IngestSupport.getJSONBody(
-            "\(PolarAccount.api)/refunds?limit=1", auth: auth(key))
+            "\(PolarAccount.api)/refunds/?limit=1", auth: auth(key))
         switch status {
         case 200: break
         case 401: return .rejected(detail: errorDetail(json))
@@ -294,7 +303,7 @@ enum PolarFetch {
     /// per Polar's docs.
     static func organization(key: String) async -> (id: String, name: String, slug: String)? {
         let (json, status) = await IngestSupport.getJSONStatus(
-            "\(PolarAccount.api)/organizations?limit=1", auth: auth(key))
+            "\(PolarAccount.api)/organizations/?limit=1", auth: auth(key))
         guard status == 200, let root = json as? [String: Any],
               let items = root["items"] as? [[String: Any]], let org = items.first
         else { return nil }
@@ -310,7 +319,7 @@ enum PolarFetch {
     /// flow).
     static func metrics(key: String) async -> PolarState.Reading? {
         let day = ISO8601DateFormatter.polarDay.string(from: .now)
-        let url = "\(PolarAccount.api)/metrics?start_date=\(day)&end_date=\(day)&interval=day"
+        let url = "\(PolarAccount.api)/metrics/?start_date=\(day)&end_date=\(day)&interval=day"
         let (json, status) = await IngestSupport.getJSONStatus(url, auth: auth(key))
         guard status == 200, let root = json as? [String: Any],
               let totals = root["totals"] as? [String: Any] else { return nil }
@@ -366,7 +375,7 @@ enum PolarFetch {
         var all: [[String: Any]] = []
         var page = 1
         while page <= maxPages {
-            let url = "\(PolarAccount.api)/\(resource)?sorting=-\(sortField)&limit=100&page=\(page)"
+            let url = "\(PolarAccount.api)/\(resource)/?sorting=-\(sortField)&limit=100&page=\(page)"
             let (items, status) = await envelope(url, key: key)
             guard status == 200 else { return page == 1 ? nil : all }
             all.append(contentsOf: items)
@@ -400,7 +409,7 @@ enum PolarFetch {
     static let unhealthyStatuses = ["past_due", "canceled", "unpaid", "incomplete_expired"]
 
     static func unhealthySubscriptions(key: String) async -> [[String: Any]]? {
-        var url = "\(PolarAccount.api)/subscriptions?sorting=-started_at&limit=100"
+        var url = "\(PolarAccount.api)/subscriptions/?sorting=-started_at&limit=100"
         for status in unhealthyStatuses { url += "&status[]=\(status)" }
         let (items, status) = await envelope(url, key: key)
         return status == 200 ? items : nil
@@ -774,7 +783,7 @@ enum PolarIngest {
             return
         }
         let (refundsBody, refundsStatus) = await IngestSupport.getJSONBody(
-            "\(PolarAccount.api)/refunds?limit=1", auth: "Bearer \(key)")
+            "\(PolarAccount.api)/refunds/?limit=1", auth: "Bearer \(key)")
         NSLog("[Casberi] polarProbe refunds endpoint: HTTP %d (401 rejected/sandbox-token · 403 missing scope · 0 unreachable)", refundsStatus)
         if refundsStatus != 200 {
             NSLog("[Casberi] polarProbe refunds endpoint reason: %@",
