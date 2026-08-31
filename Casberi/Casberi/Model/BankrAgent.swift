@@ -137,8 +137,15 @@ enum BankrAgent {
     /// Ask — safe by construction. Kept here so both verbs share one runner;
     /// `AgentAnswer.bankrAnswer` is the caller that pastes numbered candidates
     /// in beneath this, which is the ONE thing the acting path never does.
-    static func ask(_ question: String, extra: String = "") async -> Result<Reply, Failure> {
-        await run(prompt: askPrompt(question, extra: extra))
+    ///
+    /// `onTick`, when given, is called with the elapsed seconds each time a
+    /// poll comes back still-pending — the async job has no partial text to
+    /// stream, so this is the only progress a caller can show during the
+    /// ~90s wait instead of a static "Working…" that looks the same at 2s and
+    /// 88s.
+    static func ask(_ question: String, extra: String = "",
+                    onTick: ((Int) -> Void)? = nil) async -> Result<Reply, Failure> {
+        await run(prompt: askPrompt(question, extra: extra), onTick: onTick)
     }
 
     /// The asking prompt, split out so a harness can see it (2026-08-29).
@@ -157,11 +164,12 @@ enum BankrAgent {
     /// model: the permission must be on, and the instruction must say
     /// something. An empty instruction sent to an agent with a wallet is a
     /// blank cheque, and there is no good behaviour to hope for.
-    static func act(_ instruction: String) async -> Result<Reply, Failure> {
+    static func act(_ instruction: String,
+                    onTick: ((Int) -> Void)? = nil) async -> Result<Reply, Failure> {
         guard canAct else { return .failure(.actingOff) }
         let trimmed = instruction.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return .failure(.emptyInstruction) }
-        return await run(prompt: actingPrompt(trimmed))
+        return await run(prompt: actingPrompt(trimmed), onTick: onTick)
     }
 
     // MARK: - The runner
@@ -170,7 +178,7 @@ enum BankrAgent {
     /// then an answer and an action would disagree about what "completed"
     /// means, which is the class of bug this repo keeps finding in duplicated
     /// parsers.
-    static func run(prompt: String) async -> Result<Reply, Failure> {
+    static func run(prompt: String, onTick: ((Int) -> Void)? = nil) async -> Result<Reply, Failure> {
         guard let key = TokenVault.get(AgentProvider.bankr.vaultKey), !key.isEmpty else {
             return .failure(.noKey)
         }
@@ -200,7 +208,7 @@ enum BankrAgent {
             NSLog("[Casberi] BankrAgent: no job id in a %d", http.statusCode)
             return .failure(.providerError(http.statusCode))
         }
-        return await poll(jobId: jobId, key: key)
+        return await poll(jobId: jobId, key: key, onTick: onTick)
     }
 
     /// Poll every 2s for ~90s (Bankr says most jobs land inside 30). An acting
@@ -208,9 +216,11 @@ enum BankrAgent {
     /// chain — so a timeout is reported as a TIMEOUT and never as a failure:
     /// the job may still be running, and telling somebody their swap did not
     /// happen when we simply stopped watching is the worse of the two lies.
-    private static func poll(jobId: String, key: String) async -> Result<Reply, Failure> {
-        for _ in 0..<45 {
+    private static func poll(jobId: String, key: String,
+                             onTick: ((Int) -> Void)? = nil) async -> Result<Reply, Failure> {
+        for attempt in 0..<45 {
             try? await Task.sleep(nanoseconds: 2_000_000_000)
+            onTick?((attempt + 1) * 2)
             var request = URLRequest(url: URL(string: "https://api.bankr.bot/agent/job/\(jobId)")!)
             request.setValue(key, forHTTPHeaderField: "X-API-Key")
             request.timeoutInterval = 15

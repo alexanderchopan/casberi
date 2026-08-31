@@ -42,6 +42,9 @@ struct BankrChatScreen: View {
     @State private var inFlight = false
     @State private var canAct = BankrAgent.canAct
     @State private var pending: String?
+    /// Seconds into the current poll — the only progress an async job has to
+    /// show, since there's no partial text to stream. Reset per send.
+    @State private var elapsedSeconds = 0
 
     private var configured: Bool { AgentKey.isConfigured(.bankr) }
     private var armed: Bool {
@@ -155,7 +158,8 @@ struct BankrChatScreen: View {
     }
 
     private var thinking: some View {
-        Text("Working…").dsText(.subhead13).foregroundStyle(DS.textTertiary)
+        Text(elapsedSeconds > 0 ? "Working… (\(elapsedSeconds)s)" : "Working…")
+            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
     }
 
     // MARK: - The composer
@@ -200,15 +204,48 @@ struct BankrChatScreen: View {
 
     // MARK: - Sending
 
+    /// This screen's own turns, threaded into the next ASK so "the other
+    /// one" still means something (2026-08-31) — never into a Do: an act's
+    /// confirmation reads back exactly what you typed, and folding hidden
+    /// context into that prompt would make "these are your words" a little
+    /// less true. Only Q/A pairs from a real Ask count — a Do doesn't answer
+    /// a question, and a turn that never got a reply has nothing to pair.
+    private var askHistory: String {
+        var lines: [String] = []
+        var pendingQuestion: String?
+        for turn in turns {
+            switch turn.voice {
+            case .you where !turn.acted: pendingQuestion = turn.text
+            case .bankr:
+                if let q = pendingQuestion {
+                    lines.append("Q: \(q)\nA: \(turn.text)")
+                }
+                pendingQuestion = nil
+            default: pendingQuestion = nil
+            }
+        }
+        return lines.suffix(6).joined(separator: "\n\n")
+    }
+
     private func send(_ text: String, acting: Bool) {
         let instruction = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !instruction.isEmpty, !inFlight else { return }
+        let history = askHistory
+        let extra = history.isEmpty ? "" : """
+        This chat's prior turns, oldest first — "it"/"that"/"those" in the \
+        question below may refer back to one of these:
+        \(history)
+        """
         draft = ""
         inFlight = true
+        elapsedSeconds = 0
         turns.append(Turn(voice: .you, text: instruction, acted: acting))
+        let onTick: (Int) -> Void = { seconds in
+            Task { @MainActor in elapsedSeconds = seconds }
+        }
         Task { @MainActor in
-            let outcome = acting ? await BankrAgent.act(instruction)
-                                 : await BankrAgent.ask(instruction)
+            let outcome = acting ? await BankrAgent.act(instruction, onTick: onTick)
+                                 : await BankrAgent.ask(instruction, extra: extra, onTick: onTick)
             inFlight = false
             switch outcome {
             case .success(let reply):

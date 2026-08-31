@@ -250,10 +250,10 @@ enum AgentProvider: String, CaseIterable, Identifiable {
     /// What this agent can additionally do, beyond a plain text answer —
     /// shown on the connect screens so a person picks (or expects) the right
     /// thing (2026-07-21). Every provider here remembers a keyed
-    /// conversation's prior turns except Bankr, which answers each prompt
-    /// fresh off the wallet and live markets instead of the chat so far.
-    /// nil means nothing more to say — Bankr's own explainer already covers
-    /// its divergence.
+    /// conversation's prior turns, Bankr included since 2026-08-31 — its
+    /// history rides prose in the prompt rather than a messages array, since
+    /// its wire is one string (see `bankrAnswer`), but it's the same "still
+    /// means something" continuity every other provider gets.
     var capabilityLine: String? {
         switch self {
         case .anthropic:
@@ -265,7 +265,7 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         case .venice:
             "Remembers this chat's answers so far, and can search the web when your things fall short — screenshots stay text-only."
         case .bankr:
-            nil
+            "Remembers this chat's answers so far, and grounds on your wallet and live markets instead of your saved things — screenshots and web search stay off. It can also act, not just answer, once you turn that on in its own setup screen."
         case .openrouter:
             // Rewritten 2026-08-23 (prd §459). The old sentence's whole second
             // half described refusals that were only true of `openrouter/auto`
@@ -463,6 +463,15 @@ enum AgentAnswerFailure: Error, Sendable {
     /// the backends the setting exists to avoid.
     case privacyUnroutable
 
+    /// Bankr's job was still going when this app stopped polling it (~90s) —
+    /// NOT the same fact as `unreachable`. The two used to collapse to one
+    /// case (`BankrAgent.Failure.answerFailure`, until 2026-08-31), which told
+    /// somebody their swap "couldn't be reached" when it may have been sitting
+    /// in a chain confirmation the whole time. `BankrChatScreen`'s own failure
+    /// copy kept the honest distinction from the start; this brings the
+    /// composer's path up to the same honesty.
+    case stillRunning
+
     /// One plain sentence for the composer — what happened, and only where
     /// it's true, what to do about it.
     var line: String {
@@ -483,6 +492,8 @@ enum AgentAnswerFailure: Error, Sendable {
             String(localized: "Your agent came back with nothing. Try asking it another way.")
         case .privacyUnroutable:
             String(localized: "OpenRouter couldn't route that. Either the model has been retired, or nobody serving it will agree not to keep your question — pick another model, or turn off private routing in Settings.")
+        case .stillRunning:
+            String(localized: "Bankr is still working on that after 90 seconds — check Bankr for the outcome, or ask again in a moment.")
         }
     }
 }
@@ -667,9 +678,10 @@ enum AgentAnswer {
     /// (the headless `-byokProbe` hook).
     ///
     /// (Bankr carries its own two divergences, documented on `bankrAnswer` —
-    /// async job flow, wallet/market grounding — and answers through neither
-    /// of the three above: no history, no images, no search tool, since its
-    /// whole answer already isn't bound to the candidate list.)
+    /// async job flow, wallet/market grounding — and gets only ONE of the
+    /// three above: history, folded into `extra` as prose since its wire is a
+    /// single string with no messages array. No images, no search tool,
+    /// since its whole answer already isn't bound to the candidate list.)
     /// A fourth divergence since 2026-08-06, and the one that changes what the
     /// key BUYS: when the caller hands over a `corpus` snapshot, the request
     /// carries `AgentCorpusTools` and the answer runs as a bounded tool loop —
@@ -727,7 +739,8 @@ enum AgentAnswer {
         // through an async job (submit → poll), and it may ground on the
         // wallet and live markets — so an empty candidate list still asks.
         if provider == .bankr {
-            return await bankrAnswer(query: query, candidates: candidates, key: key)
+            return await bankrAnswer(query: query, candidates: candidates,
+                                     history: history, onPartial: onPartial, key: key)
         }
         // With tools the model can reach things the local retriever missed, so
         // an empty candidate list is a starting point rather than a dead end.
@@ -1894,11 +1907,32 @@ enum AgentAnswer {
     /// means — the duplicated-parser class this repo keeps paying for. This
     /// function keeps the ONE thing the acting path must never do: paste the
     /// person's own saved things into the prompt.
+    ///
+    /// `history` (2026-08-31) rides the same `extra` slot the candidates
+    /// already use, capped at the last 6 turns — Bankr's wire is one string
+    /// with no messages array, so continuity has to be prose, and an
+    /// unbounded transcript would make every later question in a long chat
+    /// cost more than the first for no benefit past what a follow-up
+    /// actually needs. `onPartial`, when given, is told the elapsed wait in
+    /// words rather than nothing — there is no partial prose to stream from
+    /// an async job, only the fact that it is still going.
     private static func bankrAnswer(query: String,
                                     candidates: [OnDeviceModel.Candidate],
+                                    history: [AgentTurn],
+                                    onPartial: ((String) -> Void)?,
                                     key: String)
     async -> Result<AgentAnswerResult, AgentAnswerFailure> {
         var extra = LanguageStore.shared.llmLanguageDirective
+        if !history.isEmpty {
+            let recent = history.suffix(6)
+            extra += """
+
+
+            This chat's prior turns, oldest first — "it"/"that"/"those" in \
+            the question below may refer back to one of these:
+            \(recent.map { "Q: \($0.question)\nA: \($0.answer)" }.joined(separator: "\n\n"))
+            """
+        }
         if !candidates.isEmpty {
             extra += """
 
@@ -1908,7 +1942,10 @@ enum AgentAnswer {
             \(OnDeviceModel.numberedCandidates(candidates))
             """
         }
-        switch await BankrAgent.ask(query, extra: extra) {
+        let tick: ((Int) -> Void)? = onPartial.map { forward in
+            { seconds in forward("Still waiting on Bankr… (\(seconds)s)") }
+        }
+        switch await BankrAgent.ask(query, extra: extra, onTick: tick) {
         case .success(let reply):
             // Bankr grounds on the wallet and live markets, never on the
             // numbered candidates — so it points at no things, and its own
@@ -1922,17 +1959,21 @@ enum AgentAnswer {
 
 extension BankrAgent.Failure {
     /// The answer path speaks `AgentAnswerFailure`, which has no case for a
-    /// permission this verb cannot hit and no case for a job still running.
-    /// `actingOff`/`emptyInstruction` are unreachable from `ask` and map to
-    /// `refused` defensively; a TIMEOUT reports as unreachable there because
-    /// that path has nothing it could do with the distinction.
+    /// permission this verb cannot hit — `actingOff`/`emptyInstruction` are
+    /// unreachable from `ask` and map to `refused` defensively. A TIMEOUT
+    /// keeps its own honest case (`stillRunning`, since 2026-08-31) rather
+    /// than folding into `unreachable`: a job Bankr is still running and a
+    /// dead connection are different problems with different advice, and
+    /// collapsing them told somebody their swap "couldn't be reached" when it
+    /// may have still been landing the whole time.
     var answerFailure: AgentAnswerFailure {
         switch self {
         case .noKey:                       .noKey
         case .rejectedKey:                 .rejectedKey
         case .rateLimited:                 .rateLimited
         case .empty:                       .empty
-        case .unreachable, .timedOut:      .unreachable
+        case .unreachable:                 .unreachable
+        case .timedOut:                    .stillRunning
         case .providerError(let status):   .providerError(status)
         case .refused, .actingOff, .emptyInstruction: .refused
         }
