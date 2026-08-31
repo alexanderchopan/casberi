@@ -301,6 +301,18 @@ enum BridgeGlyph {
         case "pypi":      return "shippingbox"
         case "homekit":   return "homekit"
         case "stripe":       return "banknote"
+        // The three payment seats must not share `banknote` with Stripe or
+        // with each other: they sit in the same Work group, and a group where
+        // three tiles wear one mark reads as one thing listed three times
+        // (the npm/PyPI rule above). Each takes what its OWN room leads with
+        // — Polar's is recurring revenue (§537's sales and the MRR head),
+        // Dodo's is every payment as it succeeds, so a card rather than a
+        // cycle.
+        case "polar":        return "arrow.trianglehead.2.clockwise.rotate.90"
+        case "dodo payments": return "creditcard"
+        // A cloud that BILLS you, deliberately not `cloud.fill` — Cloudflare
+        // already holds that, and the two are not the same kind of thing.
+        case "aws":          return "server.rack"
         case "posthog":      return "chart.bar.xaxis"
         case "cloudflare":   return "cloud.fill"
         case "cursor":       return "cursorarrow"

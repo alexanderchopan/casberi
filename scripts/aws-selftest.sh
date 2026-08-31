@@ -391,13 +391,25 @@ mutate "the AWS4 signing-key chain shortened by one link" \
         return hmac(key: kService, "aws4_request")' \
   'return hmac(key: kRegion, "aws4_request")'
 
-# 3. Query parameters left unsorted — AWS's canonicalization is order-
-#    sensitive and an unsorted query string signs a DIFFERENT request than
-#    the one actually sent whenever two parameters are given out of order.
-mutate "canonical query no longer sorted" \
+# 3. Query parameters sorted the WRONG WAY — AWS's canonicalization is
+#    order-sensitive, and a mis-ordered query string signs a DIFFERENT
+#    request than the one actually sent whenever two parameters exist.
+#
+#    REVERSED rather than DELETED, and that is the whole point (2026-08-31):
+#    this mutation used to remove the `.sorted` outright, which made it FLAKY
+#    and it duly survived a real run — `canonicalQuery` takes a
+#    `[String: String]`, and a Swift Dictionary's iteration order is
+#    unspecified, so an unsorted two-key fixture comes out already in sorted
+#    order a good share of the time. The harness then printed a green tick
+#    over a signing rule nothing was testing. A reversed comparator is
+#    deterministic: it can never coincide with the sorted answer for a
+#    fixture whose keys differ, so the mutation is caught every run.
+#    Standing lesson: never mutate a stable order into a Dictionary's order.
+mutate "canonical query sorted the wrong way" \
   'params.map { (uriEncode($0.key), uriEncode($0.value)) }
             .sorted { $0.0 < $1.0 }' \
-  'params.map { (uriEncode($0.key), uriEncode($0.value)) }'
+  'params.map { (uriEncode($0.key), uriEncode($0.value)) }
+            .sorted { $0.0 > $1.0 }'
 
 # 4. THE MEDIAN QUIETLY BECOMES A MEAN — the exact StripeSilence-class
 #    regression this file's header warns about by name.
