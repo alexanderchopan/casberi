@@ -485,6 +485,27 @@ struct FeedScreen: View {
         } else {
             VibenetBridge.disconnect(store: bridges)
         }
+        // DROPPED FROM THE SNAPSHOT NOW, not after the next full chain read
+        // (2026-08-30, user report: "long press and unwatch has about a 30
+        // second lag" — the row stayed on screen until compose() below
+        // happened to finish). `VibenetRoomSource.compose()` re-reads EVERY
+        // remaining watched address against the chain, paced at 3 at once —
+        // genuinely slow with more than a couple of accounts, and none of
+        // that reading has anything to do with the one thing this tap needs
+        // to show: that this address is no longer in the list.
+        // `VibenetRoom.compose(items:…)` is the pure, local aggregator
+        // `compose()` itself calls after its network read; reused here over
+        // the filtered last-known items, it rebuilds the same room shape
+        // with nothing to wait on, so the row disappears on THIS tap.
+        if let saved = VibenetState.saved {
+            let trimmed = VibenetRoom.compose(
+                items: saved.items.filter { $0.address.caseInsensitiveCompare(address) != .orderedSame },
+                branch: saved.branch, commit: saved.commit, configReached: saved.configReached,
+                redeployedSinceLastSeen: saved.redeployedSinceLastSeen,
+                readAt: saved.readAt, pulse: saved.pulse)
+            VibenetState.save(trimmed)
+        }
+        chrome.refreshPulse += 1
         Task {
             _ = await VibenetRoomSource.compose()
             chrome.refreshPulse += 1

@@ -93,10 +93,17 @@ struct HegotaSendSheet: View {
         .accessibilityHidden(true)
     }
 
+    // "Send" rather than "Send from this phone's key" (user, 2026-08-30): the
+    // ACCOUNT is what sends — its address is already the head's own
+    // `secondary` line, right under this title — and this phone's key is how
+    // it is AUTHORIZED, which `headSentence` already says below ("Signed by
+    // this phone's key…"). The old title put the mechanism where the subject
+    // belongs, on the one screen that also shows the account's address a line
+    // down, so it read as though the key itself were what was sending.
     private var headTitle: String {
         phase == .done
             ? String(localized: "Sent")
-            : String(localized: "Send from this phone's key")
+            : String(localized: "Send")
     }
 
     private var headStamp: String? {

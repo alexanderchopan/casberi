@@ -276,12 +276,19 @@ enum VibenetDeviceKey {
     /// `SignerKey`'s own doc records the sibling trap — `derRepresentation` is
     /// what most libraries hand back and a contract refuses every one.
     ///
-    /// **Low-s is NOT normalised here and that is deliberate**: secp256k1
-    /// verifiers reject a high-s signature as malleable, and P-256 verifiers
-    /// in this family do not. Normalising anyway would produce a signature
-    /// that is valid arithmetic and is not what the authenticator expects to
-    /// see. When the P256Authenticator's expectation is MEASURED, this comment
-    /// is where the answer belongs.
+    /// **Low-s IS normalised here, MEASURED rather than assumed (2026-08-30).**
+    /// The comment this replaced argued P-256 verifiers "in this family" don't
+    /// care about malleability the way secp256k1 does — untested, and wrong for
+    /// THIS verifier. Asked directly of the deployed `P256Authenticator` (a
+    /// software P-256 key signing one digest, `authenticate` called twice, once
+    /// with the natural `s` and once with `n - s`): a high-`s` signature
+    /// answers **zero** — refused — and the identical signature with `s`
+    /// flipped into the lower half answers the correct actor id. Since
+    /// CryptoKit's ECDSA signing is randomized rather than RFC6979-deterministic,
+    /// roughly HALF of all signatures land in the upper half by chance alone —
+    /// which is exactly why this read as "actor authentication failed" on some
+    /// taps and not others, and why the digest-hashing fix alone (below) did
+    /// not make it go away.
     static func sign(digest: Data) throws -> Data {
         guard digest.count == 32 else { throw Failure.badDigest }
         guard let key = try loadKey() else { throw Failure.noKey }
@@ -309,7 +316,63 @@ enum VibenetDeviceKey {
             // same for both (§427's measured lesson, one chain over).
             throw Failure.signingRefused
         }
-        return signature.rawRepresentation
+        var raw = [UInt8](signature.rawRepresentation)
+        guard raw.count == 64 else { throw Failure.badDigest }
+        let s = Array(raw[32..<64])
+        if isHighS(s) {
+            raw.replaceSubrange(32..<64, with: curveOrderMinus(s))
+        }
+        return Data(raw)
+    }
+
+    /// The P-256 (secp256r1) group order, big-endian — measured against the
+    /// published NIST constant, not re-derived. Used only to fold a signature's
+    /// `s` into the lower half; see `sign(digest:)`'s own comment for why.
+    private static let curveOrder: [UInt8] = [
+        0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xbc, 0xe6, 0xfa, 0xad, 0xa7, 0x17, 0x9e, 0x84,
+        0xf3, 0xb9, 0xca, 0xc2, 0xfc, 0x63, 0x25, 0x51,
+    ]
+
+    /// Half the curve order, big-endian, floored — the boundary `authenticate`
+    /// draws (measured, see `sign(digest:)`): `s` at or below this is accepted,
+    /// above it is refused.
+    private static let curveHalfOrder: [UInt8] = [
+        0x7f, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x00,
+        0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xde, 0x73, 0x7d, 0x56, 0xd3, 0x8b, 0xcf, 0x42,
+        0x79, 0xdc, 0xe5, 0x61, 0x7e, 0x31, 0x92, 0xa8,
+    ]
+
+    /// Whether 32 big-endian bytes, read as an unsigned integer, sit strictly
+    /// above `curveHalfOrder`. No 256-bit integer type exists here, so this
+    /// compares byte by byte from the most significant end — the first
+    /// differing byte decides it, and an exact match at every byte means "not
+    /// above", i.e. `s == n/2` counts as low.
+    private static func isHighS(_ s: [UInt8]) -> Bool {
+        for i in 0..<32 where s[i] != curveHalfOrder[i] {
+            return s[i] > curveHalfOrder[i]
+        }
+        return false
+    }
+
+    /// `curveOrder - s`, big-endian byte subtraction. `s` is always a valid
+    /// ECDSA scalar (`0 < s < n`), so this never borrows past the top byte.
+    private static func curveOrderMinus(_ s: [UInt8]) -> [UInt8] {
+        var result = [UInt8](repeating: 0, count: 32)
+        var borrow = 0
+        for i in stride(from: 31, through: 0, by: -1) {
+            let diff = Int(curveOrder[i]) - Int(s[i]) - borrow
+            if diff < 0 {
+                result[i] = UInt8(diff + 256)
+                borrow = 1
+            } else {
+                result[i] = UInt8(diff)
+                borrow = 0
+            }
+        }
+        return result
     }
 
     /// Reconstitutes the Enclave key. **This is the one call that decrypts**,
