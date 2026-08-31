@@ -239,17 +239,31 @@ struct Composer: View {
     /// chip gate can't afford a Keychain round-trip per render (typing a
     /// follow-up re-renders per keystroke).
     @State private var keyAvailable = false
-    /// The one-tap version of the same consent (2026-07-31, prd §242): a
-    /// person who chose "Ask with your key" from the TYPED-DRAFT band, before
-    /// either answer exists, gets the on-device answer first (unchanged —
-    /// it's free, instant, private, and stays the default source of truth)
-    /// and the keyed retry fires itself the moment that settles, via the
-    /// `inFlight` watcher below, instead of waiting to be noticed and tapped
-    /// a second time in the settled verb row. Set at the SAME moment as a
-    /// normal `commit()`, so the tap that sets it IS the consent (prd §67's
-    /// rule — nothing leaves this iPhone until a deliberate tap — is kept,
-    /// just moved earlier).
+    /// The one-tap version of the same consent (2026-07-31, prd §242) for an
+    /// ask a SURFACE handed over already wanting a key (`chrome.askWithKey` —
+    /// a thing sheet's "Ask about this"): the on-device answer runs first
+    /// (unchanged — it's free, instant, private) and the keyed retry fires
+    /// itself the moment that settles, via the `inFlight` watcher below,
+    /// instead of waiting to be noticed and tapped a second time in the
+    /// settled verb row.
+    ///
+    /// The composer's own "Ask <agent>" chip stopped using this mechanism
+    /// (2026-08-31, `forceKeyedThisAsk` below) — a tap on THAT chip already
+    /// names the agent, so running the free answer first and then silently
+    /// swapping it for a keyed one read as the app changing its mind mid-
+    /// answer (reported: "the phone answers me first, then it switches and
+    /// says still waiting on bankr"). This mechanism still fits its own
+    /// surface fine: there the tap is on a THING, before any answer exists at
+    /// all, so there is nothing on screen yet to swap out from under anyone.
     @State private var pendingKeyedFollowUp = false
+    /// The direct-tap version of consent (2026-08-31): "Ask <agent>" already
+    /// names which agent should answer, so `commit()`'s Task goes straight to
+    /// it — the same `stayKeyed` branch a mid-conversation follow-up already
+    /// takes — rather than running the free on-device pass first and
+    /// replacing it a moment later. One-shot: read and cleared the instant
+    /// `commit()` computes `stayKeyed`, so it can never leak into the NEXT
+    /// question typed after this one settles.
+    @State private var forceKeyedThisAsk = false
     /// The kept-ask KIND the current question would mint, computed once per
     /// settled answer (same reason `keyAvailable` is settle-cached, not a
     /// per-render computed property: a corpus fetch per render would be
@@ -1869,7 +1883,23 @@ struct Composer: View {
                                 // loses the lift, which is the one place that
                                 // gesture means exactly what it was built to
                                 // mean.
-                                convoTurn(question: currentQuestion,
+                                // A FOUND turn wears no header (2026-08-31,
+                                // reported: "shows the question twice when
+                                // its searching"). THE DRAFT SURVIVES A FIND
+                                // on purpose (`runFind()`, 2026-08-13) — the
+                                // field keeps the words so the scope chips
+                                // stay live for refinement — which means the
+                                // query is already sitting right there, still
+                                // editable, the moment this header would also
+                                // print it above the results. Ask has no such
+                                // echo (the field clears), so its header is
+                                // the only place the question appears — this
+                                // is scoped to the live turn's OWN state, not
+                                // `convoTurn`'s general contract, because a
+                                // settled find scrolled into history has long
+                                // since lost its field echo (the draft moved
+                                // on) and needs the header to say what it was.
+                                convoTurn(question: foundCurrent ? "" : currentQuestion,
                                           animateIn: !(risingFramePainted && turns.isEmpty)) {
                                     VStack(alignment: .leading, spacing: DS.Space.s2) {
                                         // The wait, drawn as the SHAPE of the
@@ -2894,6 +2924,7 @@ struct Composer: View {
         // out of context. `inFlight = false` two lines below would itself
         // spuriously trigger the watcher on a stale flag too.
         pendingKeyedFollowUp = false
+        forceKeyedThisAsk = false
         inFlight = false
         keepJustLanded = false
         askGeneration += 1   // any in-flight answer Task retires silently
@@ -3146,8 +3177,18 @@ struct Composer: View {
     /// explicit choice of whether a question is worth spending against the
     /// key for, which is the opposite of what "Ask <agent>" exists to be
     /// honest about.
+    ///
+    /// GOES STRAIGHT TO THE AGENT (2026-08-31) — no free pass first. The tap
+    /// already named who should answer, so running the on-device model first
+    /// and replacing its answer a moment later was the app appearing to
+    /// change its mind: "the phone answers me first, then it switches and
+    /// says still waiting on bankr". `forceKeyedThisAsk` makes `commit()`
+    /// take its existing `stayKeyed` branch — the SAME one a mid-conversation
+    /// follow-up already uses — for THIS first ask too, so a failed keyed
+    /// call still falls back to the free answer (that branch's own existing
+    /// behaviour), just never SHOWS the free answer when the keyed one works.
     private func askDirectly() {
-        pendingKeyedFollowUp = true
+        forceKeyedThisAsk = true
         commit(forceAsk: true)
     }
 
@@ -4501,7 +4542,14 @@ struct Composer: View {
             // follow-up after a keyed answer silently dropped back to the
             // on-device model — which never saw the keyed turn, so "which of
             // those…" was answered by a model with no idea what "those" meant.
-            let stayKeyed = conversationIsKeyed && keyAvailable
+            //
+            // `forceKeyedThisAsk` (2026-08-31) takes the same branch for an
+            // explicit "Ask <agent>" tap, even on the FIRST question of a
+            // conversation — `askDirectly()`'s own reason. Read and cleared
+            // together, right here, so it can only ever govern the ask it was
+            // set for.
+            let stayKeyed = forceKeyedThisAsk || (conversationIsKeyed && keyAvailable)
+            forceKeyedThisAsk = false
             // The question lift (delight, 2026-07-21): the header's entrance
             // and the berry's fade-in ride the same animated commit as the
             // rest of "a new ask just started."
@@ -4615,6 +4663,14 @@ struct Composer: View {
                         keyedModel = keyed.model
                         keyedToolRounds = keyed.toolRounds
                         finalDoc = keyed.doc
+                        // Was already true for the pre-existing mid-
+                        // conversation case (it's how `stayKeyed` got here);
+                        // for `forceKeyedThisAsk`'s FIRST ask it wasn't, and
+                        // without setting it here a plain typed follow-up
+                        // would silently drop back to the free model —
+                        // `askWithKey()`'s own success path sets this for the
+                        // identical reason.
+                        conversationIsKeyed = true
                     case .failure:
                         // The agent didn't answer, so the on-device model
                         // does — and the badge correctly reads "on this
