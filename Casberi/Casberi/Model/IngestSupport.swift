@@ -427,6 +427,27 @@ enum IngestSupport {
         return (try? JSONSerialization.jsonObject(with: data), http.statusCode)
     }
 
+    /// Like `getJSONStatus`, but decodes the body **even when the status is
+    /// not 200** — `postJSONBody`'s GET analog (2026-08-31, the Polar bridge's
+    /// undiagnosable 401).
+    ///
+    /// `getJSONStatus` drops the body on any non-200 on purpose (a 404 has
+    /// nothing worth reading for most REST bridges), but that rule made a
+    /// Polar token rejection undiagnosable: Polar's own error body names WHY
+    /// — a malformed token, a revoked one, a sandbox token against the
+    /// production host — and this app was throwing that reason away and
+    /// guessing in the UI instead. Route a caller through this one when the
+    /// failure body is the whole point of the read.
+    static func getJSONBody(_ url: String, auth: String? = nil,
+                            headers: [String: String] = [:],
+                            service: String? = nil) async -> (json: Any?, status: Int) {
+        guard let u = URL(string: url) else { return (nil, 0) }
+        var request = URLRequest(url: u)
+        apply(auth: auth, headers: headers, to: &request)
+        guard let (data, http) = await send(request, service: service) else { return (nil, 0) }
+        return (try? JSONSerialization.jsonObject(with: data), http.statusCode)
+    }
+
     /// Like `postJSONStatus`, but decodes the body **even when the status is
     /// not 200** (2026-08-30, prd §530).
     ///

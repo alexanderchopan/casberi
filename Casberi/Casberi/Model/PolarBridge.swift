@@ -60,6 +60,18 @@ import SwiftData
 /// host boundary already does what Stripe's prefix check exists to do, and
 /// there is no `PolarFetch.isTestKey` here on purpose — see `validate`.
 ///
+/// **The status code alone still can't tell "malformed" from "sandbox" from
+/// "revoked" apart, but Polar's error BODY usually can (2026-08-31).**
+/// `IngestSupport.getJSONStatus` drops the response body on any non-200,
+/// which made a 401 undiagnosable from either side of the screen — the app
+/// could only ever show the generic hedge above, and there was no way for
+/// anyone (developer included) to see what Polar actually said. `validate`
+/// now reads through `getJSONBody` (`postJSONBody`'s GET analog) and
+/// `PolarFetch.errorDetail` pulls Polar's own reason string out of the body
+/// when one is present, which the setup screen appends to the generic
+/// message. Best-effort, not confirmed against a live rejection — see the
+/// UNMEASURED paragraph below.
+///
 /// **UNMEASURED against a live account (2026-08-30)** — built from Polar's
 /// public API reference, its `polar-js` SDK's TypeScript model sources (read
 /// for exact field names, never a copy — the wire is snake_case, the SDK
@@ -204,11 +216,58 @@ enum PolarFetch {
         case ok(orgID: String, name: String, slug: String)
         /// 401: a sandbox token against the production host, or a plain
         /// rejection — Polar's own isolation makes these the same failure
-        /// (see the type doc), so there is only one recoverable message.
-        case rejected
+        /// AT THE STATUS-CODE LEVEL (see the type doc), but the response
+        /// BODY usually names which one. `detail` carries that reason,
+        /// straight from Polar's own words, when the body decodes to one —
+        /// nil only when it doesn't (an empty body, an unrecognized shape),
+        /// in which case the UI falls back to the old generic hedge.
+        case rejected(detail: String?)
         /// 403: the token is valid but missing a scope this bridge needs.
-        case missingScope
+        case missingScope(detail: String?)
         case unreachable
+    }
+
+    /// Is this pasted string the SAME token twice, with no separator?
+    /// (2026-08-31 — the actual cause behind the first "Polar didn't accept
+    /// that token" report, measured: a stored key of 106 characters that was
+    /// one 53-character token concatenated with itself.)
+    ///
+    /// A double paste is invisible in a `secure: true` field — the dots just
+    /// look long — and it produces a plain 401 whose message then sends
+    /// somebody hunting for a Sandbox/Production mixup they never made. It is
+    /// worth catching BEFORE the request, because the app can say exactly what
+    /// happened where Polar can only say "Unauthorized".
+    ///
+    /// **Deliberately shape-independent — no prefix rule.** `TokenBridge`'s
+    /// own `.cursor` placeholder comment states the reason: a check built on
+    /// one observed token shape reads as a validation rule and would have
+    /// someone believing a perfectly good key is the wrong one the day Polar
+    /// mints a different prefix. This asks only whether the string is its own
+    /// first half twice, which no real single token can be, and which stays
+    /// true whatever Polar's tokens come to look like. It generalizes to every
+    /// keyed bridge here; wired to Polar alone for now because Polar is where
+    /// it was measured.
+    static func isDoubled(_ token: String) -> Bool {
+        let count = token.count
+        guard count >= 2, count.isMultiple(of: 2) else { return false }
+        let half = token.index(token.startIndex, offsetBy: count / 2)
+        return token[token.startIndex..<half] == token[half...]
+    }
+
+    /// Reads a Polar error body's reason, trying every field name this API's
+    /// public docs and its `polar-js` SDK error types show — UNMEASURED
+    /// against a live rejection (this bridge's whole type doc), so this is a
+    /// best-effort net rather than a confirmed single key. `detail` can be a
+    /// STRING (FastAPI's own shape, which Polar is built on) or an ARRAY of
+    /// validation-error objects (FastAPI's 422 shape); only the string form
+    /// is surfaced; nil otherwise rather than guessing at a stitched-together
+    /// summary of the array form.
+    static func errorDetail(_ json: Any?) -> String? {
+        guard let root = json as? [String: Any] else { return nil }
+        for key in ["detail", "error_description", "message", "error"] {
+            if let s = root[key] as? String, !s.isEmpty { return s }
+        }
+        return nil
     }
 
     /// Validates a pasted token by reading Refunds — one of the two
@@ -218,12 +277,12 @@ enum PolarFetch {
     /// perfectly good token). The organization read follows only to LEARN
     /// THE NAME AND SLUG, and its failure is not an error.
     static func validate(key: String) async -> Outcome {
-        let (_, status) = await IngestSupport.getJSONStatus(
+        let (json, status) = await IngestSupport.getJSONBody(
             "\(PolarAccount.api)/refunds?limit=1", auth: auth(key))
         switch status {
         case 200: break
-        case 401: return .rejected
-        case 403: return .missingScope
+        case 401: return .rejected(detail: errorDetail(json))
+        case 403: return .missingScope(detail: errorDetail(json))
         default:  return .unreachable
         }
         let org = await organization(key: key)
@@ -714,9 +773,13 @@ enum PolarIngest {
             NSLog("[Casberi] polarProbe: no stored token (connect via -tokenBridge \"Polar:<token>\")")
             return
         }
-        let (_, refundsStatus) = await IngestSupport.getJSONStatus(
+        let (refundsBody, refundsStatus) = await IngestSupport.getJSONBody(
             "\(PolarAccount.api)/refunds?limit=1", auth: "Bearer \(key)")
         NSLog("[Casberi] polarProbe refunds endpoint: HTTP %d (401 rejected/sandbox-token · 403 missing scope · 0 unreachable)", refundsStatus)
+        if refundsStatus != 200 {
+            NSLog("[Casberi] polarProbe refunds endpoint reason: %@",
+                  PolarFetch.errorDetail(refundsBody) ?? "no reason field in the response body")
+        }
 
         if let org = await PolarFetch.organization(key: key) {
             NSLog("[Casberi] polarProbe org: %@ · %@ (slug=%@)", org.id, org.name.isEmpty ? "—" : org.name, org.slug.isEmpty ? "—" : org.slug)

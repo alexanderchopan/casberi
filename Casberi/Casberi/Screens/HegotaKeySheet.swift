@@ -93,8 +93,23 @@ struct HegotaKeySheet: View {
         // what gets created and why it sits with the watched accounts,
         // which runs longer and wraps to more lines.
         case .noKey:            380
-        // +100 for the Send section added alongside the faucet/Actions ones.
-        case .ready, .working:  560
+        // 560, then 560 again (both already "generous" guesses that turned
+        // out wrong) — this is the THIRD number, and it stops being a guess
+        // this time (2026-08-31, user: "you can't see the bottom of thi
+        // tray where it says send eth so someone seeing it wont know it's
+        // there"). The tray opened at 560 showed the head and the Test ETH
+        // block and NOTHING past "One claim per hour" — the whole Send
+        // block and the Actions block sat below the presented sheet's own
+        // bottom edge, indistinguishable from the tray simply ending there.
+        // A ScrollView with no visible indicator (below) makes that content
+        // REACHABLE, never DISCOVERABLE — nothing on screen said there was
+        // more, so the one control this sheet exists to lead people to
+        // (Send) was invisible to anyone who didn't already know to drag.
+        // 820 is not tuned to fit exactly; it is tuned to be WRONG IN THE
+        // SAFE DIRECTION — a resting height taller than the content leaves
+        // empty space at the bottom, which reads as a plain sheet; a
+        // resting height shorter than the content hides a whole feature.
+        case .ready, .working:  820
         }
     }
 

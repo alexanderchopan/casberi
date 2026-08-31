@@ -153,6 +153,14 @@ struct PolarScreen: View {
     private func saveToken() {
         let token = tokenField.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !token.isEmpty else { return }
+        // A double paste is invisible behind the dots and 401s exactly like a
+        // wrong token, so it gets said plainly here rather than being sent to
+        // Polar to come back as "Unauthorized" (2026-08-31 — the measured
+        // cause of the first report against this bridge).
+        guard !PolarFetch.isDoubled(token) else {
+            fail(String(localized: "That looks like the token pasted twice. Clear the field and paste it once."))
+            return
+        }
         connecting = true
         result = nil
         Task {
@@ -173,10 +181,14 @@ struct PolarScreen: View {
                 PolarWatch.registerBridge(store: store)
                 load()
                 await sync()
-            case .rejected:
-                fail(String(localized: "Polar didn't accept that token. Check you copied the whole thing — and that it's a Production token, not a Sandbox one."))
-            case .missingScope:
-                fail(String(localized: "That token works, but it's missing a permission this needs. Add Refunds (read) and Subscriptions (read) to the token in Polar."))
+            case .rejected(let detail):
+                var message = String(localized: "Polar didn't accept that token. Check you copied the whole thing — and that it's a Production token, not a Sandbox one.")
+                if let detail { message += String(localized: " (Polar said: \"\(detail)\".)") }
+                fail(message)
+            case .missingScope(let detail):
+                var message = String(localized: "That token works, but it's missing a permission this needs. Add Refunds (read) and Subscriptions (read) to the token in Polar.")
+                if let detail { message += String(localized: " (Polar said: \"\(detail)\".)") }
+                fail(message)
             case .unreachable:
                 fail(String(localized: "Couldn't reach Polar — check your connection."))
             }
