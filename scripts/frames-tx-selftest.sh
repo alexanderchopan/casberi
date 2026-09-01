@@ -708,6 +708,94 @@ check("the stitch carries the chain id", atomicTx.chainID == FramesTransaction.c
 check("and the nonce it was given", atomicTx.nonce == 7)
 check("and signs nothing by itself", atomicTx.signatures.isEmpty)
 
+// ===========================================================================
+// WHO GOT IT, AND WHAT IT COST (2026-09-01). A row said what ran, what it cost
+// in gas, and whether it landed — never who received it, and never in money.
+let me = "0xAAAA"
+let them = "0xBBBB"
+func payload(_ to: String, _ value: String) -> FramesFrameRow {
+    .init(frame: .init(mode: 2, flags: 0, target: to, executionGas: 1, stateGas: 1,
+                       value: value, data: nil),
+          outcome: .init(succeeded: true, gasUsed: 1, stateGasUsed: nil, logCount: 1))
+}
+let verifyRow = FramesFrameRow(
+    frame: .init(mode: 1, flags: 3, target: me, executionGas: 1, stateGas: 1,
+                 value: "0x0", data: nil),
+    outcome: .init(succeeded: true, gasUsed: 1, stateGasUsed: nil, logCount: 0))
+
+let paid = FramesMove(hash: "0xr1", blockNumber: 1, sender: me, payer: me,
+                      succeeded: true, gasUsed: 210_790,
+                      effectiveGasPriceWei: 1_000_000_000,
+                      rows: [verifyRow, payload(them, "0x1"), payload("0xCCCC", "0x2")])
+check("recipients name the payload frames", paid.recipients == [them, "0xCCCC"])
+
+// **TWO RULES, TWO FIXTURES, AND THE FIRST ATTEMPT PROVED NEITHER.** One
+// fixture where the VERIFY frame targets the sender satisfies BOTH the
+// mode check and the sender check, so deleting either one left the suite
+// green — both mutations survived. A fixture only tests the rule it names if
+// it FAILS that rule and passes every other one.
+//
+// Isolating the MODE rule: a VERIFY frame pointed somewhere other than the
+// sender. Constructed rather than observed — every VERIFY frame on this chain
+// targets its sender — precisely so the sender check cannot do this check's
+// work for it.
+let oddVerify = FramesMove(
+    hash: "0xr5", blockNumber: 1, sender: me, payer: me, succeeded: true, gasUsed: 1,
+    effectiveGasPriceWei: 1,
+    rows: [.init(frame: .init(mode: 1, flags: 3, target: "0xDDDD", executionGas: 1,
+                              stateGas: 1, value: "0x0", data: nil),
+                 outcome: nil),
+           payload(them, "0x1")])
+check("a VERIFY frame is never a recipient, wherever it points",
+      oddVerify.recipients == [them])
+
+// Isolating the SENDER rule: a PAYLOAD frame that pays the sender — an
+// ordinary self-transfer, which this chain permits and a room must not report
+// as "you sent to yourself" in the recipient slot.
+let selfSend = FramesMove(
+    hash: "0xr6", blockNumber: 1, sender: me, payer: me, succeeded: true, gasUsed: 1,
+    effectiveGasPriceWei: 1,
+    rows: [verifyRow, payload(me, "0x1"), payload(them, "0x2")])
+check("the sender is never its own recipient", selfSend.recipients == [them])
+let repeated = FramesMove(hash: "0xr2", blockNumber: 1, sender: me, payer: me,
+                          succeeded: true, gasUsed: 1, effectiveGasPriceWei: 1,
+                          rows: [payload(them, "0x1"), payload("0xbbbb", "0x2")])
+// Case-folded for the DEDUPE only: an address's case is a checksum, so the
+// spelling that comes back is the one that arrived.
+check("two spellings of one address are one recipient", repeated.recipients == [them])
+
+// THE FEE is the receipt's own two terms multiplied — never a frame sum, for
+// the reason `gasUsed` carries in its own doc.
+check("the fee is gasUsed x effectiveGasPrice",
+      paid.feeWei == Decimal(210_790) * Decimal(1_000_000_000))
+let noPrice = FramesMove(hash: "0xr3", blockNumber: 1, sender: me, payer: me,
+                         succeeded: true, gasUsed: 210_790, rows: [])
+// **NIL, NEVER ZERO.** An unread fee and a free transaction must not look
+// alike, and on this chain nothing is free.
+check("a missing price is an unknown fee, not a free one", noPrice.feeWei == nil)
+let theirs = FramesMove(hash: "0xr4", blockNumber: 1, sender: me, payer: them,
+                        succeeded: true, gasUsed: 210_790,
+                        effectiveGasPriceWei: 1_000_000_000, rows: [])
+check("a sponsored transaction still HAS a fee", theirs.feeWei != nil)
+// ...but it is not yours, and drawing it under a row whose own second line says
+// somebody else paid is the two halves of one row disagreeing.
+check("and never presents it as yours", theirs.feeWeiIfSelfPaid == nil)
+check("while a self-paid one does", paid.feeWeiIfSelfPaid != nil)
+
+// THE JOIN — the same bit the send now sets, read back.
+check("bit 2 reads as joined to the next frame",
+      FramesFrameRow(frame: .init(mode: 2, flags: 0x4, target: nil, executionGas: nil,
+                                  stateGas: nil, value: nil, data: nil),
+                     outcome: nil).joinedToNext)
+check("and an unflagged frame is not",
+      !FramesFrameRow(frame: .init(mode: 2, flags: 0x0, target: nil, executionGas: nil,
+                                   stateGas: nil, value: nil, data: nil),
+                      outcome: nil).joinedToNext)
+// The strip sizes cells by this, so a VERIFY frame's "0x0" and a real amount
+// must not both read as nothing.
+check("a zero value is no value", payload(them, "0x0").valueWeiHex == nil)
+check("and a real one survives", payload(them, "0x38d7ea4c68000").valueWeiHex != nil)
+
 if fails > 0 { print("  \(fails) assertion(s) failed"); exit(1) }
 print("  ok   encoder: 2 real vectors byte-exact, keccak == the chain's own hash")
 SWIFT
@@ -882,6 +970,20 @@ mutate "a payload frame built as a VERIFY frame" $F \
 mutate "the legs reversed" $F \
   '+ legs.enumerated().map { index, leg in' \
   '+ legs.reversed().enumerated().map { index, leg in'
+
+# --- the row's new readings -------------------------------------------------
+mutate "the VERIFY frame counted as a recipient" $F4 \
+  'for row in rows where row.frame.mode != 1 {' \
+  'for row in rows {'
+mutate "the sender not excluded from its own recipients" $F4 \
+  'guard to.lowercased() != sender.lowercased() else { continue }' \
+  'if false { continue }'
+mutate "an unread fee reported as zero" $F4 \
+  'guard let gasUsed, let price = effectiveGasPriceWei else { return nil }' \
+  'guard let gasUsed else { return nil }; let price = effectiveGasPriceWei ?? 0'
+mutate "a sponsor's fee presented as yours" $F4 \
+  'var feeWeiIfSelfPaid: Decimal? { sponsored ? nil : feeWei }' \
+  'var feeWeiIfSelfPaid: Decimal? { feeWei }'
 
 
 # --- the fan-out must be LAST, and this proves it -----------------------------

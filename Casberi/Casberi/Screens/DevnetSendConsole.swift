@@ -541,6 +541,15 @@ struct DevnetStitch {
     let atCapacity: String
     /// Returns nil on success, or the sentence to show on failure.
     let send: ([DevnetSendLeg], Bool) async -> String?
+    /// **WHAT THIS BATCH WILL LOOK LIKE ONCE IT HAS RUN**, drawn by the venue
+    /// in the venue's own idiom, above the list.
+    ///
+    /// Optional and closure-shaped rather than a view this file builds,
+    /// because the whole value of it is that it is the SAME drawing the room
+    /// uses to show what happened — compose in the shape you will read the
+    /// result in. A generic preview invented here would be a second drawing of
+    /// the same thing, which is the drift `roomFigure`'s own guard exists for.
+    var preview: ((_ legs: [DevnetSendLeg], _ atomic: Bool) -> AnyView)? = nil
 }
 
 struct DevnetSendSheet: View {
@@ -976,6 +985,17 @@ struct DevnetSendSheet: View {
                     .foregroundStyle(DS.textTertiary)
                     .padding(.top, DS.Space.s4)
                     .padding(.bottom, DS.Space.s3)
+
+                // The venue's own drawing of this batch, above the rows it
+                // describes. Absent for a venue that has nothing to draw, and
+                // absent below two legs on purpose: a one-leg strip is a
+                // picture of a line, and the rows already say it.
+                if let preview = stitch.preview, legs.count > 1 {
+                    preview(legs, atomic)
+                        .frame(height: 18)
+                        .padding(.bottom, DS.Space.s3)
+                        .animation(DS.Motion.standard, value: atomic)
+                }
 
                 ScrollView {
                     VStack(spacing: DS.Space.s2) {

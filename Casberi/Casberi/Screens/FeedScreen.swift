@@ -718,6 +718,42 @@ struct FeedScreen: View {
             .map { String(localized: "\($0) available") }
     }
 
+    /// The batch being built, in the shape the ROOM reads a finished one.
+    ///
+    /// Built through `FramesTransaction.stitched` rather than assembled here,
+    /// which is the whole point: the preview is then the real builder's own
+    /// answer, so a screen cannot promise a shape the signer does not produce —
+    /// including the atomic rule the node corrected, where the LAST payload
+    /// frame never carries the flag.
+    ///
+    /// An unreadable amount contributes a frame with no value rather than
+    /// dropping out, so the strip keeps one cell per leg while somebody is
+    /// still typing.
+    private func framesPreviewRun(_ legs: [DevnetSendLeg], atomic: Bool) -> [FramesFrameRow] {
+        let built = legs.map {
+            FramesTransaction.Leg(recipient: RLP.data(fromHex: $0.address) ?? Data(),
+                                  value: DevnetSendParse.weiData(from: $0.amount) ?? Data())
+        }
+        let fields = FramesTransaction.stitched(sender: Data(), legs: built, atomic: atomic,
+                                                nonce: 0, maxPriorityFeePerGas: 0, maxFeePerGas: 0)
+        return fields.frames.map { frame in
+            FramesFrameRow(
+                frame: FramesRead.Frame(mode: frame.mode,
+                                        flags: frame.flags,
+                                        target: nil,
+                                        executionGas: frame.executionGas,
+                                        stateGas: frame.stateGas,
+                                        value: "0x" + RLP.hex(frame.value),
+                                        data: nil),
+                // **NO OUTCOME, because nothing has happened.** The strip draws
+                // an outcome-less cell as "ran", which is the right reading for
+                // a plan: it is what this batch WILL do, and inventing a
+                // success or a failure here would be a claim about a
+                // transaction that has not been signed.
+                outcome: nil)
+        }
+    }
+
     /// SEVERAL LEGS, ONE SIGNATURE (prd §548 sixth follow-up).
     ///
     /// Deliberately NOT `sendFrames` in a loop: a loop is several transactions
@@ -750,7 +786,13 @@ struct FeedScreen: View {
             guard let nonce = await FramesSend.currentNonce(for: address) else {
                 return String(localized: "Couldn't reach the chain to read this account's nonce.")
             }
-            _ = try await FramesSend.sendStitched(legs: built, atomic: atomic, nonce: nonce)
+            let hash = try await FramesSend.sendStitched(legs: built, atomic: atomic, nonce: nonce)
+            // **SAY IT WENT, BEFORE THE CHAIN CAN.** `sendStitched` returns
+            // when the node accepts the bytes, which is before any block
+            // carries them — so the sheet dismissed onto a room showing the
+            // world as it was, and from outside a send that worked looked
+            // exactly like one that vanished.
+            FramesLiveState.shared.notePending(hash: hash, legs: built.count)
             await FramesLiveState.shared.refresh()
             return nil
         } catch let failure as FramesSend.Failure {
@@ -783,7 +825,8 @@ struct FeedScreen: View {
             guard let nonce = await FramesSend.currentNonce(for: address) else {
                 return String(localized: "Couldn't reach the chain to read this account's nonce.")
             }
-            _ = try await FramesSend.sendValue(to: target, valueWei: valueWei, nonce: nonce)
+            let hash = try await FramesSend.sendValue(to: target, valueWei: valueWei, nonce: nonce)
+            FramesLiveState.shared.notePending(hash: hash, legs: 1)
             await FramesLiveState.shared.refresh()
             return nil
         } catch let failure as FramesSend.Failure {
@@ -3782,7 +3825,17 @@ struct FeedScreen: View {
                     // size can show without scrolling past the control.
                     maxLegs: 8,
                     atCapacity: String(localized: "That's as many frames as one transaction can carry here."),
-                    send: sendFramesStitched))
+                    send: sendFramesStitched,
+                    // **THE SAME STRIP THE ROOM DRAWS.** Not a preview invented
+                    // for this screen: `FramesSequenceStrip` is what the Frames
+                    // scope uses to show what a transaction DID, so composing in
+                    // it means composing in the shape the result will be read
+                    // in — and the join between cells is the only place the
+                    // all-or-nothing toggle is visible as a picture rather than
+                    // as a sentence.
+                    preview: { legs, atomic in
+                        AnyView(FramesSequenceStrip(runs: [framesPreviewRun(legs, atomic: atomic)]))
+                    }))
 case .vibenetSend(let account):
             DevnetSendSheet(
                 venue: String(localized: "vibenet"),

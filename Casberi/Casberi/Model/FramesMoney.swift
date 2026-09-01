@@ -59,6 +59,31 @@ enum FramesMoney {
         return formatter.string(from: rounded as NSDecimalNumber)
     }
 
+    /// A fee, in ETH, from a raw wei `Decimal`.
+    ///
+    /// **SIX places, not four.** A fee here is ~0.0002 ETH, which `balanceLine`
+    /// would render as `0.0002` and a smaller one as a flat `0.0000` — a fee
+    /// stated as nothing, on a chain where nothing is free. The extra places
+    /// cost a slightly longer string on a line that already carries only this.
+    ///
+    /// Rounds DOWN like everything else here, which for a COST is the
+    /// conservative direction the other way round — it can only ever
+    /// understate what left. Stated rather than silently inherited: the rule
+    /// is one function's, and this is a different question.
+    static func feeLine(wei: Decimal?) -> String? {
+        guard let wei, wei > 0 else { return nil }
+        var quotient = wei / weiPerETH
+        var rounded = Decimal()
+        NSDecimalRound(&rounded, &quotient, 6, .down)
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 6
+        formatter.maximumFractionDigits = 6
+        formatter.usesGroupingSeparator = true
+        guard let text = formatter.string(from: rounded as NSDecimalNumber) else { return nil }
+        return String(localized: "\(text) fee")
+    }
+
     /// A balance line for a screen, or nil when the read did not happen.
     /// **No currency symbol and no dollar figure** — see the type doc.
     static func balanceLine(weiHex: String?) -> String? {

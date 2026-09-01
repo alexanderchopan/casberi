@@ -177,6 +177,30 @@ struct FramesFrameRow: Equatable, Codable {
     /// receipt has not been read. Three answers where a Bool has two, because
     /// collapsing "moved nothing by design" into "did not move" is a false
     /// alarm on the one frame every transaction here carries.
+    /// **IS THIS FRAME JOINED TO THE NEXT ONE?** (prd §548 sixth follow-up
+    /// amendment.)
+    ///
+    /// `flags` bit 2 does not mean "roll me back if a later frame fails" — the
+    /// node refuses a transaction that sets it on the LAST frame, in its own
+    /// words: `atomic batch flag on last frame`. It means this frame is joined
+    /// to the one after it, so a run of joined frames plus the first unjoined
+    /// frame after them is one atomic group.
+    ///
+    /// Named separately from `frame.startsBatch` because the drawing asks a
+    /// different question than the wire answers: the wire says "a batch begins
+    /// here", the strip needs "is there a join between this cell and the next".
+    /// They are the same bit and different sentences.
+    var joinedToNext: Bool { frame.startsBatch }
+
+    /// What this frame moved, as raw wei hex — nil for a frame that moves
+    /// nothing by design, which is every VERIFY frame.
+    var valueWeiHex: String? {
+        guard let raw = frame.value else { return nil }
+        let body = raw.hasPrefix("0x") || raw.hasPrefix("0X") ? String(raw.dropFirst(2)) : raw
+        guard body.contains(where: { $0 != "0" }) else { return nil }
+        return raw
+    }
+
     var valueLanded: Bool? {
         guard let outcome else { return nil }
         // `value` is the WIRE's hex string, not bytes — and "0x", "0x0" and
@@ -203,9 +227,52 @@ struct FramesMove: Identifiable, Equatable, Codable {
     /// two orders of magnitude, and wrong in the direction that looks
     /// plausible.
     var gasUsed: UInt64?
+    /// **OPTIONAL, and that is a decode requirement, not a style choice.**
+    /// `FramesMove` is `Codable` and cached in UserDefaults, and Swift's
+    /// synthesized decoder applies no default for a missing key — a
+    /// non-Optional field added here fails the decode of every move already on
+    /// disk, silently emptying the room (the `RSSStore.Feed` trap, §312).
+    var effectiveGasPriceWei: UInt64? = nil
     var rows: [FramesFrameRow]
 
     var id: String { hash }
+
+    /// **WHO THE MONEY WENT TO.** A row said what ran, what it cost and
+    /// whether it landed, and never once who received it — which on a send is
+    /// the first thing anybody wants back.
+    ///
+    /// Payload frames only, deduped, in the order they ran: a VERIFY frame
+    /// targets the sender itself and naming it would report you as your own
+    /// recipient on every transaction here. Case-folded for the dedupe and
+    /// returned in the ORIGINAL spelling, since an address's case is a
+    /// checksum and not ours to normalise away.
+    var recipients: [String] {
+        var seen: Set<String> = []
+        var out: [String] = []
+        for row in rows where row.frame.mode != 1 {
+            guard let to = row.frame.target, !to.isEmpty else { continue }
+            guard to.lowercased() != sender.lowercased() else { continue }
+            if seen.insert(to.lowercased()).inserted { out.append(to) }
+        }
+        return out
+    }
+
+    /// **WHAT IT COST, IN MONEY.** `gasUsed` is a unit nobody holds; the fee
+    /// is what actually left the balance, and this room already computes it
+    /// for the balance curve. Both terms are the receipt's own — never a frame
+    /// sum, for the reason `gasUsed` states above.
+    ///
+    /// Nil when either term is missing, never zero: an unread fee and a free
+    /// transaction must not look alike, and on this chain nothing is free.
+    var feeWei: Decimal? {
+        guard let gasUsed, let price = effectiveGasPriceWei else { return nil }
+        return Decimal(gasUsed) * Decimal(price)
+    }
+
+    /// **THE FEE IS THE SENDER'S, and a sponsored transaction's is not
+    /// theirs.** Drawing "you paid 0.0002" under a row whose own second line
+    /// says somebody else paid is the two halves of one card disagreeing.
+    var feeWeiIfSelfPaid: Decimal? { sponsored ? nil : feeWei }
 
     /// Somebody else paid. The one reading this chain publishes that ordinary
     /// chains hide — and it is a comparison of two fields on the SAME receipt,

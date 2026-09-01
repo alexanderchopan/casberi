@@ -292,8 +292,46 @@ struct FramesRoomList: View {
         }
     }
 
+    /// **A ROW FOR SOMETHING THAT HAS NOT LANDED YET.**
+    ///
+    /// Deliberately NOT a `FramesMoveRow` with invented fields: it has no
+    /// outcome, no gas and no fee, because none of those exist until a block
+    /// carries it, and filling them with zeros would be the §83 fake status on
+    /// the row somebody is watching hardest. It says the two things that ARE
+    /// true — that this phone sent it, and how many frames went — and nothing
+    /// else.
+    private func pendingRow(_ item: FramesPending) -> some View {
+        HStack(spacing: DS.Space.s3) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.legs == 1
+                     ? String(localized: "1 frame")
+                     : String(localized: "\(String(item.legs)) frames"))
+                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                Text(String(localized: "Sending\u{2026}"))
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+            }
+            Spacer(minLength: 0)
+            ProgressView().controlSize(.mini)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .transition(.opacity)
+    }
+
     @ViewBuilder private func rows(_ list: [FramesMove]) -> some View {
-        if list.isEmpty {
+        // **PENDING FIRST, and only in the scopes where it belongs.** Activity
+        // is every transaction and Home is where the send lives, so a
+        // just-broadcast batch belongs in both. Frames and Sponsors select rows
+        // by properties nothing can know yet — how many frames RAN, and who
+        // PAID — so a pending row there would be filed under a claim that has
+        // not been made.
+        let inFlight = section == .activity ? FramesLiveState.shared.pending : []
+        if !inFlight.isEmpty {
+            VStack(spacing: DS.Space.s2) {
+                ForEach(inFlight) { pendingRow($0) }
+            }
+            .padding(.bottom, DS.Space.s2)
+        }
+        if list.isEmpty, inFlight.isEmpty {
             Text(String(localized: "Nothing here yet."))
                 .dsText(.subhead13)
                 .foregroundStyle(DS.textTertiary)
@@ -330,6 +368,16 @@ struct FramesMoveRow: View {
         return move.succeeded ? String(localized: "Ran") : String(localized: "Failed")
     }
 
+    /// Nil where there is nobody to name — a plain transfer this room read
+    /// off the chain rather than sent, or a batch of pure calls.
+    private var recipientLine: String? {
+        let people = move.recipients
+        guard let first = people.first else { return nil }
+        return people.count == 1
+            ? String(localized: "\u{2192} \(WalletStore.shortAddress(first))")
+            : String(localized: "\u{2192} \(String(people.count)) addresses")
+    }
+
     private var tone: Color {
         if !move.rolledBack.isEmpty || (move.movedValue == true && !move.succeeded) {
             return DS.destructive
@@ -359,14 +407,36 @@ struct FramesMoveRow: View {
                         Text(String(localized: "Somebody else paid"))
                             .dsText(.label12).foregroundStyle(DS.textTertiary)
                     }
+                    // **WHO GOT THE MONEY.** The row said what ran, what it
+                    // cost and whether it landed, and never once who received
+                    // it — which after a send is the first thing anybody wants
+                    // back. Several recipients are COUNTED rather than listed:
+                    // three short addresses on one line is a line nobody reads,
+                    // and the strip above already shows there were three.
+                    if let line = recipientLine {
+                        Text(line).dsText(.label12).foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
                 }
             }
-            Spacer(minLength: 0)
-            if let gas = move.gasUsed {
-                // The TRANSACTION's own gas, never a sum of its frames —
-                // measured 100 + 3,000 against a receipt of 210,790.
-                Text(String(localized: "\(String(gas)) gas"))
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+            Spacer(minLength: DS.Space.s2)
+            // **THE FEE IN MONEY, WITH GAS BENEATH IT.** Gas is a unit nobody
+            // holds; the fee is what actually left the balance, and this room
+            // already computes it for the curve. Gas stays because on a devnet
+            // it is the number somebody is tuning — but it stops being the only
+            // thing the row says about cost.
+            VStack(alignment: .trailing, spacing: 1) {
+                if let fee = FramesMoney.feeLine(wei: move.feeWeiIfSelfPaid) {
+                    Text(fee).dsText(.label12).foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+                if let gas = move.gasUsed {
+                    // The TRANSACTION's own gas, never a sum of its frames —
+                    // measured 100 + 3,000 against a receipt of 210,790.
+                    Text(String(localized: "\(String(gas)) gas"))
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
             }
         }
         .contentShape(Rectangle())
@@ -491,6 +561,9 @@ struct FramesSequenceStrip: View {
 
     private static let rowHeight: CGFloat = 14
     private static let gap: CGFloat = 6
+    /// The space between two cells that are NOT joined. Joined cells touch, so
+    /// this gap is the whole of how a person sees an atomic group.
+    private static let cellGap: CGFloat = 3
 
     var body: some View {
         Canvas { ctx, size in
@@ -500,15 +573,48 @@ struct FramesSequenceStrip: View {
                              (size.height - rowGap * CGFloat(runs.count - 1)) / CGFloat(runs.count))
             for (row, run) in runs.enumerated() {
                 let y = (height + rowGap) * CGFloat(row)
-                // Gas SHARE, so a cell's width says what that frame cost —
-                // falling back to equal widths when the receipt did not report
-                // it, rather than dropping the frame from the drawing.
-                let costs = run.map { Double($0.outcome?.gasUsed ?? 0) }
-                let total = costs.reduce(0, +)
+
+                // **WIDTH IS VALUE MOVED, NOT GAS** (2026-09-01). The first cut
+                // used each frame's `gasUsed` share, and that number was
+                // measured to be nearly meaningless here: on a transaction this
+                // app sent, the frames reported 100 and 3,000 against a receipt
+                // of 210,790 — over 98% of the real cost is attributed to no
+                // frame at all. So gas shares claimed a cost breakdown this
+                // chain does not publish.
+                //
+                // Value is a fact each frame carries in its own right, it is
+                // what a batch is actually FOR, and a three-leg send now reads
+                // as ascending cells instead of three identical ones.
+                //
+                // The VERIFY frame moves nothing by design, so it is given a
+                // FIXED narrow cell rather than a zero-width one or a share of
+                // nothing: it is the frame that authorises, it is present in
+                // every transaction here, and a drawing that omits it is
+                // drawing a different transaction.
+                let verifyWidth: CGFloat = 12
+                let values: [Double] = run.map { cell in
+                    guard cell.frame.mode != 1 else { return 0 }
+                    return Self.weiMagnitude(cell.valueWeiHex)
+                }
+                let verifyCount = run.filter { $0.frame.mode == 1 }.count
+                let payloadCount = run.count - verifyCount
+                let total = values.reduce(0, +)
+                let gaps = CGFloat(max(0, run.count - 1)) * Self.cellGap
+                let payloadSpace = max(0, size.width - gaps - verifyWidth * CGFloat(verifyCount))
+
                 var x: CGFloat = 0
                 for (i, cell) in run.enumerated() {
-                    let share = total > 0 ? costs[i] / total : 1.0 / Double(run.count)
-                    let w = max(3, CGFloat(share) * (size.width - CGFloat(run.count - 1) * 2))
+                    let w: CGFloat
+                    if cell.frame.mode == 1 {
+                        w = verifyWidth
+                    } else if total > 0 {
+                        w = max(4, CGFloat(values[i] / total) * payloadSpace)
+                    } else {
+                        // Every payload frame moved nothing — a batch of pure
+                        // calls. Equal widths say "these ran" without claiming
+                        // a size none of them has.
+                        w = max(4, payloadSpace / CGFloat(max(1, payloadCount)))
+                    }
                     let rect = CGRect(x: x, y: y, width: w, height: height)
                     let path = Path(roundedRect: rect, cornerRadius: 3)
                     let ran = cell.outcome?.succeeded ?? true
@@ -523,12 +629,52 @@ struct FramesSequenceStrip: View {
                     } else {
                         ctx.fill(path, with: .color(DS.destructive))
                     }
-                    x += w + 2
+
+                    // **THE JOIN, which is the thing this room could not show
+                    // until the send could make one.** `flags` bit 2 means
+                    // "joined to the frame after me" — proven by the node
+                    // refusing it on a last frame — so a run of joined frames
+                    // plus the first unjoined one after them is ONE atomic
+                    // group, and the two transactions this app sent that
+                    // differ ONLY in that bit drew identically here.
+                    //
+                    // Drawn as a TIE between the cells rather than as a colour
+                    // or a badge: atomicity is a relationship between two
+                    // frames, and every other encoding would make it a property
+                    // of one of them.
+                    let last = i == run.count - 1
+                    if cell.joinedToNext, !last {
+                        let tieH = max(2, height * 0.34)
+                        let tie = CGRect(x: x + w, y: y + (height - tieH) / 2,
+                                         width: Self.cellGap, height: tieH)
+                        ctx.fill(Path(tie), with: .color(DS.tint.opacity(0.55)))
+                    }
+                    x += w + Self.cellGap
                 }
             }
         }
         .accessibilityElement()
         .accessibilityLabel(Text(String(localized: "\(String(runs.count)) transactions, drawn frame by frame")))
+    }
+
+    /// A wei hex string as a magnitude for RELATIVE widths only.
+    ///
+    /// `Double` is fine here and nowhere else in this seat: this is the ratio
+    /// between two bars on a 350pt strip, never a figure anybody reads, and
+    /// the alternative — `Decimal` arithmetic per cell inside a `Canvas` draw
+    /// — buys precision that cannot be seen. Anything a person READS goes
+    /// through `FramesMoney`, which carries wei as `Decimal` precisely because
+    /// this chain holds balances past `UInt64`.
+    static func weiMagnitude(_ hex: String?) -> Double {
+        guard let hex else { return 0 }
+        let body = hex.hasPrefix("0x") || hex.hasPrefix("0X") ? String(hex.dropFirst(2)) : hex
+        guard !body.isEmpty else { return 0 }
+        var out = 0.0
+        for ch in body {
+            guard let d = ch.hexDigitValue else { return 0 }
+            out = out * 16 + Double(d)
+        }
+        return out
     }
 }
 

@@ -43643,3 +43643,101 @@ transactions found on chain.
 Note again that a rolled-back frame reports **success** — `status 0x1` with no
 log — which is why every reading in this seat is taken from effects and never
 from the status field.
+
+## §548 seventh follow-up — five improvements, and two charts the send made stale (user: "how else would you improve the frames experience, and does anything you've learned so far change your mind on what you think the charts we have should render", then "do all", then "will you also ensure the demo has parity with the actual app", 2026-09-01)
+
+Asked whether the day's measurements changed my mind about the charts: yes,
+twice, and both because the send learned to do something the room could not
+draw.
+
+### The strip was stale in two different ways
+
+**1. It could not show the thing the toggle controls.** `0x04` means "joined to
+the frame after me" — the node's own correction — and the send can now produce
+both joined and independent batches. The strip drew them identically, so the
+two transactions this app sent that differ ONLY in that bit were the same
+picture. Joined cells now TOUCH, bridged by a tie; independent cells have a
+gap. Drawn as a tie between two cells rather than as a colour or a badge on
+one, because atomicity is a RELATIONSHIP between two frames and every other
+encoding makes it a property of one of them.
+
+**2. Its widths claimed a breakdown this chain does not publish.** Cells were
+sized by each frame's `gasUsed` share — and that number was measured to be
+nearly meaningless here: on a transaction this app sent, the frames reported
+100 and 3,000 against a receipt of **210,790**, so over 98% of the real cost is
+attributed to no frame at all. Width is VALUE MOVED now: a fact each frame
+carries in its own right, what a batch is actually FOR, and it makes a
+three-leg send read as ascending cells instead of three identical ones. The
+VERIFY frame moves nothing by design and gets a fixed narrow cell rather than a
+zero-width one — it is present in every transaction here, and a drawing that
+omits it is drawing a different transaction.
+
+The Activity bars are unchanged and deliberately so: the 4pt floor and the
+outlined-not-filled treatment for a failed transaction both rest on measured
+facts that still hold.
+
+### Four more
+
+**The row names who got the money.** It said what ran, what it cost and whether
+it landed, and never once the recipient — which after a send is the first thing
+anybody wants back. Payload frames only: a VERIFY frame targets the sender, so
+a naive read reports you as your own recipient on every transaction this chain
+carries. Several are COUNTED, not listed — three short addresses on one line is
+a line nobody reads, and the strip above already shows there were three.
+
+**And what it cost in money.** Gas is a unit nobody holds; the fee is what left
+the balance, and this room already computed it for the curve. Six decimal
+places rather than the balance line's four, because a fee here is ~0.0002 and
+four places render a smaller one as a flat `0.0000` — a fee stated as nothing,
+on a chain where nothing is free. **A sponsored transaction shows no fee**:
+drawing "you paid" under a row whose own second line says somebody else did is
+the two halves of one row disagreeing.
+
+**The legs screen previews the strip.** Option C's one good idea, grafted onto
+B: you compose in the same drawing you will read the result in. It is the
+ROOM's own `FramesSequenceStrip`, and the run is built by
+`FramesTransaction.stitched` itself rather than assembled for the screen — so a
+preview cannot promise a shape the signer does not produce, including the
+atomic rule where the last payload frame never carries the flag. The cells have
+no outcome, because nothing has happened.
+
+**A just-sent transaction appears immediately.** `sendStitched` returns when
+the node accepts the bytes, which is before any block carries them — so the
+sheet dismissed onto a room showing the world as it was, and from outside a
+send that worked looked exactly like one that vanished until the next sweep.
+`FramesLiveState.pending` is in memory only: a pending transaction is pending
+for seconds, and surviving a launch would mean a row saying "Sending…" about
+one that settled while the app was closed. A stuck transaction **stops being
+narrated rather than being called failed** — we cannot tell "still queued" from
+"dropped" from here, and going quiet says only what is true.
+
+### Demo parity
+
+The demo already covered the join (its rolled-back fixture carries `flags
+0x04`). What it could not show was a MULTI-leg send that worked, so every strip
+row was two cells of equal width — a demo that only ever shows two-frame
+transactions teaches that this chain does two-frame transactions.
+
+Added as the real one: `0x31e7311a`, three legs of 0.001 / 0.002 / 0.003 to
+three addresses that did not exist, 595,948 gas at 1,000,000,007 wei, every
+figure measured off the receipt. It is the only fixture where the strip's cells
+have different widths and the only row that says "3 addresses".
+
+### Guarded
+
+`frames-tx-selftest.sh` at **45 mutations**, +5 for the new readings. **Two of
+them survived their first run**, and for the same reason as ever: one fixture
+where the VERIFY frame targets the sender satisfies BOTH the mode rule and the
+sender rule, so deleting either left the suite green. Two fixtures now — a
+VERIFY frame pointed elsewhere, and a payload frame paying the sender — each
+failing exactly one rule. **A fixture only tests the rule it names if it fails
+that rule and passes every other one**, fourth instance in this seat alone.
+
+`FramesMove.effectiveGasPriceWei` is Optional because `FramesMove` is `Codable`
+and cached: Swift's synthesized decoder applies no default for a missing key,
+so a non-Optional field fails the decode of every move on disk and silently
+empties the room (the `RSSStore.Feed` trap, §312). Seen exactly that way on the
+simulator, where the first build after the change drew rows with no fee.
+
+All 29 audits green; walked on the simulator across all four scopes and both
+toggle positions.

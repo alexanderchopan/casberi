@@ -231,6 +231,18 @@ enum FramesBridge {
 
 // MARK: - The live read
 
+/// A transaction this phone broadcast and has not yet seen on chain.
+///
+/// Its own type rather than a bare hash so a row can say something true about
+/// it — how many legs were sent — without going back to the chain for a
+/// transaction the chain has not got yet.
+struct FramesPending: Identifiable, Equatable {
+    var hash: String
+    var legs: Int
+    var at: Date = .now
+    var id: String { hash }
+}
+
 @MainActor
 @Observable
 final class FramesLiveState {
@@ -275,6 +287,45 @@ final class FramesLiveState {
     /// because an unreached read is not evidence of an empty account and the
     /// room must say "couldn't reach the chain" rather than draw a zero.
     private(set) var reached = false
+
+    /// **WHAT THIS PHONE JUST SENT AND HAS NOT YET SEEN LAND.**
+    ///
+    /// `sendStitched` returns the moment the node ACCEPTS the bytes, which is
+    /// before any block carries them — so the sheet dismissed onto a room that
+    /// still showed the world as it was, and the transaction appeared whenever
+    /// the next sweep happened to run. From outside, a send that worked and a
+    /// send that vanished look identical for as long as that takes.
+    ///
+    /// **In memory only, deliberately.** It is not persisted with the accounts
+    /// because a hash that is pending is pending for seconds; surviving a
+    /// launch would mean a row saying "Sending…" about a transaction that
+    /// settled while the app was closed, which is worse than not showing it at
+    /// all. A relaunch simply reads the chain, which is the authority.
+    private(set) var pending: [FramesPending] = []
+
+    /// Record a broadcast. Called by the send path, never by a read.
+    func notePending(hash: String, legs: Int) {
+        guard !pending.contains(where: { $0.hash.lowercased() == hash.lowercased() }) else { return }
+        pending.append(FramesPending(hash: hash, legs: legs))
+    }
+
+    /// Drop anything the chain has now told us about, and anything old enough
+    /// that we are no longer entitled to claim it is in flight.
+    ///
+    /// **A stuck transaction stops being narrated rather than being called
+    /// failed.** We cannot tell "still queued" from "dropped by the node" from
+    /// here, and a row asserting either would be a claim this app cannot
+    /// support (§83) — going quiet says only what is true, which is that we
+    /// stopped being able to say.
+    private func reconcilePending(against accounts: [FramesAccount]) {
+        let landed = Set(accounts.flatMap(\.moves).map { $0.hash.lowercased() })
+        let cutoff = Date().addingTimeInterval(-Self.pendingWindow)
+        pending.removeAll { landed.contains($0.hash.lowercased()) || $0.at < cutoff }
+    }
+
+    /// Two minutes. Blocks here land in seconds, so this is a ceiling on how
+    /// long a claim may stand unverified, not an expectation.
+    private static let pendingWindow: TimeInterval = 120
 
     /// How many of an address's newest transactions get their frames read.
     /// A bound on REQUESTS, not on what a person can see.
@@ -333,6 +384,7 @@ final class FramesLiveState {
         // A pass where NOTHING answered leaves the last good read standing
         // rather than blanking the room — §515a's rule.
         guard anyAnswered else { reached = false; return }
+        reconcilePending(against: read)
         accounts = read
         readAt = .now
         reached = true
@@ -415,6 +467,11 @@ final class FramesLiveState {
                 payer: (receipt?["payer"] as? String) ?? from,
                 succeeded: (receipt?["status"] as? String) == "0x1",
                 gasUsed: FramesRead.hexInt(receipt?["gasUsed"]),
+                // The other half of the fee. Already read one function over
+                // for the balance curve; kept on the move so a row can state
+                // what the transaction cost in money rather than in a unit
+                // nobody holds.
+                effectiveGasPriceWei: FramesRead.hexInt(receipt?["effectiveGasPrice"]),
                 rows: frames.enumerated().map { i, f in
                     FramesFrameRow(frame: f, outcome: i < outcomes.count ? outcomes[i] : nil)
                 },
@@ -474,6 +531,9 @@ extension FramesLiveState {
         let sent = FramesMove(
             hash: "0x9d12f7722ab15d93ff377f19f923458cae8d6009b0a2b11eb2cd1ca006748674",
             blockNumber: 59_180, sender: me, payer: me, succeeded: true, gasUsed: 210_790,
+            // MEASURED: the 0.001 send cost 1,210,790,000,000,000 wei against a
+            // 210,790 gas receipt, so this chain quoted exactly 1 gwei.
+            effectiveGasPriceWei: 1_000_000_000,
             rows: [
                 .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
                 .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 1)),
@@ -488,7 +548,7 @@ extension FramesLiveState {
         //    that never shows it teaches the opposite.
         let partial = FramesMove(
             hash: "0x9bb9cfef1c41c97b101ce20e934e13f3a7e3d5662c2e0352b26b9998f9f8c58d",
-            blockNumber: 59_240, sender: me, payer: me, succeeded: false, gasUsed: 316_273,
+            blockNumber: 59_240, sender: me, payer: me, succeeded: false, gasUsed: 316_273, effectiveGasPriceWei: 1_000_000_000,
             rows: [
                 .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
                 .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 1)),
@@ -501,13 +561,40 @@ extension FramesLiveState {
         //    that makes `valueLanded` read effects rather than status.
         let rolled = FramesMove(
             hash: "0x2642331b604d901b59d8f3d6ff5dea314c57ab090d2bf661bbc287b79fefeb63",
-            blockNumber: 59_300, sender: me, payer: me, succeeded: false, gasUsed: 240_100,
+            blockNumber: 59_300, sender: me, payer: me, succeeded: false, gasUsed: 240_100, effectiveGasPriceWei: 1_000_000_000,
             rows: [
                 .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
                 .init(frame: frame(2, 0x04, to: peer, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 0)),
                 .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(false, 100_000, logs: 0)),
             ],
             deltaWei: -(Decimal(string: "240100000000000")!))
+
+        // 4b. **A THREE-LEG STITCH THAT WORKED** — the capability this chain
+        //     exists for, and the shape the send now builds (prd §548 sixth
+        //     follow-up). Every number below is MEASURED off the transaction
+        //     this app really sent: 595,948 gas at 1,000,000,007 wei, three
+        //     legs of 0.001 / 0.002 / 0.003 to three addresses that did not
+        //     exist before it.
+        //
+        //     It earns its place because it is the only fixture where the
+        //     strip's cells have DIFFERENT widths — value-sized, so a batch
+        //     reads as ascending — and the only one where a row says
+        //     "3 addresses". A demo that only ever shows two-frame
+        //     transactions teaches that this chain does two-frame
+        //     transactions.
+        let stitched = FramesMove(
+            hash: "0x31e7311acfbc2280df90c46b009eba7f4d45fa698a42de0e86a8eb1771bb72d8",
+            blockNumber: 60_258, sender: me, payer: me, succeeded: true,
+            gasUsed: 595_948, effectiveGasPriceWei: 1_000_000_007,
+            rows: [
+                .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
+                .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 1)),
+                .init(frame: frame(2, 0x00, to: peer, value: "0x71afd498d0000"), outcome: outcome(true, 3_000, logs: 1)),
+                .init(frame: frame(2, 0x00, to: "0xc3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+                                   value: "0xaa87bee538000"), outcome: outcome(true, 3_000, logs: 1)),
+            ],
+            // 0.006 out plus the measured fee, to the wei.
+            deltaWei: -(Decimal(string: "6595948004171636")!))
 
         // 5. **SOMEBODY ELSE PAID.** `payer` differs from `sender`, which
         //    lights the Sponsors scope — the reading this chain publishes that
@@ -516,7 +603,7 @@ extension FramesLiveState {
         //    itself produced; it is the scope's only way to be seen.
         let sponsored = FramesMove(
             hash: "0x5b131baf9e0b9635a0fd58a6410f50e66c6450736999cace47826982de1cf026",
-            blockNumber: 59_340, sender: me, payer: peer, succeeded: true, gasUsed: 402_873,
+            blockNumber: 59_340, sender: me, payer: peer, succeeded: true, gasUsed: 402_873, effectiveGasPriceWei: 1_000_000_000,
             rows: [
                 .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
                 .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 1)),
@@ -529,7 +616,7 @@ extension FramesLiveState {
             address: me,
             balanceWeiHex: "0xd7cf8d9b06f5b8",
             nonce: 4,
-            moves: [sponsored, rolled, partial, sent, funded])]
+            moves: [sponsored, stitched, rolled, partial, sent, funded])]
         Task { @MainActor in FramesLiveState.shared.installDemo(fixture) }
     }
 
