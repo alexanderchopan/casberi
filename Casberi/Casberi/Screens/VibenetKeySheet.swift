@@ -103,8 +103,21 @@ struct VibenetKeySheet: View {
     /// Roughly what the content needs, so the tray is neither padded with void
     /// nor cut off. Deliberately approximate — `.large` is one drag away, and
     /// the failure this replaces was a fixed number too big for every key.
+    ///
+    /// **THE BASE WAS UNDER-COUNTED AND IT COST THE ONE BLOCK THAT MATTERS
+    /// (prd §538, 2026-08-31; user: "you have to scroll to see what the key can
+    /// do").** 300 was meant to cover subject + permissions + identity + doors,
+    /// and the subject alone is close to that: a `DS.Face.shelf` disc, a title,
+    /// a secondary line and the receipt's own paddings and torn edge, inside a
+    /// tray that has already spent `s6 + heading34 + s4` on its own head. So
+    /// "What it can do" — the block this sheet exists to show, and the reason
+    /// §480 promoted it to second — opened at or below the fold on every key.
+    ///
+    /// 420 is the same arithmetic done against what the blocks really draw. It
+    /// is still approximate and still a floor rather than a fit: a tray with
+    /// slack is a tray, a tray in deficit hides its answer.
     private var trayHeight: CGFloat {
-        var h: CGFloat = 300                       // subject + permissions + id + doors
+        var h: CGFloat = 420                       // subject + permissions + id + doors
         h += CGFloat(termRows.count) * 26          // one facts row each
         if origin != nil { h += 52 }               // authorized + block
         return min(660, h)
@@ -147,9 +160,32 @@ struct VibenetKeySheet: View {
                         ? String(localized: "Expiring") : nil,
                     stampWeight: .urgent,
                     lead: nil,
-                    title: actor.kind.plainTitle,
+                    // **THE HEAD DOES NOT REPEAT THE TRAY'S TITLE (prd §538,
+                    // 2026-08-31; user: "when you open one, you see the type of
+                    // key twice which makes no sense").** This passed
+                    // `actor.kind.plainTitle` — the SAME expression the tray
+                    // title is built from, twenty lines up — so the sheet
+                    // opened on "P-256 key" in `heading34` with "P-256 key" in
+                    // `heading22` directly beneath it, and the only new
+                    // information was a scroll away.
+                    //
+                    // The title is WHOSE key it is now. That is the fact the
+                    // disc is already showing (the disc is the account's face,
+                    // and its door), it is stated nowhere else on the sheet
+                    // since §495 took the account row out, and it is the one
+                    // thing about a key you cannot read off its own name.
+                    title: accountName,
                     secondary: actor.kind.plainDetail,
                     sentence: nil)
+    }
+
+    /// The account this key acts for, in the room's own words — a watched name
+    /// where there is one, its short address otherwise. The same resolution
+    /// every other vibenet surface makes, so this sheet can never name an
+    /// account differently from the room that opened it.
+    private var accountName: String {
+        VibenetWatch.shared.name(for: item.address)
+            ?? VibenetRoom.shortAddress(item.address)
     }
 
     // MARK: - 2. What it may do

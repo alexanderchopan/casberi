@@ -422,7 +422,9 @@ struct FeedScreen: View {
         /// `hegotaAccount`'s exact reason: the row lives in `HegotaRoomList`,
         /// which is inside this List's rows, and cannot present its own sheet.
         case hegotaKeySheet
-        case hegotaSendSheet
+        // `hegotaSendSheet` was HERE and is deleted (prd §539, 2026-08-31):
+        // sending is the Hegotá room's own Home scope now (`HegotaSendCard`),
+        // not a sheet raised from inside another sheet.
         /// One UTXO, the spend that created it, and which of that spend's
         /// outputs are still unspent.
         case hegotaCoin(HegotaCoin, [HegotaCoin], Set<UInt64>)
@@ -463,10 +465,10 @@ struct FeedScreen: View {
         /// `VibenetRoomCard`, which is inside this List's rows, so it cannot
         /// present its own sheet.
         case vibenetCreate
-        /// Sending from an account this phone already holds the key for
-        /// (prd §533). `account` is the value the Home scope's trigger
-        /// already knows — this route never re-derives or looks one up.
-        case vibenetSend(account: Data)
+        // `vibenetSend` was HERE and is deleted (prd §538, 2026-08-31):
+        // sending is not a presented surface any more, it is the Home scope's
+        // own content (`VibenetSendCard`). A route with no caller is a door
+        // onto a screen that no longer exists.
         /// Authorizing a new key, or re-authorizing an existing one with a
         /// different scope (prd §534) — the same route either way, since
         /// `AuthorizeActor` is an upsert. `editing` is nil for a brand-new
@@ -488,7 +490,6 @@ struct FeedScreen: View {
             case .hegotaFrame(let m, let i): "hegotaFrame:\(m.id)#\(i)"
             case .hegotaAccount(let a): "hegotaAccount:\(a.address)"
             case .hegotaKeySheet: "hegotaKeySheet"
-            case .hegotaSendSheet: "hegotaSendSheet"
             case .hegotaCoin(let c, _, _): "hegotaCoin:\(c.index)"
             case .nftPicks(let address, _): "nftPicks:\(address)"
             case .person(let source, let handle): "person:\(source):\(handle)"
@@ -496,7 +497,6 @@ struct FeedScreen: View {
             case .vibenetKey(let actor, let item, _):
                 "vibenetKey:\(VibenetKeySeenDiff.keyID(address: item.address, actorId: actor.actorId))"
             case .vibenetCreate: "vibenetCreate"
-            case .vibenetSend(let account): "vibenetSend:\(VibenetTransaction.hex(account))"
             case .vibenetAuthorize(let account, _, _, let editing):
                 "vibenetAuthorize:\(VibenetTransaction.hex(account)):\(editing?.actorId ?? "new")"
             }
@@ -585,6 +585,16 @@ struct FeedScreen: View {
     /// used to occupy (prd §533, 2026-08-31 — see the case above for why it
     /// was replaced rather than kept).
     ///
+    /// **IT IS THE FORM ITSELF NOW, NOT A DOOR TO ONE (prd §538, same day;
+    /// user: "it shouldn't have a door… it should be part of the screen").**
+    /// §533 shipped this as a row that presented `VibenetSendSheet`, and a
+    /// scope whose whole content is one row reading "Send ›" has restated its
+    /// question as a menu item rather than answered it. The sheet, its head and
+    /// the tap that raised it are all ceremony around two fields, so the fields
+    /// are the scope: `VibenetSendCard` draws under the crown, the face rail
+    /// and the section strip, which are untouched and still exactly where they
+    /// were. `VibenetSendSheet` and its `FeedSheetRoute` case are deleted.
+    ///
     /// Gated on there being an account to send FROM, never drawn as a dead
     /// control over nothing (§83). This app has never authorized more than
     /// one signer per account, so "the first account this phone's key can
@@ -596,29 +606,7 @@ struct FeedScreen: View {
     private var vibenetSendRow: some View {
         if let account = Self.signableVibenetAccount() {
             Section {
-                Button {
-                    DSHaptic.selection()
-                    feedSheet = .vibenetSend(account: account)
-                } label: {
-                    HStack(spacing: DS.Space.s3) {
-                        ZStack {
-                            Circle().fill((DS.brandHue(for: "Base Vibenet") ?? DS.tint).opacity(0.18))
-                                .frame(width: DS.Mark.row, height: DS.Mark.row)
-                            Image(systemName: "arrow.up.right")
-                                .dsGlyph(12, weight: .semibold)
-                                .foregroundStyle(DS.brandHue(for: "Base Vibenet") ?? DS.tint)
-                        }
-                        Text(String(localized: "Send"))
-                            .dsText(.heading17)
-                            .foregroundStyle(DS.textPrimary)
-                        Spacer(minLength: DS.Space.s2)
-                        Image(systemName: "chevron.right")
-                            .dsGlyph(12)
-                            .foregroundStyle(DS.textTertiary)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+                VibenetSendCard(account: account)
             }
         }
     }
@@ -635,6 +623,55 @@ struct FeedScreen: View {
             return VibenetTransaction.data(fromHex: item.address)
         }
         return nil
+    }
+
+    /// **NOTHING IN THIS SCOPE, AS CONTENT (prd §538, 2026-08-31)** — the row
+    /// that replaces `filteredEmptyState` for this room. See
+    /// `keepsChromeWhenEmpty` for why the generic one could not stay.
+    ///
+    /// It says the two things that state genuinely has to say and no more: that
+    /// the room is EMPTY rather than broken, and that this is a scope rather
+    /// than the whole room — because the rails are still on screen above it,
+    /// which is the entire point, so a person can read the sentence and simply
+    /// tap somewhere else.
+    ///
+    /// **NO "Show everything" BUTTON, deliberately.** The one the generic state
+    /// offers writes `filter.source = "All"` — it leaves vibenet. Here the way
+    /// out is the strip and the rail directly above this line, both of which
+    /// are now still there; adding a control that duplicates them while meaning
+    /// something else is how the dead end got built in the first place.
+    ///
+    /// The wording NAMES THE SCOPE where it can, since "nothing here yet" over
+    /// a room whose crown is showing a balance reads as a contradiction. It
+    /// never claims WHY — an account we could not reach and an account that has
+    /// genuinely done nothing look identical from here, and §83 forbids
+    /// choosing between them on the reader's behalf.
+    @ViewBuilder
+    private var vibenetEmptyRow: some View {
+        Section {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text(vibenetEmptyLine)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(String(localized: "Its balance and keys are in the sections above."))
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, DS.Space.s6)
+        }
+    }
+
+    /// The empty sentence, naming the scoped account when one is scoped.
+    private var vibenetEmptyLine: String {
+        if let scope = chrome.vibenetScope, !scope.isEmpty {
+            let name = VibenetWatch.shared.name(for: scope)
+                ?? VibenetRoom.shortAddress(scope)
+            return String(localized: "Nothing has landed for \(name) yet.")
+        }
+        return String(localized: "Nothing has landed here yet.")
     }
 
     /// The x402 room's selected lane, or nil for all of it (2026-08-06).
@@ -3339,9 +3376,7 @@ struct FeedScreen: View {
                 feedSheet = nil
             }
         case .hegotaKeySheet:
-            HegotaKeySheet(onOpenSend: { feedSheet = .hegotaSendSheet })
-        case .hegotaSendSheet:
-            HegotaSendSheet()
+            HegotaKeySheet()
         case .hegotaCoin(let coin, let all, let unspent):
             HegotaCoinSheet(coin: coin, all: all, unspent: unspent)
         case .nftPicks(let address, let label):
@@ -3412,8 +3447,6 @@ struct FeedScreen: View {
                     chrome.refreshPulse += 1
                 }
             }
-        case .vibenetSend(let account):
-            VibenetSendSheet(account: account)
         case .vibenetAuthorize(let account, let epoch, let sequence, let editing):
             VibenetAuthorizeSheet(account: account, localEpoch: epoch, localSequence: sequence,
                                   editing: editing)
@@ -3558,7 +3591,7 @@ struct FeedScreen: View {
             // it from `feedThings` (the Feed-freeze rule, perf pass
             // 2026-07-13, extended to `visible` itself).
             let visible = self.visible
-            if visible.isEmpty {
+            if visible.isEmpty && !keepsChromeWhenEmpty {
                 Group { filteredEmptyState }
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -3567,6 +3600,37 @@ struct FeedScreen: View {
                 populatedRoom(visible)
             }
         }
+    }
+
+    /// **A ROOM WHOSE HEAD IS ITS OWN NAVIGATION MUST NOT BE REPLACED BY THE
+    /// GENERIC EMPTY STATE (prd §538, 2026-08-31.)**
+    ///
+    /// Reported exactly: *"when a user is tapping on accounts in the account
+    /// list, then clicks on one that has 'nothing to show' the entire
+    /// navigation goes away and no way for user to continue."*
+    ///
+    /// `filteredEmptyState` replaces the WHOLE room — it is written for a
+    /// source chip that matched nothing, where the room is its rows and the
+    /// honest answer is a line plus "Show everything". In vibenet the room is
+    /// not its rows: the crown, the face rail and the scope strip are the head,
+    /// they are how you got here and they are the only way back. Scoping to an
+    /// account with no activity therefore deleted the control you had just
+    /// used, and the one exit left (`filter.source = "All"`) throws you out of
+    /// vibenet altogether rather than back to the account you came from. A dead
+    /// end you can only leave by leaving.
+    ///
+    /// So a room that draws a head takes the populated path with an empty row
+    /// set instead, and says "nothing here" IN the room, under its own rails —
+    /// the empty state as content rather than as a replacement.
+    ///
+    /// Gated on the head actually COMPOSING, never on the source name alone:
+    /// if there is no card to draw then the room really is its rows, and the
+    /// generic state is the right answer after all. Hegotá already has its own
+    /// arm above for the same structural reason (it lands no `Thing` ever, so
+    /// its rows are always zero) — this is that reasoning applied to the room
+    /// that lands rows but can legitimately have none of them in view.
+    private var keepsChromeWhenEmpty: Bool {
+        shape == .vibenet && VibenetRoomSource.card() != nil
     }
 
     /// The day sections of a room that has rows, plus its closing line.
@@ -5203,8 +5267,15 @@ struct FeedScreen: View {
             if vScoped && vScope == .home {
                 vibenetSendRow
             } else if vibenetShowsRows {
-                let days = chronoGroups(visible)
-                groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+                if visible.isEmpty {
+                    // NOTHING IN THIS SCOPE, said under the rails that got you
+                    // here (prd §538) — see `keepsChromeWhenEmpty` for why this
+                    // is a row rather than a replacement for the room.
+                    vibenetEmptyRow
+                } else {
+                    let days = chronoGroups(visible)
+                    groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+                }
             }
         case .x402:
             // Lanes, not days — see `x402Lanes`. No `boundary:`, deliberately:

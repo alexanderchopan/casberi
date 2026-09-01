@@ -50,12 +50,22 @@ struct VibenetCreateSheet: View {
     /// void below the content — the §480 fault the key sheet already fixed
     /// once, and it looked exactly the same here the first time this screen
     /// was opened on a device.
+    /// **RE-MEASURED against what each phase now DRAWS (prd §538,
+    /// 2026-08-31).** The ready state was 520 for a head, a four-row table and
+    /// a button; it is a head, a two-row table and a footnote now — the two
+    /// duplicated rows and the button both left this stack — so 520 would be
+    /// a void under the content, the §480 fault in the other direction.
+    ///
+    /// The action is no longer part of this arithmetic in any phase: it is
+    /// pinned outside the scroll, so these numbers describe the SCROLLING
+    /// content alone and a wrong one costs a scroll rather than a clipped
+    /// control.
     private var trayHeight: CGFloat {
         switch phase {
         case .checking:        240
-        case .refused:         keyFailure == nil ? 340 : 400
-        case .ready, .working: 520
-        case .done:            390
+        case .refused:         keyFailure == nil ? 320 : 380
+        case .ready, .working: 430
+        case .done:            360
         }
     }
 
@@ -86,42 +96,134 @@ struct VibenetCreateSheet: View {
         // same day this screen was written; vibenet's older sheets have not
         // been converted yet, which is why the first cut of this one matched
         // the wrong siblings.
+        // **THE ACTION IS PINNED, THE CONTENT SCROLLS UNDER IT (prd §538,
+        // 2026-08-31; user: "create account content doesn't fit on the sheet
+        // when you open it. this is a miss").**
+        //
+        // `trayHeight` is a GUESS — a hand-summed arithmetic over content whose
+        // real height depends on the type size, the language and how long the
+        // sponsor's sentence turned out to be — and every guess here has been
+        // wrong at least once. When it is short the `ScrollView` above made
+        // every state REACHABLE and left the primary button cut in half by the
+        // screen edge, which is worse than a scroll: a control sliced through
+        // the middle reads as a broken screen, and the one thing a person came
+        // here to do is the thing they cannot see.
+        //
+        // So the scroll owns only what can legitimately be long (the head, the
+        // facts, a refusal's reason) and the action sits OUTSIDE it, against
+        // the tray's own bottom edge. No height, guessed or measured, can clip
+        // it. `VStack(spacing: 0)` because the footer carries its own padding,
+        // and the scroll takes `maxHeight: .infinity` so it — not the button —
+        // absorbs whatever slack the detent leaves.
         DSTray(title: String(localized: "Create an account"), height: trayHeight, ink: true,
                detents: [.height(trayHeight), .large]) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: DS.Space.s4) {
-                    // THE HOUSE SHEET HEAD, not a bare title (user,
-                    // 2026-08-29: "the UI is a bit barebones"). `DSSheetHead`
-                    // is what makes a sheet read as an OBJECT rather than as
-                    // text on a page — the subject's disc, a stamp for its
-                    // state, the title, and one sentence saying what it
-                    // means now. This screen had none of it and looked
-                    // exactly like the "jumble of text" that component was
-                    // introduced to end.
-                    DSSheetHead(disc: { headDisc },
-                                stamp: headStamp,
-                                stampWeight: headStampWeight,
-                                title: headTitle,
-                                secondary: headSecondary,
-                                sentence: headSentence,
-                                inkCard: true)
-                    switch phase {
-                    case .checking:
-                        ProgressView().frame(maxWidth: .infinity)
-                    case .refused(let refusal):
-                        refusedBody(refusal)
-                    case .ready, .working:
-                        readyBody
-                    case .done(let account):
-                        doneBody(account)
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: DS.Space.s4) {
+                        // THE HOUSE SHEET HEAD, not a bare title (user,
+                        // 2026-08-29: "the UI is a bit barebones"). `DSSheetHead`
+                        // is what makes a sheet read as an OBJECT rather than as
+                        // text on a page — the subject's disc, a stamp for its
+                        // state, the title, and one sentence saying what it
+                        // means now. This screen had none of it and looked
+                        // exactly like the "jumble of text" that component was
+                        // introduced to end.
+                        DSSheetHead(disc: { headDisc },
+                                    stamp: headStamp,
+                                    stampWeight: headStampWeight,
+                                    title: headTitle,
+                                    secondary: headSecondary,
+                                    sentence: headSentence,
+                                    inkCard: true)
+                        switch phase {
+                        case .checking:
+                            ProgressView().frame(maxWidth: .infinity)
+                        case .refused(let refusal):
+                            refusedBody(refusal)
+                        case .ready, .working:
+                            readyBody
+                        case .done(let account):
+                            doneBody(account)
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, DS.Space.s4)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.bottom, DS.Space.s4)
+                .scrollIndicators(.hidden)
+                .frame(maxHeight: .infinity)
+                pinnedAction
             }
-            .scrollIndicators(.hidden)
         }
         .task { await check() }
+    }
+
+    /// THE ONE THING THIS SCREEN IS ASKING FOR, in each state that has one.
+    ///
+    /// Every phase's primary control lives here rather than at the bottom of
+    /// its own body — that is what makes the pinning above true rather than
+    /// true-for-the-ready-state. `.checking` has no action (it is waiting on
+    /// us, not on the person) and a refusal that is not `.noKey` has none by
+    /// §83's rule: a control that cannot help is worse than no control.
+    @ViewBuilder
+    private var pinnedAction: some View {
+        switch phase {
+        case .checking:
+            EmptyView()
+        case .ready, .working:
+            actionButton(title: String(localized: "Create with Face ID"),
+                         symbol: "faceid",
+                         busy: phase == .working,
+                         disabled: phase == .working) {
+                createFailure = nil
+                Task { await create() }
+            }
+        case .refused(let refusal):
+            // A FULL-WIDTH CONTROL, not a text link (user, 2026-08-29: "the
+            // 'make a key' link is super tiny"). It is the primary action of
+            // this state — the only thing the screen is asking for — so it
+            // gets the weight the ready state's own button gets.
+            if refusal == .noKey {
+                actionButton(title: String(localized: "Make a key on this phone"),
+                             symbol: "key.fill",
+                             busy: false,
+                             disabled: false) {
+                    Task { await makeKey() }
+                }
+            }
+        case .done(let account):
+            actionButton(title: String(localized: "Watch it"),
+                         symbol: nil,
+                         busy: false,
+                         disabled: false) {
+                onCreated(account)
+                dismiss()
+            }
+        }
+    }
+
+    /// One button shape for all four states, so the pinned slot cannot drift
+    /// into four spellings of the same control.
+    private func actionButton(title: String, symbol: String?, busy: Bool,
+                              disabled: Bool, act: @escaping () -> Void) -> some View {
+        Button {
+            DSHaptic.tap()
+            act()
+        } label: {
+            HStack(spacing: 6) {
+                if let symbol { Image(systemName: symbol).dsGlyph(14, weight: .semibold) }
+                Text(title)
+                if busy { ProgressView().controlSize(.mini) }
+            }
+            .dsText(.callout15).fontWeight(.semibold)
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, DS.Space.s3)
+            .background(Self.mark, in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+        }
+        .buttonStyle(PressSpring())
+        .disabled(disabled)
+        .dsHover()
+        .padding(.top, DS.Space.s3)
     }
 
     // MARK: - The head
@@ -210,14 +312,23 @@ struct VibenetCreateSheet: View {
 
     // MARK: - Ready
 
+    /// **THE TABLE SAYS ONLY WHAT THE HEAD HAS NOT (prd §538, 2026-08-31.)**
+    ///
+    /// It carried four rows and the head above it had already answered two of
+    /// them: `secondary` is "Base vibenet · devnet" and the Network row read
+    /// "Base vibenet · devnet", `sentence` is "This phone's key becomes its
+    /// only key" and the First key row read "This phone". So a sheet whose
+    /// content did not fit was spending a third of its height restating the
+    /// three lines directly above it, in a smaller type, as a table.
+    ///
+    /// What is LEFT is what the head cannot say: who pays, and what it costs
+    /// you. Those two are the only reason to read a table here at all — and
+    /// with the two duplicates gone the ready state fits with room to spare
+    /// rather than relying on the scroll to be discovered.
     private var readyBody: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
-            // The headline moved INTO the head — it was said twice, once as a
-            // title and once as the first line of the body.
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 caption(String(localized: "What this does"))
-                fact(String(localized: "Network"), String(localized: "Base vibenet \u{00B7} devnet"))
-                fact(String(localized: "First key"), String(localized: "This phone"))
                 // WHO PAYS is said plainly and only when it is known — and
                 // "we couldn't ask" is now its own sentence rather than being
                 // reported as a refusal (prd §530). A missing payer is not
@@ -229,26 +340,6 @@ struct VibenetCreateSheet: View {
                     fact(String(localized: "From you"), String(localized: "Nothing"))
                 }
             }
-
-            Button {
-                DSHaptic.tap()
-                createFailure = nil
-                Task { await create() }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "faceid").dsGlyph(14, weight: .semibold)
-                    Text(String(localized: "Create with Face ID"))
-                    if phase == .working { ProgressView().controlSize(.mini) }
-                }
-                .dsText(.callout15).fontWeight(.semibold)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, DS.Space.s3)
-                .background(Self.mark, in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-            }
-            .buttonStyle(PressSpring())
-            .disabled(phase == .working)
-            .dsHover()
 
             // SAID HERE, not just in a toast — see `createFailure`'s own doc.
             // A retry that fails the same invisible way is what reads as a
@@ -271,70 +362,27 @@ struct VibenetCreateSheet: View {
 
     @ViewBuilder
     private func refusedBody(_ refusal: VibenetSigner.Refusal) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            // The reason is in the head's own sentence — see `headSentence`.
-            // The one refusal this screen can DO something about. Everything
-            // else is stated and left alone rather than given a control that
-            // cannot help — the §83 rule that a button which does nothing is
-            // worse than no button.
-            if refusal == .noKey {
-                // A FULL-WIDTH CONTROL, not a text link (user, 2026-08-29:
-                // "the 'make a key' link is super tiny"). It is the primary
-                // action of this state — the only thing the screen is asking
-                // for — so it gets the weight the ready state's own button
-                // gets. A `label12` link for the one thing to do here read as
-                // a footnote.
-                Button {
-                    DSHaptic.tap()
-                    Task { await makeKey() }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "key.fill").dsGlyph(13, weight: .semibold)
-                        Text(String(localized: "Make a key on this phone"))
-                    }
-                    .dsText(.callout15).fontWeight(.semibold)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, DS.Space.s3)
-                    .background(Self.mark, in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-                }
-                .buttonStyle(PressSpring())
-                .dsHover()
-                if let keyFailure {
-                    Text(keyFailure)
-                        .dsText(.label11)
-                        .foregroundStyle(DS.destructive)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
+        // The reason is in the head's own sentence — see `headSentence` — and
+        // the one act this state offers is in `pinnedAction`. What is left here
+        // is why that act just failed, which belongs beside the reason rather
+        // than under a button that is no longer in this block.
+        if refusal == .noKey, let keyFailure {
+            Text(keyFailure)
+                .dsText(.label11)
+                .foregroundStyle(DS.destructive)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
     // MARK: - Done
 
     private func doneBody(_ account: String) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
-            // The address is already in the head's `secondary`; what this block
-            // adds is the one thing left to decide.
-            Button {
-                DSHaptic.tap()
-                onCreated(account)
-                dismiss()
-            } label: {
-                Text(String(localized: "Watch it"))
-                    .dsText(.callout15).fontWeight(.semibold)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, DS.Space.s3)
-                    .background(Self.mark, in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-            }
-            .buttonStyle(PressSpring())
-            .dsHover()
-            Text(String(localized: "Watching puts it in this room with your other accounts."))
-                .dsText(.label11)
-                .foregroundStyle(DS.textTertiary)
-                .frame(maxWidth: .infinity)
-        }
+        // The address is already in the head's `secondary` and the act is in
+        // `pinnedAction`; what is left is what that act will mean.
+        Text(String(localized: "Watching puts it in this room with your other accounts."))
+            .dsText(.label11)
+            .foregroundStyle(DS.textTertiary)
+            .frame(maxWidth: .infinity)
     }
 
     /// Is a faucet really on offer — the only state in which this creation

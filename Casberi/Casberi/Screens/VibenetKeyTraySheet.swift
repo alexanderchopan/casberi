@@ -282,8 +282,33 @@ struct VibenetKeyTraySheet: View {
         }
     }
 
+    /// **ONE ROW GRAMMAR: A TITLE AND ONE SUBLINE (prd §538, 2026-08-31; user:
+    /// "permissions list looks like garbage bc different fonts and
+    /// indentations").**
+    ///
+    /// The complaint is exact and it was arithmetic, not taste. One row carried
+    /// SIX text treatments — `body17` kind, `label11` monospaced key tail, a
+    /// semibold `label11` New badge on a filled capsule, `label11` account
+    /// name, a `FlowLayout` of permission chips in three fills, and a `label11`
+    /// clock — in three columns at two vertical rhythms. Down a list of three
+    /// keys that is eighteen typographic decisions where a list needs two, and
+    /// the chips are the part that breaks the EDGE: a `FlowLayout` wraps, so
+    /// the row's height changes per key and nothing below it lines up.
+    ///
+    /// So: the face, a title, and one subline that carries what the three
+    /// middle treatments were saying — the standing, the key's own tail, the
+    /// account — separated by the room's own middle dot. The clock stays as the
+    /// single trailing value, because it is the one fact worth reading DOWN the
+    /// list rather than across one row.
+    ///
+    /// **THE CHIPS ARE NOT DELETED, THEY ARE ANSWERED PROPERLY.** What a key
+    /// may do is what its own sheet now opens on (`VibenetKeySheet.permissions`
+    /// above the fold, same session) — a wrapped strip of capsules in a list
+    /// row was a summary nobody could read at that size anyway. The subline
+    /// keeps the STANDING (`Admin`, or the first grant) because that is the one
+    /// bit of scope worth ranking keys by at a glance; the rest is one tap away.
     private func rowBody(_ key: VibenetTrayKey, door: Bool) -> some View {
-        HStack(alignment: .top, spacing: DS.Space.s3) {
+        HStack(alignment: .center, spacing: DS.Space.s3) {
             WalletFace(address: key.address, size: DS.Face.rowCircle, circular: true)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: DS.Space.s2) {
@@ -300,20 +325,14 @@ struct VibenetKeyTraySheet: View {
                     // here: the tray is titled keys, so "secp256k1" needs no
                     // "key" after it, and "Passkey" is unchanged.
                     Text(key.actor.kind.shortLabel)
-                        .dsText(.body17)
+                        .dsText(.heading17)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
-                    // WHICH KEY (prd §470) — the noun-less monospaced tail the
-                    // detail's rows carry. Two keys of one kind on one account
-                    // otherwise land as adjacent rows reading identically end
-                    // to end.
-                    Text(VibenetKeyIdentity.short(key.actor.actorId))
-                        .dsText(.label11).monospaced()
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                        .fixedSize()
                     // WHICH key is new (prd §479) — the account detail's own
-                    // chip, so one key reads the same on both surfaces.
+                    // chip, so one key reads the same on both surfaces. The
+                    // ONE thing that stays beside the title, because it is a
+                    // state rather than an identity: it is why you are looking
+                    // at this row, and it stops being true within a session.
                     if newKeyIDs.contains(key.id) {
                         Text(String(localized: "New"))
                             .dsText(.label11).fontWeight(.semibold)
@@ -323,19 +342,11 @@ struct VibenetKeyTraySheet: View {
                             .fixedSize()
                     }
                 }
-                Text(Self.accountName(key.address))
+                Text(Self.subline(key))
                     .dsText(.label11)
-                    .foregroundStyle(DS.textSecondary)
+                    .foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
-                // WHAT IT MAY DO — `VibenetAccountDetail.keyRow`'s own chip
-                // grammar (§463), so one key is one object across both
-                // surfaces: an admin INVERTS (scope 0 is unrestricted and
-                // includes reserved bits, so five chips would understate it),
-                // an unknown tail is outlined rather than filled (it names a
-                // count, not a permission), everything else is a soft fill in
-                // the room's mark.
-                permissionChips(key)
-                    .padding(.top, 4)
+                    .truncationMode(.middle)
             }
             Spacer(minLength: DS.Space.s2)
             // The clock, in the row's own words rather than a shared one:
@@ -353,7 +364,10 @@ struct VibenetKeyTraySheet: View {
                     .accessibilityHidden(true)
                     .dsGlyph(11, weight: .semibold)
                     .foregroundStyle(DS.textTertiary)
-                    .padding(.top, 2)
+                // No top nudge: the row centres its columns now that it is two
+                // lines of a known height rather than a wrapping chip strip, so
+                // a 2pt correction for a `.top` alignment would push the
+                // chevron off the centre it is finally on.
             }
         }
         // NO SEPARATOR (user, 2026-08-25: *"do NOT USE HAIRLINES"*). §8's
@@ -366,36 +380,29 @@ struct VibenetKeyTraySheet: View {
         .padding(.vertical, DS.Space.s3)
     }
 
-    /// One key's permissions, as chips. `grantedPlainLabels` is never empty
-    /// (an admin yields `["Admin"]`, any non-zero scope sets a bit that is
-    /// either named or counted), so this needs no empty branch.
-    private func permissionChips(_ key: VibenetTrayKey) -> some View {
-        FlowLayout(spacing: 6) {
-            ForEach(key.actor.scope.grantedPlainLabels, id: \.self) { label in
-                chip(label, key: key)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func chip(_ label: String, key: VibenetTrayKey) -> some View {
-        let isAdmin = key.actor.scope.isAdmin
-        let isUnknown = label.hasPrefix("+")
-        Text(label)
-            .dsText(.label11)
-            .fontWeight(isAdmin ? .semibold : .regular)
-            .foregroundStyle(isAdmin ? DS.page : DS.textPrimary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background {
-                if isAdmin {
-                    Capsule().fill(DS.textPrimary)
-                } else if isUnknown {
-                    Capsule().strokeBorder(DS.textTertiary, lineWidth: 1)
-                } else {
-                    Capsule().fill(Self.mark.opacity(0.12))
-                }
-            }
+    /// THE ROW'S ONE SUBLINE — standing, key, account, in that order (§538).
+    ///
+    /// It replaces three separate treatments (a wrapped chip strip, a
+    /// monospaced tail, an account name on its own line) with one sentence in
+    /// one tier, and the ORDER is the ranking: what it may do, which key it is,
+    /// whose account it acts for. Middle dots rather than commas, the
+    /// separator every other vibenet subline uses.
+    ///
+    /// The standing is the FIRST granted label, never the whole set — the set
+    /// is what the key's own sheet opens on. `grantedPlainLabels` is never
+    /// empty (an admin yields `["Admin"]`, any non-zero scope sets a bit that
+    /// is either named or counted), so there is no empty branch to write; a
+    /// key with several grants reads as its strongest one plus a count, which
+    /// is a summary rather than a truncation.
+    private static func subline(_ key: VibenetTrayKey) -> String {
+        let labels = key.actor.scope.grantedPlainLabels
+        var standing = labels.first ?? ""
+        if labels.count > 1 { standing += " +\(labels.count - 1)" }
+        let parts = [standing,
+                     VibenetKeyIdentity.short(key.actor.actorId),
+                     accountName(key.address)]
+            .filter { !$0.isEmpty }
+        return parts.joined(separator: " \u{00B7} ")
     }
 
     /// The room's own mark, for the one fact in this tray that earns a colour.

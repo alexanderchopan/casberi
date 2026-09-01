@@ -1412,7 +1412,22 @@ struct HegotaRoomList: View {
     var body: some View {
         VStack(spacing: DS.Space.s3) {
             switch section {
-            case .home:     movesList(Array(moves.prefix(4)))
+            // **HOME IS THE ONE DO; ACTIVITY IS THE STREAM (prd §539,
+            // 2026-08-31 — vibenet's §533/§538 ruling, carried over at the
+            // user's instruction).**
+            //
+            // This was `movesList(Array(moves.prefix(4)))` against Activity's
+            // `movesList(moves)` directly below: the SAME list, truncated, one
+            // chip away from the whole of itself. Real duplication, not a
+            // summary — a preview of four rows tells you nothing the four rows
+            // in Activity don't, and it spent Home on a worse copy of the
+            // scope beside it.
+            //
+            // The fix is not a better preview, it is a different second half:
+            // the one write action this room has, in the one slot with room
+            // for it. `HegotaSendCard` gates itself on this phone holding a
+            // key, so a room with no key draws no form rather than a dead one.
+            case .home:     HegotaSendCard()
             case .activity: movesList(moves)
             case .accounts: accountsList
             case .frames:   framesList

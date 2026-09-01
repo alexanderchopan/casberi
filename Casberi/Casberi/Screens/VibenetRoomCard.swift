@@ -2421,6 +2421,21 @@ struct VibenetRoomCard: View {
     /// The one verb this room has. It says what the tap DOES — the phone's key
     /// becomes the account's first key — because "Create an account" alone
     /// hides the only fact that matters about it.
+    ///
+    /// **IT IS THE FIRST ROW OF THE LIST, NOT A BANNER ABOVE ONE (prd §538,
+    /// 2026-08-31; user: "create account should be indented same as the list
+    /// items below it").** It shipped on its own geometry — a `DS.Mark.row`
+    /// disc where every account row below it draws a `DS.Face.rowCircle` face,
+    /// and `s2` vertical padding where they take `s3` — so its title started
+    /// two points off theirs and its row stood a different height. Two points
+    /// is not a rounding error on a leading edge: it is the one thing the eye
+    /// reads down a list, and it made the verb look like it belonged to a
+    /// different screen than the things it acts on.
+    ///
+    /// So the disc is the FACE's size rather than the mark's, and the padding
+    /// is the row's. Both read off `accountRowBody`'s own tokens on purpose —
+    /// change that row's geometry and this one has to follow, which is what
+    /// "one list" means.
     @ViewBuilder
     private var createAccountRow: some View {
         Button {
@@ -2430,7 +2445,7 @@ struct VibenetRoomCard: View {
             HStack(spacing: DS.Space.s3) {
                 ZStack {
                     Circle().fill(Self.mark.opacity(0.18))
-                        .frame(width: DS.Mark.row, height: DS.Mark.row)
+                        .frame(width: DS.Face.rowCircle, height: DS.Face.rowCircle)
                     Image(systemName: "plus")
                         .dsGlyph(12, weight: .semibold)
                         .foregroundStyle(Self.mark)
@@ -2451,7 +2466,7 @@ struct VibenetRoomCard: View {
                     .dsGlyph(11, weight: .semibold)
                     .foregroundStyle(Self.mark.opacity(0.6))
             }
-            .padding(.vertical, DS.Space.s2)
+            .padding(.vertical, DS.Space.s3)
             .padding(.horizontal, DSRoomChassis.contentInset)
             .contentShape(Rectangle())
         }
@@ -3179,15 +3194,33 @@ struct VibenetRoomCard: View {
 struct VibenetEventRow: View {
     let thing: Thing
 
-    /// The four kinds this room lands, each with the mark it draws.
+    /// **EVERY KIND THIS ROOM LANDS, each with the mark it draws (prd §538,
+    /// 2026-08-31; user: "on vibenet activity all of these should have
+    /// icons").**
     ///
-    /// A fifth case is deliberately absent: a row whose facets say nothing
-    /// (landed by a build before §308 stamped them) draws NO mark rather
-    /// than a generic one, and its title carries the whole sentence anyway
-    /// — a guessed glyph on a security row is the §83 fake status in the
-    /// one room where believing it is expensive.
+    /// This table knew FOUR of the eight `VibenetEventKind` cases, so half the
+    /// room drew no mark at all — an account creation, a transfer either way
+    /// and a policy run are the ones a person actually sees most, and a feed
+    /// where some rows have a leading slot and some do not reads as a list
+    /// that failed to load rather than as a considered absence.
+    ///
+    /// **AND `Policy` WAS DRAWING THE WRONG MARK, which is worse than none.**
+    /// `.policyRun.facetTags` is `["Key", "Policy"]` — it carries `Key` for
+    /// the same reason a revoke does — so it fell through this chain's `Key`
+    /// arm and wore the NEW-KEY plus. A key running under its gate and a new
+    /// key being authorized are not the same event, and on a security row the
+    /// second one is the alarming one: the room was reporting an authorization
+    /// that never happened. `Policy` is therefore tested BEFORE `Key`, exactly
+    /// as `Revoked` already is and for exactly the same reason.
+    ///
+    /// The nil case SURVIVES and its reasoning is unchanged: a row landed by a
+    /// build before §308 stamped these facets says nothing about its kind, and
+    /// a guessed glyph on a security row is the §83 fake status in the one
+    /// room where believing it is expensive. What changed is that seven kinds
+    /// are no longer being treated as if they were that row.
     private enum Kind {
         case authorized, revoked, locked, unlocking
+        case created, receivedIn, sentOut, policy
 
         var glyph: String {
             switch self {
@@ -3195,6 +3228,15 @@ struct VibenetEventRow: View {
             case .revoked:    return "minus"
             case .locked:     return "lock.fill"
             case .unlocking:  return "lock.open.fill"
+            // The account itself coming into existence — the same `faceid`
+            // mark its create sheet leads with, because it is the same act
+            // seen afterwards.
+            case .created:    return "faceid"
+            case .receivedIn: return "arrow.down"
+            case .sentOut:    return "arrow.up"
+            // A gate that ran, not a key that was granted — the slider glyph
+            // the permissions block uses for a scoped key, never a plus.
+            case .policy:     return "slider.horizontal.3"
             }
         }
 
@@ -3207,15 +3249,33 @@ struct VibenetEventRow: View {
             case .authorized: return DS.tint
             case .revoked:    return DS.destructive
             case .locked, .unlocking: return DS.attention
+            // Money ARRIVING is the one event in this room that green is
+            // honest about: it is the direction, not a verdict — the same
+            // reading every ledger row in the app gives a received amount.
+            case .receivedIn: return DS.confirm
+            // Sent and created are news of the room's own kind, so they take
+            // its tint. Deliberately NOT `destructive` for a send: leaving is
+            // not a fault, and red on an ordinary outgoing transfer is the
+            // judgement `authorized` above refuses to make.
+            case .sentOut, .created, .policy: return DS.tint
             }
         }
     }
 
+    /// **ORDER IS THE RULE HERE, not a formality.** Several kinds stamp more
+    /// than one facet by design (`["Key", "Revoked"]`, `["Key", "Policy"]`,
+    /// `["Transfer", "Sent"]`), so the narrower word must be asked first or
+    /// the broader one answers for it — which is precisely how a policy run
+    /// came to wear a new key's mark.
     private var kind: Kind? {
         let tags = thing.tags
         if tags.contains("Revoked")   { return .revoked }
         if tags.contains("Locked")    { return .locked }
         if tags.contains("Unlocking") { return .unlocking }
+        if tags.contains("Policy")    { return .policy }
+        if tags.contains("Received")  { return .receivedIn }
+        if tags.contains("Sent")      { return .sentOut }
+        if tags.contains("Created")   { return .created }
         if tags.contains("Key")       { return .authorized }
         return nil
     }

@@ -1518,6 +1518,26 @@ python3 "$ROOT/scripts/design-motion-audit.py" >/dev/null \
   || fail "the design-motion audit failed — run python3 scripts/design-motion-audit.py"
 print -P "%F{green}✓ design-motion audit%f"
 
+# A SHEET'S HEAD MUST NOT REPEAT ITS TRAY'S TITLE (prd §538/§539, 2026-08-31).
+# Mechanical because memory lost FOUR TIMES in one afternoon, across two
+# products: VibenetKeySheet and VibenetAuthorizeSheet each passed the
+# byte-identical expression to `DSTray(title:)` and `DSSheetHead(title:)`,
+# VibenetCreateSheet said its noun in three tiers, and HegotaKeySheet said it
+# reordered. The cost is never cosmetic — the head is `heading22` under a
+# `heading34` saying the same thing, so whatever the sheet exists to show is
+# pushed down, and in two of the four it was pushed below the fold.
+#
+# Two objective checks (one expression used twice; one literal reachable from
+# both) with a stated ceiling — it cannot catch a paraphrase, and its own
+# self-test asserts that so the gap can never read as coverage. Mutation-proven
+# against the real tree: restoring either shipped fault turns it red.
+step "Sheet-title audit"
+python3 "$ROOT/scripts/sheet-title-audit.py" --self-test >/dev/null \
+  || fail "the sheet-title audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/sheet-title-audit.py" \
+  || fail "a sheet head repeats its tray's title — see the output above"
+print -P "%F{green}✓ sheet-title audit%f"
+
 # The pointer vocabulary (2026-08-17). Three failures, each invisible from a
 # build AND from a screenshot — the second half matters here, because a
 # tooltip only exists under a cursor and no sweep in this repo has one: an

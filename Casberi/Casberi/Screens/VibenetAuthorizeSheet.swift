@@ -47,27 +47,52 @@ struct VibenetAuthorizeSheet: View {
     private var phase: Phase { sentHash == nil ? .form : .done }
 
     var body: some View {
+        // **THE ACTION IS PINNED, THE FORM SCROLLS UNDER IT (prd §538,
+        // 2026-08-31)** — `VibenetCreateSheet`'s fix, in the sheet that needed
+        // it most: at 680 this is the tallest tray in the feature, and every
+        // point of that number is a guess about how tall a two-field form, a
+        // menu, a validation line and a button turn out to be in the reader's
+        // type size. When the guess is short the button — the only thing this
+        // sheet is for — is the part that goes under the screen edge.
         DSTray(title: editing == nil ? String(localized: "Authorize a key")
                                       : String(localized: "Edit permissions"),
                height: trayHeight, ink: true, detents: [.height(trayHeight), .large]) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: DS.Space.s4) {
-                    DSSheetHead(disc: { headDisc },
-                                stamp: headStamp,
-                                stampWeight: headStampWeight,
-                                title: headTitle,
-                                secondary: "0x" + VibenetTransaction.hex(account),
-                                sentence: headSentence,
-                                inkCard: true)
-                    switch phase {
-                    case .form: formBody
-                    case .done: doneBody
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: DS.Space.s4) {
+                        DSSheetHead(disc: { headDisc },
+                                    stamp: headStamp,
+                                    stampWeight: headStampWeight,
+                                    // **NOT THE TRAY'S OWN TITLE AGAIN (§538).**
+                                    // This passed the byte-identical expression
+                                    // the tray title is built from twenty lines
+                                    // up, so the sheet opened on "Authorize a
+                                    // key" in `heading34` with "Authorize a key"
+                                    // in `heading22` directly beneath it — the
+                                    // fault §538 took out of the key sheet and
+                                    // the create sheet, third instance.
+                                    //
+                                    // The head names WHICH ACCOUNT the new key
+                                    // will be able to act for. That is the fact
+                                    // this sheet was not stating anywhere in
+                                    // words, and it is the one worth being sure
+                                    // of before granting somebody a key.
+                                    title: headTitle,
+                                    secondary: accountName,
+                                    sentence: headSentence,
+                                    inkCard: true)
+                        switch phase {
+                        case .form: formBody
+                        case .done: doneBody
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, DS.Space.s4)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.bottom, DS.Space.s4)
+                .scrollIndicators(.hidden)
+                .frame(maxHeight: .infinity)
+                pinnedAction
             }
-            .scrollIndicators(.hidden)
         }
         .onAppear {
             if let editing {
@@ -79,10 +104,15 @@ struct VibenetAuthorizeSheet: View {
         }
     }
 
+    /// **RE-MEASURED against what the SCROLL now holds (§538.)** 680 counted
+    /// the button, and the button is no longer in it; these numbers describe
+    /// the scrolling content alone, so a wrong one costs a scroll rather than
+    /// a clipped control. Still a floor rather than a fit — `.large` is one
+    /// drag away, and slack is a tray while a deficit hides something.
     private var trayHeight: CGFloat {
         switch phase {
-        case .form: 680
-        case .done: 360
+        case .form: 600
+        case .done: 340
         }
     }
 
@@ -98,12 +128,25 @@ struct VibenetAuthorizeSheet: View {
         .accessibilityHidden(true)
     }
 
+    /// WHOSE ACCOUNT this key will act for — never the tray's own words again
+    /// (§538). `.done` keeps a state word, which is a different sentence
+    /// rather than the same one: the tray still says what you came to do, the
+    /// head says it happened.
     private var headTitle: String {
         switch phase {
         case .done: String(localized: "Authorized")
-        case .form: editing == nil ? String(localized: "Authorize a key")
-                                    : String(localized: "Edit permissions")
+        case .form: accountName
         }
+    }
+
+    /// The account in the room's own words — a watched name where there is
+    /// one, its short address otherwise. Same resolution every other vibenet
+    /// surface makes, so this sheet can never name an account differently
+    /// from the room that opened it, and never as 42 raw hex characters
+    /// (which is what the head's `secondary` carried until §538).
+    private var accountName: String {
+        let hex = "0x" + VibenetTransaction.hex(account)
+        return VibenetWatch.shared.name(for: hex) ?? VibenetRoom.shortAddress(hex)
     }
 
     private var headStamp: String? { phase == .done ? String(localized: "Broadcast") : nil }
@@ -203,6 +246,26 @@ struct VibenetAuthorizeSheet: View {
                 .dsHover()
             }
 
+            // The button LEFT this stack for the tray's own bottom edge — see
+            // `pinnedAction`. The failure it can no longer state stays here,
+            // beside the fields it is about.
+            if let errorText {
+                Text(errorText)
+                    .dsText(.label11)
+                    .foregroundStyle(DS.destructive)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    /// THE ONE THING THIS SHEET IS ASKING FOR, outside the scroll (§538).
+    ///
+    /// `.done` has no action: the transaction is on its way and the only thing
+    /// left is to read the hash or leave, which the done body already offers.
+    /// A control there would be one that cannot change anything.
+    @ViewBuilder
+    private var pinnedAction: some View {
+        if phase == .form {
             Button {
                 DSHaptic.tap()
                 authorize()
@@ -224,13 +287,7 @@ struct VibenetAuthorizeSheet: View {
             .armedPop(canSubmit)
             .animation(DS.Motion.standard, value: canSubmit)
             .dsHover()
-
-            if let errorText {
-                Text(errorText)
-                    .dsText(.label11)
-                    .foregroundStyle(DS.destructive)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            .padding(.top, DS.Space.s3)
         }
     }
 

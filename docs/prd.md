@@ -40499,3 +40499,160 @@ real order — so `-polarProbe` prints the endpoint status, the raw
 four causes that render as one silence (a pre-§537 token, a quiet account,
 an account whose every order is a refused renewal, and shape drift) and only
 the last is a bug.
+
+## 538. Sending is the room, not a door to a room — vibenet's Home scope becomes the form, and three sheets stop saying their own name twice (user: "how would you improve the send modal on the home screen of vibenet? it's in an inline menu nw and should be on the screen, it is really bad right now", then "it shouldn't have a door", then "it should be part of the screen", 2026-08-31)
+
+**§533's own second half, corrected the day after it shipped.** That ruling
+retired Home's "Latest 3" preview — a truncated copy of the stream Activity
+already draws in full — and replaced it with the room's one write action. It
+made that action a ROW that presented `VibenetSendSheet`, and the row is the
+part that was wrong: a scope whose entire content is one line reading "Send ›"
+has not answered the question it was given, it has restated it as a menu item.
+The tap, the presentation, the sheet head that re-announced the word "Send" and
+the dismissal back to a room that looks exactly as it did are all ceremony
+around two fields.
+
+So the fields ARE the scope (`Screens/VibenetSendCard.swift`). The crown, the
+face rail and the section strip are untouched and still exactly where they were
+— the user said so twice, explicitly — and the form draws under them.
+`VibenetSendSheet` and its `FeedSheetRoute` case are deleted, because a route
+with no caller is a door onto a screen that no longer exists.
+
+**Four things the card earns that the sheet could not.** The done state settles
+IN PLACE (a sheet can dismiss and leave the room looking untouched; a card
+cannot, so the block that took the instruction is the block that reports it).
+The button NAMES THE AMOUNT once there is one, because an inline control sits
+farther from its own figure than a sheet's did and "Send" alone on a control
+that moves money is the weakest thing it could say at the moment it is tapped.
+`Paste` appears only when the pasteboard holds text, decided by `hasStrings`,
+which brings nothing into the process. And `Max` is honest HERE — see §539 for
+the chain where it is not.
+
+**THE SAME FAULT IN THREE SHEETS, and it is literal.** `VibenetKeySheet` passed
+the byte-identical expression `actor.kind.plainTitle` to `DSTray(title:)` and to
+`DSSheetHead(title:)`, twenty lines apart, so the sheet opened on "P-256 key" in
+`heading34` with "P-256 key" in `heading22` beneath it — and "What it can do",
+the block §480 promoted to second precisely because it is the question the sheet
+is opened with, sat at or below the fold on every key. `VibenetAuthorizeSheet`
+did the same one expression further out (the tray built a ternary and `headTitle`
+rebuilt it verbatim), and additionally carried a raw 42-character hex as its
+supporting line. `VibenetCreateSheet` said its noun in three tiers — "Create an
+account", "A new account", "Network: Base vibenet · devnet" — while its content
+did not fit.
+
+**THE RULE: the tray names the thing; the head never repeats it and carries the
+ANSWER instead.** A key sheet's head names the ACCOUNT the key acts for (stated
+nowhere else since §495 removed the account row); an authorize sheet's names the
+account the new key will be able to act for, which is the fact worth being sure
+of before granting somebody a key.
+
+**And the action is pinned OUTSIDE the scroll** in both sheets that have one.
+Every `trayHeight` in this feature is a guess about how tall a form turns out to
+be in the reader's type size, and when the guess is short the primary button is
+what goes under the screen edge. A scroll makes content reachable; it does not
+make it discoverable. Heights re-measured against what the scroll now holds
+(create 520 → 430, authorize 680 → 600), where a wrong number costs a scroll
+rather than a clipped control.
+
+**Three more faults in the same room, each invisible from a build.**
+
+1. **A scope with no rows deleted the room's own navigation.** Scoping to an
+   account with no activity fell to `filteredEmptyState`, which replaces the
+   WHOLE room — so the crown, the rail and the strip you had just used to get
+   there vanished, and the one exit left ("Show everything") leaves vibenet
+   altogether. A dead end you can only leave by leaving. `keepsChromeWhenEmpty`
+   takes the populated path with an empty row set instead and says "nothing here"
+   IN the room, under its own rails, with deliberately no button: the way out is
+   the strip directly above the sentence.
+
+2. **Half the Activity room drew no mark, and one drew the WRONG one.**
+   `VibenetEventRow.Kind` knew four of the eight `VibenetEventKind` cases, so an
+   account creation, a transfer either way and a policy run — the events a person
+   sees most — had an empty leading slot, which reads as a list that failed to
+   load. Worse, `.policyRun` stamps `["Key", "Policy"]`, so it fell through the
+   chain's `Key` arm and wore the NEW-KEY plus: the room was reporting an
+   authorization that never happened. Narrower facets are tested first now, the
+   way `Revoked` already was and for the same reason.
+
+3. **The permissions list had six type treatments on one row** — `body17` kind,
+   monospaced key tail, a semibold New badge, the account name, a wrapping
+   `FlowLayout` of permission chips and the clock — in three columns at two
+   rhythms ("looks like garbage bc different fonts and indentations"). The chips
+   are what broke the EDGE: a wrap changes the row's height per key, so nothing
+   below lines up. One grammar now, a title and one subline; what a key may do is
+   what its own sheet opens on. And `createAccountRow` drew a `DS.Mark.row` disc
+   where every account row below it draws `DS.Face.rowCircle`, with `s2` padding
+   against their `s3` — two points of leading-edge drift, which is the one thing
+   the eye reads down a list.
+
+Guarded by `scripts/sheet-title-audit.py` (see §539). All harnesses green:
+`vibenet-selftest` 720 assertions and 0 failures, `vibenet-scopes-selftest`,
+plus the static audits. UNSEEN on a device — every change here is drawn, not
+computed, and no screenshot of any of it has been taken.
+
+## 539. The same ruling carried to Hegotá, one divergence on gas, and the duplicate-title rule becomes a check (user: "what i want to do is apply this way of thinking and design to Hegota. it also has a home screen with a list that can be replaced with send etc like we did here", 2026-08-31)
+
+**§538's faults were all present here and two were worse.**
+`HegotaRoomList` was `case .home: movesList(Array(moves.prefix(4)))` sitting
+directly above `case .activity: movesList(moves)` — the same list, truncated,
+one chip away from the whole of itself, which is §533's duplication verbatim
+with four rows instead of three. And **sending was TWO SHEETS DEEP**: the only
+door to `HegotaSendSheet` was a button inside `HegotaKeySheet`, itself a
+presented sheet, so the one thing a key is for sat behind a tap, a sheet, a
+scroll and another tap.
+
+**That second one had been reported and answered by guessing three times: 560,
+560, 820** ("you can't see the bottom of thi tray where it says send eth so
+someone seeing it wont know it's there"). The comment that landed with 820 has
+the diagnosis exactly right — *a ScrollView makes that content REACHABLE, never
+DISCOVERABLE* — and then keeps the arrangement that made discoverability the
+problem, choosing instead to be "wrong in the safe direction". Putting the form
+on the room retires the question: there is nothing to discover, because there is
+nothing in front of it. The Send block is deleted from the key sheet and its
+height re-measured to 520 against what it actually draws.
+
+**THE ONE DELIBERATE DIVERGENCE FROM §538: no Max chip.** Hegotá sends are
+unsponsored by construction — the sender pays its own gas, which the copy says
+out loud — so an amount equal to the whole balance cannot pay for itself and is
+a GUARANTEED failure, which is the dead control §83 bans wearing a
+convenience's clothing. On vibenet Max is honest because gas is the faucet's
+when it sponsors, and when it does not, no send of any size goes through, so Max
+is never the thing that broke. The balance is still SHOWN either way: knowing
+what you hold is information, filling it in is a claim.
+
+**A regression caught mid-change, worth recording because the fix caused it.**
+`HegotaKeySheet` had the mildest form of the duplicate title — tray "This
+phone's account" over head "Your account on this phone", the same sentence
+reordered — and moving the short address up to the title would have left the
+FULL address nowhere on the sheet, where it had been the head's `secondary`.
+That is the screen you open to RECEIVE test ETH. It returns as a labelled,
+COPYABLE row, which is strictly better than the display-only line it replaces:
+an address you can read but not copy is forty-two characters to transcribe by
+hand.
+
+**`scripts/sheet-title-audit.py` makes §538's rule mechanical**, because memory
+lost it four times in one afternoon across two products, which is this repo's
+standing bar. Two OBJECTIVE checks — the tray's title expression and the head's
+being the same text (resolving a bare identifier one level through a same-file
+computed property), and a `String(localized:)` literal reachable from both —
+mutation-proven against the real tree by restoring each shipped fault. Comments
+are stripped first, since three of the four files now document the rule by
+quoting the expression they must no longer pass.
+
+**STATED CEILING, asserted as a self-test case so it can never read as coverage:
+it cannot catch a PARAPHRASE.** The Hegotá instance above shares no literal and
+no expression; it was found by reading. A word-overlap tier was written and
+MEASURED, and the measurement went against the guess twice. Its first run
+reported ONE finding, a true positive nobody had spotted — `headTitle` still
+paraphrased the tray on its nil-address branch, so the hand fix had left a live
+path (now "Address unreadable", a state like its two siblings). Its second run,
+after that, STILL fires on the same file — now on "This phone's key is gone" and
+"No account yet" against a tray reading "This phone's account". Those sentences
+are correct: a head that names its subject while saying something new about it
+is ordinary English, and no threshold separates that from a repetition. So the
+tier ships as `--measure`, a hand instrument, never a gate (§299's rule that a
+lint which cries wolf gets turned off within a week) — and both runs are recorded
+in the file so the refusal stays checkable rather than remembered.
+
+Both Hegotá harnesses green (`hegota-selftest` 45 mutations and 19 drift guards,
+`hegota-tx-selftest` 11 mutations). UNSEEN on a device, for §538's reason.

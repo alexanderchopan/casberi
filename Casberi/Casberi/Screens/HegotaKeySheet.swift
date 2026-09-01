@@ -20,9 +20,10 @@ struct HegotaKeySheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
 
-    /// Opens `HegotaSendSheet`, routed through `FeedSheetRoute` by the
-    /// caller — this file never presents a `.sheet` of its own (§468).
-    var onOpenSend: () -> Void = {}
+    // `onOpenSend` was HERE and is deleted (prd §539, 2026-08-31). It opened
+    // `HegotaSendSheet` — a sheet raised from inside this sheet — and sending
+    // is the room's own Home scope now (`HegotaSendCard`), so the closure had
+    // no destination and its one call site had nothing to pass.
 
     @State private var presence: HegotaKey.Presence = .none
     @State private var busy = false
@@ -93,23 +94,28 @@ struct HegotaKeySheet: View {
         // what gets created and why it sits with the watched accounts,
         // which runs longer and wraps to more lines.
         case .noKey:            380
-        // 560, then 560 again (both already "generous" guesses that turned
-        // out wrong) — this is the THIRD number, and it stops being a guess
-        // this time (2026-08-31, user: "you can't see the bottom of thi
+        // **560 → 560 → 820 → 520, and only the last one is not a guess
+        // (prd §539, 2026-08-31).** The three before it were attempts to make
+        // a fixed number tall enough for content that kept turning out longer:
+        // at 560 the tray showed the head and the Test ETH block and NOTHING
+        // past "One claim per hour", so the Send block and the Actions block
+        // sat below the presented sheet's own bottom edge, indistinguishable
+        // from the tray ending there (user: "you can't see the bottom of thi
         // tray where it says send eth so someone seeing it wont know it's
-        // there"). The tray opened at 560 showed the head and the Test ETH
-        // block and NOTHING past "One claim per hour" — the whole Send
-        // block and the Actions block sat below the presented sheet's own
-        // bottom edge, indistinguishable from the tray simply ending there.
-        // A ScrollView with no visible indicator (below) makes that content
-        // REACHABLE, never DISCOVERABLE — nothing on screen said there was
-        // more, so the one control this sheet exists to lead people to
-        // (Send) was invisible to anyone who didn't already know to drag.
-        // 820 is not tuned to fit exactly; it is tuned to be WRONG IN THE
-        // SAFE DIRECTION — a resting height taller than the content leaves
-        // empty space at the bottom, which reads as a plain sheet; a
-        // resting height shorter than the content hides a whole feature.
-        case .ready, .working:  820
+        // there"). 820 answered that by being deliberately WRONG IN THE SAFE
+        // DIRECTION — taller than the content, so the cost was a void at the
+        // bottom rather than a hidden feature.
+        //
+        // Both were treating the symptom. The comment that landed with 820
+        // had the diagnosis exactly right — *a ScrollView makes that content
+        // REACHABLE, never DISCOVERABLE* — and then kept the arrangement that
+        // made discoverability the problem: the one control this sheet existed
+        // to lead people to was the FOURTH thing in it. §539 moved sending to
+        // the room's Home scope, where nothing is in front of it, and deleted
+        // the block from here. What is left is a head, the faucet and one
+        // destructive action, which is genuinely a ~520 sheet — measured
+        // against what it draws rather than padded against what it might.
+        case .ready, .working:  520
         }
     }
 
@@ -127,17 +133,45 @@ struct HegotaKeySheet: View {
         .accessibilityHidden(true)
     }
 
+    /// **THE HEAD DOES NOT RESTATE THE TRAY (prd §539, 2026-08-31).** The tray
+    /// is titled "This phone's account" and this said "Your account on this
+    /// phone" — the same sentence with its words reordered, in `heading22`
+    /// directly under the `heading34` it was echoing. It is the mildest form
+    /// of the fault §538 took out of three vibenet sheets, and the mildest
+    /// form is the one that survives longest, because nothing about it reads
+    /// as a bug.
+    ///
+    /// `.present` names WHICH account — the address, by its watched name where
+    /// it has one, the resolution the room's own roster uses. The other two
+    /// phases keep their words: those are STATES, not the tray's noun said
+    /// twice, and each is the answer to "why is there nothing here".
     private var headTitle: String {
         switch presence {
-        case .present:   String(localized: "Your account on this phone")
-        case .destroyed: String(localized: "This phone's key is gone")
-        case .none:      String(localized: "No account yet")
+        case .present:
+            if let address = HegotaKey.address() {
+                return HegotaWatch.shared.name(for: address)
+                    ?? WalletStore.shortAddress(address)
+            }
+            // A key that is present while its address will not derive is a
+            // STATE, and it gets a state's words like the two cases below —
+            // not a paraphrase of the tray's own title, which is what stood
+            // here and is the fault this whole ruling is about. It also says
+            // more: "we have your key and cannot read its address" is a real
+            // condition somebody can act on, where "Your account on this
+            // phone" over a tray reading "This phone's account" said nothing
+            // at all, twice.
+            return String(localized: "Address unreadable")
+        case .destroyed: return String(localized: "This phone's key is gone")
+        case .none:      return String(localized: "No account yet")
         }
     }
 
+    /// The chain, always — the address moved UP to the title, so this slot
+    /// says where that address lives rather than repeating it. Same string in
+    /// every phase now, which is correct: it is a fact about the seat, not
+    /// about the key's state.
     private var headSecondary: String? {
-        if presence == .present, let address = HegotaKey.address() { return address }
-        return String(localized: "Hegotá \u{00B7} frame-transaction devnet")
+        String(localized: "Hegotá \u{00B7} frame-transaction devnet")
     }
 
     private var headSentence: String? {
@@ -200,6 +234,50 @@ struct HegotaKeySheet: View {
 
     private var readyBody: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
+            // **THE ADDRESS, IN FULL AND COPYABLE (prd §539, 2026-08-31).**
+            //
+            // It was the head's `secondary` — displayed, never selectable —
+            // and moving the short form up to the title (see `headTitle`)
+            // would otherwise have left the full value nowhere on the sheet.
+            // That is a loss worth catching: this is the screen you open to
+            // RECEIVE test ETH, and an address you can read but not copy is
+            // one you have to transcribe forty-two characters of by hand.
+            //
+            // So it comes back as a row rather than as a line — the same
+            // wrapping, monospaced treatment every other full id in this app
+            // gets — with the copy this sheet never had. `copySensitive`
+            // rather than `copy`, the vault's own verb: an address is not a
+            // secret, but the pasteboard it lands on is shared with every app
+            // on the device and a devnet address is still an identifier
+            // somebody chose to hold.
+            if let address = HegotaKey.address() {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    caption(String(localized: "Address"))
+                    Button {
+                        DSHaptic.tap()
+                        DSPasteboard.copySensitive(address)
+                        chrome.flash(String(localized: "Address copied"))
+                    } label: {
+                        HStack(alignment: .top, spacing: DS.Space.s2) {
+                            Text(address)
+                                .dsText(.mono12)
+                                .foregroundStyle(DS.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .multilineTextAlignment(.leading)
+                            Spacer(minLength: 0)
+                            Image(systemName: "doc.on.doc")
+                                .accessibilityHidden(true)
+                                .dsGlyph(12, weight: .semibold)
+                                .foregroundStyle(Self.mark)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PressSpring())
+                    .dsHover()
+                }
+            }
+
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 caption(String(localized: "Test ETH"))
                 Button {
@@ -234,26 +312,19 @@ struct HegotaKeySheet: View {
                     .foregroundStyle(DS.textTertiary)
             }
 
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                caption(String(localized: "Send"))
-                Button {
-                    DSHaptic.tap()
-                    onOpenSend()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "arrow.up.right").dsGlyph(13, weight: .semibold)
-                        Text(String(localized: "Send test ETH"))
-                    }
-                    .dsText(.callout15).fontWeight(.semibold)
-                    .foregroundStyle(Self.mark)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, DS.Space.s3)
-                    .background(Self.mark.opacity(0.14),
-                                in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-                }
-                .buttonStyle(PressSpring())
-                .dsHover()
-            }
+            // **THE SEND BLOCK IS GONE (prd §539, 2026-08-31).** It was a door
+            // to `HegotaSendSheet` — a sheet, opened from inside this sheet,
+            // to reach the one thing a key is for. Sending is the room's own
+            // Home scope now (`HegotaSendCard`), in front of everything rather
+            // than two presentations behind it, so this button would open
+            // nothing and its absence is what makes the form findable.
+            //
+            // This is also what retires the height problem this sheet was
+            // reported for three times (560 → 560 → 820, "you can't see the
+            // bottom of thi tray where it says send eth so someone seeing it
+            // wont know it's there"). The content that kept falling past the
+            // bottom edge was largely this block; the answer was never a
+            // taller guess.
 
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 caption(String(localized: "Actions"))
