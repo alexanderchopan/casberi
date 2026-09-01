@@ -144,12 +144,24 @@ enum HomeComposition {
             "Runway",                                     // Stripe, Cloudflare
             "Shielded",                                   // Privacy Pools
             "Trending", "Watching", "Watchlist",          // discovery, watches
-            // ENS (prd §534). What a followed name's row IS right now, never
-            // what it is about — "Grace" is the window after expiry only its
-            // owner can still renew, "Registered" is a watched name somebody
-            // else just claimed. The name itself ("nick.eth") is still a real
-            // subject and stays out of this set.
-            "Grace", "Registered",
+            // ENS (prd §534, completed by §540). What a followed name's row IS
+            // right now, never what it is about — the rungs of the expiry
+            // ladder plus the two moments. "Grace" is the window after expiry
+            // in which the name is protected from re-registration and CAN
+            // STILL BE RENEWED (§540 measured that renewal is permissionless;
+            // §534's "only its owner can renew" was wrong and is corrected
+            // here too). The name itself ("nick.eth") is a real subject and
+            // stays out of this set.
+            //
+            // **§534 ruled two of these six and missed four**, and the audit
+            // could not catch it: `theme-tags-audit.py` reads `tags:` / `tags
+            // =` / `tags.append` literals, while these are returned from
+            // `ENSName.tag(for:)` as a switch and stamped through a variable.
+            // So they were landing on real rows and clustering as themes with
+            // every check green — the audit's own stated blind spot, and the
+            // reason this set is a HAND list that has to be kept by reading.
+            "Expiring", "Grace", "Released", "Available",  // the ladder's rungs
+            "Renewed", "Registered",                       // the two moments
             // A watched GitHub person's pushes and releases (prd §519). STATE
             // by this set's own rule — it says what a row IS, never what it is
             // about. Deliberately NOT a §308 facet either: "activity" is among

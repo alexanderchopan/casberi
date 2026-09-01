@@ -393,7 +393,7 @@ struct MainSurface: View {
                     venues: CategoryFold.scopes(category: category, present: Set(venues)),
                     active: filter.source,
                     // THE SAME EXPRESSION BOTH FACE RAILS TAKE, deliberately
-                    // spelled rather than derived (prd §540). This control sits
+                    // spelled rather than derived (prd §541). This control sits
                     // directly above `socialScopeRail`, whose captioned faces
                     // fold 36→26 on this signal — so a switcher that did not
                     // fold put a 36pt mark row above a 26pt face row on every

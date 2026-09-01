@@ -38,7 +38,7 @@ import SwiftUI
 ///
 /// The mark is a full-bleed `DS.Face.list` (36) in a `DS.Hit.min` (44) slot —
 /// the same circle the face rail beneath it draws, and the touch floor as the
-/// chip's own footprint (prd §540; see `chip`, which carries the whole argument
+/// chip's own footprint (prd §541; see `chip`, which carries the whole argument
 /// and the two costs). It has been 20 (a badge beside text), then 26 (§358, when
 /// the words went and the mark became the chip's entire content), then 26 inside
 /// a 36pt seat (§483); this doc has been corrected each time rather than left to
@@ -73,17 +73,17 @@ struct CategoryVenueSwitcher: View {
     /// The seat currently showing — a real source, always.
     let active: String
     /// The shell's fold state (`ShellChrome.minimized`), on the SAME expression
-    /// both face rails take — `chrome.minimized && !showsRail` (prd §540).
+    /// both face rails take — `chrome.minimized && !showsRail` (prd §541).
     ///
     /// **This control was the one piece of room chrome that did not compress**,
-    /// and that was invisible until §540 made its mark full-bleed. `SourceChips`
+    /// and that was invisible until §541 made its mark full-bleed. `SourceChips`
     /// folds 56→48 above it and `FaceScopeRail` folds its captioned faces 36→26
     /// directly below it, so a switcher pinned at 36 sat between two controls
     /// that both shrank — which is the failure `FaceScopeRail`'s own doc names
     /// for the iPad case it declines to fold in: "it does not read as a system
     /// compressing; it reads as one control twitching."
     ///
-    /// It is also the half of §540 that was nearly shipped wrong. Before §540 the
+    /// It is also the half of §541 that was nearly shipped wrong. Before §541 the
     /// switcher drew a 26pt mark, so it matched the FOLDED rail by accident and
     /// mismatched the resting one; fixing only the resting size would have moved
     /// the drift rather than removed it — 36 above 26 on every scroll in a social
@@ -171,13 +171,13 @@ struct CategoryVenueSwitcher: View {
 
     /// `DS.Face.list` (36) at rest, `.row` (26) folded — `FaceScopeRail.faceSize`'s
     /// own two rungs, spelled the same way so the mark row and the face row under
-    /// it can never step apart (prd §540). The ramp's tiers, not two literals
+    /// it can never step apart (prd §541). The ramp's tiers, not two literals
     /// invented here.
     private var markSize: CGFloat { compact ? DS.Face.row : DS.Face.list }
 
     // THE SEAT'S SIZE IS SPELLED `DS.Hit.min` AT THE FRAME, not lifted into a
     // `slotSize` property, and that is a deliberate reversal made during this
-    // change (prd §540). The property read better and cost real safety:
+    // change (prd §541). The property read better and cost real safety:
     // `accessibility-audit.py` check 3 resolves a frame to a literal or to a
     // name in `NAMED_SIZES`, so hoisting the floor into a computed property
     // made this very chip report as an unhittable button minutes after the same
@@ -197,7 +197,7 @@ struct CategoryVenueSwitcher: View {
             DSHaptic.selection()
             onPick(venue)
         } label: {
-            // **THE MARK IS THE CIRCLE, FULL BLEED** (prd §540, 2026-09-01,
+            // **THE MARK IS THE CIRCLE, FULL BLEED** (prd §541, 2026-09-01,
             // user: *"should the source strips icons be larger? … smaller than
             // the silhouette rail or social avatars"* — they were, and the tap
             // targets were under the floor besides). This COMPLETES §483 rather
@@ -233,7 +233,7 @@ struct CategoryVenueSwitcher: View {
             // exists to stop controls drifting beneath, on a control that is the
             // ONLY way out of a folded category seat. It was invisible to
             // `accessibility-audit.py` check 3 because that check triggers on
-            // `Image(systemName:)` and this button's label is a brand mark; §540
+            // `Image(systemName:)` and this button's label is a brand mark; §541
             // widens it, so this class cannot ship again.
             //
             // Growing the seat is also what KEEPS the cue split below working: a
@@ -290,7 +290,7 @@ struct CategoryVenueSwitcher: View {
             // that is in fact the likeliest way to find yourself looking at it,
             // since the folded chip's dashed ring is what sent you here.
             //
-            // **THIS IS WHY §540 GREW THE SEAT INSTEAD OF MAKING SELECTION A
+            // **THIS IS WHY §541 GREW THE SEAT INSTEAD OF MAKING SELECTION A
             // RING.** Going full-bleed hides a fill drawn behind the mark, and
             // the obvious repair — promote selection to the strip's own solid
             // tint ring — was proposed and REFUSED on this paragraph: attention

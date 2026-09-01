@@ -59,7 +59,7 @@ FOUR CHECKS, all static, none needing a build.
      `dsTapTarget()`, an explicit frame at or above the floor, or a named size
      token that already encodes it.
 
-     WIDER THAN CHECK 1 SINCE 2026-09-01 (prd §540): a button whose whole label
+     WIDER THAN CHECK 1 SINCE 2026-09-01 (prd §541): a button whose whole label
      is a ROUND IDENTITY MARK counts too, not just one drawing an SF Symbol.
      `CategoryVenueSwitcher`'s chip — the only way out of a folded category seat
      — shipped a 36pt target and was invisible here for its whole life, because
@@ -213,7 +213,7 @@ NAMED_SIZES = re.compile(
     r"|doorSide|\.infinity|maxWidth:|DS\.Radius\.widget"
 )
 
-# A ROUND IDENTITY MARK standing as a button's whole label (prd §540,
+# A ROUND IDENTITY MARK standing as a button's whole label (prd §541,
 # 2026-09-01) — the other way an icon-only button gets built here, and the one
 # check 3 could not see.
 #
@@ -417,7 +417,7 @@ def audit_text(path: str, raw: str, floor: int):
             continue
 
         # CHECK 1 IS GLYPH-ONLY, DELIBERATELY, AND THE ASYMMETRY IS THE POINT
-        # (prd §540). §540 widened check 3 to face buttons because a target is a
+        # (prd §541). §541 widened check 3 to face buttons because a target is a
         # target whatever is painted in it — pure geometry, no judgment. The
         # LABEL half is a judgment, and this file's own header already made it
         # the other way: "It never demands a label on a decorative mark.
@@ -431,7 +431,7 @@ def audit_text(path: str, raw: str, floor: int):
         # `VibenetKeySheet`, both `WalletFace` discs that ARE the whole button and
         # do open something, so both look like real gaps rather than decorative
         # marks. That is a ruling for whoever owns those sheets, recorded here and
-        # in §540 rather than enforced by a check that was widened for a different
+        # in §541 rather than enforced by a check that was widened for a different
         # reason. `KNOWN_EXEMPT` is keyed `basename:line` and both are already
         # above the floor, so neither is silenced by anything below.
         if glyph and "accessibilityLabel" not in whole:
@@ -591,7 +591,7 @@ struct B: View {
 }
 """
 
-# The shape §540 was written for: `CategoryVenueSwitcher`'s own chip as it
+# The shape §541 was written for: `CategoryVenueSwitcher`'s own chip as it
 # shipped — a round brand mark, no words, a 36pt slot. It carries a LABEL on
 # purpose, so this fixture can only go red on the size check; a fixture that
 # fails two rules at once cannot tell you which one it is testing.
@@ -637,7 +637,7 @@ struct M: View {
 """
 
 # ...and an UNLABELLED round face button above the floor must also stay clean,
-# which pins the deliberate asymmetry at `audit_text`: §540 widened check 3 and
+# which pins the deliberate asymmetry at `audit_text`: §541 widened check 3 and
 # left check 1 alone. Delete the `glyph and` guard there and this fixture goes
 # red, which is exactly what it is for — the ruling is enforced, not remembered.
 CLEAN_UNLABELLED_FACE = """
@@ -882,7 +882,7 @@ def self_test() -> bool:
     cases = [
         ("dirty: unlabelled icon button", DIRTY_UNLABELLED, {"unlabelled-icon-button"}),
         ("dirty: sub-floor target", DIRTY_SMALL, {"small-tap-target"}),
-        ("dirty: sub-floor ROUND MARK target (§540)", DIRTY_SMALL_FACE,
+        ("dirty: sub-floor ROUND MARK target (§541)", DIRTY_SMALL_FACE,
          {"small-tap-target"}),
         ("clean: the same mark chip at the floor", CLEAN_FACE, set()),
         ("clean: a SQUARE mark button under the floor", CLEAN_SQUARE_MARK, set()),

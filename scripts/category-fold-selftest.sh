@@ -313,7 +313,7 @@ grep -qE 'onPick\(venueLabel|onPick\(CategoryFold\.venueLabel' "$TMP/switcher.nc
        echo "  FeedFilter.source, which no Thing, Shape or deep link answers to (§356)."; exit 1; }
 
 # THE TWO ROWS OF CIRCLES ARE ONE SIZE, AND THE SLOT IS THE TOUCH FLOOR (prd
-# §540, 2026-09-01). Both halves are guarded because both fail INVISIBLY and
+# §541, 2026-09-01). Both halves are guarded because both fail INVISIBLY and
 # neither is reachable by `xcodebuild` or a screen sweep.
 #
 # §483 pinned this chip's SEAT to `DS.Face.list` and left the MARK at `row`, so
@@ -325,7 +325,7 @@ grep -qE 'onPick\(venueLabel|onPick\(CategoryFold\.venueLabel' "$TMP/switcher.nc
 #
 # The seat is separately load-bearing: it is this chip's whole tap target, it was
 # 36 for its entire life, and it is the only way out of a folded category seat.
-# `accessibility-audit.py` check 3 covers it now (§540 widened it past
+# `accessibility-audit.py` check 3 covers it now (§541 widened it past
 # `Image(systemName:)`), so this guard is belt to that check's braces — worth
 # keeping BOTH, since that audit reads a literal or a named token and a future
 # refactor that hands the size in as a parameter goes silent there while this
@@ -333,7 +333,7 @@ grep -qE 'onPick\(venueLabel|onPick\(CategoryFold\.venueLabel' "$TMP/switcher.nc
 grep -q 'BridgeIcon(name: venue, size: markSize, circular: true)' "$TMP/switcher.nc" \
   || { echo "✗ the venue switcher's mark is no longer the full-bleed markSize —"; \
        echo "  it draws directly above FaceScopeRail's faces, so a mark inset inside"; \
-       echo "  its seat reads as two rows of circles at two sizes (§540/§483)."; exit 1; }
+       echo "  its seat reads as two rows of circles at two sizes (§541/§483)."; exit 1; }
 grep -qE 'markSize: CGFloat \{ compact \? DS\.Face\.row : DS\.Face\.list \}' "$TMP/switcher.nc" \
   || { echo "✗ the venue switcher's mark no longer folds on FaceScopeRail.faceSize's own two"; \
        echo "  rungs — the rail below folds 36→26 and a pinned mark row above it puts 36"; \
@@ -348,32 +348,32 @@ grep -qE 'markSize: CGFloat \{ compact \? DS\.Face\.row : DS\.Face\.list \}' "$T
 # `cursor-selftest.sh` records against its own first cut.
 awk '/CategoryVenueSwitcher\(/,/\{ venue in/' "$TMP/main.nc" | grep -q 'compact: chrome.minimized && !showsRail' \
   || { echo "✗ the venue switcher is no longer handed the shell's fold state, or is handed a"; \
-       echo "  different expression from the face rails beneath it (§540). Both rails take"; \
+       echo "  different expression from the face rails beneath it (§541). Both rails take"; \
        echo "  'chrome.minimized && !showsRail'; a switcher on anything else steps apart"; \
        echo "  from the row under it on exactly the scrolls nobody screenshots."; exit 1; }
 # ...and the SEAT must NOT fold with it. The slot is the tap target, so a fold
 # that shrank it would buy back space by dropping the control under the touch
-# floor — `dsTapTarget`'s ruling run backwards, and the defect §540 just fixed.
+# floor — `dsTapTarget`'s ruling run backwards, and the defect §541 just fixed.
 # The SEAT must not fold with the mark, and its size is spelled LITERALLY at the
 # frame. Both halves matter: a folding slot drops the chip under the touch floor
 # on every scroll, and hoisting the floor into a computed property blinds
 # `accessibility-audit.py` check 3 to this very chip — which is what happened
-# while §540 was being written, minutes after that check was widened to catch it.
+# while §541 was being written, minutes after that check was widened to catch it.
 grep -q 'frame(width: DS.Hit.min, height: DS.Hit.min)' "$TMP/switcher.nc" \
   || { echo "✗ the venue switcher's chip no longer claims a literal DS.Hit.min footprint —"; \
-       echo "  its whole slot IS the tap target (under the floor from §351 to §540), and a"; \
+       echo "  its whole slot IS the tap target (under the floor from §351 to §541), and a"; \
        echo "  size lifted into a property also goes invisible to accessibility check 3."; exit 1; }
 # And the annulus that selection lives in cannot be closed by 'tidying' the
 # seat down onto the mark: a full-bleed mark covers a fill drawn behind it, so
 # a seat equal to the mark silently deletes the active state while the control
-# still looks and behaves correctly in every still frame. §540 refused a
+# still looks and behaves correctly in every still frame. §541 refused a
 # selection RING for this control (attention is already a ring, and the two
 # would collide on an active-and-broken seat), so the fill is the only cue
 # there is.
 grep -q 'Capsule(style: .continuous).fill(DS.tint.opacity(' "$TMP/switcher.nc" \
   || { echo "✗ the venue switcher's SELECTION FILL is gone — with the mark full-bleed the"; \
        echo "  fill reads in the annulus between it and the DS.Hit.min seat, and it is the"; \
-       echo "  only selection cue this control has (§540: a ring would collide with"; \
+       echo "  only selection cue this control has (§541: a ring would collide with"; \
        echo "  attention, which is already a dashed ring on the same capsule)."; exit 1; }
 # The scope must live on the shell, or it dies with the room. `MainSurface`
 # gives FeedScreen `.id(filter.source)`, so `@State` here is destroyed on every

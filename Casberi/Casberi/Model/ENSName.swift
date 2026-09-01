@@ -19,8 +19,15 @@ import Foundation
 /// wallet tells you about:
 ///
 ///   1. it expires;
-///   2. for `graceDays` after that ONLY THE OWNER may renew it — so a just-
-///      lapsed name is the most actionable state there is, not the least;
+///   2. for `graceDays` after that it is in GRACE: nobody else can register
+///      it, and it can still be renewed — so a just-lapsed name is the most
+///      actionable state there is, not the least. **Renewing is
+///      PERMISSIONLESS** (measured 2026-08-31 by reading the deployed
+///      controller: `renew` has no owner check at all), so the restriction in
+///      this window is on RE-REGISTRATION, not on renewal. Saying "only the
+///      owner can renew" — which this file did until §540 — is wrong, and
+///      wrong in the direction that talks somebody out of an act they could
+///      have taken;
 ///   3. at grace end it is RELEASED and anyone may register it, for
 ///      `premiumDays` at a decaying premium;
 ///   4. after that it is an ordinary name at an ordinary price.
@@ -101,13 +108,34 @@ enum ENSName {
         var s = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !s.isEmpty else { return nil }
 
-        // A pasted link. Only the segment AFTER `/name/` is taken — `app.ens
-        // .domains/name/x.eth/details` and a bare host both fall through to
-        // the ordinary path rather than yielding a plausible wrong name.
-        if let range = s.range(of: "/name/") {
-            s = String(s[range.upperBound...])
-            s = s.split(separator: "/").first.map(String.init) ?? ""
-            s = s.split(separator: "?").first.map(String.init) ?? ""
+        // A PASTED LINK, in either of ENS's two forms. MEASURED 2026-08-31:
+        // `app.ens.domains/vitalik.eth` answers 200 and is the canonical form
+        // today, while the older `app.ens.domains/name/vitalik.eth` answers a
+        // 301 to it — so both are in circulation and both must resolve to the
+        // same name here, or the ref would depend on the age of the link
+        // somebody happened to copy.
+        //
+        // **Only ENS's OWN host, and that is the security half.** Taking the
+        // last path component of any URL would accept
+        // `evil.example/vitalik.eth` as a name — harmless in itself, but it
+        // teaches the field to read strangers' URLs, and this seat's whole job
+        // is telling somebody a name is safe to care about.
+        if s.contains("/") {
+            var rest = s
+            for scheme in ["https://", "http://"] where rest.hasPrefix(scheme) {
+                rest = String(rest.dropFirst(scheme.count))
+            }
+            var parts = rest.split(separator: "/", omittingEmptySubsequences: true)
+            guard let host = parts.first,
+                  host == "app.ens.domains" || host == "ens.domains"
+            else { return nil }
+            parts.removeFirst()
+            // `/name/<name>` and `/<name>` both end at the name; anything
+            // deeper (`/vitalik.eth/details`) names a page, not a name, and
+            // its first component is still the name.
+            if parts.first == "name" { parts.removeFirst() }
+            guard let first = parts.first else { return nil }
+            s = String(first.split(separator: "?").first ?? "")
         }
         guard !s.isEmpty else { return nil }
 
@@ -142,7 +170,8 @@ enum ENSName {
         case active
         /// Registered, expiring inside the horizon.
         case expiring
-        /// Lapsed, inside the grace period — ONLY the owner can renew.
+        /// Lapsed, inside the grace period — protected from re-registration,
+        /// and still renewable by anyone (§540).
         case grace
         /// Released, inside the premium window — anyone can register it.
         case premium
@@ -168,8 +197,8 @@ enum ENSName {
         return now < premiumEnd ? .premium : .released
     }
 
-    /// When the grace period ends — the moment the owner stops being the only
-    /// person who can renew.
+    /// When the grace period ends — the moment the name stops being protected
+    /// and anyone can register it.
     static func graceEnd(expiry: Date) -> Date? { date(byAddingDays: graceDays, to: expiry) }
 
     /// When the premium decays away.
@@ -213,7 +242,7 @@ enum ENSName {
             return String(localized: "\(name) expires \(dateWord(expiry, from: now))")
         case .grace:
             guard let expiry, let end = graceEnd(expiry: expiry) else { return name }
-            return String(localized: "\(name) expired \(dateWord(expiry, from: now)) — the owner can still renew it until \(dateWord(end, from: now))")
+            return String(localized: "\(name) expired \(dateWord(expiry, from: now)) — it can still be renewed until \(dateWord(end, from: now))")
         case .premium:
             guard let expiry, let end = graceEnd(expiry: expiry) else { return name }
             return String(localized: "\(name) was released \(dateWord(end, from: now)) — anyone can register it")

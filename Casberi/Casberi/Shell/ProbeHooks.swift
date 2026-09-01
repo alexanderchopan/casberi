@@ -2598,6 +2598,27 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-ensRenewProbe "<name>"` — what the renew card WOULD say for one
+        // followed name, and whether it would appear at all (prd §540). One
+        // NSLog per fact (the `-todayProbe` truncation lesson).
+        //
+        // Reads only: it prices the renewal and encodes the transaction, and
+        // signs nothing, sends nothing and raises no prompt — so it is safe in
+        // a headless sweep (`-signerProbe`'s rule).
+        //
+        // It exists because a MISSING renew card has six causes that render as
+        // one empty space and only two are bugs: the name isn't followed, its
+        // reading hasn't landed yet, it isn't near expiring, it has already
+        // been released, the price read didn't answer, or the controller moved
+        // out from under us. The `price=` and `cardWouldShow=` lines separate
+        // them in one launch.
+        Hook(key: "ensRenewProbe") { value, context in
+            Task { @MainActor in
+                for line in await ENSRenewPrepare.probe(name: value, context: context) {
+                    NSLog("%@", line)
+                }
+            }
+        },
         // `-weatherProbe YES` — fetch today's WeatherKit forecast headless
         // (one-shot location + WeatherService) and NSLog the summary, or an
         // honest FAILED on denial/unavailability.

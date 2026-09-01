@@ -131,6 +131,12 @@ struct ThingSheetView: View {
     /// the fee to revoke, the doors out. Fetched on open like replies; the
     /// section renders only when the check answered.
     @State private var approvalCheck: WalletPrepare.Check?
+    /// The ENS renew quote and the term it priced (prd §540). The term is held
+    /// HERE rather than in the card so re-pricing doesn't tear the card down
+    /// and rebuild it mid-interaction.
+    @State private var ensRenewTerm: ENSRenew.Term = .oneYear
+    @State private var ensRenewQuote: ENSRenewPrepare.Quote?
+    @State private var ensRenewIsYours = false
     @State private var safeCheck: SafeBridge.Check?
     /// The money receipt (prd §369) and what the app says about it. Held in
     /// state rather than computed per body evaluation because the commentary
@@ -692,6 +698,13 @@ struct ThingSheetView: View {
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s3)
                 }
+                if let quote = ensRenewQuote {
+                    ENSRenewCard(thing: thing, term: $ensRenewTerm, quote: quote,
+                                 isYours: ensRenewIsYours,
+                                 onPickTerm: { priceENSRenewal(term: $0) })
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s3)
+                }
                 if let check = safeCheck {
                     SafeQueueCard(check: check)
                         .padding(.horizontal, DS.Space.s4)
@@ -983,6 +996,14 @@ struct ThingSheetView: View {
             }
             if SafeBridge.applies(to: thing) {
                 Task { safeCheck = await SafeBridge.check(for: thing) }
+            }
+            // The gate is a string check plus a stored reading — a name that
+            // isn't expiring, and every non-ENS thing, spends nothing.
+            if ENSRenewPrepare.applies(to: thing) {
+                ensRenewIsYours = ENSRenewPrepare.isYours(
+                    name: ENSName.name(fromRef: thing.sourceRef ?? "") ?? "",
+                    context: modelContext)
+                priceENSRenewal(term: ensRenewTerm)
             }
             loadReceipt()
             Task { await loadAltanaKey() }
@@ -1811,6 +1832,29 @@ struct ThingSheetView: View {
     ///
     /// No `Thing` crosses the suspension: the ref is copied out first, so the
     /// await holds a `String` and nothing else (corollary 6).
+    /// Prices an ENS renewal for one term (prd §540). Reads only — it quotes
+    /// what a renewal would cost and prepares the transaction; nothing here
+    /// signs or sends.
+    ///
+    /// The quote is CLEARED before the read, not left standing: a stale price
+    /// under a freshly-tapped term is a figure about a different purchase, on
+    /// a card somebody is reading to decide whether to spend.
+    private func priceENSRenewal(term: ENSRenew.Term) {
+        guard let name = ENSName.name(fromRef: thing.sourceRef ?? "") else { return }
+        ensRenewQuote = nil
+        Task {
+            let quote = await ENSRenewPrepare.quote(
+                name: name, term: term, from: ENSRenewPrepare.sender())
+            // Corollary 6 — a detached task resumes later than it was made,
+            // and this row can be gone by then.
+            guard thing.isLive else { return }
+            // The person may have tapped another term while this was in
+            // flight; the last tap wins, not the last reply.
+            guard term == ensRenewTerm else { return }
+            ensRenewQuote = quote
+        }
+    }
+
     private func loadAltanaKey() async {
         guard thing.isLive, thing.source == AltanaKeystore.source,
               let ref = thing.sourceRef,

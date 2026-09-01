@@ -60,6 +60,24 @@ strip "$BRIDGE" > "$TMP/bridge.stripped"
 strip "$EXPIRY" > "$TMP/expiry.stripped"
 
 # --- drift guards ------------------------------------------------------------
+
+# EVERY TAG THIS SEAT STAMPS MUST BE RULED MECHANICAL (prd §540).
+# `theme-tags-audit.py` cannot see these and says so in its own header: it reads
+# `tags:` / `tags =` / `tags.append` LITERALS, and these are returned from
+# `ENSName.tag(for:)` as a switch and stamped through a variable. §534 ruled two
+# of the six and missed four, with every check in the repo green — the rungs
+# were landing on real rows and clustering in the Themes map as though "Expiring"
+# were something somebody's corpus is about. So the guard lives here, where the
+# tags are actually written.
+COMPOSITION="Casberi/Casberi/GenUI/HomeComposition.swift"
+for tag in Expiring Grace Released Available Renewed Registered; do
+  grep -q "\"$tag\"" "$COMPOSITION" \
+    || { echo "✗ the ENS tag '$tag' is not ruled in HomeComposition.mechanicalTags —"; \
+         echo "  it would cluster in the Themes map as a subject. theme-tags-audit.py"; \
+         echo "  CANNOT catch this: these tags are returned from a switch, not stamped"; \
+         echo "  as a literal, which is that audit's own stated blind spot."; exit 1; }
+done
+
 # Facts the compiled functions can't prove: a perfect ladder is worthless if
 # the two halves that share one name never look at it the same way.
 
@@ -233,8 +251,14 @@ check("active reads 'expires', future tense",
 let graceExpiry = ref.addingTimeInterval(-5 * day)
 check("grace reads 'expired', past tense — it already happened",
       ENSName.title(name: "vitalik.eth", expiry: graceExpiry, now: ref).contains("expired"))
-check("grace states the owner can still renew",
-      ENSName.title(name: "vitalik.eth", expiry: graceExpiry, now: ref).lowercased().contains("owner"))
+check("grace says it can still be renewed",
+      ENSName.title(name: "vitalik.eth", expiry: graceExpiry, now: ref).lowercased().contains("still be renewed"))
+// §540. MEASURED 2026-08-31 by reading the deployed controller: `renew` has NO
+// owner check — anyone can renew any name. So a grace title must NOT say the
+// owner is the only one who can act, which is what this file said until §540.
+// Wrong in the direction that talks somebody out of an act they could take.
+check("grace never claims only the owner can renew",
+      !ENSName.title(name: "vitalik.eth", expiry: graceExpiry, now: ref).lowercased().contains("owner"))
 let releasedExpiry = ref.addingTimeInterval(-200 * day)
 check("released never says 'expires' or 'expired' — it's a different name's fate now",
       !ENSName.title(name: "vitalik.eth", expiry: releasedExpiry, now: ref).contains("expire"))
