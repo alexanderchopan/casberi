@@ -41416,3 +41416,152 @@ audit is green, and the numbers above are arithmetic off the ramp — but no
 screenshot of any of the three rooms has been taken, and the one thing to look
 at first is a wallet with five watched addresses, where the rail scrolls inside
 the slab and the pick's fill has to stay legible against the glass.
+
+## 548. A seat for the chain that is only frames — the envelope Hegotá's could not sign (user: "there is now a Frames devnet, we need to build on it like we have w Vibenet and Hegota … can you check and spec. it out", then "hegota is for hegota writ large" → "this one is for Frames specifically", then "this chain is brand new is why it's empty. what do you need to get started? please do", 2026-09-01)
+
+The Frames devnet is the reference test network for **EIP-8141 frame
+transactions** — chain id **81410** (`0x13e02`), three keyless RPC hosts,
+6.1-second blocks, `ethrex v23.0.0-frames-devnet-0`. `FramesTransaction`,
+`FramesBridge`, `FramesKey`, `FramesSend`, `scripts/frames-tx-selftest.sh`, a
+`NetworkReach` entry. Seat id `frames`, group **Wallet**. No new `Thing` field,
+so **no CloudKit deploy**.
+
+**THE SEAT IS NOT A HEGOTÁ CLONE, AND THE USER'S OWN FRAMING IS WHY.** Asked
+whether the two should be one seat with a chain switch, the ruling was that
+*"hegota is for hegota writ large"* and *"this one is for Frames
+specifically"*. That is not a filing decision — it decides the room's subject.
+Hegotá's seat is about a chain; this one is about a **transaction type**, which
+is what makes the near-empty chain below survivable as a premise.
+
+**THE CENSUS, WALKED WHOLE RATHER THAN SAMPLED.** §500's rule is that sampling
+600 blocks out of 307,000 measures your sampling, not the chain — so read the
+logs, the thing that accumulates. Every log on this chain, blocks 0–56,503:
+**25 logs, 20 value-moving transactions, 5 of type `0x06`, 18 distinct
+addresses.** Most of the early traffic is genesis fixtures (`0x…dead`, `0x…42`,
+`deadbe01`) and the recent traffic is faucet drips of exactly 1 ETH. Against
+Hegotá's founding measurement — 254 transactions, 77 of type `0x6`, 164
+addresses — this chain earns no seat on volume and does not claim to.
+
+**It earns one because the chain opened on 2026-08-28**, four days before the
+census, so the reading is a floor and not a verdict (user: *"this chain is
+brand new is why it's empty"*) — and because of the faucet's own sentence:
+*"EIP-8141 is a draft, so no wallet and no released version of the common
+libraries can encode or sign one; a wallet asked to send one simply has no
+representation for it."* This app has that representation. **The read side is a
+four-day-old chain; the send side is the entire reason for the seat**, which is
+why the write path landed first and the room comes after.
+
+### The envelope, and why `HegotaTransaction` could not be reused
+
+Both chains run ethrex, both serve type `0x06`, both call it EIP-8141 — **and
+they hash different lists.**
+
+```
+FRAMES    0x06 || rlp([chain_id, nonce, sender, frames, signatures,
+                       [max_priority_fee, max_fee, max_fee_per_blob_gas],
+                       blob_hashes])                                  # 7
+
+HEGOTÁ    0x06 || rlp([chain_id, nonce_keys, nonce_seq, sender, frames,
+                       signatures, max_priority_fee, max_fee,
+                       max_fee_per_blob_gas, blob_hashes,
+                       recent_root_references])                       # 11
+```
+
+Three shapes differ: `nonce` is a **scalar** where Hegotá carries keyed nonces
+(EIP-8250, which this chain does not implement), the three fees ride a
+**nested list** where Hegotá's are flat, and there is no
+`recent_root_references` field. **Signing with the wrong one does not fail
+loudly** — it produces a well-formed signature over a different digest that
+recovers to a real address. Green build, correct screen, refused chain. That is
+`safetx-selftest.sh`'s argument, on a chain no harness can reach.
+
+**THE ENVELOPE WAS PROVEN BEFORE A LINE OF SWIFT WAS WRITTEN**, and that
+ordering is the transferable part. A throwaway Python RLP encoder plus a
+pure-Python keccak and secp256k1 recovery, run against the chain's whole
+type-`0x06` population, settled eight candidate field orders in one run:
+**5/5 byte-exact, keccak matching the RPC's own `hash` 5/5**, and **5/5
+signatures recovering to their declared signer** against the elided preimage.
+Every other variant scored **0/5**. §318's lesson — build the cheap instrument
+before the plausible fix — applied to an encoder rather than a ranking.
+
+### What carried over, and the two divergences that would have failed silently
+
+Every trap `HegotaTransaction` documents is a trap here, and the faucet's own
+"Common errors" list is the same set line for line: `v ‖ r ‖ s` with `v` a bare
+0/1 (which that page calls *"the single most common reason a hand-built frame
+transaction is refused"*), the two-element `[execution, state]` gas slot, the
+per-entry elision rule, canonical low-s, and §531's whole keychain story.
+**Casberi got all of those right eight months early on a different chain**,
+which is why this seat was days and not weeks.
+
+Two things did **not** carry, both measured, both silent if wrong:
+
+1. **The signature entry's `signer` is written LITERALLY here, where
+   `HegotaSend` writes it EMPTY.** Hegotá's empty field means "the sender". On
+   this chain the convention has never been used — all 5 transactions write the
+   address in full, and re-encoding proves it: literal 5/5, empty **0/5**. An
+   empty signer produces a hash the node recomputes differently and refuses as
+   an invalid signature.
+2. **A real state budget, where `HegotaSend` sends `stateGas: 0`.** Execution
+   gas cannot pay for state growth, and a transfer to an address that does not
+   exist yet grows state — on a four-day-old devnet the common case, not an
+   edge one. With `state: 0` the frame halts on that write and burns its whole
+   execution budget, **reporting what reads as an execution failure.**
+
+And one on the READ side: a frame's execution budget is reported as `gasLimit`
+here and `executionGasLimit` on Hegotá. A reader written for one gets nil on
+the other, and **a frame drawn with a nil budget looks like a frame that had
+none.** Both spellings are read, this chain's first.
+
+### `stateGasUsed` is optional, and nil is never zero
+
+The faucet's error guide is the room's design brief: *"A frame reverts having
+used exactly its `execution` budget, with `stateGasUsed: 0x0` — missing state
+budget, not execution. Raising `--frame-gas-limit` will not help."* Two
+failures that render identically, and the chain publishes the discriminator.
+
+Measured 2026-09-01: **`stateGasUsed` is absent from all 5 transactions (10
+frames)** while Hegotá's receipts carry it — but all five are plain transfers
+that grow no state, so that is not proof the field does not exist. It is
+decoded as `UInt64?` and **never defaulted to zero**, because `0x0` IS the
+diagnosis: reading an absent field as zero would assert a state starvation
+every time, on the one line a developer would act on (§83). `FramesRead.
+starvation` returns nil rather than judging without it. **Measure a
+state-growing frame before building the room's second bar.**
+
+### The faucet's classifier is shared, not forked
+
+`POST faucet.frames.ethrex.xyz/api/claim` takes `{"address"}` and answers
+`{"msg", "txhash"}` — byte-for-byte Hegotá's shape, including the bare 429 for
+its hourly limit. So `HegotaFaucetVerdict` classifies this one unchanged and is
+**used rather than copied**: two classifiers of one wire shape drift, and then
+the two seats disagree about what "already claimed this hour" looks like. Its
+name stays Hegotá's because renaming would churn a passing harness's assertions
+for no behavioural gain; `FramesSend.DevnetFaucetVerdict` is the alias.
+
+### The harness, and the gap it found in itself
+
+`scripts/frames-tx-selftest.sh` compiles `FramesTransaction` WHOLE — two real
+vectors byte-exact with keccak matching the chain's own hash, a third synthetic
+one with **every field distinct** because five near-identical real transactions
+cannot catch a field swap (`safetx-selftest.sh`'s lesson, where all five spec
+vectors left the same fields at zero), 17 mutations, and drift guards on the
+key, the send path and the read.
+
+**Its own `postJSONBody` guard was too weak and mutation found it.** It
+required ONE occurrence, so `claimFaucet` alone regressing to `postJSON` would
+have passed green — **§531's exact bug**, where the faucet's measured hourly
+rate limit becomes indistinguishable from a dead host and the "already claimed
+this hour" branch becomes unreachable. It requires both writes now, and forbids
+the body-dropping helpers outright. Standing lesson, third instance: a guard
+must be mutated, not read.
+
+**UNSENT. Nothing has ever been signed and broadcast to this chain from this
+app.** The encoder is proven against transactions the chain already accepted,
+which is a strictly weaker claim than having one of ours accepted; every read
+fails safe, and the first real send is the measurement that closes it — and the
+one that can finally answer the `stateGasUsed` question above. **The room, the
+catalog seat, the website tile and the demo seed are not built** (§548 is the
+write path); the toggle row this spec settled on is **Home · Frames · Activity
+· Sponsors**, with Nonces absent because the chain serves no keyed nonces and
+Sponsors conditional because every transaction observed here is self-paid.

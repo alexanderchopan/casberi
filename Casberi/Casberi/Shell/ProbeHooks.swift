@@ -6333,6 +6333,160 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-framesProbe YES` — the Frames devnet's read, phase by phase, then
+        // ONE LINE PER FRAME of the newest frame transaction (the
+        // `-todayProbe` truncation lesson: a joined multi-line NSLog gets cut
+        // by the log reader).
+        //
+        // It exists because this chain is FOUR DAYS OLD and nearly empty
+        // (25 logs, 20 transactions, 5 of type 0x06 in 56,503 blocks,
+        // measured 2026-09-01), so "nothing here" is the HEALTHY answer and
+        // has five causes that render identically: no host answered, the
+        // chain was relaunched under a new genesis, this phone has no key,
+        // the account is genuinely untouched, or a parse drifted. The
+        // `reached=` / `chain=` / `head=` triple is what separates them in a
+        // single launch, and `chain=` is first because it governs everything
+        // below — on a relaunched devnet every read answers perfectly and
+        // with nothing.
+        Hook(key: "framesProbe") { _, _ in
+            Task { @MainActor in
+                async let idCall = FramesRPC.call(method: "eth_chainId", params: [])
+                async let headCall = FramesRPC.call(method: "eth_blockNumber", params: [])
+                async let gasCall = FramesSend.suggestedGasPrice()
+                let (rawID, rawHead, gas) = await (idCall, headCall, gasCall)
+                let chainID = FramesRead.hexInt(rawID)
+                let head = FramesRead.hexInt(rawHead)
+                NSLog("[Casberi] frames| reached=%@ chain=%@ expected=81410 head=%@ gasPrice=%@",
+                      rawID == nil ? "NO" : "YES",
+                      chainID.map(String.init) ?? "-",
+                      head.map(String.init) ?? "-",
+                      gas.map(String.init) ?? "-")
+                if let chainID, chainID != FramesTransaction.chainID {
+                    // Never read as an empty account: a different chain id is
+                    // a RELAUNCH, and every balance below is a real answer
+                    // about a chain that is not the one anything was done on.
+                    NSLog("[Casberi] frames| chain id disagrees with the encoder's — this is a different chain")
+                }
+                guard let account = FramesKey.address() else {
+                    NSLog("[Casberi] frames| no key on this phone — pass -framesKeyProbe first")
+                    return
+                }
+                async let balCall = FramesRPC.call(method: "eth_getBalance", params: [account, "latest"])
+                async let nonceCall = FramesSend.currentNonce(for: account)
+                let (rawBal, nonce) = await (balCall, nonceCall)
+                NSLog("[Casberi] frames| account=%@ balanceWei=%@ nonce=%@",
+                      account,
+                      FramesRead.hexInt(rawBal).map(String.init) ?? "-",
+                      nonce.map(String.init) ?? "-")
+            }
+        },
+        // `-framesTxProbe <0x…>` — decode one frame transaction, frame by
+        // frame, off the chain's own answer.
+        //
+        // The read this seat exists for, and the one no other probe here can
+        // stand in for: it is the only way to see whether `frames` and
+        // `frameReceipts` still parse. When this chain's shape moves, the
+        // room does not break — it goes QUIET, drawing a transaction with no
+        // frames, which from outside is indistinguishable from a transaction
+        // that had none (§311's failure, on a chain with no indexer).
+        //
+        // `stateUsed=` is printed as `-` when ABSENT rather than as 0, which
+        // is the whole point: `0x0` is the discriminator that tells a missing
+        // STATE budget apart from a too-small EXECUTION one, so a probe that
+        // printed zero for "the chain did not say" would assert that
+        // diagnosis every run.
+        Hook(key: "framesTxProbe") { value, _ in
+            let hash = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            Task { @MainActor in
+                guard hash.hasPrefix("0x") else {
+                    NSLog("[Casberi] framesTx| pass a transaction hash"); return
+                }
+                async let txCall = FramesRPC.call(method: "eth_getTransactionByHash", params: [hash])
+                async let rcCall = FramesRPC.call(method: "eth_getTransactionReceipt", params: [hash])
+                let (rawTx, rawRc) = await (txCall, rcCall)
+                guard let tx = rawTx as? [String: Any] else {
+                    NSLog("[Casberi] framesTx| no host answered, or no such transaction"); return
+                }
+                let receipt = rawRc as? [String: Any]
+                let frames = FramesRead.frames(inTransaction: tx)
+                let outcomes = receipt.map { FramesRead.outcomes(inReceipt: $0) } ?? []
+                NSLog("[Casberi] framesTx| type=%@ frames=%d outcomes=%d payer=%@ sponsored=%@",
+                      (tx["type"] as? String) ?? "-", frames.count, outcomes.count,
+                      (receipt?["payer"] as? String) ?? "-",
+                      {
+                          guard let p = (receipt?["payer"] as? String)?.lowercased(),
+                                let f = (receipt?["from"] as? String)?.lowercased() else { return "-" }
+                          return p == f ? "NO" : "YES"
+                      }())
+                for (i, frame) in frames.enumerated() {
+                    let out = i < outcomes.count ? outcomes[i] : nil
+                    let starved = out.flatMap { FramesRead.starvation(frame: frame, outcome: $0) }
+                    NSLog("[Casberi] framesFrame| %d %@ to=%@ exec=%@/%@ state=%@/%@ ok=%@ starved=%@",
+                          i, frame.modeName, frame.target ?? "-",
+                          out?.gasUsed.map(String.init) ?? "-",
+                          frame.executionGas.map(String.init) ?? "-",
+                          out?.stateGasUsed.map(String.init) ?? "-",
+                          frame.stateGas.map(String.init) ?? "-",
+                          out.map { $0.succeeded ? "YES" : "NO" } ?? "-",
+                          starved.map { String(describing: $0) } ?? "-")
+                }
+            }
+        },
+        // `-framesKeyProbe YES|claim` — this phone's Frames signing key, and
+        // §531's whole triple, because that bug is transplanted code and so
+        // is its blind spot: `presence()` answers `.none` the moment the
+        // cached address is missing and never asks the keychain, so an item
+        // that OUTLIVED a reinstall is invisible to every screen while
+        // `SecItemAdd` answers `-25299` forever.
+        //
+        // **`claim` is a WORD, not a flag** (`-librarianProbe run`'s ruling):
+        // the faucet allows one claim per source IP per hour, so a probe that
+        // spent it on every headless run is one nobody could put in a sweep.
+        // Bare `YES` reports and spends nothing.
+        Hook(key: "framesKeyProbe") { value, _ in
+            let spend = value.lowercased() == "claim"
+            Task { @MainActor in
+                let presence = FramesKey.presence()
+                let address = FramesKey.address()
+                // Read BEFORE create(), because afterwards there is an item
+                // either way and the orphan is no longer distinguishable.
+                let orphaned = FramesKey.keychainHoldsItem() && address == nil
+                NSLog("[Casberi] framesKey| presence=%@ address=%@ item=%@ orphaned=%@ biometry=%@",
+                      String(describing: presence), address ?? "-",
+                      FramesKey.keychainHoldsItem() ? "YES" : "NO",
+                      orphaned ? "YES" : "NO",
+                      FramesKey.biometryAvailable() ? "YES" : "NO")
+                if presence != .present {
+                    do {
+                        let made = try FramesKey.create()
+                        NSLog("[Casberi] framesKey| created=%@ adopted=%@",
+                              made, orphaned ? "YES" : "NO")
+                    } catch {
+                        NSLog("[Casberi] framesKey| createFailed=%@", String(describing: error))
+                    }
+                }
+                guard let account = FramesKey.address() else {
+                    NSLog("[Casberi] framesKey| no account — nothing to claim for"); return
+                }
+                guard spend else {
+                    NSLog("[Casberi] framesKey| faucet=not asked (pass -framesKeyProbe claim to spend the hour)")
+                    return
+                }
+                do {
+                    let claim = try await FramesSend.claimFaucet(for: account)
+                    NSLog("[Casberi] framesKey| faucet=sent tx=%@", claim.transactionHash)
+                } catch let f as FramesSend.Failure {
+                    if case .faucet(let verdict) = f {
+                        NSLog("[Casberi] framesKey| faucet=%@ says=%@",
+                              String(describing: verdict), verdict.sentence ?? "-")
+                    } else {
+                        NSLog("[Casberi] framesKey| faucet=%@", String(describing: f))
+                    }
+                } catch {
+                    NSLog("[Casberi] framesKey| faucet=%@", String(describing: error))
+                }
+            }
+        },
         // `-hegotaProbe YES` — the whole read, phase by phase, then ONE LINE
         // PER ACCOUNT and one per scope (the `-todayProbe` truncation lesson:
         // a joined multi-line NSLog gets cut by the log reader).
