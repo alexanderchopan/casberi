@@ -278,15 +278,21 @@ struct VibenetAccountDetail: View {
                     Text(String(localized: "This account holds"))
                         .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
-                    // `price48` and the amount-first move — the SAME crown as
-                    // the aggregate and as Wallet's own (prd §475). Reported:
-                    // *"on the individual account sheets in vibenet… they have
-                    // a totally different format. We should be using the same
-                    // type of format."* This was `price40` with a percent-only
-                    // delta while the room above it drew `price48` with the
-                    // amount — the same reading, two formats, one tap apart.
+                    // The SAME crown as the aggregate and as Wallet's own
+                    // (prd §475). Reported: *"on the individual account
+                    // sheets in vibenet… they have a totally different
+                    // format. We should be using the same type of format."*
+                    // This drew a percent-only delta at a smaller rung while
+                    // the room above it drew the amount at a larger one — the
+                    // same reading, two formats, one tap apart.
+                    //
+                    // **The rung is `stat24` since §551**, and it MOVED WITH
+                    // the room rather than staying behind: the pairing is the
+                    // whole content of this decision, so a room at one rung
+                    // and a sheet at another would re-open the report it
+                    // closed.
                     Text("\(VibenetBalanceFormat.line(native)) ETH")
-                        .dsText(.price48)
+                        .dsText(.stat24)
                         .foregroundStyle(DS.textPrimary)
                         .monospacedDigit()
                         .lineLimit(1)

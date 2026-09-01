@@ -41960,3 +41960,117 @@ The capsule has not been seen on a device or a simulator, and neither has the
 catalog landing filtered to Agents. Both fail safe — an unresolvable category
 leaves the All chip selected, and the hint's gate is a persisted Bool that
 defaults to showing it once.
+
+## 551. One rung for every scope headline, an empty Accounts scope that is a drawing rather than three tiers of text, and the permissions census drawn whole (user: "on Wallet, Home, the balance is in such a large font, but on all the other screens … we should be consistent"; "this screen looks like shit and we shouldn't need subtext"; "on Permissions, this looks bad. really. we should use blocks", 2026-09-01)
+
+Three reports about the vibenet room's fixed figure slot, all landing on the
+same property: the slot is 210pt whatever it holds, so anything sized by how
+much there happens to be looks broken at the small end. Nothing here changes
+what any scope KNOWS — no request, no new `Thing` field, **no CloudKit
+deploy**.
+
+### 1. The scope strip stopped changing the type scale of the screen
+
+Home's crown was `price48` (64pt) and every other scope's headline `stat24`
+(24pt) — **two rungs apart on one control**, so using the strip resized the
+screen. Both rooms had it; Hegotá never did, because its Home draws through
+`DSRoomSlot` like every other scope.
+
+**They converge on `stat24`, and the DIRECTION was measured rather than
+picked.** The obvious answer to "each screen should be larger and home should
+be smaller" is the single rung between them, `price40` — the ramp's own "a
+figure that leads a card without being its crown". Measured against the ~304pt
+a leading headline actually has beside the settings gear (402 screen − 30 card
+inset − 24 content inset − 44 gear), **five of the headlines these rooms really
+draw do not fit it**: "Nothing is shared" 337pt, "Couldn't be read" 318,
+"Nothing deployed yet" 411, "12 accounts · 11 unwatched" 526, and the Accounts
+web's own "2 accounts · 1 you don't watch yet" 646. Each carries a
+`minimumScaleFactor`, so none would truncate — they would render at somewhere
+between 29 and 40pt **depending on what they happened to say**, which is the
+same defect wearing a smaller range. At `stat24` every one of them fits at full
+size.
+
+The lesson is the standing one: **build the cheap instrument before the
+plausible fix.** A twelve-line `swiftc` script measuring the real strings at
+both rungs settled in one run a question two rounds of mockups had gotten
+wrong, and the mockup was wrong in the reassuring direction — a browser drew
+"Nothing is shared" comfortably at 40pt on a 390px card because the mockup had
+no gear to clear.
+
+The crown is still the biggest figure on its surface; nothing else on that card
+sets 24 bold. `price48` keeps its §506 meaning and its other callers. What it
+no longer means is "the Home scope of a room", which is the one place a crown
+was competing with a control. The account SHEET's crown moved with the room's
+(§475's pairing is the whole content of that ruling — a room at one rung and a
+sheet at another re-opens the report it closed).
+
+### 2. Nothing is shared, drawn once instead of said three times
+
+The empty Accounts scope was a headline, then two 56pt faces pinned to the top
+of the box, then two grey lines — three tiers of text around a drawing that was
+the smallest thing in it, and the sentence said in prose exactly what the
+headline says in four words and the pair says in two shapes. **Third telling of
+one fact, so the sentence goes.**
+
+What replaces it is not a smaller version: the pair steps to `DS.Face.profile`
+(76 — the size a face takes when it is alone on a screen rather than one of
+several) and takes the MIDDLE of the slot, which is the room's own ruling for a
+figure with one thing to say ("air distributed is a margin, air pooled at the
+bottom is a gap").
+
+**The headline KEEPS its reserved row** rather than moving down onto the icons'
+line, which was the other option weighed and the one the report suggested. On
+that line it reads as one object — and it starts 30pt lower than every other
+scope's headline, breaking the guarantee the reserved row exists to give (§495:
+every scope's first pixel at the same y), and it has to shrink below its own
+rung to fit beside two 76pt faces, on the same day part 1 spent a pass making
+every scope headline one size. The sentence survives as the figure's
+**accessibility label**, which is the one audience two circles genuinely cannot
+serve.
+
+### 3. The permissions figure draws the whole census, granted or not
+
+It drew `VibenetPolicyAggregation.compose`'s list — what IS held — ranked by
+count, capped at four, with the type GROWING and the rows SPREADING when there
+were few. Three separate compensations for one problem: **a list as long as the
+account is interesting cannot fill a fixed box.** An account with one kind of
+key still ended up as a lone number beside a headline stating the same count
+one line above it.
+
+**Six cells now, one order, every time** — Admin, then `Scopes.sol`'s five
+named bits — in the `surfaceWell` blocks Hegotá's Nonces figure already uses
+for exactly this job. Nothing ranks, nothing is capped, nothing resizes, so the
+drawing is the same on an account with one key and an account with forty, and
+the "and N more" tail disappears because nothing is ever cut (§307 satisfied by
+construction rather than by a footnote).
+
+**And it says more than the counts did.** An ungranted permission is a real
+reading on this screen — "no key here can send anywhere" is an answer somebody
+opens this scope hoping for — and only a census that includes absences can make
+it. An absence is an OUTLINE and a dash, **never a filled "0"**: a zero in the
+same well as a count reads as a measurement, the same object with a smaller
+number, when what it means is that the permission is not in play at all. The
+dash is this room's existing grammar for a fact with no value (the dashed
+treemap outline, the empty ring on Accounts).
+
+**`census` takes the COMPOSED ROWS, not the items** — one derivation, two
+presentations — so the figure saying two keys are admins over a list showing
+three is impossible rather than merely unlikely (§468, guarded).
+
+**The one state that does not take the census is an unread account**, and that
+is a safety exception rather than a layout one: six dashes over accounts the
+chain never answered for would say nothing can act for you, which is the most
+reassuring possible way to be wrong on the one screen somebody reads to find
+out who can spend their money (§83). That branch keeps a glyph and a sentence,
+and both name the READ rather than the account. "No keys" over an account that
+WAS read is drawn as the census — six hollow cells — because that is the true
+reading.
+
+Guarded in `vibenet-selftest.sh`: both crowns at the headline rung and provably
+not back at `price48`, the census derived from the composed rows and never from
+the items, and §495's existing rule that every scope's empty counterpart draws
+through `scopeFigure` so the slot never leaves the stack.
+
+**UNSEEN on a device or a simulator.** Every string was measured, both platforms
+compile and the harnesses are green, but no screenshot of any of these three
+scopes has been taken.

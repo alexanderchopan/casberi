@@ -2118,9 +2118,11 @@ struct HegotaMoveSheet: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(HegotaFormat.signed(move.wei, incoming: move.incoming))
                 // `price40`, the app's own money-receipt hero (§363).
-                // `price48` is the WALLET CROWN and this is the same object one
-                // room over — the ramp reads as four money rungs where it has
-                // three when a devnet's receipt outsizes the wallet's.
+                // It was picked because `price48` was the WALLET CROWN and this
+                // is the same object one room over — a devnet receipt must not
+                // outsize the wallet's. §551 brought that crown down to this
+                // same rung, so the two now MATCH rather than merely not
+                // clashing, which is the stronger version of the same rule.
                 .dsText(.price40)
                 .foregroundStyle(move.incoming ? DS.confirm : DS.textPrimary)
                 .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
@@ -2415,7 +2417,7 @@ struct HegotaFrameSheet: View {
             if frame.wei > 0 {
                 Text(HegotaFormat.eth(frame.wei))
                     // `price40`, the money-receipt hero — see the move sheet's
-                    // `amount` for why `price48` left this room.
+                    // `amount`, and §551.
                     .dsText(.price40).foregroundStyle(DS.textPrimary)
                     .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
                     .padding(.top, 2)
@@ -2913,8 +2915,8 @@ struct HegotaAccountSheet: View {
             }
             Text(account.balanceWei.map { HegotaFormat.crown($0) }
                  ?? String(localized: "Unread"))
-                // `price40` — see the move sheet's `amount`. `price48` is the
-                // wallet crown, and the room's own crown is on the room card.
+                // `price40` — see the move sheet's `amount`, and §551, which
+                // brought every room crown to this rung.
                 .dsText(.price40).foregroundStyle(DS.textPrimary)
                 .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
                 .padding(.top, DS.Space.s4)

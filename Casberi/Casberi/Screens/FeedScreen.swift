@@ -4995,7 +4995,7 @@ struct FeedScreen: View {
                 // rather than inside the builder.
                 Section {
                     // `reservesHeadline: false` — the crown IS this scope's
-                    // headline (`price48`), so it stands IN the row rather
+                    // headline (`stat24` since §551), so it stands IN the row rather
                     // than under it, which is what puts its first pixel level
                     // with every other scope's headline.
                     DSRoomSlot(headline: nil, reservesHeadline: false) {
@@ -5048,7 +5048,7 @@ struct FeedScreen: View {
                                 // numbers so it looks purposeful"*). Sized to
                                 // the banner's own words, the glass stood
                                 // roughly two thirds of the box and its top
-                                // edge landed part-way THROUGH `price48`'s
+                                // edge landed part-way THROUGH the crown's
                                 // digits — a crown sliced mid-glyph, which
                                 // reads as a card that failed to lay out
                                 // rather than as one deliberately placed over
@@ -5094,7 +5094,7 @@ struct FeedScreen: View {
                                 // so the air around the card is even on three
                                 // edges. The TOP deliberately gets none: the
                                 // glass keeps its top at the slot's own, which
-                                // is what covers `price48` whole rather than
+                                // is what covers the crown whole rather than
                                 // slicing it mid-glyph — the exact defect the
                                 // paragraph above records. Its gap upward is
                                 // the row's own `WalletCardStyle.rowInsets`.
@@ -7133,7 +7133,7 @@ struct FeedScreen: View {
     /// the argument that a free-set number reads as "the room's voice" lost to
     /// the argument that a boxed one is easier to SCAN — parcels beat strata
     /// when the eye is looking for sections. The number keeps every ounce of
-    /// its weight (price48, the pour behind it, the delta and mover with it);
+    /// its weight (the crown rung, the pour behind it, the delta and mover with it);
     /// it just gets an edge. Translucent so the crown pour still travels under
     /// it rather than being punched out.
     ///

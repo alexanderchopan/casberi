@@ -514,7 +514,7 @@ struct VibenetRoomCard: View {
             // exactly those three things — a box inside a box, and the second
             // copy of the rule Wallet was also keeping.
             //
-            // Home draws the crown, which names itself in `price48`, so it
+            // Home draws the crown, which names itself at the headline rung, so it
             // passes no headline; the row is still RESERVED, which is what
             // keeps its first pixel level with every other scope's and what
             // clears the settings gear.
@@ -1087,9 +1087,19 @@ struct VibenetRoomCard: View {
                 // That was always the honest part of this caption; the
                 // count was chrome.
                 if let nativeTotal = aggregate.nativeTotal {
-                    // `price48`, Wallet's crown rung — not `price40`. The two
-                    // rooms state the same kind of reading and were stating it
-                    // two sizes apart.
+                    // **`stat24` — the rung every scope headline in this room
+                    // takes (prd §551).** It was `price48` to match Wallet's
+                    // crown, and Wallet's has come down here with it: the two
+                    // rooms still state the same kind of reading at the same
+                    // size, which was the whole point of pinning them
+                    // together, and they now also state it at the same size as
+                    // the four scopes one chip away. Using the strip used to
+                    // change the type scale of the screen.
+                    //
+                    // DOWN rather than up, and measured — see `DSRoomSlot`'s
+                    // own note: at `price40` this room's own "Nothing is
+                    // shared" and "Nothing deployed yet" overflow the line and
+                    // get shrunk to whatever their string allows.
                     //
                     // IT COUNTS UP ON ARRIVAL (prd §479). Watching your first
                     // account drops you straight into this room (§465) and the
@@ -1105,12 +1115,12 @@ struct VibenetRoomCard: View {
                     // the number, and with Reduce Motion on the figure is
                     // simply correct from the first frame.
                     Text("\(VibenetBalanceFormat.line(scrubbedTotal(nativeTotal))) ETH")
-                        .dsText(.price48)
+                        .dsText(.stat24)
                         .foregroundStyle(DS.textPrimary)
                         .monospacedDigit()
                         .lineLimit(1)
                         // **0.9, not 0.6 (prd §491).** Both rooms set the same
-                        // rung — `price48` — and on the device this one rendered
+                        // rung — `stat24` since §551 — and on the device this rendered
                         // at about 55% of Wallet's, which reads as two different
                         // type scales rather than one. The cause was not the
                         // tier but this floor: "2.514 ETH" is a longer string
@@ -1527,8 +1537,10 @@ struct VibenetRoomCard: View {
     /// so a figure with no headline opens on a picture with nothing naming its
     /// magnitude — which would be worse than the stacking it fixed.
     ///
-    /// `stat24`, not the crown's `price48`: this states ONE reading of the
-    /// room, and matching the crown's rung would claim it is the room's total.
+    /// `stat24` — the rung the crown itself takes since §551. Every scope
+    /// states ONE reading of the room and the crown states another, so they
+    /// are peers; they were two rungs apart, and picking a chip changed the
+    /// type scale of the screen.
     @ViewBuilder
     private func scopeFigure<Figure: View>(headline: String?,
                                            @ViewBuilder figure: @escaping () -> Figure) -> some View {
@@ -1759,6 +1771,29 @@ struct VibenetRoomCard: View {
     /// dashed. A line to nothing would be a relationship drawn where there is
     /// none (§83, on the screen whose whole subject is who can act for whom).
     ///
+    /// **THE SENTENCE IS GONE AND THE PAIR TOOK THE BOX (prd §551, user:
+    /// *"this screen looks like shit and we shouldn't need subtext"*).** It
+    /// was a headline, then two small faces pinned to the top of a 210pt box,
+    /// then two grey lines — three tiers of text and a drawing, arranged so
+    /// that the drawing was the smallest thing in it. The subtext said in
+    /// prose exactly what the headline says in four words and what the pair
+    /// says in two shapes, so it was the third telling of one fact.
+    ///
+    /// What replaced it is not a smaller version of the same thing: the pair
+    /// steps up a rung to `DS.Face.profile` — the size a face takes when it
+    /// is alone on a screen rather than one of several — and takes the MIDDLE
+    /// of the slot, which is `permissionsFigure`'s own ruling for a figure
+    /// with one thing to say ("air distributed is a margin, air pooled at the
+    /// bottom is a gap").
+    ///
+    /// **The headline KEEPS its reserved row** rather than moving down beside
+    /// the faces, which was the other option weighed. On the icons' own line
+    /// it would read as one object — but it would start 40pt lower than every
+    /// other scope's headline, breaking the one guarantee the reserved row
+    /// exists to give (§495: every scope's first pixel at the same y), and it
+    /// would have to shrink below its own rung to fit beside two 76pt faces,
+    /// one day after §551 spent a pass making every scope headline one size.
+    ///
     /// **It never says the chain is empty**, only that nothing was read: the
     /// sub-account read answers for the accounts this app watches, so "no
     /// sub-accounts" is a fact about the roster and not about Base.
@@ -1767,29 +1802,36 @@ struct VibenetRoomCard: View {
         let subject = scopedAddress
             ?? room.items.first?.address
         scopeFigure(headline: String(localized: "Nothing is shared")) {
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                HStack(spacing: DS.Space.s4) {
-                    if let subject {
-                        WalletFace(address: subject, size: DS.Face.shelf, circular: true)
-                    }
-                    Circle()
-                        .strokeBorder(DS.fillLine,
-                                      style: StrokeStyle(lineWidth: 1.4, dash: [3, 3]))
-                        .frame(width: DS.Face.shelf, height: DS.Face.shelf)
-                        .opacity(0.6)
+            HStack(spacing: DS.Space.s4) {
+                if let subject {
+                    WalletFace(address: subject, size: DS.Face.profile, circular: true)
                 }
-                Text(emptyAccountsLine)
-                    .dsText(.callout15)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                Circle()
+                    .strokeBorder(DS.fillLine,
+                                  style: StrokeStyle(lineWidth: 1.4, dash: [3, 3]))
+                    .frame(width: DS.Face.profile, height: DS.Face.profile)
+                    .opacity(0.6)
+                Spacer(minLength: 0)
             }
-            .frame(maxHeight: .infinity, alignment: .top)
+            // `.leading` is `Alignment(horizontal: .leading, vertical:
+            // .center)`, which is the whole point: the pair is the only
+            // content, so it sits where a lone figure sits everywhere else in
+            // this card — centred in what the headline left, never pinned to
+            // the top with the air pooled below it.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .accessibilityElement()
+            .accessibilityLabel(emptyAccountsLine)
         }
     }
 
-    /// The sentence under the empty web. Scoped it speaks about ONE account;
-    /// unscoped about the roster, because "no other account can act for this
-    /// one" is a claim the unscoped view has not checked for every account.
+    /// What the empty pair MEANS, for VoiceOver alone.
+    ///
+    /// **It is no longer drawn** (§551) — the pair and the headline say it on
+    /// screen — but a reader who cannot see two circles gets the sentence,
+    /// which is the one audience the drawing genuinely cannot serve. Scoped it
+    /// speaks about ONE account; unscoped about the roster, because "no other
+    /// account can act for this one" is a claim the unscoped view has not
+    /// checked for every account.
     private var emptyAccountsLine: String {
         if let scopedAddress {
             return String(localized:
@@ -1957,11 +1999,19 @@ struct VibenetRoomCard: View {
     /// filter strip; now it is the drawing.
     ///
     /// **Counted by CAPABILITY, so the shape never grows.** Eight keys and
-    /// forty draw the same rows, which is the property that let this replace a
+    /// forty draw the same cells, which is the property that let this replace a
     /// filter strip rather than sit beside one: the strip existed because a
     /// long list needed narrowing, and a figure that says what there is to
     /// narrow TO answers the same need without a second row of chips under the
     /// scope switcher.
+    ///
+    /// **§551 made that true of the SMALL end as well.** "The shape never
+    /// grows" held for eight keys and forty and not for one: what was drawn
+    /// was `compose`'s own list, which is as long as the account is
+    /// interesting, so a single kind of key drew a single rung in a box built
+    /// for four. The census is drawn whole now — see
+    /// `VibenetPolicyAggregation.census` for why the figure needs a different
+    /// list from the rows below it.
     ///
     /// **Admin is called "Admin"** (user ruling, prd §491) — the word the app
     /// already used on the key rows, not a paraphrase. `isAdmin` is `raw == 0`:
@@ -1971,130 +2021,159 @@ struct VibenetRoomCard: View {
     private var permissionsFigure: some View {
         let counts = policyRows
         let keys = VibenetKeyAggregation.compose(room.items, now: .now)
-        if counts.isEmpty {
-            // **AN EMPTY CENSUS IS AN ANSWER** (prd §495, user: *"for empty
-            // states or when there is only one item we need to fill it
-            // better"*). It drew NOTHING, so the room's most important
-            // question — what can act on your accounts — was blank rather
-            // than answered in a reserved 210pt box.
-            permissionsEmptyFigure(keys)
+        if (keys?.unreachedCount ?? 0) > 0 && counts.isEmpty {
+            // **THE ONE REAL EXCEPTION, and it is a safety one** (prd §551).
+            // A census of dashes over accounts the chain never answered for
+            // would say "nothing can act for you" — the most reassuring
+            // possible way to be wrong, on the one screen somebody reads to
+            // find out who can spend their money (§83). An unread account
+            // keeps a glyph and a sentence.
+            permissionsEmptyFigure
         } else {
-            let drawn = Array(counts.prefix(Self.permissionRungs))
+            // **THE WHOLE CENSUS, ALWAYS — granted and not** (prd §551, user:
+            // *"i like how it looks with four rungs, but not how it looks with
+            // 1 rung"*).
+            //
+            // The figure used to draw only what was held, ranked by count and
+            // capped at four, with the type GROWING and the rows SPREADING
+            // when there were few — three separate compensations for one
+            // problem, which is that a variable-length list cannot fill a
+            // fixed box. An account with a single kind of key still ended up
+            // as one number adrift beside a headline saying the same count.
+            //
+            // Six cells, one order, every time. Nothing ranks, nothing is
+            // capped, nothing resizes — so the drawing looks the same on an
+            // account with one key and an account with forty, and the "and N
+            // more" tail disappears because nothing is ever cut (§307 is
+            // satisfied by construction rather than by a footnote).
+            //
+            // And it says more than the counts did: an UNGRANTED permission is
+            // a real reading on this screen — "no key here can send anywhere"
+            // is the answer somebody opens this scope hoping for, and only a
+            // census that includes absences can give it.
+            let census = VibenetPolicyAggregation.census(counts)
             scopeFigure(headline: keys.map {
                 $0.total == 1 ? String(localized: "1 key") : String(localized: "\($0.total) keys")
-            }) {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(drawn.enumerated()),
-                            id: \.element.label) { index, row in
-                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-                            Text("\(row.count)")
-                                // **THE TYPE GROWS WHEN THERE ARE FEW RUNGS**
-                                // (prd §495). At a fixed `stat24` a lone rung
-                                // was one small line adrift in the slot's
-                                // reserved height — which reads as a drawing
-                                // that failed rather than as an account with
-                                // one kind of key. The ramp is the SAME
-                                // decision `NoteProse` makes for a short post:
-                                // fewer things to say, said larger.
-                                .dsText(Self.rungFigureTier(drawn.count))
-                                // ADMIN and only admin wears the alarm colour:
-                                // it is the one rung that is unbounded, and
-                                // colouring the others would be this app
-                                // grading permissions somebody set on purpose.
-                                .foregroundStyle(index == 0 && row.label == Self.adminLabel
-                                                 ? DS.attention : DS.textPrimary)
-                                .monospacedDigit()
-                                .frame(width: drawn.count <= 2 ? 46 : 26, alignment: .leading)
-                            Text(row.label)
-                                .dsText(Self.rungLabelTier(drawn.count))
-                                .foregroundStyle(DS.textPrimary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.85)
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.vertical, 1)
-                        // The rungs SPREAD to fill the slot rather than
-                        // stacking at its top — the Activity band's ruling
-                        // (§493), which the type ramp above cannot finish on
-                        // its own: two rungs set large still leave air, and
-                        // air distributed is a margin while air pooled at the
-                        // bottom is a gap.
-                        if index < drawn.count - 1 {
-                            Spacer(minLength: 0).frame(maxHeight: Self.rungSpread(drawn.count))
-                        }
+            } ?? String(localized: "No keys")) {
+                LazyVGrid(columns: Self.censusColumns,
+                          alignment: .leading,
+                          spacing: DS.Space.s2) {
+                    ForEach(Array(census.enumerated()), id: \.element.label) { index, row in
+                        policyCensusCell(row)
+                            .chartArrival(index: index, reduceMotion: reduceMotion)
                     }
-                    if counts.count > Self.permissionRungs {
-                        Text(String(localized: "and \(counts.count - Self.permissionRungs) more"))
-                            .dsText(.label12).foregroundStyle(DS.textTertiary)
-                    }
-                    // The tail spacer is what makes SEVERAL rungs settle at
-                    // the top with their spread above it. A LONE rung must
-                    // not get one: a trailing `Spacer` takes every spare point
-                    // and pins the content to the top, so the `alignment`
-                    // below would be inert — which is exactly how the first
-                    // cut of this shipped, centred in the source and top-
-                    // aligned on the device.
-                    if drawn.count > 1 { Spacer(minLength: 0) }
                 }
-                // **ONE RUNG SITS IN THE MIDDLE, not at the top** (prd §495).
-                // The slot's height is reserved whatever the census holds, and
-                // a single rung pinned to the top leaves ~250pt of black under
-                // it that reads as a drawing which failed rather than as an
-                // account with one kind of key. Two or more fill the box by
-                // spreading (above); one has nothing to spread against, so it
-                // takes the middle and the air becomes a margin.
-                .frame(maxHeight: .infinity,
-                       alignment: drawn.count <= 1 ? .center : .top)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
         }
     }
 
-    /// NOTHING CAN ACT — the Permissions scope with no key to count.
+    /// ONE PERMISSION, HELD OR NOT.
     ///
-    /// Three distinct states wear three sentences, because collapsing them is
-    /// the §83 failure on the screen where it costs most: "no key can act for
-    /// this account" is a SAFETY claim, and saying it over a read that never
-    /// reached the chain would be the most reassuring possible way to be
-    /// wrong.
+    /// **An absence is an OUTLINE and a dash, never a filled "0".** A zero
+    /// drawn in the same well as a count reads as a measurement — the same
+    /// object, a smaller number — when what it means is that this permission
+    /// is not in play at all. The dash is the app's own grammar for a fact
+    /// that has no value (`holdingsEmptyFigure`'s dashed treemap, the empty
+    /// ring on the Accounts scope), and the hollow well is the well saying
+    /// the same thing.
+    ///
+    /// **Admin, and only Admin, wears the alarm colour** — it is the one rung
+    /// that is unbounded (`scope == 0` is unrestricted, prd §463), and
+    /// colouring the others would be this app grading permissions somebody set
+    /// on purpose. It is tinted only when it is actually held: an attention
+    /// hue over a dash is an alarm about something that is not there.
     @ViewBuilder
-    private func permissionsEmptyFigure(_ keys: VibenetKeyAggregate?) -> some View {
-        let unreached = keys?.unreachedCount ?? 0
-        let headline = unreached > 0
-            ? String(localized: "Not read yet")
-            : String(localized: "No keys")
-        scopeFigure(headline: headline) {
+    private func policyCensusCell(_ row: VibenetPolicyCount) -> some View {
+        let held = row.count > 0
+        let isAdmin = row.label == Self.adminLabel
+        VStack(alignment: .leading, spacing: 4) {
+            Text(held ? "\(row.count)" : "—")
+                .dsText(.stat24)
+                .foregroundStyle(held ? (isAdmin ? DS.attention : DS.textPrimary)
+                                      : DS.textTertiary)
+                .monospacedDigit()
+            Text(row.label)
+                // Three lines at this width, `HegotaRoomCard.stat`'s own
+                // measurement in the same three-across grid: "Send to one
+                // contract" wants them, and at two it truncates mid-word to
+                // the point of losing the noun the cell exists to name.
+                .dsText(.label12)
+                .foregroundStyle(held ? DS.textTertiary : DS.textQuaternary.opacity(0.6))
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .minimumScaleFactor(0.9)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, minHeight: Self.censusCell, alignment: .topLeading)
+        .padding(.horizontal, DS.Space.s2)
+        .padding(.vertical, DS.Space.s2)
+        // A well, so six facts read as six facts rather than as a sentence
+        // that lost its words — `HegotaRoomCard.stat`'s grammar, which is what
+        // the Nonces figure one devnet over already uses for exactly this job.
+        .background {
+            RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                .fill(held ? DS.surfaceWell : Color.clear)
+        }
+        .overlay {
+            if !held {
+                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                    .strokeBorder(DS.fillLine, lineWidth: 1)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(held
+                            ? (row.count == 1
+                               ? String(localized: "1 key · \(row.label)")
+                               : String(localized: "\(row.count) keys · \(row.label)"))
+                            : String(localized: "No keys · \(row.label)"))
+    }
+
+    /// Three across, two down — the six permissions in one screenful.
+    ///
+    /// THREE and not two, measured the way `HegotaRoomCard.stat`'s were: at
+    /// two columns the six cells need three rows, which is 3 × 72 + gaps
+    /// against the ~158pt the slot has left under a `price40` headline, and
+    /// the bottom row is clipped by the slot's own `clipped()` — silently,
+    /// which is the failure this room has already paid for twice.
+    private static let censusColumns = Array(
+        repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .topLeading),
+        count: 3)
+
+    /// A census cell's floor. Two of these plus their gap must clear the slot
+    /// less its headline row; see `censusColumns`.
+    private static let censusCell: CGFloat = 72
+
+    /// NOTHING WAS READ — the Permissions scope for an account the chain did
+    /// not answer for.
+    ///
+    /// **The only state that does not take the census** (prd §551). "No keys"
+    /// is drawn as six hollow cells, because that IS the reading and it is a
+    /// true one. "Not read yet" cannot be: six dashes would say nothing can
+    /// act for you, which is a SAFETY claim, and making it over a read that
+    /// never reached the chain is the most reassuring possible way to be
+    /// wrong (§83, on the screen where it costs most).
+    ///
+    /// So this branch keeps a glyph and a sentence, and both name the READ
+    /// rather than the account. The glyph is the app's own `key.slash` symbol
+    /// through `dsGlyph`, so it scales with Dynamic Type like every other mark
+    /// here.
+    @ViewBuilder
+    private var permissionsEmptyFigure: some View {
+        scopeFigure(headline: String(localized: "Not read yet")) {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
-                Image(systemName: unreached > 0 ? "antenna.radiowaves.left.and.right.slash" : "key.slash")
+                Image(systemName: "antenna.radiowaves.left.and.right.slash")
                     .accessibilityHidden(true)
                     .dsGlyph(30, weight: .regular)
-                    .foregroundStyle(unreached > 0 ? DS.attention : DS.textTertiary)
-                Text(unreached > 0
-                     ? String(localized: "The chain did not answer, so this room cannot say what can act for you.")
-                     : String(localized: "Nothing can act for these accounts on vibenet."))
+                    .foregroundStyle(DS.attention)
+                Text(String(localized: "The chain did not answer, so this room cannot say what can act for you."))
                     .dsText(.callout15)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
             }
-            .frame(maxHeight: .infinity, alignment: .top)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
-    }
-
-    /// The figure's tier by how many rungs share the slot — see the rungs'
-    /// own note. Spelled as a function rather than inline so the label tier
-    /// below cannot drift out of step with it.
-    private static func rungFigureTier(_ count: Int) -> DSTextStyle {
-        count <= 2 ? .price40 : .stat24
-    }
-
-    private static func rungLabelTier(_ count: Int) -> DSTextStyle {
-        count <= 2 ? .heading22 : .callout15
-    }
-
-    /// The most air allowed between two rungs — `VibenetAccountWebCard`'s own
-    /// `maxSpread` reasoning, tighter because a rung is one line rather than
-    /// a face and two.
-    private static func rungSpread(_ count: Int) -> CGFloat {
-        count <= 2 ? 30 : 14
     }
 
     /// The census, composed ONCE for both readers (prd §468's guard, honoured
@@ -2109,10 +2188,6 @@ struct VibenetRoomCard: View {
     private var policyRows: [VibenetPolicyCount] {
         VibenetPolicyAggregation.compose(room.items)
     }
-
-    /// How many rungs fit the fixed slot under a headline. Four, measured the
-    /// way Wallet's own were.
-    private static let permissionRungs = 4
 
     /// The census's own word for an unrestricted key, so the colour test above
     /// can never drift from the label it is testing.
