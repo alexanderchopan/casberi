@@ -90,6 +90,13 @@ enum HomeComposition {
             // ordinary words in the language, so promoting it would hide
             // every link and note about the subject (§397's `Account` rule).
             "Sale", "New subscriber",                     // Polar
+            // The two state labels the money bridges share (2026-08-31).
+            // "Dispute" and "Subscription" say what a row IS — a chargeback,
+            // a recurring plan's event — never what it is ABOUT, so they sit
+            // here beside "Sale" by this set's own rule. Stripe has stamped
+            // both since it shipped; they surfaced only when Polar's and
+            // Dodo's demo rows wrote them as literals a text audit can see.
+            "Dispute", "Subscription",                    // Stripe, Polar, Dodo
             "Paper",                                      // Hugging Face
             // Altana (prd §402) and the chain a wallet row sits on. Both are
             // STATE by this set's own rule: a key type says what a key IS and
