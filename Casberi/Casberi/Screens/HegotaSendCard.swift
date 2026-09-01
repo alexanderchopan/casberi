@@ -1,442 +1,179 @@
 import SwiftUI
 import SwiftData
 
-/// SENDING TEST ETH ON HEGOTÁ, ON THE ROOM ITSELF (prd §539, 2026-08-31).
+/// **HEGOTÁ'S HOME IS TWO VERBS (prd §551, 2026-09-01).**
 ///
-/// `VibenetSendCard`'s ruling (§538) carried to the other devnet, at the
-/// user's own instruction — *"apply this way of thinking and design to
-/// Hegota. it also has a home screen with a list that can be replaced with
-/// send etc like we did here"*.
+/// §544 put a payment console here and §548/§548a spent a session failing to
+/// fit it under the room's chrome. `DevnetSendConsole`'s header carries that
+/// whole argument; what it comes to is that Home should not hold a form at all.
+/// It holds the two things you can do, and the form lives on a sheet with the
+/// screen to itself.
 ///
-/// **The fault here was worse than vibenet's, in two ways that compound.**
+/// **BOTH VERBS ARE REAL HERE, and that is not true of the sibling room.**
+/// `HegotaSend.claimFaucet` has existed since §525 and **no screen has ever
+/// called it** — the app has carried a working faucet nobody could reach.
+/// vibenet has no equivalent: its faucet is a PAYER that sponsors gas, not
+/// something an address can claim from, so that room draws the Send half alone
+/// rather than a button that cannot act (§83).
 ///
-/// 1. **Home drew the first four of Activity's own rows.** `HegotaRoomList`
-///    was `case .home: movesList(Array(moves.prefix(4)))` against
-///    `case .activity: movesList(moves)` — the same list, truncated, one chip
-///    away from the whole of itself. That is §533's "Latest 3" duplication
-///    verbatim, and the answer is the same: Home is where you DO the thing,
-///    Activity is the stream.
-///
-/// 2. **Sending was TWO SHEETS DEEP.** The only door to `HegotaSendSheet` was
-///    a button inside `HegotaKeySheet`, which is itself a presented sheet
-///    reached from the room — so the one thing a key is for sat behind a tap,
-///    a sheet, a scroll and another tap. That key sheet had already been
-///    reported clipped ("you can't see the bottom of thi tray where it says
-///    send eth so someone seeing it wont know it's there") and answered three
-///    times by guessing a taller number: 560, 560, 820. The comment that
-///    landed with 820 diagnoses it exactly — *"a ScrollView makes that content
-///    REACHABLE, never DISCOVERABLE"* — and then keeps the arrangement that
-///    made discoverability the problem. Putting the form on the room retires
-///    the question: there is nothing to discover, because there is nothing in
-///    front of it.
-///
-/// **What differs from `VibenetSendCard`, deliberately, and why.**
-///
-/// - **No account parameter.** A Hegotá key IS its address (a plain EOA), so
-///   there is no separate account object to be handed one; this gates on
-///   `HegotaKey.address()` and shows nothing when this phone has no key.
-/// - **NO "Max" CHIP, and that is the interesting divergence.** Hegotá sends
-///   are unsponsored by construction — the sheet's own sentence says "the
-///   sender pays its own gas" — so an amount equal to the whole balance
-///   cannot pay for itself and is a GUARANTEED failure, which is the dead
-///   control §83 bans wearing a convenience's clothing. On vibenet Max is
-///   honest because gas is the faucet's when it sponsors, and when it does
-///   not, no send of any size goes through, so Max is never the thing that
-///   broke. Here it always would be. The balance is still SHOWN — knowing
-///   what you hold is information, filling it in is a claim.
+/// **THE CARD PRESENTS NOTHING.** Send hands upward to `FeedScreen`'s single
+/// `.sheet` — a `.sheet` attached to a view inside a `List` row resolves to the
+/// same presenting controller as the screen's own and half-opens then closes,
+/// paid for three times already. Top up needs no sheet: it acts in place and
+/// reports on itself, which is the whole of its design.
 struct HegotaSendCard: View {
-    /// The door to making this phone's key — the room's own key sheet, passed
-    /// in rather than presented here (a `.sheet` inside a `FeedScreen` List row
-    /// resolves to the same presenting controller as the screen's own and
-    /// half-opens then closes, paid for three times already).
-    var onMakeKey: () -> Void = {}
+    /// Raise the send sheet. Owned by the screen, for the reason above.
+    var onSend: () -> Void = {}
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(ShellChrome.self) private var chrome
 
-    @State private var destination = ""
-    @State private var amount = ""
-    @State private var busy = false
-    @State private var errorText: String?
-    @State private var sentHash: String?
-    @State private var sentSummary: String?
-    /// The recipient picker — one sheet, raised from the To row.
-    @State private var picking = false
-    /// The amount field's focus. The `.decimalPad` has no return key, so the
-    /// keyboard toolbar owns the only way down (`devnetAmountToolbar`).
-    @FocusState private var amountFocused: Bool
+    @State private var creating = false
+    @State private var createError: String?
+    @State private var topUpBusy = false
+    @State private var topUpNote: String?
 
     // The app's own accent, not `HegotaModeStyle.room` (user: "that cyan
     // color blue or whatever it is... we don't use that anywhere else") —
     // this is an ordinary send flow, not a frame/vault reading.
     private static let mark = DS.tint
 
-    /// **NOTHING WITHOUT A KEY, never a form that cannot submit (§83).** This
-    /// phone makes its Hegotá key in `HegotaKeySheet`, and until it has one
-    /// there is no address to send from — a To field and an armed Send button
-    /// over that state would be a control that provably does nothing. The room
-    /// keeps its own "this phone's account" row, which is the door to making
-    /// one, so a keyless room is not a dead end.
-    /// **NO HEAD ON THE FORM (prd §548).** `VibenetSendCard`'s ruling, carried
-    /// here for the same arithmetic: a mark disc, the word "Send" and the
-    /// sending address cost 46pt to say the verb the button already carries,
-    /// on a card that did not fit the screen. The address it spends from moves
-    /// onto the recipient row, which names both ends of a send for nothing.
     var body: some View {
         if sender == nil {
-            noKey
+            create
         } else {
-            VStack(alignment: .leading, spacing: DevnetConsole.blockGap) {
-                if sentHash == nil {
-                    form
-                } else {
-                    sentHead
-                    done
-                }
-            }
-            .padding(DevnetConsole.cardPadding)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .dsWidgetSurface()
-            .animation(DS.Motion.standard, value: sentHash)
+            DevnetSendPanel(
+                tint: Self.mark,
+                topUp: .init(busy: topUpBusy, note: topUpNote, handsOff: false, action: topUp),
+                onSend: onSend)
         }
     }
 
-    // MARK: - No key
+    // MARK: - Before there is a key
 
-    /// **A SCOPE NEVER DRAWS NOTHING (prd §548d, 2026-09-01).**
+    /// **ONE TAP MAKES IT, and there is no screen in between** (user,
+    /// 2026-09-01: *"we won't show a 'ready' screen, once created it will just
+    /// do confetti rain pour and then land on the top up and send screen"*).
     ///
-    /// §539 gated this card on the phone holding a key — *"a room with no key
-    /// draws no form rather than a dead one"* — which is right about the form
-    /// and wrong about the screen: Home's ENTIRE content is this card, so on a
-    /// phone with no key the scope rendered blank. No form, no words, no door,
-    /// and nothing to distinguish "you need a key" from "this is broken".
+    /// §548d routed this to the key SHEET, which asked the same question the
+    /// button had just asked and offered the same button to answer it. Face ID
+    /// rises inside `HegotaKey.create()` and that is a real confirmation from
+    /// the system — ours would have been ceremony.
     ///
-    /// Reported the long way round: the console could not be seen on a fresh
-    /// simulator, and the reason was never on screen. Its justification named a
-    /// door — *"the room keeps its own 'this phone's account' row"* — that
-    /// lives on the ACCOUNTS scope, one chip away, which is exactly the kind of
-    /// "it's over there" a blank screen cannot say.
-    ///
-    /// One sentence and the door itself. `onMakeKey` is the room's existing
-    /// `onOpenKeySheet`, so this adds no presentation of its own.
-    private var noKey: some View {
+    /// The copy makes no claim about the ROOM (user: *"not necessarily true b/c
+    /// user may be following account"*). You can be watching plenty of
+    /// addresses here; the only thing missing is a key on THIS phone.
+    private var create: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text(String(localized: "This phone has no Hegotá key yet."))
-                .dsText(.body17)
-                .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Text(String(localized: "Sending needs one — it signs on this device and never leaves it."))
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
-            Button {
-                DSHaptic.tap()
-                onMakeKey()
-            } label: {
-                Text(String(localized: "Make a key"))
-                    .dsText(.callout15).fontWeight(.semibold)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, DevnetConsole.verbPad)
-                    .background(Self.mark,
-                                in: RoundedRectangle(cornerRadius: DS.Radius.control,
-                                                     style: .continuous))
+            DevnetCreatePanel(tint: Self.mark,
+                              title: String(localized: "Create\naccount"),
+                              busy: creating,
+                              onCreate: makeKey)
+            if let createError {
+                Text(createError)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.destructive)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .buttonStyle(PressSpring())
-            .dsHover()
-        }
-        .padding(DevnetConsole.cardPadding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWidgetSurface()
-    }
-
-    // MARK: - Head
-
-    /// The SENT state keeps a head: there the title is the whole news, and the
-    /// console's height budget no longer applies to a four-line receipt.
-    private var sentHead: some View {
-        HStack(spacing: DS.Space.s3) {
-            ZStack {
-                Circle().fill(Self.mark.opacity(0.18))
-                    .frame(width: DS.Face.rowCircle, height: DS.Face.rowCircle)
-                Image(systemName: "checkmark")
-                    .accessibilityHidden(true)
-                    .dsGlyph(13, weight: .semibold)
-                    .foregroundStyle(Self.mark)
-            }
-            Text(String(localized: "Sent"))
-                .dsText(.heading17)
-                .foregroundStyle(DS.textPrimary)
-            Spacer(minLength: DS.Space.s2)
-            DSStamp(word: String(localized: "Broadcast"), weight: .good)
         }
     }
+
+    private func makeKey() {
+        // Nothing is minted in a tour — a real key would raise Face ID and put
+        // an item in this phone's Keychain, from a screen whose own banner says
+        // none of this is yours.
+        guard !DemoMode.isActive else {
+            createError = String(localized: "No key is made in the demo — this is where your own would be.")
+            return
+        }
+        creating = true
+        createError = nil
+        Task { @MainActor in
+            defer { creating = false }
+            do {
+                _ = try HegotaKey.create()
+                DSHaptic.success()
+                pour()
+            } catch {
+                createError = String(localized: "Couldn't make a key on this phone.")
+            }
+        }
+    }
+
+    // MARK: - Top up
+
+    /// **THREE ENDINGS, AND ONLY ONE IS A FAULT (prd §551).**
+    ///
+    /// The faucet allows one claim per source IP per hour, MEASURED, and §525
+    /// rules that refusal expected rather than a failure. It and the
+    /// unreachable case read the same way here on purpose: no red, no alarm
+    /// mark, a plain sentence in the tile's own empty top — because whichever
+    /// it is, the next step is identical and it is to tap again.
+    private func topUp() {
+        guard !DemoMode.isActive else {
+            topUpNote = String(localized: "The faucet isn't reached in the demo.")
+            return
+        }
+        guard let address = HegotaKey.address() else { return }
+        topUpBusy = true
+        topUpNote = nil
+        Task { @MainActor in
+            defer { topUpBusy = false }
+            do {
+                let claimed = try await HegotaSend.claimFaucet(for: address)
+                HegotaSend.landReceipt(txHash: claimed.transactionHash, kind: .claimed,
+                                       in: modelContext)
+                DSHaptic.success()
+                pour()
+                // The crown is the proof, so it has to be re-read rather than
+                // left saying what it said before the money arrived.
+                await HegotaLiveState.shared.refresh()
+            } catch let f as HegotaSend.Failure {
+                if case .faucet(let verdict) = f {
+                    topUpNote = Self.faucetNote(verdict)
+                } else {
+                    topUpNote = String(localized: "The faucet didn't answer. Tap to try again.")
+                }
+            } catch {
+                topUpNote = String(localized: "The faucet didn't answer. Tap to try again.")
+            }
+        }
+    }
+
+    private static func faucetNote(_ verdict: HegotaFaucetVerdict) -> String {
+        switch verdict {
+        case .sent:
+            return String(localized: "Claimed.")
+        case .rateLimited:
+            return String(localized: "Once an hour. Try again a little later.")
+        case .refused(let why):
+            return String(localized: "The faucet said no: \(why)")
+        case .unreachable:
+            return String(localized: "The faucet didn't answer. Tap to try again.")
+        }
+    }
+
+    /// The pour IS the confirmation (prd §551) — `BerryRain` is mounted once in
+    /// `MainSurface` and driven by this counter, so a success here costs a
+    /// bump rather than a view of its own.
+    private func pour() {
+        chrome.refreshHue = Self.mark
+        chrome.refreshPulse &+= 1
+    }
+
+    // MARK: - Who it spends from
 
     /// **THE ADDRESS THIS CARD SPENDS FROM, and it answers in the demo (prd
     /// §548b).** The gate was `HegotaKey.address() != nil`, which a tour can
-    /// never satisfy — this phone makes its Hegotá key in `HegotaKeySheet` and
-    /// a demo must not make one — so the room's DEFAULT scope drew nothing in
-    /// the demo from the day §539 made the console its content.
+    /// never satisfy, so the room's DEFAULT scope drew nothing in the demo from
+    /// the day §539 made the console its content.
     ///
     /// **No fake credential is written.** The demo does not plant an address in
     /// `HegotaKey`'s own defaults, which would make every other path on this
     /// phone believe it holds a key and hand `HegotaSign` one that is not in
-    /// the Keychain. It borrows the fixture's own account for display and
-    /// `send()` refuses before it reaches a signature.
+    /// the Keychain. It borrows the fixture's own account for display, and
+    /// every write above refuses before it reaches a signature.
     private var sender: String? {
         HegotaKey.address() ?? (DemoMode.isActive ? HegotaLiveState.demoOwnerAddress : nil)
-    }
-
-    /// What the room calls the sender — so this card can never name an address
-    /// differently from the roster above it.
-    private var fromName: String? {
-        guard let from = sender else { return nil }
-        return HegotaWatch.shared.name(for: from) ?? WalletStore.shortAddress(from)
-    }
-
-    // MARK: - Form
-
-    private var canSend: Bool {
-        !busy && Self.isValidAddress(destination) && Self.weiData(from: amount) != nil
-    }
-
-    /// **THE CONSOLE (prd §544), FITTED TO THE SCREEN (prd §548)** —
-    /// `DevnetSendConsole`'s shared anatomy and its height budget, with the one
-    /// difference this chain forces: Hegotá moves ETH and only ETH, so the unit
-    /// is a WORD and never a chip. See that file's header, and §548a for why
-    /// the keypad below it is the system's now.
-    private var form: some View {
-        VStack(spacing: DevnetConsole.blockGap) {
-            DevnetSendToRow(from: sender,
-                            fromName: fromName,
-                            address: destination.isEmpty ? nil : destination,
-                            name: destination.isEmpty ? nil : recipientName,
-                            preview: knownAddresses,
-                            onTap: { picking = true })
-
-            DevnetSendFigure(amount: $amount, focus: $amountFocused,
-                             tint: Self.mark, dim: amount.isEmpty) {
-                Text(String(localized: "ETH"))
-                    .dsText(.price16)
-                    .foregroundStyle(amount.isEmpty ? DS.textTertiary : DS.textSecondary)
-            } subline: {
-                // NO MAX, and that is this chain's own rule rather than an
-                // omission: gas is the sender's here, so the whole balance is
-                // the one amount that provably cannot be sent. The figure is
-                // stated, never offered as a tap.
-                Group {
-                    if let held {
-                        Text(String(localized: "\(HegotaFormat.eth(held)) available"))
-                            .dsText(.label12)
-                            .foregroundStyle(DS.textTertiary)
-                    }
-                }
-                .frame(height: DevnetConsole.sublineRow)
-            }
-
-            DevnetSendVerb(title: sendLabel, armed: canSend, busy: busy,
-                           tint: Self.mark) {
-                // The pad covers the room, and what happens next is drawn in
-                // this card: the settled receipt, or the reason it refused.
-                amountFocused = false
-                send()
-            }
-
-            // Only ever drawn when there is something wrong, and deliberately
-            // outside the height budget for that reason (prd §548).
-            if let errorText {
-                Text(errorText)
-                    .dsText(.label11)
-                    .foregroundStyle(DS.destructive)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else if !destination.isEmpty, !Self.isValidAddress(destination) {
-                Text(String(localized: "That doesn't look like an address."))
-                    .dsText(.label11)
-                    .foregroundStyle(DS.destructive)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .devnetAmountToolbar($amountFocused)
-        .sheet(isPresented: $picking) {
-            DevnetSendPicker(title: String(localized: "Send to"),
-                             candidates: pickerCandidates,
-                             onPick: { destination = $0 })
-        }
-    }
-
-    /// The room's own resolution, so this card and the roster agree.
-    private var recipientName: String? {
-        HegotaWatch.shared.name(for: destination)
-    }
-
-    /// What this devnet knows, minus this phone's own account.
-    private var knownAddresses: [String] {
-        let me = HegotaKey.address()
-        return HegotaWatch.shared.addresses.filter { candidate in
-            guard let me else { return true }
-            return candidate.caseInsensitiveCompare(me) != .orderedSame
-        }
-    }
-
-    private var pickerCandidates: [(address: String, name: String?)] {
-        knownAddresses.map { ($0, HegotaWatch.shared.name(for: $0)) }
-    }
-
-    /// The button NAMES THE AMOUNT once there is one — the figure it is about
-    /// can be off screen in a scrolling room, and "Send" alone on a control
-    /// that moves money is the weakest thing it could say at the moment it is
-    /// tapped.
-    private var sendLabel: String {
-        guard canSend, Self.weiData(from: amount) != nil else {
-            return String(localized: "Send")
-        }
-        let trimmed = amount.trimmingCharacters(in: .whitespacesAndNewlines)
-        return String(localized: "Send \(trimmed) ETH")
-    }
-
-    /// This address's own balance, off the last sweep — never a live read, so
-    /// a keystroke never spends a request. Nil when the sweep could not reach
-    /// the chain, which `HegotaAccount.reached` keeps honest: a failed read
-    /// and a real zero must not look alike (§83), so the line is simply absent
-    /// rather than claiming nothing is held.
-    private var held: Decimal? {
-        guard let mine = sender else { return nil }
-        return HegotaLiveState.shared.accounts.first {
-            $0.address.caseInsensitiveCompare(mine) == .orderedSame
-        }?.balanceWei
-    }
-
-    // MARK: - Done
-
-    /// **THE CARD SETTLES, IT DOES NOT DISMISS.** A sheet could close and leave
-    /// the room looking exactly as it did before the send; here the block that
-    /// took the instruction is the block that reports it, in the same place.
-    private var done: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            if let sentSummary {
-                Text(sentSummary)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if let sentHash {
-                Text(sentHash)
-                    .dsText(.mono12)
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            HStack(spacing: DS.Space.s4) {
-                Button {
-                    DSHaptic.tap()
-                    destination = ""
-                    amount = ""
-                    sentHash = nil
-                    sentSummary = nil
-                    errorText = nil
-                } label: {
-                    Text(String(localized: "Send another"))
-                        .dsText(.label12).fontWeight(.semibold)
-                        .foregroundStyle(Self.mark)
-                }
-                .buttonStyle(PressSpring())
-                .dsHover()
-
-                if let sentHash,
-                   let url = URL(string: HegotaIdentity.explorer + "/tx/" + sentHash) {
-                    Link(destination: url) {
-                        HStack(spacing: 4) {
-                            Text(String(localized: "View it"))
-                            Image(systemName: "arrow.up.right")
-                        }
-                        .dsText(.label12).fontWeight(.semibold)
-                        .foregroundStyle(DS.textSecondary)
-                        .fixedSize()
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Act
-
-    private func send() {
-        // **NOTHING LEAVES THE DEMO (prd §548b).** Furnishing a tour with a
-        // working send console means the console must stop where the money
-        // starts: a real signature here would raise Face ID and a real
-        // broadcast would put a transaction on a public devnet, from a screen
-        // whose own banner says none of this is yours. Refused BEFORE the key
-        // is touched, and it says so rather than failing silently — a control
-        // that does nothing and explains why is not the dead control §83 bans.
-        guard !DemoMode.isActive else {
-            errorText = String(localized: "Nothing is sent in the demo — this is where your own key would sign it.")
-            return
-        }
-        guard let target = RLP.data(fromHex: destination),
-              let valueWei = Self.weiData(from: amount),
-              let address = HegotaKey.address() else { return }
-        let spending = amount.trimmingCharacters(in: .whitespacesAndNewlines)
-        let to = destination
-        let shortTo = HegotaWatch.shared.name(for: to) ?? WalletStore.shortAddress(to)
-        errorText = nil
-        busy = true
-        Task {
-            defer { busy = false }
-            do {
-                guard let sequence = await HegotaSend.currentNonceSequence(for: address) else {
-                    errorText = String(localized: "Couldn't reach the chain to read this account's sequence.")
-                    return
-                }
-                let hash = try await HegotaSend.sendValue(to: target, valueWei: valueWei,
-                                                          nonceSequence: sequence)
-                DSHaptic.success()
-                HegotaSend.landReceipt(txHash: hash, kind: .sent(to: to), in: modelContext)
-                sentSummary = String(localized: "\(spending) ETH to \(shortTo) is on its way to the chain.")
-                sentHash = hash
-            } catch let f as HegotaSend.Failure {
-                switch f {
-                case .broadcastRefused(let why):
-                    errorText = String(localized: "The chain refused it: \(why)")
-                case .signingRefused:
-                    errorText = String(localized: "Signing was cancelled or refused.")
-                case .noKey:
-                    errorText = String(localized: "No key on this phone.")
-                case .chainUnreachable:
-                    errorText = String(localized: "Couldn't reach the chain, so nothing was sent.")
-                default:
-                    errorText = String(localized: "Couldn't send.")
-                }
-            } catch {
-                errorText = String(localized: "Couldn't send.")
-            }
-        }
-    }
-
-    // MARK: - Parsing
-
-    private static func isValidAddress(_ raw: String) -> Bool {
-        let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard s.count == 42, s.hasPrefix("0x") else { return false }
-        return s.dropFirst(2).allSatisfy(\.isHexDigit)
-    }
-
-    /// A typed decimal ETH amount to minimal big-endian wei bytes — string
-    /// arithmetic throughout, never `Double`: this devnet's own faucet
-    /// balances run into the billions of ETH, well past `Double`'s
-    /// exact-integer range.
-    private static func weiData(from text: String) -> Data? {
-        let s = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !s.isEmpty else { return nil }
-        let parts = s.split(separator: ".", omittingEmptySubsequences: false)
-        guard parts.count == 1 || parts.count == 2 else { return nil }
-        let whole = parts[0].isEmpty ? "0" : String(parts[0])
-        let frac = parts.count == 2 ? String(parts[1]) : ""
-        guard whole.allSatisfy(\.isNumber), frac.allSatisfy(\.isNumber), frac.count <= 18
-        else { return nil }
-        let combined = whole + frac + String(repeating: "0", count: 18 - frac.count)
-        guard let word = SafeABI.word(uint256: combined) else { return nil }
-        let trimmed = word.drop(while: { $0 == 0 })
-        guard !trimmed.isEmpty else { return nil }
-        return Data(trimmed)
     }
 }

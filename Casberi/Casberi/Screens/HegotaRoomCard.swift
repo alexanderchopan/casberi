@@ -1495,7 +1495,7 @@ struct HegotaRoomList: View {
             // the one write action this room has, in the one slot with room
             // for it. `HegotaSendCard` gates itself on this phone holding a
             // key, so a room with no key draws no form rather than a dead one.
-            case .home:     HegotaSendCard(onMakeKey: onOpenKeySheet)
+            case .home:     HegotaSendCard(onSend: onOpenSend)
             case .activity: movesList(moves)
             case .accounts: accountsList
             case .frames:   framesList
@@ -1588,6 +1588,9 @@ struct HegotaRoomList: View {
     /// sheet — the half-open-then-close bug, paid for three times before
     /// today and almost a fourth and fifth in the same afternoon).
     var onOpenKeySheet: () -> Void = {}
+    /// Raise the send sheet — owned by `FeedScreen`, for the reason
+    /// `HegotaSendCard`'s own header gives.
+    var onOpenSend: () -> Void = {}
 
     @ViewBuilder private var thisPhoneRow: some View {
         Button {

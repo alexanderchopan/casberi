@@ -41808,3 +41808,174 @@ UNBUILT, like §548 through §548c: authored on Linux with no Xcode, no Swift
 toolchain and no simulator, in a session where four commits accumulated without
 a single compile. That is the standing cost of this environment and it is worth
 recording next to the work it produced.
+
+## 551. Home stopped holding a form — a split panel, and the send on a sheet with its own keypad (user: "the send module has NO WAY to enter Eth. it's dead", "we want both buttons persistent", "the ink is what makes it bold", 2026-09-01)
+
+§544 built a payment console in the devnet rooms' Home scope and §548/§548a
+spent an entire session trying to make it fit under the room's chrome. **That
+was the wrong problem, and §548a's own stated ceiling is what says so:** the
+chrome is ~545pt on EVERY iPhone because none of its four terms scales with
+screen height, so the room leaves 411pt on the largest phone, 276 on a 13 mini
+and ~161 on an SE — and its 232pt console did not fit the last of those and
+never would. Two passes of cutting produced a card that fitted exactly one
+screen size and said so honestly.
+
+**The answer is that Home should not hold a form at all.** Home holds the two
+things you can do; the form lives on a sheet, where it has the whole screen and
+none of the chrome.
+
+### 1. The panel
+
+Two tiles, permanently — the user's ruling ("*user will always want one of those
+two options*"), which rules out both a state machine that swaps one verb for the
+other and a primary-with-a-chip. One half is the venue's own colour and one half
+is the room's card surface via `dsWidgetSurface`, so the two are peers in size
+and not in weight: **the colour is the only thing saying which one the room is
+for.**
+
+**SEND IS THE TOP TILE, AND IT IS MEASURED RATHER THAN TASTE.** The agent FAB is
+a 64pt disc 8pt from the right edge and 29pt up from the bottom, floating over
+everything. Measured against the panel it covers **64pt — 37% — of the BOTTOM
+tile and none of the top one**, and its notification dot is the same blue as the
+Send tile, which a blue bottom tile swallows. So Send is above, Top up is the ink
+half below, and both lockups sit bottom-LEFT where nothing reaches them. The
+FAB's overlap is also why an earlier cut of the Send tile — a 64pt verb with the
+mark pushed to the far right — was thrown away: two circles in the same corner,
+39% overlapped.
+
+**THE HEIGHT IS A SUM AND IT WAS WRONG ON THE FIRST RUN OF THIS BUILD.** The
+room leaves **304pt** below its section strip on a 390×844 phone, measured off a
+screenshot of this build the way §548 measured the chrome it could not move. The
+first cut used `s4` padding, `s3` gaps and `DS.Hit.min` marks and came to 174 a
+tile — 348 for the pair, overflowing by 44 and putting "Top up" off the bottom
+of the screen. **That is §548's failure arriving one layout later**: it rendered
+perfectly and simply continued past the fold. Now:
+
+```
+  padding (s3 × 2)                 24
+  the mark disc                    36
+  gap (s2)                          8
+  one line of price48 at 1.18×      76
+  ────────────────────────────────────
+                                  144pt   × 2 + a 12pt gap = 300 of 304
+```
+
+**Verified on the simulator, which is the whole point of this entry**: the panel
+fits with both verbs fully on screen and no scrolling, which is the thing the
+user asked for on 2026-09-01 and had never once seen.
+
+### 2. Only one room has two verbs, and that is a finding
+
+**vibenet has no claimable faucet.** Its faucet is a PAYER
+(`VibenetSend.payerEndpoint`) that sponsors gas on a transaction somebody else
+composed; no endpoint funds an address, and the console it links to elsewhere is
+documented in its own source as *"the door for everything this app deliberately
+does not do"*. So a Top up half there would open, say what it was for, and be
+unable to do it — the dead control §83 bans. **vibenet draws the Send half
+alone** until there is something behind the other one.
+
+**Hegotá's is real, and it had been sitting unreachable.**
+`HegotaSend.claimFaucet` has existed since §525 and **no screen has ever called
+it** — the app shipped a working faucet nobody could get to. Top up wires it up.
+
+**THREE ENDINGS, ONE OF WHICH IS A FAULT.** The faucet allows one claim per
+source IP per hour (measured, §525) and that refusal is EXPECTED. It and the
+unreachable case read the same way on purpose — no red, no alarm mark, a plain
+sentence in the tile's own empty top — because whichever it is, the next step is
+identical and it is to tap again. **No screen at all**: the tile is the surface,
+and success is the pour plus the crown going up.
+
+### 3. The sheet, and the keypad coming back
+
+**OUR OWN KEYPAD AGAIN, and §548a's reason for killing it is simply gone.** That
+ruling was arithmetic and it was correct for a CARD: 176pt of a 232pt console in
+a 276pt room. A sheet has the whole screen. What the system pad cost was the
+room's entire visual language — iOS keyboard chrome under a screen built out of
+ink blocks and 64pt type, which the user called a regression on sight. §544's
+second ruling stands and is ours again: bare digits on the surface, no key
+backgrounds, the pressed circle inset so two quick presses stay two marks.
+
+**WHO, THEN HOW MUCH**, two screens inside one presentation. **One field pastes
+AND searches** — typing filters the faces, a pasted address falls through as its
+own row — so there is no second control and no Paste button that would be dead
+whenever the pasteboard is empty. **The set is this devnet's own addresses**, so
+a social handle is never offered rather than accepted and refused later: the rule
+is enforced where it can be explained.
+
+**THE FACE IS THE SAME RUNG ON BOTH SCREENS** (`DS.Face.profile`). At two rungs
+apart it read as a label ABOUT who you picked rather than the person coming with
+you — the user's own rule for the silhouettes in the room's bar, applied here.
+Everything on the amount screen starts on one left edge: face, name, figure,
+keypad, button.
+
+**THE SHEET IS `DS.surfaceSheet`**, which in dark is `#000000` — user: *"the ink
+is what makes it bold"*. A lighter grey was inventing an elevation this design
+system does not have.
+
+**NEITHER CARD PRESENTS ANYTHING.** Both send doors route through `FeedScreen`'s
+single `.sheet`: a `.sheet` attached to a view inside a `List` row resolves to
+the same presenting controller as the screen's own and half-opens then closes,
+paid for three times already.
+
+### 4. Creating an account is one tap
+
+**No confirmation screen.** §548d routed the keyless room to the key SHEET, which
+asked the same question the button had just asked and offered the same button to
+answer it. Face ID rises inside `HegotaKey.create()` and that is a real
+confirmation from the system; ours was ceremony. **The pour IS the
+confirmation** (`BerryRain`, already mounted once in `MainSurface` and driven by
+`chrome.refreshPulse`, so it costs a counter bump rather than a view).
+
+**And the copy stopped claiming something false.** §548d's sentence read "No
+account here can be signed for by this phone yet" — user, correctly: *"not
+necessarily true b/c user may be following account"*. You can be watching plenty
+of addresses in that room; the only thing missing is a key on THIS phone. The
+verb says what it does and nothing else.
+
+vibenet's create keeps the existing `VibenetCreateSheet` rather than a one-tap
+mint, because a vibenet account is DEPLOYED by a sponsor and has a real payer
+check behind it — it cannot be a keystroke.
+
+### 5. Refused: a USD toggle on the amount
+
+Asked for, and it cannot be done honestly. **Devnet ETH has no price**: Hegotá's
+bridge carries no USD anywhere and Frames' own note records that test ETH has no
+price, which is why it holds balances with no currency at all. A dollar figure
+on a worthless test token is a number people believe, in the domain this codebase
+guards hardest (§83).
+
+The control has a real denominator one room over — a vibenet account holds ETH,
+USDV and NFV — but **`VibenetSend.sendValue` takes a `valueWei` and nothing
+else**, so the app cannot move a token today and the chip would open, offer USDV
+and fail. The unit stays a WORD in both rooms. It becomes a control in the same
+commit that teaches the bridge an ERC-20 leg (USDV's decimals are **6**, measured
+— not 18) and never before. The same chip carries USD the day this sheet is
+reused in the real Wallet room, where a price is read rather than invented.
+
+### What is checked
+
+`scripts/devnet-console-audit.py` is rewritten around this shape — §548/§548a's
+checks are gone with the console they guarded. Eight checks, twelve self-tests:
+the sum against the measured room, the verb's rung asserted APART from the sum (a
+panel that fits because its words shrank has not been fixed), the custom keypad
+present and the system pad absent, neither card presenting its own sheet, one
+shared panel rather than two hand-rolled copies, the demo gate reaching both
+rooms and both `send()`s refusing inside one, vibenet declaring no Top up, and
+the hourly refusal still named. Negative checks read a COMMENT-STRIPPED copy —
+these files document what they must not do by naming it (the Obsidian/Cursor
+lesson, ninth instance).
+
+`scripts/vibenet-scopes-selftest.sh` was RED on arrival and is fixed here: §548b
+put `demoSignableAccount()` into the Foundation-only `VibenetRoom.swift`, which
+reaches `DemoMode` and `VibenetTransaction`, and that harness compiles the file
+whole against stubs. Both are stubbed inert. (`address-book-selftest.sh` also
+fails, and that one is **pre-existing** — it fails at `da3544bc`, before this
+branch.)
+
+**BUILT AND SEEN, which is what makes this entry different from §548 through
+§548d.** Every one of those was authored on Linux with no Xcode and shipped
+UNBUILT; this compiled clean and was walked on the simulator: the panel fitting
+with both verbs on screen, the picker, the amount screen, the keypad's decimal
+repair (`.` → `0.`), and the commit arming as "Send 0.25 ETH". **Unverified: the
+send itself, the faucet claim and the pour** — all three need a funded account
+on a live devnet, which this host does not have.

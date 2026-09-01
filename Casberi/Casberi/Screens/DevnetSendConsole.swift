@@ -1,49 +1,106 @@
 import SwiftUI
 
-/// THE SEND CONSOLE, SHARED BY BOTH DEVNETS (prd §544, 2026-08-31; fitted to
-/// the screen by §548, 2026-09-01).
+/// **THE DEVNET SEND SURFACE — A PANEL AND A SHEET (prd §551, 2026-09-01).**
 ///
-/// §538 and §539 made sending the room's own Home scope in vibenet and Hegotá,
-/// which was the right move and left the FORM untouched: two labelled wells and
-/// a button, i.e. a web form drawn in SwiftUI. Reported across a design pass as
-/// *"this looks terrible"*, *"these look vibecoded"*, and finally the question
-/// that settled it — *"what would Apple do"*.
+/// §544 built a payment console and §548/§548a spent an entire session trying
+/// to fit it under the room's chrome. That was the wrong problem. The chrome is
+/// ~545pt on every iPhone and none of its four terms scales with screen height,
+/// so the room leaves 411pt on the largest phone, 276 on a 13 mini and ~161 on
+/// an SE — and §548a's own stated ceiling was that its 232pt console did not
+/// fit the last of those and never would.
 ///
-/// **The answer is Apple Cash's own composition, and the pieces here are it:**
-/// the recipient as a plain row, the money GIANT and CENTRED, a keypad of bare
-/// digits on the surface, and one button carrying the verb. Three things follow
-/// from that and each is a decision rather than a style:
+/// **The answer is that Home should not hold a form at all.** What Home holds
+/// is the two things you can do; the form lives on a sheet, where it has the
+/// whole screen and none of the chrome. Three things follow and each is a
+/// ruling rather than a preference:
 ///
-/// 1. ~~**A KEYPAD, NOT A KEYBOARD.**~~ **REVERSED by §548a, 2026-09-01** —
-///    see `DevnetConsole` below for the arithmetic. §544's objection was that
-///    the system keyboard "covers half the screen — including the crown, which
-///    is the balance you are deciding against". True, and the answer it reached
-///    for costs 176pt of a room that has 276, PERMANENTLY, whether anybody is
-///    typing or not. The keyboard costs that only while you type, and what it
-///    covers is answered by the subline this console already draws: "1.2345
-///    available" is the SENDING ACCOUNT's balance, which governs this send more
-///    exactly than the room-total crown ever did.
-/// 2. **BARE DIGITS ON THE SURFACE — kept, and now the system's.** The
-///    `.decimalPad` is the same twelve keys (1–9, a separator, 0, delete) drawn
-///    at the system's own sizes, with its own haptics, its own key repeat and
-///    its own accessibility, and it is what every other amount field on the
-///    phone raises. The custom grid was a re-implementation of it that we then
-///    had to pay rent on.
-/// 3. **THE FIGURE IS CENTRED AND THE VERB IS ON THE BUTTON.** An earlier cut
-///    put "Send" on the left of the figure as a row label, which reads as a
-///    table row rather than a money moment. The word belongs where the tap is.
+/// 1. **THE KEYPAD IS OURS AGAIN.** §548a replaced it with `.decimalPad`
+///    because 176pt was 45% of a 232pt budget in a 276pt room — arithmetic,
+///    and correct at the time. On a sheet that arithmetic is simply gone, and
+///    what the system pad cost was the room's whole visual language: iOS
+///    keyboard chrome under a screen built out of ink blocks and 64pt type.
+///    §544's second ruling stands and is ours to keep: bare digits on the
+///    surface, no key backgrounds, keys at `DS.Hit.min`.
+/// 2. **BOTH VERBS ARE PERMANENT** (user, 2026-09-01: *"we want both buttons
+///    persistent… user will always want one of those two options"*). So Home is
+///    a SPLIT PANEL, not a state machine that swaps one verb for the other, and
+///    not one verb with the other demoted to a chip.
+/// 3. **THE INK IS WHAT MAKES IT BOLD** (user). One half is the room's card
+///    surface and one half is the venue's own colour, and the sheet is
+///    `DS.surfaceSheet` — which in dark is `#000000`, not the lighter grey an
+///    elevated sheet would invent.
 ///
-/// **The figure IS the field** (§548a). §544 banned a `TextField` on the
-/// grounds that a second input is one to keep in sync — with the keypad gone
-/// there is no second input: one `@State` string, one field bound to it, and
-/// `DevnetAmountInput.sanitize` as the whole grammar, still pure, still
-/// provable without a view.
-///
-/// The two rooms differ in exactly one place and it is a §83 rule rather than a
-/// taste: **Hegotá sends ETH and only ETH, so its unit is a WORD; a vibenet
-/// account can hold more, so its unit is a CONTROL.** A chip that opens a
-/// one-item menu is the dead control §83 bans, which is why `unit` is a view
-/// the caller supplies rather than a flag this file switches on.
+/// **WHY SEND IS THE TOP TILE, and it is measured rather than taste.** The
+/// agent FAB is a 64pt disc 8pt from the right edge and 29pt up from the
+/// bottom, floating over everything. It covers 64pt — 37% — of the BOTTOM tile
+/// and none of the top one, and its notification dot is the same blue as the
+/// Send tile. Blue on the bottom swallows that dot. So Send is above, Top up is
+/// the ink half below, and the lockups sit bottom-LEFT where nothing reaches
+/// them.
+enum DevnetConsole {
+
+    // MARK: - The panel
+
+    /// The card's own inset, and the gap between the two halves.
+    static let cardPadding = DS.Space.s4
+    static let tileGap = DS.Space.s3
+
+    /// Inside a tile: the mark, then the verb, hard against the bottom-left.
+    ///
+    /// **MEASURED, NOT CHOSEN (prd §551).** The room leaves 304pt below its
+    /// section strip on a 390×844 phone — measured off a screenshot of this
+    /// build, the same way §548 measured the chrome it could not move. Two
+    /// tiles and a gap have to live inside that, so each tile is 146 and its
+    /// contents are what fit:
+    ///
+    /// ```
+    ///   padding (s3 × 2)                 24
+    ///   the mark disc                    36
+    ///   gap (s2)                          8
+    ///   one line of price48 at 1.18×      76
+    ///   ────────────────────────────────────
+    ///                                   144pt   × 2 + a 12pt gap = 300 of 304
+    /// ```
+    ///
+    /// The first cut used `s4`, `s3` and `DS.Hit.min` and came to 174 a tile —
+    /// 348 for the pair, which overflowed by 44 and put "Top up" off the bottom
+    /// of the screen. That is the §548 failure exactly, arriving one layout
+    /// later: it renders perfectly and simply continues past the fold.
+    static let tilePadding = DS.Space.s3
+    static let markGap = DS.Space.s2
+
+    /// The mark disc. Under `DS.Hit.min` deliberately — it is not a target, the
+    /// whole tile is, and 146pt of tile is three times the hit floor.
+    static let mark: CGFloat = 36
+
+    /// **The floor a tile may not go under.** Two tiles plus the gap have to
+    /// leave the 64pt verb its line and the mark its disc; below this the verb
+    /// starts scaling and the panel stops being the thing it is. Asserted by
+    /// `devnet-console-audit.py` APART from anything else, because a tile
+    /// squeezed to fit one more element is exactly how this card lost its way
+    /// the first time.
+    static let tileFloor: CGFloat = 132
+
+    // MARK: - The sheet
+
+    /// The face on the amount screen is the SAME RUNG as the face in the
+    /// picker (user: *"the avatar silhouetted should be the same size it is on
+    /// the picker"*). At two rungs apart it read as a label ABOUT who you
+    /// picked rather than the person coming with you, which is the same rule
+    /// that governs the silhouettes in the room's own bar.
+    static let sheetFace = DS.Face.profile
+
+    /// One key. `DS.Hit.min` is the floor and this is deliberately above it:
+    /// this is the control people tap most in the room, and in a hurry.
+    static let key: CGFloat = 58
+
+    /// The pressed circle, inset inside the key so two quick presses stay two
+    /// marks rather than one smear.
+    static let keyPress: CGFloat = 50
+
+    static var keypad: CGFloat { key * 4 }
+}
+
 enum DevnetAmountInput {
 
     /// The most decimals any of these chains can express — a wei is 1e-18 ETH,
@@ -94,460 +151,428 @@ enum DevnetAmountInput {
     }
 }
 
-// MARK: - The budget
+// MARK: - The panel
 
-/// **THE CONSOLE'S HEIGHT IS A SUM, AND THE SUM IS WRITTEN DOWN (prd §548 and
-/// its §548a amendment, 2026-09-01).** User: *"it needs to fit all on the
-/// screen so user doesn't have to scroll"*, then *"needs to fit where it is. we
-/// can't make the slot shorter because it needs to be that same size on all the
-/// other screens and wallets"*, then — reading the first pass's stated ceiling
-/// — *"needs to come from below the slot… and maybe that means we can't have a
-/// keypad"*.
-///
-/// **It does mean that, and the arithmetic is what says so.** The room's chrome
-/// is fixed and measured off a 3× screenshot of the shipping build rather than
-/// estimated (iPhone 16 Pro Max, 440×956pt, PNG scanned for its surface edges):
-///
-/// ```
-///   safe area + source chips + venue rail   198
-///   DSRoomChassis.visualSlot                210   ← untouchable: every scope
-///   the fused rail slab                     111      and Wallet share it
-///   the gaps                                 26
-///   ────────────────────────────────────────────
-///   the card's top edge                     545pt   (measured 544.7)
-///   the card as §544 shipped it              601pt  → its bottom at 1146 of 956
-/// ```
-///
-/// **NONE OF THOSE FOUR TERMS SCALES WITH SCREEN HEIGHT**, which is the fact
-/// that decides this. The chrome is ~545pt on a 956pt phone and ~536 on an
-/// 812pt one, so the room leaves 411pt on the largest iPhone and **276pt on a
-/// 13 mini**. The first pass got the card from 601 to 394 by cutting everything
-/// that was not the console — and 394 does not fit in 276, so on every phone
-/// but the biggest it still scrolled. There was one term left worth 176pt.
-///
-/// **The keypad was 45% of the budget and it was PERMANENT.** It occupied that
-/// space whether or not anybody was typing. The `.decimalPad` is the same
-/// twelve keys, costs nothing at rest, and covers the room only while a finger
-/// is on it — and a room the size of this one cannot afford a keypad that is
-/// always there. So the console is now:
-///
-/// ```
-///   card padding (s4 × 2)                    36
-///   the recipient row                        44
-///   gap                                      14
-///   the figure and its subline               74
-///   gap                                      14
-///   the verb                                 50
-///   ────────────────────────────────────────────
-///                                           232pt
-/// ```
-///
-/// **The budget is the SMALLEST phone, not the largest** — that is the whole
-/// correction. 812pt (a 13 mini) less its 536pt of chrome is 276, less a 10pt
-/// margin so the verb never sits on the glass → **266pt**. The sum is 232 and
-/// `devnet-console-audit.py` re-adds it on every build, because the failure is
-/// otherwise invisible: a card that overflows renders perfectly, every element
-/// drawn correctly in the right order, and the ones past the fold simply
-/// continue below it. The build is green, every other audit is green, and the
-/// screen sweep photographs a Send button that is off the screen and certifies
-/// it. A sum in a comment is a sum nobody re-adds.
-///
-/// **WHAT THE AIR BOUGHT BACK.** The first pass squeezed `cardPadding` to `s3`
-/// and the block gaps to `s2` for 32pt it desperately needed. It does not need
-/// them now, and a card in these rooms that insets differently from every other
-/// card in these rooms is a difference with nothing behind it — both are back
-/// on their normal rungs and the sum still clears the smallest phone by 34pt.
-///
-/// **WHAT IS NOT COMING BACK, and neither was a space saving.** The card head
-/// (the button carries the verb — §544's own third ruling — and the sending
-/// account is on the recipient row, which has two ends to name anyway) and the
-/// standing footnote (§315: it changed nothing anyone would DO, and both halves
-/// are still said where they are actionable). Nor the `price48` figure: §491
-/// rules that one fixed box holds the crown OR a scope's figure and never both
-/// stacked, and a second crown-rung figure one slab under the crown is that
-/// fault arriving by a route the chassis cannot see.
-///
-/// **STATED CEILING.** An iPhone SE has a 20pt safe area and a 667pt screen, so
-/// its chrome is ~506 and it leaves ~161pt — 232 does not fit, and no
-/// arrangement of a recipient, a figure and a verb will. That phone needs a
-/// smaller chrome or a different surface; it does not need a shorter row, and
-/// nothing here should be traded away chasing it.
-///
-/// **REFUSED: making this adaptive.** A keypad where there is room and a
-/// keyboard where there is not is two consoles, two sets of bugs and two things
-/// to photograph, to save one screen size from a scroll it no longer has.
-enum DevnetConsole {
-
-    /// The card's own inset — `s4`, the same as every other card in these
-    /// rooms. It was squeezed to `s3` while the keypad was in the budget; a
-    /// card that insets differently from its neighbours for no reason anyone
-    /// can see is a difference worth undoing the moment the reason goes.
-    static let cardPadding = DS.Space.s4
-
-    /// Between the console's three blocks. One value, so the sum is a sum.
-    static let blockGap = DS.Space.s3
-
-    /// The recipient row — the hit floor exactly, never less.
-    static let recipientRow = DS.Hit.min
-
-    /// What one line of `price40` really draws.
-    ///
-    /// **NOT the ramp's `lineHeight`, which is a `lineSpacing` and says nothing
-    /// about a single line** — a face draws about 1.2× its point size, so 40pt
-    /// of Figtree is ~48. Every font-derived term here is ROUNDED UP for that
-    /// reason: an over-stated term makes the budget stricter than the glass, an
-    /// under-stated one makes the budget a lie. The audit's job is to catch a
-    /// structural addition — another row, a wider gap, a second button — not to
-    /// certify text metrics to the point, which only a device can do.
-    ///
-    /// **It was `price48` and the drop is a correction, not a saving that
-    /// happens to look fine.** §491 ruled that ONE FIXED BOX HOLDS THE CROWN
-    /// OR THE SCOPE'S FIGURE, never both stacked — and this card drew a second
-    /// 64pt figure one slab below a 64pt crown, which is that fault arriving
-    /// by a route the chassis could not see. `price40` is the next rung, still
-    /// the largest thing in the card by 15pt, and it is no longer a second
-    /// claim on the same screen's hero.
-    static let figureLine: CGFloat = 48
-
-    /// Figure → its subline. The tightest rung on the ramp: they are one
-    /// reading, not two.
-    static let figureGap = DS.Space.s1
-
-    /// The subline — one line of `label12` plus the Max chip's own 3pt padding
-    /// above and below it, rounded up like every term above. The CHIP is what
-    /// sets this row's height, so the chip is what is written down, and both
-    /// cards pin the row to this value so the sum holds even where there is no
-    /// balance to state and no chip to draw.
-    static let sublineRow: CGFloat = 22
-
-    /// One line of `callout15` (a 17pt face at 1.2×), and the verb's own
-    /// vertical padding.
-    static let verbLine: CGFloat = 22
-    static let verbPad = DS.Space.s3
-
-    static var figureBlock: CGFloat { figureLine + figureGap + sublineRow }
-    static var verb: CGFloat { verbLine + 2 * verbPad }
-
-    /// What the console costs, top edge to bottom edge, with nothing typed and
-    /// nothing wrong. Two things are deliberately outside it. The `.decimalPad`
-    /// — it costs nothing at rest, which is the entire §548a argument, and what
-    /// it covers while raised is the room's problem rather than the card's. And
-    /// the error line, which appears BELOW the verb only when there is
-    /// something to say: scrolling to read why a send was refused is a fair
-    /// trade for never scrolling to reach the button.
-    static var height: CGFloat {
-        2 * cardPadding + recipientRow + 2 * blockGap + figureBlock + verb
-    }
-
-    /// **THE SMALLEST PHONE, NOT THE LARGEST.** 812pt (a 13 mini) less its
-    /// ~536pt of fixed chrome is 276, less a 10pt margin so the verb never sits
-    /// on the glass. Budgeting against the 956pt device is what let the first
-    /// pass land a 394pt console that fitted exactly one screen size.
-    static let budget: CGFloat = 266
-}
-
-// MARK: - The figure
-
-/// **THE MONEY IS THE FIELD (§548a).** Centred, with its unit beside it and
-/// whatever the caller puts under it.
-///
-/// `dim` is the resting state — nothing typed yet — and it fades the figure AND
-/// its unit together, because a bright "ETH" beside a grey "0" reads as a unit
-/// that has been chosen for an amount that has not.
-///
-/// **THE UNIT SITS BESIDE THE FIGURE, NOT UNDER IT (prd §548).** It used to
-/// lead the subline, which cost a whole line of the budget to say a word that
-/// belongs to the number: "0.5" and "ETH" are one reading and are now set as
-/// one, on the last text baseline so the word rides the figure's feet however
-/// the figure scales. What is left under it is the only thing that is genuinely
-/// a second reading — what you HOLD, and the tap that spends all of it.
-///
-/// **`fixedSize` is load-bearing.** A `TextField` in an `HStack` takes every
-/// point offered, which would pin the unit to the far right of the card with a
-/// gulf between them; hugging its content keeps the pair centred as one object
-/// and lets it grow rightward as you type, which is the Apple Cash behaviour.
-/// The prompt is what gives an empty field its width, so the placeholder is a
-/// real "0" rather than a hole where the largest element belongs.
-///
-/// **STATED CEILING:** the keypad's figure carried `minimumScaleFactor(0.4)`
-/// and a `TextField` cannot — so an amount past ~10 whole digits will run its
-/// line rather than shrink to fit on a narrow phone. `maxWhole` exists to stop
-/// a stuck key producing a figure no layout can hold and still does; what is
-/// lost is the graceful shrink between the two. Worth re-eyeballing on a device
-/// with a faucet-sized Hegotá balance typed in full.
-struct DevnetSendFigure<Unit: View, Subline: View>: View {
-    @Binding var amount: String
-    var focus: FocusState<Bool>.Binding
-    /// The venue's own accent — the caret is the one place this control says
-    /// which chain you are spending on while you type.
-    let tint: Color
-    var dim: Bool = false
-    @ViewBuilder var unit: () -> Unit
-    @ViewBuilder var subline: () -> Subline
-
-    var body: some View {
-        VStack(spacing: DevnetConsole.figureGap) {
-            HStack(alignment: .lastTextBaseline, spacing: DS.Space.s2) {
-                TextField("", text: $amount,
-                          prompt: Text(verbatim: "0").foregroundStyle(DS.textTertiary))
-                    .dsText(.price40)
-                    .foregroundStyle(dim ? DS.textTertiary : DS.textPrimary)
-                    .multilineTextAlignment(.center)
-                    .keyboardType(.decimalPad)
-                    .autocorrectionDisabled()
-                    .lineLimit(1)
-                    .fixedSize()
-                    .tint(tint)
-                    .focused(focus)
-                    .accessibilityLabel(Text(String(localized: "Amount")))
-                    .onChange(of: amount) { previous, next in
-                        let clean = DevnetAmountInput.sanitize(next, previous: previous)
-                        if clean != next { amount = clean }
-                    }
-                unit()
-            }
-            subline()
-        }
-        .frame(maxWidth: .infinity)
-        // **A BIG TARGET, AND A DECLARED CONTAINER.** At rest the field is only
-        // as wide as its "0", which is a tiny thing to hit for the one control
-        // this card exists to fill in, so a tap anywhere in the block focuses
-        // it. `.contain` is what keeps that honest for VoiceOver: the block is
-        // declared a CONTAINER whose children stay individually reachable — the
-        // labelled field, the unit, the balance — rather than an untraited tap
-        // surface, which is a gesture no screen reader can find (the
-        // accessibility audit's own check 2, which caught exactly this).
-        .accessibilityElement(children: .contain)
-        .contentShape(Rectangle())
-        .onTapGesture { focus.wrappedValue = true }
-    }
-}
-
-/// **THE ONE WAY DOWN, and it is not optional (§548a).**
-///
-/// `.decimalPad` HAS NO RETURN KEY. Without a keyboard toolbar there is
-/// literally no key that dismisses it, and a tap outside is unreliable inside a
-/// scrolling `List` — so a field raised without this is a keyboard somebody
-/// cannot put away, over a Send button it is covering. The audit checks both
-/// cards carry it.
-struct DevnetAmountToolbar: ViewModifier {
-    var focus: FocusState<Bool>.Binding
+/// One half is the venue's colour and one half is the room's own card surface —
+/// which is `dsWidgetSurface`, the elevation ladder's raised rung, rather than a
+/// colour spelled here. A tinted tile cannot take that modifier (it would paint
+/// the sheet fill over the tint), so the two are one modifier with one branch
+/// instead of two backgrounds that could drift apart.
+private struct DevnetTileSurface: ViewModifier {
+    let tint: Color?
 
     func body(content: Content) -> some View {
-        content.toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button(String(localized: "Done")) {
-                    DSHaptic.selection()
-                    focus.wrappedValue = false
-                }
-                .fontWeight(.semibold)
-            }
+        if let tint {
+            content.background(tint, in: RoundedRectangle(cornerRadius: DS.Radius.widget,
+                                                          style: .continuous))
+        } else {
+            content.dsWidgetSurface()
         }
     }
 }
 
-extension View {
-    func devnetAmountToolbar(_ focus: FocusState<Bool>.Binding) -> some View {
-        modifier(DevnetAmountToolbar(focus: focus))
-    }
-}
-
-// MARK: - The verb
-
-/// The one button, shared by both rooms (prd §548).
+/// **HOME IS TWO VERBS, PERMANENTLY (prd §551).**
 ///
-/// It was written out twice, identically, in two cards — and the moment the
-/// console's height became a SUM that had to hold, two copies of the control
-/// carrying 45 of its points became a way for the sum to quietly stop being
-/// true. One component, one height, and `devnet-console-audit.py` checks both
-/// cards use it rather than a button of their own.
+/// The blue half is the venue's own colour and the ink half is the room's card
+/// surface, so the two are peers in size and not in weight — the colour is the
+/// only thing saying which one the room is for.
 ///
-/// **The title NAMES THE AMOUNT** once there is one (§538): this sits at the
-/// bottom of a card in a scrolling room, so the figure it is about can be off
-/// screen — and "Send" alone, on a control that moves money, is the weakest
-/// thing it could say at the moment it is tapped.
-struct DevnetSendVerb: View {
-    let title: String
-    let armed: Bool
-    let busy: Bool
+/// Neither tile presents anything. Send hands upward to the screen's single
+/// `.sheet` (a `.sheet` attached to a view inside a `List` row resolves to the
+/// same presenting controller as the screen's own and half-opens then closes,
+/// paid for three times already); Top up acts in place and reports on itself.
+struct DevnetSendPanel: View {
     let tint: Color
-    let action: () -> Void
+    /// Nil where the room has nothing to top up WITH — vibenet's faucet is a
+    /// payer that sponsors gas, not something an address can claim from, so
+    /// offering a claim there would be the dead control §83 bans. That room
+    /// draws the Send half alone rather than a button that cannot act.
+    var topUp: TopUp? = nil
+    let onSend: () -> Void
+
+    /// What the ink half does, and what it is currently saying about itself.
+    struct TopUp {
+        var busy = false
+        /// Only ever present when there is something to say. The rate limit and
+        /// the failure read the SAME way on purpose: §525 rules the hourly
+        /// refusal expected rather than a fault, and either way the next step
+        /// is identical — tap it again.
+        var note: String? = nil
+        /// True where the verb leaves the app rather than acting in it, so the
+        /// mark can say so instead of the tile lying about what happens next.
+        var handsOff = false
+        var action: () -> Void
+    }
 
     var body: some View {
+        VStack(spacing: DevnetConsole.tileGap) {
+            tile(kind: .send)
+            if topUp != nil { tile(kind: .topUp) }
+        }
+    }
+
+    private enum Kind { case send, topUp }
+
+    @ViewBuilder
+    private func tile(kind: Kind) -> some View {
+        let isSend = kind == .send
         Button {
             DSHaptic.tap()
-            action()
+            if isSend { onSend() } else { topUp?.action() }
         } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "arrow.up.right").dsGlyph(13, weight: .semibold)
-                Text(title)
-                if busy { ProgressView().controlSize(.mini) }
+            VStack(alignment: .leading, spacing: 0) {
+                if !isSend, let note = topUp?.note {
+                    Text(note)
+                        .dsText(.callout15).fontWeight(.semibold)
+                        .foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                Spacer(minLength: 0)
+                disc(isSend: isSend)
+                Spacer().frame(height: DevnetConsole.markGap)
+                Text(isSend ? String(localized: "Send") : String(localized: "Top up"))
+                    .dsText(.price48)
+                    .foregroundStyle(isSend ? .white : DS.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.9)
             }
-            .dsText(.callout15).fontWeight(.semibold)
-            .foregroundStyle(armed ? .white : DS.textTertiary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, DevnetConsole.verbPad)
-            .background(armed ? AnyShapeStyle(tint) : AnyShapeStyle(DS.gray200),
-                        in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+            .padding(DevnetConsole.tilePadding)
+            .frame(maxWidth: .infinity, minHeight: DevnetConsole.tileFloor, alignment: .leading)
+            .modifier(DevnetTileSurface(tint: isSend ? tint : nil))
+            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         }
         .buttonStyle(PressSpring())
-        .disabled(!armed)
-        .armedPop(armed)
-        .animation(DS.Motion.standard, value: armed)
+        .disabled(!isSend && (topUp?.busy ?? false))
         .dsHover()
+        .accessibilityLabel(Text(isSend ? String(localized: "Send")
+                                        : String(localized: "Top up from the faucet")))
     }
-}
 
-// MARK: - Who it goes to
-
-/// The route as one row: where it leaves from, where it lands, and a forward
-/// chevron because that is where the tap goes.
-///
-/// **THE SENDER LIVES HERE NOW (prd §548).** It used to be the trailing half of
-/// a card head — a mark disc, the word "Send" and the account name — which cost
-/// 46pt to say something the button below already says and something this row
-/// can carry for nothing. A send has two ends; a row with both of them on it is
-/// the money grammar, and the tap still changes the only end that can change.
-///
-/// **The chevron points RIGHT, not down.** An earlier cut pointed it down and
-/// opened a bottom sheet from it, which is two idioms at once — a disclosure
-/// says "onward", a chevron-down says "a menu drops here". This opens a picker
-/// of people, which is a sheet, so the row is a disclosure.
-struct DevnetSendToRow: View {
-    /// The account this send leaves from, and what the room calls it. Optional
-    /// so the row keeps its old "To …" reading where there is no second end to
-    /// name — never a face over a blank, which would be a sender we invented.
-    var from: String? = nil
-    var fromName: String? = nil
-    /// The chosen address, or nil for the resting state.
-    let address: String?
-    /// What to call it — the room's own resolution, never re-derived here.
-    let name: String?
-    /// Up to three known addresses, previewed as faces when nothing is chosen:
-    /// it says "there are people in here" where a plus sign says nothing.
-    let preview: [String]
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: {
-            DSHaptic.selection()
-            onTap()
-        }) {
-            HStack(spacing: DS.Space.s2) {
-                if let from {
-                    WalletFace(address: from, size: DS.Face.row, circular: true)
-                    Text(fromName ?? WalletStore.shortAddress(from))
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                        .layoutPriority(-1)
-                    Image(systemName: "arrow.right")
-                        .accessibilityHidden(true)
-                        .dsGlyph(11, weight: .semibold)
-                        .foregroundStyle(DS.textTertiary)
-                } else {
-                    Text(String(localized: "To"))
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                }
-
-                if let address {
-                    WalletFace(address: address, size: DS.Face.row, circular: true)
-                    Text(name ?? WalletStore.shortAddress(address))
-                        .dsText(.callout15)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                } else {
-                    if !preview.isEmpty {
-                        HStack(spacing: -9) {
-                            ForEach(preview.prefix(3), id: \.self) { candidate in
-                                WalletFace(address: candidate, size: DS.Face.row, circular: true)
-                                    // The knockout is the CARD's own colour, so
-                                    // overlapping faces read as a stack rather
-                                    // than as one smudged shape. Ink since §542.
-                                    .overlay(Circle().strokeBorder(DS.surfaceSheet, lineWidth: 2))
-                            }
-                        }
-                    }
-                    Text(String(localized: "Choose who"))
-                        .dsText(.callout15)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
-
-                Spacer(minLength: DS.Space.s1)
-                Image(systemName: "chevron.right")
+    @ViewBuilder
+    private func disc(isSend: Bool) -> some View {
+        ZStack {
+            Circle()
+                .fill(isSend ? AnyShapeStyle(Color.white.opacity(0.22))
+                             : AnyShapeStyle(DS.fillFaint))
+                .frame(width: DevnetConsole.mark, height: DevnetConsole.mark)
+            if !isSend, topUp?.busy == true {
+                ProgressView().controlSize(.small)
+            } else {
+                Image(systemName: glyph(isSend: isSend))
                     .accessibilityHidden(true)
-                    .dsGlyph(12, weight: .semibold)
-                    .foregroundStyle(DS.textTertiary)
+                    .dsGlyph(20, weight: .semibold)
+                    .foregroundStyle(isSend ? AnyShapeStyle(Color.white) : AnyShapeStyle(tint))
             }
-            .frame(height: DevnetConsole.recipientRow)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(RowPress())
-        .accessibilityLabel(Text(String(localized: "Choose who to send to")))
-        .dsHover()
+    }
+
+    private func glyph(isSend: Bool) -> String {
+        if isSend { return "arrow.up.right" }
+        return (topUp?.handsOff ?? false) ? "arrow.up.forward.app" : "drop"
     }
 }
 
-// MARK: - The picker
+// MARK: - Before there is an account
 
-/// Every address this devnet already knows, as faces you tap — plus Paste,
-/// which is the last cell rather than a control of its own.
+/// **THE SAME OBJECT SAYING A DIFFERENT VERB (prd §551).**
 ///
-/// A TRAY, deliberately, where the asset menu is not: this is a list of PEOPLE
-/// and can be any length, which is what a sheet is for.
-struct DevnetSendPicker: View {
+/// §548d gave the keyless room a sentence and a button because Home's whole
+/// content was a gated card and gating it rendered the scope blank. This keeps
+/// that fix and drops its explanation: the room says what it can do, at the
+/// size it says everything else, and what a key IS belongs where the account
+/// lives rather than under the button that makes one.
+///
+/// The copy is no longer a claim about the ROOM (user, 2026-09-01: *"not
+/// necessarily true b/c user may be following account"*). You can be watching
+/// plenty of addresses here; the only thing missing is a key on THIS phone, so
+/// the verb says what it does and nothing else.
+struct DevnetCreatePanel: View {
+    let tint: Color
+    /// Two lines by design — it is a two-word verb at the crown rung and the
+    /// tile is as tall as the split panel it replaces.
     let title: String
-    /// Address → display name, in the room's own order.
-    let candidates: [(address: String, name: String?)]
-    let onPick: (String) -> Void
-
-    @Environment(\.dismiss) private var dismiss
-
-    private var columns: [GridItem] {
-        [GridItem(.adaptive(minimum: 92), spacing: DS.Space.s4)]
-    }
+    var busy = false
+    let onCreate: () -> Void
 
     var body: some View {
-        DSTray(title: title, height: trayHeight, ink: true,
-               detents: [.height(trayHeight), .large]) {
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: DS.Space.s4) {
-                    ForEach(candidates, id: \.address) { candidate in
-                        cell(candidate.address, candidate.name)
-                    }
-                    pasteCell
-                }
-                .padding(.bottom, DS.Space.s4)
-            }
-            .scrollIndicators(.hidden)
-        }
-    }
-
-    /// Two rows of faces plus the tray's own chrome, floored so a devnet with
-    /// one known address still opens as a tray rather than a sliver.
-    private var trayHeight: CGFloat {
-        let rows = max(1, Int(ceil(Double(candidates.count + 1) / 3.0)))
-        return min(220 + CGFloat(min(rows, 3)) * 104, 620)
-    }
-
-    private func cell(_ address: String, _ name: String?) -> some View {
         Button {
             DSHaptic.tap()
-            onPick(address)
-            dismiss()
+            onCreate()
+        } label: {
+            VStack(alignment: .leading, spacing: 0) {
+                Spacer(minLength: 0)
+                ZStack {
+                    Circle().fill(tint)
+                        .frame(width: DevnetConsole.mark, height: DevnetConsole.mark)
+                    if busy {
+                        ProgressView().controlSize(.small).tint(.white)
+                    } else {
+                        Image(systemName: "key")
+                            .accessibilityHidden(true)
+                            .dsGlyph(20, weight: .semibold)
+                            .foregroundStyle(.white)
+                    }
+                }
+                Spacer().frame(height: DevnetConsole.markGap)
+                Text(title)
+                    .dsText(.price48)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(DevnetConsole.tilePadding)
+            .frame(maxWidth: .infinity, minHeight: DevnetConsole.tileFloor * 2, alignment: .leading)
+            .modifier(DevnetTileSurface(tint: nil))
+            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        }
+        .buttonStyle(PressSpring())
+        .disabled(busy)
+        .dsHover()
+    }
+}
+
+// MARK: - The keypad
+
+/// **OURS AGAIN, AND THE REASON IT LEFT NO LONGER APPLIES (prd §551).**
+///
+/// §548a swapped it for `.decimalPad` on arithmetic that was correct for a
+/// CARD: 176pt of a 232pt console in a 276pt room. On a sheet there is no such
+/// budget, and what the system pad cost was the room's whole visual language.
+///
+/// §544's second ruling, kept: bare digits on the surface, no key backgrounds.
+/// The pressed circle is inset inside the key so two quick presses stay two
+/// marks. Every edit goes through `DevnetAmountInput.sanitize`, so a key that
+/// would make an amount the chain cannot express simply does nothing — the
+/// figure on screen is never one the button will then reject.
+struct DevnetKeypad: View {
+    @Binding var amount: String
+    let tint: Color
+
+    @State private var pressed: String?
+
+    private static let rows: [[String]] = [["1", "2", "3"], ["4", "5", "6"],
+                                           ["7", "8", "9"], [".", "0", "\u{232B}"]]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Self.rows, id: \.self) { row in
+                HStack(spacing: 0) {
+                    ForEach(row, id: \.self) { key(_: $0) }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func key(_ label: String) -> some View {
+        let isDelete = label == "\u{232B}"
+        Button {
+            DSHaptic.selection()
+            tap(label)
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(pressed == label ? AnyShapeStyle(DS.fillFaint) : AnyShapeStyle(Color.clear))
+                    .frame(width: DevnetConsole.keyPress, height: DevnetConsole.keyPress)
+                if isDelete {
+                    Image(systemName: "delete.backward")
+                        .accessibilityHidden(true)
+                        .dsGlyph(24, weight: .regular)
+                        .foregroundStyle(DS.textPrimary)
+                } else {
+                    Text(label)
+                        .dsText(.stat24)
+                        .fontWeight(.regular)
+                        .foregroundStyle(DS.textPrimary)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: DevnetConsole.key)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(isDelete ? String(localized: "Delete") : label))
+    }
+
+    private func tap(_ label: String) {
+        pressed = label
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(110))
+            if pressed == label { pressed = nil }
+        }
+        if label == "\u{232B}" {
+            guard !amount.isEmpty else { return }
+            amount = String(amount.dropLast())
+            return
+        }
+        // The whole grammar lives in one place, so a key and a paste are held
+        // to the same rule: a change that cannot be expressed is REFUSED and
+        // the previous value stands.
+        amount = DevnetAmountInput.sanitize(amount + label, previous: amount)
+    }
+}
+
+// MARK: - The sheet
+
+/// **WHO, THEN HOW MUCH (prd §551).**
+///
+/// Two screens inside one sheet rather than two sheets: the amount needs the
+/// whole surface for a 64pt figure and a keypad, and the picker needs it for
+/// faces at `DS.Face.profile`. Sharing one presentation keeps the back gesture,
+/// the grabber and the detent in one place.
+///
+/// **The face is the same rung on both screens** (user: *"the avatar
+/// silhouetted should be the same size it is on the picker"*). Two rungs apart
+/// it reads as a label ABOUT the person rather than the person you picked
+/// coming with you — the same rule that governs the room's own face bar.
+///
+/// **ONE FIELD PASTES AND SEARCHES.** Typing filters the faces; a pasted
+/// address falls straight through when it validates. There is no second
+/// control, and no separate Paste button that would be dead whenever the
+/// pasteboard holds nothing.
+///
+/// **THE SET IS THIS DEVNET'S OWN ADDRESSES.** A social handle is never offered
+/// in the first place rather than accepted and refused later — the rule is
+/// enforced where it can be explained.
+struct DevnetSendSheet: View {
+    /// What this room is, for the picker's own footnote.
+    let venue: String
+    let tint: Color
+    /// The word beside the figure. A WORD and never a chip: both devnets move
+    /// native ETH and only that (`VibenetSend.sendValue` takes a `valueWei` and
+    /// nothing else), so a control here would open a one-item menu — the dead
+    /// control §83 bans. It becomes a control the day a bridge can move a
+    /// token, and not before.
+    let unit: String
+    let candidates: [(address: String, name: String?)]
+    /// What the sending account holds, already formatted. Nil when the sweep
+    /// could not reach the chain — a failed read and a real zero must not look
+    /// alike (§83), so the line is absent rather than claiming nothing is held.
+    let heldLine: String?
+    /// Nil where filling the whole balance is a guaranteed failure — on Hegotá
+    /// the sender pays its own gas, so an amount equal to the balance cannot
+    /// pay for itself.
+    let maxAmount: String?
+    let isValidAddress: (String) -> Bool
+    let isValidAmount: (String) -> Bool
+    /// Returns nil on success, or the sentence to show on failure.
+    let perform: (String, String) async -> String?
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(ShellChrome.self) private var chrome
+
+    @State private var destination = ""
+    @State private var amount = ""
+    @State private var query = ""
+    @State private var busy = false
+    @State private var errorText: String?
+    @FocusState private var searching: Bool
+
+    private var picked: Bool { !destination.isEmpty }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if picked { amountScreen } else { whoScreen }
+        }
+        .padding(.horizontal, DevnetConsole.cardPadding)
+        .padding(.bottom, DevnetConsole.cardPadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(DS.surfaceSheet)
+        .animation(DS.Motion.standard, value: picked)
+    }
+
+    // MARK: Who
+
+    private var matches: [(address: String, name: String?)] {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return candidates }
+        return candidates.filter {
+            $0.address.lowercased().contains(q) || ($0.name ?? "").lowercased().contains(q)
+        }
+    }
+
+    /// A typed string that is itself an address is offered as its own row, so
+    /// pasting one needs no second gesture — the field IS the paste target.
+    private var pastedAddress: String? {
+        let s = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard isValidAddress(s) else { return nil }
+        return s
+    }
+
+    private var whoScreen: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            HStack(spacing: DS.Space.s3) {
+                Image(systemName: "magnifyingglass")
+                    .accessibilityHidden(true)
+                    .dsGlyph(16, weight: .semibold)
+                    .foregroundStyle(DS.textTertiary)
+                TextField("", text: $query,
+                          prompt: Text(String(localized: "Paste an address, or search"))
+                            .foregroundStyle(DS.textTertiary))
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .focused($searching)
+                    .submitLabel(.done)
+                    .onSubmit { if let pastedAddress { destination = pastedAddress } }
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .frame(height: DS.Hit.min + DS.Space.s2)
+            .dsWell(cornerRadius: DS.Radius.control)
+
+            if let pastedAddress {
+                Button {
+                    DSHaptic.tap()
+                    destination = pastedAddress
+                } label: {
+                    HStack(spacing: DS.Space.s3) {
+                        WalletFace(address: pastedAddress, size: DS.Face.list, circular: true)
+                        Text(WalletStore.shortAddress(pastedAddress))
+                            .dsText(.body17).fontWeight(.semibold)
+                            .foregroundStyle(DS.textPrimary)
+                        Spacer(minLength: DS.Space.s2)
+                        Image(systemName: "arrow.right")
+                            .accessibilityHidden(true)
+                            .dsGlyph(14, weight: .semibold)
+                            .foregroundStyle(tint)
+                    }
+                    .frame(height: DS.Hit.min)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .dsHover()
+            }
+
+            ScrollView {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: DevnetConsole.sheetFace + DS.Space.s4),
+                                             spacing: DS.Space.s6)],
+                          spacing: DS.Space.s6) {
+                    ForEach(matches, id: \.address) { candidate in
+                        faceCell(candidate.address, candidate.name)
+                    }
+                }
+                .padding(.top, DS.Space.s1)
+            }
+            .scrollIndicators(.hidden)
+
+            Text(String(localized: "\(venue) addresses from your book."))
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.top, DS.Space.s4)
+    }
+
+    private func faceCell(_ address: String, _ name: String?) -> some View {
+        Button {
+            DSHaptic.tap()
+            destination = address
         } label: {
             VStack(spacing: DS.Space.s2) {
-                WalletFace(address: address, size: DS.Face.shelf, circular: true)
-                // §483: with one uniform mark the rail MUST caption its faces,
-                // or six accounts are six identical silhouettes.
+                WalletFace(address: address, size: DevnetConsole.sheetFace, circular: true)
                 Text(name ?? WalletStore.shortAddress(address))
-                    .dsText(.label12)
-                    .fontWeight(.semibold)
+                    .dsText(.label12).fontWeight(.semibold)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
             }
@@ -558,40 +583,183 @@ struct DevnetSendPicker: View {
         .dsHover()
     }
 
-    /// Offered ONLY when the pasteboard really holds text — `hasStrings` asks
-    /// the system without bringing anything into this process, so it raises no
-    /// paste banner and reads nothing. A cell that pastes nothing is the dead
-    /// control §83 bans.
-    @ViewBuilder
-    private var pasteCell: some View {
-        if UIPasteboard.general.hasStrings {
+    // MARK: How much
+
+    /// One left edge, top to bottom: face, name, figure, keypad, button. The
+    /// back control is its own row above them rather than a chevron the face
+    /// has to sit beside, which is what lets the column start at one indent and
+    /// stay there.
+    private var amountScreen: some View {
+        VStack(alignment: .leading, spacing: 0) {
             Button {
-                DSHaptic.tap()
-                let pasted = (UIPasteboard.general.string ?? "")
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                if !pasted.isEmpty { onPick(pasted) }
-                dismiss()
+                DSHaptic.selection()
+                destination = ""
+                amount = ""
+                errorText = nil
             } label: {
-                VStack(spacing: DS.Space.s2) {
-                    ZStack {
-                        Circle().fill(DS.fillFaint)
-                            .frame(width: DS.Face.shelf, height: DS.Face.shelf)
-                        Image(systemName: "doc.on.clipboard")
-                            .accessibilityHidden(true)
-                            .dsGlyph(20, weight: .regular)
-                            .foregroundStyle(DS.textSecondary)
-                    }
-                    Text(String(localized: "Paste"))
-                        .dsText(.label12)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
+                Image(systemName: "chevron.left")
+                    .accessibilityHidden(true)
+                    .dsGlyph(18, weight: .semibold)
+                    .foregroundStyle(DS.textPrimary)
+                    .frame(width: DS.Hit.min, height: DS.Hit.min, alignment: .leading)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(PressSpring())
+            .accessibilityLabel(Text(String(localized: "Choose someone else")))
             .dsHover()
+
+            WalletFace(address: destination, size: DevnetConsole.sheetFace, circular: true)
+                .padding(.top, DS.Space.s2)
+
+            Text(recipientName)
+                .dsText(.stat24)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+                .padding(.top, DS.Space.s3)
+
+            HStack(alignment: .lastTextBaseline, spacing: DS.Space.s2) {
+                Text(amount.isEmpty ? "0" : amount)
+                    .dsText(.price48)
+                    .foregroundStyle(amount.isEmpty ? DS.textTertiary : DS.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.4)
+                Text(unit)
+                    .dsText(.price16)
+                    .foregroundStyle(amount.isEmpty ? DS.textTertiary : DS.textSecondary)
+            }
+            .padding(.top, DS.Space.s4)
+
+            HStack(spacing: DS.Space.s2) {
+                if let heldLine {
+                    Text(heldLine)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                }
+                if let maxAmount, !maxAmount.isEmpty {
+                    Button {
+                        DSHaptic.selection()
+                        amount = DevnetAmountInput.sanitize(maxAmount, previous: amount)
+                    } label: {
+                        Text(String(localized: "Max"))
+                            .dsText(.label12).fontWeight(.semibold)
+                            .foregroundStyle(tint)
+                            .padding(.horizontal, DS.Space.s2)
+                            .padding(.vertical, 3)
+                            .background(tint.opacity(0.14), in: Capsule())
+                    }
+                    .buttonStyle(PressSpring())
+                    .dsHover()
+                }
+            }
+            .frame(height: DS.Space.s6)
+            .padding(.top, DS.Space.s1)
+
+            Spacer(minLength: DS.Space.s4)
+
+            DevnetKeypad(amount: $amount, tint: tint)
+
+            if let errorText {
+                Text(errorText)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.destructive)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, DS.Space.s2)
+            }
+
+            commit
         }
+    }
+
+    private var recipientName: String {
+        candidates.first { $0.address.caseInsensitiveCompare(destination) == .orderedSame }?.name
+            ?? WalletStore.shortAddress(destination)
+    }
+
+    private var armed: Bool {
+        !busy && isValidAddress(destination) && isValidAmount(amount)
+    }
+
+    /// **THE BUTTON NAMES THE AMOUNT** once there is one (§538): it moves money
+    /// and "Send" alone is the weakest thing it could say at the moment it is
+    /// tapped.
+    private var commit: some View {
+        Button {
+            DSHaptic.tap()
+            act()
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                Image(systemName: "arrow.up.right").dsGlyph(15, weight: .semibold)
+                Text(armed ? String(localized: "Send \(amount) \(unit)")
+                           : String(localized: "Send"))
+                if busy { ProgressView().controlSize(.mini).tint(.white) }
+            }
+            .dsText(.callout15).fontWeight(.semibold)
+            .foregroundStyle(armed ? .white : DS.textTertiary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, DS.Space.s4)
+            .background(armed ? AnyShapeStyle(tint) : AnyShapeStyle(DS.fillFaint),
+                        in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+        }
+        .buttonStyle(PressSpring())
+        .disabled(!armed)
+        .armedPop(armed)
+        .animation(DS.Motion.standard, value: armed)
+        .dsHover()
+    }
+
+    /// **THE ENDING MIRRORS TOP UP** (prd §551): the sheet goes, it rains, and
+    /// the crown moves — up there, down here. No receipt screen; the row lands
+    /// in Activity, one chip away in the bar the sheet is covering.
+    private func act() {
+        let to = destination
+        let spending = amount
+        busy = true
+        errorText = nil
+        Task { @MainActor in
+            let failure = await perform(to, spending)
+            busy = false
+            if let failure {
+                errorText = failure
+                return
+            }
+            DSHaptic.success()
+            chrome.refreshHue = tint
+            chrome.refreshPulse &+= 1
+            dismiss()
+        }
+    }
+}
+
+// MARK: - Parsing, once
+
+/// **ONE PARSER, BOTH ROOMS (prd §551).** Each send card carried a private copy
+/// of these two, byte-identical, which is how a sheet shared by two rooms
+/// quietly starts accepting different amounts in each.
+enum DevnetSendParse {
+
+    static func isValidAddress(_ raw: String) -> Bool {
+        let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard s.count == 42, s.hasPrefix("0x") else { return false }
+        return s.dropFirst(2).allSatisfy(\.isHexDigit)
+    }
+
+    /// A typed decimal ETH amount to minimal big-endian wei bytes — string
+    /// arithmetic throughout, never `Double`: Hegotá's own faucet balances run
+    /// into the billions of ETH, well past `Double`'s exact-integer range.
+    static func weiData(from text: String) -> Data? {
+        let s = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !s.isEmpty else { return nil }
+        let parts = s.split(separator: ".", omittingEmptySubsequences: false)
+        guard parts.count == 1 || parts.count == 2 else { return nil }
+        let whole = parts[0].isEmpty ? "0" : String(parts[0])
+        let frac = parts.count == 2 ? String(parts[1]) : ""
+        guard whole.allSatisfy(\.isNumber), frac.allSatisfy(\.isNumber), frac.count <= 18
+        else { return nil }
+        let combined = whole + frac + String(repeating: "0", count: 18 - frac.count)
+        guard let word = SafeABI.word(uint256: combined) else { return nil }
+        let trimmed = word.drop(while: { $0 == 0 })
+        guard !trimmed.isEmpty else { return nil }
+        return Data(trimmed)
     }
 }

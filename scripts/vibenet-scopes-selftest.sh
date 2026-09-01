@@ -165,7 +165,26 @@ if failures == 0 {
 exit(failures == 0 ? 0 : 1)
 SWIFT
 
-run() { swiftc -O -o "$work/t" "$1" "$2" "$ROOM" "$LEDGER" "$FACTS" "$work/main.swift" 2>"$work/err" || { cat "$work/err" >&2; return 2; }; "$work/t"; }
+
+# **STUBS THE ROOM NOW NEEDS (prd §551).** §548b put `VibenetRoom.demoSignableAccount()`
+# into this Foundation-only file, and it reaches two types this harness has never
+# compiled: `DemoMode` (the tour's own flag) and `VibenetTransaction` (the hex
+# decoder). Neither has anything to do with the drawings under test, so both are
+# INERT here — the demo is always off and the decoder always answers nil, which
+# is the state every assertion below already assumes.
+cat > "$work/stubs.swift" <<'SWIFT'
+import Foundation
+
+enum DemoMode {
+    static var isActive: Bool { false }
+}
+
+enum VibenetTransaction {
+    static func data(fromHex: String) -> Data? { nil }
+}
+SWIFT
+
+run() { swiftc -O -o "$work/t" "$1" "$2" "$ROOM" "$LEDGER" "$FACTS" "$work/stubs.swift" "$work/main.swift" 2>"$work/err" || { cat "$work/err" >&2; return 2; }; "$work/t"; }
 
 cp "$WEB" "$work/web.swift"; cp "$FLOW" "$work/flow.swift"
 echo "Assertions"

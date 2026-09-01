@@ -473,6 +473,15 @@ struct FeedScreen: View {
         /// `VibenetRoomCard`, which is inside this List's rows, so it cannot
         /// present its own sheet.
         case vibenetCreate
+        /// **THE SEND FORM, ON A SHEET (prd §551).** Home holds the two verbs
+        /// and the form holds the screen — routed here rather than presented by
+        /// the card for `hegotaMove`'s reason: a `.sheet` on a view inside this
+        /// List resolves to the same presenting controller as this one and
+        /// half-opens before closing again.
+        case hegotaSend
+        /// Carries the sending account, which only `signableVibenetAccount()`
+        /// can resolve — the sheet must never re-derive it and disagree.
+        case vibenetSend(Data)
         // `vibenetSend` was HERE and is deleted (prd §538, 2026-08-31):
         // sending is not a presented surface any more, it is the Home scope's
         // own content (`VibenetSendCard`). A route with no caller is a door
@@ -505,6 +514,8 @@ struct FeedScreen: View {
             case .vibenetKey(let actor, let item, _):
                 "vibenetKey:\(VibenetKeySeenDiff.keyID(address: item.address, actorId: actor.actorId))"
             case .vibenetCreate: "vibenetCreate"
+            case .hegotaSend: "hegotaSend"
+            case .vibenetSend(let a): "vibenetSend:\(VibenetTransaction.hex(a))"
             case .vibenetAuthorize(let account, _, _, let editing):
                 "vibenetAuthorize:\(VibenetTransaction.hex(account)):\(editing?.actorId ?? "new")"
             }
@@ -614,44 +625,126 @@ struct FeedScreen: View {
     private var vibenetSendRow: some View {
         if let account = Self.signableVibenetAccount() {
             Section {
-                VibenetSendCard(account: account)
+                VibenetSendCard(account: account,
+                                onSend: { feedSheet = .vibenetSend(account) })
             }
         } else {
-            // **A SCOPE NEVER DRAWS NOTHING (prd §548d).** §538 gated the
-            // console on an account this phone's key can act for, which is
-            // right about the form and wrong about the screen: Home's ENTIRE
-            // content is that card, so without one the scope rendered blank —
-            // no form, no words, no door, and no way to tell "you have no
-            // account here yet" from "this is broken". It is also why the
-            // console could not be found on a fresh simulator: the reason was
-            // never on screen.
+            // **A SCOPE NEVER DRAWS NOTHING (prd §548d), NOW IN THE ROOM'S OWN
+            // LANGUAGE (§551).** §538 gated the console on an account this
+            // phone's key can act for, which is right about the form and wrong
+            // about the screen: Home's ENTIRE content is that card, so without
+            // one the scope rendered blank.
             //
-            // No door of its own, deliberately: authorizing this phone against
-            // an account happens on the Accounts and Permissions scopes, both
-            // one chip away in the strip directly above this line, and a second
-            // route to them from here would be a third way to do one thing.
+            // §548d answered it with a sentence and no door. The sentence is
+            // gone: it claimed something about the ROOM ("no account here")
+            // that is false whenever you are watching addresses, which is most
+            // of the time. The verb says what it does and nothing else.
+            //
+            // The door is the EXISTING create sheet, not a one-tap mint like
+            // Hegotá's: a vibenet account is deployed by a sponsor, so it has a
+            // real flow with a payer check behind it and cannot be a keystroke.
             Section {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    Text(String(localized: "No account here can be signed for by this phone yet."))
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(String(localized: "Authorize this phone's key on an account in Accounts or Permissions, and sending appears here."))
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, DS.Space.s6)
+                DevnetCreatePanel(tint: DS.brandHue(for: VibenetIdentity.source)
+                                        ?? Color.fixed("#0052ff"),
+                                  title: String(localized: "Create\naccount"),
+                                  onCreate: { feedSheet = .vibenetCreate })
             }
         }
     }
 
-    /// The first account whose actor list already names this phone's own
-    /// key, read off the last saved chain snapshot — never a live read, the
-    /// same `VibenetRoomSource.card()`/`VibenetState.saved` rule every other
-    /// synchronous draw in this room follows, so scrolling never spends a
-    /// request.
+    // MARK: - Sending, from the room's two devnets (prd §551)
+
+    /// Everything this devnet knows, minus this phone's own account — a picker
+    /// that offers you yourself is offering a self-send, which neither chain
+    /// forbids and nobody means.
+    private var hegotaSendCandidates: [(address: String, name: String?)] {
+        let me = HegotaKey.address()
+        return HegotaWatch.shared.addresses
+            .filter { me == nil || $0.caseInsensitiveCompare(me!) != .orderedSame }
+            .map { ($0, HegotaWatch.shared.name(for: $0)) }
+    }
+
+    /// What the sending account holds, off the last sweep — never a live read,
+    /// so a keystroke never spends a request. Nil when the sweep could not
+    /// reach the chain: a failed read and a real zero must not look alike
+    /// (§83), so the line is absent rather than claiming nothing is held.
+    private var hegotaHeldLine: String? {
+        guard let mine = HegotaKey.address(),
+              let account = HegotaLiveState.shared.accounts.first(where: {
+                  $0.address.caseInsensitiveCompare(mine) == .orderedSame
+              }), account.reached, let wei = account.balanceWei else { return nil }
+        return String(localized: "\(HegotaFormat.crown(wei)) available")
+    }
+
+    private var vibenetSendCandidates: [(address: String, name: String?)] {
+        VibenetWatch.shared.addresses.map { ($0, VibenetWatch.shared.name(for: $0)) }
+    }
+
+    /// Returns nil on success, or the sentence to show. **The demo refuses
+    /// before the key is touched** (prd §548b): a real signature raises Face ID
+    /// and a real broadcast puts a transaction on a public devnet, from a
+    /// screen whose own banner says none of this is yours.
+    private func sendHegota(to: String, amount: String) async -> String? {
+        guard !DemoMode.isActive else {
+            return String(localized: "Nothing is sent in the demo — this is where your own key would sign it.")
+        }
+        guard let target = RLP.data(fromHex: to),
+              let valueWei = DevnetSendParse.weiData(from: amount),
+              let address = HegotaKey.address() else {
+            return String(localized: "Couldn't send.")
+        }
+        do {
+            guard let sequence = await HegotaSend.currentNonceSequence(for: address) else {
+                return String(localized: "Couldn't reach the chain to read this account's sequence.")
+            }
+            let hash = try await HegotaSend.sendValue(to: target, valueWei: valueWei,
+                                                      nonceSequence: sequence)
+            HegotaSend.landReceipt(txHash: hash, kind: .sent(to: to), in: modelContext)
+            await HegotaLiveState.shared.refresh()
+            return nil
+        } catch let f as HegotaSend.Failure {
+            switch f {
+            case .broadcastRefused(let why): return String(localized: "The chain refused it: \(why)")
+            case .signingRefused: return String(localized: "Signing was cancelled or refused.")
+            case .noKey: return String(localized: "No key on this phone.")
+            case .chainUnreachable: return String(localized: "Couldn't reach the chain, so nothing was sent.")
+            default: return String(localized: "Couldn't send.")
+            }
+        } catch {
+            return String(localized: "Couldn't send.")
+        }
+    }
+
+    private func sendVibenet(from account: Data, to: String, amount: String) async -> String? {
+        guard !DemoMode.isActive else {
+            return String(localized: "Nothing is sent in the demo — this is where your own key would sign it.")
+        }
+        guard let target = VibenetTransaction.data(fromHex: to), target.count == 20,
+              let valueWei = DevnetSendParse.weiData(from: amount) else {
+            return String(localized: "Couldn't send.")
+        }
+        do {
+            let sent = try await VibenetSend.sendValue(from: account, to: target, valueWei: valueWei)
+            VibenetSend.landSendReceipt(sent, to: target, valueWei: valueWei, in: modelContext)
+            return nil
+        } catch let f as VibenetSend.Failure {
+            switch f {
+            case .noSponsor:
+                return String(localized: "Nobody is sponsoring right now, and this account has nothing to pay with. Try again later.")
+            case .sponsorUnreadable:
+                return String(localized: "Couldn't reach the sponsor to ask who pays, so nothing was signed.")
+            case .broadcastRefused(let why): return String(localized: "The network refused it: \(why)")
+            case .payerRefused(let why): return String(localized: "The sponsor refused: \(why)")
+            case .signingRefused: return String(localized: "Face ID didn't confirm, so nothing was signed.")
+            case .chainUnreachable: return String(localized: "Couldn't reach the network, so nothing was sent.")
+            case .noKey: return String(localized: "This phone has no key yet.")
+            case .cannotCompose: return String(localized: "Couldn't put the transaction together.")
+            }
+        } catch {
+            return String(localized: "Couldn't send.")
+        }
+    }
+
     private static func signableVibenetAccount() -> Data? {
         // **THE DEMO ANSWERS FIRST (prd §548b).** Both halves of the real gate
         // are unreachable in a tour: a demo has no device key to name in an
@@ -3488,6 +3581,38 @@ struct FeedScreen: View {
                     account: address, localEpoch: seq?.localEpoch ?? 0,
                     localSequence: seq?.localSequence ?? 0, editing: editing)
             })
+        // **THE SEND FORM (prd §551).** Both rooms share one sheet and differ
+        // only in what they hand it: who the book knows, what the account
+        // holds, whether a Max is honest, and the one closure that actually
+        // sends. Everything visual lives in `DevnetSendSheet`.
+        case .hegotaSend:
+            DevnetSendSheet(
+                venue: String(localized: "Hegot\u{00E1}"),
+                tint: DS.tint,
+                unit: "ETH",
+                candidates: hegotaSendCandidates,
+                heldLine: hegotaHeldLine,
+                // **NO MAX HERE, and it is this chain's rule rather than an
+                // omission**: the sender pays its own gas, so an amount equal
+                // to the whole balance cannot pay for itself and is a
+                // guaranteed failure — the dead control §83 bans wearing a
+                // convenience's clothing. vibenet's gas is the faucet's when it
+                // sponsors, so Max is honest there and would be offered.
+                maxAmount: nil,
+                isValidAddress: DevnetSendParse.isValidAddress,
+                isValidAmount: { DevnetSendParse.weiData(from: $0) != nil },
+                perform: sendHegota)
+        case .vibenetSend(let account):
+            DevnetSendSheet(
+                venue: String(localized: "vibenet"),
+                tint: DS.brandHue(for: VibenetIdentity.source) ?? Color.fixed("#0052ff"),
+                unit: "ETH",
+                candidates: vibenetSendCandidates,
+                heldLine: nil,
+                maxAmount: nil,
+                isValidAddress: DevnetSendParse.isValidAddress,
+                isValidAmount: { DevnetSendParse.weiData(from: $0) != nil },
+                perform: { to, amount in await sendVibenet(from: account, to: to, amount: amount) })
         case .vibenetCreate:
             VibenetCreateSheet { address in
                 // Watching it is what puts it in the room — the sheet does
@@ -3642,7 +3767,8 @@ struct FeedScreen: View {
                     feedSheet = .hegotaAccount(account)
                 }, onOpenCoin: { coin, all, unspent in
                     feedSheet = .hegotaCoin(coin, all, unspent)
-                }, onOpenKeySheet: { feedSheet = .hegotaKeySheet })
+                }, onOpenKeySheet: { feedSheet = .hegotaKeySheet },
+                   onOpenSend: { feedSheet = .hegotaSend })
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
