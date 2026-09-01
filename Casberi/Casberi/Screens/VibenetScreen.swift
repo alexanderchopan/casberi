@@ -77,7 +77,7 @@ struct VibenetScreen: View {
                 // is left for this sentence is the only thing the pitch
                 // could not say: what to do here — and, since 2026-08-28,
                 // that it is not a one-shot.
-                intro: "Paste an account address, or watch any of the examples below. Add as many as you like.",
+                intro: "Paste an account address, or watch any of the examples below.",
                 connected: connected)
 
             // THE DOOR LEADS (R4.5, §460) — and since the ruling above it is

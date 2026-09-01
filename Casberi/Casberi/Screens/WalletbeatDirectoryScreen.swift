@@ -89,7 +89,7 @@ struct WalletbeatDirectoryScreen: View {
 			}
 
 			Section {
-				Text(String(localized: "Walletbeat's ratings, not ours. A wallet marked not rated is one they haven't examined yet — it isn't a verdict.\n\nRatings as of \(WalletbeatDirectory.generated); the wallets you watch are read live."))
+				Text(String(localized: "\(WalletbeatCopy.attribution) — not rated is not yet examined, never a verdict.\n\nAs of \(WalletbeatDirectory.generated); watched wallets are read live."))
 					.dsText(.label11)
 					.foregroundStyle(DS.textTertiary)
 					.fixedSize(horizontal: false, vertical: true)

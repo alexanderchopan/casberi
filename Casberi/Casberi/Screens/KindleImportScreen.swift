@@ -19,7 +19,7 @@ struct KindleImportScreen: View {
             BridgeSetupHeader(
                 name: "Kindle",
                 mode: .oneTimeImport,
-                intro: "Kindle has no live connection — export your notes and highlights, bring them here, and every passage you marked becomes searchable. Re-import any time for what's new.")
+                intro: "Kindle has no live connection — export your notes and highlights, bring them here, and every passage you marked becomes searchable.")
             // The way back to what just landed (§460). Gated on the corpus,
             // not a connection flag: an import has no live connection, so
             // "has anything arrived" is the only honest test of whether

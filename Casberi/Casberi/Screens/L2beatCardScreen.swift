@@ -318,7 +318,7 @@ struct L2beatRiskCard: View {
 	/// is exactly as current as the last app update — pretending otherwise is the quiet
 	/// staleness §83 exists to prevent.
 	private var freshnessLine: String {
-		let attribution = String(localized: "Every reading here is L2BEAT's own, in their words. Casberi reads their public assessment and never rates a chain itself.")
+		let attribution = L2beatCopy.attribution + "."
 		guard project != nil else { return attribution }
 		return live
 			? "\(attribution) \(String(localized: "Read on this device."))"

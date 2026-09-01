@@ -310,7 +310,7 @@ struct WalletbeatReportCard: View {
 						.foregroundStyle(DS.tint)
 				}
 			}
-			Text(String(localized: "Every rating here is Walletbeat's own judgment, in their words. Casberi reads their public review and never scores a wallet itself."))
+			Text(WalletbeatCopy.attribution)
 				.dsText(.label11)
 				.foregroundStyle(DS.textTertiary)
 				.fixedSize(horizontal: false, vertical: true)

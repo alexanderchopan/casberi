@@ -48,8 +48,8 @@ struct AgentModelRow: View {
                 }
                 if AgentModelStore.chosen(provider, task: task) == nil {
                     Text(task == .librarian
-                         ? String(localized: "Same model as your questions. Naming a screenshot is small work — a cheaper, faster model usually does it just as well for a fraction of the cost.")
-                         : String(localized: "The default for \(provider.agent). Providers retire model names — if answers start failing, pick a current one."))
+                         ? String(localized: "Same model as your questions — a cheaper one usually names a screenshot just as well.")
+                         : String(localized: "The default for \(provider.agent)."))
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -281,7 +281,7 @@ struct OpenRouterRoutingRow: View {
                         // The cost is stated on the control that causes it,
                         // not in fine print elsewhere — this is the one setting
                         // here that can make a question fail to answer.
-                        Text("OpenRouter routes around anyone who stores or trains on it. A model nobody will serve that way can't answer at all — you'll be told which.")
+                        Text("Some models won't be served that way — you'll be told which.")
                             .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -291,7 +291,7 @@ struct OpenRouterRoutingRow: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Let it search the web")
                             .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                        Text("Only when your own things fall short, and it says so on the answer. Charged per result on top of the model.")
+                        Text("Only when your own things fall short. Charged per result.")
                             .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -330,7 +330,7 @@ struct AgentLibrarianRow: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Let your key organize too")
                             .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                        Text("Names your screenshots from what they say, and reads long imported chats so they can be found. There's no on-device model here to do it free.")
+                        Text("Names screenshots and reads long chats so they can be found. No free on-device model here.")
                             .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -345,7 +345,7 @@ struct AgentLibrarianRow: View {
                     // itself shows, and a digest goes into a retrieval-only
                     // field. Said plainly, because "an AI renamed my things"
                     // is a fair thing to be wary of.
-                    Text("Only words your own things already contain. A chat summary is used to find it again and is never shown.")
+                    Text("Only words your things already contain — a chat summary is never shown.")
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                     AgentBudgetControl(tick: $tick)
@@ -454,20 +454,20 @@ struct AgentBudgetControl: View {
                 // Said out loud because it is the one thing somebody would
                 // otherwise assume wrongly, in the expensive direction: a cap
                 // stops the app spending on its own, and never stops YOU.
-                Text("Counted from what OpenRouter reports this key has used. Your own questions are never blocked.")
+                Text("Your own questions are never blocked.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                 // Only where it is true. A ceiling governs spend, and a free
                 // model spends nothing — so it keeps working past the cap, and
                 // saying so is what stops that reading as the cap being broken.
                 if AgentModelFacts.isFree(AgentBudget.measurableProvider, task: .librarian) {
-                    Text("The model you picked for organizing is free, so it keeps going either way.")
+                    Text("Your organizing model is free, so it keeps going.")
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
         } else if let provider = AgentKey.active {
-            Text("\(provider.company) doesn't report what a key has spent, so there's no limit to set here — the counts above are what we can measure.")
+            Text("\(provider.company) doesn't report spend, so there's no limit to set here.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -495,7 +495,7 @@ struct MCPServerRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Let agents on this Mac read your things")
                         .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                    Text("A door on this computer only — 127.0.0.1, never the network. An agent needs the key below, and anything it offers to save waits for your approval.")
+                    Text("127.0.0.1 only, never the network. Anything it offers to save waits for your approval.")
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -513,7 +513,7 @@ struct MCPServerRow: View {
                 // sentence says which client was checked rather than implying
                 // all of them, and keeps the invitation to report a failure,
                 // because that is still how a specific one gets found.
-                Text("Checked with the standard MCP tools on this Mac. If your client can't connect, tell us.")
+                Text("Checked with the standard MCP tools — tell us if yours can't connect.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: DS.Space.s2) {
@@ -543,7 +543,7 @@ struct MCPServerRow: View {
                              style: .tint, glyph: "key.fill")
                     }
                     .buttonStyle(.plain)
-                    Text("Paste it as `Authorization: Bearer …`. Deleting access in Privacy mints a new one and disconnects anything paired.")
+                    Text("Paste it as `Authorization: Bearer …`.")
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }

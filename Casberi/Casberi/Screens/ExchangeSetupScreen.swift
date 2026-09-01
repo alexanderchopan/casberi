@@ -101,7 +101,7 @@ struct ExchangeSetupScreen: View {
             .dsText(.callout15)
             .dsListCardRow()
         } footer: {
-            Text("Disconnecting stops syncing. Its balance leaves your combined total. What already landed stays yours.")
+            Text("Its balance leaves your combined total.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
