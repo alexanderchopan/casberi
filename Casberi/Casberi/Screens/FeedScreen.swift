@@ -680,11 +680,29 @@ struct FeedScreen: View {
         return String(localized: "\(HegotaFormat.crown(wei)) available")
     }
 
+    /// **REAL ACCOUNTS ON THIS CHAIN, so the picker is never empty** (user,
+    /// 2026-09-01: *"for send, we need other addresses to show, so we must get
+    /// some from the devnet as examples"*).
+    ///
+    /// A watch list is empty on every fresh install, and this chain is four
+    /// days old — so Send opened onto nothing to send TO, which is the dead
+    /// end §83 bans wearing a picker's clothes. The examples are the same
+    /// addresses the connect screen offers and they are MEASURED, not invented:
+    /// each has really transacted here (see `FramesExample`). Watched
+    /// addresses lead, because those are somebody's own choice.
     private var framesSendCandidates: [(address: String, name: String?)] {
         let me = FramesKey.address()
-        return FramesWatch.shared.addresses
-            .filter { me == nil || $0.caseInsensitiveCompare(me!) != .orderedSame }
-            .map { ($0, FramesWatch.shared.name(for: $0)) }
+        var seen = Set<String>()
+        var out: [(address: String, name: String?)] = []
+        for address in FramesWatch.shared.addresses + FramesExample.all.map(\.address) {
+            let key = address.lowercased()
+            guard !seen.contains(key) else { continue }
+            guard me == nil || address.caseInsensitiveCompare(me!) != .orderedSame else { continue }
+            seen.insert(key)
+            out.append((address, FramesWatch.shared.name(for: address)
+                                 ?? FramesExample.all.first { $0.address == address }?.title))
+        }
+        return out
     }
 
     /// What the sending account holds, off the last sweep — never a live read,
@@ -1852,6 +1870,17 @@ struct FeedScreen: View {
                 // from a device three times before this was found, because
                 // nothing static can see a memo that never invalidates.
                 HegotaRoomSource.identity,
+                // **AND THE SECOND SEAT OF THAT KIND** (prd §548). The note
+                // above was written for Hegotá and applies to the Frames
+                // devnet word for word — it lands no row either, so its
+                // revision is frozen and this key would never change. Its
+                // `identity` was written for exactly this and then not added
+                // here, so the head composed once while the demo fixture was
+                // still pouring, memoised empty, and the room said "Reading
+                // the chain…" forever. Found on a simulator, not by a check:
+                // nothing static can see a memo that never invalidates, which
+                // is the whole reason the note above exists.
+                FramesRoomSource.identity,
                 String(revision.count), String(revision.signal)]
             .joined(separator: "|")
     }
@@ -3815,22 +3844,10 @@ case .vibenetSend(let account):
             let _ = { chrome.framesSections = FramesRoomSource.sections() }()
             let framesScope = FramesSection.resolve(chrome.framesSection,
                                                     present: chrome.framesSections)
-            if FramesSection.shows(present: chrome.framesSections) {
-                Section {
-                    DSRoomRailSlab(
-                        showsRail: false,
-                        showsSwitcher: true,
-                        sections: chrome.framesSections,
-                        active: framesScope,
-                        attention: FramesSection.attention(),
-                        onPick: { chrome.framesSection = $0 },
-                        rail: { EmptyView() })
-                        .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                                  bottom: 0, trailing: DSRoomChassis.inset))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                }
-            }
+            // **FIGURE FIRST, THEN THE SLAB** — Wallet's order, which Hegotá
+            // emits as `visualSection` then `railSection`. The first cut had
+            // the switcher above the figure, which put the control that scopes
+            // the room above the drawing it scopes; reported from a screenshot.
             Section {
                 FramesRoomFigure(head: head,
                                  accounts: FramesRoomSource.accounts(),
@@ -3839,6 +3856,43 @@ case .vibenetSend(let account):
                                               bottom: 0, trailing: DSRoomChassis.inset))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+            }
+            let showsFramesRail = FramesScopeRail.shows(
+                source: source, watched: FramesRoomSource.accounts().count)
+            if showsFramesRail || FramesSection.shows(present: chrome.framesSections) {
+                Section {
+                    DSRoomRailSlab(
+                        showsRail: showsFramesRail,
+                        showsSwitcher: FramesSection.shows(present: chrome.framesSections),
+                        sections: chrome.framesSections,
+                        active: framesScope,
+                        attention: FramesSection.attention(),
+                        onPick: { chrome.framesSection = $0 }
+                    ) {
+                        // **THE SILHOUETTES.** The first cut passed
+                        // `EmptyView` and `showsRail: false`, so the fused slab
+                        // drew half of itself — §547 fused the rail and the
+                        // switcher precisely so they would not read as two
+                        // unrelated strips, and a room with only the switcher
+                        // is that failure wearing the fused component's name.
+                        FaceScopeRail(
+                            items: FramesScopeRail.items(FramesRoomSource.accounts()),
+                            scope: chrome.framesScope,
+                            compact: false,
+                            embedded: true,
+                            matches: FramesScopeRail.matches,
+                            onPick: { picked in
+                                withAnimation(DS.Motion.standard) {
+                                    chrome.framesScope = (picked?.isEmpty ?? true) ? nil : picked
+                                }
+                            })
+                    }
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                              bottom: DSRoomChassis.contentGap,
+                                              trailing: DSRoomChassis.inset))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
             }
             Group {
                 FramesRoomList(head: head,

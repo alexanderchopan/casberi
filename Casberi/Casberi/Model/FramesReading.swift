@@ -42,7 +42,7 @@ import Foundation
 enum FramesRead {
 
     /// One frame as the RPC reports it.
-    struct Frame: Equatable {
+    struct Frame: Equatable, Codable {
         var mode: UInt64
         var flags: UInt64
         var target: String?
@@ -73,7 +73,7 @@ enum FramesRead {
     }
 
     /// One frame's outcome.
-    struct FrameOutcome: Equatable {
+    struct FrameOutcome: Equatable, Codable {
         var succeeded: Bool
         var gasUsed: UInt64?
         /// **OPTIONAL, AND NEVER DEFAULTED TO ZERO.** Measured 2026-09-01:
@@ -157,7 +157,7 @@ enum FramesRead {
 /// One frame paired with what it DID. Two arrays on the wire — `frames` on the
 /// transaction, `frameReceipts` on the receipt — and they are zipped exactly
 /// once, here, so no view can pair them differently.
-struct FramesFrameRow: Equatable {
+struct FramesFrameRow: Equatable, Codable {
     var frame: FramesRead.Frame
     var outcome: FramesRead.FrameOutcome?
 
@@ -190,7 +190,7 @@ struct FramesFrameRow: Equatable {
 }
 
 /// A frame transaction, read back.
-struct FramesMove: Identifiable, Equatable {
+struct FramesMove: Identifiable, Equatable, Codable {
     var hash: String
     var blockNumber: UInt64
     var sender: String
@@ -241,10 +241,26 @@ struct FramesMove: Identifiable, Equatable {
     /// the healthy answer; anything in it is money the sender meant to move
     /// and which was rolled back.
     var rolledBack: [FramesFrameRow] { rows.filter { $0.valueLanded == false } }
+
+    /// **WHAT THIS TRANSACTION DID TO THE BALANCE OF THE ACCOUNT THAT READ
+    /// IT** — signed wei, or nil when it could not be worked out.
+    ///
+    /// **This is EXACT, and only because of two things this chain publishes.**
+    /// Every ETH movement is an EIP-7708 log, so the transfers are known
+    /// rather than inferred — and gas is NOT among them (measured 2026-09-01:
+    /// a send moving 0.001 ETH and paying 0.000210790 in fees emits exactly
+    /// ONE log, the transfer). A reconstruction from logs alone would drift by
+    /// the cumulative fee, which on a young account is most of the movement.
+    ///
+    /// The receipt closes it: it carries `gasUsed`, `effectiveGasPrice` and —
+    /// the part no ordinary chain gives — the `payer`. So the fee is
+    /// subtracted only from whoever actually paid it, which is the difference
+    /// between a curve and a guess on a chain where somebody else can pay.
+    var deltaWei: Decimal?
 }
 
 /// One address, as the chain currently reports it.
-struct FramesAccount: Identifiable, Equatable {
+struct FramesAccount: Identifiable, Equatable, Codable {
     var address: String
     /// **RAW HEX, not a number.** A genesis account on this chain holds
     /// 99,999.999762 ETH, which overflows `UInt64` when expressed in wei —

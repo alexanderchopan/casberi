@@ -40,7 +40,12 @@ enum FramesRoom {
     /// tell you anything yet" outrank the reading, because a balance drawn
     /// over an unreached chain is a confident zero.
     enum Lead: String, Equatable, Sendable {
-        /// Nothing has been read yet on this device.
+        /// Nothing has been read yet on this device. **Never reached in a
+        /// demo**: `FramesLiveState.refresh` returns early there by design
+        /// (the demo reaches no network), so a room waiting on a read that
+        /// will never come would say "Reading the chain…" forever — which is
+        /// not merely unhelpful but false. `hasRead` is true the moment the
+        /// fixture is installed, which is what keeps this honest.
         case reading
         /// Addresses are watched and NOT ONE answered. Distinct from a zero
         /// balance, and the distinction is the whole of §515a.
@@ -69,6 +74,23 @@ enum FramesRoom {
         /// Read from EFFECTS, never status. See the type doc.
         let rolledBackCount: Int
 
+        /// **THE BALANCE, RECONSTRUCTED EXACTLY** — oldest first, ending at
+        /// what the account holds now.
+        ///
+        /// Wallet and Hegotá SAMPLE: `WalletStore.ValueSample` records a point
+        /// every four hours, so their curve is a series of guesses between
+        /// observations and cannot show a movement that happened between two.
+        /// This chain logs every ETH movement, and the receipt names both the
+        /// fee and who paid it — so each step is a fact and the curve is the
+        /// balance, not a sketch of it. That is §500's first and second
+        /// reasons made visible on one drawing.
+        ///
+        /// Empty when it cannot be built. **Never partially reconstructed**: a
+        /// single transaction whose delta did not read would silently shift
+        /// every point before it, and a curve that is wrong in its middle
+        /// looks exactly like one that is right.
+        let curve: [Double]
+
         /// Some answered and some did not. The room says so rather than
         /// drawing a total that silently omits an address.
         var partial: Bool { reached < watched }
@@ -90,6 +112,10 @@ enum FramesRoom {
         let reached = accounts.filter(\.reached)
         let moves = reached.flatMap(\.moves)
         let rolled = reached.flatMap(\.rolledBack).count
+
+        // Newest first, as the room lists them; the walk below reverses it.
+        let ordered = (reached.first?.moves ?? []).sorted { $0.blockNumber > $1.blockNumber }
+        let curve = Self.curve(balanceWeiHex: reached.first?.balanceWeiHex, newestFirst: ordered)
 
         let lead: Lead
         if !hasRead {
@@ -117,7 +143,31 @@ enum FramesRoom {
             moveCount: moves.count,
             frameCount: moves.filter { $0.rows.count > 1 }.count,
             sponsoredCount: moves.filter(\.sponsored).count,
-            rolledBackCount: rolled)
+            rolledBackCount: rolled,
+            curve: curve)
+    }
+
+    /// Walk backwards from the balance that IS known, subtracting each
+    /// transaction's own delta to recover what was held before it.
+    ///
+    /// **All or nothing.** One unreadable delta and the whole curve is
+    /// abandoned — a partially reconstructed line is wrong everywhere before
+    /// the gap and says so nowhere, which is worse than no line at all.
+    static func curve(balanceWeiHex: String?, newestFirst: [FramesMove]) -> [Double] {
+        guard let balanceWeiHex,
+              var running = FramesMoney.decimal(fromHex: balanceWeiHex),
+              !newestFirst.isEmpty else { return [] }
+        var points: [Decimal] = [running]
+        for move in newestFirst {
+            guard let delta = move.deltaWei else { return [] }
+            running -= delta
+            points.append(running)
+        }
+        // Oldest first, and in ETH rather than wei — a `Double` of 1e18 has no
+        // resolution left for the digits a devnet balance actually moves in.
+        return points.reversed().map {
+            NSDecimalNumber(decimal: $0 / FramesMoney.weiPerETH).doubleValue
+        }
     }
 
     /// Which scopes this room actually has, so the switcher never offers a

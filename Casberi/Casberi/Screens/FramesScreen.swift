@@ -49,11 +49,13 @@ struct FramesScreen: View {
                 .dsSlabSection()
                 .listRowSeparator(.hidden)
 
-            Section { accountDoors }
-                .listRowInsets(EdgeInsets(top: DS.Space.s3, leading: DS.Space.s4,
+            if keyAddress == nil {
+                Section { accountDoors }
+                    .listRowInsets(EdgeInsets(top: DS.Space.s3, leading: DS.Space.s4,
                                           bottom: 0, trailing: DS.Space.s4))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
 
             Section { FramesWatchField(onWatched: watch.addresses.count == 1 ? openRoom : {}) }
                 .dsSlabSection()
@@ -130,24 +132,17 @@ struct FramesScreen: View {
         }
     }
 
-    /// The two verbs, as SLABS (§190: below the identity area every control is
-    /// a `DSSlabDoor`). They were bare tinted `Text` inside the slab above,
-    /// which `connect-shape-audit.py` fails the build over and is right to — a
-    /// tinted word beside a row reads as a label until you happen to press it.
+    /// **ONE VERB, and only before there is an account.** The claim door was
+    /// here too and is gone (user, 2026-09-01: *"i don't think we need to say
+    /// get test eth here b/c it is on the home screen"*) — §553 gives the room
+    /// a Top up tile, so a faucet door here was the same verb in two places,
+    /// which is the shape §190 and §83 both push against: two controls for one
+    /// consequence teach that neither is the real one.
     ///
-    /// **They are sequential, not a pair.** The faucet needs an address to
-    /// fund, so Claim cannot exist before the key does, and a Claim door
-    /// sitting inert above a Create door is the dead control §83 bans.
+    /// What is left is the act this screen genuinely owns, and it disappears
+    /// once done rather than sitting there inert.
     @ViewBuilder private var accountDoors: some View {
-        if let keyAddress {
-            DSSlabDoor(title: busy ? String(localized: "Asking the faucet…")
-                                   : String(localized: "Get test ETH"),
-                       detail: String(localized: "One claim an hour, for everyone on your network")) {
-                guard !busy else { return }
-                DSHaptic.selection()
-                claim(for: keyAddress)
-            }
-        } else {
+        if keyAddress == nil {
             DSSlabDoor(title: String(localized: "Make an account"),
                        detail: String(localized: "A key made on this phone")) {
                 DSHaptic.selection()

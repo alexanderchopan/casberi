@@ -150,6 +150,7 @@ final class ShellChrome {
     /// card, and three sections cannot share a card's `@State`.
     var framesSection: FramesSection?
     var framesSections: [FramesSection] = []
+    var framesScope: String?
 
     var vibenetSection: VibenetSection?
 

@@ -623,6 +623,76 @@ enum VibenetScopeRail {
     }
 }
 
+/// The same rail for the Frames devnet (prd §548).
+///
+/// **`watched > 1` is the rule, not an accident**: a rail over one face is a
+/// label rather than a control (§83), and on this chain the common case is a
+/// single account — the one this phone made. It appears the moment a second
+/// address is watched, which is what the connect screen's worked examples are
+/// for.
+enum FramesScopeRail {
+    /// **ONE FACE IS ENOUGH HERE, and that is a deliberate divergence from
+    /// `HegotaScopeRail` above** (user, 2026-09-01: *"shouldn't the rail be
+    /// there regardless?"* — yes, and the reason is this chain's, not a
+    /// relaxation of §83).
+    ///
+    /// Hegotá requires `watched > 1` because there you watch STRANGERS: the
+    /// rail is a filter across several addresses, and over one it filters
+    /// nothing and is a label wearing a control's clothes.
+    ///
+    /// Here the account is YOURS and it is the main path — `registerBridge`
+    /// registers on the key OR the watch list for exactly that reason. The
+    /// face is the room's SUBJECT rather than a filter across other people:
+    /// it says whose room this is, and it is the anchor for the Send tile
+    /// directly beneath it. Picking it still does something perceptible (the
+    /// mark carries selection, and picking again clears it), so it is a
+    /// low-value control rather than a dead one — which is the line §83 draws.
+    ///
+    /// It also keeps §547's fusion honest. That ruling joined the rail and the
+    /// switcher so they would stop reading as two unrelated strips; a room
+    /// that draws only the switcher is that failure wearing the fused
+    /// component's name, which is what a device showed twice before this
+    /// changed.
+    static func shows(source: String, watched: Int) -> Bool {
+        source == FramesIdentity.source && watched > 0
+    }
+
+    /// **THE CAPTION IS WHAT THE ACCOUNT HOLDS, and that is this rail's own
+    /// stated job** rather than a new idea (user, 2026-09-01: *"don't you
+    /// think we need a holdings slot on the rail?"*). `FaceScopeRail`'s header
+    /// says it outright — "the strip that scopes the room is the same strip
+    /// that says what each account holds, one row doing both jobs instead of
+    /// two rows doing one each".
+    ///
+    /// The first cut captioned with the short address, which put `…7d5f`
+    /// six points below the account row already saying `…7d5f` — the rail
+    /// costing a row and carrying nothing the room did not already state. A
+    /// balance is the thing the face cannot say by itself.
+    ///
+    /// Takes ACCOUNTS rather than addresses for that reason: a caption that
+    /// needs the balance cannot be built from a string. A name, where somebody
+    /// has given one, still wins — they named it so they would recognise it.
+    static func items(_ accounts: [FramesAccount]) -> [FaceScopeRail.Item] {
+        accounts.map { account in
+            FaceScopeRail.Item(
+                id: account.address,
+                caption: FramesWatch.shared.name(for: account.address)
+                    // **Nil is not zero.** An address that did not answer gets
+                    // its short form back rather than "0.0000", which would be
+                    // a claim about somebody's balance made from a failed read
+                    // (§515a, on the line most likely to be believed).
+                    ?? FramesMoney.eth(fromWeiHex: account.balanceWeiHex ?? "")
+                    ?? WalletStore.shortAddress(account.address),
+                face: .wallet(address: account.address))
+        }
+    }
+
+    static func matches(_ scope: String?, _ id: String) -> Bool {
+        guard let scope else { return false }
+        return scope.caseInsensitiveCompare(id) == .orderedSame
+    }
+}
+
 enum WalletScopeRail {
     /// Whether the rail draws at all — which is ALSO the test for whether it,
     /// rather than a room's own header, carries the add-a-wallet verb

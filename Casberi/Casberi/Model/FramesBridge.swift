@@ -235,10 +235,42 @@ enum FramesBridge {
 @Observable
 final class FramesLiveState {
     static let shared = FramesLiveState()
-    private init() {}
+    private init() {
+        // Restored BEFORE any read, so the room draws what it last knew rather
+        // than a blank. `try?` with an empty fallback: a cache that cannot be
+        // decoded is a cache that is not there, never a crash on launch.
+        if let data = UserDefaults.standard.data(forKey: Self.cacheKey),
+           let saved = try? JSONDecoder().decode([FramesAccount].self, from: data) {
+            accounts = saved
+            reached = !saved.isEmpty
+        }
+        if let at = UserDefaults.standard.object(forKey: Self.readAtKey) as? Date {
+            readAt = at
+        }
+    }
+
+    private func persist() {
+        guard let data = try? JSONEncoder().encode(accounts) else { return }
+        UserDefaults.standard.set(data, forKey: Self.cacheKey)
+        UserDefaults.standard.set(readAt, forKey: Self.readAtKey)
+    }
 
     private(set) var accounts: [FramesAccount] = []
     private(set) var readAt: Date?
+
+    /// **THE LAST READ SURVIVES A LAUNCH** (`HegotaLiveState`'s cache, and it
+    /// was missing here). Two things were broken without it, one of them
+    /// invisible until a simulator showed it.
+    ///
+    /// The demo installs its fixture in MEMORY on entry, so a relaunch found
+    /// an empty room and drew "Reading the chain…" forever — a sentence that
+    /// is not merely unhelpful in a demo but false, since `refresh` returns
+    /// early there and the read will never come. And the live room went blank
+    /// on every cold launch until the sweep returned, which on a slow network
+    /// is seconds of a room saying it knows nothing about an account it knew
+    /// about a moment ago.
+    private static let cacheKey = "frames.live.accounts.v1"
+    private static let readAtKey = "frames.live.readAt.v1"
     /// A host answered SOMETHING. Kept apart from "the accounts are empty",
     /// because an unreached read is not evidence of an empty account and the
     /// room must say "couldn't reach the chain" rather than draw a zero.
@@ -252,6 +284,8 @@ final class FramesLiveState {
         accounts = []
         readAt = nil
         reached = false
+        UserDefaults.standard.removeObject(forKey: Self.cacheKey)
+        UserDefaults.standard.removeObject(forKey: Self.readAtKey)
     }
 
     /// The demo's door. `DemoMode` reaches no network, so this is the only way
@@ -261,6 +295,9 @@ final class FramesLiveState {
         accounts = fixture
         readAt = .now
         reached = true
+        // Persisted like a real read, so the demo survives the relaunch it is
+        // usually seen across. `DemoMode.exit` clears it by name.
+        persist()
     }
 
     /// Read every watched address, plus this phone's own account.
@@ -299,6 +336,22 @@ final class FramesLiveState {
         accounts = read
         readAt = .now
         reached = true
+        persist()
+    }
+
+    /// Movement minus the fee, and **the fee only when this address paid it**.
+    ///
+    /// The `payer` is the receipt's own field, never `from`: on this chain
+    /// somebody else can pay, and charging a sponsored transaction's gas to
+    /// the sender is a curve that drifts downward for money it never spent.
+    /// Nil when the receipt did not read — not knowing is not zero (§515a).
+    private static func delta(moved: Decimal?, receipt: [String: Any]?, address: String) -> Decimal? {
+        guard let moved, let receipt else { return moved }
+        guard let gas = FramesRead.hexInt(receipt["gasUsed"]),
+              let price = FramesRead.hexInt(receipt["effectiveGasPrice"]) else { return moved }
+        let payer = (receipt["payer"] as? String)?.lowercased()
+        guard payer == address.lowercased() else { return moved }
+        return moved - Decimal(gas) * Decimal(price)
     }
 
     /// The transactions that moved this address's ETH, newest first.
@@ -327,10 +380,17 @@ final class FramesLiveState {
         let (rawOut, rawIn) = await (outCall, inCall)
 
         var byHash: [String: UInt64] = [:]
-        for side in [rawOut, rawIn] {
+        // Signed movement per transaction, accumulated from the two filtered
+        // reads: an OUT log leaves, an IN log arrives. The fee is added below,
+        // where the receipt says who paid it.
+        var moved: [String: Decimal] = [:]
+        for (side, sign) in [(rawOut, Decimal(-1)), (rawIn, Decimal(1))] {
             for log in (side as? [[String: Any]]) ?? [] {
                 guard let hash = log["transactionHash"] as? String else { continue }
                 byHash[hash] = FramesRead.hexInt(log["blockNumber"]) ?? 0
+                if let amount = (log["data"] as? String).flatMap(FramesMoney.decimal(fromHex:)) {
+                    moved[hash, default: 0] += sign * amount
+                }
             }
         }
         let newest = byHash.sorted { $0.value > $1.value }.prefix(Self.moveDepth)
@@ -357,7 +417,8 @@ final class FramesLiveState {
                 gasUsed: FramesRead.hexInt(receipt?["gasUsed"]),
                 rows: frames.enumerated().map { i, f in
                     FramesFrameRow(frame: f, outcome: i < outcomes.count ? outcomes[i] : nil)
-                }))
+                },
+                deltaWei: Self.delta(moved: moved[hash], receipt: receipt, address: address)))
         }
         return out.sorted { $0.blockNumber > $1.blockNumber }
     }
@@ -388,34 +449,87 @@ extension FramesLiveState {
     /// a fixture's omission. A demo that filled it in would show a bar the
     /// real room can never draw.
     nonisolated static func seedDemo() {
-        let sender = "0x80cfe5da326d0ab7a1d2ffc61745c57885dc2e32"
-        let move = FramesMove(
-            hash: "0x70c8c2b7c44ff8f046e1ebb7c925a80724aaad7f65f85d82e97c724cdbfc9bc6",
-            blockNumber: 582,
-            sender: sender,
-            // Self-paid, which is what every transaction on this chain is so
-            // far. A sponsored fixture would show a reading the chain has
-            // never actually produced.
-            payer: sender,
-            succeeded: true,
-            gasUsed: 210_790,
+        let me   = "0x1647a6abaf35cacf94dc450f8474d15b524b7d5f"
+        let peer = "0x80cfe5da326d0ab7a1d2ffc61745c57885dc2e32"
+        let dead = "0x00000000000000000000000000000000deadbe02"
+        let eth  = Decimal(string: "1000000000000000000")!
+
+        func frame(_ mode: UInt64, _ flags: UInt64, to: String, value: String) -> FramesRead.Frame {
+            .init(mode: mode, flags: flags, target: to, executionGas: 100_000,
+                  stateGas: 250_000, value: value, data: "0x")
+        }
+        func outcome(_ ok: Bool, _ used: UInt64, logs: Int) -> FramesRead.FrameOutcome {
+            .init(succeeded: ok, gasUsed: used, stateGasUsed: nil, logCount: logs)
+        }
+
+        // 1. THE FAUCET. An ordinary type-0x2 transfer — no frames — which is
+        //    how every account on this chain actually begins.
+        let funded = FramesMove(
+            hash: "0x46619c8ef349691b6c647e742436816d1c282c6b7479d36e72ed5894ee9320e4",
+            blockNumber: 59_100, sender: "0xf0667e65e0e5281a39d95d84770b6e2065740466",
+            payer: "0xf0667e65e0e5281a39d95d84770b6e2065740466",
+            succeeded: true, gasUsed: 21_000, rows: [], deltaWei: eth)
+
+        // 2. A FRAME TRANSACTION — verify, then send. Lights the Frames scope.
+        let sent = FramesMove(
+            hash: "0x9d12f7722ab15d93ff377f19f923458cae8d6009b0a2b11eb2cd1ca006748674",
+            blockNumber: 59_180, sender: me, payer: me, succeeded: true, gasUsed: 210_790,
             rows: [
-                FramesFrameRow(
-                    frame: .init(mode: 1, flags: 0x03, target: sender,
-                                 executionGas: 100_000, stateGas: 250_000,
-                                 value: "0x0", data: "0x"),
-                    outcome: .init(succeeded: true, gasUsed: 100, stateGasUsed: nil, logCount: 0)),
-                FramesFrameRow(
-                    frame: .init(mode: 2, flags: 0x00,
-                                 target: "0x00000000000000000000000000000000deadbe02",
-                                 executionGas: 100_000, stateGas: 250_000,
-                                 value: "0x1", data: "0x"),
-                    outcome: .init(succeeded: true, gasUsed: 3_000, stateGasUsed: nil, logCount: 1)),
-            ])
-        let fixture = [FramesAccount(address: sender,
-                                     balanceWeiHex: "0x152d02c708d9ed097cba",
-                                     nonce: 2,
-                                     moves: [move])]
+                .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
+                .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 1)),
+            ],
+            deltaWei: -(Decimal(string: "1210790000000000")!))
+
+        // 3. **A TRANSACTION THAT FAILED AND MOVED MONEY ANYWAY.** Not
+        //    invented: this is the shape measured on chain (§548's second
+        //    follow-up) — frames are not atomic by default, so an earlier
+        //    frame's transfer persists under a `status: 0x0`. It is the whole
+        //    reason this room draws frames rather than outcomes, and a demo
+        //    that never shows it teaches the opposite.
+        let partial = FramesMove(
+            hash: "0x9bb9cfef1c41c97b101ce20e934e13f3a7e3d5662c2e0352b26b9998f9f8c58d",
+            blockNumber: 59_240, sender: me, payer: me, succeeded: false, gasUsed: 316_273,
+            rows: [
+                .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
+                .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 1)),
+                .init(frame: frame(2, 0x00, to: peer, value: "0x38d7ea4c68000"), outcome: outcome(false, 100_000, logs: 0)),
+            ],
+            deltaWei: -(Decimal(string: "1316273000000000")!))
+
+        // 4. **A ROLLED-BACK BATCH.** The frame reports `status: 0x1` and
+        //    emitted no log, because the batch it was in reverted — the trap
+        //    that makes `valueLanded` read effects rather than status.
+        let rolled = FramesMove(
+            hash: "0x2642331b604d901b59d8f3d6ff5dea314c57ab090d2bf661bbc287b79fefeb63",
+            blockNumber: 59_300, sender: me, payer: me, succeeded: false, gasUsed: 240_100,
+            rows: [
+                .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
+                .init(frame: frame(2, 0x04, to: peer, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 0)),
+                .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(false, 100_000, logs: 0)),
+            ],
+            deltaWei: -(Decimal(string: "240100000000000")!))
+
+        // 5. **SOMEBODY ELSE PAID.** `payer` differs from `sender`, which
+        //    lights the Sponsors scope — the reading this chain publishes that
+        //    ordinary chains hide. No transaction on the real chain has been
+        //    sponsored yet, so this is the one shape here the chain has not
+        //    itself produced; it is the scope's only way to be seen.
+        let sponsored = FramesMove(
+            hash: "0x5b131baf9e0b9635a0fd58a6410f50e66c6450736999cace47826982de1cf026",
+            blockNumber: 59_340, sender: me, payer: peer, succeeded: true, gasUsed: 402_873,
+            rows: [
+                .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
+                .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 1)),
+            ],
+            // The fee is NOT subtracted: somebody else paid it. That is the
+            // whole point of the scope, and of `delta`'s payer check.
+            deltaWei: -(Decimal(string: "1000000000000000")!))
+
+        let fixture = [FramesAccount(
+            address: me,
+            balanceWeiHex: "0xd7cf8d9b06f5b8",
+            nonce: 4,
+            moves: [sponsored, rolled, partial, sent, funded])]
         Task { @MainActor in FramesLiveState.shared.installDemo(fixture) }
     }
 

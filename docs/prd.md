@@ -43280,3 +43280,114 @@ harness rather than in a comment.
 numbers above are the demo fixture's, read off `rpc1.hegota.ethrex.xyz` on
 2026-08-27, and the geometry is arithmetic against `DSRoomSlot`'s fixed 210.
 The Accounts roster in particular has never been drawn at the five-address cap.
+## §548 fourth follow-up — what the simulator found that thirty-one audits could not (user: "lets see it on simulator", then "you don't have the silhouette bar and action bar in the right place. silhouette isn't even present", "we need sample addresses to be able to watch. i also don't think we need to say get test eth here b/c it is on the home screen", "shouldn't the rail be there regardless?", "we should have a sparkline on home", "how come there aren't the other toggle aren't there if this is demo and simulator you should be able to create all that and seed it", "don't you think we need a holdings slot on the rail?", 2026-09-01)
+
+The room shipped green — build clean on both platforms, 31 audits, 34 harness
+mutations — and had **eight defects, every one visible in the first
+screenshot.** They are recorded together because the pattern behind most of
+them is one thing said three ways.
+
+**THE PATTERN: mirroring a sibling's CALL rather than reading the shared
+component's CONTRACT.** Three of the eight came from copying how Hegotá
+invokes something instead of what the thing itself says it is for.
+  • `DSRoomRailSlab` was handed `showsRail: false` and an `EmptyView`, so
+    §547's FUSED rail-and-switcher drew half of itself — the exact failure
+    that ruling exists to prevent, wearing its name.
+  • The switcher was emitted ABOVE the figure, putting the control that scopes
+    the room above the drawing it scopes. Wallet's order is figure then slab.
+  • The rail captioned each face with its short address, six points below an
+    account row already saying the same string — while `FaceScopeRail`'s own
+    header says the strip "says what each account holds", which is the one
+    thing a face cannot say for itself. It captions the BALANCE now, takes
+    accounts rather than addresses because a caption needing a balance cannot
+    be built from a string, and falls back to the short form rather than
+    `0.0000` when an address did not answer: nil is not zero, on the line most
+    likely to be believed.
+
+**THE RAIL SHOWS AT ONE ACCOUNT HERE, diverging from `HegotaScopeRail`
+deliberately.** That file requires `watched > 1` because there you watch
+STRANGERS and a rail over one filters nothing. Here the account is YOURS and
+is the main path, so the face is the room's SUBJECT rather than a filter — it
+says whose room this is and anchors the Send tile beneath it. Picking it is
+still perceptible, so it is a low-value control rather than a dead one, which
+is the line §83 draws.
+
+**"0 FRAMES" ON THE FAUCET'S OWN PAYOUT.** The faucet pays as a plain type-0x2
+transfer, so the first row on every account read `0 frames` — a count where a
+noun belongs, and the very first thing any new user sees. It says "Transfer".
+The Activity figure had the matching hole, drawing NOTHING whenever no frame
+transaction had landed, which on a fresh account is always.
+
+**THE VERB IN TWO PLACES.** The connect screen carried a claim door while §553
+gives the room a Top up tile — the same consequence behind two controls, which
+teaches that neither is the real one. The connect screen keeps only the act it
+owns, and its worked examples move up as a result.
+
+**SEND OPENED ONTO NOTHING TO SEND TO.** A watch list is empty on every fresh
+install and this chain is four days old, so the picker was a dead end. It falls
+back to the measured devnet accounts the connect screen offers, watched
+addresses leading.
+
+### The balance curve, and the component whose own frame refused it
+
+Wallet and Hegotá SAMPLE — a point every four hours — so their curve cannot
+show a movement between two observations. This chain logs every ETH movement,
+so the balance is walked backwards from what is held now and each step is a
+fact.
+
+**One measurement made it honest: gas is NOT logged.** A send moving 0.001 ETH
+and paying 0.000210790 in fees emits exactly ONE log, the transfer. A
+log-only reconstruction drifts by the cumulative fee, which on a young account
+is most of the movement. The receipt closes it — `gasUsed`,
+`effectiveGasPrice`, and the `payer`, so the fee is subtracted only from
+whoever actually paid it, which is the difference between a curve and a guess
+on a chain where somebody else can pay. All or nothing: one unreadable delta
+abandons the whole line, because a curve wrong in its middle looks exactly like
+one that is right.
+
+**`Sparkline` was the wrong component and its own body said so** — it pins
+itself to 46x14, being the inline mark a feed ROW wears. Handed a room's crown
+it drew a 46pt line in the corner, and an outer `.frame` cannot widen a view
+that has already fixed its own.
+
+### The demo showed a room "Reading the chain…" forever, and it took three tries
+
+**Two wrong theories before instrumenting, which is the lesson.** First the
+pour's timing (`demoMode: began` → `poured 638 rows` nine seconds later), then
+the memo key. One `NSLog` answered it in a single run: the fixture WAS
+installing, `accounts=1`.
+
+**The cause was that `FramesLiveState` never persisted anything.** The fixture
+lands in memory on demo entry and dies on the relaunch the demo is usually seen
+across. Hegotá survives it because it caches; this seat had copied that file's
+three black-screen traps and not its cache. It was breaking the live room too,
+unnoticed — blank on every cold launch until the sweep returned, masked only by
+always waiting fifteen seconds before screenshotting.
+
+**The memo-key fix stands regardless, and it is its own lesson.**
+`headIdentity` is built from the corpus revision, which for a seat landing no
+`Thing` is frozen at zero forever — so a head composed once while empty is kept
+for the life of the app. `FramesRoomSource.identity` was written FOR that,
+documented as such, and then not added to the key. The comment directly above
+where it belongs describes the same bug on Hegotá, "reported from a device
+three times before this was found, because nothing static can see a memo that
+never invalidates." Inheriting a lesson in prose and missing it in the one line
+that mattered.
+
+**And "Reading the chain…" is FALSE in a demo**, not merely unhelpful: `refresh`
+returns early there by design, so the read will never come. `hasRead` is true
+the moment the fixture installs, which is what keeps it honest.
+
+### The demo now furnishes every scope, from real transactions
+
+Five moves, four of them shapes this chain really produced and one it has not:
+the faucet's ordinary transfer, a two-frame send, **a `status: 0x0` that still
+moved money**, a rolled-back batch whose frame reports `0x1` with no log, and a
+sponsored transaction. The last is the only invented shape — nothing on the
+real chain has been sponsored — and it is the sole way that scope can be seen.
+Home · Activity · **Frames** · **Sponsors** all draw.
+
+**STANDING LESSON.** Every one of these renders perfectly and passes every
+static check. Thirty-one audits, thirty-four mutations and two clean builds saw
+none of them; one screenshot saw five. For a room, `--build-only` green means
+compiled, never seen.
