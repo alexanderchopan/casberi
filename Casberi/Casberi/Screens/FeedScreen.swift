@@ -3866,7 +3866,7 @@ case .vibenetSend(let account):
                         showsSwitcher: FramesSection.shows(present: chrome.framesSections),
                         sections: chrome.framesSections,
                         active: framesScope,
-                        attention: FramesSection.attention(),
+                        attention: FramesSection.attention(rolledBack: head.rolledBackCount),
                         onPick: { chrome.framesSection = $0 }
                     ) {
                         // **THE SILHOUETTES.** The first cut passed

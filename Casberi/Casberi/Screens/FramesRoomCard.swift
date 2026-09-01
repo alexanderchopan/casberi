@@ -49,20 +49,34 @@ struct FramesRoomFigure: View {
         }
     }
 
+    /// **THE CHASSIS DRAWS THE ROW, NOT THIS FILE** (prd §495).
+    ///
+    /// The first cut hand-rolled the slot — its own `VStack`, its own `stat24`
+    /// headline, its own `.frame(height: visualSlot)` — which is the exact
+    /// drift `DSRoomChassis`'s doc names ("one drawing its own headline, one
+    /// passing it to the chassis"), and it cost the thing that doc says
+    /// reserving the row buys: **the settings gear's clearance**. That control
+    /// floats over the slot's top-right, a `stat24` line is shorter than the
+    /// reserved row, and so every drawing began ~7pt too high and ran under
+    /// the cog — seen on all three chart scopes at once, on the simulator.
+    ///
+    /// It also cost the 12pt `contentInset`, so the drawing was wider than the
+    /// toggle bar that scopes it — Hegotá's own note on the same line.
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if let slotHeadline {
-                Text(slotHeadline)
-                    .dsText(.stat24)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
+        DSRoomSlot(headline: slotHeadline) {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                reading
+                Spacer(minLength: 0)
             }
-            reading
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            // **EVERY DRAWING IN THIS ROOM ENDS AT THE SAME x, AND IT IS THE
+            // GEAR'S.** Applied here rather than per chart for the reason the
+            // constant's own note gives: three charts each remembering the
+            // clearance is three chances to forget it, and a chart that ends
+            // 44pt short beside one that reaches the edge reads as a bug in
+            // the shorter one.
+            .padding(.trailing, DSRoomChassis.gearColumn)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: DSRoomChassis.visualSlot, alignment: .top)
     }
 
     /// **Never a chart of one point, and never a zero drawn over an unread
@@ -77,34 +91,41 @@ struct FramesRoomFigure: View {
             note(String(localized: "Couldn't reach the chain."))
         } else {
             switch section {
-            case .home, .sponsors: sponsorship
+            case .home:     sponsorship
+            case .sponsors: sponsors
             case .activity:        activity
             case .frames:          frames
             }
         }
     }
 
-    /// Home and Sponsors: what this account has DONE.
+    /// HOME: THE CURVE, AND WHOSE ACCOUNT IT IS. Nothing else.
     ///
-    /// **The slot is 210pt whatever it holds** (§551), so a branch that draws
-    /// one line leaves 180pt of void — which is how this looked on a device
-    /// the first time it was opened. Every line below is real: a nonce is
-    /// sends made, a move count is transactions that touched the account, and
-    /// both are already on screen elsewhere only as absences.
+    /// **Every tally that used to sit here is now another scope's headline**
+    /// (2026-09-01, user: "also you have clipping", with a screenshot of the
+    /// fifth line cut off by the slot's own `.clipped()`). It stacked a
+    /// rolled-back note, the curve, the account row and three more sentences
+    /// into a fixed 210pt box, and the box did what it says it does.
+    ///
+    /// The fix is not a shorter box, it is that the sentences stopped being
+    /// true of THIS scope. When Home was the only scope with a reading, saying
+    /// "5 transactions have touched it" and "somebody else paid for 1 of them"
+    /// here was the only place they could be said. Activity and Sponsors now
+    /// DRAW both of those, one chip away — so on Home they are another scope's
+    /// headline repeated in smaller type, which is exactly the argument that
+    /// removed the frame-count sentence from Activity in the same pass.
+    ///
+    /// The rolled-back note went the same way and took a replacement with it:
+    /// it was the one thing here somebody might act on, so dropping it silently
+    /// would lose a fact rather than move it. `FramesSection.attention` marks
+    /// the Frames chip instead, which is a pointer to the drawing that shows
+    /// which steps they were — strictly more than the sentence said.
+    ///
+    /// `partial` stays, and is the test for what belongs: it is not a reading
+    /// at all, it is a caveat about how much of the room was READ, and no
+    /// other scope can carry it because it applies to all of them.
     @ViewBuilder private var sponsorship: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if head.rolledBackCount > 0 {
-                // **THE ONLY THING IN THIS ROOM SOMEBODY MIGHT ACT ON**, so it
-                // leads. Read from effects, never status (§548): a rolled-back
-                // frame reports `status: 0x1`.
-                note(head.rolledBackCount == 1
-                     ? String(localized: "1 frame was rolled back and moved nothing.")
-                     : String(localized: "\(String(head.rolledBackCount)) frames were rolled back and moved nothing."))
-            }
-            // WHAT THIS ACCOUNT HAS SENT. The nonce IS the count — it is
-            // incremented per transaction the account signs — so this is a
-            // fact off the chain rather than a tally of what happened to be
-            // read back.
             // **THE CURVE, WHERE THERE IS ONE.** Two points is a line
             // between two facts and draws honestly; one point is a flat line
             // along the floor, which reads as "went to zero" — the most
@@ -121,21 +142,14 @@ struct FramesRoomFigure: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(WalletStore.shortAddress(account.address))
                             .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        // The nonce IS the count — it is incremented per
+                        // transaction the account signs — so this is a fact off
+                        // the chain rather than a tally of what was read back.
                         Text(sendLine(nonce: account.nonce))
                             .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     }
                     Spacer(minLength: 0)
                 }
-            }
-            if head.moveCount > 0 {
-                note(head.moveCount == 1
-                     ? String(localized: "1 transaction has touched it.")
-                     : String(localized: "\(String(head.moveCount)) transactions have touched it."))
-            }
-            if head.sponsoredCount > 0 {
-                note(head.sponsoredCount == 1
-                     ? String(localized: "Somebody else paid for 1 of them.")
-                     : String(localized: "Somebody else paid for \(String(head.sponsoredCount)) of them."))
             }
             if head.partial {
                 note(String(localized: "\(String(head.reached)) of \(String(head.watched)) addresses answered."))
@@ -155,38 +169,92 @@ struct FramesRoomFigure: View {
         }
     }
 
+    /// **ACTIVITY: WHAT MOVED, PER TRANSACTION.** One bar each, newest on the
+    /// right, above the line for arriving and below for leaving — the shape a
+    /// list of amounts cannot give you, which is that this account received
+    /// once and has been spending since.
+    ///
+    /// Drawn from `deltaWei`, which is exact (§548): every ETH movement is a
+    /// log and the receipt names the fee AND its payer. A transaction whose
+    /// delta could not be read draws NO bar rather than a zero-height one — an
+    /// unread amount and an amount of nothing must not look alike.
+    @ViewBuilder private var activityChart: some View {
+        let bars = moves.reversed().compactMap { move -> (Decimal, Bool)? in
+            guard let delta = move.deltaWei else { return nil }
+            return (delta, move.succeeded)
+        }
+        // ONE BAR IS STILL A READING — its size and its direction are both
+        // real. The threshold was 2 while a sentence sat under the chart to
+        // carry the single-movement case; with that sentence gone (below) a
+        // 2-bar floor would leave the slot empty on exactly the account that
+        // has just made its first send.
+        if !bars.isEmpty {
+            FramesMovementBars(bars: bars).frame(height: 64)
+        }
+    }
+
     @ViewBuilder private var activity: some View {
-        // **SAY WHAT THEY ARE, not nothing.** The first cut drew this branch
-        // empty whenever no frame transaction had landed, which on a fresh
-        // account is always — leaving a 210pt slot holding one line. The chain
-        // carries ordinary transfers too, and saying so is both true and the
-        // thing somebody wants to know.
+        activityChart
+        // **NO FRAME-COUNT SENTENCE (user ruling, 2026-09-01).** It read
+        // "4 of them are frame transactions" under the chart, and on THIS
+        // chain that is a tally of very nearly everything: a frame transaction
+        // is what this devnet is for, so the count separates almost nothing
+        // and costs a line under a drawing that already says more than it did.
+        //
+        // What survives is the one branch a chart cannot draw: an account
+        // where nothing has moved. That is not a tally, it is the reason the
+        // slot is empty, and without it the scope reads as broken rather than
+        // as new.
         if head.moveCount == 0 {
             note(String(localized: "Nothing has moved here yet."))
-        } else if head.frameCount == 0 {
-            note(String(localized: "All ordinary transfers so far — no frame transaction has landed here yet."))
-        } else if head.frameCount == head.moveCount {
-            note(head.frameCount == 1
-                 ? String(localized: "It is a frame transaction.")
-                 : String(localized: "All \(String(head.frameCount)) are frame transactions."))
-        } else {
-            note(head.frameCount == 1
-                 ? String(localized: "1 of them is a frame transaction.")
-                 : String(localized: "\(String(head.frameCount)) of them are frame transactions."))
         }
     }
 
     /// The MODE MIX — what the steps actually were. Counted rather than
     /// charted: a handful of frames is a sentence, and a bar over three values
     /// is a drawing pretending to be a measurement.
+    /// **FRAMES: EVERY TRANSACTION AS ITS PARTS.** The reading this seat
+    /// exists for, and one no other room in this app can draw.
     @ViewBuilder private var frames: some View {
-        let verify = moves.flatMap(\.rows).filter { $0.frame.mode == 1 }.count
-        let sender = moves.flatMap(\.rows).filter { $0.frame.mode == 2 }.count
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            if verify > 0 {
-                note(String(localized: "\(String(verify)) authorised, \(String(sender)) moved value."))
+        let runs = moves.filter { $0.rows.count > 1 }.prefix(6).map(\.rows)
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if !runs.isEmpty {
+                FramesSequenceStrip(runs: Array(runs))
+                    .frame(height: CGFloat(runs.count) * 20)
             }
-            note(String(localized: "Every transaction here carries a verify step, or it has no payer at all."))
+            let rolled = moves.flatMap(\.rolledBack).count
+            if rolled > 0 {
+                // The dashed cells above, said in words — a legend for the one
+                // state somebody must not misread.
+                note(rolled == 1
+                     ? String(localized: "The dashed step ran and was rolled back.")
+                     : String(localized: "The \(String(rolled)) dashed steps ran and were rolled back."))
+            } else {
+                note(String(localized: "Every transaction here carries a verify step, or it has no payer at all."))
+            }
+        }
+    }
+
+    /// **SPONSORS: WHOSE GAS.** Exact — `gasUsed` and `effectiveGasPrice` are
+    /// on every receipt and `payer` says whose it was.
+    @ViewBuilder private var sponsors: some View {
+        let paid = moves.compactMap { move -> (Double, Bool)? in
+            guard let gas = move.gasUsed else { return nil }
+            return (Double(gas), move.sponsored)
+        }
+        let theirs = paid.filter(\.1).map(\.0).reduce(0, +)
+        let mine = paid.filter { !$0.1 }.map(\.0).reduce(0, +)
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if theirs + mine > 0 {
+                FramesSponsorBar(mine: mine, theirs: theirs)
+            }
+            if theirs > 0 {
+                note(String(localized: "Somebody else paid \(Int((theirs / (theirs + mine) * 100).rounded()))% of the gas here."))
+            } else {
+                // NOT "nobody has sponsored you" — that is a claim about other
+                // people. This says only what was observed.
+                note(String(localized: "Every transaction here paid its own gas."))
+            }
         }
     }
 
@@ -349,5 +417,159 @@ struct FramesBalanceCurve: View {
         .accessibilityElement()
         .accessibilityLabel(Text(rising ? String(localized: "Balance rising")
                                         : String(localized: "Balance falling")))
+    }
+}
+
+
+/// WHAT EACH TRANSACTION DID TO THE BALANCE — signed bars from a centre line.
+///
+/// **The centre line is drawn even when every bar points the same way**, so a
+/// column of outgoing bars reads as outgoing rather than as a bar chart that
+/// happens to start at the top. Without it the sign is carried by nothing.
+struct FramesMovementBars: View {
+    /// Signed wei, and whether the transaction itself succeeded.
+    let bars: [(Decimal, Bool)]
+
+    var body: some View {
+        Canvas { ctx, size in
+            let magnitudes = bars.map { abs(NSDecimalNumber(decimal: $0.0).doubleValue) }
+            guard let peak = magnitudes.max(), peak > 0 else { return }
+            let mid = size.height / 2
+            ctx.stroke(Path { $0.move(to: CGPoint(x: 0, y: mid))
+                              $0.addLine(to: CGPoint(x: size.width, y: mid)) },
+                       with: .color(DS.textTertiary.opacity(0.35)),
+                       style: StrokeStyle(lineWidth: 1))
+
+            let slot = size.width / CGFloat(bars.count)
+            let width = min(slot * 0.55, 14)
+            for (i, bar) in bars.enumerated() {
+                let value = NSDecimalNumber(decimal: bar.0).doubleValue
+                // **A MOVEMENT THAT HAPPENED MUST NOT DRAW AS NOTHING.** On
+                // this chain a faucet claim is 1 ETH and a send is 0.001, a
+                // 1000:1 ratio — so a purely proportional bar renders four
+                // real transactions as invisible hairlines, which says "these
+                // did not happen". Same principle as nil-is-not-zero, one
+                // surface over.
+                //
+                // The floor is 4pt: enough to be seen, small enough that the
+                // shape still carries magnitude. NOT a log scale — that makes
+                // every height a claim about a ratio nobody can read back.
+                let height = max(4, CGFloat(abs(value) / peak) * (mid - 3))
+                let x = slot * CGFloat(i) + (slot - width) / 2
+                let rect = value >= 0
+                    ? CGRect(x: x, y: mid - height, width: width, height: height)
+                    : CGRect(x: x, y: mid, width: width, height: height)
+                // **A FAILED TRANSACTION IS OUTLINED, NOT FILLED.** It may
+                // still have moved money (§548), so it belongs on the chart —
+                // but it must not read as an ordinary movement.
+                let path = Path(roundedRect: rect, cornerRadius: min(3, width / 2))
+                if bar.1 {
+                    ctx.fill(path, with: .color(value >= 0 ? DS.confirm : DS.textSecondary))
+                } else {
+                    ctx.stroke(path, with: .color(DS.destructive), style: StrokeStyle(lineWidth: 1.5))
+                }
+            }
+        }
+        .accessibilityElement()
+        .accessibilityLabel(Text(String(localized: "\(String(bars.count)) movements")))
+    }
+}
+
+/// **THE ROOM'S SIGNATURE DRAWING: a transaction as its parts.**
+///
+/// One run per transaction, one cell per frame, each cell's width its share of
+/// the gas the frames themselves report. Nothing else in this app draws a
+/// transaction as a sequence, because no other chain this app reads publishes
+/// one.
+///
+/// **Three states, and the third is the whole point.** A frame that ran is
+/// filled; one that reverted is filled in the destructive tone; one that was
+/// ROLLED BACK is outlined — because it reports `status: 0x1` and did nothing,
+/// so filling it like a success would be the lie §548 was written about.
+struct FramesSequenceStrip: View {
+    let runs: [[FramesFrameRow]]
+
+    private static let rowHeight: CGFloat = 14
+    private static let gap: CGFloat = 6
+
+    var body: some View {
+        Canvas { ctx, size in
+            guard !runs.isEmpty else { return }
+            let rowGap = Self.gap
+            let height = min(Self.rowHeight,
+                             (size.height - rowGap * CGFloat(runs.count - 1)) / CGFloat(runs.count))
+            for (row, run) in runs.enumerated() {
+                let y = (height + rowGap) * CGFloat(row)
+                // Gas SHARE, so a cell's width says what that frame cost —
+                // falling back to equal widths when the receipt did not report
+                // it, rather than dropping the frame from the drawing.
+                let costs = run.map { Double($0.outcome?.gasUsed ?? 0) }
+                let total = costs.reduce(0, +)
+                var x: CGFloat = 0
+                for (i, cell) in run.enumerated() {
+                    let share = total > 0 ? costs[i] / total : 1.0 / Double(run.count)
+                    let w = max(3, CGFloat(share) * (size.width - CGFloat(run.count - 1) * 2))
+                    let rect = CGRect(x: x, y: y, width: w, height: height)
+                    let path = Path(roundedRect: rect, cornerRadius: 3)
+                    let ran = cell.outcome?.succeeded ?? true
+                    if cell.valueLanded == false {
+                        ctx.stroke(path, with: .color(DS.destructive),
+                                   style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
+                    } else if ran {
+                        // VERIFY reads lighter than SENDER: the first
+                        // authorises, the second acts.
+                        ctx.fill(path, with: .color(cell.frame.mode == 1
+                                                    ? DS.textTertiary : DS.tint))
+                    } else {
+                        ctx.fill(path, with: .color(DS.destructive))
+                    }
+                    x += w + 2
+                }
+            }
+        }
+        .accessibilityElement()
+        .accessibilityLabel(Text(String(localized: "\(String(runs.count)) transactions, drawn frame by frame")))
+    }
+}
+
+/// WHO PAID THE GAS — one bar, split.
+///
+/// Exact: `gasUsed` and `effectiveGasPrice` are on every receipt and the
+/// `payer` says whose it was. The reading no ordinary chain can give.
+struct FramesSponsorBar: View {
+    let mine: Double
+    let theirs: Double
+
+    /// **A DRAWING SIZED FROM DATA GETS AN ENTRANCE** (prd §299) — caught by
+    /// `design-motion-audit`, not by looking. It grows from the leading edge,
+    /// which is the direction the split is read in, and Reduce Motion lands it
+    /// at full width on the first frame rather than animating faster.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var grown = false
+
+    var body: some View {
+        GeometryReader { geo in
+            let total = mine + theirs
+            let split = total > 0 ? CGFloat(theirs / total) : 0
+            HStack(spacing: 2) {
+                if split < 1 {
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(DS.textTertiary)
+                        .frame(width: max(0, geo.size.width * (1 - split) - 1))
+                }
+                if split > 0 {
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(DS.tint)
+                }
+            }
+            .scaleEffect(x: grown ? 1 : 0.001, anchor: .leading)
+            .onAppear {
+                guard !reduceMotion else { grown = true; return }
+                withAnimation(DS.Motion.standard) { grown = true }
+            }
+        }
+        .frame(height: 16)
+        .accessibilityElement()
+        .accessibilityLabel(Text(String(localized: "Gas paid by others, against gas you paid")))
     }
 }

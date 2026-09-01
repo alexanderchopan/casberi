@@ -153,7 +153,24 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     /// Returning an empty set rather than dropping the call keeps
     /// `DSSectionSwitcher`'s `attention` parameter honest for Wallet, which
     /// uses it for a genuinely rare state.
-    static func attention() -> Set<FramesSection> { [] }
+    /// **THE ROLLED-BACK FRAMES, AND ONLY THOSE.**
+    ///
+    /// Home used to carry "N frames were rolled back and moved nothing" as its
+    /// first line — the one thing in this room somebody might act on. That
+    /// sentence is gone (the slot clipped, see `FramesRoomFigure`), so the dot
+    /// carries the pointer and the Frames scope's own drawing carries the
+    /// fact, which is strictly more than the sentence said: it shows WHICH
+    /// steps they were.
+    ///
+    /// Nothing else earns a dot, and that restraint is the point —
+    /// `DSSectionSwitcher`'s `attention` stays honest for Wallet, which uses
+    /// it for a genuinely rare state. A rolled-back frame qualifies: it is a
+    /// step the chain RAN and then undid, reporting `status: 0x1` while it did
+    /// so, which is the one thing on this chain nobody would find by reading a
+    /// receipt.
+    static func attention(rolledBack: Int) -> Set<FramesSection> {
+        rolledBack > 0 ? [.frames] : []
+    }
 
     /// Resolve the scope actually shown from the one the person last picked.
     ///

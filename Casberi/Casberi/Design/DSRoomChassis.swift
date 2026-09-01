@@ -157,6 +157,21 @@ enum DSRoomChassis {
     /// eyeballed: the pixel scan was too noisy to settle it and the row's own
     /// `listRowInsets` was exact.
     static let contentInset: CGFloat = DS.Space.s3
+
+    /// **THE COLUMN THE SETTINGS GEAR OWNS.**
+    ///
+    /// Reserving the headline row clears the gear for a figure that begins
+    /// BELOW a line of text — see `DSRoomSlot`'s own note. It does not clear
+    /// it for a figure whose first row is a full-width DRAWING: the gear is a
+    /// circle floating over the slot's top-right, so its lower-left arc still
+    /// crosses the top few points of anything that reaches the trailing edge.
+    ///
+    /// Measured on the Frames room, where a full-width split bar and the top
+    /// run of a sequence strip both ran under the cog's corner with the
+    /// headline row correctly reserved. Hegotá states the same fact per
+    /// caption (`figureCaption`); this is it as a number, so a drawing can ask
+    /// for it too.
+    static let gearColumn: CGFloat = 44
 }
 
 /// THE SLOT ITSELF — one definition of the box every room scope draws into

@@ -43391,3 +43391,80 @@ Home · Activity · **Frames** · **Sponsors** all draw.
 static check. Thirty-one audits, thirty-four mutations and two clean builds saw
 none of them; one screenshot saw five. For a room, `--build-only` green means
 compiled, never seen.
+
+## §548 fifth follow-up — a chart in every scope, and the gear column the chassis said was already paid for (user: "we need charts for the slots on activity frames and sponsors", then "in your activity chart we don't need '4 of them are frame...' b/c all will be and that's extraneous just show the chart", then "on frames maybe we need chart of sucess vs failed or something or maye that goes on activity", 2026-09-01)
+
+Three of the four scopes held a sentence where every other room in this app
+holds a drawing. Each now draws, and each draws the thing that scope is
+actually about:
+
+**Activity — `FramesMovementBars`.** One signed bar per transaction off
+`FramesMove.deltaWei`, newest last, a centre line always drawn so the sign is
+read against something rather than inferred. **A failed transaction is
+OUTLINED, not filled**, because on this chain a failed transaction may still
+have moved money — the measured fact the whole seat is built around — so a
+red fill would state a loss that did not happen. A transaction whose delta
+could not be read draws NO bar at all: an unread amount and an amount of
+nothing must not look alike.
+
+**A MOVEMENT THAT HAPPENED MUST NOT DRAW AS NOTHING.** The first cut scaled
+purely by magnitude, and on this chain the faucet gives 1 ETH while a send is
+0.001 — a 1000:1 ratio, so four real transactions rendered as invisible
+hairlines beside one green tower. That is the drawing saying they did not
+occur. The floor is 4pt: enough to be seen, small enough that the shape still
+carries magnitude. **Not a log scale** — that makes every height a claim about
+a ratio nobody can read back off the picture.
+
+**Frames — `FramesSequenceStrip`, and it IS the success-vs-failed chart.** One
+run per transaction, one cell per frame, width by that frame's share of the
+gas. Three states, not two, and the third is the reason this room exists: a
+frame that RAN (filled), a frame that ROLLED BACK (dashed), and a whole
+transaction that failed (outlined). **Rolled back is dashed rather than red-
+filled because it reports `status: 0x1`** — the chain calls it a success, and
+the drawing has to hold both facts at once. A two-state good/bad bar would
+have to pick one of them and would be wrong either way.
+
+**Sponsors — `FramesSponsorBar`.** A split bar of gas somebody else paid
+against gas this account paid, captioned with the share. The one reading that
+needs no per-transaction detail to be useful.
+
+**NO FRAME-COUNT SENTENCE.** Activity's chart sat under "4 of them are frame
+transactions", which on THIS chain is a tally of very nearly everything — a
+frame transaction is what this devnet is FOR, so the count separates almost
+nothing and costs a line under a drawing that already says more than the line
+did. What survives is the one branch a chart cannot draw: an account where
+nothing has moved. That is not a tally, it is the reason the slot is empty,
+and without it the scope reads as broken rather than as new. Removing it moved
+the chart's own floor from two bars to one — a single movement's size and
+direction are both real, and a 2-bar threshold would have left the slot empty
+on exactly the account that has just made its first send.
+
+**THE GEAR COLUMN, and the drift that created it.** `DSRoomChassis`'s own doc
+says reserving the headline row "earns the settings gear's clearance for
+free", and names the failure that follows from not using it: "one drawing its
+own headline, one passing it to the chassis". `FramesRoomFigure` was the
+former — its own `VStack`, its own `stat24` line, its own
+`.frame(height: visualSlot)` — so it never got the reserved row, every drawing
+began ~7pt too high, and all three new charts ran under the cog at once. It
+also never got the 12pt `contentInset`, so the drawing was wider than the
+toggle bar that scopes it, which is Hegotá's own note on the same line. Fixed
+by putting the figure on `DSRoomSlot` where it always belonged.
+
+That was necessary and not sufficient, which is the part worth writing down.
+**Reserving the headline row clears the gear for a figure that begins below a
+line of TEXT; it does not clear it for a figure whose first row is a
+full-width DRAWING.** The gear is a circle floating over the slot's top-right,
+so its lower-left arc still crosses the top few points of anything reaching
+the trailing edge — measured on the sponsor bar and on the sequence strip's
+top run, with the row correctly reserved. Hegotá states this fact once per
+caption (`figureCaption`); `DSRoomChassis.gearColumn` is it as a number, so a
+DRAWING can ask for it too, and it is applied once at the slot rather than per
+chart — three charts each remembering the clearance is three chances to
+forget it, and a chart ending 44pt short beside one reaching the edge reads as
+a bug in the shorter one.
+
+**Seen on the simulator, all four scopes, not inferred from a green build** —
+the fourth follow-up's lesson, applied rather than re-learned. Every defect
+above was found by looking: the invisible bars, the cog collision, and the
+extraneous sentence were all present in a build that compiled clean and passed
+every static audit.
