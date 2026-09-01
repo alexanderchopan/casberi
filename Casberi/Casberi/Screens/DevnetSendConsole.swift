@@ -14,23 +14,30 @@ import SwiftUI
 /// digits on the surface, and one button carrying the verb. Three things follow
 /// from that and each is a decision rather than a style:
 ///
-/// 1. **A KEYPAD, NOT A KEYBOARD.** The system keyboard covers half the screen
-///    — including the crown, which is the balance you are deciding against —
-///    and this form lives in a scrolling room where that is worse than usual.
-///    A keypad keeps the whole room legible while you type, and it is the one
-///    element on the screen that unmistakably says *press me*.
-/// 2. **BARE DIGITS, NO KEY BACKGROUNDS.** A grid of filled circles inside a
-///    filled card is boxes-inside-boxes; every iOS keypad Apple ships draws the
-///    digit on the surface it sits on. The ONLY circle is the one under your
-///    finger (`KeyStyle`), so the press is the whole feedback.
+/// 1. ~~**A KEYPAD, NOT A KEYBOARD.**~~ **REVERSED by §548a, 2026-09-01** —
+///    see `DevnetConsole` below for the arithmetic. §544's objection was that
+///    the system keyboard "covers half the screen — including the crown, which
+///    is the balance you are deciding against". True, and the answer it reached
+///    for costs 176pt of a room that has 276, PERMANENTLY, whether anybody is
+///    typing or not. The keyboard costs that only while you type, and what it
+///    covers is answered by the subline this console already draws: "1.2345
+///    available" is the SENDING ACCOUNT's balance, which governs this send more
+///    exactly than the room-total crown ever did.
+/// 2. **BARE DIGITS ON THE SURFACE — kept, and now the system's.** The
+///    `.decimalPad` is the same twelve keys (1–9, a separator, 0, delete) drawn
+///    at the system's own sizes, with its own haptics, its own key repeat and
+///    its own accessibility, and it is what every other amount field on the
+///    phone raises. The custom grid was a re-implementation of it that we then
+///    had to pay rent on.
 /// 3. **THE FIGURE IS CENTRED AND THE VERB IS ON THE BUTTON.** An earlier cut
 ///    put "Send" on the left of the figure as a row label, which reads as a
 ///    table row rather than a money moment. The word belongs where the tap is.
 ///
-/// **What is deliberately NOT here.** No amount `TextField` at all — the
-/// keypad is the only way in, so there is no second input to keep in sync and
-/// no keyboard to dismiss. `DevnetAmountInput` is the whole edit vocabulary and
-/// is pure, so the harness can prove it without a view.
+/// **The figure IS the field** (§548a). §544 banned a `TextField` on the
+/// grounds that a second input is one to keep in sync — with the keypad gone
+/// there is no second input: one `@State` string, one field bound to it, and
+/// `DevnetAmountInput.sanitize` as the whole grammar, still pure, still
+/// provable without a view.
 ///
 /// The two rooms differ in exactly one place and it is a §83 rule rather than a
 /// taste: **Hegotá sends ETH and only ETH, so its unit is a WORD; a vibenet
@@ -51,57 +58,55 @@ enum DevnetAmountInput {
     /// a figure no layout can hold, not to express a business rule.
     static let maxWhole = 15
 
-    /// Append a key. Returns the amount UNCHANGED when the key would make an
-    /// amount the chain cannot express — the keypad has no disabled state, so
-    /// a refused key simply does nothing and the figure does not lie.
-    static func append(_ key: String, to amount: String) -> String {
-        if key == "." {
-            guard !amount.contains(".") else { return amount }
-            // A leading "." is a shape nothing downstream parses, so the zero
-            // is written for you — the same courtesy every calculator gives.
-            return amount.isEmpty ? "0." : amount + "."
+    /// **THE WHOLE EDIT GRAMMAR, and it is a REFUSAL rather than a repair
+    /// (§548a).** The keypad used to enforce these rules one key at a time —
+    /// "a refused key simply does nothing and the figure does not lie" — and
+    /// with the system pad the same rules have to hold against a change that
+    /// may be a paste, a held delete or a locale separator. So a change that
+    /// would make an amount the chain cannot express returns the PREVIOUS
+    /// value: the field does not mangle what you typed into something else, it
+    /// just does not accept it, which is exactly what a refused key did.
+    ///
+    /// Two things it repairs rather than refuses, because both are what every
+    /// calculator on earth does and neither can produce a wrong number: a bare
+    /// leading separator becomes "0.", and a digit typed against the lone
+    /// placeholder "0" REPLACES it rather than making "07".
+    static func sanitize(_ text: String, previous: String) -> String {
+        if text.isEmpty { return "" }
+        // A pasted "£12", a comma from a European keyboard, a stray letter:
+        // refused whole. Stripping the bad characters instead would silently
+        // turn "1,5" into "15", which is a wrong number rather than no number.
+        guard text.allSatisfy({ $0.isNumber || $0 == "." }) else { return previous }
+        guard text.filter({ $0 == "." }).count <= 1 else { return previous }
+
+        var out = text
+        if out.hasPrefix(".") { out = "0" + out }
+        while out.count > 1, out.hasPrefix("0"),
+              let second = out.dropFirst().first, second.isNumber {
+            out.removeFirst()
         }
-        guard key.count == 1, let c = key.first, c.isNumber else { return amount }
 
-        if let dot = amount.firstIndex(of: ".") {
-            let decimals = amount.distance(from: amount.index(after: dot), to: amount.endIndex)
-            guard decimals < maxDecimals else { return amount }
-        } else {
-            // "0" alone is the placeholder, not a value — typing a digit
-            // REPLACES it rather than making "07".
-            if amount == "0" { return key }
-            guard amount.count < maxWhole else { return amount }
-        }
-        return amount + key
-    }
-
-    /// Delete one character. An amount left as a bare "0." is legal and parses;
-    /// emptying it entirely returns the placeholder state.
-    static func delete(_ amount: String) -> String {
-        var next = amount
-        if !next.isEmpty { next.removeLast() }
-        return next
-    }
-
-    /// What the figure SHOWS for a given amount — the placeholder is a real
-    /// zero rather than an empty space, so the console never has a hole where
-    /// its largest element belongs.
-    static func display(_ amount: String) -> String {
-        amount.isEmpty ? "0" : amount
+        let parts = out.split(separator: ".", omittingEmptySubsequences: false)
+        let whole = String(parts[0])
+        let frac = parts.count > 1 ? String(parts[1]) : ""
+        guard whole.count <= maxWhole, frac.count <= maxDecimals else { return previous }
+        return out
     }
 }
 
 // MARK: - The budget
 
-/// **THE CONSOLE'S HEIGHT IS A SUM, AND THE SUM IS WRITTEN DOWN (prd §548,
-/// 2026-09-01).** User: *"it needs to fit all on the screen so user doesn't
-/// have to scroll"*, then, when offered a shorter figure slot: *"needs to fit
-/// where it is. we can't make the slot shorter because it needs to be that
-/// same size on all the other screens and wallets"*.
+/// **THE CONSOLE'S HEIGHT IS A SUM, AND THE SUM IS WRITTEN DOWN (prd §548 and
+/// its §548a amendment, 2026-09-01).** User: *"it needs to fit all on the
+/// screen so user doesn't have to scroll"*, then *"needs to fit where it is. we
+/// can't make the slot shorter because it needs to be that same size on all the
+/// other screens and wallets"*, then — reading the first pass's stated ceiling
+/// — *"needs to come from below the slot… and maybe that means we can't have a
+/// keypad"*.
 ///
-/// So the room's chrome is FIXED and the console is what gives. Measured off a
-/// screenshot of the shipping build rather than estimated (iPhone 16 Pro Max,
-/// 440×956pt, a 3× PNG scanned for its surface edges):
+/// **It does mean that, and the arithmetic is what says so.** The room's chrome
+/// is fixed and measured off a 3× screenshot of the shipping build rather than
+/// estimated (iPhone 16 Pro Max, 440×956pt, PNG scanned for its surface edges):
 ///
 /// ```
 ///   safe area + source chips + venue rail   198
@@ -110,42 +115,77 @@ enum DevnetAmountInput {
 ///   the gaps                                 26
 ///   ────────────────────────────────────────────
 ///   the card's top edge                     545pt   (measured 544.7)
-///   the card as it shipped                  601pt   → bottom at 1146 of 956
+///   the card as §544 shipped it              601pt  → its bottom at 1146 of 956
 /// ```
 ///
-/// Everything from the keypad's fourth row down — `. 0 ⌫`, the Send button and
-/// the footnote under it — was off the screen, on the one surface in this app
-/// whose entire content is a control you are meant to complete in one go.
+/// **NONE OF THOSE FOUR TERMS SCALES WITH SCREEN HEIGHT**, which is the fact
+/// that decides this. The chrome is ~545pt on a 956pt phone and ~536 on an
+/// 812pt one, so the room leaves 411pt on the largest iPhone and **276pt on a
+/// 13 mini**. The first pass got the card from 601 to 394 by cutting everything
+/// that was not the console — and 394 does not fit in 276, so on every phone
+/// but the biggest it still scrolled. There was one term left worth 176pt.
 ///
-/// **The budget, derived rather than chosen**: 956 − 545 = 411pt to the glass,
-/// less an 11pt margin so the button never sits ON the edge → **400pt**. The
-/// sum below comes to 394 and `devnet-console-audit.py` fails the build if it
-/// ever exceeds the budget, because the failure is otherwise invisible — a card
-/// that overflows renders perfectly and simply continues below the fold.
+/// **The keypad was 45% of the budget and it was PERMANENT.** It occupied that
+/// space whether or not anybody was typing. The `.decimalPad` is the same
+/// twelve keys, costs nothing at rest, and covers the room only while a finger
+/// is on it — and a room the size of this one cannot afford a keypad that is
+/// always there. So the console is now:
 ///
-/// **WHAT IS NOT NEGOTIABLE, and it is the one number here that is a rule
-/// rather than a taste:** `keyHeight` is `DS.Hit.min`. The keypad is 45% of
-/// this budget and is therefore the obvious place to find another 40pt; it is
-/// also the control people tap most in the room, in a hurry, and shrinking a
-/// key below 44pt buys screen by making the thing you came for harder to hit.
-/// The audit asserts the floor separately from the sum for exactly that reason.
+/// ```
+///   card padding (s4 × 2)                    36
+///   the recipient row                        44
+///   gap                                      14
+///   the figure and its subline               74
+///   gap                                      14
+///   the verb                                 50
+///   ────────────────────────────────────────────
+///                                           232pt
+/// ```
 ///
-/// **STATED CEILING, because a budget that quietly fails on smaller hardware is
-/// worse than one that says so.** The chrome above is ~545pt on EVERY iPhone —
-/// none of its four terms scales with screen height — so the room leaves 411pt
-/// on a 956pt phone, 307pt on an 852pt one and 267pt on a 812pt one. 394 does
-/// not fit in 307. On anything below ~950pt this console is shorter than it was
-/// and still scrolls, and the only remaining slack is in the room's chrome,
-/// which §548 rules out. Do not "fix" that by taking it out of `keyHeight`.
+/// **The budget is the SMALLEST phone, not the largest** — that is the whole
+/// correction. 812pt (a 13 mini) less its 536pt of chrome is 276, less a 10pt
+/// margin so the verb never sits on the glass → **266pt**. The sum is 232 and
+/// `devnet-console-audit.py` re-adds it on every build, because the failure is
+/// otherwise invisible: a card that overflows renders perfectly, every element
+/// drawn correctly in the right order, and the ones past the fold simply
+/// continue below it. The build is green, every other audit is green, and the
+/// screen sweep photographs a Send button that is off the screen and certifies
+/// it. A sum in a comment is a sum nobody re-adds.
+///
+/// **WHAT THE AIR BOUGHT BACK.** The first pass squeezed `cardPadding` to `s3`
+/// and the block gaps to `s2` for 32pt it desperately needed. It does not need
+/// them now, and a card in these rooms that insets differently from every other
+/// card in these rooms is a difference with nothing behind it — both are back
+/// on their normal rungs and the sum still clears the smallest phone by 34pt.
+///
+/// **WHAT IS NOT COMING BACK, and neither was a space saving.** The card head
+/// (the button carries the verb — §544's own third ruling — and the sending
+/// account is on the recipient row, which has two ends to name anyway) and the
+/// standing footnote (§315: it changed nothing anyone would DO, and both halves
+/// are still said where they are actionable). Nor the `price48` figure: §491
+/// rules that one fixed box holds the crown OR a scope's figure and never both
+/// stacked, and a second crown-rung figure one slab under the crown is that
+/// fault arriving by a route the chassis cannot see.
+///
+/// **STATED CEILING.** An iPhone SE has a 20pt safe area and a 667pt screen, so
+/// its chrome is ~506 and it leaves ~161pt — 232 does not fit, and no
+/// arrangement of a recipient, a figure and a verb will. That phone needs a
+/// smaller chrome or a different surface; it does not need a shorter row, and
+/// nothing here should be traded away chasing it.
+///
+/// **REFUSED: making this adaptive.** A keypad where there is room and a
+/// keyboard where there is not is two consoles, two sets of bugs and two things
+/// to photograph, to save one screen size from a scroll it no longer has.
 enum DevnetConsole {
 
-    /// The card's own inset. `s3` rather than the `s4` every other card in
-    /// these rooms carries: this card's content is a control rather than a
-    /// reading, and a control's frame is the tightest thing on the page.
-    static let cardPadding = DS.Space.s3
+    /// The card's own inset — `s4`, the same as every other card in these
+    /// rooms. It was squeezed to `s3` while the keypad was in the budget; a
+    /// card that insets differently from its neighbours for no reason anyone
+    /// can see is a difference worth undoing the moment the reason goes.
+    static let cardPadding = DS.Space.s4
 
-    /// Between the console's four blocks. One value, so the sum is a sum.
-    static let blockGap = DS.Space.s2
+    /// Between the console's three blocks. One value, so the sum is a sum.
+    static let blockGap = DS.Space.s3
 
     /// The recipient row — the hit floor exactly, never less.
     static let recipientRow = DS.Hit.min
@@ -154,7 +194,7 @@ enum DevnetConsole {
     ///
     /// **NOT the ramp's `lineHeight`, which is a `lineSpacing` and says nothing
     /// about a single line** — a face draws about 1.2× its point size, so 40pt
-    /// of Figtree is ~48. Both font-derived terms here are ROUNDED UP for that
+    /// of Figtree is ~48. Every font-derived term here is ROUNDED UP for that
     /// reason: an over-stated term makes the budget stricter than the glass, an
     /// under-stated one makes the budget a lie. The audit's job is to catch a
     /// structural addition — another row, a wider gap, a second button — not to
@@ -174,55 +214,42 @@ enum DevnetConsole {
     static let figureGap = DS.Space.s1
 
     /// The subline — one line of `label12` plus the Max chip's own 3pt padding
-    /// above and below it, rounded up like the two terms above. The CHIP is
-    /// what sets this row's height, so the chip is what is written down, and
-    /// both cards pin the row to this value so the sum holds even where there
-    /// is no balance to state and no chip to draw.
+    /// above and below it, rounded up like every term above. The CHIP is what
+    /// sets this row's height, so the chip is what is written down, and both
+    /// cards pin the row to this value so the sum holds even where there is no
+    /// balance to state and no chip to draw.
     static let sublineRow: CGFloat = 22
 
-    static let keyRows = 4
-
-    /// **The floor, and the whole reason the audit checks it apart from the
-    /// sum.** `DS.Hit.min`, never a literal — if the ramp's floor ever moves,
-    /// the keypad moves with it rather than quietly keeping an old number.
-    static let keyHeight = DS.Hit.min
-
-    /// The pressed circle, deliberately SMALLER than the key it sits in.
-    ///
-    /// The rows are adjacent now (no gap — that is 12pt the budget could not
-    /// spare), so a circle at the full key height would be tangent to its
-    /// neighbours and two quick presses would read as one blob. Inset by 2pt
-    /// top and bottom, the press stays a discrete mark at typing speed.
-    static let pressDiameter: CGFloat = 40
-
     /// One line of `callout15` (a 17pt face at 1.2×), and the verb's own
-    /// vertical padding — `s2` rather than the `s3` it carried, which is 8pt
-    /// the budget could not spare on a control that is already 41pt tall.
+    /// vertical padding.
     static let verbLine: CGFloat = 22
-    static let verbPad = DS.Space.s2
+    static let verbPad = DS.Space.s3
 
     static var figureBlock: CGFloat { figureLine + figureGap + sublineRow }
-    static var keypad: CGFloat { CGFloat(keyRows) * keyHeight }
     static var verb: CGFloat { verbLine + 2 * verbPad }
 
     /// What the console costs, top edge to bottom edge, with nothing typed and
-    /// nothing wrong. An error line appears BELOW the verb and is deliberately
-    /// outside this sum: it exists only when there is something to say, and
-    /// scrolling to read why a send was refused is a fair trade for never
-    /// scrolling to reach the button.
+    /// nothing wrong. Two things are deliberately outside it. The `.decimalPad`
+    /// — it costs nothing at rest, which is the entire §548a argument, and what
+    /// it covers while raised is the room's problem rather than the card's. And
+    /// the error line, which appears BELOW the verb only when there is
+    /// something to say: scrolling to read why a send was refused is a fair
+    /// trade for never scrolling to reach the button.
     static var height: CGFloat {
-        2 * cardPadding + recipientRow + 3 * blockGap + figureBlock + keypad + verb
+        2 * cardPadding + recipientRow + 2 * blockGap + figureBlock + verb
     }
 
-    /// 956 (the measured screen) − 545 (the measured chrome) − 11 (a margin, so
-    /// the verb never sits on the glass).
-    static let budget: CGFloat = 400
+    /// **THE SMALLEST PHONE, NOT THE LARGEST.** 812pt (a 13 mini) less its
+    /// ~536pt of fixed chrome is 276, less a 10pt margin so the verb never sits
+    /// on the glass. Budgeting against the 956pt device is what let the first
+    /// pass land a 394pt console that fitted exactly one screen size.
+    static let budget: CGFloat = 266
 }
 
 // MARK: - The figure
 
-/// The money, centred, with its unit beside it and whatever the caller puts
-/// under it.
+/// **THE MONEY IS THE FIELD (§548a).** Centred, with its unit beside it and
+/// whatever the caller puts under it.
 ///
 /// `dim` is the resting state — nothing typed yet — and it fades the figure AND
 /// its unit together, because a bright "ETH" beside a grey "0" reads as a unit
@@ -234,8 +261,26 @@ enum DevnetConsole {
 /// one, on the last text baseline so the word rides the figure's feet however
 /// the figure scales. What is left under it is the only thing that is genuinely
 /// a second reading — what you HOLD, and the tap that spends all of it.
+///
+/// **`fixedSize` is load-bearing.** A `TextField` in an `HStack` takes every
+/// point offered, which would pin the unit to the far right of the card with a
+/// gulf between them; hugging its content keeps the pair centred as one object
+/// and lets it grow rightward as you type, which is the Apple Cash behaviour.
+/// The prompt is what gives an empty field its width, so the placeholder is a
+/// real "0" rather than a hole where the largest element belongs.
+///
+/// **STATED CEILING:** the keypad's figure carried `minimumScaleFactor(0.4)`
+/// and a `TextField` cannot — so an amount past ~10 whole digits will run its
+/// line rather than shrink to fit on a narrow phone. `maxWhole` exists to stop
+/// a stuck key producing a figure no layout can hold and still does; what is
+/// lost is the graceful shrink between the two. Worth re-eyeballing on a device
+/// with a faucet-sized Hegotá balance typed in full.
 struct DevnetSendFigure<Unit: View, Subline: View>: View {
-    let amount: String
+    @Binding var amount: String
+    var focus: FocusState<Bool>.Binding
+    /// The venue's own accent — the caret is the one place this control says
+    /// which chain you are spending on while you type.
+    let tint: Color
     var dim: Bool = false
     @ViewBuilder var unit: () -> Unit
     @ViewBuilder var subline: () -> Subline
@@ -243,109 +288,68 @@ struct DevnetSendFigure<Unit: View, Subline: View>: View {
     var body: some View {
         VStack(spacing: DevnetConsole.figureGap) {
             HStack(alignment: .lastTextBaseline, spacing: DS.Space.s2) {
-                Text(DevnetAmountInput.display(amount))
+                TextField("", text: $amount,
+                          prompt: Text(verbatim: "0").foregroundStyle(DS.textTertiary))
                     .dsText(.price40)
                     .foregroundStyle(dim ? DS.textTertiary : DS.textPrimary)
+                    .multilineTextAlignment(.center)
+                    .keyboardType(.decimalPad)
+                    .autocorrectionDisabled()
                     .lineLimit(1)
-                    .minimumScaleFactor(0.4)
-                    .contentTransition(.numericText())
-                    .animation(DS.Motion.standard, value: amount)
+                    .fixedSize()
+                    .tint(tint)
+                    .focused(focus)
+                    .accessibilityLabel(Text(String(localized: "Amount")))
+                    .onChange(of: amount) { previous, next in
+                        let clean = DevnetAmountInput.sanitize(next, previous: previous)
+                        if clean != next { amount = clean }
+                    }
                 unit()
             }
             subline()
         }
         .frame(maxWidth: .infinity)
+        // **A BIG TARGET, AND A DECLARED CONTAINER.** At rest the field is only
+        // as wide as its "0", which is a tiny thing to hit for the one control
+        // this card exists to fill in, so a tap anywhere in the block focuses
+        // it. `.contain` is what keeps that honest for VoiceOver: the block is
+        // declared a CONTAINER whose children stay individually reachable — the
+        // labelled field, the unit, the balance — rather than an untraited tap
+        // surface, which is a gesture no screen reader can find (the
+        // accessibility audit's own check 2, which caught exactly this).
+        .accessibilityElement(children: .contain)
+        .contentShape(Rectangle())
+        .onTapGesture { focus.wrappedValue = true }
     }
 }
 
-// MARK: - The keypad
+/// **THE ONE WAY DOWN, and it is not optional (§548a).**
+///
+/// `.decimalPad` HAS NO RETURN KEY. Without a keyboard toolbar there is
+/// literally no key that dismisses it, and a tap outside is unreliable inside a
+/// scrolling `List` — so a field raised without this is a keyboard somebody
+/// cannot put away, over a Send button it is covering. The audit checks both
+/// cards carry it.
+struct DevnetAmountToolbar: ViewModifier {
+    var focus: FocusState<Bool>.Binding
 
-/// Bare digits, and the only circle is the one under your finger.
-struct DevnetSendKeypad: View {
-    @Binding var amount: String
-    /// The venue's own accent — Base blue on vibenet, `DS.tint` on Hegotá — so
-    /// a pressed key agrees with the active chip in the strip above.
-    let tint: Color
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private static let rows: [[String]] = [
-        ["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], [".", "0", "\u{232B}"]
-    ]
-
-    var body: some View {
-        // **NO ROW SPACING (prd §548).** It was `s1`, which is 12pt across the
-        // four rows and 12pt the console did not have. Adjacent rows are what
-        // every system passcode keypad already does; the press circle is inset
-        // instead, so nothing touches at the moment it matters.
-        VStack(spacing: 0) {
-            ForEach(Self.rows, id: \.self) { row in
-                HStack(spacing: 0) {
-                    ForEach(row, id: \.self) { key in
-                        keyButton(key)
-                    }
+    func body(content: Content) -> some View {
+        content.toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button(String(localized: "Done")) {
+                    DSHaptic.selection()
+                    focus.wrappedValue = false
                 }
+                .fontWeight(.semibold)
             }
         }
     }
+}
 
-    @ViewBuilder
-    private func keyButton(_ key: String) -> some View {
-        let isDelete = key == "\u{232B}"
-        Button {
-            // SELECTION, not `tap()` — a keypad fires many times in a row and
-            // the heavier haptic reads as a stutter at typing speed.
-            DSHaptic.selection()
-            amount = isDelete
-                ? DevnetAmountInput.delete(amount)
-                : DevnetAmountInput.append(key, to: amount)
-        } label: {
-            Group {
-                if isDelete {
-                    Image(systemName: "delete.backward")
-                        .dsGlyph(22, weight: .regular)
-                        .foregroundStyle(DS.textSecondary)
-                } else {
-                    Text(key)
-                        .dsText(.heading28)
-                        .fontWeight(.regular)
-                        .foregroundStyle(DS.textPrimary)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            // **THE HIT FLOOR, AND NOT A POINT LESS.** This is the control
-            // people tap most in the room and they tap it in a hurry, so when
-            // §548 went looking for height the keypad was the biggest block on
-            // the screen and the one place it was refused. Read from
-            // `DevnetConsole` rather than spelled, so the height in the budget
-            // and the height on the glass are one number.
-            .frame(height: DevnetConsole.keyHeight)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(KeyStyle(tint: tint, reduceMotion: reduceMotion))
-        .accessibilityLabel(isDelete ? Text("Delete") : Text(key))
-        .dsHover()
-    }
-
-    /// The press IS the key's whole appearance — no resting fill at all, so
-    /// twelve keys read as one keypad rather than twelve buttons.
-    private struct KeyStyle: ButtonStyle {
-        let tint: Color
-        let reduceMotion: Bool
-
-        func makeBody(configuration: Configuration) -> some View {
-            configuration.label
-                .background {
-                    Circle()
-                        .fill(tint)
-                        .frame(width: DevnetConsole.pressDiameter,
-                               height: DevnetConsole.pressDiameter)
-                        .opacity(configuration.isPressed ? 1 : 0)
-                }
-                // Reduce Motion keeps the STATE (the fill still appears — it is
-                // the only feedback a key gives) and drops the animation.
-                .animation(reduceMotion ? nil : DS.Motion.press, value: configuration.isPressed)
-        }
+extension View {
+    func devnetAmountToolbar(_ focus: FocusState<Bool>.Binding) -> some View {
+        modifier(DevnetAmountToolbar(focus: focus))
     }
 }
 

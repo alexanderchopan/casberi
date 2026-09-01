@@ -55,6 +55,9 @@ struct HegotaSendCard: View {
     @State private var sentSummary: String?
     /// The recipient picker — one sheet, raised from the To row.
     @State private var picking = false
+    /// The amount field's focus. The `.decimalPad` has no return key, so the
+    /// keyboard toolbar owns the only way down (`devnetAmountToolbar`).
+    @FocusState private var amountFocused: Bool
 
     // The app's own accent, not `HegotaModeStyle.room` (user: "that cyan
     // color blue or whatever it is... we don't use that anywhere else") —
@@ -127,7 +130,8 @@ struct HegotaSendCard: View {
     /// **THE CONSOLE (prd §544), FITTED TO THE SCREEN (prd §548)** —
     /// `DevnetSendConsole`'s shared anatomy and its height budget, with the one
     /// difference this chain forces: Hegotá moves ETH and only ETH, so the unit
-    /// is a WORD and never a chip. See that file's header.
+    /// is a WORD and never a chip. See that file's header, and §548a for why
+    /// the keypad below it is the system's now.
     private var form: some View {
         VStack(spacing: DevnetConsole.blockGap) {
             DevnetSendToRow(from: HegotaKey.address(),
@@ -137,7 +141,8 @@ struct HegotaSendCard: View {
                             preview: knownAddresses,
                             onTap: { picking = true })
 
-            DevnetSendFigure(amount: amount, dim: amount.isEmpty) {
+            DevnetSendFigure(amount: $amount, focus: $amountFocused,
+                             tint: Self.mark, dim: amount.isEmpty) {
                 Text(String(localized: "ETH"))
                     .dsText(.price16)
                     .foregroundStyle(amount.isEmpty ? DS.textTertiary : DS.textSecondary)
@@ -156,10 +161,13 @@ struct HegotaSendCard: View {
                 .frame(height: DevnetConsole.sublineRow)
             }
 
-            DevnetSendKeypad(amount: $amount, tint: Self.mark)
-
             DevnetSendVerb(title: sendLabel, armed: canSend, busy: busy,
-                           tint: Self.mark, action: send)
+                           tint: Self.mark) {
+                // The pad covers the room, and what happens next is drawn in
+                // this card: the settled receipt, or the reason it refused.
+                amountFocused = false
+                send()
+            }
 
             // Only ever drawn when there is something wrong, and deliberately
             // outside the height budget for that reason (prd §548).
@@ -176,6 +184,7 @@ struct HegotaSendCard: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .devnetAmountToolbar($amountFocused)
         .sheet(isPresented: $picking) {
             DevnetSendPicker(title: String(localized: "Send to"),
                              candidates: pickerCandidates,

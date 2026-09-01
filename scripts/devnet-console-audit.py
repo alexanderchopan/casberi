@@ -29,21 +29,33 @@ comment is a sum nobody re-adds.
 FIVE CHECKS.
 
   1. THE SUM IS UNDER THE BUDGET. `DevnetConsole.height <= .budget`, evaluated
-     from the constants in the source, at iOS spacing.
-  2. THE HIT FLOOR HOLDS. `keyHeight` is `DS.Hit.min` — checked SEPARATELY from
-     the sum on purpose. The keypad is 45% of the budget and is therefore the
-     obvious place to find another 40pt the next time something is added; it is
-     also the control people tap most in the room, in a hurry. A console that
-     fits because its keys are 36pt has not been fixed.
+     from the constants in the source, at iOS spacing. The budget is the
+     SMALLEST phone's allowance, not the largest — §548's first pass budgeted
+     against a 956pt device and landed a console that fitted exactly one screen
+     size.
+  2. THE RECIPIENT ROW HOLDS THE HIT FLOOR. `recipientRow` is `DS.Hit.min`,
+     checked SEPARATELY from the sum on purpose: it is the one remaining block
+     that could be shaved to buy a few points, and it is a control.
   3. THE VIEWS READ THE CONSTANTS. A sum is only true if the glass agrees with
-     it, so the keypad's key frame, the press circle, the recipient row and the
-     verb's padding must come from `DevnetConsole` and not from literals.
+     it, so the recipient row's frame and the verb's padding must come from
+     `DevnetConsole` and not from literals.
   4. NEITHER CARD HAND-ROLLS THE VERB. Both used to spell the same button out,
      identically — and a second copy of a control carrying 42 of the budget's
      points is how the sum quietly stops being true. One `DevnetSendVerb`.
   5. NEITHER FORM REGROWS A HEAD. The 46pt card head is what §548 spent to make
      the console fit; a head above the form is the whole saving back. Checked
      against the FORM only — the sent state keeps its head, and should.
+  6. THE KEYBOARD HAS A WAY DOWN (§548a). `.decimalPad` HAS NO RETURN KEY, so a
+     field raised without a keyboard toolbar cannot be dismissed from the
+     keyboard at all, and a tap outside is unreliable inside a scrolling
+     `List` — leaving a pad somebody cannot put away, over the Send button it
+     is covering. Both cards must carry `devnetAmountToolbar`, and the figure
+     must actually ask for the decimal pad: a plain keyboard over an amount
+     field is a letter keyboard on a money control.
+  7. THE KEYPAD DOES NOT COME BACK. 176pt is the whole §548a saving and it is
+     the obvious thing to restore the next time this screen is redesigned on a
+     Pro Max. If it does come back, it comes back with a new budget and a new
+     ruling, not quietly.
 
 WHAT IT DELIBERATELY DOES NOT DO (a lint that cries wolf gets turned off within
 a week):
@@ -81,10 +93,9 @@ CONST = re.compile(r"static let (\w+)(?::\s*CGFloat)?\s*=\s*([A-Za-z0-9_.]+)\s*$
 # Check 3: what each view must read from the budget rather than spell itself.
 # The pair is (the constant, a phrase proving it is used where it must be).
 WIRED = [
-    ("keyHeight", r"\.frame\(height:\s*DevnetConsole\.keyHeight\)"),
-    ("pressDiameter", r"DevnetConsole\.pressDiameter"),
     ("recipientRow", r"\.frame\(height:\s*DevnetConsole\.recipientRow\)"),
     ("verbPad", r"\.padding\(\.vertical,\s*DevnetConsole\.verbPad\)"),
+    ("figureGap", r"VStack\(spacing:\s*DevnetConsole\.figureGap\)"),
 ]
 
 # Check 5: a head is a `heading17`/`heading22` title inside the FORM. The sent
@@ -128,15 +139,14 @@ def audit(console: str, cards: dict[str, str]) -> list[str]:
     out: list[str] = []
 
     need = ["cardPadding", "blockGap", "recipientRow", "figureLine", "figureGap",
-            "sublineRow", "keyRows", "keyHeight", "verbLine", "verbPad", "budget"]
+            "sublineRow", "verbLine", "verbPad", "budget"]
     missing = [n for n in need if n not in c]
     if missing:
         return [f"DevnetConsole is missing {', '.join(missing)} — the budget "
                 f"cannot be summed, so nothing below is certified"]
 
-    height = (2 * c["cardPadding"] + c["recipientRow"] + 3 * c["blockGap"]
+    height = (2 * c["cardPadding"] + c["recipientRow"] + 2 * c["blockGap"]
               + c["figureLine"] + c["figureGap"] + c["sublineRow"]
-              + c["keyRows"] * c["keyHeight"]
               + c["verbLine"] + 2 * c["verbPad"])
 
     # 1
@@ -145,12 +155,16 @@ def audit(console: str, cards: dict[str, str]) -> list[str]:
                    f"{c['budget']:g} — it is {height - c['budget']:g}pt past "
                    f"the bottom of the room it draws in (prd §548)")
     # 2
-    if c["keyHeight"] < 44:
-        out.append(f"keyHeight is {c['keyHeight']:g} — below the 44pt hit "
-                   f"floor. The keypad is not where the height comes from.")
-    if c["keyRows"] != 4:
-        out.append(f"keyRows is {c['keyRows']:g} — a keypad is 1-9, dot, 0, "
-                   f"delete, and the sum assumes it")
+    if c["recipientRow"] < 44:
+        out.append(f"recipientRow is {c['recipientRow']:g} — below the 44pt "
+                   f"hit floor. A control is not where the height comes from.")
+    # 6 (console half) and 7
+    if ".keyboardType(.decimalPad)" not in code:
+        out.append("the amount field does not ask for the decimal pad — a "
+                   "letter keyboard over a money control (§548a)")
+    if "DevnetSendKeypad" in code:
+        out.append("the custom keypad is back — 176pt, and the whole of "
+                   "§548a's saving. It returns with a new budget or not at all")
     # 3
     for name, pattern in WIRED:
         if not re.search(pattern, code):
@@ -172,28 +186,32 @@ def audit(console: str, cards: dict[str, str]) -> list[str]:
         if re.search(r"VStack\(spacing: DS\.Space\.", body):
             out.append(f"{path}: the form spaces its blocks with a raw token — "
                        f"use DevnetConsole.blockGap, which the sum is built on")
+        # 6 (card half)
+        if "devnetAmountToolbar" not in body:
+            out.append(f"{path}: the amount field has no keyboard toolbar — "
+                       f".decimalPad has no return key, so nothing dismisses it")
     return out
 
 
 # ── fixtures ────────────────────────────────────────────────────────────
 CLEAN_CONSOLE = """
 enum DevnetConsole {
-    static let cardPadding = DS.Space.s3
-    static let blockGap = DS.Space.s2
+    static let cardPadding = DS.Space.s4
+    static let blockGap = DS.Space.s3
     static let recipientRow = DS.Hit.min
     static let figureLine: CGFloat = 48
     static let figureGap = DS.Space.s1
     static let sublineRow: CGFloat = 22
-    static let keyRows = 4
-    static let keyHeight = DS.Hit.min
-    static let pressDiameter: CGFloat = 40
     static let verbLine: CGFloat = 22
-    static let verbPad = DS.Space.s2
-    static let budget: CGFloat = 400
+    static let verbPad = DS.Space.s3
+    static let budget: CGFloat = 266
 }
-struct DevnetSendKeypad: View {
-    var body: some View { k.frame(height: DevnetConsole.keyHeight) }
-    struct S { var c = Circle().frame(width: DevnetConsole.pressDiameter) }
+struct DevnetSendFigure: View {
+    var body: some View {
+        VStack(spacing: DevnetConsole.figureGap) {
+            TextField("", text: $amount).keyboardType(.decimalPad)
+        }
+    }
 }
 struct DevnetSendToRow: View {
     var body: some View { h.frame(height: DevnetConsole.recipientRow) }
@@ -207,9 +225,10 @@ struct A: View {
     private var form: some View {
         VStack(spacing: DevnetConsole.blockGap) {
             DevnetSendToRow(from: a, address: b, name: c, preview: d, onTap: {})
-            DevnetSendKeypad(amount: $amount, tint: t)
-            DevnetSendVerb(title: sendLabel, armed: canSend, busy: busy, tint: t, action: send)
+            DevnetSendFigure(amount: $amount, focus: $amountFocused, tint: t, dim: e) { u } subline: { v }
+            DevnetSendVerb(title: sendLabel, armed: canSend, busy: busy, tint: t) { send() }
         }
+        .devnetAmountToolbar($amountFocused)
     }
     private var sentHead: some View { Text("Sent").dsText(.heading17) }
 }
@@ -228,14 +247,20 @@ def self_test() -> int:
          swap(CLEAN_CONSOLE, "static let figureLine: CGFloat = 48",
               "static let figureLine: CGFloat = 120"),
          {"a.swift": CLEAN_CARD}, True),
-        ("a key shrunk below the hit floor — even though the sum then fits",
-         swap(CLEAN_CONSOLE, "static let keyHeight = DS.Hit.min",
-              "static let keyHeight: CGFloat = 36"),
+        ("the recipient row shrunk below the hit floor — even though the sum then fits",
+         swap(CLEAN_CONSOLE, "static let recipientRow = DS.Hit.min",
+              "static let recipientRow: CGFloat = 36"),
          {"a.swift": CLEAN_CARD}, True),
-        ("the keypad spells its own height instead of reading the budget",
-         swap(CLEAN_CONSOLE, ".frame(height: DevnetConsole.keyHeight)",
-              ".frame(height: 52)"),
+        ("the custom keypad comes back",
+         swap(CLEAN_CONSOLE, "struct DevnetSendFigure: View {",
+              "struct DevnetSendKeypad: View { var body: some View { k } }\nstruct DevnetSendFigure: View {"),
          {"a.swift": CLEAN_CARD}, True),
+        ("the field asks for a letter keyboard over a money control",
+         swap(CLEAN_CONSOLE, ".keyboardType(.decimalPad)", ".keyboardType(.default)"),
+         {"a.swift": CLEAN_CARD}, True),
+        ("a card raises the pad with no way to dismiss it",
+         CLEAN_CONSOLE,
+         {"a.swift": swap(CLEAN_CARD, "        .devnetAmountToolbar($amountFocused)\n", "")}, True),
         ("the row spells its own height",
          swap(CLEAN_CONSOLE, ".frame(height: DevnetConsole.recipientRow)",
               ".frame(minHeight: 44)"),
@@ -243,12 +268,12 @@ def self_test() -> int:
         ("a card hand-rolls the send button",
          CLEAN_CONSOLE,
          {"a.swift": swap(CLEAN_CARD,
-                          "DevnetSendVerb(title: sendLabel, armed: canSend, busy: busy, tint: t, action: send)",
+                          "DevnetSendVerb(title: sendLabel, armed: canSend, busy: busy, tint: t) { send() }",
                           "Button { send() } label: { Text(sendLabel) }")}, True),
         ("a form regrows a head",
          CLEAN_CONSOLE,
-         {"a.swift": swap(CLEAN_CARD, "DevnetSendKeypad(amount: $amount, tint: t)",
-                          "Text(\"Send\").dsText(.heading17)\n            DevnetSendKeypad(amount: $amount, tint: t)")}, True),
+         {"a.swift": swap(CLEAN_CARD, "            DevnetSendVerb",
+                          "            Text(\"Send\").dsText(.heading17)\n            DevnetSendVerb")}, True),
         # DISCRIMINATING, and it has to be: the previous cut of this case was
         # the clean fixture again, which proves nothing. The head is moved
         # ABOVE the form here, so a whole-file grep for `.heading17` WOULD
@@ -265,9 +290,9 @@ def self_test() -> int:
         ("a comment naming a banned literal does not fire",
          CLEAN_CONSOLE,
          {"a.swift": swap(CLEAN_CARD, "private var form: some View {",
-                          "// never .dsText(.heading17) here, and never .frame(height: 52)\n    private var form: some View {")}, False),
+                          "// never .dsText(.heading17) here, and never a DevnetSendKeypad\n    private var form: some View {")}, False),
         ("a console with no budget at all certifies nothing",
-         swap(CLEAN_CONSOLE, "static let budget: CGFloat = 400", ""),
+         swap(CLEAN_CONSOLE, "static let budget: CGFloat = 266", ""),
          {"a.swift": CLEAN_CARD}, True),
     ]
     ok = True
@@ -310,11 +335,11 @@ def main() -> int:
         return 1
 
     c = constants(strip_comments(console))
-    height = (2 * c["cardPadding"] + c["recipientRow"] + 3 * c["blockGap"]
+    height = (2 * c["cardPadding"] + c["recipientRow"] + 2 * c["blockGap"]
               + c["figureLine"] + c["figureGap"] + c["sublineRow"]
-              + c["keyRows"] * c["keyHeight"] + c["verbLine"] + 2 * c["verbPad"])
+              + c["verbLine"] + 2 * c["verbPad"])
     print(f"✓ devnet-console audit: the console sums to {height:g}pt of a "
-          f"{c['budget']:g}pt budget, keys at {c['keyHeight']:g}pt")
+          f"{c['budget']:g}pt budget (the smallest phone's allowance)")
     return 0
 
 

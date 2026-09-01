@@ -41520,3 +41520,106 @@ nothing here has been compiled and neither room has been photographed. Every
 static audit passes, the new one included. The first thing to look at on a
 device is the recipient row on a narrow phone, where the sender's name, an
 arrow, three overlapped faces and "Choose who" now share one 44pt line.
+
+## 548a. The keypad is the system's — the space has to come from below the slot, and 176pt of it was a keypad that was always there (user: "needs to come from below the slot", "and maybe that means we can't have a keypad I don't know", 2026-09-01)
+
+§548 took the card from 601pt to 394 by cutting everything that was not the
+console, and closed on a ceiling it could not do anything about: **the chrome
+above is ~545pt on EVERY iPhone, because none of its four terms scales with
+screen height.** So the room leaves 411pt on a 956pt phone and **276pt on an
+812pt one**, and 394 does not fit in 276. The first pass fitted exactly one
+screen size, and it said so rather than hiding it. This is the answer to that
+ceiling, and the user's own reading of it is the ruling: the space comes from
+below the slot, and there was one term below the slot still worth 176pt.
+
+**THE KEYPAD WAS 45% OF THE BUDGET AND IT WAS PERMANENT.** That is the whole
+argument. §544 chose a custom keypad over the system keyboard on the grounds
+that "the system keyboard covers half the screen — including the crown, which
+is the balance you are deciding against". True — and the alternative it reached
+for takes that space PERMANENTLY, whether or not anybody is typing, out of a
+room that has 276pt in total. A keyboard costs it only while a finger is on it.
+
+**And what it covers is already answered by the console itself.** The objection
+was about losing sight of the balance mid-decision; the subline under the
+figure says "1.2345 available", which is the SENDING ACCOUNT's balance — a more
+exact governor of this send than the room-total crown ever was. The reason
+§544's argument looked decisive was that the console did not yet state its own
+balance. It does.
+
+**`.decimalPad` IS a keypad.** The same twelve keys — 1-9, a separator, 0,
+delete — at the system's sizes, with the system's haptics, its key repeat, its
+accessibility and its behaviour under every text setting. The custom grid was a
+re-implementation of it that the room then paid rent on. §544's second ruling
+("bare digits on the surface, no key backgrounds") is kept exactly; it is now
+kept by Apple.
+
+```
+  card padding (s4 × 2)                    36
+  the recipient row                        44
+  gap                                      14
+  the figure and its subline               74
+  gap                                      14
+  the verb                                 50
+  ────────────────────────────────────────────
+                                          232pt
+```
+
+**THE BUDGET IS THE SMALLEST PHONE NOW, AND THAT IS THE REAL CORRECTION.**
+§548 budgeted against the 956pt device it had a screenshot of, which is how a
+394pt console read as a fix. 812pt less ~536 of chrome is 276, less a 10pt
+margin → **266**. The sum is 232 and clears it by 34.
+
+**The air comes back.** §548 squeezed `cardPadding` to `s3` and the block gaps
+to `s2` for 32pt it needed; it does not need them now, and a card in these
+rooms that insets differently from every other card in these rooms is a
+difference with nothing behind it. **What does not come back**: the card head
+and the standing footnote, neither of which was a space saving (§544's own
+third ruling puts the verb on the button, the sending account is on the
+recipient row, and §315 disposed of the footnote), and the `price48` figure,
+which §491 rules out as a second crown-rung figure one slab under the crown.
+
+**THE FIGURE IS THE FIELD.** §544 banned a `TextField` because "the keypad is
+the only way in, so there is no second input to keep in sync" — with the keypad
+gone there is no second input: one `@State` string, one field bound to it.
+`DevnetAmountInput.append`/`delete` are deleted and `sanitize` replaces them,
+and it REFUSES rather than repairs: a change that would make an amount the
+chain cannot express returns the previous value, which is exactly what a
+refused key did. A pasted "£12" or a European "1,5" is refused whole rather
+than stripped, because stripping turns "1,5" into "15" — a wrong number rather
+than no number. Two things it still repairs, as every calculator does: a bare
+leading separator becomes "0.", and a digit typed against the lone placeholder
+replaces it rather than making "07".
+
+**THE ONE WAY DOWN IS NOT OPTIONAL, and it is the trap this would have shipped
+with.** `.decimalPad` HAS NO RETURN KEY. Without a keyboard toolbar there is no
+key that dismisses it, and a tap outside is unreliable inside a scrolling
+`List` — leaving a pad somebody cannot put away, over the Send button it is
+covering. `devnetAmountToolbar` is a Done button in the keyboard's own
+accessory, both cards carry it, and the audit fails the build if either stops.
+The verb also lowers the pad before it acts, because what happens next — the
+settled receipt, or the reason it refused — is drawn in the card underneath it.
+
+**Two stated ceilings.** An iPhone SE has a 20pt safe area and a 667pt screen,
+so its chrome is ~506 and it leaves ~161pt: 232 does not fit and no arrangement
+of a recipient, a figure and a verb will. That phone needs a smaller chrome or
+a different surface, and nothing here should be traded away chasing it. And the
+keypad's figure carried `minimumScaleFactor(0.4)` where a `TextField` cannot,
+so an amount past ~10 whole digits will run its line rather than shrink on a
+narrow phone — worth re-eyeballing with a faucet-sized Hegotá balance typed in
+full.
+
+**REFUSED: making it adaptive.** A keypad where there is room and a keyboard
+where there is not is two consoles, two sets of bugs and two things to
+photograph, to save one screen size from a scroll it no longer has.
+
+The audit grew two checks with the ruling, and check 7 is the one that matters
+in a year: **the custom keypad must not come back.** 176pt is the whole saving
+and it is the obvious thing to restore the next time somebody redesigns this
+screen on a Pro Max. If it returns, it returns with a new budget and a new
+entry here, not quietly.
+
+UNBUILT AND UNSEEN, same as §548: authored on Linux with no Xcode and no Swift
+toolchain. Every static audit passes. The first things to look at on a device
+are the keyboard's arrival — whether the room scrolls the figure clear of the
+pad — and the recipient row on a narrow phone, where the sender's name, an
+arrow, three overlapped faces and "Choose who" share one 44pt line.

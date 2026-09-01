@@ -58,6 +58,9 @@ struct VibenetSendCard: View {
     @State private var sentSummary: String?
     /// The recipient picker — one sheet, raised from the To row.
     @State private var picking = false
+    /// The amount field's focus. The `.decimalPad` has no return key, so the
+    /// keyboard toolbar owns the only way down (`devnetAmountToolbar`).
+    @FocusState private var amountFocused: Bool
 
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
@@ -118,9 +121,9 @@ struct VibenetSendCard: View {
 
     /// **THE CONSOLE (prd §544), FITTED TO THE SCREEN (prd §548).** Two
     /// labelled wells and a button became a recipient row, a centred figure and
-    /// a keypad — see `DevnetSendConsole` for the reasoning and for the height
-    /// budget every number below is drawn from; what is specific to vibenet is
-    /// here.
+    /// an amount field — see `DevnetSendConsole` for the reasoning, for the
+    /// height budget every number below is drawn from, and for §548a's ruling
+    /// that the keypad is the system's; what is specific to vibenet is here.
     private var form: some View {
         VStack(spacing: DevnetConsole.blockGap) {
             DevnetSendToRow(from: accountAddress,
@@ -130,7 +133,8 @@ struct VibenetSendCard: View {
                             preview: knownAddresses,
                             onTap: { picking = true })
 
-            DevnetSendFigure(amount: amount, dim: amount.isEmpty) {
+            DevnetSendFigure(amount: $amount, focus: $amountFocused,
+                             tint: Self.mark, dim: amount.isEmpty) {
                 // THE UNIT IS A WORD HERE, and the asset CHOICE is not yet
                 // built (§544's stated gap): this seat has only ever moved
                 // native ETH — `VibenetSend.sendValue` takes a `valueWei`
@@ -156,10 +160,13 @@ struct VibenetSendCard: View {
                 .frame(height: DevnetConsole.sublineRow)
             }
 
-            DevnetSendKeypad(amount: $amount, tint: Self.mark)
-
             DevnetSendVerb(title: sendLabel, armed: canSend, busy: busy,
-                           tint: Self.mark, action: send)
+                           tint: Self.mark) {
+                // The pad covers the room, and what happens next is drawn in
+                // this card: the settled receipt, or the reason it refused.
+                amountFocused = false
+                send()
+            }
 
             // **THE STANDING FOOTNOTE IS GONE (prd §548).** It read "Signed by
             // this phone's key. Whether the sender or the devnet's faucet pays
@@ -183,6 +190,7 @@ struct VibenetSendCard: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .devnetAmountToolbar($amountFocused)
         .sheet(isPresented: $picking) {
             DevnetSendPicker(title: String(localized: "Send to"),
                              candidates: pickerCandidates,
