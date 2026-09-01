@@ -56,7 +56,12 @@ struct MoneyReceiptCard: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 0) {
                 MoneySubjectDisc(subject: receipt.subject, mine: receipt.mine,
-                                 ring: DS.surfaceRaised, onOpen: onSubject)
+                                 // The ring punches out the PAPER, and the
+                                 // paper is ink since §542 — a `surfaceRaised`
+                                 // ring on it draws a gray halo around the
+                                 // disc, which is the gray this ruling killed
+                                 // wearing a 1.5pt disguise.
+                                 ring: DS.inkGround, onOpen: onSubject)
                 Spacer(minLength: DS.Space.s3)
                 if let stamp = receipt.stamp {
                     DSStamp(word: stamp.word, weight: stamp.weight.stampWeight)
@@ -272,7 +277,11 @@ struct ReceiptPaper: Shape {
 struct MoneySubjectDisc: View {
     let subject: MoneyReceipt.Subject
     var mine: String?
-    var ring: Color = DS.surfaceRaised
+    /// What the ring punches out — the surface BEHIND the disc, so the
+    /// faces separate without a line. `DS.inkGround` since §542, when every
+    /// paper became ink; a caller drawing this on some other surface passes
+    /// that surface, and passing a colour the ground is not draws a halo.
+    var ring: Color = DS.inkGround
     var size: CGFloat = DS.Face.shelf
     var onOpen: ((String) -> Void)?
 

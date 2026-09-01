@@ -52,7 +52,7 @@ struct AddressGroupCard: View {
                             // The face's own separation, since nothing in this
                             // app draws a line: each mark punches the card
                             // colour out from under the one behind it.
-                            .overlay(Circle().strokeBorder(DS.surfaceRaised, lineWidth: 1.5))
+                            .overlay(Circle().strokeBorder(DS.inkGround, lineWidth: 1.5))
                             // A face joining the deck GROWS into it. Scoped to
                             // the mark rather than the deck so the ones already
                             // there hold still and only the newcomer moves.
@@ -86,8 +86,18 @@ struct AddressGroupCard: View {
             }
             .frame(width: 150, alignment: .leading)
             .padding(DS.Space.s3)
-            .background(DS.surfaceRaised,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            // INK, NOT THE GRAY (prd §542) — and the pour is what keeps it
+            // a card rather than a hole: the page under it is `#000` on the
+            // default theme, so an ink fill alone would erase the deck.
+            .background(alignment: .top) {
+                LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(height: 90)
+                    .frame(maxWidth: .infinity, alignment: .top)
+            }
+            .background(DS.inkGround)
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .shadow(color: DS.raisedShadow, radius: 10, y: 2)
             .overlay {
                 if targeted {
                     RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)

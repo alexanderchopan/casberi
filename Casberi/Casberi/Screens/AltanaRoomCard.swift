@@ -228,7 +228,12 @@ struct AltanaRoomCard: View {
         HStack(spacing: -DS.Face.badge * 0.34) {
             ForEach(row.accountAddresses.prefix(3), id: \.self) { address in
                 WalletFace(address: address, size: DS.Face.badge, circular: true)
-                    .overlay(Circle().strokeBorder(DS.surfaceRaised, lineWidth: 1.5))
+                    // The card under these faces is `dsWidgetSurface()`,
+                    // i.e. `DS.surfaceSheet` — so that is what the ring must
+                    // punch out. It was `surfaceRaised`, which drew a gray
+                    // halo on a card that was never that colour (found in
+                    // §542's sweep, predating it).
+                    .overlay(Circle().strokeBorder(DS.surfaceSheet, lineWidth: 1.5))
             }
         }
         .fixedSize()

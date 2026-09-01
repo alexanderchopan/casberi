@@ -69,8 +69,20 @@ struct AltanaKeyCard: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DS.surfaceRaised,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        // INK with a pour (prd §542) — `PriceObjectCard`'s anatomy, which
+        // sits on the same ink ground in the same sheet, so the two cards a
+        // thing sheet can show read as one family instead of one gray and
+        // one not. The pour is load-bearing: `ThingSheetView` is `dsInk()`,
+        // so an ink fill with no top would be invisible.
+        .background(alignment: .top) {
+            LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: 110)
+                .frame(maxWidth: .infinity, alignment: .top)
+        }
+        .background(DS.inkGround)
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .shadow(color: DS.raisedShadow, radius: 10, y: 2)
     }
 
     // MARK: - Pieces

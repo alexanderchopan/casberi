@@ -90,7 +90,13 @@ struct PriceObjectCard<Evidence: View>: View {
                 .frame(height: 150)
                 .frame(maxWidth: .infinity, alignment: .top)
         }
-        .background(DS.surfaceRaised)
+        // INK, for the same reason the pour above it is (prd §542,
+        // 2026-08-31, user: "i think in the token rooms sheets we have that
+        // gray" — this card, named). `DS.surfaceRaised` stood here, which is
+        // the gray every paper in the app wore until §542 and this is a
+        // paper: pour, clipped silhouette, `raisedShadow`. It reads on the
+        // ink ground by its pour and its shadow, not by a tonal step.
+        .background(DS.inkGround)
         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card + 4,
                                     style: .continuous))
         .shadow(color: DS.raisedShadow, radius: 10, y: 2)
