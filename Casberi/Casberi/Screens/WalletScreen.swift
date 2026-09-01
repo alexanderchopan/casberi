@@ -44,7 +44,22 @@ struct WalletScreen: View {
             BridgeSetupHeader(
                 name: "Wallet",
                 mode: .noAccount,
-                intro: "Paste an address or ENS name below, or connect a wallet app. Watch up to five.",
+                // **THE INTRO FOLLOWS THE FIELD (2026-08-31).** It said
+                // "paste an address or ENS name below" unconditionally, while
+                // `WalletWatchField` draws only while nothing is watched — so
+                // for everybody past their first address the sentence named a
+                // control that is not on the screen. §83's dead control in
+                // words rather than in pixels, and worse than a dead button:
+                // a button that does nothing is at least visible, and this
+                // sent people hunting for a field that had moved (§466 — the
+                // roster, and watching a second through fifth, is the address
+                // book's job now).
+                //
+                // The second branch points at the door directly below it, so
+                // "below" resolves in both states.
+                intro: wallet.addresses.isEmpty
+                    ? String(localized: "Paste an address or ENS name below, or connect a wallet app. Watch up to five.")
+                    : String(localized: "Watching \(wallet.addresses.count) of \(WalletStore.watchLimit). Add, rename or stop watching in the address book below."),
                 connected: !wallet.addresses.isEmpty)
 
             // A DOOR, not a signpost (R4.5) — only once there is a room to

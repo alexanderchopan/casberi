@@ -4620,8 +4620,7 @@ struct FeedScreen: View {
                                     },
                                     // The face rail's two halves, now the
                                     // crown's (prd §482 amendment).
-                                    scopedAddress: chrome.vibenetScope,
-                                    onOpenBook: { route.push(.vibenetAddressBook) })
+                                    scopedAddress: chrome.vibenetScope)
                 case .altana(let card):
                     AltanaRoomCard(card: card) {
                         // The door is Altana's own explorer — the only place a
@@ -7873,7 +7872,16 @@ struct FeedScreen: View {
                 WalletApprovalExposureCard(exposure: walletLive.exposure) { grant in
                     guard let thing = walletLive.activeApprovals
                         .first(where: { $0.isLive && $0.id == grant.thingID })
-                    else { return }
+                    else {
+                        // A row whose thing a foreground heal tombstoned
+                        // between the read and the tap. It used to return in
+                        // silence, which is indistinguishable from the door
+                        // being broken — and this list already had one
+                        // affordance problem (see the card's chevron note).
+                        chrome.flash(String(localized: "That grant is no longer here."),
+                                     tone: .failure)
+                        return
+                    }
                     feedSheet = .thing(thing)
                 }
                 .id(Self.approvalsAnchor)

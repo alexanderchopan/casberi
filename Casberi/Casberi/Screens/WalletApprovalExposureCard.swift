@@ -171,6 +171,26 @@ struct WalletApprovalExposureCard: View {
                     }
                     metaLine(grant)
                 }
+                // **THE ROW IS A DOOR AND HAD NO WAY TO SAY SO (2026-08-31).**
+                // Reported as "the list is just a list and doesn't do
+                // anything": in the Permissions scope this list sits directly
+                // under `WalletActingPartiesRows`, which is inert BY RULING
+                // (§112/§293 — a delegate is undone in the wallet app that set
+                // it, so a control here would be §83's dead one) and drew the
+                // identical anatomy. Two lists, one look, opposite behaviour —
+                // so the tappable half read as the inert one, and the revoke
+                // hand-off a tap away (`ApprovalPrepareCard`'s Revoke.cash
+                // door, and the sheet's own Revoke.cash disc) was never found.
+                //
+                // `WalletRowChevron` rather than a glyph of its own: it is the
+                // room's ONE "there's more" mark, and the six competing
+                // grammars it replaced are exactly how this drifted. The
+                // asymmetry with the list above is now the information — a
+                // chevron means there is somewhere to go.
+                WalletRowChevron()
+                    // Optically on the title line, like the mark opposite it,
+                    // rather than centred on the two-line block.
+                    .padding(.top, 4)
             }
             .contentShape(Rectangle())
         }
