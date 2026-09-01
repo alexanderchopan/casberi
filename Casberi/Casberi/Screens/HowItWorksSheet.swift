@@ -55,7 +55,7 @@ struct HowItWorksSheet: View {
     /// permission, an address, a handle) at the exact moment the person still
     /// does not know what the app is. The demo costs nothing and answers that
     /// question directly, so it is the only honest first tap. The fork is not
-    /// deleted, it MOVED: leaving the demo lands on it (`HomeRoute.startHere`),
+    /// deleted outright (2026-08-31): the catalogue is its answer,
     /// where "which of your own sources?" is a question the person now has.
     ///
     /// The secondary link below the CTA is the other half of that ruling —
@@ -78,10 +78,11 @@ struct HowItWorksSheet: View {
     /// True once the last tile is past the bottom — the overlay unmounts, so
     /// 31 offscreen icon views don't stay composited under the cover forever.
     @State private var rainDone = false
+    /// The Casberi mark's own arrival, after the rain has fallen past.
+    @State private var markLanded = false
     /// Pushes the fork. Kept as local navigation inside this sheet's own stack
     /// so the greeting stays on the back chevron — a first run should be
     /// reversible.
-    @State private var showStart = false
 
     private struct Point: Identifiable {
         let glyph: String
@@ -115,18 +116,20 @@ struct HowItWorksSheet: View {
     // already worked this way — "the chips up top", "the bar at the bottom" —
     // and both survive because a strip and a bar are regions, not coordinates.
     // The titles carry no "1." prefix — the giant numeral IS the number.
+    // TEXT ONLY (user, 2026-08-31: "hyper minimal and bold … it still feels
+    // like a lot to read"). Every glyph, strip and subtitle this block ever
+    // carried is deleted — three bold lines are the whole explanation, and
+    // each one names the region it teaches in its own words.
     private let points: [Point] = [
         Point(glyph: "square.grid.2x2.fill", hue: .blue,
               title: "Connect your apps",
-              line: "Everything you connect lands here on its own — pick your apps from the catalog."),
+              line: ""),
         Point(glyph: "line.3.horizontal.decrease.circle.fill", hue: .pink,
-              title: "One feed, or one app",
-              line: "Narrow it to one app with the chips up top."),
-        // Wears the agent bar's own seat — the ask bar sits at the bottom of
-        // every feed, the same reason step 1 wears the catalog's grid.
+              title: "One feed, or many",
+              line: ""),
         Point(glyph: "sparkles", hue: .purple,
-              title: "Ask anything",
-              line: "Ask the bar at the bottom about anything you've saved."),
+              title: "Ask your agents",
+              line: ""),
     ]
 
     // MARK: - The onboarding rain (moved here 2026-07-16 when the connect
@@ -134,18 +137,45 @@ struct HowItWorksSheet: View {
     // resolve to a real BridgeCatalog offer (catalog-sync.sh checks this
     // array by name). The last six are Apple's bridges as symbol tiles
     // (their icons are legally unbundlable).
-    private static let marqueeApps = ["Wallet", "Farcaster", "Gmail", "GitHub",
-                                      "Claude", "GeckoTerminal", "Strava", "Bluesky",
-                                      "Shopify", "Notion", "Reddit",
-                                      "YouTube", "Todoist", "RSS", "ChatGPT",
-                                      "Gemini", "Linear", "Raindrop", "Readwise",
-                                      "Tokens", "Venice", "Cal.com",
-                                      "Bankr", "Stocktwits",
-                                      "iCloud Mail", "Apple Music", "Apple Health",
-                                      "Reminders", "Calendar", "Photos"]
+    /// EVERY CONNECTABLE SEAT, derived (user, 2026-08-31: "why not have all
+    /// 80+ or so that are in the app?"). There was no good reason — 249 brand
+    /// marks are bundled against 103 connectable offers, so the only limit was
+    /// that this was a HAND LIST of thirty.
+    ///
+    /// Deriving it is also what retires the drift: `catalog-sync.sh` had to
+    /// check every hand-written name still resolved to a real offer, because a
+    /// renamed or retired seat left a dead tile here. A list read from the
+    /// catalog cannot go stale.
+    ///
+    /// Apple's own seats keep their SF-symbol fallback — those icons are not
+    /// legally bundlable — which `BridgeIcon` already handles per name.
+    private static var marqueeApps: [String] {
+        let all = BridgeCatalog.offers.filter(\.connectable).map(\.name)
+        // The landers fall LAST, so "the last six" is a curated set rather
+        // than whatever sits at the end of the catalog array (user,
+        // 2026-08-31: "what if the last six are weird ones"). It would have
+        // been — that order is authoring order, and a seat added tomorrow
+        // would silently take a landing slot from Photos.
+        //
+        // These six are the ones somebody recognises without reading: they
+        // are what stays on screen, so they have to say "your everyday things
+        // land here" at a glance. `catalog-sync.sh` checks each still names a
+        // real offer.
+        return all.filter { !landers.contains($0) } + landers.filter { all.contains($0) }
+    }
+
+    private static let landers = ["Photos", "Calendar", "Gmail",
+                                  "GitHub", "Notion", "Wallet"]
 
     /// Deterministic per-tile jitter — no Math.random in a view body; the
     /// same fall replays identically (and the screen sweep sees one design).
+    /// How many of the falling tiles stop on the shelf above the doors.
+    private static var landingCount: Int { landers.count }
+    private static let landingStride: CGFloat = DS.Mark.tile + DS.Space.s2
+    /// Where the rain comes to rest: below the copy, splitting the distance
+    /// between the sentence and the doors so neither side holds a void. A
+    /// fraction, not a fixed inset, so the balance holds on every phone.
+    private static let landingFraction: CGFloat = 0.60
     private static let jitter: [CGFloat] = [-4, 3, -2, 5, -5, 2, -3, 4]
 
     /// The curtain: every marquee tile falls from above the screen, tumbles,
@@ -160,10 +190,25 @@ struct HowItWorksSheet: View {
                 let frac = (Double(i) * 0.381966).truncatingRemainder(dividingBy: 1)
                 let x = DS.Space.s4 + CGFloat(frac) * (geo.size.width - DS.Space.s4 * 2)
                 let tilt = Double(Self.jitter[i % Self.jitter.count])
-                BridgeIcon(name: name, size: DS.Mark.hero)
-                    .rotationEffect(.degrees(rainFell ? tilt * 3.4 : tilt * 0.5))
-                    .position(x: x + Self.jitter[(i + 3) % Self.jitter.count],
-                              y: rainFell ? geo.size.height + 140 : -120)
+                // THE LAST SIX LAND (2026-08-31). Everything else falls past
+                // the bottom — that is what makes it a curtain — and the tail
+                // of the same fall stops on the shelf above the two doors.
+                // They ARRIVE BY FALLING: it is one motion, not a row fading
+                // in over a rain still in flight, which is what the deleted
+                // `settledPile` was and why it never read as landing.
+                let lands = i >= Self.marqueeApps.count - Self.landingCount
+                let slot = i - (Self.marqueeApps.count - Self.landingCount)
+                // Centred row: each slot is offset from the middle by half
+                // the run's width. The `* 0.5` used to sit on the STRIDE,
+                // which spaced them at half a tile and piled them up.
+                let restX = geo.size.width / 2
+                    + (CGFloat(slot) - CGFloat(Self.landingCount - 1) / 2) * Self.landingStride
+                let restY = geo.size.height * Self.landingFraction
+                BridgeIcon(name: name, size: lands ? DS.Mark.tile : DS.Mark.hero)
+                    .rotationEffect(.degrees(rainFell ? tilt * (lands ? 1.6 : 3.4) : tilt * 0.5))
+                    .position(x: rainFell && lands ? restX
+                                                   : x + Self.jitter[(i + 3) % Self.jitter.count],
+                              y: rainFell ? (lands ? restY : geo.size.height + 140) : -120)
                     // The base delay clears the cover's own presentation —
                     // start the rain while the cover is still fading in and
                     // half the fall is spent invisible (measured 2026-07-16).
@@ -173,8 +218,11 @@ struct HowItWorksSheet: View {
                     // transition (it ends below the screen either way) and
                     // step 1's settled strip says the same thing standing still.
                     .animation(reduceMotion ? nil
-                                            : .easeIn(duration: 0.75)
-                                                .delay(0.7 + Double(i) * 0.055),
+                                            : (lands
+                                               ? .spring(duration: 0.62, bounce: 0.28)
+                                                   .delay(0.7 + Double(i) * 0.022)
+                                               : .easeIn(duration: 0.75)
+                                                   .delay(0.7 + Double(i) * 0.022)),
                                value: rainFell)
             }
         }
@@ -217,52 +265,65 @@ struct HowItWorksSheet: View {
                         // contradiction — and the falling-icon rain gives this
                         // screen an identity the fork can never be mistaken for
                         // in its first seconds regardless.
-                        Text("What you can do")
+                        // The LABEL is quiet and the STATEMENTS are the
+                        // screen (user, 2026-08-31: "shouldn't they be spread
+                        // out more? larger?"). Three 24pt lines in a slab used
+                        // a tenth of the screen and read as a list; §532's own
+                        // move — extreme proportions, fewer sizes further
+                        // apart — runs the hierarchy the other way: a caption
+                        // names the screen, and each capability stands at the
+                        // head rung with the screen's height divided between
+                        // them. The slab is gone; a box around everything on
+                        // an otherwise empty screen was holding the lines
+                        // together when the whole screen is what holds them.
+                        // ONE SCREEN, TWO DOORS (user, 2026-08-31: "we
+                        // need to do better and have ONE screen somehow",
+                        // then "the fork is already there" — its three arms
+                        // are what the CATALOGUE offers, so they belong there
+                        // as discover cards and not on a screen of their own).
+                        //
+                        // What went: the three numbered steps, then the three
+                        // bold statements that replaced them, then the fork
+                        // this pushed to. Each rewrite made the screen tidier
+                        // and none made it SHORTER — it explained the app to
+                        // somebody who had not seen it yet, which is work the
+                        // demo does in ten seconds and prose never does.
+                        //
+                        // What stays is the rain (the best thing here, and the
+                        // only explanation that needs no reading), one
+                        // sentence, and the two things a person can actually
+                        // do next.
+                        // THE MARK LANDS LAST, ABOVE THE TEXT (user,
+                        // 2026-08-31: "the octopus lands last above the text
+                        // and fills that void too"). Two voids, two arrivals:
+                        // the rain settles UNDER the copy and fills the middle,
+                        // this fills the top. It waits for the curtain to
+                        // clear so it reads as the one that stayed.
+                        CasberiMark(size: 120)
+                            .scaleEffect(markLanded ? 1 : 0.7)
+                            .opacity(markLanded ? 1 : 0)
+                            .animation(reduceMotion ? nil
+                                                    : .spring(duration: 0.55, bounce: 0.3)
+                                                        .delay(2.4),
+                                       value: markLanded)
+                            .padding(.bottom, DS.Space.s4)
+                            .accessibilityHidden(true)
+                        Text("Everything you need, in one place.")
                             .dsText(.heading34)
                             .foregroundStyle(DS.textPrimary)
-                            .minimumScaleFactor(0.8)
                             .fixedSize(horizontal: false, vertical: true)
-                        Text("Everything you care about, from every app, in one place that's yours.")
+                        // Says what "one feed, or many" never did (user: "isn't
+                        // clear that you can view as one feed, or separately as
+                        // many"). The agent is named in the same breath rather
+                        // than taking a line of its own.
+                        Text("Read it all together, or one app at a time. Ask your agents about any of it.")
                             .dsText(.body17)
                             .foregroundStyle(DS.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, DS.Space.s2)
                     }
                     .padding(.top, DS.Space.s2)
                     .arrive(arrived, delay: 0.1)
-
-                    // ONE BLOCK, three beats (prd §528, 2026-08-29). The
-                    // steps were three separate `dsWidgetSurface` cards, so a
-                    // screen that offers THREE things — how it works, try it,
-                    // get started — presented five: step 1, step 2, step 3, the
-                    // CTA and the link (user: "those are five things … how can
-                    // we make them feel like three").
-                    //
-                    // **The steps are one thing and this screen's own TITLE
-                    // says so.** They are the answer to "How it works" — a
-                    // SEQUENCE, not alternatives — so one container is not a
-                    // compression of three offers into one, it is the shape
-                    // they always had drawn correctly for the first time.
-                    //
-                    // **It must not look like the fork's slab**, one screen
-                    // later, or the two screens stop announcing which of them
-                    // is asking something: that one is marked, tappable rows
-                    // with tinted square figures, this one is numbered rows
-                    // whose numerals lead. Numbers are what make it unmistakably
-                    // an explanation rather than a set of answers, which is why
-                    // dropping them (considered) was refused.
-                    //
-                    // Arrives as ONE element, the fork's ruling for the same
-                    // reason: a block whose rows staggered in is three arrivals
-                    // wearing one edge, which says the opposite of what the
-                    // grouping is for.
-                    VStack(spacing: 0) {
-                        ForEach(Array(points.enumerated()), id: \.element.id) { i, point in
-                            stepRow(i, point)
-                        }
-                    }
-                    .padding(DS.Space.s2)
-                    .dsWidgetSurface()
-                    .arrive(arrived, delay: 0.25)
                 }
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.bottom, DS.Space.s4)
@@ -283,8 +344,6 @@ struct HowItWorksSheet: View {
                     }
                 }
             }
-            .navigationDestination(isPresented: $showStart) {
-                if let onStart { StartHereScreen(onStart: onStart) }
             }
             .safeAreaInset(edge: .bottom) {
                 if onStart != nil {
@@ -317,11 +376,16 @@ struct HowItWorksSheet: View {
                     // second button: two equal buttons is a decision, and the
                     // whole point of the change above is that the first tap
                     // shouldn't be one.
+                    // Straight to the CATALOGUE (2026-08-31). It used to push
+                    // a fork asking which of three things to start with —
+                    // files, a wallet, or all the apps — and all three are
+                    // what the catalogue already lists, so the question was a
+                    // screen standing in front of its own answer.
                     Button {
                         DSHaptic.tap()
-                        showStart = true
+                        onStart?(.apps)
                     } label: {
-                        Text("Start with my own things")
+                        Text("Connect my apps")
                             .dsText(.callout15)
                             .foregroundStyle(DS.textSecondary)
                             .frame(maxWidth: .infinity)
@@ -334,19 +398,23 @@ struct HowItWorksSheet: View {
                     .padding(.bottom, DS.Space.s2)
                 }
             }
-        }
         // The rain falls only in the onboarding tail — from Settings this is
         // a reference page, and a second rain would be a fake first time.
-        .overlay { if onStart != nil && !rainDone { rain } }
+        // The rain is no longer torn down: its last six tiles ARE the
+        // shelf above the doors, so removing it would remove them.
+        .overlay { if onStart != nil { rain } }
         .tint(DS.tint)
         .onAppear {
             if reduceMotion { arrived = true }
             else { withAnimation(DS.Motion.standard) { arrived = true } }
             guard onStart != nil else { return }
             rainFell = true
-            // Last tile: 0.7 base + 30 × 0.055 stagger + 0.75 fall ≈ 3.1s.
+            markLanded = true
+            // Last tile: 0.7 base + 103 × 0.022 stagger + 0.75 fall ≈ 3.7s.
+            // The stagger tightened with the count so the curtain still runs
+            // about three seconds rather than six.
             Task { @MainActor in
-                try? await Task.sleep(for: .seconds(3.6))
+                try? await Task.sleep(for: .seconds(4.2))
                 rainDone = true
             }
         }
@@ -361,8 +429,8 @@ struct HowItWorksSheet: View {
                 try? await Task.sleep(for: .seconds(delay))
                 let ownThings = UserDefaults.standard.object(forKey: "demoCTA") != nil
                     && !UserDefaults.standard.bool(forKey: "demoCTA")
-                NSLog("howItWorksCTA: fired (%@)", ownThings ? "fork" : "demo")
-                if ownThings { showStart = true } else { enterDemo() }
+                NSLog("howItWorksCTA: fired (%@)", ownThings ? "catalog" : "demo")
+                if ownThings { onStart?(.apps) } else { enterDemo() }
             }
         }
         #endif
@@ -407,75 +475,12 @@ struct HowItWorksSheet: View {
     /// carried a `.padding(.trailing, DS.Space.s6)` so its last word would not
     /// collide with the numeral. None of it is needed now.
     private func stepRow(_ index: Int, _ point: Point) -> some View {
-        HStack(alignment: .top, spacing: DS.Space.s3) {
-            Text(verbatim: "\(index + 1)")
-                .dsText(.heading22)
-                .foregroundStyle(point.hue)
-                .frame(width: 18, alignment: .center)
-                // The row's own title says the step; the numeral is the
-                // ordering, which VoiceOver gets from the reading order.
-                .accessibilityHidden(true)
-            contentStack(index, point)
-        }
-        .padding(DS.Space.s3)
-    }
-
-    private func contentStack(_ index: Int, _ point: Point) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-                // Glyph BESIDE the words, not stacked above them (2026-07-25).
-                // Stacked, three cards plus the header ran ~200pt past the fold
-                // on a 17 Pro — step 3's title sat behind the CTA and its line
-                // ran off the bottom (user: "user doesn't have to scroll to see
-                // all the content"). Going horizontal reclaims the glyph's own
-                // height on every card. Type is UNTOUCHED: §206 raised the
-                // reading scale on purpose, and shrinking it back here to win
-                // space would undo a ruling to fix a layout problem.
-                HStack(alignment: .top, spacing: DS.Space.s3) {
-                    // The glyph is the SHELL'S OWN mark for the door this step
-                    // names — step 1 wears `TopDoors`' grid, step 3 the agent
-                    // bar's sparkles — so it is a teaching device and stays.
-                    // It sits in a TINTED CIRCLE rather than the rounded square
-                    // it used to wear (§528): the square is the fork's figure
-                    // anatomy one screen later, and the two blocks have to be
-                    // tellable apart at a glance.
-                    Image(systemName: point.glyph)
-                        .dsGlyph(20)
-                        .foregroundStyle(point.hue)
-                        .frame(width: 40, height: 40)
-                        .background(point.hue.opacity(0.16), in: Circle())
-                    VStack(alignment: .leading, spacing: DS.Space.s1) {
-                        Text(point.title)
-                            .dsText(.heading22)
-                            .foregroundStyle(DS.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Text(point.line)
-                            .dsText(.body17)
-                            .foregroundStyle(DS.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                if index == 0 { catalogStrip }
-            }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// The onboarding rain, settled: a row of the same real brands, each
-    /// resting slightly uneven — the rain's own jitter, come to rest.
-    /// Illustration by identity (real icons), never a control.
-    private static let stripApps = ["Photos", "Calendar", "Gmail",
-                                    "GitHub", "Farcaster", "Wallet"]
-    private static let stripTilt: [Double] = [-3, 2, -2, 3, -3, 2]
-
-    private var catalogStrip: some View {
-        HStack(spacing: DS.Space.s2) {
-            ForEach(Array(Self.stripApps.enumerated()), id: \.element) { i, name in
-                BridgeIcon(name: name, size: DS.Mark.list)
-                    .rotationEffect(.degrees(Self.stripTilt[i % Self.stripTilt.count]))
-            }
-        }
-        .padding(.top, DS.Space.s1)
-        .accessibilityHidden(true)
+        Text(point.title)
+            .dsText(.heading22)
+            .foregroundStyle(DS.textPrimary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(DS.Space.s3)
     }
 }
 

@@ -553,20 +553,13 @@ struct MainSurface: View {
         case .walletbeatDirectory:
             WalletbeatDirectoryScreen()
         case .l2beatDirectory:
-            L2beatDirectoryScreen()        case .addressGroup(let name):
+            L2beatDirectoryScreen()
+        case .addressGroup(let name):
             AddressGroupScreen(group: name)
         case .addressBook:
             AddressBookScreen()
         case .vibenetAddressBook:
             VibenetAddressBookScreen()
-        case .startHere:
-            // Reached after leaving the demo, so "finishing" is a pop
-            // rather than the end of onboarding — a non-nil node still
-            // means "land there instead", which is how the wallet card
-            // and the catalog link keep working unchanged.
-            StartHereScreen { landing in
-                if let landing { route.present(landing) } else { route.path = [] }
-            }
         }
     }
 

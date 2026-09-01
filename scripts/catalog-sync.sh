@@ -57,8 +57,10 @@ awk '/class="rain">/{f=1} /rain-target/{f=0} f' "$INDEX" \
   | grep -oE 'alt="[^"]+"' | sed -E 's/alt="([^"]+)"/\1/' \
   | grep -v '^$' | sort -u > "$tmp/web_marquee"
 
-# --- 4. Onboarding ice-pile names (marqueeApps array) --------------------
-awk '/marqueeApps *= *\[/{f=1} f{print} f&&/\]/{exit}' "$ONBOARD" \
+# --- 4. The onboarding rain is DERIVED from the catalog (2026-08-31), so
+#        there is no hand list left to go stale. What IS a hand list is the
+#        six tiles that LAND on the shelf, and those are checked here.
+awk '/landers *= *\[/{f=1} f{print} f&&/\]/{exit}' "$ONBOARD" \
   | grep -oE '"[^"]+"' | tr -d '"' | sort -u > "$tmp/onb_marquee"
 
 # --- 5. Empty-feed pile names (EmptyFeedPile.pileApps array) --------------
@@ -102,14 +104,18 @@ check_marquee_validity() {
 }
 say "Marquee names resolve to real offers"
 check_marquee_validity "website hero marquee" "$tmp/web_marquee"
-check_marquee_validity "onboarding rain"  "$tmp/onb_marquee"
+check_marquee_validity "onboarding landing tiles"  "$tmp/onb_marquee"
+# The rain itself must stay derived — a hand list creeping back is exactly the
+# drift this check existed to catch.
+grep -q 'BridgeCatalog.offers.filter' "$ONBOARD" \
+  || bad "the onboarding rain no longer derives its names from the catalog"
 check_marquee_validity "empty-feed pile"  "$tmp/feed_pile"
 [ "$fail" -eq 0 ] && say "  ✓ all marquee names valid"
 
 # === Info: connectable apps not (yet) in a decorative marquee ============
 say "Connectable apps absent from a marquee (info only)"
 info "hero marquee omits: $(comm -23 "$tmp/connectable" "$tmp/web_marquee" | paste -sd, - | sed 's/,/, /g')"
-info "onboarding rain omits: $(comm -23 "$tmp/connectable" "$tmp/onb_marquee" | paste -sd, - | sed 's/,/, /g')"
+info "onboarding rain: derived from the catalog — every connectable seat falls"
 
 echo
 if [ "$fail" -ne 0 ]; then

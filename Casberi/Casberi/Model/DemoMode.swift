@@ -116,7 +116,7 @@ enum DemoMode {
 
     /// The rooms somebody actually OPENED while the demo was furnished —
     /// read by the onboarding fork to decide which card to lead with
-    /// (prd §422, `StartAppetite`).
+    /// (prd §422; the fork it ordered was deleted 2026-08-31).
     ///
     /// **Why this can't just read `ChipMemory`.** That store already counts
     /// room opens, and `DemoSeedAll.teardown` calls

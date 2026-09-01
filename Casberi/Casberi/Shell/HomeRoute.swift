@@ -61,7 +61,6 @@ final class HomeRoute {
         /// answer in a second", and that reasoning got stronger, not weaker,
         /// as the catalog grew past sixty seats. The catalog stays one tap
         /// away on the fork itself.
-        case startHere
         /// Walletbeat's full directory (prd §421).
         ///
         /// Its own node so the ROOM can reach it in one push. §234 already ruled that a

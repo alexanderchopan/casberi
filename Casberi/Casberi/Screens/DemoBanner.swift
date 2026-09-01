@@ -107,7 +107,12 @@ struct DemoBanner: View {
             DemoMode.exit(context: modelContext, store: store)
             filter.source = "All"
             filter.tag = "All"
-            route.path = [.startHere]
+            // Lands on the FEED, not a question (2026-08-31). Leaving the
+            // demo used to push a fork asking what to start with; the
+            // catalogue answers that better and is one tap away, and
+            // somebody who has just watched the app fill should see their
+            // own empty feed rather than a form.
+            route.path = []
             chrome.demoLeaving = false
         }
     }

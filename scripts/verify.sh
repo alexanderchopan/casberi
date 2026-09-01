@@ -789,7 +789,6 @@ harness "Telegram export pure-logic self-test" "Telegram export pure-logic self-
 # (positionally, not by presence: both calls exist in either order and which
 # comes first IS the feature), and that the three follow examples stay the
 # ones measured against the live services rather than plausible fakes.
-harness "Onboarding-fork self-test" "onboarding-fork self-test" "scripts/start-fork-selftest.sh" "the onboarding-fork self-test failed — run scripts/start-fork-selftest.sh"
 
 # The All feed's fold decisions (prd §377/§378/§379). Every failure it catches
 # is a silent wrong answer on the LANDING SCREEN that renders perfectly: a
