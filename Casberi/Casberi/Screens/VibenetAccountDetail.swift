@@ -1413,7 +1413,7 @@ struct VibenetAccountDetail: View {
             // changes anything about the state the card just described.
             if VibenetRoom.undeployedExplainer(item) != nil,
                let faucet = VibenetConfig.cached()?.faucetAddress,
-               let url = URL(string: VibenetExplorer.address(faucet)) {
+               let url = URL(string: VibenetExplorer.faucet) {
                 Link(destination: url) {
                     verbRow(String(localized: "Devnet faucet"),
                             glyph: "drop.fill", tint: Self.mark, door: true)

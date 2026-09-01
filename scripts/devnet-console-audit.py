@@ -133,13 +133,20 @@ def checks(console: str, hegota: str, vibenet: str, feed: str):
         if not m or "DemoMode.isActive" not in m.group(0):
             out.append("%s would sign and broadcast from a demo" % verb)
 
-    # 7. NO TOP UP WHERE THERE IS NOTHING TO CLAIM FROM. vibenet's faucet is a
-    #    PAYER that sponsors gas; no endpoint funds an address. A Top up half
-    #    there would open, say what it was for, and be unable to do it.
-    if "topUp: nil" not in v_bare:
-        out.append("vibenet grew a Top up half — it has no claimable faucet, so the tile cannot act (§83)")
+    # 7. EACH ROOM'S TOP UP DOES WHAT ITS CHAIN CAN ACTUALLY DO.
+    #    Hegotá has an endpoint, so its half CLAIMS in place. vibenet has a
+    #    faucet PAGE and no endpoint, so its half HANDS OFF and must say so with
+    #    the outward mark — a tile that looks like it acts in place and then
+    #    leaves the app is the same broken promise as one that cannot act at all.
+    #    The first cut of §553 read "no endpoint in our bridge" as "no faucet on
+    #    the chain" and shipped vibenet with one verb; this is that mistake made
+    #    mechanical rather than remembered.
     if "claimFaucet" not in h_bare:
         out.append("Hegota's Top up no longer claims from the faucet — the half is decoration")
+    if "claimFaucet" in v_bare:
+        out.append("vibenet's Top up claims in place — that devnet has no claim endpoint, only a page")
+    if "topUp" in v_bare and "handsOff: true" not in v_bare:
+        out.append("vibenet's Top up dropped its hand-off mark — it leaves the app and no longer says so")
 
     # 8. THE THREE ENDINGS. The hourly refusal is EXPECTED (§525) and must be
     #    said in words rather than reported as a fault.
@@ -160,7 +167,7 @@ def self_test() -> int:
     Text(y).dsText(.price40)
     """
     good_h = 'DemoMode.isActive\nDevnetSendPanel(\nclaimFaucet(\nrateLimited\n'
-    good_v = 'DevnetSendPanel(tint: x, topUp: nil, onSend: y)\n'
+    good_v = 'DevnetSendPanel(tint: x, topUp: topUp, onSend: y)\n.init(handsOff: true)\n'
     good_f = ('VibenetRoom.demoSignableAccount()\n'
               '    func sendHegota(x: String) async -> String? {\n        DemoMode.isActive\n    }\n'
               '    func sendVibenet(x: String) async -> String? {\n        DemoMode.isActive\n    }\n')
@@ -189,9 +196,11 @@ def self_test() -> int:
                   good_console, good_h, good_v,
                   good_f.replace("    func sendHegota(x: String) async -> String? {\n        DemoMode.isActive\n    }",
                                  "    func sendHegota(x: String) async -> String? {\n        go()\n    }"), True))
-    cases.append(("vibenet grows a faucet it does not have",
+    cases.append(("vibenet's hand-off loses its outward mark",
                   good_console, good_h,
-                  'DevnetSendPanel(tint: x, topUp: .init(action: y), onSend: z)\n', good_f, True))
+                  'DevnetSendPanel(tint: x, topUp: topUp, onSend: z)\n.init(action: y)\n', good_f, True))
+    cases.append(("vibenet tries to claim from an endpoint it does not have",
+                  good_console, good_h, good_v + 'claimFaucet(\n', good_f, True))
     cases.append(("Hegota's Top up stops claiming",
                   good_console, good_h.replace("claimFaucet(", ""), good_v, good_f, True))
     cases.append(("the hourly refusal stops being named",

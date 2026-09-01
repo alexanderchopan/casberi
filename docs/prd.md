@@ -42784,6 +42784,33 @@ onboarding, which squeezes Top up against the agent bar for exactly one launch.
 Left alone deliberately: it is transient, it never returns, and reserving room
 for it permanently would cost the steady state 76pt to serve one screen.
 
+**AMENDED THE SAME DAY: vibenet HAS a Top up, and the finding above was wrong.**
+User, in one line: *"but vibenet website does have a top up feature"*. It does —
+`chain.base.org/vibenet/faucet`, and the account console this room already links
+to describes itself as *"fund them from the faucet"*.
+
+**The mistake is a shape worth naming, because it is easy to repeat: absence of
+an endpoint in OUR bridge was read as absence of the capability on the CHAIN.**
+I searched `VibenetSend`/`VibenetBridge` for something claimable, found only the
+payer that sponsors gas, and concluded the devnet had no faucet. The app already
+knew better in two places — `VibenetAccountDetail` and `VibenetRoomCard` have
+both offered a "Devnet faucet" door since the seat shipped, and the live config
+has parsed a `faucetAddress` all along.
+
+So vibenet's half is a **HAND-OFF**, which is what `DevnetSendPanel.TopUp.handsOff`
+was built for and never used: an outward arrow instead of a drop, because a tile
+that looks like it acts in place and then leaves the app is the same broken
+promise as one that cannot act. Hegotá claims in place because Hegotá has an
+endpoint. An in-app claim for vibenet stays unbuilt on purpose — the faucet page
+is client-rendered, so nothing in its markup names the endpoint it calls, and
+guessing at one is how a write path gets built against a shape nobody measured.
+
+**It also corrected the two doors that already existed**, which both opened the
+EXPLORER at the faucet's address — a page showing you what the faucet holds, on
+a row whose whole promise is that it will get you some. All three now open the
+faucet itself. Check 7 of the audit is rewritten around this: Hegotá's half must
+claim, vibenet's must NOT, and vibenet's must carry the hand-off mark.
+
 ### What is checked
 
 `scripts/devnet-console-audit.py` is rewritten around this shape — §548/§548a's

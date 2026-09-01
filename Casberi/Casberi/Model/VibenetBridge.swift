@@ -2228,6 +2228,28 @@ enum VibenetExplorer {
     /// signing key for a chain whose whole point is that nothing on it is
     /// worth anything.
     static let console = "https://chain.base.org/demos/account"
+
+    /// **THE FAUCET'S OWN PAGE (prd §553 amendment, 2026-09-01).**
+    ///
+    /// §553 shipped vibenet's Home with a Send half and no Top up, on the
+    /// finding that this devnet has no claimable endpoint — its faucet is a
+    /// PAYER that sponsors gas. That was true of the API and wrong about the
+    /// chain: the devnet runs a faucet page, and its own account console
+    /// describes itself as *"fund them from the faucet"*.
+    ///
+    /// So a Top up here is a HAND-OFF, not a claim — which is why
+    /// `DevnetSendPanel.TopUp.handsOff` exists and why the mark is an outward
+    /// arrow rather than a drop. An in-app claim stays unbuilt: the page is
+    /// client-rendered, so nothing in its markup names the endpoint it calls,
+    /// and guessing at one is how a write path gets built against a shape
+    /// nobody measured.
+    ///
+    /// It also corrects two doors that already existed. `VibenetAccountDetail`
+    /// and `VibenetRoomCard` have both offered "Devnet faucet" since the seat
+    /// shipped, and both opened the EXPLORER at the faucet's address — a page
+    /// showing you what the faucet holds, on a row whose whole promise is that
+    /// it will get you some.
+    static let faucet = "https://chain.base.org/vibenet/faucet"
 }
 
 // MARK: - Landed events (ActorAuthorized / ActorRevoked / AccountLocked)

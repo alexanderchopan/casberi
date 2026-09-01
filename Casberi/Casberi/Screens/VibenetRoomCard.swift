@@ -2810,7 +2810,7 @@ struct VibenetRoomCard: View {
                 // address needs funds to make one. A hand-off to the
                 // explorer, never a write.
                 if let faucet = VibenetConfig.cached()?.faucetAddress,
-                   let url = URL(string: VibenetExplorer.address(faucet)) {
+                   let url = URL(string: VibenetExplorer.faucet) {
                     Link(destination: url) {
                         HStack(spacing: 4) {
                             Text(String(localized: "Devnet faucet"))
