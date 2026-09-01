@@ -191,10 +191,15 @@ struct DSRoomSlot<Figure: View>: View {
     ///
     /// **True for a figure that draws below a heading; FALSE for one that IS
     /// the heading** (prd §495). Both rooms' Home scopes lead with the crown —
-    /// a `price48` figure that occupies exactly the role a headline plays —
-    /// so reserving a blank row above it pushes the crown 30pt down the screen
+    /// a figure that occupies exactly the role a headline plays — so
+    /// reserving a blank row above it pushes the crown 30pt down the screen
     /// and misaligns it with every other scope's headline, which is the
     /// opposite of what reserving the row is for.
+    ///
+    /// Since §551 the crown draws at the SAME RUNG as the headline it stands
+    /// in for, which is what makes "stands in the row" true optically as well
+    /// as structurally — at `price48` it stood in the row and was still 40pt
+    /// taller than every scope it aligned with.
     ///
     /// The guarantee the row exists to give is that every scope's FIRST PIXEL
     /// lands at the same y. A crown honours that by standing in the row, not
@@ -237,6 +242,32 @@ struct DSRoomSlot<Figure: View>: View {
             Group {
                 if let headline {
                     Text(headline)
+                        // **ONE RUNG FOR EVERY SCOPE, AND IT IS THIS ONE
+                        // (prd §551, user: "the balance is in such a large
+                        // font, but on all the other screens … the title is
+                        // smaller. we should be consistent").**
+                        //
+                        // A scope headline was `stat24` while Home's crown was
+                        // `price48` — TWO rungs apart on one control, so using
+                        // the strip changed the type scale of the screen. The
+                        // crowns come DOWN to this rung rather than this rung
+                        // going up to meet them, and that direction was
+                        // MEASURED rather than picked: at `price40` five of the
+                        // headlines these rooms really draw do not fit the
+                        // ~304pt a leading headline has beside the settings
+                        // gear — "Nothing is shared" is 337pt, "Nothing
+                        // deployed yet" 411, and the Accounts web's own "2
+                        // accounts · 1 you don't watch yet" 646. Each would
+                        // then be shrunk by its `minimumScaleFactor` to
+                        // somewhere between 29 and 40pt depending on its
+                        // string, which is the SAME defect wearing a smaller
+                        // range: a headline whose size depends on what it
+                        // happens to say.
+                        //
+                        // `stat24` carries every one of them at full size, and
+                        // it is the rung Hegotá's room — which has never had
+                        // this split, because its Home draws through this slot
+                        // like every other scope — has always used.
                         .dsText(.stat24)
                         .foregroundStyle(DS.textPrimary)
                         .monospacedDigit()

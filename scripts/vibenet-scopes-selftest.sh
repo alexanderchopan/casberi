@@ -166,7 +166,7 @@ exit(failures == 0 ? 0 : 1)
 SWIFT
 
 
-# **STUBS THE ROOM NOW NEEDS (prd §551).** §548b put `VibenetRoom.demoSignableAccount()`
+# **STUBS THE ROOM NOW NEEDS (prd §553).** §552b put `VibenetRoom.demoSignableAccount()`
 # into this Foundation-only file, and it reaches two types this harness has never
 # compiled: `DemoMode` (the tour's own flag) and `VibenetTransaction` (the hex
 # decoder). Neither has anything to do with the drawings under test, so both are

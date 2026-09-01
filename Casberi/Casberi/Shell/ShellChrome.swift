@@ -311,18 +311,9 @@ final class ShellChrome {
     /// the Find door is that nothing runs until the person says what they want.
     var focusDraftOnOpen = false
 
-    /// The whisper's title, mid-flight (2026-07-22, prd §167 item 1) — set the
-    /// instant the capsule is tapped, so a proxy title can mount in
-    /// RootShell's OWN composerOpen-driven transaction (the same transaction
-    /// that already morphs the bar into the risen surface), rather than
-    /// waiting for the real masthead, which doesn't exist until `commit()`
-    /// actually runs — a good 400ms+ later, well after the rise transition
-    /// has already finished. Cleared by RootShell on a short timer once the
-    /// real masthead has had time to mount and take over the geometry pairing.
-    var risingBriefTitle: String?
-
-    /// The day, for the detail pane's RESTING state (2026-07-31) — the same
-    /// `DayBrief` the whisper capsule composes, published UNGATED.
+    /// The day, for the detail pane's RESTING state (2026-07-31), and since
+    /// prd §550 the only reader of `DayBrief` on this path — the capsule above
+    /// the bar stopped carrying the day. Published UNGATED.
     ///
     /// The capsule is once-a-day by ruling (§165: it's a delivery, and a
     /// delivery that repeats is noise). The pane is not a delivery — it is up

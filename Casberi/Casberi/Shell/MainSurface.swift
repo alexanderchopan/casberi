@@ -1661,8 +1661,9 @@ struct MainSurface: View {
 
     /// Which swipe the current budget belongs to, so a fast second swipe can
     /// never have the FIRST one's timer clear its bound out from under it.
-    /// Bumped per step and captured by the release task, the same guarded-timer
-    /// shape `chrome.risingBriefTitle` uses one screen over.
+    /// Bumped per step and captured by the release task — the guarded-timer
+    /// shape this app uses wherever a later timer must not clear a newer
+    /// value out from under itself.
     @State private var swipeBudgetGeneration = 0
 
     /// 150 rows — five of the feed's own 30-row windows.

@@ -655,6 +655,27 @@ enum BridgeCatalog {
                          "Sends running in parallel on their own nonces",
                          "A key of your own — stored on this device, not the Secure Enclave, because the money here is worthless"],
               needsSetup: true, added: day(2026, 8, 27)),
+        // The OTHER frame-transaction devnet, and a separate seat by ruling
+        // (user, 2026-09-01: "hegota is for hegota writ large" / "this one is
+        // for Frames specifically"). The features below are deliberately NOT
+        // Hegotá's: this chain implements no keyed nonces, so no bullet claims
+        // parallel sends, and no bullet claims coins — it has none. What it
+        // has that nothing else does is the SENDING, which is why that bullet
+        // leads: EIP-8141 is a draft, so no wallet and no released library can
+        // encode a frame transaction at all.
+        //
+        // The reset bullet is not fine print. The network's own footer says it
+        // may be reset without notice, and a seat that let somebody keep
+        // something here without saying so would be the §83 failure on the
+        // page where they decide whether to connect.
+        Offer(name: "Frames Devnet", tagline: "Send a transaction no wallet can make", group: "Wallet", connectable: true,
+              summary: "The public test network for EIP-8141 frame transactions — where one transaction is a sequence of frames, each with its own target and gas. No real funds, and the chain may be reset without notice. Make an account the faucet funds, or watch any address.",
+              features: ["Send a frame transaction — no other wallet can encode one",
+                         "What each frame did, and what it spent",
+                         "Who paid the gas, when it wasn't you",
+                         "An account of your own, funded by the faucet",
+                         "A key stored on this device, because the money here is worthless"],
+              needsSetup: true, added: day(2026, 9, 1)),
         Offer(name: "Linear",      tagline: "Your issues stay in reach",             group: "Work",      connectable: true,
               summary: "The issues assigned to you join your things and surface when they matter. Connects with a personal API key from Linear settings — it stays in \(DS.device)'s Keychain.",
               needsSetup: true),
@@ -1084,6 +1105,21 @@ enum BridgeCatalog {
 
     static func category(of offer: Offer) -> String {
         categories.first { $0.groups.contains(offer.group) }?.name ?? "Life"
+    }
+
+    /// The Agents category's name, DERIVED from the table above rather than
+    /// spelled a second time (prd §550 — the agent's empty-chat link lands the
+    /// catalog filtered to it).
+    ///
+    /// A category name is an ordinary string that doubles as a join key (a
+    /// kept `category:…` ask resolves through it), so a rename must move every
+    /// reader at once; a literal in another file is exactly the drift §326
+    /// records when Mail's fold silently orphaned `category:Mail`. Nil when no
+    /// category owns the `Agent` group, which every caller must treat as "no
+    /// filter" rather than as an error — the catalog is still perfectly usable
+    /// unfiltered.
+    static var agentsCategory: String? {
+        categories.first { $0.groups.contains("Agent") }?.name
     }
 
     /// The catalog category a landed SOURCE belongs to — the join `SourcesTray`

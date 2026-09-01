@@ -167,6 +167,12 @@ final class AddressBook {
         /// of the five chains `AddressKind.detect` reads. §403 gave Altana its
         /// own registry table with its own hosts for exactly that reason.
         static let altana = "altana"
+        /// The Frames devnet (prd §548, chain 81410). In the set below for
+        /// the same reason as the other two: `AddressKind.detect`'s five
+        /// reads are mainnet RPCs, and asking them about an address that
+        /// exists only on a devnet answers "no code anywhere" and confidently
+        /// labels it `.wallet` — a fake status on a screen about identity.
+        static let frames = "frames"
 
         /// Chains `AddressKind.detect` must not ask about — its five reads
         /// are mainnet RPCs, and asking them about an account on a chain they
@@ -174,7 +180,7 @@ final class AddressBook {
         /// it `.wallet`. A smart account on BNB is the case that made this
         /// wider than devnets alone; the name is kept because every caller
         /// spells it, and the question it asks is unchanged.
-        private static let devnets: Set<String> = [vibenet, hegota, altana]
+        private static let devnets: Set<String> = [vibenet, hegota, altana, frames]
 
         static func isDevnet(_ tag: String) -> Bool { devnets.contains(tag) }
     }
@@ -747,13 +753,26 @@ final class AddressBook {
         return winner
     }
 
-    /// This device's whole book, for the mirror to push.
-    var syncSnapshot: [String: Entry] { entries }
+    /// This device's book, for the mirror to push — FIXTURES WITHHELD, so a
+    /// demo or a debug seed can never leave this device (2026-09-01, prd §549;
+    /// `WalletStore.syncSnapshot`'s rule, which the book was missing). See
+    /// `AddressBookFixtures` for why this is the honesty rail and not tidiness:
+    /// the standing demo banner is per-device, so on the person's OTHER device
+    /// a seeded counterparty is simply a name they never typed.
+    var syncSnapshot: [String: Entry] {
+        entries.filter { !Self.isFixture($0.key) }
+    }
 
     /// Replaces the book with a merged one. Only `AddressBookSync` calls this,
     /// and only with the result of its own newest-fact-wins merge.
     func applyMerged(_ merged: [String: Entry]) {
-        entries = merged
+        // Fixtures are swept unless this build or session is entitled to hold
+        // them. The push side above already withholds them, so on a healthy
+        // book this changes nothing — it is the repair for books ALREADY
+        // polluted in iCloud by a build that shipped without the rail, which
+        // is the only way those entries can come back now.
+        entries = Self.keepsFixtures ? merged
+            : merged.filter { !Self.isFixture($0.key) }
         reconcileAliases()
     }
 

@@ -1,12 +1,12 @@
 import SwiftUI
 
-/// **THE DEVNET SEND SURFACE — A PANEL AND A SHEET (prd §551, 2026-09-01).**
+/// **THE DEVNET SEND SURFACE — A PANEL AND A SHEET (prd §553, 2026-09-01).**
 ///
-/// §544 built a payment console and §548/§548a spent an entire session trying
+/// §544 built a payment console and §552/§552a spent an entire session trying
 /// to fit it under the room's chrome. That was the wrong problem. The chrome is
 /// ~545pt on every iPhone and none of its four terms scales with screen height,
 /// so the room leaves 411pt on the largest phone, 276 on a 13 mini and ~161 on
-/// an SE — and §548a's own stated ceiling was that its 232pt console did not
+/// an SE — and §552a's own stated ceiling was that its 232pt console did not
 /// fit the last of those and never would.
 ///
 /// **The answer is that Home should not hold a form at all.** What Home holds
@@ -14,7 +14,7 @@ import SwiftUI
 /// whole screen and none of the chrome. Three things follow and each is a
 /// ruling rather than a preference:
 ///
-/// 1. **THE KEYPAD IS OURS AGAIN.** §548a replaced it with `.decimalPad`
+/// 1. **THE KEYPAD IS OURS AGAIN.** §552a replaced it with `.decimalPad`
 ///    because 176pt was 45% of a 232pt budget in a 276pt room — arithmetic,
 ///    and correct at the time. On a sheet that arithmetic is simply gone, and
 ///    what the system pad cost was the room's whole visual language: iOS
@@ -47,9 +47,9 @@ enum DevnetConsole {
 
     /// Inside a tile: the mark, then the verb, hard against the bottom-left.
     ///
-    /// **MEASURED, NOT CHOSEN (prd §551).** The room leaves 304pt below its
+    /// **MEASURED, NOT CHOSEN (prd §553).** The room leaves 304pt below its
     /// section strip on a 390×844 phone — measured off a screenshot of this
-    /// build, the same way §548 measured the chrome it could not move. Two
+    /// build, the same way §552 measured the chrome it could not move. Two
     /// tiles and a gap have to live inside that, so each tile is 146 and its
     /// contents are what fit:
     ///
@@ -64,7 +64,7 @@ enum DevnetConsole {
     ///
     /// The first cut used `s4`, `s3` and `DS.Hit.min` and came to 174 a tile —
     /// 348 for the pair, which overflowed by 44 and put "Top up" off the bottom
-    /// of the screen. That is the §548 failure exactly, arriving one layout
+    /// of the screen. That is the §552 failure exactly, arriving one layout
     /// later: it renders perfectly and simply continues past the fold.
     static let tilePadding = DS.Space.s3
     static let markGap = DS.Space.s2
@@ -116,7 +116,7 @@ enum DevnetAmountInput {
     static let maxWhole = 15
 
     /// **THE WHOLE EDIT GRAMMAR, and it is a REFUSAL rather than a repair
-    /// (§548a).** The keypad used to enforce these rules one key at a time —
+    /// (§552a).** The keypad used to enforce these rules one key at a time —
     /// "a refused key simply does nothing and the figure does not lie" — and
     /// with the system pad the same rules have to hold against a change that
     /// may be a paste, a held delete or a locale separator. So a change that
@@ -171,7 +171,7 @@ private struct DevnetTileSurface: ViewModifier {
     }
 }
 
-/// **HOME IS TWO VERBS, PERMANENTLY (prd §551).**
+/// **HOME IS TWO VERBS, PERMANENTLY (prd §553).**
 ///
 /// The blue half is the venue's own colour and the ink half is the room's card
 /// surface, so the two are peers in size and not in weight — the colour is the
@@ -275,9 +275,9 @@ struct DevnetSendPanel: View {
 
 // MARK: - Before there is an account
 
-/// **THE SAME OBJECT SAYING A DIFFERENT VERB (prd §551).**
+/// **THE SAME OBJECT SAYING A DIFFERENT VERB (prd §553).**
 ///
-/// §548d gave the keyless room a sentence and a button because Home's whole
+/// §552d gave the keyless room a sentence and a button because Home's whole
 /// content was a gated card and gating it rendered the scope blank. This keeps
 /// that fix and drops its explanation: the room says what it can do, at the
 /// size it says everything else, and what a key IS belongs where the account
@@ -333,9 +333,9 @@ struct DevnetCreatePanel: View {
 
 // MARK: - The keypad
 
-/// **OURS AGAIN, AND THE REASON IT LEFT NO LONGER APPLIES (prd §551).**
+/// **OURS AGAIN, AND THE REASON IT LEFT NO LONGER APPLIES (prd §553).**
 ///
-/// §548a swapped it for `.decimalPad` on arithmetic that was correct for a
+/// §552a swapped it for `.decimalPad` on arithmetic that was correct for a
 /// CARD: 176pt of a 232pt console in a 276pt room. On a sheet there is no such
 /// budget, and what the system pad cost was the room's whole visual language.
 ///
@@ -414,7 +414,7 @@ struct DevnetKeypad: View {
 
 // MARK: - The sheet
 
-/// **WHO, THEN HOW MUCH (prd §551).**
+/// **WHO, THEN HOW MUCH (prd §553).**
 ///
 /// Two screens inside one sheet rather than two sheets: the amount needs the
 /// whole surface for a 64pt figure and a keypad, and the picker needs it for
@@ -708,7 +708,7 @@ struct DevnetSendSheet: View {
         .dsHover()
     }
 
-    /// **THE ENDING MIRRORS TOP UP** (prd §551): the sheet goes, it rains, and
+    /// **THE ENDING MIRRORS TOP UP** (prd §553): the sheet goes, it rains, and
     /// the crown moves — up there, down here. No receipt screen; the row lands
     /// in Activity, one chip away in the bar the sheet is covering.
     private func act() {
@@ -733,7 +733,7 @@ struct DevnetSendSheet: View {
 
 // MARK: - Parsing, once
 
-/// **ONE PARSER, BOTH ROOMS (prd §551).** Each send card carried a private copy
+/// **ONE PARSER, BOTH ROOMS (prd §553).** Each send card carried a private copy
 /// of these two, byte-identical, which is how a sheet shared by two rooms
 /// quietly starts accepting different amounts in each.
 enum DevnetSendParse {

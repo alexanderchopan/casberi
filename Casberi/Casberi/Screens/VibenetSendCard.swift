@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// **VIBENET'S HOME IS ONE VERB, AND THAT IS A FINDING RATHER THAN A TRIM
-/// (prd §551, 2026-09-01).**
+/// (prd §553, 2026-09-01).**
 ///
 /// The sibling room draws a split panel — Send above, Top up below — and this
 /// one deliberately does not, because **vibenet has nothing to top up from.**

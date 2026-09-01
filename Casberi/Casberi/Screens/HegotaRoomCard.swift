@@ -127,7 +127,7 @@ struct HegotaRoomFigure: View {
 
     /// The one line every scope puts in the slot's reserved row, so the drawing
     /// below it always starts at the same y.
-    /// **THE CROWN IS THE FIGURE'S, NOT THE CHASSIS'S (prd §548c, 2026-09-01).**
+    /// **THE CROWN IS THE FIGURE'S, NOT THE CHASSIS'S (prd §552c, 2026-09-01).**
     ///
     /// User: *"wallet, hegota, and vibenet have different size numbers on their
     /// home crown slot. which size works best for us? pick one and make it
@@ -202,7 +202,7 @@ struct HegotaRoomFigure: View {
     }
 
     /// Home: the crown, its delta and the curve — **vibenet's arrangement
-    /// exactly** (prd §548c).
+    /// exactly** (prd §552c).
     ///
     /// **THE SUM IS WRITTEN DOWN, because the slot is a hard 210pt with
     /// `.clipped()` and this figure now spends most of it:**
@@ -2189,9 +2189,11 @@ struct HegotaMoveSheet: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(HegotaFormat.signed(move.wei, incoming: move.incoming))
                 // `price40`, the app's own money-receipt hero (§363).
-                // `price48` is the WALLET CROWN and this is the same object one
-                // room over — the ramp reads as four money rungs where it has
-                // three when a devnet's receipt outsizes the wallet's.
+                // It was picked because `price48` was the WALLET CROWN and this
+                // is the same object one room over — a devnet receipt must not
+                // outsize the wallet's. §553 brought that crown down to this
+                // same rung, so the two now MATCH rather than merely not
+                // clashing, which is the stronger version of the same rule.
                 .dsText(.price40)
                 .foregroundStyle(move.incoming ? DS.confirm : DS.textPrimary)
                 .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
@@ -2486,7 +2488,7 @@ struct HegotaFrameSheet: View {
             if frame.wei > 0 {
                 Text(HegotaFormat.eth(frame.wei))
                     // `price40`, the money-receipt hero — see the move sheet's
-                    // `amount` for why `price48` left this room.
+                    // `amount`, and §553.
                     .dsText(.price40).foregroundStyle(DS.textPrimary)
                     .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
                     .padding(.top, 2)
@@ -2984,8 +2986,8 @@ struct HegotaAccountSheet: View {
             }
             Text(account.balanceWei.map { HegotaFormat.crown($0) }
                  ?? String(localized: "Unread"))
-                // `price40` — see the move sheet's `amount`. `price48` is the
-                // wallet crown, and the room's own crown is on the room card.
+                // `price40` — see the move sheet's `amount`, and §553, which
+                // brought every room crown to this rung.
                 .dsText(.price40).foregroundStyle(DS.textPrimary)
                 .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
                 .padding(.top, DS.Space.s4)

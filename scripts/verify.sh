@@ -344,7 +344,7 @@ python3 "$ROOT/scripts/room-crown-audit.py" \
   || fail "the room crowns drifted apart — see the output above"
 print -P "%F{green}✓ room crown audit%f"
 
-# The devnet send console fits the room it draws in (prd §548). Static, no
+# The devnet send console fits the room it draws in (prd §552). Static, no
 # build, and mechanical because the failure is invisible: a card that overflows
 # renders perfectly — every element drawn, correctly, in the right order — and
 # the ones past the fold simply continue below it, so the build is green, every
@@ -1501,6 +1501,21 @@ harness "Vibenet signer ladder self-test" "13 mutations, 6 drift guards" "script
 # The signed BROADCAST's guards are §530's and live in `hegota-selftest.sh`;
 # they are deliberately not duplicated here.
 harness "Hegota frame transaction self-test" "11 mutations, real on-chain vectors, and the faucet verdict" "scripts/hegota-tx-selftest.sh" "the hegota transaction self-test failed — run scripts/hegota-tx-selftest.sh"
+
+# THE OTHER DEVNET'S ENCODER, and it is a separate harness because the two
+# chains hash DIFFERENT LISTS (prd §552). Both run ethrex, both serve type
+# 0x06, both call it EIP-8141 — Hegotá's envelope is eleven flat fields with
+# keyed nonces and recent-root references, the Frames devnet's is seven with
+# the fees nested. Signing with the wrong one produces a well-formed signature
+# over a different digest that recovers to a real address: green build, correct
+# screen, refused chain. Its vectors are real transactions off chain 81410 —
+# two byte-exact with their keccak matching the RPC's own hash — plus one
+# synthetic with every field distinct, because the five real transactions on
+# that four-day-old chain are too alike to catch a field swap. It also carries
+# the send path's conduct guards: exactly one signed write verb, a LITERAL
+# signer (empty is Hegotá's convention and is refused here, measured 5/5
+# against 0/5), and the signature entry seeded BEFORE the digest is taken.
+harness "Frames devnet transaction self-test" "21 mutations, real on-chain vectors, and the send path's conduct" "scripts/frames-tx-selftest.sh" "the frames transaction self-test failed — run scripts/frames-tx-selftest.sh"
 # The vibenet SCOPES' two new drawings (prd §491) — the sub-account web and the
 # change flow, compiled whole. Separate from the harness above because that one
 # is four minutes over the whole room and these run in one, so a change to

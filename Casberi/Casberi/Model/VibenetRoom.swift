@@ -1574,7 +1574,7 @@ struct VibenetRoom: Equatable, Codable {
 
     // MARK: - Demo fixture
 
-    /// **WHO THE DEMO SENDS FROM (prd §548b, 2026-09-01).**
+    /// **WHO THE DEMO SENDS FROM (prd §552b, 2026-09-01).**
     ///
     /// The room's Home scope IS the send console (§538), and in the demo it
     /// drew NOTHING from the day it shipped. `FeedScreen`'s gate wants an
@@ -2883,6 +2883,44 @@ enum VibenetPolicyAggregation {
         for (bit, plain) in VibenetScope.orderedPlainBits {
             let n = actors.filter { !$0.scope.isAdmin && $0.scope.raw & bit != 0 }.count
             if n > 0 { out.append(VibenetPolicyCount(label: plain, count: n)) }
+        }
+        return out
+    }
+
+    /// EVERY PERMISSION THIS CHAIN HAS, granted or not (prd §553).
+    ///
+    /// **Why the figure needs a different list from the rows below it.**
+    /// `compose` answers "what IS granted", which is exactly right for a list:
+    /// a row per permission nobody holds would be a list of absences. A
+    /// FIGURE is the opposite job — it has one fixed box whatever the account
+    /// holds, so a list that shrinks with the census leaves that box emptier
+    /// the less there is to say, and the emptiest case is the one an account
+    /// with a single kind of key hits every single time. That shipped as a
+    /// lone number floating in a 210pt frame beside a headline stating the
+    /// same count one line above it.
+    ///
+    /// Drawing the whole census makes the figure's SHAPE constant — six cells,
+    /// always, in one order — so nothing is ranked, capped, spread or resized
+    /// by how much there happens to be. It also answers more than the counts
+    /// did: on a permissions screen "no key can send anywhere" is a reading
+    /// worth having, and only a list that includes what is absent can make it.
+    ///
+    /// **Takes the composed rows rather than the items**, so this is a
+    /// re-presentation of one derivation and can never disagree with the rows
+    /// the card draws underneath (prd §468's one-derivation rule — the card
+    /// calls `compose` exactly once and hands the result here).
+    ///
+    /// Order is `compose`'s own — Admin, then `VibenetScope.orderedPlainBits`
+    /// — and it is FIXED rather than sorted by count: a figure whose cells
+    /// swap places between two openings of the same room reads as broken, and
+    /// the position of a permission is how you find it twice.
+    static func census(_ counts: [VibenetPolicyCount]) -> [VibenetPolicyCount] {
+        let held = Dictionary(counts.map { ($0.label, $0.count) },
+                              uniquingKeysWith: { a, _ in a })
+        var out = [VibenetPolicyCount(label: String(localized: "Admin"),
+                                      count: held[String(localized: "Admin")] ?? 0)]
+        for (_, plain) in VibenetScope.orderedPlainBits {
+            out.append(VibenetPolicyCount(label: plain, count: held[plain] ?? 0))
         }
         return out
     }

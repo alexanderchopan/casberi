@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""The devnet Home surface — a split panel and a sheet (prd §551, 2026-09-01).
+"""The devnet Home surface — a split panel and a sheet (prd §553, 2026-09-01).
 
 **WHY THIS IS A SCRIPT AND NOT A NOTE.** The failure is invisible. A card that
 overflows its room renders perfectly: every element drawn correctly, in the
 right order, and the ones past the fold simply continue below it. No warning, no
 clipping, no log line — the build is green, every other audit is green, and the
 screen sweep photographs a Send button that is off the screen and certifies it.
-That is exactly what §548 shipped, and its replacement overflowed the same way
+That is exactly what §552 shipped, and its replacement overflowed the same way
 on its FIRST run of this build (174pt a tile against a 146pt allowance, which
 put "Top up" off the bottom).
 
-§548/§548a's checks are gone with the console they guarded — there is no inline
+§552/§552a's checks are gone with the console they guarded — there is no inline
 form, no `.decimalPad`, no keyboard toolbar and no 232pt budget any more. What
 replaces them is the same idea one layout up.
 
@@ -99,7 +99,7 @@ def checks(console: str, hegota: str, vibenet: str, feed: str):
     if console.count(".dsText(.price48)") < 2:
         out.append("a verb left the crown rung — a panel that fits by shrinking its words is not this panel")
 
-    # 3. THE KEYPAD IS OURS. §548a swapped it for the system pad on arithmetic
+    # 3. THE KEYPAD IS OURS. §552a swapped it for the system pad on arithmetic
     #    that was correct for a CARD and is meaningless on a sheet; what it cost
     #    was the room's whole visual language.
     if "struct DevnetKeypad" not in console:
@@ -120,7 +120,7 @@ def checks(console: str, hegota: str, vibenet: str, feed: str):
         if "DevnetSendPanel" not in bare:
             out.append("%s hand-rolls its own panel instead of using DevnetSendPanel" % name)
 
-    # 6. THE DEMO REACHES IT, AND STOPS WHERE THE MONEY STARTS (prd §548b).
+    # 6. THE DEMO REACHES IT, AND STOPS WHERE THE MONEY STARTS (prd §552b).
     #    A scope's whole content gated on a device credential is invisible to
     #    every demo check in this repo: they ask about seats, rows, heads and
     #    figures, and this is none of those.

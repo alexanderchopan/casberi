@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The three room crowns are one size (prd §548c).
+"""The three room crowns are one size (prd §552c).
 
 WHY THIS EXISTS.
 
@@ -102,7 +102,7 @@ def audit(rooms: dict[str, tuple[str, str]], chassis: str) -> list[str]:
         if CROWN_RUNG not in code:
             out.append(f"{name}: no `{CROWN_RUNG}` anywhere — its crown is not "
                        f"on the crown rung, so it is a different size from the "
-                       f"other rooms' (§548c)")
+                       f"other rooms' (§552c)")
         for m in re.finditer(re.escape(CROWN_RUNG), code):
             window = code[m.end():].split("\n")[:5]
             for line in window:
@@ -110,18 +110,18 @@ def audit(rooms: dict[str, tuple[str, str]], chassis: str) -> list[str]:
                 if found and float(found.group(1)) < MIN_SCALE_FLOOR:
                     out.append(f"{name}: its crown declares the crown rung and "
                                f"then allows {found.group(1)} — it can render "
-                               f"below the rung it names (§548c)")
+                               f"below the rung it names (§552c)")
                     break
         if "reservesHeadline" not in strip_comments(composed):
             out.append(f"{name}: never names `reservesHeadline`, so it takes "
                        f"the default and hands its crown to the chassis, which "
-                       f"sets a headline in `stat24` — a label rung (§548c)")
+                       f"sets a headline in `stat24` — a label rung (§552c)")
     # The premise: the chassis's headline really is the label rung. If that ever
     # changes, this audit's whole reasoning needs re-reading rather than
     # silently passing.
     if "dsText(.stat24)" not in strip_comments(chassis):
         out.append("DSRoomChassis no longer sets its headline in `stat24` — "
-                   "this audit's premise moved; re-read §548c before trusting "
+                   "this audit's premise moved; re-read §552c before trusting "
                    "either check above")
     return out
 

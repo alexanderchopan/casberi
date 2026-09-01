@@ -1039,6 +1039,119 @@ PY2
 fi
 
 hr
+# ── Frames devnet (prd §548) ────────────────────────────────────────────────
+# The seat's whole subject is a transaction TYPE, and this chain has no
+# indexer and no contract behind its shape — so when the wire moves, the room
+# does not break, it goes QUIET, drawing a transaction with no frames. That is
+# indistinguishable from a transaction that had none (§311's failure). Nightly,
+# because the chain is days old and its own footer says it may be reset
+# without notice.
+print -P "%F{45}Frames devnet%f (keyless, EIP-8141)"
+FR="https://rpc1.frames.ethrex.xyz"
+FR_TX="0x70c8c2b7c44ff8f046e1ebb7c925a80724aaad7f65f85d82e97c724cdbfc9bc6"
+
+# 1. All three hosts, and the chain id the encoder PINS (81410 = 0x13e02). A
+#    host answering for another chain is a signature sent to the wrong place.
+fr_up=0
+for h in rpc1 rpc2 rpc3; do
+  id=$(raw "https://$h.frames.ethrex.xyz" '{"id":1,"jsonrpc":"2.0","method":"eth_chainId","params":[]}' \
+        | python3 -c 'import sys,json;print(json.load(sys.stdin).get("result",""))' 2>/dev/null)
+  [[ "$id" == "0x13e02" ]] && (( fr_up++ ))
+done
+if (( fr_up == 3 )); then
+  pass "Frames — all three RPC hosts serve chain 81410"
+elif (( fr_up > 0 )); then
+  warn "Frames — only $fr_up of 3 hosts answered with chain 81410 (the seat retries, so this is survivable)"
+else
+  fail "Frames — no host served chain 81410; the whole seat reads nothing"
+fi
+
+if (( fr_up > 0 )); then
+  # 2. **The genesis hash.** A relaunched devnet answers everything perfectly
+  #    and with NOTHING, so this is the only thing separating "quiet" from
+  #    "this is a different chain now". A change is news, not a failure — and
+  #    on this chain it is expected, so it warns.
+  fgen=$(raw "$FR" '{"id":1,"jsonrpc":"2.0","method":"eth_getBlockByNumber","params":["0x0",false]}' \
+          | python3 -c 'import sys,json;print((json.load(sys.stdin).get("result") or {}).get("hash",""))' 2>/dev/null)
+  if [[ "$fgen" == "0x372a923bfd2599ef23e1c13c530d2ccba6064d934ac4516cfb647d5c2fee241d" ]]; then
+    pass "Frames — same chain as when the seat was built (genesis unchanged)"
+  elif [[ -n "$fgen" ]]; then
+    warn "Frames — THE DEVNET RESTARTED (genesis is now $fgen); the pinned harness vectors describe a chain that no longer exists and must be re-measured"
+  else
+    warn "Frames — the genesis header did not read; the restart check could not run"
+  fi
+
+  # 3. **THE ENVELOPE'S OWN FIELD NAMES**, which is what the encoder is written
+  #    against and what nothing else can check. `frames`/`signatures` on the
+  #    transaction, and the frame's `gasLimit` — NOT Hegotá's
+  #    `executionGasLimit`, the divergence a reader written for one chain gets
+  #    silently nil on.
+  fshape=$(raw "$FR" "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionByHash\",\"params\":[\"$FR_TX\"]}" \
+            | python3 -c '
+import sys, json
+r = (json.load(sys.stdin).get("result") or {})
+if not r: print("gone"); raise SystemExit
+f = (r.get("frames") or [{}])[0]
+print(":".join([
+  r.get("type",""),
+  "frames" if r.get("frames") else "-",
+  "sigs" if r.get("signatures") else "-",
+  "gasLimit" if "gasLimit" in f else ("executionGasLimit" if "executionGasLimit" in f else "-"),
+  "stateGasLimit" if "stateGasLimit" in f else "-",
+  "nonceKeys" if "nonceKeys" in r else "-",
+]))' 2>/dev/null)
+  case "$fshape" in
+    gone|"")
+      warn "Frames — the pinned type-0x06 transaction is gone (a reset, most likely); the envelope's field names are unverified tonight" ;;
+    0x6:frames:sigs:gasLimit:stateGasLimit:-)
+      pass "Frames — a type-0x06 still carries frames, signatures and both per-frame budgets under the names the encoder writes" ;;
+    *:*:*:executionGasLimit:*)
+      fail "Frames — a frame's execution budget is now spelled executionGasLimit (Hegotá's name); every frame in the room draws with no budget" ;;
+    *:*:*:*:*:nonceKeys)
+      warn "Frames — the chain now serves keyed nonces; the 7-field envelope is wrong and the Nonces scope this seat declined is now buildable" ;;
+    *)
+      fail "Frames — the type-0x06 shape moved ($fshape); the encoder signs a list the chain no longer hashes" ;;
+  esac
+
+  # 4. **Per-frame outcomes**, the reading the whole seat exists for. Also
+  #    reports whether `stateGasUsed` has appeared — absent on all 5
+  #    transactions when the seat was built (all plain transfers that grow no
+  #    state), and its arrival is what unblocks the room's second gas bar.
+  frcpt=$(raw "$FR" "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionReceipt\",\"params\":[\"$FR_TX\"]}" \
+           | python3 -c '
+import sys, json
+r = (json.load(sys.stdin).get("result") or {})
+if not r: print("gone"); raise SystemExit
+fr = r.get("frameReceipts") or []
+print(":".join([
+  str(len(fr)),
+  "status" if fr and "status" in fr[0] else "-",
+  "payer" if r.get("payer") else "-",
+  "stateGasUsed" if any("stateGasUsed" in x for x in fr) else "-",
+]))' 2>/dev/null)
+  case "$frcpt" in
+    gone|"") warn "Frames — the pinned receipt did not read; per-frame outcomes are unverified tonight" ;;
+    2:status:payer:-) pass "Frames — the receipt still decomposes into per-frame outcomes and names its payer" ;;
+    *:status:payer:stateGasUsed)
+      warn "Frames — receipts now carry stateGasUsed; the room can draw its second gas bar and FramesRead's caveat should be re-measured" ;;
+    *) fail "Frames — the receipt shape moved ($frcpt); a row can no longer say what each frame did" ;;
+  esac
+
+  # 5. The faucet is up. A GET on the claim endpoint 404s by design, which
+  #    proves the service answers WITHOUT spending the one claim per source IP
+  #    per hour — a nightly that burned it would make the app's own claim fail
+  #    every morning.
+  fcode=$(curl -s -m 12 -o /dev/null -w '%{http_code}' https://faucet.frames.ethrex.xyz/api/claim 2>/dev/null)
+  if [[ "$fcode" == "404" || "$fcode" == "405" ]]; then
+    pass "Frames — the faucet service is answering (no claim spent)"
+  elif [[ -z "$fcode" || "$fcode" == "000" ]]; then
+    warn "Frames — the faucet host did not answer; a new account cannot be funded"
+  else
+    warn "Frames — the faucet answered $fcode to a bare GET; its routing may have changed"
+  fi
+fi
+
+hr
 if (( RED == 0 && AMBER == 0 )); then
   print -P "%F{green}All live-integration hosts healthy.%f"
 elif (( RED == 0 )); then

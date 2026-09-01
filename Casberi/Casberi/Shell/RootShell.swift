@@ -31,11 +31,19 @@ struct RootShell: View {
     /// stops once the agent has been raised AT ALL this launch. Distinct
     /// from `KeptAskStore`'s own per-ask, persisted "seen" dot.
     @State private var agentEverOpened = false
-    /// The whisper capsule's line (prd §165) — non-nil only between the
-    /// first foreground of a day that has something to say and the agent's
-    /// next rise. The once-a-day gate is persisted (`whisper.lastShownDay`);
-    /// this is just the visible text.
-    @State private var whisper: DayBrief.Whisper?
+    /// The hint capsule is on screen (prd §550) — the once-ever teach of the
+    /// gesture §390 hid. Just the visibility; the gate that decides whether it
+    /// may ever appear again is `agentEverRaised` below.
+    @State private var agentHint = false
+    /// Spent the first time the agent rises by ANY door (prd §550). Persisted,
+    /// for `sources.everOpened`'s stated reason one control over: a first-run
+    /// explanation re-explained on every cold launch is what turns a grace into
+    /// permanent furniture.
+    ///
+    /// It tracks the AGENT, never a connected app. Somebody can furnish the
+    /// whole catalog and still never find the hold, and a grace that expires on
+    /// an unrelated event is a label outliving its own explanation.
+    @AppStorage("agent.everRaised") private var agentEverRaised = false
     @State private var deepLinkThing: Thing?
     /// `casberi://person/<Source>/<handle>` — the profile card, by name.
     @State private var deepLinkPerson: SocialProfile?
@@ -156,52 +164,50 @@ struct RootShell: View {
         }
     }
 
-    /// The whisper's once-a-day gate (prd §165): compose the day brief on
-    /// the first foreground of a calendar day, show it only when it has
-    /// something to say, never twice in one day. Suppressed until onboarded
-    /// (the cover is up; a whisper under it would be dead chrome).
-    /// `-whisperProbe YES` bypasses the day stamp so the capsule verifies
-    /// headlessly (pair with `-awayGap <hours>` for the landed count and
-    /// `-seedWalletHistory` for the wallet fragment).
+    /// THE ONCE-A-DAY WHISPER IS GONE (prd §550). What survives here is the
+    /// iPad pane's day lead, which was always on a different clock — the
+    /// capsule was a once-a-day DELIVERY, the pane is a standing lead redrawn
+    /// every open — and the two only ever shared this one compose so they
+    /// could never disagree about what today was. With the capsule out of the
+    /// day business the pane is the only reader left, so this composes when,
+    /// and only when, the pane is there to read it.
+    ///
+    /// The day reading did not leave the phone with the capsule: the All
+    /// feed's own Today header has drawn `DayBrief.whisper` since §385.
     @MainActor
-    private func refreshWhisper(things: [Thing]) {
-        guard onboarded else { return }
-        var force = false
-        #if DEBUG
-        force = UserDefaults.standard.bool(forKey: "whisperProbe")
-        #endif
-        let today = Date.now.formatted(.iso8601.year().month().day())
-        let dayKey = "whisper.lastShownDay"
-        let capsuleDue = force || UserDefaults.standard.string(forKey: dayKey) != today
-        // The pane's resting state leads with the day too (2026-07-31), on a
-        // different clock: the capsule is a once-a-day DELIVERY, the pane is a
-        // standing lead redrawn every open. Composing once serves both and is
-        // what stops them ever disagreeing about what today was.
-        //
-        // But composing is not free — `DayBrief.lead` walks the window several
+    private func refreshPaneBrief(things: [Thing]) {
+        guard onboarded, sceneState.detail.paneActive else { return }
+        // Composing is not free — `DayBrief.lead` walks the window several
         // times and `walletMove` decodes every watched wallet's sample line —
         // so it happens only when someone will actually read the result. On a
-        // phone (no pane, capsule already shown today) that is nobody, and the
-        // pre-review cut paid for it on every single foreground.
-        let paneReads = sceneState.detail.paneActive
-        guard capsuleDue || paneReads else { return }
-        let composed = DayBrief.whisper(things: things)
-        if paneReads { chrome.paneBrief = composed }
-        guard capsuleDue, let composed else {
-            #if DEBUG
-            if force && composed == nil { NSLog("[Casberi] whisper: (nothing to say)") }
-            #endif
+        // phone that is nobody, which the guard above now says in one line
+        // instead of the two clocks it used to reconcile.
+        chrome.paneBrief = DayBrief.whisper(things: things)
+    }
+
+    /// The hint's gate (prd §550): show it once, after onboarding, until the
+    /// agent has been raised by any door.
+    ///
+    /// Suppressed until `onboarded` for the whisper's own reason — the cover is
+    /// up, and chrome under it is chrome nobody can see being spent.
+    /// `-agentHintProbe YES` forces it past the spent flag so the capsule
+    /// still verifies headlessly. Renamed from `-whisperProbe` with the
+    /// feature: a probe named for a deleted thing is the drift this repo keeps
+    /// finding in registries nobody re-read.
+    @MainActor
+    private func refreshAgentHint() {
+        var force = false
+        #if DEBUG
+        force = UserDefaults.standard.bool(forKey: "agentHintProbe")
+        #endif
+        guard onboarded, force || !agentEverRaised else {
+            if agentHint { withAnimation(DS.Motion.standard) { agentHint = false } }
             return
         }
-        UserDefaults.standard.set(today, forKey: dayKey)
-        // …and the capsule stands down when the pane is already showing the
-        // same line beside it (§248's own rule, one column over: three
-        // controls for one screen, stacked, is duplication). The day stamp is
-        // still spent — the delivery happened, the pane made it.
-        guard !paneReads else { return }
-        withAnimation(DS.Motion.standard) { whisper = composed }
+        guard !agentHint else { return }
+        withAnimation(DS.Motion.standard) { agentHint = true }
         #if DEBUG
-        NSLog("[Casberi] whisper: %@ | %@", composed.title, composed.detail)
+        NSLog("[Casberi] agentHint: shown")
         #endif
     }
 
@@ -225,19 +231,24 @@ struct RootShell: View {
             if open {
                 OnDeviceModel.resetConversation()
                 agentEverOpened = true
-                // The whisper's job is done however the agent rose — it
-                // never returns until a new day has something to say.
-                whisper = nil
+                // The hint's job is done however the agent rose (prd §550) —
+                // this capsule's own tap, the hold it names, ⌘K, a quick
+                // action, a deep link. Spent here rather than at any one tap
+                // site so no door can be the one that forgets, which is the
+                // same reason `openSources` owns `sources.everOpened`.
+                //
+                // Retiring by being USED is the whole design: the rise is
+                // proof the explanation landed, so nothing has to guess when
+                // it has been read.
+                agentEverRaised = true
+                agentHint = false
                 // Whatever the walk had selected belongs to the feed you just
                 // left; coming back should not find a stale ring on a row.
                 chrome.walkSelected = nil
-            } else {
-                // A safety clear, not the primary one (that's the guarded
-                // timer at the tap site) — a fast close before the timer
-                // fires must not leave a stale proxy title behind for the
-                // NEXT rise to inherit.
-                chrome.risingBriefTitle = nil
             }
+            // The `else` branch cleared `chrome.risingBriefTitle`, deleted with
+            // the whisper's day content (prd §550): nothing sets a proxy title
+            // any more, so there is no stale word for a next rise to inherit.
         }
         #if targetEnvironment(macCatalyst)
         // The local MCP listener (2026-08-06) — Mac only, and only if the
@@ -1745,7 +1756,8 @@ struct RootShell: View {
                 if !KeptAskStore.shared.order.contains("today") {
                     _ = await TodayBrief.compose(things: surfaced, context: modelContext)
                 }
-                LaunchPerf.time("refreshWhisper") { refreshWhisper(things: surfaced) }
+                LaunchPerf.time("refreshPaneBrief") { refreshPaneBrief(things: surfaced) }
+                refreshAgentHint()
                 LaunchPerf.time("widgetPublish") { WidgetPublish.publishAll(things: surfaced, context: modelContext) }
                 #else
                 let surfaced = Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
@@ -1756,9 +1768,10 @@ struct RootShell: View {
                 if !KeptAskStore.shared.order.contains("today") {
                     _ = await TodayBrief.compose(things: surfaced, context: modelContext)
                 }
-                // The whisper's compose rides the same corpus walk this
+                // The pane brief's compose rides the same corpus walk this
                 // Task already paid for — never its own fetch.
-                refreshWhisper(things: surfaced)
+                refreshPaneBrief(things: surfaced)
+                refreshAgentHint()
                 WidgetPublish.publishAll(things: surfaced, context: modelContext)
                 #endif
               }
@@ -2067,53 +2080,40 @@ struct RootShell: View {
                 // `.trailing` rather than a hard right edge so an RTL layout
                 // gets the mirrored corner for free.
                 VStack(alignment: .trailing, spacing: DS.Space.s2) {
-                    // The whisper rides ABOVE the bar (prd §165) — the day
-                    // brief's headline, first open of the day only. Tap
-                    // raises the agent, same move as the bar's own.
-                    if let whisper {
+                    // The hint rides ABOVE the bar (prd §550) — once ever,
+                    // after onboarding, until the agent has been raised. It
+                    // names the HOLD, which is the gesture §390 left with no
+                    // visible affordance; its own tap does the same thing, so
+                    // reading it and obeying it land in the same place and it
+                    // is never a control that only talks (§83).
+                    if agentHint {
                         // roomTint nil since 2026-08-15 — see the bar's own
                         // note below; the capsule follows the bar so the
                         // bottom cluster stays one untinted pair.
-                        WhisperCapsule(title: whisper.title, lead: whisper.lead,
-                                       walletPct: whisper.walletPct,
-                                       morphNS: agentMorph,
-                                       roomTint: nil) {
+                        AgentHintCapsule(roomTint: nil) {
                             DSHaptic.tap()
-                            // The capsule's promise kept (prd §166): the tap
-                            // lands on the Today brief itself, not the rest
-                            // state — the headline it teased, opened. Routed
-                            // through `chrome.askRequest` (the same door the
-                            // weekend cover already uses), so the whisper, a
-                            // typed "how's my day", and a kept pill all reach
-                            // the one composer.
-                            chrome.askRequest = TodayBrief.title
-                            // The title travels (prd §167 item 1): set BEFORE
-                            // `composerOpen` flips, so the proxy title below
-                            // mounts in the SAME `composerOpen`-driven
-                            // transaction as the capsule vanishing — the real
-                            // masthead doesn't exist for another 400ms+ (it
-                            // waits on `consumeAskRequest`'s settle delay,
-                            // then commit()), well past this rise animation's
-                            // own duration, so without a proxy there'd be
-                            // nothing on the OTHER side of the pairing for the
-                            // morph to animate into.
-                            let title = whisper.title
-                            chrome.risingBriefTitle = title
+                            // A BARE RISE, seeding no ask — the same landing
+                            // the hold gives (§543's idle rest surface), since
+                            // this capsule promises the agent and not any one
+                            // document. `chrome.askRequest` is deliberately
+                            // left alone so a surface that seeded a specific
+                            // ask a moment before still wins, which is the
+                            // rule the bar's own tap site states.
+                            //
+                            // The day brief's proxy-title morph
+                            // (`chrome.risingBriefTitle`, §167 item 1) is
+                            // deleted with the day content: it existed to fly
+                            // this capsule's words into the brief's masthead,
+                            // and there is no titled document on the other
+                            // side of this tap to fly them into. The bar's own
+                            // shape morph is untouched.
                             composerOpen = true
-                            Task { @MainActor in
-                                try? await Task.sleep(for: .milliseconds(700))
-                                // Only clear OUR OWN word — a fast re-tap that
-                                // set a newer title must not be stomped by an
-                                // older timer firing late.
-                                guard chrome.risingBriefTitle == title else { return }
-                                withAnimation(DS.Motion.standard) { chrome.risingBriefTitle = nil }
-                            }
                         }
                         // The 2026-07-22 inset is GONE (2026-08-07) — see
-                        // `WhisperCapsule`'s own note. It existed to stop two
+                        // `AgentHintCapsule`'s own note. It existed to stop two
                         // full-width slabs reading as a double-bar, and the bar
                         // beneath it is no longer a slab. What replaces it is a
-                        // CAP: the capsule holds a title over a line of facts,
+                        // CAP: the capsule holds a title over a second line,
                         // which needs real width to be worth reading, so it
                         // keeps the phone's whole column and is only bounded on
                         // a shell wide enough to make that column silly.
@@ -2256,28 +2256,17 @@ struct RootShell: View {
                     agentSurface
                 }
                 .transition(.opacity)
-                // The proxy title (prd §167 item 1) — mounts in this SAME
-                // transaction as the surface itself appearing, so its
-                // `matchedGeometryEffect` has a live pair to interpolate from
-                // (the whisper capsule's own title, vanishing in the SAME
-                // transaction one layer down). Purely cosmetic scaffolding:
-                // Composer's real masthead carries the identical id, so once
-                // it mounts the two simply crossfade in place — this view
-                // never does anything but sit still and then fade.
-                .overlay(alignment: .top) {
-                    if let title = chrome.risingBriefTitle {
-                        Text(title)
-                            .dsText(.heading22)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                            .modifier(WhisperTitleMorph(ns: agentMorph))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, DS.Space.s4)
-                            .padding(.top, 68)
-                            .allowsHitTesting(false)
-                            .transition(.opacity)
-                    }
-                }
+                // THE PROXY TITLE IS DELETED (prd §550). It was §167 item 1's
+                // scaffolding: a `heading22` copy of the whisper's own words,
+                // mounted in this same `composerOpen` transaction so the
+                // capsule's title had a live `matchedGeometryEffect` pair to
+                // fly into while the real masthead was still 400ms away. The
+                // capsule no longer opens a titled document, so there are no
+                // words to fly and nothing on this side to receive them.
+                //
+                // The bar↔surface SHAPE morph below is a different pairing
+                // (`MorphMatch`, id "agentMorph") and is untouched — that one
+                // is the rise itself.
                 .zIndex(3)
             }
         }
@@ -2483,6 +2472,20 @@ struct RootShell: View {
                  onConnectBankr: {
                      composerOpen = false
                      sceneState.route.pushBridge(.bankr)
+                 },
+                 // The agents catalog (prd §550). Lowers the agent FIRST for
+                 // `onConnectBankr`'s stated reason one line up — a catalog
+                 // rising under a risen agent is the sources-tray-under-the-
+                 // panel bug this file already records.
+                 //
+                 // `openCategory` rather than a category-carrying route node:
+                 // `HomeRoute.Node.apps` is pushed from ten places and the
+                 // value is consumed once, on arrival, which is exactly the
+                 // shape `openOffer` already has for the empty feed's pile.
+                 onOpenAgents: {
+                     composerOpen = false
+                     sceneState.route.openCategory = BridgeCatalog.agentsCategory
+                     sceneState.route.present(.apps)
                  },
                  onLowerAgent: { composerOpen = false; keyedHistory = [] })
             .environment(\.genProjectTap) { name in

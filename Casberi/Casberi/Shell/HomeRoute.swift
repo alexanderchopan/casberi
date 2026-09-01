@@ -196,6 +196,19 @@ final class HomeRoute {
     /// just to the shelf); AppsScreen consumes it on appear, after the
     /// `.apps` push above has mounted the stack.
     var openOffer: String?
+
+    /// A catalog CATEGORY the Apps screen should land filtered to — set by a
+    /// door that named the category in the same gesture ("Set up an agent"),
+    /// consumed by `AppsScreen` on appear, exactly as `openOffer` above is.
+    ///
+    /// It is the ONE exception to that screen's own ruling that the filter is
+    /// never remembered across visits, and the exception is what makes it
+    /// honest rather than an inconsistency: that ruling exists because
+    /// arriving on a three-week-old filter "hides nine tenths of it with
+    /// nothing on screen saying why". Here the thing on screen saying why is
+    /// the link you just tapped, one gesture ago. Nothing is hidden without
+    /// explanation, and the All chip is the first thing in the strip.
+    var openCategory: String?
     // Per-window now, so the init is reachable — the `private` here was
     // the singleton's own guard against a second instance, and a second
     // instance is exactly what a second window is.

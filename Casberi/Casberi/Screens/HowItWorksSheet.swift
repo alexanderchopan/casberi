@@ -20,9 +20,11 @@ import SwiftUI
 ///
 /// Re-ruled 2026-07-16 (user): the connect screen DIED — this page IS
 /// onboarding now, one screen. Its rain moved here: in the onboarding tail
-/// the full curated set of app tiles falls down the screen in front of the
-/// steps and passes off the bottom — a curtain of everything that can land,
-/// while step 1's strip sits below as the rain come to rest. Connecting
+/// every connectable app's tile falls down the screen — a curtain of
+/// everything that can land. Since 2026-09-01 nothing falls past the bottom:
+/// all 103 come to rest as one packed, overflowing heap filling the band
+/// between the sentence and the doors, so the claim survives the fall
+/// instead of leaving with it. Connecting
 /// happens where it always really happened: in the catalog, which the one
 /// door forward opens (the arc: apps rain down → the three steps → the
 /// catalog where those apps live); from Settings there is no rain and the
@@ -75,9 +77,6 @@ struct HowItWorksSheet: View {
     @State private var arrived = false
     /// False = the rain waits above the screen · true = it has fallen through.
     @State private var rainFell = false
-    /// True once the last tile is past the bottom — the overlay unmounts, so
-    /// 31 offscreen icon views don't stay composited under the cover forever.
-    @State private var rainDone = false
     /// The Casberi mark's own arrival, after the rain has fallen past.
     @State private var markLanded = false
     /// Pushes the fork. Kept as local navigation inside this sheet's own stack
@@ -155,81 +154,286 @@ struct HowItWorksSheet: View {
         // than whatever sits at the end of the catalog array (user,
         // 2026-08-31: "what if the last six are weird ones"). It would have
         // been — that order is authoring order, and a seat added tomorrow
-        // would silently take a landing slot from Photos.
+        // would silently take the best slot from Photos.
         //
-        // These six are the ones somebody recognises without reading: they
-        // are what stays on screen, so they have to say "your everyday things
-        // land here" at a glance. `catalog-sync.sh` checks each still names a
-        // real offer.
+        // These six are the ones somebody recognises without reading. They
+        // used to be the only ones that stopped; now everything stops, and
+        // falling last still buys them the two things worth having — they
+        // come to rest ON TOP of the heap, on its centred top row directly
+        // under the sentence, and they are the last arrival, so the settling
+        // ends where the eye already is. `catalog-sync.sh` checks each still
+        // names a real offer.
         return all.filter { !landers.contains($0) } + landers.filter { all.contains($0) }
     }
 
     private static let landers = ["Photos", "Calendar", "Gmail",
                                   "GitHub", "Notion", "Wallet"]
 
+    // MARK: - The pile
+    //
+    // EVERY TILE LANDS (user, 2026-09-01: "have all of the icons fill up the
+    // gap between Everything and Try a demo … they all sit there jampacked and
+    // overflowing"). Until now six of the 103 stopped on a shelf and the other
+    // 97 fell off the bottom — so the screen's one wordless claim, that THIS
+    // MUCH can land here, was made by the tiles that LEFT, and was legible
+    // only for the second and a half they were in flight. The pile makes it
+    // standing still: the whole catalogue, at rest, filling the space between
+    // the sentence and the doors.
+    //
+    // It OVERFLOWS on purpose. The run is deliberately wider than the phone
+    // (`pileOverhang`), so the outer column is cut by the screen edge — a pile
+    // that fits inside the margins reads as a designed arrangement of exactly
+    // this many things, which is the opposite of the claim. Nothing is lost to
+    // the crop: no tile is a control, none is named, and the whole overlay is
+    // already hidden from VoiceOver.
+    //
+    // The band is MEASURED, not a fraction (the shelf it replaces used one).
+    // The copy above it wraps to two or three lines depending on the phone and
+    // the type size, and the doors below sit in a safe-area inset — so the gap
+    // being filled is not a constant share of any screen, and a fraction that
+    // balances on a 17 Pro puts the top row through the sentence on an SE. Both
+    // edges are published as anchors and read back in the overlay's own
+    // coordinate space; the fractions survive only as the first-frame fallback,
+    // which the fall's own 0.7s delay means nobody ever sees.
+    /// The tile OVERLAPS its neighbour by this share of its own width, which
+    /// is what makes a heap rather than a mesh. Scaled with the tile so the
+    /// packing looks the same at every size.
+    private static let pileOverlap: CGFloat = 6 / DS.Mark.tile
+    private static let pileOverhangShare: CGFloat = 0.85
+    /// The tile never shrinks past this — below it a brand mark stops being
+    /// recognisable, which is the one thing the pile is for.
+    private static let pileMinScale: CGFloat = 0.5
+    private static let pileBandFallback: (top: CGFloat, bottom: CGFloat) = (0.50, 0.86)
     /// Deterministic per-tile jitter — no Math.random in a view body; the
     /// same fall replays identically (and the screen sweep sees one design).
-    /// How many of the falling tiles stop on the shelf above the doors.
-    private static var landingCount: Int { landers.count }
-    private static let landingStride: CGFloat = DS.Mark.tile + DS.Space.s2
-    /// Where the rain comes to rest: below the copy, splitting the distance
-    /// between the sentence and the doors so neither side holds a void. A
-    /// fraction, not a fixed inset, so the balance holds on every phone.
-    private static let landingFraction: CGFloat = 0.60
     private static let jitter: [CGFloat] = [-4, 3, -2, 5, -5, 2, -3, 4]
 
-    /// The curtain: every marquee tile falls from above the screen, tumbles,
-    /// and passes off the bottom — rain, not ice; nothing rests over the
-    /// steps (the strip in step 1 is the rain come to rest). Gravity is an
-    /// ease-IN: tiles accelerate, they don't glide. Never hit-testable.
-    private var rain: some View {
+    /// How the heap is packed for a given screen and a given band.
+    ///
+    /// **THE TILE SCALES DOWN BEFORE THE PILE CROSSES THE BAND** (user,
+    /// 2026-09-01: "for iPhone SE what do we do about the fact that the top
+    /// row covers some of the text?"). At a fixed 44pt the heap is 310pt tall,
+    /// which fits a 17 Pro's ~313pt gap almost exactly and overruns an SE's
+    /// ~145pt by more than double — so the top row sat on the last line of the
+    /// sentence.
+    ///
+    /// The alternative on the table was letting the surplus rows spill off the
+    /// TOP edge, matching the deliberate crop at the sides. It is refused, and
+    /// the reason is that the two edges are not alike: there is nothing at the
+    /// left and right margins to lose, and the top of this screen is the mark
+    /// and the one sentence the screen exists to say. A crop over words does
+    /// not read as overflow, it reads as a broken layout — on the first screen
+    /// anybody sees, which is the worst place to be doubted. So the band is
+    /// hard and the tile gives way.
+    ///
+    /// Measured against the band each phone actually produces: 17 Pro 44pt
+    /// (13 × 8), 15 Pro 42pt, Pro Max 44pt (14 × 8), SE **26pt (19 × 6)** — a
+    /// small screen gets a finer, denser mosaic, which is more jampacked, not
+    /// less. Shrinking also buys columns, so the row count falls faster than
+    /// the tile does.
+    ///
+    /// One rung below that, stated rather than hoped for: at `pileMinScale`
+    /// the tile stops shrinking and the ROWS start overlapping instead — a
+    /// denser heap beats an unreadable mark. That rung is also what makes the
+    /// band a HARD edge rather than a target, since `rowStride` is clamped to
+    /// the room available, so the heap cannot cross into the sentence or the
+    /// doors however extreme the type size. The one exception is arithmetic
+    /// rather than design: a band shorter than a single tile overruns it by
+    /// the difference, half above and half below, and there is no arrangement
+    /// of one tile that does not.
+    private struct PileLayout {
+        var tile: CGFloat
+        var cols: Int
+        var rows: Int
+        var colStride: CGFloat
+        var rowStride: CGFloat
+    }
+
+    private static func pileLayout(count: Int, width: CGFloat, band: CGFloat) -> PileLayout {
+        var scale: CGFloat = 1
+        // Bounded: the loop must terminate on a zero or negative band too.
+        for _ in 0..<64 {
+            let tile = DS.Mark.tile * scale
+            let colStride = tile * (1 - pileOverlap)
+            // CEIL, not floor: the run must be at least the screen plus the
+            // overhang, so a whole tile hangs off each edge. Rounding down
+            // lets the run land a few points INSIDE the margins on some
+            // widths, which draws a tidy centred grid — the exact reading
+            // this is meant to refuse.
+            let cols = max(1, Int(ceil((width + tile * pileOverhangShare * 2) / colStride)))
+            let rows = max(1, Int(ceil(Double(count) / Double(cols))))
+            let height = CGFloat(rows - 1) * colStride + tile
+            if height <= band || scale <= pileMinScale {
+                let room = max(0, band - tile)
+                let rowStride = rows > 1 ? min(colStride, room / CGFloat(rows - 1)) : colStride
+                return PileLayout(tile: tile, cols: cols, rows: rows,
+                                  colStride: colStride, rowStride: rowStride)
+            }
+            scale -= 0.02
+        }
+        let tile = DS.Mark.tile * pileMinScale
+        let colStride = tile * (1 - pileOverlap)
+        return PileLayout(tile: tile, cols: 1, rows: count,
+                          colStride: colStride, rowStride: colStride)
+    }
+
+    /// Which resting slot the i-th FALLING tile takes.
+    ///
+    /// **THE FALL ORDER AND THE SLOT ORDER ARE DELIBERATELY UNRELATED** (user,
+    /// 2026-09-01: "the rain is too methodical … it rains in lines that layer
+    /// on top of each other"). They used to be the same number — tile `i` took
+    /// slot `i` — so two tiles 22ms apart landed in ADJACENT COLUMNS OF THE
+    /// SAME ROW, and the heap assembled as a line being drawn left to right,
+    /// once per row, eight times over. Every tile fell correctly and the whole
+    /// thing read as a machine stacking boxes. Jitter could never have fixed
+    /// it: the regularity was in the ORDER, not in the positions.
+    ///
+    /// The slots are dealt on a coprime stride instead — a permutation, so
+    /// every slot is still used exactly once, and one with no short cycle, so
+    /// successive arrivals are nowhere near each other. Still deterministic
+    /// (no `Math.random` in a view body): the fall replays identically and the
+    /// screen sweep sees one design.
+    ///
+    /// The six landers are held OUT of the deal. They keep the centred slots
+    /// of the top row and keep falling last, so what the permutation scatters
+    /// is only the anonymous 97 — the one piece of order worth keeping is the
+    /// one somebody can actually read.
+    private static func pileSlots(count: Int, cols: Int, rows: Int) -> [Int] {
+        let landing = min(landers.count, count)
+        let topFirst = (rows - 1) * cols
+        let topCount = count - topFirst
+        let landStart = topFirst + max(0, (topCount - landing) / 2)
+        let reserved = Set(landStart..<min(count, landStart + landing))
+        let free = (0..<count).filter { !reserved.contains($0) }
+        let n = free.count
+        guard n > 0 else { return Array(0..<count) }
+
+        // Any stride coprime with `n` walks every residue exactly once. 37 is
+        // the first choice because it is far from n/2 and from n/3, so the
+        // deal does not settle into a visible rhythm of its own; it is stepped
+        // down only if it happens to share a factor with this particular n.
+        var stride = min(37, max(1, n - 1))
+        while stride > 1 && gcd(stride, n) != 1 { stride -= 1 }
+
+        var slots = [Int](repeating: 0, count: count)
+        var k = 0
+        for i in 0..<n {
+            slots[i] = free[k]
+            k = (k + stride) % n
+        }
+        for (offset, slot) in reserved.sorted().enumerated() where n + offset < count {
+            slots[n + offset] = slot
+        }
+        return slots
+    }
+
+    private static func gcd(_ a: Int, _ b: Int) -> Int {
+        var a = a, b = b
+        while b != 0 { (a, b) = (b, a % b) }
+        return a
+    }
+
+    /// The curtain, and then the pile. Every marquee tile falls from above the
+    /// screen, tumbles, and comes to rest in the measured band between the
+    /// sentence and the doors — packed tight enough to overlap, wide enough to
+    /// be cut by both screen edges. Gravity is an ease-IN into a small spring:
+    /// tiles accelerate and then settle, they don't glide and they don't snap.
+    /// Never hit-testable.
+    private func rain(_ bounds: PileBounds) -> some View {
         GeometryReader { geo in
+            let count = Self.marqueeApps.count
+            // The band. A missing anchor means the first frame, before the
+            // preference has travelled — the fractions answer for that one
+            // frame and the 0.7s fall delay means it is never seen.
+            let top = (bounds.copy.map { geo[$0].maxY }
+                        ?? geo.size.height * Self.pileBandFallback.top) + DS.Space.s3
+            let bottom = (bounds.doors.map { geo[$0].minY }
+                        ?? geo.size.height * Self.pileBandFallback.bottom) - DS.Space.s2
+            // The tile shrinks until the whole heap fits the band — see
+            // `pileLayout`, and the SE reading that forced it.
+            let pile = Self.pileLayout(count: count,
+                                       width: geo.size.width,
+                                       band: bottom - top)
+            let cols = pile.cols
+            let rows = pile.rows
+            let originX = geo.size.width / 2
+                - CGFloat(cols - 1) * pile.colStride / 2
+            let originY = (top + bottom) / 2
+                - CGFloat(rows - 1) * pile.rowStride / 2
+            // The top row is the short one (103 tiles never divide evenly),
+            // and it is also the most looked-at, so it is centred on its own
+            // rather than left-aligned against a run it cannot fill.
+            let topRowFirst = (rows - 1) * cols
+            let topRowCount = count - topRowFirst
+            let slots = Self.pileSlots(count: count, cols: cols, rows: rows)
+
             ForEach(Array(Self.marqueeApps.enumerated()), id: \.element) { i, name in
                 // Golden-ratio spread — deterministic, evenly scattered
                 // columns without a visible grid.
                 let frac = (Double(i) * 0.381966).truncatingRemainder(dividingBy: 1)
                 let x = DS.Space.s4 + CGFloat(frac) * (geo.size.width - DS.Space.s4 * 2)
                 let tilt = Double(Self.jitter[i % Self.jitter.count])
-                // THE LAST SIX LAND (2026-08-31). Everything else falls past
-                // the bottom — that is what makes it a curtain — and the tail
-                // of the same fall stops on the shelf above the two doors.
-                // They ARRIVE BY FALLING: it is one motion, not a row fading
-                // in over a rain still in flight, which is what the deleted
-                // `settledPile` was and why it never read as landing.
-                let lands = i >= Self.marqueeApps.count - Self.landingCount
-                let slot = i - (Self.marqueeApps.count - Self.landingCount)
-                // Centred row: each slot is offset from the middle by half
-                // the run's width. The `* 0.5` used to sit on the STRIDE,
-                // which spaced them at half a tile and piled them up.
-                let restX = geo.size.width / 2
-                    + (CGFloat(slot) - CGFloat(Self.landingCount - 1) / 2) * Self.landingStride
-                let restY = geo.size.height * Self.landingFraction
-                BridgeIcon(name: name, size: lands ? DS.Mark.tile : DS.Mark.hero)
-                    .rotationEffect(.degrees(rainFell ? tilt * (lands ? 1.6 : 3.4) : tilt * 0.5))
-                    .position(x: rainFell && lands ? restX
-                                                   : x + Self.jitter[(i + 3) % Self.jitter.count],
-                              y: rainFell ? (lands ? restY : geo.size.height + 140) : -120)
+                // THE HEAP FILLS FROM THE BOTTOM UP, which is what a heap
+                // does, and what puts the curated six (which fall last — see
+                // `marqueeApps`) on the top row rather than in a corner.
+                let slot = slots[i]
+                let row = rows - 1 - slot / cols
+                let col = slot % cols
+                // Every other row is offset half a column: bricks, not a mesh.
+                let brick = row % 2 == 0 ? 0 : pile.colStride / 2
+                let centring = slot >= topRowFirst
+                    ? CGFloat(cols - topRowCount) * pile.colStride / 2 : 0
+                let restX = originX + CGFloat(col) * pile.colStride + brick + centring
+                    + Self.jitter[(i + 5) % Self.jitter.count] * 0.5
+                let restY = originY + CGFloat(row) * pile.rowStride
+                    + Self.jitter[(i + 2) % Self.jitter.count] * 0.4
+                // Hoisted out of the modifier: inline, the arithmetic pushed
+                // that one expression past the type-checker's budget.
+                let fallDelay: Double = 0.7 + Double(i) * 0.019
+                    + Double(Self.jitter[(i + 1) % Self.jitter.count]) * 0.012
+                let fallDuration: Double = 0.58
+                    + Double(Self.jitter[(i + 6) % Self.jitter.count]) * 0.012
+                BridgeIcon(name: name, size: pile.tile)
+                    // Big in flight, pile-sized at rest — a scale, not two
+                    // sizes, so the shrink is part of the landing rather than
+                    // a layout change mid-fall. The falling size is pinned to
+                    // `DS.Mark.hero` rather than to the pile's tile, so the
+                    // curtain reads the same on a phone whose heap ended up
+                    // half the size.
+                    .scaleEffect(rainFell ? 1 : DS.Mark.hero / pile.tile)
+                    .rotationEffect(.degrees(rainFell ? tilt * 1.4 : tilt * 0.5))
+                    .position(x: rainFell ? restX
+                                          : x + Self.jitter[(i + 3) % Self.jitter.count],
+                              y: rainFell ? restY : -120)
                     // The base delay clears the cover's own presentation —
                     // start the rain while the cover is still fading in and
                     // half the fall is spent invisible (measured 2026-07-16).
-                    // Reduce Motion (2026-07-21): no fall. The tiles snap to
-                    // their off-screen resting place, so the curtain simply
-                    // never plays — nothing is lost, because the rain is pure
-                    // transition (it ends below the screen either way) and
-                    // step 1's settled strip says the same thing standing still.
+                    // Reduce Motion (2026-07-21): no fall. The tiles are
+                    // simply already in the pile — nothing is lost, because
+                    // the pile is now the thing being said and the fall was
+                    // only ever how it got there.
+                    // A HEAP DOES NOT SHINGLE IN FALL ORDER. Layering by row
+                    // keeps the overlap consistent — upper rows in front, so
+                    // the landers on the top row are never half-covered by a
+                    // stranger that happened to arrive after them, which is
+                    // what a fall-order z did once the deal was permuted.
+                    .zIndex(Double(rows - row))
+                    // Neither the gap between arrivals nor the length of a
+                    // fall is constant: a fixed 22ms stagger over a fixed
+                    // 0.62s fall is a metronome, and reads as one even when
+                    // every tile is going somewhere different. The jitter is
+                    // small enough that the curtain still sweeps downward and
+                    // large enough that arrivals overlap and swap.
                     .animation(reduceMotion ? nil
-                                            : (lands
-                                               ? .spring(duration: 0.62, bounce: 0.28)
-                                                   .delay(0.7 + Double(i) * 0.022)
-                                               : .easeIn(duration: 0.75)
-                                                   .delay(0.7 + Double(i) * 0.022)),
+                                            : .spring(duration: fallDuration, bounce: 0.26)
+                                                .delay(fallDelay),
                                value: rainFell)
             }
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
-        // 31 brand tiles with no informational role — VoiceOver would read the
-        // whole catalog aloud before reaching the first step.
+        // 103 brand tiles with no informational role — VoiceOver would read the
+        // whole catalog aloud before reaching the sentence.
         .accessibilityHidden(true)
     }
 
@@ -297,8 +501,16 @@ struct HowItWorksSheet: View {
                         // 2026-08-31: "the octopus lands last above the text
                         // and fills that void too"). Two voids, two arrivals:
                         // the rain settles UNDER the copy and fills the middle,
-                        // this fills the top. It waits for the curtain to
-                        // clear so it reads as the one that stayed.
+                        // this fills the top. It arrives at 2.4s, after the
+                        // curtain has passed the middle of the screen and
+                        // while the heap's top row is still settling under it
+                        // — deliberately not after the last tile (~3.6s),
+                        // which would leave the top of the first screen
+                        // anybody sees empty for the better part of four
+                        // seconds. The rain is an overlay, so a falling tile
+                        // passes IN FRONT of the mark, which is the curtain
+                        // reading; at rest nothing reaches it, because the
+                        // pile's band starts below this whole block.
                         CasberiMark(size: 120)
                             .scaleEffect(markLanded ? 1 : 0.7)
                             .opacity(markLanded ? 1 : 0)
@@ -324,6 +536,12 @@ struct HowItWorksSheet: View {
                     }
                     .padding(.top, DS.Space.s2)
                     .arrive(arrived, delay: 0.1)
+                    // The pile's ceiling. Published rather than guessed: this
+                    // block is a 120pt mark plus two paragraphs that wrap
+                    // differently on every phone and every type size.
+                    .anchorPreference(key: PileBoundsKey.self, value: .bounds) {
+                        PileBounds(copy: $0)
+                    }
                 }
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.bottom, DS.Space.s4)
@@ -396,13 +614,20 @@ struct HowItWorksSheet: View {
                     }
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.bottom, DS.Space.s2)
+                    // The pile's floor. A safe-area inset, so its height is
+                    // the device's business as much as ours.
+                    .anchorPreference(key: PileBoundsKey.self, value: .bounds) {
+                        PileBounds(doors: $0)
+                    }
                 }
             }
         // The rain falls only in the onboarding tail — from Settings this is
         // a reference page, and a second rain would be a fake first time.
-        // The rain is no longer torn down: its last six tiles ARE the
-        // shelf above the doors, so removing it would remove them.
-        .overlay { if onStart != nil { rain } }
+        // It is never torn down: the tiles ARE the pile filling the middle of
+        // the screen, so removing the overlay would empty it.
+        .overlayPreferenceValue(PileBoundsKey.self) { bounds in
+            if onStart != nil { rain(bounds) }
+        }
         .tint(DS.tint)
         .onAppear {
             if reduceMotion { arrived = true }
@@ -410,13 +635,10 @@ struct HowItWorksSheet: View {
             guard onStart != nil else { return }
             rainFell = true
             markLanded = true
-            // Last tile: 0.7 base + 103 × 0.022 stagger + 0.75 fall ≈ 3.7s.
-            // The stagger tightened with the count so the curtain still runs
-            // about three seconds rather than six.
-            Task { @MainActor in
-                try? await Task.sleep(for: .seconds(4.2))
-                rainDone = true
-            }
+            // Last tile: 0.7 base + 103 × 0.019 stagger + ~0.6 spring ≈ 3.3s.
+            // The stagger is tight so the heap builds in about three seconds
+            // rather than six; the mark lands at 2.4s, over a pile whose top
+            // row is still settling under it.
         }
         #if DEBUG
         // `-howItWorksCTA <s>` fires the onboarding-tail CTA after a delay.
@@ -481,6 +703,31 @@ struct HowItWorksSheet: View {
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(DS.Space.s3)
+    }
+}
+
+/// Where the pile may rest, measured rather than assumed: the bottom of the
+/// copy block and the top of the doors, published as anchors so the rain —
+/// which lives in a full-screen overlay of its own — can resolve both in its
+/// OWN coordinate space (`AddressFlight`'s pattern, prd §441).
+///
+/// The two edges come from two different subtrees (the scroll content, and a
+/// `safeAreaInset`), so `reduce` MERGES per edge rather than letting the later
+/// sibling replace the whole value — the naive `value = nextValue()` drops
+/// whichever edge SwiftUI happens to visit first, and the pile then hangs off
+/// a fallback fraction on every phone while looking merely a little low. A
+/// nil edge is the first frame only, and the fall's 0.7s delay covers it.
+private struct PileBounds {
+    var copy: Anchor<CGRect>?
+    var doors: Anchor<CGRect>?
+}
+
+private struct PileBoundsKey: PreferenceKey {
+    static var defaultValue: PileBounds { PileBounds() }
+    static func reduce(value: inout PileBounds, nextValue: () -> PileBounds) {
+        let next = nextValue()
+        if let copy = next.copy { value.copy = copy }
+        if let doors = next.doors { value.doors = doors }
     }
 }
 

@@ -554,6 +554,20 @@ if [[ $(grep -o 'VibenetPolicyAggregation.compose' "$TMP/card.nc.swift" | wc -l 
   echo "  single definition, and a second copy is §418's duplicate-parser class in this card."
   exit 1
 fi
+# …and the figure's six-cell census is a RE-PRESENTATION of that one call, never
+# a second derivation from the items (prd §551). `census` takes composed rows for
+# exactly this reason, so a figure saying two keys are admins over a list showing
+# three is impossible rather than merely unlikely.
+if grep -q 'VibenetPolicyAggregation.census(room.items)' "$TMP/card.nc.swift"; then
+  echo "✗ the permissions census is derived from the items rather than from the composed"
+  echo "  rows — prd §551/§468: one derivation, two presentations."
+  exit 1
+fi
+grep -q 'VibenetPolicyAggregation.census(counts)' "$TMP/card.nc.swift" \
+  || { echo "✗ the permissions figure no longer draws the whole census — prd §551: a list as"
+       echo "  long as the account is interesting cannot fill a fixed box, which is how one"
+       echo "  kind of key ended up as a lone number beside a headline saying the same count."
+       exit 1; }
 
 # The since-you-last-looked ledger is READ then SPENT, in that order and in one
 # place. Advancing before reading erases the answer while it is being shown.
@@ -787,8 +801,18 @@ if [[ "$heroFn" == *'card {'* ]]; then
 fi
 # BOTH crowns are the same rung and the same chart height, or the same reading
 # changes size between the room and the account one tap into it.
-[[ "$heroFn" == *'.dsText(.price48)'* ]] \
-  || { echo "✗ the aggregate crown is no longer price48 — prd §475: Wallet's crown rung"; exit 1; }
+#
+# The rung is `stat24` since prd §551 — the scope headline's own, which the
+# crown stands in for on Home. It is checked HERE and in `DSRoomSlot` because
+# the pairing is the content: a crown one rung off its own scope strip is the
+# defect §551 fixed, and a crown one rung off the account sheet is the defect
+# §475 fixed.
+[[ "$heroFn" == *'.dsText(.stat24)'* ]] \
+  || { echo "✗ the aggregate crown is no longer stat24 — prd §551: every scope headline"
+       echo "  in this room takes one rung, and the crown IS Home's headline"; exit 1; }
+[[ "$heroFn" != *'.dsText(.price48)'* ]] \
+  || { echo "✗ the aggregate crown went back to price48 — prd §551: it was two rungs above"
+       echo "  every other scope's headline, so the strip changed the type scale of the screen"; exit 1; }
 # The 120pt rule is unchanged; the FUNCTION it lives in moved (prd §491). The
 # chart was nested inside `balanceHero` and is now `homeFigure`, drawn through
 # the same fixed slot every other scope's figure uses — which is what stopped
@@ -797,9 +821,9 @@ fi
 # rather than at one function of it.
 grep -q 'height: 120' "$TMP/card.nc.swift" \
   || { echo "✗ the aggregate sparkline is no longer 120pt — prd §475: Wallet's own height"; exit 1; }
-grep -q '.dsText(.price48)' "$TMP/detail.nc.swift" \
-  || { echo "✗ the account sheet's crown is not price48 — prd §475: it drew the same reading"
-       echo "  two rungs smaller than the room one tap above it"; exit 1; }
+grep -q '.dsText(.stat24)' "$TMP/detail.nc.swift" \
+  || { echo "✗ the account sheet's crown is not stat24 — prd §475/§551: it drew the same"
+       echo "  reading at a different rung from the room one tap above it"; exit 1; }
 grep -q 'height: 120' "$TMP/detail.nc.swift" \
   || { echo "✗ the account sheet's sparkline is not 120pt — prd §475"; exit 1; }
 

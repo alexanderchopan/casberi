@@ -473,7 +473,7 @@ struct FeedScreen: View {
         /// `VibenetRoomCard`, which is inside this List's rows, so it cannot
         /// present its own sheet.
         case vibenetCreate
-        /// **THE SEND FORM, ON A SHEET (prd §551).** Home holds the two verbs
+        /// **THE SEND FORM, ON A SHEET (prd §553).** Home holds the two verbs
         /// and the form holds the screen — routed here rather than presented by
         /// the card for `hegotaMove`'s reason: a `.sheet` on a view inside this
         /// List resolves to the same presenting controller as this one and
@@ -629,13 +629,13 @@ struct FeedScreen: View {
                                 onSend: { feedSheet = .vibenetSend(account) })
             }
         } else {
-            // **A SCOPE NEVER DRAWS NOTHING (prd §548d), NOW IN THE ROOM'S OWN
-            // LANGUAGE (§551).** §538 gated the console on an account this
+            // **A SCOPE NEVER DRAWS NOTHING (prd §552d), NOW IN THE ROOM'S OWN
+            // LANGUAGE (§553).** §538 gated the console on an account this
             // phone's key can act for, which is right about the form and wrong
             // about the screen: Home's ENTIRE content is that card, so without
             // one the scope rendered blank.
             //
-            // §548d answered it with a sentence and no door. The sentence is
+            // §552d answered it with a sentence and no door. The sentence is
             // gone: it claimed something about the ROOM ("no account here")
             // that is false whenever you are watching addresses, which is most
             // of the time. The verb says what it does and nothing else.
@@ -652,7 +652,7 @@ struct FeedScreen: View {
         }
     }
 
-    // MARK: - Sending, from the room's two devnets (prd §551)
+    // MARK: - Sending, from the room's two devnets (prd §553)
 
     /// Everything this devnet knows, minus this phone's own account — a picker
     /// that offers you yourself is offering a self-send, which neither chain
@@ -681,7 +681,7 @@ struct FeedScreen: View {
     }
 
     /// Returns nil on success, or the sentence to show. **The demo refuses
-    /// before the key is touched** (prd §548b): a real signature raises Face ID
+    /// before the key is touched** (prd §552b): a real signature raises Face ID
     /// and a real broadcast puts a transaction on a public devnet, from a
     /// screen whose own banner says none of this is yours.
     private func sendHegota(to: String, amount: String) async -> String? {
@@ -746,7 +746,7 @@ struct FeedScreen: View {
     }
 
     private static func signableVibenetAccount() -> Data? {
-        // **THE DEMO ANSWERS FIRST (prd §548b).** Both halves of the real gate
+        // **THE DEMO ANSWERS FIRST (prd §552b).** Both halves of the real gate
         // are unreachable in a tour: a demo has no device key to name in an
         // actor list, and `VibenetRoomSource.compose()` returns the fixture
         // without writing `VibenetState`, so the read below finds nothing
@@ -3581,7 +3581,7 @@ struct FeedScreen: View {
                     account: address, localEpoch: seq?.localEpoch ?? 0,
                     localSequence: seq?.localSequence ?? 0, editing: editing)
             })
-        // **THE SEND FORM (prd §551).** Both rooms share one sheet and differ
+        // **THE SEND FORM (prd §553).** Both rooms share one sheet and differ
         // only in what they hand it: who the book knows, what the account
         // holds, whether a Max is honest, and the one closure that actually
         // sends. Everything visual lives in `DevnetSendSheet`.
@@ -5157,7 +5157,7 @@ struct FeedScreen: View {
                 // rather than inside the builder.
                 Section {
                     // `reservesHeadline: false` — the crown IS this scope's
-                    // headline (`price48`), so it stands IN the row rather
+                    // headline (`stat24` since §553), so it stands IN the row rather
                     // than under it, which is what puts its first pixel level
                     // with every other scope's headline.
                     DSRoomSlot(headline: nil, reservesHeadline: false) {
@@ -5205,13 +5205,63 @@ struct FeedScreen: View {
                         if bankrOverlays {
                             BankrOfferBanner { route.pushBridge(.bankr) }
                                 .padding(DSRoomChassis.contentInset)
+                                // IT FILLS THE SLOT (user, 2026-09-01: *"this
+                                // looks weird here … it should cover the
+                                // numbers so it looks purposeful"*). Sized to
+                                // the banner's own words, the glass stood
+                                // roughly two thirds of the box and its top
+                                // edge landed part-way THROUGH the crown's
+                                // digits — a crown sliced mid-glyph, which
+                                // reads as a card that failed to lay out
+                                // rather than as one deliberately placed over
+                                // the room. Covering the figure whole is the
+                                // trade §529's overlay ruling already blesses
+                                // ("it's fine if it covers the image"); half
+                                // covering it is the only version that isn't.
+                                //
+                                // `minHeight`, never `maxHeight` — the box is
+                                // a floor, so at large Dynamic Type the banner
+                                // still grows past it, upward, exactly as the
+                                // bottom alignment above intends. There is no
+                                // height budget to get wrong, and the worst
+                                // case stays "it covers more of the crown".
+                                //
+                                // **THE FLOOR IS THE SLOT LESS THE GAP BELOW
+                                // IT** (user, 2026-09-01: *"there needs to be
+                                // a slight gap between the bankr card and the
+                                // stuff around it"*). At a bare `visualSlot`
+                                // the glass ran the full height of the box, so
+                                // its bottom edge landed ON the slot's own,
+                                // leaving only `railGap` (4pt) between a
+                                // frosted card and the fused rail below it —
+                                // two objects touching, which reads as one
+                                // mis-laid-out thing rather than as chrome
+                                // floating over the room. Subtracted rather
+                                // than left to a smaller constant so the pair
+                                // still SUMS to the slot: the padding below
+                                // gives the object back the height taken here,
+                                // so the banner occupies exactly the box it
+                                // always did and the rail cannot move.
+                                .frame(minHeight: DSRoomChassis.visualSlot
+                                       - DSRoomChassis.contentInset,
+                                       alignment: .leading)
                                 .dsGlass(cornerRadius: DS.Radius.widget)
                                 // Inset from the slot's edges so it reads as an
                                 // object floating ON the room rather than as a
                                 // band the room grew. Its edge lands on the
                                 // crown's own text column, which is what
                                 // `contentInset` is for.
+                                //
+                                // The bottom is the same token as the sides,
+                                // so the air around the card is even on three
+                                // edges. The TOP deliberately gets none: the
+                                // glass keeps its top at the slot's own, which
+                                // is what covers the crown whole rather than
+                                // slicing it mid-glyph — the exact defect the
+                                // paragraph above records. Its gap upward is
+                                // the row's own `WalletCardStyle.rowInsets`.
                                 .padding(.horizontal, DSRoomChassis.contentInset)
+                                .padding(.bottom, DSRoomChassis.contentInset)
                         }
                     }
                     .listRowBackground(Color.clear)
@@ -7245,7 +7295,7 @@ struct FeedScreen: View {
     /// the argument that a free-set number reads as "the room's voice" lost to
     /// the argument that a boxed one is easier to SCAN — parcels beat strata
     /// when the eye is looking for sections. The number keeps every ounce of
-    /// its weight (price48, the pour behind it, the delta and mover with it);
+    /// its weight (the crown rung, the pour behind it, the delta and mover with it);
     /// it just gets an edge. Translucent so the crown pour still travels under
     /// it rather than being punched out.
     ///

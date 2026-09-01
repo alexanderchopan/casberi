@@ -79,6 +79,8 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §165 | The whisper capsule carries the DAY BRIEF — one glass card above the agent bar on the first foreground of every calendar day, tapping through to the Today brief | superseded by §550 (that made it the last prepopulated door onto the brief after §543 deleted the rest, on the one surface that repeats forever — and the day reading was never only there: the All feed's own Today header has drawn `DayBrief.whisper` since §385 and the iPad pane since 2026-07-31, both untouched. The SLOT survives and changes subject: it teaches the hold §390 hid, once ever, retiring the first time the agent rises by any door) |
+| §167 | Item 1 — the whisper's title TRAVELS into the brief's masthead: a proxy title mounted in RootShell's own `composerOpen` transaction so the capsule's words had a live `matchedGeometryEffect` pair while the real masthead was still 400ms away | amended by §550 (the capsule opens no titled document now, so there are no words to fly and nothing on the other side to receive them — `WhisperTitleMorph`, `ShellChrome.risingBriefTitle`, the proxy overlay and the masthead's receiving modifier are all deleted. §167's other five corrections stand, and the bar↔surface SHAPE morph is a different pairing and is untouched) |
 | §386c | The kept-ask pills LEAVE the rest surface — the same chips-to-have-chips reading the suggestion row got in the same session | reversed by §543 (they were removed while sitting in a row of five identical-looking suggestions, where they read as more of the same. With every SUGGESTED chip deleted they are the opposite thing: the only content on that surface, and there only because somebody pinned it. It also repairs a hole §543 would otherwise open — "Keep" on an answer would mint a standing question with nowhere to appear, which is a control that does nothing (§83)) |
 | §534 | A `.eth` name in its grace period can be renewed by **the owner** — the grace copy said so in four places | reversed by §540 (MEASURED: the deployed `ETHRegistrarController.renew` has no owner check of any kind — it takes the money, extends the registration, and never asks who paid. **Renewing is permissionless.** The grace period restricts RE-REGISTRATION, not renewal, so the copy was wrong in the direction that talks somebody out of an act they could take; all four places now say "it can still be renewed", and the renew card carries the footgun the capability creates — paying does not transfer the name) |
 | §250 | An individual charge NEVER lands — a £9 payment is a tally wearing a currency symbol, so only money whose movement is itself the news earns a row | amended by §537 **for Polar only** (Stripe's own rule stands unchanged where §250 set it: a payment processor serving businesses at thousands of charges a day. Polar is a Merchant of Record for indie developers, where a sale is a countable event somebody remembers — so sales land, while a `subscription_cycle` RENEWAL is still refused as exactly the tally §250 describes) |
@@ -41417,7 +41419,750 @@ screenshot of any of the three rooms has been taken, and the one thing to look
 at first is a wallet with five watched addresses, where the rail scrolls inside
 the slab and the pick's fill has to stay legible against the glass.
 
-## 548. The send console fits the screen — and its height becomes a written-down sum (user: "the new send module is good, but how can we improve it? it needs to fit all on the screen so user doesn't have to scroll" → "needs to fit where it is. we can't make the slot shorter because it needs to be that same size on all the other screens and wallets", 2026-09-01)
+## 548. A seat for the chain that is only frames — the envelope Hegotá's could not sign (user: "there is now a Frames devnet, we need to build on it like we have w Vibenet and Hegota … can you check and spec. it out", then "hegota is for hegota writ large" → "this one is for Frames specifically", then "this chain is brand new is why it's empty. what do you need to get started? please do", 2026-09-01)
+
+The Frames devnet is the reference test network for **EIP-8141 frame
+transactions** — chain id **81410** (`0x13e02`), three keyless RPC hosts,
+6.1-second blocks, `ethrex v23.0.0-frames-devnet-0`. `FramesTransaction`,
+`FramesBridge`, `FramesKey`, `FramesSend`, `scripts/frames-tx-selftest.sh`, a
+`NetworkReach` entry. Seat id `frames`, group **Wallet**. No new `Thing` field,
+so **no CloudKit deploy**.
+
+**THE SEAT IS NOT A HEGOTÁ CLONE, AND THE USER'S OWN FRAMING IS WHY.** Asked
+whether the two should be one seat with a chain switch, the ruling was that
+*"hegota is for hegota writ large"* and *"this one is for Frames
+specifically"*. That is not a filing decision — it decides the room's subject.
+Hegotá's seat is about a chain; this one is about a **transaction type**, which
+is what makes the near-empty chain below survivable as a premise.
+
+**THE CENSUS, WALKED WHOLE RATHER THAN SAMPLED.** §500's rule is that sampling
+600 blocks out of 307,000 measures your sampling, not the chain — so read the
+logs, the thing that accumulates. Every log on this chain, blocks 0–56,503:
+**25 logs, 20 value-moving transactions, 5 of type `0x06`, 18 distinct
+addresses.** Most of the early traffic is genesis fixtures (`0x…dead`, `0x…42`,
+`deadbe01`) and the recent traffic is faucet drips of exactly 1 ETH. Against
+Hegotá's founding measurement — 254 transactions, 77 of type `0x6`, 164
+addresses — this chain earns no seat on volume and does not claim to.
+
+**It earns one because the chain opened on 2026-08-28**, four days before the
+census, so the reading is a floor and not a verdict (user: *"this chain is
+brand new is why it's empty"*) — and because of the faucet's own sentence:
+*"EIP-8141 is a draft, so no wallet and no released version of the common
+libraries can encode or sign one; a wallet asked to send one simply has no
+representation for it."* This app has that representation. **The read side is a
+four-day-old chain; the send side is the entire reason for the seat**, which is
+why the write path landed first and the room comes after.
+
+### The envelope, and why `HegotaTransaction` could not be reused
+
+Both chains run ethrex, both serve type `0x06`, both call it EIP-8141 — **and
+they hash different lists.**
+
+```
+FRAMES    0x06 || rlp([chain_id, nonce, sender, frames, signatures,
+                       [max_priority_fee, max_fee, max_fee_per_blob_gas],
+                       blob_hashes])                                  # 7
+
+HEGOTÁ    0x06 || rlp([chain_id, nonce_keys, nonce_seq, sender, frames,
+                       signatures, max_priority_fee, max_fee,
+                       max_fee_per_blob_gas, blob_hashes,
+                       recent_root_references])                       # 11
+```
+
+Three shapes differ: `nonce` is a **scalar** where Hegotá carries keyed nonces
+(EIP-8250, which this chain does not implement), the three fees ride a
+**nested list** where Hegotá's are flat, and there is no
+`recent_root_references` field. **Signing with the wrong one does not fail
+loudly** — it produces a well-formed signature over a different digest that
+recovers to a real address. Green build, correct screen, refused chain. That is
+`safetx-selftest.sh`'s argument, on a chain no harness can reach.
+
+**THE ENVELOPE WAS PROVEN BEFORE A LINE OF SWIFT WAS WRITTEN**, and that
+ordering is the transferable part. A throwaway Python RLP encoder plus a
+pure-Python keccak and secp256k1 recovery, run against the chain's whole
+type-`0x06` population, settled eight candidate field orders in one run:
+**5/5 byte-exact, keccak matching the RPC's own `hash` 5/5**, and **5/5
+signatures recovering to their declared signer** against the elided preimage.
+Every other variant scored **0/5**. §318's lesson — build the cheap instrument
+before the plausible fix — applied to an encoder rather than a ranking.
+
+### What carried over, and the two divergences that would have failed silently
+
+Every trap `HegotaTransaction` documents is a trap here, and the faucet's own
+"Common errors" list is the same set line for line: `v ‖ r ‖ s` with `v` a bare
+0/1 (which that page calls *"the single most common reason a hand-built frame
+transaction is refused"*), the two-element `[execution, state]` gas slot, the
+per-entry elision rule, canonical low-s, and §531's whole keychain story.
+**Casberi got all of those right eight months early on a different chain**,
+which is why this seat was days and not weeks.
+
+Two things did **not** carry, both measured, both silent if wrong:
+
+1. **The signature entry's `signer` is written LITERALLY here, where
+   `HegotaSend` writes it EMPTY.** Hegotá's empty field means "the sender". On
+   this chain the convention has never been used — all 5 transactions write the
+   address in full, and re-encoding proves it: literal 5/5, empty **0/5**. An
+   empty signer produces a hash the node recomputes differently and refuses as
+   an invalid signature.
+2. **A real state budget, where `HegotaSend` sends `stateGas: 0`.** Execution
+   gas cannot pay for state growth, and a transfer to an address that does not
+   exist yet grows state — on a four-day-old devnet the common case, not an
+   edge one. With `state: 0` the frame halts on that write and burns its whole
+   execution budget, **reporting what reads as an execution failure.**
+
+And one on the READ side: a frame's execution budget is reported as `gasLimit`
+here and `executionGasLimit` on Hegotá. A reader written for one gets nil on
+the other, and **a frame drawn with a nil budget looks like a frame that had
+none.** Both spellings are read, this chain's first.
+
+### `stateGasUsed` is optional, and nil is never zero
+
+The faucet's error guide is the room's design brief: *"A frame reverts having
+used exactly its `execution` budget, with `stateGasUsed: 0x0` — missing state
+budget, not execution. Raising `--frame-gas-limit` will not help."* Two
+failures that render identically, and the chain publishes the discriminator.
+
+Measured 2026-09-01: **`stateGasUsed` is absent from all 5 transactions (10
+frames)** while Hegotá's receipts carry it — but all five are plain transfers
+that grow no state, so that is not proof the field does not exist. It is
+decoded as `UInt64?` and **never defaulted to zero**, because `0x0` IS the
+diagnosis: reading an absent field as zero would assert a state starvation
+every time, on the one line a developer would act on (§83). `FramesRead.
+starvation` returns nil rather than judging without it. **Measure a
+state-growing frame before building the room's second bar.**
+
+### The faucet's classifier is shared, not forked
+
+`POST faucet.frames.ethrex.xyz/api/claim` takes `{"address"}` and answers
+`{"msg", "txhash"}` — byte-for-byte Hegotá's shape, including the bare 429 for
+its hourly limit. So `HegotaFaucetVerdict` classifies this one unchanged and is
+**used rather than copied**: two classifiers of one wire shape drift, and then
+the two seats disagree about what "already claimed this hour" looks like. Its
+name stays Hegotá's because renaming would churn a passing harness's assertions
+for no behavioural gain; `FramesSend.DevnetFaucetVerdict` is the alias.
+
+### The harness, and the gap it found in itself
+
+`scripts/frames-tx-selftest.sh` compiles `FramesTransaction` WHOLE — two real
+vectors byte-exact with keccak matching the chain's own hash, a third synthetic
+one with **every field distinct** because five near-identical real transactions
+cannot catch a field swap (`safetx-selftest.sh`'s lesson, where all five spec
+vectors left the same fields at zero), 17 mutations, and drift guards on the
+key, the send path and the read.
+
+**Its own `postJSONBody` guard was too weak and mutation found it.** It
+required ONE occurrence, so `claimFaucet` alone regressing to `postJSON` would
+have passed green — **§531's exact bug**, where the faucet's measured hourly
+rate limit becomes indistinguishable from a dead host and the "already claimed
+this hour" branch becomes unreachable. It requires both writes now, and forbids
+the body-dropping helpers outright. Standing lesson, third instance: a guard
+must be mutated, not read.
+
+**UNSENT. Nothing has ever been signed and broadcast to this chain from this
+app.** The encoder is proven against transactions the chain already accepted,
+which is a strictly weaker claim than having one of ours accepted; every read
+fails safe, and the first real send is the measurement that closes it — and the
+one that can finally answer the `stateGasUsed` question above. **The room, the
+catalog seat, the website tile and the demo seed are not built** (§548 is the
+write path); the toggle row this spec settled on is **Home · Frames · Activity
+· Sponsors**, with Nonces absent because the chain serves no keyed nonces and
+Sponsors conditional because every transaction observed here is self-paid.
+
+## §548 amendment — the send is proven, the seat has a door, and `stateGasUsed` is settled (user: "commit and push to main and continue on the build", then "i added an icon for the cataloge seat, which we can call Frames Devenet", 2026-09-01)
+
+Three things §548 left open, all closed the same afternoon.
+
+**1. IT SENDS. The write path is no longer unproven.** §548 shipped with
+"UNSENT" as its stated ceiling — the encoder was proven against transactions
+the chain had already *accepted*, which is strictly weaker than having one of
+ours accepted. It has now sent one. A key was generated, the faucet funded it
+(`{"msg":"sent","txhash":…}`, the shape `HegotaFaucetVerdict` classifies, 1 ETH
+landed inside two seconds), and a two-frame transfer was signed and broadcast:
+
+```
+our predicted hash: 0x9d12f7722ab15d93ff377f19f923458cae8d6009b0a2b11eb2cd1ca006748674
+node returned     : 0x9d12f7722ab15d93ff377f19f923458cae8d6009b0a2b11eb2cd1ca006748674
+receipt status    : 0x1
+```
+
+**The node returning our own predicted hash is the proof**, not the acceptance:
+it means the bytes we hashed are byte-identical to the bytes it hashed. Every
+rule in `FramesTransaction` is now confirmed by a live node rather than by
+re-derivation — the seven-field envelope, the nested fee list, the scalar
+nonce, the two-element gas slot, the per-entry elision, `v ‖ r ‖ s` with a bare
+0/1, canonical low-s, and **the literal signer** that diverges from Hegotá.
+
+The transaction was deliberately sent to a **freshly generated address that had
+never existed on the chain**, so it grew state — the one case that could answer
+the question below, and the reason it was worth spending the faucet's hourly
+claim on.
+
+**2. `stateGasUsed` DOES NOT EXIST ON THIS CLIENT, and the room's figure is one
+bar.** §548 recorded the field absent on all five transactions and correctly
+refused to conclude anything, since all five were plain transfers that grow no
+state. A state-growing transfer now says otherwise: `frameReceipts` carried
+`gasUsed` and `status` and **no `stateGasUsed`** — on the very case their own
+error guide tells implementers to check it for. So the two-bar figure §548
+designed cannot be drawn, `FramesRead.starvation` correctly returns nil on
+every frame this chain will produce today, and the `live-integrations.sh` row
+that watches for the field's arrival is the thing that will unblock it.
+
+**A second finding, unlooked-for and worth more than the first:** the per-frame
+`gasUsed` figures **do not sum to the transaction's**. Measured on our own
+transaction — frames used 100 and 3,000, the receipt reports **210,790**. So a
+room that adds up its frames and presents the total as what the transaction
+cost would be wrong by two orders of magnitude, and wrong in the direction that
+looks plausible. Whatever the room draws per frame, the transaction's own
+`gasUsed` is the only honest total.
+
+**3. The seat, named and with a door.** `BridgeCatalog` offer **"Frames
+Devnet"** (user's name), group Wallet, `FramesScreen`, `FramesWatch`,
+`FramesBridge.registerBridge`, router destination, `AddressBook.Network.frames`,
+the bundled mark (`brand-frames-devnet`, the user's own icon), the website
+mini-cell with the icon inlined as base64, and the `KindGlyph` letterform
+fallback.
+
+**"Frames Devnet", not "Frames"**, and the rename reached `Thing.source` before
+anything landed under the old spelling. The bare word is one of the most
+ordinary nouns in this app's own vocabulary — `FeedScreen` frames, a video
+frame, the `frames` array inside every transaction on this chain — and a
+catalog name, a `Thing.source` and a §308 facet share one namespace with
+search.
+
+**THE ACCOUNT BLOCK LEADS THE SCREEN, and that is the census talking.**
+`HegotaScreen` opens on "paste an address" because Hegotá has months of history
+to look at. This chain holds **18 distinct addresses**, most of them genesis
+fixtures and faucet recipients, so a pasted stranger's address shows almost
+nothing — a correct blank that reads as a broken feature (§465's own worked-
+example reasoning, reaching the opposite answer on a different chain). Only two
+addresses have ever sent more than once, and those are the two the screen
+offers. `registerBridge` therefore registers on **the key OR the watch list**,
+not the watch list alone: on this chain the account you make is the common
+case, and a seat that read "not connected" to somebody who had just created an
+account and claimed from the faucet would be wrong about the main path.
+
+**The one gray sentence** (§315's budget) is spent on the network's own footer
+— test ETH has no value and the chain may be reset without notice — rather
+than on the pitch, because it is the fact that changes what somebody would do.
+
+**Still not built:** the room itself (toggle row settled at Home · Frames ·
+Activity · Sponsors), its figures, and the demo seed.
+
+## §548 follow-up — the scope strip, and the permission that is a frame (user: "will we have 'send' module on home screen? we will need to iterate w/ this b/c of how unique frames are", then "and won't we have permissions or anythign else as a toggle int he row?" → "or no bc that is 'frames'", 2026-09-01)
+
+`FramesSection`, `FramesSend.plan`, `FramesSendCard`. The toggle row is
+**Home · Activity · Frames · Sponsors**.
+
+**SEND IS THE HOME SCOPE, NOT A DOOR TO ONE** — §538's ruling for vibenet
+(*"it shouldn't have a door… it should be part of the screen"*), carried to
+Hegotá by §539 and here by the same reasoning, with §544's shared console
+underneath. This chain moves ETH and only ETH, so the unit is a WORD and never
+a chip: a control that opens a one-item menu is the dead control §83 bans.
+
+**AND THE CONSOLE SHOWS WHAT THE SEND BECOMES, which is the whole answer to
+"how unique frames are".** A send here is not one act — it is a VERIFY frame
+that authorises execution and payment, then a SENDER frame that moves the
+value, and without the first the transaction has no payer and is invalid. A
+to-and-amount form says none of that, on the chain whose entire reason for
+existing is that a transaction has parts. `FramesPlanStrip` draws them.
+
+**The preview is the transaction, not a description of one.** `FramesSend.plan`
+was extracted for exactly this: the strip renders the same `Fields`
+`FramesSend.sendValue` signs, so the two cannot disagree. A preview built from
+a parallel description is how a screen ends up promising two frames and sending
+three. It is deliberately a READING — no way to edit a frame, add one, or
+change a mode. That is a transaction builder and a different product.
+
+### Permissions is absent because this chain has no standing authority
+
+Asked whether the strip should carry Permissions, the user answered it
+mid-question (*"or no bc that is 'frames'"*) and was right — but the reason is
+sharper than coverage and is worth having written down, because it is a fact
+about EIP-8141 rather than a gap in this room.
+
+On vibenet a keystore account really does have actors — keys, passkeys, a
+delegate — that can act for it TOMORROW, so a Permissions scope lists a durable
+grant somebody can revoke. **Here authorization is PER-TRANSACTION**: a VERIFY
+frame's `flags` carry the `APPROVE` scope for execution and payment, and that
+authority is granted and spent inside the one transaction carrying it. Nothing
+survives it, so there is nothing standing to list and nothing to revoke — which
+is also why a transaction with no `APPROVE` is not under-permissioned but
+INVALID, having no payer at all.
+
+Two consequences kept: the `frames` scope must always say whether a VERIFY
+frame approved execution, payment or both — **that is the permission, not
+decoration**, and `FramesPlanCell` spells it on the console too — and a
+Permissions scope here would be a page listing grants that cannot exist, the
+empty chip §83 bans.
+
+### The other three absences, two of them measurements
+
+**UTXOs** — this chain has no UTXO vault; Hegotá's `0x…8312` predeploy is not
+deployed here and no transaction has ever named one, so the reading that is
+Hegotá's headline simply does not exist. **Nonces** — this chain implements no
+keyed nonces; EIP-8250's `nonceKeys`/`nonceSeq` appear on none of its
+transactions, so the scope the user personally named on Hegotá has nothing to
+list. Both are absent because **the chain cannot fill them**, and both are
+guarded: a `case nonces` or `case coins` appearing in `FramesSection` fails the
+build, because it is either a chain upgrade nobody re-measured or a scope
+copied across that can only ever be empty.
+
+**Accounts** is the one that IS a choice: Hegotá gives the roster its own
+unconditional scope, and here `home` carries it, because the list is short by
+construction — usually just the account you made — and a scope showing one row
+on nearly every install is the dead control again. Revisit if watching several
+here ever becomes ordinary.
+
+**Not built: the room's own card and its `FeedScreen` wiring**, which is
+deliberate rather than unfinished — a second session was editing the shell
+files at the time and a `FeedScreen` edit alongside it is the collision this
+project has a memory about.
+
+### The harness runs its mutations concurrently — 11 minutes to 59 seconds
+
+Adding `FramesMoney` and `FramesSection` took this harness to 27 mutations, and
+each one recompiles five files under `-O`, one at a time, on one core of eight.
+Measured: **~11 minutes**. That is `verify.sh`'s own 2026-08-19 finding
+arriving inside a single harness — a phase that grows linearly with every check
+added and had never been revisited since it was a handful.
+
+Every mutation is PURE: it edits its own scratch copy and reads nothing another
+writes. So the script re-invokes itself as `--mutate <dir> <id>` and fans the
+lot out through **`xargs -P`, never a `jobs -r` slot loop** — job control is OFF
+in a non-interactive zsh, so `jobs -r` reports nothing and the loop degrades
+silently to "launch all 27 at once", which on 8 cores thrashes to slower than
+serial while every check still passes. Green, and wrong. **Measured after: 59
+seconds.**
+
+Three properties kept, because a concurrent engine reporting `CAUGHT` for
+everything is exactly the false green this file exists to prevent, and all
+three are mutation-proven:
+  • a mutation that SURVIVES is reported,
+  • a mutation matching NOTHING is reported as stale rather than skipped, and
+  • **every mutation must report** — `MUT_OK + MUT_FAILS != MUTN` fails the
+    run, because a child that dies without a line is a mutation nobody ran and
+    a silently skipped mutation is indistinguishable from a passing one.
+
+ALL failures are printed rather than the first (`verify.sh`'s rule: under
+exit-on-first a second broken mutation costs another full pass to discover),
+and results are sorted by id so the report reads in declaration order however
+`xargs` interleaves them. `printf '%s'` writes the spec files, never `echo`: a
+trailing newline appended to a `from` pattern makes it match nothing, which
+this harness then reports as STALE — a confusing failure for a mutation that is
+perfectly correct.
+
+## §549 — the demo's address book never leaves the device (user: "it has hard coded demo stuff like addresses and wallets that i did not add", then "will this issue affect other users or only affects me?" → "i am not concerned about my mac i am concerned about users", 2026-09-01)
+
+Reported as a Mac install carrying wallets and contacts nobody added. The
+investigation split in two, and only one half was the reporter's own machine.
+
+**The half that was only the dev machine.** `DemoCorpus`'s 35 fixtures are
+gated at the call site by `DemoState.seedsDemoData` (`CasberiApp.swift`), which
+is `#if DEBUG` and therefore false in every shipped build; the demo *wallets*
+are covered by `WalletStore`'s existing fixture rail. What put them on a real
+Mac is the thing `ScratchDefaults`' own header already describes: a DEBUG
+Catalyst build shares the installed app's container, and the 2026-08-19 scratch
+fix covered the demo FLAGS and the seat list while `AddressBook`, `WalletStore`
+and `VibenetWatch` kept persisting to `UserDefaults.standard`. Dev hygiene, not
+a shipped defect.
+
+**The half that shipped, and this is the ruling.** `WalletStore` has had a
+fixture rail since it started mirroring — `syncSnapshot` withholds fixture
+addresses, `applyMerged` sweeps any that arrive over the wire on an install not
+entitled to hold them, `keepsFixtures` is `DemoState.seedsDemoData ||
+DemoMode.isActive`. The address book mirrors through the SAME `KeyValueMirror`
+and had **none of it**: `syncSnapshot` was a bare `{ entries }`.
+
+The demo is a shipped feature — the onboarding CTA and the Settings row both
+enter it — and `DemoMode.pourIfNeeded` reaches `DemoSeedAll.seedAddressBook`
+through `seedBridgeStateForDemo`'s step 7, with every `setName` triggering a
+push. **So anyone who tapped "Try the demo" with iCloud sync on wrote Sam, Mia,
+Coinbase, Stripe, Bitrefill, Uniswap, Peer, Gnosis Pay, "Session key" and the
+four vibenet fixtures into their iCloud and onto their other devices.**
+
+**Why this is worse than the ~400 demo rows `DemoMode` already accepts as a
+cost.** That cost is written down and it is bounded by the standing banner: the
+demo says what it is, on the device running it. `DemoMode.isActive` is
+per-device state, so the SECOND device wears no banner — and there a seeded
+counterparty is not a demo, it is a name in your address book you never typed.
+That is §83's fake status on the screen where a wrong name is most expensive,
+and unlike a row it survives as a *fact about a person*.
+
+**The fix is the sibling's rail, derived rather than re-typed**
+(`AddressBookFixtures.swift`): the fixture set comes from the constants that
+SEED it (`WalletStore.fixtureAddresses`, `DemoSeedAll.demoCounterparties`,
+`demoVibenetWatches`, `demoVibenetKeySigner`), so the rail and the seed cannot
+drift — a hand-copied list goes stale the first time a counterparty is added,
+and a stale rail fails in the LEAKING direction. `keepsFixtures` forwards to
+`WalletStore`'s rather than re-spelling it: one question, one answer, or one
+store eventually sweeps what the other keeps.
+
+`applyMerged` sweeps as well as withholds, and that half is not redundant — the
+push side alone protects a healthy book, while the sweep is the only way a book
+ALREADY polluted in iCloud by a build that shipped without the rail can heal.
+
+**`demoVibenetWatches` is declared once.** `teardown` carried the four
+addresses twice as inline literals and the seed a third time; the rail needed a
+fourth. Guarded by a count, because that is precisely the shape that goes stale
+silently.
+
+**Guarded, not remembered** (`address-book-selftest.sh`, seven drift guards,
+each mutation-proven): this rule already existed one file over and was simply
+not carried across, which is the whole argument for a check rather than a note.
+Found in passing and amended: the rail's book-door guard had been red at HEAD
+since the title moved to `FeedScreen`, exactly the move its own comment
+anticipated — it asks both files now, as the line above it already did.
+
+**Ceiling.** Nothing here re-mirrors a book already up in iCloud until that
+device next merges; and the corpus half of the demo's mirroring cost is
+unchanged and still accepted, which is a separate question this entry does not
+reopen.
+
+## 550. The capsule above the bar stops being a daily headline and teaches the gesture, and the empty chat says where agents come from (user: "i don't want a whisper once a day, i want it once. after onboarding only", then "we either kill it or add something else there but not once a day", then "it could have a whisper that says long press to talk to agents and then empty chat has a link to where to set up agents", 2026-09-01)
+
+**Supersedes §165** (the whisper capsule) and **amends §167 item 1** (the
+travelling title). §166's Today brief itself is untouched and still reachable
+by every other door it has.
+
+The question that started it was whether the thing on first landing was still
+needed "now that we updated how our agent experience works and don't have
+prepopulated stuff". It was `WhisperCapsule`: `DayBrief.title` returns the
+literal string "What's going on", which is why it read as a leftover chip.
+
+### 1. Why the day content had to go
+
+§543 deleted every prepopulated door onto the Today brief — the three launcher
+chips, the lone category chip, the day card — on the reasoning that they were
+four doors onto two documents you can ask for by name. **This capsule was the
+last one standing, and it was on the one surface that repeats forever.**
+
+The stronger fact, found while auditing rather than assumed: **the day reading
+was never only here.** The All feed's own Today header has drawn
+`DayBrief.whisper` since §385, and the iPad pane has drawn it since 2026-07-31
+via `chrome.paneBrief`. So the capsule spent a daily arrival re-stating a line
+already on the page behind it. Both of those readers survive this pass
+untouched; `refreshWhisper` becomes `refreshPaneBrief` and composes only when
+the pane is there to read it, which also drops the two clocks it used to
+reconcile down to one guard.
+
+### 2. Why it is REPLACED rather than killed
+
+Killing it was on the table and is the wrong call, for a reason that is
+written down in the code it would have deleted. §390 swapped the bar's verbs —
+tap opens the sources tray, HOLD raises the agent — and `AgentBar`'s own note
+states the cost out loud: *"the agent is now behind a gesture with no visible
+affordance"*, acceptable because other doors exist, **and it names this capsule
+as one of them.** §543 then emptied the agent's landing. Delete this too and
+nothing on the feed ever says the agent is there, or that there is a choice of
+who answers.
+
+**So the gap §390 left is a GESTURE, not a missing product** — and the slot
+keeps its arrival and changes its subject. "Talk to your agents · Press and
+hold the button below."
+
+**A "Set up an agent" CTA in this slot was proposed first and refused**, and
+the refusal is the useful part: the capsule's own doctrine (2026-08-07) is that
+it *"is never put behind a tap … this is unsolicited news, and it works
+precisely because it ARRIVES"*. A setup offer is true every day until you act
+on it, so arriving unsolicited makes it a nag — §306's "did you already know?"
+test, failed — and the capsule is one line with a chevron, so
+`BankrOfferBanner`'s shared "Not now" would have nowhere to live. The offer
+already sits in the two places where it answers a live question (the risen
+agent, the Wallet room head), which is where it stays.
+
+### 3. Once ever, and it retires by being LEARNED
+
+`agent.everRaised`, persisted, spent the first time the agent rises by ANY door
+— this capsule's own tap, the hold it names, ⌘K, the Daily Brief quick action,
+`casberi://brief`. Spent in `RootShell`'s single `composerOpen` observer rather
+than at any one tap site, so no door can be the one that forgets; the same
+reason `openSources` owns `sources.everOpened`.
+
+That is the strongest retirement available, because **using the thing is proof
+the explanation landed.** Deliberately NOT also retired by connecting an app,
+which the user floated: somebody can furnish the whole catalog and still never
+find the hold, and a grace that expires on an unrelated event is a label
+outliving its own explanation — the exact inversion `sources.everOpened`
+records in its own note when it explains why it tracks the tray and not the
+agent.
+
+### 4. Why the capsule and not the bar's own words
+
+`AgentBar.expanded` is already a teaching grace with a persisted flag, so the
+obvious cheaper move is to put the sentence there. It cannot go there: **a
+label on a button is a promise about what TAPPING it does**, and after §390 the
+tap opens the tray. The bar cannot say "hold me" without lying about itself. A
+separate object above it can point at it.
+
+Its own tap raises the agent, so reading it and obeying it land in the same
+place — never a control that only talks (§83) — and that tap is the accessible
+route for anyone who cannot perform a long press, beside `AgentBar`'s own
+VoiceOver action. The copy says "the button below" rather than naming the mark:
+no user-facing string in this app has ever called it the berry, and teaching a
+word that appears nowhere else is worse than pointing.
+
+### 5. The other half — the empty chat says where agents come from
+
+`Composer.agentsLink`: a "Set up an agent" row on the rest surface, opening the
+catalog filtered to Agents. It says you can CHOOSE who answers, and it says it
+where "who is going to answer this?" is the live question — which is
+`BankrOfferBanner`'s own placement argument, widened from one seat to the
+category.
+
+**It retires the moment an agent exists** (`AgentKey.configured.isEmpty`), so it
+is a first-run answer and not permanent furniture; chrome is priced by frequency
+of use, and somebody who has pasted a key already knows where these live. The
+on-device model is deliberately not part of that gate — it is not a key, it
+cannot be set up, and counting it would hide the row from everyone on a device
+that has Apple Intelligence.
+
+**Not a §543 regression.** That ruling deleted prepopulated ASKS: chips that
+fired a question you had to spend a tap to learn the value of. This runs
+nothing and fetches nothing; it opens a catalog.
+
+`HomeRoute.openCategory` carries the category, consumed by `AppsScreen` on
+appear — `openOffer`'s exact shape, chosen because `.apps` is pushed from ten
+places and the value is read once, on arrival. It is the ONE exception to that
+screen's ruling that the filter is never remembered across visits, and the
+exception is what keeps it honest: that ruling exists because arriving on a
+three-week-old filter "hides nine tenths of it with nothing on screen saying
+why", and here the thing saying why is the link you tapped one gesture ago. An
+unresolvable category leaves All standing, and `BridgeCatalog.agentsCategory`
+DERIVES the name from the category table rather than spelling it a second time
+— a category name doubles as a join key, and a literal in another file is the
+drift §326 records when Mail's fold silently orphaned `category:Mail`.
+
+### 6. What went with it
+
+`WhisperCapsule` → `AgentHintCapsule`. Deleted outright: `WhisperTitleMorph`,
+`ShellChrome.risingBriefTitle`, RootShell's proxy title overlay and its safety
+clear, and the receiving `.modifier(WhisperTitleMorph(...))` on the brief's
+masthead. That whole choreography is §167 item 1 — a `heading22` copy of the
+capsule's words mounted in the same `composerOpen` transaction so the title had
+a live `matchedGeometryEffect` pair to fly into while the real masthead was
+still 400ms away. **This capsule opens no titled document, so there are no
+words to fly and nothing on the other side to receive them**, and a lone half
+of a matched pair pairs with nothing. Two gates that only existed to stand down
+for it (`Composer.risingHandoff`'s `chrome.risingBriefTitle == nil` term and
+`risingFramePainted`'s) were left vacuously true and are gone with it.
+
+**The bar↔surface SHAPE morph is untouched** (`MorphMatch`, id `agentMorph`) —
+a different pairing, and the one that is the rise itself. §445's ruling that
+the morph rides a shape and never the content stands.
+
+`-whisperProbe` → `-agentHintProbe`, renamed with the feature: a probe named
+for a deleted thing is the registry drift this repo keeps finding in lists
+nobody re-read.
+
+### 7. Unverified
+
+The capsule has not been seen on a device or a simulator, and neither has the
+catalog landing filtered to Agents. Both fail safe — an unresolvable category
+leaves the All chip selected, and the hint's gate is a persisted Bool that
+defaults to showing it once.
+
+## 551. One rung for every scope headline, an empty Accounts scope that is a drawing rather than three tiers of text, and the permissions census drawn whole (user: "on Wallet, Home, the balance is in such a large font, but on all the other screens … we should be consistent"; "this screen looks like shit and we shouldn't need subtext"; "on Permissions, this looks bad. really. we should use blocks", 2026-09-01)
+
+Three reports about the vibenet room's fixed figure slot, all landing on the
+same property: the slot is 210pt whatever it holds, so anything sized by how
+much there happens to be looks broken at the small end. Nothing here changes
+what any scope KNOWS — no request, no new `Thing` field, **no CloudKit
+deploy**.
+
+### 1. The scope strip stopped changing the type scale of the screen
+
+Home's crown was `price48` (64pt) and every other scope's headline `stat24`
+(24pt) — **two rungs apart on one control**, so using the strip resized the
+screen. Both rooms had it; Hegotá never did, because its Home draws through
+`DSRoomSlot` like every other scope.
+
+**They converge on `stat24`, and the DIRECTION was measured rather than
+picked.** The obvious answer to "each screen should be larger and home should
+be smaller" is the single rung between them, `price40` — the ramp's own "a
+figure that leads a card without being its crown". Measured against the ~304pt
+a leading headline actually has beside the settings gear (402 screen − 30 card
+inset − 24 content inset − 44 gear), **five of the headlines these rooms really
+draw do not fit it**: "Nothing is shared" 337pt, "Couldn't be read" 318,
+"Nothing deployed yet" 411, "12 accounts · 11 unwatched" 526, and the Accounts
+web's own "2 accounts · 1 you don't watch yet" 646. Each carries a
+`minimumScaleFactor`, so none would truncate — they would render at somewhere
+between 29 and 40pt **depending on what they happened to say**, which is the
+same defect wearing a smaller range. At `stat24` every one of them fits at full
+size.
+
+The lesson is the standing one: **build the cheap instrument before the
+plausible fix.** A twelve-line `swiftc` script measuring the real strings at
+both rungs settled in one run a question two rounds of mockups had gotten
+wrong, and the mockup was wrong in the reassuring direction — a browser drew
+"Nothing is shared" comfortably at 40pt on a 390px card because the mockup had
+no gear to clear.
+
+The crown is still the biggest figure on its surface; nothing else on that card
+sets 24 bold. `price48` keeps its §506 meaning and its other callers. What it
+no longer means is "the Home scope of a room", which is the one place a crown
+was competing with a control. The account SHEET's crown moved with the room's
+(§475's pairing is the whole content of that ruling — a room at one rung and a
+sheet at another re-opens the report it closed).
+
+### 2. Nothing is shared, drawn once instead of said three times
+
+The empty Accounts scope was a headline, then two 56pt faces pinned to the top
+of the box, then two grey lines — three tiers of text around a drawing that was
+the smallest thing in it, and the sentence said in prose exactly what the
+headline says in four words and the pair says in two shapes. **Third telling of
+one fact, so the sentence goes.**
+
+What replaces it is not a smaller version: the pair steps to `DS.Face.profile`
+(76 — the size a face takes when it is alone on a screen rather than one of
+several) and takes the MIDDLE of the slot, which is the room's own ruling for a
+figure with one thing to say ("air distributed is a margin, air pooled at the
+bottom is a gap").
+
+**The headline KEEPS its reserved row** rather than moving down onto the icons'
+line, which was the other option weighed and the one the report suggested. On
+that line it reads as one object — and it starts 30pt lower than every other
+scope's headline, breaking the guarantee the reserved row exists to give (§495:
+every scope's first pixel at the same y), and it has to shrink below its own
+rung to fit beside two 76pt faces, on the same day part 1 spent a pass making
+every scope headline one size. The sentence survives as the figure's
+**accessibility label**, which is the one audience two circles genuinely cannot
+serve.
+
+### 3. The permissions figure draws the whole census, granted or not
+
+It drew `VibenetPolicyAggregation.compose`'s list — what IS held — ranked by
+count, capped at four, with the type GROWING and the rows SPREADING when there
+were few. Three separate compensations for one problem: **a list as long as the
+account is interesting cannot fill a fixed box.** An account with one kind of
+key still ended up as a lone number beside a headline stating the same count
+one line above it.
+
+**Six cells now, one order, every time** — Admin, then `Scopes.sol`'s five
+named bits — in the `surfaceWell` blocks Hegotá's Nonces figure already uses
+for exactly this job. Nothing ranks, nothing is capped, nothing resizes, so the
+drawing is the same on an account with one key and an account with forty, and
+the "and N more" tail disappears because nothing is ever cut (§307 satisfied by
+construction rather than by a footnote).
+
+**And it says more than the counts did.** An ungranted permission is a real
+reading on this screen — "no key here can send anywhere" is an answer somebody
+opens this scope hoping for — and only a census that includes absences can make
+it. An absence is an OUTLINE and a dash, **never a filled "0"**: a zero in the
+same well as a count reads as a measurement, the same object with a smaller
+number, when what it means is that the permission is not in play at all. The
+dash is this room's existing grammar for a fact with no value (the dashed
+treemap outline, the empty ring on Accounts).
+
+**`census` takes the COMPOSED ROWS, not the items** — one derivation, two
+presentations — so the figure saying two keys are admins over a list showing
+three is impossible rather than merely unlikely (§468, guarded).
+
+**The one state that does not take the census is an unread account**, and that
+is a safety exception rather than a layout one: six dashes over accounts the
+chain never answered for would say nothing can act for you, which is the most
+reassuring possible way to be wrong on the one screen somebody reads to find
+out who can spend their money (§83). That branch keeps a glyph and a sentence,
+and both name the READ rather than the account. "No keys" over an account that
+WAS read is drawn as the census — six hollow cells — because that is the true
+reading.
+
+Guarded in `vibenet-selftest.sh`: both crowns at the headline rung and provably
+not back at `price48`, the census derived from the composed rows and never from
+the items, and §495's existing rule that every scope's empty counterpart draws
+through `scopeFigure` so the slot never leaves the stack.
+
+**UNSEEN on a device or a simulator.** Every string was measured, both platforms
+compile and the harnesses are green, but no screenshot of any of these three
+scopes has been taken.
+
+## §548 second follow-up — what a user can actually DO on this chain, measured by doing it (user: "what can a user do on this frames devnet, can they stitch frame transactions together?", 2026-09-01)
+
+Asked what the chain supports, the honest answer was that its whole recorded
+history is the MINIMUM shape and nothing else: all 5 type-`0x06` transactions
+are two frames — one VERIFY at `flags 0x3`, one SENDER at `0x0` — with **no
+calldata, no mode 0, one signature each, and the batch bit never set**. So the
+spec says a great deal that the chain had never once been asked to do.
+
+It was asked. Four transactions, sent from this project, each answering one
+question the room's design depends on.
+
+**1. STITCHING WORKS.** A three-frame transaction — one VERIFY and two SENDER
+frames paying two different addresses — was accepted, mined and reported three
+`frameReceipts` (`0x5b131baf…`). One signature, one nonce, two recipients paid.
+It is the first transaction with more than two frames on this chain.
+
+**2. FRAMES ARE NOT ATOMIC BY DEFAULT, and this is the finding that matters
+most.** A transaction whose third frame was state-starved returned
+**`status: 0x0`** — and frame 1's transfer **persisted anyway**: a real
+EIP-7708 log on the receipt, and the recipient holds the ETH (`0x9bb9cfef…`,
+verified by reading the log back, not by inference).
+
+So a Frames transaction can FAIL and MOVE MONEY in the same breath. Drawing
+that row as "Failed" is a lie about the money; drawing it as "Sent" is a lie
+about the outcome. **The only honest rendering is frame by frame**, which is
+the room's founding premise — now measured rather than argued.
+
+**3. ATOMICITY IS OPT-IN, via `flags` bit 2.** The same shape with the first
+SENDER frame marked `0x4` and terminated by a non-batch frame rolled the whole
+thing back (`0x2642331b…`): the batched recipient holds nothing.
+
+**4. THE TRAP THIS CREATES, and it is a §83 one.** In that atomic run, the
+rolled-back frame still reported **`status: 0x1`**. Its effect was reverted and
+its own receipt says it succeeded. **Per-frame status is therefore NOT
+sufficient to say what a frame DID** — the discriminator is the LOGS: the same
+frame carried 1 log when its effect persisted and 0 when it was rolled back.
+
+A room that draws a green tick from `status` alone will tell somebody their
+money moved when it did not. The rule: **a frame inside a batch is drawn from
+its effects, never from its status**, and `FramesMove.everyFrameSucceeded` —
+which reads `status` — must not be used to describe money.
+
+**Also confirmed here, on the case their own guide names:** the starved frame
+burned exactly its full execution budget (100,000 of 100,000) with
+`stateGasUsed` **absent**, not `0x0`. That is the documented state-starvation
+signature arriving without the field the documentation tells implementers to
+read it with, on a client that does not serve it — §548's amendment, reproduced
+deliberately rather than stumbled into.
+
+**What a user can do, then:** any list of frames under one signature and one
+nonce; each frame with its own target, value, calldata and two gas budgets;
+VERIFY frames that authorise, SENDER frames that act as them, DEFAULT frames
+called by the entry point; and atomic sub-batches inside a transaction that is
+otherwise not atomic. **What Casberi does today is exactly one of those
+shapes** — the two-frame transfer — and the gap between the two is the room's
+whole remaining opportunity.
+
+**Untested, and named rather than assumed:** calldata in a frame (nothing on
+this chain has ever carried any), mode 0, and the `signatures` ARRAY holding
+more than one entry — the envelope has always supported several and every
+transaction on the chain has exactly one.
+
+### The batch builder is not a Frames feature — it is the wallet send, mapped
+
+Ruled the moment the finding landed (user, 2026-09-01: *"batch builder will be
+a subset of the 'send' we are doing right now on the wallet work"*). So this is
+**not** a bespoke screen to design for this seat, and proposing one later would
+be building a second send console beside the one that already exists — the
+duplicate-parser class this project keeps catching, wearing a room's clothes.
+
+The mapping is exact and it is why the answer is a subset rather than a
+neighbour: a wallet send to several recipients becomes **one transaction with
+one SENDER frame per recipient**, under one signature and one nonce. What the
+wallet's own version cannot offer, and this one can, is the line above it:
+**all or nothing.** On any ordinary chain paying four people is four
+transactions, each able to fail alone; here it is one transaction whose frames
+carry `flags` bit 2, and §548's measurement is that the rollback is real.
+
+Two things follow for whoever builds it. **The atomic toggle is the only new
+control** — everything else is the wallet's send, and a frame list is what the
+existing recipient rows already are. And **the confirmation must be drawn from
+effects, not from status**, per the trap above: a batched frame reports
+`status: 0x1` after being rolled back, so a per-recipient tick taken from
+`status` will tell somebody their money moved when it did not. That is the one
+place this feature can be wrong in a way that costs real trust, on a chain
+where nothing else can.
+
+## 552. The send console fits the screen — and its height becomes a written-down sum (user: "the new send module is good, but how can we improve it? it needs to fit all on the screen so user doesn't have to scroll" → "needs to fit where it is. we can't make the slot shorter because it needs to be that same size on all the other screens and wallets", 2026-09-01)
 
 §544 gave both devnets a real payment console — a recipient row, the money
 giant and centred, a keypad of bare digits, one button carrying the verb — and
@@ -41521,7 +42266,7 @@ static audit passes, the new one included. The first thing to look at on a
 device is the recipient row on a narrow phone, where the sender's name, an
 arrow, three overlapped faces and "Choose who" now share one 44pt line.
 
-## 548a. The keypad is the system's — the space has to come from below the slot, and 176pt of it was a keypad that was always there (user: "needs to come from below the slot", "and maybe that means we can't have a keypad I don't know", 2026-09-01)
+## 552a. The keypad is the system's — the space has to come from below the slot, and 176pt of it was a keypad that was always there (user: "needs to come from below the slot", "and maybe that means we can't have a keypad I don't know", 2026-09-01)
 
 §548 took the card from 601pt to 394 by cutting everything that was not the
 console, and closed on a ceiling it could not do anything about: **the chrome
@@ -41624,7 +42369,7 @@ are the keyboard's arrival — whether the room scrolls the figure clear of the
 pad — and the recipient row on a narrow phone, where the sender's name, an
 arrow, three overlapped faces and "Choose who" share one 44pt line.
 
-## 548b. The console was never in the demo — a scope's content, gated on a credential a tour cannot have (user: "did you do the demo b/c in demo i see empty", "this is on vibenet", 2026-09-01)
+## 552b. The console was never in the demo — a scope's content, gated on a credential a tour cannot have (user: "did you do the demo b/c in demo i see empty", "this is on vibenet", 2026-09-01)
 
 Reported against the demo, on vibenet's Home: **an empty scope under a full
 crown.** Not a regression from §548 or §548a — **the send console has never
@@ -41698,7 +42443,7 @@ Every static audit passes. The demo is the thing to look at first on a fresh
 simulator install — vibenet's Home should now open on the console, with the
 three seeded accounts in the recipient picker.
 
-## 548c. One crown rung across Wallet, vibenet and Hegotá (user: "wallet, hegota, and vibenet have different size numbers on their home crown slot. which size works best for us? pick one and make it consistent", 2026-09-01)
+## 552c. One crown rung across Wallet, vibenet and Hegotá (user: "wallet, hegota, and vibenet have different size numbers on their home crown slot. which size works best for us? pick one and make it consistent", 2026-09-01)
 
 `DSRoomChassis`'s own header says these three rooms are the same machine, and
 each opens on a balance. Measured, the balance was drawn **two rungs apart**:
@@ -41763,7 +42508,7 @@ thing to look at on a device is Hegotá's Home — its crown moves from 24pt to
 64pt and its curve now shares the slot with it, so the bottom of that chart is
 where a clip would show.
 
-## 548d. A scope never draws nothing — the console could not be found because its absence had no words (user: "hegota and vibenet are still empty the send modal isn't there", "we started this session trying to fit the send module below Home on Vibenet and Hegota and i have yet to see it", 2026-09-01)
+## 552d. A scope never draws nothing — the console could not be found because its absence had no words (user: "hegota and vibenet are still empty the send modal isn't there", "we started this session trying to fit the send module below Home on Vibenet and Hegota and i have yet to see it", 2026-09-01)
 
 §538 and §539 each gated the console on a credential and each stated the reason
 well — *"a room with no key draws no form rather than a dead one"* (§83's
@@ -41809,7 +42554,7 @@ toolchain and no simulator, in a session where four commits accumulated without
 a single compile. That is the standing cost of this environment and it is worth
 recording next to the work it produced.
 
-## 551. Home stopped holding a form — a split panel, and the send on a sheet with its own keypad (user: "the send module has NO WAY to enter Eth. it's dead", "we want both buttons persistent", "the ink is what makes it bold", 2026-09-01)
+## 553. Home stopped holding a form — a split panel, and the send on a sheet with its own keypad (user: "the send module has NO WAY to enter Eth. it's dead", "we want both buttons persistent", "the ink is what makes it bold", 2026-09-01)
 
 §544 built a payment console in the devnet rooms' Home scope and §548/§548a
 spent an entire session trying to make it fit under the room's chrome. **That
@@ -41951,6 +42696,28 @@ and fail. The unit stays a WORD in both rooms. It becomes a control in the same
 commit that teaches the bridge an ERC-20 leg (USDV's decimals are **6**, measured
 — not 18) and never before. The same chip carries USD the day this sheet is
 reused in the real Wallet room, where a price is read rather than invented.
+
+
+**A NEW WAY FOR `--next` TO BE WRONG, and it is worth more than the renumbering
+it cost.** §552 through §552d were written on a branch cut at `da3544bc` and
+numbered §548–§548d; main meanwhile spent §548 on the Frames devnet seat and went
+on to write §550 and §551. `prd-index-audit.py --next` answered **§552** and
+listed §551 as *"claimed but unwritten — cited by [these very files]"*, which is
+exactly backwards: §551 was not a live claim of mine, it was main's committed
+entry that my stale tree had never seen.
+
+The audit's stated ceiling is *"this reads working trees on THIS machine; a
+checkout elsewhere is invisible"* — a SIBLING with work it cannot see. This is
+the inverse: the tree it read was **stale**, so it treated an out-of-date
+checkout as authoritative and handed out numbers main had already spent. Same
+tool, opposite direction, and **the remedies differ**: for the invisible sibling
+you say the number out loud, for the stale tree you have to `git fetch` first.
+Six numbers collided here (§548, §548a–d and §551) and the collision was found by
+another session reading main, not by any check.
+
+It also demonstrated its own harm before it was fixed: that session read
+"§548b" as a sub-entry of the Frames §548 and concluded a harness break had been
+misattributed, which cost a round trip to disprove with `git log -S`.
 
 ### What is checked
 

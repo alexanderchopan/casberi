@@ -48,6 +48,7 @@ KNOWN_NON_REACH=(
   # write is exactly the moment to re-read every entry that says a host is
   # never touched.
   dora.hegota.ethrex.xyz
+  dora.frames.ethrex.xyz
   # vibenet's own explorer (VibenetExplorer) — a landed event's permalink
   # and the room's "Explorer" door, both `Link(destination:)` the person's
   # own browser opens; this app never fetches chain.base.org itself.

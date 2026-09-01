@@ -901,7 +901,7 @@ enum HegotaBridge {
 
 extension HegotaLiveState {
     /// The demo's own account — the one with coins, and therefore the one the
-    /// send console spends from in a tour (prd §548b).
+    /// send console spends from in a tour (prd §552b).
     ///
     /// A `static let` rather than a literal in `seedDemo` because `HegotaSendCard`
     /// needs the same address to name a sender, and two copies of an address in

@@ -389,19 +389,28 @@ struct WalletBalanceHeadline: View {
                     // The digits ROLL between values (a scope switch re-keys the
                     // number, and $20K odometer-rolling to $4.2K says "same
                     // instrument, new reading"). Direction rides the value, so
-                    // the roll runs the way the money moved. `price48` is the
-                    // ramp's crown rung — the biggest figure on its surface —
-                    // so it scales with Dynamic Type like everything else.
-                    // (This comment said `price40` while the line below drew
-                    // `price48`; corrected 2026-08-28. The rung named in prd
-                    // §102 is price40, and §157 added price48 above it for
-                    // exactly this number.)
+                    // the roll runs the way the money moved.
+                    //
+                    // **`stat24` since prd §553** (user: "on Wallet, Home,
+                    // the balance is in such a large font, but on all the
+                    // other screens … the title is smaller. we should be
+                    // consistent"). It was `price48` while every OTHER scope
+                    // of this same room drew its headline at `stat24`, so the
+                    // scope strip — one control, one screen — moved the type
+                    // two rungs each time it was used.
+                    //
+                    // The crown came DOWN to the headline rung rather than the
+                    // headlines going up, and that direction was MEASURED —
+                    // see `DSRoomSlot`, where the strings these rooms really
+                    // draw are listed with their widths. It is still the
+                    // biggest figure on its surface (nothing else on this
+                    // card sets 24 bold), and still scales with Dynamic Type.
                     Text(WalletValue.money(displayed ?? 0))
-                        .dsText(.price48).foregroundStyle(DS.textPrimary)
+                        .dsText(.stat24).foregroundStyle(DS.textPrimary)
                         .monospacedDigit()
                         .contentTransition(reduceMotion ? .identity
                                            : .numericText(value: displayed ?? 0))
-                        // **0.9, not 0.6 (prd §548c).** §491 set vibenet's
+                        // **0.9, not 0.6 (prd §552c).** §491 set vibenet's
                         // floor here after its crown rendered at about 55% of
                         // this one; the cause was named as the floor and then
                         // fixed on one side only, leaving THIS crown free to
@@ -1023,7 +1032,7 @@ struct WalletDepositsTray: View {
                     // correction the locked tray below takes. `heading28` is
                     // the LEDE rung, sized for a SENTENCE, and a tray figure
                     // wearing it sat between `stat24` and `price40` matching
-                    // neither, two taps from the crown at `price48`. The
+                    // neither, two taps from the crown (`stat24` since §553). The
                     // wallet's own composition strip a few hundred lines up
                     // has always drawn its figures at `stat24`.
                     Text(WalletValue.money(composition.deposited))

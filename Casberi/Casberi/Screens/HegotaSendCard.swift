@@ -1,9 +1,9 @@
 import SwiftUI
 import SwiftData
 
-/// **HEGOTÁ'S HOME IS TWO VERBS (prd §551, 2026-09-01).**
+/// **HEGOTÁ'S HOME IS TWO VERBS (prd §553, 2026-09-01).**
 ///
-/// §544 put a payment console here and §548/§548a spent a session failing to
+/// §544 put a payment console here and §552/§552a spent a session failing to
 /// fit it under the room's chrome. `DevnetSendConsole`'s header carries that
 /// whole argument; what it comes to is that Home should not hold a form at all.
 /// It holds the two things you can do, and the form lives on a sheet with the
@@ -55,7 +55,7 @@ struct HegotaSendCard: View {
     /// 2026-09-01: *"we won't show a 'ready' screen, once created it will just
     /// do confetti rain pour and then land on the top up and send screen"*).
     ///
-    /// §548d routed this to the key SHEET, which asked the same question the
+    /// §552d routed this to the key SHEET, which asked the same question the
     /// button had just asked and offered the same button to answer it. Face ID
     /// rises inside `HegotaKey.create()` and that is a real confirmation from
     /// the system — ours would have been ceremony.
@@ -102,7 +102,7 @@ struct HegotaSendCard: View {
 
     // MARK: - Top up
 
-    /// **THREE ENDINGS, AND ONLY ONE IS A FAULT (prd §551).**
+    /// **THREE ENDINGS, AND ONLY ONE IS A FAULT (prd §553).**
     ///
     /// The faucet allows one claim per source IP per hour, MEASURED, and §525
     /// rules that refusal expected rather than a failure. It and the
@@ -153,7 +153,7 @@ struct HegotaSendCard: View {
         }
     }
 
-    /// The pour IS the confirmation (prd §551) — `BerryRain` is mounted once in
+    /// The pour IS the confirmation (prd §553) — `BerryRain` is mounted once in
     /// `MainSurface` and driven by this counter, so a success here costs a
     /// bump rather than a view of its own.
     private func pour() {
@@ -164,7 +164,7 @@ struct HegotaSendCard: View {
     // MARK: - Who it spends from
 
     /// **THE ADDRESS THIS CARD SPENDS FROM, and it answers in the demo (prd
-    /// §548b).** The gate was `HegotaKey.address() != nil`, which a tour can
+    /// §552b).** The gate was `HegotaKey.address() != nil`, which a tour can
     /// never satisfy, so the room's DEFAULT scope drew nothing in the demo from
     /// the day §539 made the console its content.
     ///
