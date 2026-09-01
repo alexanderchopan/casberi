@@ -157,6 +157,14 @@ struct FeedScreen: View {
     init(source: String, isActive: Bool, nearActive: Bool = true, rowBudget: Int? = nil) {
         self.source = source
         self.rowBudget = rowBudget
+        #if DEBUG
+        // The mark the trace was missing (PERF 2026-09-01). `mount` fires from
+        // a `.task`, i.e. after the first body AND after SwiftUI has installed
+        // the view — so with only `step`/`mount` the whole of "did the shell
+        // even get to building the new room yet" was one opaque number. It is
+        // what showed the outgoing room being re-initialised on every swipe.
+        SwipeClock.mark("init", detail: "src=\(source)")
+        #endif
         self.isActive = isActive
         self.nearActive = nearActive
         if source == "All" {
@@ -2633,6 +2641,10 @@ struct FeedScreen: View {
     private var builtBody: some View {
         #if DEBUG
         let _ = LaunchPerf.buildTick(source)
+        // Names WHICH room's body built, which `HEAVYBUILD` also does — this
+        // one is on the swipe's own clock, so a build belonging to the room
+        // being left is visible as such.
+        let _ = SwipeClock.mark("body", detail: "src=\(source)")
         #endif
         return perfAccum("feedList[\(source)]") { feedList }
             // Re-tapping the active chip pops this surface's own pushed

@@ -9,11 +9,20 @@ import Foundation
 /// same shape of blindness this project's own perf memory records twice
 /// already: **a metric measuring the wrong span reads clean.**
 ///
-/// Four marks, because the fixes for them are different and a single wall-clock
+/// Seven marks, because the fixes for them are different and a single wall-clock
 /// number cannot tell them apart:
 ///
 ///   • `step`  — the gesture decided, the source is about to change.
-///   • `mount` — the incoming `FeedScreen` ran `init` (its `@Query` is armed).
+///   • `init`  — a `FeedScreen` value was constructed, NAMING ITS SOURCE. Two
+///     of these in one swipe means the room being LEFT was rebuilt as well as
+///     the one being entered; that is what it is for (PERF 2026-09-01).
+///   • `chips` — the shell resolved the chip strip, i.e. one `MainSurface`
+///     body pass happened. Counts the passes a swipe really costs.
+///   • `body`  — that room's feed body was built, again naming its source.
+///   • `mount` — the incoming `FeedScreen`'s head task ran. NOTE this fires
+///     from a `.task`, so it is AFTER the first body and after SwiftUI has
+///     installed the view — `init` is the mark that says when the new room
+///     was first constructed.
 ///   • `heads` — the room's head chain finished, with the row count it read
 ///     and whether it came from the memo. A `heads` line that never arrives is
 ///     a finding, not a gap: it means the head declined or the budget is still

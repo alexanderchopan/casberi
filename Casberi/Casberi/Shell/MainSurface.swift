@@ -1187,6 +1187,9 @@ struct MainSurface: View {
     private func sourceStrip(axis: Axis) -> some View {
         // One walk for all three, not three (2026-08-11) — see `chipSnapshot`.
         let chips = chipSnapshot()
+        #if DEBUG
+        SwipeClock.mark("chips")
+        #endif
         return SourceChips(labels: chips.labels, active: chips.active,
                     axis: axis,
                     categoryVenues: chips.venues,
@@ -1599,15 +1602,28 @@ struct MainSurface: View {
         }
         guard target != filter.source else { return }
         slideEdge = direction(from: filter.source, to: target)
-        // THE SLIDE GETS ITS FRAMES (PERF 2026-08-21) — see `swipeRowBudget`.
-        // Set BEFORE the source changes, so the incoming `FeedScreen`'s very
-        // first `init` already carries the bound; setting it after would build
-        // the unbounded query once and then throw it away, which is the whole
-        // cost, paid and discarded.
-        swipeRowBudget = Self.swipeRowBudgetRows
-        swipeBudgetGeneration &+= 1
         SwipeClock.step(to: target)
+        // THE SLIDE GETS ITS FRAMES (PERF 2026-08-21, corrected 2026-09-01) —
+        // see `swipeRowBudget` and `swipeBudgetSource`.
+        //
+        // ALL THREE WRITES IN ONE TRANSACTION, and that is a fix rather than
+        // tidying. They were two: the bound was set first, on its own, so
+        // SwiftUI ran a WHOLE EXTRA body pass of this surface with
+        // `filter.source` still naming the room being LEFT — which rebuilt
+        // that room's body and re-armed its `@Query`, on the main actor,
+        // inside the frames the slide needs, for a room about to be thrown
+        // away. Measured on a swipe between two rooms: one full outgoing
+        // `FeedScreen` body build, removed by coalescing.
+        //
+        // The old comment's reasoning — "set BEFORE the source changes so the
+        // incoming `init` already carries the bound" — is preserved exactly:
+        // in the single body pass this now produces, the bound and the new
+        // source land together, so the incoming room's very first `init`
+        // still carries it.
         withAnimation(DS.Motion.standard) {
+            swipeRowBudget = Self.swipeRowBudgetRows
+            swipeBudgetSource = target
+            swipeBudgetGeneration &+= 1
             filter.source = target
         }
     }
@@ -1623,6 +1639,25 @@ struct MainSurface: View {
     /// `Equatable`: clearing it is a parameter change, and a parameter change
     /// is the only thing that re-runs `init` and re-arms the query.
     @State private var swipeRowBudget: Int?
+
+    /// WHICH room that bound belongs to (PERF 2026-09-01).
+    ///
+    /// The bound used to be a bare number applied to whatever room the surface
+    /// was rendering, and a swipe still produces one body pass in which
+    /// `filter.source` names the room being LEFT. So the outgoing room was
+    /// re-initialised with a bounded descriptor and re-fetched — a predicated
+    /// SwiftData fetch, on the main actor, mid-slide, for rows nobody will
+    /// see. Since 2026-08-31 that fetch also materialises the heavy inline
+    /// text, so it got more expensive rather than less.
+    ///
+    /// Named, it is inert in that pass: the outgoing screen is handed exactly
+    /// the parameters it already had, `FeedScreen: Equatable` compares equal,
+    /// and SwiftUI does not rebuild it. Measured on the same two swipes as the
+    /// coalescing above: 425ms → 235ms and 246ms → 131ms, gesture to rows.
+    ///
+    /// Cleared with the bound, so the two can never disagree about which room
+    /// is being entered.
+    @State private var swipeBudgetSource: String?
 
     /// Which swipe the current budget belongs to, so a fast second swipe can
     /// never have the FIRST one's timer clear its bound out from under it.
@@ -1653,6 +1688,7 @@ struct MainSurface: View {
         try? await Task.sleep(for: .milliseconds(360))
         guard !Task.isCancelled, swipeBudgetGeneration == generation else { return }
         swipeRowBudget = nil
+        swipeBudgetSource = nil
     }
 
     /// Which edge the incoming room slides from.
@@ -1757,7 +1793,9 @@ struct MainSurface: View {
             // one-step decision up through `chrome.pageStep` below.
             ZStack {
                 FeedScreen(source: filter.source, isActive: true, nearActive: true,
-                           rowBudget: swipeRowBudget)
+                           // Only the room the swipe is going TO — see
+                           // `swipeBudgetSource`.
+                           rowBudget: swipeBudgetSource == filter.source ? swipeRowBudget : nil)
                     // See `FeedScreen: Equatable` — this is what stops a
                     // MainSurface render from rebuilding the whole feed
                     // (measured 15 body builds → 2).
