@@ -32,10 +32,10 @@ FEED = ROOT / "Casberi/Casberi/Screens/FeedScreen.swift"
 # build rather than estimated: the section strip's bottom edge sits at 526pt, so
 # the room leaves 318 to the glass and 304 after the card's own bottom margin.
 ROOM_ALLOWANCE = 304
-#   one line of price48 (a 64pt face at ~1.18x), rounded UP like every
+#   one line of price40 (a 40pt face at ~1.18x), rounded UP like every
 #   font-derived term — an over-stated term makes the budget stricter than the
 #   glass, an under-stated one makes the budget a lie.
-VERB_LINE = 76
+VERB_LINE = 48
 
 
 def strip_comments(text: str) -> str:
@@ -96,7 +96,7 @@ def checks(console: str, hegota: str, vibenet: str, feed: str):
     # 2. THE VERB'S RUNG, asserted APART from the sum. A panel that fits because
     #    its verbs shrank has not been fixed — the 64pt IS the design, and it is
     #    the obvious place to find room the next time something is added here.
-    if console.count(".dsText(.price48)") < 2:
+    if console.count(".dsText(.price40)") < 2:
         out.append("a verb left the crown rung — a panel that fits by shrinking its words is not this panel")
 
     # 3. THE KEYPAD IS OURS. §552a swapped it for the system pad on arithmetic
@@ -156,8 +156,8 @@ def self_test() -> int:
     static let mark: CGFloat = 36
     static let tileGap = DS.Space.s3
     struct DevnetKeypad { }
-    Text(x).dsText(.price48)
-    Text(y).dsText(.price48)
+    Text(x).dsText(.price40)
+    Text(y).dsText(.price40)
     """
     good_h = 'DemoMode.isActive\nDevnetSendPanel(\nclaimFaucet(\nrateLimited\n'
     good_v = 'DevnetSendPanel(tint: x, topUp: nil, onSend: y)\n'
@@ -174,7 +174,7 @@ def self_test() -> int:
                   fat, good_h, good_v, good_f, True))
 
     cases.append(("the verb drops below the crown rung",
-                  good_console.replace("Text(y).dsText(.price48)", "Text(y).dsText(.price40)"),
+                  good_console.replace("Text(y).dsText(.price40)", "Text(y).dsText(.stat24)"),
                   good_h, good_v, good_f, True))
     cases.append(("the system keypad comes back",
                   good_console.replace("struct DevnetKeypad { }", "keyboardType(.decimalPad)"),

@@ -2887,7 +2887,7 @@ enum VibenetPolicyAggregation {
         return out
     }
 
-    /// EVERY PERMISSION THIS CHAIN HAS, granted or not (prd §553).
+    /// EVERY PERMISSION THIS CHAIN HAS, granted or not (prd §551).
     ///
     /// **Why the figure needs a different list from the rows below it.**
     /// `compose` answers "what IS granted", which is exactly right for a list:

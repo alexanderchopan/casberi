@@ -5157,7 +5157,7 @@ struct FeedScreen: View {
                 // rather than inside the builder.
                 Section {
                     // `reservesHeadline: false` — the crown IS this scope's
-                    // headline (`stat24` since §553), so it stands IN the row rather
+                    // headline (`stat24` since §551), so it stands IN the row rather
                     // than under it, which is what puts its first pixel level
                     // with every other scope's headline.
                     DSRoomSlot(headline: nil, reservesHeadline: false) {

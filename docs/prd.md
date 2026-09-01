@@ -42445,6 +42445,20 @@ three seeded accounts in the recipient picker.
 
 ## 552c. One crown rung across Wallet, vibenet and Hegotá (user: "wallet, hegota, and vibenet have different size numbers on their home crown slot. which size works best for us? pick one and make it consistent", 2026-09-01)
 
+> **SUPERSEDED BY §551 — and reversed, not merely renumbered.** This entry
+> promoted Hegotá's crown UP to `price48` so all three rooms matched at 64pt.
+> §551 answers the same complaint the other way round, on the user's own later
+> words (*"on Wallet, Home, the balance is in such a large font … we should be
+> consistent"*): every scope headline goes DOWN to `stat24`, drawn once by the
+> chassis rather than three times by three rooms. The goal — one rung across all
+> three — is unchanged and §551 delivers it; the rung and the mechanism are its.
+> `scripts/room-crown-audit.py`, written to enforce THIS entry, is deleted with
+> it: it asserted each room draws its own crown, which §551 makes false, and a
+> centralised draw needs no cross-room check because there is only one site.
+> The measured `minimumScaleFactor` lesson (§491's, that a permissive floor lets
+> a crown render at half its declared rung) is the one part worth carrying, and
+> it belongs wherever the chassis's headline is next revisited.
+
 `DSRoomChassis`'s own header says these three rooms are the same machine, and
 each opens on a balance. Measured, the balance was drawn **two rungs apart**:
 
@@ -42718,6 +42732,17 @@ another session reading main, not by any check.
 It also demonstrated its own harm before it was fixed: that session read
 "§548b" as a sub-entry of the Frames §548 and concluded a harness break had been
 misattributed, which cost a round trip to disprove with `git log -S`.
+
+**TWO THINGS MAIN CHANGED UNDER THIS WORK, both found by merging rather than
+by reading.** §551 took every scope headline DOWN to `stat24`, so the crown is
+now quieter than these verbs — which is the right way round for a room whose
+content is two actions, and it is why the verbs sit at `price40` rather than the
+`price48` they were drawn at: at 64 they would have been the biggest thing on a
+surface where §532 reserves that rung for money. And §550's once-ever "Talk to
+your agents" capsule renders between the two tiles on the first open after
+onboarding, which squeezes Top up against the agent bar for exactly one launch.
+Left alone deliberately: it is transient, it never returns, and reserving room
+for it permanently would cost the steady state 76pt to serve one screen.
 
 ### What is checked
 

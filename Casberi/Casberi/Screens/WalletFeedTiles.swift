@@ -391,7 +391,7 @@ struct WalletBalanceHeadline: View {
                     // instrument, new reading"). Direction rides the value, so
                     // the roll runs the way the money moved.
                     //
-                    // **`stat24` since prd §553** (user: "on Wallet, Home,
+                    // **`stat24` since prd §551** (user: "on Wallet, Home,
                     // the balance is in such a large font, but on all the
                     // other screens … the title is smaller. we should be
                     // consistent"). It was `price48` while every OTHER scope
@@ -410,17 +410,7 @@ struct WalletBalanceHeadline: View {
                         .monospacedDigit()
                         .contentTransition(reduceMotion ? .identity
                                            : .numericText(value: displayed ?? 0))
-                        // **0.9, not 0.6 (prd §552c).** §491 set vibenet's
-                        // floor here after its crown rendered at about 55% of
-                        // this one; the cause was named as the floor and then
-                        // fixed on one side only, leaving THIS crown free to
-                        // shrink to 38pt on a long total while declaring the
-                        // same rung. `WalletValue.money` abbreviates ($31K),
-                        // so the string is short by construction and the tight
-                        // floor costs nothing — and a crown that silently
-                        // renders two rungs down is not the crown rung,
-                        // whatever the source says.
-                        .lineLimit(1).minimumScaleFactor(0.9)
+                        .lineLimit(1).minimumScaleFactor(0.6)
                         // HOLD TO PEEK (prd §501) — nothing at all unless
                         // balances are hidden; see `HoldToPeek`.
                         .holdToPeek()
@@ -1032,7 +1022,7 @@ struct WalletDepositsTray: View {
                     // correction the locked tray below takes. `heading28` is
                     // the LEDE rung, sized for a SENTENCE, and a tray figure
                     // wearing it sat between `stat24` and `price40` matching
-                    // neither, two taps from the crown (`stat24` since §553). The
+                    // neither, two taps from the crown (`stat24` since §551). The
                     // wallet's own composition strip a few hundred lines up
                     // has always drawn its figures at `stat24`.
                     Text(WalletValue.money(composition.deposited))

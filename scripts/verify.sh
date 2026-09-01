@@ -327,23 +327,6 @@ step "Setup copy audit"
 "$ROOT/scripts/setup-copy-audit.py" || fail "a connect page drifted past its copy budget — see the output above"
 print -P "%F{green}✓ setup copy audit%f"
 
-# Wallet, vibenet and Hegotá are the same machine (`DSRoomChassis` says so) and
-# each opens on a balance — and they were drawing it TWO RUNGS apart. Hegotá
-# passed its crown to the chassis as a HEADLINE, which is `stat24`, so money sat
-# at 24pt where the same object one room over is 64. Mechanical because a wrong
-# rung renders perfectly: nothing clips, nothing warns, and the screen sweep
-# photographs a 24pt crown and certifies it. It took a person opening three
-# rooms in a row and comparing them by eye, which is the comparison nobody makes
-# twice. Also holds all three to one `minimumScaleFactor` floor — §491 recorded
-# that a permissive floor lets a crown render at half its declared rung, then
-# fixed it on one side only.
-step "Room crown audit"
-python3 "$ROOT/scripts/room-crown-audit.py" --self-test >/dev/null \
-  || fail "the room-crown audit's own self-test failed — the check is broken, not the code"
-python3 "$ROOT/scripts/room-crown-audit.py" \
-  || fail "the room crowns drifted apart — see the output above"
-print -P "%F{green}✓ room crown audit%f"
-
 # The devnet send console fits the room it draws in (prd §552). Static, no
 # build, and mechanical because the failure is invisible: a card that overflows
 # renders perfectly — every element drawn, correctly, in the right order — and
@@ -1503,7 +1486,7 @@ harness "Vibenet signer ladder self-test" "13 mutations, 6 drift guards" "script
 harness "Hegota frame transaction self-test" "11 mutations, real on-chain vectors, and the faucet verdict" "scripts/hegota-tx-selftest.sh" "the hegota transaction self-test failed — run scripts/hegota-tx-selftest.sh"
 
 # THE OTHER DEVNET'S ENCODER, and it is a separate harness because the two
-# chains hash DIFFERENT LISTS (prd §552). Both run ethrex, both serve type
+# chains hash DIFFERENT LISTS (prd §548). Both run ethrex, both serve type
 # 0x06, both call it EIP-8141 — Hegotá's envelope is eleven flat fields with
 # keyed nonces and recent-root references, the Frames devnet's is seven with
 # the fees nested. Signing with the wrong one produces a well-formed signature
