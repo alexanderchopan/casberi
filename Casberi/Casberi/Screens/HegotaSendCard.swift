@@ -53,6 +53,8 @@ struct HegotaSendCard: View {
     @State private var errorText: String?
     @State private var sentHash: String?
     @State private var sentSummary: String?
+    /// The recipient picker — one sheet, raised from the To row.
+    @State private var picking = false
 
     // The app's own accent, not `HegotaModeStyle.room` (user: "that cyan
     // color blue or whatever it is... we don't use that anywhere else") —
@@ -117,69 +119,35 @@ struct HegotaSendCard: View {
         !busy && Self.isValidAddress(destination) && Self.weiData(from: amount) != nil
     }
 
+    /// **THE CONSOLE (prd §544)** — `DevnetSendConsole`'s shared anatomy, with
+    /// the one difference this chain forces: Hegotá moves ETH and only ETH, so
+    /// the unit is a WORD and never a chip. See that file's header.
     private var form: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                caption(String(localized: "To"))
-                well {
-                    HStack(spacing: DS.Space.s2) {
-                        TextField(String(localized: "0x\u{2026}"), text: $destination)
-                            .dsText(.body17)
-                            .foregroundStyle(DS.textPrimary)
-                            .tint(DS.tint)
-                            .keyboardType(.asciiCapable)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                        // Deciding WITHOUT reading: `hasStrings` asks the
-                        // system whether the pasteboard holds text and brings
-                        // none of it into this process, so it raises no paste
-                        // banner. A chip that pastes nothing is a dead control.
-                        if destination.isEmpty, UIPasteboard.general.hasStrings {
-                            miniChip(String(localized: "Paste")) {
-                                destination = (UIPasteboard.general.string ?? "")
-                                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                            }
-                        }
+        VStack(spacing: DS.Space.s4) {
+            DevnetSendToRow(address: destination.isEmpty ? nil : destination,
+                            name: destination.isEmpty ? nil : recipientName,
+                            preview: knownAddresses,
+                            onTap: { picking = true })
+
+            DevnetSendFigure(amount: amount, dim: amount.isEmpty) {
+                HStack(spacing: DS.Space.s2) {
+                    Text(String(localized: "ETH"))
+                        .dsText(.callout15)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(amount.isEmpty ? DS.textTertiary : DS.textSecondary)
+                    if let held {
+                        // NO MAX, and that is this chain's own rule rather than
+                        // an omission: gas is the sender's here, so the whole
+                        // balance is the one amount that provably cannot be
+                        // sent. The figure is stated, never offered as a tap.
+                        Text(String(localized: "\(HegotaFormat.eth(held)) available"))
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textTertiary)
                     }
-                }
-                if !destination.isEmpty, !Self.isValidAddress(destination) {
-                    Text(String(localized: "That doesn't look like an address."))
-                        .dsText(.label11)
-                        .foregroundStyle(DS.destructive)
                 }
             }
 
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                caption(String(localized: "Amount"))
-                well {
-                    HStack(spacing: DS.Space.s2) {
-                        TextField("0.0", text: $amount)
-                            .dsText(.body17)
-                            .foregroundStyle(DS.textPrimary)
-                            .tint(DS.tint)
-                            .keyboardType(.decimalPad)
-                        Text(String(localized: "ETH"))
-                            .dsText(.body17)
-                            .foregroundStyle(DS.textTertiary)
-                        // No Max here — see the type's own doc. Gas is the
-                        // sender's on this chain, so the whole balance is the
-                        // one amount that provably cannot be sent.
-                    }
-                }
-                if !amount.isEmpty, Self.weiData(from: amount) == nil {
-                    Text(String(localized: "Enter an amount up to 18 decimal places."))
-                        .dsText(.label11)
-                        .foregroundStyle(DS.destructive)
-                } else if let held {
-                    // WHAT IS THERE TO SEND — this address's own balance, off
-                    // the last sweep. `HegotaFormat.eth` is the room's own
-                    // rendering, so the figure reads the same here as it does
-                    // in the crown above.
-                    Text(String(localized: "Holds \(HegotaFormat.eth(held))"))
-                        .dsText(.label11)
-                        .foregroundStyle(DS.textTertiary)
-                }
-            }
+            DevnetSendKeypad(amount: $amount, tint: Self.mark)
 
             Button {
                 DSHaptic.tap()
@@ -208,13 +176,37 @@ struct HegotaSendCard: View {
                     .dsText(.label11)
                     .foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
-            } else {
-                Text(String(localized: "Signed by this phone's key, unsponsored \u{2014} the sender pays its own gas, exactly as measured on this chain."))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else if !destination.isEmpty, !Self.isValidAddress(destination) {
+                Text(String(localized: "That doesn't look like an address."))
                     .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .foregroundStyle(DS.destructive)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .sheet(isPresented: $picking) {
+            DevnetSendPicker(title: String(localized: "Send to"),
+                             candidates: pickerCandidates,
+                             onPick: { destination = $0 })
+        }
+    }
+
+    /// The room's own resolution, so this card and the roster agree.
+    private var recipientName: String? {
+        HegotaWatch.shared.name(for: destination)
+    }
+
+    /// What this devnet knows, minus this phone's own account.
+    private var knownAddresses: [String] {
+        let me = HegotaKey.address()
+        return HegotaWatch.shared.addresses.filter { candidate in
+            guard let me else { return true }
+            return candidate.caseInsensitiveCompare(me) != .orderedSame
+        }
+    }
+
+    private var pickerCandidates: [(address: String, name: String?)] {
+        knownAddresses.map { ($0, HegotaWatch.shared.name(for: $0)) }
     }
 
     /// The button NAMES THE AMOUNT once there is one — the figure it is about

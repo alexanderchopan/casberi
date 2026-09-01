@@ -41173,3 +41173,51 @@ is green; no screenshot of the new rest surface, the capsule at any width, the
 reasoned from the shipped chip metrics rather than measured on a device, and the
 overflow threshold is the number that follows from that reasoning — check a
 three-key configuration on hardware before trusting `agentSlots`.
+
+## 544. The send console — a keypad, not a form (2026-08-31)
+
+§538 and §539 made sending the room's own Home scope and left the FORM alone:
+two labelled wells and a button. Across a design pass that drew: *"this looks
+terrible"*, *"these look vibecoded"*, and the question that settled it — *"what
+would Apple do"*.
+
+**Apple Cash's composition, in this app's tokens.** Recipient as a plain row,
+the money GIANT and CENTRED, a keypad of bare digits on the surface, one button
+carrying the verb. `Screens/DevnetSendConsole.swift` holds all four pieces and
+both devnets compose them, so the two rooms cannot drift into two forms.
+
+Three decisions rather than styles. **(1) A keypad, not a keyboard** — the
+system keyboard covers half the screen including the crown, which is the balance
+you are deciding against, and this form lives in a scrolling room; a keypad
+keeps the room legible while you type and is the one element that unmistakably
+says press me. There is no amount `TextField` at all, so there is no second
+input to keep in sync and no keyboard to dismiss. **(2) Bare digits, no key
+backgrounds** — filled circles inside a filled card is boxes-inside-boxes, and
+every keypad Apple ships draws the digit on the surface it sits on; the only
+circle is the one under your finger, so the press is the whole feedback.
+**(3) The verb is on the button** — an earlier cut put "Send" left of the figure
+as a row label, which reads as a table row rather than a money moment.
+
+**The chevron points RIGHT.** An earlier cut pointed it down and opened a bottom
+sheet from it — two idioms at once, since a disclosure says "onward" and a
+chevron-down says "a menu drops here". The picker is a list of people, which is
+a sheet, so the row is a disclosure. Paste is the picker's last CELL, not a
+control of its own, and appears only when the pasteboard really holds text
+(`hasStrings`, which reads nothing and raises no banner).
+
+**The asset choice is NOT built, deliberately.** The mockups for this pass gave
+vibenet a unit CHIP opening a menu, on the reasoning that a vibenet account can
+hold more than ETH. `VibenetSend.sendValue` takes a `valueWei` and nothing else
+— this seat has only ever moved native ETH — so shipping the chip would be a
+control opening a one-item menu, which is the dead control §83 bans. Both units
+are words today. It becomes a control the day the bridge can move a token.
+
+`DevnetAmountInput` is the whole edit vocabulary and is pure, so it is provable
+without a view: a refused key returns the amount UNCHANGED (the keypad has no
+disabled state, so a key that would exceed 18 decimals simply does nothing and
+the figure never shows a number the button will then reject), "." writes its own
+leading zero, and a digit REPLACES a bare placeholder zero rather than making
+"07".
+
+**UNSEEN ON A DEVICE.** iOS Simulator build passes and the liveness, motion and
+ramp audits are green; no screenshot of the console has been taken.

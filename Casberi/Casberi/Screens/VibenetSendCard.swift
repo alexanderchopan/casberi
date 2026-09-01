@@ -56,6 +56,8 @@ struct VibenetSendCard: View {
     @State private var errorText: String?
     @State private var sentHash: String?
     @State private var sentSummary: String?
+    /// The recipient picker — one sheet, raised from the To row.
+    @State private var picking = false
 
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
@@ -113,86 +115,42 @@ struct VibenetSendCard: View {
         !busy && Self.isValidAddress(destination) && Self.weiData(from: amount) != nil
     }
 
+    /// **THE CONSOLE (prd §544).** Two labelled wells and a button became a
+    /// recipient row, a centred figure and a keypad — see `DevnetSendConsole`
+    /// for the reasoning; what is specific to vibenet is here.
     private var form: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                caption(String(localized: "To"))
-                well {
-                    HStack(spacing: DS.Space.s2) {
-                        TextField(String(localized: "0x\u{2026}"), text: $destination)
-                            .dsText(.body17)
-                            .foregroundStyle(DS.textPrimary)
-                            .tint(DS.tint)
-                            .keyboardType(.asciiCapable)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                        // ONLY WHEN THERE IS SOMETHING TO PASTE, and the
-                        // deciding is done WITHOUT reading: `hasStrings` asks
-                        // the system whether the pasteboard holds text and
-                        // brings none of it into this process, so it raises no
-                        // paste banner and sees nothing. A chip that pastes
-                        // nothing is the dead control §83 bans.
-                        //
-                        // The READ, on tap, is a deliberate bare
-                        // `UIPasteboard.general.string` rather than anything in
-                        // `DSPasteboard` — that type is the app's OUTBOUND
-                        // guard (it writes with a lifetime and a local-only
-                        // flag so a copied key does not outlive its use) and
-                        // has no inbound half. The system's own "pasted from"
-                        // banner on the read is correct here and wanted: the
-                        // person tapped a button labelled Paste.
-                        if destination.isEmpty, UIPasteboard.general.hasStrings {
-                            miniChip(String(localized: "Paste")) {
-                                destination = (UIPasteboard.general.string ?? "")
-                                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                            }
-                        }
-                    }
-                }
-                if !destination.isEmpty, !Self.isValidAddress(destination) {
-                    Text(String(localized: "That doesn't look like an address."))
-                        .dsText(.label11)
-                        .foregroundStyle(DS.destructive)
-                }
-            }
+        VStack(spacing: DS.Space.s4) {
+            DevnetSendToRow(address: destination.isEmpty ? nil : destination,
+                            name: destination.isEmpty ? nil : recipientName,
+                            preview: knownAddresses,
+                            onTap: { picking = true })
 
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                caption(String(localized: "Amount"))
-                well {
-                    HStack(spacing: DS.Space.s2) {
-                        TextField("0.0", text: $amount)
-                            .dsText(.body17)
-                            .foregroundStyle(DS.textPrimary)
-                            .tint(DS.tint)
-                            .keyboardType(.decimalPad)
-                        Text(String(localized: "ETH"))
-                            .dsText(.body17)
+            DevnetSendFigure(amount: amount, dim: amount.isEmpty) {
+                HStack(spacing: DS.Space.s2) {
+                    // THE UNIT IS A WORD HERE, and the asset CHOICE is not yet
+                    // built (§544's stated gap): this seat has only ever moved
+                    // native ETH — `VibenetSend.sendValue` takes a `valueWei`
+                    // and nothing else — so a chip opening a one-item menu
+                    // would be the dead control §83 bans. It becomes a control
+                    // the day the bridge can move a token, and not before.
+                    Text(String(localized: "ETH"))
+                        .dsText(.callout15)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(amount.isEmpty ? DS.textTertiary : DS.textSecondary)
+                    if let held {
+                        Text(String(localized: "\(VibenetBalanceFormat.line(held)) available"))
+                            .dsText(.label12)
                             .foregroundStyle(DS.textTertiary)
-                        // MAX IS ONLY OFFERED WHEN THE BALANCE IS KNOWN.
-                        // `nativeBalance` is nil for an unreached account by
-                        // design (§83: a failed read and a real zero must not
-                        // look alike), so this chip is absent rather than
-                        // filling in a zero we did not measure.
-                        if let held, held > 0 {
+                        if held > 0 {
                             miniChip(String(localized: "Max")) {
                                 amount = VibenetBalanceFormat.line(held)
                             }
                         }
                     }
                 }
-                if !amount.isEmpty, Self.weiData(from: amount) == nil {
-                    Text(String(localized: "Enter an amount up to 18 decimal places."))
-                        .dsText(.label11)
-                        .foregroundStyle(DS.destructive)
-                } else if let held {
-                    // WHAT IS THERE TO SEND. The crown above shows the room's
-                    // whole balance, which is not the same number once more
-                    // than one account is watched — this is THIS account's.
-                    Text(String(localized: "Holds \(VibenetBalanceFormat.line(held)) ETH"))
-                        .dsText(.label11)
-                        .foregroundStyle(DS.textTertiary)
-                }
             }
+
+            DevnetSendKeypad(amount: $amount, tint: Self.mark)
 
             Button {
                 DSHaptic.tap()
@@ -221,13 +179,45 @@ struct VibenetSendCard: View {
                     .dsText(.label11)
                     .foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else if !destination.isEmpty, !Self.isValidAddress(destination) {
+                Text(String(localized: "That doesn't look like an address."))
+                    .dsText(.label11)
+                    .foregroundStyle(DS.destructive)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 Text(String(localized: "Signed by this phone's key. Whether the sender or the devnet's faucet pays is checked when you tap Send."))
                     .dsText(.label11)
                     .foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .sheet(isPresented: $picking) {
+            DevnetSendPicker(title: String(localized: "Send to"),
+                             candidates: pickerCandidates,
+                             onPick: { destination = $0 })
+        }
+    }
+
+    /// The room's own resolution for the chosen address, so this card can never
+    /// name somebody differently from the roster above it.
+    private var recipientName: String? {
+        VibenetWatch.shared.name(for: destination)
+    }
+
+    /// The addresses this devnet already knows, MINUS the one sending — an
+    /// account cannot usefully send to itself, and offering it is a cell that
+    /// leads to a refused transaction.
+    private var knownAddresses: [String] {
+        let me = "0x" + VibenetTransaction.hex(account)
+        return VibenetWatch.shared.addresses.filter {
+            $0.caseInsensitiveCompare(me) != .orderedSame
+        }
+    }
+
+    private var pickerCandidates: [(address: String, name: String?)] {
+        knownAddresses.map { ($0, VibenetWatch.shared.name(for: $0)) }
     }
 
     /// The button NAMES THE AMOUNT once there is one. A sheet's button sat a
