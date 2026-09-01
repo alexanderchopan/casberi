@@ -42992,3 +42992,96 @@ generically, so a tenth follow-up costs nothing.
 mutations are green, and no screen in this room has been looked at — the tile
 proportions, the figure's per-scope readings and the strip's placement are all
 reasoned from measured constants and none has been rendered.
+
+## 554. Helper text stands down where the next tap already says it — and a word budget is not minimalism (user: "we removed a lot of helper text today in wallet, hegota, vibenet, and i'd really like the app overall to be super minimal with copy, can you scan other places you think we can get rid of extraneous subtext?", 2026-09-01)
+
+A scan of every `Text`/`String(localized:)` drawn in a secondary or tertiary
+tier across `Screens/`, `Shell/`, `Design/` and `GenUI/` found **121 strings of
+eight words or more**. Ranked by density rather than by length, because the
+worst copy in this app is not the longest sentence — it is the same sentence
+in eleven places.
+
+### The ruling
+
+**A sentence explaining a choice the very next control presents is one more
+thing to read before the same decision.** The clearest instance had eleven
+copies: a footer reading "Disconnecting stops syncing. What already landed
+stays yours" sat under a button labelled *Disconnect*, and on the two screens
+that confirm, above a dialog whose own buttons are "Keep its things" and
+"Remove its things too". On the nine that do not confirm, the toast fired by
+the same tap says "Disconnected — your things stay." The button, the dialog
+and the toast each said it; the footer was the fourth telling and the only one
+you had to read BEFORE deciding. Cut from eight bridge screens, from
+`BridgeDisconnectSection` and from Wallet's dialog `message:`. Exchange keeps
+one clause — "Its balance leaves your combined total" — because it is the one
+consequence no other surface states.
+
+The same rule retires seven "Re-import any time for what's new." tails on
+import screens that all carry an Import control, Vibenet's "Add as many as you
+like." above a field with a plus, and the theme picker's "Buttons and chips
+keep their own blue whatever you pick", which a swatch demonstrates the moment
+it is tapped.
+
+### Attribution is said once, from one constant — and the constant was dead
+
+`L2beatCopy.attribution` and `WalletbeatCopy.attribution` have existed since
+those seats shipped, each documented as **"Every surface says this"**, and
+`grep` found **no caller for either**. What every surface actually carried was
+its own long restatement: a connect intro, a directory footer, a card-screen
+paragraph and a sheet stamp, four wordings of one fact per registry. Both
+constants are drawn now, and the 52-word L2BEAT directory footer — the longest
+string in the app — is 22. **A shared constant with no callers is worse than
+no constant**, because its doc comment asserts a consistency nothing enforces,
+and the next author reads that assertion instead of the four paragraphs.
+
+### What was deliberately kept: a limit is not helper text
+
+Of 59 connect-screen intros, almost every second sentence is a LIMIT — "it can
+never chat, follow, or subscribe", "nothing here reads a customer's name or
+card", "Withdrawals are unlinkable by design, so that side never appears".
+Those are §83's honesty rail wearing the shape of subtext, and they stay whole.
+So do "there is no server" (§205), the secret-scan boundary sentence and the
+Advanced Data Protection baseline (§277), and both of the Safe N-of-N warnings
+(§427) — that ruling requires the fact at the moment of signing AND on the
+setup screen, so the pass shortened each and deleted neither. **The test is
+whether the sentence says something no control on screen can say.** A limit
+passes it; a procedure the next tap performs does not.
+
+Two shortenings are worth recording because they are arithmetic rather than
+taste. `SafeSigner.Standing.hasNoSpareOwner` is defined as `ownerCount ==
+threshold`, so "needs 3 of its 3 owners, so every one of them is load-bearing"
+is exactly "needs all 3 of its owners" — eleven words for four. And on the
+Safe screen the destroyed-key sentence ended "Make a new one" directly above a
+button labelled **Make a new key**.
+
+### A word budget is not minimalism
+
+`setup-copy-audit.py` (§315) governs connect-screen prose: a mode chip, an
+intro of at most two sentences and 55 words, a step of at most 14 words, at
+most two slab notes. **It was green before this pass, during it and after it,
+and it never once bound.** The 59 intros average 26 words against a cap of 55;
+the offending copy was never on a connect screen at all — it was in settings
+sheets, room heads, registry footers and a shared component, none of which any
+audit measures. A cap stops the worst case. It does not produce minimalism,
+and its own green is what made this drift invisible for months.
+
+**No new audit rule was added, deliberately.** The one that would have caught
+item six is "a connect intro's second sentence must be a limit, not a
+procedure" — and a static check cannot tell a limit from a procedure. It would
+have to guess, and this codebase's standing rule is that a lint which cries
+wolf gets turned off within a week (§315's three named non-checks are the same
+refusal). Picking the sentence right is the answer, not grading it afterwards.
+
+### Measured
+
+121 to 104 subtext strings of eight-plus words: **21 sentences deleted, 27
+shortened, 26 files**, 40 insertions against 75 deletions. Twelve of the
+shortenings are `AgentKeyDetail`, a four-toggle screen that carried fifteen
+explainer paragraphs, including three separate explanations of one spend
+limit. iOS Simulator and Mac Catalyst both build clean; 31 static audits and
+the `safetx`, `l2beat`, `agent-keyed`, `notify`, `instagram` and `obsidian`
+harnesses are green.
+
+**UNSEEN ON A DEVICE.** Every change is a string; nothing here was rendered,
+so the only claim made is that the words are fewer and the facts survive — not
+that any of these screens was looked at afterwards.
