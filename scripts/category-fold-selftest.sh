@@ -486,7 +486,16 @@ grep -q 'dsTooltip' "$TMP/rail.nc" \
 # makes 141 the PIPELINE's status — so a SUCCESSFUL match fails the check. It
 # reproduced here immediately and deterministically, because the match is on
 # the first few lines of a long range.
-railBlock=$(sed -n '/private var walletScopeRailSection/,/private var walletSectionSwitcherSection/p' "$TMP/feed.nc")
+#
+# **THE RANGE FOLLOWED ITS SUBJECT** (prd §547, 2026-09-01). Both endpoints
+# moved when the rail and the switcher fused: `walletScopeRailSection` is a
+# FUNCTION now (it took the switcher's `active` argument), and
+# `walletSectionSwitcherSection` — the old closing anchor — no longer exists at
+# all. A range whose end never matches runs to end of file, which would have
+# left this guard passing on almost any tree; a range whose START never matches
+# yields nothing, which is what it actually did. `walletCompositionSection` is
+# the next declaration after the slab and is the honest new terminator.
+railBlock=$(sed -n '/private func walletScopeRailSection/,/private var walletCompositionSection/p' "$TMP/feed.nc")
 [[ "$railBlock" == *"namesInRoom:"* ]] \
   || { echo "✗ the wallet rail's caption decision is implicit again (§450 → §495) — the"; \
        echo "  parameter defaults to false, so a rail that captions by OMISSION is a rail"; \
