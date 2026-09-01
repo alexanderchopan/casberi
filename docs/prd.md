@@ -41221,3 +41221,62 @@ leading zero, and a digit REPLACES a bare placeholder zero rather than making
 
 **UNSEEN ON A DEVICE.** iOS Simulator build passes and the liveness, motion and
 ramp audits are green; no screenshot of the console has been taken.
+
+## 545. One address book, and the roster's verbs move onto its own rows (2026-08-31)
+
+Asked why vibenet has an address book and Hegotá does not. The answer was that
+the book slot is opt-in per rail and Hegotá's call site never passes it — so the
+first instinct was to give Hegotá one. **The user's counter-question settled it
+the other way: remove it from vibenet.** That is right, and the reasoning is
+worth keeping because the first instinct was symmetry rather than a ruling.
+
+**Both rooms already have an Accounts scope.** Vibenet's draws a sub-account web,
+Hegotá's a figure and a list, and vibenet's `accountsCard` already renders the
+whole roster with a create row above it. So a rail door to a SECOND screen
+listing the same accounts is two surfaces answering one question — §533's
+"Latest 3" duplication with a door instead of a truncation. The app also has a
+general `AddressBookScreen` holding every address with a network stamp
+(`vibenet`/`hegota`/`altana` are all in its `devnets` set), so the per-devnet
+screen was the third list of one fact.
+
+**§465'S RULING IS KEPT, NOT REVERSED.** That ruling — *"the set up screens need
+to feel like they are only for set up"* — moved the roster off `VibenetScreen`,
+which was correct and stands. What it got wrong was the destination: it moved to
+a pushed screen when the room's own Accounts scope was already drawing that
+roster. The verbs now live one chip away instead of one push away, and setup
+still holds none of them.
+
+So `VibenetAddressBookScreen.swift` is deleted with its `HomeRoute` case, the
+rail's book slot (a trailing door with nowhere to go is `FaceScopeRail`'s own
+stated §83 failure), and the `-openAddressBook vibenet` probe arm, which now
+lands on the shared book like every other address. **Rename and Stop watching
+are a context menu on the Accounts row** — not swipe actions, since these rows
+are not in a `List` and the row's own tap is already the scope pick. §472's rule
+travels whole: the LAST unwatch still confirms, because it tears down the seat
+and drops the chip rather than removing a row, and `commitUnwatch` is the single
+place the removal happens so the ordinary and confirmed paths cannot drift into
+two different removals.
+
+The setup page's door SURVIVES, repointed at the shared book: its job there was
+never navigation alone, it is that page's only tally of what you have picked.
+
+**`vibenet-selftest.sh`'s five §465 guards were RE-AIMED, never deleted** — a red
+guard after a refactor is a ruling to amend. They failed one at a time and each
+correction was real: the roster verbs are asserted on the ROW now, the in-flight
+gate is asserted in the room's own spelling, the count test is matched on the
+invariant rather than the screen's phrasing, and two NEGATIVE guards were added
+so the deleted screen and its route case cannot come back.
+
+**A field that could not grow, found in the same pass.** Reported: *"the search
+and paste field is clipped or messed up somehow"*, on the shared book — the
+screen this ruling had just made vibenet's destination. `DSSlabField` pinned
+`.frame(height: 56)`, so at larger Dynamic Type its placeholder and verb are
+drawn into a box that cannot grow and are cut at the slab's own edge, on the one
+control that is the way IN to that screen. It is `.frame(minHeight:)` with
+vertical padding now: every default-size field stays pixel-identical (they all
+measure under 56 today) and the ones that need to grow can.
+
+**UNSEEN ON A DEVICE.** iOS Simulator build passes and the liveness, motion, ramp
+and vibenet harnesses are green. The field fix is reasoned from the constraint
+rather than observed — if the report was at DEFAULT type size then something
+else is also wrong and this did not fix it.

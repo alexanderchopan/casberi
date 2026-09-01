@@ -260,7 +260,15 @@ struct VibenetRoomCard: View {
     /// and loses nothing: it is the same faces, the same order, now saying
     /// what they are worth as well as which one you are in.
     var scopedAddress: String? = nil
-    var onOpenBook: (() -> Void)? = nil
+    // `onOpenBook` was HERE and is deleted with the screen it opened
+    // (prd §545) — the roster's verbs are on the rows in this card now.
+
+    /// The naming alert — a text-entry alert needs its text in `@State`.
+    @State private var renamingAddress: String?
+    @State private var renameText = ""
+    /// Set only when the address being unwatched is the LAST one, which is
+    /// what raises the confirm. See `unwatch`.
+    @State private var removingLast: String?
 
     /// What moved since this device last looked at these keys — captured
     /// ONCE when the roster appears and then immediately spent (`advance`),
@@ -2215,8 +2223,7 @@ struct VibenetRoomCard: View {
                 // book would point at the same place twice.
                 addTitle: nil,
                 onAdd: nil,
-                bookTitle: String(localized: "Address book"),
-                onOpenBook: onOpenBook)
+                bookTitle: nil)
         }
     }
 
@@ -2373,8 +2380,42 @@ struct VibenetRoomCard: View {
     /// reason to open.
     @ViewBuilder
     private var accountsCard: some View {
+        accountsCardBody
+            // The roster's two presentations, on the card that owns the rows
+            // (prd §545). ONE alert and ONE dialog for the whole list rather
+            // than per row: a presentation declared inside a `ForEach` resolves
+            // to the same presenting controller for every row, which is the
+            // half-open-then-close bug this file's own `onOpenKeySheet` comment
+            // records paying for three times.
+            .alert(String(localized: "Name this account"),
+                   isPresented: Binding(get: { renamingAddress != nil },
+                                        set: { if !$0 { renamingAddress = nil } })) {
+                TextField(String(localized: "Name"), text: $renameText)
+                Button(String(localized: "Save")) {
+                    if let address = renamingAddress {
+                        VibenetWatch.shared.setName(renameText, for: address)
+                    }
+                    renamingAddress = nil
+                }
+                Button(String(localized: "Cancel"), role: .cancel) { renamingAddress = nil }
+            }
+            .confirmationDialog(String(localized: "Stop watching this account?"),
+                                isPresented: Binding(get: { removingLast != nil },
+                                                     set: { if !$0 { removingLast = nil } }),
+                                titleVisibility: .visible) {
+                Button(String(localized: "Stop watching"), role: .destructive) {
+                    if let address = removingLast { commitUnwatch(address) }
+                    removingLast = nil
+                }
+                Button(String(localized: "Cancel"), role: .cancel) { removingLast = nil }
+            } message: {
+                Text(String(localized: "It's the last one here, so the vibenet room and its chip go with it. Watching it again brings them back."))
+            }
+    }
+
+    private var accountsCardBody: some View {
         let links = VibenetAccountMapping.links(room.items)
-        card {
+        return card {
             VStack(alignment: .leading, spacing: 0) {
                 // MAKING ONE LEADS THE LIST (user ruling, 2026-08-29: create
                 // goes "above the existing accounts, not below the list b/c
@@ -2563,17 +2604,70 @@ struct VibenetRoomCard: View {
     /// and carries one clause at `label11`. A CENSUS rung (a permission count) is
     /// not an object and keeps its own shape — it is a number and a label, and
     /// giving it a row's type would make eight keys look like eight things.
+    /// **THE ROW CARRIES THE VERBS NOW (prd §545, 2026-08-31).**
+    ///
+    /// `VibenetAddressBookScreen` is deleted and this is where its two account
+    /// verbs went. The screen existed because §465 moved the roster off the
+    /// SETUP page — which was right — but it moved it to a pushed screen while
+    /// this room already had an Accounts scope drawing the same roster. Two
+    /// surfaces listing one set of accounts is §533's "Latest 3" duplication
+    /// with a door instead of a truncation, and the app has a general
+    /// `AddressBookScreen` besides, so the devnet copy was the third list of
+    /// one fact.
+    ///
+    /// §465's ruling is KEPT, not reversed: what you do repeatedly lives in the
+    /// room, not on setup. It just lives in the scope named after it rather
+    /// than one tap further out.
+    ///
+    /// A CONTEXT MENU, exactly as the deleted screen had it — not swipe
+    /// actions: these rows are not in a `List`, and the row's own tap is
+    /// already the scope pick, so a long-press is the only gesture left that
+    /// does not fight it.
     private func accountRow(_ item: VibenetAccountItem) -> some View {
-        if let onScope {
-            Button {
-                DSHaptic.selection()
-                onScope(item.address)
-            } label: { accountRowBody(item, door: true) }
-                .buttonStyle(.plain)
-                .dsHover()
-        } else {
-            accountRowBody(item, door: false)
+        Group {
+            if let onScope {
+                Button {
+                    DSHaptic.selection()
+                    onScope(item.address)
+                } label: { accountRowBody(item, door: true) }
+                    .buttonStyle(.plain)
+                    .dsHover()
+            } else {
+                accountRowBody(item, door: false)
+            }
         }
+        .contextMenu {
+            Button {
+                renameText = VibenetWatch.shared.name(for: item.address) ?? ""
+                renamingAddress = item.address
+            } label: {
+                Label(String(localized: "Name this account"), systemImage: "pencil")
+            }
+            Button(role: .destructive) {
+                unwatch(item.address)
+            } label: {
+                Label(String(localized: "Stop watching"), systemImage: "minus.circle")
+            }
+        }
+    }
+
+    /// **AND THAT IS WHY THE LAST ONE ASKS (prd §472, carried over whole).**
+    /// Every other unwatch removes a row; this one tears down the seat and
+    /// drops the chip out of the strip, so it is a different act wearing the
+    /// same word and it confirms.
+    private func unwatch(_ address: String) {
+        if VibenetWatch.shared.addresses.count <= 1 {
+            removingLast = address
+        } else {
+            commitUnwatch(address)
+        }
+    }
+
+    /// The one place the removal actually happens, so the ordinary path and the
+    /// confirmed last-one path can never drift into two different removals.
+    private func commitUnwatch(_ address: String) {
+        DSHaptic.tap()
+        VibenetWatch.shared.remove(address)
     }
 
     private func accountRowBody(_ item: VibenetAccountItem, door: Bool) -> some View {

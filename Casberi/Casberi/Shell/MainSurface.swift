@@ -474,8 +474,7 @@ struct MainSurface: View {
                 // choice. `addTitle`/`onAdd` deliberately left nil.
                 addTitle: nil,
                 onAdd: nil,
-                bookTitle: String(localized: "Address book"),
-                onOpenBook: { route.push(.vibenetAddressBook) })
+                bookTitle: nil)
             .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
         }
     }
@@ -558,8 +557,6 @@ struct MainSurface: View {
             AddressGroupScreen(group: name)
         case .addressBook:
             AddressBookScreen()
-        case .vibenetAddressBook:
-            VibenetAddressBookScreen()
         }
     }
 

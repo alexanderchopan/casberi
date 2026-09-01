@@ -115,7 +115,9 @@ final class HomeRoute {
         /// Wallet's book is an unlimited ledger of NAMES beside a capped
         /// watch list, and this is the watch list itself, uncapped. Same
         /// word, different contents.
-        case vibenetAddressBook
+        // `vibenetAddressBook` was HERE and is deleted with its screen
+        // (prd §545) — the roster's verbs live on the Accounts scope's
+        // own rows, and the shared book is still `addressBook`.
     }
     var path: [Node] = []
 

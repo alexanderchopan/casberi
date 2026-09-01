@@ -63,7 +63,10 @@ ROUTER="Casberi/Casberi/Model/BridgeRouting.swift"
 # prd §465 — the setup/room split. The setup page and the book are two files
 # now, and the invariant that keeps them apart is textual, so it is greppable.
 SETUP="Casberi/Casberi/Screens/VibenetScreen.swift"
-BOOK="Casberi/Casberi/Screens/VibenetAddressBookScreen.swift"
+# prd §545 — the book SCREEN is deleted and its two account verbs moved onto
+# the Accounts scope's own rows. `BOOK` now names the file that holds them, so
+# every guard below still guards the ruling rather than the filename.
+BOOK="Casberi/Casberi/Screens/VibenetRoomCard.swift"
 FIELD="Casberi/Casberi/Screens/VibenetWatchViews.swift"
 SHELL_SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
@@ -159,18 +162,23 @@ strip_comments "$FEED"    > "$TMP/feed.nc.swift"
 # files document the rule by naming the very thing they must not do (the
 # Obsidian/Cursor lesson).
 
-# The book holds the MANAGING roster, and §517 moved it out of
-# `VibenetRoomCard`'s managing mode and onto the screen itself — the ruling
-# is that the book LISTS what you watch and lets you open, rename and drop
-# each one; where those rows are drawn is not the ruling. Without all three
-# the book is a screen with a lookup and no list, which is what §465 split
-# the screens to prevent.
-grep -q 'VibenetAccountSheet(address:' "$TMP/book.nc.swift" \
-  || { echo "✗ VibenetAddressBookScreen no longer opens an account — the roster is not navigable"; exit 1; }
+# §465's RULING SURVIVES ITS SCREEN (prd §545). What you do repeatedly still
+# lives in the room and never on setup — it just lives on the Accounts scope's
+# own rows now instead of one tap further out, because that scope was already
+# drawing the same roster and two surfaces listing one set of accounts is the
+# duplication §533 removed elsewhere. So the two verbs are still guarded; only
+# the file holding them changed.
 grep -q 'renamingAddress = item.address' "$TMP/book.nc.swift" \
-  || { echo "✗ VibenetAddressBookScreen no longer offers rename on a row (prd §465)"; exit 1; }
+  || { echo "✗ the Accounts row no longer offers rename (prd §545, carrying §465)"; exit 1; }
 grep -q 'unwatch(item.address)' "$TMP/book.nc.swift" \
-  || { echo "✗ VibenetAddressBookScreen no longer offers stop-watching on a row (prd §465)"; exit 1; }
+  || { echo "✗ the Accounts row no longer offers stop-watching (prd §545, carrying §465)"; exit 1; }
+# The LAST unwatch still asks — §472's ruling, which the move must not drop:
+# every other unwatch removes a row, this one tears down the seat and the chip.
+grep -q 'removingLast = address' "$TMP/book.nc.swift" \
+  || { echo "✗ the last unwatch stopped confirming (prd §472) — it tears down the seat"; exit 1; }
+# And the per-devnet screen must not come back.
+[[ -f "Casberi/Casberi/Screens/VibenetAddressBookScreen.swift" ]] \
+  && { echo "✗ VibenetAddressBookScreen is back (prd §545) — the shared AddressBookScreen is the one book"; exit 1; }
 
 # The setup page holds NO roster. This is the whole ruling: a VibenetRoomCard
 # back on the setup screen is the 385-line screen returning.
@@ -256,10 +264,14 @@ fi
 # file and a loose match would be satisfied by the wrong one — passing green
 # with vibenet's add slot restored. A guard must prove the condition is the
 # whole condition, not that the words appear somewhere.
-grep -B 4 'onOpenBook: { route.push(.vibenetAddressBook) }' "$SHELL_SURFACE" | grep -q 'onAdd: nil,' \
-  || { echo "✗ the vibenet rail grew a second door (prd §465) — the add slot must stay nil,"; echo "  since the paste field lives in the book and both slots would land there"; exit 1; }
-grep -q 'onOpenBook: { route.push(.vibenetAddressBook) }' "$SHELL_SURFACE" \
-  || { echo "✗ the vibenet rail lost its Address Book slot (prd §465)"; exit 1; }
+# THE RAIL HAS NO BOOK SLOT (prd §545). Its door pushed a screen that no
+# longer exists, and the accounts it listed are on the Accounts scope one chip
+# away. A trailing door with nowhere to go is `FaceScopeRail`'s own stated
+# §83 failure, so its ABSENCE is the invariant now.
+grep -q 'route.push(.vibenetAddressBook)' "$SHELL_SURFACE" \
+  && { echo "✗ the vibenet rail's book slot is back (prd §545) — its screen is deleted"; exit 1; }
+grep -q 'case vibenetAddressBook' "Casberi/Casberi/Shell/HomeRoute.swift" \
+  && { echo "✗ HomeRoute.vibenetAddressBook is back (prd §545)"; exit 1; }
 
 # The feed room is UNTOUCHED by this ruling and must stay so: `onOpen` nil
 # there is what keeps the stat block the user ruled for ("N accounts and
@@ -678,15 +690,18 @@ grep -q 'VibenetRoomSource.card()' "$BOOK" \
 # …and it must not draw the roster over an empty room while a read is in
 # flight, which is the same false failure by the other route (no snapshot yet).
 #
-# The GATE'S SHAPE moved with §515/§517 (commit 5319d0b1, "the book is rows on
-# ink"): the roster stopped being `VibenetRoomCard`'s managing mode, so what it
-# withholds on is `accounts` rather than `room.items`, and the `connected`
-# clause went with the card. The INVARIANT is unchanged and is what this guards
-# — on the first-ever open, with nothing seeded, the section is withheld rather
-# than drawn empty. Matched loosely on the two terms that carry it, so the next
-# rename of the roster's array does not fail a screen that is still correct.
-grep -qE 'if !accounts\.isEmpty \|\| !loading' "$BOOK" \
-  || { echo "✗ the address book draws its roster while the first read is still in flight —"
+# The GATE'S SHAPE moved twice — §515/§517 took it off `VibenetRoomCard`'s
+# managing mode and onto the book screen, and §545 brought it back to the room
+# when that screen was deleted. The INVARIANT has never changed and is what
+# this guards: on the first-ever open, with nothing seeded, the roster is
+# WITHHELD rather than drawn empty, because an empty list and a list that has
+# not loaded are the same picture and only one of them is true (§472).
+#
+# In the room the array is `room.items` and the in-flight fact is the room's
+# own, so the terms differ from the screen's; the loose match is on the shape
+# rather than the spelling for that reason.
+grep -qE 'shows\(\.accounts\)' "$BOOK" \
+  || { echo "✗ the Accounts roster lost its gate (prd §472/§545) —"
        echo "  prd §472: with no snapshot to seed from that is the failure headline again"; exit 1; }
 
 # THE UNLOCK COUNTDOWN TICKS, in both places that draw it. A timelock is the one
@@ -708,7 +723,11 @@ fi
 # THE LAST REMOVAL ASKS. Every other unwatch removes a row; this one tears down
 # the seat, drops the chip and forgets the ledgers, from a menu item sitting
 # where "remove this row" sat a moment ago.
-grep -q 'guard watch.addresses.count > 1 else' "$BOOK" \
+# The COUNT TEST is the invariant, not its spelling — on the screen it read
+# `guard watch.addresses.count > 1 else`; in the room the store is named in
+# full. Either way the last one must route to the confirm rather than to the
+# removal.
+grep -qE 'VibenetWatch\.shared\.addresses\.count <= 1' "$BOOK" \
   || { echo "✗ unwatching the LAST vibenet account no longer asks — prd §472: it disconnects"
        echo "  the seat, which is a different act from removing a row"; exit 1; }
 # …and only the last one asks, or it becomes the dialog nobody reads.

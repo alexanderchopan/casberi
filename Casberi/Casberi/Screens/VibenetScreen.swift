@@ -124,12 +124,16 @@ struct VibenetScreen: View {
         .dsScreenTitle("Base Vibenet")
     }
 
-    /// The door to the roster. Two slots, never one joined string — the
-    /// count is what the screen behind it will LIST, so the two can never
-    /// disagree (§461's own lesson, where a door read "6 names" over a room
-    /// whose head said "Everyone else · 4"). It doubles as this screen's
-    /// only tally of what you have picked so far, which is why it is a
-    /// count and not a roster: the roster is what §465 moved.
+    /// The door to the roster, pointing at the SHARED book since §545 — the
+    /// per-devnet screen is deleted and these accounts are in `AddressBook`
+    /// already, badged `vibenet` by `VibenetWatch.add`.
+    ///
+    /// The door survives the screen because its job here was never navigation
+    /// alone: it doubles as this page's only tally of what you have picked so
+    /// far, which is why it is a count and not a roster. Two slots, never one
+    /// joined string — the count is what the screen behind it will LIST, so
+    /// the two can never disagree (§461's own lesson, where a door read
+    /// "6 names" over a room whose head said "Everyone else · 4").
     private var bookDoorSection: some View {
         Section {
             DSSlabDoor(title: String(localized: "Address book"),
@@ -137,7 +141,7 @@ struct VibenetScreen: View {
                            ? String(localized: "1 account")
                            : String(localized: "\(watch.addresses.count) accounts")) {
                 DSHaptic.selection()
-                route.push(.vibenetAddressBook)
+                route.push(.addressBook)
             }
         }
         .listRowInsets(EdgeInsets(top: DS.Space.s6, leading: DS.Space.s4,

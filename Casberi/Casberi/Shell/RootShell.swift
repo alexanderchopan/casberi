@@ -630,9 +630,13 @@ struct RootShell: View {
             // the unified book is exactly the kind of change that has to be
             // LOOKED at — a badge, a note field and a kind mark are invisible
             // to every probe.
-            if let bookArg = UserDefaults.standard.string(forKey: "openAddressBook") {
-                sceneState.route.push(bookArg.lowercased() == "vibenet"
-                                      ? .vibenetAddressBook : .addressBook)
+            // ONE BOOK since §545 — the vibenet arm pushed a per-devnet screen
+            // that no longer exists, and its accounts are in the shared book
+            // already, badged `vibenet` by `VibenetWatch.add`. The argument is
+            // still accepted so an existing sweep does not break; it just lands
+            // where every other address lands.
+            if UserDefaults.standard.string(forKey: "openAddressBook") != nil {
+                sceneState.route.push(.addressBook)
             }
             // `-openSources YES` raises the sources tray, which is otherwise
             // reachable ONLY by a long press on the agent bar — a gesture no

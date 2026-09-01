@@ -195,7 +195,19 @@ struct DSSlabField: View {
         }
         .animation(DS.Motion.standard, value: secondaryArmed)
         .padding(.horizontal, size.padding)
-        .frame(height: size.height)
+        // **A FLOOR, NOT A FIXED HEIGHT (prd §545, 2026-08-31, reported: "the
+        // search and paste field is clipped or messed up somehow").** `.frame
+        // (height:)` pins the slab at 56 whatever is inside it, so at larger
+        // Dynamic Type the placeholder and its verb are drawn into a box that
+        // cannot grow and the text is cut off at the slab's own edge — on the
+        // one control that is the way IN to this screen.
+        //
+        // A minimum keeps every default-size field pixel-identical (they all
+        // measure under 56 today) and lets the two that need it grow. The
+        // vertical padding is what stops a grown field's text touching the
+        // edge it just pushed out.
+        .padding(.vertical, DS.Space.s2)
+        .frame(minHeight: size.height)
         .background(DS.surfaceWell, in: size.shape)
     }
 
