@@ -84,7 +84,7 @@ struct BankrSetupScreen: View {
                     DSHaptic.tap()
                     web = URL(string: "https://bankr.bot/api-keys")
                 }
-                BridgeStepLines(steps: ["Sign in, then mint a key. Read-only lets Bankr answer; a full key lets it act."],
+                BridgeStepLines(steps: ["Sign in, then mint a key — read-only answers, a full key can act."],
                                 numbered: false)
                 DSSlabField(placeholder: AgentProvider.bankr.placeholder, text: $keyDraft,
                             actionLabel: checking ? "Checking…" : (configured ? "Update" : "Connect"),

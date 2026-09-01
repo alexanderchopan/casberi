@@ -106,6 +106,14 @@ enum DemoSeedAll {
                               // they outlive the demo, indistinguishable
                               // from a real landed key authorization.
                               "vibenet:",
+                              // AWS/Polar/Dodo (2026-08-31, prd §484's check
+                              // G) — same reasoning as vibenet above: their
+                              // rows carry the REAL bridges' ref shapes,
+                              // because each head matches on them literally,
+                              // so exit() and the freshness re-stamp both
+                              // need these or the rows outlive the demo and
+                              // freeze in place looking like real ones.
+                              "aws:", "polar:", "dodopayments:",
                               // Peer/Privacy Pools rows carry the REAL
                               // bridges' own ref prefixes (2026-08-10, so
                               // their room heads' ref-shape matching
@@ -604,6 +612,17 @@ enum DemoSeedAll {
         ASCState.apps = [:]
         ASCState.standing = [:]
         ASCState.lastRead = nil
+        // Same shape, same reasoning (2026-08-31): a dev install can hold a
+        // real AWS or Polar connection under these very keys, so each is
+        // cleared to its own empty rather than by a blanket wipe.
+        AWSState.standing = AWSStanding(region: "us-east-1", alarmsInAlarm: [],
+                                        lastFailedPipeline: nil, lastFailedPipelineWhen: nil,
+                                        costToday: nil, costBaseline: nil, costAnomalyDay: nil,
+                                        ec2Count: 0, s3Count: 0, rdsCount: 0, lambdaCount: 0,
+                                        lastRead: nil)
+        PolarState.set(PolarState.Reading())
+        UserDefaults.standard.removeObject(forKey: "polar.orgName")
+        UserDefaults.standard.removeObject(forKey: "polar.orgSlug")
         // BY NAME (prd §401) — a dev install watches real repos through this
         // same store, so a blanket wipe would take them with it.
         RadicleStore.shared.forgetDemo(rid: "rad:zDEMOheartwood0000000000001")
@@ -3990,7 +4009,126 @@ enum DemoSeedAll {
                 if g.expiring { t.dueAt = at(-6, 12) }
             }
         }
+
+        // AWS (prd §484's check G, furnished 2026-08-31). Three shapes, one
+        // each, because the room head ranks them in exactly this order and a
+        // demo that seeds only the quiet ones can never show the ranking:
+        // an alarm firing, a deploy that failed, and a day the spend jumped.
+        //
+        // The refs are the bridge's OWN shapes — an alarm carries the state
+        // AND an epoch so a flapping alarm keeps every transition, and the
+        // cost row is keyed by calendar day. A demo ref that merely looks
+        // right renders as nothing, because the head's tap target matches on
+        // `sourceRef` and `authorHandle` literally.
+        let awsEpoch = Int(at(0.4, 9).timeIntervalSince1970)
+        out.append(row(.link, "Alarm · prod-api-5xx", source: "AWS",
+                       ref: "aws:alarm:prod-api-5xx:ALARM:\(awsEpoch)",
+                       days: 0.4, hour: 9,
+                       content: "https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#alarmsV2:alarm/prod-api-5xx",
+                       tags: ["Alarm"]))
+        // A failed deploy stamps the pipeline on `authorHandle` — that is
+        // what the head's tap target matches, not the title.
+        out.append(row(.link, "Failed · casberi-deploy", source: "AWS",
+                       ref: "aws:pipeline:9f2c1e40-7b3a-4c19-9f0d-2a5e6c8b1d33",
+                       days: 1.2, hour: 16,
+                       content: "https://console.aws.amazon.com/codesuite/codepipeline/pipelines/casberi-deploy/executions/9f2c1e40-7b3a-4c19-9f0d-2a5e6c8b1d33/timeline?region=us-east-1",
+                       tags: ["Deploy", "Failed"]) { t in
+            t.authorHandle = "casberi-deploy"
+        })
+        out.append(row(.reminder, "Spend anomaly · $184.20", source: "AWS",
+                       ref: "aws:costanomaly:\(demoDayStamp(2))",
+                       days: 2, hour: 8,
+                       content: "https://console.aws.amazon.com/cost-management/home#/cost-explorer",
+                       tags: ["Cost"]) { t in
+            t.summary = "$184.20 on \(demoDayStamp(2)), against a typical $61.40."
+        })
+
+        // Polar (same pass). Every Polar row is a `.link` — even the dispute,
+        // which carries a `dueAt` and would look like a `.reminder` from the
+        // outside; the demo matches the bridge rather than the intuition.
+        // The dispute is what makes the head compose at all: its source reads
+        // `dueAt` inside a [-14, +90] day window on a row tagged "Dispute",
+        // and its item id IS the row's `sourceRef`, so the tap has to land.
+        out.append(row(.link, "Casberi Pro · $29.00", source: "Polar",
+                       ref: "polar:order:0a9b7c6d-1e2f-4a3b-8c9d-0e1f2a3b4c5d",
+                       days: 0.6, hour: 11,
+                       content: "https://polar.sh/dashboard/casberi/sales",
+                       tags: ["Sale", "New subscriber"]) { t in
+            t.priceValue = 29
+            t.priceCurrency = "USD"
+        })
+        out.append(row(.link, "Refund · $29.00", source: "Polar",
+                       ref: "polar:refund:3c4d5e6f-7a8b-4c9d-0e1f-2a3b4c5d6e7f",
+                       days: 3, hour: 14,
+                       content: "https://polar.sh/dashboard/casberi/finance/refunds",
+                       tags: ["Refund"]) { t in
+            t.priceValue = 29
+            t.priceCurrency = "USD"
+        })
+        out.append(row(.link, "Dispute opened · $49.00 — evidence due \(demoShortDay(9))",
+                       source: "Polar",
+                       ref: "polar:dispute:8b7a6c5d-4e3f-4a2b-9c8d-7e6f5a4b3c2d:opened",
+                       days: 1.5, hour: 10,
+                       content: "https://polar.sh/dashboard/casberi/finance/refunds",
+                       tags: ["Dispute", "Opened"]) { t in
+            t.priceValue = 49
+            t.priceCurrency = "USD"
+            t.dueAt = at(-9, 12)
+        })
+
+        // Dodo Payments (same pass). The one seat of the three with NO room
+        // head — its rows render as plain band rows, which is what the app
+        // really does, so the demo shows that rather than inventing a card.
+        // Payments and refunds are `.transaction`; a subscription alarm is a
+        // `.reminder` and carries `dueAt` only while the status is still
+        // recoverable, which "failed" is.
+        out.append(row(.transaction, "Ada Lovelace · $49.00",
+                       source: "Dodo Payments",
+                       ref: "dodopayments:payment:pay_7f3a9c2e5b1d",
+                       days: 0.3, hour: 12,
+                       content: DodoPaymentsAccount.dashboardURL,
+                       tags: ["Payment"]) { t in
+            t.priceValue = 49
+            t.priceCurrency = "USD"
+            t.transferCounterparty = "Ada Lovelace"
+        })
+        out.append(row(.transaction, "Refund · $12.00",
+                       source: "Dodo Payments",
+                       ref: "dodopayments:refund:ref_2b8e4d6a0c9f",
+                       days: 4, hour: 15,
+                       content: DodoPaymentsAccount.dashboardURL,
+                       tags: ["Refund"]) { t in
+            t.priceValue = 12
+            t.priceCurrency = "USD"
+        })
+        out.append(row(.reminder, "Subscription payment failed · Grace Hopper",
+                       source: "Dodo Payments",
+                       ref: "dodopayments:subscription:sub_5c1f7a3b9e2d:failed",
+                       days: 1, hour: 9,
+                       content: DodoPaymentsAccount.dashboardURL,
+                       tags: ["Subscription", "Failed"]) { t in
+            t.dueAt = at(-4, 12)
+            t.transferCounterparty = "Grace Hopper"
+        })
         return out
+    }
+
+    /// `yyyy-MM-dd` for a day the demo seeded, in the same calendar `at(_:_:)`
+    /// uses — AWS keys a cost anomaly by calendar day, and a ref built from a
+    /// differently-zoned formatter matches nothing.
+    private static func demoDayStamp(_ daysAgo: Double) -> String {
+        let f = DateFormatter()
+        f.calendar = Calendar.current
+        f.timeZone = Calendar.current.timeZone
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: at(daysAgo, 8))
+    }
+
+    /// "Sep 12" — the abbreviated month/day Polar prints inside a dispute
+    /// title, so the seeded title reads exactly as a landed one would.
+    private static func demoShortDay(_ daysAhead: Double) -> String {
+        at(-daysAhead, 12).formatted(.dateTime.month(.abbreviated).day())
     }
 
     // MARK: Writing and chats — the rooms that lead with a year grid
@@ -4716,6 +4854,34 @@ enum DemoSeedAll {
         ]
         ASCState.lastRead = .now
 
+        // 2d · AWS — the same shape as App Store Connect above, and for the
+        // same reason: `AWSRoomSource.compose` gates on `AWSAuth.configured`,
+        // which is a REAL secret plus a REAL access-key id in the Keychain,
+        // and a demo must never fake either. So that source widens for
+        // `DemoMode.isActive` (2026-08-31) and this plants the standing it
+        // reads. The numbers match the three seeded rows above, so the head
+        // and the room beneath it cannot disagree.
+        AWSState.standing = AWSStanding(
+            region: "us-east-1",
+            alarmsInAlarm: ["prod-api-5xx"],
+            lastFailedPipeline: "casberi-deploy",
+            lastFailedPipelineWhen: at(1.2, 16),
+            costToday: 184.20, costBaseline: 61.40,
+            costAnomalyDay: demoDayStamp(2),
+            ec2Count: 12, s3Count: 4, rdsCount: 2, lambdaCount: 30,
+            lastRead: .now)
+
+        // 2e · Polar. Its head needs NO credential — it composes off this
+        // reading OR off a dispute row with a `dueAt`, and the demo seeds
+        // both so the card shows its full anatomy (a deadline leading, with
+        // the recurring figure as the note beneath). `mrrMinor` is MINOR
+        // units: 48_200 renders "$482.00".
+        PolarState.set(PolarState.Reading(mrrMinor: 48_200, currency: "USD",
+                                          activeSubscriptions: 1_204,
+                                          fetchedAt: .now))
+        UserDefaults.standard.set("Casberi", forKey: "polar.orgName")
+        UserDefaults.standard.set("casberi", forKey: "polar.orgSlug")
+
         // Radicle's open work (prd §401). The head reads bridge STATE, not
         // rows, so seeding the three patch/issue rows above is not enough to
         // make it compose — this is what it actually reads. Dates match the
@@ -5052,6 +5218,12 @@ enum DemoSeedAll {
         ("Privacy", "Synced 2h ago", "Reads your virtual-card purchases."),
         ("Bitrefill", "Synced 4h ago", "Reads your orders and refills."),
         ("Stripe", "Synced 10m ago", "Reads what your money did."),
+        // Furnished 2026-08-31 (prd §484's check G). All three shipped on
+        // 2026-08-30 as catalog offers with no seat and no rows, so a demo
+        // visitor saw them listed and connected to nothing.
+        ("AWS", "Synced 8m ago", "Reads alarms, deploys and spend."),
+        ("Polar", "Synced 12m ago", "Reads sales, refunds and disputes."),
+        ("Dodo Payments", "Synced 5m ago", "Reads payments the moment they land."),
         ("PostHog", "2 metrics", "Reads the numbers behind what you ship."),
         ("GitHub", "Synced 5m ago", "Reads what you wrote."),
         ("GitLab", "Synced 10m ago", "Reads issues and merge requests assigned to you."),

@@ -19,7 +19,11 @@ enum AWSRoomSource {
     /// head and the connect screen.
     @MainActor
     static func compose(things: [Thing] = [], now: Date = .now) -> AWSStanding? {
-        guard AWSAuth.configured else { return nil }
+        // `|| DemoMode.isActive` (2026-08-31) — the App Store Connect precedent
+        // exactly (`ASCRoomSource`): this gate wants a real secret AND a real
+        // access-key id in the Keychain, which a demo must never fake, so the
+        // demo is admitted here and `DemoSeedAll` plants the standing below.
+        guard AWSAuth.configured || DemoMode.isActive else { return nil }
         let standing = AWSState.standing
         guard standing.lastRead != nil else { return nil }
         return standing

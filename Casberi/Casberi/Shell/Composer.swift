@@ -3196,7 +3196,7 @@ struct Composer: View {
                                    : String(localized: "On \(DS.device)"))
         return HStack(spacing: DS.Space.s1 + 2) {
             if keyed, !found, let agent {
-                BridgeIcon(name: agent, size: DS.Mark.inline, circular: true)
+                BridgeIcon(name: agent, size: DS.Face.badge, circular: true)
                     .accessibilityHidden(true)
             } else {
                 Image(systemName: glyph)
@@ -4450,7 +4450,7 @@ struct Composer: View {
                                     // The agent's own brand mark, never a key
                                     // glyph (user, 2026-08-31) — every provider
                                     // seat bundles one.
-                                    BridgeIcon(name: provider.agent, size: DS.Mark.badge, circular: true)
+                                    BridgeIcon(name: provider.agent, size: DS.Face.badge, circular: true)
                                         .accessibilityHidden(true)
                                     Text("Ask \(provider.agent)")
                                         .dsText(.callout15).fontWeight(.semibold)
