@@ -233,6 +233,78 @@ enum FramesTransaction {
                blobVersionedHashes: [])
     }
 
+    /// ONE LEG OF A STITCHED TRANSACTION.
+    struct Leg: Equatable {
+        var recipient: Data
+        var value: Data
+    }
+
+    /// **THE FLAG THAT MAKES A BATCH ALL-OR-NOTHING**, and the whole reason a
+    /// stitched send needs a control rather than a promise.
+    ///
+    /// MEASURED ON THIS CHAIN, 2026-09-01, by sending two transactions with the
+    /// same shape and the same failure in their last frame and then reading the
+    /// RECIPIENTS' BALANCES back — not the `status` field, which is the one
+    /// thing on this chain that cannot be trusted for this:
+    ///
+    /// - `0x9bb9cfef…`, payload flags `0x0`: transaction status `0x0`, and
+    ///   frame 1's recipient **holds 0.001 ETH to this day**. The money moved
+    ///   and stayed moved inside a transaction that reports failure.
+    /// - `0x2642331b…`, payload flags `0x4`: transaction status `0x0`, and
+    ///   frame 1's recipient holds **zero**. Undone.
+    ///
+    /// So atomicity is REAL and OPT-IN. A stitched send that does not set this
+    /// is a send where leg 3 failing leaves legs 1 and 2 gone — which is true
+    /// of no other send anywhere in this app, and is why the control has to
+    /// say what OFF means rather than only what ON means.
+    static let atomicFlag: UInt64 = 0x04
+
+    /// SEVERAL PAYLOAD FRAMES UNDER ONE SIGNATURE.
+    ///
+    /// `transfer` is this with exactly one leg, and is kept rather than folded
+    /// into it: it is what the byte-exact fixtures in
+    /// `scripts/frames-tx-selftest.sh` pin, and a builder proven against the
+    /// chain should not be re-derived to add a feature it does not use.
+    ///
+    /// **The VERIFY frame is built, never chosen.** It is `mode 1, flags 0x03`
+    /// targeting the sender, and it heads all 34 frame transactions this chain
+    /// has ever carried. It is not a leg, it takes no value, and no picker
+    /// offers it — exposing it would expose plumbing rather than a choice.
+    ///
+    /// **The atomic flag goes on EVERY payload frame, not just the first.**
+    /// Only the first-frame case is measured (above), and the frame-by-frame
+    /// reading of it — each frame carrying "undo me if a later one fails" — is
+    /// the one that generalises; setting it on the last frame is harmless
+    /// since nothing follows. The alternative reading, that one flagged frame
+    /// governs the whole batch, would leave legs 2..n unprotected while the
+    /// control claimed otherwise, which is the more expensive way to be wrong.
+    static func stitched(sender: Data,
+                         legs: [Leg],
+                         atomic: Bool,
+                         nonce: UInt64,
+                         maxPriorityFeePerGas: UInt64,
+                         maxFeePerGas: UInt64,
+                         executionGas: UInt64 = 100_000,
+                         stateGas: UInt64 = 250_000) -> Fields {
+        let payloadFlags: UInt64 = atomic ? atomicFlag : 0x00
+        return Fields(chainID: chainID,
+                      nonce: nonce,
+                      sender: sender,
+                      frames: [Frame(mode: 1, flags: 0x03, target: sender,
+                                     executionGas: executionGas, stateGas: stateGas,
+                                     value: Data(), data: Data())]
+                          + legs.map {
+                              Frame(mode: 2, flags: payloadFlags, target: $0.recipient,
+                                    executionGas: executionGas, stateGas: stateGas,
+                                    value: $0.value, data: Data())
+                          },
+                      signatures: [],
+                      maxPriorityFeePerGas: maxPriorityFeePerGas,
+                      maxFeePerGas: maxFeePerGas,
+                      maxFeePerBlobGas: 0,
+                      blobVersionedHashes: [])
+    }
+
     /// The validation prefix is bounded at 500,000 gas on this chain — frames
     /// plus signature cost. Stated here so a builder can refuse before the
     /// node does, since the node's refusal for this is one sentence about

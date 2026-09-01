@@ -629,6 +629,76 @@ check("case never decides it", !FramesMove(hash: "0x5", blockNumber: 1, sender: 
 check("the move carries the receipt's own gas, not a sum of frames",
       partial.gasUsed == 316_273)
 
+// ===========================================================================
+// STITCHING — several payload frames under ONE signature (prd §548 sixth
+// follow-up). The failure class here is the worst this file has: a wrong flag
+// produces a perfectly valid transaction that the chain accepts, and the
+// person is told "all or nothing" about a batch that is not.
+let sndr = Data(repeating: 0x11, count: 20)
+let legA = FramesTransaction.Leg(recipient: Data(repeating: 0xAA, count: 20),
+                                 value: Data([0x01]))
+let legB = FramesTransaction.Leg(recipient: Data(repeating: 0xBB, count: 20),
+                                 value: Data([0x02]))
+let legC = FramesTransaction.Leg(recipient: Data(repeating: 0xCC, count: 20),
+                                 value: Data([0x03]))
+
+let loose = FramesTransaction.stitched(sender: sndr, legs: [legA, legB, legC],
+                                       atomic: false, nonce: 7,
+                                       maxPriorityFeePerGas: 1, maxFeePerGas: 2)
+check("a stitch is one VERIFY frame plus one frame per leg", loose.frames.count == 4)
+// **THE HEAD IS BUILT, NEVER PICKED.** Every one of this chain's 34 frame
+// transactions leads with exactly this frame; a builder that omitted it or
+// let it carry value would produce a transaction nothing authorises.
+check("the head is the VERIFY frame", loose.frames[0].mode == 1)
+check("and it approves execution and payment", loose.frames[0].flags == 0x03)
+check("and it targets the sender", loose.frames[0].target == sndr)
+check("and it never carries value", loose.frames[0].value.isEmpty)
+check("every payload frame is a SENDER frame", loose.frames.dropFirst().allSatisfy { $0.mode == 2 })
+// ORDER IS THE WHOLE POINT of stitching: the legs run in the order they were
+// built, and a reversal renders identically while sending the wrong amounts to
+// the wrong people.
+check("the legs keep the order they were built in",
+      loose.frames[1].target == legA.recipient
+      && loose.frames[2].target == legB.recipient
+      && loose.frames[3].target == legC.recipient)
+check("each leg keeps its own value",
+      loose.frames[1].value == legA.value && loose.frames[3].value == legC.value)
+// **OFF MEANS OFF.** Measured on chain: with the flag clear a failed
+// transaction leaves the earlier legs SENT.
+check("without all-or-nothing no payload frame is flagged",
+      loose.frames.dropFirst().allSatisfy { $0.flags == 0x00 })
+
+let atomicTx = FramesTransaction.stitched(sender: sndr, legs: [legA, legB, legC],
+                                          atomic: true, nonce: 7,
+                                          maxPriorityFeePerGas: 1, maxFeePerGas: 2)
+check("the atomic flag is bit 2", FramesTransaction.atomicFlag == 0x04)
+// **EVERY payload frame, not just the first.** Flagging only the first leaves
+// legs 2..n unprotected while the control claims otherwise — the expensive way
+// to be wrong, since the screen says all-or-nothing either way.
+check("all-or-nothing flags EVERY payload frame",
+      atomicTx.frames.dropFirst().allSatisfy { $0.flags == FramesTransaction.atomicFlag })
+// The VERIFY frame is not a payload frame and must keep its own flags: 0x03 is
+// what authorises execution and payment, and overwriting it with 0x04 sends a
+// transaction that authorises nothing.
+check("and never the VERIFY frame", atomicTx.frames[0].flags == 0x03)
+
+// ONE LEG THROUGH `stitched` IS THE SAME TRANSACTION `transfer` BUILDS. The
+// two builders are kept apart on purpose (the fixtures pin `transfer`), so
+// this is the only thing standing between them and silent divergence.
+let oneLeg = FramesTransaction.stitched(sender: sndr, legs: [legA], atomic: false,
+                                        nonce: 7, maxPriorityFeePerGas: 1, maxFeePerGas: 2)
+let viaTransfer = FramesTransaction.transfer(sender: sndr, to: legA.recipient,
+                                             value: legA.value, nonce: 7,
+                                             maxPriorityFeePerGas: 1, maxFeePerGas: 2)
+check("one stitched leg encodes byte-identically to a plain transfer",
+      FramesTransaction.encoded(oneLeg) == FramesTransaction.encoded(viaTransfer))
+// The envelope's own fields must survive the new builder untouched — a stitch
+// that quietly reset the nonce or the chain id is refused by the node in a way
+// that reads as a signing bug.
+check("the stitch carries the chain id", atomicTx.chainID == FramesTransaction.chainID)
+check("and the nonce it was given", atomicTx.nonce == 7)
+check("and signs nothing by itself", atomicTx.signatures.isEmpty)
+
 if fails > 0 { print("  \(fails) assertion(s) failed"); exit(1) }
 print("  ok   encoder: 2 real vectors byte-exact, keccak == the chain's own hash")
 SWIFT
@@ -767,6 +837,36 @@ mutate "the gas total summed from the frames" $F4 \
     var gasUsed: UInt64? { rows.compactMap { $0.outcome?.gasUsed }.reduce(0, +) }'
 mutate "sponsorship decided by case" $F4 \
   'payer.lowercased() != sender.lowercased()' 'payer != sender'
+
+# --- stitching (prd §548 sixth follow-up) ------------------------------------
+# The most expensive failure in this file: each of these compiles, produces a
+# transaction the chain accepts, and makes the all-or-nothing control a lie.
+mutate "the atomic flag being the wrong bit" $F \
+  'static let atomicFlag: UInt64 = 0x04' \
+  'static let atomicFlag: UInt64 = 0x02'
+mutate "all-or-nothing flagging only the first payload frame" $F \
+  'let payloadFlags: UInt64 = atomic ? atomicFlag : 0x00' \
+  'let payloadFlags: UInt64 = 0x00'
+mutate "the VERIFY frame dropped from a stitch" $F \
+  'frames: [Frame(mode: 1, flags: 0x03, target: sender,
+                                     executionGas: executionGas, stateGas: stateGas,
+                                     value: Data(), data: Data())]
+                          + legs.map {' \
+  'frames: legs.map {'
+mutate "the VERIFY frame no longer approving payment" $F \
+  'frames: [Frame(mode: 1, flags: 0x03, target: sender,
+                                     executionGas: executionGas, stateGas: stateGas,
+                                     value: Data(), data: Data())]' \
+  'frames: [Frame(mode: 1, flags: 0x01, target: sender,
+                                     executionGas: executionGas, stateGas: stateGas,
+                                     value: Data(), data: Data())]'
+mutate "a payload frame built as a VERIFY frame" $F \
+  'Frame(mode: 2, flags: payloadFlags, target: $0.recipient,' \
+  'Frame(mode: 1, flags: payloadFlags, target: $0.recipient,'
+mutate "the legs reversed" $F \
+  '+ legs.map {' \
+  '+ legs.reversed().map {'
+
 
 # --- the fan-out must be LAST, and this proves it -----------------------------
 # **A mutation recorded AFTER this block is never dispatched, and the run still

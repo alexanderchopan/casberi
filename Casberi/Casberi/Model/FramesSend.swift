@@ -187,12 +187,61 @@ enum FramesSend {
         guard let address = FramesKey.address(),
               let sender = RLP.data(fromHex: address) else { throw Failure.noKey }
 
-        var fields = plan(sender: sender, to: target, valueWei: valueWei, nonce: nonce,
-                          maxPriorityFeePerGas: maxPriorityFeePerGas,
-                          maxFeePerGas: maxFeePerGas)
+        return try await signAndBroadcast(
+            plan(sender: sender, to: target, valueWei: valueWei, nonce: nonce,
+                 maxPriorityFeePerGas: maxPriorityFeePerGas,
+                 maxFeePerGas: maxFeePerGas),
+            sender: sender)
+    }
+
+    // MARK: - Send several value transfers under one signature
+
+    /// STITCH SEVERAL LEGS INTO ONE TRANSACTION (prd §548 sixth follow-up).
+    ///
+    /// The capability this chain exists for, and the one the send did not use:
+    /// `sendValue` builds exactly two frames, so it rode the envelope and none
+    /// of what the envelope is for.
+    ///
+    /// `atomic` is not a nicety. Measured on this chain — see
+    /// `FramesTransaction.atomicFlag`, which carries the two transaction
+    /// hashes and the balance reads — a stitched send WITHOUT it leaves the
+    /// earlier legs sent when a later one fails. That is true of no other send
+    /// in this app, so the caller must decide it rather than inherit it.
+    ///
+    /// One signature covers every leg, which is the point: they share a nonce,
+    /// a fee and a digest, so they cannot be reordered or separated in flight.
+    static func sendStitched(legs: [FramesTransaction.Leg],
+                             atomic: Bool,
+                             nonce: UInt64,
+                             maxPriorityFeePerGas: UInt64 = 1_000_000_000,
+                             maxFeePerGas: UInt64 = 10_000_000_000) async throws -> String {
+        guard let address = FramesKey.address(),
+              let sender = RLP.data(fromHex: address) else { throw Failure.noKey }
+        guard !legs.isEmpty else { throw Failure.chainUnreachable }
+        return try await signAndBroadcast(
+            FramesTransaction.stitched(sender: sender, legs: legs, atomic: atomic,
+                                       nonce: nonce,
+                                       maxPriorityFeePerGas: maxPriorityFeePerGas,
+                                       maxFeePerGas: maxFeePerGas),
+            sender: sender)
+    }
+
+    /// **ONE SIGNING PATH FOR EVERY SEND.**
+    ///
+    /// Extracted when stitching landed rather than copied, for the reason
+    /// `DevnetSendParse`'s own doc gives one file over: two copies of a
+    /// signing routine is how a one-leg send and a three-leg send quietly
+    /// start eliding different bytes, and the failure is a well-formed
+    /// signature over a different digest that recovers to a real address —
+    /// green build, correct screen, refused chain.
+    private static func signAndBroadcast(_ planned: FramesTransaction.Fields,
+                                         sender: Data) async throws -> String {
+        var fields = planned
 
         // Refuse before the Face ID, not after it (§530's ruling: a refusal
-        // that could have been made before the prompt should be).
+        // that could have been made before the prompt should be). This matters
+        // MORE with stitching: the prefix cost grows with the frame count, so
+        // a long batch is the case that actually hits the ceiling.
         guard FramesTransaction.prefixWithinBudget(fields) else { throw Failure.prefixTooLarge }
 
         // **The entry is present BEFORE the digest is taken**, carrying its

@@ -718,6 +718,55 @@ struct FeedScreen: View {
             .map { String(localized: "\($0) available") }
     }
 
+    /// SEVERAL LEGS, ONE SIGNATURE (prd §548 sixth follow-up).
+    ///
+    /// Deliberately NOT `sendFrames` in a loop: a loop is several transactions
+    /// with several nonces and several signatures, which can be reordered,
+    /// partially mined, and separately refused — the opposite of what stitching
+    /// is for, and it would make the all-or-nothing control a lie.
+    private func sendFramesStitched(_ legs: [DevnetSendLeg], atomic: Bool) async -> String? {
+        guard !DemoMode.isActive else {
+            return String(localized: "Nothing is sent in the demo — this is where your own key would sign it.")
+        }
+        guard let address = FramesKey.address() else {
+            return String(localized: "There's no account on this phone yet.")
+        }
+        // **EVERY LEG IS PARSED BEFORE ANY IS SENT.** One unreadable amount
+        // must refuse the whole transaction rather than quietly send the legs
+        // that happened to parse — which is exactly the partial-send failure
+        // the atomic control exists to let somebody rule out.
+        var built: [FramesTransaction.Leg] = []
+        for leg in legs {
+            guard let target = RLP.data(fromHex: leg.address),
+                  let value = DevnetSendParse.weiData(from: leg.amount) else {
+                return String(localized: "Couldn't read one of the frames.")
+            }
+            built.append(FramesTransaction.Leg(recipient: target, value: value))
+        }
+        do {
+            // The nonce is READ, never taken from the snapshot — `sendFrames`'
+            // own reasoning, and it holds harder here: building a batch takes
+            // long enough that a cached figure is more likely to be stale.
+            guard let nonce = await FramesSend.currentNonce(for: address) else {
+                return String(localized: "Couldn't reach the chain to read this account's nonce.")
+            }
+            _ = try await FramesSend.sendStitched(legs: built, atomic: atomic, nonce: nonce)
+            await FramesLiveState.shared.refresh()
+            return nil
+        } catch let failure as FramesSend.Failure {
+            switch failure {
+            case .noKey:            return String(localized: "There's no account on this phone yet.")
+            case .signingRefused:   return String(localized: "The signature was refused.")
+            case .chainUnreachable: return String(localized: "Couldn't reach the chain — nothing was sent.")
+            case .prefixTooLarge:   return String(localized: "That's more frames than this chain will verify at once — remove one.")
+            case .broadcastRefused(let why): return String(localized: "The network refused it: \(why)")
+            case .faucet(let verdict): return verdict.sentence
+            }
+        } catch {
+            return String(localized: "Couldn't send.")
+        }
+    }
+
     private func sendFrames(to: String, amount: String) async -> String? {
         guard !DemoMode.isActive else {
             return String(localized: "Nothing is sent in the demo — this is where your own key would sign it.")
@@ -3707,7 +3756,33 @@ struct FeedScreen: View {
                 perform: sendFrames,
                 // The one thing neither neighbour can say — see
                 // `FramesSendPlanSteps`.
-                plan: FramesSendPlanSteps.steps)
+                plan: FramesSendPlanSteps.steps,
+                // **THE ONLY VENUE THAT STITCHES** (prd §548 sixth follow-up).
+                // vibenet and Hegotá pass nil and keep the two-screen send
+                // exactly as it was; this chain's whole capability is putting
+                // several frames under one signature, and until now the send
+                // built exactly two.
+                stitch: DevnetStitch(
+                    headName: String(localized: "Verify"),
+                    headDetail: String(localized: "Your signature · always first"),
+                    atomicTitle: String(localized: "All or nothing"),
+                    // **BOTH STATES ARE SPELLED, and OFF is the one that
+                    // matters.** Measured on this chain (see
+                    // `FramesTransaction.atomicFlag`): with the flag clear, a
+                    // frame that fails leaves the frames before it SENT — the
+                    // recipient of a failed transaction's first frame still
+                    // holds the money. No other send in this app behaves that
+                    // way, so leaving OFF undescribed would be the §83 fake
+                    // status in the place it costs money.
+                    atomicOn: String(localized: "If any frame fails, none of them send."),
+                    atomicOff: String(localized: "A frame that fails leaves the ones before it sent."),
+                    // The chain bounds the verify prefix at 500,000 gas and its
+                    // refusal names no remedy, so the sheet stops first. Eight
+                    // is well inside it and is also more legs than a list this
+                    // size can show without scrolling past the control.
+                    maxLegs: 8,
+                    atCapacity: String(localized: "That's as many frames as one transaction can carry here."),
+                    send: sendFramesStitched))
 case .vibenetSend(let account):
             DevnetSendSheet(
                 venue: String(localized: "vibenet"),
@@ -3866,7 +3941,7 @@ case .vibenetSend(let account):
                         showsSwitcher: FramesSection.shows(present: chrome.framesSections),
                         sections: chrome.framesSections,
                         active: framesScope,
-                        attention: FramesSection.attention(rolledBack: head.rolledBackCount),
+                        attention: FramesSection.attention(),
                         onPick: { chrome.framesSection = $0 }
                     ) {
                         // **THE SILHOUETTES.** The first cut passed

@@ -153,24 +153,21 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     /// Returning an empty set rather than dropping the call keeps
     /// `DSSectionSwitcher`'s `attention` parameter honest for Wallet, which
     /// uses it for a genuinely rare state.
-    /// **THE ROLLED-BACK FRAMES, AND ONLY THOSE.**
+    /// **NO DOT, EVER** (user, 2026-09-01: "get rid of this yellow dot too
+    /// please").
     ///
-    /// Home used to carry "N frames were rolled back and moved nothing" as its
-    /// first line — the one thing in this room somebody might act on. That
-    /// sentence is gone (the slot clipped, see `FramesRoomFigure`), so the dot
-    /// carries the pointer and the Frames scope's own drawing carries the
-    /// fact, which is strictly more than the sentence said: it shows WHICH
-    /// steps they were.
+    /// It was wired for one pass to mark `.frames` when a frame had been
+    /// rolled back, as the pointer replacing the sentence Home lost to
+    /// clipping. The ruling is that the pointer was not wanted: the Frames
+    /// scope DRAWS those steps as dashed cells with their own caption, so the
+    /// dot decorated a fact that was already visible one tap away, on a room
+    /// the same session had just spent trimming.
     ///
-    /// Nothing else earns a dot, and that restraint is the point —
-    /// `DSSectionSwitcher`'s `attention` stays honest for Wallet, which uses
-    /// it for a genuinely rare state. A rolled-back frame qualifies: it is a
-    /// step the chain RAN and then undid, reporting `status: 0x1` while it did
-    /// so, which is the one thing on this chain nobody would find by reading a
-    /// receipt.
-    static func attention(rolledBack: Int) -> Set<FramesSection> {
-        rolledBack > 0 ? [.frames] : []
-    }
+    /// Keeping the function rather than deleting the parameter keeps
+    /// `DSSectionSwitcher`'s `attention` honest for Wallet, which uses it for
+    /// a genuinely rare state, and leaves one obvious place to put a dot back
+    /// if this room ever earns one.
+    static func attention() -> Set<FramesSection> { [] }
 
     /// Resolve the scope actually shown from the one the person last picked.
     ///

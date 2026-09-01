@@ -506,6 +506,43 @@ struct DevnetSendStep: Equatable, Identifiable {
     var id: String { name + "|" + detail }
 }
 
+/// ONE LEG OF A STITCHED TRANSACTION, as the sheet holds it.
+///
+/// `id` is a `UUID` and deliberately not derived from the contents: two legs
+/// sending the same amount to the same address is a perfectly ordinary thing
+/// to build, and a content-derived id collapses them into one row that then
+/// animates and deletes wrongly.
+struct DevnetSendLeg: Identifiable, Equatable {
+    let id = UUID()
+    var address: String
+    var amount: String
+}
+
+/// **WHAT TURNS THE SHEET INTO A BUILDER.** Nil for every venue whose send is
+/// one act, which is vibenet and Hegotá — they get byte-identical behaviour to
+/// before, and that is the whole reason this is a parameter rather than a
+/// rewrite of the two screens they share.
+struct DevnetStitch {
+    /// The head row's words. The VERIFY frame is BUILT, never chosen, so it is
+    /// drawn as a row you cannot tap rather than left out — leaving it out is
+    /// what makes somebody ask whether they were supposed to add it.
+    let headName: String
+    let headDetail: String
+    /// What all-or-nothing means here, in both states. **Both, not one**: off
+    /// is the default and is the behaviour no other send in this app has, so a
+    /// control that only describes ON leaves the dangerous state unexplained.
+    let atomicTitle: String
+    let atomicOn: String
+    let atomicOff: String
+    /// A ceiling, and the sentence for reaching it. The chain bounds the
+    /// verify prefix, so a long batch is refused by the node with a message
+    /// naming no remedy — better to stop before the signature.
+    let maxLegs: Int
+    let atCapacity: String
+    /// Returns nil on success, or the sentence to show on failure.
+    let send: ([DevnetSendLeg], Bool) async -> String?
+}
+
 struct DevnetSendSheet: View {
     /// What this room is, for the picker's own footnote.
     let venue: String
@@ -540,6 +577,11 @@ struct DevnetSendSheet: View {
     /// amount it describes, not adjacent to the button that fires it.
     var plan: ((_ destination: String, _ amount: String) -> [DevnetSendStep])? = nil
 
+    /// **NON-NIL MAKES THIS A BUILDER** (prd §548 sixth follow-up). The amount
+    /// screen then ADDS a leg instead of sending, and a third screen lists what
+    /// has been built. Nil leaves every existing venue exactly as it was.
+    var stitch: DevnetStitch? = nil
+
     @Environment(\.dismiss) private var dismiss
     @Environment(ShellChrome.self) private var chrome
 
@@ -550,17 +592,44 @@ struct DevnetSendSheet: View {
     @State private var errorText: String?
     @FocusState private var searching: Bool
 
+    /// The stitched legs, in the order they will run.
+    @State private var legs: [DevnetSendLeg] = []
+    /// **OFF BY DEFAULT, because the chain is off by default.** Defaulting it
+    /// on would be kinder and would misrepresent what the transaction does
+    /// unless the person changed it — and the point of the control is that
+    /// this chain's answer is the unusual one.
+    @State private var atomic = false
+    /// Whether the who/amount pair is currently being walked to add a leg.
+    /// Starts true so a builder opens on the picker rather than on an empty
+    /// list, which is a screen with nothing on it but a button.
+    @State private var addingLeg = true
+
     private var picked: Bool { !destination.isEmpty }
+
+    private enum Screen { case who, amount, legs }
+
+    /// **ONE PLACE DECIDES WHICH SCREEN IS UP**, so a builder and a one-act
+    /// send cannot drift into two different navigation rules.
+    private var screen: Screen {
+        guard stitch != nil else { return picked ? .amount : .who }
+        guard addingLeg else { return .legs }
+        return picked ? .amount : .who
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if picked { amountScreen } else { whoScreen }
+            switch screen {
+            case .who:    whoScreen
+            case .amount: amountScreen
+            case .legs:   legsScreen
+            }
         }
         .padding(.horizontal, DevnetConsole.cardPadding)
         .padding(.bottom, DevnetConsole.cardPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(DS.surfaceSheet)
         .animation(DS.Motion.standard, value: picked)
+        .animation(DS.Motion.standard, value: addingLeg)
     }
 
     // MARK: Who
@@ -583,6 +652,29 @@ struct DevnetSendSheet: View {
 
     private var whoScreen: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
+            // **A WAY BACK TO WHAT YOU HAVE ALREADY BUILT.** Without it,
+            // reaching the picker from the list is a one-way door: the only
+            // exits are adding a leg you may not want or cancelling the whole
+            // transaction. Absent for a one-act send, where this screen IS the
+            // start and a back control would point at nothing.
+            if !legs.isEmpty {
+                Button {
+                    DSHaptic.selection()
+                    query = ""
+                    addingLeg = false
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .accessibilityHidden(true)
+                        .dsGlyph(18, weight: .semibold)
+                        .foregroundStyle(DS.textPrimary)
+                        .frame(width: DS.Hit.min, height: DS.Hit.min, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel(Text(String(localized: "Back to the frames")))
+                .dsHover()
+                .padding(.bottom, -DS.Space.s2)
+            }
             HStack(spacing: DS.Space.s3) {
                 Image(systemName: "magnifyingglass")
                     .accessibilityHidden(true)
@@ -810,12 +902,20 @@ struct DevnetSendSheet: View {
     private var commit: some View {
         Button {
             DSHaptic.tap()
-            act()
+            if stitch != nil { addLeg() } else { act() }
         } label: {
             HStack(spacing: DS.Space.s2) {
-                Image(systemName: "arrow.up.right").dsGlyph(15, weight: .semibold)
-                Text(armed ? String(localized: "Send \(amount) \(unit)")
-                           : String(localized: "Send"))
+                Image(systemName: stitch == nil ? "arrow.up.right" : "plus")
+                    .dsGlyph(15, weight: .semibold)
+                // **THE BUTTON NAMES WHAT IT DOES, and in a builder that is
+                // not sending.** "Send" on a screen that appends a leg is the
+                // §83 fake status in the one place it would cost money: you
+                // would tap it believing the transaction had gone.
+                Text(stitch == nil
+                     ? (armed ? String(localized: "Send \(amount) \(unit)")
+                              : String(localized: "Send"))
+                     : (armed ? String(localized: "Add \(amount) \(unit)")
+                              : String(localized: "Add")))
                 if busy { ProgressView().controlSize(.mini).tint(.white) }
             }
             .dsText(.callout15).fontWeight(.semibold)
@@ -830,6 +930,289 @@ struct DevnetSendSheet: View {
         .armedPop(armed)
         .animation(DS.Motion.standard, value: armed)
         .dsHover()
+    }
+
+    // MARK: The legs
+
+    private func addLeg() {
+        legs.append(DevnetSendLeg(address: destination, amount: amount))
+        destination = ""
+        amount = ""
+        query = ""
+        errorText = nil
+        addingLeg = false
+    }
+
+    /// **THE SUM IS `Decimal`, NEVER `Double`.** A typed amount carries up to
+    /// 18 decimal places and `Double` holds ~15 significant digits, so a plain
+    /// sum silently rounds — on the one line that tells somebody how much is
+    /// about to leave. `Decimal` is 38 digits and exact for a handful of legs.
+    /// The wei conversion at send time still goes through
+    /// `DevnetSendParse.weiData`, which is string arithmetic throughout; this
+    /// figure is for reading, and never for signing.
+    private var total: String? {
+        guard !legs.isEmpty else { return nil }
+        var sum = Decimal(0)
+        for leg in legs {
+            guard let d = Decimal(string: leg.amount, locale: Locale(identifier: "en_US_POSIX"))
+            else { return nil }
+            sum += d
+        }
+        var text = "\(sum)"
+        if text.contains(".") {
+            while text.hasSuffix("0") { text.removeLast() }
+            if text.hasSuffix(".") { text.removeLast() }
+        }
+        return text
+    }
+
+    private var atCapacity: Bool { legs.count >= (stitch?.maxLegs ?? .max) }
+
+    private var legsScreen: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let stitch {
+                Text(String(localized: "What will run"))
+                    .dsText(.label12).fontWeight(.semibold)
+                    .foregroundStyle(DS.textTertiary)
+                    .padding(.top, DS.Space.s4)
+                    .padding(.bottom, DS.Space.s3)
+
+                ScrollView {
+                    VStack(spacing: DS.Space.s2) {
+                        headRow(stitch)
+                        ForEach(legs) { leg in
+                            legRow(leg)
+                        }
+                        if atCapacity {
+                            Text(stitch.atCapacity)
+                                .dsText(.label12)
+                                .foregroundStyle(DS.textTertiary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, DS.Space.s1)
+                        } else {
+                            addRow
+                        }
+                    }
+                }
+                .scrollIndicators(.hidden)
+
+                atomicRow(stitch)
+
+                if let errorText {
+                    Text(errorText)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.destructive)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.bottom, DS.Space.s2)
+                }
+
+                sendAll
+            }
+        }
+    }
+
+    /// **THE ROWS ARE ONE SIZE** (user, 2026-09-01: "the add frame card should
+    /// be same size as the others"). Every row here — the fixed head, a leg,
+    /// and the add control — is built from `rowShell`, so the add control
+    /// cannot drift into a thinner dashed strip that reads as a hint rather
+    /// than as the next item in the list.
+    private func rowShell<Content: View>(dashed: Bool,
+                                         @ViewBuilder content: () -> Content) -> some View {
+        content()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: DevnetConsole.sheetFace + DS.Space.s4)
+            .padding(.horizontal, DS.Space.s4)
+            .background {
+                let shape = RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
+                if dashed {
+                    shape.strokeBorder(DS.textTertiary.opacity(0.28),
+                                       style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                } else {
+                    shape.fill(DS.gray100)
+                }
+            }
+            // **THE WHOLE ROW IS THE TARGET.** Found on the simulator, not by
+            // reading: a dashed row has a STROKE and no fill, so SwiftUI
+            // hit-tests the glyph and the words and nothing between them —
+            // "Add a frame" ignored every tap past the end of its own label
+            // while looking completely live. The §83 dead control, except it
+            // is only dead in the half of itself nobody would think to avoid.
+            .contentShape(Rectangle())
+    }
+
+    private func headRow(_ stitch: DevnetStitch) -> some View {
+        rowShell(dashed: true) {
+            HStack(spacing: DS.Space.s3) {
+                Image(systemName: "checkmark.seal")
+                    .accessibilityHidden(true)
+                    .dsGlyph(16, weight: .semibold)
+                    .foregroundStyle(DS.textTertiary)
+                    .frame(width: DS.Face.list, height: DS.Face.list)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(stitch.headName)
+                        .dsText(.callout15).fontWeight(.semibold)
+                        .foregroundStyle(DS.textSecondary)
+                    Text(stitch.headDetail)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func legRow(_ leg: DevnetSendLeg) -> some View {
+        rowShell(dashed: false) {
+            HStack(spacing: DS.Space.s3) {
+                WalletFace(address: leg.address, size: DS.Face.list, circular: true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(name(for: leg.address))
+                        .dsText(.callout15).fontWeight(.semibold)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    Text(String(localized: "Send"))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                }
+                Spacer(minLength: DS.Space.s2)
+                // **THE FIGURE NEVER TRUNCATES, AND WEARS NO UNIT.** Seen on
+                // the simulator: a long name squeezed "0.001 test ETH" to
+                // "0.001 test…", which is an amount rendered as an unfinished
+                // word on the list somebody checks before signing. The unit is
+                // the same for every leg and is named once on the button that
+                // sends them, so repeating it per row buys only the width that
+                // broke the number. `layoutPriority` settles the rest: the
+                // name is the part that may be abbreviated, because a face
+                // sits beside it and the address is recoverable.
+                Text(leg.amount)
+                    .dsText(.callout15)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+                    .layoutPriority(1)
+                // **REMOVE IS A BUTTON, NOT A SWIPE.** A swipe here would be
+                // the only swipe in this sheet, and the list is short enough
+                // that a hidden gesture is a control nobody finds.
+                Button {
+                    DSHaptic.selection()
+                    legs.removeAll { $0.id == leg.id }
+                    if legs.isEmpty { addingLeg = true }
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .accessibilityHidden(true)
+                        .dsGlyph(17, weight: .regular)
+                        .foregroundStyle(DS.textTertiary)
+                        .frame(width: DS.Hit.min, height: DS.Hit.min)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel(Text(String(localized: "Remove this frame")))
+                .dsHover()
+            }
+        }
+    }
+
+    private var addRow: some View {
+        Button {
+            DSHaptic.tap()
+            addingLeg = true
+        } label: {
+            rowShell(dashed: true) {
+                HStack(spacing: DS.Space.s3) {
+                    Image(systemName: "plus")
+                        .accessibilityHidden(true)
+                        .dsGlyph(16, weight: .semibold)
+                        .foregroundStyle(tint)
+                        .frame(width: DS.Face.list, height: DS.Face.list)
+                    Text(String(localized: "Add a frame"))
+                        .dsText(.callout15).fontWeight(.semibold)
+                        .foregroundStyle(tint)
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+        .buttonStyle(PressSpring())
+        .dsHover()
+    }
+
+    private func atomicRow(_ stitch: DevnetStitch) -> some View {
+        HStack(spacing: DS.Space.s3) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(stitch.atomicTitle)
+                    .dsText(.callout15).fontWeight(.semibold)
+                    .foregroundStyle(DS.textPrimary)
+                Text(atomic ? stitch.atomicOn : stitch.atomicOff)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: DS.Space.s2)
+            Toggle("", isOn: $atomic)
+                .labelsHidden()
+                .tint(tint)
+        }
+        .padding(DS.Space.s4)
+        .dsWell(cornerRadius: DS.Radius.control)
+        .padding(.top, DS.Space.s3)
+        .padding(.bottom, DS.Space.s3)
+        .animation(DS.Motion.standard, value: atomic)
+    }
+
+    /// **NAMES THE TOTAL, NOT THE COUNT.** §538's ruling on the one-act send —
+    /// the button moves money, so it says how much — and a leg count says the
+    /// one thing somebody can already see in the list above it.
+    private var sendAll: some View {
+        Button {
+            DSHaptic.tap()
+            actAll()
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                Image(systemName: "arrow.up.right").dsGlyph(15, weight: .semibold)
+                Text(total.map { String(localized: "Send \($0) \(unit)") }
+                     ?? String(localized: "Send"))
+                if busy { ProgressView().controlSize(.mini).tint(.white) }
+            }
+            .dsText(.callout15).fontWeight(.semibold)
+            .foregroundStyle(armedAll ? .white : DS.textTertiary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, DS.Space.s4)
+            .background(armedAll ? AnyShapeStyle(tint) : AnyShapeStyle(DS.fillFaint),
+                        in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+        }
+        .buttonStyle(PressSpring())
+        .disabled(!armedAll)
+        .armedPop(armedAll)
+        .animation(DS.Motion.standard, value: armedAll)
+        .dsHover()
+    }
+
+    private var armedAll: Bool { !busy && !legs.isEmpty }
+
+    private func name(for address: String) -> String {
+        candidates.first { $0.address.caseInsensitiveCompare(address) == .orderedSame }?.name
+            ?? WalletStore.shortAddress(address)
+    }
+
+    private func actAll() {
+        guard let stitch else { return }
+        busy = true
+        errorText = nil
+        let built = legs
+        let allOrNothing = atomic
+        Task { @MainActor in
+            let failure = await stitch.send(built, allOrNothing)
+            busy = false
+            if let failure {
+                errorText = failure
+                return
+            }
+            DSHaptic.success()
+            chrome.refreshHue = tint
+            chrome.refreshPulse &+= 1
+            dismiss()
+        }
     }
 
     /// **THE ENDING MIRRORS TOP UP** (prd §553): the sheet goes, it rains, and

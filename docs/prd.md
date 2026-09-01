@@ -43468,3 +43468,117 @@ the fourth follow-up's lesson, applied rather than re-learned. Every defect
 above was found by looking: the invisible bars, the cog collision, and the
 extraneous sentence were all present in a build that compiled clean and passed
 every static audit.
+
+## §548 sixth follow-up — the send stitches, and all-or-nothing is a control because the chain made it one (user: "i'm not really sure how you have that send wired for frames b/c what does the devnet let us do? doesn't it allow us to stitch frames together? and if so then we need a frames picker don't we somehow?", then "are you sure the all or nothing is a thing? it's not automatic that it's always all or nothing?", then "lets do B", 2026-09-01)
+
+The send built a VERIFY frame and exactly one payload frame. It rode the
+envelope this chain exists for and used **none of the capability** — and §548's
+own premise, that the send mapped the wallet's, is why: the wallet send is
+single-recipient, so mapping it faithfully produced a frames send that cannot
+stitch.
+
+### The measurement, because the question was asked twice and memory is not evidence
+
+Challenged on whether frames are atomic, the answer was not to restate the
+earlier claim but to re-read all **34** frame transactions this chain carries,
+and then to stop trusting `status` — which on this chain is the one field that
+cannot answer this — and read the **recipients' balances**:
+
+| transaction | frame 1's recipient | frame 2's recipient |
+| --- | --- | --- |
+| `0x9bb9cfef…` **failed**, payload flags `0x0` | **holds 0.001 ETH today** | 0 |
+| `0x2642331b…` **failed**, payload flags `0x4` | **0 — undone** | 0 |
+
+Same shape, same failure in the same position, opposite outcome. The flag is
+the only difference. So all-or-nothing is REAL and it is **OPT-IN**, and the
+receipt logs agree: the first transaction's receipt carries one EIP-7708
+transfer log at `0xff…fe` while the second carries none.
+
+That settles the design question it was asked about. A send whose failure can
+leave earlier legs sent is true of **no other send anywhere in this app**, so it
+cannot be inherited — it has to be a control, and the control has to describe
+**OFF**, not only ON, because off is the default.
+
+### What was built (option B of three, mocked before any code)
+
+Three options were drawn and the user picked the list. `DevnetSendSheet` gains
+one optional parameter, `stitch`, and a third screen:
+
+1. **`DevnetStitch` is opt-in.** vibenet and Hegotá pass nil and keep the
+   two-screen send byte-identically. This is a parameter rather than a rewrite
+   of two shared screens for exactly that reason.
+2. **The amount screen ADDS rather than sends** when stitching, and its button
+   says so. "Send" on a screen that appends a leg is §83's fake status in the
+   one place it costs money — you would tap it believing the transaction had
+   gone.
+3. **The VERIFY frame is a row you cannot tap.** It is `mode 1, flags 0x03`
+   heading all 34 of this chain's frame transactions; it is built, never
+   picked. Drawing it rather than omitting it is what answers "was I supposed
+   to add that?" — leaving it out is what makes somebody ask.
+4. **Every row is one size**, head, leg and add alike (user: "the add frame
+   card should be same size as the others"), built from one `rowShell` so the
+   add control cannot drift into a thinner dashed hint that reads as a
+   suggestion rather than as the next item in the list.
+5. **The button names the total, not the count.** §538's ruling: it moves
+   money, so it says how much. The count is the one thing already visible in
+   the list above it. The sum is `Decimal` and never `Double` — an amount
+   carries up to 18 decimal places against `Double`'s ~15 significant digits,
+   so a plain sum silently rounds on the line stating how much is about to
+   leave. The wei conversion at send time still goes through
+   `DevnetSendParse.weiData`, which is string arithmetic throughout.
+
+### Model side
+
+`FramesTransaction.stitched` builds the VERIFY frame plus one payload frame per
+leg. `transfer` is kept rather than folded into it: it is what the byte-exact
+fixtures pin, and a builder proven against the chain should not be re-derived
+to add a feature it does not use — the harness now asserts the two agree
+byte-for-byte on one leg, which is the only thing standing between them and
+silent divergence.
+
+**The atomic flag goes on EVERY payload frame.** Only the first-frame case is
+measured, and the frame-by-frame reading — each frame carrying "undo me if a
+later one fails" — is the one that generalises. The alternative reading, that
+one flagged frame governs the batch, would leave legs 2..n unprotected while
+the control claimed otherwise: the more expensive way to be wrong, since the
+screen says all-or-nothing either way.
+
+`FramesSend.sendStitched` is **not `sendFrames` in a loop**, deliberately: a
+loop is several transactions with several nonces and several signatures, which
+can be reordered, partially mined and separately refused — the opposite of what
+stitching is for, and it would make the control a lie. One signing path now
+serves both sends (`signAndBroadcast`), extracted rather than copied for
+`DevnetSendParse`'s own stated reason: two copies of a signing routine is how a
+one-leg send and a three-leg send quietly start eliding different bytes, and
+the failure is a well-formed signature over a different digest that recovers to
+a real address — green build, correct screen, refused chain. Every leg is
+parsed before any is sent, so one unreadable amount refuses the whole
+transaction rather than sending the legs that happened to parse — which is
+precisely the partial-send the atomic control exists to let somebody rule out.
+
+### Two defects the simulator found and no check could
+
+**The add row ignored taps in its own empty half.** `rowShell` draws a dashed
+row as a STROKE with no fill, so SwiftUI hit-tests the glyph and the words and
+nothing between them: "Add a frame" was live over its label and dead over the
+rest of a full-width row, which is §83's dead control except only in the part
+nobody would think to avoid. `.contentShape(Rectangle())`.
+
+**The amount truncated.** A long name squeezed "0.001 test ETH" to
+"0.001 test…" — an amount rendered as an unfinished word on the list somebody
+checks before signing. The unit is identical on every leg and is named once on
+the button that sends them, so the row carries the figure alone with
+`layoutPriority`; the name is the part that may be abbreviated, because a face
+sits beside it and the address is recoverable.
+
+### Guarded
+
+`scripts/frames-tx-selftest.sh` gains ~20 assertions and **6 mutations**, each
+a transaction the chain would accept while the screen lied about it: the atomic
+flag on the wrong bit, all-or-nothing flagging only the first frame, the VERIFY
+frame dropped, the VERIFY frame no longer approving payment, a payload frame
+built as a VERIFY frame, and the legs reversed. 40 mutations total, all caught.
+
+**Walked on the simulator, two legs, both screens** — 0.1 + 0.4 summing to 0.5
+on the button. Never signed: no key exists on this simulator, so `sendStitched`
+has never once run against the chain.
