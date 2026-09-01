@@ -43085,3 +43085,162 @@ harnesses are green.
 **UNSEEN ON A DEVICE.** Every change is a string; nothing here was rendered,
 so the only claim made is that the words are fewer and the facts survive — not
 that any of these screens was looked at afterwards.
+
+## 555. The Hegotá room's charts stop explaining themselves (user: "how can we improve the Activity chart in Hegota, and the Accounts chart. I don't like all the helper text and i want something more juicy for the charts" → "for the UTXO chart we need to get rid of the '1% of everything...' helper text bc it clips the image of the treemap" → "if we are in utxo's i dunno why we say 'change' on all the treemap cells" → "for accounts, no b/c accounts isn't about balances. it could sum how many or how many watching" → "show three most recently used" → "i don't like seeing so many different sizes of silhouette avatars", 2026-09-01)
+
+Three figures, and the same defect in all three: the drawing was small and
+quiet and the sentences around it were doing the work. Every fix below deletes
+a line of helper text by making the drawing say the thing itself, which is the
+only kind of deletion that is not a loss.
+
+### 1. Activity — the caption becomes the figure
+
+The two numbers this scope is about, what came in and what went out, were a
+12pt `label12` sentence in the quietest tier on the card ("In 1.0313 ETH · out
+0.022 ETH"), under a second 12pt sentence apologising for the axis ("Bar
+lengths are a log scale — the figures are exact"). Three sentences around one
+drawing, and the drawing's own subject was in none of them at a readable size.
+
+They are the two column heads now, at `price16`, sitting over the stacks they
+total and wearing `HegotaFormat.signed`'s own `+`/`−`. **Net stays absent** for
+the reason `bandCaption` already gave: it is not a balance, Home's crown
+carries that, and two figures that look like totals on one card is how a reader
+believes the wrong one.
+
+**The log disclaimer is an AXIS TAG.** A `log` pill over the spine, drawn ONLY
+on the logarithmic scale — so its absence is how a linear band says linear, and
+a tag that is always there says nothing. What the sentence was protecting (that
+the figures are exact) is carried by every lane already printing its own; the
+accessibility label keeps the whole sentence.
+
+The freed lines bought the rows a rung: 20 → 24pt, and the bars grew 12 → 14
+and gained a gradient that **fades AWAY from the spine**, so the band reads as
+movement rather than as two bar charts facing each other. The hue is unchanged
+— still the lane's leading frame mode — and the strong end is always the spine,
+so the gradient can never be read as direction. The spine grades with them.
+
+Budget, since the slot is fixed at 168 under its headline: head 22 + 16, `s3`
+under it, four lanes at 24 with three `s1` gaps = 108. 158.
+
+**Press-a-lane still answers in place** (§503, moment 05) and it takes the
+head's sub-line — a row that is always there, so the card never changes height
+— replacing BOTH move counts rather than one, because a line that swaps only
+the left half reads as the left lane saying something about the right one.
+
+### 2. Accounts is not about balances
+
+It drew a bar per address split by where its money sat, on a log scale it had
+to apologise for, with a third line per row spelling out the vault share as a
+sentence. Rejected outright: **Home's crown one chip away already states the
+money**, so this was the room's second total and the room's §506 second crown.
+
+`HegotaSection` had already written down what this scope is, and the code had
+drifted off it: *"a watched address always has a roster row, even one that says
+the chain could not be reached, which is itself the answer."* The roster is the
+subject. So the headline is a COUNT — "2 addresses" — which also puts this
+scope in step with `activity` and `nonces`, both of which have always counted.
+
+`HegotaRoster` (in `HegotaRoom.swift`, Foundation-only so the harness compiles
+it whole) answers, per address, **which scopes it has anything to say in**:
+coins, named nonce keys, frames, a sponsor. That is the reading nothing else in
+the room gives — tap that face in the rail and you already know what you will
+get — and it is the only axis that is genuinely about the ACCOUNT rather than
+about its money or its week.
+
+**A COUNT ONLY FOR WHAT AN ADDRESS HOLDS.** Coins and nonce keys are
+inventory — states, and states are what an account scope may state. Frames and
+sponsorships are things that HAPPENED, and how much an address does is
+Activity's subject; the old figure's "it counts no moves, deliberately"
+survives this rewrite intact, which is why those two badges are bare glyphs.
+That also keeps four badges inside a row that has to hold a name.
+
+**MOST RECENTLY USED FIRST, and an address the chain refused LEADS.** Recency
+is the user's ruling and the right one: watch-list order ages into nonsense and
+balance order is the reading this rewrite removes. The exception is not a
+softening of it — an unreached address has no recency, it has an UNKNOWN one,
+and `lastUsed` answers 0 for it, so ranking it by that number asserts "nothing
+has happened here", which is exactly what we just failed to find out. It is
+also the only state in this scope worth acting on, and this app ranks trouble
+first everywhere it ranks anything (`PeerRoom`, `PrivacyPoolsRoom`, `ASCRoom`).
+Below the fold it would be invisible on the one card that exists to show it.
+Ranking is on the BLOCK and not the timestamp, which is forced rather than
+chosen: the header read that dates a move is bounded, so an older move
+legitimately carries no time and a timestamp sort would file every address
+whose activity predates the window as though it had none.
+
+**An unread address gets that badge and NOTHING else** — everything the other
+four say is derived from a sweep that did not happen, so drawing "no coins, no
+keys, no frames" beside it would state four facts we do not have (§83). It is
+the one badge that keeps its words, because a bare triangle beside three
+cheerful marks is not something anybody reads as "we could not reach the chain
+for this one".
+
+**THREE ROWS, and the rest is an ellipsis** (user: *"if we only show 3 we just
+have a … for the out of five"*). Five is the watch cap, so at worst two fold.
+The tail is NAMED with its count — a roster showing three of five and saying
+nothing looks exactly like a roster of three.
+
+**NO FACE (user: "i don't like seeing so many different sizes of silhouette
+avatars").** The fused rail (§547) sits four points under this figure and the
+list four points under that, both drawing the same silhouettes at
+`DS.Face.list` — a third size in the same column said nothing the other two
+did not. The name is the identity here and the card spends its width on what
+the address IS. A coloured dot was considered and refused: §483 already ruled
+that a coloured circle "ends up looking like bullets or buttons and not
+necessarily accounts".
+
+### 3. The UTXO treemap
+
+**The census line was clipping the drawing.** 16 (caption) + 8 + 116 (map) + 8
++ 32 (a two-line census) is 180 in a 168pt figure slot, and `DSRoomSlot` clips
+silently, so the map lost its bottom edge. It is also not a fact about your
+coins — it is what the whole chain's vault holds and how many people hold it —
+so it moved to the coin list's own footer, beside the reconciliation sentence
+it is really a companion to, where there is as much room as it needs. The map
+took the freed 28pt (116 → 144). The sentence lives on `HegotaCensus.line` so
+there is ONE of it; it was written into two files during the move, which is the
+drift this project has a paragraph about in three other places.
+
+**"change" said nothing** (user: *"if we are in utxo's i dunno why we say
+'change' on all the treemap cells"*). On a real set most coins are change
+coming back from your own spends — five of the demo address's seven — so the
+word was on nearly every cell and distinguished none of them. Worse, the two
+coins that were NOT change here are 1 and 2 wei, which fold into the tail, so
+it was on literally every visible cell.
+
+What replaces it is a share and an age, both of which VARY: three of this set's
+cells read `0.000737 ETH` to the last digit and nothing on them said which coin
+it was. The share is also what `UnitTreemap` structurally cannot draw — it
+tiles by RANK, not by area — so it is the one number the map owes its reader.
+Origin is not lost: it stays in the FILL, and the caption above names the mix
+once. Saying it once beats saying it seven times, which is the whole of the
+complaint. `HegotaCoins.dominance` retired with the caption it fed: every cell
+prints its own share now, so the question "is one piece almost all of it" is
+answered on the cell that raises it rather than narrated once for the leader.
+
+**THE FOLD IS FOUR, NOT SIX, AND THAT IS ARITHMETIC.** `UnitTreemap`'s
+six-cell table ends `(2,2,1,1), (3,2,1,1)` — two cells one unit wide. At the
+slot's width a unit is 79pt, so 63pt of content, and this room's figures are
+`HegotaFormat.eth` strings like "0.000737 ETH" at `callout15`: they do not fit,
+and `minimumScaleFactor` shrinks them out of the ramp instead. The four-cell
+table is two square heroes over two full-width rows — every cell at least two
+units wide, so nothing shrinks and nothing clips. On this chain that is also
+the truer picture: a real set spans sixteen orders of magnitude, so two pieces
+genuinely are the balance. The tail is still named and still carries its own
+total and its own share, which is the no-silent-caps rule intact. The two hero
+cells gained a share bar, which is the one place the map's rank-vs-area
+difference is visible rather than read.
+
+### What is guarded, and what is not
+
+`scripts/hegota-selftest.sh` grew ~30 assertions and nine mutations over
+`HegotaRoster` and `HegotaCoins.share`/`HegotaCensus.line` — the ranking, the
+unread-leads exception, the totality of the order, the inventory-only counting
+rule, and the badge set of an unread address. Every one of those failures
+renders as a perfectly ordinary three-row list, which is why they are in a
+harness rather than in a comment.
+
+**UNSEEN on a device.** None of the three figures has been screenshotted; the
+numbers above are the demo fixture's, read off `rpc1.hegota.ethrex.xyz` on
+2026-08-27, and the geometry is arithmetic against `DSRoomSlot`'s fixed 210.
+The Accounts roster in particular has never been drawn at the five-address cap.

@@ -272,21 +272,22 @@ enum HegotaCoins {
         wei / Decimal(sign: .plus, exponent: 18, significand: 1)
     }
 
-    /// How concentrated the set is — the largest piece as a share of the whole.
+    /// A coin's share of the set it is drawn in, 0…1.
     ///
-    /// **The one fact a rank-ordered treemap cannot show.** `UnitTreemap` sizes
-    /// its cells by RANK, not area (its own ruling: true squarified cells
-    /// arrive as slivers too thin to label), and on this chain the set spans
-    /// sixteen orders of magnitude — so the drawing reads as six roughly
-    /// comparable pieces when one of them is very often almost the entire
-    /// balance. The caption is where that gets said, so nil below a share worth
-    /// remarking on rather than narrating an even split as if it were news.
-    static func dominance(_ coins: [HegotaCoin]) -> Double? {
-        guard coins.count > 1 else { return nil }
+    /// **Of THIS ADDRESS'S coins, never of the vault** — the vault's share is
+    /// `censusLine`'s, and mixing the two denominators inside one card is how a
+    /// cell ends up claiming 45% of somebody else's money. Nil on an empty set:
+    /// a share of nothing is undefined, not zero.
+    ///
+    /// It replaced `dominance` (prd §555), which answered one question about
+    /// the whole set — "is one piece almost all of it" — for a CAPTION that no
+    /// longer exists. Every drawn cell prints its own share now, which answers
+    /// the same question on the cell that raises it, and for every cell rather
+    /// than only the leader.
+    static func share(_ wei: Decimal, of coins: [HegotaCoin]) -> Double? {
         let sum = total(coins)
-        guard sum > 0, let top = coins.map(\.wei).max() else { return nil }
-        let share = NSDecimalNumber(decimal: top / sum).doubleValue
-        return share >= 0.6 ? share : nil
+        guard sum > 0 else { return nil }
+        return NSDecimalNumber(decimal: wei / sum).doubleValue
     }
 }
 
@@ -504,5 +505,32 @@ enum HegotaClock {
         let into = Double(block - low.0)
         let seconds = high.1.timeIntervalSince(low.1)
         return low.1.addingTimeInterval(seconds * (into / span))
+    }
+}
+
+// MARK: - The census, said out loud
+
+extension HegotaCensus {
+    /// What our slice is of the whole vault, in a sentence.
+    ///
+    /// **It is a fact about the CHAIN, not about your coins.** It used to sit
+    /// under the Coins figure's treemap, where 116pt of map plus a two-line
+    /// share ran the 168pt figure slot over and clipped the drawing (prd §555,
+    /// user: *"we need to get rid of the '1% of everything…' helper text bc it
+    /// clips the image of the treemap"*). It lives in the coin list's footer
+    /// now, beside the reconciliation sentence it is really a companion to.
+    ///
+    /// Here rather than in the view so there is ONE of it: it was written into
+    /// two files during the move, which is the drift this project has a
+    /// paragraph about in three other places.
+    ///
+    /// **Nil when the vault is empty**, following `share`'s own rule: a share
+    /// of nothing is undefined, and printing 0% says the person holds none of
+    /// something that does not exist.
+    var line: String? {
+        guard let share else { return nil }
+        return soleOwner
+            ? String(localized: "Every UTXO on the chain is yours")
+            : String(localized: "\(Int((share * 100).rounded()))% of everything in the vault, across \(String(owners)) owners")
     }
 }
