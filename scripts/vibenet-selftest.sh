@@ -1031,10 +1031,20 @@ grep -q 'return .home' "Casberi/Casberi/Model/VibenetSection.swift" \
 # from the room feeding it.
 # The gate lives in the CARD now, not the shell — see the placement note
 # below. Still gated entirely on what the room published, never a source name.
-stripFn=$(sed -n '/private var scopeStrip: some View {/,/^    }$/p' "$TMP/card.nc.swift")
+# **THE GUARD FOLLOWED ITS SUBJECT** (prd §547, 2026-09-01). `scopeStrip` is
+# gone: the switcher is the lower deck of `DSRoomRailSlab`, which all three
+# chain rooms share, so a per-room copy could only be a place for them to drift
+# apart again. `railSlab` is what composes the pair here, and the gate it must
+# still hold is the same one, spelled the same way.
+stripFn=$(sed -n '/private var railSlab: some View {/,/^    }$/p' "$TMP/card.nc.swift")
 [[ "$stripFn" == *'VibenetSection.shows(present: scopes)'* ]] \
   || { echo "✗ the vibenet switcher's gate moved — prd §482: it is gated ENTIRELY on the"
        echo "  scopes the room published, so a room with one reading draws no control."; exit 1; }
+# The slab must really carry BOTH decks here, or fusing quietly deleted one.
+[[ "$stripFn" == *'showsRail:'* && "$stripFn" == *'showsSwitcher:'* ]] \
+  || { echo "✗ vibenet's railSlab no longer passes both decks — prd §547: the fused rail"
+       echo "  is the face rail AND the scope switcher, and either may be absent only"
+       echo "  because its own gate said so."; exit 1; }
 # **AND IT MUST NOT GO BACK TO THE SHELL.** Mounted in `roomControls` it was
 # the FOURTH stacked chrome row and the user rejected it on sight ("o wait no
 # way… we can' hta ve the positions risk etc at the top", then "needs to be
@@ -1045,7 +1055,7 @@ stripFn=$(sed -n '/private var scopeStrip: some View {/,/^    }$/p' "$TMP/card.n
 # naming what was removed.
 if grep -q 'vibenetSectionSwitcher' "$TMP/surface.nc.swift"; then
   echo "✗ the vibenet scope strip is pinned at the shell again — prd §482: it belongs"
-  echo "  below the crown, inside the card. See VibenetRoomCard.scopeStrip, which also"
+  echo "  below the crown, inside the card. See VibenetRoomCard.railSlab, which also"
   echo "  states what that placement costs (it scrolls away)."
   exit 1
 fi

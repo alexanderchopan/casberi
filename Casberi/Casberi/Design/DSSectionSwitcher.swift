@@ -70,26 +70,62 @@ struct DSSectionSwitcher<Scope: DSSectionScope>: View {
     /// optional so the caller is never forced to decide which one "the" alarm
     /// belongs to — several can want you at once, and each says so for itself.
     var attention: Set<Scope> = []
+    /// **Drawn as the lower deck of `DSRoomRailSlab` rather than standing on
+    /// its own** (prd §547, 2026-09-01).
+    ///
+    /// It gives up exactly three things, each of which becomes a DOUBLE inside
+    /// a container that already provides it: its glass, its own `.padding(4)`,
+    /// and — the one worth naming — the `fillFaint` capsule under every chip at
+    /// rest. A pill inside a pill is the doubling this fusion exists to remove,
+    /// so embedded the slab IS the container and only the PICK fills.
+    ///
+    /// The selected fill also changes shape, from a capsule to the slab's own
+    /// concentric rounded rect, so it is the same mark the face deck above
+    /// draws. Everything behavioural is untouched: the travel, its Reduce
+    /// Motion branch, the re-centre, the dot, the edge ease.
+    var embedded: Bool = false
     let onPick: (Scope) -> Void
 
     @Namespace private var ns
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// The shape a pick fills, and the shape a tap is caught by — one value, so
+    /// the target can never drift from the thing that looks tappable.
+    private var pickShape: AnyShape {
+        embedded
+            ? AnyShape(RoundedRectangle(cornerRadius: DSRoomChassis.slabInnerRadius,
+                                        style: .continuous))
+            : AnyShape(Capsule(style: .continuous))
+    }
+
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                DSGlassContainer(spacing: 2) {
-                    HStack(spacing: 2) {
-                        ForEach(sections) { section in
-                            chip(section)
+            Group {
+                if embedded {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 2) {
+                            ForEach(sections) { section in
+                                chip(section)
+                            }
                         }
                     }
+                    .scrollBounceBehavior(.basedOnSize)
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        DSGlassContainer(spacing: 2) {
+                            HStack(spacing: 2) {
+                                ForEach(sections) { section in
+                                    chip(section)
+                                }
+                            }
+                        }
+                        .padding(4)
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .clipShape(Capsule(style: .continuous))
+                    .dsGlass(cornerRadius: 999)
                 }
-                .padding(4)
             }
-            .scrollBounceBehavior(.basedOnSize)
-            .clipShape(Capsule(style: .continuous))
-            .dsGlass(cornerRadius: 999)
             .onAppear { proxy.scrollTo(active.id, anchor: .center) }
             .onChange(of: active) { _, now in
                 withAnimation(DS.Motion.standard) { proxy.scrollTo(now.id, anchor: .center) }
@@ -125,12 +161,16 @@ struct DSSectionSwitcher<Scope: DSSectionScope>: View {
             .padding(.vertical, DS.Space.s2)
             .background {
                 ZStack {
-                    Capsule(style: .continuous).fill(DS.fillFaint)
+                    // Embedded, the SLAB is the container — see `embedded`. A
+                    // rest fill here would be a pill inside a pill.
+                    if !embedded {
+                        Capsule(style: .continuous).fill(DS.fillFaint)
+                    }
                     if isOn {
                         // `DS.tintDim` — the token whose documented job is exactly this
                         // ("tint at rest-chip opacity"), rather than a second
                         // hand-spelled 0.18 that drifts from it.
-                        let fill = Capsule(style: .continuous).fill(DS.tintDim)
+                        let fill = pickShape.fill(DS.tintDim)
                         if reduceMotion {
                             fill
                         } else {
@@ -139,7 +179,7 @@ struct DSSectionSwitcher<Scope: DSSectionScope>: View {
                     }
                 }
             }
-            .contentShape(Capsule())
+            .contentShape(pickShape)
         }
         .buttonStyle(.plain)
         .dsHover()

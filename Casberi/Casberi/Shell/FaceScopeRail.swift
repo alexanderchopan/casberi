@@ -96,6 +96,27 @@ struct FaceScopeRail: View {
     /// anatomy and one behaviour; what differs is whether the name is drawn HERE
     /// or one card down, which is a fact about the room, not a style.
     var namesInRoom: Bool = false
+    /// **Drawn as the upper deck of `DSRoomRailSlab` rather than standing on its
+    /// own** (prd §547, 2026-09-01).
+    ///
+    /// Three consequences, and all three exist because the slab already
+    /// provides what the rail was providing for itself. It gives up its PAGE
+    /// INSET (the slab is inset, so keeping `s4` here would inset the faces
+    /// twice and leave them 36pt off the edge under a control at 18) and its
+    /// outer vertical padding; and it gains a SELECTION FILL — the same
+    /// concentric rounded rect the switcher's picked chip wears one deck below.
+    ///
+    /// That fill is the whole point of the flag. Un-embedded, selection here is
+    /// a 0.7 recession on everything else plus a semibold caption
+    /// (`restOpacity`), which is a fine grammar for a strip standing alone and
+    /// an unreadable one four points above a control that says "picked" with a
+    /// travelling tint capsule. Two selection grammars stacked is what made the
+    /// pair read as two objects.
+    ///
+    /// It does NOT touch `ringWidth`, and the two can never collide: the ring
+    /// belongs to `ringed` (social: they posted since you last looked) and to
+    /// `namesInRoom` rails, and no embedded rail is either.
+    var embedded: Bool = false
     /// Scope equality. A closure because the two adapters do NOT agree on it:
     /// hex compares case-insensitively (EIP-55 case is a checksum) while a
     /// handle is a plain string. Getting this wrong empties a room rather than
@@ -127,6 +148,11 @@ struct FaceScopeRail: View {
     var onOpenBook: (() -> Void)?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The picked slot's fill travels between slots exactly as the switcher's
+    /// does one deck below (prd §547) — same effect, same Reduce Motion branch.
+    /// Two decks of one component that animate their pick differently would
+    /// undo the fusion the moment anybody tapped.
+    @Namespace private var pickNS
 
     /// `DS.Face.list` (36) at rest, `.row` (26) folded — the ramp's own tiers,
     /// not two literals invented here.
@@ -247,10 +273,35 @@ struct FaceScopeRail: View {
                     addSlot(title: addTitle)
                 }
             }
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.vertical, DS.Space.s1)
+            // Embedded, the SLAB carries the inset and the packing — see
+            // `embedded`. Applying either here again doubles it.
+            .padding(.horizontal, embedded ? 0 : DS.Space.s4)
+            .padding(.vertical, embedded ? 0 : DS.Space.s1)
         }
         .scrollIndicators(.hidden)
+    }
+
+    /// What "All" draws inside its circle — see the note at the call site for
+    /// why the embedded pick goes neutral rather than tinted.
+    private func allCircleFill(isOn: Bool) -> Color {
+        guard isOn else { return DS.fillFaint }
+        return embedded ? DS.fillStrong : DS.tintDim
+    }
+
+    /// The picked slot's fill — nothing at all unless this rail is a deck of the
+    /// slab, where it is the same mark the switcher's picked chip wears.
+    @ViewBuilder
+    private func pickFill(_ isOn: Bool) -> some View {
+        if embedded, isOn {
+            let fill = RoundedRectangle(cornerRadius: DSRoomChassis.slabInnerRadius,
+                                        style: .continuous)
+                .fill(DS.tintDim)
+            if reduceMotion {
+                fill
+            } else {
+                fill.matchedGeometryEffect(id: "dsRailActiveFill", in: pickNS)
+            }
+        }
     }
 
     /// "All" — the default, and the exit.
@@ -286,6 +337,12 @@ struct FaceScopeRail: View {
                     .dsText(.label11).fontWeight(.semibold)
                     .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
                     .frame(width: faceSize, height: faceSize)
+                    // Embedded, the SLOT behind this circle carries the tint
+                    // (`pickFill`), so a tinted disc inside a tinted slot would
+                    // be the same colour laid twice — the doubling §547 removed
+                    // from the chips one deck down, in the one slot that has no
+                    // face of its own to separate the two. Neutral here, and the
+                    // pick still reads: the slot is filled and nothing else is.
                     // **SELECTION IS THE ONLY THING THAT FILLS** (prd §483,
                     // 2026-08-26 — the colour rule, asked for directly: *"pick
                     // a rule and lets stick to it"*).
@@ -297,7 +354,7 @@ struct FaceScopeRail: View {
                     // job is to say "you are looking at everything". Now it is
                     // `fillFaint` at rest and tint when picked, which is what
                     // the section toggle and the venue switcher already do.
-                    .background(Circle().fill(isOn ? DS.tintDim : DS.fillFaint))
+                    .background(Circle().fill(allCircleFill(isOn: isOn)))
                 // Reserves the caption's line so this circle sits level with
                 // the faces beside it. With no captions in the rail there is no
                 // line to reserve, and it centres in its slot instead.
@@ -307,6 +364,7 @@ struct FaceScopeRail: View {
                    alignment: namesInRoom ? .center : .top)
             .opacity(isOn ? 1 : restOpacity)
             .padding(.vertical, DS.Space.s1)
+            .background { pickFill(isOn) }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -368,6 +426,7 @@ struct FaceScopeRail: View {
             .frame(width: slotWidth)
             .opacity(isOn ? 1 : restOpacity)
             .padding(.vertical, DS.Space.s1)
+            .background { pickFill(isOn) }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

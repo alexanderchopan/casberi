@@ -2877,57 +2877,92 @@ struct FeedScreen: View {
         }
     }
 
-    /// FULL BLEED (`leading: 0`), Wallet's own inset for this rail: it scrolls
-    /// horizontally, so an inset would stop the faces reaching the edge.
+    /// **THE FUSED RAIL** (prd §547, 2026-09-01) — the same slab Wallet wears,
+    /// one chain over, and for the same reason: this room copied Wallet's two
+    /// sibling sections byte for byte, so it inherited the disagreement too
+    /// (full-bleed faces at `leading: 0` under an inset capsule, circles under
+    /// pills, a recession under a travelling tint).
+    ///
+    /// The rail gives up its full bleed to share the switcher's inset. What
+    /// that note used to say — "it scrolls horizontally, so an inset would stop
+    /// the faces reaching the edge" — was true and is now outranked: reaching
+    /// the edge is what made the two strips read as unrelated, and a rail of
+    /// 66pt slots scrolls at either inset regardless.
     @ViewBuilder private var hegotaRailSection: some View {
-        if HegotaScopeRail.shows(source: source,
-                                 watched: HegotaRoomSource.accounts().count) {
+        let showsRail = HegotaScopeRail.shows(source: source,
+                                              watched: HegotaRoomSource.accounts().count)
+        let showsSwitcher = HegotaSection.shows(present: chrome.hegotaSections)
+        if showsRail || showsSwitcher {
             Section {
-                FaceScopeRail(
-                    items: HegotaScopeRail.items(HegotaRoomSource.accounts().map(\.address)),
-                    scope: chrome.hegotaScope,
-                    compact: false,
-                    matches: HegotaScopeRail.matches,
-                    onPick: { picked in
-                        withAnimation(DS.Motion.standard) {
-                            chrome.hegotaScope = (picked?.isEmpty ?? true) ? nil : picked
-                        }
-                    })
-                    .listRowInsets(EdgeInsets(top: 0, leading: 0,
-                                              bottom: DSRoomChassis.switcherGap,
-                                              trailing: 0))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
-        }
-    }
-
-    @ViewBuilder private var hegotaSwitcherSection: some View {
-        if HegotaSection.shows(present: chrome.hegotaSections) {
-            Section {
-                DSSectionSwitcher(
+                DSRoomRailSlab(
+                    showsRail: showsRail,
+                    showsSwitcher: showsSwitcher,
                     sections: chrome.hegotaSections,
                     active: HegotaSection.resolve(chrome.hegotaSection,
                                                   present: chrome.hegotaSections),
-                    attention: HegotaSection.attention()) { picked in
-                        chrome.hegotaSection = picked
-                    }
-                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                              bottom: DSRoomChassis.contentGap,
-                                              trailing: DSRoomChassis.inset))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                    attention: HegotaSection.attention(),
+                    onPick: { picked in chrome.hegotaSection = picked }
+                ) {
+                    FaceScopeRail(
+                        items: HegotaScopeRail.items(HegotaRoomSource.accounts().map(\.address)),
+                        scope: chrome.hegotaScope,
+                        compact: false,
+                        // A deck of the slab, not a strip of its own (prd §547).
+                        embedded: true,
+                        matches: HegotaScopeRail.matches,
+                        onPick: { picked in
+                            withAnimation(DS.Motion.standard) {
+                                chrome.hegotaScope = (picked?.isEmpty ?? true) ? nil : picked
+                            }
+                        })
+                }
+                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                          bottom: DSRoomChassis.contentGap,
+                                          trailing: DSRoomChassis.inset))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
         }
     }
 
+    /// **THE FUSED RAIL** (prd §547, 2026-09-01) — the account rail and the
+    /// scope switcher as ONE slab, where they were two strips four points
+    /// apart disagreeing about bleed, shape and selection. `DSRoomRailSlab`
+    /// carries the reasoning; what changes HERE is that the rail gives up its
+    /// full bleed to share the switcher's inset, and the two `Section`s become
+    /// one.
+    ///
+    /// **It keeps its name deliberately.** This is still the section that
+    /// mounts the wallet's scope rail — `category-fold-selftest` asks for it
+    /// by that name, and a rename to advertise the extra deck would cost that
+    /// guard for nothing.
+    ///
+    /// The gate is `||`, not `&&`: a room with one watched wallet has no rail
+    /// and a room with one reading has no switcher, and either alone is still
+    /// a slab worth drawing. With neither, nothing is emitted rather than an
+    /// empty glass box.
     @ViewBuilder
-    private var walletScopeRailSection: some View {
-        if WalletScopeRail.shows(source: source, watched: wallet.addresses.count) {
+    private func walletScopeRailSection(_ active: WalletSection) -> some View {
+        let showsRail = WalletScopeRail.shows(source: source,
+                                              watched: wallet.addresses.count)
+        let showsSwitcher = WalletSection.shows(present: chrome.walletSections)
+        if showsRail || showsSwitcher {
             Section {
-                FaceScopeRail(
-                    items: WalletScopeRail.items(wallet.addresses),
-                    scope: chrome.walletScope,
+                DSRoomRailSlab(
+                    showsRail: showsRail,
+                    showsSwitcher: showsSwitcher,
+                    sections: chrome.walletSections,
+                    active: active,
+                    attention: chrome.walletSectionAttention,
+                    // Instant, for the reason vibenet's own pick states at
+                    // length (prd §495): animating a swap between two slots of
+                    // different natural height moves everything below the bar
+                    // and settles it back.
+                    onPick: { picked in chrome.walletSection = picked }
+                ) {
+                    FaceScopeRail(
+                        items: WalletScopeRail.items(wallet.addresses),
+                        scope: chrome.walletScope,
                     // Never folded now: `compact` existed for a pinned strip
                     // that had to yield height to the content scrolling under
                     // it. In the content there is nothing to yield to.
@@ -2945,29 +2980,36 @@ struct FeedScreen: View {
                     // regression: identity moved from a colour you had to learn
                     // to a WORD you can read. The caption is where it lives now,
                     // so it has to be drawn.
-                    namesInRoom: false,
-                    matches: WalletScopeRail.matches,
-                    onPick: { picked in
-                        withAnimation(DS.Motion.standard) { chrome.walletScope = picked }
-                    },
-                    // No re-tap verb: there is no "deeper" a watched address
-                    // goes that the room you are already in does not show.
-                    onReTap: nil,
-                    // ONE slot, not two (prd §466) — watching another wallet
-                    // and seeing the roster are the same screen, so an ADD slot
-                    // would point at the book door beside it.
-                    addTitle: nil,
-                    onAdd: nil,
-                    bookTitle: String(localized: "Address book"),
-                    onOpenBook: { route.push(.addressBook) })
-                    // `DSRoomChassis`, which Vibenet reads too — see that
-                    // type for why these gaps stopped being two hand-tuned
-                    // stacks.
-                    .listRowInsets(EdgeInsets(top: 0, leading: 0,
-                                              bottom: DSRoomChassis.switcherGap,
-                                              trailing: 0))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                        namesInRoom: false,
+                        // A deck of the slab, not a strip of its own (prd §547).
+                        embedded: true,
+                        matches: WalletScopeRail.matches,
+                        onPick: { picked in
+                            withAnimation(DS.Motion.standard) { chrome.walletScope = picked }
+                        },
+                        // No re-tap verb: there is no "deeper" a watched address
+                        // goes that the room you are already in does not show.
+                        onReTap: nil,
+                        // ONE slot, not two (prd §466) — watching another wallet
+                        // and seeing the roster are the same screen, so an ADD slot
+                        // would point at the book door beside it.
+                        addTitle: nil,
+                        onAdd: nil,
+                        bookTitle: String(localized: "Address book"),
+                        onOpenBook: { route.push(.addressBook) })
+                }
+                // ONE inset for the whole slab, where the rail used to run
+                // full bleed (`leading: 0`) under a switcher at
+                // `DSRoomChassis.inset`. That difference is a third of why the
+                // two never read as one object, so it is the first thing the
+                // fusion gives up — the faces stop reaching the screen edge.
+                // They scrolled at either inset (six 66pt slots overflow any
+                // phone), so nothing that used to fit stops fitting.
+                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                          bottom: DSRoomChassis.contentGap,
+                                          trailing: DSRoomChassis.inset))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
         }
     }
@@ -3025,58 +3067,33 @@ struct FeedScreen: View {
         }
     }
 
-    /// The scope toggle, drawn in the room's own content directly under the
-    /// crown and its chart (prd §483).
-    ///
-    /// Still reads `chrome.walletSections` rather than deriving presence here:
-    /// the publication is one value computed once per pass, and re-deriving it
-    /// at the draw site is how the strip and the sections it scopes come to
-    /// disagree about which scopes exist.
-    @ViewBuilder
-    private func walletSectionSwitcherSection(_ active: WalletSection) -> some View {
-        if WalletSection.shows(present: chrome.walletSections) {
-            // **PINNING WAS TRIED HERE AND DOES NOT WORK AS A HEADER**
-            // (prd §495, 2026-08-27).
-            //
-            // The strip scrolls away with the crown — measured, entirely off
-            // screen — so the control that scopes the room cannot be reached
-            // from inside the room it scopes. `.plain` pins section headers,
-            // so `Section { EmptyView() } header: { switcher }` looked like
-            // the fix that costs no height at rest and therefore does not
-            // re-open §483 (which ruled this control OUT of `roomControls`,
-            // where pinning it makes a fourth row of chips and pushes the
-            // crown to 45% down the screen).
-            //
-            // It does not pin: a header only stays while its own section has
-            // ROWS on screen, and this section has none, so the header leaves
-            // with them. Verified on the device, not reasoned about.
-            //
-            // Pinning properly means making the switcher the header of the
-            // section that carries the SCOPE'S CONTENT — which differs per
-            // scope across a dozen section builders — so it is a real
-            // refactor and its own ruling, not a line here. What ships
-            // instead is §495's return-to-head on a scope change, which
-            // removes the JUMP (the reported defect) without pretending to
-            // fix the reachability.
-            Section {
-                DSSectionSwitcher(
-                    sections: chrome.walletSections,
-                    active: active,
-                    attention: chrome.walletSectionAttention) { picked in
-                        // Instant, for the reason vibenet's own pick states
-                        // at length (prd §495): animating a swap between two
-                        // slots of different natural height moves everything
-                        // below the bar and settles it back.
-                        chrome.walletSection = picked
-                    }
-                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                              bottom: DSRoomChassis.contentGap,
-                                              trailing: DSRoomChassis.inset))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
-        }
-    }
+    // **THE SCOPE TOGGLE'S OWN SECTION IS GONE** (prd §547) — it is the lower
+    // deck of `walletScopeRailSection`'s slab now. Two notes from it survive
+    // because both are still true of the fused control:
+    //
+    // It reads `chrome.walletSections` rather than deriving presence at the
+    // draw site: the publication is one value computed once per pass, and
+    // re-deriving it here is how the strip and the sections it scopes come to
+    // disagree about which scopes exist.
+    //
+    // **PINNING WAS TRIED AND DOES NOT WORK AS A HEADER** (prd §495,
+    // 2026-08-27), and fusing does not change that. The strip scrolls away
+    // with the crown — measured, entirely off screen — so the control that
+    // scopes the room cannot be reached from inside the room it scopes.
+    // `.plain` pins section headers, so `Section { EmptyView() } header: {
+    // switcher }` looked like the fix that costs no height at rest and
+    // therefore does not re-open §483 (which ruled this control OUT of
+    // `roomControls`, where pinning it makes a fourth row of chips and pushes
+    // the crown to 45% down the screen). It does not pin: a header only stays
+    // while its own section has ROWS on screen, and this section has none, so
+    // the header leaves with them. Verified on the device, not reasoned about.
+    //
+    // Pinning properly means making the slab the header of the section that
+    // carries the SCOPE'S CONTENT — which differs per scope across a dozen
+    // section builders — so it is a real refactor and its own ruling. What
+    // ships is §495's return-to-head on a scope change, which removes the JUMP
+    // without pretending to fix the reachability. Fusing makes that refactor
+    // CHEAPER, since there is now one view to hoist instead of two.
 
     /// What this room publishes to the shell for §483's toggle — the scopes
     /// that have something, and which of them want you.
@@ -3577,7 +3594,6 @@ struct FeedScreen: View {
             hegotaChainNoticeSection
             hegotaVisualSection
             hegotaRailSection
-            hegotaSwitcherSection
             Group {
                 HegotaRoomList(head: head,
                                accounts: HegotaRoomSource.accounts(),
@@ -5124,8 +5140,7 @@ struct FeedScreen: View {
                     .listRowInsets(WalletCardStyle.rowInsets)
                 }
             }
-            walletScopeRailSection
-            walletSectionSwitcherSection(section)
+            walletScopeRailSection(section)
             // THE FOUR `walletGroupHeader` GROUPS BECOME SCOPES (prd §483).
             // Renamed to short nouns and split twice — NFTs out of "What you
             // hold", and "What it's doing" into Positions and Risk — so the
@@ -8455,12 +8470,28 @@ struct FeedScreen: View {
                     // door in particular pointed at a tray showing less than
                     // the list it would have covered.
                 }
-                // The holdings CARD (prd §160) — title, map, and the
-                // concentration line become one parcel. GenTagMap already
-                // self-pads horizontally by s4, which becomes this card's
-                // inner gutter; only the bottom needs closing, since the map
-                // pads its own top.
-                .padding(.bottom, DS.Space.s3)
+                // **THE MAP FILLS THE BOX, IT DOES NOT SPELL A HEIGHT**
+                // (2026-09-01, user: *"treemap is clipped in wallet"*).
+                //
+                // `GenTagMap` drew 160pt of cells under its own eyebrow,
+                // subline and 18pt top padding — ~250pt into a 210pt
+                // `DSRoomSlot`, which clips — so the bottom row of the
+                // treemap was sliced along its lower edge. The same class the
+                // chassis already records for the NFT quad, by a different
+                // route: there the box lost a reserved headline, here the
+                // drawing was taller than the box all along.
+                //
+                // The flag makes the cells absorb whatever the header leaves,
+                // so it fits at any Dynamic Type size and survives any later
+                // change to `visualSlot`.
+                .environment(\.genFillsRoomSlot, true)
+                // NO BOTTOM PADDING. The old `s3` closed the holdings CARD
+                // (prd §160), and §483 deleted that card; inside a fixed box
+                // it is no longer air below the map but 14pt taken OFF it,
+                // which is 14pt the cells are then clipped by. Every other
+                // scope's figure fills the slot — the NFT quad derives its
+                // cell size from the whole of `visualSlot` — and this one
+                // does now too.
                 // **NO CARD** (user ruling, prd §483: *"your treemap is in a
                 // card, we don't do cards"*). The room's drawings sit bare on
                 // the page — the sparkline does, the flow diagram does, and a

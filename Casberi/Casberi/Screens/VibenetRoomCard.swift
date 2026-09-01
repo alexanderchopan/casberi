@@ -528,9 +528,12 @@ struct VibenetRoomCard: View {
                 }
             }
             .padding(.bottom, DSRoomChassis.railGap - DS.Space.s6)
-            accountChips
-                .padding(.bottom, DSRoomChassis.switcherGap - DS.Space.s6)
-            scopeStrip
+            // **ONE SLAB, WHERE THERE WERE TWO STRIPS** (prd §547) — and the
+            // `switcherGap` correction between them goes with the pair it
+            // separated. `DSRoomRailSlab` owns the distance now, and it is the
+            // same distance in all three rooms rather than a negative padding
+            // against this card's own `s6` stack spacing.
+            railSlab
                 .padding(.bottom, DSRoomChassis.contentGap - DS.Space.s6)
             // THE SCOPED ACCOUNT'S OWN DETAIL, under the scope that owns each
             // part of it (prd §491) — keys under Permissions, links and
@@ -716,10 +719,29 @@ struct VibenetRoomCard: View {
     /// control you cannot reach while deep in the rows it scopes. The fix is
     /// a pinned `Section` header rather than a return to the inset, and it is
     /// deliberately not done here: the user asked to see this shape first.
+    /// **THE FUSED RAIL** (prd §547, 2026-09-01) — what `accountChips` and
+    /// `scopeStrip` were, as one slab.
+    ///
+    /// `scopeStrip` is gone as a property: `DSRoomRailSlab` owns the switcher
+    /// for all three rooms, so a per-room copy of it could only be a place for
+    /// the three to drift apart again. Its two live rulings moved here intact —
+    /// the `.home` default below, and its "no top padding of its own", which
+    /// the slab now enforces structurally rather than by comment (there is no
+    /// gap left to state, the container owns it).
+    ///
+    /// The STATED COST it carried is unchanged and worth repeating: in the
+    /// content this SCROLLS AWAY, which is §357's complaint one level down — a
+    /// scope control you cannot reach while deep in the rows it scopes. Fusing
+    /// does not fix that; it makes the eventual fix cheaper, since there is one
+    /// view to pin instead of two.
     @ViewBuilder
-    private var scopeStrip: some View {
-        if onPickScope != nil, VibenetSection.shows(present: scopes) {
-            DSSectionSwitcher(
+    private var railSlab: some View {
+        let strip = Self.fullItems(fallback: room)
+        let showsSwitcher = onPickScope != nil && VibenetSection.shows(present: scopes)
+        if showsRailDeck(strip) || showsSwitcher {
+            DSRoomRailSlab(
+                showsRail: showsRailDeck(strip),
+                showsSwitcher: showsSwitcher,
                 sections: scopes,
                 // `.home`, not `.holdings` — §491's amendment, and the same
                 // default `resolve` has always fallen back to. Left at
@@ -727,17 +749,19 @@ struct VibenetRoomCard: View {
                 // opening screen, which is a control disagreeing with what is
                 // drawn above it.
                 active: section ?? .home,
-                attention: scopeAttention) { picked in
-                    onPickScope?(picked)
-                }
-                // NO TOP PADDING OF ITS OWN (prd §491). `DSRoomChassis` owns
-                // the rail→switcher gap for both rooms, and an 18pt pad here
-                // was added on top of it — which is precisely the drift the
-                // chassis exists to end, measured on the device as this room's
-                // bar sitting 17pt below Wallet's after every other gap had
-                // already been matched. A component inside the chassis states
-                // no distance to its neighbours.
+                attention: scopeAttention,
+                onPick: { picked in onPickScope?(picked) }
+            ) {
+                accountChips
+            }
         }
+    }
+
+    /// The rail deck's gate, spelled once so `railSlab` cannot ask it and
+    /// `accountChips` answer differently — the failure that leaves a slab with
+    /// a deck-shaped hole in it.
+    private func showsRailDeck(_ strip: [VibenetAccountItem]) -> Bool {
+        strip.count > 1 && onScope != nil
     }
 
     /// Whether a scope's content draws. nil `section` means the whole room in
@@ -2215,6 +2239,8 @@ struct VibenetRoomCard: View {
                 // the rail — on Home the list is three events, so nothing else
                 // says which account is which.
                 namesInRoom: false,
+                // A deck of `railSlab`, not a strip of its own (prd §547).
+                embedded: true,
                 matches: VibenetScopeRail.matches,
                 onPick: { picked in onScope(picked ?? "") },
                 onReTap: nil,

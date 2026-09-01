@@ -85,6 +85,60 @@ enum DSRoomChassis {
     /// The page inset the chassis and its figures share.
     static let inset: CGFloat = DS.Space.s4
 
+    // MARK: - The fused rail (prd §547, 2026-09-01)
+
+    /// **THE RAIL AND THE SWITCHER ARE ONE OBJECT NOW** (user, 2026-09-01:
+    /// *"what if we made the silouheet row and the scope rail seem like more of
+    /// a component together"*).
+    ///
+    /// `railGap`/`switcherGap` above are what remains of the old answer: two
+    /// strips, tuned closer and closer together in the hope that proximity
+    /// would read as pairing. It never did, and measuring was the wrong fix for
+    /// the same reason it was the wrong fix for the chassis itself — the two
+    /// controls disagreed on all three things that make a component read as
+    /// one, and no gap can settle that. They had different BLEED (the rail full
+    /// bleed at `leading: 0`, the switcher inset 18), different SHAPE (circles
+    /// with captions against a glass capsule of pills), and different
+    /// SELECTION (a 0.7 recession plus a semibold caption against a travelling
+    /// tint capsule) — stacked directly on top of each other, four points
+    /// apart.
+    ///
+    /// So they share a container, an inset and one selection shape. What each
+    /// deck DOES is untouched: the rail still scopes by address, the switcher
+    /// still scopes by reading, and both keep their own scroll.
+    ///
+    /// **The padding is `s1` and that is a borrowed number, not a new one** —
+    /// `DSSectionSwitcher` has always drawn `.padding(4)` inside its own glass
+    /// capsule, so the slab is packed exactly as the control it absorbs was.
+    /// It also happens to be what keeps the fused object at the height the two
+    /// separate strips came to, which is the honest result stated plainly:
+    /// this ruling fuses, it does not shrink. How much chrome stands above the
+    /// first row is a different question and stays open.
+    static let slabPadding: CGFloat = DS.Space.s1
+
+    /// Rail deck → switcher deck. Equal to the padding around them on purpose:
+    /// a container whose inner gap matches its own margin reads as one evenly
+    /// packed object, where a wider inner gap reads as two things sharing a box.
+    static let slabDeckGap: CGFloat = DS.Space.s1
+
+    /// The slab's own corner — `DS.Radius.widget`, because that is the rung for
+    /// an object of this size and this is not a new kind of thing.
+    static let slabRadius: CGFloat = DS.Radius.widget
+
+    /// **The one selection shape, in BOTH decks** — a face slot and a scope chip
+    /// are filled by the same rounded rect at the same radius, so "this is the
+    /// pick" is one mark in a control that used to carry two.
+    ///
+    /// CONCENTRIC, never typed: `DS.Radius.nested` is what keeps the fill's arc
+    /// parallel to the slab's own the whole way round, and it is why this reads
+    /// as inset rather than as a second box that happens to overlap. It also
+    /// tracks the platform for free — Mac's tighter `s1`… does not differ, but
+    /// the derivation costs nothing and the day either term is re-tuned the two
+    /// stay concentric by construction.
+    static var slabInnerRadius: CGFloat {
+        DS.Radius.nested(parent: slabRadius, inset: slabPadding)
+    }
+
     /// **THE INSET INSIDE THE ROOM CARD'S OWN ROOT** — the one that makes a
     /// card's content land on the same leading as a feed ROW (prd §495).
     ///

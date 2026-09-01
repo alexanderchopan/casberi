@@ -41330,3 +41330,89 @@ never name a holder again (`.names` grepped from a comment-stripped copy, the
 Obsidian/Cursor lesson), and the counts must stay at figure size — a stat24
 demotion is the old list wearing a new doc. UNSEEN on a device: iOS build and
 the harness are green, the grid budget is arithmetic from the ramp.
+
+## 547. The account rail and the scope switcher become one component (user: "what if we made the silouheet row and the scope rail seem like more of a component together", 2026-09-01)
+
+Asked while looking at three layout directions for the wallet room, none of
+which had touched this. It is the better question, and the diagnosis is why:
+the two controls did not merely cost two rows, they read as two unrelated
+objects, and no amount of closing the gap between them was ever going to fix
+that.
+
+**They disagreed on all three things that make a stack read as one component.**
+BLEED — the rail ran full bleed (`leading: 0`, faces reaching the screen edge)
+under a switcher inset at `DSRoomChassis.inset`, so two different left edges,
+one directly above the other. SHAPE — circles with captions under them, over a
+glass capsule of pills; two shape languages, neither referring to the other.
+SELECTION — the rail said "picked" by leaving one face at full strength while
+the rest receded to 0.7 plus a semibold caption, the switcher by a tint capsule
+that TRAVELS; two grammars for one idea, four points apart.
+
+`DSRoomChassis.railGap`/`switcherGap` are what remains of the old answer. §495
+tightened both to `s1` and its own note says why it thought that would work —
+"the rail and the switcher are two controls that scope the same room, and they
+read as a pair rather than as two unrelated strips". They did not. That is the
+same mistake the chassis header already records about the chassis itself: a
+room that has to be re-measured to look related will drift again the next time
+either side is touched.
+
+**So they share a container, an inset and one selection shape**, and that is
+the whole ruling. `DSRoomRailSlab` is a glass slab at `DS.Radius.widget`
+holding a rail deck over a switcher deck, packed with `DS.Space.s1` — a
+borrowed number, not a new one, since `DSSectionSwitcher` has always drawn
+`.padding(4)` inside its own capsule. The selected fill in BOTH decks is one
+concentric `DS.Radius.nested(parent:inset:)` rounded rect in `DS.tintDim`, and
+both travel on `matchedGeometryEffect` with the same Reduce Motion branch — two
+decks of one component that animated their pick differently would undo the
+fusion the moment anybody tapped.
+
+**What each deck DOES is untouched.** The rail still scopes by address and
+keeps its own horizontal scroll; the switcher keeps its travel, its attention
+dot, its re-centre and its edge ease. Three things are given up, each because
+the container now provides it: the rail's page inset (double, inside a slab
+that is already inset), its outer vertical padding, and — the one worth naming
+— the `fillFaint` capsule under every chip at rest, since a pill inside a pill
+is exactly the doubling this exists to remove. Embedded, the slab IS the
+container and only the pick fills. "All" goes neutral inside its own circle for
+the same reason: with the slot behind it carrying the tint, a tinted disc would
+be the same colour laid twice.
+
+**Three rooms, and two of them were already one pattern.** Wallet and Hegotá
+were byte-for-byte identical — two sibling `List` sections, gaps carried on
+`listRowInsets` bottoms — so Hegotá had inherited the disagreement wholesale
+without anybody deciding it should. Both collapse to one section. Vibenet is
+the odd one: a `VStack` inside a card, its gaps expressed as NEGATIVE padding
+against the card's own `s6` stack spacing, so fusing deletes the
+`switcherGap - s6` correction outright and the slab owns that distance in all
+three rooms instead.
+
+**Stated plainly, because the temptation to claim otherwise is real: this is
+not a height saving.** The slab lands within a few points of the two strips it
+replaces. §495 had already squeezed the air out of the gaps between them and
+the parts themselves are unchanged, so there was nothing left to reclaim. How
+much chrome stands above a room's first row is a real question and is still
+open — the three directions this ruling came out of were all about exactly
+that, and none was taken.
+
+**Two guards followed their subject rather than being deleted**, which is this
+repo's own rule for a guarded thing that moves. `wallet-section-selftest`
+asked for `DSSectionSwitcher(` in `FeedScreen`; the switcher is not drawn there
+any more, so it asks for `DSRoomRailSlab(` and gains a second guard that the
+slab really draws a switcher — without which the first passes on a room that
+quietly lost half of what it scopes by. Its crown-above-switcher ordering
+anchor moved to `walletScopeRailSection(section)` for the same reason.
+`vibenet-selftest` extracted `scopeStrip`, which is gone (a per-room copy of a
+shared control is only somewhere for the three rooms to drift apart again); it
+extracts `railSlab` and asserts the same gate, plus that both decks are passed.
+`hegota-selftest` had NO assertion about either control and still does not —
+that chrome is unguarded, which is worth knowing before touching it.
+
+The Wallet room's `walletScopeRailSection` keeps its name on purpose:
+`category-fold-selftest` asks for it by that name, and renaming it to advertise
+the second deck would cost that guard for nothing.
+
+UNSEEN on a device. Both platforms compile, every affected harness and static
+audit is green, and the numbers above are arithmetic off the ramp — but no
+screenshot of any of the three rooms has been taken, and the one thing to look
+at first is a wallet with five watched addresses, where the rail scrolls inside
+the slab and the pick's fill has to stay legible against the glass.

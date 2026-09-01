@@ -24,6 +24,7 @@ MAIN="Casberi/Casberi/Shell/MainSurface.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 CHROME="Casberi/Casberi/Shell/ShellChrome.swift"
 SWITCH="Casberi/Casberi/Design/DSSectionSwitcher.swift"
+SLAB="Casberi/Casberi/Design/DSRoomRailSlab.swift"
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -185,7 +186,7 @@ mutate "the ruled short noun becomes a question again" \
 # these files DOCUMENT the rules by naming what they must not do, so a guard
 # grepping raw source scores prose as compliance (the Obsidian/Cursor lesson).
 strip_comments() { perl -pe 's{//.*$}{}g' "$1"; }
-for f in "$MAIN" "$FEED" "$CHROME" "$SWITCH" "$SRC"; do
+for f in "$MAIN" "$FEED" "$CHROME" "$SWITCH" "$SLAB" "$SRC"; do
   strip_comments "$f" > "$work/$(basename $f).bare"
 done
 
@@ -207,8 +208,19 @@ guard MainSurface.swift "extension WalletSection: DSSectionScope" \
 # and pushed the crown to about 45% down the screen.
 deny MainSurface.swift "walletSectionSwitcher" \
   "the switcher is back in roomControls — it belongs in the room's content, under the crown"
-guard FeedScreen.swift "DSSectionSwitcher(" \
-  "the switcher is not drawn in the room's content"
+# THE GUARD FOLLOWED ITS SUBJECT (prd §547, 2026-09-01). It asked for
+# `DSSectionSwitcher(` in FeedScreen until the switcher stopped being drawn
+# there directly: it is the lower deck of `DSRoomRailSlab` now, which the room
+# mounts instead. The RULE is unchanged and is the only thing this ever meant —
+# the control that scopes the room is drawn in the room's own content, not
+# pinned in `roomControls` (the `deny` directly above is its other half).
+guard FeedScreen.swift "DSRoomRailSlab(" \
+  "the scope control is not drawn in the room's content"
+# ...and the slab really carries the switcher, rather than having become a rail
+# with the scope control quietly dropped. Without this the pair above passes on
+# a room that lost half of what it is scoping by.
+guard DSRoomRailSlab.swift "DSSectionSwitcher(" \
+  "the slab no longer draws the scope switcher — fusing must not delete a deck"
 guard FeedScreen.swift "WalletSection.shows(present:" \
   "the draw is not gated on shows() — a single scope would draw a control (\u00a783)"
 guard FeedScreen.swift "WalletSection.resolve(" \
@@ -232,7 +244,14 @@ guard FeedScreen.swift "WalletSection.resolve(" \
 crown_at=$(grep -n "walletTilesSection(visible" "$work/FeedScreen.swift.bare" | head -1 | cut -d: -f1 || true)
 # The CALL SITE, not the declaration — which sits earlier in the file and
 # made this guard fire on a correctly-ordered room the first time it ran.
-switch_at=$(grep -n "walletSectionSwitcherSection(section)" "$work/FeedScreen.swift.bare" | head -1 | cut -d: -f1 || true)
+#
+# **The anchor moved with its subject** (prd §547): the switcher's own section
+# is gone, so what has to sit below the crown is the SLAB that carries it.
+# `walletScopeRailSection(section)` is that call, and it takes an argument now
+# precisely because it absorbed the switcher's — which is what keeps this
+# anchored on a call site rather than on a bare identifier that also matches
+# the declaration.
+switch_at=$(grep -n "walletScopeRailSection(section)" "$work/FeedScreen.swift.bare" | head -1 | cut -d: -f1 || true)
 [[ -n "$crown_at" && -n "$switch_at" ]] || fail "drift: cannot locate the crown or the switcher in the wallet block"
 (( crown_at < switch_at )) || fail "drift: the switcher is drawn ABOVE the crown — it must sit below the sparkline"
 
