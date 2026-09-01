@@ -42074,3 +42074,90 @@ through `scopeFigure` so the slot never leaves the stack.
 **UNSEEN on a device or a simulator.** Every string was measured, both platforms
 compile and the harnesses are green, but no screenshot of any of these three
 scopes has been taken.
+
+## §548 second follow-up — what a user can actually DO on this chain, measured by doing it (user: "what can a user do on this frames devnet, can they stitch frame transactions together?", 2026-09-01)
+
+Asked what the chain supports, the honest answer was that its whole recorded
+history is the MINIMUM shape and nothing else: all 5 type-`0x06` transactions
+are two frames — one VERIFY at `flags 0x3`, one SENDER at `0x0` — with **no
+calldata, no mode 0, one signature each, and the batch bit never set**. So the
+spec says a great deal that the chain had never once been asked to do.
+
+It was asked. Four transactions, sent from this project, each answering one
+question the room's design depends on.
+
+**1. STITCHING WORKS.** A three-frame transaction — one VERIFY and two SENDER
+frames paying two different addresses — was accepted, mined and reported three
+`frameReceipts` (`0x5b131baf…`). One signature, one nonce, two recipients paid.
+It is the first transaction with more than two frames on this chain.
+
+**2. FRAMES ARE NOT ATOMIC BY DEFAULT, and this is the finding that matters
+most.** A transaction whose third frame was state-starved returned
+**`status: 0x0`** — and frame 1's transfer **persisted anyway**: a real
+EIP-7708 log on the receipt, and the recipient holds the ETH (`0x9bb9cfef…`,
+verified by reading the log back, not by inference).
+
+So a Frames transaction can FAIL and MOVE MONEY in the same breath. Drawing
+that row as "Failed" is a lie about the money; drawing it as "Sent" is a lie
+about the outcome. **The only honest rendering is frame by frame**, which is
+the room's founding premise — now measured rather than argued.
+
+**3. ATOMICITY IS OPT-IN, via `flags` bit 2.** The same shape with the first
+SENDER frame marked `0x4` and terminated by a non-batch frame rolled the whole
+thing back (`0x2642331b…`): the batched recipient holds nothing.
+
+**4. THE TRAP THIS CREATES, and it is a §83 one.** In that atomic run, the
+rolled-back frame still reported **`status: 0x1`**. Its effect was reverted and
+its own receipt says it succeeded. **Per-frame status is therefore NOT
+sufficient to say what a frame DID** — the discriminator is the LOGS: the same
+frame carried 1 log when its effect persisted and 0 when it was rolled back.
+
+A room that draws a green tick from `status` alone will tell somebody their
+money moved when it did not. The rule: **a frame inside a batch is drawn from
+its effects, never from its status**, and `FramesMove.everyFrameSucceeded` —
+which reads `status` — must not be used to describe money.
+
+**Also confirmed here, on the case their own guide names:** the starved frame
+burned exactly its full execution budget (100,000 of 100,000) with
+`stateGasUsed` **absent**, not `0x0`. That is the documented state-starvation
+signature arriving without the field the documentation tells implementers to
+read it with, on a client that does not serve it — §548's amendment, reproduced
+deliberately rather than stumbled into.
+
+**What a user can do, then:** any list of frames under one signature and one
+nonce; each frame with its own target, value, calldata and two gas budgets;
+VERIFY frames that authorise, SENDER frames that act as them, DEFAULT frames
+called by the entry point; and atomic sub-batches inside a transaction that is
+otherwise not atomic. **What Casberi does today is exactly one of those
+shapes** — the two-frame transfer — and the gap between the two is the room's
+whole remaining opportunity.
+
+**Untested, and named rather than assumed:** calldata in a frame (nothing on
+this chain has ever carried any), mode 0, and the `signatures` ARRAY holding
+more than one entry — the envelope has always supported several and every
+transaction on the chain has exactly one.
+
+### The batch builder is not a Frames feature — it is the wallet send, mapped
+
+Ruled the moment the finding landed (user, 2026-09-01: *"batch builder will be
+a subset of the 'send' we are doing right now on the wallet work"*). So this is
+**not** a bespoke screen to design for this seat, and proposing one later would
+be building a second send console beside the one that already exists — the
+duplicate-parser class this project keeps catching, wearing a room's clothes.
+
+The mapping is exact and it is why the answer is a subset rather than a
+neighbour: a wallet send to several recipients becomes **one transaction with
+one SENDER frame per recipient**, under one signature and one nonce. What the
+wallet's own version cannot offer, and this one can, is the line above it:
+**all or nothing.** On any ordinary chain paying four people is four
+transactions, each able to fail alone; here it is one transaction whose frames
+carry `flags` bit 2, and §548's measurement is that the rollback is real.
+
+Two things follow for whoever builds it. **The atomic toggle is the only new
+control** — everything else is the wallet's send, and a frame list is what the
+existing recipient rows already are. And **the confirmation must be drawn from
+effects, not from status**, per the trap above: a batched frame reports
+`status: 0x1` after being rolled back, so a per-recipient tick taken from
+`status` will tell somebody their money moved when it did not. That is the one
+place this feature can be wrong in a way that costs real trust, on a chain
+where nothing else can.
