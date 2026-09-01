@@ -68,7 +68,12 @@ FIVE CHECKS.
      coverage) and which figure kinds draw — all of which passed over an empty
      Home for months, because this is a SCOPE'S CONTENT gated on a device
      credential, which is none of those things.
-  8. THE KEYPAD DOES NOT COME BACK. 176pt is the whole §548a saving and it is
+  8. THE KEYPAD DOES NOT COME BACK.
+  9. NEITHER HOME EVER DRAWS NOTHING (§548d). Each card must carry a no-key
+     branch, because Home's entire content IS the console: gate it on a
+     credential and a phone without one gets a blank scope with no words and no
+     door — which is what made the console impossible to find on a fresh
+     simulator, and is indistinguishable from a bug. 176pt is the whole §548a saving and it is
      the obvious thing to restore the next time this screen is redesigned on a
      Pro Max. If it does come back, it comes back with a new budget and a new
      ruling, not quietly.

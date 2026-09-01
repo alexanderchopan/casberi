@@ -45,6 +45,12 @@ import SwiftData
 ///   broke. Here it always would be. The balance is still SHOWN — knowing
 ///   what you hold is information, filling it in is a claim.
 struct HegotaSendCard: View {
+    /// The door to making this phone's key — the room's own key sheet, passed
+    /// in rather than presented here (a `.sheet` inside a `FeedScreen` List row
+    /// resolves to the same presenting controller as the screen's own and
+    /// half-opens then closes, paid for three times already).
+    var onMakeKey: () -> Void = {}
+
     @Environment(\.modelContext) private var modelContext
 
     @State private var destination = ""
@@ -76,20 +82,71 @@ struct HegotaSendCard: View {
     /// on a card that did not fit the screen. The address it spends from moves
     /// onto the recipient row, which names both ends of a send for nothing.
     var body: some View {
-        if sender != nil {
+        if sender == nil {
+            noKey
+        } else {
             VStack(alignment: .leading, spacing: DevnetConsole.blockGap) {
                 if sentHash == nil {
-                form
-            } else {
-                sentHead
-                done
-            }
+                    form
+                } else {
+                    sentHead
+                    done
+                }
             }
             .padding(DevnetConsole.cardPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .dsWidgetSurface()
             .animation(DS.Motion.standard, value: sentHash)
         }
+    }
+
+    // MARK: - No key
+
+    /// **A SCOPE NEVER DRAWS NOTHING (prd §548d, 2026-09-01).**
+    ///
+    /// §539 gated this card on the phone holding a key — *"a room with no key
+    /// draws no form rather than a dead one"* — which is right about the form
+    /// and wrong about the screen: Home's ENTIRE content is this card, so on a
+    /// phone with no key the scope rendered blank. No form, no words, no door,
+    /// and nothing to distinguish "you need a key" from "this is broken".
+    ///
+    /// Reported the long way round: the console could not be seen on a fresh
+    /// simulator, and the reason was never on screen. Its justification named a
+    /// door — *"the room keeps its own 'this phone's account' row"* — that
+    /// lives on the ACCOUNTS scope, one chip away, which is exactly the kind of
+    /// "it's over there" a blank screen cannot say.
+    ///
+    /// One sentence and the door itself. `onMakeKey` is the room's existing
+    /// `onOpenKeySheet`, so this adds no presentation of its own.
+    private var noKey: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            Text(String(localized: "This phone has no Hegotá key yet."))
+                .dsText(.body17)
+                .foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(String(localized: "Sending needs one — it signs on this device and never leaves it."))
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+            Button {
+                DSHaptic.tap()
+                onMakeKey()
+            } label: {
+                Text(String(localized: "Make a key"))
+                    .dsText(.callout15).fontWeight(.semibold)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, DevnetConsole.verbPad)
+                    .background(Self.mark,
+                                in: RoundedRectangle(cornerRadius: DS.Radius.control,
+                                                     style: .continuous))
+            }
+            .buttonStyle(PressSpring())
+            .dsHover()
+        }
+        .padding(DevnetConsole.cardPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .dsWidgetSurface()
     }
 
     // MARK: - Head

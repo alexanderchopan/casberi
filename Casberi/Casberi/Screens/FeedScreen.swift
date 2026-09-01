@@ -616,6 +616,34 @@ struct FeedScreen: View {
             Section {
                 VibenetSendCard(account: account)
             }
+        } else {
+            // **A SCOPE NEVER DRAWS NOTHING (prd §548d).** §538 gated the
+            // console on an account this phone's key can act for, which is
+            // right about the form and wrong about the screen: Home's ENTIRE
+            // content is that card, so without one the scope rendered blank —
+            // no form, no words, no door, and no way to tell "you have no
+            // account here yet" from "this is broken". It is also why the
+            // console could not be found on a fresh simulator: the reason was
+            // never on screen.
+            //
+            // No door of its own, deliberately: authorizing this phone against
+            // an account happens on the Accounts and Permissions scopes, both
+            // one chip away in the strip directly above this line, and a second
+            // route to them from here would be a third way to do one thing.
+            Section {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    Text(String(localized: "No account here can be signed for by this phone yet."))
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(String(localized: "Authorize this phone's key on an account in Accounts or Permissions, and sending appears here."))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, DS.Space.s6)
+            }
         }
     }
 

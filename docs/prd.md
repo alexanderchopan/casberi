@@ -41762,3 +41762,49 @@ UNBUILT AND UNSEEN, like §548/§548a/§548b: authored on Linux with no Xcode. T
 thing to look at on a device is Hegotá's Home — its crown moves from 24pt to
 64pt and its curve now shares the slot with it, so the bottom of that chart is
 where a clip would show.
+
+## 548d. A scope never draws nothing — the console could not be found because its absence had no words (user: "hegota and vibenet are still empty the send modal isn't there", "we started this session trying to fit the send module below Home on Vibenet and Hegota and i have yet to see it", 2026-09-01)
+
+§538 and §539 each gated the console on a credential and each stated the reason
+well — *"a room with no key draws no form rather than a dead one"* (§83's
+dead-control clause, correctly applied to the FORM). Both were wrong about the
+SCREEN, in the same way, for the same reason: **Home's entire content is that
+card.** Gate the card and the scope renders blank. No form, no sentence, no
+door, and nothing at all to separate *"you have no key here yet"* from *"this
+is broken"*.
+
+That is why the console could not be found on a fresh simulator across an
+entire session: **the reason was never on screen.** §539's justification even
+names a door — *"the room keeps its own 'this phone's account' row, so a
+keyless room is not a dead end"* — and that row lives on the ACCOUNTS scope,
+one chip away, which is exactly the kind of "it's over there" a blank screen
+cannot say.
+
+**THE RULE, and it generalises past these two rooms:** a scope whose whole
+content is one gated card owes an empty state, and the gate's own reasoning is
+not it. §83 bans a control that does nothing; it does not license a screen that
+SAYS nothing, and the two get conflated whenever the gate is written from the
+control's point of view rather than the room's.
+
+- **Hegotá** gets one sentence, one line of why, and the door itself — a "Make
+  a key" button wired to the room's existing `onOpenKeySheet`, so it adds no
+  presentation of its own (a `.sheet` inside a `FeedScreen` List row resolves
+  to the same presenting controller as the screen's and half-opens then closes,
+  paid for three times already).
+- **vibenet** gets the sentence and NO door, deliberately: authorizing this
+  phone against an account happens on the Accounts and Permissions scopes, both
+  one chip away in the strip directly above the line, and a second route from
+  here would be a third way to do one thing.
+
+Mechanical as check 9 of `devnet-console-audit.py`.
+
+**What this does NOT fix, stated plainly.** It does not put the console on a
+keyless phone — that gate is correct and stays. It makes the absence legible,
+which is the difference between a room that is waiting for something and a room
+that looks broken. Seeing the console still needs a key, the demo (§548b), or
+an authorized account.
+
+UNBUILT, like §548 through §548c: authored on Linux with no Xcode, no Swift
+toolchain and no simulator, in a session where four commits accumulated without
+a single compile. That is the standing cost of this environment and it is worth
+recording next to the work it produced.
