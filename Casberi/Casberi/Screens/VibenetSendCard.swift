@@ -61,12 +61,23 @@ struct VibenetSendCard: View {
 
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
+    /// **NO HEAD ON THE FORM (prd §548).** It was a mark disc, the word "Send"
+    /// and the sending account — 46pt of the console's height to say the verb
+    /// the button already carries, on a card that did not fit the screen. The
+    /// account it spends from is the one fact worth keeping and it costs
+    /// nothing on the recipient row, which has two ends to name anyway. The
+    /// SENT state keeps a head, because there the title is the whole news and
+    /// the budget no longer applies — a settled receipt is four short lines.
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
-            head
-            if sentHash == nil { form } else { done }
+        VStack(alignment: .leading, spacing: DevnetConsole.blockGap) {
+            if sentHash == nil {
+                form
+            } else {
+                sentHead
+                done
+            }
         }
-        .padding(DS.Space.s4)
+        .padding(DevnetConsole.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .dsWidgetSurface()
         .animation(DS.Motion.standard, value: sentHash)
@@ -74,39 +85,29 @@ struct VibenetSendCard: View {
 
     // MARK: - Head
 
-    /// A title and the account it spends from — NOT a `DSSheetHead`, and not
-    /// the word "Send" twice. The room's strip already says Home; this says
-    /// which of the two questions on Home this block is.
-    private var head: some View {
+    private var sentHead: some View {
         HStack(spacing: DS.Space.s3) {
             ZStack {
                 Circle().fill(Self.mark.opacity(0.18))
                     .frame(width: DS.Face.rowCircle, height: DS.Face.rowCircle)
-                Image(systemName: sentHash == nil ? "arrow.up.right" : "checkmark")
+                Image(systemName: "checkmark")
                     .accessibilityHidden(true)
                     .dsGlyph(13, weight: .semibold)
                     .foregroundStyle(Self.mark)
             }
-            Text(sentHash == nil ? String(localized: "Send") : String(localized: "Sent"))
+            Text(String(localized: "Sent"))
                 .dsText(.heading17)
                 .foregroundStyle(DS.textPrimary)
             Spacer(minLength: DS.Space.s2)
-            if sentHash != nil {
-                DSStamp(word: String(localized: "Broadcast"), weight: .good)
-            } else if let name = accountName {
-                Text(name)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-            }
+            DSStamp(word: String(localized: "Broadcast"), weight: .good)
         }
     }
 
-    /// The sending account in the room's own words, so this block names it the
-    /// way the rail and the roster above already do.
+    /// The sending account, and what the room calls it — so this block names it
+    /// the way the rail and the roster above already do.
+    private var accountAddress: String { "0x" + VibenetTransaction.hex(account) }
     private var accountName: String? {
-        let hex = "0x" + VibenetTransaction.hex(account)
-        return VibenetWatch.shared.name(for: hex) ?? VibenetRoom.shortAddress(hex)
+        VibenetWatch.shared.name(for: accountAddress) ?? VibenetRoom.shortAddress(accountAddress)
     }
 
     // MARK: - Form
@@ -115,28 +116,32 @@ struct VibenetSendCard: View {
         !busy && Self.isValidAddress(destination) && Self.weiData(from: amount) != nil
     }
 
-    /// **THE CONSOLE (prd §544).** Two labelled wells and a button became a
-    /// recipient row, a centred figure and a keypad — see `DevnetSendConsole`
-    /// for the reasoning; what is specific to vibenet is here.
+    /// **THE CONSOLE (prd §544), FITTED TO THE SCREEN (prd §548).** Two
+    /// labelled wells and a button became a recipient row, a centred figure and
+    /// a keypad — see `DevnetSendConsole` for the reasoning and for the height
+    /// budget every number below is drawn from; what is specific to vibenet is
+    /// here.
     private var form: some View {
-        VStack(spacing: DS.Space.s4) {
-            DevnetSendToRow(address: destination.isEmpty ? nil : destination,
+        VStack(spacing: DevnetConsole.blockGap) {
+            DevnetSendToRow(from: accountAddress,
+                            fromName: accountName,
+                            address: destination.isEmpty ? nil : destination,
                             name: destination.isEmpty ? nil : recipientName,
                             preview: knownAddresses,
                             onTap: { picking = true })
 
             DevnetSendFigure(amount: amount, dim: amount.isEmpty) {
+                // THE UNIT IS A WORD HERE, and the asset CHOICE is not yet
+                // built (§544's stated gap): this seat has only ever moved
+                // native ETH — `VibenetSend.sendValue` takes a `valueWei`
+                // and nothing else — so a chip opening a one-item menu
+                // would be the dead control §83 bans. It becomes a control
+                // the day the bridge can move a token, and not before.
+                Text(String(localized: "ETH"))
+                    .dsText(.price16)
+                    .foregroundStyle(amount.isEmpty ? DS.textTertiary : DS.textSecondary)
+            } subline: {
                 HStack(spacing: DS.Space.s2) {
-                    // THE UNIT IS A WORD HERE, and the asset CHOICE is not yet
-                    // built (§544's stated gap): this seat has only ever moved
-                    // native ETH — `VibenetSend.sendValue` takes a `valueWei`
-                    // and nothing else — so a chip opening a one-item menu
-                    // would be the dead control §83 bans. It becomes a control
-                    // the day the bridge can move a token, and not before.
-                    Text(String(localized: "ETH"))
-                        .dsText(.callout15)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(amount.isEmpty ? DS.textTertiary : DS.textSecondary)
                     if let held {
                         Text(String(localized: "\(VibenetBalanceFormat.line(held)) available"))
                             .dsText(.label12)
@@ -148,32 +153,23 @@ struct VibenetSendCard: View {
                         }
                     }
                 }
+                .frame(height: DevnetConsole.sublineRow)
             }
 
             DevnetSendKeypad(amount: $amount, tint: Self.mark)
 
-            Button {
-                DSHaptic.tap()
-                send()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.up.right").dsGlyph(13, weight: .semibold)
-                    Text(sendLabel)
-                    if busy { ProgressView().controlSize(.mini) }
-                }
-                .dsText(.callout15).fontWeight(.semibold)
-                .foregroundStyle(canSend ? .white : DS.textTertiary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, DS.Space.s3)
-                .background(canSend ? AnyShapeStyle(Self.mark) : AnyShapeStyle(DS.gray200),
-                            in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-            }
-            .buttonStyle(PressSpring())
-            .disabled(!canSend)
-            .armedPop(canSend)
-            .animation(DS.Motion.standard, value: canSend)
-            .dsHover()
+            DevnetSendVerb(title: sendLabel, armed: canSend, busy: busy,
+                           tint: Self.mark, action: send)
 
+            // **THE STANDING FOOTNOTE IS GONE (prd §548).** It read "Signed by
+            // this phone's key. Whether the sender or the devnet's faucet pays
+            // is checked when you tap Send" — two lines, always on, 50pt of a
+            // 400pt budget, and by §315's test it changes nothing anyone would
+            // DO. Both halves are still said where they are actionable: Face ID
+            // says whose key signs at the moment it signs, and `noSponsor` /
+            // `sponsorUnreadable` say who pays in words, on the one run where
+            // the answer mattered. What is left below only ever appears when
+            // there is something wrong, and is deliberately outside the budget.
             if let errorText {
                 Text(errorText)
                     .dsText(.label11)
@@ -184,12 +180,6 @@ struct VibenetSendCard: View {
                 Text(String(localized: "That doesn't look like an address."))
                     .dsText(.label11)
                     .foregroundStyle(DS.destructive)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                Text(String(localized: "Signed by this phone's key. Whether the sender or the devnet's faucet pays is checked when you tap Send."))
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -244,24 +234,13 @@ struct VibenetSendCard: View {
         }?.nativeBalance
     }
 
-    private func well<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        content()
-            .padding(.horizontal, DS.Space.s3)
-            .frame(minHeight: 44)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(DS.surfaceWell,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-    }
-
-    private func caption(_ text: String) -> some View {
-        Text(text)
-            .dsText(.label12)
-            .foregroundStyle(DS.textTertiary)
-    }
-
-    /// The in-well affordances. `label12` on `fillFaint` — the room's own quiet
-    /// chip, never the mark: these fill a field in, they do not move money, and
-    /// wearing the send button's colour would say they did.
+    /// The subline's one affordance. `label12` on `fillFaint` — the room's own
+    /// quiet chip, never the mark: it fills a field in, it does not move money,
+    /// and wearing the send button's colour would say it did.
+    ///
+    /// Its vertical padding is 3, not 5: this chip is what sets the height of
+    /// the subline row, so it is the term `DevnetConsole.sublineRow` is written
+    /// from and the two have to agree.
     private func miniChip(_ title: String, act: @escaping () -> Void) -> some View {
         Button {
             DSHaptic.selection()
@@ -271,7 +250,7 @@ struct VibenetSendCard: View {
                 .dsText(.label12).fontWeight(.semibold)
                 .foregroundStyle(DS.tint)
                 .padding(.horizontal, DS.Space.s2)
-                .padding(.vertical, 5)
+                .padding(.vertical, 3)
                 .background(Capsule(style: .continuous).fill(DS.fillFaint))
                 .fixedSize()
         }

@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// THE SEND CONSOLE, SHARED BY BOTH DEVNETS (prd §544, 2026-08-31).
+/// THE SEND CONSOLE, SHARED BY BOTH DEVNETS (prd §544, 2026-08-31; fitted to
+/// the screen by §548, 2026-09-01).
 ///
 /// §538 and §539 made sending the room's own Home scope in vibenet and Hegotá,
 /// which was the right move and left the FORM untouched: two labelled wells and
@@ -90,27 +91,167 @@ enum DevnetAmountInput {
     }
 }
 
+// MARK: - The budget
+
+/// **THE CONSOLE'S HEIGHT IS A SUM, AND THE SUM IS WRITTEN DOWN (prd §548,
+/// 2026-09-01).** User: *"it needs to fit all on the screen so user doesn't
+/// have to scroll"*, then, when offered a shorter figure slot: *"needs to fit
+/// where it is. we can't make the slot shorter because it needs to be that
+/// same size on all the other screens and wallets"*.
+///
+/// So the room's chrome is FIXED and the console is what gives. Measured off a
+/// screenshot of the shipping build rather than estimated (iPhone 16 Pro Max,
+/// 440×956pt, a 3× PNG scanned for its surface edges):
+///
+/// ```
+///   safe area + source chips + venue rail   198
+///   DSRoomChassis.visualSlot                210   ← untouchable: every scope
+///   the fused rail slab                     111      and Wallet share it
+///   the gaps                                 26
+///   ────────────────────────────────────────────
+///   the card's top edge                     545pt   (measured 544.7)
+///   the card as it shipped                  601pt   → bottom at 1146 of 956
+/// ```
+///
+/// Everything from the keypad's fourth row down — `. 0 ⌫`, the Send button and
+/// the footnote under it — was off the screen, on the one surface in this app
+/// whose entire content is a control you are meant to complete in one go.
+///
+/// **The budget, derived rather than chosen**: 956 − 545 = 411pt to the glass,
+/// less an 11pt margin so the button never sits ON the edge → **400pt**. The
+/// sum below comes to 394 and `devnet-console-audit.py` fails the build if it
+/// ever exceeds the budget, because the failure is otherwise invisible — a card
+/// that overflows renders perfectly and simply continues below the fold.
+///
+/// **WHAT IS NOT NEGOTIABLE, and it is the one number here that is a rule
+/// rather than a taste:** `keyHeight` is `DS.Hit.min`. The keypad is 45% of
+/// this budget and is therefore the obvious place to find another 40pt; it is
+/// also the control people tap most in the room, in a hurry, and shrinking a
+/// key below 44pt buys screen by making the thing you came for harder to hit.
+/// The audit asserts the floor separately from the sum for exactly that reason.
+///
+/// **STATED CEILING, because a budget that quietly fails on smaller hardware is
+/// worse than one that says so.** The chrome above is ~545pt on EVERY iPhone —
+/// none of its four terms scales with screen height — so the room leaves 411pt
+/// on a 956pt phone, 307pt on an 852pt one and 267pt on a 812pt one. 394 does
+/// not fit in 307. On anything below ~950pt this console is shorter than it was
+/// and still scrolls, and the only remaining slack is in the room's chrome,
+/// which §548 rules out. Do not "fix" that by taking it out of `keyHeight`.
+enum DevnetConsole {
+
+    /// The card's own inset. `s3` rather than the `s4` every other card in
+    /// these rooms carries: this card's content is a control rather than a
+    /// reading, and a control's frame is the tightest thing on the page.
+    static let cardPadding = DS.Space.s3
+
+    /// Between the console's four blocks. One value, so the sum is a sum.
+    static let blockGap = DS.Space.s2
+
+    /// The recipient row — the hit floor exactly, never less.
+    static let recipientRow = DS.Hit.min
+
+    /// What one line of `price40` really draws.
+    ///
+    /// **NOT the ramp's `lineHeight`, which is a `lineSpacing` and says nothing
+    /// about a single line** — a face draws about 1.2× its point size, so 40pt
+    /// of Figtree is ~48. Both font-derived terms here are ROUNDED UP for that
+    /// reason: an over-stated term makes the budget stricter than the glass, an
+    /// under-stated one makes the budget a lie. The audit's job is to catch a
+    /// structural addition — another row, a wider gap, a second button — not to
+    /// certify text metrics to the point, which only a device can do.
+    ///
+    /// **It was `price48` and the drop is a correction, not a saving that
+    /// happens to look fine.** §491 ruled that ONE FIXED BOX HOLDS THE CROWN
+    /// OR THE SCOPE'S FIGURE, never both stacked — and this card drew a second
+    /// 64pt figure one slab below a 64pt crown, which is that fault arriving
+    /// by a route the chassis could not see. `price40` is the next rung, still
+    /// the largest thing in the card by 15pt, and it is no longer a second
+    /// claim on the same screen's hero.
+    static let figureLine: CGFloat = 48
+
+    /// Figure → its subline. The tightest rung on the ramp: they are one
+    /// reading, not two.
+    static let figureGap = DS.Space.s1
+
+    /// The subline — one line of `label12` plus the Max chip's own 3pt padding
+    /// above and below it, rounded up like the two terms above. The CHIP is
+    /// what sets this row's height, so the chip is what is written down, and
+    /// both cards pin the row to this value so the sum holds even where there
+    /// is no balance to state and no chip to draw.
+    static let sublineRow: CGFloat = 22
+
+    static let keyRows = 4
+
+    /// **The floor, and the whole reason the audit checks it apart from the
+    /// sum.** `DS.Hit.min`, never a literal — if the ramp's floor ever moves,
+    /// the keypad moves with it rather than quietly keeping an old number.
+    static let keyHeight = DS.Hit.min
+
+    /// The pressed circle, deliberately SMALLER than the key it sits in.
+    ///
+    /// The rows are adjacent now (no gap — that is 12pt the budget could not
+    /// spare), so a circle at the full key height would be tangent to its
+    /// neighbours and two quick presses would read as one blob. Inset by 2pt
+    /// top and bottom, the press stays a discrete mark at typing speed.
+    static let pressDiameter: CGFloat = 40
+
+    /// One line of `callout15` (a 17pt face at 1.2×), and the verb's own
+    /// vertical padding — `s2` rather than the `s3` it carried, which is 8pt
+    /// the budget could not spare on a control that is already 41pt tall.
+    static let verbLine: CGFloat = 22
+    static let verbPad = DS.Space.s2
+
+    static var figureBlock: CGFloat { figureLine + figureGap + sublineRow }
+    static var keypad: CGFloat { CGFloat(keyRows) * keyHeight }
+    static var verb: CGFloat { verbLine + 2 * verbPad }
+
+    /// What the console costs, top edge to bottom edge, with nothing typed and
+    /// nothing wrong. An error line appears BELOW the verb and is deliberately
+    /// outside this sum: it exists only when there is something to say, and
+    /// scrolling to read why a send was refused is a fair trade for never
+    /// scrolling to reach the button.
+    static var height: CGFloat {
+        2 * cardPadding + recipientRow + 3 * blockGap + figureBlock + keypad + verb
+    }
+
+    /// 956 (the measured screen) − 545 (the measured chrome) − 11 (a margin, so
+    /// the verb never sits on the glass).
+    static let budget: CGFloat = 400
+}
+
 // MARK: - The figure
 
-/// The money, centred, with whatever the caller puts under it.
+/// The money, centred, with its unit beside it and whatever the caller puts
+/// under it.
 ///
 /// `dim` is the resting state — nothing typed yet — and it fades the figure AND
 /// its unit together, because a bright "ETH" beside a grey "0" reads as a unit
 /// that has been chosen for an amount that has not.
-struct DevnetSendFigure<Subline: View>: View {
+///
+/// **THE UNIT SITS BESIDE THE FIGURE, NOT UNDER IT (prd §548).** It used to
+/// lead the subline, which cost a whole line of the budget to say a word that
+/// belongs to the number: "0.5" and "ETH" are one reading and are now set as
+/// one, on the last text baseline so the word rides the figure's feet however
+/// the figure scales. What is left under it is the only thing that is genuinely
+/// a second reading — what you HOLD, and the tap that spends all of it.
+struct DevnetSendFigure<Unit: View, Subline: View>: View {
     let amount: String
     var dim: Bool = false
+    @ViewBuilder var unit: () -> Unit
     @ViewBuilder var subline: () -> Subline
 
     var body: some View {
-        VStack(spacing: DS.Space.s2) {
-            Text(DevnetAmountInput.display(amount))
-                .dsText(.price48)
-                .foregroundStyle(dim ? DS.textTertiary : DS.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.4)
-                .contentTransition(.numericText())
-                .animation(DS.Motion.standard, value: amount)
+        VStack(spacing: DevnetConsole.figureGap) {
+            HStack(alignment: .lastTextBaseline, spacing: DS.Space.s2) {
+                Text(DevnetAmountInput.display(amount))
+                    .dsText(.price40)
+                    .foregroundStyle(dim ? DS.textTertiary : DS.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.4)
+                    .contentTransition(.numericText())
+                    .animation(DS.Motion.standard, value: amount)
+                unit()
+            }
             subline()
         }
         .frame(maxWidth: .infinity)
@@ -133,7 +274,11 @@ struct DevnetSendKeypad: View {
     ]
 
     var body: some View {
-        VStack(spacing: DS.Space.s1) {
+        // **NO ROW SPACING (prd §548).** It was `s1`, which is 12pt across the
+        // four rows and 12pt the console did not have. Adjacent rows are what
+        // every system passcode keypad already does; the press circle is inset
+        // instead, so nothing touches at the moment it matters.
+        VStack(spacing: 0) {
             ForEach(Self.rows, id: \.self) { row in
                 HStack(spacing: 0) {
                     ForEach(row, id: \.self) { key in
@@ -168,9 +313,13 @@ struct DevnetSendKeypad: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            // Comfortably past the 44pt floor: this is the control people tap
-            // most in the room, and it is tapped in a hurry.
-            .frame(height: 52)
+            // **THE HIT FLOOR, AND NOT A POINT LESS.** This is the control
+            // people tap most in the room and they tap it in a hurry, so when
+            // §548 went looking for height the keypad was the biggest block on
+            // the screen and the one place it was refused. Read from
+            // `DevnetConsole` rather than spelled, so the height in the budget
+            // and the height on the glass are one number.
+            .frame(height: DevnetConsole.keyHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(KeyStyle(tint: tint, reduceMotion: reduceMotion))
@@ -189,7 +338,8 @@ struct DevnetSendKeypad: View {
                 .background {
                     Circle()
                         .fill(tint)
-                        .frame(width: 52, height: 52)
+                        .frame(width: DevnetConsole.pressDiameter,
+                               height: DevnetConsole.pressDiameter)
                         .opacity(configuration.isPressed ? 1 : 0)
                 }
                 // Reduce Motion keeps the STATE (the fill still appears — it is
@@ -199,16 +349,73 @@ struct DevnetSendKeypad: View {
     }
 }
 
+// MARK: - The verb
+
+/// The one button, shared by both rooms (prd §548).
+///
+/// It was written out twice, identically, in two cards — and the moment the
+/// console's height became a SUM that had to hold, two copies of the control
+/// carrying 45 of its points became a way for the sum to quietly stop being
+/// true. One component, one height, and `devnet-console-audit.py` checks both
+/// cards use it rather than a button of their own.
+///
+/// **The title NAMES THE AMOUNT** once there is one (§538): this sits at the
+/// bottom of a card in a scrolling room, so the figure it is about can be off
+/// screen — and "Send" alone, on a control that moves money, is the weakest
+/// thing it could say at the moment it is tapped.
+struct DevnetSendVerb: View {
+    let title: String
+    let armed: Bool
+    let busy: Bool
+    let tint: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            DSHaptic.tap()
+            action()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.up.right").dsGlyph(13, weight: .semibold)
+                Text(title)
+                if busy { ProgressView().controlSize(.mini) }
+            }
+            .dsText(.callout15).fontWeight(.semibold)
+            .foregroundStyle(armed ? .white : DS.textTertiary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, DevnetConsole.verbPad)
+            .background(armed ? AnyShapeStyle(tint) : AnyShapeStyle(DS.gray200),
+                        in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+        }
+        .buttonStyle(PressSpring())
+        .disabled(!armed)
+        .armedPop(armed)
+        .animation(DS.Motion.standard, value: armed)
+        .dsHover()
+    }
+}
+
 // MARK: - Who it goes to
 
-/// The recipient as a row: a face and a name, or a stack of faces and an
-/// invitation, and a forward chevron because that is where the tap goes.
+/// The route as one row: where it leaves from, where it lands, and a forward
+/// chevron because that is where the tap goes.
+///
+/// **THE SENDER LIVES HERE NOW (prd §548).** It used to be the trailing half of
+/// a card head — a mark disc, the word "Send" and the account name — which cost
+/// 46pt to say something the button below already says and something this row
+/// can carry for nothing. A send has two ends; a row with both of them on it is
+/// the money grammar, and the tap still changes the only end that can change.
 ///
 /// **The chevron points RIGHT, not down.** An earlier cut pointed it down and
 /// opened a bottom sheet from it, which is two idioms at once — a disclosure
 /// says "onward", a chevron-down says "a menu drops here". This opens a picker
 /// of people, which is a sheet, so the row is a disclosure.
 struct DevnetSendToRow: View {
+    /// The account this send leaves from, and what the room calls it. Optional
+    /// so the row keeps its old "To …" reading where there is no second end to
+    /// name — never a face over a blank, which would be a sender we invented.
+    var from: String? = nil
+    var fromName: String? = nil
     /// The chosen address, or nil for the resting state.
     let address: String?
     /// What to call it — the room's own resolution, never re-derived here.
@@ -223,10 +430,23 @@ struct DevnetSendToRow: View {
             DSHaptic.selection()
             onTap()
         }) {
-            HStack(spacing: DS.Space.s3) {
-                Text(String(localized: "To"))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
+            HStack(spacing: DS.Space.s2) {
+                if let from {
+                    WalletFace(address: from, size: DS.Face.row, circular: true)
+                    Text(fromName ?? WalletStore.shortAddress(from))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                        .layoutPriority(-1)
+                    Image(systemName: "arrow.right")
+                        .accessibilityHidden(true)
+                        .dsGlyph(11, weight: .semibold)
+                        .foregroundStyle(DS.textTertiary)
+                } else {
+                    Text(String(localized: "To"))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                }
 
                 if let address {
                     WalletFace(address: address, size: DS.Face.row, circular: true)
@@ -254,16 +474,17 @@ struct DevnetSendToRow: View {
                         .lineLimit(1)
                 }
 
-                Spacer(minLength: DS.Space.s2)
+                Spacer(minLength: DS.Space.s1)
                 Image(systemName: "chevron.right")
                     .accessibilityHidden(true)
                     .dsGlyph(12, weight: .semibold)
                     .foregroundStyle(DS.textTertiary)
             }
-            .frame(minHeight: DS.Hit.min)
+            .frame(height: DevnetConsole.recipientRow)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
+        .accessibilityLabel(Text(String(localized: "Choose who to send to")))
         .dsHover()
     }
 }

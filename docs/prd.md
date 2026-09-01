@@ -41416,3 +41416,107 @@ audit is green, and the numbers above are arithmetic off the ramp — but no
 screenshot of any of the three rooms has been taken, and the one thing to look
 at first is a wallet with five watched addresses, where the rail scrolls inside
 the slab and the pick's fill has to stay legible against the glass.
+
+## 548. The send console fits the screen — and its height becomes a written-down sum (user: "the new send module is good, but how can we improve it? it needs to fit all on the screen so user doesn't have to scroll" → "needs to fit where it is. we can't make the slot shorter because it needs to be that same size on all the other screens and wallets", 2026-09-01)
+
+§544 gave both devnets a real payment console — a recipient row, the money
+giant and centred, a keypad of bare digits, one button carrying the verb — and
+it was right about every piece and never added them up. **On the device it was
+601pt of card under 545pt of chrome on a 956pt screen**, so the keypad's fourth
+row, the Send button and the footnote under it were all below the fold, on the
+one surface in this app whose entire content is a control you are meant to
+complete in one go.
+
+**MEASURED, NOT ESTIMATED**, off a 3× screenshot of the shipping build scanned
+for its surface edges (iPhone 16 Pro Max, 440×956pt):
+
+```
+  safe area + source chips + venue rail   198
+  DSRoomChassis.visualSlot                210
+  the fused rail slab (§547)              111
+  the gaps                                 26
+  ──────────────────────────────────────────
+  the card's top edge                    545pt   (measured 544.7)
+  the card                               601pt   → its bottom at 1146 of 956
+```
+
+**The first answer offered was to take it out of the chrome and the user ruled
+that out**, which is the ruling this entry exists to record: the 210pt figure
+slot is the same box in Wallet and in both devnet rooms and on every scope, and
+a room that shortens it for one scope is the bar-walks-around fault §482, §491
+and §495 each settled in turn. So the chrome is fixed and **the console is what
+gives**. Three options were costed against the measurement before one was
+taken; the two rejected are recorded because the arithmetic that rejected them
+does not change: hoisting the figure into the slot fits, and puts the account
+rail and the scope chips between the amount and the keypad; dropping Home's
+sparkline fits, and walks the bar.
+
+**Where the 207pt came from, and every one of them is a thing the console did
+not need.**
+
+1. **The card head, 46pt.** A mark disc, the word "Send" and the sending
+   account. The verb is on the button — §544's own third ruling — and the
+   account is the one fact worth keeping, which the recipient row carries for
+   nothing: a send has two ends, and a row with both on it is the money
+   grammar. The SENT state keeps its head, where the title is the whole news.
+2. **The figure, 64pt → 48pt, and this one is a CORRECTION rather than a
+   saving.** §491 ruled that one fixed box holds the crown OR the scope's
+   figure, never both stacked — and this card drew a second `price48` one slab
+   below a `price48` crown, which is that fault arriving by a route the chassis
+   cannot see. `price40` is the next rung and still the largest thing in the
+   card by 15pt.
+3. **The unit moves beside the figure**, ~20pt. "0.5" and "ETH" are one
+   reading; setting them as two cost a line to say a word that belongs to the
+   number.
+4. **The keypad, 220pt → 176pt**: rows adjacent (every system passcode keypad
+   already is) and keys at `DS.Hit.min` exactly. The pressed circle is inset to
+   40pt so two quick presses stay two marks.
+5. **The gaps and the padding**, `s4` → `s2` between blocks and `s3` around
+   the card, ~32pt. A control's frame is the tightest thing on a page.
+6. **The standing footnote, 50pt.** It read "Signed by this phone's key.
+   Whether the sender or the devnet's faucet pays is checked when you tap
+   Send" — always on, and by §315's test it changes nothing anyone would DO.
+   Both halves are still said where they are actionable: Face ID says whose
+   key signs at the moment it signs, and `noSponsor`/`sponsorUnreadable` say
+   who pays in words on the one run where the answer mattered.
+
+**THE HEIGHT IS A SUM NOW, AND THE SUM IS THE POINT.** `DevnetConsole` holds
+every term and `scripts/devnet-console-audit.py` re-adds them on every build —
+394pt of a 400pt budget, the budget being the measured 411pt to the glass less
+an 11pt margin. Mechanical because **the failure is invisible**: a card that
+overflows its room renders perfectly, every element drawn correctly in the
+right order, and the ones past the fold simply continue below it. No warning,
+no clipping, no log line — the build is green, every other audit is green, and
+the screen sweep photographs a Send button that is off the screen and certifies
+it. A sum in a comment is a sum nobody re-adds.
+
+Five checks, and the second is the one that matters most in a year: **the key
+height is asserted APART from the sum.** The keypad is 45% of the budget and is
+therefore the obvious place to find another 40pt the next time something is
+added to this card; it is also the control people tap most in the room, and in
+a hurry. A console that fits because its keys are 36pt has not been fixed. The
+other three tie the sum to the glass — the views must READ the constants rather
+than spell them, both cards must use one `DevnetSendVerb` (two hand-rolled
+copies of a control carrying 42 of the budget's points is how a sum quietly
+stops being true), and neither form may regrow a head.
+
+**STATED CEILING, because a budget that quietly fails on smaller hardware is
+worse than one that says so.** The chrome above is ~545pt on EVERY iPhone —
+none of its four terms scales with screen height — so the room leaves 411pt on
+a 956pt phone, 307pt on an 852pt one and 267pt on a 812pt one. 394 does not fit
+in 307. **On anything below ~950pt this console is 207pt shorter than it was
+and still scrolls**, and the only remaining slack is in the chrome, which this
+entry rules out. The fix for that is a smaller chrome or a different surface,
+never a shorter key.
+
+Two deliberate non-changes. The error line stays OUTSIDE the budget — it exists
+only when there is something wrong, and scrolling to read why a send was
+refused is a fair trade for never scrolling to reach the button. And the
+picker, the amount grammar (`DevnetAmountInput`), the wei arithmetic and both
+cards' failure copy are untouched.
+
+UNBUILT AND UNSEEN: authored on Linux with no Xcode and no Swift toolchain, so
+nothing here has been compiled and neither room has been photographed. Every
+static audit passes, the new one included. The first thing to look at on a
+device is the recipient row on a narrow phone, where the sender's name, an
+arrow, three overlapped faces and "Choose who" now share one 44pt line.

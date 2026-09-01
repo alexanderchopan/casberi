@@ -327,6 +327,22 @@ step "Setup copy audit"
 "$ROOT/scripts/setup-copy-audit.py" || fail "a connect page drifted past its copy budget — see the output above"
 print -P "%F{green}✓ setup copy audit%f"
 
+# The devnet send console fits the room it draws in (prd §548). Static, no
+# build, and mechanical because the failure is invisible: a card that overflows
+# renders perfectly — every element drawn, correctly, in the right order — and
+# the ones past the fold simply continue below it, so the build is green, every
+# other audit is green, and the screen sweep photographs a Send button that is
+# off the screen and certifies it. It shipped exactly that way: 601pt of card
+# under 545pt of measured chrome on a 956pt phone, with the keypad's last row,
+# the button and the footnote all below the fold. The console's height is a
+# written-down sum now and this is what re-adds it.
+step "Devnet console audit"
+python3 "$ROOT/scripts/devnet-console-audit.py" --self-test >/dev/null \
+  || fail "the devnet-console audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/devnet-console-audit.py" \
+  || fail "the send console no longer fits the room — see the output above"
+print -P "%F{green}✓ devnet console audit%f"
+
 # The connect family's ARRANGEMENT, after §315 made its WORDS mechanical.
 # Static, no build. Same reason, one layer over: on 2026-08-29 the L2BEAT
 # connect page was reported as "totally messy like it was just thrown together

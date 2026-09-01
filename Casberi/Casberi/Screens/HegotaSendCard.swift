@@ -67,13 +67,22 @@ struct HegotaSendCard: View {
     /// over that state would be a control that provably does nothing. The room
     /// keeps its own "this phone's account" row, which is the door to making
     /// one, so a keyless room is not a dead end.
+    /// **NO HEAD ON THE FORM (prd §548).** `VibenetSendCard`'s ruling, carried
+    /// here for the same arithmetic: a mark disc, the word "Send" and the
+    /// sending address cost 46pt to say the verb the button already carries,
+    /// on a card that did not fit the screen. The address it spends from moves
+    /// onto the recipient row, which names both ends of a send for nothing.
     var body: some View {
         if HegotaKey.address() != nil {
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                head
-                if sentHash == nil { form } else { done }
+            VStack(alignment: .leading, spacing: DevnetConsole.blockGap) {
+                if sentHash == nil {
+                form
+            } else {
+                sentHead
+                done
             }
-            .padding(DS.Space.s4)
+            }
+            .padding(DevnetConsole.cardPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .dsWidgetSurface()
             .animation(DS.Motion.standard, value: sentHash)
@@ -82,35 +91,31 @@ struct HegotaSendCard: View {
 
     // MARK: - Head
 
-    /// A title and the address it spends from — NOT a `DSSheetHead`. That
-    /// component exists so a PRESENTED surface reads as an object; this is not
-    /// presented, and a head here would be the duplicate-title fault §538 took
-    /// out of three sheets in this feature.
-    private var head: some View {
+    /// The SENT state keeps a head: there the title is the whole news, and the
+    /// console's height budget no longer applies to a four-line receipt.
+    private var sentHead: some View {
         HStack(spacing: DS.Space.s3) {
             ZStack {
                 Circle().fill(Self.mark.opacity(0.18))
                     .frame(width: DS.Face.rowCircle, height: DS.Face.rowCircle)
-                Image(systemName: sentHash == nil ? "arrow.up.right" : "checkmark")
+                Image(systemName: "checkmark")
                     .accessibilityHidden(true)
                     .dsGlyph(13, weight: .semibold)
                     .foregroundStyle(Self.mark)
             }
-            Text(sentHash == nil ? String(localized: "Send") : String(localized: "Sent"))
+            Text(String(localized: "Sent"))
                 .dsText(.heading17)
                 .foregroundStyle(DS.textPrimary)
             Spacer(minLength: DS.Space.s2)
-            if sentHash != nil {
-                DSStamp(word: String(localized: "Broadcast"), weight: .good)
-            } else if let from = HegotaKey.address() {
-                // The room's own resolution, so this card can never name an
-                // address differently from the roster above it.
-                Text(HegotaWatch.shared.name(for: from) ?? WalletStore.shortAddress(from))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-            }
+            DSStamp(word: String(localized: "Broadcast"), weight: .good)
         }
+    }
+
+    /// The sending address, and what the room calls it — so this card can never
+    /// name an address differently from the roster above it.
+    private var fromName: String? {
+        guard let from = HegotaKey.address() else { return nil }
+        return HegotaWatch.shared.name(for: from) ?? WalletStore.shortAddress(from)
     }
 
     // MARK: - Form
@@ -119,58 +124,45 @@ struct HegotaSendCard: View {
         !busy && Self.isValidAddress(destination) && Self.weiData(from: amount) != nil
     }
 
-    /// **THE CONSOLE (prd §544)** — `DevnetSendConsole`'s shared anatomy, with
-    /// the one difference this chain forces: Hegotá moves ETH and only ETH, so
-    /// the unit is a WORD and never a chip. See that file's header.
+    /// **THE CONSOLE (prd §544), FITTED TO THE SCREEN (prd §548)** —
+    /// `DevnetSendConsole`'s shared anatomy and its height budget, with the one
+    /// difference this chain forces: Hegotá moves ETH and only ETH, so the unit
+    /// is a WORD and never a chip. See that file's header.
     private var form: some View {
-        VStack(spacing: DS.Space.s4) {
-            DevnetSendToRow(address: destination.isEmpty ? nil : destination,
+        VStack(spacing: DevnetConsole.blockGap) {
+            DevnetSendToRow(from: HegotaKey.address(),
+                            fromName: fromName,
+                            address: destination.isEmpty ? nil : destination,
                             name: destination.isEmpty ? nil : recipientName,
                             preview: knownAddresses,
                             onTap: { picking = true })
 
             DevnetSendFigure(amount: amount, dim: amount.isEmpty) {
-                HStack(spacing: DS.Space.s2) {
-                    Text(String(localized: "ETH"))
-                        .dsText(.callout15)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(amount.isEmpty ? DS.textTertiary : DS.textSecondary)
+                Text(String(localized: "ETH"))
+                    .dsText(.price16)
+                    .foregroundStyle(amount.isEmpty ? DS.textTertiary : DS.textSecondary)
+            } subline: {
+                // NO MAX, and that is this chain's own rule rather than an
+                // omission: gas is the sender's here, so the whole balance is
+                // the one amount that provably cannot be sent. The figure is
+                // stated, never offered as a tap.
+                Group {
                     if let held {
-                        // NO MAX, and that is this chain's own rule rather than
-                        // an omission: gas is the sender's here, so the whole
-                        // balance is the one amount that provably cannot be
-                        // sent. The figure is stated, never offered as a tap.
                         Text(String(localized: "\(HegotaFormat.eth(held)) available"))
                             .dsText(.label12)
                             .foregroundStyle(DS.textTertiary)
                     }
                 }
+                .frame(height: DevnetConsole.sublineRow)
             }
 
             DevnetSendKeypad(amount: $amount, tint: Self.mark)
 
-            Button {
-                DSHaptic.tap()
-                send()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.up.right").dsGlyph(13, weight: .semibold)
-                    Text(sendLabel)
-                    if busy { ProgressView().controlSize(.mini) }
-                }
-                .dsText(.callout15).fontWeight(.semibold)
-                .foregroundStyle(canSend ? .white : DS.textTertiary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, DS.Space.s3)
-                .background(canSend ? AnyShapeStyle(Self.mark) : AnyShapeStyle(DS.gray200),
-                            in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-            }
-            .buttonStyle(PressSpring())
-            .disabled(!canSend)
-            .armedPop(canSend)
-            .animation(DS.Motion.standard, value: canSend)
-            .dsHover()
+            DevnetSendVerb(title: sendLabel, armed: canSend, busy: busy,
+                           tint: Self.mark, action: send)
 
+            // Only ever drawn when there is something wrong, and deliberately
+            // outside the height budget for that reason (prd §548).
             if let errorText {
                 Text(errorText)
                     .dsText(.label11)
@@ -231,41 +223,6 @@ struct HegotaSendCard: View {
         return HegotaLiveState.shared.accounts.first {
             $0.address.caseInsensitiveCompare(mine) == .orderedSame
         }?.balanceWei
-    }
-
-    private func well<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        content()
-            .padding(.horizontal, DS.Space.s3)
-            .frame(minHeight: 44)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(DS.surfaceWell,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-    }
-
-    private func caption(_ text: String) -> some View {
-        Text(text)
-            .dsText(.label12)
-            .foregroundStyle(DS.textTertiary)
-    }
-
-    /// The in-well affordance. `label12` on `fillFaint` — a quiet chip, never
-    /// the mark: it fills a field in, it does not move money, and wearing the
-    /// send button's colour would say it did.
-    private func miniChip(_ title: String, act: @escaping () -> Void) -> some View {
-        Button {
-            DSHaptic.selection()
-            act()
-        } label: {
-            Text(title)
-                .dsText(.label12).fontWeight(.semibold)
-                .foregroundStyle(DS.tint)
-                .padding(.horizontal, DS.Space.s2)
-                .padding(.vertical, 5)
-                .background(Capsule(style: .continuous).fill(DS.fillFaint))
-                .fixedSize()
-        }
-        .buttonStyle(PressSpring())
-        .dsHover()
     }
 
     // MARK: - Done
