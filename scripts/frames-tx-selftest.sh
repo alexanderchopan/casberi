@@ -63,7 +63,7 @@ PYM
   # A mutation that matches NOTHING is stale and has silently been testing the
   # shipped code — the failure mode this check exists to prevent in itself.
   if (( applied == 2 )); then echo "STALE|$MID|$MLABEL"; exit 0; fi
-  if ( cd "$MW" && swiftc -O -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift m/main.swift 2>/dev/null ) \
+  if ( cd "$MW" && swiftc -O -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift FramesReading.swift m/main.swift 2>/dev/null ) \
      && "$MW/m/run2" >/dev/null 2>&1; then
     echo "SURVIVED|$MID|$MLABEL"; exit 0
   fi
@@ -75,10 +75,11 @@ RLPF="Casberi/Casberi/Model/RLP.swift"
 KC="Casberi/Casberi/Model/Keccak256.swift"
 MONEY="Casberi/Casberi/Model/FramesMoney.swift"
 SECT="Casberi/Casberi/Model/FramesSection.swift"
+READ="Casberi/Casberi/Model/FramesReading.swift"
 KEY="Casberi/Casberi/Model/FramesKey.swift"
 SEND="Casberi/Casberi/Model/FramesSend.swift"
 BRIDGE="Casberi/Casberi/Model/FramesBridge.swift"
-for f in "$TX" "$RLPF" "$KC" "$MONEY" "$SECT" "$KEY" "$SEND" "$BRIDGE"; do
+for f in "$TX" "$RLPF" "$KC" "$MONEY" "$SECT" "$READ" "$KEY" "$SEND" "$BRIDGE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -90,6 +91,7 @@ strip_comments "$TX" > "$WORK/tx.nc"
 strip_comments "$KEY" > "$WORK/key.nc"
 strip_comments "$SEND" > "$WORK/send.nc"
 strip_comments "$BRIDGE" > "$WORK/bridge.nc"
+strip_comments "$READ" > "$WORK/read.nc"
 
 # --- drift guards -----------------------------------------------------------
 # Read from a COMMENT-STRIPPED copy: this file DOCUMENTS Hegotá's envelope by
@@ -244,16 +246,16 @@ echo "  ok   drift guards: one signed write, a literal signer, the entry seeded 
 # A frame's execution budget is `gasLimit` here and `executionGasLimit` on
 # Hegotá. Reading only one spelling gives a nil budget on the other chain, and
 # a frame drawn with a nil budget looks like a frame that had none.
-grep -qF 'hexInt(f["gasLimit"])' "$WORK/bridge.nc" \
+grep -qF 'hexInt(f["gasLimit"])' "$WORK/read.nc" \
   || { echo "✗ FramesRead no longer reads this chain's own gas spelling"; exit 1; }
 # `stateGasUsed` is OPTIONAL and must never be defaulted to zero: `0x0` is the
 # discriminator that tells a missing STATE budget apart from a too-small
 # EXECUTION budget, so reading an absent field as zero asserts that diagnosis
 # every time. Measured 2026-09-01: absent on all 5 transactions here.
-if grep -qE 'stateGasUsed.*\?\?\s*0' "$WORK/bridge.nc"; then
+if grep -qE 'stateGasUsed.*\?\?\s*0' "$WORK/read.nc"; then
   echo "✗ FramesRead defaults stateGasUsed to zero — an absent field would be reported as a state starvation"; exit 1
 fi
-python3 - "$WORK/bridge.nc" <<'PYSTARVE' || exit 1
+python3 - "$WORK/read.nc" <<'PYSTARVE' || exit 1
 import sys, io
 src = io.open(sys.argv[1], encoding="utf-8").read()
 body = src[src.find("static func starvation("):]
@@ -285,6 +287,7 @@ cp "$RLPF" "$WORK/RLP.swift"
 cp "$KC" "$WORK/Keccak256.swift"
 cp "$MONEY" "$WORK/FramesMoney.swift"
 cp "$SECT" "$WORK/FramesSection.swift"
+cp "$READ" "$WORK/FramesReading.swift"
 mkdir -p "$WORK/m"
 
 cat > "$WORK/m/main.swift" <<'SWIFT'
@@ -564,12 +567,74 @@ check("the frames chip says Frames", FramesSection.frames.label == "Frames")
 check("every scope says what it holds",
       FramesSection.allCases.allSatisfy { !$0.summary.isEmpty && $0.summary != $0.label })
 
+
+// ============ STATUS IS EXECUTION; ONLY THE EFFECT SAYS WHAT A FRAME DID.
+// Measured by sending four transactions: a frame inside an atomic batch
+// reports `status: 0x1` AFTER BEING ROLLED BACK — one log when its transfer
+// persisted, zero when it was reverted, `0x1` both times.
+func out(_ ok: Bool, _ used: UInt64, _ logs: Int) -> FramesRead.FrameOutcome {
+    .init(succeeded: ok, gasUsed: used, stateGasUsed: nil, logCount: logs)
+}
+func frame(_ mode: UInt64, _ flags: UInt64, value: String) -> FramesRead.Frame {
+    .init(mode: mode, flags: flags, target: "0x00", executionGas: 100_000,
+          stateGas: 250_000, value: value, data: "0x")
+}
+// The real pair, off this chain: a value frame reporting 0x1 with a log, and
+// the SAME shape reporting 0x1 with none because the batch rolled it back.
+let landed  = FramesFrameRow(frame: frame(2, 0, value: "0x1"), outcome: out(true, 3000, 1))
+let reverted = FramesFrameRow(frame: frame(2, 4, value: "0x1"), outcome: out(true, 3000, 0))
+check("a value frame with a log landed", landed.valueLanded == true)
+check("THE ROLLED-BACK FRAME did NOT land, despite status 0x1",
+      reverted.valueLanded == false)
+check("and the two are indistinguishable by status",
+      landed.outcome?.succeeded == reverted.outcome?.succeeded)
+
+// NIL IS NOT FALSE. A VERIFY frame moves nothing and has nothing to land;
+// collapsing that into "did not move" is a false alarm on the one frame every
+// transaction on this chain carries.
+let verify = FramesFrameRow(frame: frame(1, 3, value: "0x"), outcome: out(true, 100, 0))
+check("a VERIFY frame is not asked whether its value landed", verify.valueLanded == nil)
+let zeroValue = FramesFrameRow(frame: frame(2, 0, value: "0x00"), outcome: out(true, 3000, 0))
+check("an all-zero value is not a value", zeroValue.valueLanded == nil)
+let unread = FramesFrameRow(frame: frame(2, 0, value: "0x1"), outcome: nil)
+check("an unread frame answers nil, never false", unread.valueLanded == nil)
+
+// THE TRANSACTION-LEVEL READINGS.
+let partial = FramesMove(hash: "0x1", blockNumber: 1, sender: "0xa", payer: "0xa",
+                         succeeded: false, gasUsed: 316_273, rows: [verify, landed])
+// A TRANSACTION REPORTING FAILURE THAT STILL MOVED MONEY — measured on chain,
+// not hypothetical. `status` alone would report this as nothing happening.
+check("a failed transaction can still have moved value", partial.movedValue == true)
+check("and its own status says it failed", !partial.succeeded)
+let rolled = FramesMove(hash: "0x2", blockNumber: 1, sender: "0xa", payer: "0xa",
+                        succeeded: false, gasUsed: 1, rows: [verify, reverted])
+check("a rolled-back batch moved nothing", rolled.movedValue == false)
+check("and names the frame that was rolled back", rolled.rolledBack.count == 1)
+check("a landed transaction rolls nothing back", partial.rolledBack.isEmpty)
+let unreadable = FramesMove(hash: "0x3", blockNumber: 1, sender: "0xa", payer: "0xa",
+                            succeeded: true, gasUsed: nil, rows: [unread])
+check("an unread receipt answers nil, never false", unreadable.movedValue == nil)
+
+// SPONSORSHIP is a comparison of two fields on ONE receipt, never an inference.
+let sponsored = FramesMove(hash: "0x4", blockNumber: 1, sender: "0xa", payer: "0xB",
+                           succeeded: true, gasUsed: 1, rows: [])
+check("a different payer is sponsorship", sponsored.sponsored)
+check("case never decides it", !FramesMove(hash: "0x5", blockNumber: 1, sender: "0xAa",
+                                           payer: "0xaA", succeeded: true,
+                                           gasUsed: 1, rows: []).sponsored)
+
+// THE GAS TOTAL IS THE TRANSACTION'S OWN. Measured: frames reported 100 and
+// 3,000 against a receipt of 210,790, so a sum of frames is wrong by two
+// orders of magnitude in the direction that looks plausible.
+check("the move carries the receipt's own gas, not a sum of frames",
+      partial.gasUsed == 316_273)
+
 if fails > 0 { print("  \(fails) assertion(s) failed"); exit(1) }
 print("  ok   encoder: 2 real vectors byte-exact, keccak == the chain's own hash")
 SWIFT
 
 build_run() {
-  ( cd "$WORK" && swiftc -O -o m/run FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift m/main.swift 2>&1 )
+  ( cd "$WORK" && swiftc -O -o m/run FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift FramesReading.swift m/main.swift 2>&1 )
 }
 if ! out="$(build_run)"; then echo "✗ harness did not compile"; echo "$out"; exit 1; fi
 "$WORK/m/run" || exit 1
@@ -661,6 +726,7 @@ mutate "the prefix ceiling raised past what the chain allows" $F \
 
 F2=FramesMoney.swift
 F3=FramesSection.swift
+F4=FramesReading.swift
 mutate "wei narrowed back to UInt64" $F2 \
   'var total = Decimal(0)' 'var total = Decimal(UInt64(body, radix: 16) ?? 0); if true { return total }; var unused = Decimal(0); _ = unused'
 mutate "an empty balance read as zero" $F2 \
@@ -682,6 +748,42 @@ mutate "frames marked unconditional" $F3 \
 mutate "a chip growing a dot that can never honestly light" $F3 \
   'static func attention() -> Set<FramesSection> { [] }' \
   'static func attention() -> Set<FramesSection> { [.frames] }'
+
+
+mutate "money read from status instead of effect" $F4 \
+  'return outcome.logCount > 0' 'return outcome.succeeded'
+mutate "a rolled-back frame reported as landed" $F4 \
+  'return outcome.logCount > 0' 'return true'
+mutate "a VERIFY frame asked whether its value landed" $F4 \
+  'guard body.contains(where: { $0 != "0" }) else { return nil }' \
+  'if body.isEmpty { return false }'
+mutate "an unread frame answering false instead of nil" $F4 \
+  'guard let outcome else { return nil }' \
+  'guard let outcome else { return false }'
+mutate "an unread receipt reported as nothing moved" $F4 \
+  'guard answerable else { return nil }' 'if !answerable { return false }'
+mutate "the gas total summed from the frames" $F4 \
+  'var gasUsed: UInt64?' 'var gasUsedRaw: UInt64?
+    var gasUsed: UInt64? { rows.compactMap { $0.outcome?.gasUsed }.reduce(0, +) }'
+mutate "sponsorship decided by case" $F4 \
+  'payer.lowercased() != sender.lowercased()' 'payer != sender'
+
+# --- the fan-out must be LAST, and this proves it -----------------------------
+# **A mutation recorded AFTER this block is never dispatched, and the run still
+# goes green** — measured on this file, 2026-09-01: seven `$F4` mutations were
+# appended below the fan-out, so the completeness guard ran while `MUTN` was
+# still 27, agreed with itself, passed, and the summary then printed "34
+# mutations". Seven checks silently not run, under a tick.
+#
+# It is a FILE-ORDER bug, so no amount of care inside the block can catch it —
+# only the file can. This reads itself: the last `mutate` call must precede the
+# fan-out. It is the completeness guard the completeness guard needed.
+MUT_LAST="$(grep -n '^mutate ' "$SELF" | tail -1 | cut -d: -f1)"
+FANOUT_AT="$(grep -n '^# --- run every recorded mutation, concurrently' "$SELF" | head -1 | cut -d: -f1)"
+if [[ -n "$MUT_LAST" && -n "$FANOUT_AT" ]] && (( MUT_LAST > FANOUT_AT )); then
+  echo "✗ a mutation is declared at line $MUT_LAST, BELOW the fan-out at line $FANOUT_AT — it would never run and the pass would still go green. Move it above."
+  exit 1
+fi
 
 # --- run every recorded mutation, concurrently -------------------------------
 # One core per mutation up to the machine's count. Output is KEPT and sorted by
@@ -713,6 +815,5 @@ if (( MUT_OK + MUT_FAILS != MUTN )); then
   exit 1
 fi
 (( MUT_FAILS == 0 )) || { echo "  $MUT_FAILS mutation(s) failed"; exit 1; }
-
 echo "  ok   drift guards: the envelope stays seven fields and never grows Hegotá's three"
 echo "✓ frames transaction self-test passed — encoder, 2 real vectors, $MUTN mutations"
