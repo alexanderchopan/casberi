@@ -569,24 +569,15 @@ enum DemoSeedAll {
         // blanket `removeAll()`: a real vibenet watch this device already
         // held before entering the demo (implausible, but the rule the
         // other bridges above already keep) must survive exiting it.
-        for address in [
-            "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b",
-            "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
-            "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d",
-            "0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e",
-        ] { VibenetWatch.shared.remove(address) }
+        for address in demoVibenetWatches { VibenetWatch.shared.remove(address) }
         // `VibenetWatch.remove` no longer touches the shared book (2026-08-27
         // — a single unwatch keeps the name, same as the mainnet side), so
         // the four book entries it landed must be forgotten HERE explicitly,
         // by address, same rule as everything else in this teardown — plus
         // the `.key` entry and its note, seeded above and nowhere else.
-        for address in [
-            "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b",
-            "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
-            "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d",
-            "0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e",
-            demoVibenetKeySigner,
-        ] { AddressBook.shared.remove(address) }
+        for address in (demoVibenetWatches + [demoVibenetKeySigner]) {
+            AddressBook.shared.remove(address)
+        }
         // The balance curve goes with them. Unlike the watch list above there
         // is no "kept it themselves" case to protect: the store holds ONE
         // series for the room, so a real watcher's readings and the demo's
@@ -1403,6 +1394,18 @@ enum DemoSeedAll {
     /// distinct from the four watched account addresses seeded below, so the
     /// demo exercises a key filed as an entry rather than a watched account.
     static let demoVibenetKeySigner = "0x5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f"
+
+    /// The four vibenet accounts the demo watches. Spelled ONCE (2026-09-01,
+    /// prd §549) — `teardown` carried this list twice as inline literals, and
+    /// `AddressBook.fixtureKeys` now needs it a third time. A rail that has to
+    /// be kept in step with a seed by hand fails silently in the leaking
+    /// direction, which is the whole reason §549 exists.
+    static let demoVibenetWatches = [
+        "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b",
+        "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
+        "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d",
+        "0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e",
+    ]
 
     static let demoCounterparties: [(name: String, kind: AddressBook.Kind)] = [
         ("Sam", .wallet), ("Mia", .wallet), ("Coinbase", .wallet),
@@ -4959,12 +4962,7 @@ enum DemoSeedAll {
         // address" state over a catalog that claims the seat is connected.
         // The four addresses match the fixture's own, so a person who opens
         // the setup screen sees the same accounts the card already named.
-        for address in [
-            "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b",
-            "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
-            "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d",
-            "0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e",
-        ] { _ = VibenetWatch.shared.add(address) }
+        for address in demoVibenetWatches { _ = VibenetWatch.shared.add(address) }
         // 5c-ii · A KEY entry and a NOTED entry (2026-08-27, the address-book
         // unification) — demo parity for the two kinds `AddressBook` gained,
         // per §484's doctrine ("go through each category to make sure we

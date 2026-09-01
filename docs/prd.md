@@ -41645,3 +41645,70 @@ than on the pitch, because it is the fact that changes what somebody would do.
 
 **Still not built:** the room itself (toggle row settled at Home · Frames ·
 Activity · Sponsors), its figures, and the demo seed.
+
+## §549 — the demo's address book never leaves the device (user: "it has hard coded demo stuff like addresses and wallets that i did not add", then "will this issue affect other users or only affects me?" → "i am not concerned about my mac i am concerned about users", 2026-09-01)
+
+Reported as a Mac install carrying wallets and contacts nobody added. The
+investigation split in two, and only one half was the reporter's own machine.
+
+**The half that was only the dev machine.** `DemoCorpus`'s 35 fixtures are
+gated at the call site by `DemoState.seedsDemoData` (`CasberiApp.swift`), which
+is `#if DEBUG` and therefore false in every shipped build; the demo *wallets*
+are covered by `WalletStore`'s existing fixture rail. What put them on a real
+Mac is the thing `ScratchDefaults`' own header already describes: a DEBUG
+Catalyst build shares the installed app's container, and the 2026-08-19 scratch
+fix covered the demo FLAGS and the seat list while `AddressBook`, `WalletStore`
+and `VibenetWatch` kept persisting to `UserDefaults.standard`. Dev hygiene, not
+a shipped defect.
+
+**The half that shipped, and this is the ruling.** `WalletStore` has had a
+fixture rail since it started mirroring — `syncSnapshot` withholds fixture
+addresses, `applyMerged` sweeps any that arrive over the wire on an install not
+entitled to hold them, `keepsFixtures` is `DemoState.seedsDemoData ||
+DemoMode.isActive`. The address book mirrors through the SAME `KeyValueMirror`
+and had **none of it**: `syncSnapshot` was a bare `{ entries }`.
+
+The demo is a shipped feature — the onboarding CTA and the Settings row both
+enter it — and `DemoMode.pourIfNeeded` reaches `DemoSeedAll.seedAddressBook`
+through `seedBridgeStateForDemo`'s step 7, with every `setName` triggering a
+push. **So anyone who tapped "Try the demo" with iCloud sync on wrote Sam, Mia,
+Coinbase, Stripe, Bitrefill, Uniswap, Peer, Gnosis Pay, "Session key" and the
+four vibenet fixtures into their iCloud and onto their other devices.**
+
+**Why this is worse than the ~400 demo rows `DemoMode` already accepts as a
+cost.** That cost is written down and it is bounded by the standing banner: the
+demo says what it is, on the device running it. `DemoMode.isActive` is
+per-device state, so the SECOND device wears no banner — and there a seeded
+counterparty is not a demo, it is a name in your address book you never typed.
+That is §83's fake status on the screen where a wrong name is most expensive,
+and unlike a row it survives as a *fact about a person*.
+
+**The fix is the sibling's rail, derived rather than re-typed**
+(`AddressBookFixtures.swift`): the fixture set comes from the constants that
+SEED it (`WalletStore.fixtureAddresses`, `DemoSeedAll.demoCounterparties`,
+`demoVibenetWatches`, `demoVibenetKeySigner`), so the rail and the seed cannot
+drift — a hand-copied list goes stale the first time a counterparty is added,
+and a stale rail fails in the LEAKING direction. `keepsFixtures` forwards to
+`WalletStore`'s rather than re-spelling it: one question, one answer, or one
+store eventually sweeps what the other keeps.
+
+`applyMerged` sweeps as well as withholds, and that half is not redundant — the
+push side alone protects a healthy book, while the sweep is the only way a book
+ALREADY polluted in iCloud by a build that shipped without the rail can heal.
+
+**`demoVibenetWatches` is declared once.** `teardown` carried the four
+addresses twice as inline literals and the seed a third time; the rail needed a
+fourth. Guarded by a count, because that is precisely the shape that goes stale
+silently.
+
+**Guarded, not remembered** (`address-book-selftest.sh`, seven drift guards,
+each mutation-proven): this rule already existed one file over and was simply
+not carried across, which is the whole argument for a check rather than a note.
+Found in passing and amended: the rail's book-door guard had been red at HEAD
+since the title moved to `FeedScreen`, exactly the move its own comment
+anticipated — it asks both files now, as the line above it already did.
+
+**Ceiling.** Nothing here re-mirrors a book already up in iCloud until that
+device next merges; and the corpus half of the demo's mirroring cost is
+unchanged and still accepted, which is a separate question this entry does not
+reopen.

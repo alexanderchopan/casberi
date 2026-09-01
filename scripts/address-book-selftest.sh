@@ -526,7 +526,7 @@ grep -q 'AddressBookShape.lastPhrase(activity.lastAt)' "$TMP/views-bare.swift" \
 # it survives the next move.
 grep -qs 'route.push(.addressBook)' "$SHELL_MAIN" "Casberi/Casberi/Screens/FeedScreen.swift" \
   || { echo "✗ the wallet rail's address-book slot is gone — the room would be reachable only from the roster (§461)"; exit 1; }
-grep -q 'bookTitle: String(localized: "Address book")' "$SHELL_MAIN" \
+grep -qs 'bookTitle: String(localized: "Address book")' "$SHELL_MAIN" "Casberi/Casberi/Screens/FeedScreen.swift" \
   || { echo "✗ the rail's book door lost its name — the slot is captionless, so the label IS its only naming (VoiceOver and the Mac tooltip)"; exit 1; }
 grep -q 'route.push(.addressBook)' "$SCREEN" \
   || { echo "✗ the setup screen lost its door to the book — with nothing watched the rail does not draw, so this is the only way in (§461/§466)"; exit 1; }
@@ -1183,6 +1183,51 @@ mutate "the chip label drops the cap" \
 mutate "the fan swings wide enough to clip" \
   'private static let tilts: [Double] = [-6, 3, -2, 5, -4]' \
   'private static let tilts: [Double] = [-26, 13, -2, 25, -14]'
+
+# ── §549: the demo never leaves this device ─────────────────────────────────
+# The book mirrors through the SAME `KeyValueMirror` as `WalletStore`, and only
+# the wallet store had a fixture rail — so `syncSnapshot` was a bare
+# `{ entries }` and anyone who tapped "Try the demo" with iCloud sync on wrote
+# Sam, Stripe, Uniswap, Gnosis Pay and "Session key" into their iCloud and onto
+# their other devices. It fails SILENTLY and in the leaking direction: the book
+# looks right on the device running the demo, which wears the standing banner,
+# and wrong on the second device, which does not. Guarded rather than
+# remembered, because this exact rule already existed one file over and was not
+# carried across.
+FIXTURES="Casberi/Casberi/Model/AddressBookFixtures.swift"
+[[ -f "$FIXTURES" ]] \
+  || { echo "✗ AddressBookFixtures.swift is gone — the book's fixtures are mirroring to iCloud again (prd §549)"; exit 1; }
+strip_comments "$FIXTURES" > "$TMP/fixtures-bare.swift"
+strip_comments "$BOOK" > "$TMP/book-model-bare.swift"
+
+grep -q 'entries.filter { !Self.isFixture($0.key) }' "$TMP/book-model-bare.swift" \
+  || { echo "✗ AddressBook.syncSnapshot stopped withholding fixtures — the demo's counterparties push to iCloud (prd §549)"; exit 1; }
+grep -q 'Self.keepsFixtures ? merged' "$TMP/book-model-bare.swift" \
+  || { echo "✗ AddressBook.applyMerged stopped sweeping fixtures — a book already polluted in iCloud can never heal (prd §549)"; exit 1; }
+
+# DERIVED, never re-typed. A hand-copied address list goes stale the first time
+# a counterparty is added, and a stale rail leaks rather than over-blocking.
+grep -qE '"0x[0-9a-fA-F]{6,}"' "$TMP/fixtures-bare.swift" \
+  && { echo "✗ AddressBookFixtures hardcodes an address — derive it from DemoSeedAll so the rail and the seed cannot drift (prd §549)"; exit 1; }
+for named in 'WalletStore.fixtureAddresses' 'DemoSeedAll.demoCounterparties' \
+             'DemoSeedAll.demoVibenetWatches' 'DemoSeedAll.demoVibenetKeySigner'; do
+  grep -q "$named" "$TMP/fixtures-bare.swift" \
+    || { echo "✗ AddressBookFixtures no longer derives from $named — a seeded address it stops naming leaks to iCloud (prd §549)"; exit 1; }
+done
+
+# ONE answer to "is this build entitled to hold fixtures". Two spellings drift,
+# and then one store sweeps what the other keeps.
+grep -q 'static var keepsFixtures: Bool { WalletStore.keepsFixtures }' "$TMP/fixtures-bare.swift" \
+  || { echo "✗ AddressBook.keepsFixtures stopped forwarding to WalletStore — one question, one answer (prd §549)"; exit 1; }
+grep -q 'DemoState.seedsDemoData' "$TMP/fixtures-bare.swift" \
+  && { echo "✗ AddressBookFixtures re-spelled the entitlement test instead of forwarding to WalletStore.keepsFixtures (prd §549)"; exit 1; }
+
+# The vibenet fixtures are declared ONCE. `teardown` carried them twice as
+# inline literals and the rail needs them a third time.
+DEMOSEED="Casberi/Casberi/Model/DemoSeedAll.swift"
+count=$(grep -c '"0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e"' "$DEMOSEED")
+[[ "$count" == "1" ]] \
+  || { echo "✗ the vibenet demo addresses are spelled $count times in DemoSeedAll — declare them once as demoVibenetWatches (prd §549)"; exit 1; }
 
 echo ""
 echo "address-book-selftest: OK — assertions pass and every mutation is caught."
