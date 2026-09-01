@@ -5043,6 +5043,28 @@ struct FeedScreen: View {
                         if bankrOverlays {
                             BankrOfferBanner { route.pushBridge(.bankr) }
                                 .padding(DSRoomChassis.contentInset)
+                                // IT FILLS THE SLOT (user, 2026-09-01: *"this
+                                // looks weird here … it should cover the
+                                // numbers so it looks purposeful"*). Sized to
+                                // the banner's own words, the glass stood
+                                // roughly two thirds of the box and its top
+                                // edge landed part-way THROUGH `price48`'s
+                                // digits — a crown sliced mid-glyph, which
+                                // reads as a card that failed to lay out
+                                // rather than as one deliberately placed over
+                                // the room. Covering the figure whole is the
+                                // trade §529's overlay ruling already blesses
+                                // ("it's fine if it covers the image"); half
+                                // covering it is the only version that isn't.
+                                //
+                                // `minHeight`, never `maxHeight` — the box is
+                                // a floor, so at large Dynamic Type the banner
+                                // still grows past it, upward, exactly as the
+                                // bottom alignment above intends. There is no
+                                // height budget to get wrong, and the worst
+                                // case stays "it covers more of the crown".
+                                .frame(minHeight: DSRoomChassis.visualSlot,
+                                       alignment: .leading)
                                 .dsGlass(cornerRadius: DS.Radius.widget)
                                 // Inset from the slot's edges so it reads as an
                                 // object floating ON the room rather than as a
