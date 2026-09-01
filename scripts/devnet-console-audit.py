@@ -207,7 +207,20 @@ def checks(console: str, hegota: str, vibenet: str, feed: str):
     if "topUp" in v_bare and "handsOff: true" not in v_bare:
         out.append("vibenet's Top up dropped its hand-off mark — it leaves the app and no longer says so")
 
-    # 8. THE THREE ENDINGS. The hourly refusal is EXPECTED (§525) and must be
+    # 8. NEITHER TOP UP ACTS IN A DEMO. Hegotá's claim and vibenet's hand-off
+    #    are different verbs and they must answer a demo tap the SAME way — one
+    #    refusing with a sentence while the other opened a live faucet page in
+    #    Safari, from a screen whose banner reads "none of this is yours", is
+    #    the gap this catches. Demo parity is about the tour being the same
+    #    SHAPE as the room, so the half stays and says why rather than
+    #    vanishing.
+    for name, bare in (("Hegota", h_bare), ("vibenet", v_bare)):
+        if "topUp" not in bare and name == "vibenet":
+            continue
+        if "DemoMode.isActive" not in bare:
+            out.append("%s's Top up acts in a demo — the tour reaches something real" % name)
+
+    # 9. THE THREE ENDINGS. The hourly refusal is EXPECTED (§525) and must be
     #    said in words rather than reported as a fault.
     if "rateLimited" not in hegota:
         out.append("the faucet's hourly refusal is no longer named — it will read as a failure (§525)")
@@ -226,7 +239,8 @@ def self_test() -> int:
     Text(y).dsText(.price40)
     """
     good_h = 'DemoMode.isActive\nDevnetSendPanel(\nclaimFaucet(\nrateLimited\n'
-    good_v = 'DevnetSendPanel(tint: x, topUp: topUp, onSend: y)\n.init(handsOff: true)\n'
+    good_v = ('DevnetSendPanel(tint: x, topUp: topUp, onSend: y)\n'
+              '.init(handsOff: true)\nif DemoMode.isActive { return .init(note: n) }\n')
     good_f = ('VibenetRoom.demoSignableAccount()\n'
               '    func sendHegota(x: String) async -> String? {\n        DemoMode.isActive\n    }\n'
               '    func sendVibenet(x: String) async -> String? {\n        DemoMode.isActive\n    }\n')
@@ -262,6 +276,10 @@ def self_test() -> int:
                   good_console, good_h, good_v + 'claimFaucet(\n', good_f, True))
     cases.append(("Hegota's Top up stops claiming",
                   good_console, good_h.replace("claimFaucet(", ""), good_v, good_f, True))
+    cases.append(("vibenet's Top up acts in a demo",
+                  good_console, good_h,
+                  'DevnetSendPanel(tint: x, topUp: topUp, onSend: y)\n.init(handsOff: true)\nopenURL(u)\n',
+                  good_f, True))
     cases.append(("the hourly refusal stops being named",
                   good_console, good_h.replace("rateLimited", ""), good_v, good_f, True))
     # A comment naming a banned literal must not fire — these files explain

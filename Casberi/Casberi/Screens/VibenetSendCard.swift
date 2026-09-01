@@ -54,6 +54,21 @@ struct VibenetSendCard: View {
     private var topUp: DevnetSendPanel.TopUp? {
         guard VibenetConfig.cached()?.faucetAddress != nil,
               let url = URL(string: VibenetExplorer.faucet) else { return nil }
+        // **THE TOUR DOES NOT LEAVE THE TOUR (prd §553 amendment).** The demo's
+        // own config fixture carries a `faucetAddress`, so this half draws there
+        // — correctly, it is part of the room. But the ACTION would open a live
+        // devnet faucet in Safari from a screen whose banner reads "Demo — none
+        // of this is yours", and `HegotaSendCard` already refuses its own claim
+        // in a demo with a sentence. Two rooms answering the same tap two
+        // different ways is the gap; this closes it on Hegotá's terms.
+        //
+        // The tile stays present and says why rather than vanishing: a half
+        // that disappears in the demo makes the tour a different shape from the
+        // room it is a tour of, which is the whole thing demo parity is for.
+        if DemoMode.isActive {
+            return .init(note: String(localized: "The faucet isn't opened in the demo."),
+                         handsOff: true) { }
+        }
         return .init(handsOff: true) { openURL(url) }
     }
 }

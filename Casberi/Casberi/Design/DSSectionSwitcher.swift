@@ -98,6 +98,40 @@ struct DSSectionSwitcher<Scope: DSSectionScope>: View {
             : AnyShape(Capsule(style: .continuous))
     }
 
+    /// **A CUT WORD IS NOT AN AFFORDANCE (prd §553 amendment, 2026-09-01).**
+    ///
+    /// Reported on vibenet, whose five scopes do not fit 390pt: the strip
+    /// scrolls and always has, and it centres the active scope on appear — so
+    /// nothing was broken. What was broken is that it LOOKED broken.
+    /// "Permissions" was sliced mid-letter against a hard edge, which reads as
+    /// a layout fault rather than as more content, and a person who reads it
+    /// that way never tries the gesture that would have shown them the rest.
+    ///
+    /// So the trailing edge fades — the iOS convention for exactly this, and
+    /// the smallest possible change: no chrome, no arrow, no hairline (§8
+    /// forbids the last of those outright), and no re-sizing of a component
+    /// seven other rooms share.
+    ///
+    /// **Only when it actually overflows.** A permanent fade would dim the last
+    /// scope of every SHORT strip — a two-scope room would wear a gradient
+    /// telling it there is more when there is not, which is the same lie
+    /// pointing the other way.
+    @State private var contentWidth: CGFloat = 0
+    @State private var viewportWidth: CGFloat = 0
+
+    private var overflows: Bool { contentWidth > viewportWidth + 1 }
+
+    private var edgeFade: LinearGradient {
+        // Wide enough to READ as a gradient. The first cut faded over the last
+        // 8% (~28pt) and measured on screen as barely distinguishable from the
+        // hard cut it was meant to replace — which would have been the worst
+        // outcome: the change made, the problem still there.
+        LinearGradient(stops: [.init(color: .black, location: 0),
+                               .init(color: .black, location: 0.82),
+                               .init(color: .black.opacity(0.15), location: 1)],
+                       startPoint: .leading, endPoint: .trailing)
+    }
+
     var body: some View {
         ScrollViewReader { proxy in
             Group {
@@ -108,7 +142,16 @@ struct DSSectionSwitcher<Scope: DSSectionScope>: View {
                                 chip(section)
                             }
                         }
+                        .background(GeometryReader { g in
+                            Color.clear.onAppear { contentWidth = g.size.width }
+                                .onChange(of: g.size.width) { _, w in contentWidth = w }
+                        })
                     }
+                    .background(GeometryReader { g in
+                        Color.clear.onAppear { viewportWidth = g.size.width }
+                            .onChange(of: g.size.width) { _, w in viewportWidth = w }
+                    })
+                    .mask(overflows ? AnyView(edgeFade) : AnyView(Color.black))
                     .scrollBounceBehavior(.basedOnSize)
                 } else {
                     ScrollView(.horizontal, showsIndicators: false) {

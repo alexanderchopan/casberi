@@ -42846,6 +42846,28 @@ mistake has been made in a different costume: a measurement is a measurement OF
 SOMETHING, and dropping the "of what" turns it into a claim. §552 measured its
 chrome at 956 and said so; this entry measured at 844 and did not.
 
+**AND THE SECTION STRIP STOPPED LOOKING BROKEN.** Reported on vibenet, whose
+five scopes do not fit 390pt: *"clipping on vibenet"* — "Permissions" sliced
+mid-letter against a hard edge.
+
+**Nothing was broken.** `DSSectionSwitcher` has been a horizontal `ScrollView`
+since it existed and centres the active scope on appear, so the rest was always
+one gesture away. What was broken is that it LOOKED broken: a word cut against a
+hard edge reads as a layout fault rather than as more content, and a person who
+reads it that way never tries the gesture that would show them the rest. The
+strip predates this work (last touched by §547) and Wallet's seven scopes can
+never fit at any size, so scrolling is the design and not a shortfall.
+
+So the trailing edge fades when — and only when — the content actually
+overflows. A permanent fade would dim the last scope of every SHORT strip, which
+is the same lie pointing the other way: a two-scope room wearing a gradient that
+says there is more. **The first cut faded over the last 8% and measured on
+screen as barely distinguishable from the hard cut it replaced**, which would
+have been the worst outcome — the change made, the problem still there. 18%.
+
+No chrome, no arrow, and no hairline (§8 forbids that outright), and no
+re-sizing of a component seven other rooms share.
+
 ### What is checked
 
 `scripts/devnet-console-audit.py` is rewritten around this shape — §548/§548a's
