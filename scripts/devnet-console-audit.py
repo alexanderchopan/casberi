@@ -52,7 +52,23 @@ FIVE CHECKS.
      is covering. Both cards must carry `devnetAmountToolbar`, and the figure
      must actually ask for the decimal pad: a plain keyboard over an amount
      field is a letter keyboard on a money control.
-  7. THE KEYPAD DOES NOT COME BACK. 176pt is the whole §548a saving and it is
+  7. THE DEMO CAN REACH IT, AND CANNOT SEND FROM IT (§548b). Both halves, and
+     both are load-bearing in opposite directions. The gate must answer in a
+     demo — the vibenet card wanted an account naming THIS PHONE's key and the
+     Hegotá card wanted a key in this phone's defaults, so the room's DEFAULT
+     scope drew nothing in the tour that is the first tap of onboarding, from
+     the day each console shipped. And `send()` must refuse in a demo before it
+     touches a key: a real signature raises Face ID and a real broadcast puts a
+     transaction on a public devnet, from a screen whose own banner says none of
+     this is yours.
+
+     **This is the check no other one in the repo can stand in for.** The demo
+     audits ask whether a SEAT is furnished (`demo-selftest` D/E/G/M), whether a
+     source has rows, whether a room HEAD composes (`verify.sh`'s room-head
+     coverage) and which figure kinds draw — all of which passed over an empty
+     Home for months, because this is a SCOPE'S CONTENT gated on a device
+     credential, which is none of those things.
+  8. THE KEYPAD DOES NOT COME BACK. 176pt is the whole §548a saving and it is
      the obvious thing to restore the next time this screen is redesigned on a
      Pro Max. If it does come back, it comes back with a new budget and a new
      ruling, not quietly.
@@ -133,6 +149,16 @@ def form_body(code: str) -> str:
     return rest[:stop.start()] if stop else rest
 
 
+def send_body(code: str) -> str:
+    """The `send` method, up to the next declaration at the same indent."""
+    m = re.search(r"private func send\(\) \{", code)
+    if not m:
+        return ""
+    rest = code[m.end():]
+    stop = re.search(r"\n    (?:private |static |@|/// )?(?:var|func) ", rest)
+    return rest[:stop.start()] if stop else rest
+
+
 def audit(console: str, cards: dict[str, str]) -> list[str]:
     code = strip_comments(console)
     c = constants(code)
@@ -158,7 +184,7 @@ def audit(console: str, cards: dict[str, str]) -> list[str]:
     if c["recipientRow"] < 44:
         out.append(f"recipientRow is {c['recipientRow']:g} — below the 44pt "
                    f"hit floor. A control is not where the height comes from.")
-    # 6 (console half) and 7
+    # 8 (console half) and 6
     if ".keyboardType(.decimalPad)" not in code:
         out.append("the amount field does not ask for the decimal pad — a "
                    "letter keyboard over a money control (§548a)")
@@ -190,6 +216,16 @@ def audit(console: str, cards: dict[str, str]) -> list[str]:
         if "devnetAmountToolbar" not in body:
             out.append(f"{path}: the amount field has no keyboard toolbar — "
                        f".decimalPad has no return key, so nothing dismisses it")
+        # 7 — both halves, against the WHOLE card rather than the form
+        card = strip_comments(text)
+        if "DemoMode.isActive" not in card:
+            out.append(f"{path}: the console is invisible in the demo — its "
+                       f"gate wants a device credential a tour cannot have, so "
+                       f"the room's default scope draws nothing there (§548b)")
+        send = send_body(card)
+        if send and "DemoMode.isActive" not in send:
+            out.append(f"{path}: send() does not refuse in the demo — a tour "
+                       f"would raise Face ID and broadcast to a public devnet")
     return out
 
 
@@ -231,6 +267,12 @@ struct A: View {
         .devnetAmountToolbar($amountFocused)
     }
     private var sentHead: some View { Text("Sent").dsText(.heading17) }
+    private var sender: String? { Key.address() ?? (DemoMode.isActive ? Fixture.demo : nil) }
+    private func send() {
+        guard !DemoMode.isActive else { errorText = "Nothing is sent in the demo."; return }
+        Task { try await Bridge.send() }
+    }
+    private var recipientName: String? { nil }
 }
 """
 
@@ -283,6 +325,16 @@ def self_test() -> int:
          {"a.swift": swap(CLEAN_CARD, "    private var form: some View {",
                           "    private var sentHead2: some View { Text(\"Sent\").dsText(.heading22) }\n    private var form: some View {")},
          False),
+        ("the console cannot be reached in the demo",
+         CLEAN_CONSOLE,
+         {"a.swift": swap(CLEAN_CARD,
+                          "    private var sender: String? { Key.address() ?? (DemoMode.isActive ? Fixture.demo : nil) }\n",
+                          "    private var sender: String? { Key.address() }\n")
+                     .replace('guard !DemoMode.isActive else { errorText = "Nothing is sent in the demo."; return }\n        ', "")}, True),
+        ("send() would sign and broadcast from a demo",
+         CLEAN_CONSOLE,
+         {"a.swift": swap(CLEAN_CARD,
+                          '        guard !DemoMode.isActive else { errorText = "Nothing is sent in the demo."; return }\n', "")}, True),
         ("a form spaces its blocks with a raw token",
          CLEAN_CONSOLE,
          {"a.swift": swap(CLEAN_CARD, "VStack(spacing: DevnetConsole.blockGap)",

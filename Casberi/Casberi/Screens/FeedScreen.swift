@@ -625,6 +625,14 @@ struct FeedScreen: View {
     /// synchronous draw in this room follows, so scrolling never spends a
     /// request.
     private static func signableVibenetAccount() -> Data? {
+        // **THE DEMO ANSWERS FIRST (prd §548b).** Both halves of the real gate
+        // are unreachable in a tour: a demo has no device key to name in an
+        // actor list, and `VibenetRoomSource.compose()` returns the fixture
+        // without writing `VibenetState`, so the read below finds nothing
+        // either. The room's DEFAULT scope was therefore empty in the demo from
+        // the day §538 made the console its content — and the demo is the first
+        // tap of onboarding (§217). See `VibenetRoom.demoSignableAccount`.
+        if let demo = VibenetRoom.demoSignableAccount() { return demo }
         guard let ours = VibenetDeviceKey.actorID()?.lowercased(),
               let items = VibenetState.saved?.items else { return nil }
         for item in items where item.actors.contains(where: { $0.actorId.lowercased() == ours }) {

@@ -1574,6 +1574,33 @@ struct VibenetRoom: Equatable, Codable {
 
     // MARK: - Demo fixture
 
+    /// **WHO THE DEMO SENDS FROM (prd §548b, 2026-09-01).**
+    ///
+    /// The room's Home scope IS the send console (§538), and in the demo it
+    /// drew NOTHING from the day it shipped. `FeedScreen`'s gate wants an
+    /// account whose actor list names THIS PHONE's key — a demo has no key and
+    /// never will — and it reads `VibenetState.saved`, which the demo never
+    /// writes, because `VibenetRoomSource.compose()` returns `demoFixture()`
+    /// and stops. Two independent reasons for the same empty screen, on the
+    /// DEFAULT scope of the room, in the tour that is now the first tap of
+    /// onboarding (§217).
+    ///
+    /// **No check in this repo could see it.** The demo audits ask whether a
+    /// SEAT is furnished, whether a source has rows, whether a room HEAD
+    /// composes, which figure kinds draw — and this is a scope's CONTENT gated
+    /// on a device credential, which is none of those.
+    /// `devnet-console-audit.py` carries the mechanical form of it now.
+    ///
+    /// The first ESTABLISHED account, because the console spends from it and an
+    /// undeployed one cannot. Nil outside the demo by construction, so the real
+    /// gate is the only thing that ever answers on a real install.
+    static func demoSignableAccount() -> Data? {
+        guard DemoMode.isActive else { return nil }
+        guard let address = demoFixture().items.first(where: { $0.established })?.address
+        else { return nil }
+        return VibenetTransaction.data(fromHex: address)
+    }
+
     /// The demo's fixed snapshot, and every state this card can draw shown
     /// at once: all five nameable authenticator kinds, a rich established
     /// roster, a plain lock and a mid-unlock (so the badge's two words both

@@ -320,6 +320,17 @@ struct VibenetSendCard: View {
     // MARK: - Act
 
     private func send() {
+        // **NOTHING LEAVES THE DEMO (prd §548b).** Furnishing a tour with a
+        // working send console means the console must stop where the money
+        // starts: a real signature here would raise Face ID and a real
+        // broadcast would put a transaction on a public devnet, from a screen
+        // whose own banner says none of this is yours. Refused BEFORE the key
+        // is touched, and it says so rather than failing silently — a control
+        // that does nothing and explains why is not the dead control §83 bans.
+        guard !DemoMode.isActive else {
+            errorText = String(localized: "Nothing is sent in the demo — this is where your own key would sign it.")
+            return
+        }
         guard let target = VibenetTransaction.data(fromHex: destination), target.count == 20,
               let valueWei = Self.weiData(from: amount) else { return }
         let spending = amount.trimmingCharacters(in: .whitespacesAndNewlines)

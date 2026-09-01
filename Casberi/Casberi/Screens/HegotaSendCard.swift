@@ -76,7 +76,7 @@ struct HegotaSendCard: View {
     /// on a card that did not fit the screen. The address it spends from moves
     /// onto the recipient row, which names both ends of a send for nothing.
     var body: some View {
-        if HegotaKey.address() != nil {
+        if sender != nil {
             VStack(alignment: .leading, spacing: DevnetConsole.blockGap) {
                 if sentHash == nil {
                 form
@@ -114,10 +114,25 @@ struct HegotaSendCard: View {
         }
     }
 
-    /// The sending address, and what the room calls it — so this card can never
-    /// name an address differently from the roster above it.
+    /// **THE ADDRESS THIS CARD SPENDS FROM, and it answers in the demo (prd
+    /// §548b).** The gate was `HegotaKey.address() != nil`, which a tour can
+    /// never satisfy — this phone makes its Hegotá key in `HegotaKeySheet` and
+    /// a demo must not make one — so the room's DEFAULT scope drew nothing in
+    /// the demo from the day §539 made the console its content.
+    ///
+    /// **No fake credential is written.** The demo does not plant an address in
+    /// `HegotaKey`'s own defaults, which would make every other path on this
+    /// phone believe it holds a key and hand `HegotaSign` one that is not in
+    /// the Keychain. It borrows the fixture's own account for display and
+    /// `send()` refuses before it reaches a signature.
+    private var sender: String? {
+        HegotaKey.address() ?? (DemoMode.isActive ? HegotaLiveState.demoOwnerAddress : nil)
+    }
+
+    /// What the room calls the sender — so this card can never name an address
+    /// differently from the roster above it.
     private var fromName: String? {
-        guard let from = HegotaKey.address() else { return nil }
+        guard let from = sender else { return nil }
         return HegotaWatch.shared.name(for: from) ?? WalletStore.shortAddress(from)
     }
 
@@ -134,7 +149,7 @@ struct HegotaSendCard: View {
     /// the keypad below it is the system's now.
     private var form: some View {
         VStack(spacing: DevnetConsole.blockGap) {
-            DevnetSendToRow(from: HegotaKey.address(),
+            DevnetSendToRow(from: sender,
                             fromName: fromName,
                             address: destination.isEmpty ? nil : destination,
                             name: destination.isEmpty ? nil : recipientName,
@@ -228,7 +243,7 @@ struct HegotaSendCard: View {
     /// and a real zero must not look alike (§83), so the line is simply absent
     /// rather than claiming nothing is held.
     private var held: Decimal? {
-        guard let mine = HegotaKey.address() else { return nil }
+        guard let mine = sender else { return nil }
         return HegotaLiveState.shared.accounts.first {
             $0.address.caseInsensitiveCompare(mine) == .orderedSame
         }?.balanceWei
@@ -289,6 +304,17 @@ struct HegotaSendCard: View {
     // MARK: - Act
 
     private func send() {
+        // **NOTHING LEAVES THE DEMO (prd §548b).** Furnishing a tour with a
+        // working send console means the console must stop where the money
+        // starts: a real signature here would raise Face ID and a real
+        // broadcast would put a transaction on a public devnet, from a screen
+        // whose own banner says none of this is yours. Refused BEFORE the key
+        // is touched, and it says so rather than failing silently — a control
+        // that does nothing and explains why is not the dead control §83 bans.
+        guard !DemoMode.isActive else {
+            errorText = String(localized: "Nothing is sent in the demo — this is where your own key would sign it.")
+            return
+        }
         guard let target = RLP.data(fromHex: destination),
               let valueWei = Self.weiData(from: amount),
               let address = HegotaKey.address() else { return }

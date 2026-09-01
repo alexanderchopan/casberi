@@ -900,6 +900,15 @@ enum HegotaBridge {
 // MARK: - Demo
 
 extension HegotaLiveState {
+    /// The demo's own account — the one with coins, and therefore the one the
+    /// send console spends from in a tour (prd §548b).
+    ///
+    /// A `static let` rather than a literal in `seedDemo` because `HegotaSendCard`
+    /// needs the same address to name a sender, and two copies of an address in
+    /// two files is how a card ends up drawing a balance that belongs to
+    /// somebody else's fixture.
+    nonisolated static let demoOwnerAddress = "0x8b54b45663b4af65d51d7f98c20f533965e0a013"
+
     /// The demo's Hegotá account.
     ///
     /// **A FIXTURE, never a read** — `DemoMode` reaches no network by ruling,
@@ -931,7 +940,7 @@ extension HegotaLiveState {
         // of the room: coin owners and keyed-nonce senders are disjoint
         // populations (measured), so one account would furnish one scope and
         // leave the other permanently empty in the demo.
-        let coinsAddr = "0x8b54b45663b4af65d51d7f98c20f533965e0a013"
+        let coinsAddr = Self.demoOwnerAddress
         let nonceAddr = "0x8943545177806ed17b9f23f0a21ee5948ecaa776"
         let vault = HegotaChain.vault
         let payer = "0x5bf9cea0c445c13bc5b2a5f1a2347f47a9c27a51"

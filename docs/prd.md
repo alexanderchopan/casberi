@@ -41623,3 +41623,77 @@ toolchain. Every static audit passes. The first things to look at on a device
 are the keyboard's arrival — whether the room scrolls the figure clear of the
 pad — and the recipient row on a narrow phone, where the sender's name, an
 arrow, three overlapped faces and "Choose who" share one 44pt line.
+
+## 548b. The console was never in the demo — a scope's content, gated on a credential a tour cannot have (user: "did you do the demo b/c in demo i see empty", "this is on vibenet", 2026-09-01)
+
+Reported against the demo, on vibenet's Home: **an empty scope under a full
+crown.** Not a regression from §548 or §548a — **the send console has never
+once drawn in the demo**, in either devnet, from the day §538 and §539 made it
+the content of each room's default scope.
+
+**Two independent causes, both structural rather than a missed seed.**
+
+1. `FeedScreen.signableVibenetAccount()` wants an account whose actor list
+   names THIS PHONE's key. A demo has no key and must never make one.
+2. That same function reads `VibenetState.saved`, and the demo never writes it
+   — `VibenetRoomSource.compose()` returns `VibenetRoom.demoFixture()` and
+   stops. So even a demo that somehow had a key would find nothing.
+
+Hegotá's is the same shape one file over: `HegotaSendCard` gated on
+`HegotaKey.address() != nil`, an address this phone writes when it makes a key
+in `HegotaKeySheet`.
+
+**WHY EVERY DEMO CHECK IN THIS REPO PASSED OVER IT, which is the part worth
+keeping.** The apparatus is real and it asks four questions: is a SEAT
+furnished (`demo-selftest` D/E, and G/M for the rowless ones), does a source
+have ROWS, does a room HEAD compose (`verify.sh`'s room-head coverage, which
+hard-fails), and which FIGURE KINDS draw. All four were green over a room whose
+default scope was blank, because this is **a scope's CONTENT gated on a device
+credential**, and that is none of the four. The seat is furnished, the rows
+landed, the head composes, the crown is right — and the screen under them is
+empty. Vibenet is also `KNOWN_ROWLESS_SEAT`-adjacent in spirit: everything the
+checks look at was correct.
+
+It matters more than an ordinary demo gap because of §217: the greeting's
+primary CTA is *"Try the demo"*, so this is the first tap of onboarding, and
+the vibenet room's Home is where somebody lands.
+
+**THE FIX IS A DOOR, NOT A FAKE CREDENTIAL.** `VibenetRoom.demoSignableAccount()`
+returns the fixture's first ESTABLISHED account (the console spends from it and
+an undeployed account cannot), nil outside the demo by construction so the real
+gate is the only thing that ever answers on a real install. Hegotá borrows
+`HegotaLiveState.demoOwnerAddress` — the fixture's own coin-holding account,
+now a `static let` shared with `seedDemo` rather than a second copy of the
+literal, because two copies of an address in two files is how a card draws a
+balance belonging to somebody else's fixture. **Neither writes a credential.**
+Planting an address in `HegotaKey`'s defaults would make every other path on
+the phone believe it holds a key and hand `HegotaSign` one that is not in the
+Keychain.
+
+**AND THE CONSOLE STOPS WHERE THE MONEY STARTS.** Both `send()`s refuse in a
+demo BEFORE a key is touched: a real signature raises Face ID and a real
+broadcast puts a transaction on a public devnet, from a screen whose own banner
+reads "Demo — none of this is yours". It says so in one sentence rather than
+failing silently — a control that does nothing and explains why is not the dead
+control §83 bans, and it is the same posture `Notifications.submit` and
+`BridgeRefresh.refreshAllConnected` already take in demo mode. Everything up to
+that point is fully live: pick a recipient from the seeded faces, type an
+amount, watch the verb arm.
+
+**Mechanical, as check 7 of `devnet-console-audit.py`**, in both directions —
+the gate must reach the demo AND `send()` must refuse in it. Stated in the
+audit's own header is why it cannot be delegated to the demo audits: they ask
+about seats, rows, heads and figures, and a scope's content gated on a
+credential is none of those.
+
+**The generalisable rule, and it is the one to carry to the next room:** a
+surface whose visibility is gated on something only a real install can have —
+a device key, a Keychain item, a signed-in account, a biometric enrolment — is
+invisible to every check in this repo, because all of them ask about DATA.
+When a scope's whole content sits behind such a gate, the gate needs a demo
+door and the write behind it needs a demo fence, in the same commit.
+
+UNBUILT AND UNSEEN, same as §548 and §548a: authored on Linux with no Xcode.
+Every static audit passes. The demo is the thing to look at first on a fresh
+simulator install — vibenet's Home should now open on the console, with the
+three seeded accounts in the recipient picker.
