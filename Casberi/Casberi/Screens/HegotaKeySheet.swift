@@ -35,6 +35,9 @@ struct HegotaKeySheet: View {
     /// for fine print.
     @State private var faucetFailed = false
     @State private var faucetBusy = false
+    /// What the sheet's content actually measures — `trayHeight`'s whole
+    /// input. 0 until the first layout pass.
+    @State private var contentHeight: CGFloat = 0
 
     // The app's own accent, not `HegotaModeStyle.room` — this sheet is an
     // ordinary account/key screen, not a frame/vault reading, so it gets the
@@ -71,8 +74,7 @@ struct HegotaKeySheet: View {
                                 stampWeight: headStampWeight,
                                 title: headTitle,
                                 secondary: headSecondary,
-                                sentence: headSentence,
-                                inkCard: true)
+                                sentence: headSentence)
                     switch phase {
                     case .noKey:
                         noKeyBody
@@ -82,41 +84,38 @@ struct HegotaKeySheet: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.bottom, DS.Space.s4)
+                // THE MEASUREMENT `trayHeight` rests on — see its doc.
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+                    contentHeight = $0
+                }
             }
             .scrollIndicators(.hidden)
         }
         .task { refresh() }
     }
 
+    /// **MEASURED, NOT GUESSED — the fourth number in this slot, and the first
+    /// that cannot be wrong (prd §542, 2026-08-31).** The history is 560 →
+    /// 560 → 820 → 520, each a hand-sum of line counts that real device text
+    /// metrics outran (the last one within a day: "the this phones account
+    /// sheet doesn't fully show, has stuff hidden below and user needs to
+    /// scroll. shouldn't be that way — all content should be able to be
+    /// seen"). A hand-sum breaks every time a sentence gains a line, a result
+    /// row appears, or Dynamic Type steps up — so the content now reports its
+    /// own height and the tray fits it.
+    ///
+    /// The chrome constant is `DSTray`'s own documented model — top pad,
+    /// `heading34` title (line 40), gap, content, bottom pad — the same
+    /// arithmetic `SourcesTray.chromeHeight` spells. The cap keeps a tall
+    /// phase a TRAY rather than a takeover; past it the `.large` detent is
+    /// the escape, and the guessed fallbacks last only until the first layout
+    /// pass reports in.
     private var trayHeight: CGFloat {
-        switch phase {
-        // +40 over the original 340: the no-account sentence now explains
-        // what gets created and why it sits with the watched accounts,
-        // which runs longer and wraps to more lines.
-        case .noKey:            380
-        // **560 → 560 → 820 → 520, and only the last one is not a guess
-        // (prd §539, 2026-08-31).** The three before it were attempts to make
-        // a fixed number tall enough for content that kept turning out longer:
-        // at 560 the tray showed the head and the Test ETH block and NOTHING
-        // past "One claim per hour", so the Send block and the Actions block
-        // sat below the presented sheet's own bottom edge, indistinguishable
-        // from the tray ending there (user: "you can't see the bottom of thi
-        // tray where it says send eth so someone seeing it wont know it's
-        // there"). 820 answered that by being deliberately WRONG IN THE SAFE
-        // DIRECTION — taller than the content, so the cost was a void at the
-        // bottom rather than a hidden feature.
-        //
-        // Both were treating the symptom. The comment that landed with 820
-        // had the diagnosis exactly right — *a ScrollView makes that content
-        // REACHABLE, never DISCOVERABLE* — and then kept the arrangement that
-        // made discoverability the problem: the one control this sheet existed
-        // to lead people to was the FOURTH thing in it. §539 moved sending to
-        // the room's Home scope, where nothing is in front of it, and deleted
-        // the block from here. What is left is a head, the faucet and one
-        // destructive action, which is genuinely a ~520 sheet — measured
-        // against what it draws rather than padded against what it might.
-        case .ready, .working:  520
+        guard contentHeight > 0 else {
+            return phase == .noKey ? 380 : 560
         }
+        let chrome = DS.Space.s6 + 40 + DS.Space.s4 + DS.Space.s6
+        return min(contentHeight + chrome, 700)
     }
 
     // MARK: - Head

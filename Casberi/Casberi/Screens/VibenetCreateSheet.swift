@@ -133,8 +133,7 @@ struct VibenetCreateSheet: View {
                                     stampWeight: headStampWeight,
                                     title: headTitle,
                                     secondary: headSecondary,
-                                    sentence: headSentence,
-                                    inkCard: true)
+                                    sentence: headSentence)
                         switch phase {
                         case .checking:
                             ProgressView().frame(maxWidth: .infinity)

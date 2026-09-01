@@ -3820,7 +3820,7 @@ struct Composer: View {
         // by line): an elevated field, no ring. Focus shows in the cursor and
         // the keyboard; state shows in the send dot. Ink, not the old gray
         // (2026-08-31 — the same sweep that took every gray chip to ink).
-        .background(DS.surfaceSheet, in: RoundedRectangle(cornerRadius: writingRoom ? 22 : 26, style: .continuous))
+        .dsInkFill(cornerRadius: writingRoom ? 22 : 26)
         .shadow(color: DS.cardShadow, radius: 10, x: 0, y: 3)
         .animation(DS.Motion.standard, value: hasDraft || isRecording)
         .animation(DS.Motion.standard, value: fieldFocused)

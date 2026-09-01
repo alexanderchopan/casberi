@@ -216,8 +216,7 @@ struct AgentPanelGrid: View {
             }
             .padding(DS.Space.s2 + 1)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .background(DS.surfaceSheet,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .dsInkFill()
             .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             .dsHover()
         }

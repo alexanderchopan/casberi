@@ -66,8 +66,11 @@ struct ConnectWalletRow: View {
                 .padding(.horizontal, DS.Space.s3)
                 .padding(.vertical, 11)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(DS.surfaceRaised, in: RoundedRectangle(
-                    cornerRadius: DS.Radius.card, style: .continuous))
+                // The app's one card token, not the gray (prd §542). This
+                // is a row-card on a page, not a paper — no pour, no torn
+                // edge — so it takes `surfaceSheet` like every other card
+                // that sits on the page rather than ink like a paper.
+                .dsInkFill()
                 .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             }
             .buttonStyle(PressSpring())

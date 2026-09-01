@@ -86,6 +86,16 @@ struct FeedLedeCard: View {
             .padding(DS.Space.s4)
         }
         .background(background(deck))
+        // The card's TOP (prd §542). With no deck the fill is ink on the ink
+        // page, so the pour is the only thing separating this card from the
+        // feed behind it; over a deck it is §524's rule applied evenly, the
+        // same top every other card in the app now wears.
+        .background(alignment: .top) {
+            LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: 150)
+                .frame(maxWidth: .infinity, alignment: .top)
+        }
         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         .shadow(color: DS.raisedShadow, radius: 10, x: 0, y: 2)
         // The fill and the ink are ONE decision (`DS.deckFill`'s doc): the
@@ -97,7 +107,10 @@ struct FeedLedeCard: View {
     }
 
     @ViewBuilder private func background(_ deck: Color?) -> some View {
-        if selected { DS.tintDim } else if let deck { deck } else { DS.surfaceRaised }
+        // `DS.surfaceSheet`, not the gray (prd §542): this is a feed card
+        // and every other card in the feed is that token, so the no-deck
+        // fallback was the one row in the run wearing a different surface.
+        if selected { DS.tintDim } else if let deck { deck } else { DS.surfaceSheet }
     }
 
     /// The source's own hue, solved to the register. Nil when the brand is

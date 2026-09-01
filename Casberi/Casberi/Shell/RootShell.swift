@@ -4400,8 +4400,7 @@ private struct CaptureFlight: View {
             }
             .padding(.horizontal, DS.Space.s3)
             .padding(.vertical, DS.Space.s2)
-            .background(DS.surfaceSheet,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .dsInkFill()
             .frame(maxWidth: geo.size.width * 0.75)
             .scaleEffect(flown ? 0.3 : 1)
             .opacity(flown ? 0 : 1)

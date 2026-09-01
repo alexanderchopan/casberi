@@ -27,7 +27,45 @@ enum DS {
     /// Elevated background (nav glass base, some tiles).
     static let background100  = Color.adaptive(dark: "#1c1c1e", light: "#ffffff")
     /// The one sheet-surface token — cards, tiles, trays. Brief §8.
-    static let surfaceSheet   = Color.adaptive(dark: "#111113", light: "#ffffff")
+    ///
+    /// **INK SINCE 2026-08-31 (prd §542, `#111113` → `#000000` in dark; light
+    /// is unchanged, it was already `#ffffff`).** The user ruled the gray card
+    /// out of the app three times before this one landed — "our cards on the
+    /// day brief now are too gray too" (which bought `inkCard` below), then
+    /// `surfaceRaised`'s turn, then, of the sweep that only killed
+    /// `surfaceRaised`: *"you are still showing me the same bullshit gray … i
+    /// want it to be all ink."* This token is what was left, and it is the
+    /// card fill behind `dsCard`, `dsWidgetSurface`, `dsSheetSurface`,
+    /// `dsListCardRow` and `DSTray`'s own background, so it was every gray
+    /// card in the app at once.
+    ///
+    /// **The swap is only safe because the POUR came with it.** At `#000` on
+    /// the default `#000` page a card has no tonal step left and `cardShadow`
+    /// is black-on-black, so the fill alone would erase every card in the
+    /// app. `dsElevatedSurface` now lays `DS.pourInk` across the top of the
+    /// shape it fills — which is not a new idea but §524's own rule applied
+    /// where it had not been ("a card, a sheet head or a page gets a top the
+    /// same way everywhere"), and is exactly what makes "This phone's
+    /// account" — the card the user pointed at as correct — read as an object
+    /// on ink. Every card in the app is now that card.
+    ///
+    /// Kept at three tokens rather than folded into `inkGround`: this is the
+    /// CARD, that is the GROUND, and a card is allowed to stop being ink some
+    /// day without dragging the ground with it.
+    static let surfaceSheet   = Color.adaptive(dark: "#000000", light: "#ffffff")
+
+    /// A grouped-LIST row's fill — `dsListCardRow`'s alone (prd §542).
+    ///
+    /// It exists because a list row is the one card that cannot take the pour:
+    /// `listRowBackground` paints PER ROW, so a pour there stripes a lit top
+    /// onto every row of a section instead of onto the section. With no pour
+    /// and no tonal step a settings list would be invisible black-on-black, so
+    /// this keeps `inkCard`'s dark value — 3% luminance, "enough edge to group
+    /// a section on an OLED, not enough body to read as a gray box", which is
+    /// the user's own earlier ruling on exactly this question — and takes
+    /// `#ffffff` in light, where `inkCard`'s `#f2f2f7` would vanish into the
+    /// light page it matches.
+    static let surfaceListRow = Color.adaptive(dark: "#08080a", light: "#ffffff")
 
     /// The brief's card tone on the pure-black composer ground (2026-08-16,
     /// user: "our cards on the day brief now are too gray too" — said of
@@ -173,6 +211,24 @@ enum DS {
     /// card. That is a hairline drawn by accident, in the app that has zero
     /// exceptions to the no-line rule. Reach for `fillFaint` when the fill is
     /// drawn once; reach for this when it is drawn in pieces.
+    ///
+    /// **NO LIVE CALLER SINCE 2026-08-31 — THIS IS THE GRAY (prd §542).** The
+    /// user ruled it out of the app by sight ("we have this gray colored card
+    /// — i want that gone from everywhere in the app. should be the dark ink
+    /// one we are using"), and the sweep that followed found nine sites and
+    /// converted every one BY ANATOMY rather than by token: a PAPER (a pour, a
+    /// clipped silhouette, `raisedShadow`) takes `DS.inkGround`; a card or row
+    /// on a page takes `DS.surfaceSheet`; a RING punching a surface out takes
+    /// whatever surface it punches. Two of the nine were latent bugs the sweep
+    /// surfaced rather than caused — `AltanaRoomCard`'s face ring drew this
+    /// gray over a `surfaceSheet` card, and `FeedLedeCard`'s no-deck fallback
+    /// was the one row in the feed run not wearing the feed's own token.
+    ///
+    /// Kept, not deleted, on `MoneyReceipt.Hue`'s precedent: the elevation
+    /// ladder's raised rung is a real idea with a written rationale above, and
+    /// deleting it to save an unused constant makes the day this is reversed a
+    /// re-derivation instead of a one-line day. **Do not reach for it** — a new
+    /// raised container wants `dsWell()`, `surfaceSheet`, or the ink paper.
     static let surfaceRaised = Color.adaptive(dark: "#1a1a1c", light: "#f8f8f8")
 
     /// The lift under a `surfaceRaised` container. **Transparent in DARK on

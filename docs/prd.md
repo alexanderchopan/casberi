@@ -40956,6 +40956,48 @@ has been compiled and `verify.sh` has not run. Every static audit passes. The tw
 things that need eyes: whether a 4pt tint halo still reads as selected, and
 whether seven 44pt seats in one bar read as crowded rather than as the fix.
 
+## 542. The paper is ink everywhere, and the account sheet fits what it draws (2026-08-31)
+
+Two rulings from one look at Hegotá's sheets, both user-worded.
+
+**1. The gray receipt paper is dead — every paper pours over `DS.inkGround`.**
+Reported on the UTXO, frame, account and activity sheets ("we have this gray
+colored card — i want that gone from everywhere in the app. should be the dark
+ink one we are using... it should be the color of the one we have on 'this
+phone's account'"). The gray was `DS.surfaceRaised`, `dsReceiptPaper`'s default
+base; "This phone's account" looked right because it was one of the three short
+trays §529's scoping gave `DSSheetHead.inkCard`. That 2026-08-29 scoping — ink
+for short trays only, on the reasoning that a full-page surface has margin
+enough for a raised card to read as "a paper resting on ink" — is **overturned**:
+the margin argument lost to the sheets it produced, side by side with the ink
+ones, reading as two different apps. So `DSReceiptPaper.base` is no longer a
+parameter at all (the pour's own `Color?` precedent: an option nobody may take
+is a fork waiting to drift back), `DSSheetHead.inkCard` is deleted with its
+three `true` callers, and every paper — the money receipt and the thing sheet
+included — is ink. On ink the paper's edge is carried by the pour (§524), the
+torn silhouette (§495) and, in light mode, `raisedShadow`; not by a tonal step.
+`DS.surfaceRaised` itself survives for its non-paper callers (the sources
+tray's slot fills).
+
+**2. `HegotaKeySheet` measures its content instead of guessing at it.** The
+ready phase clipped again — the FOURTH height in that slot (560 → 560 → 820 →
+520, the last landed as "measured against what it draws" and was a hand-sum
+like the rest; user, within a day: "the this phones account sheet doesn't
+fully show, has stuff hidden below and user needs to scroll. shouldn't be that
+way. all content should be able to be seen"). A hand-sum breaks every time a
+sentence gains a line or Dynamic Type steps up. The content now reports its
+own height (`onGeometryChange`) and `trayHeight` is that measurement plus
+`DSTray`'s own documented chrome model, capped at 700 so a tall phase stays a
+tray (`.large` remains the escape past the cap); the old numbers survive only
+as first-frame fallbacks until layout reports in. Standing lesson for every
+fixed-height tray with prose in it: the third wrong guess is the point where
+the number should have become a measurement.
+
+**UNSEEN ON A DEVICE** in this session's fix pass; the iOS build compiles (see
+the session's verify evidence) and the ink change is a one-token swap on a
+shared modifier, so the thing needing eyes is light mode — a white paper on
+the white thing-sheet ground separates by shadow alone there.
+
 ## 543. Nothing is prepopulated, and one capsule says who will answer (2026-08-31)
 
 Reported, unprompted and in one breath: *"asking it about wallet, work, day

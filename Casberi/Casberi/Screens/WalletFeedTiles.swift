@@ -1179,8 +1179,7 @@ struct WalletLocksTray: View {
 private extension View {
     func dsCompositionRow() -> some View {
         padding(DS.Space.s3)
-            .background(DS.surfaceSheet,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            .dsInkFill(cornerRadius: DS.Radius.widget)
             .dsHover()
     }
 }
@@ -2153,8 +2152,7 @@ struct WalletWorthALookTray: View {
         // does nothing inside `DSTray`'s plain VStack (see the tray audit
         // note in prd §241).
         .padding(DS.Space.s3)
-        .background(DS.surfaceSheet,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .dsInkFill(cornerRadius: DS.Radius.widget)
     }
 
     /// A group the ROOM states better, standing in for itself (prd §449).

@@ -251,11 +251,33 @@ extension View {
     /// Animation casts it from a cheap path instead of rasterizing each card's
     /// content offscreen every scroll frame (matches `dsSheetSurface`, which
     /// shadows the clipped shape rather than the live view).
+    ///
+    /// **THE POUR IS PART OF THE RECIPE SINCE 2026-08-31 (prd §542)**, and it
+    /// is what makes the ink card possible: `DS.surfaceSheet` is `#000` in
+    /// dark now, the same value as the default page, and `cardShadow` is black
+    /// — so fill and shadow together would draw nothing at all. `DS.pourInk`
+    /// across the top is the card's edge, the same one `dsReceiptPaper` and
+    /// every §495 sheet head already use, so a card and a paper are finally
+    /// one treatment rather than two that merely sat near each other.
+    ///
+    /// It rides INSIDE the same clipped shape as the fill (a second
+    /// `RoundedRectangle` masking the gradient) rather than as a sibling
+    /// `background(alignment: .top)`, so the pour can never bleed past a
+    /// card's own corner — which it visibly does on any card shorter than the
+    /// gradient's 150pt reach.
     private func dsElevatedSurface(cornerRadius: CGFloat,
                                    fillOpacity: Double = 1) -> some View {
         background {
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            shape
                 .fill(DS.surfaceSheet.opacity(fillOpacity))
+                .overlay {
+                    LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
+                                   startPoint: .top, endPoint: .bottom)
+                        .frame(height: 150)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                        .clipShape(shape)
+                }
                 .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
         }
     }
@@ -274,9 +296,16 @@ extension View {
     /// It's the same pointer API iPad has carried since Catalyst's
     /// inception (a physical pointer on iPad and a Mac cursor are the same
     /// UIKit interaction underneath), so it's a no-op on touch.
+    ///
+    /// **`DS.surfaceListRow`, not `surfaceSheet` (prd §542)** — the one card in
+    /// the app that cannot take the ink swap. `listRowBackground` paints PER
+    /// ROW, so the pour every other card got would stripe a lit top onto each
+    /// row of a section instead of onto the section; with no pour and no tonal
+    /// step, an ink row on the ink page is an invisible settings list. See that
+    /// token's doc for the value and why it is still ink rather than gray.
     func dsListCardRow() -> some View {
         listRowBackground(
-            DS.surfaceSheet.shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
+            DS.surfaceListRow.shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
         )
         .hoverEffect(.automatic)
     }
@@ -431,11 +460,46 @@ extension View {
         }
     }
 
+    /// A BLOCK FILLED IN THE CARD COLOUR, with the pour and no shadow — for
+    /// something nested inside a card, where a second shadow would read as a
+    /// card floating on a card (prd §542, 2026-08-31).
+    ///
+    /// It exists because the ink swap made `.background(DS.surfaceSheet, in:
+    /// shape)` — spelled by hand at a dozen sites — draw literally nothing on
+    /// the ink page. Those sites want the fill AND the top; only the outermost
+    /// of them wants the lift, and that one has `dsCard`/`dsWidgetSurface`
+    /// already.
+    func dsInkFill(cornerRadius: CGFloat = DS.Radius.card) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        return background {
+            shape
+                .fill(DS.surfaceSheet)
+                .overlay {
+                    LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
+                                   startPoint: .top, endPoint: .bottom)
+                        .frame(height: 150)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                        .clipShape(shape)
+                }
+        }
+    }
+
     /// A modal sheet / tray surface with the overlay shadow.
+    ///
+    /// Carries the pour since the ink swap (prd §542) for `dsElevatedSurface`'s
+    /// own reason: at `#000` on the ink page the fill and the black shadow
+    /// together draw nothing, and the pour is the surface's only edge.
     func dsSheetSurface() -> some View {
         let shape = RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous)
         return self
             .background(DS.surfaceSheet, in: shape)
+            .background(alignment: .top) {
+                LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(height: 150)
+                    .frame(maxWidth: .infinity, alignment: .top)
+                    .clipShape(shape)
+            }
             .clipShape(shape)
             // `DS.cardShadow`, not a pinned black: its DARK value is exactly
             // the 0.55 this used to hardcode, so dark is byte-identical, while

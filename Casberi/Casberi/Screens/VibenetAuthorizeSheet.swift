@@ -79,8 +79,7 @@ struct VibenetAuthorizeSheet: View {
                                     // of before granting somebody a key.
                                     title: headTitle,
                                     secondary: accountName,
-                                    sentence: headSentence,
-                                    inkCard: true)
+                                    sentence: headSentence)
                         switch phase {
                         case .form: formBody
                         case .done: doneBody
