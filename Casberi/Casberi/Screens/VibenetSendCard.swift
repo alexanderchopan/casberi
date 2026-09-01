@@ -41,6 +41,15 @@ struct VibenetSendCard: View {
 
     @Environment(\.openURL) private var openURL
 
+    /// Only ever set by a tap. **Not pre-populated in the demo**, which the
+    /// first cut did: the tile then wore a permanent grey sentence explaining
+    /// itself before anybody had asked, which is the standing helper-text
+    /// ruling (§553: a line survives only if it changes what someone would DO)
+    /// AND a second parity gap of its own — Hegotá says its refusal ON TAP, so
+    /// a vibenet tile that says it up front is the two rooms answering the same
+    /// question differently again, one layer down from the gap this replaced.
+    @State private var topUpNote: String?
+
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
     var body: some View {
@@ -65,10 +74,16 @@ struct VibenetSendCard: View {
         // The tile stays present and says why rather than vanishing: a half
         // that disappears in the demo makes the tour a different shape from the
         // room it is a tour of, which is the whole thing demo parity is for.
-        if DemoMode.isActive {
-            return .init(note: String(localized: "The faucet isn't opened in the demo."),
-                         handsOff: true) { }
+        return .init(note: topUpNote, handsOff: true) {
+            // The tour does not leave the tour: this would open a live devnet
+            // faucet in Safari from a screen whose banner reads "Demo — none of
+            // this is yours". Said in a sentence rather than failing silently,
+            // on the same terms `HegotaSendCard` refuses its own claim.
+            guard !DemoMode.isActive else {
+                topUpNote = String(localized: "The faucet isn't opened in the demo.")
+                return
+            }
+            openURL(url)
         }
-        return .init(handsOff: true) { openURL(url) }
     }
 }

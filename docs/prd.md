@@ -42868,6 +42868,20 @@ have been the worst outcome — the change made, the problem still there. 18%.
 No chrome, no arrow, and no hairline (§8 forbids that outright), and no
 re-sizing of a component seven other rooms share.
 
+**AND THE PARITY FIX REINTRODUCED THE SAME FAULT ONE LAYER DOWN.** The first
+cut pre-populated vibenet's note, so the tile wore a permanent grey sentence
+explaining itself before anyone had asked — the standing helper-text ruling
+(a line survives only if it changes what someone would DO), and, worse, the very
+gap it was written to close: Hegotá says its refusal ON TAP, so a vibenet tile
+that says it up front is again the two rooms answering one question two ways.
+Tap-driven now, and the tile is a mark and a verb at rest in both rooms.
+
+**Walked in the demo rather than reasoned about**: vibenet's Home draws both
+verbs, the picker offers the four seeded accounts, and the send sheet is fully
+usable up to the refusal. The Top up half appears because §476 had already fixed
+this class once — the demo writes a real `VibenetConfig` through the same store
+the live fetch uses, so `cached()?.faucetAddress` answers there.
+
 ### What is checked
 
 `scripts/devnet-console-audit.py` is rewritten around this shape — §548/§548a's
