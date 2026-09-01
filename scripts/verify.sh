@@ -1481,6 +1481,21 @@ harness "Hegota frame transaction self-test" "11 mutations, real on-chain vector
 # apologising with "0 unwatched".
 harness "Vibenet scope drawings self-test" "8 mutations, 9 drift guards" "scripts/vibenet-scopes-selftest.sh" "the vibenet scope drawings self-test failed — run scripts/vibenet-scopes-selftest.sh"
 
+# The ask capsule (prd §543) — the one control that says who will answer, and
+# the deletions that made it the only one. Every failure renders as a perfectly
+# ordinary capsule: an agent silently missing (a stale recency entry outranking
+# a configured key, or a cap that drops instead of overflowing) is
+# indistinguishable from a key never configured; a non-total order reshuffles
+# the row between opens, which destroys the one property it needs — being in
+# the same place every time; and a device segment reading "iPhone" on Mac
+# Catalyst is a claim about where the answer runs, made on the control whose
+# whole job is to say where the answer runs. Its drift half is what keeps the
+# deletions deleted: a returning send button, a returning chip row or a
+# returning day card each rebuild the confusion this pass removed, and the
+# kept pills must stay mounted or "Keep" mints a standing question with
+# nowhere to appear (§83).
+harness "Ask capsule self-test" "11 mutations, 15 drift guards" "scripts/ask-destination-selftest.sh" "the ask capsule self-test failed — run scripts/ask-destination-selftest.sh"
+
 # The design system's first mechanical check (prd §299). Every other rule in
 # this file is enforced by a script; the design system was enforced by memory,
 # which is how fourteen data drawings shipped with no entrance and how the

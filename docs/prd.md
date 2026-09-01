@@ -79,6 +79,7 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §386c | The kept-ask pills LEAVE the rest surface — the same chips-to-have-chips reading the suggestion row got in the same session | reversed by §543 (they were removed while sitting in a row of five identical-looking suggestions, where they read as more of the same. With every SUGGESTED chip deleted they are the opposite thing: the only content on that surface, and there only because somebody pinned it. It also repairs a hole §543 would otherwise open — "Keep" on an answer would mint a standing question with nowhere to appear, which is a control that does nothing (§83)) |
 | §534 | A `.eth` name in its grace period can be renewed by **the owner** — the grace copy said so in four places | reversed by §540 (MEASURED: the deployed `ETHRegistrarController.renew` has no owner check of any kind — it takes the money, extends the registration, and never asks who paid. **Renewing is permissionless.** The grace period restricts RE-REGISTRATION, not renewal, so the copy was wrong in the direction that talks somebody out of an act they could take; all four places now say "it can still be renewed", and the renew card carries the footgun the capability creates — paying does not transfer the name) |
 | §250 | An individual charge NEVER lands — a £9 payment is a tally wearing a currency symbol, so only money whose movement is itself the news earns a row | amended by §537 **for Polar only** (Stripe's own rule stands unchanged where §250 set it: a payment processor serving businesses at thousands of charges a day. Polar is a Merchant of Record for indie developers, where a sale is a countable event somebody remembers — so sales land, while a `subscription_cycle` RENEWAL is still refused as exactly the tally §250 describes) |
 | §500 | Hegotá **never touches the faucet** — a faucet claim is a write and the seat's whole claim is that it cannot write, so it links out and the person claims their own | overtaken by §525 (the key sheet grew a Claim button that POSTs to it) and then by §531, which is where the CONSEQUENCE was paid: the faucet host had been in the reach audit's non-reach denylist on §500's reasoning, so for a day the privacy screen omitted a host the app really reached |
@@ -40954,3 +40955,179 @@ that made this change — there is no Swift toolchain on the host, so nothing he
 has been compiled and `verify.sh` has not run. Every static audit passes. The two
 things that need eyes: whether a 4pt tint halo still reads as selected, and
 whether seven 44pt seats in one bar read as crowded rather than as the fix.
+
+## 543. Nothing is prepopulated, and one capsule says who will answer (2026-08-31)
+
+Reported, unprompted and in one breath: *"asking it about wallet, work, day
+doesn't seem to do much difference … 'noticed today' is same as 'day' and
+clicking on work always just shows me github but not in a good way … it's too
+many different things that don't show much difference. wallet doesn't open up
+at the top … after you get an answer you can't go back to where the chips
+are."* Then, once the chips were audited: *"i don't think the prepopulated
+things are helpful … even the wallet one, i mean a user can go look at their
+wallet … we honestly just delete all the prepopulated stuff … it should be
+about ask the device or ask one of your other agents."*
+
+**Every one of those complaints was TRUE OF THE WIRING, not of the answers.**
+The audit found four doors onto two documents: `Work` ran
+`TodayBrief.compose(category:)` and `Day` ran the same composer unscoped, so
+two chips led to one screen differing only by a source filter — which is
+exactly why Work "always just shows GitHub", since for most corpora GitHub is
+what the Work category holds. `dayCard` and the lone category chip sent
+`TodayBrief.title` **byte-identically**, a third and fourth control for that
+same screen. And two `Noticed` kinds existed — `observation` (an `Insight` plus
+evidence rows) and `noticed` (the same sentence without them). None of this was
+a composer bug; it was a menu of near-synonyms in front of good answers.
+
+### 1. The prepopulated set is deleted, all of it
+
+Gone in one pass: `launcherChips` (Wallet / Work / Day), `askChips` (whose only
+surviving render was the observation chip), `categoryChipsRow`, and `dayCard`
+with `dayCardShowing`, `dayLede` and `dayWhisper`. **Deleting a chip deletes no
+ANSWER** — every question is still typed, still deterministic, still composed by
+the same `KeptAskComposers` kind — which is the whole reason this is a cheap
+change rather than a capability loss. The suggestion machinery above them is
+deliberately NOT torn out in the same pass: it feeds the decay counters and the
+recognizers, and one corpus walk fills `tagPool`, `categoryChips` and
+`awayLanded` besides.
+
+The wallet chip went with the rest **on the user's own argument**, which is
+better than the one we had for keeping it: the wallet room is one tap away in
+the feed, so the chip bought a shortcut to a place that was never far. §386b
+retired the evergreen suggestions on this reasoning ("we just had chips to have
+them") and §386c the kept pills; this finishes the sweep the other two started.
+
+**The kept pills come back, and that reverses §386c deliberately.** They were
+removed while sitting in a row of five identical-looking suggestions, where
+they read as more of the same. With every suggested chip gone they are the
+opposite thing: the only content on the rest surface, and there only because
+somebody pinned it. It also repairs an honesty hole this pass would otherwise
+have opened — **`Keep` on an answer would mint a standing question with nowhere
+to appear, which is a control that does nothing (§83).** The loop is fully
+user-owned: Keep pins, tapping re-runs, the existing long-press unpins, and ten
+ignored offers dim to 0.55 without ever deleting. They inherit `ChipEntrance`
+from the chips they replace, so the one row left at rest still settles in.
+
+### 2. The greeting greets you, and says nothing else
+
+`Text(timeGreeting())` → `Text(clockGreeting())`: "Saturday morning." named the
+weekday — a fact the person already has — and named nobody. `clockGreeting` has
+existed since §521 for the brief masthead and is already right: whole localized
+sentences with the name INSIDE them (a name leads in Japanese and Korean and
+takes an honorific there, so `"Good morning" + ", " + name` is a sentence no
+translator can fix), falling back to the bare greeting when `ProfileStore.name`
+is nil — **not a gap, since "Good morning" is already a complete sentence.**
+The pairing line ("Ask, or write and send it out.") is deleted with it: it
+taught the surface's dual nature in prose while the controls beneath it did not
+say it, and the bar says it better now — the placeholder reads "Ask or search"
+and the capsule names every destination. A sentence restating the controls
+under it is §213's restatement in miniature.
+
+### 3. ONE ASK CAPSULE, AND NO SEND BUTTON ANYWHERE
+
+Two intermediate designs were built and rejected in front of the user, and both
+rejections are the ruling. **A row of agent faces at rest, beside the send
+button** — *"what is confusing is that there is a send button and also a phone
+button and two agent buttons"*: a selector and a send are two controls, and
+nothing on screen says which destination the arrow will use. **Then the shipped
+grammar (`Ask ↑` in the bar plus `Ask Claude` / `Ask Bankr` chips)** — *"is the
+ask asking the phone but the other buttons are asking the agent? that's also
+confusing"*: naming the agents and not the device makes the device the odd one
+out.
+
+So: `sendButton` and `SendTooltip` are **deleted**, and the composer's control
+row ends in `AskDestinationCapsule` — one segmented capsule naming every
+destination as an equal, where **tapping a segment IS the send to it.** The
+device segment wears the fill because it is what the return key does (free, on
+device, nothing leaves; return-is-always-the-device, the 2026-08-31 ruling,
+survives untouched and the fill is now what says so). Agent segments exist only
+for configured keys, so with none the capsule is the device pill alone and
+nothing claims a capability that isn't there.
+
+**The bar holds ONE anatomy in every state** — field line on top, control row
+beneath, at rest and with a draft and under a settled answer. It was two shapes
+(a one-line door that grew a second row on focus), and the capsule cannot live
+in the one-line shape without fighting the field for the same width. Holding
+one shape is also what makes the capsule learnable: same place before and after
+you type, and typing changes only what a tap does. **The capsule shows at rest**
+(user, asked directly: *"if user has agents connected why not have it already
+showing? and if no agent connected we'd still show the Phone pill"*) — at rest a
+segment ARMS the field at that destination, with a draft the same tap sends.
+The `Ask <agent>` chips leave `takeChips` with `offerKeyed`, since a second copy
+would be two controls doing the identical thing.
+
+Three rulings, each mechanical in `ask-destination-selftest.sh`:
+
+1. **THE DEVICE NAMES ITSELF** — `AskDestination.deviceLabel(isMac:isPad:)`,
+   never a hardcoded "iPhone". This app ships iPhone, iPad and Mac Catalyst and
+   `verify.sh` gates a Catalyst build every pass; a Mac segment reading "iPhone"
+   is a claim about where the answer runs, on the control whose whole job is to
+   say where the answer runs. `isMac` beats `isPad` (Catalyst can report a pad
+   idiom).
+2. **OVERFLOW IS DETERMINISTIC** — device plus the two most recently ASKED
+   agents (`AskDestination.agentSlots`, measured against the row a 390pt phone
+   leaves after the lower and mic buttons), the rest behind a `+N` **menu**.
+   Seven providers are configurable and three segments fit. Recency, not
+   `AgentKey.active`: `active` answers "which key does a keyed answer spend" and
+   moves when a key is SAVED, so a key pasted months ago would outrank the agent
+   asked ten minutes ago. Recorded on the SEND, never on a mere focus. A raw
+   value whose key was cleared is DROPPED, never shown — a segment for a
+   credential that no longer exists is §83's dead control pointed at a live
+   host. The remainder OVERFLOWS and is never dropped: an agent that vanishes
+   because a third key was added is a key you cannot spend. A `+N` menu rather
+   than an inline expansion, because the row has a fixed width and expanding in
+   place pushes the earlier segments off their own edge.
+3. **VOICE ALWAYS ANSWERS ON DEVICE** — agents stand down while recording. A
+   voice note must never silently spend somebody's key, and stopping the mic is
+   a commit, not a choice of who answers.
+
+### 4. An answer that is a document opens at its top
+
+*"wallet doesn't open up at the top."* `walletDoc` is a crown value, a
+sparkline, a stat row and a holdings treemap, and it bottom-anchored like a chat
+reply, so the crown was above the fold on arrival. §288 top-anchored the brief
+because "a document read from its own footer is the same mistake on a phone as
+on a Mac"; `documentInView` extends that verbatim to `WalletAsk.matches`, and
+the typewriter-follow skips it for the same reason (it would undo the anchor one
+frame after it is set). Gated on `turns.isEmpty` like `briefInView`: a follow-up
+makes it an ordinary conversation and the thumb rule takes over.
+
+### 5. The way back is the field
+
+*"after you get an answer you can't go back to where the chips are"* — the true
+report against a real hole: `askSurfaceShowing` has been hardcoded false since
+2026-08-31, so an answer replaced the rest surface with no route back short of
+lowering the agent. **With no chips there is nothing to go back TO**, and the
+bar — docked in every state, one anatomy, capsule included — is the way. The
+docked-chips-under-every-answer design this pass considered was retired with the
+chips themselves.
+
+### Guarded, and what is unproven
+
+`scripts/ask-destination-selftest.sh` (in `verify.sh`) compiles
+`Model/AskDestination.swift` WHOLE and unmodified — Foundation-only by design —
+with ~30 assertions, **11 mutations** and **15 drift guards**. The drift half is
+what keeps the deletions deleted: a returning `sendButton`, `launcherChips`,
+`askChips`, `categoryChipsRow` or `dayCard` fails the build, the kept pills must
+stay mounted, the greeting must stay named, the capsule must stand its agents
+down while recording and must never hardcode a device name. Negative guards read
+a COMMENT-STRIPPED copy — both files document these rules by naming the very
+things they must not do (the Obsidian/Cursor lesson, ninth instance).
+
+**A harness bug worth carrying, found on its own first run:** the mutation
+proving the recency ledger de-duplicates SURVIVED, and not because the code was
+right. The mutation string contained `$0` (every Swift closure shorthand), and
+`perl -0pi -e "s/\Q$from\E/..."` **interpolates `$0` inside the regex even under
+`\Q`** — so the pattern matched nothing, the "mutant" was byte-identical to the
+shipped file, and it passed for a reason having nothing to do with the code.
+The substitution is a literal python replace now. Standing lesson for any
+mutation harness here: **a mutation that matches nothing is indistinguishable
+from a mutation that survived**, so the anchor check must run before the
+substitution and the substitution must not be interpolated.
+
+**UNSEEN ON A DEVICE.** The iOS Simulator build compiles clean and the harness
+is green; no screenshot of the new rest surface, the capsule at any width, the
+`+N` menu or the wallet answer's anchor has been taken. The capsule's fit is
+reasoned from the shipped chip metrics rather than measured on a device, and the
+overflow threshold is the number that follows from that reasoning — check a
+three-key configuration on hardware before trusting `agentSlots`.
