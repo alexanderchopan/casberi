@@ -837,8 +837,7 @@ struct RootShell: View {
             // Declared BEFORE `-bankrProbe`: hooks run in list order and the
             // probe's acting arm reads a permission that must already be set.
             if let raw = UserDefaults.standard.string(forKey: "bankrCanAct") {
-                BankrAgent.canAct = (raw as NSString).boolValue
-                NSLog("[Casberi] bankrCanAct: %d", BankrAgent.canAct ? 1 : 0)
+                NSLog("[Casberi] bankrCanAct: retired — the key's own scope decides")
             }
             // `-bankrProbe "<question>"` ASKS (answer-only prefix, spends a
             // job and no money) and dumps the RAW job envelope keys —
@@ -860,11 +859,11 @@ struct RootShell: View {
                 Task {
                     let acting = UserDefaults.standard.string(forKey: "bankrProbe") == nil
                     let start = Date()
-                    let outcome = acting ? await BankrAgent.act(text)
+                    let outcome = acting ? await BankrAgent.ask(text)
                                          : await BankrAgent.ask(text)
                     let ms = Int(Date().timeIntervalSince(start) * 1000)
                     NSLog("[Casberi] bankrProbe| verb=%@ canAct=%d keyed=%d %dms",
-                          acting ? "act" : "ask", BankrAgent.canAct ? 1 : 0,
+                          acting ? "act" : "ask", 0,
                           AgentKey.isConfigured(.bankr) ? 1 : 0, ms)
                     switch outcome {
                     case .success(let reply):

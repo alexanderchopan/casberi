@@ -542,10 +542,7 @@ struct MainSurface: View {
         case .walletbeatDirectory:
             WalletbeatDirectoryScreen()
         case .l2beatDirectory:
-            L2beatDirectoryScreen()
-        case .bankrChat:
-            BankrChatScreen()
-        case .addressGroup(let name):
+            L2beatDirectoryScreen()        case .addressGroup(let name):
             AddressGroupScreen(group: name)
         case .addressBook:
             AddressBookScreen()

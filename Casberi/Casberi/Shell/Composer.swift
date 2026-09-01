@@ -154,6 +154,9 @@ struct Composer: View {
         /// scrolling back to a turn still says who answered rather than
         /// whichever model happens to be pinned now.
         var model: String?
+        /// Which AGENT (by its person-facing name) wrote it (2026-08-31) —
+        /// what the leading mark draws. nil for the on-device answer.
+        var agent: String? = nil
         /// This turn is a failure notice, not an answer — so it wears NO
         /// provenance badge. Without this a keyed failure fell through to
         /// the on-device badge and claimed "Answered on this iPhone" over a
@@ -1851,6 +1854,19 @@ struct Composer: View {
                             ForEach(turns) { turn in
                                 convoTurn(question: turn.question) {
                                     VStack(alignment: .leading, spacing: DS.Space.s1) {
+                                        // The mark LEADS the answer (2026-08-31)
+                                        // — who wrote it opens the turn instead
+                                        // of trailing it.
+                                        if !turn.failed {
+                                            provenanceBadge(keyed: turn.keyed,
+                                                            agent: turn.agent,
+                                                            searchedWeb: turn.searchedWeb,
+                                                            imagesSeen: turn.imagesSeen,
+                                                            pagesRead: turn.pagesRead,
+                                                            toolRounds: turn.toolRounds,
+                                                            model: turn.model,
+                                                            found: turn.found)
+                                        }
                                         GenRender(id: "root", els: turn.els)
                                             .environment(\.genAgentAnswerContext, true)
                                             .environment(\.genAskRequest, askFromAnswer)
@@ -1866,15 +1882,6 @@ struct Composer: View {
                                             // erased via AnyView for exactly
                                             // that stack-depth reason.
                                             .textSelection(.enabled)
-                                        if !turn.failed {
-                                            provenanceBadge(keyed: turn.keyed,
-                                                            searchedWeb: turn.searchedWeb,
-                                                            imagesSeen: turn.imagesSeen,
-                                                            pagesRead: turn.pagesRead,
-                                                            toolRounds: turn.toolRounds,
-                                                            model: turn.model,
-                                                            found: turn.found)
-                                        }
                                     }
                                 }
                                 // Each turn wears the cap ITS doc earns
@@ -1980,6 +1987,20 @@ struct Composer: View {
                                         if inFlight, answerStream.els.isEmpty {
                                             answerSkeleton
                                         }
+                                        // A keyed answer says so, always — the
+                                        // badge is the honesty rule applied to
+                                        // where the answer was made, and it
+                                        // LEADS the answer (2026-08-31).
+                                        if !inFlight, !answerFailed {
+                                            provenanceBadge(keyed: keyedCurrent,
+                                                            agent: (askProvider ?? AgentKey.active)?.agent,
+                                                            searchedWeb: keyedSearchedWeb,
+                                                            imagesSeen: keyedImagesSeen,
+                                                            pagesRead: keyedPagesRead,
+                                                            toolRounds: keyedToolRounds,
+                                                            model: keyedModel,
+                                                            found: foundCurrent)
+                                        }
                                         GenRender(id: "root", els: answerStream.els)
                                             .textSelection(.enabled)
                                             .environment(\.genProseStreaming, proseStreaming)
@@ -2003,18 +2024,6 @@ struct Composer: View {
                                                 filter.tag = "All"
                                                 close()
                                             }
-                                        // A keyed answer says so, always — the
-                                        // badge is the honesty rule applied to
-                                        // where the answer was made.
-                                        if !inFlight, !answerFailed {
-                                            provenanceBadge(keyed: keyedCurrent,
-                                                            searchedWeb: keyedSearchedWeb,
-                                                            imagesSeen: keyedImagesSeen,
-                                                            pagesRead: keyedPagesRead,
-                                                            toolRounds: keyedToolRounds,
-                                                            model: keyedModel,
-                                                            found: foundCurrent)
-                                        }
                                         if !proseStreaming, !inFlight {
                                             // FlowRow, not HStack (2026-07-21):
                                             // three chips don't fit one line once
@@ -3051,6 +3060,7 @@ struct Composer: View {
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
                                        imagesSeen: keyedImagesSeen, pagesRead: keyedPagesRead,
                                        toolRounds: keyedToolRounds, model: keyedModel,
+                                       agent: (askProvider ?? AgentKey.active)?.agent,
                                        failed: answerFailed,
                                        found: foundCurrent))
             }
@@ -3128,7 +3138,8 @@ struct Composer: View {
     /// retired pin by quietly answering somewhere else. A chain without this
     /// line would be exactly the fake status the rest of this badge exists to
     /// prevent.
-    private func provenanceBadge(keyed: Bool, searchedWeb: Bool = false,
+    private func provenanceBadge(keyed: Bool, agent: String? = nil,
+                                 searchedWeb: Bool = false,
                                  imagesSeen: Int = 0, pagesRead: Int = 0,
                                  toolRounds: Int = 0, model: String? = nil,
                                  found: Bool = false) -> some View {
@@ -3174,14 +3185,24 @@ struct Composer: View {
         // retriever ranked your own things and they're shown as they are.
         // Collapsing the two would let the most trustworthy result in the app
         // wear the same label as the least.
-        let glyph = found ? "magnifyingglass" : (keyed ? "key.fill" : "lock.iphone")
+        // THE MARK SAYS WHO (2026-08-31, the approved board): a keyed answer
+        // leads with the agent's own brand mark and name — never a key glyph
+        // (user: "it should have no icon or bankr icon"). The on-device answer
+        // keeps the locked phone, which is the promise, not a vendor.
+        let glyph = found ? "magnifyingglass" : "lock.iphone"
         let words = found ? String(localized: "Matched on \(DS.device) — nothing was written")
-                          : (keyed ? String(localized: "Answered with your key\(detail)")
-                                   : String(localized: "Answered on \(DS.device)"))
-        return HStack(spacing: DS.Space.s1) {
-            Image(systemName: glyph)
-                .dsGlyph(10, weight: .regular)
-                .accessibilityHidden(true)
+                          : (keyed ? ((agent.map { String(localized: "\($0) · with your key\(detail)") })
+                                      ?? String(localized: "Answered with your key\(detail)"))
+                                   : String(localized: "On \(DS.device)"))
+        return HStack(spacing: DS.Space.s1 + 2) {
+            if keyed, !found, let agent {
+                BridgeIcon(name: agent, size: DS.Mark.inline, circular: true)
+                    .accessibilityHidden(true)
+            } else {
+                Image(systemName: glyph)
+                    .dsGlyph(10, weight: .regular)
+                    .accessibilityHidden(true)
+            }
             Text(words)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -3229,6 +3250,7 @@ struct Composer: View {
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
                                        imagesSeen: keyedImagesSeen, pagesRead: keyedPagesRead,
                                        toolRounds: keyedToolRounds, model: keyedModel,
+                                       agent: (askProvider ?? AgentKey.active)?.agent,
                                        failed: answerFailed,
                                        found: foundCurrent))
             }
@@ -4038,16 +4060,58 @@ struct Composer: View {
 
     /// The mic, the ask field, and a send button that appears once there's
     /// something to send — a soft rounded bar so the surface feels inviting.
+    /// ROOM TO WRITE (user, 2026-08-31: one line "feels cramped, someone
+    /// wanting to type in there"). At rest the bar is a one-line door. The
+    /// moment it is focused or holds a draft it opens into a writing panel —
+    /// four lines reserved before a word is typed (a range line limit
+    /// reserves its lower bound) with the controls on their own row beneath.
+    /// It collapses back when the draft leaves and focus ends. A live
+    /// recording keeps the one-line shape: its "draft" is a transcript
+    /// preview, not writing.
+    private var writingRoom: Bool { (fieldFocused || hasDraft) && !isRecording }
+
     private var inputBar: some View {
-        HStack(spacing: DS.Space.s2) {
-            // ⌄ — the second exit (ruling 7): the thing that raised the
-            // agent lowers it. Only ever visible at the agent's own root —
-            // this bar is part of `openBubble`, which a NavigationStack push
-            // hides behind the pushed screen automatically. A bare glyph, no
-            // drawn circle (fix 2026-07-20) — the mic is the one true
-            // circular button beside the field now; ruling 7 already has
-            // this exit "on trial" against ✕, so it reads as the lighter of
-            // the two.
+        Group {
+            if writingRoom {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    draftField
+                        .lineLimit(4...8)
+                        .padding(.horizontal, DS.Space.s1)
+                        .padding(.top, DS.Space.s1)
+                    HStack(spacing: DS.Space.s2) {
+                        lowerButton
+                        micButton
+                        Spacer(minLength: 0)
+                        sendButton
+                    }
+                }
+                .padding(DS.Space.s2 + 4)
+            } else {
+                HStack(spacing: DS.Space.s2) {
+                    lowerButton
+                    micButton
+                    draftField
+                        .lineLimit(1...5)
+                    sendButton
+                }
+                .padding(.leading, DS.Space.s2)
+                .padding(.trailing, DS.Space.s2)
+                .padding(.vertical, DS.Space.s2)
+            }
+        }
+        // The hero of the sheet, by tone and shadow alone (the ladder — never
+        // by line): an elevated field, no ring. Focus shows in the cursor and
+        // the keyboard; state shows in the send dot. Ink, not the old gray
+        // (2026-08-31 — the same sweep that took every gray chip to ink).
+        .background(DS.surfaceSheet, in: RoundedRectangle(cornerRadius: writingRoom ? 22 : 26, style: .continuous))
+        .shadow(color: DS.cardShadow, radius: 10, x: 0, y: 3)
+        .animation(DS.Motion.standard, value: hasDraft || isRecording)
+        .animation(DS.Motion.standard, value: fieldFocused)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+    }
+
+    private var lowerButton: some View {
             Button {
                 close()
             } label: {
@@ -4061,7 +4125,9 @@ struct Composer: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Lower")
             .dsTooltip(String(localized: "Lower"))
+    }
 
+    private var micButton: some View {
             Button {
                 if isRecording { commit() }   // the live mic is STOP + keep
                 else { DSHaptic.tap(); Task { await voice.start() } }
@@ -4083,7 +4149,9 @@ struct Composer: View {
             // ternary as the label above, so the two can't drift.
             .dsTooltip(isRecording ? String(localized: "Stop and keep")
                                    : String(localized: "Record a voice note"))
+    }
 
+    private var draftField: some View {
             TextField("", text: $draft, axis: .vertical)
                 // The invitation cycles through what the composer can DO —
                 // ask, find, recap, tag — so the empty field teaches its
@@ -4141,32 +4209,9 @@ struct Composer: View {
                     detectDraftDate()
                     scheduleLiveRead()
                 }
-                .lineLimit(1...5)
+    }
 
-            // The send dot is present whenever plain send would actually
-            // submit the draft — grey and waiting when the field is empty
-            // (tap = focus the field), springing to tint the moment there's
-            // something to send. A visible affordance beats a control that
-            // pops out of nowhere (v2 pass, 2026-07-12). It wears the word
-            // "Ask" (2026-07-16): the verb was invisible, and "does typing
-            // save?" was a real question — the label answers it (2026-08-30:
-            // and the honest answer is now simply no, pasted included — a
-            // paste stopped saving anything the same day, so there is no
-            // second state left for this label to get wrong). A live
-            // recording keeps the bare arrow: stopping SAVES the voice note,
-            // and an "Ask" label there would lie.
-            //
-            // NO LONGER HIDDEN while `offerKeyedAsk` (2026-08-31, reversing
-            // 2026-08-30's "the blue send button to not show when asking").
-            // That hiding assumed the dot and "Ask <agent>" submitted the
-            // SAME thing, so showing both was a "which one do I tap"
-            // collision — true back when a configured key could make plain
-            // send go keyed too. It no longer can (user ruling, asked
-            // directly: Return is always the free answer, no matter how many
-            // agents are connected — the only door to a keyed one is tapping
-            // its own chip). So the two are genuinely different verbs again,
-            // same as Find sitting beside them, and this is simply "Ask, on
-            // this iPhone" next to "Ask, with a key" — not a duplicate.
+    private var sendButton: some View {
             Button {
                 if hasDraft || isRecording { commit() } else { fieldFocused = true }
             } label: {
@@ -4191,18 +4236,6 @@ struct Composer: View {
             .buttonStyle(PressSpring())
             .accessibilityLabel(hasDraft && !isRecording ? "Ask" : "Send")
             .modifier(SendTooltip(glyphOnly: !(hasDraft && !isRecording)))
-        }
-        .padding(.leading, DS.Space.s2)
-        .padding(.trailing, DS.Space.s2)
-        .padding(.vertical, DS.Space.s2)
-        // The hero of the sheet, by tone and shadow alone (the ladder — never
-        // by line): an elevated field, no ring. Focus shows in the cursor and
-        // the keyboard; state shows in the send dot.
-        .background(DS.background100, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .shadow(color: DS.cardShadow, radius: 10, x: 0, y: 3)
-        .animation(DS.Motion.standard, value: hasDraft || isRecording)
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.bottom, DS.Space.s3)
     }
 
     // MARK: - Send to (the typed text leaves with the jump)
@@ -4414,9 +4447,11 @@ struct Composer: View {
                                 askDirectly()
                             } label: {
                                 HStack(spacing: DS.Space.s2) {
-                                    Image(systemName: "key.fill")
+                                    // The agent's own brand mark, never a key
+                                    // glyph (user, 2026-08-31) — every provider
+                                    // seat bundles one.
+                                    BridgeIcon(name: provider.agent, size: DS.Mark.badge, circular: true)
                                         .accessibilityHidden(true)
-                                        .dsGlyph(14, weight: .medium)
                                     Text("Ask \(provider.agent)")
                                         .dsText(.callout15).fontWeight(.semibold)
                                 }
@@ -4563,6 +4598,7 @@ struct Composer: View {
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
                                        imagesSeen: keyedImagesSeen, pagesRead: keyedPagesRead,
                                        toolRounds: keyedToolRounds, model: keyedModel,
+                                       agent: (askProvider ?? AgentKey.active)?.agent,
                                        failed: answerFailed,
                                        found: foundCurrent))
             }

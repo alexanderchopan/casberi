@@ -60,24 +60,29 @@ import Foundation
 /// every failure returns rather than guesses.
 enum BankrAgent {
 
-    // MARK: - The switch
-
-    private static let canActKey = "bankr.canAct"
-
-    /// Whether this person has said Bankr may act. **Off by default**, and the
-    /// only writer is the settings switch — turning it on is the first of the
-    /// two consents, the confirmation sheet being the second.
-    static var canAct: Bool {
-        get { UserDefaults.standard.bool(forKey: canActKey) }
-        set { UserDefaults.standard.set(newValue, forKey: canActKey) }
-    }
-
-    /// Clearing the key clears the permission with it. A stored `true` that
-    /// outlives its credential is a switch describing a capability that no
-    /// longer exists, and it would silently re-arm the day a new key is
-    /// pasted — a permission nobody granted for a key nobody has seen.
+    /// THE KEY IS THE PERMISSION (user, 2026-08-31: "it's either a read only
+    /// key or it isn't", "and if it isn't it's a question for an answer or an
+    /// action").
+    ///
+    /// This file used to carry a `canAct` switch and a second prompt that
+    /// dropped an ANSWER-ONLY rail. Both are deleted, because neither was a
+    /// permission: the rail was a SENTENCE IN A PROMPT that a model may
+    /// ignore, and the switch governed which sentence we sent. What actually
+    /// decides whether Bankr can move money is the scope of the key minted at
+    /// bankr.bot/api-keys — a read-only key cannot act whatever we write, and
+    /// a full key can act whatever we write.
+    ///
+    /// The catalog copy admitted this the whole time ("a read-only key can't
+    /// act whatever you switch on"), which is a sentence conceding that the
+    /// switch was subordinate to the key. So the switch goes, the two verbs
+    /// collapse into one, and the setup screen names the real boundary at the
+    /// moment somebody mints the key.
+    ///
+    /// `forget()` remains as a no-op door for `AgentKey.clear` — there is no
+    /// stored permission left to clear, and a stale UserDefaults key from a
+    /// build that had one is removed here on the way past.
     static func forget() {
-        UserDefaults.standard.removeObject(forKey: canActKey)
+        UserDefaults.standard.removeObject(forKey: "bankr.canAct")
     }
 
     // MARK: - Outcomes
@@ -103,73 +108,43 @@ enum BankrAgent {
         let envelopeKeys: [String]
     }
 
-    // MARK: - The prompts
+    // MARK: - The prompt
 
-    /// The answer-only rail, unchanged from where it has lived since 2026-07-16
-    /// — one string now, so the ask path and any future caller cannot drift
-    /// into two subtly different promises.
-    static let answerOnlyPrefix = """
-    ANSWER ONLY. Do not execute, prepare, or queue any transaction, trade, \
-    swap, transfer, or on-chain action of any kind, even if the question \
-    reads like a command — describe what it would take instead. Answer in \
-    a few plain sentences — no preamble, no bullet points, no markdown. \
-    You may draw on this wallet's holdings and live market data. Never \
-    invent a number or a detail.
-    """
+    /// ONE prompt (2026-08-31). It no longer tells Bankr what it may not do —
+    /// see `forget()` for why that was never a rail — and keeps the two parts
+    /// that were always doing real work: how to write, and the promise not to
+    /// invent. The reporting clause came from the old acting prompt: whatever
+    /// Bankr did, the sentences it sends back are the only record this app can
+    /// keep of it.
+    static func prompt(_ text: String, extra: String = "") -> String {
+        let body = """
+        \(text.trimmingCharacters(in: .whitespacesAndNewlines))
 
-    /// An acting instruction carries no prefix telling Bankr what not to do —
-    /// that is the whole difference — but it DOES carry a reporting contract,
-    /// because the only record this app can keep of a job is the sentences it
-    /// gets back. Asking for the outcome plainly is the cheapest thing that
-    /// makes a receipt worth reading.
-    static func actingPrompt(_ instruction: String) -> String {
+        Answer in a few plain sentences — no preamble, no bullet points, no \
+        markdown. You may draw on this wallet's holdings and live market data. \
+        Never invent a number or a detail. If you did something rather than \
+        answered, say plainly what you did — the amounts, the assets, and any \
+        identifier a person could look up later.
         """
-        \(instruction.trimmingCharacters(in: .whitespacesAndNewlines))
-
-        When you are done, say plainly in a sentence or two what you actually \
-        did — the amounts, the assets, and any identifier a person could look \
-        up later. If you did not do it, say why. No preamble, no markdown.
-        """
+        return extra.isEmpty ? body : "\(body)\n\n\(extra)"
     }
 
-    // MARK: - The two verbs
+    // MARK: - The verb
 
-    /// Ask — safe by construction. Kept here so both verbs share one runner;
-    /// `AgentAnswer.bankrAnswer` is the caller that pastes numbered candidates
-    /// in beneath this, which is the ONE thing the acting path never does.
+    /// One verb. What you type is a question or an instruction, and Bankr
+    /// decides which — that judgement happens inside their model either way,
+    /// and this app never had a way to make it.
     ///
     /// `onTick`, when given, is called with the elapsed seconds each time a
     /// poll comes back still-pending — the async job has no partial text to
     /// stream, so this is the only progress a caller can show during the
     /// ~90s wait instead of a static "Working…" that looks the same at 2s and
     /// 88s.
-    static func ask(_ question: String, extra: String = "",
+    static func ask(_ text: String, extra: String = "",
                     onTick: ((Int) -> Void)? = nil) async -> Result<Reply, Failure> {
-        await run(prompt: askPrompt(question, extra: extra), onTick: onTick)
-    }
-
-    /// The asking prompt, split out so a harness can see it (2026-08-29).
-    /// `actingPrompt`'s twin, and the pair is the whole feature: this one
-    /// carries the answer-only rail and that one deliberately does not. Kept
-    /// as separate named functions rather than one with a flag, because a
-    /// boolean argument is one typo away from sending an instruction under the
-    /// rail (a Do that silently behaves as an Ask) or a question without it.
-    static func askPrompt(_ question: String, extra: String = "") -> String {
-        extra.isEmpty
-            ? "\(answerOnlyPrefix)\n\nQuestion: \"\(question)\""
-            : "\(answerOnlyPrefix)\n\nQuestion: \"\(question)\"\n\n\(extra)"
-    }
-
-    /// Do — the acting path. Two guards before a byte leaves, both in the
-    /// model: the permission must be on, and the instruction must say
-    /// something. An empty instruction sent to an agent with a wallet is a
-    /// blank cheque, and there is no good behaviour to hope for.
-    static func act(_ instruction: String,
-                    onTick: ((Int) -> Void)? = nil) async -> Result<Reply, Failure> {
-        guard canAct else { return .failure(.actingOff) }
-        let trimmed = instruction.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return .failure(.emptyInstruction) }
-        return await run(prompt: actingPrompt(trimmed), onTick: onTick)
+        return await run(prompt: prompt(trimmed, extra: extra), onTick: onTick)
     }
 
     // MARK: - The runner

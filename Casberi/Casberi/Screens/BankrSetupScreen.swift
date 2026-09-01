@@ -29,18 +29,18 @@ import SwiftData
 /// The same key that answers can also trade — that has always been true, and
 /// until now the answer was to ask for a read-only key and prefix every prompt
 /// "answer only". Both still hold for the ANSWER path. What changed is that
-/// the capability is no longer left latent behind a sentence: `BankrAgent.canAct`
+/// the capability is named where it actually lives: the key's own scope
 /// makes it a switch, off by default, and the conversation gives it a door
 /// with a person standing in it.
 struct BankrSetupScreen: View {
     @Environment(BridgeStore.self) private var store
     @Environment(HomeRoute.self) private var route
+    @Environment(ShellChrome.self) private var chrome
     @State private var keyDraft = ""
     @State private var checking = false
     @State private var result: String?
     @State private var resultIsError = false
     @State private var configured = AgentKey.isConfigured(.bankr)
-    @State private var canAct = BankrAgent.canAct
     @State private var web: URL?
     @State private var flipTrigger = 0
 
@@ -84,7 +84,7 @@ struct BankrSetupScreen: View {
                     DSHaptic.tap()
                     web = URL(string: "https://bankr.bot/api-keys")
                 }
-                BridgeStepLines(steps: ["Sign in with a passkey, then make a key with agent access."],
+                BridgeStepLines(steps: ["Sign in, then mint a key. Read-only lets Bankr answer; a full key lets it act."],
                                 numbered: false)
                 DSSlabField(placeholder: AgentProvider.bankr.placeholder, text: $keyDraft,
                             actionLabel: checking ? "Checking…" : (configured ? "Update" : "Connect"),
@@ -118,30 +118,18 @@ struct BankrSetupScreen: View {
     private var conversationSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
+                // THE FAB IS THE ONLY CHAT (user, 2026-08-31: "the only place
+                // to chat with any agent is in the fab"). This used to push a
+                // SECOND conversation screen, which duplicated the composer's
+                // whole surface — its own turn renderer, its own history, its
+                // own field — so the two never knew what you had said in the
+                // other. It raises the one composer now, exactly as the berry
+                // does, and Bankr is a chip in it like every other key.
                 DSSlabButton(title: "Talk to Bankr",
-                             detail: canAct ? "Ask, or tell it what to do" : "Ask about your wallets",
+                             detail: "Ask about your wallets, or tell it what to do",
                              systemImage: "bubble.left.and.bubble.right") {
                     DSHaptic.tap()
-                    route.path.append(.bankrChat)
-                }
-                Toggle(isOn: $canAct) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Let Bankr act on what you tell it")
-                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                        // The cost is stated on the control that causes it,
-                        // never in fine print elsewhere (the OpenRouter
-                        // private-routing anatomy) — and this is the only
-                        // switch in the app that can spend money.
-                        Text("Off, every question is prefixed answer only. On, a second button appears in the conversation and each instruction asks you first. Bankr decides what it does — Casberi can't check it beforehand or undo it. A read-only key can't act whatever this says.")
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .onChange(of: canAct) { _, on in
-                    BankrAgent.canAct = on
-                    // Turning it on is a permission, so it gets the weightier
-                    // feedback of the two.
-                    if on { DSHaptic.success() } else { DSHaptic.tap() }
+                    chrome.composerRequest += 1
                 }
             }
         }
@@ -162,23 +150,22 @@ struct BankrSetupScreen: View {
             if outcome == .accepted {
                 AgentKey.set(candidate, for: .bankr)
                 configured = true
-                // A new key arrives with no permission (2026-08-29). `clear`
-                // forgets `canAct`, but an UPDATE never clears — so without
-                // this a key pasted today inherits a permission granted for a
-                // credential that is gone.
-                canAct = BankrAgent.canAct
+                // No permission to carry over any more (2026-08-31): what a
+                // key may do travels with the key itself.
                 keyDraft = ""
                 flipTrigger += 1
                 DSHaptic.success()
                 resultIsError = false
-                result = String(localized: "Connected — answers now offer \"Try with your key\" on Bankr.")
+                result = String(localized: "Connected — \"Ask Bankr\" now appears when you type.")
                 store.registerConnected(id: "bankr", name: "Bankr",
                                         proof: String(localized: "Key in the Keychain"),
+                                        // What Bankr may do is the KEY's scope,
+                                        // not a switch in here (2026-08-31) —
+                                        // so this claims only what is true of
+                                        // every key.
                                         can: ["Answers with your key — only when you tap.",
                                               "Reads your wallet and live markets to answer.",
-                                              canAct
-                                                ? "Acts on instructions you confirm, one at a time."
-                                                : "Never trades, sends, or swaps."])
+                                              "What it may do is set by the key you minted."])
             } else {
                 // Four ways this can fail and four sentences for them (audit
                 // 2026-07-31) — a rate limit, a blocked account and a dropped

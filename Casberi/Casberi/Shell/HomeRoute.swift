@@ -82,7 +82,6 @@ final class HomeRoute {
         /// ROOM, not a setup form, and it is reached from two places — the
         /// setup screen and the seat's connected state — so a link owned by
         /// one of them would give the other nothing to push.
-        case bankrChat
         /// One address-book group, opened (prd §440).
         ///
         /// Keyed by the group's NAME, which is also its identity in the model

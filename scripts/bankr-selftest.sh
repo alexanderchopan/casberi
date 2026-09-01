@@ -3,10 +3,10 @@
 # (2026-08-29, prd §529):
 #
 #   Casberi/Casberi/Model/BankrAgent.swift
-#     — canAct / forget   (the permission, and its lifetime)
+#     — forget            (the retired permission's cleanup door)
 #     — act               (the two refusals, and the ORDER they fire in)
-#     — answerOnlyPrefix  (the rail the answer path has carried since §82)
-#     — actingPrompt      (the one prompt that deliberately drops that rail)
+#     — prompt            (the ONE prompt both readings share)
+#     (there is no second prompt: 2026-08-31 collapsed the two verbs)
 #     — ask               (composition, so both verbs share one runner)
 #
 # That file is compiled WHOLE AND UNMODIFIED against inert stubs — no
@@ -28,7 +28,7 @@
 #   • An EMPTY instruction must never reach the wire. A blank prompt sent to an
 #     agent with a wallet is a blank cheque, and there is no good behaviour to
 #     hope for on the far end.
-#   • `actingPrompt` must NOT carry the answer-only prefix, and `ask` MUST.
+#   • The prompt must never claim a rail it cannot enforce: no ANSWER ONLY.
 #     That single difference is the entire feature. Add the prefix to the
 #     acting path and every Do silently becomes an Ask — the app looks
 #     perfect, the confirmation sheet still appears, the person taps "Send it",
@@ -53,11 +53,10 @@ cd "$(dirname "$0")/.."
 
 AGENT="Casberi/Casberi/Model/BankrAgent.swift"
 ANSWER="Casberi/Casberi/Model/AgentAnswer.swift"
-CHAT="Casberi/Casberi/Screens/BankrChatScreen.swift"
 BANNER="Casberi/Casberi/Screens/BankrOfferBanner.swift"
 SETUP="Casberi/Casberi/Screens/BankrSetupScreen.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
-for f in "$AGENT" "$ANSWER" "$CHAT" "$BANNER" "$SETUP" "$REACH"; do
+for f in "$AGENT" "$ANSWER" "$BANNER" "$SETUP" "$REACH"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -71,8 +70,8 @@ trap 'rm -rf "$WORK"' EXIT
 # it. Earned the hard way on `obsidian-selftest` and re-earned since.
 strip_comments() { sed -E 's://.*::' "$1" | sed -E 's:/\*.*\*/::'; }
 strip_comments "$ANSWER" > "$WORK/answer.nocomment"
+strip_comments "$SETUP"  > "$WORK/setup.nocomment"
 strip_comments "$AGENT"  > "$WORK/agent.nocomment"
-strip_comments "$CHAT"   > "$WORK/chat.nocomment"
 
 # --- drift guards -----------------------------------------------------------
 
@@ -80,8 +79,10 @@ strip_comments "$CHAT"   > "$WORK/chat.nocomment"
 #    for every "Try with your key" on Bankr, from a composer where nobody has
 #    confirmed anything — if it could call `act`, an ordinary question would
 #    execute.
-grep -q 'BankrAgent.act' "$WORK/answer.nocomment" \
-  && { echo "✗ AgentAnswer reaches BankrAgent.act — an ASK must never be able to act"; exit 1; }
+grep -qE 'BankrAgent\.(act|actingPrompt)\b' "$WORK/answer.nocomment" \
+  && { echo "✗ AgentAnswer reaches a retired acting verb — there is one verb now"; exit 1; }
+grep -q 'canAct' "$WORK/answer.nocomment" \
+  && { echo "✗ AgentAnswer consults canAct — the KEY's scope is the permission"; exit 1; }
 
 # 2. Corpus text must never ride an instruction. The answer path pastes
 #    numbered candidates into its prompt; the acting path must not, because a
@@ -96,13 +97,18 @@ grep -qE 'numberedCandidates|OnDeviceModel\.Candidate' "$WORK/agent.nocomment" \
 grep -q 'BankrAgent.forget()' "$WORK/answer.nocomment" \
   || { echo "✗ AgentKey.clear no longer forgets Bankr's acting permission"; exit 1; }
 
-# 4. The UI confirms BEFORE it acts. The Do button must stage a pending
-#    instruction, never call act directly — a Do wired straight through is a
-#    one-tap trade with no sheet, and it looks identical in a screenshot.
-grep -q 'pending = draft' "$WORK/chat.nocomment" \
-  || { echo "✗ BankrChatScreen's Do no longer stages a pending instruction"; exit 1; }
-grep -qE 'send\(p, acting: true\)' "$WORK/chat.nocomment" \
-  || { echo "✗ the confirmation's Send it no longer sends the pending instruction"; exit 1; }
+# 4. There is ONE chat and ONE verb (2026-08-31). The separate Bankr chat
+#    screen is deleted — it duplicated the composer's whole surface to hold a
+#    second send button — and the setup screen's door raises the composer
+#    instead of pushing a screen back into existence.
+[ -e "Casberi/Casberi/Screens/BankrChatScreen.swift" ] \
+  && { echo "✗ a second Bankr conversation screen is back — the fab is the only chat"; exit 1; }
+grep -q 'composerRequest' "$WORK/setup.nocomment" \
+  || { echo "✗ Talk to Bankr no longer raises the one composer"; exit 1; }
+# The permission is the KEY's scope, so no switch may reappear in the setup
+# screen claiming to grant or withhold what Bankr may do.
+grep -q 'canAct' "$WORK/setup.nocomment" \
+  && { echo "✗ an acting switch is back — the key scope is the permission"; exit 1; }
 
 # 5. The host is disclosed (prd §205). A bridge whose API host nobody declared
 #    makes the app's own privacy screen quietly wrong.
@@ -121,10 +127,10 @@ DISMISS=$(grep -rl 'agent.bankrOfferDismissed' Casberi/Casberi | wc -l | tr -d '
 grep -q 'AgentKey.isConfigured(.bankr)' "$BANNER" \
   || { echo "✗ BankrOfferBanner no longer stands down once Bankr is connected"; exit 1; }
 
-# 8. The acting switch is only offered once a key exists — a switch governing a
-#    credential nobody has pasted is a dead control.
+# 8. The door to the composer is only offered once a key exists — a "Talk to
+#    Bankr" row with no credential behind it is a dead control.
 grep -q 'if configured { conversationSection }' "$SETUP" \
-  || { echo "✗ BankrSetupScreen offers the acting switch without a key"; exit 1; }
+  || { echo "✗ BankrSetupScreen offers the chat door without a key"; exit 1; }
 
 echo "  ✓ 8 drift guards"
 
@@ -169,55 +175,32 @@ func sync<T>(_ op: @escaping () async -> T) -> T {
 
 // --- the permission -------------------------------------------------------
 BankrAgent.forget()
-check("canAct is OFF by default", BankrAgent.canAct == false)
-BankrAgent.canAct = true
-check("canAct stores true", BankrAgent.canAct == true)
-BankrAgent.forget()
-check("forget() clears the permission", BankrAgent.canAct == false)
+check("an empty instruction never leaves",
+      sync { await BankrAgent.ask("   \n  ") } == .failure(.emptyInstruction))
+check("no key is its own failure, not a refusal",
+      sync { await BankrAgent.ask("swap 1 ETH for USDC") } == .failure(.noKey))
 
-// --- act's refusals, and the ORDER they fire in ---------------------------
-// A key IS present for this one: the permission must win over the credential,
-// or "I have a key" would be enough to act.
-StubVault.stored = "bnkr-a-real-looking-key"
-BankrAgent.canAct = false
-check("act refuses while the permission is off, even with a key",
-      sync { await BankrAgent.act("swap 1 ETH for USDC") } == .failure(.actingOff))
+// THE PROMPT CLAIMS NO RAIL IT CANNOT ENFORCE (2026-08-31). The old
+// answer-only prefix told Bankr not to act — a sentence in a prompt, which a
+// model may ignore, standing in for a permission that actually lives in the
+// key's scope. Asserting its ABSENCE is the point: bringing it back would
+// restore a promise this app cannot keep.
+let p = BankrAgent.prompt("what is my balance?")
+check("the prompt never says ANSWER ONLY", !p.contains("ANSWER ONLY"))
+check("the prompt never forbids execution", !p.lowercased().contains("do not execute"))
+check("the prompt keeps the no-invention promise", p.contains("Never invent a number"))
+check("the prompt asks for plain sentences", p.contains("no bullet points"))
+check("the prompt asks what it did, if it did something", p.contains("say plainly what you did"))
+check("the instruction leads the prompt", p.hasPrefix("what is my balance?"))
+check("extra rides beneath, not above",
+      BankrAgent.prompt("q", extra: "CTX").hasSuffix("CTX"))
 
-BankrAgent.canAct = true
-check("act refuses an empty instruction",
-      sync { await BankrAgent.act("   \n  ") } == .failure(.emptyInstruction))
-
-// With the permission on and a real instruction, the LAST checkpoint before a
-// request is built is the key. Reaching exactly here proves the order.
-StubVault.stored = nil
-check("act reaches the key check only after both guards pass",
-      sync { await BankrAgent.act("swap 1 ETH for USDC") } == .failure(.noKey))
-StubVault.stored = nil
-BankrAgent.canAct = false
-check("ask needs a key too", sync { await BankrAgent.ask("what do I hold?") } == .failure(.noKey))
-
-// --- the prompts ----------------------------------------------------------
-let rail = BankrAgent.answerOnlyPrefix
-check("the answer-only rail still forbids execution",
-      rail.contains("ANSWER ONLY") && rail.contains("Do not execute"))
-check("the rail names the command case it exists for",
-      rail.contains("even if the question reads like a command"))
-
-let acting = BankrAgent.actingPrompt("  limit order: sell 500 USDC of ETH at $4,100  ")
-check("THE WHOLE FEATURE: an acting prompt does NOT carry the answer-only rail",
-      !acting.contains("ANSWER ONLY") && !acting.contains("Do not execute"))
-check("the acting prompt carries the instruction, trimmed",
-      acting.hasPrefix("limit order: sell 500 USDC of ETH at $4,100"))
-check("the acting prompt asks for a report of what was really done",
-      acting.contains("what you actually") && acting.contains("did not do it"))
-
-// The twin. A single missing rail here is the difference between a question
-// and an instruction, so both directions are asserted rather than one.
-let asking = BankrAgent.askPrompt("what do I hold?")
-check("an ASKING prompt DOES carry the rail", asking.hasPrefix(rail))
-check("the asking prompt quotes the question", asking.contains("\"what do I hold?\""))
-check("extra material rides below the question, not above the rail",
-      BankrAgent.askPrompt("q", extra: "ZZTOP").hasSuffix("ZZTOP"))
+check("the prompt asks for a report of what was really done",
+      p.contains("say plainly what you did"))
+check("the question is carried verbatim",
+      BankrAgent.prompt("what do I hold?").contains("what do I hold?"))
+check("extra material rides below the question",
+      BankrAgent.prompt("q", extra: "ZZTOP").hasSuffix("ZZTOP"))
 
 print(failures == 0 ? "  ✓ 15 assertions" : "  \(failures) FAILED")
 exit(failures == 0 ? 0 : 1)
@@ -253,18 +236,16 @@ mutate() {
 }
 
 MUT_FAIL=0
-mutate "act no longer checks the permission" \
-  's:guard canAct else \{ return \.failure\(\.actingOff\) \}::' || MUT_FAIL=1
-mutate "act accepts an empty instruction" \
-  's:guard !trimmed\.isEmpty else \{ return \.failure\(\.emptyInstruction\) \}::' || MUT_FAIL=1
-mutate "the acting prompt regains the answer-only rail" \
-  's:^        \\\(instruction.trimmingCharacters:        \\(answerOnlyPrefix)\\n\\n\\(instruction.trimmingCharacters:' || MUT_FAIL=1
-mutate "forget() stops clearing the permission" \
-  's#UserDefaults\.standard\.removeObject\(forKey: canActKey\)##' || MUT_FAIL=1
-mutate "the acting prompt stops asking what was done" \
-  's:what you actually :what you nearly :' || MUT_FAIL=1
-mutate "the rail stops forbidding execution" \
-  's:Do not execute, prepare, or queue:Feel free to run:' || MUT_FAIL=1
+mutate "an empty instruction is allowed to leave" \
+  's:guard !trimmed.isEmpty else \{ return \.failure\(\.emptyInstruction\) \}::' || MUT_FAIL=1
+mutate "the answer-only rail creeps back into the prompt" \
+  's:Answer in a few plain sentences:ANSWER ONLY. Do not execute anything. Answer in a few plain sentences:' || MUT_FAIL=1
+mutate "the no-invention promise is dropped" \
+  's:Never invent a number or a detail\.::' || MUT_FAIL=1
+mutate "the prompt stops asking what was done" \
+  's:say plainly what you did:say nothing about what you did:' || MUT_FAIL=1
+mutate "the prompt stops asking for plain sentences" \
+  's:no bullet points:bullet points welcome:' || MUT_FAIL=1
 
 [[ $MUT_FAIL == 0 ]] || { echo "✗ a mutation survived"; exit 1; }
 echo "bankr-selftest: OK"
