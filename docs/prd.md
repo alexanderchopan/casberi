@@ -42811,6 +42811,41 @@ a row whose whole promise is that it will get you some. All three now open the
 faucet itself. Check 7 of the audit is rewritten around this: Hegotá's half must
 claim, vibenet's must NOT, and vibenet's must carry the hand-off mark.
 
+**AMENDED AGAIN: THE FIT WAS VERIFIED ON ONE PHONE AND DOES NOT HOLD ON THE
+SMALLEST.** A concurrent session took this entry's own terms, extended them down
+the device range, and got a negative slack at 736pt. They were careful to say
+they might be wrong — their model used a sheet inset quoted from a MOCKUP rather
+than the app — and asked for it to be checked rather than acted on. Checked, on
+an iPhone SE simulator built and installed for the purpose:
+
+**The Send tile renders at y 502–634 of a 667pt screen, leaving 33pt.** The
+second tile is entirely below the fold and the room scrolls. Read off the pixels
+of a real render, not computed.
+
+So the claim above — "the panel fits with both verbs on screen and no scrolling"
+— is TRUE AT 844 AND ONLY THERE, and this entry said it without naming a device.
+None of the chrome above the panel scales with screen height, so the allowance
+shrinks one-for-one with the screen: 304pt at 844, ~165 at 667. Two 144pt tiles
+never fit the latter.
+
+**Not fixed, and the reason is §552's own ruling, unchanged**: the fix for a
+small phone is a smaller chrome or a different surface, never a shorter verb.
+Shrinking the tiles to clear an SE would cost every other phone the thing this
+design is for, to serve the smallest screen Apple still sells. The panel is
+inside a `List`, so Top up remains reachable by scrolling there — the same
+degradation §552 stated for its own console and for the same reason.
+
+**What DID change is the audit's honesty.** `ROOM_ALLOWANCE` is now documented
+as a 390×844 figure with the SE measurement beside it, and the success line
+prints both, so nobody reads "244 of 304" as a claim about every phone. The
+check still asserts only the 844 case, deliberately: a budget that fails on
+every device tells you nothing on any of them.
+
+**The generalisable bit**, since this is the second time in one day the same
+mistake has been made in a different costume: a measurement is a measurement OF
+SOMETHING, and dropping the "of what" turns it into a claim. §552 measured its
+chrome at 956 and said so; this entry measured at 844 and did not.
+
 ### What is checked
 
 `scripts/devnet-console-audit.py` is rewritten around this shape — §548/§548a's

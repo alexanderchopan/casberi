@@ -28,10 +28,25 @@ HEGOTA = ROOT / "Casberi/Casberi/Screens/HegotaSendCard.swift"
 VIBENET = ROOT / "Casberi/Casberi/Screens/VibenetSendCard.swift"
 FEED = ROOT / "Casberi/Casberi/Screens/FeedScreen.swift"
 
-# **THE MEASURED ALLOWANCE.** 390x844 phone, measured off a screenshot of this
-# build rather than estimated: the section strip's bottom edge sits at 526pt, so
-# the room leaves 318 to the glass and 304 after the card's own bottom margin.
+# **THE MEASURED ALLOWANCE, AND THE DEVICE IT IS MEASURED ON.** 390x844,
+# measured off a screenshot of this build rather than estimated: the section
+# strip's bottom edge sits at 526pt, so the room leaves 318 to the glass and 304
+# after the card's own bottom margin.
+#
+# **STATED CEILING, MEASURED RATHER THAN REASONED (prd §553 amendment).** None
+# of the chrome above scales with screen height, so this allowance shrinks
+# one-for-one with the screen. On an iPhone SE (667pt) the same build renders
+# the Send tile at y 502-634, leaving **33pt** below it — so the second tile is
+# entirely under the fold and the room scrolls, which is §552's own stated
+# ceiling arriving one surface later. Verified by installing on an SE simulator
+# and reading the pixels, not by arithmetic.
+#
+# This check therefore asserts the 844 case and CANNOT speak for smaller
+# hardware. That is deliberate: a budget that fails on every phone tells you
+# nothing on any of them, and the fix for the small ones is a smaller chrome or
+# a different surface — never a shorter verb (§552's ruling, unchanged).
 ROOM_ALLOWANCE = 304
+SMALLEST_MEASURED = ("iPhone SE", 667, 33)
 #   one line of price40 (a 40pt face at ~1.18x), rounded UP like every
 #   font-derived term — an over-stated term makes the budget stricter than the
 #   glass, an under-stated one makes the budget a lie.
@@ -240,8 +255,10 @@ def main() -> int:
     tile = (2 * constant(console, "tilePadding") + constant(console, "mark")
             + constant(console, "markGap") + VERB_LINE)
     total = 2 * tile + constant(console, "tileGap")
-    print("\033[32m✓ devnet-console audit: the split panel sums to %dpt of a %dpt room\033[39m"
-          % (total, ROOM_ALLOWANCE))
+    dev, h, left = SMALLEST_MEASURED
+    print("\033[32m✓ devnet-console audit: the split panel sums to %dpt of a %dpt room "
+          "(390x844; on a %s at %dpt only %dpt is left below the first tile — measured, "
+          "and the room scrolls there)\033[39m" % (total, ROOM_ALLOWANCE, dev, h, left))
     return 0
 
 
