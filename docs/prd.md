@@ -41280,3 +41280,53 @@ measure under 56 today) and the ones that need to grow can.
 and vibenet harnesses are green. The field fix is reasoned from the constraint
 rather than observed — if the report was at DEFAULT type size then something
 else is also wrong and this did not fix it.
+
+## 546. The Permissions slot stops repeating its own list — counts, big, no names (user: "we need a graphic for the slot or something we can't just repeat the list" → "god these are so generic… they just repeat the same things that are in the list" → "maybe they should be counts" → "do the counts", 2026-08-31)
+
+The report was structural, not cosmetic. §490's rungs drew a count beside the
+rung's sentence WITH A NAME SUBLINE, and §514 then added the acting list
+directly below carrying the same names under the same sentences — so on a
+sparse wallet (two acting parties, the ordinary case) the slot and the list
+said the same two facts twice, in the same words, four rows apart. The slot's
+job is a reading the list cannot make; the per-actor list structurally has no
+AGGREGATE, so the aggregate is what the slot now is.
+
+**Counts as figures.** Up to four rungs (`rungsShown` unchanged) in a
+two-column grid, each a `price40` numeral — "the figure that leads a card
+without being its crown", one rung under the wallet total, which is right for
+a scope's figure — with the rung's sentence in `subhead13` beneath. Colour
+still marks UNBOUNDEDNESS and nothing else. The eyebrow, the fold line, the
+§490 refusals (no partial sums, no $0 for a module-only wallet, "no amount to
+state" only where a figure was expected) and the one spoken sentence all
+survive unchanged.
+
+**Names leave the slot entirely.** `subline` is deleted; `Rung.names` is
+still populated (the model is untouched and its harness compiles it whole)
+but nothing in the drawing reads it. `Rung.note` goes with it — "installed
+14 Mar" is per-holder detail and the acting list already states it.
+
+**The rung's total moved BESIDE its numeral, and it is a height decision.**
+The slot is a hard, clipped 210pt (`DSRoomChassis.visualSlot`), and the
+budget is spelled from the ramp rather than measured (the chassis's own
+rule): eyebrow 28 + two grid rows of numeral 40 + two-line phrase 34 ≈ 192.
+A third line per cell is 16pt spent four times, and the fourth rung's
+sentence is what it would shear off — the exact clipping the old card's
+comments record paying for twice.
+
+**Two roads not taken, recorded because they were drawn.** Three
+mark-and-ribbon graphics (a reach rail, an orbit, reach bars) were mocked and
+rejected in the user's words above — they re-plotted the list's per-actor
+facts as dots, which is the same repetition wearing geometry. A "reach flood"
+(the Holdings treemap with the reachable share flooded, unbounded actors
+flooding everything) was mocked alongside counts and not picked; it remains
+the strongest candidate if this slot ever wants a second reading, because it
+joins permissions to holdings — a claim neither list can make — and would fix
+a real understatement: the eyebrow's "$ in reach" sums only priced grants, so
+a wallet whose two actors are unbounded shows no figure while everything it
+holds is in reach.
+
+Guarded in `wallet-permissions-selftest.sh` (+2 drift guards): the slot may
+never name a holder again (`.names` grepped from a comment-stripped copy, the
+Obsidian/Cursor lesson), and the counts must stay at figure size — a stat24
+demotion is the old list wearing a new doc. UNSEEN on a device: iOS build and
+the harness are green, the grid budget is arithmetic from the ramp.

@@ -1,20 +1,28 @@
 import SwiftUI
 
-/// WHO CAN ACT FOR YOU — the `Permissions` scope's lead drawing (prd §490).
+/// WHO CAN ACT FOR YOU — the `Permissions` scope's lead drawing (prd §490,
+/// reshaped as COUNTS by §546).
 ///
-/// Every judgement is `WalletPermissions`'; this is its shape. Four things it
+/// Every judgement is `WalletPermissions`'; this is its shape. Five things it
 /// does on purpose:
 ///
-/// - **The count is the figure and the sentence completes it.** "2 · can move
-///   a token with no limit" reads as one clause, which is what keeps this from
-///   being the tally §292 refused: the number is meaningless without the rung
-///   it counts, so they are drawn as one thing.
+/// - **Aggregate figures, no names (§546).** The slot used to draw each rung
+///   as a count beside a name subline — which on a sparse wallet was the
+///   acting list below restated word for word (user: *"we can't just repeat
+///   the list"*). Counts are the one reading the per-actor list genuinely
+///   does not have, so the slot is now up to four large numerals in a
+///   two-column grid, each with its rung's sentence, and NOTHING here names a
+///   holder — the list below owns the names, this owns the arithmetic.
+/// - **The count is the figure and the sentence completes it.** The number is
+///   meaningless without the rung it counts, which is what keeps this from
+///   being the tally §292 refused.
 /// - **Colour marks UNBOUNDEDNESS and nothing else.** Not severity, which
 ///   would be this app grading somebody's own decisions — a capped grant made
 ///   on purpose is not an alarm.
 /// - **A rung states its total only when every holder in it is priced**
 ///   (`Rung.usd`), so a figure here is never a partial sum wearing a complete
-///   one's clothes.
+///   one's clothes. It sits BESIDE the numeral rather than under the phrase —
+///   a height decision, see `stat(_:)`.
 /// - **Bare on the page**, like every other scope's lead (§483: *"we don't do
 ///   cards"*).
 struct WalletPermissionsCard: View {
@@ -24,19 +32,24 @@ struct WalletPermissionsCard: View {
 
     private var rungs: [WalletPermissions.Rung] { WalletPermissions.rungs(holders) }
 
+    /// Two columns, top-leading. Four rungs at most (`rungsShown`) means the
+    /// grid is never taller than two rows, which is what fits the slot — see
+    /// the budget note on `stat(_:)`.
+    private static let columns = [
+        GridItem(.flexible(), spacing: DS.Space.s4, alignment: .topLeading),
+        GridItem(.flexible(), spacing: DS.Space.s4, alignment: .topLeading)
+    ]
+
     var body: some View {
         let drawn = Array(rungs.prefix(WalletPermissions.rungsShown))
         VStack(alignment: .leading, spacing: 0) {
             eyebrow
-            VStack(alignment: .leading, spacing: 0) {
+            LazyVGrid(columns: Self.columns, alignment: .leading, spacing: DS.Space.s2) {
                 ForEach(drawn) { rung in
-                    row(rung)
+                    stat(rung)
                 }
             }
-            // s1, not s2: the eyebrow, four rungs and the fold line have to
-            // clear a hard 210pt box, and at s2 the fourth rung's name was
-            // cut in half on the device.
-            .padding(.top, DS.Space.s1)
+            .padding(.top, DS.Space.s2)
             if let folded = WalletPermissions.foldedCount(rungs) {
                 Text(String(localized: "and \(folded) more"))
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -74,60 +87,60 @@ struct WalletPermissionsCard: View {
         }
     }
 
-    private func row(_ rung: WalletPermissions.Rung) -> some View {
+    /// One cell of the grid: a large numeral, the rung's sentence beneath it.
+    ///
+    /// **The height budget, spelled from the ramp rather than measured**
+    /// (`DSRoomChassis.headlineRow`'s own reasoning): the slot is a hard,
+    /// clipped 210pt. Eyebrow 28 (`stat24`) + s2 + two grid rows of
+    /// (40 numeral + 2 + 34 two-line phrase) + s2 between them = ~192, which
+    /// clears the box with the fold line to spare. That budget is WHY the
+    /// rung's dollar figure sits BESIDE the numeral rather than under the
+    /// phrase — a third line per cell is 16pt spent four times, and the
+    /// fourth rung's sentence is what it would shear off.
+    ///
+    /// The numeral is `price40`, the "figure that leads a card without being
+    /// its crown" — one rung under the wallet total, which is right: this is
+    /// a scope's figure, not the room's.
+    private func stat(_ rung: WalletPermissions.Rung) -> some View {
         let tint = rung.power.isUnbounded ? DS.attention : DS.textPrimary
-        return HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-            Text("\(rung.count)")
-                .dsText(.stat24).foregroundStyle(tint)
-                .monospacedDigit()
-                // A fixed column so the sentences line up down the card —
-                // ragged left edges here would read as four unrelated rows
-                // rather than one ranked set.
-                .frame(width: 24, alignment: .leading)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(rung.power.phrase)
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                if let sub = subline(rung) {
-                    Text(sub)
+        return VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text("\(rung.count)")
+                    .dsText(.price40).foregroundStyle(tint)
+                    .monospacedDigit()
+                if let aside = aside(rung) {
+                    Text(aside)
                         .dsText(.label12).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
             }
-            Spacer(minLength: 0)
+            Text(rung.power.phrase)
+                .dsText(.subhead13)
+                .foregroundStyle(rung.power.isUnbounded
+                                 ? DS.attention.opacity(0.9) : DS.textSecondary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        // ZERO. Four rungs plus the eyebrow plus the fold line have to clear a
-        // hard 210pt box, and this was measured down from 3 in three passes on
-        // the device rather than guessed: a rung is two lines of type, so every
-        // point spent here is spent eight times, and at 3 the fourth rung's
-        // name was cut in half. The rungs still separate — each is a figure
-        // beside a two-line block, which is its own visual unit.
-        .padding(.vertical, 0)
     }
 
-    /// Who, and how much — in that order, because the name is what you act on
-    /// and the figure is what you weigh.
+    /// The rung's total, beside its numeral — only when the rung is FULLY
+    /// priced (§490's refusal: a partial sum looks complete, which is worse
+    /// than no sum), and "no amount to state" only where a figure was
+    /// EXPECTED (`Power.canCarryAmount`) — on a module or a collection grant
+    /// it is an apology for a fact.
     ///
-    /// The figure is appended only when the rung is FULLY priced; a rung
-    /// holding one unpriced grant says so by omission rather than by printing
-    /// a total that quietly excludes it.
-    private func subline(_ rung: WalletPermissions.Rung) -> String? {
-        var parts: [String] = []
-        if !rung.names.isEmpty {
-            var who = rung.names.joined(separator: " · ")
-            let unnamed = rung.count - rung.names.count
-            if unnamed > 0 { who += String(localized: " and \(unnamed) more") }
-            parts.append(who)
-        }
+    /// No names, ever: the acting list and the approvals list directly below
+    /// carry every holder, and a name here is the slot restating them (§546).
+    private func aside(_ rung: WalletPermissions.Rung) -> String? {
         if let usd = rung.usd {
-            parts.append(WalletApprovalExposure.money(usd))
-        } else if rung.hasUnpriced, rung.power.canCarryAmount, !rung.names.isEmpty {
-            // Only where a figure was EXPECTED — see `Power.canCarryAmount`.
-            parts.append(String(localized: "no amount to state"))
+            return WalletApprovalExposure.money(usd)
         }
-        if let note = rung.note { parts.append(note) }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        if rung.hasUnpriced, rung.power.canCarryAmount {
+            return String(localized: "no amount to state")
+        }
+        return nil
     }
 
     /// The card as one sentence, in the drawn order.

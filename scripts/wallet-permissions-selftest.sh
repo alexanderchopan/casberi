@@ -413,4 +413,19 @@ strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 3 'first(where: { $0.isLive &&
 grep -q 'accessibilityElement(children: .combine)' "$CARD" \
   || fail "the card stopped speaking as one ordered sentence"
 
-print "  ok   18 mutations, 23 drift guards"
+# THE SLOT IS COUNTS, NEVER NAMES (prd §546, user: "we can't just repeat the
+# list", then "do the counts"). The rung rows used to carry a name subline,
+# which on a sparse wallet made the slot the acting list restated word for
+# word — the drawing and the list under it saying the same two facts twice.
+# The names' one home is the two lists below; the slot's reading is the
+# AGGREGATE, which a per-actor list structurally does not have. Read from a
+# COMMENT-STRIPPED copy: the card documents this rule by naming what it must
+# not do.
+strip "$CARD" | grep -qE '\.names|rung\.names' \
+  && fail "the slot names a holder again — that is the list restated (§546)"
+# ...and the numerals must stay at figure size: the count IS the drawing now,
+# so demoting it back to a row-sized stat is the old list wearing a new doc.
+grep -q 'dsText(.price40)' "$CARD" \
+  || fail "the slot's counts are no longer drawn as figures (§546)"
+
+print "  ok   18 mutations, 25 drift guards"
