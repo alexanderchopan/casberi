@@ -79,6 +79,8 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §165 | The whisper capsule carries the DAY BRIEF — one glass card above the agent bar on the first foreground of every calendar day, tapping through to the Today brief | superseded by §550 (that made it the last prepopulated door onto the brief after §543 deleted the rest, on the one surface that repeats forever — and the day reading was never only there: the All feed's own Today header has drawn `DayBrief.whisper` since §385 and the iPad pane since 2026-07-31, both untouched. The SLOT survives and changes subject: it teaches the hold §390 hid, once ever, retiring the first time the agent rises by any door) |
+| §167 | Item 1 — the whisper's title TRAVELS into the brief's masthead: a proxy title mounted in RootShell's own `composerOpen` transaction so the capsule's words had a live `matchedGeometryEffect` pair while the real masthead was still 400ms away | amended by §550 (the capsule opens no titled document now, so there are no words to fly and nothing on the other side to receive them — `WhisperTitleMorph`, `ShellChrome.risingBriefTitle`, the proxy overlay and the masthead's receiving modifier are all deleted. §167's other five corrections stand, and the bar↔surface SHAPE morph is a different pairing and is untouched) |
 | §386c | The kept-ask pills LEAVE the rest surface — the same chips-to-have-chips reading the suggestion row got in the same session | reversed by §543 (they were removed while sitting in a row of five identical-looking suggestions, where they read as more of the same. With every SUGGESTED chip deleted they are the opposite thing: the only content on that surface, and there only because somebody pinned it. It also repairs a hole §543 would otherwise open — "Keep" on an answer would mint a standing question with nowhere to appear, which is a control that does nothing (§83)) |
 | §534 | A `.eth` name in its grace period can be renewed by **the owner** — the grace copy said so in four places | reversed by §540 (MEASURED: the deployed `ETHRegistrarController.renew` has no owner check of any kind — it takes the money, extends the registration, and never asks who paid. **Renewing is permissionless.** The grace period restricts RE-REGISTRATION, not renewal, so the copy was wrong in the direction that talks somebody out of an act they could take; all four places now say "it can still be renewed", and the renew card carries the footgun the capability creates — paying does not transfer the name) |
 | §250 | An individual charge NEVER lands — a £9 payment is a tally wearing a currency symbol, so only money whose movement is itself the news earns a row | amended by §537 **for Polar only** (Stripe's own rule stands unchanged where §250 set it: a payment processor serving businesses at thousands of charges a day. Polar is a Merchant of Record for indie developers, where a sale is a countable event somebody remembers — so sales land, while a `subscription_cycle` RENEWAL is still refused as exactly the tally §250 describes) |
@@ -41712,3 +41714,146 @@ anticipated — it asks both files now, as the line above it already did.
 device next merges; and the corpus half of the demo's mirroring cost is
 unchanged and still accepted, which is a separate question this entry does not
 reopen.
+
+## 550. The capsule above the bar stops being a daily headline and teaches the gesture, and the empty chat says where agents come from (user: "i don't want a whisper once a day, i want it once. after onboarding only", then "we either kill it or add something else there but not once a day", then "it could have a whisper that says long press to talk to agents and then empty chat has a link to where to set up agents", 2026-09-01)
+
+**Supersedes §165** (the whisper capsule) and **amends §167 item 1** (the
+travelling title). §166's Today brief itself is untouched and still reachable
+by every other door it has.
+
+The question that started it was whether the thing on first landing was still
+needed "now that we updated how our agent experience works and don't have
+prepopulated stuff". It was `WhisperCapsule`: `DayBrief.title` returns the
+literal string "What's going on", which is why it read as a leftover chip.
+
+### 1. Why the day content had to go
+
+§543 deleted every prepopulated door onto the Today brief — the three launcher
+chips, the lone category chip, the day card — on the reasoning that they were
+four doors onto two documents you can ask for by name. **This capsule was the
+last one standing, and it was on the one surface that repeats forever.**
+
+The stronger fact, found while auditing rather than assumed: **the day reading
+was never only here.** The All feed's own Today header has drawn
+`DayBrief.whisper` since §385, and the iPad pane has drawn it since 2026-07-31
+via `chrome.paneBrief`. So the capsule spent a daily arrival re-stating a line
+already on the page behind it. Both of those readers survive this pass
+untouched; `refreshWhisper` becomes `refreshPaneBrief` and composes only when
+the pane is there to read it, which also drops the two clocks it used to
+reconcile down to one guard.
+
+### 2. Why it is REPLACED rather than killed
+
+Killing it was on the table and is the wrong call, for a reason that is
+written down in the code it would have deleted. §390 swapped the bar's verbs —
+tap opens the sources tray, HOLD raises the agent — and `AgentBar`'s own note
+states the cost out loud: *"the agent is now behind a gesture with no visible
+affordance"*, acceptable because other doors exist, **and it names this capsule
+as one of them.** §543 then emptied the agent's landing. Delete this too and
+nothing on the feed ever says the agent is there, or that there is a choice of
+who answers.
+
+**So the gap §390 left is a GESTURE, not a missing product** — and the slot
+keeps its arrival and changes its subject. "Talk to your agents · Press and
+hold the button below."
+
+**A "Set up an agent" CTA in this slot was proposed first and refused**, and
+the refusal is the useful part: the capsule's own doctrine (2026-08-07) is that
+it *"is never put behind a tap … this is unsolicited news, and it works
+precisely because it ARRIVES"*. A setup offer is true every day until you act
+on it, so arriving unsolicited makes it a nag — §306's "did you already know?"
+test, failed — and the capsule is one line with a chevron, so
+`BankrOfferBanner`'s shared "Not now" would have nowhere to live. The offer
+already sits in the two places where it answers a live question (the risen
+agent, the Wallet room head), which is where it stays.
+
+### 3. Once ever, and it retires by being LEARNED
+
+`agent.everRaised`, persisted, spent the first time the agent rises by ANY door
+— this capsule's own tap, the hold it names, ⌘K, the Daily Brief quick action,
+`casberi://brief`. Spent in `RootShell`'s single `composerOpen` observer rather
+than at any one tap site, so no door can be the one that forgets; the same
+reason `openSources` owns `sources.everOpened`.
+
+That is the strongest retirement available, because **using the thing is proof
+the explanation landed.** Deliberately NOT also retired by connecting an app,
+which the user floated: somebody can furnish the whole catalog and still never
+find the hold, and a grace that expires on an unrelated event is a label
+outliving its own explanation — the exact inversion `sources.everOpened`
+records in its own note when it explains why it tracks the tray and not the
+agent.
+
+### 4. Why the capsule and not the bar's own words
+
+`AgentBar.expanded` is already a teaching grace with a persisted flag, so the
+obvious cheaper move is to put the sentence there. It cannot go there: **a
+label on a button is a promise about what TAPPING it does**, and after §390 the
+tap opens the tray. The bar cannot say "hold me" without lying about itself. A
+separate object above it can point at it.
+
+Its own tap raises the agent, so reading it and obeying it land in the same
+place — never a control that only talks (§83) — and that tap is the accessible
+route for anyone who cannot perform a long press, beside `AgentBar`'s own
+VoiceOver action. The copy says "the button below" rather than naming the mark:
+no user-facing string in this app has ever called it the berry, and teaching a
+word that appears nowhere else is worse than pointing.
+
+### 5. The other half — the empty chat says where agents come from
+
+`Composer.agentsLink`: a "Set up an agent" row on the rest surface, opening the
+catalog filtered to Agents. It says you can CHOOSE who answers, and it says it
+where "who is going to answer this?" is the live question — which is
+`BankrOfferBanner`'s own placement argument, widened from one seat to the
+category.
+
+**It retires the moment an agent exists** (`AgentKey.configured.isEmpty`), so it
+is a first-run answer and not permanent furniture; chrome is priced by frequency
+of use, and somebody who has pasted a key already knows where these live. The
+on-device model is deliberately not part of that gate — it is not a key, it
+cannot be set up, and counting it would hide the row from everyone on a device
+that has Apple Intelligence.
+
+**Not a §543 regression.** That ruling deleted prepopulated ASKS: chips that
+fired a question you had to spend a tap to learn the value of. This runs
+nothing and fetches nothing; it opens a catalog.
+
+`HomeRoute.openCategory` carries the category, consumed by `AppsScreen` on
+appear — `openOffer`'s exact shape, chosen because `.apps` is pushed from ten
+places and the value is read once, on arrival. It is the ONE exception to that
+screen's ruling that the filter is never remembered across visits, and the
+exception is what keeps it honest: that ruling exists because arriving on a
+three-week-old filter "hides nine tenths of it with nothing on screen saying
+why", and here the thing saying why is the link you tapped one gesture ago. An
+unresolvable category leaves All standing, and `BridgeCatalog.agentsCategory`
+DERIVES the name from the category table rather than spelling it a second time
+— a category name doubles as a join key, and a literal in another file is the
+drift §326 records when Mail's fold silently orphaned `category:Mail`.
+
+### 6. What went with it
+
+`WhisperCapsule` → `AgentHintCapsule`. Deleted outright: `WhisperTitleMorph`,
+`ShellChrome.risingBriefTitle`, RootShell's proxy title overlay and its safety
+clear, and the receiving `.modifier(WhisperTitleMorph(...))` on the brief's
+masthead. That whole choreography is §167 item 1 — a `heading22` copy of the
+capsule's words mounted in the same `composerOpen` transaction so the title had
+a live `matchedGeometryEffect` pair to fly into while the real masthead was
+still 400ms away. **This capsule opens no titled document, so there are no
+words to fly and nothing on the other side to receive them**, and a lone half
+of a matched pair pairs with nothing. Two gates that only existed to stand down
+for it (`Composer.risingHandoff`'s `chrome.risingBriefTitle == nil` term and
+`risingFramePainted`'s) were left vacuously true and are gone with it.
+
+**The bar↔surface SHAPE morph is untouched** (`MorphMatch`, id `agentMorph`) —
+a different pairing, and the one that is the rise itself. §445's ruling that
+the morph rides a shape and never the content stands.
+
+`-whisperProbe` → `-agentHintProbe`, renamed with the feature: a probe named
+for a deleted thing is the registry drift this repo keeps finding in lists
+nobody re-read.
+
+### 7. Unverified
+
+The capsule has not been seen on a device or a simulator, and neither has the
+catalog landing filtered to Agents. Both fail safe — an unresolvable category
+leaves the All chip selected, and the hint's gate is a persisted Bool that
+defaults to showing it once.

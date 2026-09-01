@@ -1107,6 +1107,21 @@ enum BridgeCatalog {
         categories.first { $0.groups.contains(offer.group) }?.name ?? "Life"
     }
 
+    /// The Agents category's name, DERIVED from the table above rather than
+    /// spelled a second time (prd §550 — the agent's empty-chat link lands the
+    /// catalog filtered to it).
+    ///
+    /// A category name is an ordinary string that doubles as a join key (a
+    /// kept `category:…` ask resolves through it), so a rename must move every
+    /// reader at once; a literal in another file is exactly the drift §326
+    /// records when Mail's fold silently orphaned `category:Mail`. Nil when no
+    /// category owns the `Agent` group, which every caller must treat as "no
+    /// filter" rather than as an error — the catalog is still perfectly usable
+    /// unfiltered.
+    static var agentsCategory: String? {
+        categories.first { $0.groups.contains("Agent") }?.name
+    }
+
     /// The catalog category a landed SOURCE belongs to — the join `SourcesTray`
     /// groups by, so the tray reads like the catalog rather than inventing a
     /// second taxonomy (2026-08-06).

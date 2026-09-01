@@ -377,6 +377,19 @@ struct AppsScreen: View {
                     route.pushAppDetail(name)
                 }
             }
+            // …and a door that named a CATEGORY lands filtered to it (prd
+            // §550 — the agent's empty-chat link). Resolved against `scopes`
+            // rather than against the catalog's raw category list, for the
+            // same reason that property drops an empty category: a scope with
+            // no chip in the strip would filter the list to nothing while the
+            // strip showed All selected, which reads as a broken screen. An
+            // unresolvable name simply leaves All standing.
+            if let category = route.openCategory {
+                route.openCategory = nil
+                if let picked = scopes.first(where: { $0.name == category }) {
+                    scope = picked
+                }
+            }
             #if DEBUG
             if UserDefaults.standard.bool(forKey: "openPair") { pairing = true }
             // `-openWallet YES` takes the TRACKED route (prd §442, found on a

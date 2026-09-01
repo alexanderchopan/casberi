@@ -284,74 +284,101 @@ private struct BarSecondaryMenu: ViewModifier {
     }
 }
 
-/// The whisper (ruling 6's flag-gated sketch, ruled real 2026-07-22 — prd
-/// §165): one glass card above the bar on the first open of a day, carrying
-/// the day brief. Floating layer, so glass is lawful here. Tap opens the
-/// Today brief itself (prd §166). It dies for the day the moment the agent
-/// rises by any path — its one job is done — and never shows with nothing to
-/// say (`DayBrief.whisper` composes nil).
+/// THE CAPSULE ABOVE THE BAR TEACHES THE GESTURE (prd §550, 2026-09-01,
+/// user: "i don't want a whisper once a day, i want it once. after onboarding
+/// only" → "we either kill it or add something else there but not once a day"
+/// → "it could have a whisper that says long press to talk to agents and then
+/// empty chat has a link to where to set up agents").
 ///
-/// **It names itself** (user ruling 2026-07-22). The first cut was a pill: a
-/// tint dot beside one line of facts. That is notification grammar — a dot
-/// plus a sentence reads as "a transaction happened", and nobody could tell
-/// it was a daily synthesis. Three changes fix the read, and each is doing a
-/// job: the day is NAMED on its own line ("Your Wednesday brief") so the
-/// artifact is legible before the facts are; the unread dot becomes the
-/// agent's own mark, which says who this is from instead of merely that it's
-/// new; and a chevron says it opens something rather than just sitting there.
+/// It was `WhisperCapsule` (prd §165/§166): the day brief's headline, on the
+/// first foreground of every calendar day, tapping through to the brief. Two
+/// things retired it. §543 deleted every prepopulated door onto that document
+/// on the reasoning that they were doors onto a screen you can ask for by
+/// name — this was the last one standing, on the one surface that repeats
+/// forever. And the day reading was never only here: the All feed's own Today
+/// header has drawn `DayBrief.whisper` since §385, so the capsule spent a
+/// daily arrival re-stating a line already on the page behind it.
 ///
-/// It used to be INSET from the bar below it (2026-07-22) because two
-/// full-width glass slabs stacked read as one confusing double-bar. That inset
-/// is GONE (2026-08-07) and the hierarchy it bought is now free: the bar
-/// hugged into the bottom-right corner, so the pair is a wide slab above a
-/// small pill and cannot be misread as two bars. The capsule keeps its own
-/// trailing edge aligned with the bar's, so the two read as one corner system.
+/// ## WHY IT IS REPLACED RATHER THAN DELETED
 ///
-/// **It is never put behind a tap** (ruling 2026-08-07, considered and
-/// declined). Folding it into the bar — press the berry, the whisper unfolds —
-/// looks tidier and breaks the feature: this is once-a-day unsolicited news,
-/// and it works precisely because it ARRIVES rather than waits. Behind a press
-/// it becomes a menu item, unopened on the one day it had something to say.
-struct WhisperCapsule: View {
-    var title: String
-    var lead: String
-    var walletPct: Double?
-    /// The bar↔surface morph's own namespace (2026-07-22) — the title text
-    /// carries a SECOND, independent `matchedGeometryEffect` pairing inside
-    /// it (id "whisperTitleMorph", position-only — see `WhisperTitleMorph`),
-    /// so the words themselves travel from the capsule up into the masthead
-    /// as the agent rises, rather than the capsule's promise and the
-    /// screen's title merely happening to match. Optional for the same
-    /// reason `AgentBar.morphNS` is: a namespace-free preview still renders.
-    var morphNS: Namespace.ID?
-    /// The room's hue — see `AgentBar.roomTint`. The capsule takes it too so
-    /// the bottom cluster reads as one coordinated pair (2026-07-23) rather
-    /// than one tinted slab beside a neutral one.
+/// §390 swapped the bar's verbs — tap opens the sources tray, HOLD raises the
+/// agent — and `AgentBar`'s own note states the cost out loud: "the agent is
+/// now behind a gesture with no visible affordance", acceptable because other
+/// doors exist, and it names this capsule as one of them. Then §543 emptied
+/// the agent's landing. Delete this too and nothing on the feed ever says the
+/// agent is there, or that there is a choice of who answers.
+///
+/// So the slot keeps its arrival and changes its subject: the gap §390 left is
+/// a GESTURE, not a missing product, and this says the gesture.
+///
+/// ## WHY THE CAPSULE AND NOT THE BAR'S OWN WORDS
+///
+/// `AgentBar.expanded` is already a teaching grace with a persisted flag
+/// (`sources.everOpened`). It cannot carry this: **a label on a button is a
+/// promise about what TAPPING it does**, and after §390 the tap opens the
+/// tray. The bar cannot say "hold me" without lying about itself. A separate
+/// object above it can point at it.
+///
+/// ## IT RETIRES BY BEING LEARNED
+///
+/// Once ever, not once a day: `agent.everRaised` is spent the first time the
+/// agent rises by ANY door — this capsule's own tap, the hold, ⌘K, a quick
+/// action, a deep link. That is the strongest retirement available, because
+/// using the thing is proof the explanation landed. Deliberately NOT also
+/// retired by connecting an app: someone can furnish the whole catalog and
+/// still never find the hold, and a grace that expires on an unrelated event
+/// is the label outliving its own explanation — the inversion
+/// `sources.everOpened` records in its own note.
+///
+/// ## ITS OWN TAP RAISES THE AGENT
+///
+/// Reading it and obeying it land in the same place, so it is never a control
+/// that only talks (§83) — and it is the accessible route for anyone who
+/// cannot perform a long press, beside `AgentBar`'s own VoiceOver action.
+///
+/// ## STILL NEVER BEHIND A TAP (2026-08-07, carried forward)
+///
+/// Folding it into the bar — press the berry, the hint unfolds — is still
+/// self-defeating, and more so now: this explains the very press it would be
+/// hiding behind.
+///
+/// The anatomy is unchanged from the whisper's (user ruling 2026-07-22): the
+/// agent's own mark says who this is from, a named line over a quieter one so
+/// the artifact is legible before the detail, a chevron to say it opens
+/// something, and the trailing edge aligned with the bar's so the two read as
+/// one corner system.
+struct AgentHintCapsule: View {
+    /// No namespace parameter, deliberately. The whisper took one for a
+    /// SECOND, title-level `matchedGeometryEffect` pairing
+    /// (`WhisperTitleMorph`, id "whisperTitleMorph") that flew its words up
+    /// into the brief's masthead; this capsule opens no titled document, so
+    /// that modifier, `ShellChrome.risingBriefTitle` and the proxy title
+    /// `RootShell` mounted for it are all deleted with the day content. The
+    /// bar's own shape morph (`MorphMatch`, id "agentMorph") is a different
+    /// pairing and is untouched.
+    ///
+    /// The room's hue — see `AgentBar.roomTint`. Kept so the bottom cluster
+    /// can read as one coordinated pair; `RootShell` passes nil today.
     var roomTint: Color? = nil
     var action: () -> Void
-
-    @Environment(\.colorScheme) private var scheme
-
-    /// The figure wears its own direction (§83's accent rule) — rendered by
-    /// `DayBrief.Whisper` itself since 2026-07-31, so the capsule and the
-    /// detail pane's resting state can't drift on the format or the accent.
-    private var detail: Text {
-        DayBrief.Whisper(title: title, lead: lead, walletPct: walletPct)
-            .detailText(scheme: scheme)
-    }
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: DS.Space.s3) {
                 CasberiMark(size: 20)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(title)
+                    Text("Talk to your agents")
                         .dsText(.subhead13).fontWeight(.semibold)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
-                        .modifier(WhisperTitleMorph(ns: morphNS))
-                    detail
+                    // It points DOWN at the control it describes, which is
+                    // directly below it — "the button below" rather than a
+                    // name for the mark, because no user-facing copy in this
+                    // app has ever called it the berry, and naming it here
+                    // would teach a word that appears nowhere else.
+                    Text("Press and hold the button below.")
                         .dsText(.subhead13)
+                        .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
                 }
                 Spacer(minLength: DS.Space.s2)
@@ -367,20 +394,20 @@ struct WhisperCapsule: View {
         }
         .buttonStyle(.plain)
         .dsGlass(cornerRadius: DS.Radius.control, tint: roomTint)
-        // It MATERIALIZES (2026-08-06). This capsule appears once a day, out of
-        // nothing, carrying something genuinely new — the one piece of chrome in
-        // the app whose arrival is itself the news. Fading it in like any other
-        // view spent that moment on nothing; the glass growing its own lens is
-        // the system's own way of saying a floating thing just arrived. Reduce
-        // Motion stills it (`dsGlassMaterialize` gates), and because it rides
-        // the glass rather than the content, a system that declines to draw the
-        // transition costs the capsule nothing.
+        // It MATERIALIZES (2026-08-06, kept). This appears out of nothing,
+        // carrying something new — the glass growing its own lens is the
+        // system's way of saying a floating thing just arrived. Reduce Motion
+        // stills it, and because it rides the glass rather than the content, a
+        // system that declines to draw the transition costs it nothing.
         .dsGlassMaterialize()
         .animation(DS.Motion.standard, value: roomTint)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title). \(lead)"
-                            + (walletPct.map { String(format: ", wallet %+.1f percent", $0) } ?? ""))
-        .accessibilityHint("Opens your day")
+        // The hold is stated for sighted readers above; for VoiceOver the
+        // honest instruction is the one that works there — activating this
+        // capsule — since the long press on the bar is not the route a
+        // VoiceOver user takes (`AgentBar` publishes its own custom action).
+        .accessibilityLabel("Talk to your agents")
+        .accessibilityHint("Opens the agent")
     }
 }
 
@@ -401,22 +428,3 @@ struct MorphMatch: ViewModifier {
     }
 }
 
-/// The whisper's title, travelling (2026-07-22, prd §167 item 1) — pairs the
-/// capsule's `Text(title)` with the masthead's own title in `Composer`
-/// (`briefTitleText`), same id, same shared namespace. POSITION only, not
-/// size/frame: the two texts are genuinely different type scales
-/// (`subhead13` → `heading22`), and matching their full frames would stretch
-/// the smaller glyph run into the bigger one's bounds — a visible distortion
-/// for a beat. Position-only lets the words travel to their new home while
-/// each text crossfades into its own real style, which reads as "the same
-/// words, grown up" rather than "text smeared across the screen".
-struct WhisperTitleMorph: ViewModifier {
-    let ns: Namespace.ID?
-    func body(content: Content) -> some View {
-        if let ns {
-            content.matchedGeometryEffect(id: "whisperTitleMorph", in: ns, properties: .position)
-        } else {
-            content
-        }
-    }
-}

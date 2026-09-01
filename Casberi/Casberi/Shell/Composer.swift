@@ -105,6 +105,13 @@ struct Composer: View {
     /// only when this is non-nil, so the CTA can never be a control that does
     /// nothing (§83).
     var onConnectBankr: (() -> Void)? = nil
+    /// Opens the catalog filtered to Agents (prd §550) — a CLOSURE for
+    /// `onConnectBankr`'s reason, stated in full above: this view is a ZStack
+    /// layer inside `RootShell.shell` and sits above that view's environment
+    /// injections, so an `@Environment(HomeRoute.self)` here dies on first
+    /// read. `agentsLink` draws only when this is non-nil, so the row can
+    /// never be a control that does nothing (§83).
+    var onOpenAgents: (() -> Void)? = nil
     /// Lowers the agent (docs/agent-brief.md ruling 9: staying is the
     /// default; a bare tap never ejects you — this is the ONE thing "Open in
     /// app" from inside a pushed thing-view is allowed to do to the agent
@@ -748,16 +755,16 @@ struct Composer: View {
     /// looking like two different screens — which would be this bug wearing a
     /// smaller costume.
     ///
-    /// STANDS DOWN FOR THE WHISPER, and that gate is load-bearing rather than
-    /// tidy: the capsule's tap flies `chrome.risingBriefTitle`, a proxy title
-    /// RootShell renders with `matchedGeometryEffect(id: "whisperTitleMorph")`
-    /// in the SAME namespace this header uses (`glassNamespace: agentMorph`).
-    /// Two live views sharing one matched id is undefined, and the whisper's
-    /// choreography is already approved and already covers this window.
+    /// It used to STAND DOWN FOR THE WHISPER (`chrome.risingBriefTitle == nil`),
+    /// because the capsule's tap flew a proxy title RootShell rendered with
+    /// `matchedGeometryEffect(id: "whisperTitleMorph")` in the SAME namespace
+    /// this header uses, and two live views sharing one matched id is
+    /// undefined. That whole choreography is deleted with the capsule's day
+    /// content (prd §550) — nothing mints a proxy title now — so the term was
+    /// vacuously true and is gone with it. The frame simply always paints for
+    /// an open that owes an answer, which is what it was always for.
     private var risingHandoff: Bool {
-        isOpen && !answering && !isRecording
-            && chrome.risingBriefTitle == nil
-            && pendingAsk != nil
+        isOpen && !answering && !isRecording && pendingAsk != nil
     }
 
     /// THE FOCUS DOOR IS CLOSED (user, 2026-08-31: the composer "opens at first
@@ -1074,9 +1081,11 @@ struct Composer: View {
         // the wallet can't speak or the move is FLAT, so §83's "a change that
         // rounds to zero has no direction" is kept by the model, not re-derived
         // here. Never parsed back out of the sentence — the MoneyReceipt rule.
-        // `dayLede`/`dayWhisper` went with `dayCard` (prd §543) — the whisper
-        // itself is untouched and still rises above the agent bar
-        // (`WhisperCapsule`), which is where a once-a-day headline belongs.
+        // `dayLede`/`dayWhisper` went with `dayCard` (prd §543), and the
+        // whisper capsule itself went with prd §550 — the slot above the bar
+        // teaches the agent's gesture now. The day reading is still on the
+        // feed: the All room's own Today header has drawn `DayBrief.whisper`
+        // since §385.
         // One busy-publisher scan per open, feeding the timely chip below.
         // Counted in the single walk above rather than in a pass of its own.
         let busy = scan.busyPublisher
@@ -1581,13 +1590,15 @@ struct Composer: View {
                                 // fixed, and must never be the thing that goes.
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.7)
-                                // The capsule's words travel here (prd §167 item 1)
-                                // — the SAME id RootShell's proxy title (and,
-                                // before it, the whisper capsule's own title)
-                                // carry, so when this real masthead mounts it
-                                // simply takes over the geometry pairing and
-                                // the proxy quietly fades away underneath it.
-                                .modifier(WhisperTitleMorph(ns: glassNamespace))
+                                // The whisper's title morph is DELETED here
+                                // too (prd §550, §167 item 1 retired). This
+                                // was the receiving half: the capsule's own
+                                // words flew into it via RootShell's proxy
+                                // title, all three sharing the id
+                                // "whisperTitleMorph". The capsule above the
+                                // bar no longer opens this document, so there
+                                // is nothing left to fly and a lone half of a
+                                // matched pair pairs with nothing.
                             Text(Date.now.formatted(.dateTime.weekday(.abbreviated)
                                                         .month(.abbreviated).day()))
                                 .dsText(.subhead13)
@@ -2487,6 +2498,11 @@ struct Composer: View {
             // in for a synthesis the open couldn't show; the board is that
             // synthesis, so the two never appear together.
             agentChoiceHeader
+            // …and, when no agent is configured at all, where they come from
+            // (prd §550). Below the Bankr banner on purpose: that one names a
+            // single seat and its capability, this one names the category, so
+            // the wider door reads as the answer to "what else is there?"
+            agentsLink
             // NOTHING IS PREPOPULATED ANY MORE (prd §543, 2026-08-31, user:
             // "i don't think the prepopulated things are helpful … we honestly
             // just delete all the prepopulated stuff"). Gone in one pass: the
@@ -2782,7 +2798,7 @@ struct Composer: View {
         // an action rather than from the body. `turns.isEmpty` is the frame's
         // other gate, restated here so a follow-up inside a conversation still
         // gets its lift (nothing scaffolded it).
-        risingFramePainted = chrome.risingBriefTitle == nil && turns.isEmpty
+        risingFramePainted = turns.isEmpty
             && !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         chrome.askRequest = nil
         risePhase("consumed")
@@ -3543,6 +3559,56 @@ struct Composer: View {
             BankrOfferBanner(onConnect: onConnectBankr)
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.bottom, DS.Space.s3)
+        }
+    }
+
+    /// WHERE AGENTS COME FROM (prd §550, 2026-09-01, user: "empty chat has a
+    /// link to where to set up agents").
+    ///
+    /// The other half of the capsule above the bar. That one says the agent is
+    /// there and how to reach it; this one says you can choose who answers,
+    /// and it says it HERE — on the empty chat, where "who is going to answer
+    /// this?" is the live question — rather than as an interruption somewhere
+    /// else. It is `BankrOfferBanner`'s own placement argument (that offer
+    /// draws in the risen agent for exactly this reason), widened from one
+    /// seat to the category.
+    ///
+    /// **It retires the moment an agent exists.** Gated on
+    /// `AgentKey.configured.isEmpty`, so it is a first-run answer and not
+    /// permanent furniture — chrome is priced by frequency of use
+    /// (`AgentBar`'s rest ruling), and somebody who has pasted a key already
+    /// knows where these live; the ask capsule beside the field names their
+    /// destinations from then on. The on-device model is deliberately not part
+    /// of the gate: it is not a key, it cannot be set up, and counting it would
+    /// hide this from everyone on a device that has it.
+    ///
+    /// Not a §543 regression: that ruling deleted prepopulated ASKS — chips
+    /// that fired a question you had to spend a tap to learn the value of.
+    /// This runs nothing and fetches nothing; it opens a catalog.
+    @ViewBuilder private var agentsLink: some View {
+        if let onOpenAgents, restChrome(keepBrief: false), AgentKey.configured.isEmpty {
+            Button {
+                DSHaptic.tap()
+                onOpenAgents()
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    Text("Set up an agent")
+                        .dsText(.subhead13).fontWeight(.semibold)
+                        .foregroundStyle(DS.tint)
+                    Image(systemName: "chevron.right")
+                        .dsGlyph(11)
+                        .foregroundStyle(DS.tint)
+                        .accessibilityHidden(true)
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+                .dsHover()
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s3)
+            .accessibilityLabel("Set up an agent")
+            .accessibilityHint("Opens the agents in the app catalog")
         }
     }
 
