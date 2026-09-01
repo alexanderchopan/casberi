@@ -49,6 +49,12 @@ struct FramesScreen: View {
                 .dsSlabSection()
                 .listRowSeparator(.hidden)
 
+            Section { accountDoors }
+                .listRowInsets(EdgeInsets(top: DS.Space.s3, leading: DS.Space.s4,
+                                          bottom: 0, trailing: DS.Space.s4))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+
             Section { FramesWatchField(onWatched: watch.addresses.count == 1 ? openRoom : {}) }
                 .dsSlabSection()
                 .listRowSeparator(.hidden)
@@ -103,43 +109,13 @@ struct FramesScreen: View {
     /// button is the dead control §83 bans.
     @ViewBuilder private var accountBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            if let keyAddress {
-                HStack(spacing: DS.Space.s3) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(String(localized: "Your account"))
-                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                        Text(WalletStore.shortAddress(keyAddress))
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    }
-                    Spacer(minLength: 0)
-                    Button {
-                        DSHaptic.selection()
-                        claim(for: keyAddress)
-                    } label: {
-                        Text(busy ? String(localized: "Asking…") : String(localized: "Get test ETH"))
-                            .dsText(.label12).foregroundStyle(busy ? DS.textTertiary : DS.tint)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(busy)
-                }
-            } else {
-                HStack(spacing: DS.Space.s3) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(String(localized: "Make an account"))
-                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                        Text(String(localized: "A key made on this phone"))
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    }
-                    Spacer(minLength: 0)
-                    Button {
-                        DSHaptic.selection()
-                        makeKey()
-                    } label: {
-                        Text(String(localized: "Create"))
-                            .dsText(.label12).foregroundStyle(DS.tint)
-                    }
-                    .buttonStyle(.plain)
-                }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(keyAddress == nil ? String(localized: "No account yet")
+                                       : String(localized: "Your account"))
+                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                Text(keyAddress.map(WalletStore.shortAddress)
+                     ?? String(localized: "A key made on this phone, for signing here"))
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
             }
             if let note {
                 Text(note)
@@ -151,6 +127,32 @@ struct FramesScreen: View {
             // network says of itself that it may be reset without notice, so
             // an account here is not somewhere to keep anything.
             DSSlabNote(text: String(localized: "Test ETH has no value, and the network may be reset without notice."))
+        }
+    }
+
+    /// The two verbs, as SLABS (§190: below the identity area every control is
+    /// a `DSSlabDoor`). They were bare tinted `Text` inside the slab above,
+    /// which `connect-shape-audit.py` fails the build over and is right to — a
+    /// tinted word beside a row reads as a label until you happen to press it.
+    ///
+    /// **They are sequential, not a pair.** The faucet needs an address to
+    /// fund, so Claim cannot exist before the key does, and a Claim door
+    /// sitting inert above a Create door is the dead control §83 bans.
+    @ViewBuilder private var accountDoors: some View {
+        if let keyAddress {
+            DSSlabDoor(title: busy ? String(localized: "Asking the faucet…")
+                                   : String(localized: "Get test ETH"),
+                       detail: String(localized: "One claim an hour, for everyone on your network")) {
+                guard !busy else { return }
+                DSHaptic.selection()
+                claim(for: keyAddress)
+            }
+        } else {
+            DSSlabDoor(title: String(localized: "Make an account"),
+                       detail: String(localized: "A key made on this phone")) {
+                DSHaptic.selection()
+                makeKey()
+            }
         }
     }
 
