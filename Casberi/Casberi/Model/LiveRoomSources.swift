@@ -24,7 +24,16 @@ enum LiveRoomSources {
     /// Sources whose ROOM has live content, so the chip is earned by the
     /// connection rather than by landed things — and so the room must not draw
     /// the generic "nothing here yet" empty state.
-    static let all: Set<String> = ["Kalshi", "Polymarket", HegotaIdentity.source]
+    /// `FramesIdentity.source` joins for Hegotá's exact reason and NOT the
+    /// venues' (prd §548): it lands no `Thing` ever, so without membership its
+    /// room draws the corpus-shaped empty state over live chain content — and
+    /// `FeedScreen`'s two arms both fall through, which is a BLACK SCREEN.
+    /// It is deliberately absent from `venues` below: that narrower set draws
+    /// `PredictionRoomBook`, and adding Hegotá to the wrong one is why a device
+    /// report read "when i click on hegota it is showing me prediction
+    /// markets".
+    static let all: Set<String> = ["Kalshi", "Polymarket",
+                                   HegotaIdentity.source, FramesIdentity.source]
 
     /// **The prediction venues, and ONLY them.**
     ///

@@ -90,7 +90,20 @@ SECTION_HEADING = re.compile(r"^(##)\s+(?:§)?(\d{1,3}[a-z]{0,2})\b(.*)$")
 
 # A sub-entry: `## §319 amendment`, `### §286 follow-up`, `### 165a.`. These
 # deliberately re-use their parent's number and are NOT collisions.
-SUB_ENTRY = re.compile(r"^\s*(amendment|follow-up|second follow-up)", re.I)
+#
+# **THE ORDINAL IS A PREFIX, NOT A SEPARATE SPELLING** (prd §548, 2026-09-01).
+# This enumerated `second follow-up` as its own alternative and knew nothing of
+# a third, so a "§548 third follow-up" read as a SECOND DEFINITION of §548 and
+# failed the build — a real entry, correctly named, rejected because the list
+# had run out. The same shape had already cost a "§548 second amendment"
+# earlier the same day. Enumerating ordinals one at a time is a check that
+# breaks on its own success: every ledger that keeps a thread going long enough
+# hits it, and the failure names a collision that does not exist, which sends
+# the reader looking for a second session that was never there.
+SUB_ENTRY = re.compile(
+    r"^\s*(?:(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\s+)?"
+    r"(amendment|follow-up)",
+    re.I)
 
 # An H1 carrying a § is always wrong — that is the §276/§277 bug, and the only
 # heading-level mistake worth failing a build over. An H3 carrying a § is the

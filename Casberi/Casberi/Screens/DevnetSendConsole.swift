@@ -90,6 +90,13 @@ enum DevnetConsole {
     /// that governs the silhouettes in the room's own bar.
     static let sheetFace = DS.Face.profile
 
+    /// The plan strip's natural height — its own two `label12` lines plus the
+    /// cell's padding. **Not a reserved slot**: the strip is drawn inside a
+    /// `ViewThatFits`, so it takes this much where there is room and nothing
+    /// where there is not. See the call site for why a reserved height was
+    /// wrong.
+    static let planStripHeight: CGFloat = 40
+
     /// One key. `DS.Hit.min` is the floor and this is deliberately above it:
     /// this is the control people tap most in the room, and in a hurry.
     static let key: CGFloat = 58
@@ -115,44 +122,8 @@ enum DevnetAmountInput {
     /// a figure no layout can hold, not to express a business rule.
     static let maxWhole = 15
 
-    /// Append a key. Returns the amount UNCHANGED when the key would make an
-    /// amount the chain cannot express — the keypad has no disabled state, so
-    /// a refused key simply does nothing and the figure does not lie.
-    static func append(_ key: String, to amount: String) -> String {
-        if key == "." {
-            guard !amount.contains(".") else { return amount }
-            // A leading "." is a shape nothing downstream parses, so the zero
-            // is written for you — the same courtesy every calculator gives.
-            return amount.isEmpty ? "0." : amount + "."
-        }
-        guard key.count == 1, let c = key.first, c.isNumber else { return amount }
 
-        if let dot = amount.firstIndex(of: ".") {
-            let decimals = amount.distance(from: amount.index(after: dot), to: amount.endIndex)
-            guard decimals < maxDecimals else { return amount }
-        } else {
-            // "0" alone is the placeholder, not a value — typing a digit
-            // REPLACES it rather than making "07".
-            if amount == "0" { return key }
-            guard amount.count < maxWhole else { return amount }
-        }
-        return amount + key
-    }
 
-    /// Delete one character. An amount left as a bare "0." is legal and parses;
-    /// emptying it entirely returns the placeholder state.
-    static func delete(_ amount: String) -> String {
-        var next = amount
-        if !next.isEmpty { next.removeLast() }
-        return next
-    }
-
-    /// What the figure SHOWS for a given amount — the placeholder is a real
-    /// zero rather than an empty space, so the console never has a hole where
-    /// its largest element belongs.
-    static func display(_ amount: String) -> String {
-        amount.isEmpty ? "0" : amount
-    }
 
     // **BOTH GRAMMARS, BRIEFLY (prd §553).** `append`/`delete`/`display` above
     // are the retired console's, still called by `FramesSendCard`; `sanitize`
@@ -479,6 +450,62 @@ struct DevnetKeypad: View {
 /// **THE SET IS THIS DEVNET'S OWN ADDRESSES.** A social handle is never offered
 /// in the first place rather than accepted and refused later — the rule is
 /// enforced where it can be explained.
+/// ONE STEP A SEND WILL RUN, for a venue whose transaction has parts.
+///
+/// **Data, not a view, and that is the whole of the design.** The strip has to
+/// be computed from the destination and amount, which live as `@State` inside
+/// the sheet — so the caller cannot build the view, and a `@ViewBuilder` slot
+/// would mean a generic parameter on a struct with twelve stored properties
+/// and an inference break at both existing call sites. A venue hands over a
+/// pure function of two strings instead, and the sheet draws it.
+///
+/// Empty for every venue but the Frames devnet, where a send is not one act:
+/// it becomes a VERIFY frame that authorises and a SENDER frame that moves the
+/// value, and without the first the transaction has no payer and is invalid.
+/// WHAT YOUR SEND BECOMES — the steps, drawn between the figure and the
+/// keypad.
+///
+/// A READING, never a control: there is no way to edit a step, add one or
+/// change its order. That is a transaction builder and a different product.
+/// This says what the tap will do, on the one chain where that is not obvious.
+struct DevnetSendPlanStrip: View {
+    let steps: [DevnetSendStep]
+
+    var body: some View {
+        HStack(spacing: DS.Space.s2) {
+            ForEach(Array(steps.enumerated()), id: \.element.id) { index, step in
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(step.name)
+                        .dsText(.label12).fontWeight(.semibold)
+                        .foregroundStyle(DS.textSecondary)
+                    Text(step.detail)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                }
+                .lineLimit(1)
+                .padding(.horizontal, DS.Space.s3)
+                .padding(.vertical, DS.Space.s2)
+                .background(DS.gray100,
+                            in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+                if index < steps.count - 1 {
+                    Image(systemName: "arrow.right")
+                        .accessibilityHidden(true)
+                        .dsGlyph(10, weight: .semibold)
+                        .foregroundStyle(DS.textTertiary)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+struct DevnetSendStep: Equatable, Identifiable {
+    let name: String
+    let detail: String
+    var id: String { name + "|" + detail }
+}
+
 struct DevnetSendSheet: View {
     /// What this room is, for the picker's own footnote.
     let venue: String
@@ -502,6 +529,16 @@ struct DevnetSendSheet: View {
     let isValidAmount: (String) -> Bool
     /// Returns nil on success, or the sentence to show on failure.
     let perform: (String, String) async -> String?
+    /// **What this send BECOMES, if the venue has anything to say.** Given the
+    /// destination and amount currently entered, return the steps the
+    /// transaction will run. Nil for every venue whose send is one act.
+    ///
+    /// Drawn ABOVE the keypad rather than below it, deliberately: the space
+    /// under the pad is where the thumb travels between the last digit and the
+    /// commit, so a strip there is read on the way past rather than looked at
+    /// — and a claim about what the transaction becomes belongs beside the
+    /// amount it describes, not adjacent to the button that fires it.
+    var plan: ((_ destination: String, _ amount: String) -> [DevnetSendStep])? = nil
 
     @Environment(\.dismiss) private var dismiss
     @Environment(ShellChrome.self) private var chrome
@@ -701,6 +738,48 @@ struct DevnetSendSheet: View {
 
             Spacer(minLength: DS.Space.s4)
 
+            // **FIXED HEIGHT, so the `Spacer` collapses around it rather than
+            // the strip being squeezed off.** Slack is not a budget: there is
+            // ~96pt of it on an 844pt phone, ~64 on an 812 and none on a 736,
+            // where the keypad starts pushing. A reading that silently
+            // disappears on small phones is the same class as a card that
+            // overflows and simply continues past the fold — which renders
+            // perfectly and is what `devnet-console-audit.py` exists for. Its
+            // height is a term in that audit's sum.
+            if let plan {
+                let steps = plan(destination, amount)
+                if !steps.isEmpty {
+                    // **`ViewThatFits`, NOT a fixed height** (prd §548). The
+                    // first cut reserved 40pt and added it to this file's own
+                    // budget — then the arithmetic said the amount screen has
+                    // NEGATIVE slack on a 736pt phone before the strip exists
+                    // at all, using §553's own measured terms. Whether that is
+                    // real depends on how the sheet's top inset scales, which
+                    // was measured on an 844 and is not knowable from here.
+                    //
+                    // So the strip does not assert a number it cannot verify.
+                    // It draws where there is room and steps aside where there
+                    // is not, which is correct on every phone without anyone
+                    // having to know the geometry. The alternative — a
+                    // reserved height on a screen with no `ScrollView` — pushes
+                    // the commit button off the bottom, drawn correctly and
+                    // invisible, which is the panel bug this file exists for.
+                    //
+                    // Stepping aside is honest here because the strip is an
+                    // EXPLANATION, not a safety control: the transaction is
+                    // identical without it. A control would have to shrink the
+                    // screen instead.
+                    ViewThatFits(in: .vertical) {
+                        VStack(spacing: 0) {
+                            DevnetSendPlanStrip(steps: steps)
+                            Spacer(minLength: DS.Space.s3)
+                        }
+                        EmptyView()
+                    }
+                    .fixedSize(horizontal: false, vertical: false)
+                }
+            }
+
             DevnetKeypad(amount: $amount, tint: tint)
 
             if let errorText {
@@ -806,297 +885,5 @@ enum DevnetSendParse {
         let trimmed = word.drop(while: { $0 == 0 })
         guard !trimmed.isEmpty else { return nil }
         return Data(trimmed)
-    }
-}
-
-// MARK: - Retired, and retained only for one caller (prd §553)
-
-/// **THE OLD CONSOLE'S PARTS, KEPT ALIVE FOR `FramesSendCard` ALONE.**
-///
-/// §553 retires the form-on-Home shape these four were built for: Home holds
-/// two verbs and the form lives on a sheet with its own keypad.
-/// `HegotaSendCard` and `VibenetSendCard` no longer reference any of them.
-///
-/// They stay because `FramesSendCard` — written in a concurrent session, and
-/// not yet reachable from any screen — still does, and **breaking another
-/// session's file to tidy this one is not this commit's business.** They go the
-/// moment that card is migrated to `DevnetSendPanel` + `DevnetSendSheet`, which
-/// its author has already said is the plan.
-///
-/// Nothing new should use them: `devnet-console-audit.py` holds the two live
-/// cards to the panel, so a regression cannot arrive back through these.
-
-/// that has been chosen for an amount that has not.
-struct DevnetSendFigure<Subline: View>: View {
-    let amount: String
-    var dim: Bool = false
-    @ViewBuilder var subline: () -> Subline
-
-    var body: some View {
-        VStack(spacing: DS.Space.s2) {
-            Text(DevnetAmountInput.display(amount))
-                .dsText(.price48)
-                .foregroundStyle(dim ? DS.textTertiary : DS.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.4)
-                .contentTransition(.numericText())
-                .animation(DS.Motion.standard, value: amount)
-            subline()
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
-
-// MARK: - The keypad
-
-/// Bare digits, and the only circle is the one under your finger.
-struct DevnetSendKeypad: View {
-    @Binding var amount: String
-    /// The venue's own accent — Base blue on vibenet, `DS.tint` on Hegotá — so
-    /// a pressed key agrees with the active chip in the strip above.
-    let tint: Color
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private static let rows: [[String]] = [
-        ["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], [".", "0", "\u{232B}"]
-    ]
-
-    var body: some View {
-        VStack(spacing: DS.Space.s1) {
-            ForEach(Self.rows, id: \.self) { row in
-                HStack(spacing: 0) {
-                    ForEach(row, id: \.self) { key in
-                        keyButton(key)
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func keyButton(_ key: String) -> some View {
-        let isDelete = key == "\u{232B}"
-        Button {
-            // SELECTION, not `tap()` — a keypad fires many times in a row and
-            // the heavier haptic reads as a stutter at typing speed.
-            DSHaptic.selection()
-            amount = isDelete
-                ? DevnetAmountInput.delete(amount)
-                : DevnetAmountInput.append(key, to: amount)
-        } label: {
-            Group {
-                if isDelete {
-                    Image(systemName: "delete.backward")
-                        .dsGlyph(22, weight: .regular)
-                        .foregroundStyle(DS.textSecondary)
-                } else {
-                    Text(key)
-                        .dsText(.heading28)
-                        .fontWeight(.regular)
-                        .foregroundStyle(DS.textPrimary)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            // Comfortably past the 44pt floor: this is the control people tap
-            // most in the room, and it is tapped in a hurry.
-            .frame(height: 52)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(KeyStyle(tint: tint, reduceMotion: reduceMotion))
-        .accessibilityLabel(isDelete ? Text("Delete") : Text(key))
-        .dsHover()
-    }
-
-    /// The press IS the key's whole appearance — no resting fill at all, so
-    /// twelve keys read as one keypad rather than twelve buttons.
-    private struct KeyStyle: ButtonStyle {
-        let tint: Color
-        let reduceMotion: Bool
-
-        func makeBody(configuration: Configuration) -> some View {
-            configuration.label
-                .background {
-                    Circle()
-                        .fill(tint)
-                        .frame(width: 52, height: 52)
-                        .opacity(configuration.isPressed ? 1 : 0)
-                }
-                // Reduce Motion keeps the STATE (the fill still appears — it is
-                // the only feedback a key gives) and drops the animation.
-                .animation(reduceMotion ? nil : DS.Motion.press, value: configuration.isPressed)
-        }
-    }
-}
-
-// MARK: - Who it goes to
-
-/// The recipient as a row: a face and a name, or a stack of faces and an
-/// invitation, and a forward chevron because that is where the tap goes.
-///
-/// **The chevron points RIGHT, not down.** An earlier cut pointed it down and
-/// opened a bottom sheet from it, which is two idioms at once — a disclosure
-/// says "onward", a chevron-down says "a menu drops here". This opens a picker
-/// of people, which is a sheet, so the row is a disclosure.
-struct DevnetSendToRow: View {
-    /// The chosen address, or nil for the resting state.
-    let address: String?
-    /// What to call it — the room's own resolution, never re-derived here.
-    let name: String?
-    /// Up to three known addresses, previewed as faces when nothing is chosen:
-    /// it says "there are people in here" where a plus sign says nothing.
-    let preview: [String]
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: {
-            DSHaptic.selection()
-            onTap()
-        }) {
-            HStack(spacing: DS.Space.s3) {
-                Text(String(localized: "To"))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-
-                if let address {
-                    WalletFace(address: address, size: DS.Face.row, circular: true)
-                    Text(name ?? WalletStore.shortAddress(address))
-                        .dsText(.callout15)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                } else {
-                    if !preview.isEmpty {
-                        HStack(spacing: -9) {
-                            ForEach(preview.prefix(3), id: \.self) { candidate in
-                                WalletFace(address: candidate, size: DS.Face.row, circular: true)
-                                    // The knockout is the CARD's own colour, so
-                                    // overlapping faces read as a stack rather
-                                    // than as one smudged shape. Ink since §542.
-                                    .overlay(Circle().strokeBorder(DS.surfaceSheet, lineWidth: 2))
-                            }
-                        }
-                    }
-                    Text(String(localized: "Choose who"))
-                        .dsText(.callout15)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
-
-                Spacer(minLength: DS.Space.s2)
-                Image(systemName: "chevron.right")
-                    .accessibilityHidden(true)
-                    .dsGlyph(12, weight: .semibold)
-                    .foregroundStyle(DS.textTertiary)
-            }
-            .frame(minHeight: DS.Hit.min)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .dsHover()
-    }
-}
-
-// MARK: - The picker
-
-/// Every address this devnet already knows, as faces you tap — plus Paste,
-/// which is the last cell rather than a control of its own.
-///
-/// A TRAY, deliberately, where the asset menu is not: this is a list of PEOPLE
-/// and can be any length, which is what a sheet is for.
-struct DevnetSendPicker: View {
-    let title: String
-    /// Address → display name, in the room's own order.
-    let candidates: [(address: String, name: String?)]
-    let onPick: (String) -> Void
-
-    @Environment(\.dismiss) private var dismiss
-
-    private var columns: [GridItem] {
-        [GridItem(.adaptive(minimum: 92), spacing: DS.Space.s4)]
-    }
-
-    var body: some View {
-        DSTray(title: title, height: trayHeight, ink: true,
-               detents: [.height(trayHeight), .large]) {
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: DS.Space.s4) {
-                    ForEach(candidates, id: \.address) { candidate in
-                        cell(candidate.address, candidate.name)
-                    }
-                    pasteCell
-                }
-                .padding(.bottom, DS.Space.s4)
-            }
-            .scrollIndicators(.hidden)
-        }
-    }
-
-    /// Two rows of faces plus the tray's own chrome, floored so a devnet with
-    /// one known address still opens as a tray rather than a sliver.
-    private var trayHeight: CGFloat {
-        let rows = max(1, Int(ceil(Double(candidates.count + 1) / 3.0)))
-        return min(220 + CGFloat(min(rows, 3)) * 104, 620)
-    }
-
-    private func cell(_ address: String, _ name: String?) -> some View {
-        Button {
-            DSHaptic.tap()
-            onPick(address)
-            dismiss()
-        } label: {
-            VStack(spacing: DS.Space.s2) {
-                WalletFace(address: address, size: DS.Face.shelf, circular: true)
-                // §483: with one uniform mark the rail MUST caption its faces,
-                // or six accounts are six identical silhouettes.
-                Text(name ?? WalletStore.shortAddress(address))
-                    .dsText(.label12)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PressSpring())
-        .dsHover()
-    }
-
-    /// Offered ONLY when the pasteboard really holds text — `hasStrings` asks
-    /// the system without bringing anything into this process, so it raises no
-    /// paste banner and reads nothing. A cell that pastes nothing is the dead
-    /// control §83 bans.
-    @ViewBuilder
-    private var pasteCell: some View {
-        if UIPasteboard.general.hasStrings {
-            Button {
-                DSHaptic.tap()
-                let pasted = (UIPasteboard.general.string ?? "")
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                if !pasted.isEmpty { onPick(pasted) }
-                dismiss()
-            } label: {
-                VStack(spacing: DS.Space.s2) {
-                    ZStack {
-                        Circle().fill(DS.fillFaint)
-                            .frame(width: DS.Face.shelf, height: DS.Face.shelf)
-                        Image(systemName: "doc.on.clipboard")
-                            .accessibilityHidden(true)
-                            .dsGlyph(20, weight: .regular)
-                            .foregroundStyle(DS.textSecondary)
-                    }
-                    Text(String(localized: "Paste"))
-                        .dsText(.label12)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(PressSpring())
-            .dsHover()
-        }
     }
 }

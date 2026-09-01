@@ -52,6 +52,35 @@ SMALLEST_MEASURED = ("iPhone SE", 667, 33)
 #   glass, an under-stated one makes the budget a lie.
 VERB_LINE = 48
 
+# **THE AMOUNT SCREEN'S OWN BUDGET (prd §548).** The panel's sum above governs
+# the ROOM; this governs the SHEET, and it exists because the Frames devnet
+# draws a plan strip there — the only thing on that screen saying the
+# transaction has parts.
+#
+# The screen is a plain `VStack` with NO `ScrollView`, so anything that does not
+# fit pushes the commit button off the bottom, drawn correctly and invisible.
+# That is the panel bug one surface over, which is what this file was written
+# for.
+#
+# Terms measured on an 844pt phone at sheet-top 124 (§553), so 720 of sheet:
+AMOUNT_SCREEN_FIXED = (
+    27    # grabber + top padding
+    + 44  # back row
+    + 76  # face at DS.Face.profile
+    + 40  # name + gap
+    + 92  # figure line
+    + 32  # subline row
+    + 232 # keypad, 4 x 58
+    + 66  # commit + gap
+    + 15  # bottom padding
+)
+# **THE FLOOR IS THE SMALLEST PHONE THE APP DEPLOYS TO, not the one it was
+# designed on.** iOS 18 still runs on a 667pt iPhone SE, where the sheet is
+# ~543pt — and slack that exists at 844 is gone by 736. A strip sized against
+# the big phone is one that silently disappears on the small one, which is the
+# same failure as a card that overflows: it renders perfectly and is not there.
+SHEET_ON_SMALLEST = 667 - 124
+
 
 def strip_comments(text: str) -> str:
     """Negative checks read a COMMENT-STRIPPED copy.
@@ -107,6 +136,21 @@ def checks(console: str, hegota: str, vibenet: str, feed: str):
                 "the split panel needs %dpt of a %dpt room (%dpt a tile) — the second verb "
                 "falls off the bottom of the screen, drawn correctly and invisible"
                 % (total, ROOM_ALLOWANCE, tile))
+
+    # 1b. THE PLAN STRIP STEPS ASIDE RATHER THAN RESERVING SPACE (prd §548).
+    #     The amount screen is a plain `VStack` with NO `ScrollView`, so a
+    #     reserved height pushes the commit button off the bottom — drawn
+    #     correctly and invisible, the panel bug one surface over.
+    #
+    #     The arithmetic was tried first and refused: using §553's own measured
+    #     terms the screen has NEGATIVE slack by 736pt before any strip exists,
+    #     and whether that is real depends on how the sheet's top inset scales,
+    #     which was measured on an 844 and is not knowable from a static check.
+    #     So this asserts the MECHANISM instead of a number it cannot verify.
+    if "DevnetSendPlanStrip(" in console and "ViewThatFits" not in console:
+        out.append(
+            "the plan strip no longer steps aside — on a screen with no ScrollView a "
+            "reserved height pushes the commit button off the bottom")
 
     # 2. THE VERB'S RUNG, asserted APART from the sum. A panel that fits because
     #    its verbs shrank has not been fixed — the 64pt IS the design, and it is

@@ -42873,3 +42873,122 @@ with both verbs on screen, the picker, the amount screen, the keypad's decimal
 repair (`.` → `0.`), and the commit arming as "Send 0.25 ETH". **Unverified: the
 send itself, the faucet claim and the pour** — all three need a funded account
 on a live devnet, which this host does not have.
+
+## §548 third follow-up — the room exists, and the strip that refused to assert a number it could not verify (user: "the room doesn't exist yet? what do we need to continue please do", then "i'm very curious how the send sheet works", 2026-09-01)
+
+`FramesRoom`, `FramesRoomSource`, `FramesRoomCard`, the `FeedScreen` branch,
+`LiveRoomSources` membership, `FramesSection: DSSectionScope`, and
+`FramesSendCard` rewritten to §553's two-tile shape. Measured before starting:
+`FeedScreen` referenced this seat **zero** times against Hegotá's 70, so the
+catalog seat and the connect screen worked and the ROOM was an empty feed.
+
+**THREE BLACK-SCREEN TRAPS, INHERITED RATHER THAN REDISCOVERED.** A seat that
+lands no `Thing` has no rows, so `FeedScreen`'s `if/else if` falls through BOTH
+arms and renders nothing — Hegotá reached a device black four times before its
+causes were written down, and all three apply here unchanged: a nil head is a
+black screen rather than a quiet room, so `head` returns nil only when there is
+genuinely nothing to watch; the demo installs accounts without watching
+anything, so `watching` takes the larger of the watch list, the account count,
+this phone's own key and a demo floor of 1 — which also closes a
+chicken-and-egg, since the fixture is installed by the card's own task and the
+card only mounts once the head exists; and `identity` must not ride the corpus
+revision, because this seat lands no row so the revision never moves and a head
+composed once while empty would be memoised forever. `LiveRoomSources` carries
+the source in `all` and deliberately NOT in `venues` — that narrower set draws
+`PredictionRoomBook`, and putting Hegotá in the wrong one is why a device report
+read "when i click on hegota it is showing me prediction markets".
+
+**THE ROW SAYS WHAT THE TRANSACTION DID, NOT WHETHER IT SUCCEEDED.** §548's
+second follow-up measured that a transaction reporting `status: 0x0` can still
+have moved money and a frame reporting `0x1` can have been rolled back. So
+`FramesMoveRow` reads EFFECTS and says **"Failed, but value moved"** when the
+two disagree. Drawing it as "Failed" lies about the money and "Sent" lies about
+the outcome; this is the whole reason the seat draws frames rather than
+outcomes, and it is now on screen rather than only in a doc comment.
+
+### The plan strip, and a budget that was refused
+
+The send sheet is §553's, shared. What this room adds is the one thing neither
+neighbour can say: a send here is not one act. `DevnetSendSheet` gained an
+optional `plan: (destination, amount) -> [DevnetSendStep]` — **data, not a
+`@ViewBuilder`**, because the strip must be computed from state the sheet owns,
+so the caller cannot build the view, and a builder slot would mean a generic
+parameter on a twelve-property struct plus an inference break at both existing
+call sites. It renders `FramesSend.plan(…)`, the object that gets signed, so
+preview and transaction cannot disagree.
+
+**IT WAS BUILT WITH A FIXED HEIGHT AND A TERM IN THE AUDIT'S SUM, AND THAT WAS
+WRONG.** §553's author suggested exactly that, reasonably: slack is not a
+budget, it shrinks first, so reserve the space. Extending §553's own stated
+terms down the device range said the amount screen has negative slack by 736pt
+**before any strip exists**, on a screen that is a plain `VStack` with no
+`ScrollView` — so anything that does not fit pushes the commit button off the
+bottom.
+
+**THOSE FIGURES TURNED OUT TO BE UNRELIABLE, AND THE CONCLUSION SURVIVED
+ANYWAY** — which is the part worth keeping. The model was `deviceHeight − 124`
+and it was flagged as unverified when it went back to §553's author rather than
+asserted at them. It was right to flag: the 124 came from that author's
+MOCKUP, not from the app, and `DevnetSendSheet` sets no detents and draws no
+grabber, so the sheet's top is whatever the system gives and had never been
+measured. **The arithmetic above should not be quoted.**
+
+What was real was found by building an iPhone SE simulator and measuring the
+render: the Send tile spans y 502–634 of a 667pt screen, leaving **33pt**, so
+the Top up tile sits entirely below the fold and the room scrolls. That is the
+PANEL on Home, one surface further up than either session was looking, and
+before any sheet is involved. §552's ruling stands — the fix for a small phone
+is smaller chrome or a different surface, never a shorter verb — so nothing
+shrank; the panel is in a `List` and Top up stays reachable by scrolling, the
+degradation §552 already stated for itself.
+
+So the strip asserts no number at all: it sits in a `ViewThatFits(in:
+.vertical)` and steps aside where there is no room, correct on every phone
+without anyone knowing the geometry. **A budget nobody can verify is worse than
+no budget** — and on a screen with no `ScrollView`, whose allowance shrinks
+one-for-one with the device, a reserved height is the wrong instrument
+entirely: it converts *the strip is missing* into *the commit button is
+missing*, which is strictly worse. The audit asserts the MECHANISM (strip
+present ⇒ `ViewThatFits` present) rather than arithmetic it cannot verify.
+
+That is honest here for one reason, and it does not generalise: the strip is an
+EXPLANATION and not a safety control — the transaction is identical without it.
+A control would have had to shrink the screen, and then the geometry would have
+to be settled first.
+
+**THE STANDING LESSON, and it is §553's author's words: a measurement is a
+measurement OF SOMETHING, and dropping the "of what" turns it into a claim.**
+§552 measured its chrome at 956 and said so; §553 measured at 844 and did not,
+and the missing four characters are the whole difference between a figure and
+an assertion about every phone. `ROOM_ALLOWANCE` is documented as a 390×844
+number now, with the SE measurement beside it, and the audit's success line
+prints both so "244 of 304" cannot be read as a claim about every device.
+**This room inherits the same ceiling**, so any claim about fit here names the
+device in the same breath or is not made.
+
+**Retired with the migration:** `DevnetSendFigure`, `DevnetSendKeypad`,
+`DevnetSendToRow`, `DevnetSendPicker` and `DevnetAmountInput`'s
+`append`/`delete`/`display` grammar, all at zero callers once Home stopped
+holding a form. §553's author carried them forward rather than rewriting
+another session's file, which was the right call and is why nothing broke in
+between.
+
+### The ledger audit enumerated ordinals, and ran out
+
+Writing this entry failed the build: `prd-index-audit`'s `SUB_ENTRY` regex
+listed `amendment|follow-up|second follow-up` as three literal spellings, knew
+nothing of a **third** follow-up, and so read a correctly-named sub-entry as a
+SECOND DEFINITION of §548. The same shape had already cost a "§548 second
+amendment" earlier the same day.
+
+**Enumerating ordinals one at a time is a check that breaks on its own
+success**: any ledger thread kept going long enough reaches the end of the
+list, and the failure then names a collision that does not exist — sending the
+reader to look for a second session that was never there, which is the one
+thing this audit exists to make findable. The ordinal is a PREFIX now, matched
+generically, so a tenth follow-up costs nothing.
+
+**UNSEEN ON A DEVICE.** Both platforms compile, 31 audits and 34 harness
+mutations are green, and no screen in this room has been looked at — the tile
+proportions, the figure's per-scope readings and the strip's placement are all
+reasoned from measured constants and none has been rendered.

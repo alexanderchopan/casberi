@@ -144,6 +144,13 @@ final class ShellChrome {
     var hegotaSections: [HegotaSection] = []
     var hegotaScope: String?
 
+    /// The Frames devnet room's scope, held on the SHELL rather than the card
+    /// for `hegotaSection`'s reason one chain over: the figure, the rail and
+    /// the switcher are three sections of the room rather than children of one
+    /// card, and three sections cannot share a card's `@State`.
+    var framesSection: FramesSection?
+    var framesSections: [FramesSection] = []
+
     var vibenetSection: VibenetSection?
 
     /// Which scopes the vibenet room currently HAS something for. The shell

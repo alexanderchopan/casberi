@@ -479,6 +479,9 @@ struct FeedScreen: View {
         /// List resolves to the same presenting controller as this one and
         /// half-opens before closing again.
         case hegotaSend
+        /// The Frames devnet's send, routed here for `hegotaSend`'s reason: a
+        /// `.sheet` inside a List row half-opens and closes (§548).
+        case framesSend
         /// Carries the sending account, which only `signableVibenetAccount()`
         /// can resolve — the sheet must never re-derive it and disagree.
         case vibenetSend(Data)
@@ -515,6 +518,7 @@ struct FeedScreen: View {
                 "vibenetKey:\(VibenetKeySeenDiff.keyID(address: item.address, actorId: actor.actorId))"
             case .vibenetCreate: "vibenetCreate"
             case .hegotaSend: "hegotaSend"
+            case .framesSend: "framesSend"
             case .vibenetSend(let a): "vibenetSend:\(VibenetTransaction.hex(a))"
             case .vibenetAuthorize(let account, _, _, let editing):
                 "vibenetAuthorize:\(VibenetTransaction.hex(account)):\(editing?.actorId ?? "new")"
@@ -674,6 +678,61 @@ struct FeedScreen: View {
                   $0.address.caseInsensitiveCompare(mine) == .orderedSame
               }), account.reached, let wei = account.balanceWei else { return nil }
         return String(localized: "\(HegotaFormat.crown(wei)) available")
+    }
+
+    private var framesSendCandidates: [(address: String, name: String?)] {
+        let me = FramesKey.address()
+        return FramesWatch.shared.addresses
+            .filter { me == nil || $0.caseInsensitiveCompare(me!) != .orderedSame }
+            .map { ($0, FramesWatch.shared.name(for: $0)) }
+    }
+
+    /// What the sending account holds, off the last sweep — never a live read,
+    /// so a keystroke never spends a request. Nil when the sweep could not
+    /// reach the chain: a failed read and a real zero must not look alike
+    /// (§83), so the line is absent rather than claiming nothing is held.
+    private var framesHeldLine: String? {
+        guard let mine = FramesKey.address(),
+              let account = FramesLiveState.shared.accounts.first(where: {
+                  $0.address.caseInsensitiveCompare(mine) == .orderedSame
+              }), account.reached else { return nil }
+        return FramesMoney.balanceLine(weiHex: account.balanceWeiHex)
+            .map { String(localized: "\($0) available") }
+    }
+
+    private func sendFrames(to: String, amount: String) async -> String? {
+        guard !DemoMode.isActive else {
+            return String(localized: "Nothing is sent in the demo — this is where your own key would sign it.")
+        }
+        guard let target = RLP.data(fromHex: to),
+              let valueWei = DevnetSendParse.weiData(from: amount),
+              let address = FramesKey.address() else {
+            return String(localized: "Couldn't send.")
+        }
+        do {
+            // **The nonce is READ, never taken from the snapshot.** A send a
+            // moment after another one is exactly when the cached figure is
+            // stale, and `nonce too low` is a refusal nobody can act on.
+            guard let nonce = await FramesSend.currentNonce(for: address) else {
+                return String(localized: "Couldn't reach the chain to read this account's nonce.")
+            }
+            _ = try await FramesSend.sendValue(to: target, valueWei: valueWei, nonce: nonce)
+            await FramesLiveState.shared.refresh()
+            return nil
+        } catch let failure as FramesSend.Failure {
+            switch failure {
+            case .noKey:            return String(localized: "There's no account on this phone yet.")
+            case .signingRefused:   return String(localized: "The signature was refused.")
+            case .chainUnreachable: return String(localized: "Couldn't reach the chain — nothing was sent.")
+            case .prefixTooLarge:   return String(localized: "The verify step asks for more gas than this chain allows.")
+            // The node's OWN words (§530): a refusal with no reason cannot be
+            // acted on, and on a send that is the worst place for it.
+            case .broadcastRefused(let why): return String(localized: "The network refused it: \(why)")
+            case .faucet(let verdict): return verdict.sentence
+            }
+        } catch {
+            return String(localized: "Couldn't send.")
+        }
     }
 
     private var vibenetSendCandidates: [(address: String, name: String?)] {
@@ -3602,7 +3661,25 @@ struct FeedScreen: View {
                 isValidAddress: DevnetSendParse.isValidAddress,
                 isValidAmount: { DevnetSendParse.weiData(from: $0) != nil },
                 perform: sendHegota)
-        case .vibenetSend(let account):
+                case .framesSend:
+            DevnetSendSheet(
+                venue: String(localized: "Frames"),
+                tint: DS.tint,
+                unit: String(localized: "test ETH"),
+                candidates: framesSendCandidates,
+                heldLine: framesHeldLine,
+                // **NO MAX**, Hegotá's rule and this chain's too: the sender
+                // pays its own gas, so an amount equal to the whole balance
+                // cannot pay for itself and is a guaranteed failure — the dead
+                // control §83 bans wearing a convenience's clothing.
+                maxAmount: nil,
+                isValidAddress: DevnetSendParse.isValidAddress,
+                isValidAmount: { DevnetSendParse.weiData(from: $0) != nil },
+                perform: sendFrames,
+                // The one thing neither neighbour can say — see
+                // `FramesSendPlanSteps`.
+                plan: FramesSendPlanSteps.steps)
+case .vibenetSend(let account):
             DevnetSendSheet(
                 venue: String(localized: "vibenet"),
                 tint: DS.brandHue(for: VibenetIdentity.source) ?? Color.fixed("#0052ff"),
@@ -3729,6 +3806,52 @@ struct FeedScreen: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets())
+        } else if source == FramesIdentity.source, let head = FramesRoomSource.compose() {
+            // **A ROOM WITH LIVE CONTENT AND NO ROWS** — Hegotá's branch, one
+            // chain over, and needed for the same reason: without it the
+            // `if/else if` falls through BOTH arms and renders nothing at all.
+            // This seat lands no `Thing` EVER, so its rows are always zero and
+            // its entire content is this head.
+            let _ = { chrome.framesSections = FramesRoomSource.sections() }()
+            let framesScope = FramesSection.resolve(chrome.framesSection,
+                                                    present: chrome.framesSections)
+            if FramesSection.shows(present: chrome.framesSections) {
+                Section {
+                    DSRoomRailSlab(
+                        showsRail: false,
+                        showsSwitcher: true,
+                        sections: chrome.framesSections,
+                        active: framesScope,
+                        attention: FramesSection.attention(),
+                        onPick: { chrome.framesSection = $0 },
+                        rail: { EmptyView() })
+                        .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                                  bottom: 0, trailing: DSRoomChassis.inset))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+            }
+            Section {
+                FramesRoomFigure(head: head,
+                                 accounts: FramesRoomSource.accounts(),
+                                 section: framesScope)
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                              bottom: 0, trailing: DSRoomChassis.inset))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+            Group {
+                FramesRoomList(head: head,
+                               accounts: FramesRoomSource.accounts(),
+                               section: framesScope,
+                               onSend: { feedSheet = .framesSend },
+                               onOpenMove: { _ in })
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                      bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
+            .task { await FramesLiveState.shared.refresh() }
         } else if source == HegotaIdentity.source, let head = HegotaRoomSource.compose() {
             // **A ROOM WITH LIVE CONTENT AND NO ROWS.** Without this branch the
             // `if/else if` above falls through BOTH arms and renders nothing at

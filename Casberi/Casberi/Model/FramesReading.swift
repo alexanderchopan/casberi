@@ -255,4 +255,16 @@ struct FramesAccount: Identifiable, Equatable {
     var moves: [FramesMove]
 
     var id: String { address.lowercased() }
+
+    /// **Did the chain answer for this address?** Derived rather than stored,
+    /// because the two reads that populate it are the evidence: a balance or a
+    /// nonce came back, so a host answered. An account with neither was asked
+    /// and not answered, which the room must say rather than draw as a zero
+    /// (§515a — an unreached read is not evidence of an empty account).
+    var reached: Bool { balanceWeiHex != nil || nonce != nil }
+
+    /// Frames across every move whose value did NOT land — money the sender
+    /// meant to move and which was rolled back. See `FramesFrameRow
+    /// .valueLanded`: this cannot be read from status.
+    var rolledBack: [FramesFrameRow] { moves.flatMap(\.rolledBack) }
 }
