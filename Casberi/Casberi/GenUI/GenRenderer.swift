@@ -171,6 +171,35 @@ extension EnvironmentValues {
         get { self[GenSpanKey.self] }
         set { self[GenSpanKey.self] = newValue }
     }
+    /// True when this tree is drawing into a room's FIXED figure box
+    /// (`DSRoomSlot`, prd §495) rather than flowing down a feed.
+    ///
+    /// **A room slot clips, so a figure with a spelled height is a figure that
+    /// can be cut in half.** `GenTagMap`'s board is 160pt of cells UNDER its
+    /// own eyebrow, subline and top padding — about 250pt in all — and the
+    /// wallet's holdings scope draws it inside a 210pt box, so the bottom row
+    /// of the treemap was sliced along its lower edge (reported 2026-09-01:
+    /// *"treemap is clipped in wallet"*). This is the same class the chassis's
+    /// own note already records for the NFT quad, arriving by a different
+    /// route: there the box lost 42pt to a reserved headline, here the drawing
+    /// was simply taller than the box all along.
+    ///
+    /// So in a room the map takes the height it is OFFERED instead of the one
+    /// it spells: the cells absorb whatever the header leaves, and the figure
+    /// fits by construction at any Dynamic Type size and through any later
+    /// change to `DSRoomChassis.visualSlot`. It also drops its own top
+    /// padding, which is the chassis's spacing to own — that padding is what
+    /// made the holdings scope the one scope whose first pixel did not land at
+    /// the same y as every other, the exact guarantee `DSRoomSlot` exists to
+    /// give.
+    ///
+    /// Deliberately a Bool and not the box's height: the fill is proposal
+    /// driven, so there is no second copy of `visualSlot` here to drift from
+    /// the first.
+    var genFillsRoomSlot: Bool {
+        get { self[GenFillsRoomSlotKey.self] }
+        set { self[GenFillsRoomSlotKey.self] = newValue }
+    }
 }
 
 /// A module's span on the old board's bento grid: `small` was a 1×1 square,
@@ -183,6 +212,10 @@ enum ModuleSpan: String, CaseIterable, Sendable {
 
 private struct GenSpanKey: EnvironmentKey {
     static let defaultValue: ModuleSpan? = nil
+}
+
+private struct GenFillsRoomSlotKey: EnvironmentKey {
+    static let defaultValue = false
 }
 
 private struct GenMediaCompactKey: EnvironmentKey {
@@ -3121,6 +3154,27 @@ private struct GenVoiceTile: View {
 /// neutral tint wash (token maps first, extended to every map 2026-07-21 —
 /// one hue, opacity by share, never a per-cell palette); identity is the
 /// white label and the token/bridge icons.
+/// Take the height offered, or size to content — a branch, never a
+/// `.frame(maxHeight: flag ? .infinity : nil)`.
+///
+/// The nil form looks equivalent and is not: it inserts a flexible frame on
+/// EVERY surface the view draws on, which for `GenTagMap` is the feed, the
+/// agent's answer column and a room slot. A layout container that reads as a
+/// no-op in a `VStack` does not read as one inside a `List` row or a
+/// `ScrollView`, and this file's whole job is to draw the same doc in three
+/// places identically.
+private struct FillsHeight: ViewModifier {
+    let on: Bool
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if on {
+            content.frame(maxHeight: .infinity, alignment: .top)
+        } else {
+            content
+        }
+    }
+}
+
 private struct GenTagMap: View {
     let id: String
     let el: GenEl
@@ -3142,6 +3196,10 @@ private struct GenTagMap: View {
     /// True inside the agent's own answer column (2026-07-20) — tightens
     /// `boardHeight` below; see `genAgentAnswerContext`'s own doc comment.
     @Environment(\.genAgentAnswerContext) private var inAgentAnswer
+    /// True inside a room's fixed figure box — the map fills what it is
+    /// offered instead of spelling `boardHeight`, and drops its own top
+    /// padding. See `genFillsRoomSlot`'s own doc comment for why.
+    @Environment(\.genFillsRoomSlot) private var fillsRoomSlot
     /// The treemap's cell stagger, its weekend magnitude sweep and the
     /// preview's breathing loop all honour Reduce Motion (2026-08-04, prd
     /// §299). The breathe is the one that mattered most: a `repeatForever`
@@ -3223,6 +3281,28 @@ private struct GenTagMap: View {
         return iconMode == "token" ? 160 : 220
     }
 
+    /// The cells.
+    ///
+    /// **In a room the offered height IS the answer** — whatever the eyebrow
+    /// and subline leave of `DSRoomChassis.visualSlot` — so the map can never
+    /// be taller than the box that clips it. Everywhere else it is the spelled
+    /// `boardHeight`, unchanged: the two branches are the same view with a
+    /// different height, and the `else` is what shipped.
+    @ViewBuilder
+    private var board: some View {
+        if fillsRoomSlot {
+            GeometryReader { geo in
+                cells(width: geo.size.width, height: geo.size.height, animated: true)
+            }
+            .frame(maxHeight: .infinity)
+        } else {
+            GeometryReader { geo in
+                cells(width: geo.size.width, height: boardHeight, animated: true)
+            }
+            .frame(height: boardHeight)
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if !el.str(0).isEmpty {
@@ -3265,14 +3345,19 @@ private struct GenTagMap: View {
                     .padding(.top, DS.Space.s1)
                     .padding(.bottom, DS.Space.s3)
             }
-            GeometryReader { geo in
-                cells(width: geo.size.width, height: boardHeight, animated: true)
-            }
-            .frame(height: boardHeight)
+            board
         }
         // Small tiles are inset by the board's packer; wide/big self-pad.
         .padding(.horizontal, span == .small ? 0 : DS.Space.s4)
-        .padding(.top, DS.Space.s4)
+        // The chassis owns the space above a room figure (`DSRoomSlot`'s
+        // "every scope's first pixel at the same y"), so the map adds none of
+        // its own there; off the slot this is the map's own air, unchanged.
+        .padding(.top, fillsRoomSlot ? 0 : DS.Space.s4)
+        // Take the whole box in a room, so the flexible board below has a
+        // remainder to absorb. Off the slot the stack sizes to its content
+        // exactly as it always has — the branch is what keeps every other
+        // surface byte-identical.
+        .modifier(FillsHeight(on: fillsRoomSlot))
         .onAppear {
             if preview, !error, !reduceMotion {
                 withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) {
@@ -3292,8 +3377,12 @@ private struct GenTagMap: View {
     @ViewBuilder
     private func cells(width: CGFloat, height: CGFloat = 220, animated: Bool) -> some View {
         let gap = DS.Space.s2
-        let uw = (width - gap * 3) / 4
-        let uh = (height - gap * 2) / 3
+        let uw = max(1, (width - gap * 3) / 4)
+        // Floored: in a room the height is offered rather than spelled, and at
+        // the largest accessibility sizes a header can eat the whole box —
+        // a negative unit draws nothing at all, where a floored one draws a
+        // squeezed map the slot's own `.clipped()` then cuts honestly.
+        let uh = max(1, (height - gap * 2) / 3)
         // THE CELLS TRAVEL WHEN THEY ARE THE SAME CELLS (prd §501). Keyed by
         // the cell's own label rather than by slot, so a re-rank of the same
         // subject — the wallet's holdings under one account rather than all of
