@@ -41751,6 +41751,46 @@ trailing newline appended to a `from` pattern makes it match nothing, which
 this harness then reports as STALE — a confusing failure for a mutation that is
 perfectly correct.
 
+### The concurrency fix introduced a FALSE GREEN, and the guard against it could not see it
+
+Found within the hour, on this file, by reconciling two numbers that should
+have been the same: the summary said **"34 mutations"** and the run printed
+**27** `ok catches` lines. The completeness guard above — written for exactly
+this — passed.
+
+**The cause is that `mutate` stopped executing and started RECORDING.** While
+it ran inline, declaration order WAS execution order and appending a mutation
+anywhere was harmless. Recording a spec for a later fan-out introduced a
+FILE-ORDER dependency, and seven `$F4` mutations were appended below the
+fan-out. So the guard ran while `MUTN` was still 27, compared 27 against 27,
+agreed with itself, and passed; the seven were then recorded, never dispatched,
+and the closing line printed `$MUTN` — by then 34. Instrumented, the moment is
+unambiguous: `DEBUG specs=27 results=27 MUTN=27`.
+
+**Seven checks reported as run and not run, under a tick** — including every
+one guarding the effect-vs-status rule, which is the reading in this seat where
+being wrong costs real money. It is the precise failure this harness exists to
+prevent, committed by the harness.
+
+**No care INSIDE the block can catch it, because it is a property of the
+FILE.** So the script reads itself: the last `mutate ` line must precede the
+fan-out, or the run fails naming both line numbers. It is the completeness
+guard the completeness guard needed, and it is mutation-proven by appending a
+mutation below the fan-out and watching it fire.
+
+**It also caught the first attempt at its own fix.** Moving "the fan-out
+through the summary echo" to the end moved a span that CONTAINED the seven
+mutations, so their relative order never changed and nothing was fixed — the
+guard said so rather than going green. Three numbers are reconciled by hand now
+whenever this file changes: mutations DECLARED, mutations REPORTED, and `ok`
+lines PRINTED. They agree at 34.
+
+**The standing lesson, and it generalises past this file:** when a check
+changes from doing the work to SCHEDULING the work, every ordering the old
+shape made safe by construction becomes a new way to be silently incomplete.
+`verify.sh`'s own harness fan-out has the same shape and is worth reading with
+this in mind.
+
 ## §549 — the demo's address book never leaves the device (user: "it has hard coded demo stuff like addresses and wallets that i did not add", then "will this issue affect other users or only affects me?" → "i am not concerned about my mac i am concerned about users", 2026-09-01)
 
 Reported as a Mac install carrying wallets and contacts nobody added. The
