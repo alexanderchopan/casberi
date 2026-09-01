@@ -311,6 +311,45 @@ grep -q 'accessibilityLabel' "$TMP/switcher.nc" \
 grep -qE 'onPick\(venueLabel|onPick\(CategoryFold\.venueLabel' "$TMP/switcher.nc" \
   && { echo "✗ the switcher hands a DISPLAY LABEL back to its caller — \"Wallets\" would land in"; \
        echo "  FeedFilter.source, which no Thing, Shape or deep link answers to (§356)."; exit 1; }
+
+# THE TWO ROWS OF CIRCLES ARE ONE SIZE, AND THE SLOT IS THE TOUCH FLOOR (prd
+# §540, 2026-09-01). Both halves are guarded because both fail INVISIBLY and
+# neither is reachable by `xcodebuild` or a screen sweep.
+#
+# §483 pinned this chip's SEAT to `DS.Face.list` and left the MARK at `row`, so
+# a 26pt mark drew above the rail's full-bleed 36pt silhouettes — matching
+# frames, mismatched ink, which is what "the icons look smaller than the
+# silhouette rail" turned out to be. The mark is sized off the FACE ramp (never
+# `DS.Mark`) because `face-ramp-audit.py` holds circular marks to it, and it must
+# be the SAME rung `FaceScopeRail` draws or the two rows disagree again.
+#
+# The seat is separately load-bearing: it is this chip's whole tap target, it was
+# 36 for its entire life, and it is the only way out of a folded category seat.
+# `accessibility-audit.py` check 3 covers it now (§540 widened it past
+# `Image(systemName:)`), so this guard is belt to that check's braces — worth
+# keeping BOTH, since that audit reads a literal or a named token and a future
+# refactor that hands the size in as a parameter goes silent there while this
+# still names the file.
+grep -q 'BridgeIcon(name: venue, size: DS.Face.list, circular: true)' "$TMP/switcher.nc" \
+  || { echo "✗ the venue switcher's mark is no longer a full-bleed DS.Face.list —"; \
+       echo "  it draws directly above FaceScopeRail's own DS.Face.list faces, so a"; \
+       echo "  smaller mark reads as two rows of circles at two sizes (§540/§483)."; exit 1; }
+grep -q 'frame(width: DS.Hit.min, height: DS.Hit.min)' "$TMP/switcher.nc" \
+  || { echo "✗ the venue switcher's chip no longer claims the DS.Hit.min slot — its whole"; \
+       echo "  footprint IS the tap target, and it shipped under the 44pt floor from"; \
+       echo "  §351 to §540 on the only way out of a folded category seat."; exit 1; }
+# And the annulus that selection lives in cannot be closed by 'tidying' the
+# seat down onto the mark: a full-bleed mark covers a fill drawn behind it, so
+# a seat equal to the mark silently deletes the active state while the control
+# still looks and behaves correctly in every still frame. §540 refused a
+# selection RING for this control (attention is already a ring, and the two
+# would collide on an active-and-broken seat), so the fill is the only cue
+# there is.
+grep -q 'Capsule(style: .continuous).fill(DS.tint.opacity(' "$TMP/switcher.nc" \
+  || { echo "✗ the venue switcher's SELECTION FILL is gone — with the mark full-bleed the"; \
+       echo "  fill reads in the annulus between it and the DS.Hit.min seat, and it is the"; \
+       echo "  only selection cue this control has (§540: a ring would collide with"; \
+       echo "  attention, which is already a dashed ring on the same capsule)."; exit 1; }
 # The scope must live on the shell, or it dies with the room. `MainSurface`
 # gives FeedScreen `.id(filter.source)`, so `@State` here is destroyed on every
 # room change — which is the bug §356 exists to fix.

@@ -36,11 +36,18 @@ import SwiftUI
 /// it still been true the fix would have been THAT PAIR's mark, not every word
 /// coming back.
 ///
-/// The mark is 26pt (`DS.Mark.row`), up from the 20pt badge it wore beside text,
-/// since it is now the chip's entire content; every chip keeps its
-/// `accessibilityLabel` and `dsTooltip` naming the venue, which with the words
-/// gone is the ONLY naming in this control and therefore a harder requirement
-/// than before (guarded in `category-fold-selftest.sh`).
+/// The mark is a full-bleed `DS.Face.list` (36) in a `DS.Hit.min` (44) slot —
+/// the same circle the face rail beneath it draws, and the touch floor as the
+/// chip's own footprint (prd §540; see `chip`, which carries the whole argument
+/// and the two costs). It has been 20 (a badge beside text), then 26 (§358, when
+/// the words went and the mark became the chip's entire content), then 26 inside
+/// a 36pt seat (§483); this doc has been corrected each time rather than left to
+/// contradict the code, per `SourceChips.horizontalStrip`'s own lesson about
+/// what a confidently stale note costs the next session.
+///
+/// Every chip keeps its `accessibilityLabel` and `dsTooltip` naming the venue,
+/// which with the words gone is the ONLY naming in this control and therefore a
+/// harder requirement than before (guarded in `category-fold-selftest.sh`).
 ///
 /// **It centers the active scope on appear**, the `SourceChips` rule: a
 /// selection you cannot see reads as no selection, and with seven scopes the
@@ -151,30 +158,49 @@ struct CategoryVenueSwitcher: View {
             DSHaptic.selection()
             onPick(venue)
         } label: {
-            // `DS.Face.row`, not `DS.Mark.row` — the same 26, but a CIRCULAR
-            // mark is sized off the face ramp (`face-ramp-audit.py` enforces it,
-            // and caught this the first time it was written the other way).
-            // **TWO ROWS OF CIRCLES STACKED SHARE ONE OUTER DIAMETER** (prd
-            // §483, 2026-08-26, user: *"why don't we use the same size circles
-            // for the source rooms and the account avatars, isn't it
-            // disjointed"* — it was).
+            // **THE MARK IS THE CIRCLE, FULL BLEED** (prd §540, 2026-09-01,
+            // user: *"should the source strips icons be larger? … smaller than
+            // the silhouette rail or social avatars"* — they were, and the tap
+            // targets were under the floor besides). This COMPLETES §483 rather
+            // than reversing it.
             //
-            // The `DS.Face` ramp sizes the FACE by what it sits beside, and
-            // says nothing about a mark row sitting directly above a face row —
-            // which is what the wallet room became when the account rail came
-            // down out of the pinned chrome. This chip was a 26pt mark in `s2`
-            // padding, so it presented a **46pt** circle directly above the
-            // rail's **36pt** faces: two adjacent rows of circles, ten points
-            // apart, for no reason a reader could name.
+            // §483 pinned this chip's SEAT to `DS.Face.list` (36) so "two
+            // stacked rows of circles share one outer diameter", fixing a 46pt
+            // circle sitting above the rail's 36pt faces. What it left behind is
+            // that the seat and the MARK are not the same circle: the mark went
+            // on drawing at `row` (26) inside that 36pt seat, while the rail
+            // below draws its faces at a full-bleed 36 — and once §483 also made
+            // those faces solid silhouette discs, the row above was 26pt of ink
+            // against 36pt of ink. Matching diameters that carry different
+            // amounts of ink is the SAME optical-weight finding `DS.Face.rowCircle`
+            // records for the feed's mixed columns, running the other way: the
+            // frame agreed and the eye did not.
             //
-            // The seat is pinned to `DS.Face.list` (36) — the tier every avatar
-            // in the app already wears — and the MARK stays at `row` (26), so
-            // nothing gets harder to read. A frame rather than a smaller
-            // padding, because the number that has to match is the outer one,
-            // and deriving it from padding means it drifts the day the padding
-            // is tuned for something else.
-            BridgeIcon(name: venue, size: DS.Face.row, circular: true)
-                .frame(width: DS.Face.list, height: DS.Face.list)
+            // So the mark takes `DS.Face.list` itself. This is not a new
+            // treatment — it is the exact call `FaceScopeRail.face` already makes
+            // for a person with no avatar (`BridgeIcon(name:size:circular:)` at
+            // `faceSize`), so the two rows are now drawing the same thing at the
+            // same size rather than merely being framed alike. It is also what
+            // `SourceChips` has always done one tier up: a brand mark fills its
+            // chip, because "an icon IS content, and frosting one would only
+            // muddy a mark the person recognizes".
+            //
+            // **The seat becomes `DS.Hit.min` (44), and the two changes are one
+            // change.** The chip's whole slot is its tap target and it was 36 —
+            // under the floor `DS.Hit.min` exists to stop controls drifting
+            // beneath, on a control that is the ONLY way out of a folded seat.
+            // It was invisible to `accessibility-audit.py` check 3 because that
+            // check triggers on `Image(systemName:)` and this button's label is a
+            // brand mark; §540 widens it, so this class cannot ship again.
+            //
+            // Growing the seat is also what KEEPS the cue split below working: a
+            // full-bleed mark covers a fill drawn behind it, and the 4pt annulus
+            // between the 36pt mark and the 44pt seat is where the selection
+            // tint now reads — almost exactly the 5pt it had at 36/26. The fill
+            // did not have to become a ring, which matters, because a ring is
+            // what attention already is (see the overlay).
+            BridgeIcon(name: venue, size: DS.Face.list, circular: true)
+                .frame(width: DS.Hit.min, height: DS.Hit.min)
             .background {
                 ZStack {
                     Capsule(style: .continuous).fill(DS.fillFaint)
@@ -209,7 +235,26 @@ struct CategoryVenueSwitcher: View {
             // from the 2026-07-21 ruling: selection is a FILL in this capsule
             // and a RING up in the strip, so the two cues never compete for the
             // same pixels. The seat you are standing in can be the broken one —
-            // that is in fact the likeliest way to find yourself looking at it.
+            // that is in fact the likeliest way to find yourself looking at it,
+            // since the folded chip's dashed ring is what sent you here.
+            //
+            // **THIS IS WHY §540 GREW THE SEAT INSTEAD OF MAKING SELECTION A
+            // RING.** Going full-bleed hides a fill drawn behind the mark, and
+            // the obvious repair — promote selection to the strip's own solid
+            // tint ring — was proposed and REFUSED on this paragraph: attention
+            // is already a ring, so both cues would land on one 2–3pt band of
+            // pixels and the active-and-broken seat could show only one of them.
+            // Concentric rings were measured on paper and are not available
+            // either: a 36pt mark in a 44pt slot leaves 1.5pt of radius between
+            // a hugging ring and a slot-edge ring, so two 2pt strokes touch. The
+            // fill stays a fill and simply moves outward into the annulus.
+            //
+            // The cost, stated: at rest `DS.fillFaint` is ~3–4% alpha, so the
+            // resting row is bare 36pt marks matching the rail exactly, and only
+            // the ACTIVE chip paints a 44pt tinted halo. That is a state on one
+            // chip, not a second circle size in the resting rhythm — but it is a
+            // 4pt halo where it used to be 5pt, and whether it still reads as
+            // selected is a DEVICE question this pass could not answer.
             .overlay {
                 if broken {
                     Capsule(style: .continuous)

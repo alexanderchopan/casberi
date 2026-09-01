@@ -47,15 +47,26 @@ FOUR CHECKS, all static, none needing a build.
 
   1. AN ICON-ONLY BUTTON IS LABELLED. A `Button` whose label draws an
      `Image(systemName:)` and no words must carry an `accessibilityLabel`.
+     GLYPH BUTTONS ONLY — see the asymmetry argued at its use site, and the
+     third non-check below.
 
   2. A WHOLE-FACE TAP TARGET SAYS SO. `contentShape(...)` + `onTapGesture` must
      be joined by `dsTapCard()`, `dsCardLead(...)`, or an explicit
      trait/element/action. The gesture is a complete control for touch and for a
      pointer and carries nothing for anyone else.
 
-  3. AN ICON-ONLY BUTTON IS HITTABLE. Same buttons as check 1, held to
-     `DS.Hit.min` — via `dsTapTarget()`, an explicit frame at or above the
-     floor, or a named size token that already encodes it.
+  3. AN ICON-ONLY BUTTON IS HITTABLE. Held to `DS.Hit.min` — via
+     `dsTapTarget()`, an explicit frame at or above the floor, or a named size
+     token that already encodes it.
+
+     WIDER THAN CHECK 1 SINCE 2026-09-01 (prd §540): a button whose whole label
+     is a ROUND IDENTITY MARK counts too, not just one drawing an SF Symbol.
+     `CategoryVenueSwitcher`'s chip — the only way out of a folded category seat
+     — shipped a 36pt target and was invisible here for its whole life, because
+     this check was reading a spelling rather than a geometry. The definition of
+     a face is borrowed verbatim from `face-ramp-audit.py` rather than invented;
+     the measurement that chose "circular only" and the two shapes this still
+     cannot see are recorded at `MARK_CALL`.
 
   4. A WORDLESS DRAWING DECLARES A STANCE. A `struct … : View` that draws from
      data (`Path`/`Canvas`/`Chart`, a trim, an extent multiplied by a value)
@@ -201,6 +212,48 @@ NAMED_SIZES = re.compile(
     # ordinary `AddressBookRow`s already covered by the row tiers above.
     r"|doorSide|\.infinity|maxWidth:|DS\.Radius\.widget"
 )
+
+# A ROUND IDENTITY MARK standing as a button's whole label (prd §540,
+# 2026-09-01) — the other way an icon-only button gets built here, and the one
+# check 3 could not see.
+#
+# WHY THIS WIDENING. Check 3's trigger was `Image(systemName:)`, which is one of
+# the two ways this app draws an icon-only button; the other is a brand mark or a
+# face. `CategoryVenueSwitcher`'s chip is the second kind, and it shipped at 36pt
+# — under the floor, on the only way out of a folded category seat — invisible to
+# this audit for its whole life. A geometric check that only looks at SF Symbols
+# is not checking geometry, it is checking a spelling.
+#
+# THE DEFINITION IS BORROWED, NOT INVENTED: `WalletFace` always, plus
+# `BridgeIcon`/`RemoteThumb` when `circular: true` — verbatim `face-ramp-audit.py`'s
+# "WHAT COUNTS AS A FACE". Two audits keeping two ideas of what a face is would
+# drift, and the day they disagree is the day one of them is silently wrong about
+# a control the other is policing.
+#
+# MEASURED BEFORE IT SHIPPED (the check-4 discipline). Widened to any
+# `BridgeIcon`/`WalletFace`/`RemoteThumb` at all it reports 2 findings on a clean
+# tree, of which one is CORRECT CODE — `EmptyFeedPile.tile`, whose size arrives as
+# a parameter (both call sites pass 44 and 52), so a static read sees no literal
+# and reports a button that is already fine. Narrowed to CIRCULAR marks it reports
+# exactly 1, the real one. That narrowing is not merely convenient: a square brand
+# tile is a tile in a grid sized by its grid, which is the same carve-out
+# `DS.Face` and this file's own header already make for chip metrics.
+#
+# ITS CEILING, stated: a SQUARE icon-only mark button is still uncovered, and a
+# mark whose size arrives as a parameter is invisible to check 3 whatever its
+# shape — both fail toward silence, which is the right direction for a lint but
+# means a green run here is not proof that every mark button clears the floor.
+MARK_CALL = re.compile(r"\b(WalletFace|RemoteThumb|BridgeIcon)\s*\((.{0,240}?)\)", re.S)
+
+
+def draws_face(body: str) -> bool:
+    """Does this button's label draw a round identity mark and nothing else?"""
+    for m in MARK_CALL.finditer(body):
+        kind, args = m.group(1), m.group(2)
+        if kind == "WalletFace" or "circular: true" in args:
+            return True
+    return False
+
 
 # What satisfies check 2 — any of these means the tap was declared, not just felt.
 TAP_DECLARED = re.compile(
@@ -353,7 +406,9 @@ def audit_text(path: str, raw: str, floor: int):
 
     for line, body, chain in button_bodies(src):
         whole = body + chain
-        if "Image(systemName:" not in body:
+        glyph = "Image(systemName:" in body
+        face = draws_face(body)
+        if not (glyph or face):
             continue
         if WORDS.search(body):
             continue  # a button with words: labelled and wide by construction
@@ -361,7 +416,25 @@ def audit_text(path: str, raw: str, floor: int):
         if key in KNOWN_EXEMPT:
             continue
 
-        if "accessibilityLabel" not in whole:
+        # CHECK 1 IS GLYPH-ONLY, DELIBERATELY, AND THE ASYMMETRY IS THE POINT
+        # (prd §540). §540 widened check 3 to face buttons because a target is a
+        # target whatever is painted in it — pure geometry, no judgment. The
+        # LABEL half is a judgment, and this file's own header already made it
+        # the other way: "It never demands a label on a decorative mark.
+        # `BridgeIcon`, `KindGlyph`, `CasberiMark` and friends draw identity
+        # beside text that already says the same thing." Widening check 1 too
+        # would overturn a documented ruling as a side effect of a geometry fix,
+        # which is not a thing a lint may do on its own.
+        #
+        # It is NOT a claim that every face button is labelled. Measured the same
+        # day: widening check 1 reports 2 — `VibenetEventCard` and
+        # `VibenetKeySheet`, both `WalletFace` discs that ARE the whole button and
+        # do open something, so both look like real gaps rather than decorative
+        # marks. That is a ruling for whoever owns those sheets, recorded here and
+        # in §540 rather than enforced by a check that was widened for a different
+        # reason. `KNOWN_EXEMPT` is keyed `basename:line` and both are already
+        # above the floor, so neither is silenced by anything below.
+        if glyph and "accessibilityLabel" not in whole:
             found.append(("unlabelled-icon-button", line,
                           "icon-only Button with no accessibilityLabel — "
                           "VoiceOver falls back to the SF Symbol's name"))
@@ -514,6 +587,66 @@ struct B: View {
                 .frame(width: 32, height: 32)
         }
         .accessibilityLabel(Text("Watch"))
+    }
+}
+"""
+
+# The shape §540 was written for: `CategoryVenueSwitcher`'s own chip as it
+# shipped — a round brand mark, no words, a 36pt slot. It carries a LABEL on
+# purpose, so this fixture can only go red on the size check; a fixture that
+# fails two rules at once cannot tell you which one it is testing.
+DIRTY_SMALL_FACE = """
+struct K: View {
+    var body: some View {
+        Button { onPick(venue) } label: {
+            BridgeIcon(name: venue, size: DS.Face.row, circular: true)
+                .frame(width: 36, height: 36)
+        }
+        .accessibilityLabel(venue)
+    }
+}
+"""
+
+CLEAN_FACE = """
+struct L: View {
+    var body: some View {
+        Button { onPick(venue) } label: {
+            BridgeIcon(name: venue, size: DS.Face.list, circular: true)
+                .frame(width: DS.Hit.min, height: DS.Hit.min)
+        }
+        .accessibilityLabel(venue)
+    }
+}
+"""
+
+# THE DISCRIMINATING PAIR, and the reason both halves are here.
+#
+# A SQUARE mark button under the floor must NOT be flagged — that is the
+# narrowing `MARK_CALL` measured its way to, and without this fixture the
+# `circular: true` test could be deleted with every case still green (this is
+# `EmptyFeedPile.tile`, correct code that the unnarrowed check reports).
+CLEAN_SQUARE_MARK = """
+struct M: View {
+    var body: some View {
+        Button { open(name) } label: {
+            BridgeIcon(name: name, size: 20)
+        }
+        .accessibilityLabel(Text(name))
+    }
+}
+"""
+
+# ...and an UNLABELLED round face button above the floor must also stay clean,
+# which pins the deliberate asymmetry at `audit_text`: §540 widened check 3 and
+# left check 1 alone. Delete the `glyph and` guard there and this fixture goes
+# red, which is exactly what it is for — the ruling is enforced, not remembered.
+CLEAN_UNLABELLED_FACE = """
+struct N: View {
+    var body: some View {
+        Button { onAccount(address) } label: {
+            WalletFace(address: address, size: DS.Face.shelf, circular: true)
+        }
+        .buttonStyle(.plain)
     }
 }
 """
@@ -749,6 +882,12 @@ def self_test() -> bool:
     cases = [
         ("dirty: unlabelled icon button", DIRTY_UNLABELLED, {"unlabelled-icon-button"}),
         ("dirty: sub-floor target", DIRTY_SMALL, {"small-tap-target"}),
+        ("dirty: sub-floor ROUND MARK target (§540)", DIRTY_SMALL_FACE,
+         {"small-tap-target"}),
+        ("clean: the same mark chip at the floor", CLEAN_FACE, set()),
+        ("clean: a SQUARE mark button under the floor", CLEAN_SQUARE_MARK, set()),
+        ("clean: an unlabelled round face button (check 1 stays glyph-only)",
+         CLEAN_UNLABELLED_FACE, set()),
         ("dirty: untraited whole-face tap", DIRTY_TAP, {"untraited-tap-target"}),
         ("dirty: card lead in a DIFFERENT struct", DIRTY_LEAD_ELSEWHERE, {"untraited-tap-target"}),
         ("clean: all three shapes done right", CLEAN, set()),

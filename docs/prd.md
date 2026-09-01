@@ -40656,3 +40656,141 @@ in the file so the refusal stays checkable rather than remembered.
 
 Both Hegotá harnesses green (`hegota-selftest` 45 mutations and 19 drift guards,
 `hegota-tx-selftest` 11 mutations). UNSEEN on a device, for §538's reason.
+
+## 540. The venue switcher's marks become the circle they sit in, and its chips reach the touch floor (user: "should the source strips icons be larger? are they too small tap targets and also smaller than the silhouette rail or social avatars", then "I feel like we have all these things different sizes on the page and it just makes it confusing", 2026-09-01)
+
+Asked whether the source strip's icons should be bigger. **The strip itself was
+fine** — its mark chips draw a 46pt icon in a 56pt slot, larger than any face in
+the app. The row the report is actually about is `CategoryVenueSwitcher`, the
+seats inside a folded category room, which sits directly above the wallet and
+social face rails. There both halves of the observation are true, and they turn
+out to be one fix.
+
+### THE SIZE: A MATCHING FRAME IS NOT A MATCHING CIRCLE
+
+§483 already pinned this chip's SEAT to `DS.Face.list` (36) on the user's own
+ruling — *"why don't we use the same size circles for the source rooms and the
+account avatars, isn't it disjointed"* — replacing a 46pt circle that sat ten
+points above the rail's 36pt faces. **What it left is that the seat and the MARK
+are not the same circle.** The mark went on drawing at `DS.Face.row` (26) inside
+that 36pt seat, against a rail drawing its faces full-bleed at 36. Then §483's
+own second half made those faces SOLID silhouette discs, so the comparison became
+26pt of ink against 36pt of ink at matching outer diameters.
+
+That is the optical-weight finding `DS.Face.rowCircle` already records for the
+feed's mixed columns, running the other way: there a circle at 26 covers ~79% of
+the squircle beside it and reads light, so the circle is drawn at 28 in a 26pt
+seat. Here the frames agreed and the eye did not. **The `DS.Face` ramp sizes a
+face by what it sits BESIDE and still says nothing about a mark row stacked ABOVE
+a face row** — the same gap §483 named and closed one layer out.
+
+So the mark takes `DS.Face.list` itself. **This is not a new treatment**: it is
+the exact call `FaceScopeRail.face` already makes for a person with no avatar,
+and it is what `SourceChips` has always done one tier up, where a brand mark
+fills its chip because *"an icon IS content, and frosting one would only muddy a
+mark the person recognizes"*. The two rows now draw the same thing at the same
+size rather than being framed alike.
+
+### THE SECOND QUESTION ANSWERED ITSELF: THE CHIPS WERE UNDER THE FLOOR
+
+The chip's whole slot is its tap target and it was **36pt**, under `DS.Hit.min`
+(44) — the token whose own doc exists because "ten controls shipped under it
+anyway" and every one is invisible as a defect. It had been under the floor since
+§351, on the only way out of a folded category seat, and **no check could see
+it**: `accessibility-audit.py` check 3 triggers on `Image(systemName:)`, and this
+button's label is a brand mark. A geometric check that only looks at SF Symbols
+is checking a spelling, not a geometry.
+
+The seat is `DS.Hit.min` now, and the two changes are one change rather than two
+that happened to land together — see below.
+
+### THE CUE SPLIT IS WHY THE SEAT GREW INSTEAD OF SELECTION BECOMING A RING
+
+A full-bleed mark covers a fill drawn behind it, so the first proposal was to
+promote selection to the strip's own solid tint ring. **Refused, on this file's
+own paragraph.** Selection here is a FILL and attention is a RING precisely so
+the two never compete: *"the seat you are standing in can be the broken one —
+that is in fact the likeliest way to find yourself looking at it"*, since the
+folded chip's dashed ring is what sent you there. Two rings means the
+active-and-broken seat can show only one of its two states. Concentric rings are
+not available either: a 36pt mark in a 44pt slot leaves 1.5pt of radius between a
+hugging ring and a slot-edge ring, so two 2pt strokes touch.
+
+Growing the seat to the touch floor is what keeps the fill working — the 4pt
+annulus between a 36pt mark and a 44pt seat is where the tint now reads, against
+the 5pt it had at 36/26. **The accessibility fix and the design fix are the same
+line**, which is the happiest kind of coincidence and also the reason neither was
+found on its own.
+
+Two costs, stated rather than hidden. At rest `DS.fillFaint` is ~3–4% alpha, so
+the resting row is bare 36pt marks matching the rail and only the ACTIVE chip
+paints a 44pt tinted halo — a state on one chip, not a second circle size in the
+resting rhythm. And seven seats at 44 with a 2pt gap is 328pt inside the 361pt a
+393pt phone leaves after the switcher's own `s4` margins, so §358's "all seven
+Markets seats fit one row" survives, with less room than before; an eighth
+scrolls, which the control has always supported.
+
+### WHAT WAS NOT DONE, AND WHY
+
+**The ramp is not flattened.** The follow-up — *"all these things different sizes
+and it just makes it confusing"* — is right about the symptom and the cure is to
+FINISH the ramp, not collapse it. `DS.Face` states why one universal size cannot
+work: a face beside 13pt text and a face that is itself a tap target cannot be
+one number. The page's four tiers (chrome 56/46, room controls 36, row identity
+26/28, inline badges 20) each have a nameable job and legible jumps. Every
+sizing complaint this repo has recorded — `TokenRow`'s 36-beside-38, a setup
+header's 60-against-54, §483's 46-above-36 — is SAME-TIER DRIFT, not tier count.
+This was the last such drift inside the 36 tier, and it was the one visibly
+stacked against its own peer.
+
+**Check 1 was NOT widened with check 3, and the asymmetry is enforced by a
+fixture.** A target is a target whatever is painted in it — pure geometry, no
+judgment — but whether an icon-only button needs a LABEL is a judgment the audit
+already made the other way ("it never demands a label on a decorative mark:
+`BridgeIcon`, `KindGlyph`, `CasberiMark` … draw identity beside text that already
+says the same thing"). Widening it as a side effect of a geometry fix would
+overturn a documented ruling, which is not a thing a lint may do on its own.
+
+**It is not a claim that every face button is labelled.** Measured the same day:
+widening check 1 reports two — `VibenetEventCard.swift:96` and
+`VibenetKeySheet.swift:147`, both `WalletFace` discs that ARE the whole button and
+both of which open something, so both look like real gaps rather than decorative
+marks. **Recorded here as an open question for whoever owns those sheets, not
+fixed**: neither is under the floor (`DS.Face.shelf` is 56), so nothing is
+silenced, and the call is whether an identicon door announces itself.
+
+### THE CHECKS
+
+`accessibility-audit.py` check 3 now counts a button whose whole label is a ROUND
+IDENTITY MARK. **The definition is borrowed verbatim from `face-ramp-audit.py`** —
+`WalletFace` always, `BridgeIcon`/`RemoteThumb` when `circular: true` — rather
+than invented, because two audits with two ideas of what a face is drift, and the
+day they disagree one of them is silently wrong about a control the other is
+policing.
+
+**The narrowing to CIRCULAR marks is measured, not tidy.** Widened to any mark at
+all it reports 2 findings on a clean tree of which one is CORRECT CODE —
+`EmptyFeedPile.tile`, whose size arrives as a parameter (both call sites pass 44
+and 52), so a static read sees no literal and reports a button that is already
+fine. Circular-only reports exactly 1, the real one. Its ceiling is stated in the
+source: a SQUARE icon-only mark button is still uncovered, and a mark sized by a
+parameter is invisible whatever its shape — both fail toward silence, which is the
+right direction for a lint but means a green run is not proof every mark button
+clears the floor.
+
+Mutation-proven against the real tree three ways rather than against fixtures
+alone: reverting the switcher to its shipped 36pt seat is caught by name;
+deleting the `circular: true` narrowing brings the measured false positive back;
+deleting check 1's `glyph and` guard reports exactly the two Vibenet discs above.
+Four fixtures added, two of them discriminating — a square mark under the floor
+and an unlabelled round face above it must both stay CLEAN, or the narrowing and
+the asymmetry could each be deleted with every case still green.
+`category-fold-selftest.sh` carries three drift guards as belt to that audit's
+braces (the mark's rung, the seat's, and the selection fill, whose deletion would
+be invisible in every still frame).
+
+**UNSEEN ON A DEVICE.** No simulator or Mac renderer was available in the session
+that made this change — there is no Swift toolchain on the host, so nothing here
+has been compiled and `verify.sh` has not run. Every static audit passes. The two
+things that need eyes: whether a 4pt tint halo still reads as selected, and
+whether seven 44pt seats in one bar read as crowded rather than as the fix.
