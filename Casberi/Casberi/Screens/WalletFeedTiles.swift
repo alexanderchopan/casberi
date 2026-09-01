@@ -401,7 +401,17 @@ struct WalletBalanceHeadline: View {
                         .monospacedDigit()
                         .contentTransition(reduceMotion ? .identity
                                            : .numericText(value: displayed ?? 0))
-                        .lineLimit(1).minimumScaleFactor(0.6)
+                        // **0.9, not 0.6 (prd §548c).** §491 set vibenet's
+                        // floor here after its crown rendered at about 55% of
+                        // this one; the cause was named as the floor and then
+                        // fixed on one side only, leaving THIS crown free to
+                        // shrink to 38pt on a long total while declaring the
+                        // same rung. `WalletValue.money` abbreviates ($31K),
+                        // so the string is short by construction and the tight
+                        // floor costs nothing — and a crown that silently
+                        // renders two rungs down is not the crown rung,
+                        // whatever the source says.
+                        .lineLimit(1).minimumScaleFactor(0.9)
                         // HOLD TO PEEK (prd §501) — nothing at all unless
                         // balances are hidden; see `HoldToPeek`.
                         .holdToPeek()

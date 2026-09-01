@@ -41697,3 +41697,68 @@ UNBUILT AND UNSEEN, same as §548 and §548a: authored on Linux with no Xcode.
 Every static audit passes. The demo is the thing to look at first on a fresh
 simulator install — vibenet's Home should now open on the console, with the
 three seeded accounts in the recipient picker.
+
+## 548c. One crown rung across Wallet, vibenet and Hegotá (user: "wallet, hegota, and vibenet have different size numbers on their home crown slot. which size works best for us? pick one and make it consistent", 2026-09-01)
+
+`DSRoomChassis`'s own header says these three rooms are the same machine, and
+each opens on a balance. Measured, the balance was drawn **two rungs apart**:
+
+| room | crown | why |
+|---|---|---|
+| Wallet | `price48` (64pt) | drawn in its own figure (`WalletFeedTiles`) |
+| vibenet | `price48` (64pt) | drawn in its own figure (`balanceHero`) |
+| Hegotá | **`stat24` (24pt)** | passed to the chassis as a HEADLINE |
+
+**The ramp settles it without anybody needing a taste.** §532 defines 64 as the
+crown rung — *"money, one per surface (§506)"* — and `stat24` is the tier
+Hegotá's other scopes use for "12 steps" and "3 transactions". Its balance had
+been quietly filed with the labels. Two of three rooms were already right, so
+the pick is `price48` and the work is in the third.
+
+**`DSRoomSlot`'s doc already carried the rule** — *"reserve the row only where
+the CHASSIS draws the headline… both rooms' Home scopes lead with the crown, a
+`price48` figure that occupies exactly the role a headline plays"*. It said
+"both rooms" while there were three. So Hegotá's Home and Sponsors scopes now
+pass `reservesHeadline: false` and `crownFigure` draws the crown itself, which
+is vibenet's arrangement exactly rather than a new one.
+
+**THE FIGURE'S SUM IS WRITTEN DOWN, because the slot is a hard 210pt with
+`.clipped()`** — the crown (~76) + the delta line (~14) + the curve (120) ≈ 210,
+at `spacing: 0` rather than the `s2` it carried, which is 10pt this figure no
+longer has. Re-do that sum before adding a line: vibenet's own comment records
+that a third line pushed its chart off the bottom, clipped, with nothing to say
+so.
+
+**AND A RUNG THAT SILENTLY SHRINKS IS NOT THAT RUNG.** §491 already found this
+once — both rooms declared `price48` and one rendered at ~55% of the other,
+because a permissive `minimumScaleFactor` let a longer string fall far below the
+rung it declares — and then fixed it on **vibenet's side alone**. Wallet's crown
+was left at 0.6, free to render at 38pt while claiming 64, waiting for a long
+enough total. All three are at 0.9 now; `WalletValue.money` and
+`HegotaFormat.crown` both abbreviate ("$31K", "1B ETH"), so the tight floor
+costs nothing.
+
+**Mechanical, as `scripts/room-crown-audit.py`.** Three checks: every room draws
+a crown at the crown rung, every room DECIDES who owns the headline row (a room
+that never names `reservesHeadline` takes the default and hands its crown to
+`stat24`), and no crown may allow a floor under 0.9. It is a script because a
+wrong rung renders perfectly — nothing clips, nothing warns, every other audit
+is green, and the screen sweep photographs a 24pt crown and certifies it. What
+caught it was a person opening three rooms in a row and comparing by eye, which
+is exactly the comparison nobody makes twice.
+
+**The audit's own first run reported a false finding, and the correction is in
+its source**: it looked for Wallet's crown in `FeedScreen`, the file that
+COMPOSES that room, while the crown is drawn next door in `WalletFeedTiles`. The
+file that composes a room is not always the file that draws its crown, so the
+registry carries both and each check reads the half it belongs to.
+
+Deliberately NOT checked: which `Text` in an 8,000-line view is the crown
+(that is parsing Swift), the other scopes' headlines (`stat24` is correct there
+— that is the point of a ramp), and the figure's height sum, which no static
+check can measure against a rendered face.
+
+UNBUILT AND UNSEEN, like §548/§548a/§548b: authored on Linux with no Xcode. The
+thing to look at on a device is Hegotá's Home — its crown moves from 24pt to
+64pt and its curve now shares the slot with it, so the bottom of that chart is
+where a clip would show.

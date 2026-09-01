@@ -75,7 +75,8 @@ struct HegotaRoomFigure: View {
     private static let frameRows = 5
 
     var body: some View {
-        DSRoomSlot(headline: slotHeadline) { slotFigure }
+        DSRoomSlot(headline: slotHeadline,
+                   reservesHeadline: !ownsItsHeadline) { slotFigure }
             .task { await HegotaLiveState.shared.refreshIfStale() }
     }
 
@@ -126,12 +127,47 @@ struct HegotaRoomFigure: View {
 
     /// The one line every scope puts in the slot's reserved row, so the drawing
     /// below it always starts at the same y.
+    /// **THE CROWN IS THE FIGURE'S, NOT THE CHASSIS'S (prd §548c, 2026-09-01).**
+    ///
+    /// User: *"wallet, hegota, and vibenet have different size numbers on their
+    /// home crown slot. which size works best for us? pick one and make it
+    /// consistent."* Measured, and it was two rungs apart in one room: Wallet
+    /// and vibenet both draw their Home crown at `price48` inside their own
+    /// figure, and this room passed its balance to the chassis as a HEADLINE,
+    /// which `DSRoomSlot` sets in `stat24`. **Money at 24pt where the same
+    /// object one room over is 64.**
+    ///
+    /// §532's ramp settles which one wins without needing a taste: 64 is the
+    /// crown rung, defined as *"money, one per surface"*. `stat24` is the tier
+    /// this room's other scopes use for "12 steps" and "3 transactions" —
+    /// labels, not money — and the balance had been filed with them.
+    ///
+    /// `DSRoomSlot`'s own doc already carried the rule ("reserve the row only
+    /// where the CHASSIS draws the headline… both rooms' Home scopes lead with
+    /// the crown, a `price48` figure that occupies exactly the role a headline
+    /// plays"). It said "both rooms" while there were three; this is the third.
+    private var ownsItsHeadline: Bool {
+        switch section {
+        case .home, .sponsors: return true
+        default: return false
+        }
+    }
+
+    /// The crown itself, once, so the figure and the headline can never both
+    /// draw it. Nil on the same terms it always had: a read that has not
+    /// happened or did not reach is not a balance of zero (§83).
+    private var crownLine: String? {
+        guard head.hasRead, !head.everythingUnreached,
+              let wei = shownBalance ?? head.balanceWei else { return nil }
+        return HegotaFormat.crown(wei)
+    }
+
     private var slotHeadline: String? {
         switch section {
+        // Drawn by `crownFigure` at the crown rung instead — see
+        // `ownsItsHeadline`.
         case .home, .sponsors:
-            guard head.hasRead, !head.everythingUnreached,
-                  let wei = shownBalance ?? head.balanceWei else { return nil }
-            return HegotaFormat.crown(wei)
+            return nil
         case .activity:
             return moves.count == 1 ? String(localized: "1 transaction")
                                     : String(localized: "\(String(moves.count)) transactions")
@@ -165,10 +201,42 @@ struct HegotaRoomFigure: View {
         }
     }
 
-    /// Home: the delta and the curve. The figure itself is the slot's headline,
-    /// so it is not drawn twice.
+    /// Home: the crown, its delta and the curve — **vibenet's arrangement
+    /// exactly** (prd §548c).
+    ///
+    /// **THE SUM IS WRITTEN DOWN, because the slot is a hard 210pt with
+    /// `.clipped()` and this figure now spends most of it:**
+    ///
+    /// ```
+    ///   the crown (price48, a 64pt face)          ~76
+    ///   the delta line (subhead13)                 ~14
+    ///   the curve                                  120
+    ///   ─────────────────────────────────────────────
+    ///                                             ~210
+    /// ```
+    ///
+    /// `spacing: 0`, not `s2` — the 10pt it used to carry is 10pt this figure
+    /// no longer has, and vibenet's `balanceHero` has always packed its three
+    /// pieces the same way. **Re-do this sum before adding a line**, exactly as
+    /// `frameRows` above says for the frames figure: vibenet's own comment
+    /// records that a third line here pushed its chart off the bottom, clipped,
+    /// with nothing to say so.
+    ///
+    /// **`minimumScaleFactor` is 0.9 and that is §491's lesson, not a
+    /// preference.** Both rooms declared `price48` once before and this one
+    /// rendered at about half the other's, because a permissive floor let a
+    /// longer string shrink far below the rung it declares — a crown at 29pt
+    /// beside a crown at 64 is not the same crown, whatever the source says.
     @ViewBuilder private var crownFigure: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        VStack(alignment: .leading, spacing: 0) {
+            if let crownLine {
+                Text(crownLine)
+                    .dsText(.price48)
+                    .foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.9)
+            }
             if !head.hasRead {
                 Text(String(localized: "Reading the chain…"))
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
