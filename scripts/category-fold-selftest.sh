@@ -330,14 +330,39 @@ grep -qE 'onPick\(venueLabel|onPick\(CategoryFold\.venueLabel' "$TMP/switcher.nc
 # keeping BOTH, since that audit reads a literal or a named token and a future
 # refactor that hands the size in as a parameter goes silent there while this
 # still names the file.
-grep -q 'BridgeIcon(name: venue, size: DS.Face.list, circular: true)' "$TMP/switcher.nc" \
-  || { echo "✗ the venue switcher's mark is no longer a full-bleed DS.Face.list —"; \
-       echo "  it draws directly above FaceScopeRail's own DS.Face.list faces, so a"; \
-       echo "  smaller mark reads as two rows of circles at two sizes (§540/§483)."; exit 1; }
+grep -q 'BridgeIcon(name: venue, size: markSize, circular: true)' "$TMP/switcher.nc" \
+  || { echo "✗ the venue switcher's mark is no longer the full-bleed markSize —"; \
+       echo "  it draws directly above FaceScopeRail's faces, so a mark inset inside"; \
+       echo "  its seat reads as two rows of circles at two sizes (§540/§483)."; exit 1; }
+grep -qE 'markSize: CGFloat \{ compact \? DS\.Face\.row : DS\.Face\.list \}' "$TMP/switcher.nc" \
+  || { echo "✗ the venue switcher's mark no longer folds on FaceScopeRail.faceSize's own two"; \
+       echo "  rungs — the rail below folds 36→26 and a pinned mark row above it puts 36"; \
+       echo "  over 26 on every scroll, which is §483's complaint in the folded state."; exit 1; }
+# The FOLD SIGNAL is cross-file, so it is guarded where it is passed. Two
+# controls stacked on one screen folding on two different expressions is the
+# drift this whole guard block exists for, one level up from the sizes.
+# ANCHORED TO THE CALL, never to the file. Both face rails already pass this
+# exact expression, so a bare file-wide grep is satisfied by THEIR copies and
+# would stay green with the switcher's own argument deleted — a guard proving
+# the words appear rather than that the condition holds, which is the defect
+# `cursor-selftest.sh` records against its own first cut.
+awk '/CategoryVenueSwitcher\(/,/\{ venue in/' "$TMP/main.nc" | grep -q 'compact: chrome.minimized && !showsRail' \
+  || { echo "✗ the venue switcher is no longer handed the shell's fold state, or is handed a"; \
+       echo "  different expression from the face rails beneath it (§540). Both rails take"; \
+       echo "  'chrome.minimized && !showsRail'; a switcher on anything else steps apart"; \
+       echo "  from the row under it on exactly the scrolls nobody screenshots."; exit 1; }
+# ...and the SEAT must NOT fold with it. The slot is the tap target, so a fold
+# that shrank it would buy back space by dropping the control under the touch
+# floor — `dsTapTarget`'s ruling run backwards, and the defect §540 just fixed.
+# The SEAT must not fold with the mark, and its size is spelled LITERALLY at the
+# frame. Both halves matter: a folding slot drops the chip under the touch floor
+# on every scroll, and hoisting the floor into a computed property blinds
+# `accessibility-audit.py` check 3 to this very chip — which is what happened
+# while §540 was being written, minutes after that check was widened to catch it.
 grep -q 'frame(width: DS.Hit.min, height: DS.Hit.min)' "$TMP/switcher.nc" \
-  || { echo "✗ the venue switcher's chip no longer claims the DS.Hit.min slot — its whole"; \
-       echo "  footprint IS the tap target, and it shipped under the 44pt floor from"; \
-       echo "  §351 to §540 on the only way out of a folded category seat."; exit 1; }
+  || { echo "✗ the venue switcher's chip no longer claims a literal DS.Hit.min footprint —"; \
+       echo "  its whole slot IS the tap target (under the floor from §351 to §540), and a"; \
+       echo "  size lifted into a property also goes invisible to accessibility check 3."; exit 1; }
 # And the annulus that selection lives in cannot be closed by 'tidying' the
 # seat down onto the mark: a full-bleed mark covers a fill drawn behind it, so
 # a seat equal to the mark silently deletes the active state while the control

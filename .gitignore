@@ -32,3 +32,11 @@ website-deploy.zip
 design/launch-video/frames/
 design/launch-video/rec-apple-vid-out/
 design/launch-video/rec-farcaster-out/
+
+# Python bytecode. `scripts/` is run directly and several audits import each
+# other through importlib, so a `__pycache__` appears on any run — twice it has
+# been committed by a `git add -A` (2026-09-01, prd §540). It goes stale the
+# next time the script is edited, and every commit here is pushed to a PUBLIC
+# remote immediately, so the noise lands in a world-readable diff.
+__pycache__/
+*.pyc

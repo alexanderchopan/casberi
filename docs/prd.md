@@ -40740,8 +40740,7 @@ one number. The page's four tiers (chrome 56/46, room controls 36, row identity
 26/28, inline badges 20) each have a nameable job and legible jumps. Every
 sizing complaint this repo has recorded — `TokenRow`'s 36-beside-38, a setup
 header's 60-against-54, §483's 46-above-36 — is SAME-TIER DRIFT, not tier count.
-This was the last such drift inside the 36 tier, and it was the one visibly
-stacked against its own peer.
+This is one more of those, in the tier's most visibly stacked pair.
 
 **Check 1 was NOT widened with check 3, and the asymmetry is enforced by a
 fixture.** A target is a target whatever is painted in it — pure geometry, no
@@ -40758,6 +40757,53 @@ both of which open something, so both look like real gaps rather than decorative
 marks. **Recorded here as an open question for whoever owns those sheets, not
 fixed**: neither is under the floor (`DS.Face.shelf` is 56), so nothing is
 silenced, and the call is whether an identicon door announces itself.
+
+### THE FIX WAS NEARLY A RELOCATION OF THE SAME DEFECT
+
+Caught in review, and worth recording because the first cut passed every check
+including the three drift guards written for it. **The switcher was the one piece
+of room chrome that did not fold.** `SourceChips` steps 56→48 above it, and
+`FaceScopeRail`'s captioned faces step 36→26 directly below it on
+`chrome.minimized && !showsRail` — `socialScopeRail` takes the default
+`namesInRoom: false`, so the rail stacked under this control in every social room
+is the folding kind.
+
+So before §540 the switcher's 26pt mark matched the FOLDED rail and mismatched
+the resting one; pinning it at 36 fixed the resting state and broke the folded
+one — 36 above 26 on every scroll. **The same defect, moved into the state nobody
+screenshots.** The lesson generalises past this control: a size that matches a
+neighbour matches it in every state that neighbour has, and a rail with a fold is
+two sizes, not one. Checking a static pair is checking half of it.
+
+The switcher folds on the same expression now, and `markSize` is spelled as
+`FaceScopeRail.faceSize`'s own two rungs rather than as two literals. **The SLOT
+does not fold**: it stays `DS.Hit.min`, because the slot is the tap target and a
+fold that returns space by dropping a control under the floor is `dsTapTarget`'s
+ruling run backwards — the very defect this section opened with. `FaceScopeRail`
+makes the identical split, flooring its own captionless slot "on a control whose
+whole slot is the tap target". The fold therefore buys width, not height, which
+is the honest trade for a bar that is one row tall either way; selection's
+annulus grows 4pt → 9pt as a free consequence.
+
+**One reversal inside the fix, recorded because the check caught its own author.**
+The seat's size was briefly lifted into a `slotSize` property to document why it
+does not fold — and `accessibility-audit.py` check 3 immediately reported this
+chip as unhittable, minutes after the same pass widened that check to catch it,
+because the check resolves a frame to a literal or to a `NAMED_SIZES` name and a
+computed property is neither. The available fix was to add `slotSize` to
+`NAMED_SIZES`, which would have cleared it by blanket-exempting a generic
+identifier everywhere in the app: tidiness in one file bought with a hole in the
+lint for every other. The floor is spelled at the frame instead. **Say the floor
+where the frame is** — and a lint that fires on the person who just widened it is
+the lint working, not a nuisance to route around.
+
+`category-fold-selftest.sh` guards the fold in both files, and the cross-file one
+is **anchored to the call rather than to the file**: both face rails already pass
+that exact expression, so a bare grep stays green with the switcher's own
+argument deleted — a guard proving the words appear rather than that the
+condition holds, which is `cursor-selftest.sh`'s own recorded first-cut defect.
+Mutation-proven by deleting only the switcher's argument while both rails keep
+theirs.
 
 ### THE CHECKS
 
@@ -40779,7 +40825,8 @@ right direction for a lint but means a green run is not proof every mark button
 clears the floor.
 
 Mutation-proven against the real tree three ways rather than against fixtures
-alone: reverting the switcher to its shipped 36pt seat is caught by name;
+alone: reverting the switcher to its shipped 36pt seat is caught by name (in both
+its literal `36` and its `DS.Face.list` token spellings);
 deleting the `circular: true` narrowing brings the measured false positive back;
 deleting check 1's `glyph and` guard reports exactly the two Vibenet discs above.
 Four fixtures added, two of them discriminating — a square mark under the floor

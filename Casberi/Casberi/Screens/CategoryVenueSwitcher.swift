@@ -72,6 +72,25 @@ struct CategoryVenueSwitcher: View {
     let venues: [String]
     /// The seat currently showing — a real source, always.
     let active: String
+    /// The shell's fold state (`ShellChrome.minimized`), on the SAME expression
+    /// both face rails take — `chrome.minimized && !showsRail` (prd §540).
+    ///
+    /// **This control was the one piece of room chrome that did not compress**,
+    /// and that was invisible until §540 made its mark full-bleed. `SourceChips`
+    /// folds 56→48 above it and `FaceScopeRail` folds its captioned faces 36→26
+    /// directly below it, so a switcher pinned at 36 sat between two controls
+    /// that both shrank — which is the failure `FaceScopeRail`'s own doc names
+    /// for the iPad case it declines to fold in: "it does not read as a system
+    /// compressing; it reads as one control twitching."
+    ///
+    /// It is also the half of §540 that was nearly shipped wrong. Before §540 the
+    /// switcher drew a 26pt mark, so it matched the FOLDED rail by accident and
+    /// mismatched the resting one; fixing only the resting size would have moved
+    /// the drift rather than removed it — 36 above 26 on every scroll in a social
+    /// room, which is the same defect wearing the other state. Both states have
+    /// to agree, which means this control folds on the same signal or neither
+    /// does.
+    var compact: Bool = false
     let onPick: (String) -> Void
 
     @Namespace private var ns
@@ -150,6 +169,26 @@ struct CategoryVenueSwitcher: View {
         return bridges.bridges.contains { $0.name == seat && $0.status == .attention }
     }
 
+    /// `DS.Face.list` (36) at rest, `.row` (26) folded — `FaceScopeRail.faceSize`'s
+    /// own two rungs, spelled the same way so the mark row and the face row under
+    /// it can never step apart (prd §540). The ramp's tiers, not two literals
+    /// invented here.
+    private var markSize: CGFloat { compact ? DS.Face.row : DS.Face.list }
+
+    // THE SEAT'S SIZE IS SPELLED `DS.Hit.min` AT THE FRAME, not lifted into a
+    // `slotSize` property, and that is a deliberate reversal made during this
+    // change (prd §540). The property read better and cost real safety:
+    // `accessibility-audit.py` check 3 resolves a frame to a literal or to a
+    // name in `NAMED_SIZES`, so hoisting the floor into a computed property
+    // made this very chip report as an unhittable button minutes after the same
+    // pass had widened that check to catch it. Adding `slotSize` to
+    // `NAMED_SIZES` would have cleared it by blanket-exempting a generic
+    // identifier anywhere in the app — buying tidiness in one file with a hole
+    // in the lint for every other.
+    //
+    // The check catching its own author's refactor is the check working. Say
+    // the floor where the frame is.
+
     private func chip(_ venue: String) -> some View {
         let isOn = venue == active
         let broken = needsAttention(venue)
@@ -176,30 +215,43 @@ struct CategoryVenueSwitcher: View {
             // records for the feed's mixed columns, running the other way: the
             // frame agreed and the eye did not.
             //
-            // So the mark takes `DS.Face.list` itself. This is not a new
-            // treatment — it is the exact call `FaceScopeRail.face` already makes
-            // for a person with no avatar (`BridgeIcon(name:size:circular:)` at
-            // `faceSize`), so the two rows are now drawing the same thing at the
-            // same size rather than merely being framed alike. It is also what
-            // `SourceChips` has always done one tier up: a brand mark fills its
-            // chip, because "an icon IS content, and frosting one would only
+            // So the mark takes `markSize` — `FaceScopeRail.faceSize`'s own two
+            // rungs, folding with it rather than merely matching it at rest (see
+            // `compact`, and note that matching only at rest is how this fix was
+            // nearly shipped as a relocation of the same defect). This is not a
+            // new treatment: it is the exact call `FaceScopeRail.face` already
+            // makes for a person with no avatar (`BridgeIcon(name:size:circular:)`
+            // at `faceSize`), so the two rows are now drawing the same thing at
+            // the same size rather than merely being framed alike. It is also
+            // what `SourceChips` has always done one tier up: a brand mark fills
+            // its chip, because "an icon IS content, and frosting one would only
             // muddy a mark the person recognizes".
             //
-            // **The seat becomes `DS.Hit.min` (44), and the two changes are one
-            // change.** The chip's whole slot is its tap target and it was 36 —
-            // under the floor `DS.Hit.min` exists to stop controls drifting
-            // beneath, on a control that is the ONLY way out of a folded seat.
-            // It was invisible to `accessibility-audit.py` check 3 because that
-            // check triggers on `Image(systemName:)` and this button's label is a
-            // brand mark; §540 widens it, so this class cannot ship again.
+            // **The seat becomes `DS.Hit.min` (44) and never folds, and that is
+            // one change with the above rather than two.** The chip's whole slot
+            // is its tap target and it was 36 — under the floor `DS.Hit.min`
+            // exists to stop controls drifting beneath, on a control that is the
+            // ONLY way out of a folded category seat. It was invisible to
+            // `accessibility-audit.py` check 3 because that check triggers on
+            // `Image(systemName:)` and this button's label is a brand mark; §540
+            // widens it, so this class cannot ship again.
             //
             // Growing the seat is also what KEEPS the cue split below working: a
-            // full-bleed mark covers a fill drawn behind it, and the 4pt annulus
-            // between the 36pt mark and the 44pt seat is where the selection
-            // tint now reads — almost exactly the 5pt it had at 36/26. The fill
+            // full-bleed mark covers a fill drawn behind it, and the annulus
+            // between mark and seat is where the selection tint now reads — 4pt
+            // at rest against the 5pt it had at 36/26, and 9pt folded. The fill
             // did not have to become a ring, which matters, because a ring is
             // what attention already is (see the overlay).
-            BridgeIcon(name: venue, size: DS.Face.list, circular: true)
+            // **THE SEAT DOES NOT FOLD WITH THE MARK.** The slot IS the tap
+            // target, so a fold that returned space by shrinking it would be
+            // `dsTapTarget`'s ruling ("keeps the DRAWN size and grows only the
+            // target") run backwards — the exact defect this section fixes.
+            // `FaceScopeRail` makes the same split, flooring its own captionless
+            // slot "on a control whose whole slot is the tap target". So the fold
+            // buys WIDTH per chip and no height, the honest trade for a bar that
+            // is one row tall either way, and the annulus selection reads in
+            // grows 4pt → 9pt as a free consequence.
+            BridgeIcon(name: venue, size: markSize, circular: true)
                 .frame(width: DS.Hit.min, height: DS.Hit.min)
             .background {
                 ZStack {

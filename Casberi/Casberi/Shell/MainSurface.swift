@@ -391,7 +391,18 @@ struct MainSurface: View {
             if venues.count >= CategoryFold.switcherFloor {
                 CategoryVenueSwitcher(
                     venues: CategoryFold.scopes(category: category, present: Set(venues)),
-                    active: filter.source) { venue in
+                    active: filter.source,
+                    // THE SAME EXPRESSION BOTH FACE RAILS TAKE, deliberately
+                    // spelled rather than derived (prd §540). This control sits
+                    // directly above `socialScopeRail`, whose captioned faces
+                    // fold 36→26 on this signal — so a switcher that did not
+                    // fold put a 36pt mark row above a 26pt face row on every
+                    // scroll, which is §483's own complaint wearing the folded
+                    // state. `!showsRail` carries the same axis gate for the
+                    // same reason the rails give: a surface wide enough for the
+                    // vertical rail is not short of vertical space, and one
+                    // control resizing there reads as a twitch, not a system.
+                    compact: chrome.minimized && !showsRail) { venue in
                     chrome.sourceRequest = venue
                 }
                 .padding(.horizontal, DS.Space.s4)
