@@ -1482,7 +1482,7 @@ harness "Hegota frame transaction self-test" "11 mutations, real on-chain vector
 # the send path's conduct guards: exactly one signed write verb, a LITERAL
 # signer (empty is Hegotá's convention and is refused here, measured 5/5
 # against 0/5), and the signature entry seeded BEFORE the digest is taken.
-harness "Frames devnet transaction self-test" "17 mutations, real on-chain vectors, and the send path's conduct" "scripts/frames-tx-selftest.sh" "the frames transaction self-test failed — run scripts/frames-tx-selftest.sh"
+harness "Frames devnet transaction self-test" "21 mutations, real on-chain vectors, and the send path's conduct" "scripts/frames-tx-selftest.sh" "the frames transaction self-test failed — run scripts/frames-tx-selftest.sh"
 # The vibenet SCOPES' two new drawings (prd §491) — the sub-account web and the
 # change flow, compiled whole. Separate from the harness above because that one
 # is four minutes over the whole room and these run in one, so a change to

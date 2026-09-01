@@ -41565,3 +41565,83 @@ catalog seat, the website tile and the demo seed are not built** (§548 is the
 write path); the toggle row this spec settled on is **Home · Frames · Activity
 · Sponsors**, with Nonces absent because the chain serves no keyed nonces and
 Sponsors conditional because every transaction observed here is self-paid.
+
+## §548 amendment — the send is proven, the seat has a door, and `stateGasUsed` is settled (user: "commit and push to main and continue on the build", then "i added an icon for the cataloge seat, which we can call Frames Devenet", 2026-09-01)
+
+Three things §548 left open, all closed the same afternoon.
+
+**1. IT SENDS. The write path is no longer unproven.** §548 shipped with
+"UNSENT" as its stated ceiling — the encoder was proven against transactions
+the chain had already *accepted*, which is strictly weaker than having one of
+ours accepted. It has now sent one. A key was generated, the faucet funded it
+(`{"msg":"sent","txhash":…}`, the shape `HegotaFaucetVerdict` classifies, 1 ETH
+landed inside two seconds), and a two-frame transfer was signed and broadcast:
+
+```
+our predicted hash: 0x9d12f7722ab15d93ff377f19f923458cae8d6009b0a2b11eb2cd1ca006748674
+node returned     : 0x9d12f7722ab15d93ff377f19f923458cae8d6009b0a2b11eb2cd1ca006748674
+receipt status    : 0x1
+```
+
+**The node returning our own predicted hash is the proof**, not the acceptance:
+it means the bytes we hashed are byte-identical to the bytes it hashed. Every
+rule in `FramesTransaction` is now confirmed by a live node rather than by
+re-derivation — the seven-field envelope, the nested fee list, the scalar
+nonce, the two-element gas slot, the per-entry elision, `v ‖ r ‖ s` with a bare
+0/1, canonical low-s, and **the literal signer** that diverges from Hegotá.
+
+The transaction was deliberately sent to a **freshly generated address that had
+never existed on the chain**, so it grew state — the one case that could answer
+the question below, and the reason it was worth spending the faucet's hourly
+claim on.
+
+**2. `stateGasUsed` DOES NOT EXIST ON THIS CLIENT, and the room's figure is one
+bar.** §548 recorded the field absent on all five transactions and correctly
+refused to conclude anything, since all five were plain transfers that grow no
+state. A state-growing transfer now says otherwise: `frameReceipts` carried
+`gasUsed` and `status` and **no `stateGasUsed`** — on the very case their own
+error guide tells implementers to check it for. So the two-bar figure §548
+designed cannot be drawn, `FramesRead.starvation` correctly returns nil on
+every frame this chain will produce today, and the `live-integrations.sh` row
+that watches for the field's arrival is the thing that will unblock it.
+
+**A second finding, unlooked-for and worth more than the first:** the per-frame
+`gasUsed` figures **do not sum to the transaction's**. Measured on our own
+transaction — frames used 100 and 3,000, the receipt reports **210,790**. So a
+room that adds up its frames and presents the total as what the transaction
+cost would be wrong by two orders of magnitude, and wrong in the direction that
+looks plausible. Whatever the room draws per frame, the transaction's own
+`gasUsed` is the only honest total.
+
+**3. The seat, named and with a door.** `BridgeCatalog` offer **"Frames
+Devnet"** (user's name), group Wallet, `FramesScreen`, `FramesWatch`,
+`FramesBridge.registerBridge`, router destination, `AddressBook.Network.frames`,
+the bundled mark (`brand-frames-devnet`, the user's own icon), the website
+mini-cell with the icon inlined as base64, and the `KindGlyph` letterform
+fallback.
+
+**"Frames Devnet", not "Frames"**, and the rename reached `Thing.source` before
+anything landed under the old spelling. The bare word is one of the most
+ordinary nouns in this app's own vocabulary — `FeedScreen` frames, a video
+frame, the `frames` array inside every transaction on this chain — and a
+catalog name, a `Thing.source` and a §308 facet share one namespace with
+search.
+
+**THE ACCOUNT BLOCK LEADS THE SCREEN, and that is the census talking.**
+`HegotaScreen` opens on "paste an address" because Hegotá has months of history
+to look at. This chain holds **18 distinct addresses**, most of them genesis
+fixtures and faucet recipients, so a pasted stranger's address shows almost
+nothing — a correct blank that reads as a broken feature (§465's own worked-
+example reasoning, reaching the opposite answer on a different chain). Only two
+addresses have ever sent more than once, and those are the two the screen
+offers. `registerBridge` therefore registers on **the key OR the watch list**,
+not the watch list alone: on this chain the account you make is the common
+case, and a seat that read "not connected" to somebody who had just created an
+account and claimed from the faucet would be wrong about the main path.
+
+**The one gray sentence** (§315's budget) is spent on the network's own footer
+— test ETH has no value and the chain may be reset without notice — rather
+than on the pitch, because it is the fact that changes what somebody would do.
+
+**Still not built:** the room itself (toggle row settled at Home · Frames ·
+Activity · Sponsors), its figures, and the demo seed.

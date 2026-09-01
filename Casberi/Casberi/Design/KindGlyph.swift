@@ -356,6 +356,13 @@ enum BridgeGlyph {
         // no business making. The literal carries the accent in the catalog's
         // own normalization: Swift compares canonically, the harness does not.
         case "ethrex hegotá": return "character"
+        // The Frames devnet bundles its own mark (`brand-frames-devnet`), so
+        // this is the same defensive fallback for the same reason — and the
+        // same ANSWER: a neutral letterform, never an invented theme icon. A
+        // frame glyph would name one of the chain's readings and silently
+        // rank it above the others, which is a claim a fallback that only
+        // appears when an asset FAILED TO LOAD has no business making.
+        case "frames devnet": return "character"
         default:          return "app"
         }
     }

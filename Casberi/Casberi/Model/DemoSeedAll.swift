@@ -467,6 +467,11 @@ enum DemoSeedAll {
         // ride and needs its own weight or it sorts to the back of the strip
         // while reading as connected.
         "Ethrex Hegotá": 3,
+        // Frames Devnet (prd §548) — landless for exactly Hegotá's reason,
+        // one line above: it lands no `Thing` at all, so its chip has no row
+        // to ride and needs its own weight or it sorts to the back of the
+        // strip while reading as connected.
+        "Frames Devnet": 3,
         // Cloudflare (2026-08-08) — the `runway` figure kind had NO room
         // above the panel's 20-card cap, and the reason wasn't affinity, it
         // was that `runway` could not draw at all: `CloudflareRunwaySource
@@ -3566,6 +3571,7 @@ enum DemoSeedAll {
         // nothing in it — the "flat curve reads as went to zero" failure by a
         // different route.
         HegotaLiveState.seedDemo()
+        FramesLiveState.seedDemo()
         VibenetValueStore.replace(VibenetDemoHistoryShape.samples(now: .now))
         // Per account too, or picking a face on the rail drops the curve the
         // aggregate just showed — the scoped room reads its OWN series (see
@@ -5192,6 +5198,7 @@ enum DemoSeedAll {
         // shape instead.
         ("Base Vibenet", "4 accounts watched", "Reads which keys can act for a watched account."),
         ("Ethrex Hegotá", "1 address watched", "Reads an address's coins, transfers and who paid for them."),
+        ("Frames Devnet", "An account on this phone", "Reads what each frame of a transaction did."),
         ("Gnosis Pay", "Rides your wallet", "Reads what the card settled onchain."),
         ("ether.fi", "Rides your wallet", "Reads what the card settled onchain."),
         // (Aave, Morpho, Uniswap, Hyperliquid and Aerodrome were claimed here

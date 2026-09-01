@@ -206,6 +206,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
    other icon here (a remote icon host renders as a blank slot the day it
    hiccups). Black ground because the artwork carries its own. */
 .ai-ethrexhegota { background: #000; }
+.ai-framesdevnet { background: #fff; }
 .ai-sentry    { background: #fff; }
 .ai-vercel    { background: #000; }
 .ai-pagerduty { background: #04ac38; }

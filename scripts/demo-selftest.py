@@ -149,6 +149,7 @@ DEMO_FILES = {
     "WalletWarnings": CASBERI / "Model/WalletWarnings.swift",
     "ExchangeBridge": CASBERI / "Model/ExchangeBridge.swift",
     "HegotaBridge": CASBERI / "Model/HegotaBridge.swift",
+    "FramesBridge": CASBERI / "Model/FramesBridge.swift",
     "WalletPortfolio": CASBERI / "Model/WalletPortfolio.swift",
 }
 
@@ -524,6 +525,12 @@ KNOWN_ROWLESS_SEAT = {
     # account `HegotaLiveState.seedDemo` installs, which is what check M holds
     # it to.
     "Ethrex Hegotá",
+    # Frames Devnet (prd §548) — rowless for exactly Hegotá's reason, and it
+    # is the same ruling rather than a second one: the seat lands NO `Thing`
+    # at all, because its readings are live chain state and a devnet test
+    # address has no news. Its whole furnishing is the fixture account
+    # `FramesLiveState.seedDemo` installs, which check M holds it to.
+    "Frames Devnet",
 }
 
 # What proves each rowless seat is really furnished: (file key, regex). Each
@@ -556,6 +563,12 @@ ROWLESS_SEAT_FIXTURE = {
     # connected. `installDemo` is the only door that writes accounts without a
     # read, so naming it pins the whole chain.
     "Ethrex Hegotá": ("HegotaBridge", r'HegotaLiveState\.shared\.installDemo\('),
+    # Same rule, same reason: a fixture nothing installs furnishes nothing.
+    # `installDemo` is the only door that writes accounts without a read, so
+    # naming it pins the whole chain — and it is matched in `FramesBridge`
+    # rather than `DemoSeedAll`, because the call in `DemoSeedAll` is only the
+    # trigger and could keep passing over a `seedDemo` that had been emptied.
+    "Frames Devnet": ("FramesBridge", r'FramesLiveState\.shared\.installDemo\('),
 }
 
 

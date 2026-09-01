@@ -304,8 +304,8 @@ enum NetworkReach {
         // in the non-reach denylist for a day after its key sheet grew a Claim
         // button, so the privacy screen omitted a host the app really reached
         // (§531). This app POSTs to it, so it is declared.
-        Endpoint(service: "Frames",
-                 reach: .whenConnected(bridge: "Frames"),
+        Endpoint(service: "Frames Devnet",
+                 reach: .whenConnected(bridge: "Frames Devnet"),
                  purpose: "Reads a watched address's balance and its frame transactions — what each frame did, what it spent of its two gas budgets, and who paid for it — from the Frames devnet, the public test network for EIP-8141 frame transactions. A read carries only the address you watch. Sending also sends one signed transaction: what leaves is a signature, never the key that made it — that key is a plain scalar held on this device, not the Secure Enclave, because this chain's money has no value to protect and the network itself says it may be reset without notice. Asking the faucet for test ETH sends the address you are asking for, and nothing else; it needs no key and no signature.",
                  hosts: ["rpc1.frames.ethrex.xyz", "rpc2.frames.ethrex.xyz",
                          "rpc3.frames.ethrex.xyz",

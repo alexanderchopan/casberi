@@ -167,6 +167,12 @@ final class AddressBook {
         /// of the five chains `AddressKind.detect` reads. §403 gave Altana its
         /// own registry table with its own hosts for exactly that reason.
         static let altana = "altana"
+        /// The Frames devnet (prd §548, chain 81410). In the set below for
+        /// the same reason as the other two: `AddressKind.detect`'s five
+        /// reads are mainnet RPCs, and asking them about an address that
+        /// exists only on a devnet answers "no code anywhere" and confidently
+        /// labels it `.wallet` — a fake status on a screen about identity.
+        static let frames = "frames"
 
         /// Chains `AddressKind.detect` must not ask about — its five reads
         /// are mainnet RPCs, and asking them about an account on a chain they
@@ -174,7 +180,7 @@ final class AddressBook {
         /// it `.wallet`. A smart account on BNB is the case that made this
         /// wider than devnets alone; the name is kept because every caller
         /// spells it, and the question it asks is unchanged.
-        private static let devnets: Set<String> = [vibenet, hegota, altana]
+        private static let devnets: Set<String> = [vibenet, hegota, altana, frames]
 
         static func isDevnet(_ tag: String) -> Bool { devnets.contains(tag) }
     }

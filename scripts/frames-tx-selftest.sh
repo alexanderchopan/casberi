@@ -34,10 +34,11 @@ cd "$(dirname "$0")/.."
 TX="Casberi/Casberi/Model/FramesTransaction.swift"
 RLPF="Casberi/Casberi/Model/RLP.swift"
 KC="Casberi/Casberi/Model/Keccak256.swift"
+MONEY="Casberi/Casberi/Model/FramesMoney.swift"
 KEY="Casberi/Casberi/Model/FramesKey.swift"
 SEND="Casberi/Casberi/Model/FramesSend.swift"
 BRIDGE="Casberi/Casberi/Model/FramesBridge.swift"
-for f in "$TX" "$RLPF" "$KC" "$KEY" "$SEND" "$BRIDGE"; do
+for f in "$TX" "$RLPF" "$KC" "$MONEY" "$KEY" "$SEND" "$BRIDGE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -226,6 +227,7 @@ echo "  ok   drift guards: this chain's gas spelling, and an absent stateGasUsed
 cp "$TX" "$WORK/FramesTransaction.swift"
 cp "$RLPF" "$WORK/RLP.swift"
 cp "$KC" "$WORK/Keccak256.swift"
+cp "$MONEY" "$WORK/FramesMoney.swift"
 mkdir -p "$WORK/m"
 
 cat > "$WORK/m/main.swift" <<'SWIFT'
@@ -421,12 +423,43 @@ twoVerify.frames.append(.init(mode: 1, flags: 0x03, target: s1,
 check("two VERIFY frames are summed against the prefix",
       !FramesTransaction.prefixWithinBudget(twoVerify))
 
+
+// ============ WEI IS WIDER THAN `UInt64`, and this chain proves it. The
+// address this seat offers as its first worked example holds 99,999.999762
+// ETH — a genesis-funded dev account, measured 2026-09-01. As wei that is
+// 0x152d02c7e14af6612e39c, which `UInt64(_:radix:)` cannot parse.
+let genesisWei = "0x152d02c708d9ed097cba"
+check("the obvious type really does fail on it",
+      UInt64(String(genesisWei.dropFirst(2)), radix: 16) == nil)
+check("a genesis balance parses", FramesMoney.decimal(fromHex: genesisWei) != nil)
+check("and formats as the chain's own figure",
+      FramesMoney.eth(fromWeiHex: genesisWei) == "99,999.9997")
+check("one whole ETH", FramesMoney.eth(fromWeiHex: "0xde0b6b3a7640000") == "1.0000")
+check("the 0x prefix is optional", FramesMoney.decimal(fromHex: "de0b6b3a7640000")
+                                == FramesMoney.decimal(fromHex: "0xde0b6b3a7640000"))
+// AN EMPTY READ IS NIL, NEVER ZERO. `eth_getBalance` answering with nothing
+// is a read that did not happen, and drawing it as a zero balance is §515a's
+// mistake on the one number somebody would act on.
+check("an empty body is nil, not zero", FramesMoney.decimal(fromHex: "0x") == nil)
+check("a non-hex body is nil", FramesMoney.decimal(fromHex: "0xzz") == nil)
+check("an over-wide body is nil", FramesMoney.decimal(fromHex: "0x" + String(repeating: "f", count: 65)) == nil)
+check("no balance line without a balance", FramesMoney.balanceLine(weiHex: nil) == nil)
+// ROUNDS DOWN. A balance rounded up reads as more than the account holds, and
+// on a send screen that is the number somebody acts on.
+check("rounding is DOWN, never to-nearest",
+      FramesMoney.eth(fromWeiHex: "0xde0893a1f26e000") == "0.9999")
+// NO CURRENCY. Test ETH has no price and no market.
+check("the line names test ETH and no currency",
+      (FramesMoney.balanceLine(weiHex: "0xde0b6b3a7640000") ?? "").contains("test ETH"))
+check("and carries no dollar sign",
+      !(FramesMoney.balanceLine(weiHex: "0xde0b6b3a7640000") ?? "").contains("$"))
+
 if fails > 0 { print("  \(fails) assertion(s) failed"); exit(1) }
 print("  ok   encoder: 2 real vectors byte-exact, keccak == the chain's own hash")
 SWIFT
 
 build_run() {
-  ( cd "$WORK" && swiftc -O -o m/run FramesTransaction.swift RLP.swift Keccak256.swift m/main.swift 2>&1 )
+  ( cd "$WORK" && swiftc -O -o m/run FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift m/main.swift 2>&1 )
 }
 if ! out="$(build_run)"; then echo "✗ harness did not compile"; echo "$out"; exit 1; fi
 "$WORK/m/run" || exit 1
@@ -444,7 +477,7 @@ src = io.open(p, encoding="utf-8").read()
 if a not in src: sys.exit(1)
 io.open(p, "w", encoding="utf-8").write(src.replace(a, b, 1))
 PYM
-  if ( cd "$WORK" && swiftc -O -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift m/main.swift 2>/dev/null ) \
+  if ( cd "$WORK" && swiftc -O -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift m/main.swift 2>/dev/null ) \
      && "$WORK/m/run2" >/dev/null 2>&1; then
     cp "$WORK/$file.bak" "$WORK/$file"
     echo "✗ mutation SURVIVED: $label"; exit 1
@@ -507,5 +540,15 @@ mutate "the prefix budget counts every frame, not just VERIFY" $F \
 mutate "the prefix ceiling raised past what the chain allows" $F \
   'maxVerifyGas: UInt64 = 500_000' 'maxVerifyGas: UInt64 = 5_000_000'
 
+F2=FramesMoney.swift
+mutate "wei narrowed back to UInt64" $F2 \
+  'var total = Decimal(0)' 'var total = Decimal(UInt64(body, radix: 16) ?? 0); if true { return total }; var unused = Decimal(0); _ = unused'
+mutate "an empty balance read as zero" $F2 \
+  'guard !body.isEmpty, body.count <= 64 else { return nil }' \
+  'guard body.count <= 64 else { return nil }
+        if body.isEmpty { return Decimal(0) }'
+mutate "the balance rounded to nearest" $F2 '.down)' '.plain)'
+mutate "the wei-per-ETH divisor losing a zero" $F2 \
+  '"1000000000000000000"' '"100000000000000000"'
 echo "  ok   drift guards: the envelope stays seven fields and never grows Hegotá's three"
-echo "✓ frames transaction self-test passed — encoder, 2 real vectors, 17 mutations"
+echo "✓ frames transaction self-test passed — encoder, 2 real vectors, 21 mutations"
