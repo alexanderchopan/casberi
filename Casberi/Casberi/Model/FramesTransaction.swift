@@ -271,13 +271,28 @@ enum FramesTransaction {
     /// has ever carried. It is not a leg, it takes no value, and no picker
     /// offers it — exposing it would expose plumbing rather than a choice.
     ///
-    /// **The atomic flag goes on EVERY payload frame, not just the first.**
-    /// Only the first-frame case is measured (above), and the frame-by-frame
-    /// reading of it — each frame carrying "undo me if a later one fails" — is
-    /// the one that generalises; setting it on the last frame is harmless
-    /// since nothing follows. The alternative reading, that one flagged frame
-    /// governs the whole batch, would leave legs 2..n unprotected while the
-    /// control claimed otherwise, which is the more expensive way to be wrong.
+    /// **THE FLAG CHAINS A FRAME TO THE NEXT ONE, so the LAST payload frame
+    /// must NOT carry it — measured by being refused.**
+    ///
+    /// The first cut set it on every payload frame, reasoning that the last
+    /// one was harmless because nothing follows it. The node disagreed, in its
+    /// own words:
+    ///
+    /// > `Invalid frame transaction: Frame 2: atomic batch flag on last frame`
+    ///
+    /// So `0x04` does not mean "roll me back if a later frame fails", it means
+    /// "I am joined to the frame after me" — and a frame with nothing after it
+    /// cannot be joined to anything. The whole batch is therefore flagged by
+    /// marking every payload frame EXCEPT the last.
+    ///
+    /// **No harness here could have found this.** The assertion that the flag
+    /// was on every payload frame was written, passed, and was wrong: a
+    /// `swiftc` harness proves the bytes are the bytes we meant, never that
+    /// they are bytes this chain accepts. It took broadcasting one.
+    ///
+    /// A consequence worth stating: a ONE-leg batch gets no flag at all under
+    /// this rule, and that is correct rather than a hole — its only payload
+    /// frame is the last frame, and there is nothing for it to be atomic with.
     static func stitched(sender: Data,
                          legs: [Leg],
                          atomic: Bool,
@@ -286,17 +301,22 @@ enum FramesTransaction {
                          maxFeePerGas: UInt64,
                          executionGas: UInt64 = 100_000,
                          stateGas: UInt64 = 250_000) -> Fields {
-        let payloadFlags: UInt64 = atomic ? atomicFlag : 0x00
+        let last = legs.count - 1
         return Fields(chainID: chainID,
                       nonce: nonce,
                       sender: sender,
                       frames: [Frame(mode: 1, flags: 0x03, target: sender,
                                      executionGas: executionGas, stateGas: stateGas,
                                      value: Data(), data: Data())]
-                          + legs.map {
-                              Frame(mode: 2, flags: payloadFlags, target: $0.recipient,
-                                    executionGas: executionGas, stateGas: stateGas,
-                                    value: $0.value, data: Data())
+                          + legs.enumerated().map { index, leg in
+                              // The flag joins THIS frame to the NEXT, so the
+                              // last one never carries it — the node refuses
+                              // the transaction outright if it does.
+                              let joined = atomic && index < last
+                              return Frame(mode: 2, flags: joined ? atomicFlag : 0x00,
+                                           target: leg.recipient,
+                                           executionGas: executionGas, stateGas: stateGas,
+                                           value: leg.value, data: Data())
                           },
                       signatures: [],
                       maxPriorityFeePerGas: maxPriorityFeePerGas,

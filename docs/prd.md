@@ -43582,3 +43582,64 @@ built as a VERIFY frame, and the legs reversed. 40 mutations total, all caught.
 **Walked on the simulator, two legs, both screens** — 0.1 + 0.4 summing to 0.5
 on the button. Never signed: no key exists on this simulator, so `sendStitched`
 has never once run against the chain.
+
+## §548 sixth follow-up, amendment — the stitch SENDS, and the node corrected the atomic rule the harness had blessed (user: "yes", 2026-09-01)
+
+`sendStitched` had never run. Four transactions later it has, and the flag rule
+in the entry above was **wrong** — caught not by any check in this repo but by
+broadcasting one.
+
+### It sends
+
+`-framesStitchProbe "<0xaddr:amount[,…]>[|atomic]"` (DEBUG) signs and
+broadcasts a real stitched transaction. **No bare `YES` form**, deliberately —
+`-framesKeyProbe claim`'s ruling: a probe that broadcasts on every headless run
+is one nobody can put in a sweep, so the only way to fire it is to name the
+recipients and the amounts, which nobody does by accident.
+
+`0x31e7311a…` — three legs to three addresses that did not exist, from this
+phone's own key. Transaction status `0x1`, four frames (VERIFY + three), three
+EIP-7708 logs, and the three fresh addresses hold **0.001, 0.002 and 0.003 ETH**
+exactly.
+
+### The correction, in the node's own words
+
+The atomic batch was refused outright:
+
+> `Invalid frame transaction: Frame 2: atomic batch flag on last frame`
+
+So `0x04` does **not** mean "roll me back if a later frame fails". It means
+**"I am joined to the frame after me"**, and a frame with nothing after it
+cannot be joined to anything. The batch is flagged by marking every payload
+frame EXCEPT the last.
+
+**The entry above reasoned the opposite and reasoned it carefully** — "setting
+it on the last frame is harmless since nothing follows" — and the harness
+asserted it, and passed. That is the standing lesson, sharper here than
+anywhere else in this file: **a `swiftc` harness proves the bytes are the bytes
+we meant, never that they are bytes this chain accepts.** No mutation, no
+audit and no build could have found this; it took one broadcast. The assertion
+is now inverted and a mutation pins it, but the mutation only exists because
+the chain spoke first.
+
+A consequence worth stating rather than discovering later: a ONE-leg atomic
+batch carries no flag at all. That is correct, not a hole — its only payload
+frame is the last frame, and there is nothing to be atomic with.
+
+### The pair, from our own encoder
+
+Two identical two-leg batches, same failing last leg (900 ETH against ~0.99
+held), differing only in the toggle:
+
+| | frame 1 | leg 1's recipient, now |
+| --- | --- | --- |
+| `0x4e52ad3d…` **atomic** | `status 0x1`, **0 logs** | **0.0 ETH — rolled back** |
+| `0x4a2fcc7d…` **not atomic** | `status 0x1`, **1 log** | **0.001 ETH — sent and stayed** |
+
+Both transactions report `status 0x0`. The control does exactly what its two
+sentences say, and this is the app's own bytes proving it rather than two
+transactions found on chain.
+
+Note again that a rolled-back frame reports **success** — `status 0x1` with no
+log — which is why every reading in this seat is taken from effects and never
+from the status field.

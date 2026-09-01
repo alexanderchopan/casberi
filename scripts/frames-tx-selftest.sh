@@ -672,11 +672,20 @@ let atomicTx = FramesTransaction.stitched(sender: sndr, legs: [legA, legB, legC]
                                           atomic: true, nonce: 7,
                                           maxPriorityFeePerGas: 1, maxFeePerGas: 2)
 check("the atomic flag is bit 2", FramesTransaction.atomicFlag == 0x04)
-// **EVERY payload frame, not just the first.** Flagging only the first leaves
-// legs 2..n unprotected while the control claims otherwise — the expensive way
-// to be wrong, since the screen says all-or-nothing either way.
-check("all-or-nothing flags EVERY payload frame",
-      atomicTx.frames.dropFirst().allSatisfy { $0.flags == FramesTransaction.atomicFlag })
+// **THE FLAG JOINS A FRAME TO THE NEXT, so the LAST payload frame must not
+// carry it.** This assertion was originally written the other way — "every
+// payload frame" — and it PASSED, because a harness proves the bytes are the
+// bytes we meant and never that the chain accepts them. The node's own words
+// on broadcast: `Frame 2: atomic batch flag on last frame`.
+check("all-or-nothing flags every payload frame BUT the last",
+      atomicTx.frames.dropFirst().dropLast().allSatisfy { $0.flags == FramesTransaction.atomicFlag })
+check("and never the last payload frame", atomicTx.frames.last!.flags == 0x00)
+// A ONE-leg batch gets no flag at all, and that is correct rather than a hole:
+// its only payload frame IS the last frame, and there is nothing to join it to.
+let loneAtomic = FramesTransaction.stitched(sender: sndr, legs: [legA], atomic: true,
+                                            nonce: 7, maxPriorityFeePerGas: 1, maxFeePerGas: 2)
+check("a single-leg atomic batch carries no atomic flag",
+      loneAtomic.frames[1].flags == 0x00)
 // The VERIFY frame is not a payload frame and must keep its own flags: 0x03 is
 // what authorises execution and payment, and overwriting it with 0x04 sends a
 // transaction that authorises nothing.
@@ -844,15 +853,22 @@ mutate "sponsorship decided by case" $F4 \
 mutate "the atomic flag being the wrong bit" $F \
   'static let atomicFlag: UInt64 = 0x04' \
   'static let atomicFlag: UInt64 = 0x02'
-mutate "all-or-nothing flagging only the first payload frame" $F \
-  'let payloadFlags: UInt64 = atomic ? atomicFlag : 0x00' \
-  'let payloadFlags: UInt64 = 0x00'
+mutate "all-or-nothing flagging nothing at all" $F \
+  'let joined = atomic && index < last' \
+  'let joined = false'
+# **THE ONE THE CHAIN CAUGHT AND THE HARNESS DID NOT.** Flagging the last frame
+# too is a transaction this node refuses outright — `Frame N: atomic batch flag
+# on last frame` — so the off-by-one here is not a subtle wrongness, it is a
+# send that cannot go at all.
+mutate "the atomic flag reaching the last payload frame" $F \
+  'let joined = atomic && index < last' \
+  'let joined = atomic'
 mutate "the VERIFY frame dropped from a stitch" $F \
   'frames: [Frame(mode: 1, flags: 0x03, target: sender,
                                      executionGas: executionGas, stateGas: stateGas,
                                      value: Data(), data: Data())]
-                          + legs.map {' \
-  'frames: legs.map {'
+                          + legs.enumerated().map { index, leg in' \
+  'frames: legs.enumerated().map { index, leg in'
 mutate "the VERIFY frame no longer approving payment" $F \
   'frames: [Frame(mode: 1, flags: 0x03, target: sender,
                                      executionGas: executionGas, stateGas: stateGas,
@@ -861,11 +877,11 @@ mutate "the VERIFY frame no longer approving payment" $F \
                                      executionGas: executionGas, stateGas: stateGas,
                                      value: Data(), data: Data())]'
 mutate "a payload frame built as a VERIFY frame" $F \
-  'Frame(mode: 2, flags: payloadFlags, target: $0.recipient,' \
-  'Frame(mode: 1, flags: payloadFlags, target: $0.recipient,'
+  'return Frame(mode: 2, flags: joined ? atomicFlag : 0x00,' \
+  'return Frame(mode: 1, flags: joined ? atomicFlag : 0x00,'
 mutate "the legs reversed" $F \
-  '+ legs.map {' \
-  '+ legs.reversed().map {'
+  '+ legs.enumerated().map { index, leg in' \
+  '+ legs.reversed().enumerated().map { index, leg in'
 
 
 # --- the fan-out must be LAST, and this proves it -----------------------------

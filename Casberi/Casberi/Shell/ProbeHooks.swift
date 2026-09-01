@@ -6432,6 +6432,58 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-framesStitchProbe "<0xaddr:amount[,0xaddr:amount…]>[|atomic]"` —
+        // SEND a real stitched frame transaction and NSLog its hash, so the
+        // one thing no harness can prove gets proved: that the bytes this app
+        // signs for a MULTI-frame transaction are bytes this chain accepts.
+        //
+        // **It SPENDS, and says so by needing its legs spelled out.** There is
+        // no bare `YES` form on purpose (`-framesKeyProbe claim`'s ruling): a
+        // probe that broadcasts a transaction on every headless run is one
+        // nobody can put in a sweep, so the only way to fire it is to name the
+        // recipients and the amounts, which nobody does by accident.
+        //
+        // Why a probe rather than driving the sheet: the sheet's own path is
+        // the same `FramesSend.sendStitched` call, and no simulator gesture
+        // can be scripted through a keypad reliably enough to be evidence. The
+        // hash it prints is checkable against the chain, which is.
+        Hook(key: "framesStitchProbe") { value, _ in
+            let parts = value.split(separator: "|", maxSplits: 1).map(String.init)
+            let atomic = parts.count > 1 && parts[1].lowercased() == "atomic"
+            var legs: [FramesTransaction.Leg] = []
+            for spec in parts[0].split(separator: ",") {
+                let pair = spec.split(separator: ":", maxSplits: 1).map(String.init)
+                guard pair.count == 2,
+                      let target = RLP.data(fromHex: pair[0].trimmingCharacters(in: .whitespaces)),
+                      let wei = DevnetSendParse.weiData(from: pair[1]) else {
+                    NSLog("[Casberi] framesStitch| unreadable leg=%@", String(spec)); return
+                }
+                legs.append(FramesTransaction.Leg(recipient: target, value: wei))
+            }
+            guard !legs.isEmpty else {
+                NSLog("[Casberi] framesStitch| no legs — nothing to send"); return
+            }
+            Task { @MainActor in
+                guard let account = FramesKey.address() else {
+                    NSLog("[Casberi] framesStitch| no key on this phone"); return
+                }
+                guard let nonce = await FramesSend.currentNonce(for: account) else {
+                    NSLog("[Casberi] framesStitch| couldn't read the nonce"); return
+                }
+                NSLog("[Casberi] framesStitch| from=%@ legs=%d atomic=%@ nonce=%llu",
+                      account, legs.count, atomic ? "YES" : "NO", nonce)
+                do {
+                    let hash = try await FramesSend.sendStitched(legs: legs, atomic: atomic,
+                                                                 nonce: nonce)
+                    NSLog("[Casberi] framesStitch| sent tx=%@", hash)
+                } catch let f as FramesSend.Failure {
+                    NSLog("[Casberi] framesStitch| refused=%@", String(describing: f))
+                } catch {
+                    NSLog("[Casberi] framesStitch| failed=%@", String(describing: error))
+                }
+            }
+        },
+
         // `-framesKeyProbe YES|claim` — this phone's Frames signing key, and
         // §531's whole triple, because that bug is transplanted code and so
         // is its blind spot: `presence()` answers `.none` the moment the
