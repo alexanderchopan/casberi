@@ -29,16 +29,56 @@
 #
 # Pure, local, deterministic — no network, no simulator, no key.
 set -euo pipefail
+# Absolute, captured BEFORE the cd below: the mutation fan-out re-invokes this
+# script and `$0` is relative to the caller's cwd.
+SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 cd "$(dirname "$0")/.."
+
+# --- the mutation child ------------------------------------------------------
+# One mutation, in its own scratch directory so a concurrent sibling cannot see
+# it. Prints ONE line the parent classifies; never exits the whole run, because
+# a second broken mutation costs another full pass to discover (`verify.sh`'s
+# 2026-08-19 lesson — report ALL failures, not the first).
+if [[ "${1:-}" == "--mutate" ]]; then
+  SRCDIR="$2"; MID="$3"
+  MLABEL="$(cat "$SRCDIR/mut/$MID.label")"
+  MFILE="$(cat "$SRCDIR/mut/$MID.file")"
+  MW="$(mktemp -d)"
+  trap 'rm -rf "$MW"' EXIT
+  cp "$SRCDIR"/*.swift "$MW/"
+  mkdir -p "$MW/m"; cp "$SRCDIR/m/main.swift" "$MW/m/"
+  set +e
+  python3 - "$MW/$MFILE" "$SRCDIR/mut/$MID.from" "$SRCDIR/mut/$MID.to" <<'PYM'
+import sys, io
+p, fa, fb = sys.argv[1], sys.argv[2], sys.argv[3]
+src = io.open(p, encoding="utf-8").read()
+a = io.open(fa, encoding="utf-8").read()
+b = io.open(fb, encoding="utf-8").read()
+if a not in src:
+    sys.exit(2)
+io.open(p, "w", encoding="utf-8").write(src.replace(a, b, 1))
+PYM
+  applied=$?
+  set -e
+  # A mutation that matches NOTHING is stale and has silently been testing the
+  # shipped code — the failure mode this check exists to prevent in itself.
+  if (( applied == 2 )); then echo "STALE|$MID|$MLABEL"; exit 0; fi
+  if ( cd "$MW" && swiftc -O -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift m/main.swift 2>/dev/null ) \
+     && "$MW/m/run2" >/dev/null 2>&1; then
+    echo "SURVIVED|$MID|$MLABEL"; exit 0
+  fi
+  echo "CAUGHT|$MID|$MLABEL"; exit 0
+fi
 
 TX="Casberi/Casberi/Model/FramesTransaction.swift"
 RLPF="Casberi/Casberi/Model/RLP.swift"
 KC="Casberi/Casberi/Model/Keccak256.swift"
 MONEY="Casberi/Casberi/Model/FramesMoney.swift"
+SECT="Casberi/Casberi/Model/FramesSection.swift"
 KEY="Casberi/Casberi/Model/FramesKey.swift"
 SEND="Casberi/Casberi/Model/FramesSend.swift"
 BRIDGE="Casberi/Casberi/Model/FramesBridge.swift"
-for f in "$TX" "$RLPF" "$KC" "$MONEY" "$KEY" "$SEND" "$BRIDGE"; do
+for f in "$TX" "$RLPF" "$KC" "$MONEY" "$SECT" "$KEY" "$SEND" "$BRIDGE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -224,10 +264,27 @@ sys.exit(0)
 PYSTARVE
 echo "  ok   drift guards: this chain's gas spelling, and an absent stateGasUsed is never read as zero"
 
+# --- the scope strip's absences, which are MEASUREMENTS ---------------------
+# Read from a COMMENT-STRIPPED copy: this file documents the absent scopes by
+# NAMING them, so a raw grep fires on the prose explaining why they are gone.
+strip_comments "$SECT" > "$WORK/sect.nc"
+# `nonces` and `coins` are absent because THIS CHAIN CANNOT FILL THEM — it
+# implements no keyed nonces (measured over its whole type-0x06 population)
+# and has no UTXO vault. A case appearing here is either a chain upgrade
+# nobody re-measured or a scope copied across from Hegotá that can only ever
+# be empty, and §83 bans the empty chip.
+for absent in nonces coins accounts permissions; do
+  if grep -qE "case $absent" "$WORK/sect.nc"; then
+    echo "✗ FramesSection grew a \`$absent\` scope — Hegotá has it and this chain cannot fill it; re-measure before adding one"; exit 1
+  fi
+done
+echo "  ok   drift guards: the strip keeps the four scopes this chain can fill"
+
 cp "$TX" "$WORK/FramesTransaction.swift"
 cp "$RLPF" "$WORK/RLP.swift"
 cp "$KC" "$WORK/Keccak256.swift"
 cp "$MONEY" "$WORK/FramesMoney.swift"
+cp "$SECT" "$WORK/FramesSection.swift"
 mkdir -p "$WORK/m"
 
 cat > "$WORK/m/main.swift" <<'SWIFT'
@@ -454,12 +511,65 @@ check("the line names test ETH and no currency",
 check("and carries no dollar sign",
       !(FramesMoney.balanceLine(weiHex: "0xde0b6b3a7640000") ?? "").contains("$"))
 
+
+// ============ THE SCOPE STRIP. Every failure here renders as a perfectly
+// ordinary room — a scope that never appears, a remembered scope resolving to
+// one nobody picked, or a strip drawn over a single chip.
+check("Home leads", FramesSection.order.first == .home)
+check("the order covers every case", Set(FramesSection.order) == Set(FramesSection.allCases))
+check("and lists each exactly once", FramesSection.order.count == FramesSection.allCases.count)
+// THE TAIL RULE, Wallet's: no UNCONDITIONAL scope may sit after a conditional
+// one, so the strip's stable head never reflows as an address gains content.
+let firstConditional = FramesSection.order.firstIndex { $0.isConditional } ?? FramesSection.order.count
+check("no unconditional scope sits after a conditional one",
+      FramesSection.order.enumerated().allSatisfy { i, s in i < firstConditional || s.isConditional })
+check("home and activity are the constants",
+      FramesSection.order.filter { !$0.isConditional } == [.home, .activity])
+check("frames leads the conditional tail", FramesSection.order[firstConditional] == .frames)
+
+// PRESENT: the two constants always, the two readings only when they exist.
+check("a bare address is home and activity alone",
+      FramesSection.present(frames: false, sponsors: false) == [.home, .activity])
+check("a frame transaction opens the frames scope",
+      FramesSection.present(frames: true, sponsors: false) == [.home, .activity, .frames])
+// SPONSORS IS FALSE ON EVERY ADDRESS MEASURED SO FAR — every transaction on
+// this chain is self-paid — and that is the correct output rather than a gap.
+check("a sponsored transaction opens the sponsors scope",
+      FramesSection.present(frames: true, sponsors: true) == [.home, .activity, .frames, .sponsors])
+check("sponsors can appear without frames",
+      FramesSection.present(frames: false, sponsors: true) == [.home, .activity, .sponsors])
+
+// RESOLVE falls back to `.home`, never to "the first present scope" — an
+// unreachable branch that quietly picks `frames` is how a room starts opening
+// somewhere nobody chose.
+check("an unremembered scope opens Home",
+      FramesSection.resolve(nil, present: FramesSection.order) == .home)
+check("a remembered scope that is still present is kept",
+      FramesSection.resolve(.frames, present: [.home, .activity, .frames]) == .frames)
+check("a remembered scope whose content is gone falls back to Home",
+      FramesSection.resolve(.sponsors, present: [.home, .activity]) == .home)
+check("the fallback is Home and not the first present scope",
+      FramesSection.resolve(.sponsors, present: [.activity, .home]) == .home)
+
+// ONE SCOPE IS A LABEL, NOT A CONTROL.
+check("a strip over one scope is not drawn", !FramesSection.shows(present: [.home]))
+check("a strip over two is", FramesSection.shows(present: [.home, .activity]))
+// NO DOTS, EVER: nothing in this room is urgent — no deadline, no expiry, no
+// grant to revoke, and the asset is test ETH on a resettable chain.
+check("no chip ever wears a dot", FramesSection.attention().isEmpty)
+
+// THE LITERAL TERMS. The chip is where the vocabulary gets learned, and this
+// chain is NAMED for frames.
+check("the frames chip says Frames", FramesSection.frames.label == "Frames")
+check("every scope says what it holds",
+      FramesSection.allCases.allSatisfy { !$0.summary.isEmpty && $0.summary != $0.label })
+
 if fails > 0 { print("  \(fails) assertion(s) failed"); exit(1) }
 print("  ok   encoder: 2 real vectors byte-exact, keccak == the chain's own hash")
 SWIFT
 
 build_run() {
-  ( cd "$WORK" && swiftc -O -o m/run FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift m/main.swift 2>&1 )
+  ( cd "$WORK" && swiftc -O -o m/run FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift m/main.swift 2>&1 )
 }
 if ! out="$(build_run)"; then echo "✗ harness did not compile"; echo "$out"; exit 1; fi
 "$WORK/m/run" || exit 1
@@ -467,23 +577,32 @@ if ! out="$(build_run)"; then echo "✗ harness did not compile"; echo "$out"; e
 # --- mutations --------------------------------------------------------------
 # Each is a silent wrong answer: the encoder still compiles, still produces
 # bytes, and authorises something nobody asked for.
+# RECORD a mutation; the fan-out below runs them. Each is a silent wrong
+# answer: the code still compiles, still produces bytes, and authorises
+# something nobody asked for.
+#
+# **They run CONCURRENTLY (2026-09-01).** Every mutation is PURE — it edits its
+# own scratch copy and reads nothing the others write — so running them one at
+# a time on one core of eight was the whole of this harness's cost: 27
+# mutations x a full five-file `-O` compile is ~11 minutes, and it grew every
+# time a file was added. `xargs -P`, never a `jobs -r` slot loop: job control
+# is OFF in a non-interactive zsh, so `jobs -r` reports NOTHING and the loop
+# degrades silently to "launch all 27 at once", which on 8 cores thrashes to
+# slower than serial while every check still passes (`verify.sh`'s own paid-for
+# trap, 2026-08-19).
+MUTN=0
 mutate() {
-  local label="$1" file="$2" from="$3" to="$4"
-  cp "$WORK/$file" "$WORK/$file.bak"
-  python3 - "$WORK/$file" "$from" "$to" <<'PYM' || { cp "$WORK/$file.bak" "$WORK/$file"; echo "✗ mutation '$label' matched nothing — it is stale and has been testing the shipped code"; exit 1; }
-import sys, io
-p, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
-src = io.open(p, encoding="utf-8").read()
-if a not in src: sys.exit(1)
-io.open(p, "w", encoding="utf-8").write(src.replace(a, b, 1))
-PYM
-  if ( cd "$WORK" && swiftc -O -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift m/main.swift 2>/dev/null ) \
-     && "$WORK/m/run2" >/dev/null 2>&1; then
-    cp "$WORK/$file.bak" "$WORK/$file"
-    echo "✗ mutation SURVIVED: $label"; exit 1
-  fi
-  cp "$WORK/$file.bak" "$WORK/$file"
-  echo "  ok   catches  $label"
+  MUTN=$((MUTN + 1))
+  local id
+  id="$(printf '%03d' "$MUTN")"
+  mkdir -p "$WORK/mut"
+  # `printf '%s'`, never `echo`: a trailing newline appended to `from` makes the
+  # pattern match nothing, which this harness reports as a STALE mutation — a
+  # confusing failure for a mutation that is perfectly correct.
+  printf '%s' "$1" > "$WORK/mut/$id.label"
+  printf '%s' "$2" > "$WORK/mut/$id.file"
+  printf '%s' "$3" > "$WORK/mut/$id.from"
+  printf '%s' "$4" > "$WORK/mut/$id.to"
 }
 
 F=FramesTransaction.swift
@@ -541,6 +660,7 @@ mutate "the prefix ceiling raised past what the chain allows" $F \
   'maxVerifyGas: UInt64 = 500_000' 'maxVerifyGas: UInt64 = 5_000_000'
 
 F2=FramesMoney.swift
+F3=FramesSection.swift
 mutate "wei narrowed back to UInt64" $F2 \
   'var total = Decimal(0)' 'var total = Decimal(UInt64(body, radix: 16) ?? 0); if true { return total }; var unused = Decimal(0); _ = unused'
 mutate "an empty balance read as zero" $F2 \
@@ -550,5 +670,49 @@ mutate "an empty balance read as zero" $F2 \
 mutate "the balance rounded to nearest" $F2 '.down)' '.plain)'
 mutate "the wei-per-ETH divisor losing a zero" $F2 \
   '"1000000000000000000"' '"100000000000000000"'
+mutate "a conditional scope ahead of an unconditional one" $F3 \
+  '[.home, .activity, .frames, .sponsors]' '[.home, .frames, .activity, .sponsors]'
+mutate "the remembered scope falling back to the first present one" $F3 \
+  'guard let wanted, present.contains(wanted) else { return .home }' \
+  'guard let wanted, present.contains(wanted) else { return present.first ?? .home }'
+mutate "a strip drawn over a single chip" $F3 'present.count > 1' 'present.count > 0'
+mutate "sponsors shown on every address" $F3 'case .sponsors: return sponsors' 'case .sponsors: return true'
+mutate "frames marked unconditional" $F3 \
+  'case .frames, .sponsors: return true' 'case .frames, .sponsors: return false'
+mutate "a chip growing a dot that can never honestly light" $F3 \
+  'static func attention() -> Set<FramesSection> { [] }' \
+  'static func attention() -> Set<FramesSection> { [.frames] }'
+
+# --- run every recorded mutation, concurrently -------------------------------
+# One core per mutation up to the machine's count. Output is KEPT and sorted by
+# id so the report reads in declaration order regardless of which finished
+# first — `xargs` interleaves, and a mutation list that reshuffles between runs
+# is one nobody can diff.
+: > "$WORK/mut-results"
+ls "$WORK"/mut/*.label | sed 's#.*/##; s#\.label$##' \
+  | xargs -P "$(sysctl -n hw.ncpu)" -I{} zsh "$SELF" --mutate "$WORK" {} \
+  >> "$WORK/mut-results" 2>&1
+
+MUT_FAILS=0
+MUT_OK=0
+while IFS='|' read -r verdict mid label; do
+  case "$verdict" in
+    CAUGHT)   printf '  ok   catches  %s\n' "$label"; MUT_OK=$((MUT_OK + 1)) ;;
+    SURVIVED) printf '✗ mutation SURVIVED: %s\n' "$label"; MUT_FAILS=$((MUT_FAILS + 1)) ;;
+    STALE)    printf "✗ mutation '%s' matched nothing — it is stale and has been testing the shipped code\n" "$label"
+              MUT_FAILS=$((MUT_FAILS + 1)) ;;
+    *)        [[ -n "$verdict" ]] && printf '  %s\n' "$verdict" ;;
+  esac
+done < <(sort "$WORK/mut-results")
+
+# Every mutation must have reported. A child that died without a line is a
+# mutation nobody ran, and a silently skipped mutation is exactly the false
+# green this whole file exists to prevent.
+if (( MUT_OK + MUT_FAILS != MUTN )); then
+  echo "✗ $((MUTN - MUT_OK - MUT_FAILS)) of $MUTN mutation(s) never reported — they did not run"
+  exit 1
+fi
+(( MUT_FAILS == 0 )) || { echo "  $MUT_FAILS mutation(s) failed"; exit 1; }
+
 echo "  ok   drift guards: the envelope stays seven fields and never grows Hegotá's three"
-echo "✓ frames transaction self-test passed — encoder, 2 real vectors, 21 mutations"
+echo "✓ frames transaction self-test passed — encoder, 2 real vectors, $MUTN mutations"

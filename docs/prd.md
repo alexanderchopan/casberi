@@ -41648,6 +41648,109 @@ than on the pitch, because it is the fact that changes what somebody would do.
 **Still not built:** the room itself (toggle row settled at Home · Frames ·
 Activity · Sponsors), its figures, and the demo seed.
 
+## §548 follow-up — the scope strip, and the permission that is a frame (user: "will we have 'send' module on home screen? we will need to iterate w/ this b/c of how unique frames are", then "and won't we have permissions or anythign else as a toggle int he row?" → "or no bc that is 'frames'", 2026-09-01)
+
+`FramesSection`, `FramesSend.plan`, `FramesSendCard`. The toggle row is
+**Home · Activity · Frames · Sponsors**.
+
+**SEND IS THE HOME SCOPE, NOT A DOOR TO ONE** — §538's ruling for vibenet
+(*"it shouldn't have a door… it should be part of the screen"*), carried to
+Hegotá by §539 and here by the same reasoning, with §544's shared console
+underneath. This chain moves ETH and only ETH, so the unit is a WORD and never
+a chip: a control that opens a one-item menu is the dead control §83 bans.
+
+**AND THE CONSOLE SHOWS WHAT THE SEND BECOMES, which is the whole answer to
+"how unique frames are".** A send here is not one act — it is a VERIFY frame
+that authorises execution and payment, then a SENDER frame that moves the
+value, and without the first the transaction has no payer and is invalid. A
+to-and-amount form says none of that, on the chain whose entire reason for
+existing is that a transaction has parts. `FramesPlanStrip` draws them.
+
+**The preview is the transaction, not a description of one.** `FramesSend.plan`
+was extracted for exactly this: the strip renders the same `Fields`
+`FramesSend.sendValue` signs, so the two cannot disagree. A preview built from
+a parallel description is how a screen ends up promising two frames and sending
+three. It is deliberately a READING — no way to edit a frame, add one, or
+change a mode. That is a transaction builder and a different product.
+
+### Permissions is absent because this chain has no standing authority
+
+Asked whether the strip should carry Permissions, the user answered it
+mid-question (*"or no bc that is 'frames'"*) and was right — but the reason is
+sharper than coverage and is worth having written down, because it is a fact
+about EIP-8141 rather than a gap in this room.
+
+On vibenet a keystore account really does have actors — keys, passkeys, a
+delegate — that can act for it TOMORROW, so a Permissions scope lists a durable
+grant somebody can revoke. **Here authorization is PER-TRANSACTION**: a VERIFY
+frame's `flags` carry the `APPROVE` scope for execution and payment, and that
+authority is granted and spent inside the one transaction carrying it. Nothing
+survives it, so there is nothing standing to list and nothing to revoke — which
+is also why a transaction with no `APPROVE` is not under-permissioned but
+INVALID, having no payer at all.
+
+Two consequences kept: the `frames` scope must always say whether a VERIFY
+frame approved execution, payment or both — **that is the permission, not
+decoration**, and `FramesPlanCell` spells it on the console too — and a
+Permissions scope here would be a page listing grants that cannot exist, the
+empty chip §83 bans.
+
+### The other three absences, two of them measurements
+
+**UTXOs** — this chain has no UTXO vault; Hegotá's `0x…8312` predeploy is not
+deployed here and no transaction has ever named one, so the reading that is
+Hegotá's headline simply does not exist. **Nonces** — this chain implements no
+keyed nonces; EIP-8250's `nonceKeys`/`nonceSeq` appear on none of its
+transactions, so the scope the user personally named on Hegotá has nothing to
+list. Both are absent because **the chain cannot fill them**, and both are
+guarded: a `case nonces` or `case coins` appearing in `FramesSection` fails the
+build, because it is either a chain upgrade nobody re-measured or a scope
+copied across that can only ever be empty.
+
+**Accounts** is the one that IS a choice: Hegotá gives the roster its own
+unconditional scope, and here `home` carries it, because the list is short by
+construction — usually just the account you made — and a scope showing one row
+on nearly every install is the dead control again. Revisit if watching several
+here ever becomes ordinary.
+
+**Not built: the room's own card and its `FeedScreen` wiring**, which is
+deliberate rather than unfinished — a second session was editing the shell
+files at the time and a `FeedScreen` edit alongside it is the collision this
+project has a memory about.
+
+### The harness runs its mutations concurrently — 11 minutes to 59 seconds
+
+Adding `FramesMoney` and `FramesSection` took this harness to 27 mutations, and
+each one recompiles five files under `-O`, one at a time, on one core of eight.
+Measured: **~11 minutes**. That is `verify.sh`'s own 2026-08-19 finding
+arriving inside a single harness — a phase that grows linearly with every check
+added and had never been revisited since it was a handful.
+
+Every mutation is PURE: it edits its own scratch copy and reads nothing another
+writes. So the script re-invokes itself as `--mutate <dir> <id>` and fans the
+lot out through **`xargs -P`, never a `jobs -r` slot loop** — job control is OFF
+in a non-interactive zsh, so `jobs -r` reports nothing and the loop degrades
+silently to "launch all 27 at once", which on 8 cores thrashes to slower than
+serial while every check still passes. Green, and wrong. **Measured after: 59
+seconds.**
+
+Three properties kept, because a concurrent engine reporting `CAUGHT` for
+everything is exactly the false green this file exists to prevent, and all
+three are mutation-proven:
+  • a mutation that SURVIVES is reported,
+  • a mutation matching NOTHING is reported as stale rather than skipped, and
+  • **every mutation must report** — `MUT_OK + MUT_FAILS != MUTN` fails the
+    run, because a child that dies without a line is a mutation nobody ran and
+    a silently skipped mutation is indistinguishable from a passing one.
+
+ALL failures are printed rather than the first (`verify.sh`'s rule: under
+exit-on-first a second broken mutation costs another full pass to discover),
+and results are sorted by id so the report reads in declaration order however
+`xargs` interleaves them. `printf '%s'` writes the spec files, never `echo`: a
+trailing newline appended to a `from` pattern makes it match nothing, which
+this harness then reports as STALE — a confusing failure for a mutation that is
+perfectly correct.
+
 ## §549 — the demo's address book never leaves the device (user: "it has hard coded demo stuff like addresses and wallets that i did not add", then "will this issue affect other users or only affects me?" → "i am not concerned about my mac i am concerned about users", 2026-09-01)
 
 Reported as a Mac install carrying wallets and contacts nobody added. The

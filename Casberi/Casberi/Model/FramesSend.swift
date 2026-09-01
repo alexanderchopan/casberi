@@ -151,6 +151,26 @@ enum FramesSend {
         throw Failure.chainUnreachable
     }
 
+    // MARK: - What a send BECOMES
+
+    /// The transaction a send will be, built and returned unsigned.
+    ///
+    /// **This exists so the console can PREVIEW the frames, and the preview is
+    /// the transaction rather than a description of one.** `sendValue` below
+    /// calls this and signs what it returns, so the two cannot disagree — a
+    /// preview drawn from a parallel description is how a screen ends up
+    /// promising two frames and sending three. It is also the only honest way
+    /// to show what makes this chain different: a send here is not one act, it
+    /// is a VERIFY frame that authorises and a SENDER frame that moves, and
+    /// nothing about a to-and-amount form says so.
+    static func plan(sender: Data, to target: Data, valueWei: Data, nonce: UInt64,
+                     maxPriorityFeePerGas: UInt64 = 1_000_000_000,
+                     maxFeePerGas: UInt64 = 10_000_000_000) -> FramesTransaction.Fields {
+        FramesTransaction.transfer(
+            sender: sender, to: target, value: valueWei, nonce: nonce,
+            maxPriorityFeePerGas: maxPriorityFeePerGas, maxFeePerGas: maxFeePerGas)
+    }
+
     // MARK: - Send a value transfer
 
     /// Sign and broadcast the smallest useful frame transaction: a VERIFY
@@ -167,9 +187,9 @@ enum FramesSend {
         guard let address = FramesKey.address(),
               let sender = RLP.data(fromHex: address) else { throw Failure.noKey }
 
-        var fields = FramesTransaction.transfer(
-            sender: sender, to: target, value: valueWei, nonce: nonce,
-            maxPriorityFeePerGas: maxPriorityFeePerGas, maxFeePerGas: maxFeePerGas)
+        var fields = plan(sender: sender, to: target, valueWei: valueWei, nonce: nonce,
+                          maxPriorityFeePerGas: maxPriorityFeePerGas,
+                          maxFeePerGas: maxFeePerGas)
 
         // Refuse before the Face ID, not after it (§530's ruling: a refusal
         // that could have been made before the prompt should be).
