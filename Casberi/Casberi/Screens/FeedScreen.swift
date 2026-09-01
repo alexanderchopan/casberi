@@ -5063,7 +5063,25 @@ struct FeedScreen: View {
                                 // bottom alignment above intends. There is no
                                 // height budget to get wrong, and the worst
                                 // case stays "it covers more of the crown".
-                                .frame(minHeight: DSRoomChassis.visualSlot,
+                                //
+                                // **THE FLOOR IS THE SLOT LESS THE GAP BELOW
+                                // IT** (user, 2026-09-01: *"there needs to be
+                                // a slight gap between the bankr card and the
+                                // stuff around it"*). At a bare `visualSlot`
+                                // the glass ran the full height of the box, so
+                                // its bottom edge landed ON the slot's own,
+                                // leaving only `railGap` (4pt) between a
+                                // frosted card and the fused rail below it —
+                                // two objects touching, which reads as one
+                                // mis-laid-out thing rather than as chrome
+                                // floating over the room. Subtracted rather
+                                // than left to a smaller constant so the pair
+                                // still SUMS to the slot: the padding below
+                                // gives the object back the height taken here,
+                                // so the banner occupies exactly the box it
+                                // always did and the rail cannot move.
+                                .frame(minHeight: DSRoomChassis.visualSlot
+                                       - DSRoomChassis.contentInset,
                                        alignment: .leading)
                                 .dsGlass(cornerRadius: DS.Radius.widget)
                                 // Inset from the slot's edges so it reads as an
@@ -5071,7 +5089,17 @@ struct FeedScreen: View {
                                 // band the room grew. Its edge lands on the
                                 // crown's own text column, which is what
                                 // `contentInset` is for.
+                                //
+                                // The bottom is the same token as the sides,
+                                // so the air around the card is even on three
+                                // edges. The TOP deliberately gets none: the
+                                // glass keeps its top at the slot's own, which
+                                // is what covers `price48` whole rather than
+                                // slicing it mid-glyph — the exact defect the
+                                // paragraph above records. Its gap upward is
+                                // the row's own `WalletCardStyle.rowInsets`.
                                 .padding(.horizontal, DSRoomChassis.contentInset)
+                                .padding(.bottom, DSRoomChassis.contentInset)
                         }
                     }
                     .listRowBackground(Color.clear)
