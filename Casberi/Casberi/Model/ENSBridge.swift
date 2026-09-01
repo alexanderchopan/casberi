@@ -116,6 +116,12 @@ enum ENSWatch {
             landed.source = source
             landed.sourceRef = ref
             landed.authorHandle = name
+            // Remember it was the wallet's — the row is about to stop looking
+            // like a wallet row, and this is the only moment that fact exists.
+            var reading = ENSState.reading(name)
+                ?? ENSState.Reading(expiry: nil, registered: nil, readAt: .distantPast)
+            reading.fromWallet = true
+            ENSState.write(name, reading)
             if !landed.tags.contains("Watchlist") { landed.tags.append("Watchlist") }
             context.saveHonestly()
             SpotlightIndex.index([landed])
@@ -125,7 +131,7 @@ enum ENSWatch {
         let thing = Thing(
             kind: .link,
             title: name,
-            content: "https://app.ens.domains/name/\(name)",
+            content: "https://app.ens.domains/\(name)",
             source: source,
             capturedAt: .now,
             tags: ["Watchlist"],
@@ -227,6 +233,19 @@ enum ENSState {
         /// from `expiry == nil` on a reading that failed — that one is not
         /// written at all.
         var unregistered: Bool = false
+        /// This name came from a watched wallet — set when the seat ADOPTS an
+        /// `ENSExpiry` row (2026-08-31, prd §540). It decides one sentence on
+        /// the renew card: renewing is permissionless, so paying for a name
+        /// you don't own does NOT transfer it, and somebody renewing their own
+        /// name shouldn't be told that.
+        ///
+        /// **OPTIONAL, and it has to be.** This struct is decoded with `try?`
+        /// off one blob, and Swift's synthesized `Codable` does NOT fall back
+        /// to a property's default for a missing key — a non-optional addition
+        /// throws on decode and silently empties every reading on upgrade.
+        /// The trap `WalletStore.WatchedAddress.updatedAt` documents, and the
+        /// one §312 hit in `RSSStore.Feed`.
+        var fromWallet: Bool? = nil
         var readAt: Date
     }
 
@@ -409,7 +428,7 @@ enum ENSIngest {
         let thing = Thing(
             kind: .link,
             title: IngestSupport.titleLine(title),
-            content: "https://app.ens.domains/name/\(name)",
+            content: "https://app.ens.domains/\(name)",
             source: ENSWatch.source,
             capturedAt: .now,
             tags: [tag],

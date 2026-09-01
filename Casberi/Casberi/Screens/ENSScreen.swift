@@ -43,7 +43,7 @@ struct ENSScreen: View {
             BridgeSetupHeader(
                 name: "ENS",
                 mode: .noAccount,
-                intro: "Follow a name below and it says when it expires — including the ninety days after, when only its owner can still renew it.",
+                intro: "Follow a name below and it says when it expires — including the ninety days after, when it can still be renewed before anyone else can take it.",
                 connected: !followed.isEmpty)
             if !followed.isEmpty {
                 RoomDoor(name: "ENS", source: ENSWatch.source)
@@ -180,7 +180,7 @@ struct ENSScreen: View {
             return String(localized: "Expires \(ENSName.dateWord(expiry))")
         case .grace:
             guard let end = ENSName.graceEnd(expiry: expiry) else { return nil }
-            return String(localized: "Expired — the owner can renew until \(ENSName.dateWord(end))")
+            return String(localized: "Expired — can still be renewed until \(ENSName.dateWord(end))")
         case .premium, .released:
             return String(localized: "Released — anyone can register it")
         case .unregistered:

@@ -1178,6 +1178,12 @@ harness "GitHub person-watch pure-logic self-test" "github-person self-test" "sc
 # shipped with), a subname is followed into a row the registrar 404s forever, or a
 # followed name and the wallet's own ENSExpiry row disagree about which one it is.
 harness "ENS pure-logic self-test" "ens self-test" "scripts/ens-selftest.sh" "the ENS logic self-test failed — run scripts/ens-selftest.sh"
+# The ENS RENEWAL encoding (prd §540). Its own harness rather than a section of
+# the one above, because what it guards is a different KIND of failure: every
+# other prepared transaction this app produces carries "value": "0x0", and this
+# one moves real money when signed. A wrong byte here is not a crash — it is a
+# well-formed transaction a wallet will sign and a chain will execute.
+harness "ENS renewal encoding self-test" "ens renew self-test" "scripts/ens-renew-selftest.sh" "the ENS renewal encoding self-test failed — run scripts/ens-renew-selftest.sh"
 
 harness "Radicle pure-logic self-test" "radicle self-test" "scripts/radicle-selftest.sh" "the Radicle logic self-test failed — run scripts/radicle-selftest.sh"
 # Walletbeat (prd §419). Catches the silent wrong answer this seat is built around: a

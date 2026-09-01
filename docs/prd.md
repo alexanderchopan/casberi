@@ -79,6 +79,7 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §534 | A `.eth` name in its grace period can be renewed by **the owner** — the grace copy said so in four places | reversed by §540 (MEASURED: the deployed `ETHRegistrarController.renew` has no owner check of any kind — it takes the money, extends the registration, and never asks who paid. **Renewing is permissionless.** The grace period restricts RE-REGISTRATION, not renewal, so the copy was wrong in the direction that talks somebody out of an act they could take; all four places now say "it can still be renewed", and the renew card carries the footgun the capability creates — paying does not transfer the name) |
 | §250 | An individual charge NEVER lands — a £9 payment is a tally wearing a currency symbol, so only money whose movement is itself the news earns a row | amended by §537 **for Polar only** (Stripe's own rule stands unchanged where §250 set it: a payment processor serving businesses at thousands of charges a day. Polar is a Merchant of Record for indie developers, where a sale is a countable event somebody remembers — so sales land, while a `subscription_cycle` RENEWAL is still refused as exactly the tally §250 describes) |
 | §500 | Hegotá **never touches the faucet** — a faucet claim is a write and the seat's whole claim is that it cannot write, so it links out and the person claims their own | overtaken by §525 (the key sheet grew a Claim button that POSTs to it) and then by §531, which is where the CONSEQUENCE was paid: the faucet host had been in the reach audit's non-reach denylist on §500's reasoning, so for a day the privacy screen omitted a host the app really reached |
 | §369 | A money receipt pours its SOURCE — nine hues, so ten money sheets read as ten places instead of ten rows | amended by §524 (the pour is ink on every paper; `MoneyReceipt.Hue` is still computed and still harnessed nine ways, and no view paints with it — the disc directly above the pour already states the source at full strength, so the wash was the same fact a second time and weaker) |
@@ -40656,3 +40657,94 @@ in the file so the refusal stays checkable rather than remembered.
 
 Both Hegotá harnesses green (`hegota-selftest` 45 mutations and 19 drift guards,
 `hegota-tx-selftest` 11 mutations). UNSEEN on a device, for §538's reason.
+
+## 540. ENS renewal, prepared and handed off (2026-08-31)
+
+§534 gave ENS a seat that says WHEN a name expires and could do nothing about
+it. This is the act: a renew card on a followed name's sheet that prices the
+renewal, encodes the transaction, quotes the fee, and hands the whole thing to
+the person's own wallet. `WalletPrepare`/`ApprovalPrepareCard`'s shape (§112),
+second instance — **Casberi signs nothing and holds no key.**
+
+`Model/ENSRenew.swift` (the encoding, Foundation-only),
+`Model/ENSRenewPrepare.swift` (the reads), `Screens/ENSRenewCard.swift`,
+`scripts/ens-renew-selftest.sh`, `-ensRenewProbe "<name>"`.
+
+**THE CARD IS THE FIRST THING THIS APP HAS EVER PRODUCED THAT MOVES MONEY.**
+Every prepared transaction before it carries `"value": "0x0"` — a revoke costs
+gas and moves nothing. This one carries a real amount, and the failure mode is
+not a crash: a wrong byte yields a transaction that is well-formed, that a
+wallet renders a confirm screen for, and that a chain executes. Green build,
+right-looking card, right tap, money gone. Hence pinned ABI vectors from an
+INDEPENDENT encoder, `safetx-selftest.sh`'s answer to the same class.
+
+**FOUR CONSTANTS WERE MEASURED ON MAINNET, AND TWO WOULD HAVE SHIPPED AS BUGS
+FROM MEMORY.** (1) The controller is `0x59E16fcC…6547`; the long-standing one
+every note and blog post names, `0x2535…303b`, is **NO LONGER AUTHORIZED** —
+`BaseRegistrar.controllers()` answers 1 for the first and **0** for the second.
+Calldata against the retired one encodes perfectly and reverts on submission,
+after somebody has approved spending. (2) The live call is
+`renew(string,uint256,bytes32)` — **three arguments**, a referrer word the old
+two-argument form lacks; read out of the deployed bytecode, where the
+two-argument selector is absent entirely. Getting this wrong changes the head
+offset from `0x60` to `0x40` and decodes the label from the wrong place.
+(3) Prices are the published $5 / $160 / $640 per-year tiers, cross-checked
+from two independent controllers. (4) `app.ens.domains/<name>` is canonical
+today and `/name/<name>` 301s to it — both are in circulation, so `normalized`
+accepts both, **and only ENS's own host**: taking the last path component of
+any URL would teach the field to read strangers' links, on the one screen whose
+job is saying a name is safe to care about. That also fixed a §534 bug — the
+now-canonical link form was being REFUSED.
+
+**RENEWING IS PERMISSIONLESS, AND THAT REVERSES COPY §534 SHIPPED.** The
+deployed `renew` has no owner check of any kind: it takes the money, extends
+the registration, and never asks who paid. So §534's "the owner can still renew
+it" is wrong — the grace period restricts RE-REGISTRATION, not renewal — and
+wrong in the direction that talks somebody out of an act they could take. All
+four places now say "it can still be renewed". The capability is real: you can
+renew a name you follow and do not own. So is the footgun, and it is one
+sentence: **paying does not transfer the name.** `ownershipNote` states it
+whenever a watched wallet doesn't hold the name, and its absence fails the
+build — nobody should learn that after signing.
+
+**Three encoding rules, each pinned because each renders as an ordinary card.**
+The length word counts **UTF-8 BYTES, not characters** (`café` is four and
+five; encoding four renews a truncated label). Padding adds **nothing** at an
+exact word boundary (the naive `32 - count % 32` appends a dead word on a
+32-byte label, which no ordinary name reveals). And the call takes the
+**LABEL, never the name** — the controller hashes what it is given, so
+`"vitalik.eth"` renews a different, unregistered entry while the money leaves;
+refused at the encoder rather than trusted to callers.
+
+**The buffer is small on purpose.** ENS prices in USD through an oracle, so the
+wei figure drifts between the quote and the signature and sending exactly the
+quote reverts. The excess is refunded — read from the contract, not assumed —
+but by `.transfer()`, which forwards 2,300 gas and is not always enough for a
+smart-account wallet; a failed refund reverts the whole renewal. So 5%: enough
+for drift, not enough to break the wallets hardest to debug. The card says the
+amount moves rather than stating a figure as fixed (§83), and never quotes a
+fiat number, because no ETH price is trusted on this path.
+
+**The card appears in exactly two rungs, `.expiring` and `.grace`.** Before
+that there is nothing to do for years; once `.released` the name is gone and
+`renew` REVERTS — that call is `register`, at a different price with a premium,
+which this app does not do. A Renew control there is one that takes money and
+fails. The price read **fails CLOSED**: a revert answers `"0x"`, which parses
+to a price of ZERO, and "free renewal" is the worst number this card could
+print.
+
+**Deliberately NOT built: signing in the app.** Every WalletConnect session
+here is proposed with `methods: []` and `events: []`, asserted from the
+wallet's side by `scripts/wc-handshake.sh`. Signing would need a second,
+one-shot session scoped to this one call — its own decision with its own
+review, not a rider on a hand-off. Guarded as a negative: the renew path may
+not name a signer or any send/sign RPC verb.
+
+**UNSIGNED, and structurally so.** Nothing on this host owns a `.eth` name, so
+no transaction encoded here has ever been signed or submitted, and no renewal
+has ever completed. The harness is the only proof these bytes are right. Its
+own mutation pass caught a non-discriminating fixture on the first run — the
+rounding test fed `payable(base:)` an exactly-representable price, so `.up` and
+`.down` agreed and the mutation survived green (the standing rule, fourth
+instance: **a fixture only tests the rule it names if it FAILS that rule and
+passes every other one**).
