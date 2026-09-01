@@ -30,19 +30,6 @@ struct HegotaRoomFigure: View {
     let scoped: String?
     let section: HegotaSection
 
-    /// How many address bars the accounts figure draws. Five is the watch cap,
-    /// so in practice it never truncates — a bound on the drawing, not a limit
-    /// on what is watched.
-    /// How many address bars the accounts figure draws.
-    ///
-    /// **Three, and it is a HEIGHT budget, not a taste.** The slot gives a
-    /// figure 180pt under its reserved headline row and clips the rest; an
-    /// account bar is a name row, the bar and its coin note — about 50pt — so
-    /// five bars is 250pt of content in a 180pt box, and what falls off the
-    /// bottom does so silently. The remainder is NAMED rather than dropped
-    /// (the no-silent-caps rule); five is still the watch cap.
-    private static let laneCap = 3
-
     /// The pressed lane, and the task that lets it go. `@State`, so it dies
     /// with the room the way `x402Lane` does — a press is a question about
     /// right now, not a scope worth keeping.
@@ -135,9 +122,18 @@ struct HegotaRoomFigure: View {
         case .activity:
             return moves.count == 1 ? String(localized: "1 transaction")
                                     : String(localized: "\(String(moves.count)) transactions")
+        // **A COUNT, NOT THE MONEY (prd §555, user: "accounts isn't about
+        // balances. it could sum how many or how many watching").** This scope
+        // led with the summed balance of every reached address, which is the
+        // Home crown's own subject one chip away — so the room drew two totals
+        // and the second one had to apologise for its scale. `HegotaSection`
+        // already says what this scope is: "a watched address always has a
+        // roster row, even one that says the chain could not be reached, which
+        // is itself the answer." The roster is the subject, so the headline is
+        // how many, and the room is back to one crown (§506).
         case .accounts:
-            let total = accounts.filter(\.reached).compactMap(\.balanceWei).reduce(Decimal(0), +)
-            return HegotaFormat.crown(total)
+            return accounts.count == 1 ? String(localized: "1 address")
+                                       : String(localized: "\(String(accounts.count)) addresses")
         case .coins:
             return coins.isEmpty ? nil : HegotaFormat.crown(HegotaCoins.total(coins))
         case .nonces:
@@ -215,40 +211,47 @@ struct HegotaRoomFigure: View {
     /// no other chain in this app can offer, arriving inside the flow figure
     /// rather than instead of it. A lane with no frames (an ordinary type-`0x2`
     /// transfer) draws neutral, which is exactly what it is.
+    ///
+    /// **THE CAPTION IS THE FIGURE NOW (prd §555, user: "i don't like all the
+    /// helper text and i want something more juicy for the charts").** The two
+    /// numbers this scope is actually about — what came in, what went out —
+    /// were a 12pt sentence in the quietest tier on the card, under a second
+    /// 12pt sentence apologising for the scale. They are the two column heads
+    /// at `price16` instead, sitting over the stacks they total, and the
+    /// sentence that said them is deleted rather than moved.
+    ///
+    /// **The log disclaimer is an AXIS TAG, not a sentence.** It labels the
+    /// spine it governs, and what the sentence was protecting — that the
+    /// figures are exact — is carried by every lane already printing its own.
     @ViewBuilder private var activityFigure: some View {
         if let band = HegotaFlow.band(moves) {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                // **PRESS A LANE TO SEE ITS STEPS** (moment 05) — §386d's
-                // press-reveals-a-fact, answered IN the caption's own slot so
-                // the eye is already there and the card never changes height.
-                figureCaption(pickedLane.map(laneSteps) ?? bandCaption(band))
-                // **ONE scale decision across BOTH sides**, for the reason
-                // `HegotaScale` exists: this address's biggest inflow is thirty
-                // times everything else it has ever done put together, so drawn
-                // proportionally every other lane is a four-point sliver — the
-                // exact failure the accounts bar hit, in a second figure.
-                let amounts = (band.inLanes + band.outLanes).map(\.wei)
-                let scale = HegotaScale.of(amounts)
+            // **ONE scale decision across BOTH sides**, for the reason
+            // `HegotaScale` exists: this address's biggest inflow is thirty
+            // times everything else it has ever done put together, so drawn
+            // proportionally every other lane is a four-point sliver — the
+            // exact failure the accounts bar hit, in a second figure.
+            let amounts = (band.inLanes + band.outLanes).map(\.wei)
+            let scale = HegotaScale.of(amounts)
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                bandHead(band, scale: scale)
                 HStack(alignment: .top, spacing: 0) {
                     laneStack(band.inLanes, band: band, incoming: true,
                               amounts: amounts, scale: scale)
                     // The spine: the address itself, which both sides cross.
                     // Top-aligned with the lane stacks: centred, it hung below
                     // the rows it is supposed to join and read as a stray mark.
-                    Capsule().fill(DS.tint.opacity(0.55))
+                    // It GRADES away from the head now, so the eye starts at
+                    // the two totals and runs down into the lanes that make
+                    // them up rather than reading the band as two lists.
+                    Capsule()
+                        .fill(LinearGradient(
+                            colors: [DS.tint.opacity(0.75), DS.tint.opacity(0.25)],
+                            startPoint: .top, endPoint: .bottom))
                         .frame(width: 5, height: spineHeight(band))
                         .padding(.horizontal, DS.Space.s2)
                         .padding(.top, 4)
                     laneStack(band.outLanes, band: band, incoming: false,
                               amounts: amounts, scale: scale)
-                }
-                // **No reserved height.** Forcing 112pt here left ~60pt of air
-                // between the band and the note under it, which pushed that
-                // note onto the slot's bottom edge where it collided with the
-                // face rail — the "overflow" was a fixed frame the content
-                // never filled, not content that was too big.
-                if scale == .logarithmic {
-                    figureCaption(String(localized: "Bar lengths are a log scale — the figures are exact"))
                 }
             }
             // **CENTRED, not top-pinned.** `DSRoomSlot` is a fixed 210pt
@@ -261,12 +264,78 @@ struct HegotaRoomFigure: View {
         }
     }
 
-    /// In and out as one sentence, so the band can never be read against the
-    /// wrong side. Net is deliberately absent: it is not a balance, the crown
-    /// above already carries that, and two figures that look like totals on one
-    /// card is how a reader ends up believing the wrong one.
-    private func bandCaption(_ band: HegotaFlow.Band) -> String {
-        String(localized: "In \(HegotaFormat.eth(band.inWei)) · out \(HegotaFormat.eth(band.outWei))")
+    /// The band's two totals, and the axis tag between them.
+    ///
+    /// **Net is deliberately absent**: it is not a balance, the crown on Home
+    /// already carries that, and two figures that look like totals on one card
+    /// is how a reader ends up believing the wrong one. In and out are stated
+    /// as two, wearing their own signs, so the band can never be read against
+    /// the wrong side.
+    ///
+    /// **The sub-line is where a pressed lane answers** (§503, moment 05):
+    /// the fact takes a row that is always there, so the card never changes
+    /// height and the eye is already on the head. It replaces BOTH move
+    /// counts rather than one, because a line that swaps only the left half
+    /// reads as the left lane having said something about the right one.
+    ///
+    /// The trailing inset is the settings gear's — `figureCaption`'s own
+    /// clearance, spelled here because this row is not a caption.
+    @ViewBuilder private func bandHead(_ band: HegotaFlow.Band,
+                                       scale: HegotaScale) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text(HegotaFormat.signed(band.inWei, incoming: true))
+                    .dsText(.price16).monospacedDigit().lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .foregroundStyle(band.inWei > 0 ? DS.confirm : DS.textTertiary)
+                Spacer(minLength: 0)
+                // **The tag draws ONLY on the log scale**, so its absence is
+                // how a linear band says linear — the same rule the accounts
+                // roster's own scale marks follow. A tag that is always there
+                // says nothing.
+                if scale == .logarithmic {
+                    Text(String(localized: "log"))
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        .padding(.horizontal, 7).padding(.vertical, 1)
+                        .background(Capsule().fill(DS.fillFaint))
+                        .accessibilityLabel(String(localized: "Bar lengths are a log scale — the figures are exact"))
+                }
+                Spacer(minLength: 0)
+                Text(HegotaFormat.signed(band.outWei, incoming: false))
+                    .dsText(.price16).monospacedDigit().lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .foregroundStyle(band.outWei > 0 ? DS.textPrimary : DS.textTertiary)
+            }
+            Group {
+                if let lane = pickedLane {
+                    Text(laneSteps(lane))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    HStack(spacing: DS.Space.s2) {
+                        Text(sideCaption(band.inLanes, incoming: true))
+                        Spacer(minLength: 0)
+                        Text(sideCaption(band.outLanes, incoming: false))
+                    }
+                }
+            }
+            .dsText(.label12).foregroundStyle(DS.textTertiary).lineLimit(1)
+        }
+        .padding(.trailing, 56)
+    }
+
+    /// What a side's total is made of — the word, and how many moves.
+    ///
+    /// A COUNT of moves and not of lanes: three deposits to one vault is three
+    /// things that happened, and folding them into "1 counterparty" is the
+    /// figure describing its own drawing rather than the address's week.
+    private func sideCaption(_ lanes: [HegotaFlow.Lane], incoming: Bool) -> String {
+        let moves = lanes.reduce(0) { $0 + $1.count }
+        if incoming {
+            return moves == 1 ? String(localized: "in · 1 move")
+                              : String(localized: "in · \(String(moves)) moves")
+        }
+        return moves == 1 ? String(localized: "out · 1 move")
+                          : String(localized: "out · \(String(moves)) moves")
     }
 
     /// A figure's caption line.
@@ -294,8 +363,19 @@ struct HegotaRoomFigure: View {
     /// and too short for a four-lane one.
     private func spineHeight(_ band: HegotaFlow.Band) -> CGFloat {
         let rows = max(1, max(band.inLanes.count, band.outLanes.count))
-        return min(CGFloat(112), CGFloat(rows) * 24)
+        // A row is `laneRowHeight` with `DS.Space.s1` under it, and the last
+        // row has no gap — so the spine ends level with the last lane rather
+        // than four points past it. The ceiling is the four-lane case, which
+        // is `HegotaFlow.laneLimit` plus its folded tail.
+        return min(Self.laneRowHeight * 4 + DS.Space.s1 * 3,
+                   Self.laneRowHeight * CGFloat(rows) + DS.Space.s1 * CGFloat(rows - 1))
     }
+
+    /// **24, and the four points came out of the two deleted captions
+    /// (prd §555).** The band's budget is 168 less the head's 22 + 16 and the
+    /// `s3` under it: 118, against four rows at 24 plus three `s1` gaps = 108.
+    /// It was 20 while two sentences held the rest.
+    private static let laneRowHeight: CGFloat = 24
 
     /// One side of the band, as a mirrored bar chart.
     ///
@@ -355,7 +435,7 @@ struct HegotaRoomFigure: View {
                 laneLabelView(lane, incoming: false)
             }
         }
-        .frame(height: 20)
+        .frame(height: Self.laneRowHeight)
         .contentShape(Rectangle())
         // The press that reveals a lane's steps (§503, moment 05) had no trait,
         // so VoiceOver had nothing to announce and nothing to activate — the
@@ -396,9 +476,18 @@ struct HegotaRoomFigure: View {
     @ViewBuilder private func laneBar(_ lane: HegotaFlow.Lane,
                                       share: Double, incoming: Bool) -> some View {
         GeometryReader { geo in
+            // **IT FADES AWAY FROM THE SPINE (prd §555).** A flat capsule is a
+            // bar chart drawn twice; a bar that is densest where it meets the
+            // address and thins as it leaves reads as movement, which is what
+            // the figure is about. The hue is unchanged — it is still the
+            // lane's leading frame mode, and the gradient never touches which
+            // end is which, because the STRONG end is always the spine.
             Capsule()
-                .fill(laneTint(lane).opacity(0.85))
-                .frame(width: max(4, geo.size.width * CGFloat(share)), height: 12)
+                .fill(LinearGradient(
+                    colors: [laneTint(lane).opacity(0.9), laneTint(lane).opacity(0.3)],
+                    startPoint: incoming ? .trailing : .leading,
+                    endPoint: incoming ? .leading : .trailing))
+                .frame(width: max(4, geo.size.width * CGFloat(share)), height: 14)
                 .frame(maxWidth: .infinity, maxHeight: .infinity,
                        alignment: incoming ? .trailing : .leading)
         }
@@ -474,46 +563,154 @@ struct HegotaRoomFigure: View {
 
 
 
-    /// **ACCOUNTS — where each address's money actually sits.**
+    /// **ACCOUNTS — the roster, and what each address does on this chain.**
     ///
-    /// iPhone's storage bar, and the same question: one bar per address, split
-    /// by where the money is. **It counts no moves**, deliberately — how much
-    /// an address DOES is the Activity scope's subject, and a figure that
-    /// borrows it is two scopes saying one thing.
+    /// See `HegotaRoster` for the ruling (prd §555). It drew a balance bar per
+    /// address until this pass, which restated the Home crown on a log scale it
+    /// had to apologise for; the money is gone from here entirely and the
+    /// headline is a count.
     ///
-    /// What is left is genuinely an account fact and one this chain makes
-    /// interesting: money here sits in two different places at once. The
-    /// balance is in the account; the UTXOs are in the vault CONTRACT, so they
-    /// are not in that balance at all. The bar is the only place the two are
-    /// drawn as one quantity, which is what a person actually holds.
-    ///
-    /// **Bars are shares of the largest address, not of a total.** A total
-    /// across a devnet's prefunded accounts is a number nobody has, and
-    /// dividing by it draws every real account as nothing.
+    /// **No face.** The fused rail sits four points under this figure and the
+    /// list four points under that, both drawing the same silhouettes at
+    /// `DS.Face.list` — a third size in the same column said nothing the other
+    /// two did not (user, 2026-09-01: *"i don't like seeing so many different
+    /// sizes of silhouette avatars"*). The name is the identity here and the
+    /// card spends its width on what the address IS.
     @ViewBuilder private var accountsFigure: some View {
-        let lanes = Array(accounts.prefix(Self.laneCap))
-        let totals = lanes.map { held($0) }
-        let scale = HegotaScale.of(totals)
-        let peak = totals.max() ?? 0
+        let rows = HegotaRoster.rows(accounts)
+        let drawn = Array(rows.prefix(HegotaRoster.cap))
+        let rest = rows.count - drawn.count
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            figureCaption(scale == .logarithmic
-                          ? String(localized: "Where the money sits · log scale, figures exact")
-                          : String(localized: "Where each address's money sits"))
-            VStack(spacing: DS.Space.s3) {
-                ForEach(lanes) { account in
-                    accountBar(account, peak: peak, totals: totals, scale: scale)
-                }
-            }
-            if accounts.count > lanes.count {
-                let rest = accounts.count - lanes.count
-                Text(rest == 1 ? String(localized: "1 more address, in the list below")
-                               : String(localized: "\(String(rest)) more addresses, in the list below"))
-                    .dsText(.label12).foregroundStyle(DS.textTertiary).lineLimit(1)
-            }
+            ForEach(drawn) { rosterRow($0) }
+            if rest > 0 { rosterMore(rest) }
         }
         // Centred in the slot for `activityFigure`'s reason: the surplus is
-        // split rather than pooled under the bars.
+        // split rather than pooled under the rows.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    }
+
+    /// One watched address: its name, and the scopes it has something to say in.
+    @ViewBuilder private func rosterRow(_ row: HegotaRoster.Row) -> some View {
+        HStack(spacing: DS.Space.s2) {
+            Text(HegotaWatch.shared.name(for: row.address)
+                 ?? WalletStore.shortAddress(row.address))
+                .dsText(.label12)
+                .foregroundStyle(row.reached ? DS.textSecondary : DS.textTertiary)
+                .lineLimit(1)
+            Spacer(minLength: DS.Space.s2)
+            HStack(spacing: 6) {
+                ForEach(row.badges) { rosterBadge($0) }
+            }
+        }
+        .frame(height: Self.rosterRowHeight)
+    }
+
+    /// **32, and the sum is written down.** The slot gives the figure 168.
+    /// Three rows plus their two `s2` gaps is 112, the ellipsis row and its own
+    /// gap another 24 — 136, with 32 of slack for a step or two of Dynamic
+    /// Type. It is a whole rung taller than the lane rows it replaced because
+    /// this figure draws three things where that one draws eight.
+    private static let rosterRowHeight: CGFloat = 32
+
+    /// One mark. **A figure only where the mark is an inventory** — see
+    /// `HegotaRoster.Mark.counted`; the other two are a glyph in a circle,
+    /// which is what keeps four badges inside a row that also has to hold a
+    /// name.
+    @ViewBuilder private func rosterBadge(_ badge: HegotaRoster.Badge) -> some View {
+        let tint = rosterTint(badge.mark)
+        if badge.mark == .unread {
+            // **The one badge that keeps its words.** It is the alarm this
+            // scope is unconditional in order to be able to raise, and a bare
+            // triangle beside three cheerful marks is not something a person
+            // reads as "we could not reach the chain for this one".
+            HStack(spacing: 4) {
+                Image(systemName: "exclamationmark.triangle").dsGlyph(10, weight: .semibold)
+                Text(String(localized: "couldn't read")).dsText(.label12)
+            }
+            .foregroundStyle(tint)
+            .padding(.horizontal, 7).padding(.vertical, 2)
+            .background(Capsule().fill(tint.opacity(0.14)))
+        } else if badge.mark.counted {
+            HStack(spacing: 4) {
+                Image(systemName: rosterGlyph(badge.mark)).dsGlyph(10, weight: .semibold)
+                Text(String(badge.count)).dsText(.label12).monospacedDigit()
+            }
+            .foregroundStyle(tint)
+            .padding(.leading, 6).padding(.trailing, 7).padding(.vertical, 2)
+            .background(Capsule().fill(tint.opacity(0.15)))
+            .accessibilityElement()
+            .accessibilityLabel(rosterReadout(badge))
+        } else {
+            Image(systemName: rosterGlyph(badge.mark)).dsGlyph(10, weight: .semibold)
+                .foregroundStyle(tint)
+                .frame(width: DS.Face.badge, height: DS.Face.badge)
+                .background(Circle().fill(tint.opacity(0.15)))
+                .accessibilityElement()
+                .accessibilityLabel(rosterReadout(badge))
+        }
+    }
+
+    /// **The hues are the room's own, and two of them deliberately are not.**
+    ///
+    /// Coins take `hue(.utxo)` because the vault is exactly what that colour
+    /// means everywhere else in this room. Frames take a NEUTRAL rather than a
+    /// mode hue: a frame transaction is not one step, and painting the badge
+    /// verify-purple would tell somebody this address runs verify frames when
+    /// its frames may be all UTXO work. Sponsored takes `confirm` — money that
+    /// somebody else spent for you is the good news in this room — and keys
+    /// take the plain tint, since a nonce counter is machinery rather than a
+    /// mode.
+    private func rosterTint(_ mark: HegotaRoster.Mark) -> Color {
+        switch mark {
+        case .unread:    return DS.attention
+        case .coins:     return HegotaModeStyle.hue(.utxo)
+        case .keys:      return DS.tint
+        case .frames:    return DS.textSecondary
+        case .sponsored: return DS.confirm
+        }
+    }
+
+    private func rosterGlyph(_ mark: HegotaRoster.Mark) -> String {
+        switch mark {
+        case .unread:    return "exclamationmark.triangle"
+        case .coins:     return "tray.full"
+        case .keys:      return "key.fill"
+        case .frames:    return "square.stack.3d.up"
+        case .sponsored: return "fuelpump"
+        }
+    }
+
+    /// What a badge says out loud. The glyphs are learned from the Frames scope
+    /// and the sheet heads; VoiceOver has never seen them.
+    private func rosterReadout(_ badge: HegotaRoster.Badge) -> String {
+        switch badge.mark {
+        case .unread:
+            return String(localized: "The chain couldn't be read for this address")
+        case .coins:
+            return badge.count == 1 ? String(localized: "holds 1 UTXO")
+                                    : String(localized: "holds \(String(badge.count)) UTXOs")
+        case .keys:
+            return badge.count == 1 ? String(localized: "1 named nonce key")
+                                    : String(localized: "\(String(badge.count)) named nonce keys")
+        case .frames:    return String(localized: "sends frame transactions")
+        case .sponsored: return String(localized: "somebody else has paid its gas")
+        }
+    }
+
+    /// The fold. **NAMED, never silent** — a roster showing three of five with
+    /// nothing to say so looks exactly like a roster of three.
+    @ViewBuilder private func rosterMore(_ rest: Int) -> some View {
+        HStack(spacing: 6) {
+            Text(verbatim: "…").dsText(.label12).foregroundStyle(DS.textTertiary)
+            Text(rest == 1 ? String(localized: "1 more")
+                           : String(localized: "\(String(rest)) more"))
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+        }
+        .frame(height: 16)
+        .accessibilityElement()
+        .accessibilityLabel(rest == 1
+            ? String(localized: "1 more address, in the list below")
+            : String(localized: "\(String(rest)) more addresses, in the list below"))
     }
 
     /// **FRAMES — the shape of your transactions, one row each.**
@@ -658,87 +855,6 @@ struct HegotaRoomFigure: View {
         }
     }
 
-    /// Everything an address holds — its balance PLUS its unspent coins.
-    ///
-    /// Coins are only added once the set has RECONCILED against the vault's own
-    /// balance; an unreconciled set is a total nobody should read, so it is
-    /// left out rather than guessed at.
-    private func held(_ account: HegotaAccount) -> Decimal {
-        (account.balanceWei ?? 0) + (account.coinsWei ?? 0)
-    }
-
-    /// One address's bar, split into the account and the vault.
-    @ViewBuilder private func accountBar(_ account: HegotaAccount,
-                                         peak: Decimal,
-                                         totals: [Decimal],
-                                         scale: HegotaScale) -> some View {
-        let total = held(account)
-        let share = HegotaScale.share(total, in: totals, scale: scale)
-        let coins = account.coinsWei ?? 0
-        let coinShare: Double = total > 0
-            ? NSDecimalNumber(decimal: coins / total).doubleValue : 0
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: DS.Space.s2) {
-                WalletFace(address: account.address, size: DS.Face.badge, circular: true)
-                Text(HegotaWatch.shared.name(for: account.address)
-                     ?? WalletStore.shortAddress(account.address))
-                    .dsText(.label12).foregroundStyle(DS.textSecondary).lineLimit(1)
-                Spacer(minLength: DS.Space.s2)
-                Text(account.reached ? HegotaFormat.crown(total)
-                                     : String(localized: "Unread"))
-                    .dsText(.subhead13).foregroundStyle(DS.textPrimary)
-                    .monospacedDigit().lineLimit(1)
-            }
-            GeometryReader { geo in
-                let width = geo.size.width * CGFloat(share)
-                ZStack(alignment: .leading) {
-                    // An UNREACHED account draws a dashed empty track, never a
-                    // bar of zero length. Zero length is what a real zero
-                    // balance draws too, so without this "we could not read
-                    // this address" and "this address holds nothing" are one
-                    // mark — and only one of them is worth acting on.
-                    if account.reached {
-                        Capsule().fill(DS.fillFaint)
-                    } else {
-                        Capsule().strokeBorder(DS.textTertiary.opacity(0.45),
-                                               style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                    }
-                    if account.reached {
-                        Capsule().fill(DS.tint.opacity(0.8)).frame(width: max(0, width))
-                        // **THE VAULT'S SLICE IS DRAWN ONLY ON THE PLAIN SCALE,
-                        // and that is arithmetic rather than taste (§504).** The
-                        // bar's own length is a LOG share when the spread is
-                        // wide; multiplying it by a LINEAR fraction gives a
-                        // segment whose length corresponds to no reading at all
-                        // — log lengths do not add, so a nested share of one is
-                        // a mixed unit. On the plain scale the two really are
-                        // parts of one total and the nesting is exactly true.
-                        if scale == .linear, coinShare > 0 {
-                            Capsule()
-                                .fill(HegotaModeStyle.room)
-                                .frame(width: max(3, width * CGFloat(coinShare)))
-                        }
-                    }
-                }
-            }
-            .frame(height: 12)
-            if let unspent = account.unspent, !unspent.isEmpty, account.reconciled {
-                // Named, because at a real split (1.1288 in the account against
-                // 0.0131 in coins) the vault's slice is about one percent of the
-                // bar — visible, but far too small to read a figure off.
-                Text(String(localized: "\(HegotaFormat.eth(coins)) of it in \(String(unspent.count)) UTXOs"))
-                    .dsText(.label12)
-                    .foregroundStyle(HegotaModeStyle.room)
-                    .lineLimit(1)
-            }
-        }
-    }
-
-
-
-
-
-
     /// **THE UTXO SET AS A TREEMAP** — the app's own `UnitTreemap`, the same
     /// component Wallet's composition uses.
     ///
@@ -755,9 +871,15 @@ struct HegotaRoomFigure: View {
             if !drawn.isEmpty {
                 // **SIZED TO WHAT IS LEFT OF THE SLOT.** `DSRoomSlot` is a fixed
                 // 210pt and reserves 30 for the headline; with the caption and
-                // the stack's gaps above it, 116 is what remains.
-                UnitTreemap(count: drawn.count, height: 116, cell: { i in
-                    tile(drawn[i])
+                // the stack's gaps above it, 144 is what remains.
+                //
+                // It was 116 while the census line sat underneath, and 116 + a
+                // two-line census is 180 in a 168pt box — so the slot clipped,
+                // silently, and the map lost its bottom edge (prd §555, user:
+                // *"we need to get rid of the '1% of everything…' helper text
+                // bc it clips the image of the treemap"*).
+                UnitTreemap(count: drawn.count, height: 144, cell: { i in
+                    tile(drawn[i], rank: i)
                 }, readout: { i in
                     switch drawn[i] {
                     case .coin(let coin):
@@ -768,39 +890,8 @@ struct HegotaRoomFigure: View {
                         return String(localized: "\(String(count)) smaller UTXOs — \(HegotaFormat.eth(wei)) together")
                     }
                 })
-                // **THE PROOF, UNDER THE DRAWING.** The sweep already
-                // reconstructs every unspent coin on the chain and checks the
-                // total against the vault's own balance — it has to, since
-                // conservation only holds across all owners at once — and until
-                // now it kept one Bool out of all that. This is the reading no
-                // other room in this app can make about anything: not a share
-                // we estimated, a share we verified.
-                if let line = censusLine {
-                    Text(line)
-                        .dsText(.label12).foregroundStyle(DS.textTertiary)
-                        .lineLimit(2).fixedSize(horizontal: false, vertical: true)
-                }
             }
         }
-    }
-
-    /// What our slice is of the whole vault, and what the treemap cannot say.
-    ///
-    /// Two facts, ranked, one line: how much of the chain's vault is ours, and
-    /// — because `UnitTreemap` sizes by RANK rather than area — whether one
-    /// piece is very nearly the whole balance. On this chain the set spans
-    /// sixteen orders of magnitude, so six roughly equal cells routinely draw
-    /// over a set where the first one IS the money.
-    private var censusLine: String? {
-        let concentration = HegotaCoins.dominance(coins).map {
-            String(localized: "the largest is \(Int(($0 * 100).rounded()))% of them")
-        }
-        guard let census, let share = census.share else { return concentration }
-        let vault = census.soleOwner
-            ? String(localized: "Every UTXO on the chain is yours")
-            : String(localized: "\(Int((share * 100).rounded()))% of everything in the vault, across \(String(census.owners)) owners")
-        guard let concentration else { return vault }
-        return String(localized: "\(vault) · \(concentration)")
     }
 
     /// What a tile holds: one UTXO, or the folded tail.
@@ -818,8 +909,18 @@ struct HegotaRoomFigure: View {
     /// used (`NetworkReceiptsInsight` does the same). The tail is NAMED and
     /// carries its own total rather than being dropped — a set of seven drawn
     /// as six is a lie about how many pieces the balance is in.
+    ///
+    /// **FOUR, NOT SIX, AND THAT IS ARITHMETIC (prd §555).** The six-cell table
+    /// ends `(2,2,1,1), (3,2,1,1)` — two cells one unit wide. At the slot's
+    /// width a unit is 79pt, so 63pt of content, and this room's figures are
+    /// `HegotaFormat.eth` strings like "0.000737 ETH" at `callout15`: they do
+    /// not fit, and `minimumScaleFactor` shrinks them out of the ramp instead.
+    /// The FOUR-cell table is two square heroes over two full-width rows —
+    /// every cell at least two units wide, so nothing shrinks and nothing
+    /// clips. On this chain that is also the truer picture: a real set spans
+    /// sixteen orders of magnitude, so two pieces genuinely are the balance.
     private var tiledCoins: [CoinTile] {
-        let cap = 6
+        let cap = 4
         guard coins.count > cap else { return coins.map { .coin($0) } }
         // Biggest first for the drawn slots, since the treemap is rank-ordered;
         // the tail is what is left, smallest pieces together.
@@ -834,26 +935,89 @@ struct HegotaRoomFigure: View {
     /// frames and nothing else, so a cell that is only text has no shape to
     /// see. The well rather than the sheet, for the receipts map's own reason:
     /// a cell washed in the surrounding tone vanishes at low share.
-    @ViewBuilder private func tile(_ tile: CoinTile) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            switch tile {
-            case .coin(let coin):
-                Text(HegotaFormat.eth(coin.wei))
+    ///
+    /// **THE SECOND LINE IS NO LONGER THE WORD "change" (prd §555, user: *"if
+    /// we are in utxo's i dunno why we say 'change' on all the treemap
+    /// cells"*).** On a real set most coins are change coming back from your
+    /// own spends — five of this address's seven — so the word was on nearly
+    /// every cell and distinguished none of them. Worse, the two coins that
+    /// were NOT change here are 1 and 2 wei, which fold into the tail, so it
+    /// was on literally every visible cell.
+    ///
+    /// What replaces it is a share and an age, both of which VARY: three of
+    /// this set's cells read `0.000737 ETH` to the last digit, and nothing on
+    /// them said which coin it was. The share is also what `UnitTreemap`
+    /// structurally cannot draw — it tiles by RANK, not by area — so it is the
+    /// one number the map owes its reader.
+    ///
+    /// Origin is not lost: it stays in the FILL, and the caption above names
+    /// the mix once. Saying it once beats saying it seven times, which is the
+    /// whole of the complaint.
+    ///
+    /// `rank` is the treemap slot. **Slots 0 and 1 are two units tall and
+    /// everything after is one** (`UnitTreemap.frames(4)`), and one unit is
+    /// 42pt — enough for a single `callout15` line and not for two, so the
+    /// short cells set their amount and share on ONE line rather than clipping
+    /// the second. Coupling the cell to the table is the same coupling the
+    /// fold above already makes, and it is stated rather than discovered.
+    ///
+    /// Deliberately NOT a `@ViewBuilder`: the words are resolved by a `switch`
+    /// before anything is drawn, and a builder cannot hold statements.
+    private func tile(_ tile: CoinTile, rank: Int) -> some View {
+        let tall = rank < 2
+        let amount: String
+        let sub: String
+        let dim: Bool
+        switch tile {
+        case .coin(let coin):
+            amount = HegotaFormat.eth(coin.wei)
+            sub = coinTileSub(coin)
+            dim = false
+        case .rest(let count, let wei):
+            amount = HegotaFormat.eth(wei)
+            sub = restTileSub(count: count, wei: wei)
+            dim = true
+        }
+        return VStack(alignment: .leading, spacing: 2) {
+            if tall {
+                Text(amount)
                     .dsText(.callout15).fontWeight(.semibold)
-                    .foregroundStyle(DS.textPrimary)
+                    .foregroundStyle(dim ? DS.textSecondary : DS.textPrimary)
                     .lineLimit(1).minimumScaleFactor(0.6)
-                Text(coin.isChange ? String(localized: "change")
-                                   : String(localized: "received"))
-                    .dsText(.label12).foregroundStyle(DS.textSecondary).lineLimit(1)
-            case .rest(let count, let wei):
-                Text(HegotaFormat.eth(wei))
-                    .dsText(.callout15).fontWeight(.semibold)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1).minimumScaleFactor(0.6)
-                Text(String(localized: "\(String(count)) more"))
-                    .dsText(.label12).foregroundStyle(DS.textTertiary).lineLimit(1)
+                Text(sub)
+                    .dsText(.label12)
+                    .foregroundStyle(dim ? DS.textTertiary : DS.textSecondary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                // **The share, drawn, in the two cells that have room for it.**
+                // The map's own tiling says rank and not magnitude, so the
+                // leader and the runner-up can sit in equal squares over very
+                // unequal money; this is the one place the difference is
+                // visible rather than read.
+                if case .coin(let coin) = tile, let share = HegotaCoins.share(coin.wei, of: coins) {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(DS.fillLine)
+                            Capsule().fill(DS.textPrimary.opacity(0.42))
+                                .frame(width: max(2, geo.size.width * CGFloat(share)))
+                        }
+                    }
+                    .frame(height: 3)
+                }
+            } else {
+                HStack(spacing: DS.Space.s2) {
+                    Text(amount)
+                        .dsText(.callout15).fontWeight(.semibold)
+                        .foregroundStyle(dim ? DS.textSecondary : DS.textPrimary)
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                    Spacer(minLength: 0)
+                    Text(sub)
+                        .dsText(.label12)
+                        .foregroundStyle(dim ? DS.textTertiary : DS.textSecondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
         }
         .padding(DS.Space.s2)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -864,6 +1028,34 @@ struct HegotaRoomFigure: View {
             }
             .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         }
+    }
+
+    /// A cell's second line: how much of the set it is, and how old it is.
+    ///
+    /// **The age is what tells identical amounts apart** — three of this
+    /// address's coins are `0.000737 ETH` to the last digit. Nil is a real
+    /// answer for both (the header read that dates a coin is bounded), and the
+    /// line degrades rather than inventing: share alone, age alone, or the
+    /// coin's own ordinal, which is always there.
+    private func coinTileSub(_ coin: HegotaCoin) -> String {
+        let share = HegotaCoins.share(coin.wei, of: coins).map { String(localized: "\(Int(($0 * 100).rounded()))%") }
+        let when = HegotaFormat.time(coin.timestamp)
+        switch (share, when) {
+        case let (.some(s), .some(w)): return "\(s) · \(w)"
+        case let (.some(s), .none):    return s
+        case let (.none, .some(w)):    return w
+        case (.none, .none):           return String(localized: "#\(String(coin.index))")
+        }
+    }
+
+    /// The folded tail's second line. It says HOW MANY, first and always —
+    /// that is the no-silent-caps rule — and its share only when the set has
+    /// one to give.
+    private func restTileSub(count: Int, wei: Decimal) -> String {
+        let more = count == 1 ? String(localized: "1 more")
+                              : String(localized: "\(String(count)) more")
+        guard let share = HegotaCoins.share(wei, of: coins) else { return more }
+        return String(localized: "\(more) · \(String(Int((share * 100).rounded())))%")
     }
 
     /// The fill says where a UTXO came from: on a real address most of the set
@@ -888,39 +1080,6 @@ struct HegotaRoomFigure: View {
         return change == coins.count
             ? String(localized: "\(held), all of it change from your own spends")
             : String(localized: "\(held), \(String(change)) of them change")
-    }
-
-    /// One UTXO's tile.
-    ///
-    /// **The cell paints its own ground** — `UnitTreemap` lays out the frames
-    /// and nothing else, so a cell that is only text has no shape to see. The
-    /// well rather than the sheet, for the receipts map's own reason: a cell
-    /// washed in the surrounding tone vanishes at low share.
-    ///
-    /// The fill says where the UTXO came from, which is the one thing worth
-    /// encoding in hue here: on a real address most of the set is change from
-    /// your own spends, and the pieces somebody actually sent you are the
-    /// minority worth picking out.
-    private func utxoCell(_ coin: HegotaCoin) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(HegotaFormat.eth(coin.wei))
-                .dsText(.callout15).fontWeight(.semibold)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1).minimumScaleFactor(0.6)
-            Text(coin.isChange ? String(localized: "change") : String(localized: "received"))
-                .dsText(.label12).foregroundStyle(DS.textSecondary)
-                .lineLimit(1)
-            Spacer(minLength: 0)
-        }
-        .padding(DS.Space.s3)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background {
-            ZStack {
-                DS.surfaceWell
-                (coin.isChange ? DS.tint.opacity(0.16) : DS.tint.opacity(0.42))
-            }
-            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-        }
     }
 
     /// **NONCES — the three facts the list below cannot state.**
@@ -1397,6 +1556,17 @@ struct HegotaRoomList: View {
     }
     private var unspentIndices: Set<UInt64> { Set(coins.map(\.index)) }
 
+    /// The whole chain's vault, and this address's proven share of it (§555).
+    ///
+    /// Taken from the primary reached account for `HegotaRoomFigure`'s own
+    /// reason: every account's sweep computes the same whole-chain set, so two
+    /// of them can only disagree if one failed, and `census` is nil unless the
+    /// set reconciled. The SENTENCE is `HegotaCensus.line`'s, so there is one
+    /// of it.
+    private var censusLine: String? {
+        shown.filter(\.reached).compactMap(\.census).first?.line
+    }
+
     private var lanes: [HegotaNonceLane] {
         shown.flatMap(\.lanes).sorted { $0.lastBlock > $1.lastBlock }
     }
@@ -1654,13 +1824,26 @@ struct HegotaRoomList: View {
             // the vault contract actually holds — so it arrives after the rows
             // have settled rather than with them, the way a sum lands after
             // its column. No other room in this app can check its own numbers.
-            Text(String(localized: "These UTXOs account for exactly what the vault holds."))
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .opacity(balanced || reduceMotion ? 1 : 0)
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.4).delay(0.45),
-                           value: balanced)
-                .onAppear { balanced = true }
+            //
+            // **AND THE CENSUS RIDES IT NOW (prd §555).** That fact used to sit
+            // under the treemap, where 116pt of map plus a two-line share ran
+            // the 168pt figure slot over and clipped the drawing. It was never
+            // a fact about YOUR coins — it is what the whole chain's vault
+            // holds and how many people hold it — so it belongs beside the
+            // reconciliation it is a companion to, in a list with as much room
+            // as it needs.
+            VStack(alignment: .leading, spacing: 2) {
+                Text(String(localized: "These UTXOs account for exactly what the vault holds."))
+                if let census = censusLine {
+                    Text(census)
+                }
+            }
+            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .opacity(balanced || reduceMotion ? 1 : 0)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.4).delay(0.45),
+                       value: balanced)
+            .onAppear { balanced = true }
         }
     }
 

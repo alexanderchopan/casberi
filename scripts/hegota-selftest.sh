@@ -633,12 +633,113 @@ check(alone.soleOwner, "one owner holding every coin is the sole owner")
 check(HegotaCensus(coins: 0, owners: 0, wei: 0, mineCoins: 0, mineWei: 0).share == nil,
       "a share of an empty vault is undefined, never zero")
 
-// ───────────────── dominance: what a rank-ordered treemap cannot show ────────
-check(HegotaCoins.dominance([coin(1, 100)]) == nil, "one coin has no dominance to report")
-check(HegotaCoins.dominance([coin(1, 50), coin(2, 50)]) == nil,
-      "an even split is not narrated as concentration")
-let heavy = HegotaCoins.dominance([coin(1, 970), coin(2, 20), coin(3, 10)])!
-check(abs(heavy - 0.97) < 0.0001, "the largest piece's share is reported exactly")
+// ───────────────── a cell's share of the set it is drawn in (§555) ───────────
+// `dominance` retired with the caption it fed: every drawn cell prints its own
+// share now, so the question "is one piece almost all of it" is answered on the
+// cell that raises it rather than narrated once for the leader.
+check(HegotaCoins.share(50, of: [coin(1, 50), coin(2, 50)])! == 0.5,
+      "an even split reads as a half")
+let lead = HegotaCoins.share(970, of: [coin(1, 970), coin(2, 20), coin(3, 10)])!
+check(abs(lead - 0.97) < 0.0001, "a dominant piece's share is exact")
+// A share of nothing is UNDEFINED, not zero — drawing 0% says the person holds
+// none of something that does not exist.
+check(HegotaCoins.share(0, of: []) == nil, "a share of an empty set is undefined")
+// The census sentence, and the sole-owner case that is a different reading.
+check(HegotaCensus(coins: 28, owners: 11, wei: 100, mineCoins: 7, mineWei: 9).line
+        == "9% of everything in the vault, across 11 owners",
+      "the census names the share and the owners")
+check(HegotaCensus(coins: 7, owners: 1, wei: 100, mineCoins: 7, mineWei: 100).line
+        == "Every UTXO on the chain is yours",
+      "one owner holding the lot is said as that, not as 100%")
+check(HegotaCensus(coins: 0, owners: 0, wei: 0, mineCoins: 0, mineWei: 0).line == nil,
+      "an empty vault has no census sentence")
+
+// ─────────────────────────── the roster (§555) ───────────────────────────
+// The Accounts scope stopped being a balance chart. Every failure below renders
+// as a perfectly ordinary list: the wrong three addresses shown, an address the
+// chain refused sorted off the bottom of a card that exists to be able to show
+// it, a badge for a scope with nothing in it, or an order that reshuffles
+// between opens over identical data.
+func frame(_ mode: HegotaFrame.Mode) -> HegotaFrame {
+    HegotaFrame(mode: mode, target: "0xt", wei: 0, succeeded: true,
+                gasUsed: 1, stateGasUsed: 0)
+}
+func rmove(_ block: UInt64, framed: Bool = false, sponsored: Bool = false) -> HegotaMove {
+    var m = HegotaMove(hash: "0x\(block)", counterparty: "0xc", wei: Decimal(1),
+                       incoming: false, block: block)
+    if framed { m.frames = [frame(.utxo)] }
+    m.sender = "0xme"
+    m.payer = sponsored ? "0xelse" : "0xme"
+    return m
+}
+func lane(_ key: String) -> HegotaNonceLane {
+    HegotaNonceLane(key: key, seq: "0x0", lastBlock: 1, sends: 1)
+}
+
+check(HegotaRoster.cap == 3, "three rows, and the rest is an ellipsis")
+
+// MOST RECENTLY USED FIRST. The watch-list order ages into nonsense and the
+// balance order is the reading this rewrite removes.
+let older = acct("0xolder", moves: [rmove(10), rmove(40)])
+let newer = acct("0xnewer", moves: [rmove(90)])
+check(HegotaRoster.ranked([older, newer]).map(\.address) == ["0xnewer", "0xolder"],
+      "the roster ranks by the newest block an address appears in")
+check(HegotaRoster.lastUsed(older) == 40, "an address's recency is its newest block")
+check(HegotaRoster.lastUsed(acct("0xquiet")) == 0, "an address with no moves has no recency")
+
+// AN ADDRESS THE CHAIN REFUSED LEADS. Its recency is unknown rather than zero,
+// so ranking it by `lastUsed` asserts the very thing we just failed to find
+// out — and it is the only state in this scope worth acting on.
+let unread = acct("0xunread", reached: false, wei: nil)
+check(HegotaRoster.ranked([newer, older, unread]).first?.address == "0xunread",
+      "an unreachable address leads the roster whatever its recency")
+check(HegotaRoster.ranked([newer, unread]).map(\.address) == ["0xunread", "0xnewer"],
+      "…including ahead of the most recently used one")
+
+// TOTAL, or the card reshuffles between opens over identical data.
+let tieA = acct("0xaaa", moves: [rmove(5)])
+let tieB = acct("0xbbb", moves: [rmove(5)])
+check(HegotaRoster.ranked([tieB, tieA]).map(\.address) == ["0xaaa", "0xbbb"],
+      "equal recency breaks on the address, so the order is total")
+check(HegotaRoster.ranked([tieA, tieB]) == HegotaRoster.ranked([tieB, tieA]),
+      "the same set ranks the same way whatever order it arrives in")
+
+// A COUNT ONLY FOR WHAT AN ADDRESS HOLDS. Coins and keys are inventory —
+// states, which is what an account scope may state; frames and sponsorships are
+// things that HAPPENED, and how much an address does is Activity's subject.
+check(HegotaRoster.Mark.coins.counted && HegotaRoster.Mark.keys.counted,
+      "inventory marks carry a figure")
+check(!HegotaRoster.Mark.frames.counted && !HegotaRoster.Mark.sponsored.counted
+      && !HegotaRoster.Mark.unread.counted,
+      "a mark for something that happened carries no figure")
+
+let busy = acct("0xbusy", coins: [coin(1, 5), coin(2, 5)],
+                lanes: [lane("0x1"), lane("0x2")],
+                moves: [rmove(9, framed: true, sponsored: true)])
+check(HegotaRoster.badges(busy).map(\.mark) == [.coins, .keys, .frames, .sponsored],
+      "inventory badges lead, so the numbered pills sit together")
+check(HegotaRoster.badges(busy).first(where: { $0.mark == .coins })?.count == 2,
+      "the coins badge counts the unspent set")
+check(HegotaRoster.badges(busy).first(where: { $0.mark == .keys })?.count == 2,
+      "the keys badge counts the named counters")
+
+// AN UNREAD ADDRESS GETS THAT BADGE AND NOTHING ELSE. The other four are all
+// derived from a sweep that did not happen, so drawing "no coins, no keys, no
+// frames" beside it would state four facts we do not have (§83).
+check(HegotaRoster.badges(unread).map(\.mark) == [.unread],
+      "an unreachable address says only that")
+check(HegotaRoster.badges(acct("0xplain")).isEmpty,
+      "an ordinary address earns no badges, which is itself the reading")
+
+// A set that never reconciled is money we cannot vouch for, so it earns no
+// badge — `hasCoins` already refuses it and the roster must not go around it.
+check(HegotaRoster.badges(acct("0xunrec", coins: [coin(1, 5)], reconciled: false))
+        .allSatisfy { $0.mark != .coins },
+      "an unreconciled coin set earns no coins badge")
+
+let rows = HegotaRoster.rows([newer, unread, older])
+check(rows.map(\.address) == ["0xunread", "0xnewer", "0xolder"], "rows come ranked")
+check(rows.first?.reached == false, "a row carries whether the chain answered")
 
 // ───────────────── the clock past the header window ─────────────────
 let t0 = Date(timeIntervalSince1970: 1_786_025_702)
@@ -927,8 +1028,28 @@ mutate "a census is composed over a set that never reconciled" \
   HegotaCoins.swift 's/guard reconciled, !all\.isEmpty else \{ return nil \}/guard !all.isEmpty else { return nil }/'
 mutate "our share of an EMPTY vault reads as zero rather than undefined" \
   HegotaCoins.swift 's/guard wei > 0 else \{ return nil \}/if wei == 0 { return 0 }/'
-mutate "an even split is narrated as concentration" \
-  HegotaCoins.swift 's/return share >= 0\.6 \? share : nil/return share/'
+# ── the cell's share, and the census sentence (§555) ──────────────────────────
+mutate "a cell's share is measured against its own amount (every cell reads 100%)" \
+  HegotaCoins.swift 's/let sum = total\(coins\)\n        guard sum > 0 else \{ return nil \}/let sum = wei\n        guard sum > 0 else { return nil }/'
+mutate "a sole owner is told they hold 100% of the vault rather than all of it" \
+  HegotaCoins.swift 's/return soleOwner\n            \? String\(localized: "Every UTXO on the chain is yours"\)\n            :/return/'
+
+# ── the roster (§555) ────────────────────────────────────────────────────────
+# Each of these renders as a perfectly ordinary three-row list.
+mutate "an address the chain could not read sorts by its unknown recency (off the bottom of the card that exists to show it)" \
+  HegotaRoom.swift 's/if a\.reached != b\.reached \{ return !a\.reached \}//'
+mutate "the roster shows the LEAST recently used three" \
+  HegotaRoom.swift 's/if x != y \{ return x > y \}/if x != y { return x < y }/'
+mutate "an address's recency is its OLDEST block, so a long-dormant one leads" \
+  HegotaRoom.swift 's/account\.moves\.map\(\\\.block\)\.max\(\) \?\? 0/account.moves.map(\\.block).min() ?? 0/'
+mutate "an unread address is also told what it holds — four facts from a sweep that never ran" \
+  HegotaRoom.swift 's/guard account\.reached else \{ return \[Badge\(mark: \.unread, count: 0\)\] \}//'
+mutate "the badges lead with what an address DID, so the numbered pills scatter" \
+  HegotaRoom.swift 's/if account\.hasFrames \{ out\.append\(Badge\(mark: \.frames, count: 0\)\) \}\n        if account\.hasSponsors \{ out\.append\(Badge\(mark: \.sponsored, count: 0\)\) \}\n        return out/return [Badge(mark: .frames, count: 0), Badge(mark: .sponsored, count: 0)] + out/'
+mutate "a frame transaction counts as an inventory, so the badge grows a figure" \
+  HegotaRoom.swift 's/var counted: Bool \{ self == \.coins \|\| self == \.keys \}/var counted: Bool { self != .unread }/'
+mutate "the roster draws five rows in a slot that fits three" \
+  HegotaRoom.swift 's/static let cap = 3/static let cap = 5/'
 mutate "a block past every header we hold is EXTRAPOLATED into a date" \
   HegotaCoins.swift 's/guard let low = below, let high = above, high\.0 > low\.0 else \{ return nil \}/guard let low = below else { return nil }\n        guard let high = above, high.0 > low.0 else {\n            return low.1.addingTimeInterval(Double(block - low.0) * slotSeconds)\n        }/'
 mutate "a relaunched devnet reads as the same chain (the room draws a zeroed balance)" \

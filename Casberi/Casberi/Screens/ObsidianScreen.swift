@@ -146,9 +146,6 @@ struct ObsidianScreen: View {
             }
             .dsText(.callout15)
             .dsListCardRow()
-        } footer: {
-            Text("Disconnecting stops syncing. What already landed stays yours.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
 

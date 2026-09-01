@@ -146,7 +146,7 @@ struct L2beatDirectoryScreen: View {
 			}
 
 			Section {
-				Text(String(localized: "L2BEAT's assessment, not ours. The five cells are their own risk axes, always in their order — open a chain to see which question sits in which cell. A chain with nothing flagged is one they found nothing to flag, not one they call safe.\n\nBundled as of \(L2beatDirectory.generated); read live once connected."))
+				Text(String(localized: "\(L2beatCopy.attribution) — nothing flagged is nothing they flagged, not a clean bill.\n\nBundled as of \(L2beatDirectory.generated); read live once connected."))
 					.dsText(.label11)
 					.foregroundStyle(DS.textTertiary)
 					.fixedSize(horizontal: false, vertical: true)

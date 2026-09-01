@@ -62,7 +62,7 @@ struct WalletConnectionScreen: View {
             } header: {
                 Text("Chains").dsText(.label12).foregroundStyle(DS.textSecondary)
             } footer: {
-                Text("Read each watched wallet across these chains only — turn off the ones you don't use. Paste a Bitcoin address and it's read too, from its own public API.")
+                Text("A Bitcoin address is read too, from its own public API.")
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
             }
             Section {
@@ -77,8 +77,6 @@ struct WalletConnectionScreen: View {
                     Button("Keep its things") { disconnectWallet(purge: false) }
                     Button("Remove its things too", role: .destructive) { disconnectWallet(purge: true) }
                     Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text("Stops new Wallet things from landing. What already landed stays yours unless you remove it.")
                 }
             } footer: {
                 Text("Read-only — watching can never trade or move funds. Activity is public, read across chains directly on \(DS.device).")

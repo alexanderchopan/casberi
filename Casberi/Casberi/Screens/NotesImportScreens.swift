@@ -68,7 +68,7 @@ struct DayOneImportScreen: View {
             BridgeSetupHeader(
                 name: "Day One",
                 mode: .oneTimeImport,
-                intro: "Day One has no live connection — export your journal, bring it here, and every entry becomes searchable on the day you wrote it. Re-import any time for what's new.")
+                intro: "Day One has no live connection — export your journal, bring it here, and every entry becomes searchable on the day you wrote it.")
             // The way back to what just landed (§460). Gated on the corpus:
             // an import has no live connection to gate on.
             if !recent.isEmpty {
@@ -175,7 +175,7 @@ struct JournalImportScreen: View {
             BridgeSetupHeader(
                 name: "Apple Journal",
                 mode: .oneTimeImport,
-                intro: "Journal has no live connection — export it from Settings, bring it here, and every entry becomes searchable on the day you wrote it. Re-import any time for what's new.")
+                intro: "Journal has no live connection — export it from Settings, bring it here, and every entry becomes searchable on the day you wrote it.")
             // The way back to what just landed (§460). Gated on the corpus:
             // an import has no live connection to gate on.
             if !recent.isEmpty {
@@ -295,12 +295,6 @@ struct NotesShareScreen: View {
                     .buttonStyle(.plain)
                     .dsListCardRow()
                 }
-            } footer: {
-                // Where they land is step 3's job ("It lands in your feed as a
-                // note"); this footer only has to say why one at a time
-                // (2026-07-31).
-                Text("Apple offers no export for Notes, so they arrive one at a time, as you share them.")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
             }
             .listRowSeparator(.hidden)
         }
@@ -337,7 +331,7 @@ struct BookmarksImportScreen: View {
             BridgeSetupHeader(
                 name: "Bookmarks",
                 mode: .oneTimeImport,
-                intro: "Export your bookmarks from any browser, bring the file here, and they become findable links — folders become tags. Re-import any time for what's new.")
+                intro: "Export your bookmarks from any browser, bring the file here, and they become findable links — folders become tags.")
             // The way back to what just landed (§460). Gated on the corpus:
             // an import has no live connection to gate on.
             if !recent.isEmpty {

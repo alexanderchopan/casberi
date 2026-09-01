@@ -678,9 +678,6 @@ struct TokenSetupScreen: View {
             }
             .dsText(.callout15)
             .dsListCardRow()
-        } footer: {
-            Text("Removing the token stops syncing. What already landed stays yours.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
         }
     }
 

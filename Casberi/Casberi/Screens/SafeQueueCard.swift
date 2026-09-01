@@ -364,7 +364,7 @@ struct SafeSignBlock: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             case .keyDestroyed:
-                Text("This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Make a new one in the Safe screen and have another owner swap the old address out.")
+                Text("This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Make a new one in the Safe screen.")
                     .dsText(.subhead13).foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
             case .done:
@@ -405,8 +405,8 @@ struct SafeSignBlock: View {
             // transaction in front of us is the repair.
             if ready.standing.hasNoSpareOwner {
                 Text(verbatim: ready.addsASpareOwner
-                     ? String(localized: "This is the fix: it gives the Safe an owner to spare, so losing one key stops being final.")
-                     : String(localized: "This Safe needs every owner it has. If this phone goes, it can't be signed for again — or repaired, since that needs a signature too."))
+                     ? String(localized: "This is the fix — the Safe gets an owner to spare.")
+                     : String(localized: "This Safe needs every owner it has. If this phone goes, it can't be signed for again — or repaired."))
                     .dsText(.subhead13)
                     .foregroundStyle(ready.addsASpareOwner ? DS.confirm : DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)

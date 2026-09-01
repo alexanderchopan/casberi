@@ -40,16 +40,16 @@ struct BridgeDisconnectSection: View {
             .dsListCardRow()
             // Keep-or-purge — the same choice the generic detail screen offers,
             // so "stop this source" and "clear what it dropped in my feed" are
-            // one gesture apart, not two screens apart.
+            // one gesture apart, not two screens apart. The two buttons SAY the
+            // consequence, which is why there is no footer restating it: a
+            // sentence explaining a choice the very next tap presents is one
+            // more thing to read before the same decision.
             .confirmationDialog("Disconnect \(name)?", isPresented: $confirm,
                                 titleVisibility: .visible) {
                 Button("Keep its things") { disconnect(purge: false) }
                 Button("Remove its things too", role: .destructive) { disconnect(purge: true) }
                 Button("Cancel", role: .cancel) {}
             }
-        } footer: {
-            Text("Stops new \(name) things from landing. What already landed stays yours unless you remove it.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
 

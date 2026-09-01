@@ -464,7 +464,7 @@ struct AccountDetailSheet: View {
             // that an end-to-end claim requires ADP, and the honest way to
             // keep it is to say what today is.
             if icloudSync {
-                Text("Your iCloud copy is encrypted, but Apple holds the keys. Turn on Advanced Data Protection (\(DS.settingsAppName) › your name › iCloud) and only your devices can read it.")
+                Text("Encrypted, but Apple holds the keys. Advanced Data Protection (\(DS.settingsAppName) › your name › iCloud) makes it yours alone.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -505,7 +505,7 @@ struct AccountDetailSheet: View {
             // because the on-device model is deliberately NOT redacted — it
             // never leaves, and "what's my wifi password?" is a fair question
             // to ask your own corpus.
-            Text("Passwords and recovery phrases spotted in your things are kept out of search, Siri, and any ask sent with your key.")
+            Text("Passwords and recovery phrases are kept out of search, Siri, and any ask sent with your key.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -761,9 +761,6 @@ struct AccountDetailSheet: View {
                 }
                 Spacer(minLength: 0)
             }
-            Text("Buttons and chips keep their own blue whatever you pick.")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -863,12 +860,12 @@ struct AccountDetailSheet: View {
             // deadline", because `NotifyKind.isTimeSensitive` is exactly
             // `disputeOpened || deadlineNear` — and a person reading this row
             // is deciding whether to trust the switch, not skimming it.
-            toggleRow("Quiet hours", "Anything that arrives at night waits until morning — except a dispute or a deadline, which can break through.",
+            toggleRow("Quiet hours", "Waits until morning — except a dispute or a deadline.",
                       isOn: Binding(get: { notifySettings.quiet.enabled },
                                     set: { notifySettings.quiet.enabled = $0; saveNotify() }))
             // The ceiling, stated rather than hidden. There is no server, so
             // there is no push: the app looks when iOS lets it look.
-            Text("There is no server, so nothing is pushed — it looks while the system lets it, then tells you what it found. Each one says when the thing happened, not when it reached you.")
+            Text("No server, so nothing is pushed — the app looks when the system lets it. Each says when the thing happened, not when it arrived.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }

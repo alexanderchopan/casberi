@@ -396,6 +396,136 @@ enum HegotaFlow {
     }
 }
 
+// MARK: - The roster
+
+/// **WHO YOU WATCH, AND WHAT EACH ONE DOES ON THIS CHAIN** (prd §555, user:
+/// *"accounts isn't about balances. it could sum how many or how many
+/// watching"*, then *"show three most recently used"*).
+///
+/// The Accounts figure led with a bar per address split by where its money sat
+/// — a second total on a card whose Home scope one chip away already carries
+/// the crown, drawn on a log scale that had to apologise for itself in a
+/// caption. `HegotaSection` already says what this scope is: *"a watched
+/// address always has a roster row, even one that says the chain could not be
+/// reached, which is itself the answer."* So the subject is the roster.
+///
+/// **What a row says is which SCOPES this address has anything to say in** —
+/// coins, named nonce keys, frames, a sponsor — which is the reading nothing
+/// else in the room gives: tap that face in the rail and you already know what
+/// you will get. It is also the one axis that is genuinely about the ACCOUNT
+/// rather than about its money or its week.
+///
+/// **A COUNT ONLY FOR WHAT AN ADDRESS HOLDS.** Coins and nonce keys are
+/// inventory — states, and states are what an account scope may state. Frames
+/// and sponsorships are things that HAPPENED, and how much an address does is
+/// the Activity scope's subject; the original figure's "it counts no moves,
+/// deliberately" survives this rewrite intact, which is why those two badges
+/// are bare.
+///
+/// Foundation-only and here rather than in the view for this file's own stated
+/// reason: every failure below renders as a perfectly ordinary list — the wrong
+/// three addresses shown, an unread one sorted off the bottom, a badge for a
+/// scope that has nothing in it, or an order that reshuffles between opens.
+enum HegotaRoster {
+
+    /// One of the four things this chain lets an address do, plus the state
+    /// that is the reason this scope is unconditional.
+    enum Mark: String, Equatable, Sendable, CaseIterable {
+        case unread, coins, keys, frames, sponsored
+
+        /// Whether the badge carries a figure. True for INVENTORY only — see
+        /// the type's own note.
+        var counted: Bool { self == .coins || self == .keys }
+    }
+
+    struct Badge: Identifiable, Equatable, Sendable {
+        let mark: Mark
+        /// Zero for an uncounted mark, never drawn.
+        let count: Int
+        var id: String { mark.rawValue }
+    }
+
+    struct Row: Identifiable, Equatable, Sendable {
+        let address: String
+        let reached: Bool
+        let badges: [Badge]
+        var id: String { address }
+    }
+
+    /// **THREE ROWS, and the rest is an ellipsis** (user: *"if we only show 3
+    /// we just have a … for the out of five"*).
+    ///
+    /// Five is the watch cap, so at worst two are folded. The tail is NAMED
+    /// with its count rather than dropped — a roster that shows three of five
+    /// and says nothing looks exactly like a roster of three.
+    static let cap = 3
+
+    /// The whole roster, ranked, badges resolved.
+    static func rows(_ accounts: [HegotaAccount]) -> [Row] {
+        ranked(accounts).map { Row(address: $0.address, reached: $0.reached,
+                                   badges: badges($0)) }
+    }
+
+    /// **MOST RECENTLY USED FIRST — except that an address we could not read
+    /// leads.**
+    ///
+    /// Recency is the user's own ruling and it is the right one: a roster
+    /// ordered by watch-list position ages into nonsense, and one ordered by
+    /// balance is the reading this whole rewrite removes.
+    ///
+    /// The exception is not a softening of it. An unreached address has no
+    /// recency — it has an UNKNOWN one — and `lastUsed` answers 0 for it, so
+    /// ranking it by that number asserts "nothing has happened here", which is
+    /// exactly the thing we just failed to find out. It is also the only state
+    /// in this scope worth acting on, and this app ranks trouble first
+    /// everywhere it ranks anything (`PeerRoom`, `PrivacyPoolsRoom`,
+    /// `ASCRoom`). Below the fold it would be invisible on the one card that
+    /// exists to be able to show it.
+    ///
+    /// TOTAL, ties broken on the address: a roster that reshuffles between
+    /// opens over identical data reads as broken.
+    static func ranked(_ accounts: [HegotaAccount]) -> [HegotaAccount] {
+        accounts.sorted { a, b in
+            if a.reached != b.reached { return !a.reached }
+            let x = lastUsed(a), y = lastUsed(b)
+            if x != y { return x > y }
+            return a.address.lowercased() < b.address.lowercased()
+        }
+    }
+
+    /// The newest block this address appears in.
+    ///
+    /// **The BLOCK and not the timestamp**, which is not a preference: the
+    /// header read that dates a move is bounded, so an older move legitimately
+    /// carries no time at all — ranking on `timestamp` would sort every
+    /// address whose activity predates the window as though it had none, which
+    /// on a devnet with a long history is most of them. The block number is on
+    /// every move by construction.
+    static func lastUsed(_ account: HegotaAccount) -> UInt64 {
+        account.moves.map(\.block).max() ?? 0
+    }
+
+    /// What this address does, inventory first.
+    ///
+    /// **An unread address gets that badge and NOTHING else.** Everything the
+    /// other four say is derived from a sweep that did not happen, so drawing
+    /// "no coins, no keys, no frames" beside "couldn't read" would state four
+    /// facts we do not have — §83 in the one row that exists to admit it.
+    static func badges(_ account: HegotaAccount) -> [Badge] {
+        guard account.reached else { return [Badge(mark: .unread, count: 0)] }
+        var out: [Badge] = []
+        if account.hasCoins {
+            out.append(Badge(mark: .coins, count: (account.unspent ?? []).count))
+        }
+        if account.hasLanes {
+            out.append(Badge(mark: .keys, count: account.lanes.count))
+        }
+        if account.hasFrames { out.append(Badge(mark: .frames, count: 0)) }
+        if account.hasSponsors { out.append(Badge(mark: .sponsored, count: 0)) }
+        return out
+    }
+}
+
 // MARK: - Every counter, including the one nobody lists
 
 /// The nonce scope's totals.
