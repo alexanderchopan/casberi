@@ -176,49 +176,6 @@ struct CountUpText: View {
 
 // MARK: - Swipe hint nudge (teaches the swipe-to-pin gesture, once ever)
 
-/// The one swipe lesson, shared by every list that pins via a trailing swipe
-/// (Feed, Wallet, Tokens' watchlist, 2026-07-11): the first row nudges
-/// left once, a pin peeks from the trailing edge, the row settles back, then
-/// `onDone` retires it — for good, everywhere, since callers key `active` off
-/// the same "coach.swipe.done" flag. One gesture, one lesson, taught once no
-/// matter which screen a person meets it on first.
-struct SwipeHintNudge: ViewModifier {
-    let active: Bool
-    var onDone: () -> Void
-    @State private var nudge: CGFloat = 0
-    /// Under Reduce Motion the lesson is RETIRED rather than played still
-    /// (2026-08-04, prd §299). The whole teaching device is the movement — a
-    /// nudge that doesn't move teaches nothing, and holding the row hostage for
-    /// 2.6 seconds to teach nothing is worse than skipping it. `onDone` fires
-    /// immediately so the flag is set and no list waits on it again.
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    func body(content: Content) -> some View {
-        content
-            .offset(x: nudge)
-            .background(alignment: .trailing) {
-                if active {
-                    Image(systemName: "pin.fill")
-                        .dsGlyph(14)
-                        .foregroundStyle(DS.tint)
-                        .opacity(nudge < -8 ? Double(min(1, -nudge / 48)) : 0)
-                }
-            }
-            .onAppear {
-                guard active else { return }
-                guard !reduceMotion else { onDone(); return }
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(1400))
-                    withAnimation(.spring(duration: 0.45, bounce: 0.35)) { nudge = -56 }
-                    try? await Task.sleep(for: .milliseconds(800))
-                    withAnimation(.spring(duration: 0.4, bounce: 0.3)) { nudge = 0 }
-                    try? await Task.sleep(for: .milliseconds(400))
-                    onDone()
-                }
-            }
-    }
-}
-
 // MARK: - Connect bloom (an app's hue floods a store surface as a connect lands)
 
 /// The connect payoff, shared by the Apps store and the product page so the

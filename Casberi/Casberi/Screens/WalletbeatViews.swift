@@ -62,17 +62,6 @@ struct WalletbeatBar: View {
 	}
 }
 
-/// What a bar cannot say: how much of this wallet has been looked at.
-struct WalletbeatCoverageLine: View {
-	let counts: WalletbeatCounts
-
-	var body: some View {
-		Text(WalletbeatCopy.coverage(counts))
-			.dsText(.label11)
-			.foregroundStyle(DS.textTertiary)
-	}
-}
-
 /// A wallet's verdict shape, or an honest statement that there isn't one yet.
 ///
 /// The single component every list row uses, so the coverage gate cannot be applied on one

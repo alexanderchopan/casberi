@@ -508,8 +508,8 @@ enum NetworkReach {
                          "wrpcd.net"]),
         Endpoint(service: "Reddit",
                  reach: .whenConnected(bridge: "Reddit"),
-                 purpose: "Reads your saved posts. Connects through Reddit's own sign-in.",
-                 hosts: ["oauth.reddit.com", "www.reddit.com"]),
+                 purpose: "Reads the newest public posts of the subreddits and people you follow, through Reddit's own RSS feed. No account, no sign-in.",
+                 hosts: ["www.reddit.com"]),
         // Nostr's own hosts are WebSocket relays, so no `https://` literal
         // exists for the audit to find and this entry — like WalletConnect's
         // above — is hand-written. The NIP-05 check is the person-named half:

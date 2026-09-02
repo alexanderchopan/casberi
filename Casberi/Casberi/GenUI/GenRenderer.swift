@@ -2119,42 +2119,6 @@ private struct GenMediaStrip: View {
     }
 }
 
-/// The large grid — Pinterest/screenshots grow into a moodboard, the same
-/// 2-column idiom the pinned card's large form uses (Goal 2), just with
-/// real images instead of glyph tiles.
-private struct GenMediaGrid: View {
-    let refs: [String]
-    let els: GenEls
-    var body: some View {
-        Group {
-            // A single pinned item (below the usual 2-item magnitude) gets
-            // one full-width tile rather than a 2-column grid with an empty
-            // half — a lone tile beside a blank cell reads as broken, not
-            // as a moodboard.
-            if refs.count == 1 {
-                if let ref = refs.first, let el = els[ref] {
-                    GenMediaTile(el: el, size: nil).frame(height: 220)
-                } else {
-                    GenSkeletonTile(minHeight: 220)
-                }
-            } else {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: DS.Space.s3),
-                                     GridItem(.flexible(), spacing: DS.Space.s3)],
-                          spacing: DS.Space.s3) {
-                    ForEach(refs, id: \.self) { ref in
-                        if let el = els[ref] {
-                            GenMediaTile(el: el, size: nil).frame(height: 160)
-                        } else {
-                            GenSkeletonTile(minHeight: 160)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, DS.Space.s4)
-    }
-}
-
 /// Music's large form — literally full-bleed (prd 58's wording): the
 /// newest track's own art fills the card edge to edge, title/artist over
 /// a bottom scrim. The rest of the strip rides below, still tappable.

@@ -1478,37 +1478,6 @@ private struct MailContentView: View {
     }
 }
 
-/// A reminder's structured deadline — read straight off `dueAt`, the same
-/// field the "Coming up" lane already reads (KeptAskComposers.swift), so the
-/// sheet finally shows the date the app is quietly tracking for you rather
-/// than only the free-text title.
-private struct ReminderDueRow: View {
-    let due: Date
-
-    private var overdue: Bool { due < .now }
-
-    var body: some View {
-        HStack(spacing: DS.Space.s3) {
-            Image(systemName: "clock")
-                .accessibilityHidden(true)
-                .dsGlyph(15, weight: .medium)
-                .foregroundStyle(overdue ? DS.destructive : DS.tint)
-            Text(due.formatted(.dateTime.month(.abbreviated).day().hour().minute()))
-                .dsText(.body17)
-                .foregroundStyle(overdue ? DS.destructive : DS.textPrimary)
-            if overdue {
-                Text("Overdue")
-                    .dsText(.label12).foregroundStyle(DS.destructive)
-            }
-            Spacer()
-        }
-        .padding(DS.Space.s3)
-        .dsWell()
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.bottom, DS.Space.s3)
-    }
-}
-
 /// What the agent wants to run — the exact ask, monospaced, nothing
 /// paraphrased. The verbs below it are the answer.
 private struct CommandCard: View {
