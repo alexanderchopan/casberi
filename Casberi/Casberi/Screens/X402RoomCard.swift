@@ -49,7 +49,7 @@ struct X402RoomCard: View {
             }
 
             UnitTreemap(count: room.cells.count, height: 180, cell: { i in
-                face(room.cells[i])
+                face(room.cells[i], rank: i)
             }, readout: { i in
                 let cell = room.cells[i]
                 let unit = cell.services == 1 ? "service" : "services"
@@ -70,25 +70,40 @@ struct X402RoomCard: View {
     /// One tile. The service count rides under the name because it IS the
     /// magnitude the tile's size encodes — a reader shouldn't have to estimate
     /// an area to learn a number we know exactly.
-    private func face(_ cell: X402Room.Cell) -> some View {
+    private func face(_ cell: X402Room.Cell, rank: Int = -1) -> some View {
+        // THE LEADER IS THE LOCKUP (prd §565) — the biggest seller states its
+        // service count at the head rung, and every other cell is untouched.
+        // A count, not a price: this directory quotes what a call costs and
+        // that figure is never the one drawn here.
+        //
+        // Never the TAIL, whose number is a sum across sellers — the refusal
+        // the small tier already makes below, which only gets worse at 40pt.
         VStack(alignment: .leading, spacing: 2) {
-            Text(cell.label)
-                .dsText(.callout15).fontWeight(.semibold)
-                .foregroundStyle(cell.isTail ? DS.textSecondary : DS.textPrimary)
-                .lineLimit(2).minimumScaleFactor(0.8)
-            // The tail's number is a SUM across several sellers, so printing it
-            // beside a name would read as one company selling that many — the
-            // receipts map's own refusal, same shape.
-            if !cell.isTail {
-                Text(cell.services == 1
-                     ? String(localized: "1 service")
-                     : String(localized: "\(cell.services) services"))
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    .monospacedDigit()
+            if rank == 0 && !cell.isTail {
+                DSTreemapLeader(
+                    figure: cell.services.formatted(),
+                    name: cell.services == 1
+                        ? String(localized: "service · \(cell.label)")
+                        : String(localized: "services · \(cell.label)"))
+            } else {
+                Text(cell.label)
+                    .dsText(.callout15).fontWeight(.semibold)
+                    .foregroundStyle(cell.isTail ? DS.textSecondary : DS.textPrimary)
+                    .lineLimit(2).minimumScaleFactor(0.8)
+                // The tail's number is a SUM across several sellers, so printing it
+                // beside a name would read as one company selling that many — the
+                // receipts map's own refusal, same shape.
+                if !cell.isTail {
+                    Text(cell.services == 1
+                         ? String(localized: "1 service")
+                         : String(localized: "\(cell.services) services"))
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .monospacedDigit()
+                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
         }
-        .padding(DS.Space.s3)
+        .padding(rank == 0 && !cell.isTail ? 0 : DS.Space.s3)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background {
             ZStack {

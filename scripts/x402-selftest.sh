@@ -298,6 +298,60 @@ PY
 # says can never be allowed to happen. So the guard is not "both tables must
 # rank correctly", it is "there is one table". A tiling literal anywhere else
 # in the app fails the build, and names itself.
+# ── THE LEADER LOCKUP IS FOR A NUMBER, NEVER A WORD (prd §565) ──────────
+# `DSTreemapLeader` sets slot 0's figure at `price40`. That is right for a
+# COUNT and wrong for a TERM: a word at 40pt is a headline, a claim about
+# importance made in the largest type on the card, and §382a already demoted
+# the themes map for exactly that reason ("things you must read before they
+# say anything").
+#
+# The two word maps are named here rather than trusted to a comment. Both draw
+# a treemap whose cells are language — `TopicMapHero` the terms OCR lifts off
+# screenshots, `GenTagMap` the wallet's tags and the themes lede — and both
+# live in one file, so the guard is on that file. Mechanical because the
+# failure renders beautifully: a giant "github.com" looks like a designed
+# emphasis and is a claim nobody made.
+#
+# Read from a COMMENT-STRIPPED copy: `DSTreemapLeader`'s own doc names both of
+# these files as the things it must not be used by, and `GenRenderer` explains
+# the exclusion the same way — so a raw grep fires on the prose describing the
+# rule. Ninth instance of that lesson in this repo.
+GENUI_CODE="$(mktemp)"
+sed -e 's://.*::' "$GENUI" > "$GENUI_CODE"
+if grep -q 'DSTreemapLeader' "$GENUI_CODE"; then
+  echo "✗ GenRenderer.swift reaches DSTreemapLeader — that file draws the two"
+  echo "  WORD maps (TopicMapHero, GenTagMap). A term at price40 is a headline,"
+  echo "  not a figure (prd §565). The lockup is only for a leader sayable as a"
+  echo "  number: a share, a count, a tally."
+  rm -f "$GENUI_CODE"; exit 1
+fi
+rm -f "$GENUI_CODE"
+
+# The Hegotá UTXO map is excluded for a DIFFERENT reason and must stay so: its
+# leader is an amount of ETH, and §374's rule is that figures go while shapes
+# stay — a balance at the head rung on a room head is the one number that must
+# never grow. (Its own slot is also a documented tight sum; see the card.)
+HEG="Casberi/Casberi/Screens/HegotaRoomCard.swift"
+if [ -f "$HEG" ]; then
+  HEG_CODE="$(mktemp)"
+  sed -e 's://.*::' "$HEG" > "$HEG_CODE"
+  if grep -q 'DSTreemapLeader' "$HEG_CODE"; then
+    echo "✗ HegotaRoomCard.swift reaches DSTreemapLeader — that map's leader is a"
+    echo "  BALANCE, which §374 withholds. The lockup states counts and shares."
+    rm -f "$HEG_CODE"; exit 1
+  fi
+  rm -f "$HEG_CODE"
+fi
+
+# The component must keep FIGURE and NAME as separate parameters. Folded into
+# one "title" a caller could pass a term and get a headline by accident, which
+# is the entire class the rule above exists to prevent.
+LEADER="Casberi/Casberi/Design/DSTreemapLeader.swift"
+grep -q 'let figure: String' "$LEADER" && grep -q 'let name: String' "$LEADER" \
+  || { echo "✗ DSTreemapLeader no longer splits figure from name — a single title"; \
+       echo "  lets a word be passed where a number belongs (prd §565)."; exit 1; }
+echo "  ok   the leader lockup is numeric-only, and the word maps are out"
+
 grep -q 'UnitTreemap<EmptyView>.frames(items.count)' "$GENUI" \
   || { echo "✗ GenTagMap no longer reads UnitTreemap's table — the holdings map"; \
        echo "  can drift from the receipts / x402 / topic maps again."; exit 1; }

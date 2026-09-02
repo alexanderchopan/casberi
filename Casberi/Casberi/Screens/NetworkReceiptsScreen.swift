@@ -215,7 +215,7 @@ private struct ReachCard: View {
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
             UnitTreemap(count: reach.cells.count, height: 180, cell: { i in
-                face(reach.cells[i])
+                face(reach.cells[i], rank: i)
             }, readout: { i in
                 // The exact count under the cursor. The card's whole job is
                 // "who did this app reach, and how much", and a rank-ordered
@@ -286,22 +286,39 @@ private struct ReachCard: View {
         return String(localized: "\(label) asks most, at \(percent)% of every request. \(promise)")
     }
 
-    private func face(_ cell: NetworkReceiptsInsight.Cell) -> some View {
+    private func face(_ cell: NetworkReceiptsInsight.Cell, rank: Int = -1) -> some View {
+        // THE LEADER IS THE LOCKUP (prd §565). Slot 0 states its count at the
+        // head rung; every other cell is untouched, so the tail keeps its
+        // slots, its ramp and its 12pt names. A count is safe at that size
+        // where a balance would not be (§374) — this card counts requests.
+        //
+        // Never the TAIL, even when the tail is somehow first: its number is a
+        // SUM across several services, and at 40pt "one thing made that many
+        // requests" is the same misreading this face already refuses in the
+        // small tier, said louder.
+        //
+        // No disc. The only mark available here would be a monogram of the
+        // service name printed directly beneath it, which restates its own
+        // caption; see `DSTreemapLeader`'s doc.
         VStack(alignment: .leading, spacing: 2) {
-            Text(cell.label)
-                .dsText(.callout15).fontWeight(.semibold)
-                .foregroundStyle(cell.isTail ? DS.textSecondary : DS.textPrimary)
-                .lineLimit(2).minimumScaleFactor(0.8)
-            // The tail is a sum, not a service — printing its count beside a
-            // name would read as one thing that made that many requests.
-            if !cell.isTail {
-                Text("\(cell.count)")
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    .monospacedDigit()
+            if rank == 0 && !cell.isTail {
+                DSTreemapLeader(figure: cell.count.formatted(), name: cell.label)
+            } else {
+                Text(cell.label)
+                    .dsText(.callout15).fontWeight(.semibold)
+                    .foregroundStyle(cell.isTail ? DS.textSecondary : DS.textPrimary)
+                    .lineLimit(2).minimumScaleFactor(0.8)
+                // The tail is a sum, not a service — printing its count beside a
+                // name would read as one thing that made that many requests.
+                if !cell.isTail {
+                    Text("\(cell.count)")
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .monospacedDigit()
+                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
         }
-        .padding(DS.Space.s3)
+        .padding(rank == 0 && !cell.isTail ? 0 : DS.Space.s3)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background {
             ZStack {

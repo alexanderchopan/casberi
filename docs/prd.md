@@ -44987,4 +44987,79 @@ nothing, which no mockup ever does.
 measurement behind its wrap: "There is no server." at 40pt heavy is 19
 characters and will take two lines on a narrow phone, which is fine and has not
 been looked at.
+## 565. The treemap's leader cell becomes the lockup, and the rule is that a leader must be a number (user: "how would this make you change how we do treemaps?", then "mock it up", then "do all", 2026-09-02)
+
+The treemap was already the most disciplined figure in the app — ONE rank table
+(`UnitTreemap.frames`), a six-cell ceiling with a folded tail, area for rank and
+`DS.ink(magnitude:)` for magnitude, every cell labelled. The style changes one
+thing about it and it is not the tiling: **a map had two tiers of AREA and one
+tier of TYPE**, so the biggest slot said its name no louder than the smallest.
+
+`Design/DSTreemapLeader.swift` is §559's grammar rotated onto a figure — the
+number at `price40` hard against the bottom-left, its name at `label12` beside
+the baseline. **Slot 0 only.** The tail keeps its slots, its ramp and its 12pt
+names, so the change is one cell and the table `x402-selftest.sh` guards never
+moves; that is also what makes it cheap, since each caller draws it into its own
+`cell(0)`.
+
+### The rule that decides a caller, and the two it excludes
+
+**The leader must be sayable as a NUMBER** — a share, a count, a tally. Where
+the leader is a WORD this is forbidden: a term at 40pt is a headline, a claim
+about importance made in the largest type on the card, and §382a already
+demoted the themes map for exactly that ("things you must read before they say
+anything"). `TopicMapHero` and `GenTagMap` — the terms OCR lifts off
+screenshots, and the wallet's tags with the themes lede — keep their 12pt cells.
+
+**Two callers took it: the receipts screen's reach map and the x402 room.** Both
+count things, both already printed the number in the small tier, and both sit in
+a 180pt box. §300's three invariants are untouched: an undeclared host is never
+drawn bigger than it is, the tail is folded and named, the tiling is
+rank-ordered.
+
+**Three were refused, each for its own reason rather than a shrug.**
+*`TopicMapHero`* and *`GenTagMap`*, on the word rule above — and `GenTagMap`
+for a second reason worth recording, that its cells are label STRINGS inside a
+`GenEl`, so a share there is a schema change to the generative layer rather than
+a view change. *The Hegotá UTXO map*, because its leader would be an amount of
+ETH and §374's rule is that figures go while shapes stay — **a balance is the
+one number that must never grow**; its slot is also a documented tight sum whose
+own comment says "re-do this sum before raising it".
+
+**The TAIL never takes the lockup even in slot 0.** Its number is a sum across
+several services or sellers, and both faces already refuse to print it beside a
+name in the small tier because it reads as one thing having done that many. At
+40pt that misreading is merely louder.
+
+### Two decisions inside the component
+
+**The figure and the name are separate parameters, and that is a guard rather
+than a style.** Folded into one "title" a caller could pass a term and get a
+headline by accident — the exact class the word rule exists to prevent — so the
+split makes the wrong call impossible to write rather than merely wrong when
+somebody reviews it. `x402-selftest.sh` fails the build if they are ever merged.
+
+**THE DISC IS OPTIONAL AND ABSENT IS THE COMMON CASE.** In the panel (§553) the
+disc says HOW the act happens; in a map it would say WHO, so it earns its place
+only where it carries identity the cell does not otherwise draw — a token's
+bundled brand mark. For a service or a seller the only mark available is a
+monogram of the very name printed beneath it, and **a mark that restates its own
+caption is not a mark** (`AssetMark`'s no-invented-hue rule, one step further).
+Both shipped callers draw no disc. The mockup showed one; the tree said it would
+be redundant in exactly the two places that were buildable.
+
+### The guard
+
+In `x402-selftest.sh` beside the table it already protects, and mutation-proven
+three ways against the real tree: a word map reaching the component, the Hegotá
+card reaching it, and the two parameters folded into one. Its negative greps
+read a COMMENT-STRIPPED copy, because `DSTreemapLeader`'s own doc names both
+excluded files as the things it must not be used by, so a raw grep fires on the
+prose explaining the rule — the ninth instance of that lesson here.
+
+**UNSEEN on a device.** A five-figure count at 40pt heavy runs wider than the
+172pt slot 0 gets at six cells, so the figure carries `minimumScaleFactor(0.6)`
+and shrinks rather than truncates — a clipped number is a WRONG number and this
+one is the card's whole claim — but no map has been looked at on a simulator or
+a phone, and the reach map's real leader count is the one to check first.
 
