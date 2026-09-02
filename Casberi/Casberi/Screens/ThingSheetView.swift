@@ -706,15 +706,19 @@ struct ThingSheetView: View {
                         .padding(.top, DS.Space.s3)
                 }
                 if let check = safeCheck {
-                    SafeQueueCard(check: check)
+                    let signable: Bool = {
+                        guard case .pending = check.status, thing.sourceRef != nil
+                        else { return false }
+                        return SignerKey.presence() != .none
+                    }()
+                    SafeQueueCard(check: check, signable: signable)
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s3)
                     // The ask (prd §425). Under the queue card because that
                     // card is what says WHO is still waiting; this is the one
                     // seat in it that is yours. Draws nothing until the chain
                     // has answered every refusal.
-                    if case .pending = check.status, let ref = thing.sourceRef,
-                       SignerKey.presence() != .none {
+                    if signable, let ref = thing.sourceRef {
                         SafeSignBlock(sourceRef: ref)
                             .padding(.horizontal, DS.Space.s4)
                             .padding(.top, DS.Space.s3)
@@ -1634,7 +1638,8 @@ struct ThingSheetView: View {
         // more — it would have restated that line word for word — so without
         // this conjunct the row §363 deleted would come straight back on every
         // one of those sheets, which is the opposite of the cut.
-        let hasFrom = showsWho && !isWork && purchaseReading == nil
+        let hasFrom = !PlaceWords.line(for: thing).isEmpty
+            && showsWho && !isWork && purchaseReading == nil
             && agentShape == nil
             && !SocialSheetSource.eyebrowLeadsWithPerson(thing, shape: socialShape)
             && reception?.provenance == nil
@@ -1677,7 +1682,7 @@ struct ThingSheetView: View {
                 // the app recognizing its own history instead of treating a
                 // re-save as new (CrossSourceEcho, 2026-07-21).
                 if hasEcho, let crossSourceEcho {
-                    specRow("Also", "Saved from \(crossSourceEcho)")
+                    specRow("Also saved from", crossSourceEcho)
                 }
                 // "You wrote · Linked on X, Apr 2019" retired here 2026-08-08
                 // (prd §340): the read is unchanged and better placed. It named

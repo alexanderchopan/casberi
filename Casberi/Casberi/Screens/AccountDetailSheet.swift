@@ -382,9 +382,11 @@ struct AccountDetailSheet: View {
                     .dsText(.price40).foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
                     .lineLimit(1).minimumScaleFactor(0.6)
+                // No "on <device>" here: the capsule immediately below says
+                // it in bold green, and saying it twice in two lines spends
+                // the hero's subline on a fact already made.
                 (Text("things · ")
-                    + Text(storeSize).fontWeight(.semibold)
-                    + Text(" on \(DS.device)"))
+                    + Text(storeSize).fontWeight(.semibold))
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
             }
             // The whole on-device story, worn as one quiet capsule — the
@@ -473,14 +475,14 @@ struct AccountDetailSheet: View {
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            toggleRow("Hide previews", "Blur your things in the app switcher",
+            toggleRow("Hide previews", "…in the app switcher",
                       isOn: Binding(get: { hidePreviews }, set: { hidePreviews = $0; DSHaptic.tap() }))
             // Its sibling (prd §374): the same threat — somebody reading your
             // screen — one surface over. Written through `BalancePrivacy` and
             // not an `@AppStorage` of its own, because every wallet view reads
             // the same object and a second source of truth for one setting is
             // how the two quietly disagree.
-            toggleRow("Hide wallet balances", "Show •••• instead of amounts",
+            toggleRow("Hide wallet balances", "•••• instead of amounts",
                       isOn: Binding(get: { BalancePrivacy.shared.hidden },
                                     set: { BalancePrivacy.shared.hidden = $0; DSHaptic.tap() }))
             // The in-motion half (prd §205): what LEAVES this iPhone. The rows

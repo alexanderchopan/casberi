@@ -950,7 +950,11 @@ enum PlaceWords {
         case .contact:     return "in your contacts"
         case .product:     return "from a store you follow"
         case .accessory:   return "in your home"
-        default:           return "in your things"
+        // A kind with no place of its own says NOTHING rather than "in your
+        // things", which is true of every row in the corpus and therefore
+        // tells you nothing about this one — a label column spent on a fact
+        // the eyebrow above already carries. The caller drops the row on "".
+        default:           return ""
         }
     }
 

@@ -37,7 +37,7 @@ struct ShopifyScreen: View {
             BridgeSetupHeader(
                 name: "Shopify",
                 mode: .noAccount,
-                intro: "No account and no key — paste a store's address and its new products arrive from the store's own public catalog. Nothing here checks out or pays.",
+                intro: "Paste a store's address and its new products arrive from its own public catalog. Nothing here checks out or pays.",
                 connected: shopify.connected)
             // The way back to what just landed (§460). Gated on the corpus,
             // not a connection flag: an import has no live connection, so

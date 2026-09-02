@@ -24,7 +24,7 @@ struct KalshiScreen: View {
             BridgeSetupHeader(
                 name: "Kalshi",
                 mode: .noAccount,
-                intro: "No account, no wallet, no key — Kalshi's odds are public, so following just brings the markets you pick into your feed. Nothing here ever places a trade.",
+                intro: "Kalshi's odds are public, so following just brings the markets you pick into your feed. Nothing here ever places a trade.",
                 connected: connected)
             // The way back to your things (§460).
             if connected {

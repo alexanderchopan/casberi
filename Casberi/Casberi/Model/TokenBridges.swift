@@ -709,7 +709,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // mean a working key on a fresh account looks identical to a broken
         // one without this sentence.
         case .dodoPayments:
-            String(localized: "Dodo Payments answered — nothing in the last 30 days. Payments land as they succeed, so a new or quiet product can read empty for a while.")
+            String(localized: "Dodo Payments answered — no payments in the last 30 days.")
         // Since §537 sales land too, so an empty read no longer means "all
         // quiet" — on a token minted before §537 it means the sales half is
         // switched off, which is the likeliest cause by far and the one thing
@@ -722,7 +722,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // to expiring, so a healthy account reads as a broken connection
         // forever without this sentence.
         case .cloudflare:
-            String(localized: "Cloudflare answered — nothing needs attention. Only certificates, domains and tokens close to expiring land, so an empty read means everything is current.")
+            String(localized: "Cloudflare answered — no certificate, domain or token is close to expiring.")
         // Cursor earns one for the plainest reason of the three: most people
         // who use Cursor have never launched a CLOUD agent — they use the
         // editor, which this cannot see and does not claim to. So a perfectly
@@ -735,13 +735,13 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // lands until something fires, so a quiet week reads as a broken
         // connection without this sentence.
         case .pagerduty:
-            String(localized: "PagerDuty answered — nothing is on fire. Incidents land as they trigger and resolve, so an empty read means your services are quiet.")
+            String(localized: "PagerDuty answered — nothing is on fire.")
         // Sentry's empty is ambiguous in the way Trello's is, and the cause is
         // actionable: this reads UNRESOLVED issues only, so an org whose
         // backlog is entirely resolved or archived legitimately lands nothing
         // forever, and so does an org that simply isn't the one you meant.
         case .sentry:
-            String(localized: "Sentry answered — nothing unresolved. Open issues only, so an empty read means your backlog is clear. If that's a surprise, check which organization is selected above.")
+            String(localized: "Sentry answered — nothing unresolved. If that's a surprise, check which organization is selected above.")
         // Vercel's is a WRONG-SCOPE hint rather than a quiet-is-fine one: a
         // personal token reads your personal account, and someone whose
         // projects live under a team will otherwise see a working connection
@@ -756,7 +756,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // today's news. Both are the healthy answer, and both are exactly as
         // silent as a key Apple refused.
         case .appStoreConnect:
-            String(localized: "Apple answered — nothing has changed. A first sync notes where everything stands, then stays quiet until a verdict, a review, or a build expiry actually arrives.")
+            String(localized: "Apple answered — nothing has changed. A first sync only records where everything stands.")
         // Trello's exact ambiguity, on a different filter: `jiraJQL` asks for
         // issues assigned to you specifically, so a working token can read a
         // busy site and still land nothing if nothing is assigned to you.
@@ -766,7 +766,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // alarm fires, a deploy fails, or spend crosses its baseline, so a
         // healthy account reads exactly like a refused key without this.
         case .aws:
-            String(localized: "AWS answered — nothing needs attention. Alarms, failed deploys and a cost anomaly land as they happen, so an empty read means everything is quiet.")
+            String(localized: "AWS answered — no firing alarms, failed deploys or spend anomalies.")
         default:
             nil
         }

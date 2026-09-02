@@ -31,7 +31,7 @@ struct RailgunScreen: View {
             BridgeSetupHeader(
                 name: "Railgun",
                 mode: .watchedWallets,
-                intro: "No account here — it reads the wallets you already watch, so shields and unshields land in your feed. What happens inside the pool is never read: your private balance stays private, which is the point of using Railgun.",
+                intro: "Shields and unshields on a wallet you watch land in your feed. What happens inside the pool is never read — your private balance stays private, which is the point of Railgun.",
                 connected: hasWallets)
             if hasWallets {
                 RoomDoor(name: "Railgun", source: "Railgun")

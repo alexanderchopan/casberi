@@ -68,7 +68,7 @@ struct NetworkReceiptsScreen: View {
                 }
             } else {
                 Section {
-                    Text("Nothing yet. Every service reached shows up here — the host, how many requests, and when the last one was.")
+                    Text("Nothing yet. Every service reached shows up here.")
                         .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .listRowBackground(Color.clear)
@@ -84,7 +84,7 @@ struct NetworkReceiptsScreen: View {
                 } header: {
                     Text("Not on the list").dsText(.label12).foregroundStyle(DS.textTertiary)
                 } footer: {
-                    Text("Reached but not declared in \"What this app reaches\" — a bug in the list, not a hidden service. Please report it.")
+                    Text("A bug in the list, not a hidden service — please report it.")
                         .dsText(.callout15).foregroundStyle(DS.attention)
                 }
             }
@@ -112,7 +112,7 @@ struct NetworkReceiptsScreen: View {
                     }
                     .dsListCardRow()
                 } footer: {
-                    Text("Kept on \(DS.device) for seven days, never synced. Forgetting them changes nothing about what's reached.")
+                    Text("Forgetting them changes nothing about what's reached.")
                         .dsText(.callout15).foregroundStyle(DS.textTertiary)
                 }
             }

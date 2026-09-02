@@ -31,7 +31,7 @@ struct PrivacyPoolsScreen: View {
             BridgeSetupHeader(
                 name: "0xBow Privacy Pools",
                 mode: .watchedWallets,
-                intro: "No account here — it reads the wallets you already watch, so every deposit lands and you're told the moment one is cleared to withdraw. Withdrawals are unlinkable by design, so that side never appears.",
+                intro: "Every deposit on a wallet you watch lands, and you're told the moment one is cleared to withdraw. Withdrawals are unlinkable by design, so that side never appears.",
                 connected: hasWallets)
             if hasWallets {
                 // "…and their screening status" left the verb (duplication

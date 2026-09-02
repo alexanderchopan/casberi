@@ -13,7 +13,7 @@ struct PairClientSheet: View {
     var body: some View {
         DSTray(title: "Pair a client", height: 560) {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
-                Text("Scan this in Claude, Raycast, or any MCP client to connect it to your things.")
+                Text("Scan this in Claude, Raycast, or any MCP client.")
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
 
@@ -62,11 +62,10 @@ struct PairClientSheet: View {
                         .dsGlyph(16)
                         .foregroundStyle(.white)
                 )
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Yours to allow").dsText(.body17).foregroundStyle(DS.textPrimary)
-                Text("Reads when you ask · saves only what you approve")
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-            }
+            // One line, not a title over its own restatement: "Yours to
+            // allow" said what the sentence beneath it already said.
+            Text("Reads when you ask · saves only what you approve")
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
             Spacer()
         }
     }

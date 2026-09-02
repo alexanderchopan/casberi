@@ -10,9 +10,10 @@ struct LanguagePickerSheet: View {
 
     var body: some View {
         DSTray(title: "Language", height: 580) {
+            // No intro sentence: the first row is "System · Match your device",
+            // which teaches the scope by being the choice, where a sentence
+            // above it could only say the same thing again in prose.
             VStack(alignment: .leading, spacing: DS.Space.s4) {
-                Text("This app only — your device language stays as it is.")
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
                 VStack(spacing: DS.Space.s2) {
                     row(endonym: "System", gloss: "Match your device",
                         selected: store.code == nil) { store.code = nil }

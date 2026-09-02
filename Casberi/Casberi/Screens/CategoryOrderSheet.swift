@@ -57,7 +57,9 @@ struct CategoryOrderSheet: View {
                 }
                 .onMove(perform: move)
             } header: {
-                Text("Drag to put the chips in the order you want. All and Pinned always lead.")
+                // The grabbers are permanently visible, so "drag to reorder" was the
+                // affordance restated. Only the rule the grabbers cannot show.
+                Text("All and Pinned always lead.")
                     .dsText(.callout15)
                     .foregroundStyle(DS.textSecondary)
                     .textCase(nil)

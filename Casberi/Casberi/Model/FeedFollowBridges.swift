@@ -200,15 +200,15 @@ enum FeedFollowKind: String, CaseIterable {
     var setupIntro: String {
         switch self {
         case .substack:
-            String(localized: "No account and no sign-in — name a publication and its posts arrive, fetched straight from its own feed. Public posts only; a subscriber-only one stays behind Substack's wall.")
+            String(localized: "Name a publication and its posts arrive, straight from its own feed. A subscriber-only post stays behind Substack's wall.")
         case .reddit:
-            String(localized: "No account and no sign-in — name a subreddit or a person and their posts arrive through Reddit's own RSS. Public posts only.")
+            String(localized: "Name a subreddit or a person and their public posts arrive, through Reddit's own RSS.")
         case .youtube:
-            String(localized: "No account and no sign-in — name a channel and its uploads arrive through YouTube's own feed. Public uploads only, and Shorts are tagged so you can filter them out.")
+            String(localized: "Name a channel and its uploads arrive through YouTube's own feed. Shorts are tagged so you can filter them out.")
         case .podcasts:
-            String(localized: "No account and no sign-in — name a show and its episodes arrive through the show's own public feed.")
+            String(localized: "Name a show and its episodes arrive through the show's own public feed.")
         case .telegram:
-            String(localized: "No account and no sign-in — name a public channel and its posts arrive from the channel's own public page. Public channels only: groups and your own chats are never readable this way.")
+            String(localized: "Name a public channel and its posts arrive from the channel's own page. Groups and your own chats are never readable this way.")
         }
     }
 

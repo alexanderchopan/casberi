@@ -1468,7 +1468,7 @@ private struct MailContentView: View {
             // it always was. Gated on there being no body, so a demo/sample
             // mail thing that DOES carry text never claims otherwise.
             if isFromLine || thing.content.isEmpty {
-                Text("The header only — open it in Mail to read the message.")
+                Text("The header only — the message is still in Mail.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }

@@ -46,7 +46,7 @@ struct SafeScreen: View {
             BridgeSetupHeader(
                 name: "Safe",
                 mode: .watchedWallets,
-                intro: "No account here — it reads the wallets you already watch, so you're told when a transaction is waiting on your signature. This phone can also be one of the Safe's owners, so your computer can't spend without your phone's yes.",
+                intro: "You're told when a transaction on a Safe you watch is waiting on your signature. This phone can also be one of the Safe's owners, so your computer can't spend without your phone's yes.",
                 connected: safeCount > 0)
             // Ahead of the signer sections, which are the longest on any
             // wallet-riding page — see `RoomDoor`. Safe earned its own

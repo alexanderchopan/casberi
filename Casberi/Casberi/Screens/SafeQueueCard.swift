@@ -20,6 +20,15 @@ import SwiftUI
 /// do, and until now had no way to hand off.
 struct SafeQueueCard: View {
     let check: SafeBridge.Check
+    /// True when `SafeSignBlock` renders directly below this card — i.e. this
+    /// phone holds a signer key for a still-pending transaction.
+    ///
+    /// It suppresses the closing hand-off line, which is FALSE in exactly that
+    /// case: signing really does happen here, and the block below says the
+    /// true, narrower thing ("Casberi signs; it can't execute"). Shipped as
+    /// both sentences stacked, the second contradicting the first. Defaults to
+    /// false, so every other caller renders as before.
+    var signable: Bool = false
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -38,10 +47,12 @@ struct SafeQueueCard: View {
                            text: "Replaced — a different transaction executed at this position instead.")
             }
             if let door = check.doorURL, let url = URL(string: door) {
-                doorRow(icon: "arrow.up.right", label: "Open in Safe") { openURL(url) }
+                DSDoorRow(icon: "arrow.up.right", label: "Open in Safe") { openURL(url) }
             }
-            Text("Signatures happen in your Safe app — never here.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            if !signable {
+                Text("Signatures happen in your Safe app — never here.")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            }
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -94,13 +105,19 @@ struct SafeQueueCard: View {
         return String(localized: "Waiting on \(waiting[0].displayName) and \(waiting.count - 1) other")
     }
 
+    /// The subline says what is LEFT, never the fraction.
+    ///
+    /// `SafeSignatureDisc` beside it already draws "\(have)/\(required)" — its
+    /// own doc says the disc is where that fraction lives — so spelling it here
+    /// too, under a headline that can spell it a third time, printed one number
+    /// pair three ways in one 60pt block.
     private func subline(have: Int, required: Int) -> String? {
         guard required > 0 else { return nil }
         if check.readyToExecute {
-            return String(localized: "\(have) of \(required) — anyone can execute it now")
+            return String(localized: "Anyone can execute it now")
         }
         let short = required - have
-        return String(localized: "\(have) of \(required) · \(short) more to go")
+        return String(localized: "\(short) more to go")
     }
 
     // MARK: - The people
@@ -180,24 +197,8 @@ struct SafeQueueCard: View {
         }
     }
 
-    private func doorRow(icon: String, label: LocalizedStringKey,
-                         action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: DS.Space.s2) {
-                Image(systemName: icon)
-                    .dsGlyph(13, weight: .regular)
-                    .foregroundStyle(DS.textSecondary)
-                    .frame(width: 18, alignment: .center)
-                Text(label)
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                Spacer(minLength: 0)
-            }
-            .padding(.vertical, DS.Space.s1)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .dsHover()
-    }
+    // `doorRow` was HERE and is `DSDoorRow` (prd §560, 2026-09-01) — this
+    // file's copy is the one the shared component was drawn from.
 }
 
 /// The signature ring — `MetricDisc`'s doctrine applied to a multisig: a
@@ -411,23 +412,16 @@ struct SafeSignBlock: View {
                     .foregroundStyle(ready.addsASpareOwner ? DS.confirm : DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            Button {
-                DSHaptic.tap()
+            // THE HERO VERB (prd §559) — the highest-stakes single act in the
+            // app, wearing the identity the devnet Home panels set: the verb
+            // at `price40` on the filled tile, the faceid disc saying how it
+            // confirms. The reading above is information; this is the point.
+            DSActVerb(title: signing ? String(localized: "Signing…")
+                                     : String(localized: "Sign"),
+                      glyph: "faceid",
+                      busy: signing) {
                 Task { await sign(ready) }
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: "faceid").dsGlyph(15)
-                    Text(signing ? "Signing…" : "Sign")
-                        .dsText(.callout15).fontWeight(.semibold)
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 50)
-                .background(signing ? DS.gray100 : DS.tint, in: Capsule(style: .continuous))
-                .contentShape(Capsule(style: .continuous))
             }
-            .buttonStyle(PressSpring())
-            .disabled(signing)
             Text("Casberi signs; it can't execute. Another owner sends it.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
         }

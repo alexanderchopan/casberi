@@ -275,13 +275,13 @@ enum HandleBridge: String {
     var setupIntro: String {
         switch self {
         case .bluesky:
-            String(localized: "No account and no sign-in — name someone and their posts arrive, straight from Bluesky's public API. What they like stays out: that needs a sign-in, which is coming later.")
+            String(localized: "Name someone and their posts arrive, straight from Bluesky's public API. What they like needs a sign-in, which is coming later.")
         case .farcaster:
-            String(localized: "No account and no sign-in — name someone and their casts arrive, served by the Farcaster team's own public node. Channels and mentions of you can be followed too.")
+            String(localized: "Name someone and their casts arrive, from the Farcaster team's own public node. Channels and mentions of you can be followed too.")
         case .nostr:
-            String(localized: "No account and no sign-in — name someone and their notes arrive from whichever public relays this \(DS.device) can reach. No key, and nothing here can ever post.")
+            String(localized: "Name someone and their notes arrive from whichever public relays this \(DS.device) can reach. Nothing here can ever post.")
         case .pinterest:
-            String(localized: "No account and no sign-in — name someone and their pins arrive. Public boards only: a secret board never appears in the public feed, so it can never appear here.")
+            String(localized: "Name someone and their public pins arrive. A secret board never appears in Pinterest's own feed, so it can never appear here.")
         default:
             feedKind?.setupIntro ?? ""
         }
