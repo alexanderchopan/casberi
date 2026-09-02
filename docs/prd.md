@@ -43901,3 +43901,80 @@ guarded.
 **UNSEEN on a device.** Neither new card has been screenshotted, and no Dodo or
 Privacy.com key has ever been held by this project — so the harness is not the
 best proof these numbers are right, it is the only one.
+
+## 559. The hero verb — an act at the head rung, past the devnet rooms (user: "this is more and more becoming our identity. Where else should we be using font that size", then "do all your recommendations", 2026-09-01)
+
+§553 put "Send", "Top up" and "Create account" at `price40` on the devnet rooms'
+Home panel. Until that day the two head rungs were worn by FIGURES alone — the
+money receipt's hero, the token chart's price, the wallet crown — and the ramp's
+own doc describes `price40` as "money at head size". §553 was the first place a
+**verb** took it, and the user named it as identity rather than as a one-room
+layout. This entry generalises it.
+
+**THE RULE, and it is a scope rather than a size.** A verb wears the head rung
+when the surface exists to do ONE thing: the state above it is information, and
+the tile is the point. Two verbs is the ceiling (§553's split panel), and the
+second is the ink half. Three is a menu, and a hero verb among peers is just
+shouting.
+
+**`DSActVerb` (`Design/DSActVerb.swift`) is the component, and it deliberately
+shares no code with `DevnetSendPanel`.** The panel's geometry is MEASURED
+against the room's chrome — §553's `tileFloor` arithmetic, asserted by
+`devnet-console-audit.py` — while this hugs its content. Folding the two would
+put a sheet's commit under a room measurement, and the next time somebody
+retunes the room the sheet moves for a reason nobody can find. What is shared is
+the GRAMMAR, which is the part that is the identity: the disc top-left, the verb
+hard against the bottom-left at `price40`, the filled tile at the widget radius,
+`PressSpring`.
+
+**Four surfaces take it, each because its whole reason is one act.**
+
+1. **`SafeSignBlock`'s Sign** — the highest-stakes single verb in the app, and
+   it was a 50pt capsule with the verb at `callout15`, smaller than the reading
+   above it. The faceid glyph rides the disc rather than sitting beside the
+   word, so the verb is the object and the confirmation is a property of it.
+2. **`VibenetCreateSheet`'s pinned commit**, all four states through one shape,
+   and **`HegotaKeySheet`'s create** — the same verb the rooms' own
+   `DevnetCreatePanel` says, so the sheet and the Home tile are recognisably one
+   act rather than two spellings of it.
+3. **`FollowImportSheet`'s Add N** — a picker whose entire purpose is the commit
+   at the bottom of it.
+4. **The onboarding greeting's "Try a demo"** — §217's one honest first tap,
+   which is where the identity is worth spending first.
+
+**Three copy consequences, all in the same direction.** "Create with Face ID"
+became "Create account", "Make a key on this phone" became "Make a key",
+"Create an account on this phone" became "Create account". At the head rung a
+prepositional tail is a sentence set as a headline; what the tail said, the disc
+and the sheet's own prose already say. The verb is the verb.
+
+**§83 is the component's contract, not each caller's.** A hand-rolled button
+paints its own background and `.disabled` dims a label rather than a fill, so an
+inert tile swaps its own fill — the failure `FollowImportSheet` had already
+fixed by hand and every future caller would have had to fix again. A BUSY tile
+keeps its fill and spins IN THE DISC: it is acting, not refusing, and a spinner
+appended beside the word makes a 40pt verb wobble.
+
+**Deliberately NOT taken, and the exclusions are the load-bearing half.**
+*Connect and setup screens* — §190 rules those slabs and `connect-shape-audit.py`
+fails the build over it, so this tile there is that audit's finding wearing a
+bigger font; `FramesScreen` was corrected TO slabs hours before this entry, and
+this must not walk it back. *A thing sheet's discs, a row, a directory's own
+verb* — content-level acts, which §190 already exempts from the slab rule for
+the same reason they are exempt from this one. *The Data tray's paired deletes* —
+a 40pt **Delete everything** invites the one act that should be made deliberate,
+which inverts the point of the rung.
+
+**Also here:** the onboarding CTA's glass capsule is retired for a solid tile.
+The tap-eating that slot fixed in 2026-07-17 was interactive glass applied
+OUTSIDE a button intercepting touches for its own press deformation — a failure
+a solid fill cannot have — so the fix's REASON is preserved by a shape that
+never had the problem, rather than by carrying the workaround forward.
+`VibenetCreateSheet.trayHeight` gains +68 on its acting states, since the pinned
+commit grew from a 48pt button to a ~116pt tile and the tray height is a
+hand-summed guess that has been wrong at least once already (§538).
+
+**UNSEEN on a device.** Every one of the four is a control that has to be
+LOOKED at — a 40pt verb inside a tray is exactly the class §538 and §553 both
+got wrong by arithmetic — so the tray heights and the onboarding inset are
+reasoned, not measured.

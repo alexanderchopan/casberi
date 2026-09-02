@@ -204,22 +204,15 @@ struct HegotaKeySheet: View {
 
     private var noKeyBody: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Button {
-                DSHaptic.tap()
+            // THE HERO VERB (prd §559) — the same object saying the same verb
+            // as the room's own `DevnetCreatePanel`, so the sheet and the Home
+            // tile are recognisably one act. "on this phone" moved out of the
+            // label; the sheet's own prose already says it.
+            DSActVerb(title: String(localized: "Create account"),
+                      glyph: "key.fill",
+                      tint: Self.mark) {
                 makeKey()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "key.fill").dsGlyph(13, weight: .semibold)
-                    Text(String(localized: "Create an account on this phone"))
-                }
-                .dsText(.callout15).fontWeight(.semibold)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, DS.Space.s3)
-                .background(Self.mark, in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
             }
-            .buttonStyle(PressSpring())
-            .dsHover()
             if let keyFailure {
                 Text(keyFailure)
                     .dsText(.label11)

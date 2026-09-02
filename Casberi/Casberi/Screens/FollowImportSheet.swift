@@ -182,24 +182,17 @@ struct FollowImportSheet: View {
 
     private var addButton: some View {
         let n = picked.count
-        return Button {
+        // THE HERO VERB (prd §559): this sheet's whole reason is one commit,
+        // so the commit wears the identity — the verb at `price40` on the
+        // filled tile. The §83 fill swap (an inert button must not read live)
+        // is the component's own contract now.
+        return DSActVerb(title: n == 0 ? String(localized: "Pick who to add")
+                                       : String(localized: "Add \(n)"),
+                         glyph: "person.badge.plus",
+                         disabled: n == 0) {
             importPicked()
-        } label: {
-            Text(n == 0 ? "Pick who to add" : "Add \(n)")
-                .dsText(.callout15).fontWeight(.semibold)
-                .foregroundStyle(n == 0 ? DS.textTertiary : .white)
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 48)
-                // A hand-rolled button paints its own background, and
-                // `.disabled` dims a label, not a fill — so the fill swaps
-                // itself or an inert button reads live (honesty rule, §83).
-                .background(n == 0 ? DS.gray100 : DS.tint,
-                            in: RoundedRectangle(cornerRadius: DS.Radius.control,
-                                                 style: .continuous))
         }
-        .buttonStyle(PressSpring())
         .armedPop(n > 0)
-        .disabled(n == 0)
     }
 
     /// The rows, filtered by what's typed — matched on both the handle and the

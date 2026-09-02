@@ -61,11 +61,16 @@ struct VibenetCreateSheet: View {
     /// content alone and a wrong one costs a scroll rather than a clipped
     /// control.
     private var trayHeight: CGFloat {
+        // +68 on the acting states since the pinned commit became the hero
+        // verb tile (prd §559, ~116pt against the old 48pt button) — the tile
+        // is pinned outside the scroll, so without the allowance it eats the
+        // scroll's height rather than clipping, which is survivable but makes
+        // the resting detent hide content it used to show.
         switch phase {
         case .checking:        240
-        case .refused:         keyFailure == nil ? 320 : 380
-        case .ready, .working: 430
-        case .done:            360
+        case .refused:         keyFailure == nil ? 388 : 448
+        case .ready, .working: 498
+        case .done:            428
         }
     }
 
@@ -169,10 +174,9 @@ struct VibenetCreateSheet: View {
         case .checking:
             EmptyView()
         case .ready, .working:
-            actionButton(title: String(localized: "Create with Face ID"),
-                         symbol: "faceid",
-                         busy: phase == .working,
-                         disabled: phase == .working) {
+            actionVerb(title: String(localized: "Create account"),
+                       glyph: "faceid",
+                       busy: phase == .working) {
                 createFailure = nil
                 Task { await create() }
             }
@@ -182,47 +186,32 @@ struct VibenetCreateSheet: View {
             // this state — the only thing the screen is asking for — so it
             // gets the weight the ready state's own button gets.
             if refusal == .noKey {
-                actionButton(title: String(localized: "Make a key on this phone"),
-                             symbol: "key.fill",
-                             busy: false,
-                             disabled: false) {
+                actionVerb(title: String(localized: "Make a key"),
+                           glyph: "key.fill",
+                           busy: false) {
                     Task { await makeKey() }
                 }
             }
         case .done(let account):
-            actionButton(title: String(localized: "Watch it"),
-                         symbol: nil,
-                         busy: false,
-                         disabled: false) {
+            actionVerb(title: String(localized: "Watch it"),
+                       glyph: "eye",
+                       busy: false) {
                 onCreated(account)
                 dismiss()
             }
         }
     }
 
-    /// One button shape for all four states, so the pinned slot cannot drift
-    /// into four spellings of the same control.
-    private func actionButton(title: String, symbol: String?, busy: Bool,
-                              disabled: Bool, act: @escaping () -> Void) -> some View {
-        Button {
-            DSHaptic.tap()
-            act()
-        } label: {
-            HStack(spacing: 6) {
-                if let symbol { Image(systemName: symbol).dsGlyph(14, weight: .semibold) }
-                Text(title)
-                if busy { ProgressView().controlSize(.mini) }
-            }
-            .dsText(.callout15).fontWeight(.semibold)
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, DS.Space.s3)
-            .background(Self.mark, in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-        }
-        .buttonStyle(PressSpring())
-        .disabled(disabled)
-        .dsHover()
-        .padding(.top, DS.Space.s3)
+    /// One shape for every state's pinned commit — the HERO VERB (prd §559),
+    /// the identity the devnet Home panels set: the verb at `price40` on the
+    /// venue's own fill, the disc saying how the act happens (faceid — Face ID
+    /// is the confirmation, §553). Titles are the verb alone; what "with Face
+    /// ID" and "on this phone" used to say in the label, the disc and the
+    /// sheet's own prose say already.
+    private func actionVerb(title: String, glyph: String, busy: Bool,
+                            act: @escaping () -> Void) -> some View {
+        DSActVerb(title: title, glyph: glyph, tint: Self.mark, busy: busy, act: act)
+            .padding(.top, DS.Space.s3)
     }
 
     // MARK: - The head
