@@ -4265,6 +4265,10 @@ struct Composer: View {
                 .padding(.horizontal, DS.Space.s4)
             }
             .padding(.top, DS.Space.s3)
+            // Clear of the deck below (prd §578) — the pills used to sit flush
+            // on the panel's top edge, which is the "boxes touching each
+            // other" reading in miniature.
+            .padding(.bottom, DS.Space.s4)
         }
     }
 
@@ -4724,26 +4728,17 @@ struct Composer: View {
         // learnable: it is in the same place before and after you type, and
         // typing changes only what a tap does.
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if showsRail {
-                // THE RAIL IS THE PANEL'S HEAD (prd §577c). It was a 36pt
-                // device disc and, for somebody with no key, a "Set up an
-                // agent" link — which on a device read as an empty raised box
-                // with a dot in the corner, reported as "weird, the boxes
-                // touching each other like an error". The faces fill it and
-                // say the thing the panel is for.
-                //
-                // `showsRail` deliberately does NOT read `hasDraft` or
-                // `fieldFocused`: everything above the field must hold still
-                // while you type, or the field changes position in the VStack
-                // and SwiftUI rebuilds its UITextView — the §577c hang.
+            // THE DECK IS THE HEAD, ALWAYS (prd §578). Present for the whole
+            // life of the embedded surface; only its SIZE changes — 158pt keys
+            // while nothing is answered, 64pt once a turn exists — because a
+            // head that appears or disappears moves the field below it, and a
+            // moved `TextField` is a rebuilt `UITextView` (§577c).
+            if embedded, !isRecording {
                 AskDestinationRail(
                     providers: AgentKey.configured,
                     active: activeAskAgent,
                     recording: isRecording,
-                    size: .large,
-                    onTint: onTint,
-                    find: (hasDraft && !isRecording && !inFlight && !handingOff)
-                        ? { runFind() } : nil,
+                    size: showsRail ? .deck : .strip,
                     onDevice: {
                         AskDestination.used(AskDestination.deviceRaw)
                         chosenAgent = nil
@@ -4754,19 +4749,12 @@ struct Composer: View {
                         chosenAgent = provider
                         askProvider = provider
                     })
-                .padding(.horizontal, DS.Space.s1)
-                if AgentKey.configured.isEmpty {
+                if showsRail, AgentKey.configured.isEmpty {
                     HStack { Spacer(minLength: 0); agentsLink }
                         .padding(.horizontal, DS.Space.s1)
+                        .padding(.top, DS.Space.s2)
                 }
-                // THE AIR IS THE POINT, and it is a written-down sum (§552's
-                // lesson): head disc 36 + this 24 + the invitation at the head
-                // rung 40 + s2 8 + the control row 36 + the panel's own 12
-                // top and bottom ≈ 168pt. Re-do the sum before adding a row
-                // here. The `Spacer` above this whole block absorbs the
-                // change, so nothing clips — what a careless row costs is the
-                // emptiness the panel exists to pool.
-                Spacer(minLength: DS.Space.s6)
+                Spacer(minLength: showsRail ? DS.Space.s6 : DS.Space.s3)
             }
             draftField
                 // Four lines reserved once there is writing to do, one line
@@ -4778,69 +4766,75 @@ struct Composer: View {
             // What the chosen destination will read from — the corpus count,
             // or Bankr's disclosure. Under the words it is about.
             if showsRail { askSubline }
+            // ONE WIDE VERB, TWO ROUND KEYS (prd §578). The capsule is gone
+            // from the embedded surface: the deck above is the picker, so a
+            // second, smaller picker beside the send is the duplication §543
+            // collapsed into the capsule in the first place. It is untouched
+            // in the non-embedded bubble, which has no deck.
             HStack(spacing: DS.Space.s2) {
                 lowerButton
                 micButton
-                Spacer(minLength: 0)
-                // THE SEND BUTTON IS GONE. Tapping a capsule segment IS the
-                // send to that destination — see `AskDestinationCapsule`.
-                // THE CAPSULE STANDS DOWN WHERE THE RAIL STANDS (prd §577c) —
-                // two pickers for one choice, one of them 32pt and one 88pt,
-                // is the duplication §543 collapsed into the capsule in the
-                // first place. It keeps every other state: under an answer,
-                // in the non-embedded bubble, while recording.
-                if !showsRail {
-                AskDestinationCapsule(
-                    providers: AgentKey.configured,
-                    hasDraft: hasDraft,
-                    recording: isRecording,
-                    active: activeAskAgent,
-                    // FIND IS A SEGMENT NOW (prd §575) — its own gate, not
-                    // `hasDraft`, because `runFind` refuses an in-flight ask
-                    // and a segment that refuses is the dead control §83 bans.
-                    // A live recording stands it down for the same reason the
-                    // agents do: the mic's own commit is the verb there.
-                    find: (hasDraft && !isRecording && !inFlight && !handingOff)
-                        ? { runFind() } : nil,
-                    onDevice: {
-                        // The device answer is what the return key does, so
-                        // this is `commit()` exactly: a live recording commits
-                        // the capture, an empty field just takes focus.
-                        AskDestination.used(AskDestination.deviceRaw)
-                        // Clears the pick too (prd §577c) — otherwise the
-                        // capsule could send to the phone while a stale
-                        // `chosenAgent` still lit an agent segment.
-                        chosenAgent = nil
-                        if hasDraft || isRecording { commit() } else { fieldFocused = true }
-                    },
-                    onAgent: { provider in
-                        AskDestination.used(provider.rawValue)
-                        // THE CAPSULE'S TAP STICKS TOO (prd §577c, user: "when
-                        // i tap on bankr it didn't switch"). `activeAskAgent`
-                        // reported nil until a conversation was already keyed,
-                        // so a tap on an agent segment with an empty field
-                        // armed the field and moved NO fill — the exact thing
-                        // the fill exists to say. One pick model, both
-                        // controls.
-                        chosenAgent = provider
-                        askProvider = provider
-                        // At rest there is no question yet: arm the field at
-                        // that agent rather than sending an empty ask — the
-                        // stranded-"Thinking…" the empty-draft guard exists
-                        // to prevent.
-                        if hasDraft { askDirectly() } else { fieldFocused = true }
-                    })
+                if embedded, hasDraft, !isRecording, !inFlight, !handingOff {
+                    // Find is a VERB here, not a destination — it keeps you
+                    // inside the app and writes nothing (§215). Its own gate,
+                    // never `hasDraft` alone, because `runFind` refuses an
+                    // in-flight ask and a control that refuses is the dead
+                    // control §83 bans.
+                    Button { runFind() } label: {
+                        Image(systemName: "magnifyingglass")
+                            .dsGlyph(20, weight: .regular)
+                            .foregroundStyle(DS.textPrimary)
+                            .frame(width: 52, height: 52)
+                            .background(DS.surfaceRaised, in: Circle())
+                            .dsHover()
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityLabel("Find in your things")
                 }
-                if showsRail { sendPill }
+                Spacer(minLength: 0)
+                if embedded {
+                    sendPill
+                } else {
+                    AskDestinationCapsule(
+                        providers: AgentKey.configured,
+                        hasDraft: hasDraft,
+                        recording: isRecording,
+                        active: activeAskAgent,
+                        find: (hasDraft && !isRecording && !inFlight && !handingOff)
+                            ? { runFind() } : nil,
+                        onDevice: {
+                            AskDestination.used(AskDestination.deviceRaw)
+                            chosenAgent = nil
+                            if hasDraft || isRecording { commit() } else { fieldFocused = true }
+                        },
+                        onAgent: { provider in
+                            AskDestination.used(provider.rawValue)
+                            chosenAgent = provider
+                            askProvider = provider
+                            if hasDraft { askDirectly() } else { fieldFocused = true }
+                        })
+                }
+            }
+            .animation(DS.Motion.standard, value: hasDraft)
+        }
+        .padding(embedded ? 0 : DS.Space.s2 + 4)
+        // THE SLAB IS GONE ON THE EMBEDDED SURFACE (prd §578). It was "the
+        // hero of the sheet, by tone and shadow alone" — an elevated ink card
+        // holding a one-line field — and that reading died with the field: the
+        // deck's keys are now the raised objects, so a raised card BEHIND them
+        // is a box inside a box, which is what the user saw twice ("the boxes
+        // touching each other like an error"). A console has controls sitting
+        // on the ink, not a card holding them.
+        //
+        // The non-embedded bubble keeps it: it really is a card floating over
+        // the feed, and it has no deck.
+        .background {
+            if !embedded {
+                Color.clear
+                    .dsInkFill(cornerRadius: writingRoom ? 22 : 26)
+                    .shadow(color: DS.cardShadow, radius: 10, x: 0, y: 3)
             }
         }
-        .padding(DS.Space.s2 + 4)
-        // The hero of the sheet, by tone and shadow alone (the ladder — never
-        // by line): an elevated field, no ring. Focus shows in the cursor and
-        // the keyboard; state shows in the send dot. Ink, not the old gray
-        // (2026-08-31 — the same sweep that took every gray chip to ink).
-        .dsInkFill(cornerRadius: writingRoom ? 22 : 26)
-        .shadow(color: DS.cardShadow, radius: 10, x: 0, y: 3)
         .animation(DS.Motion.standard, value: hasDraft || isRecording)
         .animation(DS.Motion.standard, value: fieldFocused)
         .animation(DS.Motion.standard, value: restingPanel)
@@ -4947,9 +4941,20 @@ struct Composer: View {
                         // rebuilt, which is the §577c hang arriving by a
                         // second route. The invitation is the crown here in
                         // every state, so there is nothing left to switch on.
-                        .dsText(embedded ? .heading34 : .body17)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(2)
+                        // THE INVITATION IS AT THE DISPLAY RUNG (prd §578,
+                        // user: "the ask or search i think could be LARGER
+                        // extreme size"). It CAN be and the field's own text
+                        // cannot: the placeholder is a separate view inside
+                        // `.placeholder(when:)`'s ZStack, so sizing it costs
+                        // the `UITextView` nothing, while changing `.dsText`
+                        // on the field itself is a rebuild (§577c).
+                        .dsText(embedded ? .price48 : .body17)
+                        .foregroundStyle(DS.textTertiary)
+                        // ONE LINE. At 64pt "Ask or search" wraps on a phone
+                        // and eats the air the deck needs; scaled it holds the
+                        // rung and the shape of a single statement.
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.45)
                         .minimumScaleFactor(0.9)
                         .contentTransition(.opacity)
                 }

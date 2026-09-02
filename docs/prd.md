@@ -46384,3 +46384,21 @@ So: `askSurface` and the `asking` gate are deleted. The panel is ONE container i
 `room-perf-selftest`'s C4 guard and its mutation were both re-aimed rather than deleted: the ground under the matched shape is now `(chrome.askOnTint ? DS.tint : DS.page)` and the ruling — flat, full-bleed, underneath — never depended on the colour. The mutation had gone STALE against the new line and was "surviving" by editing nothing, the `notify-selftest` trap again.
 
 **Verification:** iOS build green, harness green, rest and draft states seen on the simulator with the field holding still across the keystroke boundary. **Not yet re-shipped** — the redesign below (§578) was asked for first.
+
+## 578. The agent becomes a console — keys, not chips (user: "mock up another version of what the chat could look like b/c we aren't at it right now it's not good and we already got rid of the blue", then "ink, extreme, large logo for bankr, large buttons to touch to select, large text kinda stuff", then "less like a phone chat and more like a device interface", then "love it. build it", 2026-09-02)
+
+§577 gave the destination an 88pt round face and §577c made the panel one stable container. On a device it still read as a chat with big avatars. The instruction was to stop drawing a chat: **ink only, one thing enormous, controls you press without looking.**
+
+**The round face was the thing to lose.** A circle is a PORTRAIT — at 88pt it read as somebody's avatar with a caption, and the caption had to shrink to fit under it. `AskDestinationRail` is a DECK of 158pt rounded squares now: the brand mark at 64pt in the top-left corner, the name at `heading22` across the bottom, and under it **what that destination answers FROM** — "on your things" or, for Bankr, "its own account". That line is the one the round rail had no room for, and it is drawn from `AskSubject.ground` rather than written in the view, so the key and the draft note below can never disagree about whose account Bankr uses. The pressed key is filled `DS.tint` with everything on it white; §570 stands (no agent brings a colour of its own) and §563's budget is kept, because the pressed key and the verb are the only saturated blocks on an ink screen.
+
+**They SCROLL, and the cap is gone.** The capsule folds a fourth agent into a `+N` menu because it is a fixed-width row sharing a line with the mic and the send. A deck has no such budget, so every configured agent gets a key and a fifth is a push sideways — nothing reachable only through a menu. `AskDestination.split` still decides the ORDER (two controls for one choice must not rank differently); only its slot cap is ignored, by appending the overflow.
+
+**A row, never a grid**, and this is the §577c rule applied to layout: a second grid row would double the head's height, and height is the one dimension the field below cannot afford to have move.
+
+**The invitation takes the display rung** (`price48`, one line, scaled) — user: "the ask or search i think could be LARGER extreme size". It CAN be while the field's own text cannot: `.placeholder(when:)` puts it in a ZStack as a separate view, so sizing it costs the `UITextView` nothing, where changing `.dsText` on the field is a rebuild.
+
+**One wide verb, two round keys.** The capsule leaves the embedded surface entirely — the deck is the picker, so a second smaller picker beside the send is the duplication §543 collapsed into the capsule in the first place. Find becomes a 52pt round key beside the mic when there is a draft: it is a VERB here, not a destination. The capsule survives untouched in the non-embedded bubble, which has no deck.
+
+**And the slab under it all is gone.** `dsInkFill` + shadow was "the hero of the sheet, by tone and shadow alone", written when the panel held a one-line field. The deck's keys are the raised objects now, so a raised card behind them is a box inside a box — which is exactly what the user saw twice ("the boxes touching each other like an error"). Controls sit on the ink. The bubble keeps its card, because there it really is one floating over the feed.
+
+**Verification:** iOS build green; rest, draft and the three-key multi-agent case all seen on the simulator. **Unseen:** the `.strip` size under a settled answer, and the wait clock, which still needs a live Bankr key.
