@@ -2272,12 +2272,20 @@ enum VibenetExplorer {
     /// chain: the devnet runs a faucet page, and its own account console
     /// describes itself as *"fund them from the faucet"*.
     ///
-    /// So a Top up here is a HAND-OFF, not a claim — which is why
-    /// `DevnetSendPanel.TopUp.handsOff` exists and why the mark is an outward
-    /// arrow rather than a drop. An in-app claim stays unbuilt: the page is
-    /// client-rendered, so nothing in its markup names the endpoint it calls,
-    /// and guessing at one is how a write path gets built against a shape
-    /// nobody measured.
+    /// **AND THE PAGE IS NO LONGER HOW YOU TOP UP (prd §553b, 2026-09-01).**
+    /// That amendment shipped the Top up tile as a hand-off to this page,
+    /// reasoning that the page is client-rendered so nothing in its markup
+    /// names the endpoint it calls. True of the served HTML and false about
+    /// the app: the endpoint is in the page's own JS bundle, and
+    /// `VibenetSend.claimFaucet` calls it directly now. Home's tile claims in
+    /// place like Hegotá's and Frames'.
+    ///
+    /// This constant survives as a DOOR, and only where a door is what is
+    /// wanted: the two "Devnet faucet" rows on an UNDEPLOYED account
+    /// (`VibenetAccountDetail`, `VibenetRoomCard`), which are offered for any
+    /// watched address rather than only for one this phone holds — claiming
+    /// silently on somebody else's behalf is not what that row promises, and
+    /// the page can fund an address you type.
     ///
     /// It also corrects two doors that already existed. `VibenetAccountDetail`
     /// and `VibenetRoomCard` have both offered "Devnet faucet" since the seat

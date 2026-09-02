@@ -1412,7 +1412,7 @@ struct VibenetAccountDetail: View {
             // It LEADS, because when it is here it is the only row that
             // changes anything about the state the card just described.
             if VibenetRoom.undeployedExplainer(item) != nil,
-               let faucet = VibenetConfig.cached()?.faucetAddress,
+               VibenetConfig.cached()?.faucetAddress != nil,
                let url = URL(string: VibenetExplorer.faucet) {
                 Link(destination: url) {
                     verbRow(String(localized: "Devnet faucet"),

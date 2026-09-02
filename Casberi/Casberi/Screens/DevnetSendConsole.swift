@@ -199,10 +199,13 @@ private struct DevnetTileSurface: ViewModifier {
 /// paid for three times already); Top up acts in place and reports on itself.
 struct DevnetSendPanel: View {
     let tint: Color
-    /// Nil where the room has nothing to top up WITH — vibenet's faucet is a
-    /// payer that sponsors gas, not something an address can claim from, so
-    /// offering a claim there would be the dead control §83 bans. That room
-    /// draws the Send half alone rather than a button that cannot act.
+    /// **ALL THREE DEVNETS CLAIM IN PLACE NOW (prd §553b, 2026-09-01)**, so
+    /// nothing passes nil here today. It stays optional rather than required
+    /// because the reason it was optional is still a real state: a room whose
+    /// chain runs no faucet must draw the Send half alone rather than a button
+    /// that cannot act (§83). What changed is that vibenet turned out not to be
+    /// such a room — its faucet was reachable all along, one `curl` from the
+    /// page this tile used to open.
     var topUp: TopUp? = nil
     let onSend: () -> Void
 
@@ -214,9 +217,6 @@ struct DevnetSendPanel: View {
         /// refusal expected rather than a fault, and either way the next step
         /// is identical — tap it again.
         var note: String? = nil
-        /// True where the verb leaves the app rather than acting in it, so the
-        /// mark can say so instead of the tile lying about what happens next.
-        var handsOff = false
         var action: () -> Void
     }
 
@@ -283,9 +283,13 @@ struct DevnetSendPanel: View {
         }
     }
 
+    /// **THE DROP IS UNCONDITIONAL AGAIN (prd §553b).** §553's amendment gave
+    /// this an outward-arrow branch for a `handsOff` tile, which vibenet was
+    /// the only room ever to set and no longer does — a flag with one possible
+    /// value is a branch that cannot happen, so both are gone. A tile that
+    /// LEAVES the app should say so again if one ever returns.
     private func glyph(isSend: Bool) -> String {
-        if isSend { return "arrow.up.right" }
-        return (topUp?.handsOff ?? false) ? "arrow.up.forward.app" : "drop"
+        isSend ? "arrow.up.right" : "drop"
     }
 }
 

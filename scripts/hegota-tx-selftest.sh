@@ -296,6 +296,39 @@ check("unreachable does not say refused",
 check("a refusal quotes the service",
       (HegotaFaucetVerdict.refused("invalid address").sentence ?? "").contains("invalid address"))
 
+// --- vibenet's faucet speaks a different wire (prd §553b) --------------------
+// MEASURED 2026-09-01 against the live service, all three answers. It shares
+// this type's CASE SET and not its field names, so every assertion here is
+// about a shape `of` above structurally cannot read: there is no `msg`, so
+// `of`'s `said == "sent"` test can never fire and every real claim would come
+// back a refusal.
+check("a drip is a 200 carrying a hash",
+      HegotaFaucetVerdict.ofDrip(status: 200, error: nil, txHash: "0x9835") == .sent(hash: "0x9835"))
+check("the measured cooldown is the rate limit, not a fault",
+      HegotaFaucetVerdict.ofDrip(status: 429, error: "IP rate limited. Try again in 4s.", txHash: nil)
+        == .rateLimited)
+check("a bad address is quoted in the service's own words",
+      HegotaFaucetVerdict.ofDrip(status: 400, error: "Invalid address", txHash: nil)
+        == .refused("Invalid address"))
+check("a dead host is not a refusal",
+      HegotaFaucetVerdict.ofDrip(status: 0, error: nil, txHash: nil) == .unreachable)
+// A body carrying BOTH is contradictory, and the safe reading of a
+// contradiction is to refuse — a receipt for money that may never have moved
+// is the one outcome worse than a missed claim.
+check("an error beats a hash in the same body",
+      HegotaFaucetVerdict.ofDrip(status: 200, error: "Invalid address", txHash: "0xfeed")
+        == .refused("Invalid address"))
+// A hash inside a 500 is not a claim.
+if case .refused = HegotaFaucetVerdict.ofDrip(status: 500, error: nil, txHash: "0xfeed") {} else {
+    check("a hash outside a 200 is not a claim", false)
+}
+if case .refused = HegotaFaucetVerdict.ofDrip(status: 200, error: nil, txHash: "  ") {} else {
+    check("a whitespace hash is not a claim", false)
+}
+check("an empty 200 says it answered with nothing, not that it sent",
+      HegotaFaucetVerdict.ofDrip(status: 200, error: nil, txHash: nil)
+        == .refused("it reported no transaction"))
+
 print("OUTCOMES=ok")
 if fails == 0 { print("  ok") } else { exit(1) }
 SWIFT
@@ -343,6 +376,44 @@ wmutate "a hashless claim reported as sent" \
 # The service's own words dropped in favour of a status code.
 wmutate "the body message ignored" 'if !said.isEmpty { return .refused(said) }' \
   'if said.isEmpty { return .refused(said) }' "$OUT" || WMUT=1
+# --- vibenet's drip, same case set, different wire (prd §553b) ---------------
+# Its 429 is a TEN-SECOND cooldown, not Hegotá's hour, so a screen that took
+# `sentence` here would send somebody away for an hour over a wait they could
+# sit through — which is why `VibenetSendCard` words its own and why these
+# mutations are about the READING alone.
+#
+# **Every pattern here is anchored to something only `ofDrip` contains.** The
+# two functions share three lines verbatim, and a mutation matching the first
+# occurrence would edit `of` instead — passing for the wrong reason, over the
+# reader it was written for.
+wmutate "the drip's 429 rung removed" \
+  'static func ofDrip(status: Int, error: String?, txHash: String?) -> HegotaFaucetVerdict {
+        if status == 0 { return .unreachable }
+        if status == 429 { return .rateLimited }' \
+  'static func ofDrip(status: Int, error: String?, txHash: String?) -> HegotaFaucetVerdict {
+        if status == 0 { return .unreachable }
+        if status == -3 { return .rateLimited }' "$OUT" || WMUT=1
+wmutate "the drip's transport failure read as a refusal" \
+  'static func ofDrip(status: Int, error: String?, txHash: String?) -> HegotaFaucetVerdict {
+        if status == 0 { return .unreachable }' \
+  'static func ofDrip(status: Int, error: String?, txHash: String?) -> HegotaFaucetVerdict {
+        if status == -4 { return .unreachable }' "$OUT" || WMUT=1
+# A body carrying an error AND a hash is contradictory; refusing is the safe
+# reading, and inverting this reports a send the service complained about.
+wmutate "a drip error ignored in favour of its hash" \
+  'let hash = (txHash ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !said.isEmpty { return .refused(said) }' \
+  'let hash = (txHash ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if said.isEmpty { return .refused(said) }' "$OUT" || WMUT=1
+# A hash inside a 500 is not a claim.
+wmutate "a drip hash outside a 200 read as a claim" \
+  'if status == 200 {
+            // A claim with no transaction is not a claim.
+            return hash.isEmpty ? .refused(String(localized: "it reported no transaction"))
+                                : .sent(hash: hash)
+        }' \
+  'return hash.isEmpty ? .refused(String(localized: "it reported no transaction"))
+                          : .sent(hash: hash)' "$OUT" || WMUT=1
 # An unknown message swallowed instead of quoted — the shape the whole report
 [[ $WMUT -eq 0 ]] || exit 1
 
@@ -417,4 +488,4 @@ grep -qF 'kSecAttrSynchronizableAny' "$WORK/key.nc" \
   || { echo "✗ HegotaKey.delete no longer matches every synchronizability — a survivor becomes the next duplicate"; exit 1; }
 echo "  ok   drift guards: the faucet keeps its status, the broadcast keeps the node's words, the key survives a reinstall"
 
-echo "✓ hegota transaction self-test passed — encoder, the faucet verdict, 11 mutations"
+echo "✓ hegota transaction self-test passed — encoder, both faucet wires, 15 mutations"

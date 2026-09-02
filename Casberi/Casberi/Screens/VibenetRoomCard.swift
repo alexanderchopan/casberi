@@ -2809,7 +2809,7 @@ struct VibenetRoomCard: View {
                 // an account deploys on its first transaction and a devnet
                 // address needs funds to make one. A hand-off to the
                 // explorer, never a write.
-                if let faucet = VibenetConfig.cached()?.faucetAddress,
+                if VibenetConfig.cached()?.faucetAddress != nil,
                    let url = URL(string: VibenetExplorer.faucet) {
                     Link(destination: url) {
                         HStack(spacing: 4) {

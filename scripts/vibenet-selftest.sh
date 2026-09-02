@@ -1409,6 +1409,28 @@ grep -B 2 'chrome.vibenetScope = address' "$FEED" | grep -q 'feedSheet = nil' \
 cat > "$TMP/main.swift" <<'SWIFT'
 import Foundation
 
+// INERT STUBS for the two things `VibenetRoom.demoSignableAccount` names and
+// this harness cannot compile: `DemoMode` is `@MainActor`/SwiftData-bound and
+// `VibenetTransaction` pulls in the signer. Both are stubbed rather than the
+// function being excluded, because `VibenetRoom.swift` is compiled WHOLE and
+// unmodified by contract — excluding a function means editing the subject.
+// `isActive` is false, which is the state every assertion below assumes.
+enum DemoMode { static var isActive: Bool { false } }
+enum VibenetTransaction {
+    static func data(fromHex hex: String) -> Data? {
+        var s = Substring(hex)
+        if s.hasPrefix("0x") { s = s.dropFirst(2) }
+        guard s.count % 2 == 0 else { return nil }
+        var out = Data(); var i = s.startIndex
+        while i < s.endIndex {
+            let j = s.index(i, offsetBy: 2)
+            guard let byte = UInt8(s[i..<j], radix: 16) else { return nil }
+            out.append(byte); i = j
+        }
+        return out
+    }
+}
+
 var failures = 0
 func check(_ label: String, _ ok: Bool) {
     if ok { print("  ✓ \(label)") } else { print("  ✗ \(label)"); failures += 1 }
@@ -5375,6 +5397,87 @@ if refusal > signature:
     print("✗ the sponsorship refusal now happens AFTER the signature — a Face ID would be spent on a creation that cannot land (prd §530)")
     sys.exit(1)
 ORDER
+
+# --- prd §553b: the top up claims IN THE APP ---------------------------------
+# The reported bug, twice over: this room's Top up opened a web page while the
+# other two devnets funded the address in place. Every check here fails
+# INVISIBLY — a tile that opens Safari looks like a tile that works, and a
+# claim wired to the wrong reader looks like a faucet that refuses everything.
+SENDCARD="Casberi/Casberi/Screens/VibenetSendCard.swift"
+[[ -f "$SENDCARD" ]] || { echo "✗ $SENDCARD not found"; exit 1; }
+strip_comments "$SENDCARD" > "$TMP/sendcard.nc.swift"
+
+# 1. THE CLAIM EXISTS AND THE TILE MAKES IT. A tile whose action is a URL is
+#    the shipped bug.
+grep -qF 'VibenetSend.claimFaucet' "$TMP/sendcard.nc.swift" \
+  || { echo "✗ the Top up tile no longer claims from the faucet (prd §553b) — it is a door again"; exit 1; }
+if grep -qF 'VibenetExplorer.faucet' "$TMP/sendcard.nc.swift"; then
+  echo "✗ the Top up tile opens the faucet's web page again — that is the bug §553b fixed"; exit 1
+fi
+if grep -qF 'openURL' "$TMP/sendcard.nc.swift"; then
+  echo "✗ the Top up tile leaves the app again (prd §553b)"; exit 1
+fi
+
+# 2. IT KEEPS THE STATUS *AND* THE BODY. `postJSON` returns nil for any
+#    non-200, so the measured cooldown arrives indistinguishable from a dead
+#    host; `postJSONStatus` drops the body, where this service puts its own
+#    words (§531's lesson, third file).
+grep -qF 'IngestSupport.postJSONBody(faucetDripEndpoint' "$TMP/send.nc.swift" \
+  || { echo "✗ the faucet claim no longer reads the status AND the body — a 429 reads as a dead host"; exit 1; }
+if grep -qE 'IngestSupport\.postJSON(Status)?\(faucetDripEndpoint' "$TMP/send.nc.swift"; then
+  echo "✗ the faucet claim is back on a helper that drops non-200 bodies"; exit 1
+fi
+
+# 3. IT READS THE RIGHT WIRE. vibenet answers `{tx_hash}`/`{error}` and carries
+#    no `msg` at all, so `HegotaFaucetVerdict.of` classifies every successful
+#    drip as a refusal — a faucet that works and reports that it does not.
+grep -qF 'HegotaFaucetVerdict.ofDrip' "$TMP/send.nc.swift" \
+  || { echo "✗ the faucet claim no longer reads vibenet's own wire (ofDrip) — `of` cannot see a drip's success"; exit 1; }
+
+# 4. THE COOLDOWN IS NOT AN HOUR HERE. `HegotaFaucetVerdict.sentence` words the
+#    rate limit as "already claimed this hour", measured and correct for
+#    Hegotá and Frames and false for vibenet, whose own `faucet/status` reports
+#    a ten-second cooldown. Sharing the case set is the point; sharing the
+#    prose is how one of three rooms starts lying.
+if grep -qE 'verdict\.sentence|refusal\.verdict\.sentence' "$TMP/sendcard.nc.swift"; then
+  echo "✗ the Top up tile took the shared faucet sentence — it says \"this hour\" over a ten-second cooldown (prd §553b)"; exit 1
+fi
+
+# 5. A CLAIM SIGNS NOTHING. It needs no key, no account and no Face ID — which
+#    is what lets it fund an address the chain has never seen. A signature
+#    creeping into it would make the one path that works without a key refuse
+#    on every phone that has none.
+python3 - "$TMP/send.nc.swift" <<'CLAIMPURE' || exit 1
+import sys
+src = open(sys.argv[1]).read()
+start = src.find("static func claimFaucet(")
+if start < 0:
+    print("✗ VibenetSend.claimFaucet is gone (prd §553b)")
+    sys.exit(1)
+end = src.find("\n    static func ", start + 10)
+body = src[start:end if end > 0 else len(src)]
+for forbidden in ("VibenetDeviceKey.sign(", "payerOffer(", "LAContext"):
+    if forbidden in body:
+        print("✗ claimFaucet reaches %s — a faucet claim signs nothing and asks for no key (prd §553b)" % forbidden)
+        sys.exit(1)
+sys.exit(0)
+CLAIMPURE
+
+# 6. THE RECEIPT IS THE CLAIM'S OWN. `vibenet:claim:` is a namespace no read
+#    path produces, so the row can only ever exist for a claim this phone made
+#    — and a claim landing under `vibenet:create:` would dedupe against a
+#    creation and vanish.
+grep -qF 'vibenet:claim:' "$TMP/send.nc.swift" \
+  || { echo "✗ the faucet claim no longer lands under its own ref namespace (prd §553b)"; exit 1; }
+
+# 7. NO NEW HOST. The drip rides the host this seat already posts the payer to,
+#    which is why §553b adds nothing to the app's reach.
+grep -qF 'https://api.vibes.base.org/api/vibenet/faucet/drip' "$TMP/send.nc.swift" \
+  || { echo "✗ the faucet endpoint moved — re-measure it and re-check NetworkReach"; exit 1; }
+grep -qF 'api.vibes.base.org' "$TMP/reach.nc.swift" \
+  || { echo "✗ api.vibes.base.org is no longer declared in NetworkReach"; exit 1; }
+
+echo "top-up guards ✓"
 
 echo "write-path guards ✓"
 

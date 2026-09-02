@@ -44,7 +44,7 @@ struct HegotaSendCard: View {
         } else {
             DevnetSendPanel(
                 tint: Self.mark,
-                topUp: .init(busy: topUpBusy, note: topUpNote, handsOff: false, action: topUp),
+                topUp: .init(busy: topUpBusy, note: topUpNote, action: topUp),
                 onSend: onSend)
         }
     }

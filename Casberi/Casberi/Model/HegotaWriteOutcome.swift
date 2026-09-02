@@ -24,6 +24,14 @@ import Foundation
 /// The SIGNED half of this seat's writes is §530's, not this file's: a node's
 /// refusal reaches the screen in the node's own words from
 /// `HegotaSend.broadcast`. This file is the faucet alone.
+///
+/// **IT IS THREE DEVNETS' FAUCETS NOW, ONE CASE SET (prd §553b, 2026-09-01).**
+/// Frames took this type by typealias on 2026-09-01 because its faucet speaks
+/// Hegotá's wire byte for byte; vibenet's does not, so it takes the same four
+/// cases through a second reader (`ofDrip`) rather than a second enum. The
+/// file keeps its name — what is shared is the VERDICT, and forking it per
+/// chain is how three rooms start saying three different things about the same
+/// four outcomes.
 
 // MARK: - The faucet
 
@@ -60,6 +68,52 @@ enum HegotaFaucetVerdict: Equatable {
         }
         if !said.isEmpty { return .refused(said) }
         if status == 200 { return .refused(String(localized: "it answered with nothing")) }
+        return .refused(String(localized: "it answered \(String(status))"))
+    }
+
+    /// **THE THIRD DEVNET'S FAUCET SPEAKS A DIFFERENT WIRE (prd §553b,
+    /// 2026-09-01).**
+    ///
+    /// vibenet's faucet is `POST api.vibes.base.org/api/vibenet/faucet/drip`
+    /// with `{"address": …}`, and its answers do not fit `of` above — MEASURED
+    /// 2026-09-01, all four shapes, against the live service:
+    ///
+    /// - `200 {"tx_hash":"0x…","amount_wei":"…","to":"0x…"}` — the claim.
+    ///   There is no `msg` at all, so `of`'s `said == "sent"` test can never be
+    ///   satisfied and every successful drip would classify as a refusal.
+    /// - `429 {"error":"IP rate limited. Try again in 4s."}`
+    /// - `400 {"error":"Invalid address"}`
+    ///
+    /// So this is a second READER of one wire, not a second CLASSIFIER: the
+    /// case set is shared, which is what keeps three rooms saying the same
+    /// four things about their faucets. Named for the wire (`drip` is
+    /// vibenet's own word for the endpoint), never for the chain — a fourth
+    /// devnet speaking this shape should reuse it rather than add a third.
+    ///
+    /// **Order, again, is the whole of it, and it differs from `of` in one
+    /// place**: an `error` in the body is read BEFORE the hash. A body
+    /// carrying both is contradictory, and the safe reading of a contradiction
+    /// is to refuse — reporting a send that the service also complained about
+    /// would put a receipt in the corpus for money that may never have moved.
+    /// The success arm additionally requires a 200: a hash inside a 500 is not
+    /// a claim.
+    ///
+    /// **The `rateLimited` SENTENCE is not this type's to give here.** Hegotá's
+    /// limit is one claim an hour (§525) and vibenet's is a ten-second cooldown
+    /// on both the IP and the address (measured, `faucet/status`), so the
+    /// screen that asked words its own — see `VibenetSendCard.faucetNote`.
+    static func ofDrip(status: Int, error: String?, txHash: String?) -> HegotaFaucetVerdict {
+        if status == 0 { return .unreachable }
+        if status == 429 { return .rateLimited }
+
+        let said = (error ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let hash = (txHash ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !said.isEmpty { return .refused(said) }
+        if status == 200 {
+            // A claim with no transaction is not a claim.
+            return hash.isEmpty ? .refused(String(localized: "it reported no transaction"))
+                                : .sent(hash: hash)
+        }
         return .refused(String(localized: "it answered \(String(status))"))
     }
 

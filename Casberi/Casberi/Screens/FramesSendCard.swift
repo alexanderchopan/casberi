@@ -36,8 +36,8 @@ struct FramesSendCard: View {
             DevnetSendPanel(
                 tint: Self.mark,
                 // The faucet leaves nothing to open — it funds the address in
-                // place — so `handsOff` is false and the tile acts here.
-                topUp: .init(busy: topUpBusy, note: topUpNote, handsOff: false, action: topUp),
+                // place, so the tile acts here.
+                topUp: .init(busy: topUpBusy, note: topUpNote, action: topUp),
                 onSend: onSend)
         }
     }

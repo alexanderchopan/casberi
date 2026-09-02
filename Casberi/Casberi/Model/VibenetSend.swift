@@ -44,6 +44,37 @@ enum VibenetSend {
     /// `NetworkReach` — no new host joins the app's reach for this.
     private static let payerEndpoint = "https://api.vibes.base.org/api/vibenet/account/payer"
 
+    /// **THE FAUCET, AND IT IS NOT THE PAYER (prd §553b, 2026-09-01).**
+    ///
+    /// §553 shipped this room's Top up as a hand-off that opened the faucet's
+    /// web page, on the finding that vibenet "has nothing to top up from": its
+    /// faucet is a PAYER (`payerEndpoint` above) that sponsors gas on a
+    /// transaction somebody else composed, and no endpoint funds an address.
+    /// §553's own amendment corrected half of that — the chain does run a
+    /// faucet — and kept the hand-off, on a second finding: the faucet page is
+    /// client-rendered, so nothing in its markup names the endpoint it calls.
+    ///
+    /// **That was true of the markup and false about the app.** The page is a
+    /// Next.js bundle and its API client is in the chunks it ships; read on
+    /// 2026-09-01, it names `POST /api/vibenet/faucet/drip` with
+    /// `{"address": …}` on the same `api.vibes.base.org` host this file
+    /// already posts to. MEASURED the same day against the live service, all
+    /// three answers (see `HegotaFaucetVerdict.ofDrip`).
+    ///
+    /// The shape of the mistake is worth naming twice because it is the same
+    /// one both times: **absence of a thing where we happened to look was read
+    /// as absence of the thing.** First an endpoint missing from OUR bridge
+    /// was read as a capability missing from the chain; then an endpoint
+    /// missing from the SERVED HTML was read as an endpoint that could not be
+    /// found. It was one `curl` away on both occasions.
+    ///
+    /// Keyless and signature-free, exactly like Hegotá's and Frames': this is
+    /// the network handing an address free test ETH, not an account acting. It
+    /// therefore needs no key, no Face ID and no account — which is why it can
+    /// fund an account that does not exist on chain yet, the one state where a
+    /// vibenet address most needs it.
+    private static let faucetDripEndpoint = "https://api.vibes.base.org/api/vibenet/faucet/drip"
+
     enum Failure: Error, Equatable {
         case noKey
         case cannotCompose
@@ -69,6 +100,22 @@ enum VibenetSend {
         /// blaming the node for a dropped connection is the §515a mistake.
         case chainUnreachable
         case signingRefused
+    }
+
+    /// **THE FAUCET'S REFUSAL IS ITS OWN ERROR, NOT A CASE ON `Failure`
+    /// (prd §553b).** Hegotá and Frames hang theirs on the shared enum, and
+    /// copying that here would have added a case to two exhaustive switches
+    /// (`VibenetCreateSheet`, `VibenetAuthorizeSheet`) that can never see it —
+    /// every member of `Failure` above is a way a SIGNED transaction fails, and
+    /// a claim signs nothing, needs no key and raises no Face ID.
+    ///
+    /// The verdict is carried whole rather than flattened to a string (§531's
+    /// ruling, taken here rather than re-derived): the cooldown is the refusal
+    /// this service was MEASURED to make on an ordinary day and it is not a
+    /// fault, so a screen has to be able to tell it apart from a real one,
+    /// which a sentence it must grep cannot do.
+    struct FaucetRefusal: Error, Equatable {
+        let verdict: HegotaFaucetVerdict
     }
 
     /// What came back, so a receipt can state it rather than re-deriving it.
@@ -204,6 +251,65 @@ enum VibenetSend {
         // JSON, no result, no error — the node is answering something this
         // app does not understand, which is not the same as refusing.
         throw Failure.chainUnreachable
+    }
+
+    // MARK: - The faucet
+
+    struct Claimed: Equatable {
+        let transactionHash: String
+        /// The address the service says it funded, in its own words. Read back
+        /// rather than assumed: a receipt that names the address we ASKED for
+        /// would say the same thing whether or not the service agreed.
+        let to: String?
+    }
+
+    /// Ask the faucet to fund `account`. No key, no signature, no Face ID.
+    ///
+    /// **`postJSONBody`, NOT `postJSON`** (§531, the third time this file's
+    /// neighbourhood has paid for it): `postJSON` returns nil for ANY non-200,
+    /// so the measured cooldown arrives indistinguishable from a dead host,
+    /// and `postJSONStatus` is no better — it drops the BODY on a non-200,
+    /// which is exactly where this service puts `{"error": …}`.
+    static func claimFaucet(for account: Data) async throws -> Claimed {
+        let address = "0x" + VibenetTransaction.hex(account)
+        let answered = await IngestSupport.postJSONBody(faucetDripEndpoint,
+                                                        body: ["address": address],
+                                                        service: VibenetIdentity.source)
+        let root = answered.json as? [String: Any]
+        let verdict = HegotaFaucetVerdict.ofDrip(status: answered.status,
+                                                 error: root?["error"] as? String,
+                                                 txHash: root?["tx_hash"] as? String)
+        if case .sent(let hash) = verdict {
+            return Claimed(transactionHash: hash, to: root?["to"] as? String)
+        }
+        throw FaucetRefusal(verdict: verdict)
+    }
+
+    /// The claim's own row. Same ruling as `landReceipt` below — **your own
+    /// writes land rows** — and a claim qualifies for the reason §525 gave for
+    /// Hegotá's: it carries no signature of yours, but you asked for it and it
+    /// put money in an account you hold.
+    ///
+    /// `vibenet:claim:<txHash>`, a namespace no read path produces, so this
+    /// row can only ever exist for a claim this phone made.
+    @MainActor
+    static func landClaimReceipt(txHash: String, account: Data, in context: ModelContext) {
+        let ref = "vibenet:claim:\(txHash)"
+        let existing = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref })
+        if let found = try? context.fetch(existing), !found.isEmpty { return }
+
+        let thing = Thing(
+            kind: .transaction,
+            title: String(localized: "Claimed test ETH from the vibenet faucet"),
+            content: VibenetExplorer.tx(txHash),
+            source: VibenetIdentity.source,
+            capturedAt: .now,
+            tags: ["Faucet"],
+            sourceRef: ref)
+        thing.walletAddress = "0x" + VibenetTransaction.hex(account)
+        thing.summary = String(localized: "Requested for this phone's account. No signature was needed \u{2014} the faucet gives it freely.")
+        context.insert(thing)
+        try? context.save()
     }
 
     // MARK: - The receipt

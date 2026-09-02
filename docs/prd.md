@@ -43029,6 +43029,57 @@ mutations are green, and no screen in this room has been looked at — the tile
 proportions, the figure's per-scope readings and the strip's placement are all
 reasoned from measured constants and none has been rendered.
 
+## 553b. The top up claims in the app — the endpoint was in the page all along (user: "for vibenet, the top up redirects me to a new page in their explorer, it doesn't top up in the app like hegota and frames do can you fix it?", 2026-09-01)
+
+**Reported in one line, and the second time this room has been wrong about its own faucet in one day.** §553 shipped vibenet's Home with a Send half and no Top up at all, on the finding that this devnet "has nothing to top up from": its faucet is a PAYER (`VibenetSend.payerEndpoint`) that sponsors gas on a transaction somebody else composed, and no endpoint in our bridge funds an address. §553's amendment corrected half of that — the chain does run a faucet, and the app already knew, since `VibenetAccountDetail` and `VibenetRoomCard` have both carried a "Devnet faucet" door since the seat shipped — and then shipped the verb as a HAND-OFF that opened the faucet's web page, on a second finding: **the page is client-rendered, so nothing in its markup names the endpoint it calls, and guessing at one is how a write path gets built against a shape nobody measured.**
+
+**The shape of the mistake is the whole entry, because it is the same shape both times: absence of a thing where we happened to look was read as absence of the thing.** First an endpoint missing from OUR bridge was read as a capability missing from the CHAIN. Then an endpoint missing from the SERVED HTML was read as an endpoint that could not be found — and the reasoning that followed it ("guessing is how a write path gets built against a shape nobody measured") is correct in general and was, here, an argument for not looking. It was one `curl` away on both occasions. The page is a Next.js bundle and its API client ships in the chunks the page loads; read 2026-09-01, it names `vibenetApi.faucet.drip` against `/api/vibenet/faucet/drip`. **Generalisable: "client-rendered" means the markup does not name the endpoint, never that the endpoint is unknowable — the client that calls it is served to you along with the page.**
+
+### 1. The wire, measured
+
+`POST https://api.vibes.base.org/api/vibenet/faucet/drip` with `{"address": "0x…"}`. Measured live 2026-09-01, all three answers:
+
+- `200 {"tx_hash":"0x…","amount_wei":"100000000000000000","to":"0x…"}` — 0.1 ETH a drip.
+- `429 {"error":"IP rate limited. Try again in 4s."}`
+- `400 {"error":"Invalid address"}` (and for an empty body).
+
+`GET /api/vibenet/faucet/status` reports the terms and needs no cooldown: `drip_wei`, the faucet's own balance, and **`ip_cooldown_secs: 10` / `addr_cooldown_secs: 10`** — the fact that decides §553b's copy, below. There are two more endpoints (`drip-usdv`, `drip-nfv`) which this app does not call: it reads native balance and nothing else on this chain, so a token nothing displays is a claim nobody can see.
+
+**No new host.** The drip rides `api.vibes.base.org`, which this file already posts the payer to and which `NetworkReach` has declared since the seat shipped. Its purpose sentence gains the faucet clause, worded exactly as Hegotá's: the address you are asking for leaves, and nothing else.
+
+### 2. One case set, two readers, and never one sentence
+
+`HegotaFaucetVerdict` has classified Hegotá's faucet since §531 and Frames' since 2026-09-01, the latter by typealias because Frames speaks Hegotá's wire byte for byte. **vibenet does not**, and the divergence is not cosmetic: there is no `msg` field at all, so `of`'s `said == "sent"` test can never fire and **every successful drip would classify as a refusal** — a faucet that works and reports that it does not. So `ofDrip(status:error:txHash:)` is a second READER of one wire, not a second classifier: the four cases are shared, which is what keeps three rooms saying the same four things about their faucets. Named for the wire, never for the chain.
+
+Its order differs from `of` in one place, deliberately: **an `error` in the body is read BEFORE the hash.** A body carrying both is contradictory, and the safe reading of a contradiction is to refuse — reporting a send the service also complained about would put a receipt in the corpus for money that may never have moved. The success arm additionally requires a 200, since a hash inside a 500 is not a claim.
+
+**What is NOT shared is the prose.** `HegotaFaucetVerdict.sentence` words `rateLimited` as *"already claimed this hour — the faucet allows one per hour"*, which is measured and correct for Hegotá and Frames and simply false here: vibenet's cooldown is ten seconds on the IP and ten on the address. Taking the shared sentence would send somebody away for an hour over a wait they could sit through. So `VibenetSendCard` words its own ("Just claimed — wait a few seconds and tap again"), and the harness fails the build if it ever reaches `.sentence`. **Sharing the case set is the point; sharing the prose is how one of three rooms starts lying.**
+
+### 3. The claim signs nothing, which is what makes it useful
+
+No key, no account, no Face ID — the faucet is the network handing an address free test ETH, not an account acting. That is why it can fund an address the chain has never seen, which on vibenet is the state where an address most needs it (an account deploys on its first transaction, and a transaction needs funds). Guarded as a negative: a signature, a payer read or an `LAContext` appearing inside `claimFaucet` fails the build.
+
+Consequently `FaucetRefusal` is **its own error type, not a case on `VibenetSend.Failure`** — the divergence from Hegotá and Frames, and it is structural rather than taste. Every member of `Failure` is a way a SIGNED transaction fails, and adding a fifteenth would have added a case to two exhaustive switches (`VibenetCreateSheet`, `VibenetAuthorizeSheet`) that can never see it, each needing a sentence for an outcome that cannot occur.
+
+### 4. What the tile does now, and what keeps its page
+
+Home's Top up claims in place, exactly as Hegotá's and Frames' do: busy spinner in the disc, the pour as the confirmation (`BerryRain`, one counter bump), a `vibenet:claim:<txHash>` receipt in the corpus — a namespace no read path produces, so the row can only ever exist for a claim this phone made — and the refusal said ON TAP in the tile's own empty top, never pre-populated. The demo refuses before the request: a claim would put a real transaction on a public devnet from a screen whose banner reads "Demo — none of this is yours", and would spend the cooldown doing it.
+
+**`DevnetSendPanel.TopUp.handsOff` is deleted with the hand-off it existed for.** It was §553's amendment's outward-arrow flag, vibenet was the only room ever to set it, and a flag no caller can set is a branch that cannot happen.
+
+**The tile is no longer gated on the config's `faucetAddress`.** §553's amendment gated it there so a devnet that stopped running a faucet would lose the half rather than keep a door onto a dead page — right about a DOOR and wrong about a claim: the drip endpoint is the API's and has nothing to do with the contract map, so that gate could only ever hide a working verb on a sweep whose config read had not landed. A faucet that stops answering now says so on tap, in its own words.
+
+**The two "Devnet faucet" rows keep the page**, and the line is not laziness: they are offered for any WATCHED address on an undeployed account, not only one this phone holds, and claiming silently on somebody else's behalf is not what that row promises. The page can also fund an address you type, which is the thing a door is for.
+
+### 5. Probe and guards
+
+`-vibenetFaucetProbe YES|claim` — an empty Top up has FIVE causes that render as one grey sentence and only two are bugs (no account this phone's key can act for, so Home drew Create and the tile was never on screen; the cooldown; unreachable; the address refused; or it worked). `account=` separates the first from the rest and is the line no screen shows, since Home draws the tile or it draws Create and from outside those look like two rooms rather than one gate. **`claim` is a WORD, not a flag** (`-hegotaKeyProbe`'s ruling): bare `YES` reports and spends no cooldown. `to=` is the service's own word for who it funded, never the address we asked about — a probe echoing its own input proves nothing about the far end.
+
+Eight assertions and four mutations on `ofDrip` in `hegota-tx-selftest.sh`, which already compiles that file WHOLE; seven drift guards on the caller in `vibenet-selftest.sh`, mutation-proven six ways. **Every drip mutation is anchored to something only `ofDrip` contains** — the two readers share three lines verbatim, and a mutation matching the first occurrence edits `of` instead, passing for the wrong reason over the reader it was written for. That trap caught two of this session's own first-cut probes, both of which matched a DOC COMMENT rather than the code: a mutation is only a test of the rule it names if it fails that rule and passes every other one.
+
+**UNMEASURED on a device**: the wire is measured against the live service, the tile has never been tapped on hardware.
+
+
 ## 554. Helper text stands down where the next tap already says it — and a word budget is not minimalism (user: "we removed a lot of helper text today in wallet, hegota, vibenet, and i'd really like the app overall to be super minimal with copy, can you scan other places you think we can get rid of extraneous subtext?", 2026-09-01)
 
 A scan of every `Text`/`String(localized:)` drawn in a secondary or tertiary

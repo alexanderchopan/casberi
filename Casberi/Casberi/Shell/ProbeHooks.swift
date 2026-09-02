@@ -6914,6 +6914,67 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-vibenetFaucetProbe YES|claim` — THE TOP UP, headless (prd §553b,
+        // 2026-09-01). It exists because an empty Top up has FIVE causes that
+        // render as one grey sentence and only two are bugs: no account this
+        // phone's key can act for (so the room draws Create instead and the
+        // tile was never on screen), the cooldown, the service unreachable,
+        // the service refusing the address, or it worked.
+        //
+        // `account=` is the line that separates the first from the rest, and
+        // it is the one no screen shows — Home draws the tile or it draws
+        // Create, and from outside those look like two different rooms rather
+        // than one gate.
+        //
+        // **`claim` is a WORD, not a flag** (`-hegotaKeyProbe`'s ruling, and
+        // `-librarianProbe run`'s before it): the faucet holds a ten-second
+        // cooldown on the source IP AND on the address (measured 2026-09-01 at
+        // `faucet/status`), so a probe that spent it on every headless run is
+        // one nobody could put in a sweep. Bare `YES` reports the status read
+        // — which costs no cooldown and is a GET — and claims nothing.
+        Hook(key: "vibenetFaucetProbe") { value, context in
+            let spend = value.lowercased() == "claim"
+            Task { @MainActor in
+                // The same resolution Home does, spelled here rather than
+                // shared: `FeedScreen.signableVibenetAccount` is private to
+                // that screen, and a probe that guessed differently would
+                // report about an account the tile never offers.
+                let ours = VibenetDeviceKey.actorID()?.lowercased()
+                let account: Data? = {
+                    guard let ours, let items = VibenetState.saved?.items else { return nil }
+                    for item in items where item.actors.contains(where: { $0.actorId.lowercased() == ours }) {
+                        return VibenetTransaction.data(fromHex: item.address)
+                    }
+                    return nil
+                }()
+                NSLog("[Casberi] vibenetFaucet| deviceActor=%@ account=%@ watched=%d",
+                      ours ?? "-",
+                      account.map { "0x" + VibenetTransaction.hex($0) } ?? "NONE",
+                      VibenetWatch.shared.addresses.count)
+                guard let account else {
+                    NSLog("[Casberi] vibenetFaucet| nothing to fund — Home draws Create, not Top up")
+                    return
+                }
+                guard spend else {
+                    NSLog("[Casberi] vibenetFaucet| claim=not asked (pass -vibenetFaucetProbe claim to spend the cooldown)")
+                    return
+                }
+                do {
+                    let claimed = try await VibenetSend.claimFaucet(for: account)
+                    VibenetSend.landClaimReceipt(txHash: claimed.transactionHash,
+                                                 account: account, in: context)
+                    // `to=` is the service's own word for who it funded, not
+                    // the address we asked about: a probe echoing its own
+                    // input proves nothing about the far end.
+                    NSLog("[Casberi] vibenetFaucet| claim=sent tx=%@ to=%@",
+                          claimed.transactionHash, claimed.to ?? "-")
+                } catch let refusal as VibenetSend.FaucetRefusal {
+                    NSLog("[Casberi] vibenetFaucet| claim=%@", String(describing: refusal.verdict))
+                } catch {
+                    NSLog("[Casberi] vibenetFaucet| claim=%@", String(describing: error))
+                }
+            }
+        },
         Hook(key: "vibenetProbe") { _, _ in
             Task { @MainActor in
                 guard let contracts = await VibenetConfig.current() else {
