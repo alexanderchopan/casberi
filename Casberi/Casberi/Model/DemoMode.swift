@@ -69,11 +69,28 @@ enum DemoMode {
     /// Widen further only against a real run, never by reasoning about what
     /// the seed probably contains — re-verify both counts if `infra`/`work`
     /// changes.
+    /// ONE (prd §577b, user: "these prepopulated answers SHOULD NOT BE THERE
+    /// … all of that is crap that will return garbage answers anyways. the
+    /// only thing useful is 'how's my wallet'").
+    ///
+    /// It was four, and the other three are the §543 class the demo was still
+    /// paying: a kept pill is supposed to mean "you pinned this", and seeding
+    /// four of them puts standing questions on a new person's agent that they
+    /// never asked for and cannot have wanted. Worse, they answer BADLY —
+    /// "Show Release" and "What's new in Linear?" recite a tag and a source
+    /// over a corpus somebody has had for ninety seconds, which is the
+    /// demo's own furniture read back to it.
+    ///
+    /// The wallet ask survives because it is the one that answers with
+    /// something the person cannot get by looking: a figure, a delta and what
+    /// moved it. Keeping exactly one also demonstrates the FEATURE — that a
+    /// question can be pinned — without pretending anybody pinned four.
+    ///
+    /// `teardown` iterates this same list, so removing an entry here removes
+    /// its seed and its cleanup together; a pill seeded by an older build
+    /// simply stays kept, which is correct — it is the person's now.
     private static let keptAsks: [(kind: String, title: String)] = [
-        ("today", String(localized: "How's my day?")),
         ("wallet", String(localized: "How's my wallet?")),
-        ("showtag:Release", String(localized: "Show Release")),
-        ("context:Linear", String(localized: "What's new in Linear?")),
     ]
 
     /// The prior-window brief history, the tap-learning counters, and the

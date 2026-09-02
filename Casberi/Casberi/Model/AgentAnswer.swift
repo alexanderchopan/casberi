@@ -470,7 +470,10 @@ enum AgentAnswerFailure: Error, Sendable {
     /// in a chain confirmation the whole time. `BankrChatScreen`'s own failure
     /// copy kept the honest distinction from the start; this brings the
     /// composer's path up to the same honesty.
-    case stillRunning
+    /// A keyed job outran the poll. It carries the job id when the provider
+    /// gave us one, because "still running" is advice somebody may want to act
+    /// on and the id is the only way to find the job again.
+    case stillRunning(String?)
 
     /// One plain sentence for the composer — what happened, and only where
     /// it's true, what to do about it.
@@ -492,8 +495,15 @@ enum AgentAnswerFailure: Error, Sendable {
             String(localized: "Your agent came back with nothing. Try asking it another way.")
         case .privacyUnroutable:
             String(localized: "OpenRouter couldn't route that. Either the model has been retired, or nobody serving it will agree not to keep your question — pick another model, or turn off private routing in Settings.")
-        case .stillRunning:
-            String(localized: "Bankr is still working on that after 90 seconds — check Bankr for the outcome, or ask again in a moment.")
+        case .stillRunning(let jobID):
+            // The id is NAMED when there is one (prd §577b). "Check Bankr for
+            // the outcome" is advice you cannot follow across a page of jobs
+            // without knowing which; with the id it is one search. Never
+            // invented — a provider that gave us no id gets the sentence
+            // without it rather than a placeholder.
+            jobID.map {
+                String(localized: "Bankr is still working on that after 90 seconds. It may still land — the job is \($0). Check Bankr for the outcome, or ask again in a moment.")
+            } ?? String(localized: "Bankr is still working on that after 90 seconds — check Bankr for the outcome, or ask again in a moment.")
         }
     }
 }
@@ -2118,10 +2128,20 @@ enum AgentAnswer {
             \(OnDeviceModel.numberedCandidates(candidates))
             """
         }
-        let tick: ((Int) -> Void)? = onPartial.map { forward in
-            { seconds in forward("Still waiting on Bankr… (\(seconds)s)") }
-        }
-        switch await BankrAgent.ask(query, extra: extra, onTick: tick) {
+        // NO TICK (prd §577, 2026-09-02). This forwarded "Still waiting on
+        // Bankr… (44s)" into `onPartial`, which is the PROSE channel — so
+        // every poll painted a line of fake document, and two things followed
+        // that nobody wanted. The composer's own skeleton stood down at the
+        // two-second mark because its gate is an empty stream, leaving a
+        // rewriting sentence as the whole loading state; and `paintPartial`
+        // sets `currentStreamed`, which marks an answer keepable AS TEXT — so
+        // a Bankr job that then timed out offered to keep a countdown.
+        //
+        // The wait is drawn by the composer now (`askWorking`), off the moment
+        // the ask committed, which is a truer clock anyway: it counts the
+        // submit request too, where the poll's own counter starts at the first
+        // poll two seconds in.
+        switch await BankrAgent.ask(query, extra: extra) {
         case .success(let reply):
             // Bankr grounds on the wallet and live markets, never on the
             // numbered candidates — so it points at no things, and its own
@@ -2161,7 +2181,7 @@ extension BankrAgent.Failure {
         case .rateLimited:                 .rateLimited
         case .empty:                       .empty
         case .unreachable:                 .unreachable
-        case .timedOut:                    .stillRunning
+        case .timedOut(let jobID):         .stillRunning(jobID)
         case .providerError(let status):   .providerError(status)
         case .refused, .actingOff, .emptyInstruction: .refused
         }

@@ -515,8 +515,8 @@ enum BridgeCatalog {
         // stated rather than blurred: asking is still answer-only and always
         // will be, acting is a switch that starts off, and the strongest fact
         // is last, because it is the one that holds whatever this app does.
-        Offer(name: "Bankr",       tagline: "Your wallet's agent — ask it, or tell it", group: "Agent", connectable: true,
-              summary: "Bankr is an agent with a wallet, so its answers can weigh what you hold and what the market is doing — not just what you saved.\n\nWhat Bankr may do is set by the key you mint: read-only and it answers, full and it can act. Casberi doesn't decide that, and can't check a job beforehand or undo it.",
+        Offer(name: "Bankr",       tagline: "An agent with a wallet of its own", group: "Agent", connectable: true,
+              summary: "Bankr is an agent that holds a wallet of its own, so its answers can weigh what that account holds and what the market is doing — not just what you saved.\n\nThat account is Bankr's, at bankr.bot. It is not the wallets you watch in Casberi, and Bankr cannot see those.\n\nWhat Bankr may do is set by the key you mint: read-only and it answers, full and it can act. Casberi doesn't decide that, and can't check a job beforehand or undo it.",
               features: ["Ask Bankr from the same field you ask anything else",
                          "Ask about your wallet, or tell it what to do",
                          "A read-only key answers; a full key can act",

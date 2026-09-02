@@ -49,7 +49,7 @@ struct BankrSetupScreen: View {
             BridgeSetupHeader(
                 name: "Bankr",
                 mode: .pasteKey,
-                intro: "Make a key in a page that opens here, and Bankr can answer about your wallets and live markets when you tap for it. It can also act on instructions you confirm, if you turn that on.",
+                intro: "Make a key in a page that opens here. Bankr answers and acts on its own account at bankr.bot, never on the wallets you watch in Casberi, and what it may do there is set by the key you mint.",
                 flipTrigger: flipTrigger)
             setupSection
             if configured { conversationSection }

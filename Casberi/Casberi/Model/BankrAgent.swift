@@ -96,7 +96,11 @@ enum BankrAgent {
         case refused(String)
         case empty
         case unreachable
-        case timedOut
+        /// The poll gave up; the job may well still be running. It carries the
+        /// id BECAUSE it may — that string is the only handle anybody has on a
+        /// job this app stopped watching, and discarding it made the one
+        /// outcome you might want to chase the one outcome that left no trace.
+        case timedOut(String)
         case providerError(Int)
     }
 
@@ -191,11 +195,24 @@ enum BankrAgent {
     /// chain — so a timeout is reported as a TIMEOUT and never as a failure:
     /// the job may still be running, and telling somebody their swap did not
     /// happen when we simply stopped watching is the worse of the two lies.
+    /// The first ten polls are a second apart, the rest two (prd §577b, 2026-09-02).
+    ///
+    /// A flat 2s meant a job that finished in four seconds was reported at six,
+    /// and the fast case is the common one — the slow tail is what the 90s
+    /// ceiling is for. **The ceiling is unchanged**: 10 polls at 1s plus 40 at
+    /// 2s is 90 seconds either way, so this buys latency on the jobs that land
+    /// quickly and gives up nothing on the jobs that do not. It costs at most
+    /// five extra requests against an endpoint we hit once per ask.
+    private static let fastPolls = 10
+
     private static func poll(jobId: String, key: String,
                              onTick: ((Int) -> Void)? = nil) async -> Result<Reply, Failure> {
-        for attempt in 0..<45 {
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
-            onTick?((attempt + 1) * 2)
+        var elapsed = 0
+        for attempt in 0..<50 {
+            let gap = attempt < fastPolls ? 1 : 2
+            try? await Task.sleep(nanoseconds: UInt64(gap) * 1_000_000_000)
+            elapsed += gap
+            onTick?(elapsed)
             var request = URLRequest(url: URL(string: "https://api.bankr.bot/agent/job/\(jobId)")!)
             request.setValue(key, forHTTPHeaderField: "X-API-Key")
             request.timeoutInterval = 15
@@ -221,6 +238,6 @@ enum BankrAgent {
             }
         }
         NSLog("[Casberi] BankrAgent: job %@ still running after ~90s", jobId)
-        return .failure(.timedOut)
+        return .failure(.timedOut(jobId))
     }
 }

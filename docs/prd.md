@@ -108,6 +108,7 @@ at all.
 | §450 | The wallet rail draws faces only — the crown card below names the pick | amended by §483 (the crown's caption is gone and the face no longer carries identity, so the rail captions again) |
 | §479 | The attention strip sits directly under the crown, and draws each line as one sentence | amended by §482 (below the holdings — Wallet's precedent lives INSIDE a balance card and this room's hero is bare; and the line is a row with a face, not a sentence) |
 | §467 | The delegate spine states its direction ONCE, in the caption beneath | amended by §482 (the columns were swapped so authority leads, and the roles are named at the head of each column — the caption was too far from the drawing to be read as part of it) |
+| §575 | The invitation drops back to `body17` ON FOCUS, not on a draft — a 40pt invitation beside a 17pt caret reads as the field failing to match its own placeholder | amended by §577 **on the ask surface only** (the ruling's premise is that the TYPED TEXT is body-sized, and on the blue surface it is not: placeholder, caret and words are all `heading34`, so there is nothing left to mismatch and the sentence being written is the subject of the screen for as long as it is being written. Everywhere else — the resting panel over a conversation, the non-embedded bubble — §575's shrink-on-focus is untouched, and its other five items stand whole) |
 | §57 | Telegram REMOVED from the catalog — all three doors in fail, so the seat is cut entirely | reversed by §456 (a public channel is not a chat, and the export door was rejected on a premise this app's own nine import bridges overturned) |
 | §362 | The face rail always captions its faces — it compresses rather than dropping them, on both rails alike | caption half reversed for the WALLET rail by §450 |
 | §182 | The watch cap is a SHELF of faces with dashed rings for the free slots | superseded by §448 |
@@ -46260,3 +46261,114 @@ TestFlight upload can be re-done for free. A store swap cannot.
 
 **UNSEEN on a device**: the wiring is the sibling's exact shape and the harness
 is green, but nobody has tapped "Watch an account" on a phone.
+
+## 577. The surface turns blue when you ask — the destination as a face, the words at the head rung, and the wait as a clock (user: "i still think the agent experience can be improved… it's not a joy to touch and engage with", then "what i care about is someone using Bankr (or any other agent) and what that experience is like", then "we could be using the extreme sizes b/c it's just a question… something creative and bold", then "even using the blue and white motif", then "build it", 2026-09-02)
+
+Three mocks, then a synthesis, then this. The first two mocks (a spine of receipts; a face rail with the question at 40pt) and the third (the screen turning blue) each carried one idea the user kept, and the build is the intersection that survived a measurement — see item 5 for what did not.
+
+### 1. What was wrong, in one screenshot
+
+The user sent the draft state from a device: "Good afternoon, accountless", a Send-to row of Reminders/Calendar/Notes, the word "hell" highlighted in a 17pt field, and three quarters of the screen black. §575 had given the resting invitation the head rung and left the two things a person is actually deciding — **what to ask** and **who to ask** — as the smallest objects on the surface, with the count crown (§575 item 2) gated on two-plus matches so for most drafts the "honest silence" was a black wall. Reported as *"that looks and feels bad"*, which it did.
+
+### 2. The ask surface (`Composer.askSurface`, `Shell/AskDestinationRail.swift`)
+
+Focus the field on an empty surface and it turns `DS.tint` edge to edge, past the safe areas. **Blue means exactly one thing: you are asking and it has not answered yet.** It arrives with focus, survives the wait, and is gone the instant a single element of the answer paints, so it is information rather than decoration.
+
+- **The destinations are faces at the top.** The chosen one is an 88pt white disc with the brand mark inside at `DS.Face.shelf`; the others wait at 44 in washed white, marks at `DS.Face.row`. **One tint** (§570): Bankr brings no yellow; the mark inside the disc is identity enough. Ordering is `AskDestination.split`'s, the same call the capsule makes, so the two controls can never disagree about which agents show.
+- **The pick sticks and works before or after the words** (`chosenAgent`). `activeAskAgent` reported nil until a conversation was already keyed, which is right for the capsule's fill and useless for a picker — tapping Bankr on an empty field lit nothing. The pick is held from the tap.
+- **The words take the head rung** — placeholder, caret and typed text all at `heading34`, white on the tint. This AMENDS §575's shrink-on-focus rather than reversing it: that ruling's premise was a 40pt invitation beside a 17pt caret; here nothing is 17pt, so there is nothing to mismatch. Everywhere else §575 stands.
+- **The crown changes hands** (§506 kept by sequence): the invitation before a word, your words the moment there are any, the elapsed seconds while a keyed job runs. Never two at once.
+- **One white send pill that names the destination** ("Send to Bankr" / "Ask"), dim by a real fill swap until there is a draft (§83's corollary). The capsule stands down on this surface: the rail has its picking job and the pill its sending job, and both plus a capsule is the two-controls duplication §543 collapsed. At rest and under an answer the capsule is untouched.
+- **`restChrome` gained `!onTint`** — every rest band stands down at the one gate they already share, so the surface cannot be half-drawn.
+
+### 3. RETURN GOES WHERE YOU PICKED, and that amends 2026-08-31
+
+That ruling — return is always the free answer, never a silent keyed ask — exists because deferring to "whichever agent was tapped last, or the app's default active provider" spent against a key **nobody chose for this question, with no visible sign of which agent answered** until the badge printed. Both halves are inverted on this surface: the destination was chosen for this question one gesture ago, and it is the largest object on the screen the whole time you type. A return that then went to the phone would be §543's confusion exactly. `commit` routes to `chosenAgent` when one is set; voice and a navigate command are checked first, because a voice note is a capture whatever is picked and "go to Wallet" is not a question anybody meant to pay for. The pick is cleared on close, so a new open starts on the device.
+
+### 4. The wait is a clock (`askWorking`)
+
+Bankr submits and polls for up to ~90s with **no partial text of any kind**. The skeleton is the shape of a document about to paint; there is no such document and none of its shape is known, so it was a promise nobody could keep, holding still for a minute and a half. Now: the chosen face at 132pt (`DS.Face.profile` mark inside), a ring that fills across the 30s Bankr itself publishes as typical and then **rotates rather than completing** (a bar that fills and stops says finished), the seconds at `price48` as the crown, the question at body beneath. `TimelineView` off one `askStartedAt` stamp — no timer to leak — set in `askWithKey` so the submit request is counted too. **Device asks keep the skeleton**: ~2s away, document shape known.
+
+**A bug this removed:** `bankrAnswer` forwarded "Still waiting on Bankr… (44s)" into `onPartial`, the PROSE channel, so every poll painted a line of fake document — which stood the skeleton down at 2s (its gate is an empty stream) AND set `currentStreamed`, marking a job that then timed out as keepable text. The tick is gone; the composer's clock is the wait.
+
+### 5. THE CROWN THAT WAS REFUSED, and why it is the entry's most important line
+
+Every mock drew, under Bankr's face before a word, the watched wallets' combined value — "Bankr can see $19,742 in 3 wallets" — because it was the biggest true number the app had. **User: "bankr can't see the wallets on device, it can only see the user's bankr account."** Bankr acts on the account behind the key at bankr.bot; the addresses you watch in Casberi are a different set of money it has never been told about. That figure under that face would have told somebody their watched wallet was about to be traded — §83 where believing it costs money. `Model/AskSubject.swift` (Foundation-only) encodes the correction as a type with no wallet case: `ground(forAgent:)` answers `.ownAccount` for Bankr and `.corpus` for everything else, and **the one line under a Bankr draft is the disclosure** — "Bankr acts on its own account — not the wallets you watch here." — stated where the instruction is being written rather than in a sheet afterwards. A second candidate, "N things Bankr has done for you", was drawn and refused on a grep: §529 describes landing a `.run` row per job and the 2026-08-31 amendment took it with the two verbs, so nothing lands one and the figure had no source. The empty Bankr surface is its face, the invitation, and no number, which is §563's ruling anyway.
+
+**Copy fixed in the same pass:** `BankrSetupScreen`'s intro said "answer about your wallets" (plural, the watched ones) and "act on instructions you confirm, if you turn that on" (a toggle deleted 2026-08-31); the catalog tagline "Your wallet's agent" made the same claim in three words. All three now name whose account it is.
+
+### 6. Not built, said rather than left
+
+The **receipt paper** from the first mock (a keyed answer on `dsReceiptPaper`, flat while streaming and torn at settle, with a job stamp and verb discs) — `GenRender` is unpadded at the turn level, so the paper's own inset re-indents every keyed answer, and that is presentation nobody has looked at. The **spine** and the kept-ask slabs went with it. **Hold-to-talk** on the mic and the hold-swell on the bar are the delight pass this entry is the substrate for.
+
+### 7. Verification ceiling
+
+iOS build green in an isolated worktree at HEAD (the shared tree carried a peer session's mid-refactor `onRequestWatch` removal — §568's lesson, a red that was real and not mine). Every static audit green after four corrections it made: two face rungs (`shelf`/`row`/`profile` in place of literals), the ring's spin reading Reduce Motion inside the modifier, and this number. **UNSEEN on a device or simulator, and this is presentation work** — the first things to look at are the 88pt face against the 40pt words on a 390pt phone, and whether the blue reads as a state rather than a card that failed to fill.
+
+### 577a. Surprise and delight on the ask surface — seven moments, one already shipped, one refused for want of a signal (user: "ok, now how would you add surprise and delight to what you did", then "continue", 2026-09-02)
+
+§577 built the substrate: the surface turns blue, the destination is a face, the words take the head rung, the wait is a clock. This is the feel on top of it. **Every moment here is on a control somebody is touching or a state they are waiting through** — §411's standing rule that nothing added may be a notification wearing an animation.
+
+**1. The ring is allowed to finish.** A keyed answer arrives and `answerStream.els` stops being empty, which is the clock's own gate — so the blue drained and the arc vanished mid-turn on the exact frame the thing you waited forty seconds for landed. `askSettling` holds the surface for one beat: the arc snaps to a full turn whatever it was doing (mid-fill, or spinning at a fifth of a circle because the job outran its typical), blooms once, and only then does the colour leave. **A wait that ended should be seen to end.** Fired at the settle every keyed answer passes through, success and fallback alike — a beat that only played on the happy path would leave the blue standing over an error — and bounded by a fixed sleep rather than by any flag the answer path owns.
+
+**2. The wait survives as a fact.** The clock was the only place the elapsed seconds had ever existed and the settle threw them away. `askWaitSeconds` freezes at the beat (so the last thing the clock does is not tell you the wait was a second longer than it was) and lands in `provenanceBadge` as "41s", where it stops being a countdown and becomes a fact about the job. Optional and defaulted, so every existing call site is untouched and only a turn that really went through the clock carries it.
+
+**3. The blue pours up from the field.** Focus is a touch at the BOTTOM of the screen, so a colour that crossfades in flat arrives from nowhere in particular. It is a bottom-anchored scale on the fill — never a mask on the content, so nothing is laid out twice — and Reduce Motion drops it to the crossfade the transition already carries.
+
+**4. The face that becomes the subject flips once.** `coinFlip` is this app's own word for "this mark just became what the screen is about" (a thing sheet's header, a source chip on a room change), and picking who answers is that event. Gated on the CHOSEN flag, so the face you tapped turns and the ones you did not are still; it rides on top of the size spring, so the disc turns as it grows rather than simply inflating.
+
+**5. The mark breathes while the job runs, and stops when it lands.** `.breathing()` already exists and is what the berry uses, but it is unconditional — `WorkingBreath` has to STOP, because stopping is what makes moment 1 a full stop rather than one more second of the same. It is also the one thing on that screen that is not a number, so the face reads as somebody working rather than as a logo above a timer.
+
+**6. The overrun is narrated once, at the moment it happens.** "Most jobs land inside 30 seconds. This one is taking longer." printed from the first frame is an excuse made before anything went wrong; arriving AS the ring stops filling is the app telling you something it just learned. Bankr's own published figure, hoisted to `typicalKeyedWait` so the ring and the sentence can never disagree about where the line is.
+
+**7. The send buzz matches the consequence.** `tap()` for a question the phone answers; `lift()` — the heavier one this app reserves for a gesture that had to be held — for a send to an agent acting on an account of its own, which may spend money and which we cannot undo. Feel is the one channel that reaches somebody who is not reading, and this is the send where that matters.
+
+**ALREADY SHIPPED, and this is §432's finding again.** The eighth proposal was a `matchedGeometryEffect` carrying the typed question up into the turn's header — the §441 star-flight idiom on the app's most-used hand-off. `convoTurn` has done it since 2026-07-21 (`animateIn`, a bottom-edge move on the header, commented "the felt hand-off from field to answer"). Proposed against a screenshot and a memory, both older than the code; the instrument that settled it was reading the function.
+
+**REFUSED for want of a signal.** The face pulsing with your VOICE LEVEL while the mic is held: `VoiceCapture` exposes `elapsed` and no meter of any kind, so the pulse would be a rhythm we invented sitting on a face that claims to be listening to you — §83, at the exact moment somebody is deciding whether the app hears them. Buildable the day the recorder publishes a level; the breath in moment 5 is the honest version and says "listening" rather than "you are at 0.4".
+
+**Verification ceiling: UNSEEN.** iOS build green in an isolated worktree at HEAD, every static audit green. Not one of these seven has been looked at on a device or a simulator, and this is presentation work — §394a. The two to watch first are the completion beat (520ms is arithmetic, not a measurement, and a full stop that lingers reads as a hang) and the upward pour against the keyboard rising in the same frame.
+
+### 577b. The rise stops computing chips that no longer exist, the blue retreats to the wait, and the demo stops pinning questions nobody pinned (user: "how else would you improve the experience? we want it to be super fast when it opens too", then "do all", then "these prepopulated answers SHOULD NOT BE THERE… the only thing useful is 'how's my wallet'", then "i think we really went overkill with all this blue", 2026-09-02)
+
+### 1. THE RISE PAID ~700ms FOR A LIST WITH NOWHERE TO APPEAR
+
+`computeSuggestions()` ran on every open — a measured ~700ms of main-actor time on a 12,000-row corpus, with no yield of its own — and §543 deleted every chip it fed. Its own comment recorded the machinery as "deliberately not torn", which was a decision about the CODE and read, at the call site, as a decision to keep paying for it: `suggestions` is consumed by `dockedSuggestions` alone, and nothing has read that since the chip row went. **Verified by grep before deleting the call**, not assumed. The two things it did that were not the list are kept — the DEBUG launch-arg seeds (`-askStats`, `-asksMade`) moved up into the open task, and the kept-ask decay bump, which was always its own call. The 90ms chip-stagger sleep became one `Task.yield()`: it existed so the `false → true` flip landed in a later transaction, and it was sized for a row of seven suggestion chips that no longer exists.
+
+**A claim in the same proposal was WRONG and is recorded because measuring beat reading:** "a second full corpus fetch" for the kept-ask digests. `fullCorpusForDigests` is bounded at `fetchLimit = 600` and always was.
+
+### 2. THE FOCUS-ON-OPEN REGRESSION — the one thing here that broke the app
+
+The proposal's headline was that the hold should land you typing: blue from the first frame, keyboard rising with the surface. Built as `fieldFocused = true` at the end of the open task. **It made the entire agent surface invisible** — `composerOpen` true, the bar correctly hidden, and the feed showing through where the composer should be.
+
+The cause is worth carrying: `asking` derives from `fieldFocused`, and `restChrome` — which gates SEVEN bands — derives from `asking` through `onTint`. Writing `@FocusState` from inside the mounting task therefore rewrote the whole surface's structure in the frame it was being inserted, and SwiftUI dropped the layer. The log said so in the one line that mattered: **`Update NavigationRequestObserver tried to update multiple times per frame`**, twice, immediately before `risePhase| raise`.
+
+**Found only by building HEAD and running the same probe** — the sim was showing the feed on both my build and (apparently) the probe, and it took a clean-HEAD run to prove the probe was fine and the regression was mine. The generalisable rule: **do not write `@FocusState` from a view's own mounting task when the surface's LAYOUT depends on that focus.** Focus is a user event; deriving structure from it is fine, seeding it from the same frame that builds the structure is not. Reverted — the ask surface arrives on the tap that focuses the field, which is the ordinary path and costs one gesture.
+
+### 3. THE BLUE RETREATS TO THE WAIT
+
+§577 turned the surface blue the moment the field took focus. Seen on a device that is most of a screen of saturated colour carrying nothing: the 88pt face and the 40pt words are already the subject, and the tint was decorating a state the person is in CONTROL of. §563's rule is that colour marks the one act on a surface, and while you are typing the act has not happened yet.
+
+So `onTint` is `workingClock` alone. **Blue now means: somebody else's server has this, for up to ninety seconds, and you can do nothing about it** — the one state worth a colour you can read across a room — and §577a's completion beat is what ends it. The ask surface keeps everything else §577 gave it, on ink; the send pill is the one saturated block, which is the tint budget spent on the act. `AskDestinationRail` took an `onTint` flag rather than reading the colour scheme, because the ground here is a STATE of this surface and not the device's theme.
+
+**And the tint moved to `RootShell`** (`ShellChrome.askOnTint`). As a `.background` on the composer's own content, `ignoresSafeArea()` could not reach: that content is laid out inside the agent layer's safe-area insets, so the fill stopped at the status bar and the home indicator — reported as "the top and bottom of the screen are black and should be blue". The root's ZStack already ignores the safe areas for exactly this reason, so it paints the ground and there is one owner of it.
+
+### 4. THE SEND-TO ROW STANDS DOWN
+
+Reminders, Calendar and Notes are destinations for a NOTE. On the ask surface they were dark chips on the tint offering to file the question you are writing as a to-do. Gated off while `asking`; Find survives as a face on the rail, which is the only part of that row this screen wants.
+
+### 5. THE DEMO PINS ONE QUESTION, NOT FOUR
+
+`DemoMode.keptAsks` seeded "How's my day?", "How's my wallet?", "Show Release" and "What's new in Linear?". A kept pill means *you pinned this*, so seeding four puts standing questions on a new person's agent that they never asked for — §543's own class, still being paid by the demo. Worse, three of them answer badly: reciting a tag and a source over a corpus somebody has had for ninety seconds is the demo's furniture read back to it. **The wallet ask survives because it is the one that answers with something you cannot get by looking** — a figure, a delta, and what moved it — and keeping exactly one still demonstrates that a question can be pinned. `teardown` iterates the same list, so a removal takes its cleanup with it.
+
+### 6. BANKR: the poll leans in, and a timeout keeps the job
+
+The poll was a flat 2s from 2s, so a job that finished in four seconds was reported at six — and the fast case is the common one. **The first ten polls are 1s apart, the rest 2s: 10 + 80 = the same 90-second ceiling**, so this buys latency on jobs that land quickly and gives up nothing on jobs that do not, for at most five extra requests. And `Failure.timedOut` now CARRIES the job id, which `stillRunning` names in its own sentence: "check Bankr for the outcome" is advice you cannot follow across a page of jobs without knowing which. Never invented — a provider that gave us no id gets the sentence without it.
+
+### 7. A keyed conversation re-arms its field
+
+2026-08-30's "focus is never restored automatically" is about the DEVICE, where the answer is a document and a keyboard covering it is the app talking over itself. A keyed turn is a conversation — Bankr replies in a few sentences and the commonest next act is "ok, do it" — and a plain follow-up stays on the same agent by `conversationIsKeyed`. Scoped to a keyed turn with a real answer, never a failure notice.
+
+### 8. Verification
+
+iOS build green, all static audits green, and **this pass was actually LOOKED AT**, which is why items 2, 3 and 4 exist at all — every one of them was invisible to the build and to the audits. Seen on the simulator: the rest surface, the ink ask surface with a draft, and the regression in item 2 before and after. **Still unseen: the wait clock**, which needs a live Bankr key this host has never held, and the completion beat with it.

@@ -223,6 +223,68 @@ struct Composer: View {
     /// Gemini too — and `keyedHistory` upstream threads the prior turns, which
     /// would otherwise be handed to a different model than wrote them.
     @State private var askProvider: AgentProvider?
+
+    /// WHEN THE ASK COMMITTED — the wait's only input (prd §577, 2026-09-02).
+    ///
+    /// A keyed job runs on somebody else's server with no partial text to
+    /// stream, so the honest thing to show while it does is how long it has
+    /// been. Bankr polls for up to ~90s (`BankrAgent.poll`), which is the
+    /// longest anything in this app makes you wait, and until now that whole
+    /// stretch drew four pulsing skeleton blocks that said the same thing at
+    /// 2s and 88s.
+    ///
+    /// A DATE and not a ticking counter: the elapsed seconds are rendered by a
+    /// `TimelineView` off this one stamp, so there is no timer to start, stop,
+    /// leak or forget to invalidate, and a view that is not on screen costs
+    /// nothing.
+    @State private var askStartedAt: Date?
+
+    /// THE DESTINATION YOU PICKED, WHICH STICKS (prd §577, 2026-09-02, user:
+    /// "user should be able to select bankr before they type a question or
+    /// after").
+    ///
+    /// `askProvider` is set at ASK time and `activeAskAgent` reports nil until
+    /// a conversation is already keyed, which is right for the capsule's fill
+    /// (it says where the return key goes) and useless for a picker: tapping
+    /// Bankr with an empty field lit nothing, because nothing had been asked
+    /// yet. This is the pick itself, held from the tap.
+    ///
+    /// **IT MAKES RETURN GO THERE, and that AMENDS the 2026-08-31 ruling
+    /// rather than ignoring it.** That ruling — return is always the free
+    /// answer, never a silent keyed ask — exists because deferring to
+    /// "whichever agent was tapped last, or the app's default active provider"
+    /// spent against a key *nobody chose for this question*, with no visible
+    /// sign of which agent answered until the badge printed at the end. Both
+    /// halves of that premise are inverted here: this destination was chosen
+    /// FOR this question, one gesture ago, and it is the largest object on the
+    /// screen for the whole time you are typing. A return that then went to
+    /// the phone would be the §543 confusion exactly — a control saying one
+    /// thing while the keyboard did another.
+    ///
+    /// Cleared when the surface closes, so a new open starts on the device.
+    @State private var chosenAgent: AgentProvider?
+
+    /// THE RING IS ALLOWED TO FINISH (prd §577a, 2026-09-02).
+    ///
+    /// A keyed answer arrives and `answerStream.els` stops being empty, which
+    /// is the clock's own gate — so without this the blue drained and the ring
+    /// vanished mid-arc on the exact frame the thing you waited forty seconds
+    /// for landed. **A wait that ended should be seen to end.** For one beat
+    /// after the answer the surface stays blue, the arc snaps to full and
+    /// flashes once, and only then does the colour leave.
+    ///
+    /// It is a `Bool` and not a duration because the beat is fixed: this is a
+    /// full stop, not a progress bar.
+    @State private var askSettling = false
+
+    /// How long the wait really was, frozen at the settle.
+    ///
+    /// The clock is the only place this number has ever existed and it was
+    /// about to be thrown away — so it is kept, said once by the ring's own
+    /// last frame, and then carried into the answer's receipt line, where it
+    /// stops being a countdown and becomes a fact about the job. Nil for
+    /// everything that did not go through the clock.
+    @State private var askWaitSeconds: Int?
     /// The current "answer" is really a failure notice — no provenance badge
     /// belongs on it (2026-07-21). Reset at the start of every ask.
     @State private var answerFailed = false
@@ -783,7 +845,14 @@ struct Composer: View {
     /// it is at REST, with nothing answered and nothing answering. Tapping the
     /// field over an answer raises the keyboard and does nothing else.
     private func restChrome(keepBrief: Bool) -> Bool {
-        isOpen && !hasDraft && !isRecording && !handingOff
+        // `!onTint` (prd §577): the ask surface stands IN PLACE of the rest
+        // surface, so every band this gate governs — the greeting's spacer,
+        // the Bankr banner, the kept pills, the resting panel — must stand
+        // down together rather than one at a time. One term, at the one gate
+        // they already share, is what keeps them from drifting apart into a
+        // half-drawn screen.
+        !onTint
+            && isOpen && !hasDraft && !isRecording && !handingOff
             && (!answering || (keepBrief && briefLanding))
     }
 
@@ -1586,7 +1655,12 @@ struct Composer: View {
     /// read the same and neither is a claim.
     @ViewBuilder
     private var draftCrown: some View {
-        if isOpen, hasDraft, !isRecording, !handingOff, !answering, turns.isEmpty,
+        // `!asking` (prd §577) — on the blue surface this reading moved under
+        // the words as `askSubline`, at the caption rung rather than the crown
+        // rung, because there the CROWN is the question you are writing. Two
+        // crowns on one surface is the §506 breach §575 removed from the
+        // greeting; this is the same fix one state later.
+        if isOpen, hasDraft, !asking, !isRecording, !handingOff, !answering, turns.isEmpty,
            let liveCount, liveCount > 0 {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 Image(systemName: "magnifyingglass")
@@ -1622,6 +1696,387 @@ struct Composer: View {
             .animation(DS.Motion.standard, value: liveCount)
             .accessibilityElement(children: .combine)
             .accessibilityLabel("\(liveCount) things match so far")
+        }
+    }
+
+    // MARK: - The blue ask surface (prd §577)
+
+    /// THE WHOLE SCREEN, WHILE YOU ARE ASKING.
+    ///
+    /// §575 gave the resting field the head rung and left everything else
+    /// where it was: a 40pt invitation in a raised panel at the foot of an ink
+    /// screen, under a greeting, with three quarters of the surface empty and
+    /// the destination a 32pt capsule segment. Reported as looking and feeling
+    /// bad, and the diagnosis was that the two things a person is actually
+    /// deciding — **what to ask** and **who to ask** — were the two smallest
+    /// objects on it.
+    ///
+    /// So both take the rungs the app reserves for a subject: the destination
+    /// is an 88pt face (`AskDestinationRail`), the words are set at
+    /// `heading34` in the field itself, and the ground is the tint.
+    ///
+    /// ## THE CROWN CHANGES HANDS, WHICH IS WHAT KEEPS §506
+    ///
+    /// One crown per surface, and here it is the same slot holding three
+    /// different things in sequence: **the invitation** before a word (§563 —
+    /// the one act on a surface takes the head rung), **your words** the moment
+    /// there are any, and **the elapsed seconds** while a keyed job runs. Never
+    /// two at once, because each is the subject of exactly the state it draws
+    /// in, and it is a hand-off rather than three separate decisions.
+    ///
+    /// ## WHAT IS DELIBERATELY NOT HERE
+    ///
+    /// No figure under an agent's face. The obvious one — the watched wallets'
+    /// combined value — is refused in `AskSubject` at length, because Bankr
+    /// cannot see it; the rest of that argument lives there rather than being
+    /// restated. And no ask chips, no kept pills, no greeting: `asking` is a
+    /// state you entered by touching the field, so everything that is not the
+    /// question is chrome standing between you and it.
+    @ViewBuilder
+    private var askSurface: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            AskDestinationRail(
+                providers: AgentKey.configured,
+                active: activeAskAgent,
+                recording: isRecording,
+                size: .large,
+                onTint: onTint,
+                // Find's own gate, never `hasDraft` — `runFind` refuses an
+                // in-flight ask, and a face that refuses is the dead control
+                // §83 bans (the capsule's own 2026-09-02 rule).
+                find: (hasDraft && !isRecording && !inFlight && !handingOff)
+                    ? { runFind() } : nil,
+                onDevice: {
+                    AskDestination.used(AskDestination.deviceRaw)
+                    chosenAgent = nil
+                    askProvider = nil
+                    fieldFocused = true
+                },
+                onAgent: { provider in
+                    AskDestination.used(provider.rawValue)
+                    // The pick STICKS and the field stays open — picking a
+                    // destination is not sending to it. At rest an empty send
+                    // would be the stranded-"Thinking…" the empty-draft guard
+                    // exists to prevent; with a draft it would send on a tap
+                    // meant to choose.
+                    chosenAgent = provider
+                    askProvider = provider
+                    fieldFocused = true
+                })
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s2)
+
+            // THE AIR IS THE POINT (§552's written-down sum, §559's anatomy):
+            // the faces at the top, the act hard against the bottom, and the
+            // emptiness between them is what makes the act read. It is a
+            // `Spacer` rather than a fixed height because the question grows
+            // as it is written and the air is what yields.
+            Spacer(minLength: DS.Space.s6)
+
+            draftField
+                .padding(.horizontal, DS.Space.s4)
+
+            // What the destination will read from, under the words it will
+            // read them for. The corpus reading carries its own caption; the
+            // agent note is the disclosure — see `AskSubject`.
+            askSubline
+
+            HStack(spacing: DS.Space.s2) {
+                lowerButton
+                micButton
+                Spacer(minLength: 0)
+                sendPill
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.bottom, DS.Space.s3)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The one line under the draft. At most one of the two, ever — the corpus
+    /// reading and the agent note answer the same question ("what will this
+    /// read?") for different destinations, so drawing both would mean one of
+    /// them is describing a destination that was not chosen.
+    @ViewBuilder
+    private var askSubline: some View {
+        if let note = AskSubject.draftNote(ground: askGround,
+                                           agent: activeAskAgent?.agent) {
+            Text(note)
+                .dsText(.body17)
+                .foregroundStyle(onTint ? Color.white.opacity(0.78) : DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
+                .transition(.opacity)
+                .animation(DS.Motion.standard, value: activeAskAgent)
+        } else if hasDraft, let reading = AskSubject.corpus(matches: liveCount) {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Text(reading.figure)
+                        .dsText(.price16)
+                        .foregroundStyle(onTint ? Color.white : DS.textPrimary)
+                        // The figure changes on a debounce while you are still
+                        // typing, so it ROLLS rather than cutting.
+                        .contentTransition(.numericText())
+                    Text(reading.caption)
+                        .dsText(.body17)
+                        .foregroundStyle(onTint ? Color.white : DS.textSecondary)
+                }
+                if !liveScopes.isEmpty || !droppedScopes.isEmpty { scopeChips }
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s2)
+            .animation(DS.Motion.standard, value: liveCount)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(reading.figure) \(reading.caption)")
+        }
+    }
+
+    /// The send, as one white pill that NAMES where it is going.
+    ///
+    /// The capsule stands down on this surface because the rail has taken its
+    /// picking job, and a picker plus a capsule is the "choosing and sending as
+    /// two controls" §543 removed, restored with an extra step. So the pill is
+    /// the send alone, and it says the destination for the same reason the
+    /// capsule's segments do: a bare arrow made the device the one unnamed
+    /// destination.
+    ///
+    /// Dim until there is something to send, and the dim state is a real
+    /// background swap rather than `.disabled` — a hand-rolled button that
+    /// paints its own fill reads as live while inert otherwise (§83's own
+    /// corollary).
+    @ViewBuilder
+    private var sendPill: some View {
+        let armed = hasDraft && !inFlight
+        let name = activeAskAgent?.agent
+        Button {
+            guard armed else { return }
+            // THE BUZZ MATCHES THE CONSEQUENCE (prd §577a). `tap()` for a
+            // question the phone answers; `lift()` — the heavier one this app
+            // reserves for a gesture that had to be held — for a send to an
+            // agent acting on an account of its own, which may spend money and
+            // cannot be undone by us. Feel is the one channel that reaches
+            // somebody who is not reading, and this is the send where that
+            // matters.
+            if askGround == .ownAccount { DSHaptic.lift() } else { DSHaptic.tap() }
+            if activeAskAgent != nil { askWithKey() } else { commit() }
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                Text(name.map { String(localized: "Send to \($0)") }
+                        ?? String(localized: "Ask"))
+                    .dsText(.label12).fontWeight(.semibold)
+                    .foregroundStyle(armed ? Color.white : DS.textTertiary)
+                    .lineLimit(1)
+                Image(systemName: "arrow.up")
+                    .dsGlyph(13, weight: .bold)
+                    .foregroundStyle(armed ? DS.tint : DS.textTertiary)
+                    .frame(width: 28, height: 28)
+                    .background(armed ? AnyShapeStyle(Color.white)
+                                      : AnyShapeStyle(DS.gray100),
+                                in: Circle())
+                    .accessibilityHidden(true)
+            }
+            .padding(.leading, DS.Space.s4)
+            .padding(.trailing, DS.Space.s1 + 2)
+            .padding(.vertical, DS.Space.s1 + 2)
+            // The SEND is the one saturated block on the ask surface now —
+            // §563's tint budget, spent on the act rather than on the ground.
+            .background(armed ? AnyShapeStyle(DS.tint)
+                              : AnyShapeStyle(DS.gray100),
+                        in: Capsule(style: .continuous))
+            .dsHover()
+        }
+        .buttonStyle(PressSpring())
+        .disabled(!armed)
+        .animation(DS.Motion.standard, value: armed)
+        .animation(DS.Motion.standard, value: name)
+        .accessibilityLabel(name.map { "Send to \($0)" } ?? "Ask")
+    }
+
+    // MARK: - The wait, as a clock (prd §577)
+
+    /// WHAT A KEYED JOB LOOKS LIKE WHILE IT RUNS.
+    ///
+    /// Bankr submits a prompt and polls for up to ~90 seconds with **no
+    /// partial text of any kind** — the wire has no stream, only a job that is
+    /// pending until it is not. Until now that stretch drew `answerSkeleton`,
+    /// which is the shape of a document about to paint; there is no such
+    /// document here and none of its shape is known to us, so the skeleton was
+    /// a promise nobody could keep, holding still for a minute and a half.
+    ///
+    /// The face grows and the seconds count. That is the whole of what is
+    /// true, and it is enough — the ring fills across the interval Bankr
+    /// itself publishes as typical and then **keeps turning past it** rather
+    /// than completing, because a bar that fills and stops says finished.
+    ///
+    /// **`TimelineView`, not a timer.** Nothing is started, stopped or
+    /// invalidated; the view renders off one stamp and costs nothing when it is
+    /// not on screen.
+    @ViewBuilder
+    private var askWorking: some View {
+        let started = askStartedAt ?? .now
+        VStack(alignment: .leading, spacing: 0) {
+            TimelineView(.periodic(from: started, by: 1)) { context in
+                // Frozen at the settle: the beat after the answer must not
+                // keep counting, or the last thing the clock does is tell you
+                // the wait was a second longer than it was.
+                let live = max(0, Int(context.date.timeIntervalSince(started)))
+                let elapsed = askWaitSeconds ?? live
+                VStack(alignment: .leading, spacing: DS.Space.s6) {
+                    workingFace(elapsed: elapsed)
+                    VStack(alignment: .leading, spacing: DS.Space.s2) {
+                        HStack(alignment: .lastTextBaseline, spacing: DS.Space.s2) {
+                            Text("\(elapsed)")
+                                .dsText(.price48)
+                                .foregroundStyle(Color.white)
+                                .contentTransition(.numericText())
+                                .lineLimit(1)
+                            Text(verbatim: "s")
+                                .dsText(.price16)
+                                .foregroundStyle(Color.white.opacity(0.78))
+                        }
+                        Text(currentQuestion)
+                            .dsText(.body17)
+                            .foregroundStyle(Color.white.opacity(0.78))
+                            .fixedSize(horizontal: false, vertical: true)
+                        // THE OVERRUN IS NARRATED ONCE, AT THE MOMENT IT
+                        // HAPPENS (prd §577a). Printing "most jobs land inside
+                        // 30 seconds" from the first frame is an excuse made
+                        // before anything went wrong; arriving AS the ring
+                        // stops filling is the app telling you something it
+                        // just learned. It is Bankr's own published figure, so
+                        // it is a claim they made and not one we invented.
+                        if elapsed > Int(Self.typicalKeyedWait), !askSettling {
+                            Text("Most jobs land inside 30 seconds. This one is taking longer.")
+                                .dsText(.body17)
+                                .foregroundStyle(Color.white.opacity(0.55))
+                                .fixedSize(horizontal: false, vertical: true)
+                                .transition(.opacity)
+                        }
+                    }
+                    .animation(DS.Motion.standard, value: elapsed > Int(Self.typicalKeyedWait))
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Working for \(elapsed) seconds")
+                }
+            }
+            Spacer(minLength: DS.Space.s4)
+            HStack(spacing: DS.Space.s2) {
+                lowerButton
+                Spacer(minLength: 0)
+            }
+            .padding(.bottom, DS.Space.s3)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s6)
+    }
+
+    /// The chosen face at 132pt, with the ring around it.
+    ///
+    /// `typicalWait` is Bankr's own published figure (`BankrAgent.poll`'s note:
+    /// "most jobs land inside 30"), so the ring is a claim they made and not
+    /// one we invented — and past it the arc stops growing and the whole ring
+    /// rotates instead, which says "still going" without ever saying "nearly
+    /// there" about a job whose end nobody can predict.
+    /// Bankr's own published typical (`BankrAgent.poll`: "most jobs land inside
+    /// 30"), as a constant so the ring and the sentence it triggers can never
+    /// disagree about where the line is.
+    static let typicalKeyedWait = 30.0
+
+    @ViewBuilder
+    private func workingFace(elapsed: Int) -> some View {
+        let progress = min(1, Double(elapsed) / Self.typicalKeyedWait)
+        let overrun = Double(elapsed) > Self.typicalKeyedWait && !askSettling
+        // THE ARC COMPLETES (prd §577a). At the settle it snaps to a full turn
+        // whatever it was doing — mid-fill, or spinning at a fifth of a circle
+        // because the job outran its own typical. A ring that simply
+        // disappeared said the wait was abandoned; a ring that closes says it
+        // finished.
+        let trim: CGFloat = askSettling ? 1 : (overrun ? 0.22 : max(0.02, progress))
+        ZStack {
+            Circle()
+                .stroke(Color.white.opacity(0.18), lineWidth: 6)
+            Circle()
+                .trim(from: 0, to: trim)
+                .stroke(Color.white, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .modifier(WorkingSpin(spinning: overrun))
+                // The flash — one soft bloom on the completed ring, the beat
+                // before the colour drains. Reduce Motion keeps the completed
+                // arc and drops the glow, which is less motion and the same
+                // information.
+                .shadow(color: askSettling && !reduceMotion
+                        ? Color.white.opacity(0.9) : .clear, radius: 12)
+                .animation(DS.Motion.standard, value: askSettling)
+            Group {
+                if let agent = activeAskAgent?.agent {
+                    // `profile` — the tier for "a surface whose whole subject
+                    // is the identity", which for the next ninety seconds is
+                    // exactly what this is.
+                    BridgeIcon(name: agent, size: DS.Face.profile, circular: true)
+                } else {
+                    Image(systemName: AskDestination.deviceGlyph(isMac: DS.isMac,
+                                                                 isPad: DS.isPad))
+                        .dsGlyph(56, weight: .regular)
+                        .foregroundStyle(DS.tint)
+                }
+            }
+            .frame(width: 132, height: 132)
+            .background(Color.white, in: Circle())
+            // ALIVE WHILE IT RUNS, STILL THE MOMENT IT LANDS. The breath is
+            // the app's own "waiting" idiom (`AgentBar`'s berry, the in-flight
+            // composer) and it is the one thing on this screen that is not a
+            // number — so the face reads as somebody working rather than as a
+            // logo above a timer. It stops at the settle, which is how the
+            // completion beat reads as a full stop rather than as one more
+            // second of the same.
+            .modifier(WorkingBreath(alive: !askSettling))
+        }
+        .frame(width: 132, height: 132)
+        .accessibilityHidden(true)
+    }
+
+    /// The overrun turn — the ring rotating once a job has outrun the interval
+    /// its own service publishes as typical. `repeatForever` is the one loop
+    /// this file allows and it is gated on Reduce Motion by its caller, per
+    /// `design-motion-audit`'s rule: a drawing sized from data needs an
+    /// entrance, and an appear-triggered animation needs the guard.
+    /// The face's breath while a keyed job runs. `.breathing()` already exists
+    /// and is what the berry uses, but it is unconditional — this one has to
+    /// STOP, because stopping is what makes the completion beat a full stop.
+    private struct WorkingBreath: ViewModifier {
+        let alive: Bool
+        @State private var big = false
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        private func run() {
+            guard alive, !reduceMotion else { big = false; return }
+            withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
+                big = true
+            }
+        }
+        func body(content: Content) -> some View {
+            content
+                .scaleEffect(big ? 1.03 : 1)
+                .onChange(of: alive) { _, _ in run() }
+                .onAppear(perform: run)
+        }
+    }
+
+    private struct WorkingSpin: ViewModifier {
+        let spinning: Bool
+        @State private var angle: Double = 0
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        private func start() {
+            guard spinning, !reduceMotion else { angle = 0; return }
+            withAnimation(.linear(duration: 1.6).repeatForever(autoreverses: false)) {
+                angle = 360
+            }
+        }
+        func body(content: Content) -> some View {
+            content
+                .rotationEffect(.degrees(angle))
+                .onChange(of: spinning) { _, _ in start() }
+                .onAppear(perform: start)
         }
     }
 
@@ -1891,7 +2346,7 @@ struct Composer: View {
             // painted "Sunday afternoon." and its pairing line, with their own
             // `settleIn` entrances, into the window before the answer commits.
             // An open that owes an answer shows the answer and nothing else.
-            if embedded, turns.isEmpty, !answering, !handingOff {
+            if embedded, turns.isEmpty, !answering, !handingOff, !onTint {
                 // The greeting (docs/agent-brief.md ruling 4, built
                 // 2026-07-20): the day and its moment, "Saturday morning."
                 // ONE line since 2026-07-31 — the corpus stat that used to
@@ -2237,7 +2692,8 @@ struct Composer: View {
                                                             pagesRead: keyedPagesRead,
                                                             toolRounds: keyedToolRounds,
                                                             model: keyedModel,
-                                                            found: foundCurrent)
+                                                            found: foundCurrent,
+                                                            waited: askWaitSeconds)
                                                 .padding(.top, DS.Space.s1)
                                         }
                                         if !proseStreaming, !inFlight {
@@ -2754,13 +3210,34 @@ struct Composer: View {
             // on an answer would mint a standing question with nowhere to
             // appear, which is a control that does nothing (§83).
             keptAskPills
-            takeChips
+            // THE SEND-TO ROW STANDS DOWN ON THE BLUE (prd §577b). Reminders,
+            // Calendar and Notes are destinations for a NOTE, and the ask
+            // surface is where a question goes to an agent — so on that screen
+            // they were dark chips on the tint offering to file the sentence
+            // you are writing as a to-do. Find is already a face on the rail,
+            // which is the only part of this row the ask surface wants.
+            if !asking { takeChips }
             // The brief's table of contents (2026-08-15) — the LAST band
             // before the field, where the mockup put it and where the
             // composer's own stacking already sends a chip row.
             briefNav
-            // The input, pinned to the bottom — a friendly rounded bar.
-            inputBar
+            // THE ASK SURFACE STANDS IN PLACE OF THE INPUT BAR (prd §577).
+            // Not beside it: the rail has taken the capsule's picking job and
+            // the pill has taken its sending job, so drawing both would put
+            // two pickers and two sends on one screen — the exact duplication
+            // §543 collapsed into the capsule in the first place.
+            //
+            // Every other band above is already standing down through
+            // `restChrome`'s `!onTint` term, so this is the one place the
+            // swap has to be spelled.
+            if asking {
+                askSurface
+            } else if workingClock {
+                askWorking
+            } else {
+                // The input, pinned to the bottom — a friendly rounded bar.
+                inputBar
+            }
         }
         .frame(maxWidth: .infinity, alignment: .top)
         // Report the content's natural height so the hosting sheet hugs it.
@@ -2797,6 +3274,20 @@ struct Composer: View {
         // is what the approved reference screenshot shows and what gives the
         // cards a real floor to sit on. Opaque now too — the 0.97 was
         // letting the feed glow through a surface that claims to be a room.
+        // THE BLUE (prd §577) — under the surface's own ground rather than
+        // replacing it, and reaching past the safe areas, because a tint that
+        // stops at the status bar reads as a card that failed to fill rather
+        // than as the screen being in a state. It is the only saturated block
+        // on the surface while it is up, which is §563's budget kept: there is
+        // nothing else here to spend colour on.
+        // The tint is published to `ShellChrome` and painted by `RootShell`
+        // (prd §577b) — see `ShellChrome.askOnTint` for why a background here
+        // could never reach the status bar or the home indicator.
+        .onChange(of: onTint, initial: true) { _, now in
+            guard embedded else { return }
+            chrome.askOnTint = now
+        }
+        .onDisappear { if embedded { chrome.askOnTint = false } }
         .background(embedded ? Color.clear : DS.inkGround, in: bubbleShape)
         .clipShape(embedded ? AnyShape(Rectangle()) : AnyShape(bubbleShape))
         .scaleEffect(embedded ? 1 : (isOpen ? 1 : 0.3), anchor: .bottomTrailing)
@@ -2877,7 +3368,28 @@ struct Composer: View {
                 // written — it releases the hold for a request that arrives
                 // during this prep — and double-consumption is safe.
                 await consumeAskRequest()
-                await computeSuggestions()
+                // `computeSuggestions()` IS NOT CALLED ANY MORE (PERF, prd
+                // §577b, 2026-09-02, user: "we want it to be super fast when
+                // it opens too").
+                //
+                // It cost a measured ~700ms of main-actor time on a
+                // 12,000-row corpus, with no yield of its own, on EVERY open —
+                // and §543 deleted every chip it fed. Its own comment recorded
+                // the machinery as "deliberately not torn", which was a
+                // decision about the CODE and read, at this call site, as a
+                // decision to keep paying for it: `suggestions` is consumed by
+                // `dockedSuggestions` alone, and nothing has read that since
+                // the chip row went. So the rise spent most of a second
+                // ranking, decaying and capping a list with nowhere to appear.
+                //
+                // The two things it did that were NOT the list are kept: the
+                // DEBUG launch-arg seeds, moved up here so `-askStats` and
+                // `-asksMade` still land, and the kept-ask decay bump below,
+                // which was always its own call.
+                #if DEBUG
+                AskMemory.seedFromLaunchArgs()
+                AskMemory.seedMadeFromLaunchArgs()
+                #endif
                 // Kept asks share AskMemory's own decay counters with the
                 // suggestion tiles (ruling 5: "ignored asks decay dim") —
                 // bumped once per open here, exactly how computeSuggestions()
@@ -2912,7 +3424,13 @@ struct Composer: View {
                 // BEFORE the board, since 2026-08-12 — the chips are ready in
                 // a fraction of the board's time and used to sit behind it.
                 chipsAppeared = false
-                try? await Task.sleep(for: .milliseconds(90))
+                // ONE FRAME, NOT 90ms (PERF, prd §577b). The sleep existed so
+                // the false → true flip landed in a later transaction and the
+                // entrance actually animated; a yield does that and costs a
+                // frame instead of six. It was also sized for a row of seven
+                // suggestion chips that no longer exists — the kept pills are
+                // usually one or two.
+                await Task.yield()
                 chipsAppeared = true
                 // …and the board fills in behind them. `panelLoading` stays
                 // true across this, so a FIRST open still shows the bento
@@ -2936,6 +3454,22 @@ struct Composer: View {
                 // Raised by the bar's magnifier (2026-07-30): the field takes
                 // focus and nothing else happens — no brief, no ask. Cleared
                 // on read so an ordinary later open doesn't inherit it.
+                // THE RISE LANDS YOU TYPING (prd §577b, user: "we want it to
+                // be super fast when it opens too").
+                //
+                // The hold used to land on the ink rest surface, and the blue
+                // ask surface — the one §577 built, and the only thing on this
+                // screen you can act on — needed a second tap on the field to
+                // reach. Two moments for one intention, the first of them a
+                // mostly-empty screen. The agent is raised to ASK, so it
+                // arrives asking: focused, blue from the first frame, keyboard
+                // rising with the surface rather than after it.
+                //
+                // Every other landing is untouched, and each is a real one: an
+                // open that owes an answer (`handingOff`), one that already has
+                // a document (`answering`/`turns`), and a live capture all keep
+                // what they had. `focusDraftOnOpen` still forces it for the
+                // paths that ask for it by name.
                 if chrome.focusDraftOnOpen {
                     chrome.focusDraftOnOpen = false
                     fieldFocused = true
@@ -3221,6 +3755,15 @@ struct Composer: View {
         // spuriously trigger the watcher on a stale flag too.
         pendingKeyedFollowUp = false
         forceKeyedThisAsk = false
+        // The rail's pick and the wait's stamp are both about ONE ask, so
+        // neither may outlive the surface (prd §577). A stale pick would make
+        // the next open's return key spend a key nobody chose this time — the
+        // exact hazard the 2026-08-31 ruling names — and a stale stamp would
+        // start the next clock somewhere in the past.
+        chosenAgent = nil
+        askStartedAt = nil
+        askSettling = false
+        askWaitSeconds = nil
         inFlight = false
         keepJustLanded = false
         askGeneration += 1   // any in-flight answer Task retires silently
@@ -3407,8 +3950,16 @@ struct Composer: View {
                                  searchedWeb: Bool = false,
                                  imagesSeen: Int = 0, pagesRead: Int = 0,
                                  toolRounds: Int = 0, model: String? = nil,
-                                 found: Bool = false) -> some View {
+                                 found: Bool = false,
+                                 waited: Int? = nil) -> some View {
         var parts: [String] = []
+        // HOW LONG IT TOOK (prd §577a). The clock is the only place this
+        // number has ever existed, and the settle was throwing it away — so it
+        // lands here, in the line that already says what was done, where it
+        // stops being a countdown and becomes a fact about the job. Optional
+        // and defaulted, so every existing call site is untouched and only a
+        // turn that actually went through the clock carries it.
+        if let waited, waited > 0 { parts.append(String(localized: "\(waited)s")) }
         // Named only when it is NEWS — when what answered isn't what was asked
         // for. On a direct key with a live pin the two agree and saying so
         // every time would be noise on a line that has to stay scannable; the
@@ -3495,6 +4046,26 @@ struct Composer: View {
     /// follow-up already uses — for THIS first ask too, so a failed keyed
     /// call still falls back to the free answer (that branch's own existing
     /// behaviour), just never SHOWS the free answer when the keyed one works.
+    /// Let the ring finish, freeze the figure, then drain (prd §577a).
+    ///
+    /// Bounded by a fixed sleep and not by any state the answer path owns: the
+    /// blue must come down whatever happened, so nothing here can be left
+    /// waiting on a flag a failure path forgot to clear.
+    private func closeWaitBeat() {
+        guard embedded, keyedCurrent, turns.isEmpty, let started = askStartedAt,
+              !askSettling else { return }
+        askWaitSeconds = max(0, Int(Date.now.timeIntervalSince(started)))
+        withAnimation(DS.Motion.standard) { askSettling = true }
+        let gen = askGeneration
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(520))
+            // A newer ask overtook this one — its own beat owns the surface
+            // now, and clearing here would cut it short.
+            guard gen == askGeneration else { return }
+            withAnimation(DS.Motion.standard) { askSettling = false }
+        }
+    }
+
     private func askDirectly() {
         forceKeyedThisAsk = true
         commit(forceAsk: true)
@@ -3519,6 +4090,11 @@ struct Composer: View {
     /// keystroke) and `askProvider` is resolved once per keyed ask at its
     /// start, never here.
     private var activeAskAgent: AgentProvider? {
+        // An explicit pick wins over every inference (prd §577). It is only
+        // non-nil once somebody has tapped a face, so every shipped path — the
+        // capsule's fill, a keyed conversation's follow-up, a free answer's
+        // settle — behaves exactly as it did before the rail existed.
+        if !inFlight, let chosenAgent, keyAvailable { return chosenAgent }
         let keyed = inFlight ? keyedCurrent : (conversationIsKeyed && keyAvailable)
         return keyed ? askProvider : nil
     }
@@ -3532,6 +4108,10 @@ struct Composer: View {
         let q = currentQuestion
         guard !q.isEmpty, !inFlight else { return }
         DSHaptic.tap()
+        // The clock starts HERE and not at the first poll — the submit request
+        // is part of the wait, and a clock that begins two seconds in reports
+        // a shorter wait than the person had.
+        askStartedAt = .now
         // NAME THE AGENT BEFORE THE ASK, not per render (2026-09-01). This
         // path is reached with `askProvider` nil whenever a surface handed the
         // ask over (`chrome.askWithKey`), and `answerWithKey` resolves that nil
@@ -4121,6 +4701,87 @@ struct Composer: View {
     /// when the crown belongs to the count (`draftCrown`) or to the answer.
     private var restingPanel: Bool { restChrome(keepBrief: false) }
 
+    /// THE SURFACE TURNS BLUE WHILE YOU ARE ASKING (prd §577, 2026-09-02,
+    /// user: "we could be using the extreme sizes b/c it's just a question…
+    /// and bold", then "even using the blue and white motif").
+    ///
+    /// §553/§559/§563 built a language out of one saturated block carrying one
+    /// act at the head rung, and §563 made a check of its budget: **the colour
+    /// is the only thing saying which one the room is for.** Everywhere else in
+    /// the app that block is a tile. Here it is the whole surface, because here
+    /// the act is the whole surface — there is nothing else on this screen to
+    /// leave uncoloured.
+    ///
+    /// **So blue means exactly one thing: you are asking, and it has not
+    /// answered yet.** It arrives with focus, it survives the wait
+    /// (`workingClock`), and it is gone the instant a single element of the
+    /// answer paints. That is what makes it information rather than decoration:
+    /// a person can tell across the room whether the app is still owed
+    /// something.
+    ///
+    /// **`turns.isEmpty && !answering` is the focus door, not a new rule.**
+    /// 2026-08-31 closed that door — an answer that exists is always drawn, and
+    /// tapping the field over one raises the keyboard and does nothing else —
+    /// so this can only ever replace an EMPTY surface, never a document.
+    /// Reversing that would put the blue over a finished answer, which is the
+    /// exact report ("the answer VANISHED") `restChrome` records.
+    private var asking: Bool {
+        isOpen && embedded && (fieldFocused || hasDraft)
+            && !isRecording && !handingOff && !answering && turns.isEmpty
+    }
+
+    /// The wait, on the same blue — a keyed ask only.
+    ///
+    /// **The device keeps its skeleton and that is a measurement, not an
+    /// oversight.** `answerSkeleton` is the shape of an answer that is about to
+    /// paint, which is honest when the answer is ~2s away and the document's
+    /// own layout is what is coming. A keyed job is up to 90s away and its
+    /// shape is unknown to us, so a skeleton there is a promise about a
+    /// document nobody has seen. The clock promises nothing except the one
+    /// thing we know.
+    ///
+    /// Gated on an EMPTY stream rather than on `inFlight` alone, for the
+    /// skeleton's own 2026-08-14 reason: `inFlight` is cleared at the settle
+    /// while a document can paint seconds earlier, so reading it alone leaves
+    /// the clock standing over an answer that has already arrived.
+    private var workingClock: Bool {
+        // `|| askSettling` is the completion beat — see that flag. The clock
+        // outlives its own gate by one beat on purpose, and by exactly one:
+        // the flag is cleared on a fixed timer, so no failure path can leave
+        // the blue standing over an answer.
+        askSettling
+            || (isOpen && embedded && inFlight && keyedCurrent
+                && answerStream.els.isEmpty && turns.isEmpty && !handingOff)
+    }
+
+    /// Blue is on the surface for either of them — one property, so the ground
+    /// and the contents can never disagree about which palette they are in.
+    /// THE BLUE IS THE WAIT, NOT THE WRITING (prd §577b, user: "i think we
+    /// really went overkill with all this blue").
+    ///
+    /// It was `asking || workingClock` — the surface turned blue the moment
+    /// the field took focus and stayed blue for as long as you sat there. On a
+    /// device that is most of a screen of saturated colour carrying no
+    /// information: the faces and the words are already the subject, and the
+    /// tint was decorating a state the person is in CONTROL of.
+    ///
+    /// §563's rule is that colour marks the one act on a surface. While you
+    /// are typing, the act has not happened yet. The moment it has, the answer
+    /// belongs to somebody else's server for up to ninety seconds — and THAT
+    /// is worth a colour you can read across a room, because it is the one
+    /// state you cannot do anything about. Blue now means exactly that, it
+    /// lasts as long as the job, and the completion beat (§577a) is what ends
+    /// it.
+    ///
+    /// The ask surface keeps everything else §577 gave it — the 88pt face, the
+    /// words at the head rung, the air, the named send — on ink.
+    private var onTint: Bool { workingClock }
+
+    /// What the chosen destination will actually read from.
+    private var askGround: AskSubject.Ground {
+        AskSubject.ground(forAgent: activeAskAgent?.rawValue)
+    }
+
     private var inputBar: some View {
         // ONE ANATOMY IN EVERY STATE (prd §543, 2026-08-31): the field line on
         // top, the control row beneath it — at rest, with a draft, and under a
@@ -4285,18 +4946,33 @@ struct Composer: View {
                 // placeholder. So the invitation shrinks as you start to
                 // write, which is the honest transition — it stops being the
                 // subject the instant you are.
+                // THE WORDS TAKE THE HEAD RUNG ON THE BLUE (prd §577), and
+                // that AMENDS §575's ruling rather than reversing it. That one
+                // dropped the invitation to `body17` on focus, and its stated
+                // reason was a mismatch: "a 40pt invitation standing beside a
+                // 17pt caret reads as the field failing to match its own
+                // placeholder." The premise was that the TYPED TEXT is
+                // body-sized. On the ask surface it is not — placeholder,
+                // caret and typed words are all at `heading34` — so there is
+                // nothing left to mismatch, and the sentence you are writing is
+                // the subject of the screen for as long as you are writing it.
+                //
+                // Everywhere else (the resting panel over a conversation, the
+                // non-embedded bubble) §575's shrink-on-focus is untouched.
                 .placeholder(when: !hasDraft) {
                     Text(answering || !turns.isEmpty ? String(localized: "Ask about this…")
-                                                     : String(localized: "Ask or search"))
-                        .dsText(restingPanel && !fieldFocused ? .heading34 : .body17)
-                        .foregroundStyle(restingPanel && !fieldFocused
-                                         ? DS.textSecondary : DS.textTertiary)
-                        .lineLimit(1)
+                                                     : AskSubject.invitation(ground: askGround))
+                        .dsText(asking ? .heading34
+                                       : (restingPanel && !fieldFocused ? .heading34 : .body17))
+                        .foregroundStyle(asking ? DS.textTertiary
+                                               : (restingPanel && !fieldFocused
+                                                  ? DS.textSecondary : DS.textTertiary))
+                        .lineLimit(asking ? 2 : 1)
                         .minimumScaleFactor(0.9)
                         .contentTransition(.opacity)
                         .animation(DS.Motion.standard, value: fieldFocused)
                 }
-                .dsText(.body17)
+                .dsText(asking ? .heading34 : .body17)
                 .foregroundStyle(DS.textPrimary)
                 .tint(DS.tint)
                 .focused($fieldFocused)
@@ -4602,6 +5278,22 @@ struct Composer: View {
     /// does NOT skip — there is no committed text to ask about yet while a
     /// voice capture is still running, force or not.
     private func commit(forceAsk: Bool = false) {
+        // THE PICK DECIDES WHERE A PLAIN SEND GOES (prd §577). See
+        // `chosenAgent` for why this amends the 2026-08-31 "return is always
+        // the free answer" ruling rather than ignoring it: that ruling
+        // protects against spending a key nobody chose for this question, and
+        // here the destination was chosen for it and has been the largest
+        // object on the screen ever since.
+        //
+        // Voice and a navigate command are deliberately BEFORE this: a voice
+        // note is a capture whatever is picked (`AskDestinationCapsule`'s own
+        // rule — agents stand down while recording), and "go to Wallet" is a
+        // navigation, not a question anybody meant to pay for.
+        if !isRecording, !forceAsk, chosenAgent != nil, hasDraft, keyAvailable,
+           NavigateCommand.parse(draft, tags: tagPool, sources: knownSources()) == nil {
+            askWithKey()
+            return
+        }
         if isRecording {
             // Voice is a capture path — send keeps the piece.
             if let piece = voice.stop(keep: true) {
@@ -4808,6 +5500,32 @@ struct Composer: View {
                 withAnimation(DS.Motion.standard) {
                     proseStreaming = false
                     inFlight = false
+                }
+                // The wait's full stop (prd §577a) — fired here rather than at
+                // the ring, because this is the one line every keyed answer
+                // passes through, success and fallback alike, and a beat that
+                // only played on the happy path would leave the blue standing
+                // over an error.
+                closeWaitBeat()
+                // A KEYED CONVERSATION RE-ARMS ITS FIELD (prd §577b), which
+                // relaxes 2026-08-30's "focus is never restored automatically"
+                // for one case rather than reversing it.
+                //
+                // That ruling is about the DEVICE, where the answer is a
+                // document you have just been given and a keyboard covering it
+                // is the app talking over itself. A keyed turn is a
+                // conversation: Bankr replies in a few sentences and the
+                // commonest next act is "ok, do it" — and a plain follow-up
+                // stays on the same agent by `conversationIsKeyed`, so the
+                // field is where you were already going. The keyboard costs
+                // nothing over three lines of prose.
+                //
+                // Scoped hard: a keyed turn, a real answer (never a failure
+                // notice, where the next act is fixing a key and not asking
+                // again), and only while the surface is up.
+                if isOpen, embedded, keyedCurrent, !answerFailed,
+                   !docHasFallback(finalDoc) {
+                    fieldFocused = true
                 }
                 keyAvailable = AgentKey.isConfigured   // one read per settle
                 // The settle haptic is keyed to honesty (delight, 2026-07-21):

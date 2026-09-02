@@ -542,6 +542,20 @@ final class ShellChrome {
     /// `RootShell` only, as one expression over every presentation it owns.
     var walkModalOpen = false
 
+    /// THE ASK SURFACE IS BLUE, AND THE ROOT IS WHAT PAINTS IT (prd §577b,
+    /// user: "the top and bottom of the screen are black and should be blue").
+    ///
+    /// The tint began as a `.background` on the composer's own content, and
+    /// `ignoresSafeArea()` there could not reach: that content is laid out
+    /// INSIDE the agent layer's safe-area insets, so the fill expanded to its
+    /// own container and stopped at the status bar and the home indicator —
+    /// a blue card on a black screen rather than a screen that turned blue.
+    ///
+    /// Published here instead, so `RootShell`'s agent ZStack — which already
+    /// paints `DS.page.ignoresSafeArea()` for exactly this reason — paints the
+    /// tint in its place. One ground, one owner, every edge.
+    var askOnTint = false
+
     /// A sheet raised by the feed itself (a thing, a token, a market book).
     /// Written by the active `FeedScreen` only. Separate from `walkModalOpen`
     /// because it has a different owner, not because it means anything
