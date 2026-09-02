@@ -45894,4 +45894,49 @@ proves anything.
 `address-book-selftest`'s book door): when a guard goes red after a refactor,
 establish whether the RULE was broken or the PATTERN was outrun before touching
 either. Both of today's reds were the pattern.
+## 574. §572's ring was wrong for one of the three controls, and the guard caught it after it shipped (2026-09-02)
+
+§572 gave every MARK a selection ring on one argument: a fill cannot speak on a
+brand mark, because the mark IS its own fill. That argument is right for the
+strip's icon chip and right for the face rail. **It is wrong for the venue
+switcher, and §541 had already written down why.**
+
+**Attention on a venue is itself a dashed ring on the same capsule.** So an
+active-AND-broken seat would draw a solid tint ring and a dashed orange one on
+top of each other — which is exactly what §541 refused when it settled this
+control, and what `category-fold-selftest` has guarded ever since in those
+words.
+
+**The fill was never a wash over the mark, which is what made the ring look like
+an improvement.** The mark is FULL-BLEED inside a `DS.Hit.min` seat, so the fill
+reads in the ANNULUS around it and never tints the face. It was already doing
+the job a ring would do, without the collision — and the mockup that proposed
+the change drew the switcher's marks as small discs on pills, which is not what
+the control is.
+
+**The face rail's ring STANDS, and the reason is in that file rather than in a
+judgement call.** `pickFill` is `embedded`-only, and `FaceScopeRail`'s own doc
+says the two can never collide: "the ring belongs to `ringed` (social) and to
+`namesInRoom` rails, and no embedded rail is either." The word chips' neutral
+resting glass stands too. **One of three controls was wrong, not the ruling.**
+
+### What it cost, and the lesson
+
+It shipped. Build 487 went to TestFlight and into an App Store submission
+carrying this, because the full `verify.sh` was still running its harness phase
+when the submission went in — and this harness is in that phase.
+
+**The failure mode is worth naming precisely: I ran the audits that were fast
+and shipped before the ones that were slow.** The cheap static audits all passed
+and none of them can see this; the check that could is a `swiftc` harness in the
+long tail. The App Store submit is the one ship a partial pass does not cover,
+because it burns a review queue position — and correcting this burns a second
+one.
+
+**Second finding from the same pass, and NOT mine**: `vibenet-selftest` was red
+because another session has an uncommitted 82-line deletion in
+`VibenetRoomCard.swift` that removes the `VibenetWatchSheet` presentation §517
+guards. `HEAD` carries it, the working tree does not, and build 487 is clean of
+it. Recorded here so the next reader of that log does not go looking for it in
+this work.
 

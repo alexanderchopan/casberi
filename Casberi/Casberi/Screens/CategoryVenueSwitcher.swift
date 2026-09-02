@@ -253,45 +253,54 @@ struct CategoryVenueSwitcher: View {
             // grows 4pt → 9pt as a free consequence.
             BridgeIcon(name: venue, size: markSize, circular: true)
                 .frame(width: DS.Hit.min, height: DS.Hit.min)
-            // **A MARK SELECTS BY RING, NOT BY A WASH (prd §572).**
+            // **THE FILL COMES BACK — §541 REFUSED A RING HERE, AND I MISSED
+            // IT (prd §574, reversing §572 for this control only).**
             //
-            // The active venue sat on an 18% tint wash and every inactive one
-            // on a faint pill, so this rail was a third and fourth way of
-            // saying "selected" beneath a strip that already had two. §359
-            // settled the question one level up and gave the reason: a fill
-            // cannot speak on a brand mark, because **the mark IS its own
-            // fill** — which is why the strip's single-seat icon chip selects
-            // by a 2.5pt ring. This brings that ruling down to the rail under
-            // it, leaving one selection form per KIND of thing: a fill for a
-            // word, a ring for a mark.
+            // §572 gave every MARK a selection ring on the argument that a
+            // fill cannot speak on a brand mark. That argument holds for the
+            // strip's icon chip and for the face rail, and it does NOT hold
+            // here, for a reason §541 had already written down and
+            // `category-fold-selftest` had already guarded: **attention on a
+            // venue is itself a dashed ring on this same capsule**, so an
+            // active-AND-broken seat would draw a solid tint ring and a dashed
+            // orange one on top of each other.
             //
-            // The resting pill goes with it: it was a surface under every mark
-            // saying nothing, and bare marks on ink are what make the one
-            // ringed mark the only tinted thing in the row.
-            .overlay {
-                if isOn {
-                    let ring = Capsule(style: .continuous)
-                        .strokeBorder(DS.tint, lineWidth: 2.5)
-                    // **`matchedGeometryEffect` on EVERY version, including
-                    // 26 (prd §360, 2026-08-11).** This branched to
-                    // `glassEffectID` on iOS 26 and that branch was inert:
-                    // the decoration does nothing on a shape carrying no
-                    // `glassEffect`, and this fill is a flat 18% tint, not a
-                    // blob. So the shipped path had no travel at all while
-                    // the pre-26 fallback did — the selection teleported on
-                    // exactly the OS everyone runs, and looked correct in
-                    // every still frame.
-                    //
-                    // It is the same swap `WordChipFill` made one tier up
-                    // and reverted after frame-stepping at 60fps ("swapping
-                    // `glassEffectID` in for `matchedGeometryEffect`
-                    // silently deleted the travel it replaced"); this
-                    // control was left on the losing side of that finding.
-                    // Reduce Motion keeps the undecorated fill.
-                    if reduceMotion {
-                        ring
-                    } else {
-                        ring.matchedGeometryEffect(id: "venueActiveFill", in: ns)
+            // The fill is not a wash over the mark either, which is what made
+            // the ring look like an improvement: the mark is FULL-BLEED inside
+            // a `DS.Hit.min` seat, so the fill reads in the ANNULUS around it
+            // and never tints the face. It was already doing the job a ring
+            // would do, without the collision.
+            //
+            // The guard caught this after it had shipped to TestFlight and
+            // into an App Store submission. What it cost is one queue
+            // position; what it would have cost unguarded is a control with
+            // two rings on it.
+            .background {
+                ZStack {
+                    Capsule(style: .continuous).fill(DS.fillFaint)
+                    if isOn {
+                        let fill = Capsule(style: .continuous).fill(DS.tint.opacity(0.18))
+                        // **`matchedGeometryEffect` on EVERY version, including
+                        // 26 (prd §360, 2026-08-11).** This branched to
+                        // `glassEffectID` on iOS 26 and that branch was inert:
+                        // the decoration does nothing on a shape carrying no
+                        // `glassEffect`, and this fill is a flat 18% tint, not a
+                        // blob. So the shipped path had no travel at all while
+                        // the pre-26 fallback did — the selection teleported on
+                        // exactly the OS everyone runs, and looked correct in
+                        // every still frame.
+                        //
+                        // It is the same swap `WordChipFill` made one tier up
+                        // and reverted after frame-stepping at 60fps ("swapping
+                        // `glassEffectID` in for `matchedGeometryEffect`
+                        // silently deleted the travel it replaced"); this
+                        // control was left on the losing side of that finding.
+                        // Reduce Motion keeps the undecorated fill.
+                        if reduceMotion {
+                            fill
+                        } else {
+                            fill.matchedGeometryEffect(id: "venueActiveFill", in: ns)
+                        }
                     }
                 }
             }
