@@ -11,7 +11,7 @@
 # Usage: scripts/verify-mac.sh [--build-only]
 #   LAUNCH_CYCLES=<n>  cold-launch cycles (default 5, 0 skips)
 #   SKIP_LIVE=1        skip the network section entirely (offline runs)
-#   SKIP_LOGIC=1       skip the discovered logic self-tests (§0b) because the
+#   SKIP_LOGIC=1       skip the discovered logic self-tests (step 0b) because the
 #                      caller already ran the same set. `verify.sh` sets this
 #                      on the pass it launches in parallel and NOTHING else
 #                      does — see that block's own comment for the argument.
