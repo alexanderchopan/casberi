@@ -956,7 +956,13 @@ exit(failures == 0 ? 0 : 1)
 SWIFT
 
 echo "Assertions"
-build() { swiftc -O -o "$TMP/l2b-selftest" "$1" "$2" "$3" "$4" "$TMP/main.swift" 2>"$TMP/build.log"; }
+# `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer,
+# and it bought nothing an assertion can see — measured 3.3x faster here
+# (2026-09-02). NOT a blanket rule: `-O` can change a harness's OBSERVABLE
+# behaviour (a trapping one prints NOTHING under `-O`), so this file was
+# proven equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
+# Re-probe before trusting it again after adding mutations.
+build() { swiftc -Onone -o "$TMP/l2b-selftest" "$1" "$2" "$3" "$4" "$TMP/main.swift" 2>"$TMP/build.log"; }
 if ! build "$RATING" "$NEWS" "$ROOM" "$SHEET"; then
   echo "✗ the shipped source did not compile with the harness"
   tail -25 "$TMP/build.log"
@@ -965,7 +971,13 @@ fi
 "$TMP/l2b-selftest"
 
 echo ""
-if ! swiftc -O -o "$TMP/l2b-bundle" "$RATING" "$NEWS" "$ROOM" "$SHEET" "$DIR" \
+# `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer,
+# and it bought nothing an assertion can see — measured 3.3x faster here
+# (2026-09-02). NOT a blanket rule: `-O` can change a harness's OBSERVABLE
+# behaviour (a trapping one prints NOTHING under `-O`), so this file was
+# proven equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
+# Re-probe before trusting it again after adding mutations.
+if ! swiftc -Onone -o "$TMP/l2b-bundle" "$RATING" "$NEWS" "$ROOM" "$SHEET" "$DIR" \
      "$TMP/bundle/main.swift" 2>"$TMP/bundle.log"; then
   echo "✗ the generated bundle did not compile against the shipped model"
   tail -25 "$TMP/bundle.log"
@@ -1003,7 +1015,13 @@ PY
   fi
   # WITHOUT the directory — see the split above. Measured: including that 124KB file in
   # every mutation build took this harness past ten minutes.
-  if ! swiftc -O -o "$TMP/mut" "$a" "$b" "$c" "$d" "$TMP/main.swift" 2>/dev/null; then
+  # `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer,
+  # and it bought nothing an assertion can see — measured 3.3x faster here
+  # (2026-09-02). NOT a blanket rule: `-O` can change a harness's OBSERVABLE
+  # behaviour (a trapping one prints NOTHING under `-O`), so this file was
+  # proven equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
+  # Re-probe before trusting it again after adding mutations.
+  if ! swiftc -Onone -o "$TMP/mut" "$a" "$b" "$c" "$d" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

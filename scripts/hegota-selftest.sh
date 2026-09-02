@@ -898,7 +898,13 @@ print("  ok   \(HegotaSection.allCases.count) scopes, words, the spent bitmap, c
 SWIFT
 
 build() {
-  swiftc -O -o "$work/run" "$1" "$2" "$3" "$4" "$work/Keccak256.swift" "$work/main.swift" 2>"$work/err" || return 1
+  # `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer,
+  # and it bought nothing an assertion can see — measured 6.0x faster here
+  # (2026-09-02). NOT a blanket rule: `-O` can change a harness's OBSERVABLE
+  # behaviour (a trapping one prints NOTHING under `-O`), so this file was
+  # proven equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
+  # Re-probe before trusting it again after adding mutations.
+  swiftc -Onone -o "$work/run" "$1" "$2" "$3" "$4" "$work/Keccak256.swift" "$work/main.swift" 2>"$work/err" || return 1
 }
 
 cp "$SECTION" "$work/HegotaSection.swift"

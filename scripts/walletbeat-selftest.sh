@@ -1138,7 +1138,13 @@ if failures > 0 {
 print("walletbeat-selftest: OK — every assertion passed against the shipped source.")
 SWIFT
 
-build() { swiftc -O -o "$TMP/wb-selftest" "$1" "$2" "$3" "$4" "$SHEET" "$5" "$TMP/main.swift" 2>"$TMP/build.log"; }
+# `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer,
+# and it bought nothing an assertion can see — measured 3.6x faster here
+# (2026-09-02). NOT a blanket rule: `-O` can change a harness's OBSERVABLE
+# behaviour (a trapping one prints NOTHING under `-O`), so this file was
+# proven equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
+# Re-probe before trusting it again after adding mutations.
+build() { swiftc -Onone -o "$TMP/wb-selftest" "$1" "$2" "$3" "$4" "$SHEET" "$5" "$TMP/main.swift" 2>"$TMP/build.log"; }
 
 echo "Assertions (shipped source, compiled whole)"
 if ! build "$RATING" "$NEWS" "$ROOM" "$DIR" "$MATCH"; then
@@ -1178,7 +1184,13 @@ PY
   then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$a" "$b" "$c" "$DIR" "$d" "$e" "$TMP/main.swift" 2>/dev/null; then
+  # `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer,
+  # and it bought nothing an assertion can see — measured 3.6x faster here
+  # (2026-09-02). NOT a blanket rule: `-O` can change a harness's OBSERVABLE
+  # behaviour (a trapping one prints NOTHING under `-O`), so this file was
+  # proven equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
+  # Re-probe before trusting it again after adding mutations.
+  if ! swiftc -Onone -o "$TMP/mut" "$a" "$b" "$c" "$DIR" "$d" "$e" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

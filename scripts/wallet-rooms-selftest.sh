@@ -1624,7 +1624,13 @@ print("all assertions passed")
 SWIFT
 
 echo "wallet-rooms-selftest: compiling the five heads and the scope enum WHOLE and unmodified…"
-swiftc -O -o "$TMP/run" "$PEER" "$POOLS" "$GNOSIS" "$RAILGUN" "$SAFE" "$SECTION" "$TMP/main.swift" \
+# `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer,
+# and it bought nothing an assertion can see — measured 9.2x faster here
+# (2026-09-02). NOT a blanket rule: `-O` can change a harness's OBSERVABLE
+# behaviour (a trapping one prints NOTHING under `-O`), so this file was
+# proven equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
+# Re-probe before trusting it again after adding mutations.
+swiftc -Onone -o "$TMP/run" "$PEER" "$POOLS" "$GNOSIS" "$RAILGUN" "$SAFE" "$SECTION" "$TMP/main.swift" \
   || { echo "✗ the shipped room heads do not compile Foundation-only — something reached Thing/SwiftUI"; exit 1; }
 "$TMP/run" || exit 1
 
@@ -1664,7 +1670,13 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$target"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$a" "$b" "$c" "$d" "$e" "$g" "$TMP/main.swift" 2>/dev/null; then
+  # `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer,
+  # and it bought nothing an assertion can see — measured 9.2x faster here
+  # (2026-09-02). NOT a blanket rule: `-O` can change a harness's OBSERVABLE
+  # behaviour (a trapping one prints NOTHING under `-O`), so this file was
+  # proven equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
+  # Re-probe before trusting it again after adding mutations.
+  if ! swiftc -Onone -o "$TMP/mut" "$a" "$b" "$c" "$d" "$e" "$g" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
