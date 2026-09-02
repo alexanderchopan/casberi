@@ -80,6 +80,7 @@ at all.
 | Ruling | What it said | Changed by |
 |---|---|---|
 | §545 | The vibenet roster moves onto the room's own Accounts scope, and `VibenetAddressBookScreen` is deleted with its route | amended by §562 (the ruling stands; the deleted screen took `VibenetWatchSheet`'s ONLY presenter with it, so the roster could be renamed and unwatched from and not added to, and §479's discovery is in the empty branch — the moment you watch one account the lookup is off the screen for good. The door is restored as a head row routed through `FeedSheetRoute.vibenetWatch`, and five §517 guards re-pointed in the same move turned out to be dead) |
+| §569 | The profile card's Watch tile is tinted with the NETWORK's own hue, since that is the seat the act happens on | reversed by §570 (user: "changing different colors is going to make the language drift wont' it" — and it would: a hero tile is loud because ONE colour means "this is the act" everywhere, so a per-seat hue makes the reader learn a palette instead of a shape. §524 had already drawn the line — colour says what is happening, not where it came from — and a Watch tile is the same act on every network. §553's devnet panel is untouched: there one tinted half against one ink half carries a DISTINCTION between two verbs rather than decorating one) |
 | §165 | The whisper capsule carries the DAY BRIEF — one glass card above the agent bar on the first foreground of every calendar day, tapping through to the Today brief | superseded by §550 (that made it the last prepopulated door onto the brief after §543 deleted the rest, on the one surface that repeats forever — and the day reading was never only there: the All feed's own Today header has drawn `DayBrief.whisper` since §385 and the iPad pane since 2026-07-31, both untouched. The SLOT survives and changes subject: it teaches the hold §390 hid, once ever, retiring the first time the agent rises by any door) |
 | §167 | Item 1 — the whisper's title TRAVELS into the brief's masthead: a proxy title mounted in RootShell's own `composerOpen` transaction so the capsule's words had a live `matchedGeometryEffect` pair while the real masthead was still 400ms away | amended by §550 (the capsule opens no titled document now, so there are no words to fly and nothing on the other side to receive them — `WhisperTitleMorph`, `ShellChrome.risingBriefTitle`, the proxy overlay and the masthead's receiving modifier are all deleted. §167's other five corrections stand, and the bar↔surface SHAPE morph is a different pairing and is untouched) |
 | §386c | The kept-ask pills LEAVE the rest surface — the same chips-to-have-chips reading the suggestion row got in the same session | reversed by §543 (they were removed while sitting in a row of five identical-looking suggestions, where they read as more of the same. With every SUGGESTED chip deleted they are the opposite thing: the only content on that surface, and there only because somebody pinned it. It also repairs a hole §543 would otherwise open — "Keep" on an answer would mint a standing question with nowhere to appear, which is a control that does nothing (§83)) |
@@ -45463,4 +45464,85 @@ drawing to be wrong in.
 tinted profile tile are all compiled and none has been looked at; the sheet's
 name threshold is a character count on a centred column, which is the value most
 likely to want a measurement.
+## 570. One tint, one book door, and a stale guard's reason (user: "the devnets should all be 'create an account', and why not use blue since we do everywhere? changing different colors is going to make the language drift wont' it?", then "why do the set up screens even need to have a link to the address book? isn't that kind of confusing", then "one thing to make sure is that all the devnets have the book in their rails", 2026-09-02)
+
+Three rulings on a setup-screen mockup, and each one turned out to be about
+something already in the tree rather than about the drawing.
+
+### 1. ONE TINT. The hero tile is blue everywhere.
+
+**Reverses §569's own choice, one day old.** That entry tinted the profile
+card's Watch tile with `DS.brandHue(for: source)` on the reasoning that the
+network is the seat the act happens on. The user's objection is the stronger
+argument and it is about the LANGUAGE rather than about any one card: a hero
+tile is loud because one colour means "this is the act" everywhere, and a
+per-seat hue makes the reader learn a palette instead of a shape. §524 had
+already drawn this line — colour says what is happening, not where it came from
+— and a Watch tile is the same act on every network.
+
+The mockup that prompted this had tinted three devnet tiles three different
+ways, which is exactly the drift the user named before it shipped.
+
+**§553's devnet Home panel is NOT changed by this and the distinction matters.**
+There the venue colour is doing a different job: one half tinted and one half
+ink is how that panel says which of the two verbs the room is for, so the colour
+is carrying a DISTINCTION rather than decorating an act. A single tile has no
+sibling to be distinguished from.
+
+### 2. "Create an account" — already true, and the mockup was the thing that was wrong
+
+Every devnet create verb in the tree already says it: `HegotaKeySheet` and
+`VibenetCreateSheet` both draw "Create account" on a `DSActVerb`, and Frames'
+door says "Create an account". **The mockup drew Hegotá's tile as "Make a key",
+which is the drift the user caught — in the drawing, not the code.**
+
+**The two remaining "Make a key" verbs are deliberately NOT renamed**, and this
+is the §511 rule running the other way. In `VibenetCreateSheet` it is the
+`.refused(.noKey)` branch and in `VibenetThisPhoneRow` it is the no-key state:
+both mean *there is no key yet, make one first*, which is a PREREQUISITE and not
+the act. Renaming them would give two different consequences one word, which is
+the fault §511 spent an entry undoing ("two removes, one word").
+
+### 3. The book door leaves the setup screens, and enters every rail
+
+**Asked whether the setup screens even need a link to the address book, the
+answer is no, and the reason it was there is visible in Wallet's own intro**:
+"Add, rename or stop watching in the address book below" — the door was doing
+the ROSTER's job on a screen that had no roster.
+
+**A guard said otherwise, and its reason was stale.** `address-book-selftest.sh`
+asserted the door on `WalletScreen` with the stated reason "with nothing watched
+the rail does not draw, so this is the only way in (§461/§466)". That was true
+when written and stopped being true on 2026-08-27, when §498 put a book door in
+the SOURCES TRAY beside the avatar, the apps and the all-feed buttons — drawn
+with no gate at all. **The guard would have failed this build, which is it
+working**; what it protected has moved, so the assertion moves with it.
+
+The guard now asserts the invariant that actually holds — **there is at least
+one door no state can hide** — by reading the tray's door AND checking that the
+eight lines above it open no conditional, since a gated unconditional door is
+the same dead end wearing a passing grep. Mutation-proven both ways: the door
+removed, and the door wrapped in an `if`.
+
+**And the rails gain what the setup screens lost.** Only the WALLET rail carried
+a book door; Hegotá's and Frames' passed nothing and vibenet's passed
+`bookTitle: nil` — so three rooms drew a rail of faces with no way through to
+the ledger that names them. All four carry it now. vibenet's card takes it as a
+closure from the feed like every other destination it has, rather than reading a
+route from an environment it does not otherwise use; §545 deleted an
+`onOpenBook` from that card and said so in a comment, and this is a different
+destination — the shared book, which a devnet address is a row in like any
+other.
+
+### What is NOT built
+
+**The seven-block setup anatomy from the mockup** — the hero tile on all four
+screens, examples as a face rail, the watching roster on the screen. Each of the
+four needs its create sheet wired to a new door (Hegotá's is presented from
+`FeedScreen`, vibenet's likewise, Wallet's is the WalletConnect picker), which is
+four presentations and a §559 amendment, and landing half of it in a tree three
+sessions are pushing to is worse than landing none. The rulings above stand on
+their own and the anatomy is the next pass.
+
+**UNSEEN on a device.**
 

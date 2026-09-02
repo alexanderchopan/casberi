@@ -663,11 +663,16 @@ struct SocialProfileCard: View {
             // the handle directly above already say who. §511's one-word rule
             // for this consequence, said once.
             //
-            // The tint is the NETWORK's own colour where it has one, since
-            // that is the seat the watch happens on, falling to `DS.tint`.
-            DSActVerb(title: String(localized: "Watch"),
-                      glyph: "eye",
-                      tint: DS.brandHue(for: shown.source) ?? DS.tint) {
+            // **THE TINT IS THE APP'S, NEVER THE SEAT'S (prd §570, user: "why
+            // not use blue since we do everywhere? changing different colors
+            // is going to make the language drift won't it").** Shipped in
+            // §569 as the network's own hue and reversed here: a hero tile is
+            // loud because ONE colour means "this is the act" everywhere, and
+            // a per-seat hue makes the reader learn a palette instead of a
+            // shape. §524 already drew this line — colour says what is
+            // happening, not where it came from — and a Watch tile is the same
+            // act on every network.
+            DSActVerb(title: String(localized: "Watch"), glyph: "eye") {
                 watch()
             }
         }

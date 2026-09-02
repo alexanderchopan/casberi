@@ -86,7 +86,6 @@ struct WalletScreen: View {
                 .listRowSeparator(.hidden)
             }
 
-            bookDoorSection
             footSection
 
             Color.clear.frame(height: ShellMetrics.bottomInset - 40)
@@ -123,33 +122,6 @@ struct WalletScreen: View {
 
     // MARK: - The door to everyone else (prd §461/§466)
 
-    /// One row, one count, one chevron — a DOOR, never a list.
-    ///
-    /// It exists because the rail's own book slot is gated on the rail
-    /// showing at all (`WalletScopeRail.shows` wants more than one wallet
-    /// watched), so with nothing watched — the state a new person is in —
-    /// the book would otherwise be unreachable.
-    ///
-    /// **The count is the whole ledger now (prd §466)**, not "everyone
-    /// else": since the roster moved into the book, `book.count` is
-    /// exactly what the room behind this door will list — the same
-    /// "the count is what the room will list" rule §461 stated for the
-    /// narrower count this door used to carry.
-    private var bookDoorSection: some View {
-        Section {
-            DSSlabDoor(title: String(localized: "Address book"),
-                       detail: book.count == 1
-                           ? String(localized: "1 name")
-                           : String(localized: "\(book.count) names")) {
-                DSHaptic.selection()
-                route.push(.addressBook)
-            }
-        }
-        .listRowInsets(EdgeInsets(top: DS.Space.s6, leading: DS.Space.s4,
-                                  bottom: 0, trailing: DS.Space.s4))
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
-    }
 
     // MARK: - The foot
 

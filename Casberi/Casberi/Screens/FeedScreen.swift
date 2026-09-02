@@ -3378,7 +3378,22 @@ struct FeedScreen: View {
                             withAnimation(DS.Motion.standard) {
                                 chrome.hegotaScope = (picked?.isEmpty ?? true) ? nil : picked
                             }
-                        })
+                        },
+                        onReTap: nil,
+                        addTitle: nil,
+                        onAdd: nil,
+                        // **THE BOOK IS IN EVERY ADDRESS RAIL (prd §570, user:
+                        // "one thing to make sure is that all the devnets have
+                        // the book in their rails").** Only the Wallet rail
+                        // carried this door; the three devnets drew the same
+                        // faces with no way through to the ledger that names
+                        // them. It is the same book — §498 made it the app's
+                        // ONE people surface, and a devnet address is a row in
+                        // it like any other — so a rail of faces that cannot
+                        // reach it is the dead end the setup screens were
+                        // quietly standing in for.
+                        bookTitle: String(localized: "Address book"),
+                        onOpenBook: { route.push(.addressBook) })
                 }
                 .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                           bottom: DSRoomChassis.contentGap,
@@ -4258,7 +4273,12 @@ case .vibenetSend(let account):
                                 withAnimation(DS.Motion.standard) {
                                     chrome.framesScope = (picked?.isEmpty ?? true) ? nil : picked
                                 }
-                            })
+                            },
+                            onReTap: nil,
+                            addTitle: nil,
+                            onAdd: nil,
+                            bookTitle: String(localized: "Address book"),
+                            onOpenBook: { route.push(.addressBook) })
                     }
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                               bottom: DSRoomChassis.contentGap,
@@ -5359,6 +5379,7 @@ case .vibenetSend(let account):
                                             localSequence: sequence, editing: nil)
                                     },
                                     onScope: vibenetScoper,
+                                    onOpenBook: { route.push(.addressBook) },
                                     // WHICH READING IS ON SCREEN (prd §482).
                                     // Resolved rather than read raw: a scope
                                     // remembered from a room whose last key has

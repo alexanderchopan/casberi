@@ -528,8 +528,38 @@ grep -qs 'route.push(.addressBook)' "$SHELL_MAIN" "Casberi/Casberi/Screens/FeedS
   || { echo "✗ the wallet rail's address-book slot is gone — the room would be reachable only from the roster (§461)"; exit 1; }
 grep -qs 'bookTitle: String(localized: "Address book")' "$SHELL_MAIN" "Casberi/Casberi/Screens/FeedScreen.swift" \
   || { echo "✗ the rail's book door lost its name — the slot is captionless, so the label IS its only naming (VoiceOver and the Mac tooltip)"; exit 1; }
-grep -q 'route.push(.addressBook)' "$SCREEN" \
-  || { echo "✗ the setup screen lost its door to the book — with nothing watched the rail does not draw, so this is the only way in (§461/§466)"; exit 1; }
+# **THE UNCONDITIONAL DOOR IS THE TRAY'S, NOT THE SETUP SCREEN'S (prd §570,
+# user: "why do the set up screens even need to have a link to the address
+# book? isn't that kind of confusing").**
+#
+# This guard used to read the SETUP screen, on the stated reason that "with
+# nothing watched the rail does not draw, so this is the only way in". That was
+# true when it was written and is not any more: §498 (2026-08-27) put a book
+# door in the sources tray beside the avatar, the apps and the all-feed
+# buttons, and it is drawn with NO gate at all — no `if`, no count, no watched
+# list. The book is reachable from a fresh install with nothing watched.
+#
+# So the invariant that actually holds is asserted instead: there is at least
+# one door that no state can hide. That is the stronger check, and it is what
+# lets the setup screens drop theirs — where the door was doing the roster's
+# job anyway, which Wallet's own intro said out loud ("Add, rename or stop
+# watching in the address book below").
+grep -q 'action: onOpenAddressBook' "Casberi/Casberi/Shell/SourcesOverlay.swift" \
+  || { echo "✗ the sources tray lost its address-book door — that is the ONE door no state can hide, and every other way in (the rails) needs something already watched (§498/§570)"; exit 1; }
+python3 - <<'GATE' || exit 1
+import re, sys
+src = open("Casberi/Casberi/Shell/SourcesOverlay.swift", encoding="utf-8").read()
+i = src.find("action: onOpenAddressBook")
+if i < 0:
+    sys.exit(0)
+# The eight lines above the door must not open a conditional around it: the
+# whole point is that this door is drawn unconditionally.
+above = src[:i].split("\n")[-8:]
+if any(re.match(r"\s*(if|guard)\b", line) for line in above):
+    print("✗ the sources tray's address-book door grew a condition — it is the")
+    print("  unconditional way in, and gating it re-creates the dead end §570 removed")
+    sys.exit(1)
+GATE
 grep -q 'case addressBook' "$ROUTE" \
   || { echo "✗ the address book has no route node"; exit 1; }
 grep -q 'AddressBookScreen()' "$SHELL_MAIN" \

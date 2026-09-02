@@ -107,7 +107,6 @@ struct VibenetScreen: View {
             .listRowSeparator(.hidden)
 
             if connected {
-                bookDoorSection
 
                 BridgeDisconnectSection(
                     bridgeID: VibenetIdentity.seatID, name: VibenetIdentity.source,
@@ -124,31 +123,6 @@ struct VibenetScreen: View {
         .dsScreenTitle("Base Vibenet")
     }
 
-    /// The door to the roster, pointing at the SHARED book since §545 — the
-    /// per-devnet screen is deleted and these accounts are in `AddressBook`
-    /// already, badged `vibenet` by `VibenetWatch.add`.
-    ///
-    /// The door survives the screen because its job here was never navigation
-    /// alone: it doubles as this page's only tally of what you have picked so
-    /// far, which is why it is a count and not a roster. Two slots, never one
-    /// joined string — the count is what the screen behind it will LIST, so
-    /// the two can never disagree (§461's own lesson, where a door read
-    /// "6 names" over a room whose head said "Everyone else · 4").
-    private var bookDoorSection: some View {
-        Section {
-            DSSlabDoor(title: String(localized: "Address book"),
-                       detail: watch.addresses.count == 1
-                           ? String(localized: "1 account")
-                           : String(localized: "\(watch.addresses.count) accounts")) {
-                DSHaptic.selection()
-                route.push(.addressBook)
-            }
-        }
-        .listRowInsets(EdgeInsets(top: DS.Space.s6, leading: DS.Space.s4,
-                                  bottom: 0, trailing: DS.Space.s4))
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
-    }
 
     /// An address was just watched, from either control. Registers the seat
     /// and warms the room. **It does not navigate** — see the header doc.
