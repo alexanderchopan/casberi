@@ -866,19 +866,43 @@ struct HegotaRoomFigure: View {
     @ViewBuilder private var coinsFigure: some View {
         let drawn = tiledCoins
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text(coinsLine)
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
+            // **THROUGH `figureCaption`, like every other scope.** This was a
+            // bare `Text`, so it took neither of that helper's two guarantees:
+            // the 56pt settings-gear clearance, and a line clamp — and an
+            // unclamped caption is what turns the 4pt overflow below into a
+            // 20pt one on a set whose sentence happens to wrap.
+            figureCaption(coinsLine, lines: 1)
             if !drawn.isEmpty {
-                // **SIZED TO WHAT IS LEFT OF THE SLOT.** `DSRoomSlot` is a fixed
-                // 210pt and reserves 30 for the headline; with the caption and
-                // the stack's gaps above it, 144 is what remains.
+                // **SIZED TO WHAT IS LEFT OF THE SLOT, AND THE SUM IS WRITTEN
+                // DOWN** (prd §555 follow-up, user: *"hegota utxo treemap is
+                // clipping on the rail below it"*).
+                //
+                // `DSRoomSlot` is a hard 210pt with `.clipped()`, less its
+                // 30pt reserved headline row AND that row's own `DS.Space.s3`
+                // bottom pad — 14 on iOS, and the part that is easy to miss
+                // because it lives in the chassis rather than here. So the
+                // figure's budget is **166**, exactly as `frameRows` says.
+                //
+                // 144 did not fit and never had: caption 16 + the stack's gap
+                // 10 + 144 is 170, four points over, so `.clipped()` shaved
+                // the map's bottom row against the rail slab directly beneath
+                // (that section is emitted at `bottom: 0` / `top: 0`, so the
+                // cut edge lands flush on the rail).
+                //
+                // 128 spends 16 + 10 + 128 = 154 and leaves 12 of slack, which
+                // is what absorbs a step of Dynamic Type — `label12` is
+                // `.caption1`-relative and the slot is not, the same reasoning
+                // `frameRows` keeps 16 for.
                 //
                 // It was 116 while the census line sat underneath, and 116 + a
                 // two-line census is 180 in a 168pt box — so the slot clipped,
                 // silently, and the map lost its bottom edge (prd §555, user:
                 // *"we need to get rid of the '1% of everything…' helper text
-                // bc it clips the image of the treemap"*).
-                UnitTreemap(count: drawn.count, height: 144, cell: { i in
+                // bc it clips the image of the treemap"*). Raising it to 144
+                // fixed that clip by overrunning the budget by less.
+                //
+                // **Re-do this sum before raising it.**
+                UnitTreemap(count: drawn.count, height: 128, cell: { i in
                     tile(drawn[i], rank: i)
                 }, readout: { i in
                     switch drawn[i] {
@@ -956,7 +980,7 @@ struct HegotaRoomFigure: View {
     ///
     /// `rank` is the treemap slot. **Slots 0 and 1 are two units tall and
     /// everything after is one** (`UnitTreemap.frames(4)`), and one unit is
-    /// 42pt — enough for a single `callout15` line and not for two, so the
+    /// 36pt — enough for a single `callout15` line and not for two, so the
     /// short cells set their amount and share on ONE line rather than clipping
     /// the second. Coupling the cell to the table is the same coupling the
     /// fold above already makes, and it is stated rather than discovered.
@@ -1019,7 +1043,16 @@ struct HegotaRoomFigure: View {
                 Spacer(minLength: 0)
             }
         }
-        .padding(DS.Space.s2)
+        .padding(.horizontal, DS.Space.s2)
+        // **A SHORT CELL CANNOT AFFORD `s2` TOP AND BOTTOM, AND NEVER COULD.**
+        // One unit is `(height - 2 × gap) / 3` = 36pt at the height above (it
+        // was 41 at 144), while a one-unit cell's content is 10 + a `callout15`
+        // line of 25 + 10 = 45. So the row overran its own frame at BOTH
+        // heights — the amount sat hard against the cell's bottom edge and the
+        // fill stopped short of the text. `s1` takes it to 4 + 25 + 4 = 33,
+        // inside 36 with room to spare, and leaves the two-unit heroes at `s2`
+        // where they have 82pt for 66pt of content.
+        .padding(.vertical, tall ? DS.Space.s2 : DS.Space.s1)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background {
             ZStack {
