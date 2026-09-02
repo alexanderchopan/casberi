@@ -359,18 +359,40 @@ struct RootShell: View {
                 // KeyedThing value-keying) touches the store.
                 try? await Task.sleep(for: .milliseconds(400))
                 guard !Task.isCancelled else { return }
+                // INTERRUPTIBLE, not shorter (PERF 2026-09-01, perf-spec
+                // P5.4). Yielding past the first frame was only half the
+                // answer: 400ms later is exactly when the person starts
+                // scrolling, and until now each of these held the main actor
+                // for a whole-corpus walk in one uninterruptible call. Each
+                // one below is chunked with a `Task.yield()` between chunks
+                // (`ImportCommit`'s shape), so the same total work becomes a
+                // run of short blocks the run loop can draw between. Nothing
+                // was truncated and no `fetchLimit` was added — a scan that
+                // silently stops short is a different bug, not a fix.
+                //
+                // NOT MEASURED. No number has been taken before or after; the
+                // claim here is structural (the work no longer runs in one
+                // block), which is the only claim this change is entitled to
+                // make until a scroll is sampled on the reference corpus.
+                //
                 // Every launch: Spotlight reconciles and CloudKit-merge
                 // duplicates collapse (covers extension writes + sync merges).
                 #if DEBUG
-                LaunchPerf.time("SpotlightIndex.reindexAll") {
-                    SpotlightIndex.reindexAll(context: modelContext)
+                // `[wall]` because these now yield: the figure is elapsed
+                // time across the suspensions, not main-actor time held, and
+                // it is NOT comparable with the pre-2026-09-01 numbers in
+                // `scripts/output/*/perf.txt` under the old label. Expect it
+                // to read HIGHER while the thing it measures gets better —
+                // which is exactly the misreading a renamed label prevents.
+                await LaunchPerf.timeAsync("SpotlightIndex.reindexAll[wall]") {
+                    await SpotlightIndex.reindexAll(context: modelContext)
                 }
-                LaunchPerf.time("SyncReconcile.dedupe") {
-                    SyncReconcile.dedupeBySourceRef(context: modelContext)
+                await LaunchPerf.timeAsync("SyncReconcile.dedupe[wall]") {
+                    await SyncReconcile.dedupeBySourceRef(context: modelContext)
                 }
                 #else
-                SpotlightIndex.reindexAll(context: modelContext)
-                SyncReconcile.dedupeBySourceRef(context: modelContext)
+                await SpotlightIndex.reindexAll(context: modelContext)
+                await SyncReconcile.dedupeBySourceRef(context: modelContext)
                 #endif
 
                 // One-time migrations run once per install (bump the version
@@ -395,13 +417,33 @@ struct RootShell: View {
                         // One-time move (2026-07-07): voice audio used to live as
                         // loose files keyed by sourceRef; it belongs in the store
                         // so sync carries it. Load each file in, then remove it.
+                        //
+                        // CHUNKED (PERF 2026-09-01): the only unqualified fetch
+                        // in this block — `kind` is a transformable-backed
+                        // column this file has no `#Predicate` precedent for,
+                        // so the filter is in Swift and the walk is the whole
+                        // corpus. It also does file I/O per row, which is the
+                        // one thing here that is genuinely slow rather than
+                        // merely numerous. Same rows, same files, same moves;
+                        // only the walk is sliced. Liveness: `voiceThings` is
+                        // now held across yields, so each row is re-checked
+                        // inside its chunk before `kind`/`audio`/`sourceRef`
+                        // are read (corollary 6).
                         let voiceThings = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
-                        for thing in voiceThings where thing.kind == .voice && thing.audio == nil {
-                            guard let ref = thing.sourceRef,
-                                  let url = VoiceCapture.audioURL(for: ref),
-                                  let data = try? Data(contentsOf: url) else { continue }
-                            thing.audio = data
-                            try? FileManager.default.removeItem(at: url)
+                        var v = 0
+                        while v < voiceThings.count {
+                            let end = min(v + 500, voiceThings.count)
+                            for n in v..<end where voiceThings[n].isLive {
+                                let thing = voiceThings[n]
+                                guard thing.kind == .voice, thing.audio == nil,
+                                      let ref = thing.sourceRef,
+                                      let url = VoiceCapture.audioURL(for: ref),
+                                      let data = try? Data(contentsOf: url) else { continue }
+                                thing.audio = data
+                                try? FileManager.default.removeItem(at: url)
+                            }
+                            v = end
+                            if v < voiceThings.count { await Task.yield() }
                         }
                         // One-time retitle (2026-07-07): early screenshot ingests
                         // carried the timestamp in the title — pure noise.
@@ -498,7 +540,7 @@ struct RootShell: View {
                         // Fixing the prefix list alone reaches nothing already
                         // landed, so this is the repair for devices that have
                         // them today. It refuses while a demo is live.
-                        _ = DemoSeedAll.sweepEscapedRows(modelContext)
+                        _ = await DemoSeedAll.sweepEscapedRows(modelContext)
                     }
                     modelContext.saveHonestly()
                     UserDefaults.standard.set(migrationsCurrent, forKey: migrationsKey)
@@ -3567,9 +3609,41 @@ struct RootShell: View {
         #if DEBUG
         let t0 = Date.now
         #endif
-        let rows = (try? modelContext.fetch(FetchDescriptor<Thing>(
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-        ))) ?? []
+        var d = FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        // LIGHT-COLUMNED (PERF 2026-09-01). Unbounded is correct here and is
+        // not the cost being paid: arithmetic over the corpus ("how many
+        // things", "what tags do I have") must see every row or it is a wrong
+        // answer, so this fetch may never carry a `fetchLimit`. What it may
+        // stop carrying is the heavy inline text.
+        //
+        // WHAT EVERY CONSUMER ACTUALLY READS, checked one by one rather than
+        // assumed: `tagsDoc`/`matchedTag`/`tagTile` read `tags`; `knownSources`
+        // reads `source`; `AggregateAsk`/`StatusAsk` read `capturedAt`,
+        // `source`, `kind`, `likeCount`, `repostCount`; the evidence filter
+        // reads `id`. All of them are in `lightColumns`. The retrieval branch
+        // does NOT rank over this array at all — `hits` come from `retrieve`,
+        // which has its own scoped window — so the ranker's need for `content`
+        // is not served from here and never was.
+        //
+        // THE COMBINATION THAT IS A DEFECT IS NOT THIS ONE. `propertiesToFetch`
+        // paired with a `#Predicate` can hand back a set the predicate never
+        // selected, including an empty one, and differs across OS versions —
+        // that is the 2026-08-31 source-room regression, and it is why
+        // `FeedScreen`'s source branch deliberately carries no column list.
+        // This fetch has NO predicate, which is the All room's configuration
+        // and has been correct in ship for months.
+        //
+        // The residue is a FAULT, never a wrong row: `TodayBrief` and
+        // `KeptAskComposers` read `content`/`enrichedText`/`postText` for the
+        // handful of rows a module actually shows, and those fault on first
+        // touch — a cheap local read, once, on a few rows, in place of
+        // hydrating the heavy text for every row in the store on every ask.
+        // That is the same trade `lightColumns`' own doc-comment describes.
+        //
+        // UNMEASURED on device; the `askPerf| fullCorpus=` line below is the
+        // before/after number, and it is Debug-only.
+        d.propertiesToFetch = FeedScreen.lightColumns
+        let rows = (try? modelContext.fetch(d)) ?? []
         #if DEBUG
         NSLog("[Casberi] askPerf| fullCorpus=%dms rows=%d",
               Int(Date.now.timeIntervalSince(t0) * 1000), rows.count)

@@ -39,6 +39,28 @@ enum LaunchPerf {
         return v
     }
 
+    /// `time`'s async twin (2026-09-01), for a block that yields partway
+    /// through. Named apart rather than overloaded: an `async` overload of
+    /// `time` resolves silently by context, and a call site that forgot its
+    /// `await` would quietly measure something else.
+    ///
+    /// SAME WIRE FORMAT as `time` on purpose — `perf.sh` greps
+    /// `timed=<label> took=<n>ms` and takes whatever labels it finds, so a
+    /// spelling of its own would have made an already-reported number
+    /// silently stop being reported. What the number MEANS does change: it is
+    /// wall time across the suspensions, not main-actor time held, and those
+    /// are the same figure only for a block that never yields. That is a
+    /// distinction a format can't carry, so the CALL SITE carries it — see
+    /// `RootShell`'s `[wall]` labels.
+    @MainActor
+    static func timeAsync<T>(_ label: String, _ work: () async -> T) async -> T {
+        let t0 = Date()
+        let v = await work()
+        let ms = Date().timeIntervalSince(t0) * 1000
+        NSLog("[Casberi] launchPerf timed=%@ took=%.1fms", label, ms)
+        return v
+    }
+
     /// Accumulates total time under a label across a launch, so a derivation
     /// that runs cheaply but MANY times shows its real aggregate cost — the
     /// shape that matters once per-call time is already small.

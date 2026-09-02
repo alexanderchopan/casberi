@@ -360,16 +360,61 @@ enum EmbeddingIndex {
 
     private static var isSweeping = false
 
+    /// How many 32-row batches ONE foreground sweep may commit (PERF
+    /// 2026-09-01, perf spec P5.3). 8 × 32 = 256 things per activation.
+    ///
+    /// **Every batch ends in a `saveHonestly()`, and every save re-emits every
+    /// live `@Query`** — which means it rebuilds the feed the person is
+    /// looking at. Unbounded, that is not one rebuild, it is a TRAIN of them:
+    /// a batch is 32 real inference calls at a few ms each, so the saves land
+    /// roughly ten a second for as long as the sweep runs. On the 13,412-row
+    /// corpus `AgentOpenCache` measured against, draining is 419 batches —
+    /// about fifty seconds of continuous rebuilding — and build 281's report
+    /// puts the sweep at MINUTES on a freshly-synced corpus, which is the same
+    /// window that report describes an ask racing into.
+    ///
+    /// **The bound is structural, not a tuned number.** It is sized to one
+    /// activation: 8 batches is on the order of a second of sweeping, which
+    /// fits inside the burst `RootShell.runForegroundWork` already pays on
+    /// every activation (the bridge sweeps, the kept-ask digest recompute,
+    /// `SyncReconcile`, the Spotlight reindex). So the sweep adds no NEW period
+    /// of jank rather than merely a shorter one.
+    ///
+    /// **What it costs is latency-to-fully-indexed, never correctness**, and
+    /// that is the whole trade. The sweep re-arms on EVERY activation, so a
+    /// bounded pass is resumed rather than abandoned; each pass makes strict
+    /// progress (a stamped vector — an empty one for unembeddable text — is
+    /// never re-selected). Two things make the latency cheap: the fetch is
+    /// NEWEST FIRST, so what a person just captured is embedded in the first
+    /// batch of the first pass, and a thing the sweep hasn't reached is still
+    /// retrievable by keyword — the degradation this file already documents.
+    /// A large first-run backfill therefore completes over tens of activations
+    /// instead of one long one.
+    ///
+    /// In STEADY STATE the bound never binds: an ordinary foreground's
+    /// arrivals are well under 256, so the sweep drains completely and behaves
+    /// exactly as it did. It bites only on the first-run and big-sync
+    /// backfills — which is the case it exists for. UNMEASURED, like every
+    /// number in the perf spec: no reading here has been taken on hardware.
+    private static let foregroundBatchBudget = 8
+
     /// Fire-and-forget: embed everything not yet indexed, off the critical path.
     /// Single-flighted and idempotent — safe to call every foreground. The
     /// answer path stays keyword-only for anything the sweep hasn't reached yet.
+    ///
+    /// **The batch bound lives HERE and not on `indexPending`** — this is the
+    /// path that runs on every activation while somebody is watching the feed,
+    /// so it is the path that owns the "how much per pass" policy. The two
+    /// headless probes (`-answerProbe`, `-byokProbe`) call `indexPending`
+    /// directly and must keep draining, or a semantic ask over a large corpus
+    /// stops being deterministic — which is the whole reason they index first.
     @MainActor
     static func backfill(context: ModelContext) {
         guard isAvailable, !isSweeping else { return }
         isSweeping = true
         Task { @MainActor in
             defer { isSweeping = false }
-            let n = await indexPending(context: context)
+            let n = await indexPending(context: context, maxBatches: foregroundBatchBudget)
             if n > 0 { NSLog("[Casberi] EmbeddingIndex: embedded %d things", n) }
             // Only once the new work is done: retire vectors written in the
             // wrong language (see `remedyMistagged`). Bounded and cursored, so
@@ -381,17 +426,30 @@ enum EmbeddingIndex {
     }
 
     /// Embed things with no vector yet — newest first, so what a person just
-    /// captured becomes semantically searchable soonest. Loops until the
-    /// store drains. Returns the count embedded. Awaited directly by the
-    /// headless probe.
+    /// captured becomes semantically searchable soonest. Returns the count
+    /// embedded. Awaited directly by the headless probes.
+    ///
+    /// `maxBatches` caps how many 32-row batches — and therefore how many
+    /// saves, and therefore how many feed rebuilds — one call may commit; see
+    /// `foregroundBatchBudget`, which is what the live sweep passes. **nil
+    /// means drain**, which is the default because that is what the probes
+    /// need and what this has always done: the bound is the foreground sweep's
+    /// policy, not this function's. A bounded call leaves the rest pending and
+    /// the next call resumes it — the fetch selects on `embedding == nil`, so
+    /// there is no cursor to keep and no work to lose.
     @MainActor
     @discardableResult
-    static func indexPending(context: ModelContext) async -> Int {
+    static func indexPending(context: ModelContext, maxBatches: Int? = nil) async -> Int {
         guard isAvailable else { return 0 }
         let batchSize = 32
         var total = 0
+        var batches = 0
         var landed: [NLLanguage: Int] = [:]
         while true {
+            // Checked before the FETCH, not after the save: reaching the bound
+            // and then reading 32 more rows just to discard them would pay the
+            // pass's most expensive main-actor step for nothing.
+            if let cap = maxBatches, batches >= cap { break }
             var descriptor = FetchDescriptor<Thing>(
                 predicate: #Predicate { $0.embedding == nil },
                 sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
@@ -416,6 +474,7 @@ enum EmbeddingIndex {
             }
             context.saveHonestly()
             total += batch.count
+            batches += 1
             await Task.yield()
         }
         if !landed.isEmpty { recordDominant(landed) }

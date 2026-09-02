@@ -368,19 +368,43 @@ enum DemoSeedAll {
     /// `refPrefixes` list, which would take a legitimately seeded demo apart —
     /// and refuses while a demo is live, since in that state these rows are
     /// exactly the demo the person is looking at. Returns the number removed.
+    ///
+    /// CHUNKED, so the walk is interruptible (PERF 2026-09-01, perf-spec
+    /// P5.4). The fetch is unqualified — a `sourceRef` prefix test is not
+    /// something a `#Predicate` can carry across ~30 prefixes — so this is a
+    /// whole-corpus walk on the main actor, running 400ms after the first
+    /// frame from the migration block. It is once per install, which bounds
+    /// how OFTEN it costs and not how MUCH: the install it runs on is
+    /// precisely the one whose corpus has just arrived from the zone.
+    ///
+    /// Same rows, same prefixes, same single save. Only the WALK is sliced,
+    /// never the fetch (`AgentOpenCache.scanPaged`'s ruling — no index on the
+    /// sort key, so paging re-sorts per page). The delete runs after the last
+    /// yield with nothing suspending in between, so the one `.live` filter
+    /// there covers it (corollary 6's own condition); the collect loop
+    /// re-checks per row, since a heal can delete one mid-walk and reading
+    /// `sourceRef` off a tombstone traps.
     @MainActor
     @discardableResult
-    static func sweepEscapedRows(_ context: ModelContext) -> Int {
+    static func sweepEscapedRows(_ context: ModelContext, chunk: Int = 1500) async -> Int {
         guard !DemoMode.isActive else { return 0 }
         let sweep = escapedPrefixes + retiredPrefixes
         let all = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
-        let orphans = all.filter { thing in
-            guard let ref = thing.sourceRef else { return false }
-            return sweep.contains { ref.hasPrefix($0) }
+        var orphans: [Thing] = []
+        var i = 0
+        while i < all.count {
+            let end = min(i + chunk, all.count)
+            for n in i..<end where all[n].isLive {
+                guard let ref = all[n].sourceRef else { continue }
+                if sweep.contains(where: { ref.hasPrefix($0) }) { orphans.append(all[n]) }
+            }
+            i = end
+            if i < all.count { await Task.yield() }
         }
-        for thing in orphans { context.delete(thing) }
-        if !orphans.isEmpty { context.saveHonestly() }
-        return orphans.count
+        let doomed = orphans.filter(\.isLive)
+        for thing in doomed { context.delete(thing) }
+        if !doomed.isEmpty { context.saveHonestly() }
+        return doomed.count
     }
 
     // MARK: - Entry point

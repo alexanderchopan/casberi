@@ -463,6 +463,30 @@ python3 "$ROOT/scripts/body-publish-audit.py" \
   || fail "a view body writes the observable state it reads — see the output above"
 print -P "%F{green}✓ body-publish audit%f"
 
+# An UNBOUNDED whole-corpus `FetchDescriptor<Thing>` on a main-actor path is
+# this codebase's most-repeated performance bug: it has re-entered at least
+# four times by four different routes (the kept-ask branches, the Composer's
+# settle block, the two `@Query`-staleness safety nets, and the rooms' own body
+# writes), and every one of them was found by sampling a device rather than by
+# any check here. It is invisible to everything else: it compiles, it renders
+# correctly, and it only hurts in proportion to how much the person has saved —
+# so it ships fine and then degrades for exactly the people who use the app
+# most. The registry is the point: an entry names the mechanism that makes an
+# unbounded read correct there (a dedupe must see every row; arithmetic over
+# the corpus must see every row; the pinned room is as long as you made it by
+# hand), so switching the check off for a file is not something anyone can do
+# quietly. Its stated ceiling, in its own docstring: it holds the WHOLE-corpus
+# class plus the @Query-backed render-path cases, NOT every predicated fetch in
+# the tree — that was measured at 163 entries, nearly all off-render-path
+# bridge dedupe reads, which is a snooze wearing a registry's clothes
+# (`ref-shape-audit.py`'s refused reverse direction, same reasoning).
+step "Fetch-bound audit"
+python3 "$ROOT/scripts/fetch-bound-audit.py" --self-test >/dev/null \
+  || fail "the fetch-bound audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/fetch-bound-audit.py" \
+  || fail "an unbounded whole-corpus fetch sits on a main-actor path — see the output above"
+print -P "%F{green}✓ fetch-bound audit%f"
+
 # A room head matches its rows by ref prefix, the bridge stamps that prefix in
 # a different file, and nothing checked the two agree. When they stop agreeing
 # the room does not break, it goes QUIET — every row still landed, the head

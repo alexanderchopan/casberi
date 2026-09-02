@@ -38,7 +38,34 @@ enum SyncReconcile {
     ///
     /// Splitting them changes no outcome: the two groups never compare against
     /// each other, so running them separately is the same walk in two parts.
-    static func dedupeBySourceRef(context: ModelContext) {
+    ///
+    /// CHUNKED, so both walks are interruptible (PERF 2026-09-01, perf-spec
+    /// P5.4). Pass 1's fetch is unqualified — every row in the corpus, and the
+    /// 2026-07-31 split above made it CHEAP per row without making it
+    /// BOUNDED — and it runs 400ms after the first frame, i.e. while the
+    /// person is starting to scroll. Same rows, same signatures, same
+    /// duplicates, same single save; the difference is that the walk is now a
+    /// run of short blocks the run loop can draw between instead of one
+    /// uninterruptible main-actor call.
+    ///
+    /// Not a truncation: no `fetchLimit` is added to either fetch, and a
+    /// duplicate seen after any yield is collapsed exactly as before. Only the
+    /// WALK is sliced, never the fetch — paging a `createdAt`-sorted fetch
+    /// would re-sort the table per page (`AgentOpenCache.scanPaged`'s ruling),
+    /// which trades a freeze for a longer total wait.
+    ///
+    /// The delete runs AFTER the last yield with no suspension of its own, so
+    /// one `.live` filter at that point is the whole guard: from there the
+    /// main actor is held exclusively and nothing can delete underneath it.
+    /// That is corollary 6's own stated condition, spelled out here because it
+    /// is the reason this doesn't need a re-check per delete.
+    ///
+    /// LIVENESS: `withRefs` and `looseThings` are both held across yields —
+    /// the corollary-6 shape, and this function's own concurrent heal (a
+    /// bridge sweep deleting upstream-gone rows) is exactly what makes it
+    /// real. Every row is re-checked inside its chunk immediately before it is
+    /// read, the way `scanPaged` does it.
+    static func dedupeBySourceRef(context: ModelContext, chunk: Int = 1500) async {
         guard SharedStore.syncEnabled else { return }
 
         // Pass 1 — the sourceRef duplicates. Three columns, no text. `createdAt`
@@ -51,9 +78,16 @@ enum SyncReconcile {
 
         var seenRefs: Set<String> = []
         var duplicates: [Thing] = []
-        for thing in withRefs {
-            guard let ref = thing.sourceRef, !ref.isEmpty else { continue }
-            if seenRefs.contains(ref) { duplicates.append(thing) } else { seenRefs.insert(ref) }
+        var i = 0
+        while i < withRefs.count {
+            let end = min(i + chunk, withRefs.count)
+            for n in i..<end where withRefs[n].isLive {
+                let thing = withRefs[n]
+                guard let ref = thing.sourceRef, !ref.isEmpty else { continue }
+                if seenRefs.contains(ref) { duplicates.append(thing) } else { seenRefs.insert(ref) }
+            }
+            i = end
+            if i < withRefs.count { await Task.yield() }
         }
 
         // Pass 2 — the ref-less captures, fully hydrated because the signature
@@ -68,21 +102,34 @@ enum SyncReconcile {
         let looseThings = (try? context.fetch(looseDescriptor)) ?? []
 
         var seenSignatures: [String: Date] = [:]
-        for thing in looseThings {
-            // Nothing meaningful to compare (an empty note) — never collapse.
-            guard !thing.title.isEmpty || !thing.content.isEmpty else { continue }
-            let signature = "\(thing.kind.rawValue)|\(thing.source)|\(thing.title)|\(thing.content)"
-            if let priorCreatedAt = seenSignatures[signature],
-               abs(thing.createdAt.timeIntervalSince(priorCreatedAt)) < exactMatchWindow {
-                duplicates.append(thing)
-            } else {
-                seenSignatures[signature] = thing.createdAt
+        var j = 0
+        while j < looseThings.count {
+            let end = min(j + chunk, looseThings.count)
+            for n in j..<end where looseThings[n].isLive {
+                let thing = looseThings[n]
+                // Nothing meaningful to compare (an empty note) — never collapse.
+                guard !thing.title.isEmpty || !thing.content.isEmpty else { continue }
+                let signature = "\(thing.kind.rawValue)|\(thing.source)|\(thing.title)|\(thing.content)"
+                if let priorCreatedAt = seenSignatures[signature],
+                   abs(thing.createdAt.timeIntervalSince(priorCreatedAt)) < exactMatchWindow {
+                    duplicates.append(thing)
+                } else {
+                    seenSignatures[signature] = thing.createdAt
+                }
             }
+            j = end
+            if j < looseThings.count { await Task.yield() }
         }
-        guard !duplicates.isEmpty else { return }
 
-        SpotlightIndex.remove(ids: duplicates.map(\.id))
-        for duplicate in duplicates { context.delete(duplicate) }
+        // The last await is above; from here nothing suspends, so this one
+        // filter covers every read below (corollary 6's own condition). A row
+        // collected before a yield may have been deleted by a heal since —
+        // reading `.id` off it, or deleting it twice, is the trap.
+        let doomed = duplicates.filter(\.isLive)
+        guard !doomed.isEmpty else { return }
+
+        SpotlightIndex.remove(ids: doomed.map(\.id))
+        for duplicate in doomed { context.delete(duplicate) }
         context.saveHonestly()
     }
 }

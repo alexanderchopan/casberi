@@ -392,6 +392,61 @@ struct ThingFact: Hashable, Identifiable, Sendable {
 /// the defaults exist for the schema, not for callers.
 @Model
 final class Thing {
+    /// Local B-tree indexes on the columns the hot fetches sort and filter by
+    /// (2026-09-01, perf spec P5.1). `#Index` is `@available(iOS 18, …)` and
+    /// this target deploys to 18.0, so it needs no availability gate — checked
+    /// against the SDK's own `SwiftData.swiftinterface`, not remembered.
+    ///
+    /// **This is not a schema migration and not a CloudKit ship.** An index
+    /// declares no stored property, so it mints no `CD_*` field, needs no row
+    /// in `docs/cloudkit-schema.ckdb`, and needs no `ThingSchemaVN` stage:
+    /// `ThingSchemaVersioning`'s own rule names a rename, a type change, or a
+    /// removed property whose data must move, and an index is none of the
+    /// three. It is also NOT `#Unique`, which sits beside it in the API and IS
+    /// banned under CloudKit mirroring (see the class doc above) — an index
+    /// constrains nothing, it only tells SQLite where to look.
+    ///
+    /// Each one names the read it exists for:
+    ///
+    ///   · **`capturedAt`** — every room sorts on it, descending, as do both
+    ///     `EmbeddingIndex` sweeps. Its absence is already on record as a
+    ///     decision rather than an oversight: `AgentOpenCache` refused to page
+    ///     its corpus walk because "`Thing.capturedAt` carries no index, so
+    ///     every page would re-sort the whole table." This retroactively
+    ///     legalises that paging.
+    ///   · **`source, capturedAt`** — the compound is what a SOURCE room
+    ///     actually asks (`WHERE source = ? ORDER BY capturedAt DESC`), which
+    ///     one index answers in a single ordered walk instead of a filter and
+    ///     then a sort. **There is deliberately NO standalone `source` index**:
+    ///     a B-tree already serves an equality test on its LEADING column, so
+    ///     the bare `source ==` reads — `MainSurface.newestPerSource`, once per
+    ///     source seat, and `existingSourceRefs(_:source:)` — are covered by
+    ///     this one. A second index on the same leading column would buy
+    ///     nothing and still be paid for on every insert.
+    ///   · **`sourceRef`** — the dedupe key, and the most-repeated lookup in
+    ///     the app. `IngestSupport.existingSourceRefs` is called from 76 sites
+    ///     and runs on every ingest pass of every bridge, and 32 more files
+    ///     point-look-up a single `sourceRef == ref`. Every one of those was a
+    ///     table scan.
+    ///   · **`pinnedAt`** — the pinned room is `WHERE pinnedAt != nil ORDER BY
+    ///     pinnedAt DESC` and is deliberately UNBOUNDED (a ceiling there could
+    ///     hide a row you pinned on purpose), and `Pinboard.hasAny` asks the
+    ///     same predicate on mount, foreground and arrival. Nearly every row is
+    ///     nil, which is the shape an index answers best and a scan worst.
+    ///
+    /// **THE KNOWN COST, stated because it is real: an index is paid on every
+    /// WRITE, and this app's writes arrive in bursts.** A bulk import lands
+    /// thousands of rows in one afternoon through `ImportCommit` — a chunk is a
+    /// commit — and every insert now maintains four B-trees instead of none.
+    /// There is also a one-time build when an existing store first opens
+    /// against this schema, which lands on a launch nobody chose.
+    ///
+    /// **Both costs are UNMEASURED on this host**, and so is the read win: no
+    /// number here has been taken on real hardware in Release (perf spec P0).
+    /// If an import or a launch gets slower, this is the first thing to A/B —
+    /// interleaved, on a drained corpus, per the spec's method rule 2.
+    #Index<Thing>([\.capturedAt], [\.source, \.capturedAt], [\.sourceRef], [\.pinnedAt])
+
     var id: UUID = UUID()
     var kind: ThingKind = ThingKind.note
     var title: String = ""

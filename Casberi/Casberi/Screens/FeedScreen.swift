@@ -333,7 +333,13 @@ struct FeedScreen: View {
     /// light columns, and the few visible rows that DO show prose fault it on
     /// appearance — a cheap local read, once, not per re-fetch. The
     /// `.externalStorage` columns (audio/image/embedding) are already lazy.
-    private static let lightColumns: [PartialKeyPath<Thing>] = [
+    ///
+    /// NOT `private` since 2026-09-01: `RootShell.fullCorpus()` — the ask
+    /// path's unscoped read — takes this same list. The ask path reads a
+    /// strict SUBSET of these columns, so a list of its own would be smaller
+    /// and would drift, and the drift's symptom is the fault storm this
+    /// doc-comment already describes. One list, one place, per the rule above.
+    static let lightColumns: [PartialKeyPath<Thing>] = [
         \.id, \.kind, \.title, \.source, \.createdAt, \.capturedAt, \.mark,
         \.tags, \.provenance, \.sourceRef, \.previewImageURL, \.walletAddress,
         \.counterpartyAddress, \.transferDirection, \.transferAmount, \.transferVenue,
@@ -9999,7 +10005,45 @@ case .vibenetSend(let account):
                 // for the open verb and once for the rest, doubled a per-row
                 // fault and a per-row detector run against the exact
                 // optimization that pass exists for.
-                let verbs = VerbDerivation.verbs(for: thing)
+                //
+                // AMENDMENT (2026-09-01): the detector half of that paragraph
+                // is STALE and left standing because the rest of it is why
+                // this is one call. §260/§262 moved all three scans out —
+                // `placeURL`/`telURL`/`mailtoURL` are stamped once by
+                // `VerbDetection.backfill` off the main actor and merely READ
+                // here as `detectedPlace`/`detectedTel`/`detectedMailto`. The
+                // `content` fault is the part that is still true, and only in
+                // the All room, whose query sets `propertiesToFetch` while a
+                // source room's does not.
+                //
+                // MEASURED BY NOTHING (perf-spec P3). No instrument in this
+                // app covers scroll or per-row render cost, so what this costs
+                // per row per body build is unknown — which is precisely why
+                // it is being measured rather than memoised. The obvious fix
+                // (a `DerivationMemo` entry keyed by `corpusRevision`) is
+                // deliberately NOT taken here: it would be a guess dressed as
+                // a fix, and this repo's own record is that every tuned guess
+                // died and every structural fix held.
+                //
+                // Bracketed by room because the rooms differ in the one way
+                // that matters: All faults `content` per row, a source room
+                // has it hydrated already. One label for both would average
+                // the question away. `perfAccum`'s totals are a documented
+                // FLOOR (a 250ms report throttle, so the final sub-throttle
+                // window is missing from the last line) and it compiles out
+                // entirely in Release.
+                //
+                // If `perf.sh` prints this as `  ms over  calls`, the label
+                // is fine and the reader is not: its accumulator loop greps
+                // `accum=$label ` as a REGEX, so `[All]` reads as a character
+                // class. `feedList[All]` has reported blank that way in every
+                // recorded run since it landed (see any
+                // `scripts/output/*/perf.txt`). `grep -F` is the fix, and it
+                // is the same `-F` lesson `verify-mac.sh`'s span breakdown
+                // already paid for. Read the raw `accum=` lines meanwhile.
+                let verbs = perfAccum("rowVerbs[\(source)]") {
+                    VerbDerivation.verbs(for: thing)
+                }
                 if let openVerb = verbs.first(where: {
                     if case .openURL = $0.action { return true } else { return false }
                 }) {

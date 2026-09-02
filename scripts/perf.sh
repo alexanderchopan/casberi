@@ -190,7 +190,14 @@ TS=$(date +%Y-%m-%dT%H:%M:%S)
     done
     # Accumulators are cumulative — the LAST line per label is the total.
     for label in $(grep -o 'accum=[^ ]*' "$LOG" | cut -d= -f2 | sort -u); do
-      last=$(grep "accum=$label " "$LOG" | tail -1)
+      # -F, and it is load-bearing: a label carries BRACKETS (`feedList[All]`,
+      # `rowVerbs[Wallet]`) and an unanchored grep reads `[All]` as a character
+      # class, so the line never matches, `last` is empty, and this prints
+      # "accum=feedList[All]  ms over  calls" — a blank where the number should
+      # be. `verify-mac.sh` was bitten by exactly this and fixed; this copy
+      # never was, so the single most-cited accumulator in the perf record has
+      # been reporting nothing here all along (found 2026-09-01).
+      last=$(grep -F "accum=$label " "$LOG" | tail -1)
       calls=$(echo "$last" | grep -o 'calls=[0-9]*' | cut -d= -f2)
       total=$(echo "$last" | grep -o 'totalMs=[0-9.]*' | cut -d= -f2)
       print -r -- "  accum=$label  ${total}ms over ${calls} calls"
