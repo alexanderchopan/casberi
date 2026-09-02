@@ -112,6 +112,14 @@ enum HomeComposition {
             // key" as a search, and its whole job is to route one row to the
             // lock screen (`NotifySweep.classify`).
             "Admin key",                                  // vibenet keystore
+            // The devnet faucet claim (prd §553b). STATE by this set's own
+            // rule: it says what the row IS — a top-up from the faucet —
+            // never what it is about. Its SIBLING is "Sent", stamped on the
+            // same rows by `HegotaSend`, which is ruled nowhere and is not
+            // flagged only because that one is written through a ternary and
+            // this audit reads source text; so this entry covers the pair in
+            // practice while the parser can see one of them (2026-09-01).
+            "Faucet",                                     // Hegotá, vibenet
             "BNB Smart Chain",                            // wallet chain label
             // Radicle (prd §400). All five are STATE, not subject: they say
             // what happened to a patch or an issue, never what it is about.
