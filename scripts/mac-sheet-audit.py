@@ -57,7 +57,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SOURCES = [ROOT / "Casberi" / "Casberi", ROOT / "Casberi" / "Shared"]
 
-MAC_SIZING = re.compile(r"\.(dsSizedSheet|dsPageSheet|presentationSizing)\s*\(")
+# `dsNavSheet` joined the list on 2026-09-01, and it is a SPELLING fix rather
+# than a widening: prd §560's nav-sheet family is `dsPageSheet()` plus a corner
+# (see `DSNavSheet.swift` — `dsNavSheet()` calls `dsPageSheet()` on its first
+# line), so a view wearing it is sized exactly as it was before. Four registered
+# files migrated to the new helper in that pass and this audit failed all four
+# while every one of them was correctly sized, which is the failure mode a
+# check written against one call site's SPELLING always eventually has. The
+# invariant is "Mac sizing is applied", and the way to keep this honest as more
+# helpers appear is to name each one that provably routes to a sizing modifier
+# — never to loosen the pattern into matching anything.
+MAC_SIZING = re.compile(r"\.(dsSizedSheet|dsPageSheet|dsNavSheet|presentationSizing)\s*\(")
 DETENTS = re.compile(r"\.presentationDetents\s*\(")
 STRUCT = re.compile(r"^\s*(?:public\s+|private\s+|fileprivate\s+|internal\s+)?struct\s+(\w+)")
 
@@ -262,6 +272,18 @@ struct Page: View {
     }
 }
 """
+# prd §560's nav-sheet family. It is `dsPageSheet()` plus a corner, so a view
+# wearing it IS sized — and this fixture is what stops the next reader
+# "tidying" the helper back out of MAC_SIZING and failing four correct files.
+NAV_SHEET_OK = """
+struct Page: View {
+    var body: some View {
+        Text("x")
+        .presentationDetents([.large])
+        .dsNavSheet()
+    }
+}
+"""
 TWO_STRUCTS = """
 struct First: View {
     var body: some View {
@@ -287,6 +309,7 @@ def self_test():
         ("a COMMENT naming the modifier is not compliance", COMMENT_ONLY, 1),
         ("a tray's stated height counts", TRAY_OK, 0),
         ("raw presentationSizing counts", SIZING_OK, 0),
+        ("the nav-sheet family counts (prd §560)", NAV_SHEET_OK, 0),
         ("sizing in a SIBLING struct does not cover this one", TWO_STRUCTS, 1),
     ]
     ok = True
