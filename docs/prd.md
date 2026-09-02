@@ -45799,4 +45799,99 @@ object.
 the demo corpus and photographed in both states. The Markets room shows the ink
 strip, the blue active chip, and the ringed Stocktwits mark on a bare row of
 venue marks.
+## 573. The sources tray's empty state, and the populated one left alone with its reasons (user: "now, how would you apply our new language to the Your Sources tray", then "mock it up", then "ok build it", 2026-09-02)
+
+**The populated tray is already in the language, and saying so is most of the
+answer.** Marks select by a 2.5pt tint ring with a dashed orange for a broken
+seat — §572's grammar, which this surface had FIRST and which that entry
+generalised outward from. The three doors are 44pt discs (§498's placement),
+navigation rather than acts, so no hero tile: three doors are a menu and a tile
+among them is §559's own exclusion. The cards are ink with a pour, carved whole
+and packed biggest-first (§348, §392). "Your feeds" is `heading22` with content
+directly beneath, the family rung §560 settled.
+
+**One thing was looked at and left**: the card overline sits at the same 12pt as
+the tile names. Raising it would spend rows under the 660pt resting cap on
+hierarchy that position already carries — and that cap has already been retuned
+once (620 → 660) precisely because a type change snapped a whole category off
+the panel.
+
+### What changed: the empty tray
+
+A `subhead13` sentence over a `body17` glass capsule — **the sentence quieter
+than the button, and both quieter than anything the populated tray draws** —
+which is §563's inversion on the surface the agent bar opens for somebody with
+no sources yet. It becomes one statement at the head rung, the act as a
+`DSActVerb`, and the old sentence dropped to `label12` beneath as the CONSEQUENCE
+of the act (§217's cost line).
+
+**`dsGlassProminent`'s own argument is preserved rather than overruled.** It was
+chosen as "the app's own primary-action-on-glass treatment… a grammar this
+surface already speaks" — true when written, and §559 has since made a different
+treatment the grammar for exactly this case. Everything else that doc records
+still holds and is restated at the new call: still the ONLY filled control this
+tray will ever draw, still gone the moment anything connects, still not a fourth
+container, since none of the three refusals (§391, §392a, the card) reaches a
+control alone on the panel.
+
+**It also settles the tap hazard instead of working around it.** The capsule put
+glass INSIDE its label because interactive glass outside a button eats taps for
+its own press deformation (2026-07-17, "takes several taps"). A solid tile cannot
+have that problem — the same correction §559 made to the onboarding CTA.
+
+**And it removes the last glass from a panel made opaque to be rid of glass.**
+The tray stopped being a sheet and went ink-not-glass on the user's own words
+("can we make it ink or black that we use elsewhere in the app and get rid of the
+glass"); the empty state's prominent-glass capsule was the one piece left.
+
+**The height stays a written-down sum** (`emptyStatement + s4 + emptyVerbTile +
+s2 + emptyNote + chromeHeight`), because the panel's resting height is computed
+from it. The statement wraps to TWO lines — sixteen characters against a 40pt
+heavy line that holds about fourteen at this width — and that is exactly the
+class §552 recorded twice: an arithmetic that renders perfectly and continues
+past the edge.
+
+**Held open, not decided.** With the tile in place the Apps door beside the
+avatar opens the same catalog — one destination, two ways. That is how every
+other empty state in the app already reads (the feed's tile and its chip strip
+both reach the catalog), so nothing was changed; if it reads as doubled on a
+device, the Apps door is the one to stand down while the tray is empty.
+
+**UNSEEN on a device.** The empty tray needs an install with no connected
+sources, which is not the state any demo or dev corpus is in.
+
+## 573a. The guard was stale, not the code — a red that stopped a release for a reformat (2026-09-02)
+
+`verify.sh` went red on `purchase-stage-selftest` ("the From row no longer
+stands down") and the failure gated an App Store submit, which is the one ship
+that cannot go out on partial evidence because it burns a review queue position.
+
+**The code was correct the whole time.** `ThingSheetView`'s `hasFrom` had gained
+a leading `!PlaceWords.line(for: thing).isEmpty` conjunct in `885c04d6` and
+wrapped across lines; the stand-down — `showsWho && !isWork && purchaseReading
+== nil` — sat intact on the second line. The guard grepped the whole conjunction
+as ONE line, so it matched nothing and reported a regression that did not exist.
+
+**A guard that fails on a reformat teaches people to delete guards**, which is
+the opposite of what this repo builds them for. It reads the EXPRESSION now: it
+finds `let hasFrom =`, walks its continuation lines (skipping the comments this
+file puts between conjuncts, since each one is explained), and asserts the
+conjunct is somewhere inside whatever shape the expression has taken. Proven
+three ways — passes the real tree, catches the stand-down being deleted, catches
+`hasFrom` being renamed away.
+
+**A trap worth writing down, because it cost two false proofs.** The guard's body
+is a heredoc inside the shell script, and the script was written by a Python
+generator whose own string turned `"\n"` into a REAL newline — so the shipped
+guard carried a broken string literal and died with a `SyntaxError` on every
+run, which reads from outside exactly like the check failing. The first two
+mutation "proofs" were both green against a script that could not parse. It uses
+`splitlines()` now, and the re-proof was run against the body EXTRACTED FROM THE
+SHIPPED FILE rather than from the generator, which is the only version that
+proves anything.
+
+**Standing lesson, second instance today** (the first was
+`address-book-selftest`'s book door): when a guard goes red after a refactor,
+establish whether the RULE was broken or the PATTERN was outrun before touching
+either. Both of today's reds were the pattern.
 

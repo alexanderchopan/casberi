@@ -362,10 +362,29 @@ struct SourcesTray: View {
     ///
     /// Summed from the pieces rather than measured, so it cannot drift when
     /// the type ramp moves: `subhead13`'s own line, `s4`, the button, the pad.
-    private static let emptyLine: CGFloat = 17     // subhead13.lineHeight
-    private static let emptyDoorHeight: CGFloat = 48
+    /// Still summed from the pieces rather than measured (prd §573), so the
+    /// panel's resting height cannot drift when the ramp moves:
+    ///
+    /// ```
+    ///   "Nothing here yet" — two lines of heading34   80
+    ///   s4                                            18
+    ///   the tile: disc 36 + s2 + price40 + s3 × 2     114
+    ///   s2                                            10
+    ///   the note — one line of label12                 16
+    /// ```
+    ///
+    /// **Two lines, not one, and that is the arithmetic doing its job.** The
+    /// statement is sixteen characters and a 40pt heavy line holds about
+    /// fourteen at this panel's width, so it wraps — which is why the height is
+    /// written down here rather than left to a guess that renders perfectly and
+    /// then continues past the panel's edge (§552's failure, twice recorded).
+    private static let emptyStatement: CGFloat = 80   // heading34.lineHeight × 2
+    private static let emptyVerbTile: CGFloat =
+        36 + DS.Space.s2 + 40 + DS.Space.s3 * 2
+    private static let emptyNote: CGFloat = 16        // label12.lineHeight
     private static let emptyHeight: CGFloat =
-        emptyLine + DS.Space.s4 + emptyDoorHeight + chromeHeight
+        emptyStatement + DS.Space.s4 + emptyVerbTile
+        + DS.Space.s2 + emptyNote + chromeHeight
     /// 620 → 660 on 2026-08-16, alongside the eyebrow's step to `subhead13`:
     /// four rows went 610 → 634pt, and a cap of 620 would have answered the
     /// user's "make the eyebrows larger" by snapping a whole category off the
@@ -494,28 +513,45 @@ struct SourcesTray: View {
     /// (the composer's Save), so it is a grammar this surface already speaks,
     /// not a new one.
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
-            Text("Connect an app and it lands here.")
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textSecondary)
-            Button {
-                DSHaptic.tap()
+        VStack(alignment: .leading, spacing: 0) {
+            // **ONE STATEMENT AT THE HEAD RUNG (prd §573).** This was a
+            // `subhead13` sentence over a `body17` capsule — the sentence
+            // quieter than the button and both quieter than everything the
+            // populated tray draws — which is §563's inversion on the surface
+            // the agent bar opens for somebody with no sources yet.
+            Text("Nothing here yet")
+                .dsText(.heading34)
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            // **AND THE ACT AS THE TILE.** `dsGlassProminent` was chosen as
+            // "the app's own primary-action-on-glass treatment… a grammar this
+            // surface already speaks" — true when written, and §559 has since
+            // made a different treatment the grammar for exactly this case: a
+            // surface that exists to do ONE thing sets its verb at the size
+            // money gets. The reasoning that mattered is preserved whole —
+            // this is still the only filled control the tray will ever draw,
+            // still gone the moment anything connects, and still not a fourth
+            // container, since none of the three refusals reach a control
+            // alone on the panel.
+            //
+            // It also settles the tap hazard rather than working around it:
+            // the old capsule put glass INSIDE the label because interactive
+            // glass outside a button eats taps for its own press deformation
+            // (2026-07-17). A solid tile cannot have that problem, which is
+            // the same correction §559 made to the onboarding CTA.
+            DSActVerb(title: String(localized: "Open the catalog"),
+                      glyph: "square.grid.2x2") {
                 onOpenCatalog()
-            } label: {
-                Text("Open the catalog")
-                    .dsText(.body17)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, DS.Space.s6)
-                    .frame(height: Self.emptyDoorHeight)
-                    // Glass INSIDE the label, so the Button owns the whole hit
-                    // region — interactive glass applied OUTSIDE a button eats
-                    // taps for its own press deformation (2026-07-17, "takes
-                    // several taps"). `HowItWorksSheet`'s pattern, verbatim.
-                    .dsGlassProminent(tint: DS.tint, cornerRadius: DS.Radius.pill)
-                    .contentShape(Capsule())
             }
-            .buttonStyle(.plain)
-            .dsHover()
+            .padding(.top, DS.Space.s4)
+
+            // What the old sentence said, in the tier it belongs to: the
+            // CONSEQUENCE of the act, under the act (§217's cost line).
+            Text("An app you connect shows up here")
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+                .padding(.top, DS.Space.s2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

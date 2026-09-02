@@ -429,9 +429,38 @@ grep -qE 'PurchaseStageView\(thing:' "$ROOT/Casberi/Casberi/Screens/ThingSheetVi
 # …and the spec table's `From` row must stand down where the card's own
 # sentence says it better, or the sheet says where this came from twice and
 # differs (the row said "from a store you follow" over a barcode scan).
-grep -qE 'hasFrom = showsWho && !isWork && purchaseReading == nil' \
-  "$ROOT/Casberi/Casberi/Screens/ThingSheetView.swift" \
-  || { print -u2 "purchase-stage-selftest: drift — the From row no longer stands down"; exit 1; }
+# **THE GUARD READS THE EXPRESSION, NOT ONE LINE OF IT (prd §573a).** It used to
+# grep the whole conjunction as a single line, and on 2026-09-02 it went red over
+# code that was still correct: `hasFrom` had gained a leading
+# `!PlaceWords.line(for: thing).isEmpty` and wrapped, so the stand-down was
+# intact on the SECOND line and the pattern matched nothing. A guard that fails
+# on a reformat teaches people to delete guards. It now asserts the CONJUNCT
+# inside whatever shape the expression has taken.
+python3 - "$ROOT/Casberi/Casberi/Screens/ThingSheetView.swift" <<'FROMROW' || exit 1
+import re, sys
+src = open(sys.argv[1], encoding="utf-8").read()
+i = src.find("let hasFrom =")
+if i < 0:
+    print("purchase-stage-selftest: drift — `hasFrom` is gone from the spec table")
+    sys.exit(1)
+# The expression runs to the first line that neither continues it (`&&`) nor is
+# its opening line. Comments between conjuncts are skipped, since this file
+# explains each one.
+expr, started = [], False
+for line in src[i:].splitlines():
+    body = re.sub(r"//.*$", "", line).strip()
+    if not started:
+        expr.append(body); started = True; continue
+    if body.startswith("&&") or body == "":
+        expr.append(body); continue
+    break
+joined = " ".join(expr)
+if "purchaseReading == nil" not in joined:
+    print("purchase-stage-selftest: drift — the From row no longer stands down")
+    print("  A purchase sheet would say where this came from TWICE and differ —")
+    print('  the row said "from a store you follow" over a barcode scan.')
+    sys.exit(1)
+FROMROW
 
 # The seller must reach the FEED row too. It was stamped by all three bridges
 # and drawn nowhere, which is half of what this pass was for.
