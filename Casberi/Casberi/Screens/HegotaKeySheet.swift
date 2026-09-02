@@ -210,7 +210,7 @@ struct HegotaKeySheet: View {
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "key.fill").dsGlyph(13, weight: .semibold)
-                    Text(String(localized: "Make an account on this phone"))
+                    Text(String(localized: "Create an account on this phone"))
                 }
                 .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(.white)

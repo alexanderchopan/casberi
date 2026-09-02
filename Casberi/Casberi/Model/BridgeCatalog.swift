@@ -630,7 +630,7 @@ enum BridgeCatalog {
               // time it is used. `vibenet-selftest.sh` ties this bullet to the
               // code both ways: it may not claim read-only while a signing
               // path exists, and it may not give up the claim while none does.
-              summary: "Base's experimental devnet for native account abstraction (EIP-8130). No real funds. Watch any address and read its keystore state, or make an account of your own that this phone signs for with a key held in its Secure Enclave.",
+              summary: "Base's experimental devnet for native account abstraction (EIP-8130). No real funds. Watch any address and read its keystore state, or create an account of your own that this phone signs for with a key held in its Secure Enclave.",
               features: ["Whether a watched address is established yet",
                          "Which keys — secp256k1, a passkey, a delegate — can act for it",
                          "Whether the account is locked, and whether an unlock is underway",

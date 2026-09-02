@@ -45475,6 +45475,34 @@
         }
       }
     },
+    "Create an account on this phone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Crear una cuenta en este teléfono"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この端末でアカウントを作成"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 휴대폰에서 계정 만들기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在此手机上创建账户"
+          }
+        }
+      }
+    },
     "Create an app, then copy its Test token." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -62122,34 +62150,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "创建新密钥"
-          }
-        }
-      }
-    },
-    "Make an account on this phone" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Crear una cuenta en este teléfono"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "この端末でアカウントを作成"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "이 휴대폰에서 계정 만들기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "在此手机上创建账户"
           }
         }
       }
