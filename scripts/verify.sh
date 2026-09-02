@@ -31,7 +31,9 @@ fail() { print -P "%F{red}✗ $1%f"; exit 1; }
 # overlap (CasberiDD/CasberiCatalystDD here, CasberiMacDD there), every
 # harness scratches through mktemp, and verify-mac.sh never touches the
 # simulator. LAUNCH_CYCLES / SKIP_LIVE / VERIFY_NO_CACHE propagate through the
-# environment, so one knob tunes both passes.
+# environment, so one knob tunes both passes. SKIP_LOGIC is the one knob this
+# script SETS rather than forwards — the harnesses are platform-independent
+# and this pass runs them, so the Mac leg would only be re-proving them.
 #
 #   SKIP_MAC=1     opt out (offline docs-only runs, or when the Mac pass is
 #                  being driven separately).
@@ -49,9 +51,18 @@ if [[ "${1:-}" == "--build-only" || -n "${SKIP_MAC:-}" ]]; then
 elif pgrep -f "scripts/verify-mac.sh" >/dev/null 2>&1; then
   print -P "%F{yellow}⚠ a verify-mac.sh is already running — not starting a second (shared CasberiMacDD); this pass will NOT gate on the Mac%f"
 else
-  "$ROOT/scripts/verify-mac.sh" >"$MACLOG" 2>&1 &
+  # SKIP_LOGIC=1 — the parallel Mac pass must NOT re-run the 86 pure-logic
+  # harnesses, because this pass runs that exact set itself a few lines below.
+  # From 2026-08-21 until 2026-09-01 it did, so every interactive verify ran
+  # all 86 TWICE, two `xargs -P ncpu` swarms contending for the same 8 cores.
+  # They are pure and platform-independent by construction (each compiles a
+  # Foundation-only file — no UIKit, no simulator), so the second run could
+  # only ever reach the same verdict more slowly. See verify-mac.sh's own
+  # SKIP_LOGIC block for what this costs and why the unattended passes — the
+  # nightly and CI, both uncached — are deliberately left running all of them.
+  SKIP_LOGIC=1 "$ROOT/scripts/verify-mac.sh" >"$MACLOG" 2>&1 &
   MACPID=$!
-  step "Mac verify launched in parallel (pid $MACPID) → $MACLOG"
+  step "Mac verify launched in parallel (pid $MACPID, logic self-tests left to this pass) → $MACLOG"
 fi
 # On an iOS failure the parallel Mac run is stopped rather than orphaned: its
 # verdict would be about a tree that is about to change, and a leftover
@@ -164,8 +175,18 @@ run_harnesses() {
     { for i in "${_TODO[@]}"; do print -r -- "$i"; done } \
       | xargs -P "$jobs" -I{} zsh -c '
           s="$1"; b="${s:t:r}"
+          # Wall time per harness (PERF, 2026-09-01). This suite grew 52 → 86
+          # harnesses in twelve days and nothing recorded what any one of them
+          # cost, so the only visible number was the total — and prd §257 is
+          # exactly the lesson that a metric with no breakdown tells you to
+          # panic rather than what to do. `zsh/datetime` because macOS `date`
+          # has no sub-second format.
+          zmodload zsh/datetime 2>/dev/null
+          t0=$EPOCHREALTIME
           "$H_ROOT/$s" > "$H_OUT/$b.log" 2>&1
-          print $? > "$H_OUT/$b.rc"
+          rc=$?
+          printf "%.1f\n" $(( EPOCHREALTIME - t0 )) > "$H_OUT/$b.sec"
+          print $rc > "$H_OUT/$b.rc"
           exit 0
         ' _ {}
   fi
@@ -193,6 +214,35 @@ run_harnesses() {
     fi
   done
   (( bad == 0 )) || fail "$bad of $n pure-logic harnesses failed — see the logs above"
+
+  # The slowest few that actually RAN, always printed. Wall time under
+  # `xargs -P` is contended and therefore not a clean per-harness cost — it is
+  # still the only number that says which harness to look at, and the ordering
+  # it gives has been stable across runs. A cached harness has no .sec file
+  # and correctly appears nowhere.
+  #
+  # NO `| head` HERE, and that is not style: this script runs `set -euo
+  # pipefail`, and `head` closing the pipe early makes `sort` die of SIGPIPE
+  # (141), which pipefail promotes to the pipeline's status and `set -e` turns
+  # into an exit — the pass would die on its own summary line. It is the exact
+  # `cmd | grep -q X` race this file already records, and it is SIZE-DEPENDENT
+  # (86 short rows fit the 64KB pipe buffer, so `sort` finishes writing before
+  # `head` leaves and it passes on an idle machine), which is the worst way for
+  # it to be wrong. Sorting into an array closes the whole class.
+  local -a _rows
+  _rows=( ${(f)"$(for f in "$OUT"/*.sec(N); do print -r -- "$(<$f) ${f:t:r}"; done | sort -rn)"} )
+  if (( ${#_rows} )); then
+    print -r -- "  slowest harnesses (contended wall time):"
+    for _r in ${_rows[1,8]}; do printf '    %6.1fs  %s\n' "${_r%% *}" "${_r##* }"; done
+  fi
+
+  # Prune stamps nothing can match again. The key covers every input, so an
+  # edit to a hot file leaves one dead stamp per harness that names it — 1,388
+  # files for 86 harnesses when this was added, ~16 dead keys each. Harmless
+  # but unbounded, and a directory nobody can read is one nobody will check.
+  # Anything untouched for 14 days is older than any tree still being verified.
+  find "$cache" -type f -mtime +14 -delete 2>/dev/null || true
+
   print -P "%F{green}✓ all $n pure-logic harnesses%f"
 }
 
@@ -200,6 +250,40 @@ run_harnesses() {
 # Enforces BridgeCatalog.offers as the single source of truth for the app
 # catalog, the website #catalog shelf, and the onboarding tiles. See the
 # catalog-sync RULE in CLAUDE.md.
+# ── Last nightly verdict (REPORTS, never gates — 2026-09-01) ──────────
+# The nightly ledger was written to and never read back. Measured the day this
+# landed: `nightly-mac` was RED on six of the last eight nights, and nobody
+# noticed, because the only place that verdict appeared was a log file nothing
+# opens. Four of the five named failures already passed on the tree hours
+# later — so they were real at that commit and fixed during the following day,
+# which is worth knowing at the START of a pass rather than never.
+#
+# NEVER GATES, and the reason is not politeness: that verdict describes a
+# DIFFERENT COMMIT on a different day, so failing this pass over it would
+# block work on a tree that may already have the fix. It is a note, not a
+# check. STALENESS is reported too — the nightly is a LaunchAgent driving a
+# GUI app, so a closed lid means the night is skipped rather than queued, and
+# "no row since Tuesday" and "Tuesday passed" are different facts.
+NIGHTLY_LOG="$ROOT/scripts/output/nightly-mac.log"
+if [[ -r "$NIGHTLY_LOG" ]] && [[ -s "$NIGHTLY_LOG" ]]; then
+  _nrow=$(tail -1 "$NIGHTLY_LOG")
+  _nts=${_nrow%% *}
+  # A row whose timestamp will not parse is reported as unreadable rather than
+  # silently treated as fresh — an unparseable date must never read as "fine".
+  _nepoch=$(date -j -f "%Y-%m-%dT%H:%M:%S" "$_nts" +%s 2>/dev/null || print 0)
+  _nage=$(( ($(date +%s) - _nepoch) / 3600 ))
+  _nverdict=$(print -r -- "$_nrow" | awk '{$1="";$2="";print}' | sed 's/^ *//' | cut -c1-96)
+  if (( _nepoch == 0 )); then
+    print -P "%F{yellow}⚠ last nightly: unreadable ledger row — $NIGHTLY_LOG%f"
+  elif (( _nage > 36 )); then
+    print -P "%F{yellow}⚠ last nightly ran ${_nage}h ago (lid closed? it is a LaunchAgent, so a missed night is skipped, not queued): $_nverdict%f"
+  elif [[ "$_nrow" == *"FAIL"* ]]; then
+    print -P "%F{yellow}⚠ last nightly (${_nage}h ago) FAILED — on that commit, not necessarily this tree: $_nverdict%f"
+  else
+    print -P "%F{green}✓ last nightly (${_nage}h ago): $_nverdict%f"
+  fi
+fi
+
 step "Catalog sync"
 "$ROOT/scripts/catalog-sync.sh" || fail "catalog surfaces drifted — run scripts/catalog-sync.sh"
 print -P "%F{green}✓ catalog sync%f"

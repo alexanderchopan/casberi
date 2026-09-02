@@ -11,6 +11,10 @@
 # Usage: scripts/verify-mac.sh [--build-only]
 #   LAUNCH_CYCLES=<n>  cold-launch cycles (default 5, 0 skips)
 #   SKIP_LIVE=1        skip the network section entirely (offline runs)
+#   SKIP_LOGIC=1       skip the discovered logic self-tests (§0b) because the
+#                      caller already ran the same set. `verify.sh` sets this
+#                      on the pass it launches in parallel and NOTHING else
+#                      does — see that block's own comment for the argument.
 #
 # ── Why this can't just be verify.sh with a different -destination ──────────
 # verify.sh is `xcrun simctl` end to end: boot, install, launch, screenshot,
@@ -214,14 +218,52 @@ ok "static audits ($(ls "$ROOT"/scripts/*-audit.py "$ROOT"/scripts/*-audit.sh | 
 # broke and nothing about how — and re-running it by hand the next morning is
 # exactly the "passed standalone every time" dead end `category-fold` cost two
 # ~20-minute runs to learn (2026-08-13). At 03:20 there is no one to re-run it.
+# ── SKIP_LOGIC: the caller already ran this exact set (PERF, 2026-09-01) ────
+# `verify.sh` launches this script in parallel and then runs the SAME 86
+# harnesses itself, so from 2026-08-21 every interactive pass has run all of
+# them TWICE — 172 executions for 86 checks, both swarms `xargs -P ncpu` on
+# the same 8 cores, each slowing the other down. Measured on the 08-31 runs:
+# green passes took 38–57min and two overlapping sessions took 2.5h, against
+# 3.6min the day the parallel runner landed. The duplication is pure loss:
+# these harnesses are PURE and platform-independent by construction (every
+# one compiles a Foundation-only file — no UIKit, no simulator, no device),
+# so the same bytes give the same verdict whichever pass runs them.
+#
+# WHAT THIS COSTS, said plainly rather than left to be discovered: `verify.sh`
+# runs its loop through the SKIP CACHE, so a harness cached there and skipped
+# here runs in NEITHER leg of that pass. That is the cache's own bargain, not
+# a new hole — its key is the harness plus every input it names, so a cached
+# harness is one whose inputs are byte-identical to a run that passed. Running
+# it again here was accidental redundancy, never designed coverage.
+#
+# THE UNATTENDED PASSES ARE UNTOUCHED, which is the whole safety argument:
+# `nightly-mac.sh` invokes this script DIRECTLY and sets nothing, so the
+# nightly still runs all 86 uncached, and CI runs them uncached on every push
+# (.github/workflows/logic-selftests.yml). Only the pass with a person sitting
+# in front of it takes the shortcut.
+LOGIC_SKIPPED=0
+if [[ "${SKIP_LOGIC:-0}" == "1" ]]; then
+  # Recorded in the SUMMARY as well as printed, for the reason SKIP_LIVE is:
+  # a ledger row that reads exactly like a full pass while 86 checks never ran
+  # is the silent-coverage-gap this repo bans everywhere else.
+  LOGIC_SKIPPED=1
+  warn "logic self-tests skipped (SKIP_LOGIC=1 — the launching verify.sh runs the same 86)"
+else
 step "Logic self-tests (all $(ls "$ROOT"/scripts/*-selftest.sh | wc -l | tr -d ' ') discovered, up to $(sysctl -n hw.ncpu 2>/dev/null || print 4) at once)"
 typeset -a SELFTEST_FAILS
 export MST_OUT="$OUT"
 { for _st in "$ROOT"/scripts/*-selftest.sh; do print -r -- "$_st"; done } \
   | xargs -P "$(sysctl -n hw.ncpu 2>/dev/null || print 4)" -I{} zsh -c '
       s="$1"; b="${s:t:r}"
+      # Wall time per harness, so growth is visible the week it lands rather
+      # than when a pass crosses an hour. `zsh/datetime` because macOS `date`
+      # has no sub-second format; the module load is per-child and cheap.
+      zmodload zsh/datetime 2>/dev/null
+      t0=$EPOCHREALTIME
       "$s" > "$MST_OUT/selftest-$b.log" 2>&1
-      print $? > "$MST_OUT/selftest-$b.rc"
+      rc=$?
+      printf "%.1f\n" $(( EPOCHREALTIME - t0 )) > "$MST_OUT/selftest-$b.sec"
+      print $rc > "$MST_OUT/selftest-$b.rc"
       exit 0
     ' _ {}
 # Collected in glob order so a failing night reads the same way twice.
@@ -237,6 +279,21 @@ done
 (( ${#SELFTEST_FAILS} == 0 )) \
   || fail "logic self-test failed: ${SELFTEST_FAILS[*]} — logs above, and in $OUT"
 ok "logic self-tests"
+# The slowest few, always — a total with no breakdown tells you to panic, not
+# what to do (prd §257's lesson, applied to the test suite itself).
+# NO `| head`: `head` leaving early kills `sort` with SIGPIPE (141), which
+# `pipefail` promotes to the pipeline's status — the same race this repo
+# already records for `cmd | grep -q X`, and size-dependent, so it passes on an
+# idle machine. Sort into an array and slice it instead.
+typeset -a _rows
+_rows=( ${(f)"$(for _f in "$OUT"/selftest-*.sec(N); do
+                  print -r -- "$(<$_f) ${${_f:t:r}#selftest-}"
+                done | sort -rn)"} )
+if (( ${#_rows} )); then
+  print -r -- "  slowest harnesses:"
+  for _r in ${_rows[1,8]}; do printf '    %6.1fs  %s\n' "${_r%% *}" "${_r##* }"; done
+fi
+fi
 
 # ── 1. Build ───────────────────────────────────────────────────────────────
 step "Building Casberi (Mac Catalyst, derivedData: $DD)"
@@ -741,6 +798,6 @@ fi
 # flags, which are REPORTED BY DESIGN and never gate anything. Conflating those
 # with a real third-party outage is how a ledger becomes noise. Two counts,
 # kept apart, named.
-print -r -- "SUMMARY live_warnings=${#WARNINGS} perf_flags=${#FLAGS} live_skipped=$LIVE_SKIPPED"
+print -r -- "SUMMARY live_warnings=${#WARNINGS} perf_flags=${#FLAGS} live_skipped=$LIVE_SKIPPED logic_skipped=$LOGIC_SKIPPED"
 ok "mac verify complete → $OUT"
 exit 0

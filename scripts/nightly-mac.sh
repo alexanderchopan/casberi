@@ -76,14 +76,24 @@ if (( STATUS == 0 )); then
   # warnings mean a third party was unreachable; perf flags mean a number
   # moved. Only the first is a warning about US, so only it colours the
   # verdict — the flag count still rides along, unranked.
-  SUMMARY=$(grep -o 'SUMMARY live_warnings=[0-9]* perf_flags=[0-9]* live_skipped=[0-9]*' /tmp/nightly-mac-run.log | tail -1)
+  # Matched as `SUMMARY .*` rather than by spelling every field: the line
+  # gained `logic_skipped` on 2026-09-01, and an exact-field pattern silently
+  # matches NOTHING the day a field is added — which reads as a night with no
+  # summary at all, i.e. the exact silent gap this ledger exists to close.
+  # Each field is then pulled out by name, so order and additions are free.
+  SUMMARY=$(grep -o 'SUMMARY .*' /tmp/nightly-mac-run.log | tail -1)
   LIVE_W=$(echo "$SUMMARY" | grep -o 'live_warnings=[0-9]*' | cut -d= -f2)
   PERF_F=$(echo "$SUMMARY" | grep -o 'perf_flags=[0-9]*'    | cut -d= -f2)
   LIVE_S=$(echo "$SUMMARY" | grep -o 'live_skipped=[0-9]*'  | cut -d= -f2)
+  LOGIC_S=$(echo "$SUMMARY" | grep -o 'logic_skipped=[0-9]*' | cut -d= -f2)
   VERDICT="PASS"
   (( ${LIVE_S:-0} == 1 )) && VERDICT="PASS(live skipped)"
   (( ${LIVE_W:-0} > 0 ))  && VERDICT="PASS(${LIVE_W} live-warn)"
   (( ${PERF_F:-0} > 0 ))  && VERDICT="$VERDICT[${PERF_F} perf-flag]"
+  # The nightly never sets SKIP_LOGIC — it is the pass that must run all 86
+  # uncached. Recorded anyway, because a row that reads exactly like a full
+  # night while 86 checks never ran is the one thing this ledger must not say.
+  (( ${LOGIC_S:-0} == 1 )) && VERDICT="$VERDICT[logic SKIPPED]"
 else
   # Strip ANSI before trimming: `fail()` colours its output, so the escape
   # codes rode into the ledger and every FAIL row ended in a stray "[39m".

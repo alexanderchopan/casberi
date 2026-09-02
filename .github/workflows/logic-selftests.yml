@@ -1,0 +1,133 @@
+# Every `swiftc` logic harness, uncached, on every push.
+#
+# WHY THIS EXISTS. `static-checks.yml` deliberately runs no `swiftc` harness —
+# "a macOS runner is minutes and this is seconds" — and left them to two
+# runners that both turned out to be unreliable in the same way.
+#
+#   * `verify.sh` runs them through the SKIP CACHE, so a harness whose inputs
+#     are unchanged is not re-run at all (correct, and by design).
+#   * `nightly-mac` runs them uncached, but it is a LaunchAgent driving a GUI
+#     app, so a closed lid means the night is SKIPPED rather than queued — and
+#     it fires at 03:20 against whatever `main` happened to be at that moment.
+#
+# MEASURED 2026-09-01, and this is the reason the cost is now worth paying:
+# the nightly was RED on six of the last eight nights, and four of the five
+# named failures already passed on the tree hours later. So they were real
+# failures at that commit, fixed during the following day — which means `main`
+# was broken on push and nobody learned about it for up to twelve hours, if
+# the lid happened to be open at all. Catching that at push is the whole job.
+#
+# Actions minutes and storage are FREE for public repos (CLAUDE.md), so this
+# costs the account nothing but wall time.
+#
+# DISCOVERED, never enumerated — `verify-mac.sh`'s 2026-08-12 ruling. The glob
+# IS the registry: name a check `*-selftest.sh` and it runs here the day it
+# lands. NO CACHE of any kind, deliberately: the one unacceptable outcome for
+# an unattended pass is a cached ✓ standing in for a check a real change should
+# have re-run.
+#
+# WHAT IT DOES NOT DO. No build, no simulator, no device, no screen sweep, no
+# live-integration probes. Every harness here compiles a Foundation-only file
+# and is pure, local and deterministic by construction — that is exactly the
+# set that ports to a runner with no Casberi container and no GUI session.
+#
+# UNVERIFIED against the runner's toolchain until this workflow's first run:
+# these harnesses are written against the local Xcode, and a runner shipping
+# an older Swift can fail one on syntax rather than on a real drift. That is
+# reported as an ordinary failure on purpose — a toolchain gap is a thing to
+# know about, not to paper over — but read the first red run before assuming
+# the code broke.
+name: Logic self-tests
+
+on:
+  push:
+  pull_request:
+
+# A push that supersedes another on the same ref cancels it. These runs are
+# minutes, so without this a burst of commits queues several full sweeps whose
+# verdicts are all about trees nobody has any more.
+concurrency:
+  group: logic-selftests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  selftests:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          xcrun swiftc --version
+          sw_vers
+
+      # Concurrent, for the reason `verify.sh` and `verify-mac.sh` both are:
+      # these are ~600 optimizing `swiftc` runs and serially they are the
+      # single largest cost in the pass. Safe as a MEASURED property rather
+      # than a hope — every harness allocates its scratch through `mktemp`, so
+      # no two can collide on a path.
+      #
+      # `xargs -P`, NOT a hand-rolled slot loop: job control is off in a
+      # non-interactive shell, so a `jobs -r` loop degrades silently to
+      # "launch all 86 at once", which thrashes to slower than serial while
+      # every check still passes. Green, and wrong.
+      #
+      # OUTPUT IS KEPT for every harness. A failed unattended run that says
+      # only which harness broke, and nothing about how, is the dead end
+      # `category-fold` cost two ~20-minute runs to learn — and here there is
+      # nobody to re-run it by hand.
+      - name: Logic self-tests (all discovered, uncached)
+        shell: zsh -e {0}
+        run: |
+          set -uo pipefail
+          zmodload zsh/datetime
+          OUT="$PWD/.selftest-out"; mkdir -p "$OUT"; export OUT
+          JOBS=$(sysctl -n hw.ncpu)
+          n=$(ls scripts/*-selftest.sh | wc -l | tr -d ' ')
+          print -r -- "▶ $n logic self-tests, up to $JOBS at once"
+          { for s in scripts/*-selftest.sh; do print -r -- "$s"; done } \
+            | xargs -P "$JOBS" -I{} zsh -c '
+                s="$1"; b="${s:t:r}"
+                zmodload zsh/datetime 2>/dev/null
+                t0=$EPOCHREALTIME
+                "$s" > "$OUT/$b.log" 2>&1
+                rc=$?
+                printf "%.1f\n" $(( EPOCHREALTIME - t0 )) > "$OUT/$b.sec"
+                print $rc > "$OUT/$b.rc"
+                exit 0
+              ' _ {}
+          # Reported in glob order so two runs can be diffed against each other.
+          fails=()
+          for s in scripts/*-selftest.sh; do
+            b="${s:t:r}"
+            rc=$(<"$OUT/$b.rc" 2>/dev/null) || rc=99   # no rc file = never ran
+            if [[ "$rc" != 0 ]]; then
+              fails+=("${s:t}")
+              print -r -- "✗ ${s:t} (rc=$rc)"
+              tail -30 "$OUT/$b.log" 2>/dev/null | sed 's/^/    /'
+            fi
+          done
+          # NO `| head`: this step runs under `zsh -e` with `pipefail`, and
+          # `head` closing the pipe early kills `sort` with SIGPIPE (141),
+          # which pipefail promotes to the pipeline's status and `-e` turns
+          # into a failed step — a green run reported red on its own summary
+          # line. Same race this repo records for `cmd | grep -q X`, and
+          # size-dependent, so it would pass on a small tree.
+          print -r -- "  slowest:"
+          rows=( ${(f)"$(for f in "$OUT"/*.sec(N); do print -r -- "$(<$f) ${f:t:r}"; done | sort -rn)"} )
+          for r in ${rows[1,10]}; do printf '    %6.1fs  %s\n' "${r%% *}" "${r##* }"; done
+          print -r -- "— $n run, ${#fails[@]} failed"
+          if (( ${#fails[@]} )); then
+            print -r -- "failed: ${fails[*]}"
+            exit 1
+          fi
+
+      # The logs are the whole point of a run nobody watched.
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selftest-logs
+          path: .selftest-out/
+          retention-days: 7
