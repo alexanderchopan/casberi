@@ -233,6 +233,30 @@ struct FramesMove: Identifiable, Equatable, Codable {
     /// non-Optional field added here fails the decode of every move already on
     /// disk, silently emptying the room (the `RSSStore.Feed` trap, §312).
     var effectiveGasPriceWei: UInt64? = nil
+    /// **WHEN THE BLOCK CARRYING THIS WAS MINED**, and nil where it was not
+    /// read.
+    ///
+    /// Until this landed a Frames row carried `blockNumber` and nothing else,
+    /// which made these the one set of undated rows in the app — a block
+    /// number is the only clock a log carries and it is not a time to anybody.
+    /// The header read that fills it is BOUNDED (`FramesLiveState
+    /// .headerDepth`), so a move outside the window legitimately has no time.
+    ///
+    /// **No `estimatedAt` here, deliberately, and that is a divergence from
+    /// Hegotá.** That room interpolates a block's time between two headers it
+    /// really read, anchored on a genesis header it fetches every pass for its
+    /// restart check. This seat fetches no genesis header, so an estimate here
+    /// would be extrapolated from an assumed block rate rather than bracketed
+    /// between two facts — a guess wearing the same shape as a reading, which
+    /// is the §83 failure in the field most likely to be believed. A move with
+    /// no time says its block and stops.
+    ///
+    /// **`= nil` is a DECODE requirement**, exactly as `effectiveGasPriceWei`
+    /// above states: `FramesMove` is `Codable` and cached, and Swift's
+    /// synthesized decoder applies no default for a missing key, so a
+    /// non-Optional field added here fails the decode of every move already on
+    /// disk and silently empties the room.
+    var timestamp: Date? = nil
     var rows: [FramesFrameRow]
 
     var id: String { hash }
@@ -309,6 +333,57 @@ struct FramesMove: Identifiable, Equatable, Codable {
     /// and which was rolled back.
     var rolledBack: [FramesFrameRow] { rows.filter { $0.valueLanded == false } }
 
+    /// **WHAT TO CALL THIS TRANSACTION — from EFFECTS, never from status.**
+    ///
+    /// It lived in `FramesMoveRow.verdict`, where nothing but that row could
+    /// reach it — so the sheet the row opens would have had to derive the same
+    /// reading a second time, and two readings of a rule this sharp drift.
+    /// Here that drift is a row and the sheet it opens disagreeing about
+    /// whether somebody's money moved, which is the one thing in this seat
+    /// that costs real trust.
+    ///
+    /// The order is load-bearing and is the shipped row's own: a transaction
+    /// that failed AND moved money is that first, before anything else it may
+    /// also be.
+    enum Verdict: String, Equatable, Sendable {
+        /// Every frame ran and nothing was rolled back.
+        case ran
+        /// It reverted and nothing landed.
+        case failed
+        /// **It reverted and money moved anyway.** Frames are not atomic by
+        /// default (§548, measured on this chain), so an earlier frame's
+        /// transfer persists under a `status: 0x0`. Drawing this as "Failed"
+        /// is a lie about the money and "Ran" is a lie about the outcome.
+        case failedButMoved
+        /// A frame declared a value, reported `status: 0x1`, and emitted no
+        /// log — its effect was reverted and its own receipt says it
+        /// succeeded. The trap `valueLanded` exists for.
+        case rolledBack
+
+        /// Anything but `ran` earns the destructive tone. Stated here rather
+        /// than re-derived per surface, for this property's own reason.
+        var isTrouble: Bool { self != .ran }
+
+        /// **THE WORD, in the model** — `FramesRead.Frame.modeName`'s
+        /// precedent and `FramesSection.label`'s. A row and its sheet saying
+        /// the same state in two different words is the drift this type was
+        /// hoisted to prevent, and the words are the whole of what it says.
+        var word: String {
+            switch self {
+            case .ran:            return String(localized: "Ran")
+            case .failed:         return String(localized: "Failed")
+            case .failedButMoved: return String(localized: "Failed, but value moved")
+            case .rolledBack:     return String(localized: "Rolled back")
+            }
+        }
+    }
+
+    var verdict: Verdict {
+        if movedValue == true && !succeeded { return .failedButMoved }
+        if !rolledBack.isEmpty { return .rolledBack }
+        return succeeded ? .ran : .failed
+    }
+
     /// **WHAT THIS TRANSACTION DID TO THE BALANCE OF THE ACCOUNT THAT READ
     /// IT** — signed wei, or nil when it could not be worked out.
     ///
@@ -350,4 +425,175 @@ struct FramesAccount: Identifiable, Equatable, Codable {
     /// meant to move and which was rolled back. See `FramesFrameRow
     /// .valueLanded`: this cannot be read from status.
     var rolledBack: [FramesFrameRow] { moves.flatMap(\.rolledBack) }
+}
+
+// MARK: - Who an address is, from this room's point of view
+
+/// **WHO, rather than a hex string.**
+///
+/// A sheet that says `0x80cf…2e32 → 0x333e…3a0d` has told you nothing you
+/// could not read off the row it opened from; one that says "you → an address
+/// you watch" has.
+///
+/// **Three cases and deliberately no fourth.** Hegotá's `HegotaParty` carries
+/// a vault and a nonce manager because that chain HAS them; this one has
+/// neither, so a fourth case here would be a permanently unreachable branch.
+/// And there is no `burn` case, which is the one that looks missing: this
+/// chain's `0x…dead` / `0x…deadbe02` addresses are genesis FIXTURES, funded on
+/// purpose and holding real test ETH, so calling one a burn address would tell
+/// somebody their money is gone when it is sitting in a dev account (§83, on
+/// the one line a receipt is read for).
+///
+/// Takes `mine` and `watched` rather than reading them, so this file stays
+/// Foundation-only and `scripts/frames-tx-selftest.sh` compiles it whole.
+enum FramesParty: Equatable, Sendable {
+    /// This phone's own account. **Wins over `watched`**, because watching
+    /// your own address does not make it somebody else's — and on this chain
+    /// the account you made is usually also the one you watch.
+    case you(String)
+    /// An address on the watch list, returned in the **WATCH LIST's** spelling
+    /// rather than the transaction's: an address's case is a checksum, the two
+    /// can legitimately differ, and a name given to `0xAbC…` must be found for
+    /// a receipt that spelled it `0xabc…`.
+    case watched(String)
+    case stranger(String)
+
+    var address: String {
+        switch self {
+        case .you(let a), .watched(let a), .stranger(let a): return a
+        }
+    }
+
+    /// Whether a door should be offered to watch this address. **A stranger
+    /// only** — one of yours is already here, and a button there would do
+    /// nothing, which is §83's dead control on the one screen offering it.
+    var isStranger: Bool { if case .stranger = self { return true }; return false }
+
+    static func of(_ address: String, mine: String?, watched: [String]) -> FramesParty {
+        let key = address.lowercased()
+        if let mine, mine.lowercased() == key { return .you(mine) }
+        if let match = watched.first(where: { $0.lowercased() == key }) { return .watched(match) }
+        return .stranger(address)
+    }
+}
+
+// MARK: - Who paid for somebody else
+
+/// One address that paid another address's gas.
+struct FramesPayer: Identifiable, Equatable, Sendable {
+    let address: String
+    let count: Int
+    /// What they spent, in wei. **Nil when ANY of their transactions' fees
+    /// could not be read** — `FramesRoom.curve`'s all-or-nothing rule, for its
+    /// reason: a total missing one term is wrong by that term and says so
+    /// nowhere, and a sponsor's generosity understated is a specific untruth
+    /// about a specific person.
+    let gasWei: Decimal?
+
+    var id: String { address.lowercased() }
+}
+
+enum FramesPayers {
+    /// The sponsors, most generous first.
+    ///
+    /// **Self-paid transactions are dropped here, not just by the caller.**
+    /// The Sponsors scope already filters, but a roster that trusted its
+    /// caller would put YOU at the top of the list of people who paid for you
+    /// the first time somebody passed it an unfiltered array — which is the
+    /// one reading this scope exists to make impossible.
+    ///
+    /// **A TOTAL ORDER** (gas, then count, then address). `Dictionary`
+    /// iteration order is not stable across runs, and a roster that reshuffles
+    /// between two reads of identical data reads as broken — the ordering rule
+    /// every ranked figure in this app already carries.
+    static func roster(_ moves: [FramesMove]) -> [FramesPayer] {
+        var order: [String] = []
+        var spelling: [String: String] = [:]
+        var counts: [String: Int] = [:]
+        var totals: [String: Decimal] = [:]
+        var complete: [String: Bool] = [:]
+
+        for move in moves where move.sponsored {
+            let key = move.payer.lowercased()
+            if counts[key] == nil {
+                order.append(key)
+                spelling[key] = move.payer
+                counts[key] = 0
+                totals[key] = 0
+                complete[key] = true
+            }
+            counts[key]! += 1
+            if let fee = move.feeWei { totals[key]! += fee } else { complete[key] = false }
+        }
+
+        return order.map { key in
+            FramesPayer(address: spelling[key] ?? key,
+                        count: counts[key] ?? 0,
+                        gasWei: (complete[key] ?? false) ? totals[key] : nil)
+        }
+        .sorted { a, b in
+            // An unreadable total sorts LAST rather than as zero — it is not a
+            // claim that they paid nothing. A real gas total is always above
+            // zero, so a negative stand-in can never collide with one.
+            let x = a.gasWei ?? Decimal(-1)
+            let y = b.gasWei ?? Decimal(-1)
+            if x != y { return x > y }
+            if a.count != b.count { return a.count > b.count }
+            return a.id < b.id
+        }
+    }
+
+    /// Every transaction this payer paid for, in the order the room lists them.
+    static func moves(of payer: String, in moves: [FramesMove]) -> [FramesMove] {
+        moves.filter { $0.sponsored && $0.payer.lowercased() == payer.lowercased() }
+    }
+}
+
+// MARK: - Saying when
+
+/// The dateline grammar, mirroring `HegotaFormat`'s so the two devnet rooms
+/// read alike. Foundation-only, like everything else in this file.
+enum FramesFormat {
+    /// How long ago, in the app's own coarse grain.
+    ///
+    /// **Nil is a real answer and every caller draws nothing for it.** The
+    /// header read is bounded, so a move past the window has no time — a
+    /// different thing from a move at the epoch, and substituting "now" for a
+    /// miss is the fake status §83 bans.
+    static func time(_ date: Date?, now: Date = Date()) -> String? {
+        guard let date else { return nil }
+        let seconds = max(0, now.timeIntervalSince(date))
+        let minutes = Int(seconds / 60)
+        if minutes < 1 { return String(localized: "just now") }
+        if minutes < 60 { return String(localized: "\(String(minutes))m ago") }
+        let hours = minutes / 60
+        if hours < 24 { return String(localized: "\(String(hours))h ago") }
+        let days = hours / 24
+        if days < 7 { return String(localized: "\(String(days))d ago") }
+        let weeks = days / 7
+        if weeks < 52 { return String(localized: "\(String(weeks))w ago") }
+        return String(localized: "\(String(weeks / 52))y ago")
+    }
+
+    /// A sheet's dateline.
+    ///
+    /// **The block is always said and the time only when it was read** — which
+    /// is the inverse of how it looks it should go, and is right for this
+    /// chain. The block number is the chain's own identity for the moment,
+    /// exact, and the thing you would paste into an explorer or quote to
+    /// somebody else; the date is the only form of it a person can read. So
+    /// both where both exist, and the exact one alone where they do not.
+    static func stamp(_ date: Date?, block: UInt64) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        // Grouped: block 60,258 rather than 60258 — this is a COUNT of blocks
+        // and reads as one. (An identifier would not be grouped; this is not
+        // an identifier, it is a height.)
+        let number = f.string(from: NSNumber(value: block)) ?? String(block)
+        guard let date else { return String(localized: "Block \(number)") }
+        let d = DateFormatter()
+        d.dateStyle = .medium
+        d.timeStyle = .short
+        return String(localized: "\(d.string(from: date)) · block \(number)")
+    }
 }

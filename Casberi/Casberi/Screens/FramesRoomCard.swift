@@ -21,6 +21,13 @@ struct FramesRoomFigure: View {
     let head: FramesRoom.Head
     let accounts: [FramesAccount]
     let section: FramesSection
+    /// Home's account row is a DOOR (2026-09-02). It was the only identity on
+    /// the screen and it opened nothing — and it is where the balance, the
+    /// nonce and the curve all already meet, so it is the obvious place to ask
+    /// what this address has been doing. Declared here rather than adding a
+    /// second account row to the list below, which would be one fact drawn
+    /// twice six points apart.
+    var onOpenAccount: ((FramesAccount) -> Void)? = nil
 
     private var moves: [FramesMove] {
         accounts.filter(\.reached).flatMap(\.moves).sorted { $0.blockNumber > $1.blockNumber }
@@ -137,19 +144,36 @@ struct FramesRoomFigure: View {
                     .frame(maxWidth: .infinity)
             }
             if let account = accounts.first(where: \.reached) {
-                HStack(spacing: DS.Space.s3) {
-                    WalletFace(address: account.address, size: DS.Face.list, circular: true)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(WalletStore.shortAddress(account.address))
-                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                        // The nonce IS the count — it is incremented per
-                        // transaction the account signs — so this is a fact off
-                        // the chain rather than a tally of what was read back.
-                        Text(sendLine(nonce: account.nonce))
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                Button {
+                    DSHaptic.selection()
+                    onOpenAccount?(account)
+                } label: {
+                    HStack(spacing: DS.Space.s3) {
+                        WalletFace(address: account.address, size: DS.Face.list, circular: true)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(FramesWatch.shared.name(for: account.address)
+                                 ?? WalletStore.shortAddress(account.address))
+                                .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                            // The nonce IS the count — it is incremented per
+                            // transaction the account signs — so this is a fact off
+                            // the chain rather than a tally of what was read back.
+                            Text(sendLine(nonce: account.nonce))
+                                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        }
+                        Spacer(minLength: 0)
+                        WalletRowChevron()
                     }
-                    Spacer(minLength: 0)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                // **The name stays IN the label.** The first cut replaced the
+                // button's whole label with "Open this account", which is the
+                // one thing a sighted reader already knows from the chevron
+                // and drops the one thing they get from the row — which
+                // account it is. `children: .combine` keeps the address and
+                // the send line and adds the verb.
+                .accessibilityElement(children: .combine)
+                .accessibilityHint(Text(String(localized: "Opens this account")))
             }
             if head.partial {
                 note(String(localized: "\(String(head.reached)) of \(String(head.watched)) addresses answered."))
@@ -296,12 +320,28 @@ struct FramesRoomList: View {
     let accounts: [FramesAccount]
     let section: FramesSection
     let onSend: () -> Void
-    let onOpenMove: (FramesMove) -> Void
+    /// **THE OWNING ADDRESS TRAVELS WITH THE MOVE** — Hegotá's signature, and
+    /// for its reason: in an unscoped room nothing else can say which of the
+    /// shown addresses a transaction belonged to, and a sheet that cannot
+    /// answer "whose?" is a sheet about a stranger's money.
+    let onOpenMove: (FramesMove, String) -> Void
+    var onOpenPayer: ((FramesPayer) -> Void)? = nil
 
     @Environment(ShellChrome.self) private var chrome
 
     private var moves: [FramesMove] {
-        accounts.filter(\.reached).flatMap(\.moves).sorted { $0.blockNumber > $1.blockNumber }
+        pairs.map(\.move)
+    }
+
+    /// Every shown move with the address whose read produced it.
+    ///
+    /// The flat `moves` list above is derived FROM this rather than beside it,
+    /// so the two orderings can never differ — a row opening the sheet for the
+    /// transaction above it is the kind of defect that renders perfectly.
+    private var pairs: [(move: FramesMove, owner: String)] {
+        accounts.filter(\.reached)
+            .flatMap { account in account.moves.map { (move: $0, owner: account.address) } }
+            .sorted { $0.move.blockNumber > $1.move.blockNumber }
     }
 
     var body: some View {
@@ -340,11 +380,44 @@ struct FramesRoomList: View {
             // **HOME HOLDS THE TILES, NOT A FORM** (§553's ruling, mirrored).
             FramesSendCard(onSend: onSend)
         case .activity:
-            rows(moves)
+            rows(pairs)
         case .frames:
-            rows(moves.filter { $0.rows.count > 1 })
+            rows(pairs.filter { $0.move.rows.count > 1 })
         case .sponsors:
-            rows(moves.filter(\.sponsored))
+            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                payers
+                rows(pairs.filter { $0.move.sponsored })
+            }
+        }
+    }
+
+    /// **WHO PAID — the scope's other subject, and it had no surface at all.**
+    ///
+    /// The figure draws one split bar: how much of the gas here somebody else
+    /// covered. It could not say WHO, and on this chain that is the whole
+    /// interesting half — the `payer` field is the reading no ordinary chain
+    /// publishes, and a sponsor is the one stranger on a network of eighteen
+    /// addresses genuinely worth following.
+    ///
+    /// Above the transactions rather than below, because the people are what
+    /// the scope is ABOUT and the transactions are the evidence.
+    @ViewBuilder private var payers: some View {
+        let roster = FramesPayers.roster(moves)
+        if !roster.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text(roster.count == 1 ? String(localized: "1 sponsor")
+                                       : String(localized: "\(String(roster.count)) sponsors"))
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                ForEach(roster) { payer in
+                    Button {
+                        DSHaptic.selection()
+                        onOpenPayer?(payer)
+                    } label: {
+                        FramesPayerRow(payer: payer).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
     }
 
@@ -398,7 +471,7 @@ struct FramesRoomList: View {
         .transition(.opacity)
     }
 
-    @ViewBuilder private func rows(_ list: [FramesMove]) -> some View {
+    @ViewBuilder private func rows(_ list: [(move: FramesMove, owner: String)]) -> some View {
         // **PENDING FIRST, and only in the scopes where it belongs.** Activity
         // is every transaction and Home is where the send lives, so a
         // just-broadcast batch belongs in both. Frames and Sponsors select rows
@@ -424,8 +497,14 @@ struct FramesRoomList: View {
                 .padding(.vertical, DS.Space.s3)
         } else {
             VStack(spacing: DS.Space.s2) {
-                ForEach(list) { move in
-                    Button { onOpenMove(move) } label: { FramesMoveRow(move: move) }
+                ForEach(list, id: \.move.id) { pair in
+                    let move = pair.move
+                    Button {
+                        DSHaptic.selection()
+                        onOpenMove(move, pair.owner)
+                    } label: {
+                        FramesMoveRow(move: move).contentShape(Rectangle())
+                    }
                         .buttonStyle(.plain)
                         // **THE SETTLE, ON THE ROW SOMEBODY IS WATCHING.**
                         // The pending row above it fades out and the real one
@@ -452,15 +531,13 @@ struct FramesRoomList: View {
 struct FramesMoveRow: View {
     let move: FramesMove
 
-    private var verdict: String {
-        if move.movedValue == true && !move.succeeded {
-            return String(localized: "Failed, but value moved")
-        }
-        if !move.rolledBack.isEmpty {
-            return String(localized: "Rolled back")
-        }
-        return move.succeeded ? String(localized: "Ran") : String(localized: "Failed")
-    }
+    /// **THE VERDICT COMES FROM THE MODEL** (2026-09-02). It was spelled out
+    /// here, where nothing else could reach it — so the sheet this row now
+    /// opens would have had to derive the same rule a second time, and two
+    /// readings of THIS rule drifting means a row and its own sheet disagreeing
+    /// about whether somebody's money moved. `FramesMove.verdict` is the one
+    /// door, and the harness mutates it.
+    private var verdict: FramesMove.Verdict { move.verdict }
 
     /// Nil where there is nobody to name — a plain transfer this room read
     /// off the chain rather than sent, or a batch of pure calls.
@@ -472,12 +549,7 @@ struct FramesMoveRow: View {
             : String(localized: "\u{2192} \(String(people.count)) addresses")
     }
 
-    private var tone: Color {
-        if !move.rolledBack.isEmpty || (move.movedValue == true && !move.succeeded) {
-            return DS.destructive
-        }
-        return move.succeeded ? DS.textTertiary : DS.destructive
-    }
+    private var tone: Color { verdict.isTrouble ? DS.destructive : DS.textTertiary }
 
     var body: some View {
         HStack(spacing: DS.Space.s3) {
@@ -496,7 +568,7 @@ struct FramesMoveRow: View {
                     .dsText(.callout15)
                     .foregroundStyle(DS.textPrimary)
                 HStack(spacing: DS.Space.s2) {
-                    Text(verdict).dsText(.label12).foregroundStyle(tone)
+                    Text(verdict.word).dsText(.label12).foregroundStyle(tone)
                     if move.sponsored {
                         Text(String(localized: "Somebody else paid"))
                             .dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -511,15 +583,40 @@ struct FramesMoveRow: View {
                         Text(line).dsText(.label12).foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
                     }
+                    // **WHEN** (2026-09-02). These were the app's only undated
+                    // rows: a log carries a block number and a block number is
+                    // not a time to anybody. Nil draws NOTHING rather than
+                    // "now" — the header read is bounded, so a move outside the
+                    // window legitimately has no time (§515a).
+                    if let when = FramesFormat.time(move.timestamp) {
+                        Text(when).dsText(.label12).foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
                 }
             }
             Spacer(minLength: DS.Space.s2)
-            // **THE FEE IN MONEY, WITH GAS BENEATH IT.** Gas is a unit nobody
-            // holds; the fee is what actually left the balance, and this room
-            // already computes it for the curve. Gas stays because on a devnet
-            // it is the number somebody is tuning — but it stops being the only
-            // thing the row says about cost.
             VStack(alignment: .trailing, spacing: 1) {
+                // **WHAT IT MOVED, LEADING THE MONEY COLUMN** (2026-09-02).
+                // The row carried a fee and a gas figure and never said the
+                // amount — so the one number a person opens a money row for
+                // existed on this screen only as the HEIGHT OF A BAR in the
+                // Activity chart, readable as a proportion and never as a
+                // figure. It is exact (§548): every ETH movement is a log and
+                // the receipt names both the fee and who paid it.
+                //
+                // Nil draws nothing rather than a zero — an unread delta and a
+                // transaction that moved nothing must not look alike.
+                if let delta = move.deltaWei {
+                    Text(FramesMoney.signedETH(wei: delta))
+                        .dsText(.callout15)
+                        .foregroundStyle(delta > 0 ? DS.confirm : DS.textPrimary)
+                        .monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
+                }
+                // **THE FEE IN MONEY, WITH GAS BENEATH IT.** Gas is a unit
+                // nobody holds; the fee is what actually left the balance, and
+                // this room already computes it for the curve. Gas stays
+                // because on a devnet it is the number somebody is tuning — but
+                // it stops being the only thing the row says about cost.
                 if let fee = FramesMoney.feeLine(wei: move.feeWeiIfSelfPaid) {
                     Text(fee).dsText(.label12).foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
@@ -537,6 +634,39 @@ struct FramesMoveRow: View {
     }
 }
 
+/// ONE SPONSOR, as a row.
+///
+/// **The figure's split bar says how much and this says who** — the two halves
+/// of the one reading this chain publishes that ordinary chains hide.
+struct FramesPayerRow: View {
+    let payer: FramesPayer
+
+    var body: some View {
+        HStack(spacing: DS.Space.s3) {
+            WalletFace(address: payer.address, size: DS.Face.list, circular: true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(FramesWatch.shared.name(for: payer.address)
+                     ?? WalletStore.shortAddress(payer.address))
+                    .dsText(.callout15).foregroundStyle(DS.textPrimary).lineLimit(1)
+                Text(payer.count == 1
+                     ? String(localized: "1 transaction")
+                     : String(localized: "\(String(payer.count)) transactions"))
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+            }
+            Spacer(minLength: DS.Space.s2)
+            // **NOT A ZERO WHEN IT COULD NOT BE TOTALLED.** `FramesPayer
+            // .gasWei` is all-or-nothing on purpose, and printing "0.000000"
+            // for an incomplete sum understates a specific person's generosity
+            // (§515a, wearing a name).
+            if let fee = FramesMoney.feeLine(wei: payer.gasWei) {
+                Text(fee).dsText(.label12).foregroundStyle(DS.textSecondary)
+                    .monospacedDigit().lineLimit(1)
+            }
+            WalletRowChevron()
+        }
+        .contentShape(Rectangle())
+    }
+}
 
 /// THE BALANCE, AT ROOM SCALE.
 ///

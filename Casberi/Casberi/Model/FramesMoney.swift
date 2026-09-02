@@ -84,6 +84,44 @@ enum FramesMoney {
         return String(localized: "\(text) fee")
     }
 
+    /// **THE RECEIPT'S HERO FIGURE** — signed wei, as ETH.
+    ///
+    /// **A TRUE MINUS (U+2212), never a hyphen**, so the digits stay aligned
+    /// in a monospaced column — and the sign is the whole reading:
+    /// `HegotaFormat.signed`'s rule, that direction carried only in colour is
+    /// direction lost to anybody who cannot see the colour.
+    ///
+    /// **SIX places, `feeLine`'s number rather than `balanceLine`'s**, and for
+    /// the same reason one step sharper. This figure is a DELTA, and a delta
+    /// on this chain is routinely the fee alone (~0.0002 ETH) for a
+    /// transaction that moved nothing of its own — which four places renders
+    /// as a flat `0.0000`, a movement that happened shown as nothing, in the
+    /// largest type on the sheet.
+    ///
+    /// Rounds toward ZERO in both directions, so money in is never overstated
+    /// and money out is never overstated either.
+    ///
+    /// **Says "test ETH"**, exactly as `balanceLine` does. It is the longer
+    /// string and it is the honest one: this figure is the biggest thing on a
+    /// receipt, and a receipt for a chain that says of itself it may be reset
+    /// without notice must not lead with a number that reads like money.
+    static func signedETH(wei: Decimal) -> String {
+        let magnitude = wei < 0 ? -wei : wei
+        var quotient = magnitude / weiPerETH
+        var rounded = Decimal()
+        NSDecimalRound(&rounded, &quotient, 6, .down)
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 6
+        formatter.maximumFractionDigits = 6
+        formatter.usesGroupingSeparator = true
+        let text = formatter.string(from: rounded as NSDecimalNumber) ?? "0"
+        // A movement of exactly nothing has no direction — the flat-percent
+        // rule (§83): no sign, no arrow, no colour.
+        let sign = wei < 0 ? "\u{2212}" : (wei > 0 ? "+" : "")
+        return String(localized: "\(sign)\(text) test ETH")
+    }
+
     /// A balance line for a screen, or nil when the read did not happen.
     /// **No currency symbol and no dollar figure** — see the type doc.
     static func balanceLine(weiHex: String?) -> String? {

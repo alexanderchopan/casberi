@@ -434,6 +434,16 @@ final class FramesLiveState {
     /// A bound on REQUESTS, not on what a person can see.
     private static let moveDepth = 12
 
+    /// How many distinct blocks get their header read for a timestamp.
+    ///
+    /// **A bound on REQUESTS, and there is one for a reason even though this
+    /// is a single batched call.** Somebody watching five addresses at
+    /// `moveDepth` each has 60 blocks to ask about in one request, on a
+    /// three-host devnet — and a batch that size timing out takes the whole
+    /// sweep's timing with it. Spent newest-first, which is where anybody is
+    /// looking.
+    private static let headerDepth = 30
+
     func clear() {
         accounts = []
         readAt = nil
@@ -495,6 +505,10 @@ final class FramesLiveState {
         // A pass where NOTHING answered leaves the last good read standing
         // rather than blanking the room — §515a's rule.
         guard anyAnswered else { reached = false; return }
+        // AFTER the reachability guard, so an unreachable chain is not asked a
+        // second question, and BEFORE the arrival bookkeeping, so a row that
+        // washes in as news already knows when it happened.
+        await stampTimes(&read)
         reconcilePending(against: read)
         seedFirstSettleIfAlreadySent(read)
         noteArrivals(in: read)
@@ -592,6 +606,56 @@ final class FramesLiveState {
         }
         return out.sorted { $0.blockNumber > $1.blockNumber }
     }
+
+    /// **WHEN EACH TRANSACTION HAPPENED** — one batched header read per sweep.
+    ///
+    /// Until this landed every row in this room was undated: a log carries a
+    /// block number and nothing else, and a block number is not a time to
+    /// anybody. It is one request whatever the corpus, because the blocks are
+    /// deduped first and asked together — `FramesRPC.batch`, which matches its
+    /// answers by `id` rather than by position, so one transaction can never
+    /// be given another transaction's time.
+    ///
+    /// **A block that did not answer leaves its move UNDATED**, never stamped
+    /// with now (§515a): an unread header is not evidence about when anything
+    /// happened, and these rows are read by somebody reasoning about a
+    /// sequence they sent minutes ago.
+    private func stampTimes(_ accounts: inout [FramesAccount]) async {
+        var blocks: [UInt64] = []
+        var seen: Set<UInt64> = []
+        let newestFirst = accounts.flatMap(\.moves).sorted { $0.blockNumber > $1.blockNumber }
+        for move in newestFirst {
+            guard seen.insert(move.blockNumber).inserted else { continue }
+            blocks.append(move.blockNumber)
+            if blocks.count >= Self.headerDepth { break }
+        }
+        guard !blocks.isEmpty else { return }
+
+        let calls: [(method: String, params: [Any])] = blocks.map {
+            // `false` — headers only. Asking for full transaction bodies would
+            // fetch every transaction in every block to read one integer.
+            (method: "eth_getBlockByNumber", params: [String(format: "0x%llx", $0), false])
+        }
+        guard let answers = await FramesRPC.batch(calls) else { return }
+
+        var times: [UInt64: Date] = [:]
+        for (index, block) in blocks.enumerated() {
+            guard let header = answers[index] as? [String: Any],
+                  let seconds = FramesRead.hexInt(header["timestamp"]), seconds > 0
+            else { continue }
+            times[block] = Date(timeIntervalSince1970: TimeInterval(seconds))
+        }
+        guard !times.isEmpty else { return }
+
+        for i in accounts.indices {
+            for j in accounts[i].moves.indices {
+                // Assigned unconditionally: a block outside the window yields
+                // nil, which is the honest answer and the value the field
+                // already held.
+                accounts[i].moves[j].timestamp = times[accounts[i].moves[j].blockNumber]
+            }
+        }
+    }
 }
 
 // MARK: - The demo
@@ -632,13 +696,34 @@ extension FramesLiveState {
             .init(succeeded: ok, gasUsed: used, stateGasUsed: nil, logCount: logs)
         }
 
+        // **WHEN: THE SPACING IS MEASURED, ONLY THE ANCHOR MOVES.**
+        //
+        // Every block above is real and so is every interval between them,
+        // read off rpc1.frames.ethrex.xyz on 2026-09-02 — 60,258 sits 5,508
+        // seconds after 59,340, which sits 240 after 59,300, and so on down to
+        // the faucet payment 6,948 seconds before the newest.
+        //
+        // What is NOT carried over is the absolute time. A demo entered next
+        // year over the true timestamps reads "1y ago" on every row, and
+        // `DemoMode.restampIfStale` — which exists for exactly that and shifts
+        // the corpus by whole days — cannot reach this fixture: it lives in
+        // memory and is installed fresh on entry. So the newest transaction
+        // sits a few minutes back and every other keeps its real distance from
+        // it. Same bargain the restamp makes (shift everything by one amount,
+        // keep the shape), taken at install time instead of on a stale check.
+        let anchor = Date().addingTimeInterval(-240)
+        func at(_ secondsBefore: TimeInterval) -> Date {
+            anchor.addingTimeInterval(-secondsBefore)
+        }
+
         // 1. THE FAUCET. An ordinary type-0x2 transfer — no frames — which is
         //    how every account on this chain actually begins.
         let funded = FramesMove(
             hash: "0x46619c8ef349691b6c647e742436816d1c282c6b7479d36e72ed5894ee9320e4",
             blockNumber: 59_100, sender: "0xf0667e65e0e5281a39d95d84770b6e2065740466",
             payer: "0xf0667e65e0e5281a39d95d84770b6e2065740466",
-            succeeded: true, gasUsed: 21_000, rows: [], deltaWei: eth)
+            succeeded: true, gasUsed: 21_000, timestamp: at(6948),
+            rows: [], deltaWei: eth)
 
         // 2. A FRAME TRANSACTION — verify, then send. Lights the Frames scope.
         let sent = FramesMove(
@@ -647,6 +732,7 @@ extension FramesLiveState {
             // MEASURED: the 0.001 send cost 1,210,790,000,000,000 wei against a
             // 210,790 gas receipt, so this chain quoted exactly 1 gwei.
             effectiveGasPriceWei: 1_000_000_000,
+            timestamp: at(6468),
             rows: [
                 .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
                 .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 1)),
@@ -662,6 +748,7 @@ extension FramesLiveState {
         let partial = FramesMove(
             hash: "0x9bb9cfef1c41c97b101ce20e934e13f3a7e3d5662c2e0352b26b9998f9f8c58d",
             blockNumber: 59_240, sender: me, payer: me, succeeded: false, gasUsed: 316_273, effectiveGasPriceWei: 1_000_000_000,
+            timestamp: at(6108),
             rows: [
                 .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
                 .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 1)),
@@ -675,6 +762,7 @@ extension FramesLiveState {
         let rolled = FramesMove(
             hash: "0x2642331b604d901b59d8f3d6ff5dea314c57ab090d2bf661bbc287b79fefeb63",
             blockNumber: 59_300, sender: me, payer: me, succeeded: false, gasUsed: 240_100, effectiveGasPriceWei: 1_000_000_000,
+            timestamp: at(5748),
             rows: [
                 .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
                 .init(frame: frame(2, 0x04, to: peer, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 0)),
@@ -699,6 +787,7 @@ extension FramesLiveState {
             hash: "0x31e7311acfbc2280df90c46b009eba7f4d45fa698a42de0e86a8eb1771bb72d8",
             blockNumber: 60_258, sender: me, payer: me, succeeded: true,
             gasUsed: 595_948, effectiveGasPriceWei: 1_000_000_007,
+            timestamp: at(0),
             rows: [
                 .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
                 .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 1)),
@@ -717,6 +806,7 @@ extension FramesLiveState {
         let sponsored = FramesMove(
             hash: "0x5b131baf9e0b9635a0fd58a6410f50e66c6450736999cace47826982de1cf026",
             blockNumber: 59_340, sender: me, payer: peer, succeeded: true, gasUsed: 402_873, effectiveGasPriceWei: 1_000_000_000,
+            timestamp: at(5508),
             rows: [
                 .init(frame: frame(1, 0x03, to: me,   value: "0x0"), outcome: outcome(true, 100, logs: 0)),
                 .init(frame: frame(2, 0x00, to: dead, value: "0x38d7ea4c68000"), outcome: outcome(true, 3_000, logs: 1)),

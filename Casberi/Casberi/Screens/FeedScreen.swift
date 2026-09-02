@@ -493,6 +493,28 @@ struct FeedScreen: View {
         /// The Frames devnet's send, routed here for `hegotaSend`'s reason: a
         /// `.sheet` inside a List row half-opens and closes (§548).
         case framesSend
+        /// ONE FRAMES TRANSACTION, and the three routes below it — all four
+        /// here for `hegotaMove`'s two reasons at once: the seat lands no
+        /// `Thing` so nothing can ride `.thing`, and every card that opens one
+        /// lives inside this List's rows, where a `.sheet` resolves to the same
+        /// presenting controller as this one and half-opens before closing.
+        ///
+        /// Carries the OWNING address beside the move: in an unscoped room
+        /// nothing else can say which of the shown addresses it belonged to.
+        case framesMove(FramesMove, String)
+        /// One FRAME — the object this chain is NAMED for, and until now the
+        /// one thing in the room that could not be opened anywhere. Carries the
+        /// whole move and an index rather than the frame alone, so the sheet
+        /// can draw the step in its sequence; a step out of its order is a step
+        /// without its meaning.
+        case framesFrame(FramesMove, Int)
+        /// One address that paid somebody else's gas, with the moves the room
+        /// is currently showing — passed rather than re-read, because the room
+        /// may be scoped and a sheet that quietly widened to every account
+        /// would answer a question nobody asked.
+        case framesPayer(FramesPayer, [FramesMove])
+        /// One watched Frames address, or this phone's own.
+        case framesAccount(FramesAccount)
         /// Carries the sending account, which only `signableVibenetAccount()`
         /// can resolve — the sheet must never re-derive it and disagree.
         case vibenetSend(Data)
@@ -531,6 +553,10 @@ struct FeedScreen: View {
             case .vibenetWatch: "vibenetWatch"
             case .hegotaSend: "hegotaSend"
             case .framesSend: "framesSend"
+            case .framesMove(let m, _): "framesMove:\(m.id)"
+            case .framesFrame(let m, let i): "framesFrame:\(m.id)#\(i)"
+            case .framesPayer(let p, _): "framesPayer:\(p.id)"
+            case .framesAccount(let a): "framesAccount:\(a.address)"
             case .vibenetSend(let a): "vibenetSend:\(VibenetTransaction.hex(a))"
             case .vibenetAuthorize(let account, _, _, let editing):
                 "vibenetAuthorize:\(VibenetTransaction.hex(account)):\(editing?.actorId ?? "new")"
@@ -741,6 +767,34 @@ struct FeedScreen: View {
     /// An unreadable amount contributes a frame with no value rather than
     /// dropping out, so the strip keeps one cell per leg while somebody is
     /// still typing.
+    /// The Frames accounts this room is showing, after the face rail's scope.
+    ///
+    /// **Asked of `FramesRoomSource` rather than filtered here**, so the head,
+    /// the figure and the rows cannot disagree about which addresses are on
+    /// screen: the rule lives in one place and this is a call to it.
+    private var framesAccounts: [FramesAccount] {
+        FramesRoomSource.accounts(scope: chrome.framesScope)
+    }
+
+    /// Every move the Frames room is currently showing, newest first — the
+    /// denominator a sponsor's share is taken against.
+    private var framesShownMoves: [FramesMove] {
+        framesAccounts.filter(\.reached).flatMap(\.moves)
+            .sorted { $0.blockNumber > $1.blockNumber }
+    }
+
+    /// Which shown address a Frames move was read from.
+    ///
+    /// A move opened from a SPONSOR's sheet has lost its owner on the way —
+    /// the payer is by definition not it — so it is looked up rather than
+    /// guessed. Empty where the move is no longer in the shown set, which the
+    /// sheet draws as an unknown endpoint rather than as somebody.
+    private func framesOwner(of move: FramesMove) -> String {
+        framesAccounts.first {
+            $0.moves.contains { $0.hash.lowercased() == move.hash.lowercased() }
+        }?.address ?? ""
+    }
+
     private func framesPreviewRun(_ legs: [DevnetSendLeg]) -> [FramesFrameRow] {
         let built = legs.map {
             FramesTransaction.Leg(recipient: RLP.data(fromHex: $0.address) ?? Data(),
@@ -2019,6 +2073,16 @@ struct FeedScreen: View {
                 // same nothing lost — this key matters only in the room whose
                 // revision is frozen.
                 source == FramesIdentity.source ? FramesRoomSource.identity : "",
+                // **AND ITS SCOPE** (2026-09-02). The face rail scopes this
+                // room's head from today, so it belongs in the memo key for
+                // this property's own stated reason: a head that survived a
+                // scope change is a card describing rows that are no longer on
+                // screen. `chrome.vibenetScope` is here for exactly this, two
+                // rooms over — and the symptom there was exactly this too, the
+                // face lighting while the card kept listing every account.
+                // Scoped to the room for the perf reason the Hegotá term
+                // above gives, and with the same nothing lost.
+                source == FramesIdentity.source ? (chrome.framesScope ?? "") : "",
                 String(revision.count), String(revision.signal)]
             .joined(separator: "|")
     }
@@ -3834,6 +3898,33 @@ struct FeedScreen: View {
                 chrome.hegotaSection = section
                 feedSheet = nil
             }
+        case .framesMove(let move, let owner):
+            FramesMoveSheet(move: move, owner: owner) { index in
+                // Frame-to-frame through the ONE sheet: replacing the route
+                // swaps the tray's content in place, so the step rises where
+                // the transaction was rather than as a second sheet over it.
+                feedSheet = .framesFrame(move, index)
+            }
+        case .framesFrame(let move, let index):
+            FramesFrameSheet(move: move, index: index) { next in
+                // Step-to-step, the same route swap that opened this one.
+                feedSheet = .framesFrame(move, next)
+            }
+        case .framesPayer(let payer, let moves):
+            FramesPayerSheet(payer: payer, moves: moves) { move in
+                // The owner is this room's own scope: a sponsored transaction
+                // was read off one of the shown accounts, and the payer is by
+                // definition NOT it.
+                feedSheet = .framesMove(move, framesOwner(of: move))
+            }
+        case .framesAccount(let account):
+            FramesAccountSheet(account: account) { section in
+                // The sheet's facts are doors: scope the room to this account
+                // and open the list the fact names.
+                chrome.framesScope = account.address
+                chrome.framesSection = section
+                feedSheet = nil
+            }
         case .hegotaKeySheet:
             HegotaKeySheet()
         case .hegotaCoin(let coin, let all, let unspent):
@@ -4109,7 +4200,8 @@ case .vibenetSend(let account):
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets())
-        } else if source == FramesIdentity.source, let head = FramesRoomSource.compose() {
+        } else if source == FramesIdentity.source,
+                  let head = FramesRoomSource.compose(scope: chrome.framesScope) {
             // **A ROOM WITH LIVE CONTENT AND NO ROWS** — Hegotá's branch, one
             // chain over, and needed for the same reason: without it the
             // `if/else if` falls through BOTH arms and renders nothing at all.
@@ -4126,13 +4218,18 @@ case .vibenetSend(let account):
             // the room above the drawing it scopes; reported from a screenshot.
             Section {
                 FramesRoomFigure(head: head,
-                                 accounts: FramesRoomSource.accounts(),
-                                 section: framesScope)
+                                 accounts: framesAccounts,
+                                 section: framesScope,
+                                 onOpenAccount: { feedSheet = .framesAccount($0) })
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                               bottom: 0, trailing: DSRoomChassis.inset))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
+            // **THE RAIL LISTS EVERY ACCOUNT, NOT THE SCOPED ONE.** It is the
+            // control that SETS the scope, so feeding it the scoped list would
+            // leave one face on screen and no way back to the others — a filter
+            // that can be entered and not left.
             let showsFramesRail = FramesScopeRail.shows(
                 source: source, watched: FramesRoomSource.accounts().count)
             if showsFramesRail || FramesSection.shows(present: chrome.framesSections) {
@@ -4172,10 +4269,23 @@ case .vibenetSend(let account):
             }
             Group {
                 FramesRoomList(head: head,
-                               accounts: FramesRoomSource.accounts(),
+                               accounts: framesAccounts,
                                section: framesScope,
                                onSend: { feedSheet = .framesSend },
-                               onOpenMove: { _ in })
+                               // **THESE ROWS WERE BUTTONS WIRED TO NOTHING**
+                               // (2026-09-02). `FramesRoomList` has built every
+                               // row as a `Button { onOpenMove(move) }` since
+                               // the room shipped and this closure was empty —
+                               // so a tap in Activity, Frames or Sponsors
+                               // highlighted and did nothing, which is §83's
+                               // dead control multiplied by every transaction
+                               // on screen.
+                               onOpenMove: { move, owner in
+                                   feedSheet = .framesMove(move, owner)
+                               },
+                               onOpenPayer: { payer in
+                                   feedSheet = .framesPayer(payer, framesShownMoves)
+                               })
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)

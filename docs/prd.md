@@ -44713,3 +44713,179 @@ the empty room's new tile has not been looked at on any simulator or phone, and
 §394a's standing lesson is that for presentation work a green build proves
 nothing.
 
+
+## §548 ninth follow-up — every row in the room was a button wired to nothing (user: "in Frames, none of the lists open sheets for the individual items, we need to add these, how would you do that to each of the groups of screens: activity, frames, and sponsors? how else would you improve the frames room, look at the data model, then spec it out", then "build it", 2026-09-02)
+
+Reported as a missing feature and it was a dead one. `FramesRoomList` has built
+every row as `Button { onOpenMove(move) }` since the room shipped, and
+`FeedScreen` passed **`onOpenMove: { _ in }`** — so a tap in Activity, Frames or
+Sponsors highlighted and did nothing. That is §83's dead control multiplied by
+every transaction on screen, in the room whose entire content is those rows,
+and nothing could see it: the compiler is happy with an empty closure and a
+screen sweep photographs a room whose rows look perfectly tappable.
+
+Hegotá has four sheet routes; this seat had none.
+
+### The four sheets
+
+**None of them presents itself.** Every card that opens one lives inside
+`FeedScreen`'s `List`, where a `.sheet` resolves to the same presenting
+controller and rises part way before closing again — paid for three times now,
+so it is inherited rather than rediscovered.
+
+**The move sheet** is the receipt: the dateline and the block, a `DSStamp`
+drawn from `FramesMove.verdict`, the signed delta at `price40`, the crossing
+(sender → recipient, several recipients stacked and counted), the sponsorship
+sentence, the room's own `FramesSequenceStrip` over this one transaction, a row
+per frame, the facts as a `DSSpecTable`, a watch door and the explorer.
+
+**The frame sheet is the one that matters most, and it is where the PERMISSION
+finally gets said after the fact.** `FramesSection`'s own ruling is that this
+seat has no Permissions scope because authority here is per-transaction — a
+VERIFY frame's `flags` carry the `APPROVE` scope for execution and payment,
+nothing survives the transaction, and there is nothing standing to revoke — and
+it closes with the consequence: *"the `frames` scope must always say whether a
+VERIFY frame approved execution, payment or both."* Until this sheet existed the
+only surface in the app that ever said it was the **send preview**: before the
+fact, never after. It also draws the two gas budgets against what was spent of
+them, `FramesRead.starvation`'s verdict (which existed and nothing showed), the
+EVIDENCE line — the EIP-7708 log, which is what makes a rolled-back frame
+distinguishable from a successful one at all — the join in words, the calldata,
+and prev/next doors naming the neighbour's mode.
+
+**The payer sheet is new ground.** The Sponsors scope drew one split bar and
+had no way to ask whose the other half was — so the reading this chain
+publishes that ordinary chains hide had no subject. `FramesPayers.roster`
+groups the sponsored moves by payer; a roster row leads the scope, above the
+transactions, because the people are what it is ABOUT and the transactions are
+the evidence. A sponsor is also the one stranger on a network of eighteen
+addresses genuinely worth following: they spent real gas on somebody else's
+behalf, which is a better reason than any balance on a chain whose money has no
+value.
+
+**The account sheet's facts are DOORS.** Hegotá's shipped as a summary that
+named three readings the room can show and offered no way to any of them, which
+is the dead control wearing the shape of a paragraph; that lesson is taken here
+rather than re-learned.
+
+### THE FACE RAIL WAS A CONTROL THAT CHANGED NOTHING
+
+`chrome.framesScope` was written on every pick and read by **nothing** — the
+figure, the curve, the crown, the sponsor split and every row all took
+`FramesLiveState.shared.accounts` whole. On a room watching two addresses the
+face lit and not one number on the screen moved. §547 fused that rail into the
+room's chrome precisely so it would read as load-bearing.
+
+Scoping the **accounts** rather than each drawing is what makes it one change
+instead of six, and it is the stronger version: every reading in the room is
+derived from that array, so they cannot disagree about which addresses are on
+screen. Three things it had to get right. A scope matching nothing shows
+EVERYTHING, never nothing — an address can leave the watch list while its face
+is the remembered pick, and an empty room is a blank that names no cause.
+`head.watched` narrows only on a real narrowing, so `partial` never says "1 of 2
+answered" about an address you yourself set aside, and all three black-screen
+guards keep the unscoped count verbatim. And `chrome.framesScope` joins
+`headIdentity`, or a head memoised under one scope survives the pick that
+changed it — `chrome.vibenetScope` is in that key for exactly this, two rooms
+over, where the symptom was exactly this too.
+
+**`sections()` stays unscoped, and that is a ruling.** Scoping it would make the
+strip reflow on a face tap: pick an address nobody has sponsored and the
+Sponsors chip vanishes, taking you back to Home. A control that rearranges the
+control beside it is one nobody can aim at. So the strip describes the ROOM and
+the face scopes its CONTENTS; the cost is that a scoped Sponsors page can be
+empty, which it already says in words.
+
+### The rows were undated, and the amount was only ever a bar height
+
+**These were the app's only undated rows.** A log carries a block number and a
+block number is not a time to anybody. One batched `eth_getBlockByNumber` per
+sweep now stamps them — deduped first and asked together, matched by `id`
+rather than position, so one transaction can never be given another's time. A
+block that did not answer leaves its move **undated, never stamped with now**.
+
+**No `estimatedAt`, and that is a divergence from Hegotá worth stating.** That
+room interpolates between two headers it really read, anchored on a genesis
+header it fetches every pass for its restart check. This seat fetches no
+genesis header, so an estimate here would be extrapolated from an assumed block
+rate rather than bracketed between two facts — a guess wearing the shape of a
+reading.
+
+**And the row never said what moved.** It carried a fee and a gas figure, so
+the one number a person opens a money row for existed on this screen only as
+the HEIGHT OF A BAR in the Activity chart — readable as a proportion, never as
+a figure. `FramesMoney.signedETH` is six places, not the balance line's four,
+because a delta here is routinely the fee alone (~0.0002), which four places
+renders as a flat `0.0000`.
+
+### The verdict has one home now
+
+"Failed, but value moved" / "Rolled back" / "Ran" lived inside `FramesMoveRow`
+where nothing else could reach them — so the sheet that row now opens would
+have derived the same rule a second time, and THIS rule drifting means a row
+and its own sheet disagreeing about whether somebody's money moved.
+`FramesMove.verdict` is the one door, the words are on the enum
+(`FramesRead.Frame.modeName`'s precedent), and a negative guard fails the build
+if either surface re-derives it.
+
+### Costs
+
+**No new `Thing` field, so no CloudKit deploy**, and no new host. One added
+request per sweep (the block headers, batched, bounded at 30). Everything else
+is composition over data the room already held.
+
+### Demo parity
+
+The fixture's block numbers are real and now so are its INTERVALS, read off
+rpc1 the same day: 60,258 sits 5,508 seconds after 59,340, and so on down to the
+faucet payment 6,948 seconds before the newest. What is deliberately not carried
+over is the absolute time — a demo entered next year over the true timestamps
+reads "1y ago" on every row, and `restampIfStale` cannot reach a fixture that
+lives in memory and is installed fresh on entry. So the newest sits four minutes
+back and every other keeps its real distance from it: the same bargain the
+restamp makes, taken at install time.
+
+### Guarded
+
+`frames-tx-selftest.sh` at **63 mutations**, and **two of them survived their
+first run** — the same lesson this seat has now paid for a fifth time. The
+verdict-ORDER mutation was uncatchable because its fixture had one landed frame,
+so `rolledBack` was EMPTY and swapping the two checks reproduced the answer; it
+takes the real measured shape (`0x9bb9cfef`, a transaction that reverted whose
+first frame's transfer persisted and whose later one did not) where both
+branches fire and only the order decides.
+
+**The second one was right to survive, and it is recorded rather than papered
+over.** An untotalled sponsor sorts last via `?? Decimal(-1)`, and swapping that
+for `Decimal(0)` changes nothing: a real total is `gasUsed × price` and both
+terms are above zero on any transaction a chain will mine, so nil and zero can
+never be compared. The sentinel stays for the intent, the code says it is
+unreachable-by-construction, and **no fixture was invented to make it look
+load-bearing** — which would be a test proving the wrong thing on purpose. It
+was replaced by the tiebreak that IS real: two sponsors nobody could total,
+ordered by how many transactions they paid for, on a fixture where the count and
+the address orders deliberately disagree.
+
+New drift guards: the rows really open (the empty closure fails the build), the
+verdict has one home, nil is never drawn as zero on the four money readings, the
+atomic flag reaches the sheet through `joinedToNext` alone, the permission is
+said, an absent `stateGasUsed` is never a bar, no sheet presents its own sheet,
+the strip is shared rather than copied, and both halves of the scope fix.
+
+### DELIBERATELY NOT BUILT, and the reason is scope rather than doubt
+
+**Chain-reset detection.** The seat's own connect copy says this network "may be
+reset without notice", and there is no detection of it anywhere: `FramesBridge`
+reads no genesis hash, and `NotifyDevnet.Seat` is a closed two-case enum
+(vibenet, hegota) that this chain is not in. A reset reads as "nothing has
+landed here", which is §515a's exact reported failure one chain over. It wants a
+`FramesGenesis`, a `Lead` case, a third `NotifyDevnet` seat and a re-proving of
+`notify-selftest.sh`'s 79 assertions — a feature, not a rider on this one.
+
+### UNSEEN
+
+Every sheet here is opened by a gesture and no static check exercises one. The
+build is green, all 30 audits pass and the harness is at 63 mutations, but not
+one of the four has been photographed on a simulator or a device. The first
+thing to look at is the frame sheet on a two-frame transaction, where the
+budget bar, the permission pair and the neighbour doors all appear at once.

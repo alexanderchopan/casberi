@@ -434,6 +434,194 @@ grep -qF '.id(newestHash)' "$WORK/card.nc" \
   || { echo "✗ the room's charts are no longer keyed on the newest transaction — a settle would redraw silently"; exit 1; }
 echo "  ok   drift guards: both Canvas drawings arrive, and a settle redraws them"
 
+# --- the sheets (prd §548 ninth follow-up) ----------------------------------
+# Every list in this room was a `Button` wired to an empty closure — §83's dead
+# control multiplied by every transaction on screen. These guards are the
+# wiring, and each failure is invisible: a row that highlights and does
+# nothing, a sheet that re-derives a rule the model already owns, or a control
+# that names the wrong address.
+SHEETS="Casberi/Casberi/Screens/FramesSheets.swift"
+[[ -f "$SHEETS" ]] || { echo "✗ $SHEETS not found"; exit 1; }
+strip_comments "$SHEETS" > "$WORK/sheets.nc"
+
+# THE ROWS REALLY OPEN. The closure was `{ _ in }` for as long as the room has
+# existed, and nothing could see it: the build is happy with a closure that
+# does nothing, and a screen sweep photographs a room whose rows look tappable.
+python3 - "$WORK/feed.nc" <<'PYWIRED' || exit 1
+import sys, io, re
+src = io.open(sys.argv[1], encoding="utf-8").read()
+# The WHOLE room branch, not a window from the list's own mount: the account
+# door is on the FIGURE, which is mounted above the list, so a window anchored
+# there could only ever see two of the three doors and would pass while one was
+# missing.
+i = src.find("source == FramesIdentity.source,")
+j = src.find("} else if source == HegotaIdentity.source", i)
+if i < 0 or j < 0:
+    print("✗ FeedScreen no longer mounts the Frames room"); sys.exit(1)
+body = src[i:j]
+if "FramesRoomList(head:" not in body:
+    print("✗ FeedScreen no longer mounts FramesRoomList"); sys.exit(1)
+if re.search(r"onOpenMove:\s*\{\s*_\s*in\s*\}", body):
+    print("✗ the Frames rows are wired to an empty closure again — every row in three scopes highlights and does nothing")
+    sys.exit(1)
+# **THE ROUTE BEING ASSIGNED, not the word appearing.** The first cut matched
+# the bare case name and passed with the account door DELETED, because
+# `framesAccounts` — the scoped-accounts helper two lines above it — contains
+# the substring. A guard must prove the condition, not that the words are on
+# the page; this repo has paid for that twice (`cursor-selftest`'s
+# end-of-line anchor, `safetx-selftest`'s whole-condition rule).
+for hook, why in [("feedSheet = .framesMove(", "a transaction"),
+                  ("feedSheet = .framesAccount(", "an account"),
+                  ("feedSheet = .framesPayer(", "a sponsor")]:
+    if hook not in body:
+        print("✗ nothing in the Frames room opens %s" % why); sys.exit(1)
+sys.exit(0)
+PYWIRED
+
+# THE VERDICT HAS ONE HOME. `FramesMoveRow` spelled it out and the sheet would
+# have had to derive it again — and this rule drifting means a row and the
+# sheet it opens disagreeing about whether somebody's money moved, which is the
+# one thing in this seat that costs real trust.
+python3 - "$WORK/card.nc" "$WORK/sheets.nc" <<'PYVERDICT' || exit 1
+import sys, io
+for path, name in [(sys.argv[1], "FramesRoomCard"), (sys.argv[2], "FramesSheets")]:
+    src = io.open(path, encoding="utf-8").read()
+    if "movedValue == true && !succeeded" in src or "movedValue == true && !move.succeeded" in src:
+        print("✗ %s derives the verdict itself — it must come through FramesMove.verdict alone" % name)
+        sys.exit(1)
+sys.exit(0)
+PYVERDICT
+grep -qF 'move.verdict' "$WORK/card.nc" \
+  || { echo "✗ FramesMoveRow no longer reads FramesMove.verdict"; exit 1; }
+
+# NIL IS NEVER ZERO, on the four readings where a failed read would render as a
+# confident claim about somebody's money: the delta, the fee, a sponsor's total
+# and a balance. Each is drawn behind an `if let`, never a `?? 0`.
+python3 - "$WORK/sheets.nc" "$WORK/card.nc" <<'PYNIL' || exit 1
+import sys, io, re
+for path in sys.argv[1:]:
+    src = io.open(path, encoding="utf-8").read()
+    for bad in ["deltaWei ?? 0", "feeWei ?? 0", "gasWei ?? 0", "feeWeiIfSelfPaid ?? 0",
+                "balanceWeiHex ?? \"0x0\""]:
+        if bad in src:
+            print("✗ `%s` — an unread reading drawn as zero, which is a confident claim built on a failed read (§515a)" % bad)
+            sys.exit(1)
+sys.exit(0)
+PYNIL
+
+# THE FLAG REACHES EVERY CONSUMER THROUGH ONE DOOR. The strip's own guard says
+# so for the drawing; the sheet states the join in WORDS, which is a second
+# reader and must go through the same property — a sheet reading `flags & 0x4`
+# itself is how "roped to step 3" and a strip with no tie end up on one screen.
+python3 - "$WORK/sheets.nc" <<'PYJOIN' || exit 1
+import sys, io
+src = io.open(sys.argv[1], encoding="utf-8").read()
+if "startsBatch" in src or "0x4" in src or "flags &" in src:
+    print("✗ FramesSheets reads the atomic flag directly — it must come through FramesFrameRow.joinedToNext")
+    sys.exit(1)
+if "joinedToNext" not in src:
+    print("✗ the frame sheet no longer says whether a step is roped to its neighbour")
+    sys.exit(1)
+sys.exit(0)
+PYJOIN
+
+# THE PERMISSION IS SAID. `FramesSection`'s own ruling: there is no Permissions
+# scope because authority here is granted and spent inside one transaction, so
+# "the `frames` scope must always say whether a VERIFY frame approved
+# execution, payment or both". Until this sheet existed the only surface that
+# ever said it was the send preview — before the fact, never after.
+for term in approvesExecution approvesPayment; do
+  grep -qF "$term" "$WORK/sheets.nc" \
+    || { echo "✗ the frame sheet no longer reads $term — the permission is the frame, and this is the only place it can be read after the fact"; exit 1; }
+done
+
+# AN ABSENT `stateGasUsed` IS NEVER DRAWN AS A BAR. Measured across every frame
+# on this chain, including one sent to a fresh address (which grows state): the
+# field is absent, not zero — and `0x0` is the discriminator that tells a
+# missing STATE budget apart from a too-small EXECUTION one, so a bar built on
+# a defaulted zero asserts that diagnosis every time.
+python3 - "$WORK/sheets.nc" <<'PYSTATE' || exit 1
+import sys, io
+src = io.open(sys.argv[1], encoding="utf-8").read()
+if "stateGasUsed ?? 0" in src:
+    print("✗ the frame sheet defaults stateGasUsed to zero — an absent field would be drawn as a state starvation")
+    sys.exit(1)
+i = src.find("func stateReading(")
+if i < 0:
+    print("✗ the frame sheet no longer reports the state budget"); sys.exit(1)
+if "let used = row.outcome?.stateGasUsed" not in src[i:i + 700]:
+    print("✗ the state bar no longer requires a REPORTED stateGasUsed"); sys.exit(1)
+sys.exit(0)
+PYSTATE
+
+# THE SHEETS DO NOT PRESENT THEMSELVES. Every card that opens one lives inside
+# `FeedScreen`'s List, where a `.sheet` resolves to the same presenting
+# controller and rises part way before closing again — paid for three times.
+grep -q '\.sheet(' "$WORK/sheets.nc" \
+  && { echo "✗ a Frames sheet presents its own sheet — it must route through FeedScreen's one .sheet(item:)"; exit 1; }
+
+# THE ROOM'S SIGNATURE DRAWING IS SHARED, NEVER COPIED. A transaction pictured
+# one way in the slot and another way in its own sheet is worse than not
+# drawing it twice.
+grep -qF 'FramesSequenceStrip(runs: [move.rows])' "$WORK/sheets.nc" \
+  || { echo "✗ the move sheet no longer draws the room's own strip"; exit 1; }
+python3 - "$WORK/sheets.nc" <<'PYCANVAS' || exit 1
+import sys, io
+src = io.open(sys.argv[1], encoding="utf-8").read()
+if "Canvas {" in src:
+    print("✗ FramesSheets rolls its own Canvas — the sequence drawing is FramesRoomCard's and must stay one drawing")
+    sys.exit(1)
+sys.exit(0)
+PYCANVAS
+
+# EVERY BAR IN THESE SHEETS IS SIZED FROM DATA, SO IT ARRIVES (design-motion
+# law). `design-motion-audit` can see a GeometryReader, so this is belt rather
+# than the only guard — but the budget bar is the sheet's whole subject and a
+# measurement that simply IS reads as chrome.
+python3 - "$WORK/sheets.nc" <<'PYWIPE' || exit 1
+import sys, io
+src = io.open(sys.argv[1], encoding="utf-8").read()
+i = src.find("struct FramesBudgetBar: View")
+if i < 0:
+    print("✗ FramesBudgetBar is gone"); sys.exit(1)
+body = src[i:]
+if "chartWipe(reduceMotion:" not in body[:1600]:
+    print("✗ FramesBudgetBar no longer arrives"); sys.exit(1)
+if "min(1, Double(used) / Double(limit))" not in body[:1600]:
+    print("✗ the budget bar no longer clamps — a frame that overran its budget would draw off its own track")
+    sys.exit(1)
+sys.exit(0)
+PYWIPE
+
+# THE SCOPE IS NOT DEAD. `chrome.framesScope` was written on every pick and
+# read by NOTHING: the figure, the curve, the crown and every row took the
+# whole account list, so the face lit and the room did not change. Both halves
+# — the source must narrow, and the memoised head must re-key on it, or the
+# card describes rows that are no longer on screen.
+python3 - "Casberi/Casberi/Model/FramesRoomSource.swift" "$WORK/feed.nc" <<'PYSCOPE' || exit 1
+import sys, io
+source = io.open(sys.argv[1], encoding="utf-8").read()
+feed = io.open(sys.argv[2], encoding="utf-8").read()
+if "static func accounts(scope: String? = nil)" not in source:
+    print("✗ FramesRoomSource.accounts no longer takes a scope — the face rail would be a control that changes nothing")
+    sys.exit(1)
+if "picked.isEmpty ? all : picked" not in source:
+    print("✗ a scope matching nothing no longer falls back to every account — a remembered pick whose address has gone would empty the room")
+    sys.exit(1)
+if "FramesRoomSource.accounts(scope: chrome.framesScope)" not in feed:
+    print("✗ the Frames room no longer scopes its accounts"); sys.exit(1)
+if "compose(scope: chrome.framesScope)" not in feed:
+    print("✗ the Frames head is composed unscoped — the crown would describe an address the room is not showing")
+    sys.exit(1)
+i = feed.find("private var headIdentity")
+key = feed[i:feed.find("\n    }", i)]
+if "chrome.framesScope" not in key:
+    print("✗ chrome.framesScope is not in headIdentity — a head memoised under one scope would survive the pick that changed it")
+    sys.exit(1)
+sys.exit(0)
+PYSCOPE
+echo "  ok   drift guards: the rows open, the verdict has one home, and the face rail really scopes"
+
 cp "$TX" "$WORK/FramesTransaction.swift"
 cp "$RLPF" "$WORK/RLP.swift"
 cp "$KC" "$WORK/Keccak256.swift"
@@ -973,6 +1161,204 @@ check("and an unflagged frame is not",
 check("a zero value is no value", payload(them, "0x0").valueWeiHex == nil)
 check("and a real one survives", payload(them, "0x38d7ea4c68000").valueWeiHex != nil)
 
+// --- THE VERDICT, which is what a row and its sheet BOTH say now -------------
+// It lived inside `FramesMoveRow` where nothing could reach it; the sheet the
+// row opens would have derived the same rule a second time, and this rule
+// drifting means a row and its own sheet disagreeing about whether money moved.
+func moved(_ landed: Bool, ok: Bool) -> FramesMove {
+    // A payload frame carrying value, whose LOG count decides whether the
+    // value really landed — status cannot answer this (§548, measured).
+    let row = FramesFrameRow(
+        frame: .init(mode: 2, flags: 0x0, target: them, executionGas: nil,
+                     stateGas: nil, value: "0x38d7ea4c68000", data: nil),
+        outcome: .init(succeeded: true, gasUsed: 3_000, stateGasUsed: nil,
+                       logCount: landed ? 1 : 0))
+    return FramesMove(hash: "0xv", blockNumber: 1, sender: me, payer: me,
+                      succeeded: ok, rows: [row])
+}
+check("a clean transaction reads as Ran", moved(true, ok: true).verdict == .ran)
+// **THE TRAP THIS SEAT EXISTS FOR**: it reverted and the money moved anyway,
+// because frames are not atomic by default. "Failed" lies about the money and
+// "Ran" lies about the outcome.
+// **THE ORDER IS ONLY TESTABLE WHERE BOTH BRANCHES ARE TRUE.** The first
+// fixture here was `moved(true, ok: false)` — one landed frame, so
+// `rolledBack` is EMPTY and swapping the two checks reproduced the same
+// answer, green. This is the REAL measured shape (`0x9bb9cfef` on this chain,
+// §548's second follow-up): a transaction that reverted, whose first frame's
+// transfer persisted and whose later one did not. Both branches fire, and only
+// the order decides.
+let partlyLanded = FramesMove(
+    hash: "0xp", blockNumber: 1, sender: me, payer: me, succeeded: false,
+    rows: [
+        FramesFrameRow(frame: .init(mode: 2, flags: 0x0, target: them, executionGas: nil,
+                                    stateGas: nil, value: "0x38d7ea4c68000", data: nil),
+                       outcome: .init(succeeded: true, gasUsed: 3_000,
+                                      stateGasUsed: nil, logCount: 1)),
+        FramesFrameRow(frame: .init(mode: 2, flags: 0x0, target: them, executionGas: nil,
+                                    stateGas: nil, value: "0x38d7ea4c68000", data: nil),
+                       outcome: .init(succeeded: true, gasUsed: 3_000,
+                                      stateGasUsed: nil, logCount: 0)),
+    ])
+check("both branches really fire on this fixture",
+      partlyLanded.movedValue == true && !partlyLanded.rolledBack.isEmpty)
+check("failed-and-moved outranks rolled-back", partlyLanded.verdict == .failedButMoved)
+check("and the simple case still reads the same",
+      moved(true, ok: false).verdict == .failedButMoved)
+// The converse: status says the FRAME succeeded, no log, so the effect was
+// rolled back. Drawing this from status alone paints a green tick over money
+// that never moved.
+check("a rolled-back frame is named, not called failed",
+      moved(false, ok: true).verdict == .rolledBack)
+// A revert with no value-carrying frame at all — the only shape that can
+// reach `.failed`. **A fixture only tests the rule it names if it fails that
+// rule and passes every other one**: `moved(false, ok: false)` looks like this
+// case and is NOT, because its frame declared a value and emitted no log,
+// which is `rolledBack` and outranks it.
+let verifyOnly = FramesMove(
+    hash: "0xf", blockNumber: 1, sender: me, payer: me, succeeded: false,
+    rows: [FramesFrameRow(
+        frame: .init(mode: 1, flags: 0x3, target: me, executionGas: nil,
+                     stateGas: nil, value: nil, data: nil),
+        outcome: .init(succeeded: false, gasUsed: 100, stateGasUsed: nil, logCount: 0))])
+check("a revert that carried no value is plainly Failed", verifyOnly.verdict == .failed)
+check("and the value-carrying revert beside it is NOT",
+      moved(false, ok: false).verdict == .rolledBack)
+check("only `ran` is untroubled",
+      !FramesMove.Verdict.ran.isTrouble && FramesMove.Verdict.failed.isTrouble
+        && FramesMove.Verdict.rolledBack.isTrouble
+        && FramesMove.Verdict.failedButMoved.isTrouble)
+
+// --- WHO AN ADDRESS IS ------------------------------------------------------
+// The key wins over the watch list: watching your own address does not make it
+// somebody else's, and on this chain the account you made is usually both.
+check("your own key is you, even when it is also watched",
+      FramesParty.of(me, mine: me, watched: [me, them]) == .you(me))
+check("a watched address is watched", FramesParty.of(them, mine: me, watched: [them])
+        == .watched(them))
+check("and anybody else is a stranger",
+      FramesParty.of(them, mine: me, watched: []) == .stranger(them))
+// **CASE IS A CHECKSUM.** The two spellings are the same address and a name
+// given to one must be found for the other — matched case-insensitively, and
+// handed BACK in the watch list's own spelling so the name lookup hits.
+check("a watched address matches whatever case the receipt used",
+      FramesParty.of(them.uppercased(), mine: nil, watched: [them]) == .watched(them))
+check("only a stranger is offered a watch door",
+      FramesParty.of(them, mine: me, watched: []).isStranger
+        && !FramesParty.of(me, mine: me, watched: []).isStranger
+        && !FramesParty.of(them, mine: nil, watched: [them]).isStranger)
+
+// --- WHO PAID ---------------------------------------------------------------
+func sponsoredBy(_ hash: String, by payer: String, gas: UInt64?) -> FramesMove {
+    FramesMove(hash: hash, blockNumber: 1, sender: me, payer: payer,
+               succeeded: true, gasUsed: gas,
+               effectiveGasPriceWei: gas == nil ? nil : 1_000_000_000, rows: [])
+}
+let selfPaid = FramesMove(hash: "0xs", blockNumber: 1, sender: me, payer: me,
+                          succeeded: true, gasUsed: 100, effectiveGasPriceWei: 1,
+                          rows: [])
+let third = "0x3333333333333333333333333333333333333333"
+let roster = FramesPayers.roster([
+    sponsoredBy("0xa", by: them, gas: 100),
+    sponsoredBy("0xb", by: third, gas: 500),
+    sponsoredBy("0xc", by: them, gas: 100),
+    selfPaid,
+])
+// **SELF-PAID IS DROPPED HERE, NOT ONLY BY THE CALLER.** A roster that trusted
+// its caller puts YOU at the top of the list of people who paid for you.
+check("a self-paid transaction is not a sponsorship", roster.count == 2)
+// A TOTAL ORDER: `Dictionary` iteration order is not stable across runs, and a
+// roster that reshuffles between two reads of identical data reads as broken.
+check("the biggest sponsor leads", roster.first?.address == third)
+check("and their transactions are counted",
+      roster.first(where: { $0.id == them.lowercased() })?.count == 2)
+check("their spend is the sum of the fees",
+      roster.first(where: { $0.id == them.lowercased() })?.gasWei
+        == Decimal(200) * Decimal(1_000_000_000))
+// **ALL OR NOTHING** — a total missing one term is wrong by that term and says
+// so nowhere, and understating a named person's generosity is a specific
+// untruth about a specific person.
+let partialRoster = FramesPayers.roster([sponsoredBy("0xa", by: them, gas: 100),
+                                         sponsoredBy("0xb", by: them, gas: nil)])
+check("one unreadable fee abandons the whole total",
+      partialRoster.count == 1 && partialRoster[0].gasWei == nil)
+check("but the count still stands", partialRoster[0].count == 2)
+// An unreadable total sorts LAST rather than as zero.
+//
+// **THE SENTINEL ITSELF IS UNREACHABLE-BY-CONSTRUCTION AND THAT IS SAID
+// RATHER THAN PRETENDED.** A mutation swapping `Decimal(-1)` for `Decimal(0)`
+// SURVIVED, and it was right to: a real total is `gasUsed x price` and both
+// terms are above zero on any transaction a chain will mine, so nil and zero
+// can never be compared against each other. The `-1` is written for the
+// intent, not for a case that exists — and no fixture is invented to make it
+// look load-bearing, which would be a test proving the wrong thing on purpose.
+let mixedTotals = FramesPayers.roster([sponsoredBy("0xa", by: them, gas: nil),
+                                       sponsoredBy("0xb", by: third, gas: 1)])
+check("an untotalled sponsor sorts below one we could measure",
+      mixedTotals.first?.address == third)
+// **THE TIEBREAK THAT IS REAL**: two sponsors nobody could total, ordered by
+// how many transactions they paid for. The fixture is built so the count and
+// the address disagree — `third` sorts first alphabetically and second by
+// count — because with both agreeing, dropping the count rule reproduces the
+// same order and the mutation survives.
+let untotalled = FramesPayers.roster([
+    sponsoredBy("0xa", by: third, gas: nil),
+    sponsoredBy("0xb", by: them, gas: nil),
+    sponsoredBy("0xc", by: them, gas: nil),
+])
+check("the fixture's count and address orders really disagree",
+      third.lowercased() < them.lowercased())
+check("two untotalled sponsors are ordered by what they paid for",
+      untotalled.first?.address == them && untotalled.count == 2)
+check("the moves of one payer are its own",
+      FramesPayers.moves(of: them, in: [sponsoredBy("0xa", by: them, gas: 1),
+                                        sponsoredBy("0xb", by: third, gas: 1)]).count == 1)
+check("and a self-paid move belongs to nobody",
+      FramesPayers.moves(of: me, in: [selfPaid]).isEmpty)
+
+// --- SAYING WHEN ------------------------------------------------------------
+// **NIL IS A REAL ANSWER.** The header read is bounded, so a move past the
+// window has no time — a different thing from a move at the epoch, and
+// substituting "now" for a miss is the fake status §83 bans.
+check("an unread time is no time", FramesFormat.time(nil) == nil)
+let now = Date(timeIntervalSince1970: 1_788_303_520)
+check("a fresh block is just now",
+      FramesFormat.time(now.addingTimeInterval(-30), now: now) == "just now")
+check("an older one is counted in minutes",
+      FramesFormat.time(now.addingTimeInterval(-3000), now: now) == "50m ago")
+check("and past the hour it stops counting them",
+      FramesFormat.time(now.addingTimeInterval(-5508), now: now) == "1h ago")
+// **THE BLOCK IS ALWAYS SAID AND THE TIME ONLY WHEN IT WAS READ.** The block
+// is the chain's own identity for the moment — exact, and the thing you paste
+// into an explorer — so it survives when the time does not.
+check("an undated move still names its block",
+      FramesFormat.stamp(nil, block: 60_258).contains("60"))
+check("and a dated one names both",
+      FramesFormat.stamp(now, block: 60_258).contains("60")
+        && FramesFormat.stamp(now, block: 60_258).count
+             > FramesFormat.stamp(nil, block: 60_258).count)
+
+// --- THE RECEIPT'S HERO FIGURE ----------------------------------------------
+let oneETH = Decimal(string: "1000000000000000000")!
+// A TRUE MINUS (U+2212), never a hyphen — direction carried only in colour is
+// direction lost to anybody who cannot see the colour.
+check("money out wears a true minus",
+      FramesMoney.signedETH(wei: -oneETH).hasPrefix("\u{2212}"))
+check("money in wears a plus", FramesMoney.signedETH(wei: oneETH).hasPrefix("+"))
+// **A MOVEMENT OF EXACTLY NOTHING HAS NO DIRECTION** (§83's flat rule).
+check("and nothing wears neither",
+      !FramesMoney.signedETH(wei: 0).hasPrefix("+")
+        && !FramesMoney.signedETH(wei: 0).hasPrefix("\u{2212}"))
+// **SIX PLACES, not the balance line's four.** A delta here is routinely the
+// fee alone (~0.0002), which four places renders as a flat 0.0000 — a movement
+// that happened, shown as nothing, in the largest type on the sheet.
+// Asserted on the DIGITS rather than on the whole string: the decimal
+// separator is the formatter's locale's, and a fixture that pins it is one
+// that fails on a machine set to French for a reason that has nothing to do
+// with this rule.
+check("a fee-sized delta is still visible",
+      FramesMoney.signedETH(wei: Decimal(210_790) * Decimal(1_000_000_000))
+        .contains("210"))
+
 if fails > 0 { print("  \(fails) assertion(s) failed"); exit(1) }
 print("  ok   encoder: 2 real vectors byte-exact, keccak == the chain's own hash")
 SWIFT
@@ -1172,6 +1558,82 @@ mutate "a sponsor's fee presented as yours" $F4 \
   'var feeWeiIfSelfPaid: Decimal? { sponsored ? nil : feeWei }' \
   'var feeWeiIfSelfPaid: Decimal? { feeWei }'
 
+
+# --- the sheets' readings (prd §548 ninth follow-up) -------------------------
+# Every one of these renders as a perfectly ordinary sheet. That is the point:
+# a wrong verdict, a stranger named as you, a sponsor's spend understated and a
+# guessed timestamp all draw exactly like the right answer.
+mutate "a rolled-back transaction called Ran" $F4 \
+  'if movedValue == true && !succeeded { return .failedButMoved }
+        if !rolledBack.isEmpty { return .rolledBack }' \
+  'if movedValue == true && !succeeded { return .failedButMoved }'
+mutate "failed-and-moved demoted below rolled-back" $F4 \
+  'if movedValue == true && !succeeded { return .failedButMoved }
+        if !rolledBack.isEmpty { return .rolledBack }' \
+  'if !rolledBack.isEmpty { return .rolledBack }
+        if movedValue == true && !succeeded { return .failedButMoved }'
+mutate "the verdict read from status alone" $F4 \
+  'if movedValue == true && !succeeded { return .failedButMoved }' \
+  'if false { return .failedButMoved }'
+mutate "a rolled-back verdict treated as untroubled" $F4 \
+  'var isTrouble: Bool { self != .ran }' \
+  'var isTrouble: Bool { self == .failed }'
+mutate "the watch list beating your own key" $F4 \
+  'if let mine, mine.lowercased() == key { return .you(mine) }' \
+  'if false, let mine { return .you(mine) }'
+mutate "an address matched case-sensitively" $F4 \
+  'if let match = watched.first(where: { $0.lowercased() == key }) { return .watched(match) }' \
+  'if let match = watched.first(where: { $0 == address }) { return .watched(match) }'
+mutate "your own address offered a watch door" $F4 \
+  'var isStranger: Bool { if case .stranger = self { return true }; return false }' \
+  'var isStranger: Bool { if case .watched = self { return false }; return true }'
+mutate "a self-paid transaction counted as a sponsorship" $F4 \
+  'for move in moves where move.sponsored {' \
+  'for move in moves {'
+mutate "an unreadable fee treated as zero in a sponsor total" $F4 \
+  'if let fee = move.feeWei { totals[key]! += fee } else { complete[key] = false }' \
+  'totals[key]! += move.feeWei ?? 0'
+mutate "the sponsor roster left in dictionary order" $F4 \
+  'if x != y { return x > y }
+            if a.count != b.count { return a.count > b.count }
+            return a.id < b.id' \
+  'return false'
+mutate "the sponsor roster's count tiebreak dropped" $F4 \
+  'if a.count != b.count { return a.count > b.count }' \
+  'if false { return a.count > b.count }'
+mutate "a sponsor's moves taken from the wrong payer" $F4 \
+  '$0.sponsored && $0.payer.lowercased() == payer.lowercased()' \
+  '$0.sponsored && $0.sender.lowercased() == payer.lowercased()'
+mutate "an unread time rendered as the epoch" $F4 \
+  'guard let date else { return nil }
+        let seconds = max(0, now.timeIntervalSince(date))' \
+  'let seconds = max(0, now.timeIntervalSince(date ?? Date(timeIntervalSince1970: 0)))'
+mutate "the dateline dropping the block it could always state" $F4 \
+  'guard let date else { return String(localized: "Block \(number)") }' \
+  'guard let date else { return "" }'
+mutate "a signed figure losing its minus" $F2 \
+  'let sign = wei < 0 ? "\u{2212}" : (wei > 0 ? "+" : "")' \
+  'let sign = wei > 0 ? "+" : ""'
+mutate "a movement of nothing given a direction" $F2 \
+  'let sign = wei < 0 ? "\u{2212}" : (wei > 0 ? "+" : "")' \
+  'let sign = wei < 0 ? "\u{2212}" : "+"'
+mutate "the receipt hero rounded to the balance line's four places" $F2 \
+  'NSDecimalRound(&rounded, &quotient, 6, .down)
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 6
+        formatter.maximumFractionDigits = 6
+        formatter.usesGroupingSeparator = true
+        let text = formatter.string(from: rounded as NSDecimalNumber) ?? "0"
+        // A movement of exactly nothing has no direction' \
+  'NSDecimalRound(&rounded, &quotient, 4, .down)
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 4
+        formatter.maximumFractionDigits = 4
+        formatter.usesGroupingSeparator = true
+        let text = formatter.string(from: rounded as NSDecimalNumber) ?? "0"
+        // A movement of exactly nothing has no direction'
 
 # --- the fan-out must be LAST, and this proves it -----------------------------
 # **A mutation recorded AFTER this block is never dispatched, and the run still
