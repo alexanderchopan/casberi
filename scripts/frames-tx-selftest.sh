@@ -407,6 +407,34 @@ sys.exit(0)
 PYPREV
 echo "  ok   drift guards: the tie is a dial over the run's own joins, and the preview declares both halves"
 
+# THE LEGS LIST'S TIE COMES FROM THE ENCODER TOO (prd §571). The list now draws
+# a tie between joined rows, which is a SECOND drawing of the same flag — and
+# the only thing keeping it honest is that `FeedScreen` answers `joins` by
+# reading the run it already builds, rather than re-spelling "every leg but the
+# last". A re-spelling agrees with the signer right up until somebody edits one
+# of them, on the control that decides whether a failed batch leaves money with
+# a stranger.
+python3 - "$WORK/feed.nc" <<'PYJOIN' || exit 1
+import sys, io
+src = io.open(sys.argv[1], encoding="utf-8").read()
+j = src.find("joins: { legs, atomic in")
+if j < 0:
+    print("\u2717 the Frames stitch no longer tells the sheet which legs are joined \u2014 the list would draw no tie, or a decorative one")
+    sys.exit(1)
+body = src[j:j + 500]
+if "framesPreviewRun(" not in body:
+    print("\u2717 `joins` no longer reads the shipped encoder's own run \u2014 it would be a second spelling of the atomic rule")
+    sys.exit(1)
+if "joinedToNext" not in body:
+    print("\u2717 `joins` no longer comes through FramesFrameRow.joinedToNext")
+    sys.exit(1)
+if "atomicFlag" in body or "startsBatch" in body or "count - 1" in body:
+    print("\u2717 `joins` re-derives the atomic rule instead of asking the encoder")
+    sys.exit(1)
+sys.exit(0)
+PYJOIN
+echo "  ok   drift guards: the legs list's tie is the encoder's own join, not a second spelling"
+
 # EVERY DRAWING IN THIS ROOM ARRIVES. Both are a `Canvas`, which is why
 # `design-motion-audit` — which looks for proportional shapes and
 # GeometryReader — cannot see them, and why a room where everything else

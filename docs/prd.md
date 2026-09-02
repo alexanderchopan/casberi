@@ -45546,3 +45546,182 @@ their own and the anatomy is the next pass.
 
 **UNSEEN on a device.**
 
+
+## 571. The stitch sheet takes the language — and the frame slots turn out to be the part that was wrong (user: "using our new design language how would you improve the Frames send sheet. mock it up", then "i think even those frame slots could be better. not sure how but please improve it", then "but i like what you gave so build it", 2026-09-02)
+
+§563/§564/§565/§566/§569 put the house grammar on an act, a claim, a treemap's
+leader, six room figures and the people surfaces. This is the stitch send
+(§548's sixth follow-up), and the entry divides the way the session did: the
+sheet's CHROME was the obvious half and the LIST was the half that mattered,
+which is the user's own correction after seeing the first drawing.
+
+### 1. The commit is the hero tile
+
+A sheet whose entire reason is one act ended on a 50pt capsule with its verb at
+`callout15` — **smaller than the figures in the list above it**. `DSActVerb`
+now, so the tile that sends a batch and the Home panel tile that opened this
+sheet are recognisably one act rather than two spellings of it (§559's own
+argument for the component).
+
+**§538's ruling is unchanged and is what makes it fit**: the tile names the
+TOTAL and never the count, because it moves money and the count is the one
+thing already visible in the list above it. What is new is the LOCKUP — the
+unit rides a `price16` slot on the verb's baseline rather than inside the
+40pt string, which is exactly what the amount screen one tap back already does
+with a figure and its unit. Folded into one string the unit is set at 40pt,
+which both wraps the verb onto a second line and states a denomination in the
+size reserved for the amount; `DSTreemapLeader` split its two parameters for
+the same reason and this is that rule reused.
+
+`disabled` is `legs.isEmpty` and deliberately not `!armed`: a busy tile keeps
+its fill and spins in the disc, because it is acting rather than refusing.
+
+### 2. The strip moved into the tile, and that is a tint-budget fix
+
+The sheet carried **two saturated blocks** — the sequence strip at the top and
+the blue button at the bottom — which is precisely the condition
+`hero-tint-audit` was written for eleven hours earlier: *"a hero tile reads
+loud for one reason and it is not the 40pt verb: the fill is the only saturated
+block on the surface"* (§563 item 4). The audit could not see this one, and the
+ceiling it states is why — its unit is a `DSActVerb` call site, and a strip is
+not a tile.
+
+Drawn inside the tile's own fill it also lands where the argument for it always
+pointed: **you compose in the drawing you will read the result in**, and the
+toggle's picture now moves under the thumb that flips it.
+
+**`FramesSequenceStrip` gained a `palette`, and the point is that it stays ONE
+drawing.** A second strip written for the tile would be exactly the drift
+`roomFigure`'s guard exists for. Every member of `Palette` is a `static var`
+and never a `static let`: `DS.tint` is themed and `DS.textTertiary` is
+contrast-adaptive, so a `let` freezes both at first access and the strip
+silently stops following a tint swap or Increase Contrast. `Palette.onTint`'s
+`failed` colour is white rather than `DS.destructive` — red on blue is
+unreadable — and it is **deliberately unreachable rather than merely unused**:
+the only caller is the preview, where nothing has run, so every cell's
+`outcome` is nil and no cell can take that branch.
+
+### 3. THE FRAME SLOTS, which is the half the first mockup left alone
+
+Asked to improve them with no direction beyond *"not sure how"*, four things
+were wrong and each is a rule this ledger already holds somewhere else.
+
+**The figure is the row's crown.** The amount was `callout15` in
+`textSecondary` while the NAME — very often an address-book label somebody
+typed, or a shortened hex stub — was bold and `textPrimary`. **This is the one
+list in the app somebody reads to check what is about to leave, and the thing
+they came to check was the quietest thing in the row**: §563's inversion, one
+surface down. The figure takes `stat24` with monospaced digits so the legs
+compare down the column, and the name drops to `callout15` secondary. It keeps
+its `layoutPriority`, so §548's own finding stands — the figure never
+truncates, the name is the part that may be abbreviated, because a face sits
+beside it and the address is recoverable.
+
+**The row now fits its own face.** `rowShell` was `sheetFace + s4` — **91pt,
+the height a 76pt hero face needs** — and drew a 36pt `Face.list` inside it, so
+every row in the list was built for a face it did not contain and read hollow.
+`Face.shelf` is the ramp's own rung for a face that is one of several, which is
+what every row here is; the row is that face plus one `s4`. Same arithmetic,
+same single shell for head, leg and add (user, 2026-09-01: *"the add frame card
+should be same size as the others"*).
+
+**Dashed carries one meaning per colour.** Both outlined rows were the same
+neutral dash while meaning two different things — the head is a row you did not
+add and cannot remove, the add row is a row that is not there yet — so the
+treatment separating them from a real leg said nothing about which was which.
+Neutral is "not yours"; the venue's tint is "not yet, and one tap makes it".
+
+**The "Send" subline goes and the minus recedes.** A word true of every row in
+the list distinguishes none of them, which is the Activity chart's *"4 of them
+are frame…"* finding (§554) in a second place. And with the figure now at
+`stat24`, a FILLED grey disc beside it was the second-loudest thing in the row
+— on the one control here nobody came to use; it is an outline.
+
+### 4. The tie, drawn where the list is read
+
+All-or-nothing was a sentence and a drawing at the far end of the screen, so
+**the list itself — the thing somebody actually reads leg by leg — was
+byte-identical in both positions of the control**. A 3pt bar now bridges the
+8pt gap between two joined rows, on the FACE's axis rather than the row's
+centre so it reads as a chain running down the list. It is the strip's own
+encoding rotated a quarter turn, and for the strip's own reason: atomicity is a
+RELATIONSHIP between two frames, and every other encoding makes it a property
+of one of them.
+
+**IT IS ASKED OF THE ENCODER, NEVER RE-SPELLED.** `DevnetStitch.joins` is a
+venue closure, and `FeedScreen` answers it by reading the run it already builds
+for the strip and mapping `joinedToNext` — so the last leg never ties (the node
+refuses that flag outright, in its own words) and the head row never ties (a
+VERIFY frame's flags are `0x03` and carry no join bit, checked in
+`FramesTransaction.stitched` before the tie was drawn rather than assumed). A
+second spelling of "every leg but the last" would agree with the signer right
+up until somebody edited one of them, **on the control that decides whether a
+failed batch leaves money with a stranger** — which is the same class the
+amendment to §548's sixth follow-up already paid for once, where a carefully
+reasoned flag rule was blessed by the harness and refused by the chain.
+
+Guarded in `frames-tx-selftest.sh` beside the licence guards it joins, and
+mutation-proven two ways: the rule re-spelled as an index test, and the closure
+removed. The existing guards are untouched and still pass — the strip gates its
+tie on the run's own join, `framesPreviewRun` still asks for the joined shape,
+and the toggle still reaches the drawing as `joinProgress`.
+
+### 5. Two smaller ones
+
+**"What will run" goes.** It captioned a list that captions itself, and the
+tile below now says it in the one type size that carries. What the label bought
+was air above the rows, and the air stays.
+
+**The toggle loses its well.** A well raises a control off the page, and this
+one sits directly above the tile it changes with nothing between them — the
+container was drawing a boundary exactly where the relationship is the point.
+What it bought was separation from the rows above, which the stack's own gap
+gives for free.
+
+### What was NOT done
+
+**The head row's copy is untouched.** "Your signature · always first" reads
+like §554's target and is not: the position half is said by the row being
+first, but the signature half is the only place that fact appears, and it is
+what explains why the row is there and cannot be tapped. The first mockup drew
+it trimmed to "Always first", which keeps the redundant half and drops the
+load-bearing one — the drawing was wrong and the shipped copy was right.
+
+**The amount screen keeps its capsule.** Its crown is the figure being typed,
+so a hero verb there would be a second crown on a screen that already has one;
+§559's exclusion for a hero verb among peers, arriving as a hero verb beside a
+hero figure.
+
+### 6. WALKED ON THE SIMULATOR — and it moved three values a green build could not
+
+§394a's standing lesson is that for presentation work a green build proves
+nothing, and this pass is the evidence: all 34 audits and the harness were
+green over a sheet with three faults in it, every one visible in the first
+screenshot and none reachable by any check in this repo.
+
+**The strip inside the tile was the loudest thing on the tile.** At full white
+on the tint fill, two payload cells read as a PROGRESS BAR rather than a
+diagram — brighter than the 40pt verb beside them, so the tile stopped having
+one subject and item 1's whole argument was undone by item 2's drawing. The
+cells step back to `white.opacity(0.55)` and **the TIE stays bright at 0.9**,
+which is the right way round rather than a uniform dimming: the tie is the only
+part of that drawing the toggle changes.
+
+**The tie was a speck.** 3pt wide bridging an 8pt gap is nearly square and
+reads as dust rather than as a link; 4pt reads as a chain running down the
+faces, which is what it is for.
+
+**The first row sat against the sheet's own top corner.** Deleting the label
+(item 5) removed ~28pt that was doing two jobs, and only one of them was
+captioning. `s6` rather than `s4`, and the air is free — the list is
+top-anchored and the pool below it is the grammar's, not a shortage.
+
+Walked in the demo across both toggle positions, two legs, at 0.7 and 0.4: the
+tie draws between the two joined rows and NOT under Verify (its flags are
+`0x03`, exactly as the encoder says), the strip's own tie appears in the same
+beat, and both vanish together when the control goes off.
+
+**Still unseen: everything that needs a real chain.** No stitched send has been
+signed from this build, so the busy tile, the disabled tile and the error line
+under the toggle have not been looked at — and the simulator cannot make a
+transaction settle.

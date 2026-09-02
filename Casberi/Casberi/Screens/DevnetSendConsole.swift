@@ -90,6 +90,19 @@ enum DevnetConsole {
     /// that governs the silhouettes in the room's own bar.
     static let sheetFace = DS.Face.profile
 
+    /// **THE LEG LIST'S FACE AND ROW** (prd §571).
+    ///
+    /// Until this ruling every row in the stitch list was `sheetFace + s4` —
+    /// 91pt, the height a 76pt profile face needs — and drew a 36pt `Face.list`
+    /// inside it, so a row built for a hero face carried a list face and read
+    /// hollow. `Face.shelf` is the rung for a face that is one of SEVERAL
+    /// (`DS.Face.shelf`'s own words), which is what every row here is; the row
+    /// is that face plus one `s4`, which is the same arithmetic the old one
+    /// used and the same shell for head, leg and add (user, 2026-09-01: *"the
+    /// add frame card should be same size as the others"*).
+    static let legFace = DS.Face.shelf
+    static let legRow = DS.Face.shelf + DS.Space.s4
+
     /// The plan strip's natural height — its own two `label12` lines plus the
     /// cell's padding. **Not a reserved slot**: the strip is drawn inside a
     /// `ViewThatFits`, so it takes this much where there is room and nothing
@@ -554,6 +567,21 @@ struct DevnetStitch {
     /// result in. A generic preview invented here would be a second drawing of
     /// the same thing, which is the drift `roomFigure`'s own guard exists for.
     var preview: ((_ legs: [DevnetSendLeg], _ atomic: Bool) -> AnyView)? = nil
+
+    /// **WHICH LEGS ARE JOINED TO THE ONE BELOW THEM**, one `Bool` per leg in
+    /// order, so the list can draw the tie the strip draws (prd §571).
+    ///
+    /// The venue answers, because the rule is the venue's: on Frames the join
+    /// is `flags` bit 2 and the LAST payload frame never carries it, which the
+    /// node enforces by refusing the transaction outright. **The venue must
+    /// answer it by asking its own ENCODER rather than by re-spelling the
+    /// rule here** — a second spelling is how a screen ends up promising a
+    /// shape the signer does not produce, which is the fault this whole
+    /// parameter list is arranged to prevent.
+    ///
+    /// Nil for a venue that cannot join anything, and the list then draws no
+    /// ties at all rather than a decorative chain.
+    var joins: ((_ legs: [DevnetSendLeg], _ atomic: Bool) -> [Bool])? = nil
 }
 
 struct DevnetSendSheet: View {
@@ -984,28 +1012,24 @@ struct DevnetSendSheet: View {
     private var legsScreen: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let stitch {
-                Text(String(localized: "What will run"))
-                    .dsText(.label12).fontWeight(.semibold)
-                    .foregroundStyle(DS.textTertiary)
-                    .padding(.top, DS.Space.s4)
-                    .padding(.bottom, DS.Space.s3)
-
-                // The venue's own drawing of this batch, above the rows it
-                // describes. Absent for a venue that has nothing to draw, and
-                // absent below two legs on purpose: a one-leg strip is a
-                // picture of a line, and the rows already say it.
-                if let preview = stitch.preview, legs.count > 1 {
-                    preview(legs, atomic)
-                        .frame(height: 18)
-                        .padding(.bottom, DS.Space.s3)
-                        .animation(DS.Motion.standard, value: atomic)
-                }
+                // **NO LABEL, AND NO STRIP UP HERE** (prd §571). "What will
+                // run" was a caption on a list that captions itself, and the
+                // strip has moved into the tile that sends it — this screen
+                // had TWO saturated blocks, the strip and the button, which is
+                // precisely what stops a hero tile reading (`hero-tint-audit`,
+                // §563 item 4). What the label bought was air above the rows,
+                // and the air stays.
+                //
+                // Asked from the encoder, never re-derived: `joins` reaches
+                // the venue's own builder, so the tie this list draws and the
+                // tie the strip draws are the same fact.
+                let joins = stitch.joins?(legs, atomic) ?? []
 
                 ScrollView {
                     VStack(spacing: DS.Space.s2) {
                         headRow(stitch)
-                        ForEach(legs) { leg in
-                            legRow(leg)
+                        ForEach(Array(legs.enumerated()), id: \.element.id) { index, leg in
+                            legRow(leg, joinsNext: index < joins.count && joins[index])
                         }
                         if atCapacity {
                             Text(stitch.atCapacity)
@@ -1020,6 +1044,12 @@ struct DevnetSendSheet: View {
                     }
                 }
                 .scrollIndicators(.hidden)
+                // `s6`, not `s4`: with the label gone the first row sat hard
+                // against the sheet's own top corner (seen on the simulator).
+                // The air this buys is free — the list is top-anchored and the
+                // pool below it is the grammar's, not a shortage.
+                .padding(.top, DS.Space.s6)
+                .animation(DS.Motion.standard, value: atomic)
 
                 atomicRow(stitch)
 
@@ -1042,17 +1072,23 @@ struct DevnetSendSheet: View {
     /// and the add control — is built from `rowShell`, so the add control
     /// cannot drift into a thinner dashed strip that reads as a hint rather
     /// than as the next item in the list.
-    private func rowShell<Content: View>(dashed: Bool,
+    ///
+    /// **`dash` CARRIES ONE MEANING PER COLOUR** (prd §571). Both outlined
+    /// rows used to be the same neutral dash while meaning two different
+    /// things — the head is a row you did not add and cannot remove, the add
+    /// row is a row that is not there yet — so the treatment that separates
+    /// them from a real leg said nothing about which was which. Neutral is
+    /// "not yours"; the venue's tint is "not yet, and one tap makes it".
+    private func rowShell<Content: View>(dash: Color?,
                                          @ViewBuilder content: () -> Content) -> some View {
         content()
             .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(height: DevnetConsole.sheetFace + DS.Space.s4)
+            .frame(height: DevnetConsole.legRow)
             .padding(.horizontal, DS.Space.s4)
             .background {
                 let shape = RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
-                if dashed {
-                    shape.strokeBorder(DS.textTertiary.opacity(0.28),
-                                       style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                if let dash {
+                    shape.strokeBorder(dash, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
                 } else {
                     shape.fill(DS.gray100)
                 }
@@ -1067,13 +1103,13 @@ struct DevnetSendSheet: View {
     }
 
     private func headRow(_ stitch: DevnetStitch) -> some View {
-        rowShell(dashed: true) {
+        rowShell(dash: DS.textTertiary.opacity(0.28)) {
             HStack(spacing: DS.Space.s3) {
                 Image(systemName: "checkmark.seal")
                     .accessibilityHidden(true)
-                    .dsGlyph(16, weight: .semibold)
+                    .dsGlyph(22, weight: .semibold)
                     .foregroundStyle(DS.textTertiary)
-                    .frame(width: DS.Face.list, height: DS.Face.list)
+                    .frame(width: DevnetConsole.legFace, height: DevnetConsole.legFace)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(stitch.headName)
                         .dsText(.callout15).fontWeight(.semibold)
@@ -1088,19 +1124,25 @@ struct DevnetSendSheet: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func legRow(_ leg: DevnetSendLeg) -> some View {
-        rowShell(dashed: false) {
+    /// **THE FIGURE IS THE ROW'S CROWN** (prd §571), and the name is its
+    /// label — the two-tier rule at row scale, and the reverse of what shipped.
+    /// This is the list somebody reads to check what is about to leave, and on
+    /// it the AMOUNT was `callout15` in `textSecondary` while the NAME — very
+    /// often an address-book label somebody typed, or a shortened hex stub —
+    /// was bold and primary. That is §563's inversion one surface down: the
+    /// thing you are here to check was the quietest thing in the row.
+    ///
+    /// **The "Send" subline is gone.** Every row in this list sends; a word
+    /// that is true of all of them distinguishes none of them, which is the
+    /// same finding as the Activity chart's "4 of them are frame…" (§554).
+    private func legRow(_ leg: DevnetSendLeg, joinsNext: Bool) -> some View {
+        rowShell(dash: nil) {
             HStack(spacing: DS.Space.s3) {
-                WalletFace(address: leg.address, size: DS.Face.list, circular: true)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(name(for: leg.address))
-                        .dsText(.callout15).fontWeight(.semibold)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    Text(String(localized: "Send"))
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                }
+                WalletFace(address: leg.address, size: DevnetConsole.legFace, circular: true)
+                Text(name(for: leg.address))
+                    .dsText(.callout15)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
                 Spacer(minLength: DS.Space.s2)
                 // **THE FIGURE NEVER TRUNCATES, AND WEARS NO UNIT.** Seen on
                 // the simulator: a long name squeezed "0.001 test ETH" to
@@ -1112,8 +1154,9 @@ struct DevnetSendSheet: View {
                 // name is the part that may be abbreviated, because a face
                 // sits beside it and the address is recoverable.
                 Text(leg.amount)
-                    .dsText(.callout15)
-                    .foregroundStyle(DS.textSecondary)
+                    .dsText(.stat24)
+                    .monospacedDigit()
+                    .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                     .layoutPriority(1)
                 // **REMOVE IS A BUTTON, NOT A SWIPE.** A swipe here would be
@@ -1124,9 +1167,13 @@ struct DevnetSendSheet: View {
                     legs.removeAll { $0.id == leg.id }
                     if legs.isEmpty { addingLeg = true }
                 } label: {
-                    Image(systemName: "minus.circle.fill")
+                    // **OUTLINED, NOT FILLED.** With the figure now at
+                    // `stat24` a filled disc beside it is the second-loudest
+                    // thing in the row, and it is the one control here nobody
+                    // came to use.
+                    Image(systemName: "minus.circle")
                         .accessibilityHidden(true)
-                        .dsGlyph(17, weight: .regular)
+                        .dsGlyph(20, weight: .regular)
                         .foregroundStyle(DS.textTertiary)
                         .frame(width: DS.Hit.min, height: DS.Hit.min)
                         .contentShape(Rectangle())
@@ -1136,6 +1183,33 @@ struct DevnetSendSheet: View {
                 .dsHover()
             }
         }
+        // **THE TIE, WHERE YOU READ THE LIST** (prd §571). The strip draws
+        // all-or-nothing as a tie between two adjacent cells because atomicity
+        // is a RELATIONSHIP between two frames and every other encoding makes
+        // it a property of one of them. That drawing sat at the top of the
+        // screen (and now sits in the tile), so the list itself — the thing
+        // somebody actually reads leg by leg — was byte-identical in both
+        // states of the control. This is the strip's own encoding rotated a
+        // quarter turn: a bar bridging the gap between two joined rows.
+        //
+        // On the face's axis rather than the row's centre, so it reads as a
+        // chain running down the list. It bridges exactly `s2`, which is the
+        // stack's own gap, so joined rows touch and independent ones do not.
+        //
+        // It can only ever draw a join the run declares: `joinsNext` comes
+        // from the venue's encoder, so the last leg never ties (the node
+        // refuses that flag outright) and the head row never ties (a VERIFY
+        // frame's flags are `0x03` and carry no join bit).
+        .overlay(alignment: .bottomLeading) {
+            Capsule()
+                .fill(tint)
+                // 4pt, not 3: measured on the simulator, a 3pt bar bridging an
+                // 8pt gap reads as a speck rather than a link.
+                .frame(width: 4, height: joinsNext ? DS.Space.s2 : 0)
+                .opacity(joinsNext ? 1 : 0)
+                .offset(x: DS.Space.s4 + DevnetConsole.legFace / 2 - 2, y: DS.Space.s2)
+                .accessibilityHidden(true)
+        }
     }
 
     private var addRow: some View {
@@ -1143,13 +1217,13 @@ struct DevnetSendSheet: View {
             DSHaptic.tap()
             addingLeg = true
         } label: {
-            rowShell(dashed: true) {
+            rowShell(dash: tint.opacity(0.45)) {
                 HStack(spacing: DS.Space.s3) {
                     Image(systemName: "plus")
                         .accessibilityHidden(true)
-                        .dsGlyph(16, weight: .semibold)
+                        .dsGlyph(22, weight: .semibold)
                         .foregroundStyle(tint)
-                        .frame(width: DS.Face.list, height: DS.Face.list)
+                        .frame(width: DevnetConsole.legFace, height: DevnetConsole.legFace)
                     Text(String(localized: "Add a frame"))
                         .dsText(.callout15).fontWeight(.semibold)
                         .foregroundStyle(tint)
@@ -1177,39 +1251,63 @@ struct DevnetSendSheet: View {
                 .labelsHidden()
                 .tint(tint)
         }
-        .padding(DS.Space.s4)
-        .dsWell(cornerRadius: DS.Radius.control)
-        .padding(.top, DS.Space.s3)
-        .padding(.bottom, DS.Space.s3)
+        // **NO WELL** (prd §571). A well raises a control off the page, and
+        // this one sits directly above the tile it changes with nothing
+        // between them — the container was drawing a boundary where the
+        // relationship is the point. What the well bought was separation from
+        // the rows above, which the gap now gives for free.
+        .padding(.vertical, DS.Space.s4)
+        .padding(.horizontal, DS.Space.s1)
         .animation(DS.Motion.standard, value: atomic)
     }
 
-    /// **NAMES THE TOTAL, NOT THE COUNT.** §538's ruling on the one-act send —
-    /// the button moves money, so it says how much — and a leg count says the
-    /// one thing somebody can already see in the list above it.
+    /// **THE COMMIT IS THE HERO TILE** (prd §571, §559's grammar).
+    ///
+    /// It was a 50pt capsule with its verb at `callout15` — smaller than the
+    /// figures in the list above it — on a sheet whose whole reason is this one
+    /// act. `DSActVerb` puts the verb at `price40` hard against the bottom-left
+    /// with the disc above it, which is the same tile the room's Home panel
+    /// opened this sheet from, so the two are recognisably one act rather than
+    /// two spellings of it.
+    ///
+    /// **NAMES THE TOTAL, NOT THE COUNT** — §538's ruling on the one-act send,
+    /// unchanged: the tile moves money, so it says how much, and the count is
+    /// the one thing already visible in the list above it. The unit rides the
+    /// `price16` slot beside the verb's baseline rather than inside it, which
+    /// is the amount screen's own lockup.
+    ///
+    /// `disabled` is `legs.isEmpty` and NOT `!armedAll`: a busy tile keeps its
+    /// fill and spins in the disc, because it is acting rather than refusing.
     private var sendAll: some View {
-        Button {
-            DSHaptic.tap()
-            actAll()
-        } label: {
-            HStack(spacing: DS.Space.s2) {
-                Image(systemName: "arrow.up.right").dsGlyph(15, weight: .semibold)
-                Text(total.map { String(localized: "Send \($0) \(unit)") }
-                     ?? String(localized: "Send"))
-                if busy { ProgressView().controlSize(.mini).tint(.white) }
-            }
-            .dsText(.callout15).fontWeight(.semibold)
-            .foregroundStyle(armedAll ? .white : DS.textTertiary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, DS.Space.s4)
-            .background(armedAll ? AnyShapeStyle(tint) : AnyShapeStyle(DS.fillFaint),
-                        in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-        }
-        .buttonStyle(PressSpring())
-        .disabled(!armedAll)
-        .armedPop(armedAll)
-        .animation(DS.Motion.standard, value: armedAll)
-        .dsHover()
+        DSActVerb(title: total.map { String(localized: "Send \($0)") }
+                         ?? String(localized: "Send"),
+                  unit: total == nil ? nil : unit,
+                  glyph: "arrow.up.right",
+                  tint: tint,
+                  busy: busy,
+                  disabled: legs.isEmpty,
+                  accessory: stitchPreview,
+                  act: actAll)
+            .armedPop(armedAll)
+            .animation(DS.Motion.standard, value: armedAll)
+    }
+
+    /// **THE STRIP, IN THE TILE IT SENDS.** The venue's own drawing of this
+    /// batch, moved off the top of the screen (prd §571): the sheet was
+    /// carrying two saturated blocks and a hero tile only reads while its fill
+    /// is the one saturated block on the surface. Drawn on the tint in
+    /// `Palette.onTint`, it is the SAME `FramesSequenceStrip` the room uses to
+    /// show what a transaction did — so you compose in the shape you will read
+    /// the result in, and the toggle's own picture now moves under your thumb.
+    ///
+    /// **Still absent below two legs**, on the reasoning that shipped with it:
+    /// a one-leg strip is a picture of a line. The tile then draws the disc
+    /// and air, which is `DSActVerb`'s ordinary look everywhere else.
+    private var stitchPreview: AnyView? {
+        guard let preview = stitch?.preview, legs.count > 1 else { return nil }
+        return AnyView(preview(legs, atomic)
+            .frame(height: 14)
+            .animation(DS.Motion.standard, value: atomic))
     }
 
     private var armedAll: Bool { !busy && !legs.isEmpty }

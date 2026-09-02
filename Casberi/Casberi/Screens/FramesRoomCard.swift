@@ -937,6 +937,52 @@ struct FramesSequenceStrip: View {
     /// exists and can never invent one that does not.
     var joinProgress: Double = 1
 
+    /// **THE COLOURS, so ONE drawing can sit on two grounds** (prd §571).
+    ///
+    /// The room draws this strip on the page; the send sheet draws it inside
+    /// the hero tile's own tint fill, where `DS.tint` cells would be a blue
+    /// drawing on a blue block. Parameterising the palette is what keeps that
+    /// ONE drawing rather than two — the whole reason the send composes in the
+    /// room's strip is that you read the result in the shape you built it in,
+    /// and a second strip written for the tile would be exactly the drift
+    /// `roomFigure`'s guard exists for.
+    ///
+    /// **Every member is a `static var` and never a `static let`.** `DS.tint`
+    /// is themed and `DS.textTertiary` is contrast-adaptive, so a `let` freezes
+    /// both at first access and the strip silently stops following a tint swap
+    /// or Increase Contrast.
+    var palette: Palette = .room
+
+    struct Palette {
+        let payload: Color
+        let verify: Color
+        let tie: Color
+        let failed: Color
+
+        /// The room's own ground.
+        static var room: Palette {
+            Palette(payload: DS.tint, verify: DS.textTertiary,
+                    tie: DS.tint.opacity(0.55), failed: DS.destructive)
+        }
+
+        /// Inside a filled tint tile. `failed` is white rather than
+        /// `DS.destructive` because red on blue is unreadable — and it is
+        /// deliberately unreachable today rather than merely unused: the only
+        /// caller is the send sheet's preview, where nothing has run, so every
+        /// cell's `outcome` is nil and no cell can take the failed branch.
+        /// **NOT PURE WHITE, measured on the simulator.** At full strength
+        /// the payload cells are a solid white block on blue — the loudest
+        /// thing in the tile, louder than the 40pt verb beside them, so the
+        /// band read as a progress bar rather than a diagram and the tile
+        /// stopped having one subject. The cells step back and **the TIE stays
+        /// bright**, which is the right way round: the tie is the only part of
+        /// this drawing the toggle changes.
+        static var onTint: Palette {
+            Palette(payload: .white.opacity(0.55), verify: .white.opacity(0.3),
+                    tie: .white.opacity(0.9), failed: .white.opacity(0.85))
+        }
+    }
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -948,7 +994,7 @@ struct FramesSequenceStrip: View {
         //
         // Left to right is the direction it MEANS: these cells are frames in
         // execution order, so the wipe is the transaction running.
-        FramesSequenceCanvas(runs: runs, joinProgress: joinProgress)
+        FramesSequenceCanvas(runs: runs, joinProgress: joinProgress, palette: palette)
             .chartWipe(reduceMotion: reduceMotion)
             .accessibilityElement()
             .accessibilityLabel(Text(String(localized: "\(String(runs.count)) transactions, drawn frame by frame")))
@@ -958,6 +1004,7 @@ struct FramesSequenceStrip: View {
 private struct FramesSequenceCanvas: View, Animatable {
     let runs: [[FramesFrameRow]]
     var joinProgress: Double
+    var palette: FramesSequenceStrip.Palette
 
     /// One value, so a plain `Double`. This is what lets a `Canvas`
     /// interpolate at all — SwiftUI animates a view's `animatableData` and
@@ -1028,15 +1075,15 @@ private struct FramesSequenceCanvas: View, Animatable {
                     let path = Path(roundedRect: rect, cornerRadius: 3)
                     let ran = cell.outcome?.succeeded ?? true
                     if cell.valueLanded == false {
-                        ctx.stroke(path, with: .color(DS.destructive),
+                        ctx.stroke(path, with: .color(palette.failed),
                                    style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
                     } else if ran {
                         // VERIFY reads lighter than SENDER: the first
                         // authorises, the second acts.
                         ctx.fill(path, with: .color(cell.frame.mode == 1
-                                                    ? DS.textTertiary : DS.tint))
+                                                    ? palette.verify : palette.payload))
                     } else {
-                        ctx.fill(path, with: .color(DS.destructive))
+                        ctx.fill(path, with: .color(palette.failed))
                     }
 
                     // **THE JOIN, which is the thing this room could not show
@@ -1058,7 +1105,7 @@ private struct FramesSequenceCanvas: View, Animatable {
                         let tieH = max(2, height * 0.34) * joinProgress
                         let tie = CGRect(x: x + w, y: y + (height - tieH) / 2,
                                          width: Self.cellGap, height: tieH)
-                        ctx.fill(Path(tie), with: .color(DS.tint.opacity(0.55)))
+                        ctx.fill(Path(tie), with: .color(palette.tie))
                     }
                     x += w + Self.cellGap
                 }

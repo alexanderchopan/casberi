@@ -479,11 +479,6 @@ struct FeedScreen: View {
         /// `VibenetRoomCard`, which is inside this List's rows, so it cannot
         /// present its own sheet.
         case vibenetCreate
-        /// Finding an account you did not make (prd §517, restored §562).
-        /// Routed here for `vibenetCreate`'s reason verbatim: the row that
-        /// raises it lives in `VibenetRoomCard`, inside this List's rows, so
-        /// it cannot present its own sheet.
-        case vibenetWatch
         /// **THE SEND FORM, ON A SHEET (prd §553).** Home holds the two verbs
         /// and the form holds the screen — routed here rather than presented by
         /// the card for `hegotaMove`'s reason: a `.sheet` on a view inside this
@@ -550,7 +545,6 @@ struct FeedScreen: View {
             case .vibenetKey(let actor, let item, _):
                 "vibenetKey:\(VibenetKeySeenDiff.keyID(address: item.address, actorId: actor.actorId))"
             case .vibenetCreate: "vibenetCreate"
-            case .vibenetWatch: "vibenetWatch"
             case .hegotaSend: "hegotaSend"
             case .framesSend: "framesSend"
             case .framesMove(let m, _): "framesMove:\(m.id)"
@@ -3947,11 +3941,20 @@ struct FeedScreen: View {
         case .nftPicks(let address, let label):
             WalletNFTPickerSheet(wallet: address, label: label)
         case .person(let source, let handle):
+            // `dsNavSheet` (prd §560) — this route had no sizing, so a person
+            // room opened into a ~540×620 box on iPad and Mac.
             NavigationStack {
                 PersonRoomScreen(profile: SocialProfile(
                     source: source, handle: handle,
                     displayName: nil, bio: nil, avatarURL: nil))
+                    // The dismiss is declared HERE and not on the screen,
+                    // because `PersonRoomScreen` is also PUSHED (the roster's
+                    // own door, `navigationDestination(item: $openPerson)`) —
+                    // a Done button on the screen itself would appear over a
+                    // pushed room, where it exits nothing.
+                    .dsSheetDismiss { feedSheet = nil }
             }
+            .dsNavSheet()
         case .vibenetKeys(let items, let newKeyIDs):
             // A tapped key SCOPES THE ROOM to its account (prd §470),
             // which is the follow-up the tray previously dead-ended on.
@@ -4060,9 +4063,28 @@ struct FeedScreen: View {
                     // in — and the join between cells is the only place the
                     // all-or-nothing toggle is visible as a picture rather than
                     // as a sentence.
+                    // Drawn on the commit tile's own tint fill since §571, so
+                    // it takes the palette for that ground — the same drawing,
+                    // not a second one written for the tile.
                     preview: { legs, atomic in
                         AnyView(FramesSequenceStrip(runs: [framesPreviewRun(legs)],
-                                                    joinProgress: atomic ? 1 : 0))
+                                                    joinProgress: atomic ? 1 : 0,
+                                                    palette: .onTint))
+                    },
+                    // **ASKED OF THE ENCODER, NEVER RE-SPELLED** (prd §571).
+                    // The list draws a tie between joined legs, and the rule
+                    // for which legs those are is `FramesTransaction.stitched`'s
+                    // — the last payload frame never carries the flag, which
+                    // the node enforces by refusing the transaction outright.
+                    // Reading it back off the run this file already builds for
+                    // the strip means the tie in the list and the tie in the
+                    // drawing are one fact with one door, rather than two
+                    // spellings that agree until somebody edits one.
+                    joins: { legs, atomic in
+                        guard atomic else { return Array(repeating: false, count: legs.count) }
+                        return framesPreviewRun(legs)
+                            .filter { $0.frame.mode != 1 }
+                            .map(\.joinedToNext)
                     }))
 case .vibenetSend(let account):
             DevnetSendSheet(
@@ -4094,30 +4116,6 @@ case .vibenetSend(let account):
                 // old self until something ELSE happened to touch it. Both
                 // halves, same as `onWatched`: read the chain now, then bump
                 // the term this screen's memoised head recomputes on.
-                Task {
-                    _ = await VibenetRoomSource.compose()
-                    chrome.refreshPulse += 1
-                }
-            }
-        case .vibenetWatch:
-            VibenetWatchSheet {
-                // DISMISS FIRST, then re-read — `.vibenetCreate`'s ruling
-                // directly above, for the same reason: the room re-composes
-                // behind this sheet, and asking for that while it is still up
-                // lands the change under a covered screen. The sheet calls
-                // this before its own `dismiss()`, so without this line the
-                // recompose starts while it is up; both settle the same
-                // binding, so saying it twice costs nothing.
-                feedSheet = nil
-                // The watch itself already happened inside the sheet
-                // (`VibenetWatchField`/`VibenetDiscoverySection` own that, and
-                // are shared with `VibenetScreen` so the two surfaces can
-                // never answer one paste two ways). All that is owed here is
-                // `onWatched`'s own fix: the room is composed from
-                // `VibenetState.saved`, a flat snapshot with no observation,
-                // so read the chain now and then bump the term this screen's
-                // memoised head recomputes on — or the account is watched and
-                // the room goes on showing its old self.
                 Task {
                     _ = await VibenetRoomSource.compose()
                     chrome.refreshPulse += 1
@@ -5366,7 +5364,6 @@ case .vibenetSend(let account):
                                         }
                                     },
                                     onRequestCreate: { feedSheet = .vibenetCreate },
-                                    onRequestWatch: { feedSheet = .vibenetWatch },
                                     onOpenKeys: { newKeyIDs in
                                         feedSheet = .vibenetKeys(room.items, newKeyIDs: newKeyIDs)
                                     },

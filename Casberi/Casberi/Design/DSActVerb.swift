@@ -30,6 +30,16 @@ import SwiftUI
 /// `DevnetCreatePanel` shape — the verb is the object and does not wobble.
 struct DSActVerb: View {
     let title: String
+    /// A unit set at `price16` on the verb's own baseline, for a tile whose
+    /// verb carries a FIGURE ("Send 1.1" · "test ETH"). Nil everywhere else.
+    ///
+    /// It is a second parameter rather than part of `title` for the reason
+    /// `DSTreemapLeader` splits its two: folded into one string the unit is
+    /// set at 40pt, which both wraps the verb onto a second line and states a
+    /// denomination in the size reserved for the amount. `DevnetSendSheet`'s
+    /// amount screen already sets a figure and its unit at exactly these two
+    /// rungs, so this is that lockup, on the tile that commits it.
+    var unit: String? = nil
     /// The disc's glyph — the slot that says HOW the act happens: "faceid" on
     /// a commit Face ID confirms, "key" where a key is made, "plus" where
     /// something is added.
@@ -41,6 +51,11 @@ struct DSActVerb: View {
     var tint: Color = DS.tint
     var busy = false
     var disabled = false
+    /// Something to sit beside the disc in the tile's header band — today the
+    /// stitched send's own sequence strip, drawn inside the tile that sends
+    /// it. Nil for every other caller, so the band stays the air it has always
+    /// been and nothing about the existing four changes.
+    var accessory: AnyView? = nil
     let act: () -> Void
 
     var body: some View {
@@ -49,12 +64,24 @@ struct DSActVerb: View {
             act()
         } label: {
             VStack(alignment: .leading, spacing: 0) {
-                disc
+                HStack(spacing: DS.Space.s3) {
+                    disc
+                    if let accessory { accessory }
+                }
                 Spacer().frame(height: DS.Space.s2)
-                Text(title)
-                    .dsText(.price40)
-                    .foregroundStyle(disabled ? DS.textTertiary : .white)
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .lastTextBaseline, spacing: DS.Space.s2) {
+                    Text(title)
+                        .dsText(.price40)
+                        .foregroundStyle(disabled ? DS.textTertiary : .white)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let unit {
+                        Text(unit)
+                            .dsText(.price16)
+                            .foregroundStyle(disabled ? DS.textTertiary
+                                                      : Color.white.opacity(0.78))
+                            .lineLimit(1)
+                    }
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(DS.Space.s3)
@@ -65,7 +92,7 @@ struct DSActVerb: View {
         .buttonStyle(PressSpring())
         .disabled(disabled || busy)
         .dsHover()
-        .accessibilityLabel(Text(title))
+        .accessibilityLabel(Text(unit.map { "\(title) \($0)" } ?? title))
     }
 
     private var disc: some View {
