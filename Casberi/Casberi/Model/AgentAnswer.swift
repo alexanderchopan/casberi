@@ -768,6 +768,7 @@ enum AgentAnswer {
         if fetchOn { system += AgentWebFetch.guidance }
         system += toolsOn ? toolPickInstructions : pickInstructions
         if provider.searchesWeb { system += webSearchGuidance }
+        if provider == .anthropic { system += thinkingOffGuidance }
 
         // First turn sends the full prompt (instructions + numbered
         // candidates); a follow-up sends just the bare question — the
@@ -797,6 +798,11 @@ enum AgentAnswer {
         var pagesRead = 0
         var answeredModel: String?
         var rounds = 0
+        // Prose from turns the API PAUSED. A resumed turn continues the same
+        // answer, so what it already wrote has to be carried rather than
+        // repainted from empty the way a tool round is.
+        var carriedText = ""
+        var pauses = 0
 
         while true {
             // The LAST permitted round declares no tools at all, so the model
@@ -808,8 +814,9 @@ enum AgentAnswer {
             // paints from empty on purpose: a round that ends in a tool call
             // emits a preamble ("let me look…"), and the answer that replaces
             // it is the one worth keeping.
+            let carried = carriedText
             let liveOnPartial: ((String) -> Void)? = onPartial.map { forward in
-                { raw in forward(stripPickLine(raw)) }
+                { raw in forward(stripPickLine(carried + raw)) }
             }
             guard let wire = makeRequest(provider: provider, key: key, system: system,
                                          history: history, userText: userText,
@@ -852,7 +859,22 @@ enum AgentAnswer {
             // summing them is what makes the receipt say what Casberi spent
             // rather than what the key has spent.
             billGeneration(provider: provider, key: key, id: streamed.generationID)
-            finalText = streamed.text
+            finalText = carriedText + streamed.text
+
+            // A paused turn is resumed, not finished: the assistant message
+            // goes back verbatim and the model carries on where its server
+            // tool interrupted it. It does NOT spend a tool round — no client
+            // tool ran and none was answered — so it is bounded separately, or
+            // a provider that kept pausing would loop for as long as the key
+            // held out. Hitting that bound keeps the prose written so far
+            // rather than failing: a clipped answer the person can see beats
+            // an error over work already paid for.
+            if streamed.paused, !streamed.replay.isEmpty, pauses < maxPauses {
+                pauses += 1
+                carriedText = finalText
+                steps.append(.rawAssistant(streamed.replay))
+                continue
+            }
 
             let calls = streamed.toolCalls
             guard declareTools, !calls.isEmpty else { break }
@@ -1004,6 +1026,15 @@ enum AgentAnswer {
     private enum AgentStep {
         case toolCalls([AgentCorpusTools.Call])
         case toolResults([AgentCorpusTools.Result])
+        /// An assistant turn the API PAUSED mid-server-tool (`pause_turn`),
+        /// replayed verbatim so it can finish. Anthropic's own rule is that the
+        /// paused message goes back unchanged — a `web_search_tool_result`'s
+        /// `encrypted_content` is decrypted server-side on the next turn, and a
+        /// missing or edited one is a 400 rather than a degraded answer. So
+        /// these are the streamed blocks reassembled, not blocks of our own
+        /// making. Anthropic-only by construction: no other wire here emits
+        /// `content_block_start`, so no other replayer can ever see this case.
+        case rawAssistant([[String: Any]])
     }
 
     /// One round's request plus the parser for its stream. Returns nil only
@@ -1201,6 +1232,12 @@ enum AgentAnswer {
         return (request, parse)
     }
 
+    /// How many times one answer may be resumed after a `pause_turn`. A
+    /// billing bound like `AgentCorpusTools.maxRounds`, not a capability one:
+    /// each resume re-sends the whole turn so far, and the API pauses to hand
+    /// back control, never because it is stuck.
+    private static let maxPauses = 4
+
     // MARK: - The "PICKS: …" marker — structured grounding without a
     // separate structured-output API per provider
 
@@ -1220,13 +1257,12 @@ enum AgentAnswer {
     private static let toolGuidance = """
 
 
-        You have tools that read the things this person has saved. Use them \
-        before you answer — search for what the question is about, and search \
-        again with different words if the first look was thin. You may go back \
-        at most \(AgentCorpusTools.maxRounds) times, so make each search count, \
-        and answer from what you have when you are done. The app DISPLAYS every \
-        thing your tools returned as rows beneath your answer, so never list, \
-        number or restate them — write only what they add up to.
+        You have tools that read the things this person has saved. The list \
+        above is only what a first keyword pass found, so search before you \
+        answer. You have at most \(AgentCorpusTools.maxRounds) tool rounds, \
+        after which you answer from what you have. The app draws every thing \
+        your tools returned as rows beneath your answer, so write what they \
+        add up to rather than listing or numbering them.
         """
 
     /// Appended to the shared synthesis instructions: asks the model to name,
@@ -1264,13 +1300,36 @@ enum AgentAnswer {
         none" if none apply. Nothing may follow that line.
         """
 
+    /// Appended for Anthropic, whose request sends no `thinking` block — so
+    /// on the pinned model the answer is written without thinking. That mode
+    /// has two documented failures and both land in the person's answer here:
+    /// a tool call written as prose (the loop ends with the corpus never
+    /// searched, and the sentence is drawn as the answer) and internal tags
+    /// leaking into the text, which `stripPickLine` passes straight through.
+    /// This is Anthropic's own recommended wording for the case; it is NOT a
+    /// "don't reason" instruction, which is documented to make the leak worse.
+    ///
+    /// Turning thinking on instead would retire this — `thinking: {type:
+    /// "adaptive"}` with a low `effort` — but it changes what every keyed
+    /// answer costs the person, and it needs each turn's thinking blocks
+    /// replayed with its tool calls (`AgentStep.rawAssistant` now carries the
+    /// shape that would take). Unmeasured either way: no key for this provider
+    /// has ever been held on this host.
+    private static let thinkingOffGuidance = """
+
+
+        When you use a tool, you may say a brief sentence first. If no tool can \
+        express what the person asked for, say so instead of guessing. Do not \
+        include internal or system XML tags in your response.
+        """
+
     /// Appended only for a provider that `searchesWeb` — the one line that
     /// changes the grounding contract, so it says so plainly to the model
     /// too: the saved things come first, search only fills real gaps.
     private static let webSearchGuidance = """
-         You may also use live web search when it would meaningfully improve \
-        the answer, but always prefer and lean on the things listed above \
-        first — they are what the person actually saved.
+         Live web search is available for a gap the saved things can't fill. \
+        The things listed above are what the person actually saved, so they \
+        come first and a search result never stands in for them.
         """
 
     /// The prose with the model's own "PICKS: …" marker line (and the blank
@@ -1378,6 +1437,16 @@ enum AgentAnswer {
         case fetched
         case tool([ToolFragment])
         case usage(Usage)
+        /// The API stopped a long-running server-tool turn partway
+        /// (`stop_reason: "pause_turn"`). NOT the end of the answer: read as
+        /// one, whatever preamble preceded the search ("I'll look that up")
+        /// becomes the whole answer, which is the silent truncation this case
+        /// exists to prevent.
+        ///
+        /// It carries the round's usage because Anthropic reports both on the
+        /// SAME `message_delta`, and a paused round is a billed round — a case
+        /// that returned the pause alone would drop it off the receipt.
+        case paused(Usage?)
         case ignore
     }
 
@@ -1406,8 +1475,91 @@ enum AgentAnswer {
         /// by exactly one caller. Anthropic's message id lands here too and is
         /// never used.
         var generationID: String?
+        /// The API paused this turn mid-server-tool and it must be resent.
+        var paused = false
         /// Slot number → the call being assembled, in arrival order.
         var toolBuffers: [(index: Int, id: String, name: String, arguments: String)] = []
+        /// Every content block of THIS assistant turn, reassembled from the
+        /// stream, for the one case that needs the turn back verbatim (see
+        /// `AgentStep.rawAssistant`). Kept generically off the event names
+        /// rather than inside `parse`, exactly as `generationID` is: it costs
+        /// nothing on the wires that never emit these events, and it needs no
+        /// new case competing with the text the same chunk carries.
+        var rawBlocks: [Int: [String: Any]] = [:]
+        var rawOrder: [Int] = []
+
+        /// The scratch key `input_json_delta` accumulates into before the
+        /// finished JSON is parsed back to an object. Prefixed so it can never
+        /// collide with a field Anthropic sends, and stripped in `replay`.
+        static let pendingInput = "__casberiPendingInput"
+
+        /// Folds one Anthropic stream event into the block it belongs to.
+        /// Anything that isn't a content-block event is ignored, which is what
+        /// makes this inert for every other provider.
+        mutating func absorbBlock(_ json: [String: Any]) {
+            guard let type = json["type"] as? String,
+                  let index = json["index"] as? Int else { return }
+            switch type {
+            case "content_block_start":
+                guard let block = json["content_block"] as? [String: Any] else { return }
+                if rawBlocks[index] == nil { rawOrder.append(index) }
+                rawBlocks[index] = block
+            case "content_block_delta":
+                guard var block = rawBlocks[index],
+                      let delta = json["delta"] as? [String: Any] else { return }
+                switch delta["type"] as? String {
+                case "text_delta":
+                    if let chunk = delta["text"] as? String {
+                        block["text"] = ((block["text"] as? String) ?? "") + chunk
+                    }
+                case "thinking_delta":
+                    if let chunk = delta["thinking"] as? String {
+                        block["thinking"] = ((block["thinking"] as? String) ?? "") + chunk
+                    }
+                case "signature_delta":
+                    // A thinking block's signature is what makes it verifiable
+                    // on replay; dropping it invalidates the block.
+                    if let signature = delta["signature"] as? String {
+                        block["signature"] = ((block["signature"] as? String) ?? "") + signature
+                    }
+                case "citations_delta":
+                    if let citation = delta["citation"] as? [String: Any] {
+                        block["citations"] = ((block["citations"] as? [[String: Any]]) ?? []) + [citation]
+                    }
+                case "input_json_delta":
+                    if let partial = delta["partial_json"] as? String {
+                        block[Self.pendingInput] =
+                            ((block[Self.pendingInput] as? String) ?? "") + partial
+                    }
+                default:
+                    break
+                }
+                rawBlocks[index] = block
+            default:
+                break
+            }
+        }
+
+        /// The turn as Anthropic sent it, in block order, with each streamed
+        /// tool input parsed back from the JSON text it arrived as. A block
+        /// whose input never finished arriving keeps whatever `input` the
+        /// opening event carried rather than being dropped: an incomplete
+        /// replay is refused as a whole, so a best-effort block is the only
+        /// thing with a chance of being accepted.
+        var replay: [[String: Any]] {
+            rawOrder.compactMap { index in
+                guard var block = rawBlocks[index] else { return nil }
+                if let pending = block[Self.pendingInput] as? String {
+                    block[Self.pendingInput] = nil
+                    if let data = pending.data(using: .utf8),
+                       let object = (try? JSONSerialization.jsonObject(with: data))
+                           as? [String: Any] {
+                        block["input"] = object
+                    }
+                }
+                return block
+            }
+        }
 
         /// Merges a fragment into whatever is already buffered for its slot.
         mutating func absorb(_ fragment: ToolFragment) {
@@ -1477,6 +1629,7 @@ enum AgentAnswer {
                 if outcome.generationID == nil, let id = json["id"] as? String, !id.isEmpty {
                     outcome.generationID = id
                 }
+                outcome.absorbBlock(json)
                 switch parse(json) {
                 case .text(let chunk):
                     outcome.text += chunk
@@ -1489,6 +1642,14 @@ enum AgentAnswer {
                     outcome.pagesRead += 1
                 case .tool(let fragments):
                     fragments.forEach { outcome.absorb($0) }
+                case .paused(let usage):
+                    outcome.paused = true
+                    if let usage {
+                        if let input = usage.input { outcome.inputTokens = input }
+                        if let output = usage.output { outcome.outputTokens = output }
+                        if let read = usage.cacheRead { outcome.cacheReadTokens = read }
+                        if let write = usage.cacheWrite { outcome.cacheWriteTokens = write }
+                    }
                 case .usage(let usage):
                     // Anthropic reports input on `message_start` and output on
                     // `message_delta`, so the two halves arrive in different
@@ -1584,16 +1745,18 @@ enum AgentAnswer {
             }
         }
         if type == "message_delta" {
-            if let delta = json["delta"] as? [String: Any],
-               delta["stop_reason"] as? String == "refusal" {
-                return .refused
+            let stop = (json["delta"] as? [String: Any])?["stop_reason"] as? String
+            if stop == "refusal" { return .refused }
+            let counted = (json["usage"] as? [String: Any]).map { usage in
+                Usage(input: usage["input_tokens"] as? Int,
+                      output: usage["output_tokens"] as? Int, model: nil,
+                      cacheRead: usage["cache_read_input_tokens"] as? Int,
+                      cacheWrite: usage["cache_creation_input_tokens"] as? Int)
             }
-            if let usage = json["usage"] as? [String: Any] {
-                return .usage(Usage(input: usage["input_tokens"] as? Int,
-                                    output: usage["output_tokens"] as? Int, model: nil,
-                                    cacheRead: usage["cache_read_input_tokens"] as? Int,
-                                    cacheWrite: usage["cache_creation_input_tokens"] as? Int))
-            }
+            // A long-running web search or page read, stopped partway. Read
+            // before the plain usage return, since both ride this one event.
+            if stop == "pause_turn" { return .paused(counted) }
+            if let counted { return .usage(counted) }
         }
         return .ignore
     }
@@ -1765,6 +1928,11 @@ enum AgentAnswer {
                 messages.append(["role": "user", "content": results.map { result in
                     ["type": "tool_result", "tool_use_id": result.id, "content": result.content]
                 }])
+            case .rawAssistant(let blocks):
+                // Verbatim, and never marked for caching: a cache breakpoint
+                // rewrites nothing here, but this turn is the one thing in the
+                // request the API insists it sent us unaltered.
+                messages.append(["role": "assistant", "content": blocks])
             }
         }
         return messages
@@ -1794,6 +1962,12 @@ enum AgentAnswer {
                     messages.append(["role": "tool", "tool_call_id": result.id,
                                      "name": result.name, "content": result.content])
                 }
+            case .rawAssistant:
+                // Unreachable: only Anthropic pauses a turn, and only its own
+                // parser can produce the blocks. Spelled out rather than left
+                // to a `default` so a wire that gains a pause of its own fails
+                // to compile instead of silently dropping the turn.
+                continue
             }
         }
         return messages
@@ -1815,6 +1989,8 @@ enum AgentAnswer {
                     ["functionResponse": ["name": result.name,
                                           "response": ["result": result.content]]]
                 }])
+            case .rawAssistant:
+                continue  // Anthropic-only; see `openAISteps`.
             }
         }
         return contents

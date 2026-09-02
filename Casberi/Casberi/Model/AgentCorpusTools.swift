@@ -145,16 +145,20 @@ enum AgentCorpusTools {
     private static let specs: [Spec] = [
         Spec(name: "search_things",
              description: """
-             Search everything the person has saved. Returns matching things, \
-             each with a reference number, title, kind, source app, when it \
-             was saved, and a short excerpt. Call this before answering, and \
-             call it again with different words to follow a lead.
+             Keyword search over everything the person has saved. A term \
+             matches as a whole word in a thing's title, tags or text, and \
+             title matches rank first; there is no semantic matching, so a \
+             synonym finds nothing and different words are worth trying. \
+             Returns the things that match, each with a reference number \
+             continuing the numbering of the list in the prompt, plus title, \
+             kind, source app, when it was saved, and a short excerpt. Says so \
+             in a sentence when nothing matches.
              """,
              properties: [
                 ("query", "string",
                  "The words to search for, e.g. 'lisbon flight' or 'quarterly budget'."),
                 ("source", "string",
-                 "Optional: only things from this source app. Use list_sources first to learn the exact names."),
+                 "Optional: only things from this source app, matched exactly against the names list_sources returns."),
                 ("kind", "string",
                  "Optional: only things of this kind — note, link, screenshot, chat, event, reminder, mail, voice, product, transaction."),
              ],
@@ -162,12 +166,12 @@ enum AgentCorpusTools {
         Spec(name: "recent_things",
              description: """
              The person's most recently saved things, newest first, optionally \
-             narrowed by source app or kind. Use this when the question is \
-             about what is recent rather than about particular words.
+             narrowed by source app or kind. Answers "what is recent" rather \
+             than "what mentions X", in the same row shape as search_things.
              """,
              properties: [
                 ("source", "string",
-                 "Optional: only things from this source app. Use list_sources first to learn the exact names."),
+                 "Optional: only things from this source app, matched exactly against the names list_sources returns."),
                 ("kind", "string",
                  "Optional: only things of this kind — note, link, screenshot, chat, event, reminder, mail, voice, product, transaction."),
              ],

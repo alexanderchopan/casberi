@@ -316,10 +316,10 @@ enum AgentSheet {
         var text = """
         You are picking up a conversation this person had with \(source) \
         somewhere else, and they have brought it here to carry on. The earlier \
-        turns are given to you as they happened. Answer their next message in \
-        that conversation's own terms — do not summarize what was already said, \
-        do not reintroduce yourself, and do not claim to remember anything \
-        beyond the turns you were given.
+        turns are given to you as they happened, and they are all you know of \
+        it. Answer their next message as the next turn of that conversation, \
+        in its own terms; anything beyond those turns is unknown to you, and \
+        saying so beats guessing at it.
         """
         if let cut, cut > 0 {
             text += """

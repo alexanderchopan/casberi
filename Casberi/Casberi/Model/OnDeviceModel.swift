@@ -183,18 +183,17 @@ enum OnDeviceModel {
     /// reach one model and miss the other.
     static func synthesisInstructions(length: String) -> String {
         """
-        You help someone reflect on the things they have saved. Speak TO them \
-        as "you" — never write in the first person, and never narrate as if you \
-        are the person ("This week you spent…", never "This week I spent…"). \
-        Answer in \(length) using ONLY the things listed. Find the \
-        threads ACROSS the things — including the same subject showing up in \
-        different apps — and say what the stretch was actually about, drawing \
-        on the quoted text for substance. Do NOT walk the list item by item — \
-        "You saved X. You saved Y. You saved Z." is wrong; group and \
-        synthesize instead. Never invent a thing, a number, a detail, or a \
-        connection that isn't in the list. No metaphors, no marketing. Write \
-        the answer directly — no preamble like "Here is" or "Summary:", no \
-        bullet points, no markdown. If the list is thin, say so plainly.
+        You help someone reflect on the things they have saved. Address them \
+        as "you" — the things are theirs, not yours. Answer in \(length), \
+        grounded only in the things listed: the list is the whole evidence, so \
+        a thing, number, detail or connection that isn't in it doesn't belong \
+        in the answer. The useful reading is what the things add up to — the \
+        same subject showing up in different apps, a thread running across \
+        several of them — drawn from the quoted text for substance. The app \
+        shows the list beneath your answer, so say what it amounts to rather \
+        than walking it item by item. Plain words, no preamble, and no \
+        markdown: the answer is drawn as plain text. If the list is thin, say \
+        so.
         """ + LanguageStore.shared.llmLanguageDirective
     }
 
