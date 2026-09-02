@@ -192,20 +192,37 @@ def checks(console: str, hegota: str, vibenet: str, feed: str):
         if not m or "DemoMode.isActive" not in m.group(0):
             out.append("%s would sign and broadcast from a demo" % verb)
 
-    # 7. EACH ROOM'S TOP UP DOES WHAT ITS CHAIN CAN ACTUALLY DO.
-    #    Hegotá has an endpoint, so its half CLAIMS in place. vibenet has a
-    #    faucet PAGE and no endpoint, so its half HANDS OFF and must say so with
-    #    the outward mark — a tile that looks like it acts in place and then
-    #    leaves the app is the same broken promise as one that cannot act at all.
-    #    The first cut of §553 read "no endpoint in our bridge" as "no faucet on
-    #    the chain" and shipped vibenet with one verb; this is that mistake made
-    #    mechanical rather than remembered.
+    # 7. BOTH ROOMS' TOP UP CLAIMS IN PLACE, AND THE HAND-OFF STAYS DELETED
+    #    (§553b, amended 2026-09-01 — this check used to assert the opposite).
+    #    The history is the whole point, because the room was wrong about its
+    #    own faucet twice in one day and BOTH times the shape was the same:
+    #    absence of a thing where we happened to look, read as absence of the
+    #    thing. §553 read "no endpoint in OUR bridge" as "no faucet on the
+    #    chain" and shipped vibenet with one verb; its amendment read "no
+    #    endpoint in the SERVED HTML" as "no endpoint at all" and shipped a
+    #    Safari hand-off. §553b measured the wire — the page is Next.js and its
+    #    API client ships in the chunks the page loads — and vibenet claims in
+    #    place like Hegotá, so `DevnetSendPanel.TopUp.handsOff` was DELETED
+    #    with the hand-off it existed for.
+    #
+    #    This guard was left behind by that ruling and went red on `main` for
+    #    two commits, which is exactly the failure the CI floor exists to make
+    #    visible. Amended rather than deleted: a red guard after a refactor is
+    #    a ruling to amend. So the rule inverts — vibenet must CLAIM, and the
+    #    deleted flag must never come back, which is the drift that would
+    #    quietly restore a tile that leaves the app without saying so.
     if "claimFaucet" not in h_bare:
         out.append("Hegota's Top up no longer claims from the faucet — the half is decoration")
-    if "claimFaucet" in v_bare:
-        out.append("vibenet's Top up claims in place — that devnet has no claim endpoint, only a page")
-    if "topUp" in v_bare and "handsOff: true" not in v_bare:
-        out.append("vibenet's Top up dropped its hand-off mark — it leaves the app and no longer says so")
+    if "claimFaucet" not in v_bare:
+        out.append("vibenet's Top up no longer claims from the faucet — §553b measured that endpoint, "
+                   "and a half that only opens a page is the hand-off that ruling deleted")
+    # Read from the COMMENT-STRIPPED copies, or this fires on the paragraphs in
+    # both files that explain the deletion BY NAMING the flag — the Obsidian /
+    # Cursor lesson, which this file already pays elsewhere.
+    for name, bare in (("DevnetSendConsole", c_bare), ("VibenetSendCard", v_bare)):
+        if "handsOff" in bare:
+            out.append("%s brought back the handsOff tile — §553b deleted it, and a tile that looks "
+                       "like it acts in place and then leaves the app is the promise that ruling closed" % name)
 
     # 8. NEITHER TOP UP ACTS IN A DEMO. Hegotá's claim and vibenet's hand-off
     #    are different verbs and they must answer a demo tap the SAME way — one
@@ -239,8 +256,9 @@ def self_test() -> int:
     Text(y).dsText(.price40)
     """
     good_h = 'DemoMode.isActive\nDevnetSendPanel(\nclaimFaucet(\nrateLimited\n'
+    # §553b: vibenet claims in place like Hegotá, and carries no handsOff flag.
     good_v = ('DevnetSendPanel(tint: x, topUp: topUp, onSend: y)\n'
-              '.init(handsOff: true)\nif DemoMode.isActive { return .init(note: n) }\n')
+              'claimFaucet(\nif DemoMode.isActive { return .init(note: n) }\n')
     good_f = ('VibenetRoom.demoSignableAccount()\n'
               '    func sendHegota(x: String) async -> String? {\n        DemoMode.isActive\n    }\n'
               '    func sendVibenet(x: String) async -> String? {\n        DemoMode.isActive\n    }\n')
@@ -269,16 +287,21 @@ def self_test() -> int:
                   good_console, good_h, good_v,
                   good_f.replace("    func sendHegota(x: String) async -> String? {\n        DemoMode.isActive\n    }",
                                  "    func sendHegota(x: String) async -> String? {\n        go()\n    }"), True))
-    cases.append(("vibenet's hand-off loses its outward mark",
-                  good_console, good_h,
-                  'DevnetSendPanel(tint: x, topUp: topUp, onSend: z)\n.init(action: y)\n', good_f, True))
-    cases.append(("vibenet tries to claim from an endpoint it does not have",
-                  good_console, good_h, good_v + 'claimFaucet(\n', good_f, True))
+    # §553b's own three mutations. The first is the regression that ruling
+    # exists to prevent: a vibenet half that stops claiming is back to opening
+    # a page, which is the hand-off §553b deleted.
+    cases.append(("vibenet's Top up stops claiming",
+                  good_console, good_h, good_v.replace("claimFaucet(", ""), good_f, True))
+    cases.append(("the deleted handsOff tile comes back on the card",
+                  good_console, good_h, good_v + '.init(handsOff: true)\n', good_f, True))
+    cases.append(("the console grows a handsOff branch again",
+                  good_console + "\n    if topUp.handsOff { Image(systemName: a) }\n",
+                  good_h, good_v, good_f, True))
     cases.append(("Hegota's Top up stops claiming",
                   good_console, good_h.replace("claimFaucet(", ""), good_v, good_f, True))
     cases.append(("vibenet's Top up acts in a demo",
                   good_console, good_h,
-                  'DevnetSendPanel(tint: x, topUp: topUp, onSend: y)\n.init(handsOff: true)\nopenURL(u)\n',
+                  'DevnetSendPanel(tint: x, topUp: topUp, onSend: y)\nclaimFaucet(\nopenURL(u)\n',
                   good_f, True))
     cases.append(("the hourly refusal stops being named",
                   good_console, good_h.replace("rateLimited", ""), good_v, good_f, True))
@@ -287,6 +310,14 @@ def self_test() -> int:
     cases.append(("a comment naming a banned literal does not fire",
                   good_console + "\n    /// It is not `.decimalPad` any more.\n",
                   good_h, good_v + "\n    /// No `.sheet(` here, deliberately.\n", good_f, False))
+    # The §553b half of that rule, and NOT decoration: both real files explain
+    # the deletion by naming `handsOff`, so a raw-source check would fire on
+    # the prose describing the very thing it is enforcing.
+    cases.append(("a comment naming the deleted handsOff flag does not fire",
+                  good_console + "\n    /// No outward-arrow branch for a `handsOff` tile any more.\n",
+                  good_h,
+                  good_v + "\n    /// `DevnetSendPanel.TopUp.handsOff` was deleted by §553b.\n",
+                  good_f, False))
 
     failed = 0
     for name, c, h, v, f, should_fire in cases:
