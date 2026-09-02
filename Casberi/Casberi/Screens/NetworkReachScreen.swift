@@ -46,7 +46,31 @@ struct NetworkReachScreen: View {
     var body: some View {
         List {
             Section {
-                Text("There is no server. Every request below goes straight from \(DS.device) to the service named.")
+                // THE CLAIM TAKES THE HEAD RUNG (prd §564). This screen exists
+                // to make ONE promise checkable, and the promise was drawn at
+                // `subhead13` — the second-smallest rung on the ramp — above a
+                // list of sixty services each of whose NAME was set larger than
+                // it. That is §563's inversion, on the screen carrying the
+                // app's central claim: the most important thing on it was the
+                // quietest thing on it.
+                //
+                // **Split into two keys rather than set whole.** At the head
+                // rung a trailing clause is a paragraph wearing a headline
+                // (§559), and the second sentence is the MECHANISM, not the
+                // claim. The four translations were carried across rather than
+                // orphaned (§561's rule — a re-worded label silently doubles a
+                // key and re-bills a translator), split at each language's own
+                // sentence terminator; the format specifier sits entirely in
+                // the second half of all four, so the crown carries none.
+                //
+                // No colour and no tile: this screen has no act. The style here
+                // is the proportion alone.
+                Text("There is no server.")
+                    .dsText(.heading34).foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                Text("Every request below goes straight from \(DS.device) to the service named.")
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .listRowBackground(Color.clear)

@@ -44889,3 +44889,102 @@ build is green, all 30 audits pass and the harness is at 63 mutations, but not
 one of the four has been photographed on a simulator or a device. The first
 thing to look at is the frame sheet on a two-frame transaction, where the
 budget bar, the permission pair and the neighbour doors all appear at once.
+## 564. The two-tier rule gets an instrument, and five of six proposals died on the tree (user: "how else would you extend this design to other parts of the app, not necessarily the blue and white, but the style", then "do all", 2026-09-02)
+
+The style §553/§559/§563 built is four rules with the colour removed: one thing
+is enormous and nothing is medium, a 36pt disc anchors it, the big thing sits
+hard bottom-left with the air pooled above, and colour appears only where it
+means something. Six extensions were proposed. **One landed, and the other five
+were refused by MEASUREMENT rather than by taste** — which is the entry.
+
+### 1. The instrument first (`scripts/support/ramp-census.py`)
+
+Not an audit and not a gate: it prints where the ramp actually sits, so a sweep
+can be judged site by site instead of run blind. Two modes, and the second is
+the one that found something.
+
+**`--summary` refuted the proposal it was built for.** The pitch was "kill the
+middle tier": 29 sites at the head rungs, **114** at `heading22`/`stat24`/
+`price16`, ~1,300 small. But **26 of the 114 are a room head card's lead at
+`heading22`**, which §451 ruled deliberately ("the pair the drawing is
+structurally unable to state"), and `stat24` on a devnet scope is §551's
+measured answer. A blanket sweep would have reversed two rulings with
+measurements behind them and called it a design pass. The middle tier is mostly
+settled; it was not the fault.
+
+**`--flat` is the real signal: a surface with no crown AT ALL** — four or more
+text sites and nothing above `body17`, so nothing on it is the subject. 62 of
+them, and the tool says out loud that most are correctly flat: a ROW is quiet
+ground by design (`ShapedRows`, 72 sites), a connect screen is §190 slabs, a
+directory is a list. Read it, do not sweep it.
+
+### 2. What landed: the privacy claim takes the head rung
+
+`NetworkReachScreen` exists to make ONE promise checkable, and drew it at
+`subhead13` — **the second-smallest rung on the ramp** — above a list of sixty
+services each of whose NAME was set larger than the claim. That is §563's
+inversion arriving on the screen that carries the app's central promise: the
+most important thing on it was the quietest thing on it.
+
+"There is no server." takes `heading34`. The mechanism sentence stays quiet
+beneath it, split into its own key rather than set whole, because at the head
+rung a trailing clause is a paragraph wearing a headline (§559). **No colour and
+no tile: this screen has no act**, and the style here is the proportion alone —
+which is the whole point of the question that prompted this entry.
+
+**The four translations were carried across rather than orphaned.** §561's
+finding is that a re-worded label does not collide with its twin, it DOUBLES it
+and re-bills a translator; splitting one string into two is the same hazard by
+another route. Each translation was cut at its own sentence terminator — a full
+stop in es/ko, an ideographic one in ja/zh-Hans — and every half was asserted
+non-empty, with the format specifier landing entirely in the second half of all
+four, so the crown carries none. The catalog re-emits **byte-identical** under
+`indent=2, sort_keys=True, separators=(",", " : ")`, proven by round-tripping
+the untouched file first; the diff is 38 lines rather than the 98,000 a
+reformat would produce.
+
+### 3. The five refusals, each with what refused it
+
+**The composer's empty chat** ("Set up an agent" at `subhead13`) stays a link.
+§550's own gate is the reason: the on-device model is deliberately NOT part of
+it, "it would hide this from everyone on a device that has it" — so on an Apple
+Intelligence phone the field already answers, the setup link is not the only
+act, and a 40pt verb beside a working affordance is §559's own exclusion, a hero
+verb among peers.
+
+**The figure lockup at rail scale** was already refused in §563 and nothing
+found since changes it.
+
+**The widgets and the three Live Activities.** `MoneyActivityAttributes` rule 3
+is "**NO FIGURE.** Not masked — absent", because the lock screen is the most
+stood-next-to surface the OS has and §374's rule is that figures go while shapes
+stay; `WalletWidget` says the same at every size ("the curve alone — no figure").
+The widget ramp also tops out at `widgetFigure24` by WidgetKit geometry: a
+systemSmall tile is ~158pt wide, where 40pt type is four characters. The
+grammar cannot be carried to a surface whose whole ruling is that the number is
+absent.
+
+**The bare keypad for number entry** has one candidate in the entire app and it
+is the wrong one: `OpenFoodFactsScreen`'s `.numberPad`, which takes a BARCODE.
+§544's keypad is for an amount you are about to send, and a barcode is not a
+hero figure. The agent budget cap, which prompted the idea, has no screen field
+at all — it is a launch argument.
+
+**The room head's caption becoming the figure** is §555, already done, and the
+`price16` sites the census lists on those cards ARE that ruling's column heads.
+
+### 4. The pattern worth keeping
+
+Six proposals, five already answered by the tree. That is the third session in a
+fortnight to find the app more finished than a proposal assumed (§418, §563),
+and the cause is the same: a design idea is generated against a screenshot and a
+memory, and both are older than the code. **The instrument is cheap and the
+sweep is not** — a twenty-line census settled in one run what six mockups would
+have argued about, and it settled five of them in the direction of doing
+nothing, which no mockup ever does.
+
+**UNSEEN on a device.** The reach screen's new crown is a token change with no
+measurement behind its wrap: "There is no server." at 40pt heavy is 19
+characters and will take two lines on a narrow phone, which is fine and has not
+been looked at.
+

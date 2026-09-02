@@ -48925,6 +48925,34 @@
         }
       }
     },
+    "Every request below goes straight from %@ to the service named." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada petición de abajo va directamente desde %@ al servicio indicado."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以下のリクエストはすべて %@ から記載のサービスへ直接送信されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아래의 모든 요청은 %@에서 명시된 서비스로 직접 전송됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "下方的每个请求都从 %@ 直接发往所列的服务。"
+          }
+        }
+      }
+    },
     "Every review is finished" : {
       "localizations" : {
         "es" : {
@@ -97389,30 +97417,30 @@
         }
       }
     },
-    "There is no server. Every request below goes straight from %@ to the service named." : {
+    "There is no server." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "No hay servidor. Cada petición de abajo va directamente desde %@ al servicio indicado."
+            "value" : "No hay servidor."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "サーバーはありません。以下のリクエストはすべて %@ から記載のサービスへ直接送信されます。"
+            "value" : "サーバーはありません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "서버가 없습니다. 아래의 모든 요청은 %@에서 명시된 서비스로 직접 전송됩니다."
+            "value" : "서버가 없습니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "没有服务器。下方的每个请求都从 %@ 直接发往所列的服务。"
+            "value" : "没有服务器。"
           }
         }
       }
