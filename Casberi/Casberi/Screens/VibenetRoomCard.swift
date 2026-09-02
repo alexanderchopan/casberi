@@ -2161,15 +2161,15 @@ struct VibenetRoomCard: View {
         // what a label's own wrapping walks straight through, and the grid it
         // grows is clipped rather than scrolled.
         //
-        // Spelled min+max rather than `height:`, which is not a spelling choice:
-        // SwiftUI has `frame(width:height:alignment:)` and the
-        // `min/ideal/max` family, and NO overload mixing `maxWidth:` with
-        // `height:` — so the obvious reading of "full width, pinned height"
-        // does not compile. Pinning both ends of the height range is the same
-        // constraint the `height:` argument would have expressed.
-        .frame(maxWidth: .infinity,
-               minHeight: Self.censusCell, maxHeight: Self.censusCell,
-               alignment: .topLeading)
+        // TWO modifiers, and that is forced rather than stylistic: SwiftUI has
+        // `frame(width:height:alignment:)` and the `min/ideal/max` family, and
+        // NO overload mixing `maxWidth:` with `height:` — so the obvious
+        // single-call reading of "full width, pinned height" does not compile
+        // at all. Pinning the height first and widening after says the same
+        // thing. Deliberately NOT `minHeight:`, which is the floor this
+        // room's own guard bans and which a label's wrapping walks through.
+        .frame(height: Self.censusCell, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .padding(.horizontal, DS.Space.s2)
         .padding(.vertical, DS.Space.s2)
         // A well, so six facts read as six facts rather than as a sentence
