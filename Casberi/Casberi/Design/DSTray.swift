@@ -52,7 +52,16 @@ struct DSTray<Content: View>: View {
                 // 12pt caption inside it is 3.3×.
                 .dsText(.heading34)
                 .foregroundStyle(DS.textPrimary)
-            content()
+            // **THE TRAY HAS SPENT THE HEAD RUNG, AND SAYS SO** (2026-09-02).
+            // Read by `DSSheetHead`, which takes the next rung down rather than
+            // drawing a second `heading34` four points under this one — see its
+            // `title` for why that stopped being a fair reading of §560.
+            //
+            // Declared HERE rather than passed by every caller: five of the six
+            // `DSSheetHead`s in the app are inside a tray, so a flag would be
+            // remembered five times and forgotten on the sixth. The tray is the
+            // only thing that knows it is a tray.
+            content().environment(\.dsSurfaceHasHead, true)
         }
         // Top-aligned by FRAME, not by a trailing `Spacer(minLength: 0)`
         // (2026-08-11). A Spacer is a view, so the stack's own `spacing` was
@@ -500,5 +509,35 @@ enum DSTrayGlass {
         #else
         false
         #endif
+    }
+}
+
+/// **HAS THIS SURFACE ALREADY SPENT THE HEAD RUNG?** (2026-09-02)
+///
+/// One `heading34` per surface, which is `heading34`'s own doc ("the head of a
+/// tray, a sheet or a room — the rung that says WHERE YOU ARE") read for what
+/// it says: you are only in one place. `DSTray` sets this on its content;
+/// `DSSheetHead` reads it and takes the next rung down.
+///
+/// **The pair was drawing two heads on five sheets and nothing could see it**,
+/// because each is right on its own. §532 gave the tray title the head rung (a
+/// tray is a place); §560 raised `DSSheetHead` to the same rung on the
+/// reasoning that "a `DSSheetHead` has no amount, so its title is the largest
+/// thing on the paper". Inside a tray that premise is simply false — the tray's
+/// own title is the same size, four points above — and the result was 120pt of
+/// headline before the first fact, which on `VibenetCreateSheet` pushed the new
+/// account's address under the pinned action and cut it through the middle.
+///
+/// Environment rather than a parameter for the reason `DSTray` states at the
+/// call site: the tray is the only view that knows it is a tray, and a flag
+/// five callers must remember is a flag the sixth forgets.
+private struct DSSurfaceHasHeadKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var dsSurfaceHasHead: Bool {
+        get { self[DSSurfaceHasHeadKey.self] }
+        set { self[DSSurfaceHasHeadKey.self] = newValue }
     }
 }

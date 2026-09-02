@@ -57,6 +57,22 @@ struct DSSheetHead<Disc: View>: View {
     /// thing on the paper and takes the rung the figure would have. One rule —
     /// the head rung goes to whatever the sheet is actually about — reading
     /// out as two numbers because the two sheets are about different things.
+    ///
+    /// **INSIDE A `DSTray` IT IS `heading22`, and that is the same rule rather
+    /// than an exception to it** (2026-09-02). "Its title is the largest thing
+    /// on the paper" is the premise the whole paragraph above rests on, and in
+    /// a tray it is false: `DSTray` draws its own title at `heading34` four
+    /// points higher (§532 — a tray is a place). §560 raised this line without
+    /// noticing, so **five of the six heads in the app began drawing a second
+    /// head under the first** — 120pt of headline before the first fact, which
+    /// on `VibenetCreateSheet` pushed the new account's address under the
+    /// pinned action and sliced it through the middle. Both rulings are intact:
+    /// the tray title says WHERE YOU ARE, this says WHAT IT IS, and one surface
+    /// spends the head rung once (`heading34`'s own doc, and §506's rule for
+    /// the crown one rung up).
+    ///
+    /// It reads that from the environment rather than a parameter, so no caller
+    /// can get it wrong — `EnvironmentValues.dsSurfaceHasHead`.
     let title: String
     /// One supporting line under the title — an id, a curve, a handle.
     var secondary: String?
@@ -81,6 +97,8 @@ struct DSSheetHead<Disc: View>: View {
     // left for a caller to choose.
 
     @Environment(\.colorScheme) private var scheme
+    /// Set by `DSTray` — see `title` and `EnvironmentValues.dsSurfaceHasHead`.
+    @Environment(\.dsSurfaceHasHead) private var surfaceHasHead
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -123,8 +141,10 @@ struct DSSheetHead<Disc: View>: View {
                 }
                 Text(title)
                     // The head rung (prd §532) — this line IS the subject of
-                    // the sheet, so it takes the largest words in the app.
-                    .dsText(.heading34)
+                    // the sheet, so it takes the largest words in the app…
+                    // **unless the surface already spent that rung** (see
+                    // `title`), in which case it takes the next one down.
+                    .dsText(surfaceHasHead ? .heading22 : .heading34)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
