@@ -64,6 +64,17 @@ def strip_comments(text: str) -> str:
     Line-wise and deliberately naive about `//` inside a string literal — this
     file has no URL literals in the region that matters, and over-stripping
     here can only ever LOSE a match, i.e. fail loudly, never pass silently.
+
+    A LINE COMMENT WINS OVER A BLOCK OPENER THAT FOLLOWS IT ON THE SAME LINE,
+    and that is not a nicety (2026-09-01). This looked for `/*` first, so a
+    `//` comment that merely MENTIONS a glob — `scripts/output/<run>/perf.txt`
+    written with a `*` for the run — contains the two characters `/` `*`, was
+    read as an unterminated block opener, and blanked EVERY LINE AFTER IT to
+    the end of the file. All three checks then failed at once, reporting that
+    the privacy cover was gone from a file where all five of its symbols were
+    present and correct. That is the worst shape a guard can fail in: it
+    accuses the code, and the accusation looks exactly like the real bug this
+    audit exists to catch. Found when a perf comment cited a glob path.
     """
     out = []
     in_block = False
@@ -75,18 +86,28 @@ def strip_comments(text: str) -> str:
                 continue
             line = " " * (end + 2) + line[end + 2:]
             in_block = False
-        start = line.find("/*")
-        while start != -1:
-            end = line.find("*/", start + 2)
+        # WHICHEVER OPENS FIRST WINS. Testing one delimiter before the other
+        # is wrong in one direction or the other, and both directions were
+        # written before this one: `/*`-first blanks the file on a `//` that
+        # mentions a glob, and `//`-first breaks on a `//` sitting INSIDE a
+        # one-line `/* … */`. Scanning left to right is the only rule that
+        # needs no exception.
+        pos = 0
+        while True:
+            b = line.find("/*", pos)
+            s = line.find("//", pos)
+            if s != -1 and (b == -1 or s < b):
+                line = line[:s]
+                break
+            if b == -1:
+                break
+            end = line.find("*/", b + 2)
             if end == -1:
-                line = line[:start]
+                line = line[:b]
                 in_block = True
                 break
-            line = line[:start] + " " * (end + 2 - start) + line[end + 2:]
-            start = line.find("/*", start)
-        slash = line.find("//")
-        if slash != -1:
-            line = line[:slash]
+            line = line[:b] + " " * (end + 2 - b) + line[end + 2:]
+            pos = end + 2
         out.append(line)
     return "\n".join(out)
 
@@ -220,6 +241,24 @@ NO_DEBOUNCE = CLEAN.replace(
     "        guard Date.now.timeIntervalSince(lastActivation) > 2 else { return }\n", ""
 )
 
+# A `//` comment that merely MENTIONS a glob, ABOVE everything this audit
+# looks for. The two characters `/` `*` inside it used to read as an
+# unterminated block-comment opener, which blanked every line after it and made
+# all three checks fail at once against a file whose cover was perfectly
+# intact. This fixture is the regression: it must come back CLEAN (2026-09-01,
+# found when a perf comment cited a run-directory glob).
+GLOB_IN_COMMENT = (
+    "    // compare against the old numbers in scripts/output/*/perf.txt\n" + CLEAN
+)
+
+# The other direction, which the first cut of that fix broke: a `//` sitting
+# INSIDE a one-line `/* … */`. Cutting at the line comment first would leave an
+# unterminated opener and blank the file just as badly, so the rule is
+# whichever delimiter opens FIRST — not one tested before the other.
+SLASHES_INSIDE_BLOCK = (
+    "    /* a // b */ let x = 1\n" + CLEAN
+)
+
 
 def self_test() -> int:
     cases = [
@@ -230,6 +269,8 @@ def self_test() -> int:
         ("a second raise outside handleDeactivation", STRAY_RAISE, True),
         ("the cover no longer draws", NOT_DRAWN, True),
         ("no debounce — nothing to swallow the clear", NO_DEBOUNCE, False),
+        ("a glob in a line comment does not blank the file", GLOB_IN_COMMENT, False),
+        ("slashes inside a one-line block comment", SLASHES_INSIDE_BLOCK, False),
     ]
     bad = 0
     for name, fixture, should_fail in cases:
@@ -250,7 +291,7 @@ def main() -> int:
         if bad:
             print(f"✗ privacy-cover audit self-test: {bad} case(s) wrong")
             return 1
-        print("✓ privacy-cover audit self-test: 7/7")
+        print("✓ privacy-cover audit self-test: 9/9")
         return 0
 
     if not SHELL.is_file():

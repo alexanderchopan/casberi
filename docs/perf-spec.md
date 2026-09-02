@@ -117,7 +117,7 @@ The unbounded-main-actor-fetch class has re-entered at least four times by four 
 | P1 source-room hydration | **Narrowed to one option, blocked on a validation step.** Two of three shapes killed with evidence. |
 | P2 typed-ask path | **Done.** `fullCorpus()` is light-columned. |
 | P3 per-row costs | **Instrumented, deliberately not optimised.** |
-| P4 fetch-bound audit | See below. |
+| P4 fetch-bound audit | **Done**, wired into `verify.sh` and discovered by CI. |
 | P5.1 `#Index` | **Done.** |
 | P5.2 heavy columns lazy | **Dead** — see P1. |
 | P5.3 backfill batching | **Done.** |
@@ -134,6 +134,22 @@ The unbounded-main-actor-fetch class has re-entered at least four times by four 
 **P5.3** — the embedding backfill takes a per-activation budget of 8 batches (256 things). The bound lives on `backfill`, not on `indexPending`, because two headless probes call the primitive directly and rely on it draining. Arithmetic: unbounded on a 13k corpus is ~419 batches ≈ 50 seconds of continuous feed rebuilding; 8 batches is ~1 second, which fits inside the burst `runForegroundWork` already pays, so it adds no new window of jank rather than a shorter one. In steady state the bound never binds.
 
 **P5.4** — `SpotlightIndex.reindexAll`, `SyncReconcile.dedupeBySourceRef` and `DemoSeedAll.sweepEscapedRows` walk in chunks with a yield between them. Same rows, same work, same single save — only the **walk** is sliced, never the fetch (`AgentOpenCache`'s ruling: no index on the sort key, so paging re-sorts per page). Each chunk re-checks `.isLive` per row and the delete pass filters again after the last await, because a yield puts a held `[Thing]` across a suspension — corollary 6, the crash class.
+
+## Findings that came out of doing the work
+
+**The measurement itself was broken, and had been all along.** `scripts/perf.sh` re-greps each accumulator label as a regex, so `feedList[All]` is read as a character class `[All]` and never matches — the line prints `accum=feedList[All]  ms over  calls`, a blank where the number should be. It is in **every recorded run on disk** (`scripts/output/perf-*/perf.txt`). This is the single most-cited accumulator in the entire perf record, and the same `-F` lesson CLAUDE.md already records for `verify-mac.sh`'s span breakdown — that fix was never carried to this copy. Fixed, and proven both ways against a fixture. Generalise: **when a lesson is recorded for one script, grep the tree for the same shape** — the record said this bug was fixed, and it was, in one of the two places it lived.
+
+**A comment describing a cost outlived the cost.** `FeedScreen`'s context-menu comment claimed `VerbDerivation.verbs` runs an `NSDataDetector` pass per row. §260/§262 moved all three scans off the main actor, so it reads stamped columns instead. This spec inherited the claim from the comment without checking, and would have sent the next session optimising something already optimised.
+
+**What is really left there:** `verbs(for:)` reads `thing.content` ungated for `.link`, `.product`, `.transaction`, `.note`, `.chat`, `.mail`, `.voice` and `.file` — i.e. nearly every row. The All room's query omits `content`, so that is **a per-row external fault on the All room and not on a source room** (which hydrates it since the 2026-08-31 fix). That asymmetry is exactly what the new per-room label will show, and it is the first concrete hypothesis P3 has ever had.
+
+**Dead code, not a perf cost:** `FeedScreen.openVerb(for:)` has zero callers — residue of the both-edge swipe retired 2026-07-16. Left alone; noted so it can be deleted deliberately rather than found again.
+
+**The audit refused its own brief, correctly.** Taken literally, "every `FetchDescriptor<Thing>`" needed 163 registry entries, 133 of them predicated bridge-dedupe reads off the render path. That is `ref-shape-audit.py`'s refused reverse direction wearing a registry's clothes, and a check firing on a healthy tree gets turned off within a week. It holds the whole-corpus class plus the `@Query`-backed render-path cases, and says so in its docstring.
+
+**A comment we added to explain a perf change broke a different audit, in the worst possible shape.** One of the new comments cited a run-directory glob, `scripts/output/*/perf.txt`. That contains the two characters `/` `*`, and `privacy-cover-audit.py`'s comment-stripper looked for a block opener **before** a line comment — so it read the glob as an unterminated `/*` and blanked every line after it to the end of the file. All three of its checks then failed at once, reporting that the app-switcher privacy cover had been removed from a file where all five of its symbols were present and correct. **A guard that accuses the code, in language identical to the real bug it exists to catch**, is worse than one that stays silent: the obvious response is to go looking for a regression that was never there. Fixed properly — whichever delimiter opens first wins, since testing either one first is wrong in the other direction — with two fixtures (the glob, and a `//` inside a one-line `/* */`) and mutation-proven by reverting the order. Generalise: **a comment-stripper is parsing, and a naive one fails open in the direction of blaming your code.**
+
+**Sixth instance of the comment-matching lesson.** The audit's own first cut of check 3 was a file-wide grep and **survived its mutation**, because `RootShell` names the instrumentation string in a comment two lines above the log line it guards. Comment-stripping is not fussiness in this repo; it is the default.
 
 ## Order of execution
 

@@ -381,7 +381,7 @@ struct RootShell: View {
                 // `[wall]` because these now yield: the figure is elapsed
                 // time across the suspensions, not main-actor time held, and
                 // it is NOT comparable with the pre-2026-09-01 numbers in
-                // `scripts/output/*/perf.txt` under the old label. Expect it
+                // each run's own `perf.txt` under the old label. Expect it
                 // to read HIGHER while the thing it measures gets better —
                 // which is exactly the misreading a renamed label prevents.
                 await LaunchPerf.timeAsync("SpotlightIndex.reindexAll[wall]") {
