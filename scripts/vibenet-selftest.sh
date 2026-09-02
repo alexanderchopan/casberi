@@ -5203,58 +5203,109 @@ mutateLedger "a new chain and a rewind must never collide on one key" \
   'case let .newChain(from, to):   return "tip-\(from)-\(to)"'
 
 
-# --- prd §517: the book is rows on ink, and the lookup is a sheet ------------
+# --- prd §517: the lookup is a sheet, and §545 moved the surface it opens from -
 #
 # Reported as "gross": the page called itself Address Book while listing
 # vibenet accounts, the lookup unfolded IN PLACE so eight strangers sat above
 # the user's own account, and five type sizes shared three positions. Every
 # guard below fails invisibly — the screen builds and renders either way.
+#
+# **THESE GUARDS WERE RE-AIMED, AND FIVE OF THEM HAD BEEN DEAD (§562).** §545
+# deleted `VibenetAddressBookScreen` and moved the roster onto the room's own
+# Accounts scope, and `$BOOK` was re-pointed at `VibenetRoomCard.swift` in one
+# move without walking this block guard by guard. It could not survive that:
+# `subjectLine`/`rosterSection`/`doorsSection` were the deleted screen's own
+# members, `dsInk()` belonged to a screen that owned its ground where a card
+# inside `FeedScreen`'s List does not, the negative naming `VibenetRoomCard`
+# matched that file's own type name, and the negative on
+# `VibenetDiscoverySection` fired on §479's empty-room way out. The harness was
+# red on main, which is the one thing that worked as designed — but a red
+# guard is a ruling to amend, and amending it is what found the real defect:
+# the SHEET HAD NO PRESENTER. `VibenetWatchSheet` sat in the tree with zero
+# callers, so the room had a roster you could rename and unwatch from and
+# could not add to, and discovery was reachable only from the empty branch —
+# §472's exact regression, which §476 and §517 were both spent undoing.
+#
+# So each ruling is now guarded where it actually LIVES: the whole add PATH on
+# the card and the screen that presents for it, and ink/no-cards on the sheet,
+# which is the surface the ink ruling was ever about.
 
-# THE LOOKUP IS A SHEET. As an unfold it could push the roster down the page,
-# which is the ordering half of the report; as a sheet that is structurally
-# impossible. A discovery section reaching the book again is the unfold back.
-grep -q 'VibenetWatchSheet' "$TMP/book.nc.swift" \
-  || { echo "✗ the book no longer opens the watch sheet — the lookup has nowhere to be"; exit 1; }
-grep -q 'VibenetDiscoverySection' "$TMP/book.nc.swift" \
-  && { echo "✗ the discovery list is back on the book — prd §517: it unfolds above your own"; \
-       echo "  accounts, which is the ordering complaint that moved it to a sheet"; exit 1; }
-grep -q 'VibenetDiscoverySection' "$TMP/sheet.nc.swift" \
-  || { echo "✗ the watch sheet no longer carries discovery — nobody has a devnet address to paste"; exit 1; }
+# THE LOOKUP IS A SHEET, AND SOMETHING OPENS IT. Both halves, because the
+# defect was a live row and a live sheet with nothing between them — the card
+# names the closure, the screen presents the sheet, and neither half alone is
+# a way in. A card cannot present it itself: it lives inside `FeedScreen`'s
+# List rows, where a `.sheet` resolves to the same presenting controller as
+# that screen's own and half-opens before closing again.
+grep -q 'onRequestWatch' "$TMP/book.nc.swift" \
+  || { echo "✗ the roster no longer asks for the watch sheet — prd §517/§562: rename and"; \
+       echo "  unwatch without an add is a roster you cannot put anything into"; exit 1; }
+grep -q 'watchAccountRow' "$TMP/book.nc.swift" \
+  || { echo "✗ the watch row left the roster — the closure with no row is the dead half"; exit 1; }
+grep -q 'VibenetWatchSheet' "$TMP/feed.nc.swift" \
+  || { echo "✗ nothing presents VibenetWatchSheet — 2026-09-02: it had NO caller at all,"; \
+       echo "  so the sheet existed, compiled, and could not be reached from the app"; exit 1; }
 
-# WATCHED ACCOUNTS LEAD. Nothing may be composed above the roster but the one
-# line naming the network — that is the whole of "where you are".
+# IT MAY NOT UNFOLD BESIDE THE ROSTER. Scoped to `accountsCardBody` rather
+# than the file, which is the whole correction: §479 deliberately draws
+# discovery in the EMPTY branch, where there is no roster for it to push down,
+# and a file-wide negative calls that ruling an offence. The hazard §517 names
+# is a lookup expanding BETWEEN the way in and the accounts, and that is the
+# one place this asserts it cannot happen.
 python3 - "$TMP/book.nc.swift" <<'GUARD' || exit 1
-import sys
+import re, sys
 src = open(sys.argv[1]).read()
 try:
-    body = src.index("var body: some View {")
-    subject = src.index("subjectLine", body)
-    roster = src.index("rosterSection", body)
-    doors = src.index("doorsSection", body)
+    start = src.index("private var accountsCardBody: some View {")
 except ValueError:
-    print("✗ the book's body no longer composes subject / roster / doors — prd §517")
+    print("✗ accountsCardBody is gone from the room card — prd §545: it is the roster now")
     sys.exit(1)
-if not (subject < roster < doors):
-    print("✗ the book no longer leads with what you watch — prd §517: on the reported")
-    print("  screen the user's own account sat below eight strangers'")
+m = re.search(r"\n    \}\n", src[start:])
+if not m:
+    print("✗ accountsCardBody's closing brace could not be found — prd §517")
+    sys.exit(1)
+body = src[start:start + m.end()]
+if "VibenetDiscoverySection" in body:
+    print("✗ the discovery list unfolds beside the roster again — prd §517: it expands")
+    print("  between the way in and your own accounts, which is the ordering complaint")
+    print("  that moved it to a sheet (§472 → §476 → §517, three rulings)")
+    sys.exit(1)
+# WHAT YOU WATCH IS NEVER PUSHED DOWN BY THE WAY TO ADD. Both doors are single
+# rows at the head of the list — §538's ruling ("create account should be
+# indented same as the list items below it", and a verb under a roster of
+# twenty is a verb nobody finds) and §517's ordering fix at once: two fixed
+# rows cannot grow the way an unfold can.
+try:
+    create = body.index("createAccountRow")
+    watch = body.index("watchAccountRow")
+    roster = body.index("ForEach(Array(drawn.enumerated())")
+except ValueError:
+    print("✗ the roster no longer composes create / watch / accounts — prd §538/§562")
+    sys.exit(1)
+if not (create < watch < roster):
+    print("✗ the two ways in are no longer the head of the list — prd §538: a verb under")
+    print("  a roster of twenty is a verb nobody finds")
     sys.exit(1)
 GUARD
 
-# INK, AND NO CARDS (user ruling, 2026-08-29). `dsInk()` is DS.inkGround —
-# pure black in dark — and the roster is rows on that ground. A slab section
-# here is the card the ruling removed; the themed page is the grey it named.
-grep -q 'dsInk()' "$TMP/book.nc.swift" \
-  || { echo "✗ the book is off ink again — 2026-08-29: 'make sure its ink black not the grayish black'"; exit 1; }
-if grep -qE 'dsSlabSection|dsPageBackground|VibenetRoomCard' "$TMP/book.nc.swift"; then
-  echo "✗ a card or the themed page is back on the book — 2026-08-29: 'we don't use cards"
-  echo "  so i don't think you need those around things'"
+grep -q 'VibenetDiscoverySection' "$TMP/sheet.nc.swift" \
+  || { echo "✗ the watch sheet no longer carries discovery — nobody has a devnet address to paste"; exit 1; }
+
+# INK, AND NO CARDS (user ruling, 2026-08-29) — ON THE SHEET, which is where
+# that ruling still has a surface. `dsInk()` is DS.inkGround, pure black in
+# dark; the lookup's rows sit on that ground and the one filled shape is the
+# address field, which is a control.
+grep -q 'dsInk()' "$TMP/sheet.nc.swift" \
+  || { echo "✗ the watch sheet is off ink — 2026-08-29: 'make sure its ink black not the grayish black'"; exit 1; }
+if grep -qE 'dsSlabSection|dsPageBackground' "$TMP/sheet.nc.swift"; then
+  echo "✗ a card or the themed page is back on the watch sheet — 2026-08-29: 'we don't use"
+  echo "  cards so i don't think you need those around things'"
   exit 1
 fi
 
 # NO HAIRLINES, EVER (§8 law, zero exceptions). The rows have nothing between
 # them but rhythm, so a separator here would be the first line in the app.
 if grep -qE 'Divider\(\)|listRowSeparator\(\.visible\)' "$TMP/book.nc.swift" "$TMP/sheet.nc.swift"; then
-  echo "✗ a divider reached the vibenet book — §8: nothing draws a line"
+  echo "✗ a divider reached the vibenet roster — §8: nothing draws a line"
   exit 1
 fi
 

@@ -144,6 +144,26 @@ struct VibenetRoomCard: View {
     /// through `FeedSheetRoute.vibenetCreate` instead, the same door
     /// `onOpenKeys`/`onOpenKey` already use.
     var onRequestCreate: () -> Void = {}
+    /// Raises the WATCH sheet (`VibenetWatchSheet`) — the lookup §517 made a
+    /// sheet, restored to the surface §545 moved the roster to.
+    ///
+    /// **IT WENT MISSING, AND NOTHING COULD SEE IT.** §545 deleted
+    /// `VibenetAddressBookScreen` and moved this roster onto the room's own
+    /// Accounts scope — correctly — but the sheet's only presenter went with
+    /// the deleted screen, so `VibenetWatchSheet` sat in the tree with no
+    /// caller and the room grew a roster you could rename and unwatch from
+    /// and could not ADD to. That is §472's exact regression back again: the
+    /// discovery list §479 put in this card is in the EMPTY branch, so the
+    /// moment you watch one account the only route to a second is to leave,
+    /// find the catalog and open the setup screen — which §479's own ruling
+    /// names as the dead end it exists to close.
+    ///
+    /// **Routed, not presented, for `onRequestCreate`'s reason verbatim**:
+    /// this card lives inside `FeedScreen`'s List rows, and a `.sheet` on a
+    /// row resolves to the same presenting controller as the screen's own
+    /// single sheet — the half-open-then-close bug this codebase has now paid
+    /// for four times. `FeedSheetRoute.vibenetWatch`.
+    var onRequestWatch: () -> Void = {}
     /// Raised by the context menu's "Name this account…" — the alert itself
     /// lives on the SCREEN (a text-entry alert needs `@State` a card
     /// re-composed from a value type shouldn't own), so this just reports
@@ -2612,6 +2632,7 @@ struct VibenetRoomCard: View {
                 // wallets — a confusion built in on purpose for renaming and
                 // exactly wrong for making.
                 createAccountRow
+                watchAccountRow
                 ForEach(Array(drawn.enumerated()), id: \.element.id) { index, item in
                     // The last ROW is only the last thing in the card when
                     // there are no links folded under it — otherwise its
@@ -2681,6 +2702,67 @@ struct VibenetRoomCard: View {
                         .foregroundStyle(Self.mark)
                         .lineLimit(1)
                     Text(String(localized: "This phone becomes its first key"))
+                        .dsText(.label11)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: DS.Space.s2)
+                Image(systemName: "chevron.right")
+                    .accessibilityHidden(true)
+                    .dsGlyph(11, weight: .semibold)
+                    .foregroundStyle(Self.mark.opacity(0.6))
+            }
+            .padding(.vertical, DS.Space.s3)
+            .padding(.horizontal, DSRoomChassis.contentInset)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .dsHover()
+    }
+
+    /// The other way an account gets into this list: one you did not make.
+    ///
+    /// **IT SITS BESIDE CREATE, ABOVE THE ROSTER, FOR §538'S OWN REASON** —
+    /// *"create account should be indented same as the list items below it"*,
+    /// and the ruling one line up from that: a verb under a roster of twenty
+    /// is a verb nobody finds. So it reads off `createAccountRow`'s tokens
+    /// rather than spelling its own, and the two are one pair: change that
+    /// row's geometry and this one has to follow.
+    ///
+    /// **The tap is a SHEET and never an unfold (prd §517).** The lookup this
+    /// opens is `VibenetDiscoverySection` — up to eight strangers' addresses —
+    /// and inline it would land BETWEEN this row and the accounts below it,
+    /// pushing the one account you actually watch down the page. That is the
+    /// reported "this whole thing is gross", and §472 → §476 → §517 is three
+    /// rulings spent arriving at the surface that makes it structurally
+    /// impossible. Unfolding it here would be the fourth.
+    ///
+    /// Second, not first: creating is the room's own act and watching is
+    /// somebody else's account, so the primary verb keeps the lead.
+    @ViewBuilder
+    private var watchAccountRow: some View {
+        Button {
+            DSHaptic.selection()
+            onRequestWatch()
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                ZStack {
+                    Circle().fill(Self.mark.opacity(0.18))
+                        .frame(width: DS.Face.rowCircle, height: DS.Face.rowCircle)
+                    Image(systemName: "magnifyingglass")
+                        .dsGlyph(12, weight: .semibold)
+                        .foregroundStyle(Self.mark)
+                }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(String(localized: "Watch an account"))
+                        .dsText(.heading17)
+                        .foregroundStyle(Self.mark)
+                        .lineLimit(1)
+                    // Says what the tap ASKS FOR, `createAccountRow`'s rule:
+                    // one of these two rows wants an address you already have
+                    // and the other does not, and that is the whole of how
+                    // somebody picks between them.
+                    Text(String(localized: "Paste an address, or pick a new one"))
                         .dsText(.label11)
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)

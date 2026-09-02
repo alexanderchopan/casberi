@@ -79,6 +79,7 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §545 | The vibenet roster moves onto the room's own Accounts scope, and `VibenetAddressBookScreen` is deleted with its route | amended by §562 (the ruling stands; the deleted screen took `VibenetWatchSheet`'s ONLY presenter with it, so the roster could be renamed and unwatched from and not added to, and §479's discovery is in the empty branch — the moment you watch one account the lookup is off the screen for good. The door is restored as a head row routed through `FeedSheetRoute.vibenetWatch`, and five §517 guards re-pointed in the same move turned out to be dead) |
 | §165 | The whisper capsule carries the DAY BRIEF — one glass card above the agent bar on the first foreground of every calendar day, tapping through to the Today brief | superseded by §550 (that made it the last prepopulated door onto the brief after §543 deleted the rest, on the one surface that repeats forever — and the day reading was never only there: the All feed's own Today header has drawn `DayBrief.whisper` since §385 and the iPad pane since 2026-07-31, both untouched. The SLOT survives and changes subject: it teaches the hold §390 hid, once ever, retiring the first time the agent rises by any door) |
 | §167 | Item 1 — the whisper's title TRAVELS into the brief's masthead: a proxy title mounted in RootShell's own `composerOpen` transaction so the capsule's words had a live `matchedGeometryEffect` pair while the real masthead was still 400ms away | amended by §550 (the capsule opens no titled document now, so there are no words to fly and nothing on the other side to receive them — `WhisperTitleMorph`, `ShellChrome.risingBriefTitle`, the proxy overlay and the masthead's receiving modifier are all deleted. §167's other five corrections stand, and the bar↔surface SHAPE morph is a different pairing and is untouched) |
 | §386c | The kept-ask pills LEAVE the rest surface — the same chips-to-have-chips reading the suggestion row got in the same session | reversed by §543 (they were removed while sitting in a row of five identical-looking suggestions, where they read as more of the same. With every SUGGESTED chip deleted they are the opposite thing: the only content on that surface, and there only because somebody pinned it. It also repairs a hole §543 would otherwise open — "Keep" on an answer would mint a standing question with nowhere to appear, which is a control that does nothing (§83)) |
@@ -44453,3 +44454,125 @@ this file's first-run false positives, both now handled and both pinned.
 
 **The website and the docs were swept too and are clean**: every `<h1>`–`<h6>`
 and button label on casberi.app is already sentence case or a product name.
+
+## 562. The vibenet roster could be renamed and unwatched from and not added to — the watch sheet had no presenter (2026-09-02)
+
+Found by a red harness, which is the only thing that could have found it.
+`scripts/vibenet-selftest.sh` had been failing on `main` on a §517 drift guard
+asserting that the book opens `VibenetWatchSheet`. The obvious reading was a
+stale guard after a refactor. It was the opposite: **the guard was right and the
+app was wrong.**
+
+`grep -rn 'VibenetWatchSheet' Casberi/` returned exactly one hit — the struct's
+own definition. Nothing in the app presented it.
+
+### What actually broke, and why nothing else could see it
+
+§545 deleted `VibenetAddressBookScreen` and moved the roster onto the room's own
+Accounts scope. That is right and it stands. But the sheet's ONLY presenter
+lived on the deleted screen, and it went with it — so the room grew a roster
+carrying **rename** and **stop watching** and no way to **add**.
+
+The remaining doors do not cover it. §479 draws `VibenetDiscoverySection` in
+this card's EMPTY branch, so the moment you watch one account the lookup is off
+the screen for good, and the only route to a second is to leave, find the
+catalog and open the setup screen — **which is the dead end §479's own ruling
+exists to close**. That is §472's exact regression restored: the discovery list
+was once "only while nothing is watched", §476 made it a collapsed door for that
+reason, and §517 made it a sheet. Three rulings, undone as collateral.
+
+Nothing but the harness could see it. It compiles either way, the screen sweep
+proves a card painted, the liveness audit asks about tombstones, and a dead
+`View` struct is not a warning. The exit code was the report.
+
+### The ruling: the lookup is still wanted
+
+§545 retired a duplicate SCREEN and moved the roster's VERBS onto its rows.
+Adding is neither of those things, and no line of §545 rules on it — so this
+amends §545 only where it dropped something it never meant to decide. §517's own
+finding — *"a lookup that is not on the screen cannot push your accounts down
+it"* — is structural and survives its screen intact. So the door is restored to
+the surface §545 moved the roster to.
+
+`watchAccountRow` sits directly under `createAccountRow`, above the roster.
+Second rather than first, because creating is this room's own act and watching
+is somebody else's account. Both read `createAccountRow`'s tokens rather than
+spelling their own — §538's ruling (*"create account should be indented same as
+the list items below it"*) makes the two one pair, so the geometry cannot drift
+by the two points that ruling was spent on.
+
+**Routed, never presented** (`FeedSheetRoute.vibenetWatch`), for
+`onRequestCreate`'s reason verbatim: this card lives inside `FeedScreen`'s List
+rows, and a `.sheet` there resolves to the same presenting controller as that
+screen's own — the half-open-then-close bug this codebase has now paid for four
+times. The handler dismisses BEFORE it re-composes, `.vibenetCreate`'s own rule,
+or the read lands under a covered screen.
+
+**§476's "one way, not two" ruling survives for free, and the split is exact.**
+`stacksIntoCards` is `onOpen == nil && room.lead != nil`, so the card that
+carries this row draws only when the roster is NOT empty, while §479's inline
+discovery lives in `rosterBranch`'s `else` and draws only when it IS. They are
+mutually exclusive by construction, and they divide along the very line §517
+drew: with no roster on screen there is nothing a lookup can push down, so
+inline is right there; with a roster, the lookup must be a sheet.
+
+The sheet itself needed no change. It already shares `VibenetWatchField` and
+`VibenetDiscoverySection` with `VibenetScreen` (§465's reason: copied, the two
+surfaces answer one paste two different ways within a release), and it is
+already ink with no cards.
+
+### FIVE guards had been dead, not one
+
+This is the part worth carrying. When §545 re-pointed the harness's `$BOOK` at
+`VibenetRoomCard.swift` it moved the whole §517 block in one step rather than
+walking it guard by guard — the thing §545's own entry says it did for §465's
+five. The block could not survive that move, and only the first failure was
+visible because the harness exits on it:
+
+1. `VibenetWatchSheet` on the book — **the real defect**, now guarded as the
+   whole PATH (the card names the closure, the screen presents the sheet;
+   neither half alone is a way in, and the bug was a live row and a live sheet
+   with nothing between them).
+2. `VibenetDiscoverySection` NOT on the book — fired on §479's empty-room way
+   out. Re-aimed at `accountsCardBody`, which is the actual hazard: a lookup
+   expanding BETWEEN the way in and your own accounts. In the empty branch
+   there is no roster to push down.
+3. `subjectLine < rosterSection < doorsSection` — those were the deleted
+   screen's own members, so the guard could never parse. Replaced by the
+   invariant that survives: create and watch are both fixed rows at the HEAD of
+   the list, which is §538 and §517's ordering fix at once — two fixed rows
+   cannot grow the way an unfold can.
+4. `dsInk()` on the book — belonged to a screen that owned its ground; a card
+   inside `FeedScreen`'s List does not. Re-aimed at the SHEET, which is the
+   surface that ink ruling was ever about.
+5. The negative naming `VibenetRoomCard` — matched that file's own type name,
+   so it was unfailable in the other direction. Re-aimed at the sheet.
+
+**The generalisable lesson: re-pointing a guard's SUBJECT is not re-aiming the
+guard.** A guard names a file and a ruling, and moving the file underneath it
+silently re-asks the question of something that was never the subject — which
+yields a guard that cannot pass, a guard that cannot fail, or one that fires on
+a different ruling. Walk them one at a time, and a red one is a ruling to amend.
+
+**Mutation-proven nine ways** before landing, against stripped copies rather
+than tracked files (a concurrent session's `git add -A` can commit a mutation):
+the closure removed, the row removed, **the presenter removed — the shipped bug
+itself**, discovery unfolded beside the roster, the two ways in sunk below the
+roster, the sheet's discovery removed, the sheet off ink, a card back on the
+sheet, a divider on the sheet. All nine caught; baseline green.
+
+### What it cost, and what it did not
+
+No new `Thing` field, so **no CloudKit deploy**. No request, no host, no catalog
+change. `VibenetScreen`'s own inline field and discovery are untouched, and
+§479's empty-room branch is untouched.
+
+**UNSEEN on a device.** The iOS Simulator build passes and the harness is green;
+no screenshot of the repaired roster has been taken. The one thing to look at
+first is the two head rows together — `createAccountRow` and `watchAccountRow`
+share a leading edge, a face size and a row height by construction, and §538 is
+a whole ruling about how two points on that edge read.
+
+**Unblocks a measured speedup.** `scripts/support/harness-opt-probe.sh` refuses
+to license an `-O` → `-Onone` swap for a harness that fails, and vibenet is the
+longest in the suite. Green, it can now be probed.

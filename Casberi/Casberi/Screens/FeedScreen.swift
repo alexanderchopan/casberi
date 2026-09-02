@@ -479,6 +479,11 @@ struct FeedScreen: View {
         /// `VibenetRoomCard`, which is inside this List's rows, so it cannot
         /// present its own sheet.
         case vibenetCreate
+        /// Finding an account you did not make (prd §517, restored §562).
+        /// Routed here for `vibenetCreate`'s reason verbatim: the row that
+        /// raises it lives in `VibenetRoomCard`, inside this List's rows, so
+        /// it cannot present its own sheet.
+        case vibenetWatch
         /// **THE SEND FORM, ON A SHEET (prd §553).** Home holds the two verbs
         /// and the form holds the screen — routed here rather than presented by
         /// the card for `hegotaMove`'s reason: a `.sheet` on a view inside this
@@ -523,6 +528,7 @@ struct FeedScreen: View {
             case .vibenetKey(let actor, let item, _):
                 "vibenetKey:\(VibenetKeySeenDiff.keyID(address: item.address, actorId: actor.actorId))"
             case .vibenetCreate: "vibenetCreate"
+            case .vibenetWatch: "vibenetWatch"
             case .hegotaSend: "hegotaSend"
             case .framesSend: "framesSend"
             case .vibenetSend(let a): "vibenetSend:\(VibenetTransaction.hex(a))"
@@ -3987,6 +3993,30 @@ case .vibenetSend(let account):
                     chrome.refreshPulse += 1
                 }
             }
+        case .vibenetWatch:
+            VibenetWatchSheet {
+                // DISMISS FIRST, then re-read — `.vibenetCreate`'s ruling
+                // directly above, for the same reason: the room re-composes
+                // behind this sheet, and asking for that while it is still up
+                // lands the change under a covered screen. The sheet calls
+                // this before its own `dismiss()`, so without this line the
+                // recompose starts while it is up; both settle the same
+                // binding, so saying it twice costs nothing.
+                feedSheet = nil
+                // The watch itself already happened inside the sheet
+                // (`VibenetWatchField`/`VibenetDiscoverySection` own that, and
+                // are shared with `VibenetScreen` so the two surfaces can
+                // never answer one paste two ways). All that is owed here is
+                // `onWatched`'s own fix: the room is composed from
+                // `VibenetState.saved`, a flat snapshot with no observation,
+                // so read the chain now and then bump the term this screen's
+                // memoised head recomputes on — or the account is watched and
+                // the room goes on showing its old self.
+                Task {
+                    _ = await VibenetRoomSource.compose()
+                    chrome.refreshPulse += 1
+                }
+            }
         case .vibenetAuthorize(let account, let epoch, let sequence, let editing):
             VibenetAuthorizeSheet(account: account, localEpoch: epoch, localSequence: sequence,
                                   editing: editing)
@@ -5206,6 +5236,7 @@ case .vibenetSend(let account):
                                         }
                                     },
                                     onRequestCreate: { feedSheet = .vibenetCreate },
+                                    onRequestWatch: { feedSheet = .vibenetWatch },
                                     onOpenKeys: { newKeyIDs in
                                         feedSheet = .vibenetKeys(room.items, newKeyIDs: newKeyIDs)
                                     },
