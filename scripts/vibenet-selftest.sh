@@ -64,13 +64,28 @@ ROUTER="Casberi/Casberi/Model/BridgeRouting.swift"
 # now, and the invariant that keeps them apart is textual, so it is greppable.
 SETUP="Casberi/Casberi/Screens/VibenetScreen.swift"
 # prd §545 — the book SCREEN is deleted and its two account verbs moved onto
-# the Accounts scope's own rows. `BOOK` now names the file that holds them, so
-# every guard below still guards the ruling rather than the filename.
-BOOK="Casberi/Casberi/Screens/VibenetRoomCard.swift"
+# the Accounts scope's own rows, i.e. onto the room card.
+#
+# **ONE NAME, ONE STRIPPED COPY (prd §568).** §545 re-pointed a `BOOK`
+# variable at this file and never merged it into the `CARD` that was already
+# three lines below, so ONE file was read under TWO names into two
+# byte-identical stripped copies with its guards split across them — 59
+# references to one, 10 to the other, and nothing tying them together. §562 is
+# what that cost: five §517 guards written for the deleted screen went on
+# being asserted about the room card, four of them red and one of them
+# demanding a `.sheet` from the one file §468 forbids to present any. §562
+# corrected every one of those guards and left the SPLIT in place, which is
+# the part that will do it again — somebody amending "the card's" guards has
+# no reason to open "the book's". So there is one name now. The collapse is
+# behaviour-preserving BY CONSTRUCTION: the two copies were the same bytes of
+# the same file, produced by the same `strip_comments`.
+CARD="Casberi/Casberi/Screens/VibenetRoomCard.swift"
 FIELD="Casberi/Casberi/Screens/VibenetWatchViews.swift"
-SHELL_SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
+# ONE name per file (prd §568) — this was `$SHELL_SURFACE` here and `$SURFACE`
+# below, the same two-names-one-path split that let five §517 guards go dead.
+SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
-for f in "$ROOM" "$LEDGER" "$BRIDGE" "$CATALOG" "$REACH" "$ROUTER" "$SETUP" "$BOOK" "$FIELD" "$SHELL_SURFACE" "$FEED"; do
+for f in "$ROOM" "$LEDGER" "$BRIDGE" "$CATALOG" "$REACH" "$ROUTER" "$SETUP" "$CARD" "$FIELD" "$SURFACE" "$FEED"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -119,13 +134,12 @@ src = re.sub(r'(?<![:/])//.*$', '', src, flags=re.M)
 sys.stdout.write(src)
 PY
 }
-CARD="Casberi/Casberi/Screens/VibenetRoomCard.swift"
 DETAIL="Casberi/Casberi/Screens/VibenetAccountDetail.swift"
 TRAY="Casberi/Casberi/Screens/VibenetKeyTraySheet.swift"
 KEYSHEET="Casberi/Casberi/Screens/VibenetKeySheet.swift"
 SPINE="Casberi/Casberi/Screens/VibenetLinkSpine.swift"
 NOTIFY="Casberi/Casberi/Model/NotifySweep.swift"
-for f in "$CARD" "$DETAIL" "$TRAY" "$NOTIFY"; do
+for f in "$DETAIL" "$TRAY" "$NOTIFY"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 strip_comments "$CARD"   > "$TMP/card.nc.swift"
@@ -136,7 +150,6 @@ strip_comments "$NOTIFY" > "$TMP/notify.nc.swift"
 strip_comments "$ROOM"   > "$TMP/room.nc.swift"
 strip_comments "$BRIDGE" > "$TMP/bridge.nc.swift"
 strip_comments "$SETUP" > "$TMP/setup.nc.swift"
-strip_comments "$BOOK"  > "$TMP/book.nc.swift"
 strip_comments "$CATALOG" > "$TMP/catalog.nc.swift"
 strip_comments "$REACH"   > "$TMP/reach.nc.swift"
 # prd §517 — the lookup is its own surface now.
@@ -145,12 +158,8 @@ WATCHSHEET="Casberi/Casberi/Screens/VibenetWatchSheet.swift"
 strip_comments "$WATCHSHEET" > "$TMP/sheet.nc.swift"
 strip_comments "$FIELD" > "$TMP/watch.nc.swift"
 strip_comments "$SPINE" > "$TMP/spine.nc.swift"
-SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
-FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 SECTION="Casberi/Casberi/Model/VibenetSection.swift"
-for f in "$SURFACE" "$FEED" "$SECTION"; do
-  [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
-done
+[[ -f "$SECTION" ]] || { echo "✗ $SECTION not found"; exit 1; }
 strip_comments "$SURFACE" > "$TMP/surface.nc.swift"
 strip_comments "$FEED"    > "$TMP/feed.nc.swift"
 
@@ -168,13 +177,13 @@ strip_comments "$FEED"    > "$TMP/feed.nc.swift"
 # drawing the same roster and two surfaces listing one set of accounts is the
 # duplication §533 removed elsewhere. So the two verbs are still guarded; only
 # the file holding them changed.
-grep -q 'renamingAddress = item.address' "$TMP/book.nc.swift" \
+grep -q 'renamingAddress = item.address' "$TMP/card.nc.swift" \
   || { echo "✗ the Accounts row no longer offers rename (prd §545, carrying §465)"; exit 1; }
-grep -q 'unwatch(item.address)' "$TMP/book.nc.swift" \
+grep -q 'unwatch(item.address)' "$TMP/card.nc.swift" \
   || { echo "✗ the Accounts row no longer offers stop-watching (prd §545, carrying §465)"; exit 1; }
 # The LAST unwatch still asks — §472's ruling, which the move must not drop:
 # every other unwatch removes a row, this one tears down the seat and the chip.
-grep -q 'removingLast = address' "$TMP/book.nc.swift" \
+grep -q 'removingLast = address' "$TMP/card.nc.swift" \
   || { echo "✗ the last unwatch stopped confirming (prd §472) — it tears down the seat"; exit 1; }
 # And the per-devnet screen must not come back.
 [[ -f "Casberi/Casberi/Screens/VibenetAddressBookScreen.swift" ]] \
@@ -235,14 +244,14 @@ for f in "$TMP/setup.nc.swift" "$TMP/sheet.nc.swift"; do
   grep -q 'VibenetWatchField' "$f" \
     || { echo "✗ $f no longer uses the shared VibenetWatchField (prd §465)"; exit 1; }
 done
-for f in "$TMP/setup.nc.swift" "$TMP/sheet.nc.swift" "$TMP/book.nc.swift"; do
+for f in "$TMP/setup.nc.swift" "$TMP/sheet.nc.swift" "$TMP/card.nc.swift"; do
   grep -q 'DSSlabField' "$f" \
     && { echo "✗ $f hand-rolls its own paste field — VibenetWatchField is the one control (prd §465)"; exit 1; }
 done
 
 # NO CAP, ever. Wallet's five is a metered-read fact; vibenet's RPC is keyless
 # and free, so a limit here would be a control protecting nothing (§83).
-if grep -q 'watchLimit\|canWatchMore' "$TMP/book.nc.swift" "$TMP/setup.nc.swift"; then
+if grep -q 'watchLimit\|canWatchMore' "$TMP/card.nc.swift" "$TMP/setup.nc.swift"; then
   echo "✗ a watch cap reached the vibenet screens — prd §465: reads here are free,"
   echo "  so there is no expensive tier to ration and no cap to state"
   exit 1
@@ -268,7 +277,7 @@ fi
 # longer exists, and the accounts it listed are on the Accounts scope one chip
 # away. A trailing door with nowhere to go is `FaceScopeRail`'s own stated
 # §83 failure, so its ABSENCE is the invariant now.
-grep -q 'route.push(.vibenetAddressBook)' "$SHELL_SURFACE" \
+grep -q 'route.push(.vibenetAddressBook)' "$SURFACE" \
   && { echo "✗ the vibenet rail's book slot is back (prd §545) — its screen is deleted"; exit 1; }
 grep -q 'case vibenetAddressBook' "Casberi/Casberi/Shell/HomeRoute.swift" \
   && { echo "✗ HomeRoute.vibenetAddressBook is back (prd §545)"; exit 1; }
@@ -698,7 +707,7 @@ grep -q 'Text(timerInterval:' "Casberi/CasberiWidgets/VibenetUnlockActivity.swif
 # contracts" on every open, before a single request had been made. A guard and
 # not an assertion, because the defect is a first FRAME and no harness here can
 # render one.
-grep -q 'VibenetRoomSource.card()' "$BOOK" \
+grep -q 'VibenetRoomSource.card()' "$CARD" \
   || { echo "✗ the address book no longer seeds from the saved snapshot — prd §472: its first"
        echo "  frame then claims the read failed before it has been attempted (§83)"; exit 1; }
 # …and it must not draw the roster over an empty room while a read is in
@@ -714,7 +723,7 @@ grep -q 'VibenetRoomSource.card()' "$BOOK" \
 # In the room the array is `room.items` and the in-flight fact is the room's
 # own, so the terms differ from the screen's; the loose match is on the shape
 # rather than the spelling for that reason.
-grep -qE 'shows\(\.accounts\)' "$BOOK" \
+grep -qE 'shows\(\.accounts\)' "$CARD" \
   || { echo "✗ the Accounts roster lost its gate (prd §472/§545) —"
        echo "  prd §472: with no snapshot to seed from that is the failure headline again"; exit 1; }
 
@@ -741,11 +750,11 @@ fi
 # `guard watch.addresses.count > 1 else`; in the room the store is named in
 # full. Either way the last one must route to the confirm rather than to the
 # removal.
-grep -qE 'VibenetWatch\.shared\.addresses\.count <= 1' "$BOOK" \
+grep -qE 'VibenetWatch\.shared\.addresses\.count <= 1' "$CARD" \
   || { echo "✗ unwatching the LAST vibenet account no longer asks — prd §472: it disconnects"
        echo "  the seat, which is a different act from removing a row"; exit 1; }
 # …and only the last one asks, or it becomes the dialog nobody reads.
-grep -q 'private func commitUnwatch' "$BOOK" \
+grep -q 'private func commitUnwatch' "$CARD" \
   || { echo "✗ the ordinary unwatch no longer goes straight through — prd §472"; exit 1; }
 
 # AN UNWATCH KEEPS THE NAME. Watching and naming are two tiers over one ledger
@@ -4182,7 +4191,13 @@ if failures == 0 {
 SWIFT
 
 echo "Assertions"
-if ! swiftc -O -o "$TMP/run" "$ROOM" "$LEDGER" "$FACTS" "$TMP/main.swift" 2>"$TMP/build.log"; then
+# `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer, and it
+# bought nothing an assertion can see — measured 2818s -> 458s, 6.2x faster
+# here (2026-09-02). NOT a blanket rule: `-O` can change a harness's OBSERVABLE
+# behaviour (a trapping one prints NOTHING under `-O`), so this file was proven
+# equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
+# Re-probe before trusting it again after adding mutations.
+if ! swiftc -Onone -o "$TMP/run" "$ROOM" "$LEDGER" "$FACTS" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ VibenetRoom.swift did not compile with the harness"
   tail -25 "$TMP/build.log"
   exit 1
@@ -4219,7 +4234,13 @@ PY
   # word for a mutation the TYPE SYSTEM caught. Thirty-four checks, all green,
   # none of them testing anything. A check that cannot fail proves nothing;
   # this one could not even run.
-  if ! swiftc -O -o "$TMP/mut" "$target" "$LEDGER" "$FACTS" "$TMP/main.swift" 2>/dev/null; then
+  # `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer, and it
+  # bought nothing an assertion can see — measured 2818s -> 458s, 6.2x faster
+  # here (2026-09-02). NOT a blanket rule: `-O` can change a harness's OBSERVABLE
+  # behaviour (a trapping one prints NOTHING under `-O`), so this file was proven
+  # equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
+  # Re-probe before trusting it again after adding mutations.
+  if ! swiftc -Onone -o "$TMP/mut" "$target" "$LEDGER" "$FACTS" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -4245,7 +4266,13 @@ mutateFacts() { # mutateFacts <name> <from> <to>
   then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mutf" "$ROOM" "$LEDGER" "$target" "$TMP/main.swift" 2>/dev/null; then
+  # `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer, and it
+  # bought nothing an assertion can see — measured 2818s -> 458s, 6.2x faster
+  # here (2026-09-02). NOT a blanket rule: `-O` can change a harness's OBSERVABLE
+  # behaviour (a trapping one prints NOTHING under `-O`), so this file was proven
+  # equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
+  # Re-probe before trusting it again after adding mutations.
+  if ! swiftc -Onone -o "$TMP/mutf" "$ROOM" "$LEDGER" "$target" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mutf" > /dev/null 2>&1; then
@@ -4266,7 +4293,13 @@ mutateLedger() { # mutateLedger <name> <from> <to>
   then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mutl" "$ROOM" "$target" "$FACTS" "$TMP/main.swift" 2>/dev/null; then
+  # `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer, and it
+  # bought nothing an assertion can see — measured 2818s -> 458s, 6.2x faster
+  # here (2026-09-02). NOT a blanket rule: `-O` can change a harness's OBSERVABLE
+  # behaviour (a trapping one prints NOTHING under `-O`), so this file was proven
+  # equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
+  # Re-probe before trusting it again after adding mutations.
+  if ! swiftc -Onone -o "$TMP/mutl" "$ROOM" "$target" "$FACTS" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mutl" > /dev/null 2>&1; then
@@ -5212,7 +5245,8 @@ mutateLedger "a new chain and a rewind must never collide on one key" \
 #
 # **THESE GUARDS WERE RE-AIMED, AND FIVE OF THEM HAD BEEN DEAD (§562).** §545
 # deleted `VibenetAddressBookScreen` and moved the roster onto the room's own
-# Accounts scope, and `$BOOK` was re-pointed at `VibenetRoomCard.swift` in one
+# Accounts scope, and a `BOOK` variable (collapsed into `$CARD` by §563 — the
+# split is what let these go dead) was re-pointed at `VibenetRoomCard.swift` in one
 # move without walking this block guard by guard. It could not survive that:
 # `subjectLine`/`rosterSection`/`doorsSection` were the deleted screen's own
 # members, `dsInk()` belonged to a screen that owned its ground where a card
@@ -5236,10 +5270,10 @@ mutateLedger "a new chain and a rewind must never collide on one key" \
 # a way in. A card cannot present it itself: it lives inside `FeedScreen`'s
 # List rows, where a `.sheet` resolves to the same presenting controller as
 # that screen's own and half-opens before closing again.
-grep -q 'onRequestWatch' "$TMP/book.nc.swift" \
+grep -q 'onRequestWatch' "$TMP/card.nc.swift" \
   || { echo "✗ the roster no longer asks for the watch sheet — prd §517/§562: rename and"; \
        echo "  unwatch without an add is a roster you cannot put anything into"; exit 1; }
-grep -q 'watchAccountRow' "$TMP/book.nc.swift" \
+grep -q 'watchAccountRow' "$TMP/card.nc.swift" \
   || { echo "✗ the watch row left the roster — the closure with no row is the dead half"; exit 1; }
 grep -q 'VibenetWatchSheet' "$TMP/feed.nc.swift" \
   || { echo "✗ nothing presents VibenetWatchSheet — 2026-09-02: it had NO caller at all,"; \
@@ -5251,7 +5285,7 @@ grep -q 'VibenetWatchSheet' "$TMP/feed.nc.swift" \
 # and a file-wide negative calls that ruling an offence. The hazard §517 names
 # is a lookup expanding BETWEEN the way in and the accounts, and that is the
 # one place this asserts it cannot happen.
-python3 - "$TMP/book.nc.swift" <<'GUARD' || exit 1
+python3 - "$TMP/card.nc.swift" <<'GUARD' || exit 1
 import re, sys
 src = open(sys.argv[1]).read()
 try:
@@ -5304,7 +5338,7 @@ fi
 
 # NO HAIRLINES, EVER (§8 law, zero exceptions). The rows have nothing between
 # them but rhythm, so a separator here would be the first line in the app.
-if grep -qE 'Divider\(\)|listRowSeparator\(\.visible\)' "$TMP/book.nc.swift" "$TMP/sheet.nc.swift"; then
+if grep -qE 'Divider\(\)|listRowSeparator\(\.visible\)' "$TMP/card.nc.swift" "$TMP/sheet.nc.swift"; then
   echo "✗ a divider reached the vibenet roster — §8: nothing draws a line"
   exit 1
 fi
