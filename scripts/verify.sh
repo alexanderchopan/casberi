@@ -1738,6 +1738,16 @@ print -P "%F{green}✓ design-motion audit%f"
 # both) with a stated ceiling — it cannot catch a paraphrase, and its own
 # self-test asserts that so the gap can never read as coverage. Mutation-proven
 # against the real tree: restoring either shipped fault turns it red.
+#
+# **THREE since 2026-09-02**, and the third exists because the paragraph above
+# went stale: "the head is `heading22` under a `heading34`" was the shape §538
+# described and §560 ended, raising the head to the tray's own rung on
+# reasoning that is right for a head standing alone and false inside a tray.
+# Five of the six heads in the app are inside one, so five sheets drew two
+# heads — 120pt of headline before the first fact, which sliced the create
+# sheet's address under its pinned action. Check C is the RUNG rather than the
+# words: `DSTray` declares it has spent the head rung, `DSSheetHead` steps down
+# when it reads that, and no caller can get it wrong.
 step "Sheet-title audit"
 python3 "$ROOT/scripts/sheet-title-audit.py" --self-test >/dev/null \
   || fail "the sheet-title audit's own self-test failed — the check is broken, not the code"
