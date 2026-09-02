@@ -75,12 +75,18 @@ struct FeedLedeCard: View {
         VStack(alignment: .leading, spacing: 0) {
             if face == .picture { art }
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                eyebrow(onDeck: deck != nil)
+                // **THE MARK LEADS AS A DISC (prd §567).** It was 14pt inline
+                // ahead of the source's own name, in the same row as the time
+                // — the §553 grammar has it at 36 and top-left, where it heads
+                // the card instead of labelling it.
+                BridgeIcon(name: thing.source, size: DS.Face.list, circular: true)
+                    .padding(.bottom, DS.Space.s1)
                 switch face {
                 case .picture, .words: titleBlock
                 case .money:           moneyBlock(receipt)
                 case .clock:           clockBlock
                 }
+                eyebrow(onDeck: deck != nil)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(DS.Space.s4)
@@ -121,13 +127,30 @@ struct FeedLedeCard: View {
 
     // MARK: - Faces
 
+    /// **THE TITLE TAKES THE HEAD RUNG, BY LENGTH (prd §567).**
+    ///
+    /// This card is §389's "first object" — the newest thing, promoted out of
+    /// the run — and it wore `heading22`, the same rung as the day divider
+    /// directly above it. It takes `heading34` when it is a STATEMENT, which
+    /// is `ThingSheetView`'s own rule (`> 100 ? .heading22 : .heading34`) at
+    /// this card's width: at 40pt heavy on a 354pt card a line holds roughly
+    /// fourteen characters, so the threshold is what fits four lines rather
+    /// than the sheet's number.
+    ///
+    /// A paragraph never takes it. §559: at the head rung a long title is a
+    /// sentence set as a headline, and the rung stops meaning anything the
+    /// first time it wraps to six lines.
+    private static let statementLimit = 56
+
     private var titleBlock: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
+        let short = thing.title.count <= Self.statementLimit
+        return VStack(alignment: .leading, spacing: DS.Space.s1) {
             Text(thing.title)
-                .dsText(.heading22)
+                .dsText(short ? .heading34 : .heading22)
                 .foregroundStyle(DS.textPrimary)
                 .multilineTextAlignment(.leading)
-                .lineLimit(3)
+                .lineLimit(short ? 4 : 3)
+                .minimumScaleFactor(short ? 0.8 : 1)
                 .fixedSize(horizontal: false, vertical: true)
             if let note = excerpt {
                 Text(note)
@@ -150,8 +173,11 @@ struct FeedLedeCard: View {
                     // `verbatim:` like the receipt card's own figure — the
                     // string is already locale-formatted or the bridge's own
                     // stamp, and must not be re-interpolated.
+                    // The receipt's own hero rung (prd §567). `price40`, not
+                    // `price48`: §506's crown is one per surface and this
+                    // card sits under the day divider that holds it.
                     Text(verbatim: amount.number)
-                        .dsText(.stat24)
+                        .dsText(.price40)
                         .monospacedDigit()
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -171,8 +197,11 @@ struct FeedLedeCard: View {
                 // the reason its spoken form spells the sign out.
                 .foregroundStyle(DS.textPrimary)
             }
+            // Under the figure, in the quiet tier — the amount is what the
+            // row is FOR (`FeedLedeFace`'s own words for why money beats a
+            // picture), and this says who it was with.
             Text(receipt.map { partyLine($0) } ?? thing.title)
-                .dsText(.body17)
+                .dsText(.label12)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -201,14 +230,16 @@ struct FeedLedeCard: View {
     @ViewBuilder private var clockBlock: some View {
         VStack(alignment: .leading, spacing: 2) {
             if let due = thing.dueAt {
+                // §35's perishable countdown, at the rung the money face
+                // takes for the same reason (prd §567).
                 Text(FeedLedeFace.dueLine(due))
-                    .dsText(.stat24)
+                    .dsText(.price40)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
             Text(thing.title)
-                .dsText(.body17)
+                .dsText(.label12)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -239,14 +270,23 @@ struct FeedLedeCard: View {
     /// brand tint is solved against the PAGE, and this ground is the brand's
     /// own hue, so a tinted name on it is the one place that tint cannot be
     /// read.
+    /// Where it came from and when, under the thing itself (prd §567).
+    ///
+    /// **The icon is gone from this row and the NAME is not.** §565's rule is
+    /// that a mark restating its own caption is not a mark — true where the
+    /// two sit adjacent in one small cell, and the disc above is separated
+    /// from this line by the title, so it heads the card rather than badging
+    /// this row. The name stays because dropping it would lose the source on
+    /// the feed's cover for every seat whose `BridgeIcon` has no bundled art,
+    /// which is a real regression to buy a tidier line.
     private func eyebrow(onDeck: Bool) -> some View {
         HStack(spacing: DS.Space.s2) {
-            BridgeIcon(name: thing.source, size: DS.Mark.inline)
             Text(thing.source)
                 .dsText(.label12)
                 .foregroundStyle(onDeck ? DS.textPrimary : DS.textSecondary)
             LiveTimeText(date: thing.capturedAt)
         }
+        .padding(.top, DS.Space.s1)
     }
 
     /// The remote art URL, when the row has one worth enlarging.

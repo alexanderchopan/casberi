@@ -45245,4 +45245,75 @@ different populations.** They did here, and §510 exists because they did.
 **UNSEEN on a device.** Every one of the six is a fixed-slot layout whose budget
 is arithmetic, and §552/§553 are two entries about that arithmetic being wrong on
 the first run. Six figures, no screenshots.
+## 567. The feed's first object takes the head rung — and the header it was going to fix needed nothing (user: "how would you improve if at all our home All screen? it is the most visited screen and is currently imo our best one", then "build it", 2026-09-02)
+
+The All feed is the app's most-visited surface and, by the user's own reading,
+its best. The language's answer is therefore SMALL, and the size is the finding:
+this screen is mostly quiet ground by ruling — rows are one anatomy
+(2026-07-06), the tail cools by weight and never by size (§254), the themes map
+already lives above the fold (§385) — and quiet ground is what a loud thing
+needs. There was one thing to make loud.
+
+### What the census found at the top of it
+
+The head of the most-visited screen has **no head rung anywhere**. The day
+label is `heading22`, its secondary line `subhead13`, and the lede card's
+title — §389's "first object", the newest thing promoted out of the run — is
+`heading22` as well. **The feed's cover wore the same rung as the divider
+directly above it.**
+
+### `FeedLedeCard`, three changes
+
+**The title takes `heading34`, BY LENGTH.** `ThingSheetView` already decides
+this way (`> 100 ? .heading22 : .heading34`); the threshold here is 56 because
+at 40pt heavy on a 354pt card a line holds about fourteen characters, so it is
+what fits four lines rather than the sheet's number. A longer title keeps
+`heading22`: §559's rule that at the head rung a paragraph is a sentence set as
+a headline, and the rung stops meaning anything the first time it wraps to six
+lines.
+
+**The source mark leads as a 36pt disc.** It was `DS.Mark.inline` — 14pt —
+sitting ahead of the source's own name in the same row as the timestamp. The
+§553 grammar puts it top-left at `DS.Face.list`, heading the card rather than
+labelling it, and the eyebrow moves BELOW the title where it belongs.
+
+**§565's "a mark restating its own caption is not a mark" was weighed and does
+not apply here.** That rule is about a treemap cell where the two sit adjacent
+in one small box; here the title separates them. **The source NAME stays in the
+eyebrow** — dropping it would lose the source on the feed's cover for every
+seat whose `BridgeIcon` has no bundled art, which is a real regression bought
+for a tidier line.
+
+**The money and clock faces take `price40`.** Both led at `stat24` — money with
+its amount, which `FeedLedeFace` itself calls "what the row is FOR", and clock
+with §35's perishable countdown. Their titles drop to `label12` beneath.
+`price40` and not `price48`, on §506's rule that the crown is one per SURFACE.
+
+§389's own ruling is untouched throughout: the pick is still POSITIONAL, the
+newest row full stop, and a bigger title makes it no more editorial than it was.
+
+### The header change was proposed, built and then found unnecessary
+
+The mockup folded the day header's "three quiet lines" into one, and the header
+does not have three. **The subject line and the whisper are already mutually
+exclusive BY CONSTRUCTION** — `subjects` is populated for COARSE groups only,
+and §385's whisper draws on Today or "Since you left", which are never coarse.
+§385's own entry says so in the sentence that ends "at most one of the two lines
+renders", and the code carries the same note. "Last here" is the whisper's
+`else` branch, so it cannot stack either.
+
+**The mockup also drew a count on that header, and §218 deleted counts from it
+in 2026-07-25** ("people do not care how many things landed"; the clearest case
+against it was "Monday, Jun 15 · 1", a number that can only ever say one).
+
+Three sessions running, a proposal has been answered by something already in the
+tree (§564, §566, and now this). The instrument that keeps catching it is the
+same one: read the ruling that governs the surface before drawing over it, and
+when the drawing and the code disagree about what is on screen, the code is
+right.
+
+**UNSEEN on a device.** A 40pt title on a 354pt card is the change most likely
+to look different from its arithmetic, and the threshold that decides between
+the two rungs is a character count rather than a measurement — a title of 56
+wide characters may still take five lines. First thing to look at.
 
