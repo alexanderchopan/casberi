@@ -18,10 +18,24 @@ import UIKit
 /// sending as two controls leaves nothing on screen saying which one the
 /// arrow would use.
 ///
-/// The device segment wears the fill because it is what the return key does
-/// (free, on-device, nothing leaves). Agent segments exist only for
-/// configured keys, so with none the capsule is the device pill alone and
-/// nothing claims a capability that isn't there.
+/// **THE FILL MARKS WHERE THE ASK IS GOING, NOT WHERE IT USUALLY GOES**
+/// (2026-09-01, user: "when you tap 'ask bankr' the phone button stays blue so
+/// you can't tell the bankr thing is activated"). The device segment wore the
+/// fill unconditionally, which was true only until the first keyed ask: from
+/// the tap onwards Bankr is answering, and a plain typed follow-up STAYS on it
+/// (`conversationIsKeyed`, 2026-07-21) — so the blue pill was naming a
+/// destination the return key no longer used, on the one control whose whole
+/// job is to say who answers. It is `active` that decides now: nil means the
+/// device, and only then does the device pill fill.
+///
+/// It is a fill and not a badge because there is exactly one destination at a
+/// time — two lit segments would be the fake status §83 bans — and because the
+/// device pill has meant "this is where it goes" since the capsule shipped;
+/// moving that meaning to a second visual language would leave the fill saying
+/// something else at the same time.
+///
+/// Agent segments exist only for configured keys, so with none the capsule is
+/// the device pill alone and nothing claims a capability that isn't there.
 struct AskDestinationCapsule: View {
     /// Configured providers in `AgentProvider.allCases` order — the canonical
     /// order `AskDestination.split` falls back to.
@@ -34,6 +48,14 @@ struct AskDestinationCapsule: View {
     /// silently spend somebody's key, and stopping the mic is a commit, not a
     /// choice of who answers.
     let recording: Bool
+    /// The agent the CURRENT ask is going to — the one in flight, or the one a
+    /// plain send would still reach because the conversation is keyed to it.
+    /// nil is the device, which is the resting state and the state after every
+    /// free answer. Never `AgentKey.active` on its own: that is which key a
+    /// keyed answer would SPEND, which is a different question from whether
+    /// this conversation is keyed at all, and reading it here would light an
+    /// agent segment for somebody who has only ever asked the phone.
+    let active: AgentProvider?
     let onDevice: () -> Void
     let onAgent: (AgentProvider) -> Void
 
@@ -62,7 +84,8 @@ struct AskDestinationCapsule: View {
     private var split: (shown: [AgentProvider], overflow: [AgentProvider]) {
         guard !recording else { return ([], []) }
         let raw = providers.map(\.rawValue)
-        let parts = AskDestination.split(configured: raw, recent: AskDestination.recent())
+        let parts = AskDestination.split(configured: raw, recent: AskDestination.recent(),
+                                         active: active?.rawValue)
         let byRaw = { (values: [String]) in
             values.compactMap { value in providers.first { $0.rawValue == value } }
         }
@@ -76,20 +99,27 @@ struct AskDestinationCapsule: View {
                 DSHaptic.selection()
                 onDevice()
             } label: {
-                segment(glyph: deviceGlyph, title: deviceLabel, filled: true)
+                segment(glyph: deviceGlyph, title: deviceLabel, filled: active == nil)
             }
             .buttonStyle(PressSpring())
             .accessibilityLabel(hasDraft ? "Ask \(deviceLabel)" : "Ask \(deviceLabel) — answered on this device")
+            // The fill is a colour, so it says nothing to VoiceOver on its own
+            // — the same fact has to be spoken, or the control that names the
+            // destination is the one control a screen reader cannot read it
+            // from.
+            .accessibilityAddTraits(active == nil ? [.isSelected] : [])
 
             ForEach(parts.shown) { provider in
                 Button {
                     DSHaptic.selection()
                     onAgent(provider)
                 } label: {
-                    segment(mark: provider.agent, title: provider.agent, filled: false)
+                    segment(mark: provider.agent, title: provider.agent,
+                            filled: provider == active)
                 }
                 .buttonStyle(PressSpring())
                 .accessibilityLabel("Ask \(provider.agent) with your key")
+                .accessibilityAddTraits(provider == active ? [.isSelected] : [])
             }
 
             if !parts.overflow.isEmpty {
@@ -120,6 +150,11 @@ struct AskDestinationCapsule: View {
         .padding(2)
         .background(DS.fillFaint, in: Capsule(style: .continuous))
         .animation(DS.Motion.standard, value: recording)
+        // The fill MOVES between segments rather than blinking off one and on
+        // at another — the source chips' own 2026-07-14 ruling ("selection is
+        // an object traveling, not two states blinking"), which is what makes
+        // the hand-off legible at the moment it matters: the tap.
+        .animation(DS.Motion.standard, value: active)
     }
 
     @ViewBuilder

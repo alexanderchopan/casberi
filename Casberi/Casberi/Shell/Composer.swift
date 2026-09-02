@@ -3273,6 +3273,29 @@ struct Composer: View {
         commit(forceAsk: true)
     }
 
+    /// WHO THIS ASK IS GOING TO — the capsule's fill (2026-09-01, user: "when
+    /// you tap 'ask bankr' the phone button stays blue so you can't tell the
+    /// bankr thing is activated"). nil is the device.
+    ///
+    /// Two questions, and the split is the whole of it. WHILE AN ASK IS
+    /// RUNNING the answer is who is answering it — `keyedCurrent`, which the
+    /// keyed fallback clears the moment the agent fails and the on-device
+    /// model takes over, so a failed Bankr call hands the fill back rather
+    /// than crediting Bankr with a phone-written answer (§83, on the badge's
+    /// own subject). ONCE IT HAS SETTLED the answer is where the NEXT plain
+    /// send goes, which is `commit`'s own `stayKeyed` term spelled the same
+    /// way — a keyed conversation keeps typed follow-ups on the agent, so a
+    /// device pill lit there names a destination the return key does not use.
+    ///
+    /// Reads no keychain: `keyAvailable` is the mirror the chip gate already
+    /// keeps (one read per settle, because a follow-up re-renders this per
+    /// keystroke) and `askProvider` is resolved once per keyed ask at its
+    /// start, never here.
+    private var activeAskAgent: AgentProvider? {
+        let keyed = inFlight ? keyedCurrent : (conversationIsKeyed && keyAvailable)
+        return keyed ? askProvider : nil
+    }
+
     /// The BYO-key retry: the same question, re-answered by the person's own
     /// agent key (Claude, ChatGPT, Gemini, or Venice). The on-device answer
     /// settles into the thread first, so the two sit side by side — the tap
@@ -3282,6 +3305,14 @@ struct Composer: View {
         let q = currentQuestion
         guard !q.isEmpty, !inFlight else { return }
         DSHaptic.tap()
+        // NAME THE AGENT BEFORE THE ASK, not per render (2026-09-01). This
+        // path is reached with `askProvider` nil whenever a surface handed the
+        // ask over (`chrome.askWithKey`), and `answerWithKey` resolves that nil
+        // to `AgentKey.active` for itself — so without pinning it here the
+        // capsule would have to make the same keychain read on every keystroke
+        // of the follow-up to light the segment that is actually answering.
+        // One read, at the one moment the answer is decided.
+        if askProvider == nil { askProvider = AgentKey.active }
         withAnimation(DS.Motion.standard) {
             if answering {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
@@ -3863,6 +3894,7 @@ struct Composer: View {
                     providers: AgentKey.configured,
                     hasDraft: hasDraft,
                     recording: isRecording,
+                    active: activeAskAgent,
                     onDevice: {
                         // The device answer is what the return key does, so
                         // this is `commit()` exactly: a live recording commits
@@ -4344,6 +4376,9 @@ struct Composer: View {
             // set for.
             let stayKeyed = forceKeyedThisAsk || (conversationIsKeyed && keyAvailable)
             forceKeyedThisAsk = false
+            // Pin who answers, for `activeAskAgent` — see `askWithKey()` for
+            // why this is resolved here rather than in the capsule's body.
+            if stayKeyed, askProvider == nil { askProvider = AgentKey.active }
             // The question lift (delight, 2026-07-21): the header's entrance
             // and the berry's fade-in ride the same animated commit as the
             // rest of "a new ask just started."

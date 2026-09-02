@@ -56,11 +56,27 @@ enum AskDestination {
     /// A raw value in `recent` that is no longer configured is DROPPED, never
     /// shown: a key can be cleared, and a segment for a key that does not
     /// exist is the dead control §83 bans, pointed at a live host.
+    ///
+    /// `active` — the destination the CURRENT ask actually went to — leads the
+    /// agents when there is one, because the capsule marks it and a marked
+    /// segment folded into the overflow menu is a mark nobody can see. That is
+    /// not the same as recency and cannot be left to it: a tap on a segment
+    /// records itself through `used`, but an ask a SURFACE handed over already
+    /// wanting a key (`chrome.askWithKey`) never touches this ledger, so its
+    /// agent can be sitting in the overflow while it is the one answering.
+    /// Ordering, never inclusion — an active raw value that is not configured
+    /// is ignored like any other, so this can no more mint a dead segment than
+    /// `recent` can.
     static func split(configured: [String], recent: [String],
+                      active: String? = nil,
                       slots: Int = agentSlots) -> (shown: [String], overflow: [String]) {
         guard slots > 0 else { return ([], configured) }
         var ordered: [String] = []
         var seen = Set<String>()
+        if let active, configured.contains(active) {
+            ordered.append(active)
+            seen.insert(active)
+        }
         for raw in recent where configured.contains(raw) && !seen.contains(raw) {
             ordered.append(raw)
             seen.insert(raw)

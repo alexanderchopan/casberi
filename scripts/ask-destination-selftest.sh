@@ -99,6 +99,38 @@ check(stable, "the split is deterministic across repeated calls")
 let zero = AskDestination.split(configured: three, recent: [], slots: 0)
 check(zero.shown.isEmpty && zero.overflow == three, "zero slots overflows everything")
 
+// ---- active: the destination the ask is actually going to ---------------
+// The capsule fills the active segment, so an active agent folded into the
+// overflow menu is a mark nobody can see — which is the whole bug this
+// parameter exists for, one layer down.
+//
+// ACTIVE BEATS RECENCY, and the fixture says so by disagreeing with it: with
+// `recent: ["openai"]` alone the row would read openai, anthropic — so this
+// case fails if `active` is ignored AND passes every other rule here, which
+// is the only way it tests the rule it names.
+let activeLeads = AskDestination.split(configured: three, recent: ["openai"], active: "bankr")
+check(activeLeads.shown == ["bankr", "openai"], "the active agent leads even the most recent one")
+check(activeLeads.overflow == ["anthropic"], "recency still orders behind it")
+
+// ORDERING, NEVER INCLUSION: an active raw value that is not configured is
+// dropped exactly as a stale recency entry is — otherwise it mints a segment
+// pointed at a credential that does not exist (§83, at a live host).
+let activeStale = AskDestination.split(configured: ["anthropic"], recent: [], active: "grok")
+check(activeStale.shown == ["anthropic"], "an unconfigured active agent mints no segment")
+check(activeStale.overflow.isEmpty, "and does not linger in the overflow")
+
+// One list, so the active agent cannot also draw as its own recency entry.
+let activeDupe = AskDestination.split(configured: three, recent: ["bankr"], active: "bankr")
+check(activeDupe.shown == ["bankr", "anthropic"], "the active agent is not listed twice")
+check(activeDupe.overflow == ["openai"], "nor padded into the overflow")
+
+// A resting capsule (no ask in flight, no keyed conversation) is EXACTLY what
+// it was before this parameter existed.
+let resting = AskDestination.split(configured: three, recent: ["openai"], active: nil)
+let restingBefore = AskDestination.split(configured: three, recent: ["openai"])
+check(resting.shown == restingBefore.shown && resting.overflow == restingBefore.overflow,
+      "no active destination leaves the order untouched")
+
 // ---- the device names itself --------------------------------------------
 check(AskDestination.deviceLabel(isMac: false, isPad: false) == "iPhone", "phone says iPhone")
 check(AskDestination.deviceLabel(isMac: false, isPad: true) == "iPad", "pad says iPad")
@@ -175,6 +207,12 @@ mutate "a cleared key is still offered" \
 mutate "duplicates draw twice" \
        "for raw in configured where !seen.contains(raw) {" \
        "for raw in configured {"
+mutate "the active agent is not promoted, so the marked segment can hide in the overflow" \
+       "if let active, configured.contains(active) {" \
+       "if let active, active.isEmpty, configured.contains(active) {"
+mutate "an active agent whose key was cleared still mints a segment" \
+       "if let active, configured.contains(active) {" \
+       "if let active, true {"
 mutate "the slot count changes" \
        "static let agentSlots = 2" \
        "static let agentSlots = 1"
@@ -249,6 +287,30 @@ guard_absent "the weekday greeting is not restored" "$WORK/composer.nc" \
 # VOICE ANSWERS ON DEVICE. A voice note must never silently spend a key.
 guard "the capsule stands its agents down while recording" "$WORK/capsule.nc" \
       'guard !recording else \{ return \(\[\], \[\]\) \}'
+# THE FILL MARKS THE ACTIVE DESTINATION, not the usual one (2026-09-01). A
+# device pill filled unconditionally names a destination the return key stops
+# using the moment a conversation goes keyed.
+guard "the capsule orders on the active destination" "$WORK/capsule.nc" \
+      'active: active\?\.rawValue'
+guard "the device segment fills only when it is the destination" "$WORK/capsule.nc" \
+      'segment\(glyph: deviceGlyph, title: deviceLabel, filled: active == nil\)'
+guard_absent "the device pill is never filled unconditionally" "$WORK/capsule.nc" \
+      'filled: true'
+guard "the answering agent's segment fills" "$WORK/capsule.nc" \
+      'filled: provider == active'
+# The capsule must never resolve the agent itself: `AgentKey.active` says which
+# key a keyed answer would SPEND, not whether this conversation is keyed at
+# all, so reading it here lights a segment for somebody who has only ever asked
+# their phone — and costs a keychain read per keystroke of a follow-up.
+guard_absent "the capsule does not read the active key itself" "$WORK/capsule.nc" \
+      'AgentKey\.active'
+guard "the composer names the destination for the capsule" "$WORK/composer.nc" \
+      'active: activeAskAgent'
+# In flight it is who is ANSWERING; settled it is where the next plain send
+# goes — `commit`'s own `stayKeyed` term, spelled the same way so the fill and
+# the routing can never disagree.
+guard "the fill reads in-flight and settled state apart" "$WORK/composer.nc" \
+      'inFlight \? keyedCurrent : \(conversationIsKeyed && keyAvailable\)'
 # The device is never hardcoded in the view either.
 guard_absent "the capsule does not hardcode a device name" "$WORK/capsule.nc" \
       '"(iPhone|iPad|Mac)"'
@@ -260,4 +322,4 @@ guard "the wallet answer is a document for the scroll anchor" "$WORK/composer.nc
 guard "the anchor and the typewriter guard read the same term" "$WORK/composer.nc" \
       'documentInView'
 
-print "  ok   AskDestination — 11 mutations, 15 drift guards"
+print "  ok   AskDestination — 13 mutations, 22 drift guards"
