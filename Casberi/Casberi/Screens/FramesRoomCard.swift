@@ -227,7 +227,15 @@ struct FramesRoomFigure: View {
         // 2-bar floor would leave the slot empty on exactly the account that
         // has just made its first send.
         if !bars.isEmpty {
-            FramesMovementBars(bars: bars).frame(height: 64).id(newestHash)
+            // **FILLS THE SLOT** (user, 2026-09-02: *"why it so tiny and top
+            // justified"*). It was pinned to 64pt inside a 210pt box whose
+            // remaining height went to the `Spacer` below, so the room's
+            // busiest reading drew in a third of the space it had been given
+            // and every scope beside it looked fuller. `maxHeight: .infinity`
+            // hands it what the slot actually reserved.
+            FramesMovementBars(bars: bars)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .id(newestHash)
         }
     }
 
@@ -294,7 +302,13 @@ struct FramesRoomFigure: View {
         }
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if theirs + mine > 0 {
+                // Centred in what is left rather than pinned to the top, for
+                // the Activity chart's reason: a 16pt bar hung under a
+                // headline in a 210pt box reads as a drawing that failed to
+                // load.
+                Spacer(minLength: 0)
                 FramesSponsorBar(mine: mine, theirs: theirs, glance: sponsoredArrival)
+                Spacer(minLength: 0)
             }
             if theirs > 0 {
                 note(String(localized: "Somebody else paid \(Int((theirs / (theirs + mine) * 100).rounded()))% of the gas here."))
@@ -384,9 +398,24 @@ struct FramesRoomList: View {
         case .frames:
             rows(pairs.filter { $0.move.rows.count > 1 })
         case .sponsors:
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
+            // **TWO KINDS OF ROW, SAID TO BE TWO** (user, 2026-09-02: *"sponsors
+            // list also is messy"*). A person and a transaction have different
+            // anatomies, and stacked under one caption at one spacing they read
+            // as a single list that keeps changing shape. Each block names
+            // itself; `s6` between them is the gap the app already uses for
+            // "these are different things".
+            VStack(alignment: .leading, spacing: DS.Space.s6) {
                 payers
-                rows(pairs.filter { $0.move.sponsored })
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    Text(String(localized: "What they paid for"))
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    // **THE SPONSORSHIP CLAUSE IS DROPPED HERE.** Every row in
+                    // this scope is sponsored by definition, so the word
+                    // separates nothing and costs the line its remaining
+                    // width — §548's own ruling against the frame-count
+                    // sentence on Activity, one chip over.
+                    rows(pairs.filter { $0.move.sponsored }, showsSponsorship: false)
+                }
             }
         }
     }
@@ -471,7 +500,8 @@ struct FramesRoomList: View {
         .transition(.opacity)
     }
 
-    @ViewBuilder private func rows(_ list: [(move: FramesMove, owner: String)]) -> some View {
+    @ViewBuilder private func rows(_ list: [(move: FramesMove, owner: String)],
+                                   showsSponsorship: Bool = true) -> some View {
         // **PENDING FIRST, and only in the scopes where it belongs.** Activity
         // is every transaction and Home is where the send lives, so a
         // just-broadcast batch belongs in both. Frames and Sponsors select rows
@@ -503,7 +533,8 @@ struct FramesRoomList: View {
                         DSHaptic.selection()
                         onOpenMove(move, pair.owner)
                     } label: {
-                        FramesMoveRow(move: move).contentShape(Rectangle())
+                        FramesMoveRow(move: move, showsSponsorship: showsSponsorship)
+                            .contentShape(Rectangle())
                     }
                         .buttonStyle(.plain)
                         // **THE SETTLE, ON THE ROW SOMEBODY IS WATCHING.**
@@ -530,6 +561,9 @@ struct FramesRoomList: View {
 /// the seat draws frames rather than outcomes.
 struct FramesMoveRow: View {
     let move: FramesMove
+    /// False in the Sponsors scope, where every row is sponsored and the word
+    /// is a tally of everything.
+    var showsSponsorship = true
 
     /// **THE VERDICT COMES FROM THE MODEL** (2026-09-02). It was spelled out
     /// here, where nothing else could reach it — so the sheet this row now
@@ -539,17 +573,53 @@ struct FramesMoveRow: View {
     /// door, and the harness mutates it.
     private var verdict: FramesMove.Verdict { move.verdict }
 
-    /// Nil where there is nobody to name — a plain transfer this room read
-    /// off the chain rather than sent, or a batch of pure calls.
-    private var recipientLine: String? {
-        let people = move.recipients
-        guard let first = people.first else { return nil }
-        return people.count == 1
-            ? String(localized: "\u{2192} \(WalletStore.shortAddress(first))")
-            : String(localized: "\u{2192} \(String(people.count)) addresses")
+    /// **THE ROW SAYS FOUR THINGS, AND IT USED TO SAY SEVEN** (user,
+    /// 2026-09-02: *"thats a lot of detail for the list. it should be cleaned
+    /// up not all of that needs to show at this level"*).
+    ///
+    /// It carried the frame count, the verdict, "Somebody else paid", the
+    /// recipients, the time, the amount, the fee AND the gas — and on a
+    /// sponsored row that overflowed so badly the words broke one per line
+    /// (`Someb / ody / else / paid`, seen on a device).
+    ///
+    /// **Every one of those was right when it was added and the reason has
+    /// since expired.** §548's seventh follow-up put the recipient and the fee
+    /// here explicitly because the row was the ONLY surface — there was no
+    /// sheet, so a fact not on the row was a fact nowhere. There is a sheet
+    /// now, and it carries all seven with room to explain them. What stays is
+    /// what a LIST is for: what it was, whether anything is wrong, when, and
+    /// how much.
+    ///
+    /// **The clauses are ONE `Text`, not several in an `HStack`** — that is
+    /// the whole of the wrap fix. SwiftUI squeezes an over-committed row by
+    /// picking a child and shrinking it to its minimum width, so a long middle
+    /// clause wraps into a one-word column while its siblings sit at full
+    /// width. Concatenated runs cannot do that; they wrap as a sentence, and
+    /// this one is capped at a line.
+    private var meta: Text? {
+        var out: Text?
+        func add(_ piece: Text) {
+            out = out.map { $0 + Text(verbatim: " · ").foregroundColor(DS.textTertiary) + piece }
+                ?? piece
+        }
+        // **ONLY WHEN SOMETHING IS WRONG.** "Ran" is the answer on nearly every
+        // row, so printing it is a word that separates nothing — while its
+        // absence makes the rows that DO say something impossible to miss.
+        if verdict.isTrouble {
+            add(Text(verdict.word).foregroundColor(DS.destructive))
+        }
+        // One word, not a sentence: the scope is called Sponsors and the sheet
+        // says who and how much.
+        if move.sponsored, showsSponsorship {
+            add(Text(String(localized: "Sponsored")).foregroundColor(DS.textTertiary))
+        }
+        // Nil draws nothing rather than "now" — the header read is bounded, so
+        // a move outside the window legitimately has no time (§515a).
+        if let when = FramesFormat.time(move.timestamp) {
+            add(Text(when).foregroundColor(DS.textTertiary))
+        }
+        return out
     }
-
-    private var tone: Color { verdict.isTrouble ? DS.destructive : DS.textTertiary }
 
     var body: some View {
         HStack(spacing: DS.Space.s3) {
@@ -557,9 +627,7 @@ struct FramesMoveRow: View {
                 // **AN ORDINARY TRANSACTION IS NOT "0 FRAMES".** This chain
                 // carries both — the faucet pays out as a plain type-0x2
                 // transfer — and a row reading "0 frames" over one of them is
-                // a count where a noun belongs. Reported from a screenshot on
-                // the very first launch, which is how the faucet's own payment
-                // arrives.
+                // a count where a noun belongs.
                 Text(move.rows.isEmpty
                      ? String(localized: "Transfer")
                      : move.rows.count == 1
@@ -567,67 +635,22 @@ struct FramesMoveRow: View {
                        : String(localized: "\(String(move.rows.count)) frames"))
                     .dsText(.callout15)
                     .foregroundStyle(DS.textPrimary)
-                HStack(spacing: DS.Space.s2) {
-                    Text(verdict.word).dsText(.label12).foregroundStyle(tone)
-                    if move.sponsored {
-                        Text(String(localized: "Somebody else paid"))
-                            .dsText(.label12).foregroundStyle(DS.textTertiary)
-                    }
-                    // **WHO GOT THE MONEY.** The row said what ran, what it
-                    // cost and whether it landed, and never once who received
-                    // it — which after a send is the first thing anybody wants
-                    // back. Several recipients are COUNTED rather than listed:
-                    // three short addresses on one line is a line nobody reads,
-                    // and the strip above already shows there were three.
-                    if let line = recipientLine {
-                        Text(line).dsText(.label12).foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                    }
-                    // **WHEN** (2026-09-02). These were the app's only undated
-                    // rows: a log carries a block number and a block number is
-                    // not a time to anybody. Nil draws NOTHING rather than
-                    // "now" — the header read is bounded, so a move outside the
-                    // window legitimately has no time (§515a).
-                    if let when = FramesFormat.time(move.timestamp) {
-                        Text(when).dsText(.label12).foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                    }
+                if let meta {
+                    meta.dsText(.label12).lineLimit(1)
                 }
             }
             Spacer(minLength: DS.Space.s2)
-            VStack(alignment: .trailing, spacing: 1) {
-                // **WHAT IT MOVED, LEADING THE MONEY COLUMN** (2026-09-02).
-                // The row carried a fee and a gas figure and never said the
-                // amount — so the one number a person opens a money row for
-                // existed on this screen only as the HEIGHT OF A BAR in the
-                // Activity chart, readable as a proportion and never as a
-                // figure. It is exact (§548): every ETH movement is a log and
-                // the receipt names both the fee and who paid it.
-                //
-                // Nil draws nothing rather than a zero — an unread delta and a
-                // transaction that moved nothing must not look alike.
-                if let delta = move.deltaWei {
-                    Text(FramesMoney.signedETH(wei: delta))
-                        .dsText(.callout15)
-                        .foregroundStyle(delta > 0 ? DS.confirm : DS.textPrimary)
-                        .monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
-                }
-                // **THE FEE IN MONEY, WITH GAS BENEATH IT.** Gas is a unit
-                // nobody holds; the fee is what actually left the balance, and
-                // this room already computes it for the curve. Gas stays
-                // because on a devnet it is the number somebody is tuning — but
-                // it stops being the only thing the row says about cost.
-                if let fee = FramesMoney.feeLine(wei: move.feeWeiIfSelfPaid) {
-                    Text(fee).dsText(.label12).foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
-                if let gas = move.gasUsed {
-                    // The TRANSACTION's own gas, never a sum of its frames —
-                    // measured 100 + 3,000 against a receipt of 210,790.
-                    Text(String(localized: "\(String(gas)) gas"))
-                        .dsText(.label12).foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
+            // **WHAT IT MOVED, AND NOTHING ELSE IN THIS COLUMN.** The fee and
+            // the gas were here and are now the sheet's — three stacked
+            // figures made the money column wider than the words beside it,
+            // which is what left the metadata line no room at all. It is exact
+            // (§548): every ETH movement is a log and the receipt names both
+            // the fee and who paid it. Nil draws nothing rather than a zero.
+            if let delta = move.deltaWei {
+                Text(FramesMoney.signedETH(wei: delta, compact: true))
+                    .dsText(.callout15)
+                    .foregroundStyle(delta > 0 ? DS.confirm : DS.textPrimary)
+                    .monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
             }
         }
         .contentShape(Rectangle())
@@ -641,9 +664,22 @@ struct FramesMoveRow: View {
 struct FramesPayerRow: View {
     let payer: FramesPayer
 
+    /// **NO FACE, so the scope's two lists share a left edge** (user,
+    /// 2026-09-02: *"terrible indentation"*).
+    ///
+    /// A `DS.Face.list` mark pushed this row's words 76pt right of the
+    /// transaction rows directly beneath it, under captions that both sit at
+    /// the margin — so the block read as a list that could not decide where it
+    /// started. A list's rows share a left content edge, and here there are
+    /// two lists stacked.
+    ///
+    /// The identity is not lost, it MOVED: the payer sheet this row opens
+    /// leads with the same face at `DS.Face.shelf`, which is where a portrait
+    /// belongs (§435's own rule — a face is the subject of the sheet, and one
+    /// of several in a roster). The chevron and the two captions are what keep
+    /// the kinds apart here.
     var body: some View {
         HStack(spacing: DS.Space.s3) {
-            WalletFace(address: payer.address, size: DS.Face.list, circular: true)
             VStack(alignment: .leading, spacing: 1) {
                 Text(FramesWatch.shared.name(for: payer.address)
                      ?? WalletStore.shortAddress(payer.address))
@@ -756,7 +792,16 @@ struct FramesMovementBars: View {
                 // The floor is 4pt: enough to be seen, small enough that the
                 // shape still carries magnitude. NOT a log scale — that makes
                 // every height a claim about a ratio nobody can read back.
-                let height = max(4, CGFloat(abs(value) / peak) * (mid - 3))
+                // **THE FLOOR SCALES WITH THE DRAWING.** It was a flat 4pt,
+                // chosen when this chart was 64pt tall; at the slot's real
+                // height 4pt is 3% of the box, so on this chain's own spread —
+                // a 1 ETH faucet claim beside 0.001 sends, a 1000:1 ratio —
+                // five of six real transactions drew as hairlines and the
+                // chart read as empty. Still NOT a log scale, for the reason
+                // below: this raises the minimum, it does not restate any
+                // bar's magnitude relative to another above it.
+                let floor = max(4, (mid - 3) * 0.08)
+                let height = max(floor, CGFloat(abs(value) / peak) * (mid - 3))
                 let x = slot * CGFloat(i) + (slot - width) / 2
                 let rect = value >= 0
                     ? CGRect(x: x, y: mid - height, width: width, height: height)

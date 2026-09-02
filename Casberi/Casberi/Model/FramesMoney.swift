@@ -70,7 +70,7 @@ enum FramesMoney {
     /// conservative direction the other way round — it can only ever
     /// understate what left. Stated rather than silently inherited: the rule
     /// is one function's, and this is a different question.
-    static func feeLine(wei: Decimal?) -> String? {
+    static func fee(wei: Decimal?) -> String? {
         guard let wei, wei > 0 else { return nil }
         var quotient = wei / weiPerETH
         var rounded = Decimal()
@@ -80,7 +80,14 @@ enum FramesMoney {
         formatter.minimumFractionDigits = 6
         formatter.maximumFractionDigits = 6
         formatter.usesGroupingSeparator = true
-        guard let text = formatter.string(from: rounded as NSDecimalNumber) else { return nil }
+        return formatter.string(from: rounded as NSDecimalNumber)
+    }
+
+    /// The same figure wearing its noun, for a line that has no label of its
+    /// own. **A `DSSpecRow` labelled "Fee" must take `fee(wei:)` instead** —
+    /// seen on a device reading `Fee   0.000595 fee`.
+    static func feeLine(wei: Decimal?) -> String? {
+        guard let text = fee(wei: wei) else { return nil }
         return String(localized: "\(text) fee")
     }
 
@@ -105,7 +112,7 @@ enum FramesMoney {
     /// string and it is the honest one: this figure is the biggest thing on a
     /// receipt, and a receipt for a chain that says of itself it may be reset
     /// without notice must not lead with a number that reads like money.
-    static func signedETH(wei: Decimal) -> String {
+    static func signedETH(wei: Decimal, compact: Bool = false) -> String {
         let magnitude = wei < 0 ? -wei : wei
         var quotient = magnitude / weiPerETH
         var rounded = Decimal()
@@ -119,7 +126,15 @@ enum FramesMoney {
         // A movement of exactly nothing has no direction — the flat-percent
         // rule (§83): no sign, no arrow, no colour.
         let sign = wei < 0 ? "\u{2212}" : (wei > 0 ? "+" : "")
-        return String(localized: "\(sign)\(text) test ETH")
+        // **`compact` DROPS "test", AND ONLY A ROW MAY ASK FOR IT.** The word
+        // is the honest one and the receipt hero keeps it — but a LIST repeats
+        // the unit once per row inside a room whose own crown, whose name and
+        // whose every sheet already say "test ETH", and those characters are
+        // width the row needs for what it moved. It is context doing the work
+        // rather than a claim being dropped: nothing reachable from outside
+        // this room ever calls it.
+        return compact ? String(localized: "\(sign)\(text) ETH")
+                       : String(localized: "\(sign)\(text) test ETH")
     }
 
     /// A balance line for a screen, or nil when the read did not happen.

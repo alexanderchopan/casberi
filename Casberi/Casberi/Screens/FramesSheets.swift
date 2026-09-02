@@ -89,13 +89,13 @@ enum FramesModeStyle {
     static func meaning(_ mode: UInt64) -> String {
         switch mode {
         case 1:
-            return String(localized: "It authorises the transaction. Without one there is no payer at all.")
+            return String(localized: "Authorises the transaction — without one there is no payer.")
         case 2:
-            return String(localized: "It acts as the sender — this is where the value moves.")
+            return String(localized: "Acts as the sender. This is where the value moves.")
         case 0:
             return String(localized: "The entry point calls it.")
         default:
-            return String(localized: "A mode this build doesn't know. It ran; what it meant is the chain's to say.")
+            return String(localized: "A mode this build doesn't know.")
         }
     }
 }
@@ -153,8 +153,17 @@ struct FramesMoveSheet: View {
         let crossing: CGFloat = 76
         let sponsored: CGFloat = move.sponsored ? 46 : 0
         let watch: CGFloat = watchable == nil ? 0 : 34
-        return min(880, 360 + paper + crossing + sponsored + watch
-                        + CGFloat(move.rows.count) * 54)
+        // **MEASURED OFF A DEVICE, NOT ESTIMATED** (user, 2026-09-02: *"the
+        // verify and the move sheet were clipped at bottom"*). The first sum
+        // had no term for the facts table or the explorer link and ran ~90pt
+        // short on a four-frame transaction, which put the one door out of
+        // this sheet below its own edge. The `.large` detent made it
+        // reachable and nothing said so — a sheet that must be dragged to
+        // finish reading is a sheet that looks broken.
+        let facts: CGFloat = hasFacts ? 120 : 0
+        let explorer: CGFloat = 40
+        return min(920, 400 + paper + crossing + sponsored + watch + facts + explorer
+                        + CGFloat(move.rows.count) * 56)
     }
 
     /// **THE DIRECTION NAMES THE SHEET.** Nil or zero gets the neutral noun:
@@ -316,10 +325,10 @@ struct FramesMoveSheet: View {
     private var sponsorship: String? {
         guard move.sponsored else { return nil }
         let who = FramesName.of(move.payer, mine: mine, watched: watched)
-        if let fee = move.feeWei, let line = FramesMoney.feeLine(wei: fee) {
-            return String(localized: "It cost the sender nothing — \(who) paid the \(line).")
+        if let fee = move.feeWei, let figure = FramesMoney.fee(wei: fee) {
+            return String(localized: "\(who) paid the gas — \(figure) ETH.")
         }
-        return String(localized: "It cost the sender nothing — \(who) paid the gas.")
+        return String(localized: "\(who) paid the gas.")
     }
 
     // MARK: The steps
@@ -336,7 +345,7 @@ struct FramesMoveSheet: View {
             // **AN ORDINARY TRANSACTION IS NOT "0 FRAMES".** This chain carries
             // both — the faucet pays out as a plain type-`0x2` transfer — and
             // the row above already learned to say so.
-            Text(String(localized: "An ordinary transfer — it reports one result, not a step for each part."))
+            Text(String(localized: "An ordinary transfer — one result, not a step per part."))
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         } else {
@@ -412,7 +421,10 @@ struct FramesMoveSheet: View {
                 // Only when the sender really paid it. A "Fee" row under a head
                 // whose own last sentence says somebody else paid is the two
                 // halves of one document disagreeing.
-                if let fee = FramesMoney.feeLine(wei: move.feeWeiIfSelfPaid) {
+                // `fee(wei:)`, never `feeLine` — that one wears the noun,
+                // and under a label reading "Fee" it renders `0.000595 fee`.
+                // Seen on a device.
+                if let fee = FramesMoney.fee(wei: move.feeWeiIfSelfPaid) {
                     DSSpecRow(label: Text("Fee"), value: Text(verbatim: fee))
                 }
                 if let gas = move.gasUsed {
@@ -464,8 +476,13 @@ struct FramesMoveSheet: View {
         }
     }
 
+    /// **NEVER IN THE DEMO** (§549's class, and it was reachable). The demo's
+    /// accounts are a fixture, not this phone's — so this door offered to add
+    /// a demo address to the REAL watch list, which survives the demo's own
+    /// teardown and is exactly the "hard coded demo stuff … that i did not
+    /// add" §549 was reported for.
     @ViewBuilder private var watchDoor: some View {
-        if let address = watchable {
+        if let address = watchable, !DemoMode.isActive {
             Button {
                 DSHaptic.selection()
                 if FramesWatch.shared.add(address) {
@@ -531,8 +548,30 @@ struct FramesFrameSheet: View {
     }
     private var total: Int { move.rows.count }
 
+    /// **A SUM WITH A TERM PER BLOCK, because a flat number clipped** (user,
+    /// 2026-09-02). It was `total > 1 ? 760 : 660`, which took no account of
+    /// the two blocks that only some frames carry — so a VERIFY frame, which
+    /// is the one that gains the whole permission section, was the one most
+    /// likely to lose its neighbour doors off the bottom.
+    private var trayHeight: CGFloat {
+        guard let row else { return 420 }
+        let permission: CGFloat = row.frame.mode == 1 ? 170 : 0
+        let joined: CGFloat = (row.joinedToNext || (index > 0 && move.rows[index - 1].joinedToNext))
+            ? 44 : 0
+        let neighbours: CGFloat = total > 1 ? 56 : 0
+        let value: CGFloat = row.valueWeiHex == nil ? 0 : 56
+        // 680 is MEASURED off the device rather than reasoned about, twice:
+        // the first sum ran ~90pt short on a VERIFY frame and cut the calldata
+        // row and both neighbour doors, which are the sheet's only way onward.
+        // The cap is generous on purpose — over-tall rests at a taller sheet,
+        // short CLIPS, and only one of those is recoverable by the reader.
+        // Down from 680 with the three duplicated fact rows gone — the sheet
+        // got shorter rather than the box getting taller.
+        return min(940, 560 + permission + joined + neighbours + value)
+    }
+
     var body: some View {
-        let height: CGFloat = total > 1 ? 760 : 660
+        let height = trayHeight
         DSTray(title: row?.frame.modeName ?? String(localized: "Step"),
                height: height, ink: true, detents: [.height(height), .large]) {
             ScrollView {
@@ -640,12 +679,17 @@ struct FramesFrameSheet: View {
                     approval(String(localized: "Running"), granted: execution)
                     approval(String(localized: "Payment"), granted: payment)
                 }
+                // **THE FOOTNOTE IS TWELVE WORDS AND WAS TWENTY-ONE.** The
+                // long form explained that authority here is per-transaction;
+                // the short one states the consequence, which is the only part
+                // that changes what somebody would DO (§315). The head above
+                // already says a VERIFY frame authorises.
                 if !execution && !payment {
-                    Text(String(localized: "It approves neither, which leaves the transaction with no payer at all."))
+                    Text(String(localized: "It approves neither, so the transaction has no payer."))
                         .dsText(.subhead13).foregroundStyle(DS.destructive)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
-                    Text(String(localized: "On this chain authority is granted and spent inside the one transaction carrying it — there is nothing standing to revoke."))
+                    Text(String(localized: "Granted and spent inside this transaction — nothing to revoke."))
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -720,12 +764,14 @@ struct FramesFrameSheet: View {
                             used: used, limit: limit, tint: DS.confirm,
                             reduceMotion: reduceMotion)
         } else if let limit = row.frame.stateGas, limit > 0 {
-            Text(String(localized: "It asked for \(String(limit)) of state budget. This chain doesn't report how much was used."))
+            Text(String(localized: "State budget \(String(limit)) — this chain doesn't report how much was used."))
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         if let starvation = row.outcome.flatMap({ FramesRead.starvation(frame: row.frame, outcome: $0) }) {
             Text(starvation == .state
+                 // The one sentence here somebody would ACT on, so it keeps
+                 // its full length while everything around it loses a clause.
                  ? String(localized: "It ran out of STATE budget, not execution — raising the execution limit will not help.")
                  : String(localized: "It used its whole execution budget and reverted."))
                 .dsText(.subhead13).foregroundStyle(DS.destructive)
@@ -744,20 +790,20 @@ struct FramesFrameSheet: View {
     @ViewBuilder private func evidence(_ row: FramesFrameRow) -> some View {
         switch row.valueLanded {
         case .some(true):
-            note(String(localized: "Its transfer is on the chain's log — the money really moved."),
+            note(String(localized: "Its transfer is on the chain's log — the money moved."),
                  tone: DS.textSecondary)
         case .some(false):
-            note(String(localized: "It reports success and emitted no log. Its effect was rolled back, so the money did not move."),
+            note(String(localized: "It reports success and emitted no log — rolled back, so the money did not move."),
                  tone: DS.destructive)
         case .none:
             if row.outcome == nil {
-                note(String(localized: "Its receipt couldn't be paired, so what it did is not readable from here."),
+                note(String(localized: "Its receipt couldn't be paired, so what it did isn't readable."),
                      tone: DS.textTertiary)
             } else {
                 // NOT "it failed to move value": a VERIFY frame moves nothing
                 // by design and has nothing to land. Collapsing the two is a
                 // false alarm on the frame every transaction here carries.
-                note(String(localized: "It moves no value by design, so there is nothing to land."),
+                note(String(localized: "Moves no value by design, so there is nothing to land."),
                      tone: DS.textTertiary)
             }
         }
@@ -780,12 +826,12 @@ struct FramesFrameSheet: View {
         if joinsNext || joinsPrev {
             let word: String = {
                 if joinsNext && joinsPrev {
-                    return String(localized: "Roped to the steps either side — they run all or nothing.")
+                    return String(localized: "Roped either side — all or nothing.")
                 }
                 if joinsNext {
-                    return String(localized: "Roped to step \(String(index + 2)) — they run all or nothing.")
+                    return String(localized: "Roped to step \(String(index + 2)) — all or nothing.")
                 }
-                return String(localized: "Roped to step \(String(index)) — they run all or nothing.")
+                return String(localized: "Roped to step \(String(index)) — all or nothing.")
             }()
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: "link").dsGlyph(13).foregroundStyle(DS.tint)
@@ -797,21 +843,29 @@ struct FramesFrameSheet: View {
 
     // MARK: The facts
 
+    /// **WHAT IS NOT ALREADY ON THE SCREEN, and that is the whole edit** (user,
+    /// 2026-09-02, of this sheet running past the fold).
+    ///
+    /// It listed five rows and three of them were the SAME FACTS the bar and
+    /// the sentence directly above already state: `Execution: 100 of 100000`
+    /// is the budget and the used figure, and "It asked for 250000 of state
+    /// budget" is the state one. So the sheet said each of them twice, in two
+    /// registers, and paid ~130pt for it — which is most of what pushed the
+    /// calldata row and both neighbour doors below the fold.
+    ///
+    /// The answer was never a taller sheet. One fact, one place.
     @ViewBuilder private func facts(_ row: FramesFrameRow) -> some View {
         DSSpecTable {
-            if let target = row.frame.target, !target.isEmpty {
+            // **A VERIFY FRAME TARGETS THE SENDER, ALWAYS**, so naming it here
+            // tells you what the mode already told you — and on the one row
+            // where a target IS news (a payload frame), the crossing on the
+            // move sheet and this sheet's own recipient both carry it. Shown
+            // only when it is something other than the sender.
+            if let target = row.frame.target, !target.isEmpty,
+               target.lowercased() != move.sender.lowercased() {
                 DSSpecRow(label: Text("Target"),
                           value: Text(verbatim: FramesName.leading(
                             target, mine: mine, watched: watched)))
-            }
-            if let limit = row.frame.executionGas {
-                DSSpecRow(label: Text("Execution budget"), value: Text(verbatim: String(limit)))
-            }
-            if let used = row.outcome?.gasUsed {
-                DSSpecRow(label: Text("Execution used"), value: Text(verbatim: String(used)))
-            }
-            if let limit = row.frame.stateGas {
-                DSSpecRow(label: Text("State budget"), value: Text(verbatim: String(limit)))
             }
             DSSpecRow(label: Text("Calldata"), value: Text(verbatim: calldataLine(row)))
         }
@@ -943,7 +997,15 @@ struct FramesPayerSheet: View {
     private var theirs: [FramesMove] { FramesPayers.moves(of: payer.address, in: moves) }
 
     var body: some View {
-        let height = min(820, 400 + CGFloat(min(theirs.count, 8)) * 56)
+        // **MEASURED, after this sheet clipped its own explorer link** (user,
+        // 2026-09-02). The first sum counted the rows and nothing else — not
+        // the paper, not the share bar, not the caption, not the two doors —
+        // so a one-transaction sponsor, which is every sponsor on this chain
+        // today, lost its last line off the bottom.
+        let watch = FramesParty.of(payer.address, mine: mine, watched: watched).isStranger
+            && !DemoMode.isActive
+        let height = min(920, 620 + (watch ? 44 : 0)
+                              + CGFloat(min(theirs.count, 6)) * 72)
         DSTray(title: FramesName.leading(payer.address, mine: mine, watched: watched),
                height: height, ink: true, detents: [.height(height), .large]) {
             ScrollView {
@@ -970,8 +1032,12 @@ struct FramesPayerSheet: View {
                 Text(WalletStore.shortAddress(payer.address))
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
             }
-            if let wei = payer.gasWei, let line = FramesMoney.feeLine(wei: wei) {
-                Text(line)
+            // `fee(wei:)` and not `feeLine` — that one appends "fee", which at
+            // `price40` renders `0.000402 fee` as the largest thing on the
+            // sheet. The sentence under it says what the figure is; the hero
+            // says how much.
+            if let wei = payer.gasWei, let figure = FramesMoney.fee(wei: wei) {
+                Text(String(localized: "\(figure) ETH"))
                     .dsText(.price40).foregroundStyle(DS.textPrimary)
                     .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
                     .padding(.top, DS.Space.s3)
@@ -985,8 +1051,8 @@ struct FramesPayerSheet: View {
                     .padding(.top, DS.Space.s3)
             }
             Text(payer.count == 1
-                 ? String(localized: "They paid for 1 transaction here.")
-                 : String(localized: "They paid for \(String(payer.count)) transactions here."))
+                 ? String(localized: "They paid the gas on 1 transaction here.")
+                 : String(localized: "They paid the gas on \(String(payer.count)) transactions here."))
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s4)
@@ -1000,11 +1066,22 @@ struct FramesPayerSheet: View {
     /// denominator is missing a term overstates the numerator, which here means
     /// telling somebody a sponsor covered more of their gas than they did.
     @ViewBuilder private var share: some View {
-        let all = moves.map(\.feeWei)
-        if let theirWei = payer.gasWei, !all.contains(where: { $0 == nil }) {
-            let total = all.compactMap { $0 }.reduce(Decimal(0), +)
+        // **GAS, THE SAME BASIS THE ROOM'S OWN SPLIT BAR USES.** It was built
+        // on `feeWei`, which needs the receipt's gas PRICE as well as its gas
+        // — and this chain's faucet payments carry no price, so one of them
+        // anywhere in the room made the whole share decline while the bar in
+        // the slot two taps away happily drew 23%. Two surfaces answering one
+        // question, one of them silent.
+        //
+        // The all-or-nothing rule is unchanged and still load-bearing: a
+        // denominator missing a term overstates the numerator, which here
+        // means crediting a sponsor with more than they covered.
+        let all = moves.map(\.gasUsed)
+        let mineGas = theirs.compactMap(\.gasUsed).map(Double.init).reduce(0, +)
+        if !all.contains(where: { $0 == nil }), theirs.allSatisfy({ $0.gasUsed != nil }) {
+            let total = all.compactMap { $0 }.map(Double.init).reduce(0, +)
             if total > 0 {
-                let fraction = NSDecimalNumber(decimal: theirWei / total).doubleValue
+                let fraction = mineGas / total
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
@@ -1033,7 +1110,12 @@ struct FramesPayerSheet: View {
                             DSHaptic.selection()
                             onOpenMove?(move)
                         } label: {
-                            FramesMoveRow(move: move).contentShape(Rectangle())
+                            // Every row here was paid for by the person this
+                            // sheet is ABOUT, so the word separates nothing —
+                            // the room's Sponsors scope drops it for the same
+                            // reason one level up.
+                            FramesMoveRow(move: move, showsSponsorship: false)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }
@@ -1042,8 +1124,10 @@ struct FramesPayerSheet: View {
         }
     }
 
+    /// Never in the demo — see `FramesMoveSheet.watchDoor`.
     @ViewBuilder private var watchDoor: some View {
-        if FramesParty.of(payer.address, mine: mine, watched: watched).isStranger {
+        if FramesParty.of(payer.address, mine: mine, watched: watched).isStranger,
+           !DemoMode.isActive {
             Button {
                 DSHaptic.selection()
                 if FramesWatch.shared.add(payer.address) {
@@ -1218,8 +1302,10 @@ struct FramesAccountSheet: View {
     /// not it is watched (`FramesLiveState.refresh` inserts it), so an unwatch
     /// there would be a control whose consequence is invisible — and a watch
     /// button beside an address already on screen is the dead control §83 bans.
+    /// Never in the demo — see `FramesMoveSheet.watchDoor`. Seen offering
+    /// "Watch this address" over the demo's own fixture account.
     @ViewBuilder private var manage: some View {
-        if !isMine {
+        if !isMine, !DemoMode.isActive {
             if FramesWatch.shared.isWatching(account.address) {
                 Button {
                     DSHaptic.selection()

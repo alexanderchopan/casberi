@@ -45063,3 +45063,97 @@ and shrinks rather than truncates — a clipped number is a WRONG number and thi
 one is the card's whole claim — but no map has been looked at on a simulator or
 a phone, and the reach map's real leader count is the one to check first.
 
+
+## §548 ninth follow-up, amendment — what the simulator found, and a row that had been right twice (user: "check on sim", then "thats a lot of detail for the list", "the verify and the move sheet were clipped at bottom", "make this chart fill the slot better why it so tiny and top justified", "sponsors list also is messy", "terrible indentation", "clipping", "there seems to be a lot of verboseness on the frames sheets how would you improve them, please sweep", 2026-09-02)
+
+The sheets worked on the first launch. Everything below is what a device showed
+that thirty-one audits, 63 mutations and a green build could not.
+
+### The row had been right twice and was wrong the third time
+
+It carried SEVEN facts — frame count, verdict, "Somebody else paid",
+recipients, time, amount, fee, gas — and on a sponsored row that overflowed so
+badly the words broke one per line: `Someb / ody / else / paid`, a column of
+single words beside siblings sitting at full width.
+
+**Every one of those facts was added for a good reason and the reason had
+expired.** §548's seventh follow-up put the recipient and the fee here
+EXPLICITLY because the row was the only surface — no sheet existed, so a fact
+not on the row was a fact nowhere. There is a sheet now. What stays is what a
+list is for: what it was, whether anything is wrong, when, and how much.
+
+Two mechanisms, and the first is the general one: **clauses in an `HStack` are
+several `Text` views, and SwiftUI squeezes an over-committed row by shrinking
+ONE child to its minimum width.** Concatenated runs cannot do that — they wrap
+as a sentence. The verdict prints only when it is trouble ("Ran" is the answer
+on nearly every row, so it separates nothing while its absence makes the others
+impossible to miss), and the amount drops "test" because the crown, the room's
+name and every sheet already say it.
+
+### Three drawings that were sized for a smaller room
+
+**The Activity chart was 64pt inside a 210pt slot**, with the rest going to a
+`Spacer` — the room's busiest reading in a third of the space it was given. And
+its 4pt bar floor, chosen when the chart WAS 64pt, is 3% of the real box: on
+this chain's own spread (a 1 ETH faucet claim beside 0.001 sends, 1000:1) five
+of six transactions drew as hairlines. The floor scales with the drawing now.
+Still not a log scale, for the reason already recorded. The sponsor bar was
+16pt hung under a headline in the same box; it is centred in what is left.
+
+### The Sponsors scope was two lists pretending to be one
+
+Two kinds of row under one caption at one spacing. Each block names itself now,
+`s6` apart — and the transaction rows drop the word "Sponsored", which in a
+scope where every row is sponsored is the frame-count sentence §548 already
+removed from Activity, one chip over.
+
+Then: **"terrible indentation"**. The roster row's face pushed its words 76pt
+right of the transactions beneath it, under captions that both sat at the
+margin. A list's rows share a left content edge, and here there are two lists
+stacked. The face is not lost, it MOVED — the payer sheet leads with it at
+`DS.Face.shelf`, which is where a portrait belongs.
+
+### The sheets were not clipped, they were long — and the fix was to say less
+
+Reported as clipping. It scrolled; the content simply ran past the fold with no
+affordance, which reads the same from outside. **Raising the height twice
+changed nothing, because the sheet was already full-screen** — the honest fix
+was that the frame sheet's facts table repeated what the bar and the sentence
+directly above it already said. `Execution: 100 of 100000` IS the budget and
+the used figure; "State budget 250000" IS the state row. Three of five rows
+were the same facts in a second register, and they cost ~130pt — which was most
+of what pushed the calldata row and both neighbour doors off the bottom. One
+fact, one place. The Verify sheet fits on one screen now.
+
+The prose sweep that followed took the same test to every sentence (§315: does
+it change what somebody would DO?). The permission footnote went from
+twenty-one words to twelve by stating the consequence rather than explaining
+the mechanism; the mode meanings, the evidence lines and the join lost a clause
+each. **The state-starvation verdict keeps its full length** — it is the one
+sentence here anybody would act on.
+
+### Three defects the screenshots caught outright
+
+**`Fee   0.000595 fee`** — `feeLine` appends its own noun, and it was handed to
+a `DSSpecRow` that already had a label. It is split now: `fee(wei:)` is the
+figure, `feeLine` is the figure wearing the noun. The payer sheet's hero had
+the same bug at `price40`.
+
+**The demo offered "Watch this address" over its own fixture account** — which
+would have written a demo address into the REAL watch list, where it survives
+the demo's teardown. That is §549's exact class ("hard coded demo stuff … that
+i did not add"), reachable from three doors here. All three are gated.
+
+**The payer sheet's share bar silently declined** while the room's split bar two
+taps away drew 23% of the same fact. It was built on `feeWei`, which needs the
+receipt's gas PRICE as well as its gas, and this chain's faucet payments carry
+no price — so one of them anywhere in the room killed the whole reading. It
+rests on `gasUsed` now, the same basis the room's bar uses. The all-or-nothing
+rule is unchanged and still load-bearing.
+
+### Now seen
+
+All four sheets, all four scopes, on iPhone 17 Pro. What is still unseen is
+every state the demo cannot produce: a sponsor with more than one transaction,
+a frame carrying calldata, a state-starved frame, and any of it on a device
+rather than a simulator.
