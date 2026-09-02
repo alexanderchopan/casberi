@@ -179,6 +179,16 @@ enum Corpus {
     ///   · **Stripe** — `StripeRoomSource` documents why its amounts can't do
     ///     arithmetic either, and it wouldn't belong regardless: it reads
     ///     strangers paying you, not you paying anyone.
+    ///
+    /// **The REVENUE seats are out by definition, not by measurement**
+    /// (2026-09-01, prd §558). Dodo Payments and Polar both land `.transaction`
+    /// rows carrying a real `priceValue` AND `priceCurrency`, so both pass the
+    /// data test above and the question of joining reads as open until it is
+    /// answered here. It isn't open: Stripe's second reason governs all three —
+    /// money ARRIVING is not money SPENT, and folding a Merchant of Record's
+    /// takings into "what did I spend?" would answer that question with the
+    /// opposite sign. A revenue seat's own figure belongs on its own room head
+    /// (`DodoPaymentsRoom`), never in this set.
     static let cardSpendSources: Set<String> = ["Apple Wallet", "Gnosis Pay", "ether.fi"]
 
     /// The stable ref of a source's import receipt. Stable ON PURPOSE: a

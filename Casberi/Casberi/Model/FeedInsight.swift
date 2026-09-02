@@ -154,6 +154,28 @@ enum FeedInsight {
             return cardMonths(things, title: "What the card spent")
         case "ether.fi":
             return cardMonths(things, title: "What the card spent")
+        // Privacy.com, 2026-09-01 (prd §558) — the room had NO registry entry
+        // of any kind and led with a bare band of rows, in the one seat here
+        // that knows WHERE its money went. `PrivacyBridge` has stamped the
+        // merchant on `transferCounterparty` since 2026-08-06, normalized
+        // through `AppleWalletRoom.normalizeMerchant` so one shop cannot rank
+        // as two spellings of itself.
+        //
+        // COUNTED, never `cardMonths`, and that is the whole correctness of
+        // this line rather than a preference. `Corpus.cardSpendSources` leaves
+        // Privacy.com out because its ARITHMETIC would be wrong: the read
+        // filters `result=APPROVED` and falls back from `settled_amount` to
+        // `amount`, so a return lands wearing its positive authorization
+        // amount and would add to a total it should subtract from. A COUNT is
+        // immune to exactly that — an approved authorization at a merchant is
+        // a use of the card whichever direction the money went — so this board
+        // is honest today, while a `cardMonths` strip here would state a total
+        // nobody could check. The unit says "charge" rather than "purchase"
+        // for the same reason: every landed row IS an approved charge, and
+        // "purchase" would quietly claim the return wasn't one.
+        case "Privacy":
+            return counted(things, title: "Where the cards go",
+                           unit: ("charge", "charges"), key: merchant)
         default:
             return nil
         }
@@ -846,6 +868,14 @@ enum FeedInsight {
         let parts = t.title.components(separatedBy: " — ")
         guard parts.count >= 2, let credited = parts.last else { return nil }
         return credited.components(separatedBy: ", ").first?.trimmingCharacters(in: .whitespaces)
+    }
+
+    /// The shop a card charge names. `transferCounterparty` is where every card
+    /// bridge here stamps it, already normalized — see `PrivacyIngest`, which
+    /// runs the descriptor through `AppleWalletRoom.normalizeMerchant` so a
+    /// processor prefix ("SQ *", "TST*") cannot file one shop under two names.
+    private static func merchant(_ t: Thing) -> String? {
+        t.transferCounterparty.flatMap { $0.isEmpty ? nil : $0 }
     }
 
     /// A bookmark's `content` is its URL; group by host, minus the "www.".

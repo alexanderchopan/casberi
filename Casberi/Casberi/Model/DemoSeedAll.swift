@@ -4085,12 +4085,18 @@ enum DemoSeedAll {
             t.dueAt = at(-9, 12)
         })
 
-        // Dodo Payments (same pass). The one seat of the three with NO room
-        // head — its rows render as plain band rows, which is what the app
-        // really does, so the demo shows that rather than inventing a card.
-        // Payments and refunds are `.transaction`; a subscription alarm is a
-        // `.reminder` and carries `dueAt` only while the status is still
-        // recoverable, which "failed" is.
+        // Dodo Payments (same pass; gained a room head 2026-09-01, prd §558).
+        // These four rows are chosen to make `DodoPaymentsRoom` compose all
+        // three of its readings rather than only the one it leads with: a
+        // payment and a settled refund give the window a NET ($49 - $12), the
+        // failed subscription gives the retry rail its dot, and the dispute
+        // gives the trouble rung — which is what the headline actually states,
+        // since an open dispute outranks everything (§349). Payments and
+        // refunds are `.transaction`; a subscription alarm is a `.reminder` and
+        // carries `dueAt` only while the status is still recoverable, which
+        // "failed" is. The dispute's ref must keep the `:opened` suffix — that
+        // is what `DodoPaymentsRoomSource.openDisputes` joins on, and without
+        // it the row lands and the head correctly reports no open dispute.
         out.append(row(.transaction, "Ada Lovelace · $49.00",
                        source: "Dodo Payments",
                        ref: "dodopayments:payment:pay_7f3a9c2e5b1d",
@@ -4118,6 +4124,15 @@ enum DemoSeedAll {
                        tags: ["Subscription", "Failed"]) { t in
             t.dueAt = at(-4, 12)
             t.transferCounterparty = "Grace Hopper"
+        })
+        out.append(row(.reminder, "Dispute opened · $29.00",
+                       source: "Dodo Payments",
+                       ref: "dodopayments:dispute:dis_9a2c4e6b8d0f:opened",
+                       days: 2, hour: 11,
+                       content: DodoPaymentsAccount.dashboardURL,
+                       tags: ["Dispute", "Opened"]) { t in
+            t.priceValue = 29
+            t.priceCurrency = "USD"
         })
         return out
     }

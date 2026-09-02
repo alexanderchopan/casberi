@@ -900,6 +900,18 @@ harness "AWS pure-logic self-test" "aws self-test" "scripts/aws-selftest.sh" "th
 # Payments'.
 harness "Polar pure-logic self-test" "polar self-test" "scripts/polar-selftest.sh" "the Polar logic self-test failed — run scripts/polar-selftest.sh"
 
+# Dodo Payments (2026-09-01, prd §558) — the THIRD Merchant of Record, and the
+# only one whose head states a revenue figure, which is what makes this harness
+# the sharpest of the three. Its bridge has never run against a live account
+# either, and every failure renders as a perfectly ordinary money card: an
+# unsettled refund subtracted from revenue, two currencies summed into one
+# figure, a payment with no readable amount counted as zero, a window-on-window
+# claim made against a window the room never observed, a dispute joined to the
+# wrong half of its own ref so it never closes. It also PINS the two window
+# constants equal across two files — drift there states a 30-day total over a
+# fortnight of rows and looks correct doing it.
+harness "Dodo Payments pure-logic self-test" "dodo self-test" "scripts/dodo-payments-selftest.sh" "the Dodo Payments logic self-test failed — run scripts/dodo-payments-selftest.sh"
+
 harness "Circle x402 pure-logic self-test" "x402 self-test" "scripts/x402-selftest.sh" "the x402 logic self-test failed — run scripts/x402-selftest.sh"
 
 # The contract between the app and its Home Screen (prd §382, 2026-08-14).
@@ -2071,6 +2083,8 @@ else
   typeset -A ROOM_HEADS=(
     runway            "Cloudflare"
     stripeHead        "Stripe"
+    polarHead         "Polar"
+    dodoHead          "Dodo Payments"
     posthogHead       "PostHog"
     appleWallet       "Apple Wallet"
     x402              "Circle x402"

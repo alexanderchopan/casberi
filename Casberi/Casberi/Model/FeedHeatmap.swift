@@ -83,6 +83,12 @@ enum FeedHeatmap {
         // channel's broadcasts with your own saved messages and chats, and the
         // noun in a subtitle has to be true of everything it counts.
         "Telegram":      Label(title: "Your Telegram year",  unit: "entry",      units: "entries"),
+        // Privacy.com, 2026-09-01 (prd §558) — the fallback beneath "Where the
+        // cards go", which declines below three charges across two merchants.
+        // WHEN is the weakest lead and it is the right one here: this grid can
+        // never state an amount, and an amount is the one thing this seat's
+        // rows cannot do arithmetic with (see `Corpus.cardSpendSources`).
+        "Privacy":       Label(title: "Your card year",      unit: "charge",     units: "charges"),
     ]
 
     static func label(for source: String) -> Label? { labels[source] }

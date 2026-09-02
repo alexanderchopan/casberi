@@ -1193,6 +1193,18 @@ enum ProbeHooks {
                 NSLog("[Casberi] polarRoom| %@", line)
             }
         },
+        // `-dodoPaymentsRoomProbe YES` — the Dodo Payments ROOM HEAD's
+        // reading, line by line (2026-09-01, prd §558). Spends nothing: it
+        // composes the card off landed rows alone, exactly as the room does.
+        // One NSLog per line (the `-todayProbe` truncation lesson), and it
+        // prints the two window constants side by side because they live in
+        // two files and a card stating a 30-day total over 14 days of rows
+        // renders perfectly.
+        Hook(key: "dodoPaymentsRoomProbe") { _, context in
+            for line in DodoPaymentsRoomSource.probeLines(context: context) {
+                NSLog("[Casberi] dodoRoom| %@", line)
+            }
+        },
         // `-posthogRoomProbe YES` — the same for PostHog's head. Pairs with
         // `-posthogSeed "<event>:<c,c,c>[|total]"`, which plants a reading, so
         // the whole card — discs, ring, silence ordering — verifies with no
@@ -4942,6 +4954,26 @@ enum ProbeHooks {
                 note("stripeHead", source == "Stripe"
                      ? StripeRoomSource.compose(things: things).map {
                         "\(StripeRoom.headline($0)) · \($0.total) deadlines"
+                     } : nil)
+                // The two other Merchants of Record. `polarHead` shipped
+                // 2026-08-30 with NO line here at all and `dodoHead` is new
+                // 2026-09-01 — exactly the drift this hook's own header warns
+                // against, found by adding the second one: this probe would
+                // have reported "leads with NOTHING" about a Polar room that
+                // leads with a card, which is the §219 failure inverted and
+                // the one thing this probe exists to stop. Both read `things`
+                // the way `cursorHead` does — the deadlines and the payments
+                // ARE the subject — so each `compose` would already answer nil
+                // for another room's rows; gated anyway, so every line in this
+                // block reads the same way.
+                note("polarHead", source == "Polar"
+                     ? PolarRoomSource.compose(things: things).map {
+                        "\(PolarRoom.headline($0)) · \($0.total) deadlines"
+                     } : nil)
+                note("dodoHead", source == DodoPaymentsRoomSource.source
+                     ? DodoPaymentsRoomSource.compose(things: things).map {
+                        "\(DodoPaymentsRoom.headline($0)) · \($0.currencies.count) currencies"
+                        + " · \($0.disputes.count) disputes · \($0.retryTotal) retries"
                      } : nil)
                 note("posthogHead", source == "PostHog"
                      ? PostHogRoomSource.compose(things: things).map {

@@ -43741,3 +43741,163 @@ simulator, where the first build after the change drew rows with no fee.
 
 All 29 audits green; walked on the simulator across all four scopes and both
 toggle positions.
+
+## 557. Dodo Payments moves to Wallet — a reconstructed stub, not a reconstructed ruling (2026-08-30)
+
+**This entry exists because the section it names never did.** §535 cites
+`§"Dodo Payments moves to Wallet"` twice, by TITLE rather than by number, and no
+such heading is in this ledger. That title citation is also why nothing caught
+it: `prd-index-audit.py` check C resolves `§N` citations and a citation naming a
+section in words resolves to nothing to check. So five commits of shipped work —
+a whole catalog seat, its bridge, its group, its website row — reached `main`
+with no ruling written down, the §340 shape exactly, and unnoticed for two days.
+
+The commits, named so the work is at least findable:
+
+- `2348e7ad` — Add Dodo Payments bridge — a Merchant-of-Record processor read read-only
+- `9265d620` — Fix Dodo Payments' room door: stamp source through a literal constant
+- `bac07ef7` — Dodo Payments moves to Wallet: money in reach reads like card spending, not a dev tool
+- `5e6158c2` — Bump website cache-busters for the Dodo Payments catalog update
+- `417a39de` — Furnish the three seats that shipped with no demo behind them
+
+**Deliberately NOT a reconstructed ruling.** §340's stub says why and the reason
+holds here: inventing the reasoning poisons the one thing this ledger is for. The
+seat's own type doc in `DodoPaymentsBridge.swift` carries the substantive
+divergence it shipped with — that this bridge lands EVERY succeeded payment where
+`StripeBridge` lands none, because the doctrine's tally test is about VOLUME and
+this processor's audience takes a payment occasionally rather than constantly —
+and that doc, not this stub, is the record. What can be said without invention is
+what §535 already says on the seat's behalf: **the catalog group follows the
+BEHAVIOR, not the category.** A bridge that lands every transaction is Wallet; a
+bridge that alarms rarely is Work. Dodo is the first and Polar the second, which
+is why two Merchants of Record sit in different groups.
+
+**The generalizable correction.** A section cited by TITLE is invisible to the
+index audit, so it is invisible full stop. Cite a number or cite nothing —
+`prd-index-audit.py --next` exists to make that cheap, and a title citation is
+the one form that reads as a reference while referring to nothing.
+
+## 558. The payments rooms get a grammar, and the two with no head at all get one (user: "we have several payments rooms like dodo, polar, privacy, apple card, and i'm not sure what else, but should their room heads be similar and how would you improve each if at all", 2026-09-01)
+
+**The question's own premise turned out to be the finding.** Asked whether the
+payments heads should be more alike, the answer is that they already share a
+grammar and that forcing them closer would break measured refusals — but two of
+the six rooms named had no head to compare at all, and one of those is the seat
+that lands the richest money data in the catalog.
+
+**The grammar, stated so it can be checked rather than felt.** The payments
+family splits by DIRECTION of money, and the head follows the direction, never
+the category:
+
+- **Revenue rooms** — Stripe, Polar, Dodo Payments. Strangers pay you. The head
+  is *standing state plus what needs you*: a balance or an MRR headline, and a
+  deadline rail for disputes and dunning. `PolarRoom` was built as "StripeRoom's
+  exact shape" (§535) and this is that shape's third instance.
+- **Spend rooms** — Apple Wallet, Gnosis Pay, Privacy.com. You pay others. The
+  head is *what changed*: a merchant board, a price creep, a silence, a windowed
+  per-currency reading.
+
+The two families diverge from each other on purpose and the members diverge
+inside a family only where the DATA forces it — Gnosis Pay has no merchant board
+because merchant names structurally never reach the chain (§222), not because
+nobody built one. **Do not "harmonize" a refusal.** Stripe's ban on a revenue
+figure and Gnosis Pay's refusal of an unobserved month-over-month comparison are
+correctness rulings that happen to look like inconsistency from a distance.
+
+### 1. Dodo Payments gets a head, and it is the only one allowed to state revenue
+
+`Model/DodoPaymentsRoom.swift` (Foundation-only), `DodoPaymentsRoomSource.swift`,
+`Screens/DodoPaymentsRoomCard.swift`, `scripts/dodo-payments-selftest.sh`,
+`-dodoPaymentsRoomProbe YES`.
+
+Dodo led with a bare band of rows — no `SourceHead` case, no `FeedScreen.Shape`
+case, no `FeedInsight` registry entry, not even a `FeedHeatmap` label — in the
+room holding every payment the account took. `DemoSeedAll` recorded the absence
+in as many words and seeded plain rows to match.
+
+**The licence is the interesting part.** `StripeRoom` refuses a revenue figure
+twice over and BOTH of its reasons are absent here rather than overlooked:
+Stripe's amounts survive only as formatted substrings inside row titles, while
+Dodo stamps `priceValue` AND `priceCurrency` on every payment and refund; and
+Stripe's landed rows are a biased sample — disputes, dunning, payouts, never a
+charge — so a figure built from them "would read as 'your revenue' while plotting
+your problems", whereas Dodo lands every succeeded payment in its window. **Here
+the sample is the population.** That licence is exactly as wide as those two
+sentences and no wider, which is why `scripts/dodo-payments-selftest.sh` PINS
+`DodoPaymentsRoom.windowDays` equal to `DodoPaymentsAccount.windowDays` across
+two files rather than trusting them: drift there states a 30-day total over a
+fortnight of rows and renders perfectly while doing it.
+
+**Ranked trouble-first (§349):** an open dispute, then a subscription that can
+still be saved, then the window's net, then the quiet answer. The note is never a
+restatement (`PolarRoom`'s rule) — when trouble leads it carries the money, when
+money leads it carries the change.
+
+**Five refusals, each a silent wrong answer if dropped**, and all five are
+mutation-proven rather than written down: no cross-currency sum (currencies rank
+by payment COUNT, the only ordering that never compares magnitudes across codes);
+no revenue curve (`StripeRoom`'s ban survives the licence — a window is a handful
+of points for an occasional-payment account); no comparison against an unobserved
+window (`GnosisPayRoom`'s refusal, biting harder because this bridge keeps a
+rolling window and no cursor); **an unsettled refund never subtracts** (a pending
+return has moved no money — `AppleWalletRoom`'s `isSettled` rule, the §83
+fake-status ban wearing a dollar sign); and **a refund never CREATES a currency**
+(`AppleWalletRoom`'s "a store that only ever refunded you is not somewhere you
+spend", read backwards — admitting it would put a negative total on a revenue
+card; those refunds are counted and named instead).
+
+**One ruling diverges from Polar deliberately, and it would have been the easy
+thing to copy.** Polar's rail chip says "Missed" for a passed date because its
+deadline is an evidence window that really can be missed. Dodo's date is its own
+`next_billing_date` — the moment the next attempt was DUE — and this bridge has
+no signal for whether that attempt has since happened, so the chip says
+"Retrying" and `value(days:)` says "due", never "overdue". Calling it missed
+states an outcome nobody measured, on the card whose subject is money. Pinned as
+a mutation.
+
+### 2. Privacy.com joins the two registries it was never in
+
+The one seat in this app that knows WHERE its money went, leading with a bare
+band. `PrivacyBridge` has stamped the merchant on `transferCounterparty` since
+2026-08-06, already normalized through `AppleWalletRoom.normalizeMerchant` so one
+shop cannot rank as two spellings of itself — and nothing read it.
+
+**`counted`, never `cardMonths`, and that is the whole correctness rather than a
+preference.** `Corpus.cardSpendSources` leaves Privacy.com out because its
+ARITHMETIC would be wrong: the read filters `result=APPROVED` and falls back from
+`settled_amount` to `amount`, so a return lands wearing its positive
+authorization amount and would ADD to a total it should subtract from. A COUNT is
+immune to precisely that — an approved authorization at a merchant is a use of
+the card whichever way the money went — so a count-ranked board is honest today
+while a `cardMonths` strip would state a total nobody could check. The unit is
+"charge", not "purchase", for the same reason: every landed row IS an approved
+charge, and "purchase" would quietly claim the return wasn't one. A "Your card
+year" heatmap sits beneath it as the fallback for an account with too few
+merchants to rank. **The amount-ranked, Apple-Wallet-grade head stays unbuilt
+until `-privacyProbe` measures a real return against a live key** — that
+measurement, not this entry, is what unblocks it.
+
+### 3. `Corpus.cardSpendSources` closes a question that read as open
+
+Its doc decides Privacy.com and Stripe by name and had never mentioned Dodo
+Payments or Polar — both of which land `.transaction` rows carrying a real
+`priceValue` and `priceCurrency`, so both PASS its stated data test and joining
+them looks correct. They must not join: Stripe's second reason governs all
+three — **money arriving is not money spent**, and folding a Merchant of Record's
+takings into "what did I spend?" answers that question with the opposite sign. A
+revenue seat's figure belongs on its own room head. Guarded mechanically, since a
+seat that passes the stated test is exactly the one somebody adds in good faith.
+
+### 4. Two drift findings, both in the machinery that exists to catch drift
+
+**`roomInsightProbe` had no `polarHead` line**, so that probe would have
+confidently reported "leads with NOTHING" about a room that leads with a card —
+the §219 failure inverted, which is the one thing that probe exists to stop, and
+exactly the drift its own header warns against. Found only by adding the second
+one beside it. **`verify.sh`'s `ROOM_HEADS` map was missing Polar too**, so demo
+coverage had never once asserted that head composes. Both fixed, both now
+guarded.
+
+**UNSEEN on a device.** Neither new card has been screenshotted, and no Dodo or
+Privacy.com key has ever been held by this project — so the harness is not the
+best proof these numbers are right, it is the only one.

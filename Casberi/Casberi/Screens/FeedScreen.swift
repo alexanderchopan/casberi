@@ -4859,6 +4859,17 @@ case .vibenetSend(let account):
                     PolarRoomCard(room: room) { item in
                         openBySourceRef(item.id, in: visible)
                     }
+                case .dodoPayments(let room):
+                    DodoPaymentsRoomCard(room: room) { currency in
+                        // A currency owns many payments, so the honest landing
+                        // is its most recent one — the Gnosis Pay rule, matched
+                        // on the same `priceCurrency` field the room groups by.
+                        openNewest(source: DodoPaymentsRoomSource.source, in: visible) { thing in
+                            thing.priceCurrency == currency.code
+                        }
+                    } onOpenRetry: { retry in
+                        openBySourceRef(retry.id, in: visible)
+                    }
                 case .posthog(let room):
                     PostHogRoomCard(room: room) { event in
                         openBySourceRef(PostHogWatch.metricRef(event), in: visible)
@@ -7146,6 +7157,12 @@ case .vibenetSend(let account):
         case runway(CloudflareRunway)
         case stripe(StripeRoom)
         case polar(PolarRoom)
+        // Dodo Payments (2026-09-01, prd §558) — the third Merchant of Record,
+        // and the only one whose head may state a revenue figure: its bridge
+        // lands EVERY succeeded payment, so the sample is the population. See
+        // `DodoPaymentsRoom`'s type doc for why Stripe's identical refusal
+        // still stands.
+        case dodoPayments(DodoPaymentsRoom)
         case posthog(PostHogRoom)
         case appleWallet(AppleWalletRoom.Card)
         case x402(X402Room)
@@ -7268,6 +7285,8 @@ case .vibenetSend(let account):
             return StripeRoomSource.compose(things: visible).map { .stripe($0) }
         case "Polar":
             return PolarRoomSource.compose(things: visible).map { .polar($0) }
+        case DodoPaymentsRoomSource.source:
+            return DodoPaymentsRoomSource.compose(things: visible).map { .dodoPayments($0) }
         case "PostHog":
             return PostHogRoomSource.compose(things: visible).map { .posthog($0) }
         case AppleWalletBridge.sourceName:
