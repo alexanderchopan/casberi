@@ -44988,3 +44988,71 @@ measurement behind its wrap: "There is no server." at 40pt heavy is 19
 characters and will take two lines on a narrow phone, which is fine and has not
 been looked at.
 
+## 566. One file, one name — §562 fixed the guards and left the mechanism that killed them (2026-09-02)
+
+**`scripts/vibenet-selftest.sh` read ONE file under TWO variable names.** `$CARD`
+and `$BOOK` both held
+`Casberi/Casberi/Screens/VibenetRoomCard.swift`, were stripped into two
+byte-identical copies (`card.nc.swift`, `book.nc.swift`), and that file's drift
+guards were split across them — **59 references to one, 10 to the other**, with
+nothing tying them together.
+
+**§545 made it and §562 paid for it.** §545 deleted
+`VibenetAddressBookScreen.swift`, moved the roster's verbs onto the room card,
+re-pointed `$BOOK` at that file and re-aimed only the five §465 guards it had
+come for; `$CARD` was already there, three lines further down, and nobody
+looked. §562 then found what the split cost: five §517 guards written for the
+deleted screen went on being asserted about the room card — four of them RED,
+and one demanding a `VibenetWatchSheet` presentation from the one file §468 has
+forbidden any `.sheet(` since 2026-07-28. Correcting them is what surfaced the
+real defect (the sheet had no presenter at all), so the split did not merely
+waste a check; it hid a roster nobody could add to.
+
+**§562 corrected every one of those guards and left the split in place.** That
+is the half this entry closes, and it is the half that will do it again:
+somebody amending "the card's" guards has no reason to open "the book's". A
+REQUIRE and a FORBID on one file can sit 4,600 lines apart under two names and
+never meet.
+
+**THE FIX IS THE STRUCTURE, NOT THE GUARDS.** `$BOOK` is deleted, the second
+stripped copy with it, and `$CARD` is the one name — declared where `$BOOK` was,
+carried through the existence loop, with the whole story in its comment. **The
+collapse is behaviour-preserving BY CONSTRUCTION**: the two copies were the same
+bytes of the same file through the same `strip_comments`, so re-pointing a
+reference cannot change a verdict. That argument is why this is safe to do in
+one move where §545's re-*aiming* was not — and the distinction is the lesson.
+Re-pointing a guard at a DIFFERENT file changes what it asserts and must be
+walked one at a time; collapsing two names for the SAME file changes nothing and
+can be done wholesale.
+
+All twelve formerly-`$BOOK` guards were re-verified live against §562's
+`VibenetRoomCard.swift` after the collapse (rename, stop-watching, the last-
+unwatch confirm, `commitUnwatch`, the snapshot seed, the Accounts gate, no
+hand-rolled paste field, no watch cap, `onRequestWatch`, `watchAccountRow`, no
+hairline, and §517's ordering guard), and §517's python guard was re-probed on
+the merged copy two ways — discovery unfolded beside the roster, and the ways in
+pushed below it — both caught. `catalog-sync.sh`'s shape: the value is not that
+the list is right today, it is that there is one list.
+
+**AND THE RUN COST 47 MINUTES, so it was converted in the same commit.** This
+harness was not among the four the 2026-09-02 `-O` -> `-Onone` pass covered, and
+it is bigger than three of them: ~97% of its wall time was the optimizer buying
+nothing an assertion can see. `scripts/support/harness-opt-probe.sh` — which
+runs the harness both ways behind a PATH shim and licenses the swap only on
+byte-identical output AND exit code — returned **2818.4s -> 457.9s, 6.2x, SAME**.
+All four `swiftc` sites carry the reason and the standing instruction to
+re-probe after adding mutations, because the recorded objection stands: a
+trapping harness prints NOTHING under `-O`, so the flag can change observable
+behaviour and the swap is per-harness evidence, never a blanket rule.
+
+**The tell, and it generalises past this harness.** When a ruling deletes a file
+and moves its content into an existing one, re-pointing the variable is the easy
+half; the hard half is that the destination ALREADY HAD guards, and the two sets
+now describe one file while still being written as if they described two. **Merge
+the names in the same pass.** It is cheap to look for — two variables in a
+harness holding the same path — and the sweep found one more in this same file:
+`MainSurface.swift` was `$SHELL_SURFACE` at the top and `$SURFACE` ninety lines
+down (plus a redundant second `FEED=`), collapsed here in the same pass on the
+same by-construction argument. No path in this harness is now held under two
+names, which is a one-line check anybody can re-run:
+`grep -E '^[A-Z_]+="Casberi' | cut -d'"' -f2 | sort | uniq -d`.
