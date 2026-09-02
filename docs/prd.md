@@ -45385,3 +45385,82 @@ down (plus a redundant second `FEED=`), collapsed here in the same pass on the
 same by-construction argument. No path in this harness is now held under two
 names, which is a one-line check anybody can re-run:
 `grep -E '^[A-Z_]+="Casberi' | cut -d'"' -f2 | sort | uniq -d`.
+## 569. The people surfaces take the language — and two of the three changes are smaller than the mockup drew (user: "how would you apply this new design style to address book and contact sheets. mock it up", then "build it", 2026-09-02)
+
+Three surfaces: the book (§498/§511), the address sheet (§499) and the social
+profile card. **The standing rule is that no balance ever appears on any of
+them** — the book is a people screen, said in those words — so the language has
+no figure to work with here. What it has is a face, a name and one act.
+
+### 1. An empty book is one statement and one act
+
+§563's shape on the screen §498 made the app's one people surface. A book with
+nobody in it drew a `subhead13` line — the second-smallest rung on the ramp —
+under a screen title, a sync line and a foot sentence, so **the only thing a
+person could do was the quietest thing on screen.** It takes `heading34` and a
+`DSActVerb`, with the §217 cost line under it.
+
+**The SEARCH miss keeps its old line**, and that distinction is the whole
+correctness of the change: a query matching nothing is a FILTER, the book still
+holds everybody, and the act is to clear the field. The feed's own
+`filteredEmptyState` was left alone for exactly this reason (§563).
+
+**The verb focuses the field the screen already has.** One field searches AND
+saves — §461 took its Watch verb — so no second door was invented for a tile to
+point at. The copy drops to a statement: "No names yet. Name an address and
+every transfer reads by that name" becomes **"Nobody here yet"**, because what
+the naming sentence taught is what the book visibly does the moment it has one
+row, and §554 rules out teaching it to somebody who has nothing yet.
+
+### 2. The address sheet's name, and a drift the mockup did not know about
+
+§499 gave this sheet a 96pt face and set the person's name under it at
+`heading28` — the rung §506 rules "sets a sentence, never a figure", between
+`stat24` and `price40` and matching neither. Under a hero face, on a sheet about
+one person, the name was the middle tier. It takes `heading34` by LENGTH (32
+characters, smaller than the feed lede's 56 because this name is CENTRED on a
+narrower column), and `kindLine` drops to `label12` so the head is a face, a
+name and one fact.
+
+**The build found a real drift the mockup could not see: the two states
+disagreed.** The editing `TextField` was `heading28` and the resting `Text` was
+`heading22`, so tapping the name to rename it CHANGED ITS SIZE. One rule serves
+both now, which is what makes §444's in-place rename read as editing the thing
+rather than replacing it with a control.
+
+### 3. The profile card — and the half of the mockup that was wrong
+
+The card a tapped face opens. Its verb was a `callout15` row in a well, quieter
+than the bio above it, on a card that exists to answer "who is this, and do I
+want their posts" — §559's own definition of a surface whose state is
+information and whose tile is the point. **Watch is a hero tile**, tinted with
+the NETWORK's own hue since that is the seat the watch happens on, and the verb
+is "Watch" rather than "Watch @handle" because at 40pt a handle is a second line
+of address wearing a headline while the face and handle directly above already
+say who.
+
+The face steps `DS.Face.shelf` → `DS.Face.profile` — §551's own words for that
+rung, "the size a face takes when it is alone on a screen rather than one of
+several", and this card drew one person at the size a roster draws six.
+
+**THE NAME AT THE HEAD RUNG WAS DRAWN AND IS NOT BUILT.** `DSTray`'s title
+already carries `shown.title`, so a `heading34` name under the face is §538's
+duplication — the fault that entry fixed by making the head say something the
+title does not. The head stays the handle and the network, which is what the
+title cannot say. **The Watch/Unfollow pair the mockup drew is also not built**:
+the watched state has no unfollow verb on this card (§511 put that elsewhere),
+so drawing one would have been inventing a control rather than promoting one.
+
+### The pattern, fourth session running
+
+Three surfaces, and on two of them the mockup proposed something the code
+already had a ruling against — a name that would duplicate a tray title, a verb
+pair that does not exist. The mockups keep being right about WHICH surface is
+weak and wrong about how much to change, which is the correct direction for a
+drawing to be wrong in.
+
+**UNSEEN on a device.** The empty book, the sheet head at two rungs and the
+tinted profile tile are all compiled and none has been looked at; the sheet's
+name threshold is a character count on a centred column, which is the value most
+likely to want a measurement.
+

@@ -1102,8 +1102,12 @@ struct AddressCard: View {
                 .shadow(color: .black.opacity(0.55), radius: 16, y: 8)
             nameField
                 .padding(.top, DS.Space.s3)
+            // The quiet tier (prd §569). With the name at the head rung this
+            // is the fact BENEATH it — what kind of thing this is and its
+            // short form — and at `callout15` the head read as three tiers of
+            // text under a face rather than a name with a caption.
             Text(kindLine)
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .multilineTextAlignment(.center)
                 .padding(.top, 2)
             bitcoinVintageLine
@@ -1142,6 +1146,28 @@ struct AddressCard: View {
     /// subject IS the face (prd §499). Not added to the ramp: it is one
     /// screen's hero size, and `face-ramp-audit` reads the ramp for marks that
     /// repeat.
+    /// **THE NAME TAKES THE HEAD RUNG, BY LENGTH (prd §569).**
+    ///
+    /// §499 gave this sheet a 96pt face and then set the person's name under
+    /// it at `heading28` — the rung §506 rules "sets a sentence, never a
+    /// figure", sitting between `stat24` and `price40` and matching neither.
+    /// Under a hero face, on a sheet about one person, the name was the middle
+    /// tier.
+    ///
+    /// **It also fixes a real drift: the two states disagreed.** The editing
+    /// `TextField` was `heading28` and the resting `Text` was `heading22`, so
+    /// tapping the name to rename it changed its size. One rule now serves
+    /// both, which is what makes the in-place rename (§444) read as editing
+    /// the thing rather than replacing it with a control.
+    ///
+    /// A paragraph never takes it (§559). The threshold is smaller than the
+    /// feed lede's 56 because this name is CENTRED on a narrower column, so
+    /// what fits is fewer characters — a long ENS subdomain keeps `heading22`
+    /// rather than wrapping to four centred lines.
+    static func nameRung(_ name: String) -> DSTextStyle {
+        name.count <= 32 ? .heading34 : .heading22
+    }
+
     static let identityFace: CGFloat = 96
 
     /// The state worth stamping on an identity — one of your own five, or a
@@ -1295,7 +1321,7 @@ struct AddressCard: View {
         if editingName {
             VStack(spacing: DS.Space.s2) {
                 TextField("Name", text: $nameDraft)
-                    .dsText(.heading28)
+                    .dsText(Self.nameRung(nameDraft))
                     .foregroundStyle(DS.textPrimary)
                     .multilineTextAlignment(.center)
                     .textInputAutocapitalization(.words)
@@ -1328,7 +1354,7 @@ struct AddressCard: View {
             Button { beginRename() } label: {
                 HStack(spacing: DS.Space.s2) {
                     Text(current.name)
-                        .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                        .dsText(Self.nameRung(current.name)).foregroundStyle(DS.textPrimary)
                         .multilineTextAlignment(.center)
                         // The NAME reveal (2026-08-01) — `AddressMark`'s kind
                         // turn-over (prd §171) applied to the other half of the

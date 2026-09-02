@@ -998,10 +998,46 @@ struct AddressBookScreen: View {
         }
         if sections.isEmpty {
             Section {
-                Text(emptyBookLine)
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                // **AN EMPTY BOOK IS ONE STATEMENT AND ONE ACT (prd §569).**
+                //
+                // §563's shape, on the screen §498 made the app's one people
+                // surface. A book with nobody in it drew a `subhead13` line —
+                // the second-smallest rung on the ramp — under a screen title,
+                // a sync line and a foot sentence, so the only thing a person
+                // could DO here was the quietest thing on screen.
+                //
+                // **The SEARCH miss keeps its line.** A query that matches
+                // nothing is a filter, not an empty room: the book still holds
+                // everybody, the act is to clear the field, and the feed's own
+                // `filteredEmptyState` was left alone for exactly this reason.
+                //
+                // The verb focuses the field this screen already has — one
+                // field that searches AND saves (§461 took its Watch verb, so
+                // saving a name is all it does). No second door invented for a
+                // tile to point at.
+                if draft.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(emptyBookLine)
+                            .dsText(.heading34)
+                            .foregroundStyle(DS.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        DSActVerb(title: String(localized: "Add someone"),
+                                  glyph: "plus") {
+                            fieldFocused = true
+                        }
+                        .padding(.top, DS.Space.s4)
+                        Text("An address, an ENS name, or a contact")
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textTertiary)
+                            .padding(.top, DS.Space.s2)
+                    }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text(emptyBookLine)
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .listRowInsets(EdgeInsets(top: DS.Space.s4, leading: DS.Space.s4,
                                       bottom: 0, trailing: DS.Space.s4))
@@ -1145,7 +1181,11 @@ struct AddressBookScreen: View {
             // than no sentence.
             return String(localized: "No name, address or group here matches “\(draft)”.")
         }
-        return String(localized: "No names yet. Name an address and every transfer reads by that name.")
+        // A STATEMENT at the head rung, not the old sentence. What the naming
+        // sentence taught ("every transfer reads by that name") is what the
+        // book visibly does the moment there is one row in it, and §554 rules
+        // out teaching it to somebody who has nothing yet.
+        return String(localized: "Nobody here yet")
     }
 
     /// One row of the book — the shared anatomy, plus this list's gestures.

@@ -612,10 +612,20 @@ struct SocialProfileCard: View {
 
     private var header: some View {
         HStack(spacing: DS.Space.s3) {
+            // **`DS.Face.profile`, not `shelf` (prd §569)** — §551's own words
+            // for this rung, "the size a face takes when it is alone on a
+            // screen rather than one of several". This card is about one
+            // person and drew them at the size a roster draws six.
+            //
+            // The NAME is deliberately not added here: `DSTray`'s title
+            // already carries `shown.title`, and repeating it under the face
+            // is §538's duplication, which that entry fixed by making the head
+            // say something the title does not. So the head stays the handle
+            // and the network — what the title cannot say.
             if let avatar = shown.avatarURL {
-                RemoteThumb(urlString: avatar, size: DS.Face.shelf, fallback: shown.source, circular: true)
+                RemoteThumb(urlString: avatar, size: DS.Face.profile, fallback: shown.source, circular: true)
             } else {
-                BridgeIcon(name: shown.source, size: DS.Face.shelf, circular: true)
+                BridgeIcon(name: shown.source, size: DS.Face.profile, circular: true)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text("@\(shown.shortHandle)")
@@ -642,22 +652,24 @@ struct SocialProfileCard: View {
             .padding(DS.Space.s3)
             .dsWell()
         } else {
-            Button {
+            // **THE ONE ACT, AT THE HEAD RUNG (prd §569).** This card exists
+            // to answer "who is this, and do I want their posts" — everything
+            // above is information and this is the point, which is §559's own
+            // definition of the case. It was a `callout15` row in a well,
+            // quieter than the bio above it.
+            //
+            // The verb is "Watch", not "Watch @handle": at 40pt the handle is
+            // a second line of address wearing a headline, and the face and
+            // the handle directly above already say who. §511's one-word rule
+            // for this consequence, said once.
+            //
+            // The tint is the NETWORK's own colour where it has one, since
+            // that is the seat the watch happens on, falling to `DS.tint`.
+            DSActVerb(title: String(localized: "Watch"),
+                      glyph: "eye",
+                      tint: DS.brandHue(for: shown.source) ?? DS.tint) {
                 watch()
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: "eye")
-                        .dsGlyph(14)
-                        .foregroundStyle(DS.textSecondary)
-                    Text("Watch @\(shown.shortHandle)")
-                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                    Spacer(minLength: 0)
-                }
-                .padding(DS.Space.s3)
-                .dsWell()
-                .contentShape(Rectangle())
             }
-            .buttonStyle(PressSpring())
         }
     }
 
