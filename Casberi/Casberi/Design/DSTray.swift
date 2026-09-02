@@ -42,6 +42,33 @@ struct DSTray<Content: View>: View {
     var detents: Set<PresentationDetent>?
     @ViewBuilder var content: () -> Content
 
+    /// **A TITLE WRAPS, IT DOES NOT TRUNCATE** (2026-09-02, user: "in hegota we
+    /// have sheets w/ titles that are clipped now that we use bigger font").
+    ///
+    /// `heading34` is 40pt heavy, so a perfectly ordinary tray title — "Into the
+    /// UTXO vault", "This phone's account", "Keys and permissions" — no longer
+    /// fits one phone line, and the head rung is exactly where a lost word costs
+    /// most: "Into the UTXO va…" is the sheet failing to say what it is about.
+    /// `DSSheetHead` has carried the `fixedSize` guard since it was written and
+    /// the tray title never took it; this is that same line, one component over.
+    ///
+    /// The measurement is the other half. Every caller sizes its tray from the
+    /// model this component documents — "pad, title, gap, content, pad" — with
+    /// ONE line of title in it, so a title that grows to two would silently
+    /// spend a content line, and a deficit clips. `titleOverflow` hands those
+    /// points back to the sheet rather than making 27 callers each remember a
+    /// term for a wrap they cannot see from where they sit.
+    @State private var titleHeight: CGFloat = 0
+
+    /// One line of `heading34` (its own `lineHeight`), scaled the way `dsText`
+    /// scales it — `@ScaledMetric(relativeTo:)` and `UIFontMetrics` are the same
+    /// table, so the two can't drift apart at an accessibility size.
+    @ScaledMetric(relativeTo: .largeTitle) private var titleLine: CGFloat = 40
+
+    /// What the title took BEYOND the one line every caller's arithmetic
+    /// budgeted for. Zero for the ~20 short titles, so nothing moves for them.
+    private var titleOverflow: CGFloat { max(0, titleHeight - titleLine) }
+
     var body: some View {
         let tray = VStack(alignment: .leading, spacing: DS.Space.s4) {
             // The title doubles as its own catalog key — a title that isn't a
@@ -52,6 +79,12 @@ struct DSTray<Content: View>: View {
                 // 12pt caption inside it is 3.3×.
                 .dsText(.heading34)
                 .foregroundStyle(DS.textPrimary)
+                .multilineTextAlignment(.leading)
+                // …and therefore it WRAPS. See `titleHeight` above.
+                .fixedSize(horizontal: false, vertical: true)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+                    titleHeight = $0
+                }
             // **THE TRAY HAS SPENT THE HEAD RUNG, AND SAYS SO** (2026-09-02).
             // Read by `DSSheetHead`, which takes the next rung down rather than
             // drawing a second `heading34` four points under this one — see its
@@ -90,10 +123,16 @@ struct DSTray<Content: View>: View {
         // the top edge; every tray inherits it.
         .padding(.top, DS.Space.s6)
         .padding(.bottom, DS.Space.s6)
-        .presentationDetents(detents ?? [.height(height)])
+        // The overflow is paid ONLY where this component owns the number.
+        // A caller that passes its own set has already put `.large` in it —
+        // every one of the eight does — so a second line there costs a shorter
+        // resting viewport on a body that scrolls, never a dead end; adding a
+        // detent of our own to somebody else's set would leave the sheet
+        // choosing between two nearly-equal heights on open.
+        .presentationDetents(detents ?? [.height(height + titleOverflow)])
         // …and the Mac twin of that line, because the line above does NOTHING
         // there (2026-08-20). See `dsSizedSheet`.
-        .dsSizedSheet(height)
+        .dsSizedSheet(height + titleOverflow)
         .presentationDragIndicator(.visible)
         // THE CORNER UIKIT DRAWS FOR US (prd §560, 2026-09-01). `DS.Radius`'s
         // own `presentedSheet` doc argues this for "the most-opened surface in
@@ -139,7 +178,7 @@ struct DSTray<Content: View>: View {
         // swallowed. That is what Maps' sheet does and it suits a picker that
         // is a lens over the room, but it is a real behaviour change and not a
         // side effect of a colour tweak.
-        .presentationBackgroundInteraction(glass ? .enabled(upThrough: .height(height))
+        .presentationBackgroundInteraction(glass ? .enabled(upThrough: .height(height + titleOverflow))
                                                  : .automatic)
         // Feel, re-declared for this presentation (2026-08-01, user: the
         // sources tray's cells were silent). `DSHaptic` is a counter bump on a
