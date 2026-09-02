@@ -20,6 +20,88 @@ mkdir -p "$OUT"
 step() { print -P "%F{cyan}▶ $1%f"; }
 fail() { print -P "%F{red}✗ $1%f"; exit 1; }
 
+# ── Stale DerivedData sweep (2026-09-02) ───────────────────────────
+# Every concurrent Claude session mints its OWN one-off `-derivedDataPath`
+# dir under ~/Library/Developer/ or /private/tmp, and Xcode mints a
+# `Casberi-*` per checkout. Nothing ever removed any of them. MEASURED TWICE, two weeks apart, same ending:
+# 2026-08-18 it was 75 dirs / ~145 GB with the Mac down to 3.0 GB free of
+# 460; 2026-09-02 it was 34 dirs / ~100 GB, again at 3.8 GB free. The cause
+# is the normal multi-session workflow rather than a mistake, so it WILL
+# recur — and it is invisible until the disk is full, because builds keep
+# succeeding until they don't. Hence a sweep in the pass that already runs
+# on every change, rather than a note somebody has to remember.
+#
+# THREE THINGS MUST SURVIVE, protected by ABSOLUTE PATH and never by name:
+#   • $DD, CasberiCatalystDD, CasberiMacDD — this pass's and verify-mac.sh's
+#     three fixed dirs; clearing one makes that leg's next build go cold.
+#   • the NEWEST `Casberi-*` — Xcode's own live dir for this checkout.
+# By path, because a stray sharing a keeper's NAME has already happened: a
+# second `CasberiCatalystDD` nested inside DerivedData (6 GB) was swept on
+# 2026-09-02 while the real one, one directory up, was correctly kept.
+#
+# The 14-day floor is what makes a CONCURRENT session safe — a dir another
+# session is building into was touched today, so it can never match. Age is
+# the NEWEST mtime among the dir and the three subdirectories a build
+# actually writes, not the dir's own: adding a file updates a directory's
+# mtime but rewriting one does not, so a warm dir rebuilt in place every day
+# can carry a months-old timestamp and would otherwise be swept mid-use.
+#
+# `zstat`, not `find -mtime`: `find` on this machine's PATH resolves to
+# `bfs`, whose timestamp parsing differs, and a housekeeping step must not
+# depend on which `find` is installed.
+#
+# REPORTS, NEVER GATES. Housekeeping must never fail a verification pass, so
+# the whole block ends `|| true` — under `set -e` one unlink refused by a
+# permission would otherwise kill a run that had nothing to do with disk.
+# SKIP_DD_SWEEP=1 opts out.
+if [[ -z "${SKIP_DD_SWEEP:-}" ]]; then
+  {
+    zmodload -F zsh/stat b:zstat 2>/dev/null
+    _dd_newest_mtime() {          # newest mtime of the dir + what a build writes
+      local d=$1 p t newest=0
+      for p in "$d" "$d/Build" "$d/Logs" "$d/Index.noindex" "$d/ModuleCache.noindex"; do
+        [[ -e $p ]] || continue
+        t=$(zstat +mtime "$p" 2>/dev/null) || continue
+        (( t > newest )) && newest=$t
+      done
+      print -r -- $newest
+    }
+    local _cutoff=$(( $(date +%s) - 14 * 86400 ))
+    local _live="$(ls -dt "$HOME/Library/Developer/Xcode/DerivedData"/Casberi-*(N) 2>/dev/null | head -1)"
+    local -a _keep
+    _keep=("$DD" "$HOME/Library/Developer/CasberiCatalystDD"
+           "$HOME/Library/Developer/CasberiMacDD" "$_live")
+    local -a _swept
+    local _freed=0 _d _kb
+    for _d in "$HOME/Library/Developer/"Casberi*(N/) \
+              "$HOME/Library/Developer/Xcode/DerivedData/"Casberi*(N/) \
+              /private/tmp/[Cc]asberi*(N/); do
+      [[ -n "${_keep[(r)${_d%/}]:-}" ]] && continue
+      (( $(_dd_newest_mtime "$_d") < _cutoff )) || continue
+      # A /tmp name is arbitrary — sessions have used `casberi-sheets-dd`,
+      # `casberi-perf2-cat`, `casberi-ship-wt` — so the NAME may not be
+      # trusted there and the dir must PROVE it is a build cache before it
+      # is removed. Without this the same glob eats a scratch checkout or a
+      # worktree: `/private/tmp/casberi-fast-wt` and `casberi-ship-wt` are
+      # live git worktrees that match `casberi*` exactly. A DerivedData dir
+      # always carries `Build/` or `info.plist`; a checkout carries neither.
+      if [[ "$_d" == /private/tmp/* ]]; then
+        [[ -d "$_d/Build" || -e "$_d/info.plist" ]] || continue
+      fi
+      _kb=$(du -sk "$_d" 2>/dev/null | cut -f1) || _kb=0
+      rm -rf "$_d" 2>/dev/null || continue
+      _swept+=("${_d:t}")
+      (( _freed += ${_kb:-0} ))
+    done
+    if (( ${#_swept} )); then
+      local _size
+      if (( _freed >= 1048576 )); then _size="$(( _freed / 1048576 )) GB"
+      else _size="$(( _freed / 1024 )) MB"; fi
+      step "Swept ${#_swept} stale DerivedData dir(s), $_size: ${_swept[*]}"
+    fi
+  } || true
+fi
+
 # ── Mac verify runs IN PARALLEL (user rule, 2026-08-21) ────────────
 # One command verifies both platforms: the Catalyst compile gate below proves
 # the Mac still BUILDS, verify-mac.sh is the only pass that proves it still
