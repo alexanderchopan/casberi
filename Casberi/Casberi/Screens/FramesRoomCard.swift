@@ -261,24 +261,72 @@ struct FramesRoomFigure: View {
     /// is a drawing pretending to be a measurement.
     /// **FRAMES: EVERY TRANSACTION AS ITS PARTS.** The reading this seat
     /// exists for, and one no other room in this app can draw.
+    /// **THE STRIP IS THE FIGURE, AND THE SENTENCES BECOME A LEGEND
+    /// (prd §566).** The drawing sat at 20pt a row under two `subhead13`
+    /// sentences, so the thing this seat exists to show was the smallest thing
+    /// in the box while the prose about it was the largest.
+    ///
+    /// **Both sentences were already legends** — one names the dashed
+    /// vocabulary, the other says every row opens with a verify frame — and a
+    /// legend is what they become: a swatch and a word each, at `label12`, in
+    /// one row under a strip that now fills the slot. Nothing is dropped; the
+    /// rolled-back count still appears, beside the swatch that means it.
+    ///
+    /// **"or it has no payer at all" survives as a swatch that is simply
+    /// absent.** That clause exists because a transaction without a payer has
+    /// no verify frame, and in the drawing that reads as a row with no grey
+    /// opening segment — which is the fact itself rather than a sentence about
+    /// it, so the legend names Verify only when one is actually drawn.
     @ViewBuilder private var frames: some View {
         let runs = moves.filter { $0.rows.count > 1 }.prefix(6).map(\.rows)
+        let rolled = moves.flatMap(\.rolledBack).count
+        let failed = moves.flatMap(\.rows).filter { $0.outcome?.succeeded == false }.count
+        let verified = runs.contains { $0.contains { $0.frame.mode == 1 } }
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if !runs.isEmpty {
                 FramesSequenceStrip(runs: Array(runs))
-                    .frame(height: CGFloat(runs.count) * 20)
+                    .frame(maxHeight: .infinity)
                     .id(newestHash)
             }
-            let rolled = moves.flatMap(\.rolledBack).count
-            if rolled > 0 {
-                // The dashed cells above, said in words — a legend for the one
-                // state somebody must not misread.
-                note(rolled == 1
-                     ? String(localized: "The dashed step ran and was rolled back.")
-                     : String(localized: "The \(String(rolled)) dashed steps ran and were rolled back."))
-            } else {
-                note(String(localized: "Every transaction here carries a verify step, or it has no payer at all."))
+            HStack(spacing: DS.Space.s3) {
+                if verified { framesKey(DS.textTertiary, String(localized: "Verify")) }
+                framesKey(DS.tint, String(localized: "Ran"))
+                if rolled > 0 {
+                    framesKey(nil, rolled == 1
+                              ? String(localized: "Rolled back 1")
+                              : String(localized: "Rolled back \(String(rolled))"))
+                }
+                if failed > 0 {
+                    framesKey(DS.destructive, failed == 1
+                              ? String(localized: "Failed 1")
+                              : String(localized: "Failed \(String(failed))"))
+                }
+                Spacer(minLength: 0)
             }
+        }
+    }
+
+    /// One legend entry. A nil fill draws the dashed outline the strip uses for
+    /// a rolled-back step, so the swatch IS the mark it explains.
+    /// A whole-number percent, formatted once so the figure and the bar's own
+    /// end label can never disagree by a rounding step.
+    private static func percent(_ fraction: Double) -> String {
+        (fraction * 100).rounded().formatted(.number.precision(.fractionLength(0))) + "%"
+    }
+
+    @ViewBuilder private func framesKey(_ fill: Color?, _ label: String) -> some View {
+        HStack(spacing: 4) {
+            Group {
+                if let fill {
+                    RoundedRectangle(cornerRadius: 2, style: .continuous).fill(fill)
+                } else {
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .strokeBorder(DS.destructive, style: StrokeStyle(lineWidth: 1, dash: [2, 1.5]))
+                }
+            }
+            .frame(width: 8, height: 8)
+            Text(label)
+                .dsText(.label12).foregroundStyle(DS.textTertiary).lineLimit(1)
         }
     }
 
@@ -300,6 +348,21 @@ struct FramesRoomFigure: View {
         let sponsoredArrival = moves.contains {
             $0.sponsored && FramesLiveState.shared.hasJustArrived($0.hash)
         }
+        // **THE SHARE IS THE FIGURE (prd §566).** This scope is about ONE
+        // number — how much of the gas somebody else paid — and it lived only
+        // inside a `subhead13` sentence under a 14pt bar, while the headline
+        // above is the room's BALANCE, a figure this scope is not about. The
+        // share takes the head rung and the sentence that carried it goes: the
+        // bar's own two ends are named instead.
+        //
+        // `price40`, not `price48`. §506's crown is one per SURFACE and this
+        // card's headline already holds it; the ramp's word for this rung is
+        // "a figure that leads a card without being its crown".
+        //
+        // **The figure wears the tint because the tint half of the bar IS it**
+        // — colour saying what is happening rather than where it came from
+        // (§524), and the one place on this card where a hue states a fact.
+        let share = theirs + mine > 0 ? theirs / (theirs + mine) : 0
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if theirs + mine > 0 {
                 // Centred in what is left rather than pinned to the top, for
@@ -307,11 +370,34 @@ struct FramesRoomFigure: View {
                 // headline in a 210pt box reads as a drawing that failed to
                 // load.
                 Spacer(minLength: 0)
+                if theirs > 0 {
+                    HStack(alignment: .lastTextBaseline, spacing: DS.Space.s2) {
+                        Text(Self.percent(share))
+                            .dsText(.price40).monospacedDigit()
+                            .foregroundStyle(DS.tint)
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                        Text(String(localized: "of gas paid by somebody else"))
+                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                            .lineLimit(2)
+                            .frame(maxWidth: 120, alignment: .leading)
+                    }
+                }
                 FramesSponsorBar(mine: mine, theirs: theirs, glance: sponsoredArrival)
+                    .frame(height: theirs > 0 ? 44 : 14)
+                if theirs > 0 {
+                    // The bar's two ends, named where they are — this replaces
+                    // the sentence rather than adding to it.
+                    HStack(spacing: 0) {
+                        Text(String(localized: "you · \(Self.percent(1 - share))"))
+                        Spacer(minLength: DS.Space.s2)
+                        Text(String(localized: "sponsors"))
+                    }
+                    .dsText(.label12).foregroundStyle(DS.textTertiary).lineLimit(1)
+                }
                 Spacer(minLength: 0)
             }
             if theirs > 0 {
-                note(String(localized: "Somebody else paid \(Int((theirs / (theirs + mine) * 100).rounded()))% of the gas here."))
+                EmptyView()
             } else {
                 // NOT "nobody has sponsored you" — that is a claim about other
                 // people. This says only what was observed.

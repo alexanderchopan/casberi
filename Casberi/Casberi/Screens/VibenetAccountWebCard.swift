@@ -55,12 +55,26 @@ struct VibenetAccountWebCard: View {
                 // hangs off. Drawn at `shelf` rather than `row` so the
                 // asymmetry states which side is the subject without a label
                 // saying so.
+                // **THE OWNER'S NAME WAS THE SMALLEST TEXT ON THE CARD
+                // (prd §566).** It sat at `label11`/tertiary under a 56pt face
+                // while every sub-account hanging off it was drawn at
+                // `subhead13`/primary — so the subject of the figure was
+                // quieter than its dependents, which is the inversion §563 and
+                // §564 both fix elsewhere. It takes `price16`, the rung the
+                // roster rows next door use for the same job.
+                //
+                // The face ASYMMETRY is deliberate and stays: shelf against
+                // rowCircle is what states which side is the subject without a
+                // label saying so, and the mockup that proposed one size for
+                // both did not know that ruling was here.
                 VStack(spacing: DS.Space.s1) {
                     WalletFace(address: web.owner, size: DS.Face.shelf, circular: true)
                     Text(name(web.owner))
-                        .dsText(.label11)
-                        .foregroundStyle(DS.textTertiary)
+                        .dsText(.price16)
+                        .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(maxWidth: DS.Face.shelf + DS.Space.s3)
                 }
                 .padding(.top, DS.Space.s2)
                 // **THE ROWS SPREAD TO FILL THE SLOT** (user, 2026-08-26:
@@ -137,9 +151,13 @@ struct VibenetAccountWebCard: View {
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
+                // **"Watching" is what the SOLID face already says** — the
+                // unwatched node is drawn as a dashed outline right beside it,
+                // so the word restated the drawing for the majority case and
+                // pushed two tiers of text under every row (prd §566). The
+                // unwatched line stays: it is not a restatement, it is the act.
                 if node.watched {
-                    Text(String(localized: "Watching"))
-                        .dsText(.label11).foregroundStyle(DS.textTertiary)
+                    EmptyView()
                 } else if onWatch != nil {
                     Text(String(localized: "Not watched · Watch it"))
                         .dsText(.label11).foregroundStyle(DS.tint)

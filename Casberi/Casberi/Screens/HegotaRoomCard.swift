@@ -280,54 +280,115 @@ struct HegotaRoomFigure: View {
     ///
     /// The trailing inset is the settings gear's — `figureCaption`'s own
     /// clearance, spelled here because this row is not a caption.
+    /// **THE TWO TOTALS ARE THE FIGURE (prd §566).**
+    ///
+    /// §555 moved them out of a 12pt caption into `price16` column heads and
+    /// deleted the sentences around them. This finishes that move: what the
+    /// scope is ABOUT is how much came in and how much went out, so they take
+    /// the head rung and everything else on the card drops to `label12`. The
+    /// lanes, the spine, the gradient and the log tag are untouched.
+    ///
+    /// **THE QUALIFIER IS INLINE, AND THAT IS A BUDGET DECISION.** §555's sum
+    /// leaves 8pt of slack in the 166pt box and `price40` costs 18 more than
+    /// `price16`, so a separate sub-line row would overflow — which is §552's
+    /// failure, a card that renders perfectly and continues past the fold. The
+    /// caption sits beside each baseline instead, and the head stays ONE row:
+    ///
+    /// ```
+    ///   one line of price40                40
+    ///   s3                                 14
+    ///   four lanes at 24, three s1 gaps   108
+    ///   ─────────────────────────────────────
+    ///                                     162   of 166
+    /// ```
+    ///
+    /// **§503's press-in-place survives, by a different route.** That ruling
+    /// gave the picked lane a sub-line "a row that is always there, so the card
+    /// never changes height" — and with the figure at the head rung there is no
+    /// room for one. The answer takes the QUALIFIER's slot instead, so the
+    /// height is still constant and the readout is still in place. It drops the
+    /// lane's "who", which `laneSteps` prefixes: the picked lane is lit in the
+    /// band directly below, so the who is on screen already and the slot spends
+    /// its width on the part that is not.
     @ViewBuilder private func bandHead(_ band: HegotaFlow.Band,
                                        scale: HegotaScale) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(HegotaFormat.signed(band.inWei, incoming: true))
-                    .dsText(.price16).monospacedDigit().lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .foregroundStyle(band.inWei > 0 ? DS.confirm : DS.textTertiary)
-                Spacer(minLength: 0)
-                // **The tag draws ONLY on the log scale**, so its absence is
-                // how a linear band says linear — the same rule the accounts
-                // roster's own scale marks follow. A tag that is always there
-                // says nothing.
-                if scale == .logarithmic {
-                    Text(String(localized: "log"))
-                        .dsText(.label12).foregroundStyle(DS.textTertiary)
-                        .padding(.horizontal, 7).padding(.vertical, 1)
-                        .background(Capsule().fill(DS.fillFaint))
-                        .accessibilityLabel(String(localized: "Bar lengths are a log scale — the figures are exact"))
-                }
-                Spacer(minLength: 0)
-                Text(HegotaFormat.signed(band.outWei, incoming: false))
-                    .dsText(.price16).monospacedDigit().lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .foregroundStyle(band.outWei > 0 ? DS.textPrimary : DS.textTertiary)
-            }
-            Group {
-                if let lane = pickedLane {
-                    Text(laneSteps(lane))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                } else {
-                    HStack(spacing: DS.Space.s2) {
-                        Text(sideCaption(band.inLanes, incoming: true))
-                        Spacer(minLength: 0)
-                        Text(sideCaption(band.outLanes, incoming: false))
-                    }
-                }
-            }
-            .dsText(.label12).foregroundStyle(DS.textTertiary).lineLimit(1)
+        HStack(alignment: .lastTextBaseline, spacing: DS.Space.s2) {
+            sideFigure(band.inWei, incoming: true, band: band, scale: scale)
+            Spacer(minLength: DS.Space.s1)
+            sideFigure(band.outWei, incoming: false, band: band, scale: scale)
         }
-        .padding(.trailing, 56)
     }
 
-    /// What a side's total is made of — the word, and how many moves.
+    /// One side of the band: the total, and what it is of.
     ///
-    /// A COUNT of moves and not of lanes: three deposits to one vault is three
-    /// things that happened, and folding them into "1 counterparty" is the
-    /// figure describing its own drawing rather than the address's week.
+    /// Mirrored — the incoming figure leads its caption and the outgoing one
+    /// trails it — so each pair hangs off the spine the way its lanes do.
+    @ViewBuilder private func sideFigure(_ wei: Decimal,
+                                         incoming: Bool,
+                                         band: HegotaFlow.Band,
+                                         scale: HegotaScale) -> some View {
+        let has = wei > 0
+        let figure = Text(HegotaFormat.signed(wei, incoming: incoming))
+            .dsText(.price40).monospacedDigit().lineLimit(1)
+            // A four-decimal ETH total at 40pt heavy is wider than half this
+            // card. It SHRINKS rather than rounding: a rounded figure here
+            // would be a different number, and §555's log tag exists precisely
+            // to promise that these two are exact.
+            .minimumScaleFactor(0.45)
+            .foregroundStyle(has ? (incoming ? DS.confirm : DS.textPrimary)
+                                 : DS.textTertiary)
+        let caption = sideQualifier(band, incoming: incoming, scale: scale)
+        HStack(alignment: .lastTextBaseline, spacing: DS.Space.s1) {
+            if incoming {
+                figure
+                caption
+            } else {
+                caption
+                figure
+            }
+        }
+    }
+
+    /// What the figure beside it is OF — or, while a lane is pressed, what that
+    /// lane ran (§503's readout, moved into this slot; see `bandHead`).
+    @ViewBuilder private func sideQualifier(_ band: HegotaFlow.Band,
+                                            incoming: Bool,
+                                            scale: HegotaScale) -> some View {
+        VStack(alignment: incoming ? .leading : .trailing, spacing: 1) {
+            // The tag draws ONLY on the log scale, so its absence is how a
+            // linear band says linear — §555's rule, kept, and moved to the
+            // side whose figure it qualifies first.
+            if incoming, scale == .logarithmic {
+                Text(String(localized: "log"))
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    .padding(.horizontal, 7).padding(.vertical, 1)
+                    .background(Capsule().fill(DS.fillFaint))
+                    .accessibilityLabel(String(localized: "Bar lengths are a log scale — the figures are exact"))
+            }
+            Text(qualifierText(band, incoming: incoming))
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                .lineLimit(2)
+                .multilineTextAlignment(incoming ? .leading : .trailing)
+        }
+        .frame(maxWidth: 96, alignment: incoming ? .leading : .trailing)
+    }
+
+    private func qualifierText(_ band: HegotaFlow.Band, incoming: Bool) -> String {
+        if let lane = pickedLane {
+            // The picked lane's own answer. Only the incoming slot carries it:
+            // split across both it would read as two different lanes.
+            return incoming ? laneModes(lane) : ""
+        }
+        return sideCaption(incoming ? band.inLanes : band.outLanes, incoming: incoming)
+    }
+
+    /// A pressed lane's steps, without the "who" — see `bandHead`.
+    private func laneModes(_ lane: HegotaFlow.Lane) -> String {
+        lane.modes.isEmpty
+            ? String(localized: "an ordinary transfer, no steps")
+            : lane.modes.map(\.label).joined(separator: ", ")
+    }
+
     private func sideCaption(_ lanes: [HegotaFlow.Lane], incoming: Bool) -> String {
         let moves = lanes.reduce(0) { $0 + $1.count }
         if incoming {
@@ -460,15 +521,6 @@ struct HegotaRoomFigure: View {
     /// **The one fact the band cannot show and the room has nowhere else to
     /// put** — a lane is tinted by its LEADING mode, so a lane that was half
     /// verify and half UTXO looks exactly like one that was all UTXO.
-    private func laneSteps(_ lane: HegotaFlow.Lane) -> String {
-        let who = lane.isOther
-            ? String(localized: "these")
-            : HegotaName.of(lane.address, watched: accounts.map(\.address))
-        guard !lane.modes.isEmpty else {
-            return String(localized: "\(who) — an ordinary transfer, no steps")
-        }
-        return String(localized: "\(who) — \(lane.modes.map(\.label).joined(separator: ", "))")
-    }
 
     /// The bar itself. A floor, because a bar of no width is indistinguishable
     /// from a lane that is not there — and the small lanes are the ones a
@@ -590,13 +642,30 @@ struct HegotaRoomFigure: View {
     }
 
     /// One watched address: its name, and the scopes it has something to say in.
+    /// **THE ROW IS WHAT THIS SCOPE IS ABOUT (prd §566).**
+    ///
+    /// §555 settled what Accounts means — "a watched address always has a
+    /// roster row, even one that says the chain could not be reached, which is
+    /// itself the answer" — and then drew every word of it at `label12`, the
+    /// quiet tier, on the one scope whose subject is these addresses. The name
+    /// steps to `price16` and gains the face §555 asked for in its own words
+    /// ("i don't like seeing so many different sizes of silhouette avatars"):
+    /// ONE size, `DS.Face.list`, the same 36pt disc the hero lockup uses.
+    ///
+    /// Three rows at 48 with two `s2` gaps is 164 of the 166pt box, which is
+    /// why `HegotaRoster.cap` is 3 and why this height is written down.
+    ///
+    /// The badges are untouched. An unreached address dims its face as well as
+    /// its name, so the state is in the drawing and not only in the words.
     @ViewBuilder private func rosterRow(_ row: HegotaRoster.Row) -> some View {
-        HStack(spacing: DS.Space.s2) {
+        HStack(spacing: DS.Space.s3) {
+            WalletFace(address: row.address, size: DS.Face.list, circular: true)
+                .opacity(row.reached ? 1 : 0.45)
             Text(HegotaWatch.shared.name(for: row.address)
                  ?? WalletStore.shortAddress(row.address))
-                .dsText(.label12)
-                .foregroundStyle(row.reached ? DS.textSecondary : DS.textTertiary)
-                .lineLimit(1)
+                .dsText(.price16)
+                .foregroundStyle(row.reached ? DS.textPrimary : DS.textTertiary)
+                .lineLimit(1).minimumScaleFactor(0.75)
             Spacer(minLength: DS.Space.s2)
             HStack(spacing: 6) {
                 ForEach(row.badges) { rosterBadge($0) }
@@ -605,12 +674,7 @@ struct HegotaRoomFigure: View {
         .frame(height: Self.rosterRowHeight)
     }
 
-    /// **32, and the sum is written down.** The slot gives the figure 168.
-    /// Three rows plus their two `s2` gaps is 112, the ellipsis row and its own
-    /// gap another 24 — 136, with 32 of slack for a step or two of Dynamic
-    /// Type. It is a whole rung taller than the lane rows it replaced because
-    /// this figure draws three things where that one draws eight.
-    private static let rosterRowHeight: CGFloat = 32
+    private static let rosterRowHeight: CGFloat = 48
 
     /// One mark. **A figure only where the mark is an inventory** — see
     /// `HegotaRoster.Mark.counted`; the other two are a glyph in a circle,
@@ -732,17 +796,63 @@ struct HegotaRoomFigure: View {
     /// The legend names the modes actually present, in the mix's own ranked
     /// order, so the colours are learnable from the drawing rather than from a
     /// sheet you have to open first.
+    /// How tall one frame strip is, so the drawing FILLS the box rather than
+    /// sitting at a fixed 14pt inside it (prd §566).
+    ///
+    /// A sum rather than a guess, in the shape §553 and §555 both use — the
+    /// slot is fixed, the chrome under it is known, and what is left is the
+    /// drawing's. Floored at the old 14 so a many-rowed band can never be
+    /// worse than it was, and capped at 34 so a single strip does not become a
+    /// slab: a frame strip is a texture, and one bar filling the box reads as a
+    /// progress meter.
+    private static func frameStripHeight(rows: Int, hasMore: Bool) -> CGFloat {
+        guard rows > 0 else { return 14 }
+        // The caption, the legend, §510's remainder line where it draws, and
+        // the gaps the `s1` stack puts between all of them.
+        let chrome = 16 + DS.Space.s1
+                   + 16 + DS.Space.s1
+                   + (hasMore ? 16 + DS.Space.s1 : 0)
+        let gaps = 5 * CGFloat(rows - 1)
+        let room = DSRoomChassis.figureSlot - chrome - gaps
+        return max(14, min(34, room / CGFloat(rows)))
+    }
+
     @ViewBuilder private var framesFigure: some View {
         if let mix = HegotaFrameMix.of(framedMoves) {
             let rows = Array(framedMoves.prefix(Self.frameRows))
             // `s1`, not `s2`: the caption, the legend and the note all belong
             // TO the drawing rather than beside it, and the three gaps are
             // also what buys the note its room inside `frameRows`' budget.
+            // **THE STRIPS FILL THE BOX (prd §566).** The drawing this scope
+            // exists for sat at a fixed 14pt inside a 166pt slot while every
+            // word around it was larger. It takes the room that is actually
+            // left instead — see `frameStripHeight`.
+            //
+            // **THE CAPTION STAYS, and deleting it was the mistake this
+            // comment exists to record.** It looks like a duplicate of the
+            // headline and is not: the headline counts STEPS and the caption
+            // counts TRANSACTIONS — §510's exact confusion — and it is also
+            // the only place a FAILED step is named. Removing it lost two
+            // facts to win 16pt, and orphaned `HegotaFrameMix.leaders`, which
+            // this room's harness spends twenty assertions and three mutations
+            // on. The strips grow 14 → 22 with every fact kept, which is the
+            // trade that was actually available.
+            //
+            // **§510's line stays whole for the same reason.**
+            // The obvious tidy — folding "4 of 11" into the legend's trailing
+            // end — drops "step counts cover all", and §510 says in its own
+            // words that "naming the remainder without naming the census
+            // leaves the contradiction intact": the legend counts steps over
+            // every framed transaction while the bars are capped, so both
+            // halves have to be said or the two numbers on the card cannot be
+            // reconciled by any arithmetic.
+            let strip = Self.frameStripHeight(rows: rows.count,
+                                              hasMore: framedMoves.count > rows.count)
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 figureCaption(framesCaption(mix), lines: 1)
                 VStack(spacing: 5) {
                     ForEach(rows) { move in
-                        HegotaFrameStrip(frames: move.frames ?? [], height: 14,
+                        HegotaFrameStrip(frames: move.frames ?? [], height: strip,
                                          weighted: true)
                     }
                 }
@@ -793,6 +903,12 @@ struct HegotaRoomFigure: View {
     /// down: §83's fake status, refuted on its own card, and reported as the
     /// card not adding up. A tie is a real and interesting answer here, so it
     /// is said rather than broken.
+
+    /// The modes present, in the mix's ranked order, each with its count.
+    ///
+    /// Deliberately NOT every mode the chain defines: a legend listing four
+    /// colours this address has never used teaches the palette and says nothing
+    /// about the person, and it is the same dead-chrome objection §83 makes.
     private func framesCaption(_ mix: HegotaFrameMix) -> String {
         let leaders = mix.leaders
         guard !leaders.isEmpty else {
@@ -834,11 +950,6 @@ struct HegotaRoomFigure: View {
         return String(localized: "\(what) · no commonest step")
     }
 
-    /// The modes present, in the mix's ranked order, each with its count.
-    ///
-    /// Deliberately NOT every mode the chain defines: a legend listing four
-    /// colours this address has never used teaches the palette and says nothing
-    /// about the person, and it is the same dead-chrome objection §83 makes.
     @ViewBuilder private func framesLegend(_ mix: HegotaFrameMix) -> some View {
         HStack(spacing: DS.Space.s3) {
             ForEach(mix.slices.prefix(4)) { slice in

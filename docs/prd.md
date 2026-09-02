@@ -45157,3 +45157,92 @@ All four sheets, all four scopes, on iPhone 17 Pro. What is still unseen is
 every state the demo cannot produce: a sponsor with more than one transaction,
 a frame carrying calldata, a state-starved frame, and any of it on a device
 rather than a simulator.
+## 566. Six room figures take the language — and the one deletion that lost facts, caught and reversed (user: "using our new language mock up a new version of" six charts, then "do all", 2026-09-02)
+
+§563/§564/§565 put the house grammar on an act, a claim and a treemap's leader.
+This applies it to the six figures of the three devnet rooms. **The chassis is
+untouched throughout**: the `stat24` headline keeps its 30pt row (§551, measured)
+and every change happens inside the 166pt figure box, whose budget is written
+down per figure the way §553 and §555 write theirs.
+
+**§506 was checked before anything moved, and it dissolves both flags the
+mockup raised.** The crown rung is `price48`, one per SURFACE; `price40` is the
+ramp's own "a figure that leads a card without being its crown". Activity's pair
+and Sponsors' share are that rung, not a second crown.
+
+### The six
+
+**1. Hegotá · Activity.** §555 moved the two totals from a 12pt caption into
+`price16` column heads; they take the head rung now. **The qualifier is INLINE,
+and that is a budget decision** — §555's sum leaves 8pt of slack and `price40`
+costs 18 more, so a separate sub-line would overflow, which is §552's failure
+(renders perfectly, continues past the fold). One row: 40 + s3 + four lanes at 24
+with three s1 gaps = 162 of 166. **§503's press-in-place survives by a different
+route**: the readout takes the qualifier's slot rather than a row of its own, so
+the height is still constant, and it drops the lane's "who" because the pressed
+lane is lit in the band directly below — the slot spends its width on the part
+that is not already on screen.
+
+**2. Hegotá · Accounts.** §555 settled what this scope means and then drew every
+word of it at `label12`. The name steps to `price16` and gains the face §555
+asked for in its own words ("i don't like seeing so many different sizes of
+silhouette avatars") — ONE size, `DS.Face.list`, the 36pt disc the hero lockup
+uses. Three rows at 48 with two `s2` gaps is 164 of 166, which is why
+`HegotaRoster.cap` is 3. An unreached address dims its face as well as its name,
+so the state is in the drawing and not only in the words. **The recency line the
+mockup drew is NOT built**: `HegotaRoster.Row` carries address, reached and
+badges, and nothing else — the rows are ordered by recency but no timestamp
+reaches the view, so drawing "used 2h ago" would have been inventing it.
+
+**3. Hegotá · Frames.** The strips fill the box instead of sitting at a fixed
+14pt inside it (`frameStripHeight`, a sum in the §553 shape: the slot is fixed,
+the chrome is known, the rest is the drawing's). Floored at the old 14 so a
+many-rowed band is never worse, capped at 34 because a single strip filling the
+box reads as a progress meter rather than a texture.
+
+**4. Frames · Frames.** The strip fills, and the two `subhead13` sentences become
+a legend — which is what they already were, one naming the dashed vocabulary and
+one naming the verify frame. Nothing is dropped and a FAILED count is gained. The
+"or it has no payer at all" clause is carried by the drawing instead: a
+transaction with no payer has no verify frame, which reads as a row with no grey
+opening segment, so the legend names Verify only when one is actually drawn.
+
+**5. Frames · Sponsors.** The one number this scope is about lived inside a
+`subhead13` sentence under a 14pt bar, while the headline above it is the room's
+BALANCE — a figure this scope is not about at all. The share takes `price40`, the
+bar grows to 44 and its two ends are named, and the sentence goes. The figure
+wears the tint **because the tint half of the bar IS it** (§524: colour says what
+is happening, not where it came from). One `percent` formatter serves the figure
+and the end label so they cannot disagree by a rounding step.
+
+**6. vibenet · Accounts.** The owner's name sat at `label11`/tertiary under a
+56pt face while every sub-account hanging off it was `subhead13`/primary — **the
+subject of the figure drawn quieter than its dependents.** It takes `price16`.
+The "Watching" sub-line goes, because the solid face says it and the unwatched
+node is already a dashed outline right beside it; the unwatched line stays, since
+it is not a restatement but an act. **The face ASYMMETRY the mockup proposed
+flattening is KEPT** — shelf against rowCircle is what states which side is the
+subject without a label, and that reasoning was in the file; the mockup did not
+know it was there.
+
+### The mistake, which is the entry's real content
+
+**Deleting Hegotá's frames caption lost two facts, and it looked exactly like a
+duplicate.** It read as a restatement of a headline already saying "N steps" —
+but the headline counts STEPS and the caption counts TRANSACTIONS, which is
+§510's own confusion, and it is the only place a FAILED step is named. It also
+orphaned `HegotaFrameMix.leaders`, which this room's harness spends twenty
+assertions and three mutations on: a model function with no caller, its tie
+handling still guarded, guarding nothing.
+
+It was caught by asking which harness guards name the lines being changed rather
+than by running the suite — the drift greps are seconds where the harness is
+fifteen minutes — and reversed. The strips grow 14 → 22 with every fact kept,
+which is the trade that was actually available. **The generalisable form: before
+deleting a line because a larger one says it, check whether the two count
+different populations.** They did here, and §510 exists because they did.
+
+**UNSEEN on a device.** Every one of the six is a fixed-slot layout whose budget
+is arithmetic, and §552/§553 are two entries about that arithmetic being wrong on
+the first run. Six figures, no screenshots.
+
