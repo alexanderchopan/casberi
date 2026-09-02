@@ -252,6 +252,34 @@ else
   fail "the rowBudget guard does not precede recomputeHeads()"
 fi
 
+# B1b. THE SAME DECLINE ON BOTH `@Query`-STALENESS SAFETY NETS (2026-09-01).
+#      Those nets compare a real SQL COUNT against `things.count` and run a
+#      recovery fetch on a mismatch — and while the swipe's bound is set the
+#      mismatch is GUARANTEED, because we set it: 150 rows against a room of
+#      thousands. Without this guard every room swipe runs a full, main-actor,
+#      fully-hydrated fetch inside the slide's own frames, which is the largest
+#      single cost in this file and goes red nowhere. Anchored to the line each
+#      guard precedes, since all three now share one spelling.
+net_all="$(perl -0777 -ne 'print $1 if /\.task\(id: safetyNetKey\) \{(.*?)\n        \}/s' "$FEED_STRIPPED")"
+if print -r -- "$net_all" | grep -Eq 'guard rowBudget == nil else \{ return \}'; then
+  ok "the All-room staleness net declines while rowBudget is set"
+else
+  fail "the All-room staleness net does NOT decline while rowBudget is set"
+fi
+if grep -Eq 'guard rowBudget == nil else \{ return \}\s*$' "$FEED_STRIPPED" \
+   && perl -0777 -ne 'exit(/guard rowBudget == nil else \{ return \}\n            if things\.isEmpty/s ? 0 : 1)' "$FEED_STRIPPED"; then
+  ok "the per-source staleness net declines while rowBudget is set"
+else
+  fail "the per-source staleness net does NOT decline while rowBudget is set"
+fi
+# Both nets must be keyed so the check RE-FIRES when the bound lifts. Keyed on
+# `scenePhase` alone the guard above would not defer the net but DISABLE it for
+# the life of the mount — and a room entered by swiping is most rooms.
+check "the staleness nets re-fire when the bound lifts" \
+      "$FEED" 'private var safetyNetKey' yes
+check "safetyNetKey carries the budget" \
+      "$FEED" 'rowBudget == nil \? "\|full" : "\|bounded"' yes
+
 # B2. The bound is TRANSIENT. A `rowBudget` that no one clears is the permanent
 #     `fetchLimit` the 2026-08-14 ruling refused, wearing a new name.
 check "MainSurface arms the budget on a room change" \
@@ -398,7 +426,22 @@ fi
 
 print -r -- "mutations"
 mfails=0
-mutate "the head task stops declining on a bound room (§83)"  feed 's/guard rowBudget == nil else \{ return \}//' || mfails=$((mfails + 1))
+# ANCHORED to the line it follows, and that anchoring is the point (2026-09-01).
+# `perl -0777` with no /g removes the FIRST match in the whole file, and this
+# guard is no longer unique: the two `@Query`-staleness safety nets took the
+# same one-line guard above, for the same swipe budget. Unanchored, this
+# mutation deleted a SAFETY NET's guard, left the head task's intact, and
+# survived — a mutation that no longer breaks the rule it names, which is this
+# repo's own standing lesson about a fixture that passes for the wrong reason.
+mutate "the head task stops declining on a bound room (§83)"  feed \
+  's/guard rowBudget == nil else \{ return \}\n            recomputeHeads\(\)/recomputeHeads()/' || mfails=$((mfails + 1))
+# The same guard on each safety net, pinned separately — each is the whole
+# reason a room swipe no longer runs a full main-actor fetch mid-animation, and
+# each is one line that reads as redundant.
+mutate "the All-room staleness net stops declining on a bound room"  feed \
+  's/guard rowBudget == nil else \{ return \}\n            let cappedRaw/let cappedRaw/' || mfails=$((mfails + 1))
+mutate "the per-source staleness net stops declining on a bound room"  feed \
+  's/guard rowBudget == nil else \{ return \}\n            if things\.isEmpty/if things.isEmpty/' || mfails=$((mfails + 1))
 mutate "RoomHeads gains a Thing"  feed 's/(private struct RoomHeads \{)/$1\n        let row: Thing?/' || mfails=$((mfails + 1))
 mutate "the memo is keyed by source alone (a scope change flashes the wrong head)"  feed \
   's/headMemo\[headIdentity\]/headMemo[source]/g' || mfails=$((mfails + 1))

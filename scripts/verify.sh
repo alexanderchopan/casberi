@@ -443,6 +443,26 @@ python3 "$ROOT/scripts/privacy-cover-audit.py" \
   || fail "the app-switcher redaction can be raised and not lowered — see the output above"
 print -P "%F{green}✓ privacy cover audit%f"
 
+# A view body must not write the @Observable state it reads (PERF 2026-09-01).
+# `ShellChrome`'s generated setter mutates unconditionally, so a body that
+# assigns `chrome.x` and reads it back in the same pass invalidates itself for
+# as long as the room is on screen. Mechanical because the rule was ALREADY
+# WRITTEN DOWN — `FeedScreen.memo`'s own doc states it, which is why `memo` is a
+# plain class — and it still reached two rooms: Hegotá wrote its sections from
+# inside `roomBody`, Frames copied Hegotá three weeks later, and both shipped
+# while Wallet and Vibenet did the same publish correctly from `.onChange` in
+# the same file. Invisible to everything else here: it compiles, it renders
+# perfectly, and the screen sweep photographs a correct screen. Its second check
+# guards the swipe budget's own one-line guard on the two `@Query`-staleness
+# safety nets, whose absence puts an unbounded main-actor fetch inside every
+# room swipe and goes red nowhere.
+step "Body-publish audit"
+python3 "$ROOT/scripts/body-publish-audit.py" --self-test >/dev/null \
+  || fail "the body-publish audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/body-publish-audit.py" \
+  || fail "a view body writes the observable state it reads — see the output above"
+print -P "%F{green}✓ body-publish audit%f"
+
 # A room head matches its rows by ref prefix, the bridge stamps that prefix in
 # a different file, and nothing checked the two agree. When they stop agreeing
 # the room does not break, it goes QUIET — every row still landed, the head

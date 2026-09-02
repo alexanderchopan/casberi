@@ -1964,20 +1964,55 @@ enum VibenetState {
     /// redeploys weekly.
     private static let key = "vibenet.room.snapshot.v2"
 
+    /// MEMOISED IN PROCESS (PERF 2026-09-01) — `VibenetContracts.cached()`'s
+    /// pattern, for a sharper form of its own reason.
+    ///
+    /// Every call was a `UserDefaults` read plus a `JSONDecoder` pass over the
+    /// WHOLE snapshot — items, actors, transfers, policy runs, pulse — and the
+    /// callers are view bodies. `FeedScreen.vibenetSectionPublication` alone
+    /// resolves it as an `onChange` key (evaluated on every body pass), as the
+    /// footer's row gate, and from several more sites in the room's own
+    /// sections, so a single pass over the vibenet room decoded this four to
+    /// eight times. In demo mode it is worse: `card()` falls through to
+    /// `VibenetRoom.demoFixture()`, ~260 lines of nested value construction,
+    /// rebuilt per call.
+    ///
+    /// Safe rather than clever, for the same structural reason as the contracts
+    /// cache: this is a cache OF a cache, and its only writers are `save` and
+    /// `forget` below, both of which update the memo — so it cannot go stale
+    /// behind a write. Every call site in the app funnels through those two.
+    /// Not actor-isolated because this property never was; the decoded value is
+    /// a `let`-only struct.
+    private nonisolated(unsafe) static var memo: VibenetRoom?
+    private nonisolated(unsafe) static var memoLoaded = false
+
     static var saved: VibenetRoom? {
-        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
-        return try? JSONDecoder().decode(VibenetRoom.self, from: data)
+        if memoLoaded { return memo }
+        memoLoaded = true
+        guard let data = UserDefaults.standard.data(forKey: key) else {
+            memo = nil
+            return nil
+        }
+        memo = try? JSONDecoder().decode(VibenetRoom.self, from: data)
+        return memo
     }
 
     static func save(_ room: VibenetRoom) {
         guard let data = try? JSONEncoder().encode(room) else { return }
         UserDefaults.standard.set(data, forKey: key)
+        // The memo tracks what was STORED, so it is set from the value in hand
+        // rather than dropped — a drop would make the next read decode bytes we
+        // are already holding.
+        memo = room
+        memoLoaded = true
     }
 
     /// Disconnecting forgets the snapshot too — otherwise the head keeps
     /// drawing accounts that are no longer watched.
     static func forget() {
         UserDefaults.standard.removeObject(forKey: key)
+        memo = nil
+        memoLoaded = true
     }
 }
 

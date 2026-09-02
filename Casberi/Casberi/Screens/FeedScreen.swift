@@ -1961,7 +1961,18 @@ struct FeedScreen: View {
                 // room, permanently, with every other fix in place. Reported
                 // from a device three times before this was found, because
                 // nothing static can see a memo that never invalidates.
-                HegotaRoomSource.identity,
+                //
+                // SCOPED TO ITS OWN ROOM (PERF 2026-09-01). Read
+                // unconditionally this was correct and expensive in the wrong
+                // place: `identity` touches `HegotaLiveState.shared`, an
+                // `@Observable`, and this property is evaluated from EVERY
+                // room's body through `headKey` — so All, X and Wallet each
+                // took an observation dependency on devnet state, and a sweep
+                // tick invalidated whichever room you were actually standing
+                // in. The term is only ever load-bearing for the room whose
+                // own revision cannot move, so asking it only there loses
+                // nothing the note above describes.
+                source == HegotaIdentity.source ? HegotaRoomSource.identity : "",
                 // **AND THE SECOND SEAT OF THAT KIND** (prd §548). The note
                 // above was written for Hegotá and applies to the Frames
                 // devnet word for word — it lands no row either, so its
@@ -1972,7 +1983,10 @@ struct FeedScreen: View {
                 // the chain…" forever. Found on a simulator, not by a check:
                 // nothing static can see a memo that never invalidates, which
                 // is the whole reason the note above exists.
-                FramesRoomSource.identity,
+                // Scoped for the same reason as Hegotá's above, and with the
+                // same nothing lost — this key matters only in the room whose
+                // revision is frozen.
+                source == FramesIdentity.source ? FramesRoomSource.identity : "",
                 String(revision.count), String(revision.signal)]
             .joined(separator: "|")
     }
@@ -1995,6 +2009,29 @@ struct FeedScreen: View {
     /// deferred but DROPPED — nil until some unrelated change moves the count.
     private var headKey: String {
         headIdentity + (rowBudget == nil ? "|full" : "|bounded")
+    }
+
+    /// The two `@Query`-staleness safety nets' id, for `headKey`'s exact reason
+    /// one job over (PERF 2026-09-01).
+    ///
+    /// Those nets compare a real SQL `COUNT` against `things.count` and fetch on
+    /// a mismatch. `rowBudget` is the swipe's transient bound, so while it is
+    /// set the mismatch is GUARANTEED and manufactured by us — 150 rows against
+    /// a room of thousands — and the recovery fetch they then run is the largest
+    /// single main-actor cost in this file, landing inside the frames the slide
+    /// animation needs. That is the "lag swiping between screens" report,
+    /// arriving by the one route the head task's own `rowBudget` guard did not
+    /// already close.
+    ///
+    /// **The guard alone would be a correctness bug, and this key is why it is
+    /// not.** `scenePhase` does not move when the budget lifts, so a net that
+    /// declined mid-swipe would never re-run for the life of the mount — and a
+    /// room entered by swiping is most rooms. The net would not be deferred but
+    /// DISABLED, on exactly the device it exists to save (FB14619787). Same trap
+    /// `headKey` documents above, same shape of fix: the budget is in the id, so
+    /// the check follows a few hundred ms later on its own.
+    private var safetyNetKey: String {
+        "\(scenePhase)" + (rowBudget == nil ? "|full" : "|bounded")
     }
 
     /// The room's own narrowing, as ONE rule — the lane strip scopes everything
@@ -2995,6 +3032,28 @@ struct FeedScreen: View {
                 chrome.vibenetSections = []
                 chrome.vibenetSectionAttention = []
             }
+            // The two devnet rooms' half of the same contract (PERF
+            // 2026-09-01), replacing writes made from inside `roomBody` — see
+            // `hegotaSectionPublication`. `initial: true` for the reason the two
+            // above give: both rooms' live state is usually already loaded by
+            // the time the room mounts, so a room that never changes afterwards
+            // would publish nothing and draw no switcher at all.
+            .onChange(of: hegotaSectionPublication, initial: true) { _, now in
+                chrome.hegotaSections = now
+            }
+            .onChange(of: framesSectionPublication, initial: true) { _, now in
+                chrome.framesSections = now
+            }
+            // Cleared on the way OUT, which the body-path writes never did:
+            // every room evaluated those lines, so the list left behind was
+            // whatever the last devnet visit put there. The list is also each
+            // switcher's own gate, so clearing it is what makes "a devnet
+            // switcher cannot appear over another room" true by construction
+            // rather than by a source test in two files.
+            .onDisappear {
+                if source == HegotaIdentity.source { chrome.hegotaSections = [] }
+                if source == FramesIdentity.source { chrome.framesSections = [] }
+            }
     }
 
     /// Every token the treemap maps, as rows (prd §483).
@@ -3489,6 +3548,36 @@ struct FeedScreen: View {
         return .init(sections: sections, attention: VibenetSection.attention(room))
     }
 
+    /// What the two DEVNET rooms publish to the shell — the scopes each one has
+    /// (PERF 2026-09-01).
+    ///
+    /// Guarded on `source` FIRST for the reason Wallet's and Vibenet's are
+    /// guarded on `shape`: these are read by every room as `onChange` keys, and
+    /// SwiftUI evaluates a key on every body pass — so the cheap term has to be
+    /// the one that decides. Unguarded they would also publish a devnet strip
+    /// over whatever room is on screen.
+    ///
+    /// **These exist because both rooms used to write `chrome.*Sections` from
+    /// inside their own body**, and the same pass read the value back a few
+    /// lines later (the figure, the rail, the switcher's `present:`).
+    /// `ShellChrome` is `@Observable` and its generated setter mutates
+    /// unconditionally — an equal-valued write still invalidates every
+    /// observer — while `sections()` returns a fresh array per call, so the
+    /// body invalidated itself for as long as the room was on screen. Wallet
+    /// and Vibenet published the identical kind of value correctly from
+    /// `onChange` the whole time; these two seats copied each other instead,
+    /// which is why the file states the rule against it in `memo`'s own doc and
+    /// it still reached two rooms.
+    private var hegotaSectionPublication: [HegotaSection] {
+        guard source == HegotaIdentity.source else { return [] }
+        return HegotaRoomSource.sections()
+    }
+
+    private var framesSectionPublication: [FramesSection] {
+        guard source == FramesIdentity.source else { return [] }
+        return FramesRoomSource.sections()
+    }
+
     /// Whether the vibenet room is currently drawing its event rows — true for
     /// every other room, so this reads as a plain pass-through everywhere it is
     /// not vibenet. One derivation, so the footer and the rows can never
@@ -3969,7 +4058,9 @@ case .vibenetSend(let account):
             // `if/else if` falls through BOTH arms and renders nothing at all.
             // This seat lands no `Thing` EVER, so its rows are always zero and
             // its entire content is this head.
-            let _ = { chrome.framesSections = FramesRoomSource.sections() }()
+            // Published from `.onChange(of: framesSectionPublication)` up in
+            // `body`, NOT written here — see `framesSectionPublication` for what
+            // a body that writes its own observed state costs.
             let framesScope = FramesSection.resolve(chrome.framesSection,
                                                     present: chrome.framesSections)
             // **FIGURE FIRST, THEN THE SLAB** — Wallet's order, which Hegotá
@@ -4055,8 +4146,11 @@ case .vibenetSend(let account):
             // which is what put this room's rails out of line with Wallet's.
             // The room publishes what it HAS, so the switcher never offers a
             // chip that opens nothing — derived from the composed room rather
-            // than the watch list (the face rail's own rule).
-            let _ = { chrome.hegotaSections = HegotaRoomSource.sections() }()
+            // than the watch list (the face rail's own rule) — published from
+            // `.onChange(of: hegotaSectionPublication)` up in `body`, NOT
+            // written here. It was written here until 2026-09-01, and since
+            // `ShellChrome` is `@Observable` and the reads below are in this
+            // same pass, that was a body which invalidated itself continuously.
             hegotaChainNoticeSection
             hegotaVisualSection
             hegotaRailSection
@@ -4421,13 +4515,27 @@ case .vibenetSend(let account):
         // uncapped comparison would read as a permanent mismatch and run
         // the expensive fallback on every foreground, defeating the bound
         // `things` exists to enforce.
-        .task(id: scenePhase) {
+        .task(id: safetyNetKey) {
             guard source == "All", filter.tag == "All", scenePhase == .active else { return }
+            // NEVER against a transiently bounded query — see `safetyNetKey`.
+            // While the swipe budget is set, `things` holds 150 rows by our own
+            // instruction, so the comparison below cannot mean what it is
+            // written to mean and the mismatch is manufactured.
+            guard rowBudget == nil else { return }
             let cappedRaw = min(Corpus.count(in: modelContext), Self.allRoomFetchLimit)
             guard cappedRaw != things.count else { return }
-            guard let raw = try? modelContext.fetch(FetchDescriptor<Thing>(
-                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))
-            else { return }
+            // BOUNDED like its per-source sibling below, and here the bound is
+            // not a trade but a CORRECTION: `things` is capped at
+            // `allRoomFetchLimit` and `cappedRaw` is compared at that cap, so an
+            // unbounded recovery re-derived this room's snapshot from a
+            // different, larger set than the room is defined to hold — on the
+            // largest corpora, the whole store, fully hydrated, on the main
+            // actor. At the cap it reproduces exactly the array a healthy
+            // `@Query` would have handed over.
+            var descriptor = FetchDescriptor<Thing>(
+                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+            descriptor.fetchLimit = Self.allRoomFetchLimit
+            guard let raw = try? modelContext.fetch(descriptor) else { return }
             let next = liveVisible(rawOverride: raw)
             allSnapshotKey = snapshotSignature(next)
             debouncedAllSnapshot = next
@@ -4471,9 +4579,20 @@ case .vibenetSend(let account):
         // below still covers the rarer PARTIAL-staleness case (some rows
         // showing, newer ones missing) where the predicate has already
         // demonstrated it can be trusted this session.
-        .task(id: scenePhase) {
+        .task(id: safetyNetKey) {
             guard source != "All", !Pinboard.isPinnedRoom(source), scenePhase == .active
             else { return }
+            // NEVER against a transiently bounded query — see `safetyNetKey`.
+            // This arm is the more expensive of the two and the one a swipe
+            // reaches: with the budget set, `things` holds 150 rows, so the
+            // `rawCount != things.count` test below is TRUE for every room of
+            // any size, and the predicated recovery fetch runs — unbounded and,
+            // since 2026-08-31, carrying the heavy inline text — on the main
+            // actor, during the slide. It stays unbounded afterwards on
+            // purpose: a source room's head describes the WHOLE room (the
+            // init's own 2026-08-14 refusal of a permanent `fetchLimit`), so
+            // the fix here is to run it at the right TIME, never to truncate it.
+            guard rowBudget == nil else { return }
             if things.isEmpty {
                 // BOUNDED, and the bound is load-bearing (2026-08-31): a
                 // legitimately empty source room is the COMMON case, not a
@@ -5330,8 +5449,7 @@ case .vibenetSend(let account):
             // channel's wordless pictures lead as a grid, while its captioned
             // posts, your Saved Messages and whole imported conversations all
             // read as rows beneath them.
-            let tiles = visible.live.filter(Self.isTelegramPhotoTile)
-            let rest = visible.live.filter { !Self.isTelegramPhotoTile($0) }
+            let (tiles, rest) = Self.splitTiles(visible.live, by: Self.isTelegramPhotoTile)
             if !tiles.isEmpty { photoGridSection(tiles) }
             let telegramDays = chronoGroups(rest)
             groupedSections(telegramDays, nextEventID: nextEventID,
@@ -5348,8 +5466,7 @@ case .vibenetSend(let account):
             // one. A photograph with a caption stays a post card, because the
             // caption is the post — extracting its picture into a grid would
             // separate the two halves of one thing.
-            let photoTiles = visible.live.filter(Self.isXPhotoTile)
-            let rest = visible.live.filter { !Self.isXPhotoTile($0) }
+            let (photoTiles, rest) = Self.splitTiles(visible.live, by: Self.isXPhotoTile)
             if !photoTiles.isEmpty { photoGridSection(photoTiles) }
             // A THREAD READS AS A THREAD (2026-08-18, prd §396). The archive
             // has named a self-reply's parent since §308, and until this pass
@@ -5370,8 +5487,7 @@ case .vibenetSend(let account):
             // The mixed room's fourth instance (2026-08-18, prd §395), on
             // Snapchat's, Files' and X's terms: what has pixels AND nothing to
             // say leads as a grid, everything else reads as rows.
-            let photoTiles = visible.live.filter(Self.isInstagramPhotoTile)
-            let rest = visible.live.filter { !Self.isInstagramPhotoTile($0) }
+            let (photoTiles, rest) = Self.splitTiles(visible.live, by: Self.isInstagramPhotoTile)
             if !photoTiles.isEmpty { photoGridSection(photoTiles) }
             let days = chronoGroups(rest)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
@@ -5382,8 +5498,7 @@ case .vibenetSend(let account):
             // thumbnails a pass) hasn't reached yet — reads as rows until it
             // has pixels to show. Same honesty rule as above: a tile promises
             // a picture.
-            let imageTiles = visible.live.filter(Self.isFileImageTile)
-            let rest = visible.live.filter { !Self.isFileImageTile($0) }
+            let (imageTiles, rest) = Self.splitTiles(visible.live, by: Self.isFileImageTile)
             if !imageTiles.isEmpty { photoGridSection(imageTiles) }
             let days = chronoGroups(rest)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
@@ -5846,8 +5961,9 @@ case .vibenetSend(let account):
             // Your watched wallets lead as standing report cards, then the news
             // below in days. A rating is not an event and must not be filed under
             // the day it happened to be read; an incident is, and is.
-            let watches = visible.live.filter { WalletbeatWatch.isWatchRef($0.sourceRef) }
-            let rest = visible.live.filter { !WalletbeatWatch.isWatchRef($0.sourceRef) }
+            let (watches, rest) = Self.splitTiles(visible.live) {
+                WalletbeatWatch.isWatchRef($0.sourceRef)
+            }
             if !watches.isEmpty {
                 groupedSections([(String(localized: "Your wallets"), watches)], nextEventID: nextEventID)
             }
@@ -5857,8 +5973,9 @@ case .vibenetSend(let account):
             // Your watched chains lead as standing assessments, then the timeline
             // below in days. An assessment is not an event and must not be filed
             // under the day it happened to be read; a milestone is, and is.
-            let watches = visible.live.filter { L2beatWatch.isChainRef($0.sourceRef) }
-            let rest = visible.live.filter { !L2beatWatch.isChainRef($0.sourceRef) }
+            let (watches, rest) = Self.splitTiles(visible.live) {
+                L2beatWatch.isChainRef($0.sourceRef)
+            }
             if !watches.isEmpty {
                 groupedSections([(String(localized: "Your chains"), watches)], nextEventID: nextEventID)
             }
@@ -9054,6 +9171,37 @@ case .vibenetSend(let account):
     /// test, used to split that room (2026-07-31). Guarded internally because
     /// it is a shared helper taking a raw `Thing` and every caller hands it its
     /// own derived array (COROLLARY 4, see `ThingRowKeying`).
+    /// The mixed rooms' grid split, in ONE pass (PERF 2026-09-01).
+    ///
+    /// All five wrote it as two `visible.live.filter` calls — once for the
+    /// membership and once for its negation — which is two walks of the room,
+    /// two `.live` copies, and, because the tests below read
+    /// `previewImageData`, **two disk reads per picture row**, on every body
+    /// pass. The predicate is pure, so asking it once per row and keeping both
+    /// answers is the same result for half the work.
+    ///
+    /// Order is preserved in both halves, which is load-bearing rather than
+    /// incidental: `rest` goes straight to `chronoGroups`, and the grid draws
+    /// newest-first like every other tile shelf here.
+    private static func splitTiles(_ rows: [Thing],
+                                   by isTile: (Thing) -> Bool) -> (tiles: [Thing], rest: [Thing]) {
+        var tiles: [Thing] = []
+        var rest: [Thing] = []
+        for row in rows {
+            if isTile(row) { tiles.append(row) } else { rest.append(row) }
+        }
+        return (tiles, rest)
+    }
+
+    /// **`previewImageData` IS TESTED LAST IN ALL FIVE OF THESE, AND THAT IS NOT
+    /// COSMETIC (PERF 2026-09-01).** It is `@Attribute(.externalStorage)`, so
+    /// `!= nil` is a read of the blob off disk rather than a field compare —
+    /// and these run over `visible`, twice per mixed room (tiles, then the
+    /// rest), on every body pass. Every other term is a string or enum compare,
+    /// so ordering the cheap ones first is what lets them actually decide, and
+    /// leaves the file read to the handful of rows that got past them. Same
+    /// lesson `displayedMarketVenues` paid for on 2026-08-11: a short-circuit
+    /// whose expensive half runs first is not a short-circuit.
     private static func isMemoryTile(_ thing: Thing) -> Bool {
         thing.isLive && thing.source == "Snapchat" && thing.kind == .file
             && thing.previewImageData != nil
@@ -9073,8 +9221,11 @@ case .vibenetSend(let account):
     /// written as an explicit test instead of a `previewImageData != nil`.
     private static func isFileImageTile(_ thing: Thing) -> Bool {
         thing.isLive && thing.source == "Files" && thing.kind == .file
-            && thing.previewImageData != nil
+            // `drawsAsPicture` BEFORE the pixels (PERF 2026-09-01) — a
+            // `sourceRef` extension test is a string compare; the term after it
+            // is a file read. See `isMemoryTile` above.
             && FilesIngest.drawsAsPicture(thing.sourceRef)
+            && thing.previewImageData != nil
     }
 
     /// A wordless picture in an Instagram export (2026-08-18, prd §389) — the
@@ -9095,8 +9246,8 @@ case .vibenetSend(let account):
     /// internally for the same corollary-4 reason as its three siblings.
     private static func isInstagramPhotoTile(_ thing: Thing) -> Bool {
         thing.isLive && thing.source == InstagramImport.source && thing.kind == .note
-            && thing.previewImageData != nil
             && thing.tags.contains("Photo")
+            && thing.previewImageData != nil
     }
 
     /// A wordless picture OR video post in an X archive (2026-08-13, prd §375;
@@ -9119,9 +9270,9 @@ case .vibenetSend(let account):
     /// siblings.
     private static func isXPhotoTile(_ thing: Thing) -> Bool {
         thing.isLive && thing.source == XRoomSource.source && thing.kind == .note
-            && thing.previewImageData != nil
             && thing.postText == nil
             && (thing.tags.contains("Photo") || thing.tags.contains("Video"))
+            && thing.previewImageData != nil
     }
 
     /// A wordless picture from a followed CHANNEL (2026-08-23, prd §456).
@@ -9133,8 +9284,8 @@ case .vibenetSend(let account):
     private static func isTelegramPhotoTile(_ thing: Thing) -> Bool {
         thing.isLive && thing.source == TelegramChannel.source
             && Corpus.arrivedLive(thing)
-            && thing.previewImageData != nil
             && (thing.postText ?? "").isEmpty
+            && thing.previewImageData != nil
     }
 
     /// A tile whose picture is one FRAME of a video, so the grid can mark it.
