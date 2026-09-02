@@ -1596,6 +1596,22 @@ python3 "$ROOT/scripts/allcaps-audit.py" \
   || fail "a display string is set in ALL CAPS (build-brief §8) — see the output above"
 print -P "%F{green}✓ allcaps audit%f"
 
+# §8's OTHER half. `allcaps-audit.py` catches a label that shouts; this catches
+# the far commoner drift — a label that Title Cases every word — and the two
+# are the same failure at different volumes. The quiet one spreads further:
+# when this landed (2026-09-01) the tree carried "Address Book" as the ONE
+# Title Case entry among sixty-one screen titles, "Copy Address" and "Move to
+# Front" beside siblings reading "Copy all as text" and "Remove from book",
+# and — the tell — BOTH casings live at once in `Localizable.xcstrings`, each
+# translated into four languages, because a drifted label does not collide
+# with its twin, it quietly doubles it and the translator bills for both.
+step "Sentence-case audit"
+python3 "$ROOT/scripts/sentence-case-audit.py" --self-test >/dev/null \
+  || fail "the sentence-case audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/sentence-case-audit.py" \
+  || fail "a display label is Title Case (build-brief §8) — see the output above"
+print -P "%F{green}✓ sentence-case audit%f"
+
 step "Design-motion audit"
 python3 "$ROOT/scripts/design-motion-audit.py" >/dev/null \
   || fail "the design-motion audit failed — run python3 scripts/design-motion-audit.py"

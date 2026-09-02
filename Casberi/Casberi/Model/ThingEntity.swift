@@ -84,7 +84,7 @@ struct ThingEntityQuery: EntityStringQuery {
 /// deep link the widgets use, so the system tap and the widget tap land on
 /// one proven path instead of two.
 struct OpenThingIntent: OpenIntent {
-    static let title: LocalizedStringResource = "Open Thing"
+    static let title: LocalizedStringResource = "Open thing"
     static let description = IntentDescription("Opens a thing in Casberi.")
 
     @Parameter(title: "Thing")

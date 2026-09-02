@@ -205,7 +205,7 @@ struct TokenWatchScreen: View {
                 Button {
                     moveToFront(thing, in: items)
                 } label: {
-                    Label("Move to Front", systemImage: "arrow.left.to.line")
+                    Label("Move to front", systemImage: "arrow.left.to.line")
                 }
             }
             Button(role: .destructive) {

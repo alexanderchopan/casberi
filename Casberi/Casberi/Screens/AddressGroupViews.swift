@@ -212,7 +212,7 @@ struct AddressGroupScreen: View {
                         Button {
                             DSPasteboard.copySensitive(entry.address)
                             DSHaptic.success()
-                        } label: { Label("Copy Address", systemImage: "doc.on.doc") }
+                        } label: { Label("Copy address", systemImage: "doc.on.doc") }
                         Button {
                             DSHaptic.tap()
                             sheet = .move(entry)

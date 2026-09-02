@@ -30789,34 +30789,6 @@
         }
       }
     },
-    "Address Book" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Agenda de direcciones"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "アドレス帳"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "주소록"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "地址簿"
-          }
-        }
-      }
-    },
     "Address book" : {
       "localizations" : {
         "es" : {
@@ -41641,34 +41613,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "复制"
-          }
-        }
-      }
-    },
-    "Copy Address" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Copiar dirección"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "アドレスをコピー"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "주소 복사"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "复制地址"
           }
         }
       }
@@ -63841,7 +63785,7 @@
         }
       }
     },
-    "Move to Front" : {
+    "Move to front" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -74114,34 +74058,6 @@
         }
       }
     },
-    "Open Thing" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Abrir elemento"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "アイテムを開く"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "항목 열기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "打开内容"
-          }
-        }
-      }
-    },
     "Open a note in Apple Notes." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -74563,6 +74479,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "打开提及内容"
+          }
+        }
+      }
+    },
+    "Open thing" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abrir elemento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アイテムを開く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "항목 열기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开内容"
           }
         }
       }
@@ -88153,7 +88097,7 @@
         }
       }
     },
-    "See in Feed" : {
+    "See in feed" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {

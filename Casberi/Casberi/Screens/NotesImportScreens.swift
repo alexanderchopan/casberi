@@ -388,7 +388,7 @@ struct BookmarksImportScreen: View {
     @ViewBuilder
     private var pickRows: some View {
         if let parsed, parsed.readingListCount > 0 {
-            ImportPickRow(label: "Reading List only (\(parsed.readingListCount))") {
+            ImportPickRow(label: "Reading list only (\(parsed.readingListCount))") {
                 importScope(parsed.entries.filter(\.isReadingList))
             }
             ImportPickRow(label: "All bookmarks (\(parsed.entries.count))") {

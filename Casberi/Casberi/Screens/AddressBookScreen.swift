@@ -176,7 +176,7 @@ struct AddressBookScreen: View {
             .dsAdaptiveContentWidth()
             .dsPageBackground()
             .dsSoftScrollEdges()
-            .dsScreenTitle("Address Book")
+            .dsScreenTitle("Address book")
             .overlay(alignment: .trailing) {
                 if bookSort.sections, !searching {
                     AddressIndexBar(letters: AddressBookShape.index(of: sections)) { letter in
@@ -1312,7 +1312,7 @@ struct AddressBookScreen: View {
                 DSPasteboard.copySensitive(entry.address)
                 DSHaptic.success()
             } label: {
-                Label("Copy Address", systemImage: "doc.on.doc")
+                Label("Copy address", systemImage: "doc.on.doc")
             }
             Menu {
                 GroupMenuItems(entry: entry, groups: groups) {

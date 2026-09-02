@@ -44147,3 +44147,104 @@ has to be LOOKED at — a close button that moved sides, a title that stepped
 down a rung, a corner below iOS 26 — and §394a's standing lesson is that for
 presentation work a green build proves nothing. The build is green on iOS
 Simulator and nothing here has been run.
+
+## 561. Sentence case became a check, because the manual sweep had already missed it (user: "do a sweep of all copy, identify what is not Sentence case, and change all to Sentence case. we keep drifting", 2026-09-01)
+
+"We keep drifting" is the whole finding, and this repo's standing answer to it
+is a script rather than a written reminder. §8 has said "headers are sentence
+case" since the design system existed, and only HALF of that sentence was
+mechanical: `allcaps-audit.py` (2026-08-22) catches a label that SHOUTS and
+nothing caught the far commoner drift, a label that Title Cases every word.
+
+**The argument for making it mechanical is this ledger's own previous entry on
+the subject.** A prior session swept sentence case by hand, reported "3,675
+localized strings checked mechanically — no Title Case beyond proper nouns and
+acronyms", and named `"Address Book"` as "the single break … in ten places, now
+'Address book'". At HEAD on the day this landed, `AddressBookScreen.swift` still
+carried `.dsScreenTitle("Address Book")` and `Label("Copy Address", …)` — two
+instances of that very break, in the file the sweep was named after — plus five
+more strings it never reached. A manual sweep proves the tree was clean at the
+moment somebody looked, which is not the property anybody wants.
+
+**What was actually drifting, and the tell.** Seven labels, and every one of
+them sat beside a correct sibling: `"Address Book"` was the ONE Title Case entry
+among sixty-one `dsScreenTitle` calls; `"Copy Address"` and `"Move to Front"`
+sat in menus reading "Copy all as text", "Remove from book" and "Rename group";
+`"See in Feed"` among "Open in app" and "Open in store"; `"Open Thing"` beside
+the intent title "Save a thing"; `"Reading List only"` beside "All bookmarks",
+in a room whose other surface already drew "Reading list". Drift is never a
+house style changing its mind — it is one label disagreeing with sixty.
+
+**The tell that makes this worth a check rather than a tidy-up: a drifted label
+does not COLLIDE with its twin, it DOUBLES it.** `Localizable.xcstrings` carried
+`"Address Book"` AND `"Address book"` as separate keys, and `"Copy Address"`
+AND `"Copy address"`, each translated into es/ja/ko/zh-Hans — four of the eight
+translations byte-identical to their twin. Nothing warns, because a new key is
+what a new string looks like. So the fix carries the translations across rather
+than orphaning them (`"Move to front"`, `"See in feed"`, `"Open thing"` inherit
+theirs; the two that already had translated twins were dropped), and the audit's
+failure text says so, since a rename that silently re-bills a translator is the
+expensive half of this mistake.
+
+**`scripts/sentence-case-audit.py`** — static, self-tested (41 checks), in
+`verify.sh`, and discovered for free by CI and `verify-mac.sh` because it is
+named `*-audit.py`. A finding is a LABEL-shaped display literal (2–8 words, no
+sentence punctuation) with a capitalized non-first word that no proper noun
+explains. Every narrowing is MEASURED: run over PROSE the same test reports ~200
+literals on a healthy tree, essentially all of them a legitimate mid-sentence
+proper noun or a second sentence's first word — prose is where capitals belong,
+a label is where they do not.
+
+**The lexicon is DERIVED first.** Every word of every `BridgeCatalog.offers`
+name is a proper noun by construction, so a new seat is covered the day it lands
+— the `mac-parity-audit.py` ruling, in the registry this repo grows fastest.
+
+**PHRASES, not words, and mutation is the only reason that split exists.**
+`Address` had to be exempted so "Add to Address book" — where it opens the
+SCREEN'S NAME — reads clean; that single word-level entry immediately made
+`"Copy Address"` invisible, which is the finding the audit was written for. It
+passed every fixture and its own self-test, and only mutating the real tree
+found it. So a word whose capital is earned only IN A PHRASE is exempted as that
+phrase and stands alone as a finding everywhere else — `Access Key ID` without
+freeing `Key`, `new Space` without freeing `Space`. **The same mutation caught a
+second one**: exempting Safari's `"Reading List"` made the label this pass had
+just re-cased impossible to regress-catch, so Apple's casing is deliberately NOT
+exempted where this app's own house spelling differs. An exemption that cannot
+fail is a snooze wearing a registry's clothes; both are pinned as self-tests.
+
+**THE MAC MENU BAR IS EXEMPT, and it is a ruling rather than a gap.** Apple's
+HIG specifies title-style capitalization for menu items, and Casberi's commands
+render directly beneath Apple's own File/Edit/View/Window/Help. "New Window",
+"Next Item", "Previous Venue" and the other nine are INTERNALLY CONSISTENT in
+Title Case, which is the tell that they are a convention rather than drift —
+drift is one Title Case label among sixty sentence-case ones, which is what this
+found everywhere else. §8 governs the app's own screens; the menu bar belongs to
+the platform. Reverse it and the whole `MENU_BAR` set moves together, in one
+place. Also exempt, each for a stated reason: the `DO NOT EDIT BY HAND`
+directory snapshots (`L2beatDirectory`, `WalletbeatDirectory` — re-casing a
+third party's own project names edits a quotation, and the next regeneration
+reverts it), and the demo corpora (their titles stand in for real-world content
+— a security disclosure really is Title Cased in the world, and a demo that
+renders it in sentence case misrepresents what the feed will hold). Both
+exemption sets are PROVEN load-bearing: lifted, they report 14 findings.
+
+**Mutation-proven seven ways against the real tree**, each the exact regression
+of a label fixed here, plus a brand-new Title Case header nobody has ruled on.
+Proven in an isolated copy rather than in place: a concurrent session held
+sixteen files uncommitted that afternoon, and a tracked-file mutation can be
+swept into somebody else's `git add -A` and auto-pushed to a public remote.
+
+**Deliberately NOT checked**, so it cannot become the lint it warns about:
+prose (not this rule's business), ALL CAPS and `.uppercased()` (both
+`allcaps-audit.py`'s), and the QUALITY of a label — it can tell you "Getting
+Started" is Title Cased and never that "Getting started" was the wrong words.
+
+**Its stated ceiling**: it reads display POSITIONS it knows about, so a label
+handed to a component through a variable is invisible to it, exactly as
+`allcaps-audit.py`'s is. The `LABEL_ARG` pass is what covers most of that gap,
+and its own blind spot — a Swift `let title: String` DECLARATION matching the
+label-name rule, and a literal sitting in a trailing `//` comment — was two of
+this file's first-run false positives, both now handled and both pinned.
+
+**The website and the docs were swept too and are clean**: every `<h1>`–`<h6>`
+and button label on casberi.app is already sentence case or a product name.

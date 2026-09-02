@@ -628,7 +628,7 @@ struct HandleSetupScreen: View {
             } label: {
                 HStack(spacing: DS.Space.s2) {
                     Image(systemName: "list.bullet")
-                    Text("See in Feed")
+                    Text("See in feed")
                     Spacer()
                     Image(systemName: "arrow.right")
                         .dsGlyph(13)
