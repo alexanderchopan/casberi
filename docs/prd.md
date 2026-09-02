@@ -45725,3 +45725,78 @@ beat, and both vanish together when the control goes off.
 signed from this build, so the busy tile, the disabled tile and the error line
 under the toggle have not been looked at — and the simulator cannot make a
 transaction settle.
+## 572. The two rails stop saying "selected" four ways (user: "how if at all would you change the category chips in our top rail in the app", then "mock it", then "and would you change in anyway the source strip that is below it w/ the source room icons?", then "mock both rails together", then "ok, build it", 2026-09-02)
+
+The category strip and the room rail beneath it had **four selection grammars
+inside about 100pt of vertical chrome**: a solid fill for a word chip, a 2.5pt
+ring for a single-seat icon chip, an 18% tint wash for a venue mark, and a
+`tintDim` disc for a scoped face. At rest with a category open the pair also
+carried six tinted objects, five of which were saying nothing.
+
+Two changes, and everything else on both rails is left exactly as five prior
+rulings (§351, §352, §355, §358, §359, §362) settled it.
+
+### 1. One blue per surface — the resting chip is neutral
+
+`WordChipFill` applied `.dsGlass(tint: DS.tint)` to EVERY word chip, so four or
+five blue-washed capsules sat under the sixth, solid, active one. The tint comes
+off the resting glass; the travelling active fill is untouched.
+
+**THIS IS NOT THE STATE THE 2026-08-16 RULING REJECTED, and the distinction is
+the whole safety of the change.** That day (`d2bd0471`, "the chips go back to
+blue") reversed a mock whose unselected chips had **no background at all** —
+"it's too hard to see", then "revert and make them same color as the blue we now
+use". The fix for an invisible chip is a chip you can see, which is what the
+glass capsule still is: only the BLUE comes out of it. Verified on the simulator
+rather than argued — the resting chips read as buttons on the black page and the
+one blue chip is the first thing the eye finds.
+
+**The stale doc that made this look already-done.** `WordChipFill`'s own comment
+still says "THE RESTING GLASS IS GONE (2026-08-15, user-approved mock)" directly
+above the line that applies it. The 08-16 ruling reversed that mock a day later
+and nobody updated the paragraph, so the file has spent two weeks describing a
+state it does not draw.
+
+### 2. A mark selects by RING, everywhere
+
+§359 settled this one rail up and gave the reason: **a fill cannot speak on a
+brand mark, because the mark IS its own fill** — which is why the strip's
+single-seat icon chip selects by a ring. That argument is not about the strip;
+it is about marks. So the venue switcher's 18% wash and the face rail's
+`tintDim` disc both become the same 2.5pt ring, riding the same
+`matchedGeometryEffect` ids the fills did, so selection is still an object
+travelling rather than two states blinking (2026-07-14).
+
+For a FACE the argument is stronger than for a logo: a face is a picture, and a
+coloured plate behind it tints the person.
+
+**The switcher's resting pill goes with it** — a faint capsule under every
+inactive mark, a surface saying nothing. Bare marks on ink are what make the one
+ringed mark the only tinted thing in its row.
+
+**What the ring does NOT replace, deliberately.** The face rail's 0.7 recession
+and its semibold caption stay. They were measured (`restOpacity`'s own note),
+they carry the state in channels a ring does not, and a captionless rail leans on
+the ring precisely because they are absent. This swaps one indicator for another
+rather than removing one.
+
+### What was left alone, and why
+
+The 46-vs-36 size step between strip and rail is a TIER, not drift (§352 made
+the strip the larger control deliberately). Marks-only in the switcher and
+captions on faces are both user rulings from 2026-08-11. The glass container is
+chrome the shell pins, which is the floating layer §8 allows glass on. And the
+"All" slot keeps a FILL in both rails, because by this entry's own rule All is a
+WORD.
+
+**One state deliberately keeps two blues**: with a wallet scoped, the Wallet word
+chip is a fill and the scoped face is a ring. They are the same colour saying the
+same thing at two levels — which room, then which wallet — and a ring is an
+outline rather than a second block, so the resting weight is still one filled
+object.
+
+**SEEN on a device**, unusually for this ledger: installed to the simulator over
+the demo corpus and photographed in both states. The Markets room shows the ink
+strip, the blue active chip, and the ringed Stocktwits mark on a bare row of
+venue marks.
+

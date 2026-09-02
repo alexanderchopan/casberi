@@ -1231,7 +1231,22 @@ private struct WordChipFill: ViewModifier {
                     }
                 }
             }
-            .dsGlass(cornerRadius: cornerRadius, tint: DS.tint)
+            // **THE RESTING CAPSULE IS NEUTRAL, THE ACTIVE ONE IS BLUE
+            // (prd §572).** The glass carried `tint: DS.tint`, so every chip
+            // in the strip wore a blue wash at rest and the strip was the
+            // loudest tinted region on the screen with nothing happening —
+            // four or five blues stacked under a sixth, the solid active one.
+            // One blue per surface is what makes the active chip read.
+            //
+            // **THIS IS NOT THE STATE THE 2026-08-16 RULING REJECTED.** That
+            // day reversed a mock whose unselected chips had NO BACKGROUND AT
+            // ALL — "it's too hard to see", then "revert and make them same
+            // color as the blue we now use" — and the fix for an invisible
+            // chip is a chip you can see, which is what the glass capsule
+            // still is. What goes is only the BLUE in it: the material, the
+            // shape, the size, the words and the travelling active fill are
+            // all untouched, so a resting chip is still a visible button.
+            .dsGlass(cornerRadius: cornerRadius)
     }
 }
 

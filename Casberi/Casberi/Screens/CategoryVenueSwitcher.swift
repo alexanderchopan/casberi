@@ -253,60 +253,48 @@ struct CategoryVenueSwitcher: View {
             // grows 4pt → 9pt as a free consequence.
             BridgeIcon(name: venue, size: markSize, circular: true)
                 .frame(width: DS.Hit.min, height: DS.Hit.min)
-            .background {
-                ZStack {
-                    Capsule(style: .continuous).fill(DS.fillFaint)
-                    if isOn {
-                        let fill = Capsule(style: .continuous).fill(DS.tint.opacity(0.18))
-                        // **`matchedGeometryEffect` on EVERY version, including
-                        // 26 (prd §360, 2026-08-11).** This branched to
-                        // `glassEffectID` on iOS 26 and that branch was inert:
-                        // the decoration does nothing on a shape carrying no
-                        // `glassEffect`, and this fill is a flat 18% tint, not a
-                        // blob. So the shipped path had no travel at all while
-                        // the pre-26 fallback did — the selection teleported on
-                        // exactly the OS everyone runs, and looked correct in
-                        // every still frame.
-                        //
-                        // It is the same swap `WordChipFill` made one tier up
-                        // and reverted after frame-stepping at 60fps ("swapping
-                        // `glassEffectID` in for `matchedGeometryEffect`
-                        // silently deleted the travel it replaced"); this
-                        // control was left on the losing side of that finding.
-                        // Reduce Motion keeps the undecorated fill.
-                        if reduceMotion {
-                            fill
-                        } else {
-                            fill.matchedGeometryEffect(id: "venueActiveFill", in: ns)
-                        }
+            // **A MARK SELECTS BY RING, NOT BY A WASH (prd §572).**
+            //
+            // The active venue sat on an 18% tint wash and every inactive one
+            // on a faint pill, so this rail was a third and fourth way of
+            // saying "selected" beneath a strip that already had two. §359
+            // settled the question one level up and gave the reason: a fill
+            // cannot speak on a brand mark, because **the mark IS its own
+            // fill** — which is why the strip's single-seat icon chip selects
+            // by a 2.5pt ring. This brings that ruling down to the rail under
+            // it, leaving one selection form per KIND of thing: a fill for a
+            // word, a ring for a mark.
+            //
+            // The resting pill goes with it: it was a surface under every mark
+            // saying nothing, and bare marks on ink are what make the one
+            // ringed mark the only tinted thing in the row.
+            .overlay {
+                if isOn {
+                    let ring = Capsule(style: .continuous)
+                        .strokeBorder(DS.tint, lineWidth: 2.5)
+                    // **`matchedGeometryEffect` on EVERY version, including
+                    // 26 (prd §360, 2026-08-11).** This branched to
+                    // `glassEffectID` on iOS 26 and that branch was inert:
+                    // the decoration does nothing on a shape carrying no
+                    // `glassEffect`, and this fill is a flat 18% tint, not a
+                    // blob. So the shipped path had no travel at all while
+                    // the pre-26 fallback did — the selection teleported on
+                    // exactly the OS everyone runs, and looked correct in
+                    // every still frame.
+                    //
+                    // It is the same swap `WordChipFill` made one tier up
+                    // and reverted after frame-stepping at 60fps ("swapping
+                    // `glassEffectID` in for `matchedGeometryEffect`
+                    // silently deleted the travel it replaced"); this
+                    // control was left on the losing side of that finding.
+                    // Reduce Motion keeps the undecorated fill.
+                    if reduceMotion {
+                        ring
+                    } else {
+                        ring.matchedGeometryEffect(id: "venueActiveFill", in: ns)
                     }
                 }
             }
-            // Unlike the strip, selection and attention are NOT exclusive here,
-            // and that is a property of this control rather than a departure
-            // from the 2026-07-21 ruling: selection is a FILL in this capsule
-            // and a RING up in the strip, so the two cues never compete for the
-            // same pixels. The seat you are standing in can be the broken one —
-            // that is in fact the likeliest way to find yourself looking at it,
-            // since the folded chip's dashed ring is what sent you here.
-            //
-            // **THIS IS WHY §541 GREW THE SEAT INSTEAD OF MAKING SELECTION A
-            // RING.** Going full-bleed hides a fill drawn behind the mark, and
-            // the obvious repair — promote selection to the strip's own solid
-            // tint ring — was proposed and REFUSED on this paragraph: attention
-            // is already a ring, so both cues would land on one 2–3pt band of
-            // pixels and the active-and-broken seat could show only one of them.
-            // Concentric rings were measured on paper and are not available
-            // either: a 36pt mark in a 44pt slot leaves 1.5pt of radius between
-            // a hugging ring and a slot-edge ring, so two 2pt strokes touch. The
-            // fill stays a fill and simply moves outward into the annulus.
-            //
-            // The cost, stated: at rest `DS.fillFaint` is ~3–4% alpha, so the
-            // resting row is bare 36pt marks matching the rail exactly, and only
-            // the ACTIVE chip paints a 44pt tinted halo. That is a state on one
-            // chip, not a second circle size in the resting rhythm — but it is a
-            // 4pt halo where it used to be 5pt, and whether it still reads as
-            // selected is a DEVICE question this pass could not answer.
             .overlay {
                 if broken {
                     Capsule(style: .continuous)

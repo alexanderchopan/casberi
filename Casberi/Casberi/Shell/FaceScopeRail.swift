@@ -291,15 +291,35 @@ struct FaceScopeRail: View {
     /// The picked slot's fill — nothing at all unless this rail is a deck of the
     /// slab, where it is the same mark the switcher's picked chip wears.
     @ViewBuilder
+    /// **THE SCOPED FACE WEARS A RING, NOT A DISC (prd §572).**
+    ///
+    /// A `tintDim` slab behind the picked face was the fourth way this app's
+    /// two stacked rails said "selected" — word fill, icon ring, venue wash,
+    /// face disc — and it is the one that fights its own subject hardest: a
+    /// face is a picture, so a coloured plate behind it tints the person. §359
+    /// had already ruled for the mark case one rail up ("a fill cannot speak
+    /// on a brand mark, because the mark IS its own fill") and this is the
+    /// same argument for an identicon.
+    ///
+    /// **What the ring does NOT replace, deliberately.** The 0.7 recession on
+    /// everything else and the caption's semibold both stay — they were
+    /// measured (see `restOpacity`), they carry the state in channels a ring
+    /// does not, and a captionless rail leans on the ring precisely because
+    /// those are absent. This swaps one indicator for another rather than
+    /// removing one.
+    ///
+    /// The travel is unchanged: the ring rides the same
+    /// `matchedGeometryEffect` id the fill did, so the selection is still an
+    /// object moving between faces (2026-07-14).
     private func pickFill(_ isOn: Bool) -> some View {
         if embedded, isOn {
-            let fill = RoundedRectangle(cornerRadius: DSRoomChassis.slabInnerRadius,
+            let ring = RoundedRectangle(cornerRadius: DSRoomChassis.slabInnerRadius,
                                         style: .continuous)
-                .fill(DS.tintDim)
+                .strokeBorder(DS.tint, lineWidth: 2.5)
             if reduceMotion {
-                fill
+                ring
             } else {
-                fill.matchedGeometryEffect(id: "dsRailActiveFill", in: pickNS)
+                ring.matchedGeometryEffect(id: "dsRailActiveFill", in: pickNS)
             }
         }
     }
