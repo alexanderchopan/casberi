@@ -10490,30 +10490,39 @@ case .vibenetSend(let account):
                 .padding(.top, DS.Space.s2)
                 .settleIn(delay: 0.05)
             if words.offersDoor {
-                Button {
-                    DSHaptic.selection()
-                    route.present(.apps)
-                } label: {
-                    HStack(spacing: DS.Space.s1) {
-                        Text("Open \(source)")
-                            .dsText(.callout15).fontWeight(.semibold)
-                        Image(systemName: "chevron.right")
-                            .accessibilityHidden(true)
-                            .dsGlyph(12)
-                    }
-                    .foregroundStyle(DS.tint)
-                    .padding(.horizontal, DS.Space.s4)
-                    .frame(minHeight: 36)
-                    .background(DS.tintDim, in: Capsule(style: .continuous))
-                }
-                .buttonStyle(PressSpring())
-                .padding(.top, DS.Space.s4)
-                .settleIn(delay: 0.1)
+                emptyDoor(String(localized: "Open \(source)"))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s6)
+    }
+
+    /// The one act an empty room offers, at the head rung (prd §563).
+    ///
+    /// **Both empty states shared one shape: a control set SMALLER than the
+    /// prose above it** — `heading34`, then `body17`, then a `callout15`
+    /// capsule — so the only thing a person could DO on the screen was the
+    /// quietest thing on it. §559 made a verb at `price40` the house treatment
+    /// for a surface that exists to do one thing, and an empty room is exactly
+    /// that: there is nothing here to read, so the act is the content.
+    ///
+    /// **ONE call site for both states, deliberately.** §299 already rules that
+    /// the quiet room and the invitation are "one screen in two states rather
+    /// than two screens", and a shared door is that ruling as code rather than
+    /// as a comment — the two cannot drift into different verbs at different
+    /// rungs. It is also what keeps `hero-tint-audit.py`'s one-tile-per-file
+    /// rule true of the file that draws both.
+    ///
+    /// The destination is unchanged and is the CATALOG in both states, which is
+    /// what `route.present(.apps)` has always done here — including under the
+    /// "Open \(source)" wording, whose door has never gone to that source.
+    private func emptyDoor(_ title: String) -> some View {
+        DSActVerb(title: title, glyph: "square.grid.2x2") {
+            route.present(.apps)
+        }
+        .padding(.top, DS.Space.s4)
+        .settleIn(delay: 0.1)
     }
 
     private var invitationState: some View {
@@ -10522,29 +10531,17 @@ case .vibenetSend(let account):
                 .dsText(.heading34)
                 .foregroundStyle(DS.textPrimary)
                 .settleIn()
-            Text("Connect an app and things start landing on their own.")
-                .dsText(.body17).foregroundStyle(DS.textSecondary)
-                .padding(.top, DS.Space.s2)
-                .settleIn(delay: 0.05)
-            Button {
-                DSHaptic.selection()
-                route.present(.apps)
-            } label: {
-                HStack(spacing: DS.Space.s1) {
-                    Text("Open the catalog")
-                        .dsText(.callout15).fontWeight(.semibold)
-                    Image(systemName: "chevron.right")
-                        .accessibilityHidden(true)
-                        .dsGlyph(12)
-                }
-                .foregroundStyle(DS.tint)
-                .padding(.horizontal, DS.Space.s4)
-                .frame(minHeight: 36)
-                .background(DS.tintDim, in: Capsule(style: .continuous))
-            }
-            .buttonStyle(PressSpring())
-            .padding(.top, DS.Space.s4)
-            .settleIn(delay: 0.1)
+            // THE SENTENCE STANDS DOWN (prd §563). It read "Connect an app and
+            // things start landing on their own" — which is the headline's
+            // goal, the tile's verb and the pile's own contents said a third
+            // time, in the tier §554 rules on. What replaces it is not shorter
+            // copy, it is the tile below saying it at the head rung.
+            //
+            // A quiet room's `detail` is DELIBERATELY NOT treated this way: it
+            // carries §299's diagnosis (a broken room says it is broken), which
+            // no verb can state. A sentence that RESTATES the door goes; a
+            // sentence that DIAGNOSES stays.
+            emptyDoor(String(localized: "Open the catalog"))
             // The "or paste a link, share in, snap a screenshot" line is
             // DELETED (user, 2026-08-07). It was added to teach the capture
             // verbs the headline only claimed, but it teaches them to someone

@@ -44576,3 +44576,140 @@ a whole ruling about how two points on that edge read.
 **Unblocks a measured speedup.** `scripts/support/harness-opt-probe.sh` refuses
 to license an `-O` → `-Onone` swap for a harness that fails, and vibenet is the
 longest in the suite. Green, it can now be probed.
+## 563. The empty room's one act takes the head rung, and the tint budget becomes a check (user: "how would you improve app design to make it more of this style — this is a new look we have been going with the extreme proportion of things", then "build all", 2026-09-02)
+
+§559 generalised the devnet Home panel's treatment — a disc top-left, a verb
+hard against the bottom-left at `price40`, a filled tile at the widget radius —
+and took it to four surfaces whose whole reason is one act. This is the next
+tier, and it is DELIBERATELY TWO ITEMS RATHER THAN FOUR: two of the four
+proposed were checked against the tree and refused, each because the surface it
+was drawn for no longer exists or is governed by a ruling with a measurement
+behind it. Those refusals are the load-bearing half of this entry.
+
+### 1. An empty room is one statement and one act
+
+Both empty states — `quietState` (a room that is connected, paused or broken)
+and `invitationState` (a room with no seat) — shared one shape, and it inverted
+its own priorities: `heading34`, then `body17`, then a `callout15` capsule. **The
+only thing a person could DO on the screen was the quietest thing on it**, set
+smaller than either line of prose above it, on the screen a new install sees
+more than any other.
+
+The capsule is `DSActVerb` now. Nothing about the destination changed — both
+states have always called `route.present(.apps)`, including under the
+"Open \(source)" wording, whose door has never gone to that source.
+
+**ONE call site serves both states, and that is §299 as code.** That ruling
+already says the quiet room and the invitation are "one screen in two states
+rather than two screens", and it said so in a comment while the two states each
+built their own capsule; a shared `emptyDoor` is the same claim in a form that
+cannot drift into two verbs at two rungs. It is also what keeps item 3's
+one-tile-per-file rule true of the file that draws both.
+
+**A sentence that RESTATES the door goes; a sentence that DIAGNOSES stays.**
+The invitation's "Connect an app and things start landing on their own" is the
+headline's goal, the tile's verb and the pile's own contents said a third time,
+in the tier §554 rules on — so it goes, and what replaces it is not shorter copy
+but the tile saying it at the head rung. A quiet room's `detail` is deliberately
+untouched: it carries §299's diagnosis, and a broken room saying it is broken is
+a fact no verb can state.
+
+### 2. REFUSED — the figure lockup, because every home for it collides with a measured ruling
+
+The proposal was the same anatomy rotated onto a number: the disc, the numeral
+at `price48`, the unit dropped to `label12` beside its baseline, so a count
+could take the rung a sentence cannot. It was drawn, reviewed and then checked
+against the tree, which refused it twice.
+
+**The devnet scope headline is shared chrome with a reserved height.** It is
+drawn by `DSRoomChassis.headlineRowView` for every room and every scope at once,
+into a row whose height is `DSRoomChassis.headlineRow` — **30pt**, which a 64pt
+numeral cannot occupy. Raising it is not a per-card change, it re-lays out every
+room; and §551 settled that rung at `stat24` with a MEASUREMENT (five real
+headlines overrun the ~304pt beside the settings gear at `price40`, the worst of
+them "2 accounts · 1 you don't watch yet" at 646). The argument that survived
+review — only the numeral takes the rung, so the width §551 measured cannot
+recur — answers the type question and not the architecture one.
+
+**The feed's own head cards lead with sentences by ruling.** `XRoomCard`,
+`InstagramRoomCard`, `JournalRoomCard` and `AppStoreConnectRoomCard` each draw
+their own lead locally at `heading22`, free of the chassis — but §451 made that
+lead a NOTE, "the pair the drawing is structurally unable to state", precisely
+because the headline it replaced restated row one. A lockup there would put back
+the thing §451 removed.
+
+So the component was not built. **A component with no home is dead code wearing
+a ruling's clothes**, and this repo's standing lesson is that the cheap
+instrument comes before the plausible fix: the instrument here was reading two
+ledger entries and one constant, and it cost less than the component would have.
+The idea is not wrong — it is waiting for a surface whose lead is a bare count
+and whose chrome is its own.
+
+### 3. REFUSED — the onboarding fork, because it was deleted two days ago
+
+The proposal was §553's split panel for the fork's arms: a tint half, an ink
+half, the third answer as a text link. **`StartHereScreen` and `StartAppetite`
+were deleted on 2026-08-31** ("Onboarding is one screen: the rain lands, and the
+fork is deleted") on the ruling that its three arms are what the catalogue
+lists, so the question was a screen standing in front of its own answer. The
+files survive only in a stale worktree, and `CLAUDE.md` still documents
+`-startPick` and its arms — which is how the proposal was made in the first
+place.
+
+The greeting behind it refuses the same shape for its own reason: its secondary
+door is text and not a tile because "two equal buttons is a decision, and the
+whole point of the change above is that the first tap shouldn't be one."
+
+**§418's lesson, third instance in a fortnight, and it now has a cause worth
+naming: `CLAUDE.md` is a record of what was built, not of what is still there.**
+Before proposing a change to any surface, resolve the file — a `grep` that
+returns nothing is an answer, not a miss.
+
+### 4. `hero-tint-audit.py` — the tint budget, made mechanical
+
+**A hero tile reads loud for one reason and it is not the 40pt verb: the fill is
+the only saturated block on the surface.** §553's own panel says so — one tint
+half, one ink half, "the colour is the only thing saying which one the room is
+for". A second tinted tile leaves the type exactly as big and takes away the
+thing that made it read.
+
+Mechanical for this repo's standing reason: the failure is invisible where it
+happens. Two hero tiles compile, render, pass the ramp audit, pass the motion
+audit and look deliberate on the screen that has them. What degrades is every
+OTHER tile in the app, and none of those is open at the time.
+
+Two checks, both measured against the real tree before they were written.
+**(1) One `DSActVerb` call site per file** — all five callers have exactly one
+today, so it fires zero times and cannot cry wolf; a file wanting two mutually
+exclusive tiles factors them to one call site, which is what item 1 does.
+**(2) A hero rung set inside a `Button`** is a hand-rolled tile, which silently
+loses §559's honesty contract, since `.disabled` dims a label and not a fill.
+`DSActVerb` and `DevnetSendConsole` are the named pair and are exempt.
+
+**Its self-test caught its own first defect and a mutation caught its second,
+which is the whole argument for demanding both.** Check 2 began as a proximity
+rule — a hero rung within twelve lines of a `Button` — and the self-test's own
+fixture showed it flagging a card that draws a button and then a hero FIGURE
+below it, the commonest layout in the app; it counts brace depth now. Then the
+mutation pass against the REAL tree found something worse: **the comment
+stripper handled `/*` before `//`, so a line comment in `FeedScreen.swift`
+containing a path glob opened a block comment that never closed and blanked the
+remaining 7,000 lines** — and the audit reported that file clean because it
+could no longer see a single call site in it. Both mutations survived, green,
+against a check that was doing nothing. The stripper is a character scanner now,
+that exact shape is a permanent fixture, and the six sibling audits carrying
+their own strippers were each probed with the same input and are clean.
+
+**Stated ceilings, in the file.** The unit is the FILE and not the screen (the
+`keychain-audit.py` proxy, for the same reason: pairing a call with the view it
+renders into means parsing Swift). Check 2 is not a Swift parser — a tile
+assembled through a helper or a `ViewModifier` is invisible to it. And it says
+nothing about the colour budget at large: a tint-dim capsule, a chip or a filled
+disc is not a hero tile and is not counted.
+
+**UNSEEN on a device.** Item 1 changes what the most-seen screen in a new
+install draws, and every value in it is a token rather than a measurement — but
+the empty room's new tile has not been looked at on any simulator or phone, and
+§394a's standing lesson is that for presentation work a green build proves
+nothing.
+

@@ -642,8 +642,9 @@ struct HowItWorksSheet: View {
         }
         #if DEBUG
         // `-howItWorksCTA <s>` fires the onboarding-tail CTA after a delay.
-        // It now enters the DEMO rather than pushing the fork — pass
-        // `-startPick <arm>` with `-demoCTA NO` to walk the own-things route.
+        // It enters the DEMO; `-demoCTA NO` walks the secondary door instead,
+        // which since 2026-08-31 lands on the CATALOG and not on a fork —
+        // `-startPick` and `StartHereScreen` are deleted (prd §563).
         .onAppear {
             let delay = UserDefaults.standard.double(forKey: "howItWorksCTA")
             guard delay > 0, onStart != nil else { return }

@@ -1720,6 +1720,25 @@ python3 "$ROOT/scripts/sentence-case-audit.py" \
   || fail "a display label is Title Case (build-brief §8) — see the output above"
 print -P "%F{green}✓ sentence-case audit%f"
 
+# ONE TINTED HERO TILE PER SCREEN (prd §563). `DSActVerb` reads loud because
+# its fill is the only saturated block on the surface — §553's own panel says
+# so ("the colour is the only thing saying which one the room is for"), pairing
+# one tint half with one ink half. A second tinted tile leaves the 40pt verb
+# exactly as big and takes away the thing that made it read.
+#
+# Mechanical because the failure is invisible where it happens: two hero tiles
+# compile, render, pass the ramp and motion audits, and look deliberate on the
+# screen that has them. What degrades is every OTHER screen's tile, which is
+# not open at the time. Also catches the drift that actually happens — a tile
+# copied by hand instead of imported, which loses §559's honesty contract
+# silently, since `.disabled` dims a label and not a fill.
+step "Hero-tint audit"
+python3 "$ROOT/scripts/hero-tint-audit.py" --self-test >/dev/null \
+  || fail "the hero-tint audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/hero-tint-audit.py" \
+  || fail "a screen draws more than one hero tile, or hand-rolls one (prd §563) — see the output above"
+print -P "%F{green}✓ hero-tint audit%f"
+
 step "Design-motion audit"
 python3 "$ROOT/scripts/design-motion-audit.py" >/dev/null \
   || fail "the design-motion audit failed — run python3 scripts/design-motion-audit.py"
