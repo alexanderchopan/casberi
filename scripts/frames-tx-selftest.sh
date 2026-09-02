@@ -282,6 +282,158 @@ for absent in nonces coins accounts permissions; do
 done
 echo "  ok   drift guards: the strip keeps the four scopes this chain can fill"
 
+# --- the moments (2026-09-01) -----------------------------------------------
+# Five small things that are all one class: a room says what JUST HAPPENED, and
+# every one of them fails as a false claim rather than as a missing animation.
+# Read from COMMENT-STRIPPED copies throughout — all three files document these
+# rules by naming what they must not do (the Obsidian/Cursor lesson).
+CARD="Casberi/Casberi/Screens/FramesRoomCard.swift"
+FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+for f in "$CARD" "$FEED"; do
+  [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
+done
+strip_comments "$CARD" > "$WORK/card.nc"
+strip_comments "$FEED" > "$WORK/feed.nc"
+
+# ARRIVALS ARE SEEDED SILENTLY ON THE FIRST READ. Without the seed, the first
+# sweep after launch reports the whole history as news and every landed row
+# washes at once — the §306 "did you already know?" failure with an animation
+# on it, and the exact bug Hyperliquid shipped (22 positions landing as 22
+# "Opened" rows on the day somebody started watching).
+python3 - "$WORK/bridge.nc" <<'PYSEED' || exit 1
+import sys, io
+src = io.open(sys.argv[1], encoding="utf-8").read()
+i = src.find("private func noteArrivals(")
+if i < 0:
+    print("✗ FramesLiveState no longer notes arrivals — nothing can tell a landing apart from a history"); sys.exit(1)
+body = src[i:src.find("private func seedArrivals(", i)]
+if "guard seeded else" not in body:
+    print("✗ noteArrivals no longer seeds silently on the first read — the first sweep of a session would report the whole history as having just landed")
+    sys.exit(1)
+sys.exit(0)
+PYSEED
+# The demo must SEED its fixture, never note it: five transactions installed in
+# one call are not five transactions arriving, and a demo that celebrates its
+# own seed does it in the one place somebody is being SHOWN the app.
+python3 - "$WORK/bridge.nc" <<'PYDEMO' || exit 1
+import sys, io
+src = io.open(sys.argv[1], encoding="utf-8").read()
+i = src.find("func installDemo(")
+if i < 0:
+    print("✗ FramesLiveState.installDemo is gone"); sys.exit(1)
+body = src[i:i + 600]
+if "seedArrivals(in: fixture)" not in body:
+    print("✗ installDemo no longer seeds arrivals — the demo would report its own fixture as having just landed")
+    sys.exit(1)
+if "noteArrivals(in: fixture)" in body:
+    print("✗ installDemo NOTES its fixture as arrivals — every seeded row would wash as news")
+    sys.exit(1)
+sys.exit(0)
+PYDEMO
+
+# THE FIRST SETTLE IS NEVER CLAIMED RETROACTIVELY. An account whose nonce is
+# already above zero sent its first transaction before this build existed, so
+# the moment has been had and cannot be given back. Both halves: the seed must
+# exist, and it must be gated on there being nothing pending, or a send made in
+# THIS session could be eaten by the seed that runs before it.
+python3 - "$WORK/bridge.nc" <<'PYFIRST' || exit 1
+import sys, io
+src = io.open(sys.argv[1], encoding="utf-8").read()
+i = src.find("private func seedFirstSettleIfAlreadySent(")
+if i < 0:
+    print("✗ FramesLiveState no longer seeds the first-settle moment — it would fire retroactively for an account that has been sending for weeks")
+    sys.exit(1)
+body = src[i:i + 700]
+if "pending.isEmpty" not in body:
+    print("✗ the first-settle seed is no longer gated on nothing being pending — it could eat a real first settle")
+    sys.exit(1)
+if "nonce > 0" not in body:
+    print("✗ the first-settle seed no longer reads the nonce — the count of transactions this account signed is the only evidence it has already sent")
+    sys.exit(1)
+if "seedFirstSettleIfAlreadySent(read)" not in src:
+    print("✗ nothing calls the first-settle seed"); sys.exit(1)
+sys.exit(0)
+PYFIRST
+echo "  ok   drift guards: arrivals seed silently, and the first settle is never claimed retroactively"
+
+# THE TIE IS A DIAL, NEVER A SECOND SOURCE OF TRUTH. `joinProgress` may hide a
+# join the run declares and must never draw one it does not — otherwise the
+# send preview stops being a picture of what the signer produces and becomes a
+# picture of what the toggle says, on the control that decides whether a failed
+# batch leaves money with a stranger.
+python3 - "$WORK/card.nc" <<'PYTIE' || exit 1
+import sys, io
+src = io.open(sys.argv[1], encoding="utf-8").read()
+i = src.find("if cell.joinedToNext, !last")
+if i < 0:
+    print("✗ the strip no longer gates its tie on the run's own join — `joinProgress` would be free to invent one")
+    sys.exit(1)
+if "joinProgress > 0.01" not in src[i:i + 200]:
+    print("✗ the tie no longer honours joinProgress"); sys.exit(1)
+# One door from `flags` into the drawing. A second reading of the flag would
+# make `joinProgress: 0` stop being the non-atomic run.
+if src.count("joinedToNext") != 1:
+    print("✗ FramesRoomCard reads `joinedToNext` more than once — the preview's licence is that flags reach this drawing through exactly one door")
+    sys.exit(1)
+if "startsBatch" in src or "atomicFlag" in src:
+    print("✗ FramesRoomCard reads the atomic flag directly — it must come through FramesFrameRow.joinedToNext alone")
+    sys.exit(1)
+sys.exit(0)
+PYTIE
+# BOTH HALVES OF THE PREVIEW'S LICENCE, because either alone is a lie: the run
+# must be built JOINED (so the tie has something to travel over in both
+# directions), and the toggle must reach the strip as `joinProgress` (so the
+# picture still answers the control).
+python3 - "$WORK/feed.nc" <<'PYPREV' || exit 1
+import sys, io
+src = io.open(sys.argv[1], encoding="utf-8").read()
+i = src.find("private func framesPreviewRun(")
+if i < 0:
+    print("✗ framesPreviewRun is gone"); sys.exit(1)
+body = src[i:src.find("\n    }", i)]
+if "FramesTransaction.stitched(" not in body:
+    print("✗ the send preview no longer builds its run with the shipped encoder — it would promise a shape the signer does not produce")
+    sys.exit(1)
+if "atomic: true" not in body:
+    print("✗ framesPreviewRun no longer asks for the JOINED shape — the tie has nothing to travel over and the toggle's own picture snaps")
+    sys.exit(1)
+j = src.find("preview: { legs, atomic in")
+if j < 0:
+    print("✗ the Frames stitch no longer hands the sheet a preview"); sys.exit(1)
+if "joinProgress: atomic ? 1 : 0" not in src[j:j + 400]:
+    print("✗ the preview no longer dials the tie from the toggle — a run built joined would draw ties with all-or-nothing OFF")
+    sys.exit(1)
+sys.exit(0)
+PYPREV
+echo "  ok   drift guards: the tie is a dial over the run's own joins, and the preview declares both halves"
+
+# EVERY DRAWING IN THIS ROOM ARRIVES. Both are a `Canvas`, which is why
+# `design-motion-audit` — which looks for proportional shapes and
+# GeometryReader — cannot see them, and why a room where everything else
+# arrives kept two that simply were. Reduce Motion is `chartWipe`'s own
+# contract, so requiring the shared component is requiring the guarantee.
+for drawing in FramesSequenceStrip FramesMovementBars; do
+  python3 - "$WORK/card.nc" "$drawing" <<'PYENTRY' || exit 1
+import sys, io
+src, name = io.open(sys.argv[1], encoding="utf-8").read(), sys.argv[2]
+i = src.find("struct %s: View" % name)
+if i < 0:
+    print("✗ %s is gone" % name); sys.exit(1)
+body = src[i:src.find("\nstruct ", i + 1)]
+if "chartWipe(reduceMotion:" not in body:
+    print("✗ %s no longer arrives — a Canvas is invisible to design-motion-audit, so nothing else will say so" % name)
+    sys.exit(1)
+sys.exit(0)
+PYENTRY
+done
+# A NEW TRANSACTION IS A NEW DRAWING. A chart entrance is one-shot on appear,
+# which is right for opening a room and wrong for the moment this room exists
+# for — without the key, a send you just made lands by the chart redrawing
+# silently between two frames.
+grep -qF '.id(newestHash)' "$WORK/card.nc" \
+  || { echo "✗ the room's charts are no longer keyed on the newest transaction — a settle would redraw silently"; exit 1; }
+echo "  ok   drift guards: both Canvas drawings arrive, and a settle redraws them"
+
 cp "$TX" "$WORK/FramesTransaction.swift"
 cp "$RLPF" "$WORK/RLP.swift"
 cp "$KC" "$WORK/Keccak256.swift"
@@ -691,6 +843,31 @@ check("a single-leg atomic batch carries no atomic flag",
 // transaction that authorises nothing.
 check("and never the VERIFY frame", atomicTx.frames[0].flags == 0x03)
 
+// **THE TWO STITCHED SHAPES DIFFER IN `flags` AND IN NOTHING ELSE.**
+//
+// This is not a tidiness assertion, it is the whole licence for how the send
+// sheet draws its preview (2026-09-01): that screen asks `stitched` for the
+// JOINED shape once and scales the ties by the toggle, so flipping
+// all-or-nothing GROWS a tie instead of swapping one static Canvas for
+// another. That is exact only while the flag is the sole difference — and the
+// flag reaches the drawing through one door, `FramesFrameRow.joinedToNext`,
+// which is rendered as the tie and nowhere else (guarded separately below).
+//
+// Give `flags` a second meaning and the preview silently starts promising a
+// shape the signer does not produce, on the one control in this app that
+// decides whether a failed batch leaves money with a stranger.
+check("the two stitched shapes agree on frame count",
+      atomicTx.frames.count == loose.frames.count)
+check("and differ in `flags` and in nothing else",
+      zip(atomicTx.frames, loose.frames).allSatisfy {
+          $0.0.mode == $0.1.mode && $0.0.target == $0.1.target
+          && $0.0.value == $0.1.value && $0.0.data == $0.1.data
+          && $0.0.executionGas == $0.1.executionGas
+          && $0.0.stateGas == $0.1.stateGas
+      })
+check("and really do differ in flags, or the check above proves nothing",
+      zip(atomicTx.frames, loose.frames).contains { $0.0.flags != $0.1.flags })
+
 // ONE LEG THROUGH `stitched` IS THE SAME TRANSACTION `transfer` BUILDS. The
 // two builders are kept apart on purpose (the fixtures pin `transfer`), so
 // this is the only thing standing between them and silent divergence.
@@ -970,6 +1147,16 @@ mutate "a payload frame built as a VERIFY frame" $F \
 mutate "the legs reversed" $F \
   '+ legs.enumerated().map { index, leg in' \
   '+ legs.reversed().enumerated().map { index, leg in'
+# **THE PREVIEW'S LICENCE, AS A MUTATION.** The send sheet draws its
+# all-or-nothing preview by asking `stitched` for the joined shape once and
+# scaling the ties by the toggle, which is exact only while `flags` is the sole
+# difference between the two. Give the atomic path a second effect and that
+# preview silently starts promising a shape the signer does not produce.
+mutate "all-or-nothing quietly changing a frame's budget too" $F \
+  'executionGas: executionGas, stateGas: stateGas,
+                                           value: leg.value' \
+  'executionGas: joined ? executionGas &* 2 : executionGas, stateGas: stateGas,
+                                           value: leg.value'
 
 # --- the row's new readings -------------------------------------------------
 mutate "the VERIFY frame counted as a recipient" $F4 \

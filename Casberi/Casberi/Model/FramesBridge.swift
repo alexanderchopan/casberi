@@ -309,6 +309,92 @@ final class FramesLiveState {
         pending.append(FramesPending(hash: hash, legs: legs))
     }
 
+    // MARK: - What arrived while somebody was looking
+
+    /// **TRANSACTIONS THIS SESSION WATCHED LAND** — present in a read and
+    /// absent from the read before it.
+    ///
+    /// One set serves three moments that would otherwise each need their own
+    /// bookkeeping: a landed row gets an entrance instead of appearing between
+    /// two frames, the sponsor bar can light the share somebody else just paid,
+    /// and the first send this install ever watched settle earns its one-shot.
+    ///
+    /// **SEEDED SILENTLY ON THE FIRST READ OF A SESSION** — the rule every
+    /// arrival-shaped feature in this app already follows (Peer's cursor,
+    /// Hyperliquid's position snapshot, `AddressConnectionsSeen`). Without it
+    /// the first sweep after launch reports the whole history as news, which
+    /// is the §306 "did you already know?" failure with an animation on it.
+    /// Deliberately NOT seeded from the persisted cache either: that would
+    /// report everything that landed while the app was CLOSED as having just
+    /// happened, which is the same lie one step subtler.
+    private(set) var arrived: Set<String> = []
+    private var seenHashes: Set<String> = []
+    private var seeded = false
+
+    /// Cleared by the next read, which is what makes these moments transient
+    /// rather than a badge a row wears forever (§441's rule — a moment is an
+    /// answer to something that just happened, never a claim about the row).
+    private func noteArrivals(in accounts: [FramesAccount]) {
+        let now = Set(accounts.flatMap(\.moves).map { $0.hash.lowercased() })
+        defer { seenHashes = now }
+        guard seeded else { seeded = true; arrived = []; return }
+        arrived = now.subtracting(seenHashes)
+    }
+
+    /// Take a whole set as already-seen. The demo's door, and `clear`'s.
+    private func seedArrivals(in accounts: [FramesAccount]) {
+        seenHashes = Set(accounts.flatMap(\.moves).map { $0.hash.lowercased() })
+        arrived = []
+        seeded = true
+    }
+
+    func hasJustArrived(_ hash: String) -> Bool { arrived.contains(hash.lowercased()) }
+
+    // MARK: - The first one
+
+    /// **THE FIRST SEND THIS INSTALL EVER WATCHED SETTLE**, once ever.
+    ///
+    /// Not the first BROADCAST: the send sheet already rains when the node
+    /// accepts the bytes, and accepting bytes is not the chain agreeing. The
+    /// moment worth marking is the one where a transaction this phone signed
+    /// turns out to be real — which on this chain is the whole point of the
+    /// seat, and which happens exactly once per person.
+    ///
+    /// Nil except in the beat between the settle and the room spending it.
+    private(set) var firstSettle: String?
+    private static let firstSettleKey = "frames.firstSettle.celebrated.v1"
+    private var firstSettleSpent: Bool {
+        UserDefaults.standard.bool(forKey: Self.firstSettleKey)
+    }
+
+    /// Called by the room once it has fired the moment. Spending it here
+    /// rather than at the settle is deliberate: a celebration nobody was
+    /// present for is not a celebration, and this seat is one chip away from
+    /// three others.
+    func spendFirstSettle() {
+        firstSettle = nil
+        UserDefaults.standard.set(true, forKey: Self.firstSettleKey)
+    }
+
+    /// **SEEDED SILENTLY FOR AN ACCOUNT THAT HAS ALREADY SENT.**
+    ///
+    /// The nonce IS the count of transactions this account signed, so a nonce
+    /// above zero on the first read of a session means the first send happened
+    /// before this build existed — and firing a "your first transaction
+    /// landed" moment over a week-old account is exactly the retroactive
+    /// claim §83 bans.
+    ///
+    /// Gated on `pending` being empty so it can never eat a real first settle:
+    /// a send made in THIS session leaves a pending row, and this only runs on
+    /// the session's first read, which happens before any send could.
+    private func seedFirstSettleIfAlreadySent(_ accounts: [FramesAccount]) {
+        guard !firstSettleSpent, pending.isEmpty else { return }
+        guard let mine = FramesKey.address() else { return }
+        let account = accounts.first { $0.address.caseInsensitiveCompare(mine) == .orderedSame }
+        guard let nonce = account?.nonce, nonce > 0 else { return }
+        UserDefaults.standard.set(true, forKey: Self.firstSettleKey)
+    }
+
     /// Drop anything the chain has now told us about, and anything old enough
     /// that we are no longer entitled to claim it is in flight.
     ///
@@ -319,13 +405,30 @@ final class FramesLiveState {
     /// stopped being able to say.
     private func reconcilePending(against accounts: [FramesAccount]) {
         let landed = Set(accounts.flatMap(\.moves).map { $0.hash.lowercased() })
+        // **THE FIRST ONE, CAUGHT ON ITS WAY OUT.** A pending row of ours that
+        // the chain now carries is a send that turned out to be real, and this
+        // is the only place that transition is observable — the row is about
+        // to stop existing, and the landed move it becomes carries no record
+        // of ever having been watched.
+        if !firstSettleSpent, firstSettle == nil,
+           let settled = pending.first(where: { landed.contains($0.hash.lowercased()) }) {
+            firstSettle = settled.hash
+        }
         let cutoff = Date().addingTimeInterval(-Self.pendingWindow)
         pending.removeAll { landed.contains($0.hash.lowercased()) || $0.at < cutoff }
     }
 
+    /// When a pending claim starts to look doubtful.
+    ///
+    /// The row dims from here to the cutoff rather than standing at full
+    /// strength and then vanishing. It says the true thing — that we are
+    /// losing our grip on a claim — without asserting the failure we cannot
+    /// observe (`reconcilePending`'s own rule, drawn instead of written).
+    static let pendingDoubtAfter: TimeInterval = 20
+
     /// Two minutes. Blocks here land in seconds, so this is a ceiling on how
     /// long a claim may stand unverified, not an expectation.
-    private static let pendingWindow: TimeInterval = 120
+    static let pendingWindow: TimeInterval = 120
 
     /// How many of an address's newest transactions get their frames read.
     /// A bound on REQUESTS, not on what a person can see.
@@ -335,6 +438,7 @@ final class FramesLiveState {
         accounts = []
         readAt = nil
         reached = false
+        seedArrivals(in: [])
         UserDefaults.standard.removeObject(forKey: Self.cacheKey)
         UserDefaults.standard.removeObject(forKey: Self.readAtKey)
     }
@@ -343,6 +447,13 @@ final class FramesLiveState {
     /// accounts exist there — and it must never be reachable from a real
     /// sweep, or a fixture would overwrite a live read.
     func installDemo(_ fixture: [FramesAccount]) {
+        // SEEDED, never noted: a fixture landing all at once is not five
+        // transactions arriving, and a demo that celebrates its own seed is
+        // the retroactive claim in the one place somebody is being SHOWN the
+        // app. `seedArrivals` rather than `noteArrivals` because entering the
+        // demo after a live read has already seeded would otherwise report
+        // every fixture row as news.
+        seedArrivals(in: fixture)
         accounts = fixture
         readAt = .now
         reached = true
@@ -385,6 +496,8 @@ final class FramesLiveState {
         // rather than blanking the room — §515a's rule.
         guard anyAnswered else { reached = false; return }
         reconcilePending(against: read)
+        seedFirstSettleIfAlreadySent(read)
+        noteArrivals(in: read)
         accounts = read
         readAt = .now
         reached = true

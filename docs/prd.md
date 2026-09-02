@@ -43793,6 +43793,160 @@ simulator, where the first build after the change drew rows with no fee.
 All 29 audits green; walked on the simulator across all four scopes and both
 toggle positions.
 
+## §548 eighth follow-up — five moments, and the two drawings that never arrived (user: "how would you add surprise and delight in the frames room", then "do all", 2026-09-01)
+
+Asked for delight, the honest first move was to read the room's own last
+ledger entry — §418's rule, and it paid immediately: three of the first ideas
+that came to mind were shipped last week. What was left divides cleanly into
+two halves that turned out to be the same finding twice: **this room draws
+things nothing had ever taught to arrive, and it narrates events nothing had
+ever taught to be noticed.**
+
+### The two drawings that simply were
+
+`FramesSequenceStrip` and `FramesMovementBars` painted their final frame in
+one go — the exact split §297 was written about, in a room where
+`FramesSponsorBar`, `FramesBalanceCurve` and every treemap in the app arrive.
+Both now wear `chartWipe`, left to right, which is the direction each of them
+MEANS: the strip's cells are frames in execution order, so the wipe is the
+transaction running, and the bars are oldest-to-newest, so the wipe is the
+account's own history accruing.
+
+**`design-motion-audit` could not have said so, and that is worth recording**:
+its second check looks for a proportional shape or a `GeometryReader` sized
+from data, and a `Canvas` is neither. So the one room whose two signature
+drawings are both `Canvas` kept two entrances missing while the audit printed
+green. Guarded by name in `frames-tx-selftest.sh` instead, since the general
+check structurally cannot reach them.
+
+### A settle you can see
+
+A chart entrance is a one-shot on appear, which is right for opening a room and
+wrong for the moment this seat exists for. **A transaction you just sent landed
+by the chart redrawing silently between two frames**, and the pending row above
+it — §548's own seventh-follow-up work — was simply gone. From outside, the
+most important thing this room does was the least visible.
+
+Three parts, one mechanism. `FramesLiveState.arrived` is the set of hashes
+present in a read and absent from the read before it; both charts are keyed on
+the newest hash, so a new transaction is a NEW drawing and draws itself; and
+the landed row wears `arrivalWash`, the app's existing one-shot, so the pending
+row fading out and the real row washing in are one beat.
+
+**Seeded silently on the first read of a session**, which is the whole
+correctness of it: without the seed the first sweep after launch reports the
+entire history as news and every row washes at once — §306's "did you already
+know?" failure with an animation on it, and precisely the bug Hyperliquid
+shipped when watching a wallet landed twenty-two "Opened" rows dated today.
+Deliberately NOT seeded from the persisted cache either: that reports
+everything that landed while the app was CLOSED as having just happened, which
+is the same lie one step subtler. The demo SEEDS rather than notes, so a
+fixture installed in one call can never celebrate itself in the one place
+somebody is being shown the app.
+
+### The first one, once ever
+
+The moment worth marking is not the first broadcast — the send sheet already
+rains when the node accepts the bytes, and accepting bytes is not the chain
+agreeing. It is the first time a transaction this phone signed turns out to be
+REAL, which is what the seat is for and happens exactly once per person.
+
+**A sentence, not a second shower.** The send that produced it rained seconds
+earlier, and dealing another over it is the stutter `BerryRain`'s "one gesture,
+one shower" ruling forbids wearing a different costume. It is a toast with the
+seat's own mark and a success haptic — the register this app already uses for
+"your first thing" and "your first standing question".
+
+**Never claimed retroactively.** The nonce IS the count of transactions an
+account signed, so a nonce above zero on the first read of a session means the
+first send happened before this build existed, and the flag is spent silently
+(`AddressConnectionsSeen`'s rule). Gated on nothing being pending so it can
+never eat a real first settle. **Spent by the ROOM, not by the settle**: a
+celebration nobody was present for is not a celebration, and this seat is one
+chip away from three others.
+
+### Somebody else just paid for one
+
+The reading this chain has that no other room in this app can make, and until
+now it only ever arrived as a slightly different bar. A sponsored transaction
+landing while somebody is in the Sponsors scope lights the segment that
+somebody else paid — a GLOW, deliberately not a size change and not a hue
+change, because the segment's width is a measurement and its colour is the
+room's, so the only thing left to lend it is light. Latched per view, dropped
+under Reduce Motion, and gone by the next read, so it is a glance and never a
+badge (`ArrivalWash`'s ruling).
+
+### The claim decays rather than popping
+
+`reconcilePending` drops a hash the chain has not carried inside its window,
+and its own doc says why: we cannot tell "still queued" from "dropped" from
+here, so we stop narrating rather than call it failed. **That is right and it
+was drawn wrong.** The row stood at full strength saying "Sending…" and was
+then simply gone, which from outside reads as the transaction being LOST rather
+than as us losing our grip on a claim. It dims from `pendingDoubtAfter` to the
+cutoff, never below a floor — a row you can barely see has already made the
+claim the dim exists to withdraw — and the container animates its removals,
+which it never did: the row had declared `.transition(.opacity)` since it
+shipped and nothing above it ever animated, so every removal was a cut.
+
+### The toggle's own picture moves — and the licence that lets it
+
+**`.animation(DS.Motion.standard, value: atomic)` had been sitting on the send
+preview since it shipped and could never have done anything**, because a
+`Canvas` redraws whole and that modifier has nothing inside it to reach. So the
+one place all-or-nothing is visible as a picture rather than as a sentence
+snapped between two states. `FramesSequenceCanvas` is `Animatable` on one
+`Double` now, and the tie GROWS.
+
+Making it animate in BOTH directions needed a decision. Threading `atomic`
+through to `stitched` draws both states correctly and animates neither: the
+run's joins vanish in the same instant as the dial, so the tie has nothing to
+travel over. The preview therefore asks `stitched` for the JOINED shape once
+and scales the ties by the toggle — **exact rather than a stand-in, and only
+because of a property of the encoder**: the two stitched outputs differ in
+`flags` and in nothing else, and `flags` reaches this drawing through exactly
+one door, `FramesFrameRow.joinedToNext`, rendered as the tie and nowhere else.
+So `joinProgress: 0` draws the non-atomic run exactly.
+
+Both halves are PINNED, because this is the kind of claim that stays true right
+up until somebody gives `flags` a second meaning — on the control that decides
+whether a failed batch leaves money with a stranger. The compiled half asserts
+the two shapes agree on every field but `flags` **and that they really do
+differ in flags**, or the first assertion proves nothing; a new mutation gives
+the atomic path a second effect and is caught. The textual half asserts
+`FramesRoomCard` reads `joinedToNext` exactly ONCE and never touches
+`startsBatch` or `atomicFlag` directly. And `joinProgress` is a dial over the
+run's own joins, so it can hide a join that exists and can never invent one
+that does not.
+
+### Demo parity, stated rather than faked
+
+Three of the five are arrival-driven, and the demo reaches no network by
+design — `refresh` returns early, the send is refused — so the settle wash, the
+first-settle toast and the sponsor glance are **structurally unreachable
+there, and that is the correct answer rather than a gap**: faking one would be
+the demo claiming a transaction landed, in the one place somebody is being
+shown the app. What the demo DOES carry is the other two whole — both chart
+entrances draw on every open, and the all-or-nothing preview composes and
+animates, since only the final send is refused.
+
+### Guarded
+
+`frames-tx-selftest.sh` at **46 mutations** plus eight new drift guards, read
+from comment-stripped copies as ever (all three files document these rules by
+naming what they must not do). The guards are the silent-claim half, not the
+animation half: arrivals seed silently, the demo seeds rather than notes, the
+first settle reads the nonce and is gated on nothing pending, both `Canvas`
+drawings arrive, the charts are keyed on the newest transaction, the tie is a
+dial over the run's own joins, and the preview declares both halves of its
+licence.
+
+**UNSEEN on a device.** Every one of the five is time-driven or gesture-driven
+— a landing, a first, a sponsorship, a stuck claim, a toggle — and no static
+check and no simulator sweep can exercise a transaction settling on a chain
+four days old. The build is green and all 29 audits pass; the settle, the
+first-settle toast and the glance have never been watched happen.
+
 ## 557. Dodo Payments moves to Wallet — a reconstructed stub, not a reconstructed ruling (2026-08-30)
 
 **This entry exists because the section it names never did.** §535 cites

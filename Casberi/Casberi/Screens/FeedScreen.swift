@@ -729,12 +729,32 @@ struct FeedScreen: View {
     /// An unreadable amount contributes a frame with no value rather than
     /// dropping out, so the strip keeps one cell per leg while somebody is
     /// still typing.
-    private func framesPreviewRun(_ legs: [DevnetSendLeg], atomic: Bool) -> [FramesFrameRow] {
+    private func framesPreviewRun(_ legs: [DevnetSendLeg]) -> [FramesFrameRow] {
         let built = legs.map {
             FramesTransaction.Leg(recipient: RLP.data(fromHex: $0.address) ?? Data(),
                                   value: DevnetSendParse.weiData(from: $0.amount) ?? Data())
         }
-        let fields = FramesTransaction.stitched(sender: Data(), legs: built, atomic: atomic,
+        // **BUILT JOINED, AND THE TOGGLE DIALS THE TIE** (2026-09-01).
+        //
+        // The `atomic` argument used to be threaded here, which drew both
+        // states correctly and animated NEITHER: flipping the toggle changed
+        // `flags` on the frames, and a run whose joins vanish in the same
+        // instant as the strip's `joinProgress` gives the tie nothing to
+        // travel over. So the toggle's own picture snapped, in the one place
+        // the control is visible as a picture at all.
+        //
+        // Asking `stitched` for the JOINED shape and scaling the ties by the
+        // toggle is exact rather than a stand-in, and the reason is a property
+        // of the encoder: **the two stitched outputs differ in `flags` and in
+        // nothing else** (see `FramesTransaction.stitched` — same frames, same
+        // targets, same values, same gas), and `flags` reaches this drawing
+        // through exactly one door, `FramesFrameRow.joinedToNext`, which the
+        // strip renders as the tie and nowhere else. So `joinProgress: 0`
+        // draws the non-atomic run byte for byte. Both halves of that are
+        // pinned by `frames-tx-selftest.sh`, because it is the kind of claim
+        // that stays true right up until somebody gives `flags` a second
+        // meaning.
+        let fields = FramesTransaction.stitched(sender: Data(), legs: built, atomic: true,
                                                 nonce: 0, maxPriorityFeePerGas: 0, maxFeePerGas: 0)
         return fields.frames.map { frame in
             FramesFrameRow(
@@ -3923,7 +3943,8 @@ struct FeedScreen: View {
                     // all-or-nothing toggle is visible as a picture rather than
                     // as a sentence.
                     preview: { legs, atomic in
-                        AnyView(FramesSequenceStrip(runs: [framesPreviewRun(legs, atomic: atomic)]))
+                        AnyView(FramesSequenceStrip(runs: [framesPreviewRun(legs)],
+                                                    joinProgress: atomic ? 1 : 0))
                     }))
 case .vibenetSend(let account):
             DevnetSendSheet(

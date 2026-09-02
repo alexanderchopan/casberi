@@ -178,6 +178,20 @@ struct FramesRoomFigure: View {
     /// log and the receipt names the fee AND its payer. A transaction whose
     /// delta could not be read draws NO bar rather than a zero-height one — an
     /// unread amount and an amount of nothing must not look alike.
+    /// **THE NEWEST TRANSACTION IS THE DRAWING'S IDENTITY** (2026-09-01).
+    ///
+    /// A chart entrance is a one-shot on appear, which is right for opening a
+    /// room and wrong for the moment this room exists for: a transaction you
+    /// just sent LANDS, and the chart it lands in redrew silently between two
+    /// frames. Keyed on the newest hash, a new transaction is a new drawing
+    /// and it draws itself — so the settle is watchable rather than inferred
+    /// from a row that is suddenly there.
+    ///
+    /// It changes only when a transaction becomes the newest, so nothing else
+    /// in the room can replay it: not a scope switch, not a balance read, not
+    /// an older run rolling off the end.
+    private var newestHash: String { moves.first?.hash ?? "" }
+
     @ViewBuilder private var activityChart: some View {
         let bars = moves.reversed().compactMap { move -> (Decimal, Bool)? in
             guard let delta = move.deltaWei else { return nil }
@@ -189,7 +203,7 @@ struct FramesRoomFigure: View {
         // 2-bar floor would leave the slot empty on exactly the account that
         // has just made its first send.
         if !bars.isEmpty {
-            FramesMovementBars(bars: bars).frame(height: 64)
+            FramesMovementBars(bars: bars).frame(height: 64).id(newestHash)
         }
     }
 
@@ -221,6 +235,7 @@ struct FramesRoomFigure: View {
             if !runs.isEmpty {
                 FramesSequenceStrip(runs: Array(runs))
                     .frame(height: CGFloat(runs.count) * 20)
+                    .id(newestHash)
             }
             let rolled = moves.flatMap(\.rolledBack).count
             if rolled > 0 {
@@ -244,9 +259,18 @@ struct FramesRoomFigure: View {
         }
         let theirs = paid.filter(\.1).map(\.0).reduce(0, +)
         let mine = paid.filter { !$0.1 }.map(\.0).reduce(0, +)
+        // **SOMEBODY ELSE JUST PAID FOR ONE.** The reading this chain has that
+        // no other room in this app can make, and until now it only ever
+        // arrived as a slightly different bar. A glance, not a badge: it
+        // answers a thing that just happened and gets out of the way
+        // (`ArrivalWash`'s ruling), and `arrived` empties on the next read so
+        // it cannot become a mark the bar wears.
+        let sponsoredArrival = moves.contains {
+            $0.sponsored && FramesLiveState.shared.hasJustArrived($0.hash)
+        }
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if theirs + mine > 0 {
-                FramesSponsorBar(mine: mine, theirs: theirs)
+                FramesSponsorBar(mine: mine, theirs: theirs, glance: sponsoredArrival)
             }
             if theirs > 0 {
                 note(String(localized: "Somebody else paid \(Int((theirs / (theirs + mine) * 100).rounded()))% of the gas here."))
@@ -274,11 +298,43 @@ struct FramesRoomList: View {
     let onSend: () -> Void
     let onOpenMove: (FramesMove) -> Void
 
+    @Environment(ShellChrome.self) private var chrome
+
     private var moves: [FramesMove] {
         accounts.filter(\.reached).flatMap(\.moves).sorted { $0.blockNumber > $1.blockNumber }
     }
 
     var body: some View {
+        scoped
+            // **THE FIRST ONE, ONCE EVER** (2026-09-01).
+            //
+            // Not the first broadcast — the send sheet already rains when the
+            // node accepts the bytes, and accepting bytes is not the chain
+            // agreeing. This fires when a transaction this phone signed turns
+            // out to be REAL, which is the thing the seat is for and happens
+            // exactly once per person.
+            //
+            // **A sentence, not a second shower.** The send that produced it
+            // rained seconds ago, and dealing another over it is the stutter
+            // `BerryRain`'s "one gesture, one shower" ruling forbids in a
+            // different costume. The toast carries the seat's own mark and a
+            // success haptic, which is the register this app already uses for
+            // "your first X".
+            //
+            // Spent HERE rather than at the settle, because a celebration
+            // nobody was present for is not a celebration — this seat is one
+            // chip away from three others and the room may not have been open.
+            .task(id: FramesLiveState.shared.firstSettle) {
+                guard FramesLiveState.shared.firstSettle != nil else { return }
+                FramesLiveState.shared.spendFirstSettle()
+                chrome.flash(String(localized: "Your first transaction landed"),
+                             tone: .success,
+                             mark: FramesIdentity.source,
+                             seconds: 3)
+            }
+    }
+
+    @ViewBuilder private var scoped: some View {
         switch section {
         case .home:
             // **HOME HOLDS THE TILES, NOT A FORM** (§553's ruling, mirrored).
@@ -301,19 +357,44 @@ struct FramesRoomList: View {
     /// true — that this phone sent it, and how many frames went — and nothing
     /// else.
     private func pendingRow(_ item: FramesPending) -> some View {
-        HStack(spacing: DS.Space.s3) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.legs == 1
-                     ? String(localized: "1 frame")
-                     : String(localized: "\(String(item.legs)) frames"))
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                Text(String(localized: "Sending\u{2026}"))
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+        // **THE CLAIM DECAYS RATHER THAN POPPING** (2026-09-01).
+        //
+        // `reconcilePending` drops a hash the chain has not carried inside its
+        // window, and its own doc says why: we cannot tell "still queued" from
+        // "dropped" from here, so we stop narrating rather than call it
+        // failed. That is right and it was drawn wrong — the row stood at full
+        // strength saying "Sending…" and then was simply gone, which from
+        // outside reads as the transaction being lost rather than as us losing
+        // our grip on a claim.
+        //
+        // A 1Hz tick, bounded by construction: it exists only while something
+        // is pending, in a stack that is already redrawing a spinner, and
+        // blocks here land in seconds so the common life of this view is two
+        // or three ticks.
+        TimelineView(.periodic(from: item.at, by: 1)) { tick in
+            let age = tick.date.timeIntervalSince(item.at)
+            let doubt = FramesLiveState.pendingDoubtAfter
+            let span = max(1, FramesLiveState.pendingWindow - doubt)
+            // Never below a floor: a row you can barely see is a row that has
+            // already made the claim this dim exists to withdraw.
+            let strength = age <= doubt ? 1
+                : max(0.4, 1 - (age - doubt) / span * 0.6)
+            HStack(spacing: DS.Space.s3) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.legs == 1
+                         ? String(localized: "1 frame")
+                         : String(localized: "\(String(item.legs)) frames"))
+                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    Text(String(localized: "Sending\u{2026}"))
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                }
+                Spacer(minLength: 0)
+                ProgressView().controlSize(.mini)
             }
-            Spacer(minLength: 0)
-            ProgressView().controlSize(.mini)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .opacity(strength)
+            .animation(DS.Motion.standard, value: strength)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .transition(.opacity)
     }
 
@@ -330,6 +411,11 @@ struct FramesRoomList: View {
                 ForEach(inFlight) { pendingRow($0) }
             }
             .padding(.bottom, DS.Space.s2)
+            // The row already declared `.transition(.opacity)` and nothing
+            // ever animated the container, so every removal was a cut. Keyed
+            // on the IDs rather than the array: a `FramesPending` carries a
+            // date, so `value: inFlight` would re-run on nothing changing.
+            .animation(DS.Motion.standard, value: inFlight.map(\.id))
         }
         if list.isEmpty, inFlight.isEmpty {
             Text(String(localized: "Nothing here yet."))
@@ -341,6 +427,14 @@ struct FramesRoomList: View {
                 ForEach(list) { move in
                     Button { onOpenMove(move) } label: { FramesMoveRow(move: move) }
                         .buttonStyle(.plain)
+                        // **THE SETTLE, ON THE ROW SOMEBODY IS WATCHING.**
+                        // The pending row above it fades out and the real one
+                        // arrives in the same beat, so a send becoming real is
+                        // a thing you SEE rather than a row that is suddenly
+                        // there. `arrivalWash` is the app's existing one-shot —
+                        // latched per view, dropped under Reduce Motion, and
+                        // gone by the next read, so it can never become a badge.
+                        .arrivalWash(FramesLiveState.shared.hasJustArrived(move.hash))
                 }
             }
         }
@@ -500,6 +594,14 @@ struct FramesMovementBars: View {
     /// Signed wei, and whether the transaction itself succeeded.
     let bars: [(Decimal, Bool)]
 
+    /// **THE DRAWING DRAWS ITSELF** (prd §297), and left to right is the
+    /// direction it means: oldest bar first, newest on the right, so the wipe
+    /// is the account's own history accruing. Invisible to
+    /// `design-motion-audit` because it is a `Canvas` rather than a
+    /// proportional shape — which is how a room where every other sized-from-
+    /// data drawing arrives kept two that simply were.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         Canvas { ctx, size in
             let magnitudes = bars.map { abs(NSDecimalNumber(decimal: $0.0).doubleValue) }
@@ -540,6 +642,7 @@ struct FramesMovementBars: View {
                 }
             }
         }
+        .chartWipe(reduceMotion: reduceMotion)
         .accessibilityElement()
         .accessibilityLabel(Text(String(localized: "\(String(bars.count)) movements")))
     }
@@ -547,10 +650,10 @@ struct FramesMovementBars: View {
 
 /// **THE ROOM'S SIGNATURE DRAWING: a transaction as its parts.**
 ///
-/// One run per transaction, one cell per frame, each cell's width its share of
-/// the gas the frames themselves report. Nothing else in this app draws a
-/// transaction as a sequence, because no other chain this app reads publishes
-/// one.
+/// One run per transaction, one cell per frame, each cell's width the VALUE
+/// that frame moved (the gas share it used to be was measured meaningless —
+/// see the note at the widths). Nothing else in this app draws a transaction
+/// as a sequence, because no other chain this app reads publishes one.
 ///
 /// **Three states, and the third is the whole point.** A frame that ran is
 /// filled; one that reverted is filled in the destructive tone; one that was
@@ -558,6 +661,51 @@ struct FramesMovementBars: View {
 /// so filling it like a success would be the lie §548 was written about.
 struct FramesSequenceStrip: View {
     let runs: [[FramesFrameRow]]
+
+    /// **THE TIE, AS A DIAL RATHER THAN A FACT** (2026-09-01).
+    ///
+    /// The room passes 1 and the drawing is the data's. The send preview
+    /// passes the toggle, so flipping all-or-nothing GROWS the ties instead of
+    /// swapping one static picture for another — which is what it did, despite
+    /// the `.animation(_:value: atomic)` already sitting on it: a `Canvas`
+    /// redraws whole, so nothing about that modifier could reach inside it.
+    /// `FramesSequenceCanvas` is `Animatable` for exactly this one value.
+    ///
+    /// It is a dial and not a second source of truth: a tie is drawn only
+    /// where the RUN says the frames are joined, so this can hide a join that
+    /// exists and can never invent one that does not.
+    var joinProgress: Double = 1
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        // **THE DRAWING DRAWS ITSELF** (prd §297). It is a `Canvas`, so
+        // `design-motion-audit` — which looks for proportional shapes and
+        // `GeometryReader` — could not see that it had no entrance, and it
+        // did not: every other sized-from-data drawing in this room arrives
+        // and this one simply was.
+        //
+        // Left to right is the direction it MEANS: these cells are frames in
+        // execution order, so the wipe is the transaction running.
+        FramesSequenceCanvas(runs: runs, joinProgress: joinProgress)
+            .chartWipe(reduceMotion: reduceMotion)
+            .accessibilityElement()
+            .accessibilityLabel(Text(String(localized: "\(String(runs.count)) transactions, drawn frame by frame")))
+    }
+}
+
+private struct FramesSequenceCanvas: View, Animatable {
+    let runs: [[FramesFrameRow]]
+    var joinProgress: Double
+
+    /// One value, so a plain `Double`. This is what lets a `Canvas`
+    /// interpolate at all — SwiftUI animates a view's `animatableData` and
+    /// re-evaluates its body per frame; without it the parent's `.animation`
+    /// modifier has nothing inside the drawing to move.
+    var animatableData: Double {
+        get { joinProgress }
+        set { joinProgress = newValue }
+    }
 
     private static let rowHeight: CGFloat = 14
     private static let gap: CGFloat = 6
@@ -643,8 +791,10 @@ struct FramesSequenceStrip: View {
                     // frames, and every other encoding would make it a property
                     // of one of them.
                     let last = i == run.count - 1
-                    if cell.joinedToNext, !last {
-                        let tieH = max(2, height * 0.34)
+                    // `joinProgress` scales it and can only ever HIDE a join
+                    // the run declares — never draw one it does not.
+                    if cell.joinedToNext, !last, joinProgress > 0.01 {
+                        let tieH = max(2, height * 0.34) * joinProgress
                         let tie = CGRect(x: x + w, y: y + (height - tieH) / 2,
                                          width: Self.cellGap, height: tieH)
                         ctx.fill(Path(tie), with: .color(DS.tint.opacity(0.55)))
@@ -653,8 +803,9 @@ struct FramesSequenceStrip: View {
                 }
             }
         }
-        .accessibilityElement()
-        .accessibilityLabel(Text(String(localized: "\(String(runs.count)) transactions, drawn frame by frame")))
+        // The wrapper carries the one label. Two accessibility elements over
+        // one drawing reads the same fact twice.
+        .accessibilityHidden(true)
     }
 
     /// A wei hex string as a magnitude for RELATIVE widths only.
@@ -685,6 +836,8 @@ struct FramesSequenceStrip: View {
 struct FramesSponsorBar: View {
     let mine: Double
     let theirs: Double
+    /// A sponsored transaction landed while somebody was in this scope.
+    var glance = false
 
     /// **A DRAWING SIZED FROM DATA GETS AN ENTRANCE** (prd §299) — caught by
     /// `design-motion-audit`, not by looking. It grows from the leading edge,
@@ -692,6 +845,11 @@ struct FramesSponsorBar: View {
     /// at full width on the first frame rather than animating faster.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var grown = false
+    /// The glance's own clock, latched so a re-compose cannot replay it —
+    /// this scope re-composes on every read, and a segment that keeps
+    /// flickering is the badge `ArrivalWash` exists to refuse.
+    @State private var glanced = false
+    @State private var lit = false
 
     var body: some View {
         GeometryReader { geo in
@@ -706,12 +864,32 @@ struct FramesSponsorBar: View {
                 if split > 0 {
                     RoundedRectangle(cornerRadius: 4, style: .continuous)
                         .fill(DS.tint)
+                        // A GLOW, not a size change and not a hue change: the
+                        // segment's width is a measurement and its colour is
+                        // the room's, so the only thing left to lend it is
+                        // light. Nothing when idle.
+                        .shadow(color: DS.tint.opacity(lit ? 0.7 : 0),
+                                radius: lit ? 7 : 0)
                 }
             }
             .scaleEffect(x: grown ? 1 : 0.001, anchor: .leading)
             .onAppear {
                 guard !reduceMotion else { grown = true; return }
                 withAnimation(DS.Motion.standard) { grown = true }
+            }
+            .task {
+                // Reduce Motion draws nothing at all rather than a slower
+                // glow — the fact is already in the bar's own proportions,
+                // and this is the flourish that preference exists to drop.
+                guard glance, !glanced, !reduceMotion else { return }
+                glanced = true
+                // A beat, so the bar's own growth lands first and the glance
+                // reads as a mark ON a settled drawing rather than as part of
+                // its arrival (`ArrivalWash`'s reasoning, same number).
+                try? await Task.sleep(nanoseconds: 180_000_000)
+                withAnimation(.easeOut(duration: 0.22)) { lit = true }
+                try? await Task.sleep(nanoseconds: 620_000_000)
+                withAnimation(.easeInOut(duration: 0.5)) { lit = false }
             }
         }
         .frame(height: 16)
