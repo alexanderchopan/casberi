@@ -56,6 +56,23 @@ struct AskDestinationCapsule: View {
     /// this conversation is keyed at all, and reading it here would light an
     /// agent segment for somebody who has only ever asked the phone.
     let active: AgentProvider?
+    /// FIND, as the capsule's first segment (prd §575, 2026-09-02). nil when
+    /// there is nothing to find — no draft, or a live recording.
+    ///
+    /// It joined the capsule because it was the second saturated block on the
+    /// draft surface: a solid `DS.tint` capsule 40pt tall sitting a thumb-width
+    /// from this row's own filled segment, so the screen carried two blue
+    /// blocks and neither read as the act (§563's tint budget, which
+    /// `hero-tint-audit.py` now enforces for hero TILES and cannot see here).
+    /// One control naming every destination the text can go to is also the
+    /// whole argument §543 made for this component; Find is a destination.
+    ///
+    /// **IT NEVER WEARS THE FILL, and that is not an omission.** The fill says
+    /// where the RETURN KEY goes, which is the device and only the device
+    /// (2026-08-31, unchanged). Find is a tap-only verb, and its result is its
+    /// own mark: the count lockup that replaces the surface the moment it runs.
+    /// Filling it would claim return searches, which it does not.
+    let find: (() -> Void)?
     let onDevice: () -> Void
     let onAgent: (AgentProvider) -> Void
 
@@ -85,7 +102,8 @@ struct AskDestinationCapsule: View {
         guard !recording else { return ([], []) }
         let raw = providers.map(\.rawValue)
         let parts = AskDestination.split(configured: raw, recent: AskDestination.recent(),
-                                         active: active?.rawValue)
+                                         active: active?.rawValue,
+                                         slots: AskDestination.slots(findShown: find != nil))
         let byRaw = { (values: [String]) in
             values.compactMap { value in providers.first { $0.rawValue == value } }
         }
@@ -95,6 +113,22 @@ struct AskDestinationCapsule: View {
     var body: some View {
         let parts = split
         HStack(spacing: 2) {
+            // FIND LEADS. It is the one verb here that keeps you inside the
+            // app and writes nothing (§215), and it is the leftmost thing the
+            // thumb reaches on a row that is right-aligned — but the ordering
+            // reason that matters is that the segments read left to right as
+            // "search this / ask this phone / ask an agent", cheapest first.
+            if let find {
+                Button {
+                    DSHaptic.selection()
+                    find()
+                } label: {
+                    segment(glyph: "magnifyingglass",
+                            title: String(localized: "Find"), filled: false)
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel("Find in your things")
+            }
             Button {
                 DSHaptic.selection()
                 onDevice()
@@ -150,6 +184,11 @@ struct AskDestinationCapsule: View {
         .padding(2)
         .background(DS.fillFaint, in: Capsule(style: .continuous))
         .animation(DS.Motion.standard, value: recording)
+        // The Find segment arrives with the first character and leaves with
+        // the last, and the row re-lays out around it — an agent segment folds
+        // into the overflow as it comes. One motion, the same curve the fill
+        // travels on, so the two never read as two separate events.
+        .animation(DS.Motion.standard, value: find != nil)
         // The fill MOVES between segments rather than blinking off one and on
         // at another — the source chips' own 2026-07-14 ruling ("selection is
         // an object traveling, not two states blinking"), which is what makes

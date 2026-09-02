@@ -45725,6 +45725,7 @@ beat, and both vanish together when the control goes off.
 signed from this build, so the busy tile, the disabled tile and the error line
 under the toggle have not been looked at — and the simulator cannot make a
 transaction settle.
+
 ## 572. The two rails stop saying "selected" four ways (user: "how if at all would you change the category chips in our top rail in the app", then "mock it", then "and would you change in anyway the source strip that is below it w/ the source room icons?", then "mock both rails together", then "ok, build it", 2026-09-02)
 
 The category strip and the room rail beneath it had **four selection grammars
@@ -45799,6 +45800,7 @@ object.
 the demo corpus and photographed in both states. The Markets room shows the ink
 strip, the blue active chip, and the ringed Stocktwits mark on a bare row of
 venue marks.
+
 ## 573. The sources tray's empty state, and the populated one left alone with its reasons (user: "now, how would you apply our new language to the Your Sources tray", then "mock it up", then "ok build it", 2026-09-02)
 
 **The populated tray is already in the language, and saying so is most of the
@@ -45894,6 +45896,7 @@ proves anything.
 `address-book-selftest`'s book door): when a guard goes red after a refactor,
 establish whether the RULE was broken or the PATTERN was outrun before touching
 either. Both of today's reds were the pattern.
+
 ## 574. §572's ring was wrong for one of the three controls, and the guard caught it after it shipped (2026-09-02)
 
 §572 gave every MARK a selection ring on one argument: a fill cannot speak on a
@@ -45940,3 +45943,258 @@ guards. `HEAD` carries it, the working tree does not, and build 487 is clean of
 it. Recorded here so the next reader of that log does not go looking for it in
 this work.
 
+## 575. The composer takes the design language — and the one lockup that was refused because the document already says it (user: "how would you apply our design langugage to improve the chat interface and ux", then "can you be more dramatic in rest, draft, and answering", then "ok build it", 2026-09-02)
+
+The style §553/§559/§563/§564 built is four rules with the colour removed: one
+thing is enormous and nothing is medium, a 36pt disc anchors it, the big thing
+sits hard bottom-left with the air pooled above, and colour appears only where
+it means something. This is that language carried to the agent sheet — the one
+surface in the app it had never reached, and the one people open most after the
+feed.
+
+Six changes landed. A seventh was drawn twice, approved twice, and then refused
+on a measurement, which is the entry's most useful half.
+
+### 1. The draft surface carried TWO blue blocks, so neither read as the act
+
+With text in the field the screen showed a solid `DS.tint` Find capsule 40pt
+tall AND the ask capsule's own filled segment, a thumb-width apart, plus
+`tintDim` scope chips and tint glyphs on the Send-to pills. That is §572's "four
+selection grammars inside 100pt of chrome" one screen over, and §563's tint
+budget broken — *"a second tinted tile leaves the type exactly as big and takes
+away the thing that made it read."*
+
+**Find is a segment of `AskDestinationCapsule` now.** That is not a demotion, it
+is the component's own argument applied one verb wider: §543 built this capsule
+because *"choosing and sending were two controls, and a person could not tell
+from the screen which one the arrow would use"* — and Find is a destination the
+typed text can go to. One control, every destination, one blue.
+
+**IT NEVER WEARS THE FILL, and that had to be reasoned about rather than
+styled.** The fill says where the RETURN KEY goes, which since 2026-08-31 is the
+device and only the device. Find is tap-only, and its result is its own mark.
+Filling it would claim return searches.
+
+**The row had to be re-measured, not just re-arranged.** `agentSlots = 2` was a
+measurement of device + two agents against a 390pt phone; device + Find + two
+agents is a segment too many. `AskDestination.agentSlotsWithFind = 1` is the
+second measurement, kept as its OWN constant rather than folded into a cleverer
+`agentSlots` — they are two rows and each is pinned by its own mutation. The
+displaced agent overflows into the menu that already existed for exactly this,
+whose items send identically to a segment, so nothing becomes unreachable.
+
+### 2. The count leaves the chip and becomes the crown
+
+`liveCount` is the debounced read `Retriever.find` has run against the draft on
+every keystroke since 2026-08-13 — the app answering before you ask — and its
+entire appearance was a **15pt numeral inside the Find chip**, beside the verb,
+two rungs under the words the person had typed. §563's inversion on the surface
+where the app is most obviously working for you.
+
+`draftCrown` draws it at `price48`, the crown rung, with a magnifier disc above
+and the scope chips beneath — the filters under the figure they narrow, where
+they were previously two bands away in the dock beside "Send to". Digits roll
+(`numericText`) because the figure changes on a debounce while you are still
+typing and a 64pt number swapping whole reads as the screen breaking.
+
+**Nothing is drawn under one match.** A `0` at 64pt is a verdict on your typing
+delivered in the largest type the app owns; and a read still in flight is
+honestly absent rather than stale, so the two silences read the same and neither
+is a claim.
+
+**§506 allows one crown per surface, which is what makes this legal** — and it
+is what forced item 4 below. Its gate is deliberately the same shape as
+`takeChips`' so the crown and the band that explains it appear and leave
+together.
+
+### 3. Who is answering leads every turn, from the first frame
+
+`provenanceBadge` has named the agent since 2026-08-31 and **it cannot exist
+until the answer does** — so the longest, least certain moment in the app (a
+keyed ask runs for many seconds) said nothing at all about where the question
+had gone. The capsule already resolves the destination at commit; nothing was
+drawing it.
+
+`turnDisc` is a 36pt disc at the head of the turn: the agent's own brand mark,
+or the device glyph, which is the promise rather than a vendor. **While waiting
+it takes §559's full anatomy** — the disc, the destination's NAME at the head
+rung, the question stepping back to the body rung beneath it — and the name is
+removed the moment a single element of the document paints. One thing large,
+and only while it is the only thing: §506 kept by the clock rather than by a
+gate somebody has to remember.
+
+Its gate is `inFlight && answerStream.els.isEmpty`, the skeleton's own, for the
+skeleton's own 2026-08-14 reason: `inFlight` is cleared at the settle while the
+brief paints its corpus half seconds earlier, so reading it alone leaves a 40pt
+agent name standing over an answer that has already arrived.
+
+**The brief takes no disc.** Its masthead greeting is its own subject, and a
+phone glyph beside "Good morning" claims the day was answered by a device. It is
+the one turn in the app that is not a question.
+
+**The rising frame gets the disc and the name too** — 2026-08-21's rule that the
+handoff frame must be the same pixels the real turn will wear, or the swap pops.
+
+### 4. The receipt moves under the answer, and the greeting steps off the head rung
+
+The badge LED the turn (2026-08-31, *"who wrote it opens the turn instead of
+trailing it"*). The disc does that now, larger and earlier. What is left is the
+part the disc cannot say and which is only true once the answer exists: what was
+DONE. That belongs after the thing it describes, in the quiet voice, the way a
+source line does.
+
+**Its words are deliberately unchanged, including the clause the disc appears to
+repeat.** Dropping "On this iPhone" was drawn in the mock and refused on
+2026-07-21's ruling: that sentence is the app's own promise stated as the silent
+default, and **a glyph is not a promise**. A receipt that names its issuer is
+also what makes the line readable on its own after a scroll.
+
+The greeting was `heading34` directly above a panel that now takes the same rung
+for its own invitation. Two 40pt objects is two crowns. §543's ruling is
+untouched in the part that was ruled on — it still greets you BY NAME through
+`clockGreeting()` — and the change is the size alone. Its `minimumScaleFactor`
+and its trailing-64 inset go with the rung: the first existed because a name at
+display scale overran the line, the second cleared the ✕ this same pass deleted.
+
+### 5. The resting field becomes the ask panel — the act at the head rung
+
+The one act on this surface was its quietest object: a 17pt placeholder in a
+one-line door. §563 found exactly that on the empty room (*"the only thing a
+person could DO on the screen was the quietest thing on it"*) and fixed it by
+giving the act the head rung; this is the same fix on the surface whose entire
+reason for existing is that act.
+
+At rest the field is a PANEL: a disc naming where a plain send goes, air, the
+invitation at `heading34`, then the controls. §559's anatomy on a surface that
+is not a tile and takes **no tint** — it has no colour to spend and does not
+need one, which is §564's reach screen making the same move with proportion
+alone.
+
+**It shares `restChrome(keepBrief: false)` with the `Spacer` that pushes this
+whole block to the bottom** — deliberately the same gate, so the panel can never
+grow while the spacer that makes room for it has gone. With a draft, a
+recording, a handoff or an answer, this is a tool rather than an invitation and
+returns to the compact shape it has always had.
+
+**The invitation drops back to `body17` on FOCUS, not on a draft.** The caret and
+the typed text are body-sized, and a 40pt invitation beside a 17pt caret reads as
+the field failing to match its own placeholder. It stops being the subject the
+instant you are.
+
+`agentsLink` moved into the panel's head row. §550 put it *"on the empty chat,
+where 'who is going to answer this?' is the live question"* — which is exactly
+this panel, so the move is that ruling drawn closer rather than reversed; it
+kept its own gate and still retires the moment an agent exists.
+
+**THE AIR IS A WRITTEN-DOWN SUM (§552's lesson):** disc 36 + s6 24 + head rung 40
++ s2 8 + control row 36 + the panel's own 12 top and bottom ≈ 168pt. Re-do the
+sum before adding a row. The `Spacer` absorbs the change, so nothing clips —
+what a careless row costs is the emptiness the panel exists to pool.
+
+### 6. One exit, and one fewer question under an answer
+
+The ✕ and the control row's chevron both called `close()`. One surface, one
+verb, two controls — the duplication §543 removed from the send row hours after
+shipping it. The chevron survives because it is in the bottom-right thumb zone
+the whole floating cluster was moved to by `AgentBar`'s 2026-08-07 corner
+ruling, while the ✕ sat in the hardest corner to reach on a phone.
+
+The §177 follow-up chip is unmounted. It is a PREPOPULATED QUESTION — the exact
+class §543 deleted from the rest surface, surviving only because that audit
+looked at the chips a person sees BEFORE asking. It also cost the verb row its
+weighting: three same-shaped neutral chips are three peers, and two of them are
+verbs on the answer you are reading while the third is a different question.
+Keep and Save as a note are what is left, which is one act per consequence.
+**Dormant, not deleted** (the §386a shape) — the deterministic map is the
+interesting half of §177 and costs nothing per answer.
+
+### 7. REFUSED — the find lockup, because the document already states the count
+
+The mock drew the same crown over the RESULTS, so the count you watched climb
+became the count that settled, and the fifth frame was the second one finished.
+It was approved twice and then checked against the tree, which refused it in one
+grep: `KeptAskComposers.search` already opens its document with
+`"N things match. In <scopes>. Showing the N closest."`
+
+A lockup there is **the same number twice, ten points apart** — §213's
+restatement, in the app that keeps re-learning it. And the sentence is not the
+view's to remove: that composer is shared by the kept `search:` pill, the digest
+refresh and the widget, so stripping its count to make room would take the
+number away from three readers to help one.
+
+**The continuity survives anyway, and is the better version of it**: the figure
+you were watching is confirmed in words by the document that replaces it.
+
+This is the third session in a fortnight to find the app more finished than a
+proposal assumed (§418, §563, §564) and the cause is the same every time — a
+design idea is generated against a screenshot and a memory, and both are older
+than the code. The instrument that settled it was one `grep` at one composer.
+
+### 8. The guards, and the two defects the guards had themselves
+
+`ask-destination-selftest.sh` grew to 15 mutations and 38 drift guards. **Every
+new guard was mutation-proven against the real tree before it was trusted** — the
+✕ returning, the crown leaving the crown rung, the crown drawing on zero, the
+resting invitation losing its rung, the turn losing its disc, the follow-up chip
+coming back, the solid Find capsule coming back, Find wearing the fill, the row
+ceasing to size for Find, and the receipt creeping back above its document.
+All ten fail the harness; the receipt pair is an ORDERING rule and is checked as
+one, by line number, since no single pattern can state it.
+
+**Two of the guards were broken on their first run, in the two ways this repo
+keeps paying for.**
+
+`badge_below` read its line numbers through `grep … | head -1`, which is the
+**SIGPIPE trap under `pipefail`**: head closes the pipe on its first line, grep
+dies 141, `pipefail` hands that to `set -e`, and the whole block exited
+**SILENTLY** after printing every guard above it — the run looked complete and
+its exit code was 1 with nothing saying why. `grep -m1` stops grep itself and
+nothing closes a pipe early. Same shape as `ondevice-selftest`'s 2026-08-19
+finding, in a second script; the generalisation is that **any `cmd | head` in a
+`pipefail` script is that bug waiting for a long enough file.** That function
+also used BRE where every other guard uses `-E`, so `\(` read as a group and its
+patterns matched nothing — a guard that cannot fire, passing.
+
+The other was a guard asserting the greeting had LEFT the head rung, written to
+match `Text(clockGreeting())` and the `.dsText(.heading34)` on the line beneath
+it. **grep is line-based**, so the pattern matched nothing, and `guard_absent`
+therefore passed vacuously — the classic check satisfied for the wrong reason.
+It asserts the rung on the line that carries it instead.
+
+### 9. What this does NOT do, said rather than left to be discovered
+
+**UNSEEN ON A DEVICE, and this is presentation work, which §394a says a green
+build proves nothing about.** The iOS build succeeds, all 33 static audits pass,
+the harness is green and every guard is mutation-proven — and not one of these
+six changes has been looked at on a simulator or a phone. The two to look at
+first are the resting ask panel (its 168pt sum is arithmetic against tokens, not
+a measurement against a rendered face) and the ask capsule with two agent keys
+configured, where Find takes the row to four segments and the `+N` overflow does
+real work for the first time.
+
+### 10. The number was taken out from under this entry while it was being written
+
+Recorded because it is §494's collision class recurring with the audit working
+exactly as designed. `--next` answered **§575** while this work was mid-build,
+so every code comment here was written citing §574 — and by the time the entry
+was appended, a concurrent session had committed its own §574 (the venue-switcher
+ring, `49fdda59`). Both readings were honest: `--next` counts a citation anywhere
+in the working tree as a claim, and at the moment it was asked their number was
+already claimed, which is precisely why it offered 575 and not 574. The mistake
+was mine — I read "next free: 575" and then cited 574.
+
+Resolved by the standing rule: **the bare number stays with whichever meaning the
+SOURCE already cites**, and theirs was committed with a heading while mine lived
+only in uncommitted comments, so this entry moved and 19 citations across four
+files moved with it. No renumbering table is needed because nothing shipped
+citing the wrong one.
+
+The generalisable half is the one `--next` already prints as its own ceiling:
+**say the number you take out loud.** Two sessions on one machine, one asking and
+one committing, and the audit can only see what is on disk at the moment it runs.
+
+Untouched on purpose: the Today brief's masthead keeps its own rung and its date
+(the rest greeting and the masthead are no longer the same object, so §564's
+one-rung argument does not reach across them); the ink fill and shadow on the
+input panel, which already make it the hero by tone; and every word of the
+provenance sentence.

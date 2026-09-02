@@ -95,6 +95,27 @@ for _ in 0..<50 {
 }
 check(stable, "the split is deterministic across repeated calls")
 
+// ---- FIND JOINS THE ROW (prd §575) --------------------------------------
+// Find is a segment of this capsule now rather than a solid tint capsule of
+// its own, so the row is device + Find + agents and one agent slot had to go.
+// The failure this pins is silent in both directions: too many slots and the
+// row overflows its own edge with the last segment half-drawn, too few and a
+// configured key drops into a menu for no reason.
+check(AskDestination.slots(findShown: false) == AskDestination.agentSlots,
+      "without Find the row keeps its two agent slots")
+check(AskDestination.slots(findShown: true) == AskDestination.agentSlotsWithFind,
+      "with Find the row makes room by giving up one")
+check(AskDestination.slots(findShown: true) < AskDestination.slots(findShown: false),
+      "Find costs a slot rather than being free")
+// NOTHING BECOMES UNREACHABLE. The displaced agent overflows into the menu,
+// whose items send identically to a segment — the whole reason the overflow
+// exists. A slot count that DROPPED one would be a key you cannot spend.
+let withFind = AskDestination.split(configured: three, recent: [],
+                                    slots: AskDestination.slots(findShown: true))
+check(withFind.shown.count == 1, "one agent shows beside Find")
+check(Set(withFind.shown + withFind.overflow) == Set(three),
+      "every configured provider is still reachable with Find in the row")
+
 // slots: 0 is a real answer (every agent overflows), never a crash.
 let zero = AskDestination.split(configured: three, recent: [], slots: 0)
 check(zero.shown.isEmpty && zero.overflow == three, "zero slots overflows everything")
@@ -216,6 +237,12 @@ mutate "an active agent whose key was cleared still mints a segment" \
 mutate "the slot count changes" \
        "static let agentSlots = 2" \
        "static let agentSlots = 1"
+mutate "Find is free, so the row overflows its own trailing edge" \
+       "static let agentSlotsWithFind = 1" \
+       "static let agentSlotsWithFind = 2"
+mutate "the slot count ignores Find" \
+       "findShown ? agentSlotsWithFind : agentSlots" \
+       "agentSlots"
 mutate "a Mac claims to be an iPhone" \
        'if isMac { return String(localized: "Mac") }' \
        'if false { return String(localized: "Mac") }'
@@ -298,6 +325,92 @@ guard_absent "the device pill is never filled unconditionally" "$WORK/capsule.nc
       'filled: true'
 guard "the answering agent's segment fills" "$WORK/capsule.nc" \
       'filled: provider == active'
+
+# ---- prd §575: the composer takes the design language --------------------
+# FIND IS A SEGMENT, NOT A SECOND TINT BLOCK. The solid `DS.tint` Find capsule
+# sat a thumb-width from this row's own filled segment, so the draft surface
+# carried TWO saturated blocks and neither read as the act (§563's tint budget,
+# which `hero-tint-audit.py` enforces for hero TILES and cannot see here). Both
+# halves are guarded: the segment must exist, and the capsule must not return.
+guard "Find is a segment of the ask capsule" "$WORK/capsule.nc" \
+      'title: String\(localized: "Find"\), filled: false'
+guard_absent "the Find segment never wears the fill" "$WORK/capsule.nc" \
+      'localized: "Find"\), filled: true'
+guard "the composer hands Find to the capsule" "$WORK/composer.nc" \
+      'find: \(hasDraft'
+guard_absent "the solid Find capsule does not return to the draft band" \
+      "$WORK/composer.nc" 'background\(DS\.tint, in: Capsule'
+# THE ROW SIZES ITSELF FOR FIND. Passing the default slot count with Find in
+# the row draws three agent-width segments where two fit.
+guard "the capsule sizes its agent slots for Find" "$WORK/capsule.nc" \
+      'slots: AskDestination\.slots\(findShown: find != nil\)'
+
+# ONE EXIT. The ✕ and the control row's chevron both called `close()` — one
+# surface, one verb, two controls, which is the duplication §543 removed from
+# the send row. The chevron survives because it is in the thumb corner the
+# whole floating cluster was moved to; this asserts both halves.
+guard_absent "the ✕ stays deleted" "$WORK/composer.nc" \
+      'accessibilityLabel\("Close"\)'
+guard "the chevron is still the way out" "$WORK/composer.nc" \
+      'accessibilityLabel\("Lower"\)'
+
+# THE CROWN IS THE COUNT WHILE THERE IS A DRAFT, and it is the ONLY crown on
+# the surface (§506, one per surface). Both halves matter: the figure must be
+# at the crown rung, and the greeting must have left it — two 40pt objects is
+# two crowns and neither reads as the subject.
+guard "the draft's match count draws at the crown rung" "$WORK/composer.nc" \
+      'dsText\(\.price48\)'
+guard "the crown is not drawn under one match" "$WORK/composer.nc" \
+      'let liveCount, liveCount > 0'
+# A LINE-BASED grep cannot span two lines, so the first cut of this guard --
+# matching `Text(clockGreeting())` and the `.dsText(.heading34)` beneath it --
+# matched nothing and passed vacuously, which is a guard that cannot fail.
+# The rung is asserted on the line that carries it instead.
+guard "the greeting sits at the body rung" "$WORK/composer.nc" \
+      'dsText\(\.body17\)'
+
+# THE ASK PANEL IS THE CROWN AT REST — the one act on the surface, at the head
+# rung, sharing its gate with the `Spacer` that makes room for it.
+guard "the resting invitation takes the head rung" "$WORK/composer.nc" \
+      'restingPanel && !fieldFocused \? \.heading34 : \.body17'
+guard "the resting panel shares the rest gate" "$WORK/composer.nc" \
+      'private var restingPanel: Bool \{ restChrome\(keepBrief: false\) \}'
+
+# WHO IS ANSWERING LEADS THE TURN, from the first frame — the badge below can
+# only say it once the answer exists, which left the longest moment in the app
+# silent about where the question had gone.
+guard "every turn leads with the destination disc" "$WORK/composer.nc" \
+      'turnDisc\(agent: agent\)'
+guard "the live turn names the agent it is asking" "$WORK/composer.nc" \
+      'agent: keyedCurrent'
+
+# NO PREPOPULATED QUESTION UNDER AN ANSWER (§543's rule, arriving late). The
+# §177 map is dormant, not deleted — this guards the MOUNT, not the function.
+guard_absent "the follow-up chip stays unmounted" "$WORK/composer.nc" \
+      'glyph: "arrow.turn.down.right"'
+guard "the §177 map stays available to re-mount" "$WORK/composer.nc" \
+      'private func nextAsk\(for question'
+
+# THE RECEIPT SITS UNDER THE ANSWER IT DESCRIBES. An ordering rule, so it is
+# checked as one: the document must be rendered BEFORE the badge in both the
+# settled turn and the live one, or the badge has crept back to the lead.
+badge_below() {
+  local what="$1" doc="$2" badge="$3"
+  local d b
+  # `grep ... | head -1` is the SIGPIPE trap this repo has paid for twice: head
+  # closes the pipe on its first line, grep dies 141, and `pipefail` hands that
+  # to `set -e` -- so this whole block exited SILENTLY on its first run, after
+  # printing every guard above it. `grep -m1` stops grep itself, so nothing
+  # closes a pipe early.
+  d=$(grep -nE -m1 "$doc" "$WORK/composer.nc" | cut -d: -f1)
+  b=$(grep -nE -m1 "$badge" "$WORK/composer.nc" | cut -d: -f1)
+  if [[ -n "$d" && -n "$b" && "$d" -lt "$b" ]]; then print "  ok   $what"
+  else print -u2 "  ✗ drift: $what (doc=$d badge=$b)"; exit 1; fi
+}
+badge_below "the settled turn's receipt sits under its document" \
+      'GenRender\(id: "root", els: turn\.els\)' 'provenanceBadge\(keyed: turn\.keyed'
+badge_below "the live turn's receipt sits under its document" \
+      'GenRender\(id: "root", els: answerStream\.els\)' 'provenanceBadge\(keyed: keyedCurrent'
 # The capsule must never resolve the agent itself: `AgentKey.active` says which
 # key a keyed answer would SPEND, not whether this conversation is keyed at
 # all, so reading it here lights a segment for somebody who has only ever asked
@@ -322,4 +435,4 @@ guard "the wallet answer is a document for the scroll anchor" "$WORK/composer.nc
 guard "the anchor and the typewriter guard read the same term" "$WORK/composer.nc" \
       'documentInView'
 
-print "  ok   AskDestination — 13 mutations, 22 drift guards"
+print "  ok   AskDestination — 15 mutations, 38 drift guards"

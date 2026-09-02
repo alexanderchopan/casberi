@@ -26,6 +26,28 @@ enum AskDestination {
     /// rest have to go somewhere, and `split` is where that is decided.
     static let agentSlots = 2
 
+    /// …and how many fit once FIND joins the row (prd §575, 2026-09-02).
+    ///
+    /// ONE, by the same arithmetic that measured the two above: Find is a
+    /// segment of this capsule now rather than a solid tint capsule of its
+    /// own, so the row carries device + Find + agents, and something had to
+    /// give. What gives is an agent slot and not the device or Find, because
+    /// both of those are always-present verbs while an agent is a preference
+    /// — and `split` already has an overflow menu for exactly this, whose
+    /// items send identically to a segment, so nothing becomes unreachable.
+    ///
+    /// Kept as a SECOND named constant rather than folded into a smarter
+    /// `agentSlots`: the two are separate measurements of two different rows,
+    /// and each is pinned by its own mutation in the harness.
+    static let agentSlotsWithFind = 1
+
+    /// The slot count for the row as it will actually be drawn. One place
+    /// decides, so the capsule can never disagree with the harness about how
+    /// many agents fit.
+    static func slots(findShown: Bool) -> Int {
+        findShown ? agentSlotsWithFind : agentSlots
+    }
+
     /// The device's own raw value in the recency ledger. Deliberately not a
     /// provider raw value and deliberately not spellable as one: it shares
     /// the ledger with them, so it must never collide with a real provider

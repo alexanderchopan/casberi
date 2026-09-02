@@ -467,6 +467,21 @@ enum DS {
         #endif
     }
 
+    /// True on iPad. Beside `isMac` and for the same reason: the ask
+    /// capsule's device segment and the agent turn's own device disc must name
+    /// the machine they are running on, and `AskDestination.deviceGlyph` is
+    /// pure over exactly these two facts so its harness can hold all three
+    /// cases. Kept HERE rather than recomputed per view — two readers of one
+    /// platform fact drift, and then two controls on one screen disagree about
+    /// what this device is.
+    static var isPad: Bool {
+        #if canImport(UIKit) && !targetEnvironment(macCatalyst)
+        UIDevice.current.userInterfaceIdiom == .pad
+        #else
+        false
+        #endif
+    }
+
     /// The on-device noun privacy/connect copy names — every "this
     /// iPhone"/"this Mac" claim in the app is a literal, checkable promise
     /// (see `NetworkReach.swift`), so it has to name the device it's

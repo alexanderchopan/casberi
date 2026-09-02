@@ -1530,10 +1530,11 @@ struct Composer: View {
     /// whole surface.
     @ViewBuilder
     private func convoTurn<Content: View>(question: String, animateIn: Bool = false,
+                                          agent: String? = nil, waiting: Bool = false,
                                           @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             if !question.isEmpty {
-                turnHeader(question: question)
+                turnHeader(question: question, agent: agent, waiting: waiting)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, DS.Space.s4)
                     // The question lift (delight, 2026-07-21): a freshly-sent
@@ -1549,6 +1550,108 @@ struct Composer: View {
         }
     }
 
+    /// WHAT YOU HAVE ALREADY FOUND, at the rung it deserves (prd §575,
+    /// 2026-09-02).
+    ///
+    /// `liveCount` is the debounced read `Retriever.find` already runs against
+    /// the draft on every keystroke — the app answering before you ask. Until
+    /// this, its whole appearance was a 15pt numeral inside the Find capsule,
+    /// beside the verb: the most useful thing on the draft surface, set two
+    /// rungs under the words the person typed. §563's inversion, on the
+    /// surface where the app is most obviously working for you.
+    ///
+    /// **`price48` is the CROWN rung and §506 allows one per surface, which is
+    /// what makes this legal.** While a draft is live and no answer is drawn,
+    /// this is the only figure on the screen; the moment either stops being
+    /// true it is not drawn at all. Its gate is deliberately the same shape as
+    /// `takeChips`' — the two are the draft's chrome and must appear and leave
+    /// together, or the crown outlives the band that explains it.
+    ///
+    /// **THE FOUND STATE DELIBERATELY DOES NOT GET THIS, and the reason is a
+    /// measurement rather than a taste.** The mock this implements drew the
+    /// same lockup over the results, so the count you watched climb became the
+    /// count that settled. `KeptAskComposers.search` already opens its
+    /// document with `"\(hits.count) thing match. In …. Showing the N
+    /// closest."` — so a lockup there is the same number twice, ten points
+    /// apart, which is §213's restatement. The composer is shared (the kept
+    /// `search:` pill, the digest refresh, the widget) so its sentence is not
+    /// the view's to remove. The continuity survives anyway and is the better
+    /// version of it: the figure you were watching is confirmed in words by
+    /// the document that replaces it.
+    ///
+    /// **Nothing is drawn under one match.** A `0` at 64pt is a verdict on
+    /// your typing delivered in the largest type the app owns, and a read
+    /// still in flight is honestly absent rather than stale (`liveCount` is
+    /// nil until a pass completes — see its own note), so the two silences
+    /// read the same and neither is a claim.
+    @ViewBuilder
+    private var draftCrown: some View {
+        if isOpen, hasDraft, !isRecording, !handingOff, !answering, turns.isEmpty,
+           let liveCount, liveCount > 0 {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Image(systemName: "magnifyingglass")
+                    .dsGlyph(18, weight: .semibold)
+                    .foregroundStyle(DS.textPrimary)
+                    .frame(width: DS.Face.list, height: DS.Face.list)
+                    .background(DS.gray100, in: Circle())
+                    .accessibilityHidden(true)
+                HStack(alignment: .lastTextBaseline, spacing: DS.Space.s2) {
+                    Text("\(liveCount)")
+                        .dsText(.price48)
+                        .foregroundStyle(DS.textPrimary)
+                        // The digits ROLL as the read refreshes rather than
+                        // cutting — this number changes on a debounce while
+                        // you are still typing, and a 64pt figure swapping
+                        // whole reads as the screen breaking.
+                        .contentTransition(.numericText())
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.9)
+                    Text("match so far")
+                        .dsText(.price16)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+                // The filters that produced it, under the figure they narrow.
+                // They were in the dock beside "Send to", two bands away from
+                // the number they explain.
+                if !liveScopes.isEmpty || !droppedScopes.isEmpty { scopeChips }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s3)
+            .animation(DS.Motion.standard, value: liveCount)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(liveCount) things match so far")
+        }
+    }
+
+    /// WHO IS ANSWERING, as a 36pt disc at the head of every turn (prd §575).
+    ///
+    /// The provenance badge has named the agent since 2026-08-31 and it can
+    /// only do so once the answer has SETTLED — which left the longest, most
+    /// uncertain moment in the app (a keyed ask can run for many seconds)
+    /// saying nothing at all about who was working. The capsule already knows
+    /// the destination at commit, so this is drawn from the first frame.
+    ///
+    /// nil is the device, and the device gets its own glyph rather than a
+    /// mark: the promise there is the phone, never a vendor (the badge's own
+    /// 2026-08-31 ruling, one rung larger).
+    @ViewBuilder
+    private func turnDisc(agent: String?) -> some View {
+        Group {
+            if let agent {
+                BridgeIcon(name: agent, size: DS.Face.list, circular: true)
+            } else {
+                Image(systemName: AskDestination.deviceGlyph(isMac: DS.isMac, isPad: DS.isPad))
+                    .dsGlyph(17, weight: .regular)
+                    .foregroundStyle(DS.textPrimary)
+                    .frame(width: DS.Face.list, height: DS.Face.list)
+                    .background(DS.gray100, in: Circle())
+            }
+        }
+        .accessibilityHidden(true)
+    }
+
     /// A turn's header, as ONE view — shared by the live turn, every settled
     /// turn, and the rising frame the handoff window paints (`risingHandoff`).
     ///
@@ -1557,7 +1660,54 @@ struct Composer: View {
     /// a second copy of this markup would reintroduce the pop it exists to
     /// remove, in a form nobody would think to look for.
     @ViewBuilder
-    private func turnHeader(question: String) -> some View {
+    private func turnHeader(question: String, agent: String? = nil,
+                            waiting: Bool = false) -> some View {
+        // THE DISC LEADS EVERY TURN (prd §575, 2026-09-02) — who answered,
+        // from the FIRST frame rather than at the settle. Before this the only
+        // statement of who was working was `provenanceBadge`, which cannot
+        // exist until the answer does, so the longest and least certain moment
+        // in the app (a keyed ask runs for many seconds) said nothing about
+        // where it had gone. The capsule already resolves the destination at
+        // commit; this draws it.
+        //
+        // WHILE WAITING it takes §559's anatomy: the disc, then the
+        // destination's own NAME at the head rung, the question stepping back
+        // to the body rung beneath it. That is the room saying what it is
+        // doing at the size the app reserves for the subject of a surface, and
+        // it is only ever true while nothing else is on screen — the moment a
+        // single element of the document paints, the name is gone and the
+        // question is the title again. One thing large, and only while it is
+        // the only thing (§506's one crown per surface, kept by the clock
+        // rather than by a gate somebody has to remember).
+        HStack(alignment: .top, spacing: DS.Space.s3) {
+            turnDisc(agent: agent)
+                // The brief wears a masthead whose greeting is its own subject
+                // — a disc there would put a phone glyph beside "Good morning"
+                // and claim the day was answered by a device. It is the one
+                // turn in the app that is not a question, so it is the one
+                // that takes no disc.
+                .opacity(TodayBrief.matches(question) ? 0 : 1)
+                .frame(width: TodayBrief.matches(question) ? 0 : DS.Face.list)
+                .allowsHitTesting(false)
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                if waiting, !TodayBrief.matches(question) {
+                    Text(agent ?? AskDestination.deviceLabel(isMac: DS.isMac, isPad: DS.isPad))
+                        .dsText(.heading34)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.9)
+                        .transition(.opacity)
+                }
+                header(question: question, waiting: waiting)
+            }
+        }
+        .animation(DS.Motion.standard, value: waiting)
+    }
+
+    /// The question itself — extracted so the waiting and settled shapes above
+    /// share it rather than each spelling the masthead's two branches.
+    @ViewBuilder
+    private func header(question: String, waiting: Bool) -> some View {
         Group {
                     // The Today brief wears a MASTHEAD, not the typed question
                     // (2026-07-22). The whisper capsule promises "Your
@@ -1608,8 +1758,12 @@ struct Composer: View {
                         }
                     } else {
                         Text(question)
-                            .dsText(.heading17)
-                            .foregroundStyle(DS.textPrimary)
+                            // Steps back while the destination's name is above
+                            // it: two objects at the row-title rung read as
+                            // two titles, and the one that is the subject of
+                            // the wait is the name.
+                            .dsText(waiting ? .body17 : .heading17)
+                            .foregroundStyle(waiting ? DS.textSecondary : DS.textPrimary)
                     }
         }
     }
@@ -1688,27 +1842,17 @@ struct Composer: View {
             // Opens UNFOCUSED (2026-07-12): the tray leads with the field's
             // invitation and the ask chips visible — tapping the field is
             // what raises the keyboard to ask.
-            .overlay(alignment: .topTrailing) {
-                // ✕ — the first exit (ruling 7). Only at the agent's own
-                // root; a pushed thing-view relies on its system back chevron.
-                if path.isEmpty {
-                    Button {
-                        close()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .dsText(.subhead13)
-                            .foregroundStyle(DS.textSecondary)
-                            .padding(10)
-                            .background(DS.fillFaint, in: Circle())
-                            .dsHover()
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Close")
-                    .dsTooltip(String(localized: "Close"))
-                    .padding(.top, DS.Space.s3)
-                    .padding(.trailing, DS.Space.s4)
-                }
-            }
+            // THE ✕ IS DELETED (prd §575, 2026-09-02). It and the chevron in
+            // the control row both called `close()` — one surface, one verb,
+            // two controls, which is exactly the duplication §543 removed from
+            // the send row hours after shipping it. The chevron survives
+            // because it is in the bottom-right thumb zone the whole floating
+            // cluster was moved to (`AgentBar`'s 2026-08-07 corner ruling),
+            // where this one sat in the hardest corner to reach on a phone.
+            //
+            // Nothing else changes about closing: `close()` has the same six
+            // callers it had, the swipe-down dismiss is the sheet's own, and a
+            // pushed thing-view still relies on its system back chevron.
             .navigationDestination(for: String.self) { id in
                 // Real generative thing-view — the real `ThingSheetView`,
                 // reused as-is rather than a slimmer push-only variant (it
@@ -1771,21 +1915,29 @@ struct Composer: View {
                 // an honorific), falling back to the bare greeting when
                 // `ProfileStore.name` is nil — which is not a gap, since "Good
                 // morning" is already a complete sentence.
+                // THE GREETING KEEPS ITS NAME AND LOSES ITS RUNG (prd §575,
+                // 2026-09-02). It was `heading34` — the head rung — directly
+                // above an ask panel that now takes the same rung for its own
+                // invitation, and §506's rule is one crown per surface: two
+                // 40pt objects on one screen is two crowns, so neither reads
+                // as the subject. The one you can ACT on wins, which is the
+                // panel; this is the room saying hello, not the room's job.
+                //
+                // §543's ruling is untouched in the part that was ruled on —
+                // it greets you BY NAME through `clockGreeting()`, whole
+                // localized sentences with the name inside them — and the
+                // change is the size alone.
+                //
+                // The two fit modifiers go with the rung: `minimumScaleFactor`
+                // was there because a name at display scale overran the line,
+                // and the trailing 64 cleared the ✕ this same pass deleted.
+                // At the body rung a long name simply wraps, which is what a
+                // sentence is allowed to do.
                 Text(clockGreeting())
-                    .dsText(.heading34)
-                    .foregroundStyle(DS.textPrimary)
-                    .padding(.leading, DS.Space.s4)
-                    // Clears the ✕ pinned top-trailing — a greeting carrying a
-                    // name at display scale runs the full width and collided
-                    // with it (caught on sim, 2026-07-20).
-                    .padding(.trailing, 64)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textSecondary)
+                    .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s2)
-                    // A long name at full display size still doesn't fit the
-                    // line reserved above — scale down rather than truncate
-                    // (the type ramp still carries hierarchy; this is fit,
-                    // not a new size step). Caught on sim, 2026-07-22.
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
                     .settleIn()
                 // THE PAIRING LINE IS DELETED (prd §543, user: "we don't need
                 // a 'ask or write or send it out' subtext"). It taught the
@@ -1819,6 +1971,9 @@ struct Composer: View {
                 .padding(.top, DS.Space.s2)
             }
 
+            // THE DRAFT'S OWN ANSWER, before it is asked (prd §575).
+            draftCrown
+
             // The conversation (2026-07-12): answered asks stack as turns you
             // can keep following up on. The last answer stays LIVE (answerStream)
             // until you ask the next one or close — so a typewriter reveal never
@@ -1842,7 +1997,12 @@ struct Composer: View {
             if risingHandoff, turns.isEmpty, !askSurfaceShowing,
                let pending = pendingAsk {
                 VStack(alignment: .leading, spacing: DS.Space.s1) {
-                    turnHeader(question: pending)
+                    // The handoff's own frame must be the same pixels the real
+                    // turn will wear or the swap pops (2026-08-21) — including
+                    // the disc and the waiting name. A handed-over ask is free
+                    // by construction (`chrome.askRequest` never carries a
+                    // key), so its destination is the device.
+                    turnHeader(question: pending, agent: nil, waiting: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, DS.Space.s4)
                     answerSkeleton
@@ -1877,21 +2037,9 @@ struct Composer: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: DS.Space.s4) {
                             ForEach(turns) { turn in
-                                convoTurn(question: turn.question) {
+                                convoTurn(question: turn.question,
+                                          agent: turn.keyed ? turn.agent : nil) {
                                     VStack(alignment: .leading, spacing: DS.Space.s1) {
-                                        // The mark LEADS the answer (2026-08-31)
-                                        // — who wrote it opens the turn instead
-                                        // of trailing it.
-                                        if !turn.failed {
-                                            provenanceBadge(keyed: turn.keyed,
-                                                            agent: turn.agent,
-                                                            searchedWeb: turn.searchedWeb,
-                                                            imagesSeen: turn.imagesSeen,
-                                                            pagesRead: turn.pagesRead,
-                                                            toolRounds: turn.toolRounds,
-                                                            model: turn.model,
-                                                            found: turn.found)
-                                        }
                                         GenRender(id: "root", els: turn.els)
                                             .environment(\.genAgentAnswerContext, true)
                                             .environment(\.genAskRequest, askFromAnswer)
@@ -1907,6 +2055,31 @@ struct Composer: View {
                                             // erased via AnyView for exactly
                                             // that stack-depth reason.
                                             .textSelection(.enabled)
+                                        // THE RECEIPT SITS UNDER THE ANSWER
+                                        // (prd §575, 2026-09-02). It led the
+                                        // turn from 2026-08-31 so the mark
+                                        // would say who wrote it before you
+                                        // read it — and the 36pt disc in the
+                                        // header does that now, larger, and
+                                        // from the first frame rather than at
+                                        // the settle. What is left here is the
+                                        // part the disc cannot say and which
+                                        // is only true once the answer exists:
+                                        // what was actually DONE to make it.
+                                        // That belongs after the thing it
+                                        // describes, in the quiet voice, the
+                                        // way a source line does.
+                                        if !turn.failed {
+                                            provenanceBadge(keyed: turn.keyed,
+                                                            agent: turn.agent,
+                                                            searchedWeb: turn.searchedWeb,
+                                                            imagesSeen: turn.imagesSeen,
+                                                            pagesRead: turn.pagesRead,
+                                                            toolRounds: turn.toolRounds,
+                                                            model: turn.model,
+                                                            found: turn.found)
+                                                .padding(.top, DS.Space.s1)
+                                        }
                                     }
                                 }
                                 // Each turn wears the cap ITS doc earns
@@ -1954,7 +2127,20 @@ struct Composer: View {
                                 // since lost its field echo (the draft moved
                                 // on) and needs the header to say what it was.
                                 convoTurn(question: foundCurrent ? "" : currentQuestion,
-                                          animateIn: !(risingFramePainted && turns.isEmpty)) {
+                                          animateIn: !(risingFramePainted && turns.isEmpty),
+                                          agent: keyedCurrent
+                                              ? (askProvider ?? AgentKey.active)?.agent : nil,
+                                          // The head-rung name stands only
+                                          // while the document is genuinely
+                                          // empty — the same gate the skeleton
+                                          // takes, for the same 2026-08-14
+                                          // reason: `inFlight` is cleared at
+                                          // the settle while the brief paints
+                                          // its corpus half seconds earlier,
+                                          // so reading it alone leaves a 40pt
+                                          // agent name standing over an answer
+                                          // that has already arrived.
+                                          waiting: inFlight && answerStream.els.isEmpty) {
                                     VStack(alignment: .leading, spacing: DS.Space.s2) {
                                         // The wait, drawn as the SHAPE of the
                                         // answer coming (2026-07-31). A
@@ -2012,20 +2198,6 @@ struct Composer: View {
                                         if inFlight, answerStream.els.isEmpty {
                                             answerSkeleton
                                         }
-                                        // A keyed answer says so, always — the
-                                        // badge is the honesty rule applied to
-                                        // where the answer was made, and it
-                                        // LEADS the answer (2026-08-31).
-                                        if !inFlight, !answerFailed {
-                                            provenanceBadge(keyed: keyedCurrent,
-                                                            agent: (askProvider ?? AgentKey.active)?.agent,
-                                                            searchedWeb: keyedSearchedWeb,
-                                                            imagesSeen: keyedImagesSeen,
-                                                            pagesRead: keyedPagesRead,
-                                                            toolRounds: keyedToolRounds,
-                                                            model: keyedModel,
-                                                            found: foundCurrent)
-                                        }
                                         GenRender(id: "root", els: answerStream.els)
                                             .textSelection(.enabled)
                                             .environment(\.genProseStreaming, proseStreaming)
@@ -2049,6 +2221,25 @@ struct Composer: View {
                                                 filter.tag = "All"
                                                 close()
                                             }
+                                        // The receipt, under the answer it
+                                        // describes (prd §575) — see the
+                                        // settled turn's own note. It says
+                                        // what was DONE, which is only knowable
+                                        // once the answer exists; who is
+                                        // answering is the header's disc and
+                                        // has been on screen since the first
+                                        // frame.
+                                        if !inFlight, !answerFailed {
+                                            provenanceBadge(keyed: keyedCurrent,
+                                                            agent: (askProvider ?? AgentKey.active)?.agent,
+                                                            searchedWeb: keyedSearchedWeb,
+                                                            imagesSeen: keyedImagesSeen,
+                                                            pagesRead: keyedPagesRead,
+                                                            toolRounds: keyedToolRounds,
+                                                            model: keyedModel,
+                                                            found: foundCurrent)
+                                                .padding(.top, DS.Space.s1)
+                                        }
                                         if !proseStreaming, !inFlight {
                                             // FlowRow, not HStack (2026-07-21):
                                             // three chips don't fit one line once
@@ -2167,17 +2358,46 @@ struct Composer: View {
                                                 // suggestion row below already carries the
                                                 // next asks (the away chip among them), so
                                                 // showing it here too would double it.
-                                                if let next = nextAsk, !briefLanding {
-                                                    Button {
-                                                        DSHaptic.selection()
-                                                        draft = next.query
-                                                        commit()
-                                                    } label: {
-                                                        Chip(text: next.label, style: .neutral,
-                                                             glyph: "arrow.turn.down.right")
-                                                    }
-                                                    .buttonStyle(.plain)
-                                                }
+                                                // THE FOLLOW-UP CHIP IS NOT
+                                                // DRAWN (prd §575, 2026-09-02).
+                                                // §177 offered one related next
+                                                // ask under every settled
+                                                // answer, and it is a
+                                                // PREPOPULATED QUESTION — the
+                                                // exact class §543 deleted from
+                                                // the rest surface, arriving
+                                                // late rather than early. It
+                                                // survived that sweep only
+                                                // because §543 audited the
+                                                // chips a person sees BEFORE
+                                                // asking; the reasoning ("four
+                                                // doors onto two documents", a
+                                                // tap whose value you cannot
+                                                // know until you spend it)
+                                                // reads identically here.
+                                                //
+                                                // It also cost this row its
+                                                // weighting: three same-shaped
+                                                // neutral chips are three peers,
+                                                // and two of them are verbs on
+                                                // the answer you are reading
+                                                // while the third is a
+                                                // different question. Keep and
+                                                // Save as a note are what is
+                                                // left, which is one act per
+                                                // consequence.
+                                                //
+                                                // DORMANT, NOT DELETED (the
+                                                // §386a shape): `nextAsk`, its
+                                                // state and every assignment
+                                                // stay exactly as they are, so
+                                                // re-admitting it is one mount
+                                                // away and the deterministic map
+                                                // that is the interesting half
+                                                // of §177 is not thrown away.
+                                                // It costs nothing per answer —
+                                                // string matches over a corpus
+                                                // that is already fetched.
                                             }
                                             .padding(.horizontal, DS.Space.s4)
                                             // One settled VERB ROW (2026-07-20):
@@ -2498,11 +2718,18 @@ struct Composer: View {
             // in for a synthesis the open couldn't show; the board is that
             // synthesis, so the two never appear together.
             agentChoiceHeader
-            // …and, when no agent is configured at all, where they come from
-            // (prd §550). Below the Bankr banner on purpose: that one names a
-            // single seat and its capability, this one names the category, so
-            // the wider door reads as the answer to "what else is there?"
-            agentsLink
+            // `agentsLink` MOVED INTO THE ASK PANEL'S HEAD (prd §575). §550
+            // put it "on the empty chat, where 'who is going to answer this?'
+            // is the live question" — which is exactly the panel, so this is
+            // that ruling drawn closer rather than reversed. It kept its own
+            // gate (`AgentKey.configured.isEmpty` plus `restChrome`), so it
+            // still retires the moment an agent exists.
+            //
+            // The Bankr banner stays HERE, above, and the ordering argument
+            // survives the move: that one names a single seat and its
+            // capability, this one names the category. They are simply no
+            // longer adjacent, which costs nothing — neither was reading as a
+            // pair.
             // NOTHING IS PREPOPULATED ANY MORE (prd §543, 2026-08-31, user:
             // "i don't think the prepopulated things are helpful … we honestly
             // just delete all the prepopulated stuff"). Gone in one pass: the
@@ -3636,8 +3863,10 @@ struct Composer: View {
                 .dsHover()
             }
             .buttonStyle(.plain)
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s3)
+            // The two band paddings are GONE with the band (prd §575): this
+            // is drawn inside the ask panel's head row now, beside the device
+            // disc, so the panel's own insets place it and a second set here
+            // pushed it off the row's trailing edge.
             .accessibilityLabel("Set up an agent")
             .accessibilityHint("Opens the agents in the app catalog")
         }
@@ -3867,6 +4096,31 @@ struct Composer: View {
     /// preview, not writing.
     private var writingRoom: Bool { (fieldFocused || hasDraft) && !isRecording }
 
+    /// THE PANEL IS THE CROWN AT REST (prd §575, 2026-09-02).
+    ///
+    /// The one act on this surface — asking — was its quietest object: a
+    /// 17pt placeholder in a one-line door, under a 40pt greeting. §563 found
+    /// exactly that inversion on the empty room ("the only thing a person
+    /// could DO on the screen was the quietest thing on it") and fixed it by
+    /// giving the act the head rung; this is the same fix on the surface whose
+    /// entire reason for existing is that act.
+    ///
+    /// So at rest the field is a PANEL: a disc naming where a plain send goes,
+    /// air, then the invitation at the head rung, then the controls. §559's
+    /// anatomy — disc top-left, the big thing hard against the bottom-left,
+    /// the air pooled above it — on a surface that is not a tile and takes no
+    /// tint, because it has no colour to spend and does not need one (§564's
+    /// reach screen made the same move with proportion alone).
+    ///
+    /// **It is the rest state ONLY**, and it shares `restChrome(keepBrief:
+    /// false)` with the `Spacer` that pushes this whole block to the bottom —
+    /// deliberately the same gate, so the panel can never grow while the
+    /// spacer that makes room for it has gone. The moment there is a draft, a
+    /// recording, a handoff or an answer, this is a tool rather than an
+    /// invitation and returns to the compact shape it has always had: that is
+    /// when the crown belongs to the count (`draftCrown`) or to the answer.
+    private var restingPanel: Bool { restChrome(keepBrief: false) }
+
     private var inputBar: some View {
         // ONE ANATOMY IN EVERY STATE (prd §543, 2026-08-31): the field line on
         // top, the control row beneath it — at rest, with a draft, and under a
@@ -3877,6 +4131,28 @@ struct Composer: View {
         // learnable: it is in the same place before and after you type, and
         // typing changes only what a tap does.
         VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if restingPanel {
+                // The head of the panel: the device this answers on, and — for
+                // somebody with no key yet — where other answerers come from.
+                // `agentsLink` moved HERE from its own band two rows up the
+                // stack (prd §550 placed it on the empty chat, which this is;
+                // it is the same row in the same state, now beside the thing
+                // it explains rather than floating above the kept pills).
+                HStack(alignment: .center, spacing: DS.Space.s3) {
+                    turnDisc(agent: nil)
+                    Spacer(minLength: 0)
+                    agentsLink
+                }
+                .padding(.horizontal, DS.Space.s1)
+                // THE AIR IS THE POINT, and it is a written-down sum (§552's
+                // lesson): head disc 36 + this 24 + the invitation at the head
+                // rung 40 + s2 8 + the control row 36 + the panel's own 12
+                // top and bottom ≈ 168pt. Re-do the sum before adding a row
+                // here. The `Spacer` above this whole block absorbs the
+                // change, so nothing clips — what a careless row costs is the
+                // emptiness the panel exists to pool.
+                Spacer(minLength: DS.Space.s6)
+            }
             draftField
                 // Four lines reserved once there is writing to do, one line
                 // otherwise — the room-to-write ruling, unchanged; only the
@@ -3895,6 +4171,13 @@ struct Composer: View {
                     hasDraft: hasDraft,
                     recording: isRecording,
                     active: activeAskAgent,
+                    // FIND IS A SEGMENT NOW (prd §575) — its own gate, not
+                    // `hasDraft`, because `runFind` refuses an in-flight ask
+                    // and a segment that refuses is the dead control §83 bans.
+                    // A live recording stands it down for the same reason the
+                    // agents do: the mic's own commit is the verb there.
+                    find: (hasDraft && !isRecording && !inFlight && !handingOff)
+                        ? { runFind() } : nil,
                     onDevice: {
                         // The device answer is what the return key does, so
                         // this is `commit()` exactly: a live recording commits
@@ -3922,6 +4205,7 @@ struct Composer: View {
         .shadow(color: DS.cardShadow, radius: 10, x: 0, y: 3)
         .animation(DS.Motion.standard, value: hasDraft || isRecording)
         .animation(DS.Motion.standard, value: fieldFocused)
+        .animation(DS.Motion.standard, value: restingPanel)
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
     }
@@ -3987,12 +4271,30 @@ struct Composer: View {
                 // The examples aren't lost: the ask chips below are the
                 // corpus-derived specifics, and they're tappable, which a
                 // placeholder never was.
+                // THE INVITATION IS THE CROWN AT REST (prd §575) — see
+                // `restingPanel`. `heading34` is the head rung, and this is
+                // the one place on the surface that earns it: §506 allows one
+                // crown per surface and at rest there is nothing else here,
+                // the greeting having stepped down to the body rung in the
+                // same pass for exactly that reason.
+                //
+                // It drops back to `body17` THE MOMENT THE FIELD IS FOCUSED,
+                // not when a draft exists: the caret and the typed text are
+                // body-sized, and a 40pt invitation standing beside a 17pt
+                // caret reads as the field failing to match its own
+                // placeholder. So the invitation shrinks as you start to
+                // write, which is the honest transition — it stops being the
+                // subject the instant you are.
                 .placeholder(when: !hasDraft) {
                     Text(answering || !turns.isEmpty ? String(localized: "Ask about this…")
                                                      : String(localized: "Ask or search"))
-                        .dsText(.body17).foregroundStyle(DS.textTertiary)
+                        .dsText(restingPanel && !fieldFocused ? .heading34 : .body17)
+                        .foregroundStyle(restingPanel && !fieldFocused
+                                         ? DS.textSecondary : DS.textTertiary)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.9)
                         .contentTransition(.opacity)
+                        .animation(DS.Motion.standard, value: fieldFocused)
                 }
                 .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
@@ -4184,39 +4486,26 @@ struct Composer: View {
                 if offerFind && !liveScopes.isEmpty { scopeChips }
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: DS.Space.s2) {
-                        // Find leads, and wears the tint FILL where the other
-                        // chips wear tint only in their glyph — this is the one
-                        // verb that keeps you in the app, so it reads primary.
-                        if offerFind {
-                        Button { runFind() } label: {
-                            HStack(spacing: DS.Space.s2) {
-                                Image(systemName: "magnifyingglass")
-                                    .accessibilityHidden(true)
-                                    .dsGlyph(14)
-                                Text("Find")
-                                    .dsText(.callout15).fontWeight(.semibold)
-                                // The count, when it is known — the chip says
-                                // whether the tap is worth taking, and with
-                                // the scope chips beside it, WHY it isn't. It
-                                // is simply absent otherwise (a big corpus, a
-                                // pass still in flight): a stale or guessed
-                                // number here would be worse than none.
-                                if let liveCount {
-                                    Text("\(liveCount)")
-                                        .dsText(.callout15)
-                                        .foregroundStyle(.white.opacity(0.7))
-                                        .contentTransition(.numericText())
-                                }
-                            }
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, DS.Space.s3 + 2)
-                            .frame(minHeight: 40)
-                            .background(DS.tint, in: Capsule(style: .continuous))
-                            .dsHover()
-                        }
-                        .buttonStyle(PressSpring())
-                        .accessibilityLabel("Find in your things")
-                        }
+                        // THE SOLID FIND CAPSULE IS GONE (prd §575,
+                        // 2026-09-02). It was `DS.tint`-filled and 40pt tall,
+                        // a thumb-width above the ask capsule's own filled
+                        // segment — TWO saturated blocks on one surface, which
+                        // is §563's tint budget broken in the place the
+                        // budget's own audit cannot look (that check governs
+                        // hero TILES). The verb moved into the capsule as its
+                        // leading segment, where it is one of the destinations
+                        // the text can go to rather than a competing primary.
+                        //
+                        // ITS COUNT MOVED UP, not away: `liveCount` is the
+                        // crown of the draft surface now (`draftCrown`), at
+                        // the rung a figure that IS the answer earns. Said
+                        // once, in one place, at the size that makes it worth
+                        // reading — the chip's 15pt number was the same fact
+                        // whispered beside the verb.
+                        //
+                        // `offerFind` survives because the SCOPE CHIPS still
+                        // read it (they belong to the find, not to the send),
+                        // and they are drawn with the crown now.
 
                         // THE "Ask <agent>" CHIPS MOVED INTO THE CAPSULE
                         // (prd §543). One chip per provider was right when the
