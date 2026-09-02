@@ -56,7 +56,7 @@ struct FramesSendCard: View {
     @ViewBuilder private var create: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             DevnetCreatePanel(tint: Self.mark,
-                              title: String(localized: "Make an account"),
+                              title: String(localized: "Create\naccount"),
                               busy: creating,
                               onCreate: makeKey)
             if let createError {

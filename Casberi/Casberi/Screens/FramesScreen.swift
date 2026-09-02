@@ -37,7 +37,7 @@ struct FramesScreen: View {
                 mode: .noAccount,
                 // ACTION, not a re-pitch: you reach this from the product
                 // page, which has just said what the chain is.
-                intro: "Make an account the faucet will fund, or paste an address to watch.",
+                intro: "Create an account the faucet will fund, or paste an address to watch.",
                 connected: connected)
 
             if connected {
@@ -143,7 +143,7 @@ struct FramesScreen: View {
     /// once done rather than sitting there inert.
     @ViewBuilder private var accountDoors: some View {
         if keyAddress == nil {
-            DSSlabDoor(title: String(localized: "Make an account"),
+            DSSlabDoor(title: String(localized: "Create an account"),
                        detail: String(localized: "A key made on this phone")) {
                 DSHaptic.selection()
                 makeKey()

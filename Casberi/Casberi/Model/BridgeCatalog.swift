@@ -669,7 +669,7 @@ enum BridgeCatalog {
         // something here without saying so would be the §83 failure on the
         // page where they decide whether to connect.
         Offer(name: "Frames Devnet", tagline: "Send a transaction no wallet can make", group: "Wallet", connectable: true,
-              summary: "The public test network for EIP-8141 frame transactions — where one transaction is a sequence of frames, each with its own target and gas. No real funds, and the chain may be reset without notice. Make an account the faucet funds, or watch any address.",
+              summary: "The public test network for EIP-8141 frame transactions — where one transaction is a sequence of frames, each with its own target and gas. No real funds, and the chain may be reset without notice. Create an account the faucet funds, or watch any address.",
               features: ["Send a frame transaction — no other wallet can encode one",
                          "What each frame did, and what it spent",
                          "Who paid the gas, when it wasn't you",
