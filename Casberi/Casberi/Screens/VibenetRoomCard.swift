@@ -441,248 +441,281 @@ struct VibenetRoomCard: View {
         // and looks unrefined". Separation by surface only works once the gap
         // is wide enough to be seen as a gap; the contents of all four cards
         // are untouched.
-        VStack(alignment: .leading, spacing: DS.Space.s6) {
-            // **THE HERO IS BARE (2026-08-25, prd §475).** Reported: "the
-            // sparkline and balance are in one card in the vibenet room, but
-            // in the wallet room neither are in a card."
-            //
-            // Wallet's own hero carries the ruling in its source
-            // (`walletTilesSection`, 2026-08-16): "NO GROUND AT ALL — Apple
-            // has never shipped a balance inside a coloured card… a container
-            // around them was the app claiming emphasis the content already
-            // had." A figure, its move and its curve ARE the hero; the card
-            // was this room claiming an emphasis they already carry, and it
-            // made the one reading both rooms share the one element that
-            // looked different in each.
-            // **THE CROWN AND ITS CHART ARE ALWAYS ON, ABOVE THE CONTROL
-            // (prd §482 amendment).** They belong to no scope: they are the
-            // room's identity rather than one of its readings, and a strip
-            // that could scope them away would let you open vibenet and not
-            // be told the balance.
-            //
-            // It also settles §482's own ruling permanently instead of by
-            // careful ordering. That entry moved the attention strip below
-            // the holdings because *"holdings and sparkline are together"* —
-            // with the crown pinned above the control, nothing can ever get
-            // between the two again.
-            // **THE CROWN AND ITS CHART ARE ALWAYS ON, ABOVE THE CONTROL.**
-            // They belong to no scope: they are the room's identity rather
-            // than one of its readings, and a strip that could scope them away
-            // would let you open vibenet and not be told the balance.
-            //
-            // **HOME'S CHART IS ITS DRAWING; every other scope gets one of its
-            // own in the SAME FIXED SLOT** (prd §482 amendment, Wallet's §483
-            // contract). The bar must land in the same place on every scope,
-            // and the only way that is true is if everything above it is one
-            // height — so the slot is fixed rather than fitted and each
-            // drawing sits in it top-aligned. Fitted, the runway and the spine
-            // are different heights and the toggle walks up and down the
-            // screen as you use it.
-            // **ONE FIXED BOX HOLDS THE CROWN *OR* THE SCOPE'S FIGURE — never
-            // both stacked** (prd §491, matching Wallet's §483 spec exactly;
-            // reported as *"the home toggle bar is in the wrong place, so it's
-            // not like Wallet"*).
-            //
-            // MEASURED: Wallet's chip bar sits at 579pt and this room's sat at
-            // 745 — 166pt lower — and the cause was structural rather than
-            // spacing. Wallet's 210pt box contains the crown AND its chart, and
-            // on any other scope the crown is REPLACED: its Positions scope
-            // opens "Deposited $61,000", not the wallet total. This room kept
-            // its crown on every scope and then added a 210pt box beneath it,
-            // so the room was crown + 210 where Wallet is 210.
-            //
-            // Which means each scope owes its own headline, because it no
-            // longer inherits the crown's — see `scopeFigure`.
-            // **THE SLOT HOLDS ITS HEIGHT EVEN WHEN THE FIGURE DECLINES.**
-            //
-            // Reported as *"clicking in accounts makes the bar move around"*,
-            // and measured: picking an account with no sub-accounts and no
-            // links moved the chip bar from 575pt to 355pt — exactly this
-            // slot's height. `.frame(minHeight:)` DOES NOT hold an `EmptyView`
-            // open: a `@ViewBuilder` that produces nothing has no layout
-            // presence at all, so the frame collapsed and everything below
-            // jumped up a third of a screen the moment you used the control.
-            //
-            // The `Color.clear` underneath is what gives the frame something
-            // to be applied to. It is the same class §483 recorded for Wallet
-            // ("collapsing to `maxHeight: 0` is NOT the same as not emitting")
-            // arriving from the opposite direction — there an empty Section
-            // still took spacing, here a non-empty frame took none.
-            // **ONE SLOT, AND IT IS `DSRoomSlot`** (prd §495, user: "one
-            // template"). This wrapped its own `ZStack` + fixed frame + clip
-            // around figures that now go through `DSRoomSlot`, which applies
-            // exactly those three things — a box inside a box, and the second
-            // copy of the rule Wallet was also keeping.
-            //
-            // Home draws the crown, which names itself at the headline rung, so it
-            // passes no headline; the row is still RESERVED, which is what
-            // keeps its first pixel level with every other scope's and what
-            // clears the settings gear.
-            Group {
-                if (section ?? .home) == .home {
-                    // The crown IS the headline here too — see Wallet's
-                    // own Home slot and `reservesHeadline`.
-                    DSRoomSlot(headline: nil, reservesHeadline: false) { balanceHero }
-                } else {
-                    scopeVisualDissolving
+        // **THE CHASSIS IS ITS OWN STACK, AND ITS GAPS ARE POSITIVE NUMBERS**
+        // (2026-09-02 — reported as *"clipping on vibenet"*, with the scope
+        // switcher cut in half along the bottom edge of the fused slab).
+        //
+        // The two chassis gaps were spelled as NEGATIVE bottom paddings against
+        // this stack's own `s6` — `railGap - s6` and `contentGap - s6` — which
+        // is only a spacing correction while something follows. On the Home
+        // scope with several accounts nothing does: every branch below the slab
+        // is gated on a scope this one is not, so `railSlab` is the LAST child
+        // and its `-14` is not a correction, it is 14pt of the slab drawn BELOW
+        // the stack. This card is one `List` row (`FeedScreen.insightSection`,
+        // `listRowInsets(EdgeInsets())`) and a list cell clips to its bounds, so
+        // those 14 points were cut — which lands on the switcher, the last thing
+        // in the slab, and takes its bottom padding and half its picked fill
+        // with it. **Measured off the screenshot**: the glass ran 96.7pt against
+        // an ideal 110.7, and the difference is exactly `contentGap - s6`.
+        //
+        // The other three chain rooms never had it: Wallet, Hegotá and Frames
+        // each mount the slab as its own `Section` with a POSITIVE
+        // `listRowInsets(bottom: DSRoomChassis.contentGap)`, so there is nothing
+        // to draw outside. This is that shape, expressed in a stack: the chassis
+        // is one child holding the slot and the slab `railGap` apart, the room
+        // it scopes is the other, and the outer stack's own spacing IS
+        // `contentGap`. No view draws outside its frame, so no clip can reach
+        // one — which is the point rather than the 14pt: a negative trailing
+        // padding is a bet on there always being a next child, and this stack
+        // has eight optional ones.
+        VStack(alignment: .leading, spacing: DSRoomChassis.contentGap) {
+            VStack(alignment: .leading, spacing: DSRoomChassis.railGap) {
+                // **THE HERO IS BARE (2026-08-25, prd §475).** Reported: "the
+                // sparkline and balance are in one card in the vibenet room, but
+                // in the wallet room neither are in a card."
+                //
+                // Wallet's own hero carries the ruling in its source
+                // (`walletTilesSection`, 2026-08-16): "NO GROUND AT ALL — Apple
+                // has never shipped a balance inside a coloured card… a container
+                // around them was the app claiming emphasis the content already
+                // had." A figure, its move and its curve ARE the hero; the card
+                // was this room claiming an emphasis they already carry, and it
+                // made the one reading both rooms share the one element that
+                // looked different in each.
+                // **THE CROWN AND ITS CHART ARE ALWAYS ON, ABOVE THE CONTROL
+                // (prd §482 amendment).** They belong to no scope: they are the
+                // room's identity rather than one of its readings, and a strip
+                // that could scope them away would let you open vibenet and not
+                // be told the balance.
+                //
+                // It also settles §482's own ruling permanently instead of by
+                // careful ordering. That entry moved the attention strip below
+                // the holdings because *"holdings and sparkline are together"* —
+                // with the crown pinned above the control, nothing can ever get
+                // between the two again.
+                // **THE CROWN AND ITS CHART ARE ALWAYS ON, ABOVE THE CONTROL.**
+                // They belong to no scope: they are the room's identity rather
+                // than one of its readings, and a strip that could scope them away
+                // would let you open vibenet and not be told the balance.
+                //
+                // **HOME'S CHART IS ITS DRAWING; every other scope gets one of its
+                // own in the SAME FIXED SLOT** (prd §482 amendment, Wallet's §483
+                // contract). The bar must land in the same place on every scope,
+                // and the only way that is true is if everything above it is one
+                // height — so the slot is fixed rather than fitted and each
+                // drawing sits in it top-aligned. Fitted, the runway and the spine
+                // are different heights and the toggle walks up and down the
+                // screen as you use it.
+                // **ONE FIXED BOX HOLDS THE CROWN *OR* THE SCOPE'S FIGURE — never
+                // both stacked** (prd §491, matching Wallet's §483 spec exactly;
+                // reported as *"the home toggle bar is in the wrong place, so it's
+                // not like Wallet"*).
+                //
+                // MEASURED: Wallet's chip bar sits at 579pt and this room's sat at
+                // 745 — 166pt lower — and the cause was structural rather than
+                // spacing. Wallet's 210pt box contains the crown AND its chart, and
+                // on any other scope the crown is REPLACED: its Positions scope
+                // opens "Deposited $61,000", not the wallet total. This room kept
+                // its crown on every scope and then added a 210pt box beneath it,
+                // so the room was crown + 210 where Wallet is 210.
+                //
+                // Which means each scope owes its own headline, because it no
+                // longer inherits the crown's — see `scopeFigure`.
+                // **THE SLOT HOLDS ITS HEIGHT EVEN WHEN THE FIGURE DECLINES.**
+                //
+                // Reported as *"clicking in accounts makes the bar move around"*,
+                // and measured: picking an account with no sub-accounts and no
+                // links moved the chip bar from 575pt to 355pt — exactly this
+                // slot's height. `.frame(minHeight:)` DOES NOT hold an `EmptyView`
+                // open: a `@ViewBuilder` that produces nothing has no layout
+                // presence at all, so the frame collapsed and everything below
+                // jumped up a third of a screen the moment you used the control.
+                //
+                // The `Color.clear` underneath is what gives the frame something
+                // to be applied to. It is the same class §483 recorded for Wallet
+                // ("collapsing to `maxHeight: 0` is NOT the same as not emitting")
+                // arriving from the opposite direction — there an empty Section
+                // still took spacing, here a non-empty frame took none.
+                // **ONE SLOT, AND IT IS `DSRoomSlot`** (prd §495, user: "one
+                // template"). This wrapped its own `ZStack` + fixed frame + clip
+                // around figures that now go through `DSRoomSlot`, which applies
+                // exactly those three things — a box inside a box, and the second
+                // copy of the rule Wallet was also keeping.
+                //
+                // Home draws the crown, which names itself at the headline rung, so it
+                // passes no headline; the row is still RESERVED, which is what
+                // keeps its first pixel level with every other scope's and what
+                // clears the settings gear.
+                Group {
+                    if (section ?? .home) == .home {
+                        // The crown IS the headline here too — see Wallet's
+                        // own Home slot and `reservesHeadline`.
+                        DSRoomSlot(headline: nil, reservesHeadline: false) { balanceHero }
+                    } else {
+                        scopeVisualDissolving
+                    }
                 }
+                // **ONE SLAB, WHERE THERE WERE TWO STRIPS** (prd §547) — and the
+                // `switcherGap` correction between them goes with the pair it
+                // separated. `DSRoomRailSlab` owns the distance now, and it is the
+                // same distance in all three rooms rather than a negative padding
+                // against this card's own `s6` stack spacing.
+                railSlab
             }
-            .padding(.bottom, DSRoomChassis.railGap - DS.Space.s6)
-            // **ONE SLAB, WHERE THERE WERE TWO STRIPS** (prd §547) — and the
-            // `switcherGap` correction between them goes with the pair it
-            // separated. `DSRoomRailSlab` owns the distance now, and it is the
-            // same distance in all three rooms rather than a negative padding
-            // against this card's own `s6` stack spacing.
-            railSlab
-                .padding(.bottom, DSRoomChassis.contentGap - DS.Space.s6)
-            // THE SCOPED ACCOUNT'S OWN DETAIL, under the scope that owns each
-            // part of it (prd §491) — keys under Permissions, links and
-            // sub-accounts under Accounts, the record under Activity.
-            if scopedToOneAccount, let lead = room.lead {
-                let fullItems = Self.fullItems(fallback: room)
-                VibenetAccountDetail(
-                    item: lead,
-                    links: VibenetAccountMapping.links(fullItems),
-                    sharedKeys: VibenetKeyReuse.sharing(lead, in: fullItems),
-                    // The chassis draws the face in the rail above.
-                    showsFace: false,
-                    section: section ?? .home,
-                    onScope: onScope,
-                    onOpenKey: onOpenKey.map { open in
-                        { actor in open(actor, lead, VibenetKeyReuse.sharing(lead, in: fullItems)) }
-                    },
-                    onAuthorize: onAuthorize.map { open in
-                        {
-                            guard let address = VibenetTransaction.data(fromHex: lead.address) else { return }
-                            let seq = lead.changeSequences
-                            open(address, seq?.localEpoch ?? 0, seq?.localSequence ?? 0)
-                        }
-                    },
-                    newKeyIDs: keyChanges?.added ?? [])
-            }
-            if shows(.holdings) { holdingsCard }
-            // **THE AMOUNTS THE MAP GAVE UP (prd §491).** Stripping the figures
-            // out of the treemap is only honest where a list carries them, and
-            // Wallet has had `walletTokenListSection` under its map all along
-            // while this scope had NOTHING below the drawing — so the same cut
-            // that merely de-duplicated Wallet would have deleted this room's
-            // amounts outright.
-            //
-            // Same source as the map, never a second derivation: one call to
-            // `VibenetBalanceTreemap.cells` would otherwise become two, and a
-            // list that disagrees with the picture above it is worse than
-            // either alone.
-            if promoted(.holdings) { holdingsList }
-            // **WHO THESE ACCOUNTS MOVE TOKENS WITH (prd §507).** The room
-            // could say what an account HOLDS and never what MOVED — there
-            // was not one `Transfer` topic in the bridge — so Holdings was a
-            // number with no motion behind it and Activity was key changes
-            // only. Under the list rather than in the figure slot: the
-            // treemap answers "what", this answers "with whom", and the two
-            // are one reading at two grains, the same relation the amounts
-            // list above already has to the map.
-            if promoted(.holdings) { movesList }
-            // **THE ATTENTION STRIP IS GONE (2026-08-26, prd §482).** It was
-            // added by §479 and re-grammared and re-titled twice in one
-            // afternoon before it was deleted the same day, and the churn was
-            // the diagnosis: the thing had no stable identity. It grouped four
-            // unlike facts — a key's deadline, an account's lock, an unlock's
-            // countdown, our own failed read — by nothing except "you might
-            // want to look", which is why no name (Needs you → Worth a look →
-            // Risk) ever fitted all four.
-            //
-            // **Scoping dissolves it, and NOTHING IS LOST — checked row type
-            // by row type before deleting, because that is the test that bit
-            // the wallet session twice today.** A key expiring is the Keys
-            // scope's own runway (`shelfRow`, same blue, same countdown); a
-            // locked account is its roster row's pill; an unlocking one is
-            // that row's ticking subtitle and progress bar; an unreached read
-            // is that row's subtitle in words (`VibenetRoom` line ~1155,
-            // "Couldn't reach the chain"). The strip existed only because all
-            // four were buried in one long scroll, and a scope strip is a
-            // better answer to burial than a summary of it.
-            //
-            // `VibenetAttention` survives with its ranking intact, one layer
-            // down: it decides which CHIP wears a dot
-            // (`VibenetSection.attention`). The work is kept, the surface that
-            // could not be named is gone.
-            if shows(.accounts) {
-                // The header is dropped when the strip is naming the scope —
-                // a chip reading "Accounts" above a heading reading "Accounts"
-                // says one thing twice, and the heading is the one that can go
-                // because the chip is also the control.
-                if section == nil { sectionHeader(String(localized: "Accounts")) }
-                accountsCard
-            }
-            if shows(.permissions) {
-                if section == nil { sectionHeader(String(localized: "Keys")) }
-                // THIS PHONE'S OWN KEY LEADS THE SCOPE (prd §522).
+            // Everything the chassis scopes, in one child so the gap above it is
+            // the outer stack's `contentGap` and the gaps BETWEEN these cards
+            // stay `s6` — §471's ruling ("separation by surface only works once
+            // the gap is wide enough to be seen as a gap"), untouched.
+            VStack(alignment: .leading, spacing: DS.Space.s6) {
+                // THE SCOPED ACCOUNT'S OWN DETAIL, under the scope that owns each
+                // part of it (prd §491) — keys under Permissions, links and
+                // sub-accounts under Accounts, the record under Activity.
+                if scopedToOneAccount, let lead = room.lead {
+                    let fullItems = Self.fullItems(fallback: room)
+                    VibenetAccountDetail(
+                        item: lead,
+                        links: VibenetAccountMapping.links(fullItems),
+                        sharedKeys: VibenetKeyReuse.sharing(lead, in: fullItems),
+                        // The chassis draws the face in the rail above.
+                        showsFace: false,
+                        section: section ?? .home,
+                        onScope: onScope,
+                        onOpenKey: onOpenKey.map { open in
+                            { actor in open(actor, lead, VibenetKeyReuse.sharing(lead, in: fullItems)) }
+                        },
+                        onAuthorize: onAuthorize.map { open in
+                            {
+                                guard let address = VibenetTransaction.data(fromHex: lead.address) else { return }
+                                let seq = lead.changeSequences
+                                open(address, seq?.localEpoch ?? 0, seq?.localSequence ?? 0)
+                            }
+                        },
+                        newKeyIDs: keyChanges?.added ?? [])
+                }
+                if shows(.holdings) { holdingsCard }
+                // **THE AMOUNTS THE MAP GAVE UP (prd §491).** Stripping the figures
+                // out of the treemap is only honest where a list carries them, and
+                // Wallet has had `walletTokenListSection` under its map all along
+                // while this scope had NOTHING below the drawing — so the same cut
+                // that merely de-duplicated Wallet would have deleted this room's
+                // amounts outright.
                 //
-                // Above the census rather than inside it, because the census
-                // answers "what can act for these accounts" and this answers
-                // "what can THIS DEVICE do" — the second question is the one
-                // somebody opens Permissions with once they have a key, and
-                // burying it in a list of other people's authenticators is how
-                // §386p's panel lost its own subject.
+                // Same source as the map, never a second derivation: one call to
+                // `VibenetBalanceTreemap.cells` would otherwise become two, and a
+                // list that disagrees with the picture above it is worse than
+                // either alone.
+                if promoted(.holdings) { holdingsList }
+                // **WHO THESE ACCOUNTS MOVE TOKENS WITH (prd §507).** The room
+                // could say what an account HOLDS and never what MOVED — there
+                // was not one `Transfer` topic in the bridge — so Holdings was a
+                // number with no motion behind it and Activity was key changes
+                // only. Under the list rather than in the figure slot: the
+                // treemap answers "what", this answers "with whom", and the two
+                // are one reading at two grains, the same relation the amounts
+                // list above already has to the map.
+                if promoted(.holdings) { movesList }
+                // **THE ATTENTION STRIP IS GONE (2026-08-26, prd §482).** It was
+                // added by §479 and re-grammared and re-titled twice in one
+                // afternoon before it was deleted the same day, and the churn was
+                // the diagnosis: the thing had no stable identity. It grouped four
+                // unlike facts — a key's deadline, an account's lock, an unlock's
+                // countdown, our own failed read — by nothing except "you might
+                // want to look", which is why no name (Needs you → Worth a look →
+                // Risk) ever fitted all four.
                 //
-                // Drawn in every shape of this scope, scoped or not: the key
-                // belongs to the phone and not to whichever account happens to
-                // be selected, so narrowing the room must not narrow it away.
-                VibenetThisPhoneRow()
-                    .padding(.horizontal, DSRoomChassis.contentInset)
-                // The census card stands down under its own scope — the
-                // capability rungs ARE that census, drawn in the slot above.
-                if !promoted(.permissions) { keysCard }
-            }
-            // EVERY KEY, GROUPED BY THE ACCOUNT IT CAN ACT FOR (user pick of
-            // two mocked lists, prd §491).
-            //
-            // **NOT WHEN THE DETAIL IS ALREADY DRAWING THEM** (prd §495).
-            // Scoped to one account with Permissions picked, this room drew
-            // the SAME KEY TWICE in two different row designs, one under the
-            // other: `VibenetAccountDetail` above renders its own key list
-            // under `wants(.permissions)`, and then this ran as well. Found by
-            // walking the screen — every check in the tree is green over it,
-            // because two correct lists of one key is not a wrong number, it
-            // is a wrong page.
-            //
-            // The room's list stands down rather than the detail's, and the
-            // reason is in this list's own title: it groups keys BY THE
-            // ACCOUNT they act for, which over a single account is a heading
-            // above the only group. The detail's list groups by CAPABILITY
-            // ("Limited keys"), which is the reading that still says something
-            // once the account is fixed.
-            if promoted(.permissions), !scopedToOneAccount { permissionsList }
-            // OUTSIDE the cards, and quieter for it. Provenance is a fact
-            // about the whole room rather than about any one reading, so a
-            // card of its own would make a section out of a footnote.
-            //
-            // NO horizontal padding of its own — the outer margin below now
-            // does that job for the footnote and every card alike, uniformly.
-            // Giving it a SECOND s4 here (on top of the outer one) is the
-            // over-correction that would put it back out of alignment with
-            // the cards' own text, the opposite direction from the bug this
-            // whole modifier exists to fix.
-            // Provenance follows the ROSTER it describes ("N more watched",
-            // and where the config was read) rather than trailing whichever
-            // scope happens to be last — in `.permissions` it would be a footnote
-            // about accounts under a census of keys.
-            if shows(.accounts), let note = VibenetRoom.note(room, drawn: drawn.count) {
-                // **INDENTED TO THE ROW'S TEXT COLUMN** (prd §495, user: *"the
-                // indentation issues here should maybe be where the
-                // transactions start or middle aligned w/ the icon? i dunno
-                // looks weird"*).
+                // **Scoping dissolves it, and NOTHING IS LOST — checked row type
+                // by row type before deleting, because that is the test that bit
+                // the wallet session twice today.** A key expiring is the Keys
+                // scope's own runway (`shelfRow`, same blue, same countdown); a
+                // locked account is its roster row's pill; an unlocking one is
+                // that row's ticking subtitle and progress bar; an unreached read
+                // is that row's subtitle in words (`VibenetRoom` line ~1155,
+                // "Couldn't reach the chain"). The strip existed only because all
+                // four were buried in one long scroll, and a scope strip is a
+                // better answer to burial than a summary of it.
                 //
-                // It read as a footnote on the whole LIST because it sat flush
-                // with the faces, while what it actually explains is the one
-                // row above it — the account that is "Not established yet".
-                // Aligning it with that row's TEXT is what says so, and it
-                // uses the row's own leading column so the two can never
-                // drift apart.
-                Text(note)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .padding(.leading, DS.Face.rowCircle + DS.Space.s2)
+                // `VibenetAttention` survives with its ranking intact, one layer
+                // down: it decides which CHIP wears a dot
+                // (`VibenetSection.attention`). The work is kept, the surface that
+                // could not be named is gone.
+                if shows(.accounts) {
+                    // The header is dropped when the strip is naming the scope —
+                    // a chip reading "Accounts" above a heading reading "Accounts"
+                    // says one thing twice, and the heading is the one that can go
+                    // because the chip is also the control.
+                    if section == nil { sectionHeader(String(localized: "Accounts")) }
+                    accountsCard
+                }
+                if shows(.permissions) {
+                    if section == nil { sectionHeader(String(localized: "Keys")) }
+                    // THIS PHONE'S OWN KEY LEADS THE SCOPE (prd §522).
+                    //
+                    // Above the census rather than inside it, because the census
+                    // answers "what can act for these accounts" and this answers
+                    // "what can THIS DEVICE do" — the second question is the one
+                    // somebody opens Permissions with once they have a key, and
+                    // burying it in a list of other people's authenticators is how
+                    // §386p's panel lost its own subject.
+                    //
+                    // Drawn in every shape of this scope, scoped or not: the key
+                    // belongs to the phone and not to whichever account happens to
+                    // be selected, so narrowing the room must not narrow it away.
+                    VibenetThisPhoneRow()
+                        .padding(.horizontal, DSRoomChassis.contentInset)
+                    // The census card stands down under its own scope — the
+                    // capability rungs ARE that census, drawn in the slot above.
+                    if !promoted(.permissions) { keysCard }
+                }
+                // EVERY KEY, GROUPED BY THE ACCOUNT IT CAN ACT FOR (user pick of
+                // two mocked lists, prd §491).
+                //
+                // **NOT WHEN THE DETAIL IS ALREADY DRAWING THEM** (prd §495).
+                // Scoped to one account with Permissions picked, this room drew
+                // the SAME KEY TWICE in two different row designs, one under the
+                // other: `VibenetAccountDetail` above renders its own key list
+                // under `wants(.permissions)`, and then this ran as well. Found by
+                // walking the screen — every check in the tree is green over it,
+                // because two correct lists of one key is not a wrong number, it
+                // is a wrong page.
+                //
+                // The room's list stands down rather than the detail's, and the
+                // reason is in this list's own title: it groups keys BY THE
+                // ACCOUNT they act for, which over a single account is a heading
+                // above the only group. The detail's list groups by CAPABILITY
+                // ("Limited keys"), which is the reading that still says something
+                // once the account is fixed.
+                if promoted(.permissions), !scopedToOneAccount { permissionsList }
+                // OUTSIDE the cards, and quieter for it. Provenance is a fact
+                // about the whole room rather than about any one reading, so a
+                // card of its own would make a section out of a footnote.
+                //
+                // NO horizontal padding of its own — the outer margin below now
+                // does that job for the footnote and every card alike, uniformly.
+                // Giving it a SECOND s4 here (on top of the outer one) is the
+                // over-correction that would put it back out of alignment with
+                // the cards' own text, the opposite direction from the bug this
+                // whole modifier exists to fix.
+                // Provenance follows the ROSTER it describes ("N more watched",
+                // and where the config was read) rather than trailing whichever
+                // scope happens to be last — in `.permissions` it would be a footnote
+                // about accounts under a census of keys.
+                if shows(.accounts), let note = VibenetRoom.note(room, drawn: drawn.count) {
+                    // **INDENTED TO THE ROW'S TEXT COLUMN** (prd §495, user: *"the
+                    // indentation issues here should maybe be where the
+                    // transactions start or middle aligned w/ the icon? i dunno
+                    // looks weird"*).
+                    //
+                    // It read as a footnote on the whole LIST because it sat flush
+                    // with the faces, while what it actually explains is the one
+                    // row above it — the account that is "Not established yet".
+                    // Aligning it with that row's TEXT is what says so, and it
+                    // uses the row's own leading column so the two can never
+                    // drift apart.
+                    Text(note)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                        .padding(.leading, DS.Face.rowCircle + DS.Space.s2)
+                }
             }
         }
         // **THE MARGIN FROM THE SCREEN EDGE (2026-08-25, prd §474).** Reported:

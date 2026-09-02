@@ -1069,6 +1069,39 @@ stripFn=$(sed -n '/private var railSlab: some View {/,/^    }$/p' "$TMP/card.nc.
   || { echo "✗ vibenet's railSlab no longer passes both decks — prd §547: the fused rail"
        echo "  is the face rail AND the scope switcher, and either may be absent only"
        echo "  because its own gate said so."; exit 1; }
+# **NOTHING IN THE CARD MAY DRAW BELOW ITS OWN FRAME** (2026-09-02, reported as
+# "clipping on vibenet"). The chassis spelled its two gaps as NEGATIVE bottom
+# paddings against the card stack's `s6` — a spacing correction that is only a
+# correction while something FOLLOWS. On the Home scope every branch under the
+# slab is gated on another scope, so `railSlab` was the last child and its `-14`
+# was 14pt drawn below the stack; this card is one `List` row
+# (`FeedScreen.insightSection`, `listRowInsets(EdgeInsets())`) and a list cell
+# clips to its bounds, so the switcher lost its bottom padding and half its
+# picked fill. Measured: the glass ran 96.7pt against an ideal 110.7, exactly
+# `contentGap - s6` short.
+#
+# Scoped to the CHASSIS gaps by naming them: `sectionHeader`'s own negative is
+# fine and stays, because a header is emitted immediately above the card it
+# introduces and can never be last. Read from the comment-stripped copy, since
+# the source explains the fix by naming the line it deleted.
+if grep -qE 'padding\(\.bottom, DSRoomChassis\.(railGap|contentGap) - DS\.Space\.' \
+     "$TMP/card.nc.swift"; then
+  echo "✗ the vibenet chassis is spacing itself with a negative bottom padding again —"
+  echo "  a negative trailing padding is a bet on there always being a next child, and"
+  echo "  this stack has eight optional ones. On the Home scope the slab is last and"
+  echo "  the overflow is clipped by the List row, cutting the scope switcher in half."
+  echo "  The chassis is its own VStack with POSITIVE gaps — see stackedRoom."
+  exit 1
+fi
+# And the shape that makes that true: the chassis is one child of a stack whose
+# own spacing IS `contentGap`, which is the same distance Wallet, Hegotá and
+# Frames get from `listRowInsets(bottom: DSRoomChassis.contentGap)`.
+grep -q 'VStack(alignment: .leading, spacing: DSRoomChassis.contentGap)' "$TMP/card.nc.swift" \
+  || { echo "✗ the vibenet card's outer stack no longer spaces at contentGap — the chassis"
+       echo "  and the room it scopes sit that far apart in all four chain rooms."; exit 1; }
+grep -q 'VStack(alignment: .leading, spacing: DSRoomChassis.railGap)' "$TMP/card.nc.swift" \
+  || { echo "✗ the vibenet chassis stack is gone — the slot and the fused slab sit railGap"
+       echo "  apart inside their own stack, so neither draws outside its frame."; exit 1; }
 # **AND IT MUST NOT GO BACK TO THE SHELL.** Mounted in `roomControls` it was
 # the FOURTH stacked chrome row and the user rejected it on sight ("o wait no
 # way… we can' hta ve the positions risk etc at the top", then "needs to be
