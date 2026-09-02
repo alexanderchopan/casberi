@@ -742,14 +742,19 @@ struct ConnectFormSheet: View {
     var body: some View {
         NavigationStack {
             BridgeDestinationView(destination: destination)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Close") { dismiss() }
-                            .dsText(.callout15).foregroundStyle(DS.tint)
-                    }
-                }
+                // "Done", not "Close" (prd §560, 2026-09-01) — this was the
+                // one site in the family with the other word. A connect form
+                // is finished rather than abandoned: you either connected or
+                // you did not, and both are done.
+                .dsSheetDismiss { dismiss() }
         }
-        .presentationDragIndicator(.visible)
+        // THE GRABBER WENT WITH THE WORD (prd §560, 2026-09-01). A
+        // `presentationDragIndicator(.visible)` was here, and this was the
+        // only nav sheet that had one: a tray exits by its grabber and a nav
+        // sheet by its button, one exit affordance per family, never both
+        // stacked above one another. Drag-to-dismiss is untouched — the
+        // indicator is the AFFORDANCE, not the gesture.
+        //
         // **This sheet had NO sizing of any kind, and it is the one that got
         // reported (2026-08-20, user: "these modals are way too small, user has
         // to scroll to read them in a tiny box").**
@@ -765,7 +770,10 @@ struct ConnectFormSheet: View {
         // rather than `#if targetEnvironment(macCatalyst)`: "the Mac is the odd
         // one out" was the wrong frame. Every REGULAR idiom sizes its sheets,
         // and iPad had been quietly living with the same box all along.
-        .dsPageSheet()
+        //
+        // `dsNavSheet` is that `.page` plus the presented corner, as the
+        // family's one chassis (prd §560).
+        .dsNavSheet()
         .onChange(of: live) { _, isLive in
             // A beat, so the screen's own success moment (the icon's coin
             // flip, the proof line counting up) is seen rather than cut off

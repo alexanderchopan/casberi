@@ -89,7 +89,15 @@ struct NetworkReachScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .dsScreenTitle("What this app reaches")
+        // **THIS SHEET HAD NO WAY OUT** (prd §560, 2026-09-01). It is presented
+        // only from `AccountDetailSheet` and carried no close control at all,
+        // so the only exit was a drag — and on Catalyst a form sheet has no
+        // drag to give, which makes it a sheet a Mac cannot dismiss. The
+        // cohesion pass found it by asking what every nav sheet's exit is; a
+        // screenshot of it looks completely correct.
+        .navigationTitle(Text("What this app reaches"))
+        .navigationBarTitleDisplayMode(.inline)
+        .dsSheetDismiss { dismiss() }
     }
 
     private func group(_ title: String, _ endpoints: [NetworkReach.Endpoint],

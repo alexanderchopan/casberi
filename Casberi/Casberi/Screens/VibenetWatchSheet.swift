@@ -69,13 +69,15 @@ struct VibenetWatchSheet: View {
             }
             .scrollContentBackground(.hidden)
             .dsAdaptiveContentWidth()
-            .dsScreenTitle("Watch an account")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(String(localized: "Done")) { dismiss() }
-                }
-            }
+            // `.inline` + the shared dismiss (prd §560) — `dsScreenTitle` is
+            // the FULL-SCREEN title, large on iPhone, and this is a sheet.
+            .navigationTitle(Text("Watch an account"))
+            .navigationBarTitleDisplayMode(.inline)
+            .dsSheetDismiss { dismiss() }
         }
+        // Ink stays: this sheet is the vibenet room's own ground, and the
+        // chassis deliberately shares geometry rather than grounds (§560).
         .dsInk()
+        .dsNavSheet()
     }
 }

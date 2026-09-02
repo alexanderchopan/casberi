@@ -22,8 +22,16 @@ struct L2beatMilestoneHead: View {
 	@ViewBuilder private var liveBody: some View {
 		let facts = L2beatMilestoneBook.facts(ref: thing.sourceRef)
 		VStack(alignment: .leading, spacing: DS.Space.s4) {
+			// THE CONTAINER'S OWN TITLE RULE (prd §560, 2026-09-01). This was a
+			// flat `heading28` — a rung the sheet system uses nowhere else,
+			// with no comment saying why — sitting in the slot where
+			// `ThingSheetView`'s sibling branches set a title. That screen
+			// already decides this by LENGTH (`words.count > 100 ? .heading22
+			// : .heading34`): a statement takes the head rung, a paragraph
+			// steps down so it does not become a wall. One rule, reused, so a
+			// registry head and a post read as the same sheet.
 			Text(thing.title)
-				.dsText(.heading28)
+				.dsText(thing.title.count > 100 ? .heading22 : .heading34)
 				.foregroundStyle(DS.textPrimary)
 				.fixedSize(horizontal: false, vertical: true)
 				.textSelection(.enabled)
@@ -57,13 +65,19 @@ struct L2beatMilestoneHead: View {
 		let isIncident = thing.tags.contains(L2beatNewsParse.incidentTag)
 		HStack(spacing: DS.Space.s2) {
 			if let facts {
-				Text(facts.kind.label)
-					.dsText(.label11).fontWeight(.bold)
-					.foregroundStyle(isIncident ? DS.attention : DS.textSecondary)
-					.padding(.horizontal, 10).padding(.vertical, 4)
-					.background(
-						Capsule(style: .circular)
-							.fill(isIncident ? DS.attention.opacity(0.13) : DS.fillFaint))
+				// THE SHARED STAMP (prd §560, 2026-09-01). This was a
+				// hand-rolled `Capsule` at `label11`/bold, 0.13 wash, 10/4
+				// padding — against `DSStamp`'s `label12`, 0.16 wash, `s2` and
+				// a 24pt floor. That component's own doc records this exact
+				// drift class being fixed once already for `MoneyReceiptCard`
+				// vs `DSSheetHead` ("same word, two weights and two heights,
+				// on sheets a person moves between in two taps"); these two
+				// registry heads were simply not swept in at the time.
+				//
+				// The weight carries what the colour used to: an incident is
+				// `urgent` (it is the thing you opened this to read), anything
+				// else is `quiet` — true, and not news.
+				DSStamp(word: facts.kind.label, weight: isIncident ? .urgent : .quiet)
 				if let name = facts.projectName {
 					Text(name)
 						.dsText(.label11)

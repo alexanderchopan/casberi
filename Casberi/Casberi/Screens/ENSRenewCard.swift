@@ -56,11 +56,11 @@ struct ENSRenewCard: View {
             }
 
             if let url = URL(string: quote.ensURL) {
-                doorRow(icon: "arrow.up.right", label: "Renew on ENS") { openURL(url) }
+                DSDoorRow(icon: "arrow.up.right", label: "Renew on ENS") { openURL(url) }
             }
             if let json = quote.transactionJSON {
-                doorRow(icon: copied ? "checkmark" : "doc.on.doc",
-                        label: copied ? "Copied" : "Copy renewal transaction") {
+                DSDoorRow(icon: copied ? "checkmark" : "doc.on.doc",
+                          label: copied ? "Copied" : "Copy renewal transaction") {
                     copy(json)
                 }
             }
@@ -141,18 +141,10 @@ struct ENSRenewCard: View {
         }
     }
 
-    private func doorRow(icon: String, label: LocalizedStringKey,
-                         action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: DS.Space.s2) {
-                Image(systemName: icon).dsGlyph(15, weight: .regular)
-                Text(label).dsText(.callout15)
-                Spacer()
-            }
-            .foregroundStyle(DS.tint)
-        }
-        .buttonStyle(.plain)
-    }
+    // `doorRow` was HERE and is `DSDoorRow` (prd §560, 2026-09-01) — the third
+    // of three private copies, and the one that had drifted: it painted the
+    // whole row `DS.tint` and dropped the icon column, so the same door read
+    // as a link here and as a row on the two sheets beside it.
 
     /// Copy + the brief acknowledgment, reset included — a button stuck on
     /// "Copied" reads as state it no longer has (`ApprovalPrepareCard`'s

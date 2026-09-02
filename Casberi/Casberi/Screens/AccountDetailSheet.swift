@@ -126,6 +126,10 @@ struct AccountDetailSheet: View {
                 connected: Set(store.bridges.filter { $0.status == .connected }.map(\.name))
             ).count
         }
+        // `dsNavSheet` (prd §560) — this pair had NO sizing, so on iPad and Mac
+        // it presented as a ~540×620 box while its literal sibling one line up
+        // in `AccountScreen` was sized. Both screens gained their own close
+        // control in the same pass; see `NetworkReachScreen`.
         .sheet(item: $privacyPage) { page in
             NavigationStack {
                 switch page {
@@ -133,6 +137,7 @@ struct AccountDetailSheet: View {
                 case .receipts: NetworkReceiptsScreen()
                 }
             }
+            .dsNavSheet()
         }
         // The export's other half — the file comes back in whole (dedupe by id).
         .fileImporter(isPresented: $importing,

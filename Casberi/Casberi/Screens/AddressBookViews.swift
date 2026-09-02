@@ -1013,6 +1013,11 @@ struct AddressCard: View {
         // book, both inside a `switch`, so a call-site size would have to
         // be written twice and could drift.
         .dsPageSheet()
+        // …and the corner, for the same reason and in the same place (prd
+        // §560). With `DSTray` and `dsNavSheet` both carrying it, this card
+        // was the last presented sheet in the app still taking whatever
+        // corner the system happened to give it.
+        .dsSheetCorner()
     }
 
     /// 0 while the face is still on screen, 1 once it has cleared the bar.

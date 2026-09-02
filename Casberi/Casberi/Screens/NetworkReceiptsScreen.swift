@@ -9,6 +9,9 @@ import SwiftUI
 /// is worse than none — so the paths that aren't instrumented are named in
 /// the footer, in the same plain words the registry uses.
 struct NetworkReceiptsScreen: View {
+    /// Presented only as a sheet, so it owns its own exit — see the dismiss
+    /// note on the title below (prd §560).
+    @Environment(\.dismiss) private var dismiss
     @State private var entries: [NetworkLedger.Entry] = []
     @State private var confirmForget = false
 
@@ -119,7 +122,12 @@ struct NetworkReceiptsScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .dsScreenTitle("What it actually reached")
+        // **NO WAY OUT, the second of the pair** (prd §560) — see
+        // `NetworkReachScreen`, its sibling in the same `.sheet(item:)`; both
+        // were presented with no close control and no sizing.
+        .navigationTitle(Text("What it actually reached"))
+        .navigationBarTitleDisplayMode(.inline)
+        .dsSheetDismiss { dismiss() }
         .onAppear { entries = NetworkLedger.shared.snapshot() }
         .confirmationDialog("Forget these receipts?",
                             isPresented: $confirmForget, titleVisibility: .visible) {

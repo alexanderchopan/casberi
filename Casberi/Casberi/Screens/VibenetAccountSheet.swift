@@ -129,10 +129,13 @@ struct VibenetAccountSheet: View {
             }
             .navigationTitle(item.map { VibenetWatch.shared.name(for: $0.address) ?? VibenetRoom.shortAddress($0.address) } ?? "")
             .navigationBarTitleDisplayMode(.inline)
+            // The dismiss moved LEADING → trailing with the family (prd §560).
+            // It sits beside this sheet's own `.primaryAction` menu rather
+            // than opposite it, which is ordinary iOS — two trailing buttons —
+            // and means the exit is in the same corner here as on every other
+            // nav sheet.
+            .dsSheetDismiss { dismiss() }
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(String(localized: "Done")) { dismiss() }
-                }
                 if item != nil {
                     ToolbarItem(placement: .primaryAction) {
                         Menu {
@@ -181,7 +184,7 @@ struct VibenetAccountSheet: View {
                 Button(String(localized: "Cancel"), role: .cancel) {}
             }
         }
-        .dsPageSheet()
+        .dsNavSheet()
     }
     /// The account, as the same paper every other vibenet sheet opens with.
     ///

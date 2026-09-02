@@ -504,12 +504,8 @@ struct WalletbeatCardScreen: View {
 			.navigationTitle(
 				WalletbeatDirectory.wallets.first { $0.id == walletID }?.name ?? walletID)
 			.navigationBarTitleDisplayMode(.inline)
-			.toolbar {
-				ToolbarItem(placement: .cancellationAction) {
-					Button(String(localized: "Done")) { dismiss() }
-				}
-			}
+			.dsSheetDismiss { dismiss() }
 		}
-		.dsPageSheet()
+		.dsNavSheet()
 	}
 }

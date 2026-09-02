@@ -64,14 +64,17 @@ struct SettingsScreen: View {
             .dsPageBackground()
             .dsScreenTitle("Settings")
             .onAppear { markMilestone() }
+            // `dsNavSheet` rather than `dsPageSheet` (prd §560) — the nav-sheet
+            // family's own chassis, which adds the presented corner these
+            // three were missing along with the sizing they already had.
             .sheet(isPresented: $diagnosticsOpen) {
-                NavigationStack { DiagnosticsScreen() }.dsPageSheet()
+                NavigationStack { DiagnosticsScreen() }.dsNavSheet()
             }
             .sheet(item: $detail) { AccountDetailSheet(detail: $0) }
             .sheet(isPresented: $languageOpen) { LanguagePickerSheet() }
-            .sheet(isPresented: $howItWorksOpen) { HowItWorksSheet().dsPageSheet() }
+            .sheet(isPresented: $howItWorksOpen) { HowItWorksSheet().dsNavSheet() }
             .sheet(isPresented: $chipOrderOpen) {
-                NavigationStack { CategoryOrderSheet() }.dsPageSheet()
+                NavigationStack { CategoryOrderSheet() }.dsNavSheet()
             }
             .photosPicker(isPresented: $avatarPickerOpen,
                           selection: $avatarSelection, matching: .images)

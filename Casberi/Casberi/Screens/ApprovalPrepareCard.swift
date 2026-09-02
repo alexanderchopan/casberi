@@ -36,13 +36,13 @@ struct ApprovalPrepareCard: View {
                 // chain), never read off `content` — a door labelled
                 // Revoke.cash must only ever open Revoke.cash.
                 if let url = URL(string: check.revokeURL) {
-                    doorRow(icon: "arrow.up.right", label: "Revoke on Revoke.cash") {
+                    DSDoorRow(icon: "arrow.up.right", label: "Revoke on Revoke.cash") {
                         openURL(url)
                     }
                 }
                 if let json = check.transactionJSON {
-                    doorRow(icon: copied ? "checkmark" : "doc.on.doc",
-                            label: copied ? "Copied" : "Copy revoke transaction") {
+                    DSDoorRow(icon: copied ? "checkmark" : "doc.on.doc",
+                              label: copied ? "Copied" : "Copy revoke transaction") {
                         copy(json)
                     }
                 }
@@ -100,21 +100,7 @@ struct ApprovalPrepareCard: View {
         }
     }
 
-    private func doorRow(icon: String, label: LocalizedStringKey,
-                         action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: DS.Space.s2) {
-                Image(systemName: icon)
-                    .dsGlyph(13, weight: .regular)
-                    .foregroundStyle(DS.textSecondary)
-                    .frame(width: 18, alignment: .center)
-                Text(label)
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                Spacer(minLength: 0)
-            }
-            .padding(.vertical, DS.Space.s1)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
+    // `doorRow` was HERE and is `DSDoorRow` (prd §560, 2026-09-01). This copy
+    // and `SafeQueueCard`'s were byte-identical but for a `.dsHover()`, which
+    // the shared one keeps — a pointer target is not a per-sheet decision.
 }

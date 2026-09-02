@@ -41,7 +41,22 @@ struct DSSheetHead<Disc: View>: View {
     var stampWeight: DSStamp.Weight = .quiet
     /// When it happened, above the title — the receipt's own `lead`.
     var lead: String?
-    /// The thing's own words. `heading22`, the receipt's `party` tier.
+    /// The thing's own words, at `heading34` — the HEAD rung (prd §532).
+    ///
+    /// **This doc said `heading22`, "the receipt's `party` tier", and had said
+    /// it since §532 raised the code without it (prd §560, 2026-09-01).** A
+    /// stale doc on a shared component is worse than none: it points at the
+    /// loser of a settled question, so the next reader either "fixes" the code
+    /// down to it or copies the wrong number into a fourth sheet.
+    ///
+    /// **And the receipt's `party` really is `heading22`, correctly** — which
+    /// is what made the contradiction look like drift rather than staleness.
+    /// `MoneyReceiptCard` has `amountBlock` at `price40` directly beneath, so
+    /// the head rung there belongs to the FIGURE and the party is the line
+    /// under it. A `DSSheetHead` has no amount, so its title is the largest
+    /// thing on the paper and takes the rung the figure would have. One rule —
+    /// the head rung goes to whatever the sheet is actually about — reading
+    /// out as two numbers because the two sheets are about different things.
     let title: String
     /// One supporting line under the title — an id, a curve, a handle.
     var secondary: String?

@@ -482,12 +482,8 @@ struct L2beatCardScreen: View {
 			.dsSoftScrollEdges()
 			.navigationTitle(L2beatState.best(chainID)?.name ?? chainID)
 			.navigationBarTitleDisplayMode(.inline)
-			.toolbar {
-				ToolbarItem(placement: .cancellationAction) {
-					Button(String(localized: "Done")) { dismiss() }
-				}
-			}
+			.dsSheetDismiss { dismiss() }
 		}
-		.dsPageSheet()
+		.dsNavSheet()
 	}
 }

@@ -43978,3 +43978,172 @@ hand-summed guess that has been wrong at least once already (§538).
 LOOKED at — a 40pt verb inside a tray is exactly the class §538 and §553 both
 got wrong by arithmetic — so the tray heights and the onboarding inset are
 reasoned, not measured.
+
+## 560. The nav-sheet family gets a chassis, and two sheets get a way out (user: "what are things we could do to make our sheets more cohesive across the app, or are they already", then "do all the recommendations you suggested", 2026-09-01)
+
+**The honest first answer was that the CONTENT is cohesive and the CHROME is
+not**, and the split falls exactly where this ledger has and has not ruled.
+What a sheet SAYS is governed by ~45 entries — §495 gave every head a paper,
+§524 made every pour one ink, §542 killed the gray, §363–§369 settled an
+anatomy per category — and the code follows them. What a sheet IS was never
+ruled as a system: detents, corner, close control, title tier and sizing had
+drifted into four families, and only two of the four had a component.
+
+`DSTray` owns the tray. The three READING sheets (`ThingSheetView`,
+`TokenQuickSheet`, `SocialPostSheet`) share one recipe and are few enough to
+keep in step by hand. The third family — a `NavigationStack` with a title and a
+dismiss — is **twelve sheets with no component**, and therefore had twelve
+answers to questions a person crossing between them reads instantly. The fourth
+is hand-rolled and stays that way for stated reasons.
+
+### 1. `dsNavSheet()` + `dsSheetDismiss(_:)` — the family, named
+
+Four findings, all invisible in a screenshot of any one sheet:
+
+- **The word.** "Done" at seven sites, "Close" at one (`ConnectFormSheet`).
+  Settled on **Done**: a connect form is FINISHED rather than abandoned — you
+  either connected or you did not, and both are done.
+- **The placement.** `.cancellationAction` (LEADING on iPhone) at four sites and
+  `.topBarTrailing` at four, so the exit changed sides of the bar between
+  sheets reachable from one another in two taps. **This is the one a hand
+  cannot learn.** Settled on `.confirmationAction` — Apple's idiom puts an
+  abandon verb leading and a finish verb trailing, and naming the placement
+  SEMANTICALLY rather than as `.topBarTrailing` is also what lands it correctly
+  on Catalyst. `VibenetAccountSheet`'s own `.primaryAction` menu now sits
+  BESIDE it rather than opposite it, which is ordinary iOS.
+- **The sizing.** `dsPageSheet()` at eight sites and missing at four. On iPad
+  and Mac a sheet with no sizing is a ~540×620 form-sheet box whatever the
+  window — the failure `ConnectFormSheet`'s own doc records being reported as
+  "these modals are way too small". The four included **`AccountDetailSheet`'s
+  privacy pages, whose literal sibling one line up in `AccountScreen` had it.**
+- **The corner.** `DS.Radius.presentedSheet` argues the concentric corner for
+  "the most-opened surface in the app" and had reached **three sheets out of
+  forty-odd** — the reading three, which spell it by hand. It is on `DSTray`
+  (all 26 trays), on `dsNavSheet`, and on `AddressCard`, which was the last
+  presented sheet in the app still taking whatever the system gave it. On iOS
+  26 the token is nil, so this is the system's own corner and nothing changes;
+  below 26 it pins the 16 every drawn surface already uses.
+
+**A nav sheet has NO grabber, and that is the family's rule.** A tray exits by
+its grabber and carries no button; a nav sheet exits by its button and carries
+no grabber — one exit affordance per family, never both stacked. Drag-to-dismiss
+is untouched: the indicator is the AFFORDANCE, never the gesture, so what goes
+is doubled chrome over a bar that already holds an exit. `ConnectFormSheet` was
+the only nav sheet that had one.
+
+**Two modifiers, not one, and the split is structural**: a toolbar attached from
+OUTSIDE a `NavigationStack` has no bar to attach to, so the dismiss is applied
+to the content and the presentation half to the stack. `dsSheetDismiss` takes an
+OPTIONAL, so `HowItWorksSheet` in the onboarding tail (where the catalog CTA is
+the only door forward) passes nil rather than growing a shape of its own.
+
+**THE BACKGROUND IS DELIBERATELY NOT FOLDED IN.** These sheets paint three
+grounds and each is an answer rather than drift: `dsPageBackground` carries the
+person's own theme (a background photo included), `dsInk` is a devnet room's
+ink, and `BridgeConnectionSheet` states `DS.surfaceSheet` because a form is not
+a page. Forcing one would flatten a distinction the person set — §558's "do not
+'harmonize' a refusal", one layer down. What is shared is the GEOMETRY, which
+had no reason to differ and did.
+
+### 2. Two sheets had no way out at all
+
+**`NetworkReachScreen` and `NetworkReceiptsScreen` carried no close control of
+any kind** — no toolbar button, and (per finding 3 above) no sizing. They are
+presented only from `AccountDetailSheet`, so the sole exit was a drag, and **on
+Catalyst a form sheet has no drag to give**: a sheet a Mac cannot dismiss, on
+the two screens that exist to make the app's privacy claims checkable. Found by
+asking what every nav sheet's exit is, not by looking — a screenshot of either
+looks completely correct.
+
+`DiagnosticsScreen`, `NetworkReachScreen`, `NetworkReceiptsScreen`,
+`CategoryOrderSheet` and `VibenetWatchSheet` also wore `dsScreenTitle`, which is
+documented as the FULL-SCREEN title and is LARGE on iPhone — so the family had
+two title sizes as well as two close placements. All five are `.inline` now.
+`PersonRoomScreen`'s dismiss is declared at its SHEET site and not on the
+screen, because that screen is also PUSHED by the roster's own door and a Done
+button there would exit nothing.
+
+### 3. `DSDoorRow` — a way out of a sheet, drawn once
+
+Three wallet sheets each carried a private `doorRow(icon:label:action:)`.
+`SafeQueueCard`'s and `ApprovalPrepareCard`'s were byte-identical but for a
+`.dsHover()`; `ENSRenewCard`'s set its glyph two points larger, dropped the icon
+column and painted the whole row `DS.tint`. **The tinted one is the drift and it
+settles toward the other two**: a row painted entirely in the accent is
+web-footer grammar — it reads as a link, which §480 already named a fault
+("three blue links in a row") on the sheet next door. `DSSlabDoor` is the
+sibling and NOT the same object — that is §190's connect-screen slab, enforced
+by `connect-shape-audit.py`.
+
+### 4. `DSStamp`, and the stray rung
+
+`L2beatSheetViews` and `WalletbeatSheetViews` each hand-rolled a `Capsule` state
+badge at `label11`/bold, 0.13 wash, 10/4 padding — against `DSStamp`'s
+`label12`, 0.16 wash, `s2` and a 24pt floor. **That component's own doc records
+this exact drift being fixed once already** for `MoneyReceiptCard` vs
+`DSSheetHead` ("same word, two weights and two heights, on sheets a person moves
+between in two taps"); these two were simply not swept in at the time. The
+weight now carries what the colour did — an open incident is `urgent`, a closed
+one `good`, a classification `quiet` — which is `DSStamp`'s point: **a closed
+weight, never an open colour.**
+
+Both also set `thing.title` at a flat `heading28`, a rung the sheet system uses
+nowhere else, with no comment saying why — sitting in the slot where
+`ThingSheetView`'s sibling branches set a title. That screen already decides
+this BY LENGTH (`> 100 ? .heading22 : .heading34`): a statement takes the head
+rung, a paragraph steps down. One rule, reused.
+
+### 5. The four Hegotá trays take `HegotaKeySheet`'s own fix
+
+`HegotaMoveSheet`, `HegotaFrameSheet`, `HegotaAccountSheet` and
+`HegotaCoinSheet` are each a bare `VStack` against a hand-summed height, with no
+`ScrollView` and no second detent — **the exact shape whose failure
+`HegotaKeySheet` records** ("the tray is clipped at the bottom on create
+account"), because real device text metrics ran a line longer than the
+arithmetic guessed and the last section sat below the tray's edge with no way to
+reach it. That sheet fixed itself and the four beside it never took it. All four
+gain `ScrollView` + `[.height(h), .large]`. **`HegotaCoinSheet` is the sharpest:
+its height is `min(820, …)`, so a coin with enough siblings does not merely risk
+overrunning its guess — the cap is a promise to clip.** Two heights are hoisted
+to properties so the detent names the same number instead of restating the
+arithmetic. §542's measurement is the better fix and a bigger one; this is the
+half that removes the dead end.
+
+### 6. `DSSheetHead`'s doc pointed at the loser
+
+Its `title` doc said `heading22`, "the receipt's `party` tier", and the code has
+rendered `heading34` since §532 raised the head rung without updating it. **A
+stale doc on a shared component is worse than none**: the next reader either
+"fixes" the code down to it or copies the wrong number into a fourth sheet.
+
+**And the receipt's `party` really is `heading22`, correctly** — which is what
+made this look like drift rather than staleness. `MoneyReceiptCard` has
+`amountBlock` at `price40` directly beneath, so the head rung there belongs to
+the FIGURE. A `DSSheetHead` has no amount, so its title is the largest thing on
+the paper. One rule — the head rung goes to whatever the sheet is about —
+reading out as two numbers because the two sheets are about different things.
+
+### What was examined and REFUSED
+
+- **The stacked 34pt titles** (`DSTray` title above a `DSSheetHead` title on
+  `VibenetCreateSheet`, `HegotaKeySheet`). This looks like the §538 fault and is
+  not: §538 already fixed the DUPLICATION — the head carries the ANSWER now ("A
+  new account" under "Create an account", "No account yet" under "This phone's
+  account") — and what remains is two settled §532 rungs meeting. Lowering
+  either re-opens a ruling with a measurement behind it, which is §407's own
+  lesson ("re-opening one of them is how it gets worse").
+- **Folding the three grounds into one.** See §1 above.
+- **A detent LADDER.** Genuinely never ruled: every height in the app is a
+  per-sheet number and §542 only rules that they be MEASURED, not what they
+  should be. Left open rather than invented in a chrome pass.
+- **`DS.Radius.presentedSheet` differing from `DS.Radius.sheet`.** Correct, not
+  drift — §412 already says one is UIKit's corner and one is ours.
+- **The reading three and `AddressCard`.** Internally consistent, and
+  `AddressCard`'s divergence is §498/§499's ruling ("a person is not an event").
+  Only its corner was missing.
+
+**UNSEEN on a device, and the risk is named.** Every change here is chrome that
+has to be LOOKED at — a close button that moved sides, a title that stepped
+down a rung, a corner below iOS 26 — and §394a's standing lesson is that for
+presentation work a green build proves nothing. The build is green on iOS
+Simulator and nothing here has been run.

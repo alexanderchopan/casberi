@@ -77,12 +77,13 @@ struct CategoryOrderSheet: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .dsScreenTitle("Chip order")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Done") { dismiss() }
-            }
-        }
+        // `.inline`, not `dsScreenTitle` (prd §560, 2026-09-01): that modifier
+        // is the FULL-SCREEN title — large on iPhone — and this is a sheet.
+        // Two of the twelve nav sheets wore it, so the family had two title
+        // sizes as well as two close placements.
+        .navigationTitle(Text("Chip order"))
+        .navigationBarTitleDisplayMode(.inline)
+        .dsSheetDismiss { dismiss() }
     }
 
     private func row(_ name: String) -> some View {

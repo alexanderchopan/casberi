@@ -2124,17 +2124,33 @@ struct HegotaMoveSheet: View {
     var onOpenFrame: ((Int) -> Void)? = nil
 
     var body: some View {
-        DSTray(title: title, height: trayHeight, ink: true) {
-            VStack(alignment: .leading, spacing: DS.Space.s6) {
-                head
-                becomes
-                frames
-                facts
-                watchDoor
-                explorer
+        // SCROLLABLE, AND DRAG-PAST (prd §560, 2026-09-01) — `HegotaKeySheet`'s
+        // own fix, which that sheet applied to itself and the four trays
+        // beside it never took. All four are a bare `VStack` against a
+        // hand-summed height, which is the shape whose failure that sheet
+        // records: "the tray is clipped at the bottom", because real device
+        // text metrics ran a line longer than the arithmetic guessed and the
+        // last section sat below the tray's own edge with no way to reach it.
+        // A `ScrollView` plus a second `.large` detent makes every reachable
+        // state reachable regardless of how the number is guessed — the
+        // measurement §542 asks for is the better fix and a bigger one, and
+        // this is the half that removes the dead end.
+        DSTray(title: title, height: trayHeight, ink: true,
+               detents: [.height(trayHeight), .large]) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DS.Space.s6) {
+                    head
+                    becomes
+                    frames
+                    facts
+                    watchDoor
+                    explorer
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.bottom, DS.Space.s4)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, DS.Space.s4)
+            .scrollIndicators(.hidden)
         }
     }
 
@@ -2545,21 +2561,27 @@ struct HegotaFrameSheet: View {
         DSTray(title: frame?.mode.label ?? String(localized: "Step"),
                // The paper's own chrome (`dsReceiptPaper` pads s6 top and s6
                // plus a tooth at the bottom) plus the disc it now carries.
-               height: total > 1 ? 720 : 640, ink: true) {
-            VStack(alignment: .leading, spacing: DS.Space.s6) {
-                if let frame {
-                    head(frame)
-                    position
-                    gasShare(frame)
-                    facts(frame)
-                    neighbours
-                } else {
-                    Text(String(localized: "This step is no longer available."))
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+               height: total > 1 ? 720 : 640, ink: true,
+               // Scrollable and drag-past — see `HegotaMoveSheet.body`.
+               detents: [.height(total > 1 ? 720 : 640), .large]) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DS.Space.s6) {
+                    if let frame {
+                        head(frame)
+                        position
+                        gasShare(frame)
+                        facts(frame)
+                        neighbours
+                    } else {
+                        Text(String(localized: "This step is no longer available."))
+                            .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.bottom, DS.Space.s4)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, DS.Space.s4)
+            .scrollIndicators(.hidden)
         }
     }
 
@@ -2939,21 +2961,32 @@ struct HegotaAccountSheet: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var copied = false
 
+    /// The paper's own chrome — `dsReceiptPaper` pads `s6` top and `s6` plus a
+    /// tooth at the bottom, which the old height had no term for. Hoisted out
+    /// of the call (prd §560) so the detent set below can name the same number
+    /// rather than restating the arithmetic — two copies of a height is how
+    /// the resting detent and the tray stop agreeing.
+    private var trayHeight: CGFloat {
+        700 + (showsSplit ? 52 : 0) + (sends == nil ? 0 : 76)
+    }
+
     var body: some View {
-        // The paper's own chrome — `dsReceiptPaper` pads `s6` top and `s6` plus
-        // a tooth at the bottom, which the old height had no term for.
-        DSTray(title: name,
-               height: 700 + (showsSplit ? 52 : 0) + (sends == nil ? 0 : 76),
-               ink: true) {
-            VStack(alignment: .leading, spacing: DS.Space.s6) {
-                head
-                vaultDoor
-                sendStory
-                doing
-                explorer
+        DSTray(title: name, height: trayHeight, ink: true,
+               // Scrollable and drag-past — see `HegotaMoveSheet.body`.
+               detents: [.height(trayHeight), .large]) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DS.Space.s6) {
+                    head
+                    vaultDoor
+                    sendStory
+                    doing
+                    explorer
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.bottom, DS.Space.s4)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, DS.Space.s4)
+            .scrollIndicators(.hidden)
         }
     }
 
@@ -3274,20 +3307,32 @@ struct HegotaCoinSheet: View {
         // the literal term (§500), and the origin is not lost: it is the line
         // under the amount and the sibling row's own caption.
         DSTray(title: String(localized: "UTXO #\(String(coin.index))"),
-               // +60 for the paper's own chrome (`dsReceiptPaper` pads s6 top
-               // and s6 plus a tooth at the bottom); a deficit clips.
-               height: min(820, 460 + CGFloat(siblings.count) * 46
-                                + (showsShare ? 64 : 0)),
-               ink: true) {
-            VStack(alignment: .leading, spacing: DS.Space.s6) {
-                head
-                share
-                spend
+               height: trayHeight, ink: true,
+               // Scrollable and drag-past — see `HegotaMoveSheet.body`. This is
+               // the sharpest of the four: the height is `min(820, …)`, so a
+               // coin with enough siblings does not merely risk overrunning
+               // its guess, it is GUARANTEED to — the cap is a promise to clip.
+               detents: [.height(trayHeight), .large]) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DS.Space.s6) {
+                    head
+                    share
+                    spend
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.bottom, DS.Space.s4)
+                .onAppear { dealt = true }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, DS.Space.s4)
-            .onAppear { dealt = true }
+            .scrollIndicators(.hidden)
         }
+    }
+
+    /// +60 for the paper's own chrome (`dsReceiptPaper` pads s6 top and s6 plus
+    /// a tooth at the bottom); a deficit clips. Hoisted out of the call (prd
+    /// §560) so the detent set names the same number instead of restating it.
+    private var trayHeight: CGFloat {
+        min(820, 460 + CGFloat(siblings.count) * 46 + (showsShare ? 64 : 0))
     }
 
     /// **THE HEAD IS AN OBJECT** — the move sheet's paper (prd §495), on the

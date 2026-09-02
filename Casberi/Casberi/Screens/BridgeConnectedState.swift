@@ -149,12 +149,7 @@ struct BridgeConnectionSheet<Content: View>: View {
             .dsPageBackground()
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .dsText(.body17).foregroundStyle(DS.tint)
-                }
-            }
+            .dsSheetDismiss { dismiss() }
         }
         .presentationDetents([.large])
         // `.large` is inert on Catalyst AND unhelpfully small on iPad (see
@@ -165,7 +160,11 @@ struct BridgeConnectionSheet<Content: View>: View {
         // one sheet here whose iOS twin asks for the WHOLE height, and `.page`
         // is the system's own "a large sheet, sized to this window", which
         // needs no arithmetic of ours and cannot outgrow its container.
-        .dsPageSheet()
+        .dsNavSheet()
+        // The ground stays STATED here and is deliberately not folded into
+        // `dsNavSheet` (prd §560): a form is not a page, so this sheet says
+        // `surfaceSheet` while its siblings carry the person's own
+        // `dsPageBackground`. What the chassis shares is the geometry.
         .presentationBackground(DS.surfaceSheet)
         .dsColorScheme()
     }

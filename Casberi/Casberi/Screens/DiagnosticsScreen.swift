@@ -61,12 +61,13 @@ struct DiagnosticsScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .dsScreenTitle("Diagnostics")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Done") { dismiss() }
-            }
-        }
+        // `.inline` + the shared dismiss (prd §560, 2026-09-01). This screen is
+        // only ever a SHEET, and `dsScreenTitle` is the full-screen title — so
+        // it wore a large title inside a presentation, and its Done sat
+        // trailing while four sibling sheets put theirs leading.
+        .navigationTitle(Text("Diagnostics"))
+        .navigationBarTitleDisplayMode(.inline)
+        .dsSheetDismiss { dismiss() }
         .task { await run() }
     }
 

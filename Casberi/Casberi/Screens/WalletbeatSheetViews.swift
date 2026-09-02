@@ -25,8 +25,11 @@ struct WalletbeatIncidentHead: View {
 	@ViewBuilder private var liveBody: some View {
 		let facts = WalletbeatIncidentBook.facts(ref: thing.sourceRef)
 		VStack(alignment: .leading, spacing: DS.Space.s4) {
+			// THE CONTAINER'S OWN TITLE RULE (prd §560) — see
+			// `L2beatSheetViews.liveBody`; the two registry heads shared the
+			// stray `heading28` and are swept together.
 			Text(thing.title)
-				.dsText(.heading28)
+				.dsText(thing.title.count > 100 ? .heading22 : .heading34)
 				.foregroundStyle(DS.textPrimary)
 				.fixedSize(horizontal: false, vertical: true)
 				.textSelection(.enabled)
@@ -62,18 +65,16 @@ struct WalletbeatIncidentHead: View {
 		let open = thing.tags.contains(WalletbeatNewsParse.openTag)
 		HStack(spacing: DS.Space.s2) {
 			if let facts {
-				Text(facts.type.label)
-					.dsText(.label11).fontWeight(.bold)
-					.foregroundStyle(DS.textSecondary)
-					.padding(.horizontal, 10).padding(.vertical, 4)
-					.background(Capsule(style: .circular).fill(DS.fillFaint))
-				Text(facts.status.label)
-					.dsText(.label11).fontWeight(.bold)
-					.foregroundStyle(open ? DS.attention : DS.confirm)
-					.padding(.horizontal, 10).padding(.vertical, 4)
-					.background(
-						Capsule(style: .circular)
-							.fill((open ? DS.attention : DS.confirm).opacity(0.13)))
+				// THE SHARED STAMP (prd §560, 2026-09-01) — see
+				// `L2beatSheetViews.kindLine` for the full reasoning; these two
+				// heads carried the same hand-rolled capsule and are swept
+				// together. The KIND is `quiet` (a classification, not news);
+				// the STATUS takes the two weights it already meant — `urgent`
+				// while it is open, `good` once Walletbeat records it closed,
+				// which is `DSStamp`'s own `confirm`/`attention` pair reached
+				// by naming the meaning instead of picking the colour.
+				DSStamp(word: facts.type.label, weight: .quiet)
+				DSStamp(word: facts.status.label, weight: open ? .urgent : .good)
 				if let severity = facts.severity {
 					// "Walletbeat rates it …", never a bare severity word: the judgment is
 					// theirs and every surface in this feature says so.

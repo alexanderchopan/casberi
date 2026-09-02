@@ -86,6 +86,15 @@ struct DSTray<Content: View>: View {
         // there (2026-08-20). See `dsSizedSheet`.
         .dsSizedSheet(height)
         .presentationDragIndicator(.visible)
+        // THE CORNER UIKIT DRAWS FOR US (prd §560, 2026-09-01). `DS.Radius`'s
+        // own `presentedSheet` doc argues this for "the most-opened surface in
+        // the app" and it had reached exactly three sheets — the reading
+        // three, which spell it by hand — while all 26 trays took whatever the
+        // system gave. On iOS 26 the token is nil, so this is the system's
+        // concentric corner and nothing changes; below 26 it pins the same 16
+        // every drawn surface in this app already uses. A tray is a presented
+        // sheet like any other and had no reason to be the exception.
+        .dsSheetCorner()
         // A tray with a SECOND, larger detent (the Hegotá key/send sheets'
         // own scroll-past-clipping fix) defaults to `.automatic` content
         // interaction — which on a sheet with more than one detent resizes
