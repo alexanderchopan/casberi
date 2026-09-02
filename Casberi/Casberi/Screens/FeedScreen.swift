@@ -479,6 +479,16 @@ struct FeedScreen: View {
         /// `VibenetRoomCard`, which is inside this List's rows, so it cannot
         /// present its own sheet.
         case vibenetCreate
+        /// **THE WATCH SHEET (prd §576).** Routed here for `vibenetCreate`'s
+        /// reason verbatim — the watch row is the create row's own sibling in
+        /// `VibenetRoomCard`, inside this List's rows, so it cannot present a
+        /// sheet of its own.
+        ///
+        /// It had NO case and no presenter at all: §545 moved the roster's
+        /// verbs onto its rows and this one arrived without its destination,
+        /// so `VibenetWatchSheet` sat in the tree constructed by nobody while
+        /// "Watch an account" stayed tappable and did nothing.
+        case vibenetWatch
         /// **THE SEND FORM, ON A SHEET (prd §553).** Home holds the two verbs
         /// and the form holds the screen — routed here rather than presented by
         /// the card for `hegotaMove`'s reason: a `.sheet` on a view inside this
@@ -545,6 +555,7 @@ struct FeedScreen: View {
             case .vibenetKey(let actor, let item, _):
                 "vibenetKey:\(VibenetKeySeenDiff.keyID(address: item.address, actorId: actor.actorId))"
             case .vibenetCreate: "vibenetCreate"
+            case .vibenetWatch: "vibenetWatch"
             case .hegotaSend: "hegotaSend"
             case .framesSend: "framesSend"
             case .framesMove(let m, _): "framesMove:\(m.id)"
@@ -4121,6 +4132,24 @@ case .vibenetSend(let account):
                     chrome.refreshPulse += 1
                 }
             }
+        case .vibenetWatch:
+            VibenetWatchSheet {
+                // The create branch's own two halves, for its own stated
+                // reason: this room is composed from `VibenetState.saved`, a
+                // flat UserDefaults snapshot with no observation, so watching
+                // alone changes nothing this screen has READ. Read the chain
+                // now, then bump the term the memoised head recomputes on.
+                //
+                // No `feedSheet = nil` here, unlike the create branch: this
+                // sheet dismisses ITSELF the moment an address is really added
+                // (`VibenetWatchSheet.onWatched` calls `dismiss()` right after
+                // this closure), so clearing the route as well would be the
+                // same dismissal asked for twice.
+                Task {
+                    _ = await VibenetRoomSource.compose()
+                    chrome.refreshPulse += 1
+                }
+            }
         case .vibenetAuthorize(let account, let epoch, let sequence, let editing):
             VibenetAuthorizeSheet(account: account, localEpoch: epoch, localSequence: sequence,
                                   editing: editing)
@@ -5364,6 +5393,7 @@ case .vibenetSend(let account):
                                         }
                                     },
                                     onRequestCreate: { feedSheet = .vibenetCreate },
+                                    onRequestWatch: { feedSheet = .vibenetWatch },
                                     onOpenKeys: { newKeyIDs in
                                         feedSheet = .vibenetKeys(room.items, newKeyIDs: newKeyIDs)
                                     },

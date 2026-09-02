@@ -46198,3 +46198,65 @@ Untouched on purpose: the Today brief's masthead keeps its own rung and its date
 one-rung argument does not reach across them); the ink fill and shadow on the
 input panel, which already make it the hero by tone; and every word of the
 provenance sentence.
+
+## 576. "Watch an account" was a button wired to nothing, and the guard had been saying so since §545 (2026-09-02)
+
+Found by `verify.sh` run AFTER an upload rather than before it, which is the
+only reason it was found at all: iOS build 488 was already on TestFlight and
+487 was waiting for review with `AFTER_APPROVAL` set, so both were on their way
+to the public carrying it.
+
+**The defect.** `VibenetRoomCard.watchAccountRow` is a real `Button` mounted
+directly under `createAccountRow`. It reads "Watch an account", it haptics on
+tap, and it calls `onRequestWatch()` — which was declared
+`var onRequestWatch: () -> Void = {}` and **wired by nobody**. A `grep` for
+`onRequestWatch:` across the app returned exactly one hit, the declaration
+itself. `VibenetWatchSheet` was declared in its own file and CONSTRUCTED
+NOWHERE; the only other mentions of it in the tree were two doc comments.
+
+So the row looked live, felt live — it fires a selection haptic — and did
+nothing. §83's dead control, on the row whose whole job is the verb it names.
+
+**How it got in, and why nobody saw it.** `git log -S"VibenetWatchSheet("`
+names `5fe0f0df` (§545, *"One address book: the roster's verbs move onto its
+own rows"*). That pass moved the roster's verbs onto rows and this one arrived
+without its destination: **the affordance survived the move and the
+presentation did not.** It is invisible from every direction that usually
+catches things here — it compiles, it renders, it passes the ramp audit, the
+motion audit, the liveness audit and the screen sweep, because a button that
+does nothing photographs exactly like a button that does something.
+
+**The guard was right the whole time and was read as stale.** `vibenet-selftest`
+has failed on this since §545. Two sessions in a row met that red and reached
+for the check rather than the code — the working tree carried an uncommitted
+82-line deletion in `VibenetRoomCard.swift`, and a peer session's own note
+recorded the failure as "another session's WIP" with `HEAD` believed clean. It
+was not: `card=0 feed=0` holds for all twelve commits back through `37bc4f27`.
+**A red that survives a clean-worktree run is not somebody else's WIP.** The
+cheap instrument was `git worktree add --detach HEAD` and one `grep`, and it
+cost less than either session's reasoning about whose file it was.
+
+**The fix is its sibling's, verbatim.** `FeedSheetRoute.vibenetWatch`, wired
+`onRequestWatch: { feedSheet = .vibenetWatch }`. Routed rather than presented
+by the card for `vibenetCreate`'s own recorded reason — the watch row is inside
+this List's rows, and a `.sheet` on a view in there resolves to the same
+presenting controller as the screen's own, half-opens and closes again. The
+post-watch closure is the create branch's two halves for its stated reason: the
+room is composed from `VibenetState.saved`, a flat UserDefaults snapshot with no
+observation, so watching alone changes nothing this screen has READ.
+
+**One deliberate divergence from the create branch, stated because it looks
+like an omission:** this branch does NOT set `feedSheet = nil` first.
+`VibenetWatchSheet` calls `dismiss()` itself immediately after its `onWatched`
+closure, so clearing the route as well is the same dismissal asked for twice.
+
+**The ship consequence, recorded rather than tidied away.** The user's standing
+instruction was ship-then-verify, and here that is what caught it — but it
+caught it with 488 already uploaded and unswappable-without-cost. Build 490
+carries the fix; 488 is left on TestFlight rather than promoted. The general
+lesson is the one `docs/testflight-handoff.md` step 3 already states and this
+session inverted on request: **verify gates the submit, not the session.** A
+TestFlight upload can be re-done for free. A store swap cannot.
+
+**UNSEEN on a device**: the wiring is the sibling's exact shape and the harness
+is green, but nobody has tapped "Watch an account" on a phone.
