@@ -158,6 +158,32 @@ enum DSRoomChassis {
     /// `listRowInsets` was exact.
     static let contentInset: CGFloat = DS.Space.s3
 
+    /// The height `DSRoomSlot` reserves for a headline, drawn or not.
+    ///
+    /// `stat24`'s own line height — spelled from the ramp rather than measured,
+    /// for `visualSlot`'s reason: a measured height settles the frame a frame
+    /// late, which is the same walk arriving slower.
+    ///
+    /// **It lives HERE rather than on `DSRoomSlot` so a figure can derive from
+    /// it** (2026-09-02). It was a `static var` on a GENERIC type, which is
+    /// reachable only as `DSRoomSlot<SomeView>.headlineRow` — unusable enough
+    /// that `VibenetRoomCard` kept its own unused copy of the number instead,
+    /// and its census grid then did the one thing this constant exists to
+    /// prevent: it sized itself against a guess at the room it had.
+    static let headlineRow: CGFloat = 30
+
+    /// **THE HEIGHT A FIGURE REALLY HAS**, once the reserved headline row and
+    /// its gap are paid out of `visualSlot`.
+    ///
+    /// The number a drawing must fit, and the one it should DERIVE from rather
+    /// than measure against. `DSRoomSlot` clips, so a figure that computes its
+    /// own rows from a floor and hopes they fit does not fail loudly — it loses
+    /// its bottom row, silently, which is the failure the vibenet census
+    /// shipped (a 2×3 grid wanting ~193pt of the 166 there are, its second row
+    /// cut in half). A figure whose cells are `figureSlot` divided by its own
+    /// row count cannot overflow at all.
+    static let figureSlot: CGFloat = visualSlot - headlineRow - DS.Space.s3
+
     /// **THE COLUMN THE SETTINGS GEAR OWNS.**
     ///
     /// Reserving the headline row clears the gear for a figure that begins
@@ -232,11 +258,6 @@ struct DSRoomSlot<Figure: View>: View {
     var reservesHeadline: Bool = true
     @ViewBuilder let figure: () -> Figure
 
-    /// `stat24`'s line height, spelled from the ramp rather than measured:
-    /// a measured height settles the frame a frame late, which is the same
-    /// walk arriving slower (`visualSlot`'s own reasoning).
-    static var headlineRow: CGFloat { 30 }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if reservesHeadline {
@@ -295,7 +316,7 @@ struct DSRoomSlot<Figure: View>: View {
                     Color.clear
                 }
             }
-            .frame(height: Self.headlineRow, alignment: .leading)
+            .frame(height: DSRoomChassis.headlineRow, alignment: .leading)
             .padding(.bottom, DS.Space.s3)
     }
 }

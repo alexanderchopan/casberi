@@ -2122,23 +2122,45 @@ struct VibenetRoomCard: View {
         let isAdmin = row.label == Self.adminLabel
         VStack(alignment: .leading, spacing: 4) {
             Text(held ? "\(row.count)" : "—")
-                .dsText(.stat24)
+                // **`price16`, ONE RUNG UNDER THE HEADLINE** (2026-09-02) —
+                // the ramp's own "a row's figure", which is what a cell in a
+                // well is. It was `stat24`, the same rung as the "3 keys"
+                // directly above it, so the figure read as seven numbers of
+                // equal standing when six of them are that seventh one's
+                // breakdown. It is also what makes the cell FIT: at `stat24` a
+                // two-line cell wants 83pt of the 78 `censusCell` derives.
+                //
+                // **The knowing divergence from `HegotaRoomCard.stat`**, which
+                // this cell otherwise copies: that grid is ONE row of three in
+                // the same slot, so it can spend 88pt on a cell and the whole
+                // rung with it. Two rows cannot, and the rung is what gives.
+                .dsText(.price16)
                 .foregroundStyle(held ? (isAdmin ? DS.attention : DS.textPrimary)
                                       : DS.textTertiary)
                 .monospacedDigit()
             Text(row.label)
-                // Three lines at this width, `HegotaRoomCard.stat`'s own
-                // measurement in the same three-across grid: "Send to one
-                // contract" wants them, and at two it truncates mid-word to
-                // the point of losing the noun the cell exists to name.
+                // **TWO lines, not three** (2026-09-02). Three was
+                // `HegotaRoomCard.stat`'s measurement, and it was measured
+                // against THAT box: three across a 342pt slot leave ~60pt of
+                // text, where "On the ordinary nonce" really does want three.
+                // This grid is wider — three across the room's own 376pt, less
+                // this cell's `s2` insets, is ~99pt — and the longest label
+                // here ("Send to one contract") sets in two. The third line was
+                // never drawn and was still PAID FOR: every cell in the grid
+                // takes the tallest cell's height, so one label's unused third
+                // line made all six 14pt taller, which is most of what pushed
+                // the second row past the slot's clip.
                 .dsText(.label12)
                 .foregroundStyle(held ? DS.textTertiary : DS.textQuaternary.opacity(0.6))
-                .lineLimit(3)
+                .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
                 .minimumScaleFactor(0.9)
             Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, minHeight: Self.censusCell, alignment: .topLeading)
+        // **PINNED, NOT FLOORED** (2026-09-02) — see `censusCell`. A floor is
+        // what a label's own wrapping walks straight through, and the grid it
+        // grows is clipped rather than scrolled.
+        .frame(maxWidth: .infinity, height: Self.censusCell, alignment: .topLeading)
         .padding(.horizontal, DS.Space.s2)
         .padding(.vertical, DS.Space.s2)
         // A well, so six facts read as six facts rather than as a sentence
@@ -2164,18 +2186,36 @@ struct VibenetRoomCard: View {
 
     /// Three across, two down — the six permissions in one screenful.
     ///
-    /// THREE and not two, measured the way `HegotaRoomCard.stat`'s were: at
-    /// two columns the six cells need three rows, which is 3 × 72 + gaps
-    /// against the ~158pt the slot has left under a `price40` headline, and
-    /// the bottom row is clipped by the slot's own `clipped()` — silently,
-    /// which is the failure this room has already paid for twice.
+    /// THREE and not two: at two columns the six cells need three rows, and
+    /// three rows do not fit `DSRoomChassis.figureSlot` at any cell height a
+    /// number and a label can be read at.
+    private static let censusRows: CGFloat = 2
     private static let censusColumns = Array(
         repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .topLeading),
         count: 3)
 
-    /// A census cell's floor. Two of these plus their gap must clear the slot
-    /// less its headline row; see `censusColumns`.
-    private static let censusCell: CGFloat = 72
+    /// **A CENSUS CELL'S HEIGHT, DERIVED FROM THE BOX IT MUST FIT** (2026-09-02
+    /// — reported as clipping on the Permissions scope, the second row of cells
+    /// cut in half along the top edge of the fused slab).
+    ///
+    /// It was a FLOOR of 72 with a note doing the arithmetic by hand, and every
+    /// term of that arithmetic was wrong by the time it was read. The floor
+    /// never bound — a cell is a number over a label, and the label's own
+    /// wrapping decides the height, so the six cells came out at ~92 each; the
+    /// note allowed "~158pt under a `price40` headline" when §551 had taken the
+    /// headline to `stat24` and its row to 30 + `s3`; and it compared against a
+    /// number that could not be reached from here anyway, since `headlineRow`
+    /// was a static on a generic type. Two rows of 92 plus their gap is ~193pt
+    /// of the 166 there are, and `DSRoomSlot` clips — so the bottom row lost a
+    /// quarter of itself with nothing anywhere saying so.
+    ///
+    /// Derived, the arithmetic cannot go stale: the slot changes, the cell
+    /// changes with it. **The cell is PINNED to this rather than floored by
+    /// it** (see `policyCensusCell`), so a longer label can never grow the grid
+    /// past the box again — it is the cell's own text that gives, which is
+    /// visible, rather than the row below it, which is not.
+    private static let censusCell: CGFloat =
+        (DSRoomChassis.figureSlot - DS.Space.s2 * (censusRows - 1)) / censusRows
 
     /// NOTHING WAS READ — the Permissions scope for an account the chain did
     /// not answer for.
@@ -2272,12 +2312,13 @@ struct VibenetRoomCard: View {
     /// same jump arriving slower (Wallet's `walletVisualSlot`, same reason).
     private static var visualSlot: CGFloat { DSRoomChassis.visualSlot }
 
-    /// The height `scopeFigure` reserves for a headline, drawn or not.
-    ///
-    /// `stat24`'s own line height — spelled from the ramp rather than
-    /// measured, for `visualSlot`'s reason: a measured height settles the
-    /// frame a frame late, which is the same walk arriving slower.
-    private static let headlineRow: CGFloat = 30
+    // **The local `headlineRow` copy is GONE** (2026-09-02). It was a second
+    // spelling of `DSRoomChassis.headlineRow` that nothing here read — kept, by
+    // the look of it, because the real one was unreachable as a static on a
+    // generic type — while the census sized itself against a hand-written
+    // guess at the same number and lost a row to the clip. The number is on the
+    // chassis, with `figureSlot` derived from it; anything in this card that
+    // needs it reads it there.
 
     /// The samples the crown, the delta and the line all read (prd §479) —
     /// ONE derivation, so the figure, its move and its curve can never

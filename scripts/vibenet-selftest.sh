@@ -1069,6 +1069,36 @@ stripFn=$(sed -n '/private var railSlab: some View {/,/^    }$/p' "$TMP/card.nc.
   || { echo "✗ vibenet's railSlab no longer passes both decks — prd §547: the fused rail"
        echo "  is the face rail AND the scope switcher, and either may be absent only"
        echo "  because its own gate said so."; exit 1; }
+# **AND NOTHING MAY DRAW BELOW THE FIGURE SLOT EITHER** (2026-09-02, reported
+# in the same breath, on the Permissions scope: the census grid's second row of
+# cells cut in half along the top edge of the slab). Same family, different box.
+# `DSRoomSlot` CLIPS, so a figure sized against a hand-written guess at the room
+# it has does not fail loudly — it loses its bottom row. The census guessed with
+# a FLOOR of 72 and a note allowing "~158pt under a `price40` headline"; the
+# floor never bound (a label's own wrapping sets the cell, which came out ~92)
+# and the headline had been `stat24` since §551. Two rows of 92 is ~193pt of the
+# 166 there are.
+#
+# Derived from `DSRoomChassis.figureSlot`, the arithmetic cannot go stale — and
+# PINNED rather than floored, so a longer label gives before the row below does.
+CHASSIS="Casberi/Casberi/Design/DSRoomChassis.swift"
+strip_comments "$CHASSIS" > "$TMP/chassis.nc.swift"
+grep -q 'static let figureSlot: CGFloat = visualSlot - headlineRow - DS.Space.s3' \
+     "$TMP/chassis.nc.swift" \
+  || { echo "✗ DSRoomChassis.figureSlot is gone or no longer derived — it is the height a"
+       echo "  figure really has (the slot less the reserved headline row), and every"
+       echo "  multi-row figure divides it rather than measuring against it."; exit 1; }
+grep -q 'DSRoomChassis.figureSlot' "$TMP/card.nc.swift" \
+  || { echo "✗ the vibenet census cell no longer derives its height from the slot — a"
+       echo "  hand-written height is what let two rows of cells want ~193pt of 166, and"
+       echo "  DSRoomSlot clips rather than scrolls, so the bottom row went silently."
+       exit 1; }
+if grep -q 'minHeight: Self.censusCell' "$TMP/card.nc.swift"; then
+  echo "✗ the census cell is a FLOOR again — a floor is what a label's own wrapping"
+  echo "  walks straight through. Pin it (height:), so the cell's text gives before"
+  echo "  the row below it does."
+  exit 1
+fi
 # **NOTHING IN THE CARD MAY DRAW BELOW ITS OWN FRAME** (2026-09-02, reported as
 # "clipping on vibenet"). The chassis spelled its two gaps as NEGATIVE bottom
 # paddings against the card stack's `s6` — a spacing correction that is only a
