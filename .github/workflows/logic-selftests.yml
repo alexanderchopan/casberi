@@ -37,23 +37,60 @@
 # reported as an ordinary failure on purpose — a toolchain gap is a thing to
 # know about, not to paper over — but read the first red run before assuming
 # the code broke.
+#
+# HOW LONG IT TAKES — MEASURED 2026-09-02, and the first cut of this file was
+# wrong about it in a way that made every run useless. It said "these runs are
+# minutes", carried a 45-minute budget, and in twelve runs NOT ONE ever reached
+# a conclusion. The two numbers that explain it, both read off run 33595374093's
+# own log rather than assumed:
+#
+#   * the hosted runner prints `▶ 86 logic self-tests, up to 3 at once` —
+#     `macos-26-arm64` gives **3 cores**, where every wall-clock figure in
+#     CLAUDE.md was taken on an 8-core machine. That is 2.7x fewer lanes;
+#   * the suite is 86 harnesses now, where the ~6-7min local figure recorded
+#     in CLAUDE.md was taken at 52. That is another 1.65x of work.
+#
+# 45 minutes was never going to be enough, and the failure was silent in the
+# worst way: a job-level timeout kills the job, `if: always()` never gets its
+# grace period, and the artifact holding the per-harness `.sec` timings is
+# never uploaded — so every overrun destroyed the one measurement that could
+# have diagnosed it. CONFIRMED: all twelve runs report `total_count: 0`
+# artifacts. Both halves are fixed below, and the ordering matters — the
+# timeout moved to the STEP so the evidence survives, THEN the budget raised
+# so a run can finish. Instrument first, fix second.
 name: Logic self-tests
 
 on:
   push:
   pull_request:
 
-# A push that supersedes another on the same ref cancels it. These runs are
-# minutes, so without this a burst of commits queues several full sweeps whose
-# verdicts are all about trees nobody has any more.
+# A push that supersedes another on the same BRANCH cancels it — a burst of
+# commits would otherwise queue several full sweeps whose verdicts are all
+# about trees nobody has any more, and at ~an hour each on a 3-core runner
+# that queue does not drain.
+#
+# Keyed on the branch NAME, not `github.ref`, and that is a fix rather than a
+# tidy-up. A push is `refs/heads/<branch>` and its pull_request is
+# `refs/pull/<n>/merge`, so the two events were in DIFFERENT groups and neither
+# could ever cancel the other: measured 2026-09-02, three runners were live on
+# the single SHA bd598ee (a push run and a PR run on the branch, plus main's
+# own). `head_ref` is set on pull_request and empty otherwise, `ref_name` is
+# the branch on push — so both events on one branch now resolve to one group
+# and one verdict per head SHA.
 concurrency:
-  group: logic-selftests-${{ github.ref }}
+  group: logic-selftests-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
   selftests:
     runs-on: macos-latest
-    timeout-minutes: 45
+    # Deliberately generous, and deliberately NOT the 45 that never finished.
+    # This is the budget for a MEASURING run: nothing here has ever reported a
+    # total, so the honest first move is to let one finish and read the
+    # `.sec` files it uploads, rather than to guess a number. Actions minutes
+    # are free for public repos (CLAUDE.md), so the only cost is wall time.
+    # Tighten it once a green run has said what the real figure is.
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
 
@@ -77,7 +114,20 @@ jobs:
       # only which harness broke, and nothing about how, is the dead end
       # `category-fold` cost two ~20-minute runs to learn — and here there is
       # nobody to re-run it by hand.
+      # TIMED OUT ON THE STEP, NOT ON THE JOB, and the distinction is the
+      # whole reason twelve runs taught nobody anything. A job-level timeout
+      # terminates the job outright — the `if: always()` upload below never
+      # runs, so an overrun uploads NOTHING and destroys the only record of
+      # where the time went. A step-level timeout fails just this step, and
+      # every later `if: always()` step still runs, so an overrun now hands
+      # back the `.sec` files for whichever harnesses did finish. That is the
+      # measurement that decides between raising the budget, sharding, and
+      # `-O` -> `-Onone`; without it all three are guesses.
+      #
+      # Ten minutes under the job budget on purpose, so the step is always
+      # what expires and the artifact is never the thing that gets cut.
       - name: Logic self-tests (all discovered, uncached)
+        timeout-minutes: 170
         shell: zsh -e {0}
         run: |
           set -uo pipefail
@@ -93,8 +143,18 @@ jobs:
                 t0=$EPOCHREALTIME
                 "$s" > "$OUT/$b.log" 2>&1
                 rc=$?
-                printf "%.1f\n" $(( EPOCHREALTIME - t0 )) > "$OUT/$b.sec"
+                el=$(( EPOCHREALTIME - t0 ))
+                printf "%.1f\n" $el > "$OUT/$b.sec"
                 print $rc > "$OUT/$b.rc"
+                # A heartbeat, because this step used to print NOTHING until
+                # the last harness returned — so an hour of real work and a
+                # hang looked identical from outside, which is what made the
+                # 45-minute overruns so hard to read. One `printf` under
+                # PIPE_BUF is atomic, so concurrent children cannot interleave
+                # within a line. The ordered verdict below is unchanged; this
+                # is arrival order and says nothing about pass/fail overall.
+                if (( rc == 0 )); then mark="ok  "; else mark="FAIL"; fi
+                printf "%s %-42s %6.1fs\n" "$mark" "$b" $el
                 exit 0
               ' _ {}
           # Reported in glob order so two runs can be diffed against each other.
