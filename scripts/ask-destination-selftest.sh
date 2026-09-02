@@ -371,8 +371,24 @@ guard "the greeting sits at the body rung" "$WORK/composer.nc" \
 
 # THE ASK PANEL IS THE CROWN AT REST — the one act on the surface, at the head
 # rung, sharing its gate with the `Spacer` that makes room for it.
-guard "the resting invitation takes the head rung" "$WORK/composer.nc" \
-      'restingPanel && !fieldFocused \? \.heading34 : \.body17'
+#
+# AMENDED 2026-09-02 (prd §578), and UPWARD. §575 put the invitation at
+# `heading34` and switched it to `body17` on focus, because a 40pt placeholder
+# beside a 17pt caret is a mismatch. §578 raised the invitation to `price48`
+# and removed the switch: the placeholder is a separate view inside
+# `.placeholder(when:)`'s ZStack, so it can take the display rung while the
+# field's own text stays constant — and the field's text MUST stay constant,
+# because changing `.dsText` on a live `TextField` rebuilds its `UITextView`
+# (§577c's watchdog hang, by a second route).
+#
+# The ruling this guard protects is "the invitation is the crown on this
+# surface". It is more true than it was, so the guard asserts the higher rung
+# and, separately, that the field's own text is NOT sized from a state the
+# field produces — which is the half that can actually hang a phone.
+guard "the resting invitation takes the crown rung" "$WORK/composer.nc" \
+      'dsText\(embedded \? \.price48 : \.body17\)'
+guard "the field's own text is not sized from the draft" "$WORK/composer.nc" \
+      'dsText\(embedded \? \.heading34 : \.body17\)'
 guard "the resting panel shares the rest gate" "$WORK/composer.nc" \
       'private var restingPanel: Bool \{ restChrome\(keepBrief: false\) \}'
 
