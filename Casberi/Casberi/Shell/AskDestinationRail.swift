@@ -62,8 +62,13 @@ struct AskDestinationRail: View {
     let onDevice: () -> Void
     let onAgent: (AgentProvider) -> Void
 
-    private var chosenDiameter: CGFloat { size == .large ? 88 : 44 }
-    private var restingDiameter: CGFloat { size == .large ? 44 : 36 }
+    /// 104 and 60 (prd §577c, user: "the bankr and phone icons could be
+    /// bigger"). They were 88 and 44, and on a real device the unchosen faces
+    /// read as chrome rather than as the other answer — which is the one thing
+    /// this control has to say. 60 also clears the 44pt touch floor with room,
+    /// where the old resting size WAS the floor exactly.
+    private var chosenDiameter: CGFloat { size == .large ? 104 : 44 }
+    private var restingDiameter: CGFloat { size == .large ? 60 : 36 }
 
     private var deviceLabel: String { AskDestination.deviceLabel(isMac: DS.isMac, isPad: DS.isPad) }
     private var deviceGlyph: String { AskDestination.deviceGlyph(isMac: DS.isMac, isPad: DS.isPad) }
@@ -143,9 +148,9 @@ struct AskDestinationRail: View {
                     // are row-scale — two tiers, two call sites, so the audit
                     // can read each one.
                     if let mark, chosen {
-                        BridgeIcon(name: mark, size: DS.Face.shelf, circular: true)
+                        BridgeIcon(name: mark, size: DS.Face.profile, circular: true)
                     } else if let mark {
-                        BridgeIcon(name: mark, size: DS.Face.row, circular: true)
+                        BridgeIcon(name: mark, size: DS.Face.list, circular: true)
                     } else if let glyph {
                         Image(systemName: glyph)
                             .dsGlyph(d * 0.42, weight: .regular)

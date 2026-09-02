@@ -845,14 +845,10 @@ struct Composer: View {
     /// it is at REST, with nothing answered and nothing answering. Tapping the
     /// field over an answer raises the keyboard and does nothing else.
     private func restChrome(keepBrief: Bool) -> Bool {
-        // `!onTint` (prd §577): the ask surface stands IN PLACE of the rest
-        // surface, so every band this gate governs — the greeting's spacer,
-        // the Bankr banner, the kept pills, the resting panel — must stand
-        // down together rather than one at a time. One term, at the one gate
-        // they already share, is what keeps them from drifting apart into a
-        // half-drawn screen.
-        !onTint
-            && isOpen && !hasDraft && !isRecording && !handingOff
+        // The `!onTint` term is GONE (prd §577c). It made seven bands mount
+        // and unmount from the field's own focus, and the field lives inside
+        // them — see `askPanel` for the watchdog hang that caused.
+        isOpen && !hasDraft && !isRecording && !handingOff
             && (!answering || (keepBrief && briefLanding))
     }
 
@@ -1655,12 +1651,11 @@ struct Composer: View {
     /// read the same and neither is a claim.
     @ViewBuilder
     private var draftCrown: some View {
-        // `!asking` (prd §577) — on the blue surface this reading moved under
-        // the words as `askSubline`, at the caption rung rather than the crown
-        // rung, because there the CROWN is the question you are writing. Two
-        // crowns on one surface is the §506 breach §575 removed from the
-        // greeting; this is the same fix one state later.
-        if isOpen, hasDraft, !asking, !isRecording, !handingOff, !answering, turns.isEmpty,
+        // `!showsRail` (prd §577c) — where the panel wears the rail it also
+        // carries this reading as `askSubline`, under the words, at the
+        // caption rung rather than the crown rung. Two crowns on one surface
+        // is the §506 breach §575 removed from the greeting.
+        if isOpen, hasDraft, !showsRail, !isRecording, !handingOff, !answering, turns.isEmpty,
            let liveCount, liveCount > 0 {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 Image(systemName: "magnifyingglass")
@@ -1699,99 +1694,15 @@ struct Composer: View {
         }
     }
 
-    // MARK: - The blue ask surface (prd §577)
-
-    /// THE WHOLE SCREEN, WHILE YOU ARE ASKING.
-    ///
-    /// §575 gave the resting field the head rung and left everything else
-    /// where it was: a 40pt invitation in a raised panel at the foot of an ink
-    /// screen, under a greeting, with three quarters of the surface empty and
-    /// the destination a 32pt capsule segment. Reported as looking and feeling
-    /// bad, and the diagnosis was that the two things a person is actually
-    /// deciding — **what to ask** and **who to ask** — were the two smallest
-    /// objects on it.
-    ///
-    /// So both take the rungs the app reserves for a subject: the destination
-    /// is an 88pt face (`AskDestinationRail`), the words are set at
-    /// `heading34` in the field itself, and the ground is the tint.
-    ///
-    /// ## THE CROWN CHANGES HANDS, WHICH IS WHAT KEEPS §506
-    ///
-    /// One crown per surface, and here it is the same slot holding three
-    /// different things in sequence: **the invitation** before a word (§563 —
-    /// the one act on a surface takes the head rung), **your words** the moment
-    /// there are any, and **the elapsed seconds** while a keyed job runs. Never
-    /// two at once, because each is the subject of exactly the state it draws
-    /// in, and it is a hand-off rather than three separate decisions.
-    ///
-    /// ## WHAT IS DELIBERATELY NOT HERE
-    ///
-    /// No figure under an agent's face. The obvious one — the watched wallets'
-    /// combined value — is refused in `AskSubject` at length, because Bankr
-    /// cannot see it; the rest of that argument lives there rather than being
-    /// restated. And no ask chips, no kept pills, no greeting: `asking` is a
-    /// state you entered by touching the field, so everything that is not the
-    /// question is chrome standing between you and it.
-    @ViewBuilder
-    private var askSurface: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            AskDestinationRail(
-                providers: AgentKey.configured,
-                active: activeAskAgent,
-                recording: isRecording,
-                size: .large,
-                onTint: onTint,
-                // Find's own gate, never `hasDraft` — `runFind` refuses an
-                // in-flight ask, and a face that refuses is the dead control
-                // §83 bans (the capsule's own 2026-09-02 rule).
-                find: (hasDraft && !isRecording && !inFlight && !handingOff)
-                    ? { runFind() } : nil,
-                onDevice: {
-                    AskDestination.used(AskDestination.deviceRaw)
-                    chosenAgent = nil
-                    askProvider = nil
-                    fieldFocused = true
-                },
-                onAgent: { provider in
-                    AskDestination.used(provider.rawValue)
-                    // The pick STICKS and the field stays open — picking a
-                    // destination is not sending to it. At rest an empty send
-                    // would be the stranded-"Thinking…" the empty-draft guard
-                    // exists to prevent; with a draft it would send on a tap
-                    // meant to choose.
-                    chosenAgent = provider
-                    askProvider = provider
-                    fieldFocused = true
-                })
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s2)
-
-            // THE AIR IS THE POINT (§552's written-down sum, §559's anatomy):
-            // the faces at the top, the act hard against the bottom, and the
-            // emptiness between them is what makes the act read. It is a
-            // `Spacer` rather than a fixed height because the question grows
-            // as it is written and the air is what yields.
-            Spacer(minLength: DS.Space.s6)
-
-            draftField
-                .padding(.horizontal, DS.Space.s4)
-
-            // What the destination will read from, under the words it will
-            // read them for. The corpus reading carries its own caption; the
-            // agent note is the disclosure — see `AskSubject`.
-            askSubline
-
-            HStack(spacing: DS.Space.s2) {
-                lowerButton
-                micButton
-                Spacer(minLength: 0)
-                sendPill
-            }
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.bottom, DS.Space.s3)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
+    // MARK: - The ask panel's readings (prd §577, restructured §577c)
+    //
+    // `askSurface` is DELETED. It was a second container holding a second copy
+    // of the field, switched in when `asking` flipped — and that switch is
+    // what rebuilt the `UITextView` and hung the app (§577c). Its parts were
+    // not the problem and all survive, inside the one panel: the rail is the
+    // panel's head, the invitation is the field at the head rung, the send
+    // pill is the control row's trailing item, and the reading below is
+    // `askSubline`, unchanged.
 
     /// The one line under the draft. At most one of the two, ever — the corpus
     /// reading and the agent note answer the same question ("what will this
@@ -2346,7 +2257,7 @@ struct Composer: View {
             // painted "Sunday afternoon." and its pairing line, with their own
             // `settleIn` entrances, into the window before the answer commits.
             // An open that owes an answer shows the answer and nothing else.
-            if embedded, turns.isEmpty, !answering, !handingOff, !onTint {
+            if embedded, turns.isEmpty, !answering, !handingOff {
                 // The greeting (docs/agent-brief.md ruling 4, built
                 // 2026-07-20): the day and its moment, "Saturday morning."
                 // ONE line since 2026-07-31 — the corpus stat that used to
@@ -3216,7 +3127,7 @@ struct Composer: View {
             // they were dark chips on the tint offering to file the sentence
             // you are writing as a to-do. Find is already a face on the rail,
             // which is the only part of this row the ask surface wants.
-            if !asking { takeChips }
+            if !showsRail { takeChips }
             // The brief's table of contents (2026-08-15) — the LAST band
             // before the field, where the mockup put it and where the
             // composer's own stacking already sends a chip row.
@@ -3230,12 +3141,16 @@ struct Composer: View {
             // Every other band above is already standing down through
             // `restChrome`'s `!onTint` term, so this is the one place the
             // swap has to be spelled.
-            if asking {
-                askSurface
-            } else if workingClock {
+            // ONE CONTAINER, ALWAYS (prd §577c). This was `if asking {
+            // askSurface } else { inputBar }`, and the field lived in BOTH —
+            // so the first keystroke moved it to a different position in the
+            // view tree, SwiftUI destroyed and rebuilt the UITextView, and a
+            // device hung until the watchdog killed it (0x8BADF00D, stack in
+            // `TextViewAdaptor.makeUIView`). The field now has ONE identity
+            // for the life of the surface and never moves.
+            if workingClock {
                 askWorking
             } else {
-                // The input, pinned to the bottom — a friendly rounded bar.
                 inputBar
             }
         }
@@ -4701,6 +4616,24 @@ struct Composer: View {
     /// when the crown belongs to the count (`draftCrown`) or to the answer.
     private var restingPanel: Bool { restChrome(keepBrief: false) }
 
+    /// WHETHER THE PANEL WEARS THE FACE RAIL (prd §577c).
+    ///
+    /// **It must not read `hasDraft` or `fieldFocused`, and that is the whole
+    /// bug this constant exists to prevent.** Everything above the field lives
+    /// in the same `VStack`, so a band that appears when you start typing moves
+    /// the field's position in that stack — and SwiftUI answers a moved
+    /// `TextField` by destroying and rebuilding its `UITextView`. On a device
+    /// that hung until the watchdog killed the app (0x8BADF00D, 11s of CPU,
+    /// stack in `TextViewAdaptor.makeUIView`).
+    ///
+    /// So this is a fact about the CONVERSATION, not about the draft: an
+    /// asking surface with nothing answered wears the rail, from the moment it
+    /// opens until an answer exists, and it does not flinch at a keystroke.
+    private var showsRail: Bool {
+        isOpen && embedded && !answering && turns.isEmpty
+            && !handingOff && !isRecording
+    }
+
     /// THE SURFACE TURNS BLUE WHILE YOU ARE ASKING (prd §577, 2026-09-02,
     /// user: "we could be using the extreme sizes b/c it's just a question…
     /// and bold", then "even using the blue and white motif").
@@ -4725,10 +4658,9 @@ struct Composer: View {
     /// so this can only ever replace an EMPTY surface, never a document.
     /// Reversing that would put the blue over a finished answer, which is the
     /// exact report ("the answer VANISHED") `restChrome` records.
-    private var asking: Bool {
-        isOpen && embedded && (fieldFocused || hasDraft)
-            && !isRecording && !handingOff && !answering && turns.isEmpty
-    }
+    /// DELETED as a gate (prd §577c) — see `showsRail`. Deriving the
+    /// surface's STRUCTURE from the field's own focus and draft is what
+    /// rebuilt the text view on every keystroke boundary.
 
     /// The wait, on the same blue — a keyed ask only.
     ///
@@ -4792,19 +4724,41 @@ struct Composer: View {
         // learnable: it is in the same place before and after you type, and
         // typing changes only what a tap does.
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if restingPanel {
-                // The head of the panel: the device this answers on, and — for
-                // somebody with no key yet — where other answerers come from.
-                // `agentsLink` moved HERE from its own band two rows up the
-                // stack (prd §550 placed it on the empty chat, which this is;
-                // it is the same row in the same state, now beside the thing
-                // it explains rather than floating above the kept pills).
-                HStack(alignment: .center, spacing: DS.Space.s3) {
-                    turnDisc(agent: nil)
-                    Spacer(minLength: 0)
-                    agentsLink
-                }
+            if showsRail {
+                // THE RAIL IS THE PANEL'S HEAD (prd §577c). It was a 36pt
+                // device disc and, for somebody with no key, a "Set up an
+                // agent" link — which on a device read as an empty raised box
+                // with a dot in the corner, reported as "weird, the boxes
+                // touching each other like an error". The faces fill it and
+                // say the thing the panel is for.
+                //
+                // `showsRail` deliberately does NOT read `hasDraft` or
+                // `fieldFocused`: everything above the field must hold still
+                // while you type, or the field changes position in the VStack
+                // and SwiftUI rebuilds its UITextView — the §577c hang.
+                AskDestinationRail(
+                    providers: AgentKey.configured,
+                    active: activeAskAgent,
+                    recording: isRecording,
+                    size: .large,
+                    onTint: onTint,
+                    find: (hasDraft && !isRecording && !inFlight && !handingOff)
+                        ? { runFind() } : nil,
+                    onDevice: {
+                        AskDestination.used(AskDestination.deviceRaw)
+                        chosenAgent = nil
+                        askProvider = nil
+                    },
+                    onAgent: { provider in
+                        AskDestination.used(provider.rawValue)
+                        chosenAgent = provider
+                        askProvider = provider
+                    })
                 .padding(.horizontal, DS.Space.s1)
+                if AgentKey.configured.isEmpty {
+                    HStack { Spacer(minLength: 0); agentsLink }
+                        .padding(.horizontal, DS.Space.s1)
+                }
                 // THE AIR IS THE POINT, and it is a written-down sum (§552's
                 // lesson): head disc 36 + this 24 + the invitation at the head
                 // rung 40 + s2 8 + the control row 36 + the panel's own 12
@@ -4821,12 +4775,21 @@ struct Composer: View {
                 .lineLimit(writingRoom ? 4...8 : 1...5)
                 .padding(.horizontal, DS.Space.s1)
                 .padding(.top, DS.Space.s1)
+            // What the chosen destination will read from — the corpus count,
+            // or Bankr's disclosure. Under the words it is about.
+            if showsRail { askSubline }
             HStack(spacing: DS.Space.s2) {
                 lowerButton
                 micButton
                 Spacer(minLength: 0)
                 // THE SEND BUTTON IS GONE. Tapping a capsule segment IS the
                 // send to that destination — see `AskDestinationCapsule`.
+                // THE CAPSULE STANDS DOWN WHERE THE RAIL STANDS (prd §577c) —
+                // two pickers for one choice, one of them 32pt and one 88pt,
+                // is the duplication §543 collapsed into the capsule in the
+                // first place. It keeps every other state: under an answer,
+                // in the non-embedded bubble, while recording.
+                if !showsRail {
                 AskDestinationCapsule(
                     providers: AgentKey.configured,
                     hasDraft: hasDraft,
@@ -4844,10 +4807,22 @@ struct Composer: View {
                         // this is `commit()` exactly: a live recording commits
                         // the capture, an empty field just takes focus.
                         AskDestination.used(AskDestination.deviceRaw)
+                        // Clears the pick too (prd §577c) — otherwise the
+                        // capsule could send to the phone while a stale
+                        // `chosenAgent` still lit an agent segment.
+                        chosenAgent = nil
                         if hasDraft || isRecording { commit() } else { fieldFocused = true }
                     },
                     onAgent: { provider in
                         AskDestination.used(provider.rawValue)
+                        // THE CAPSULE'S TAP STICKS TOO (prd §577c, user: "when
+                        // i tap on bankr it didn't switch"). `activeAskAgent`
+                        // reported nil until a conversation was already keyed,
+                        // so a tap on an agent segment with an empty field
+                        // armed the field and moved NO fill — the exact thing
+                        // the fill exists to say. One pick model, both
+                        // controls.
+                        chosenAgent = provider
                         askProvider = provider
                         // At rest there is no question yet: arm the field at
                         // that agent rather than sending an empty ask — the
@@ -4855,6 +4830,8 @@ struct Composer: View {
                         // to prevent.
                         if hasDraft { askDirectly() } else { fieldFocused = true }
                     })
+                }
+                if showsRail { sendPill }
             }
         }
         .padding(DS.Space.s2 + 4)
@@ -4962,17 +4939,21 @@ struct Composer: View {
                 .placeholder(when: !hasDraft) {
                     Text(answering || !turns.isEmpty ? String(localized: "Ask about this…")
                                                      : AskSubject.invitation(ground: askGround))
-                        .dsText(asking ? .heading34
-                                       : (restingPanel && !fieldFocused ? .heading34 : .body17))
-                        .foregroundStyle(asking ? DS.textTertiary
-                                               : (restingPanel && !fieldFocused
-                                                  ? DS.textSecondary : DS.textTertiary))
-                        .lineLimit(asking ? 2 : 1)
+                        // ONE SIZE, ALWAYS, ON THE EMBEDDED SURFACE (prd
+                        // §577c, user: "the ask or search i think could be
+                        // LARGER extreme size"). It was three ternaries over
+                        // `asking`/`restingPanel`/`fieldFocused` — and a
+                        // `TextField` whose FONT changes is a `UITextView`
+                        // rebuilt, which is the §577c hang arriving by a
+                        // second route. The invitation is the crown here in
+                        // every state, so there is nothing left to switch on.
+                        .dsText(embedded ? .heading34 : .body17)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(2)
                         .minimumScaleFactor(0.9)
                         .contentTransition(.opacity)
-                        .animation(DS.Motion.standard, value: fieldFocused)
                 }
-                .dsText(asking ? .heading34 : .body17)
+                .dsText(embedded ? .heading34 : .body17)
                 .foregroundStyle(DS.textPrimary)
                 .tint(DS.tint)
                 .focused($fieldFocused)

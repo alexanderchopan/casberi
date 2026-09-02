@@ -404,8 +404,19 @@ checkm "the matched view is a shape fill, not the risen surface" \
 #     Mac) shows the feed through its four corners once the rise settles. A
 #     phone hides them behind the display's own mask; the other two surfaces
 #     this app ships on do not.
+#
+#     AMENDED 2026-09-02 (prd §577b), not loosened. §577b made this ground the
+#     ask surface's TINT while a keyed job runs — `(chrome.askOnTint ? DS.tint
+#     : DS.page)` — because a `.background` inside the composer is laid out
+#     within the agent layer's safe-area insets and could never reach the
+#     status bar or the home indicator. The ruling C4 exists for is about the
+#     ground being FLAT, FULL-BLEED and UNDERNEATH; which colour it is was
+#     never the point. So the pattern accepts either the bare token or a
+#     ternary that resolves to one, and still demands `.ignoresSafeArea()`
+#     immediately before the `RoundedRectangle` — which is the whole of what
+#     the corners depend on.
 checkm "a flat ground still sits under the matched shape" \
-       "$ROOT" 'DS\.page\.ignoresSafeArea\(\)\s*RoundedRectangle' yes
+       "$ROOT" '\(chrome\.askOnTint \? DS\.tint : DS\.page\)\.ignoresSafeArea\(\)\s*\.animation\([^)]*\)\s*RoundedRectangle' yes
 
 # C5. The brief's document dissolves into the chrome instead of being cut by
 #     it. The `safeAreaInset` above it gives the last card somewhere to travel;
@@ -468,7 +479,7 @@ mutate "the morph moves off the shape onto the risen surface"  root \
   's/\.modifier\(MorphMatch\(ns: agentMorph\)\)\n                    agentSurface/\n                    agentSurface\n                        .modifier(MorphMatch(ns: agentMorph))/' \
   || mfails=$((mfails + 1))
 mutate "the flat ground under the matched shape is dropped (corners leak on iPad and Mac)"  root \
-  's/                    DS\.page\.ignoresSafeArea\(\)\n(?=\s*\/\/ THE MORPH RIDES)//' \
+  's/                    \(chrome\.askOnTint \? DS\.tint : DS\.page\)\.ignoresSafeArea\(\)\n\s*\.animation\(DS\.Motion\.standard, value: chrome\.askOnTint\)\n(?=\s*\/\/ THE MORPH RIDES)//' \
   || mfails=$((mfails + 1))
 mutate "the document is guillotined by the chrome again"  composer \
   's/                \.overlay\(alignment: \.bottom\) \{\n                    LinearGradient.*?\n                \}\n//s' \
