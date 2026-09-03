@@ -5665,6 +5665,42 @@ enum ProbeHooks {
                 NSLog("Dropbox probe: %@ new", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-spotifyProbe YES` re-reads the ALREADY-connected liked-songs
+        // library and NSLogs WHICH way it ended — one line per fact (the
+        // `-todayProbe` truncation lesson). A connect can't be scripted (PKCE
+        // needs a live tap through Spotify's own page); connect once by hand
+        // in the simulator, then this drives that connection headlessly.
+        //
+        // It exists because "Couldn't read your liked songs" had SIX causes
+        // that render as one sentence and only some are bugs: never connected,
+        // a sign-in Spotify has retired (the Keychain outlives the app, so a
+        // reinstall shows a green Connected row over a dead grant), a phone
+        // with no signal, a rate limit, a refusal, and a body whose shape
+        // moved. `read=` and `status=` are what separate them in one launch —
+        // and `expiresIn=` is the one nothing else can show, since the cached
+        // token is trusted on a clock and a clock that is wrong looks exactly
+        // like a clock that is right.
+        Hook(key: "spotifyProbe") { _, context in
+            Task { @MainActor in
+                NSLog("spotify| connected=%@ ready=%@ health=%@",
+                      SpotifyAuth.connected ? "YES" : "NO",
+                      SpotifyAuth.ready ? "YES" : "NO",
+                      BridgeHealth.record(for: "Spotify")
+                          .map { "lastStatus=\($0.lastStatus.map(String.init) ?? "none") authFailedAt=\($0.authFailedAt.map(\.description) ?? "none")" }
+                          ?? "no record")
+                NSLog("spotify| expiresIn=%ds", SpotifyAuth.secondsUntilTokenRefresh)
+                switch await SpotifyIngest.refresh(context: context) {
+                case .landed(let n):        NSLog("spotify| read=landed new=%d", n)
+                case .notConnected:         NSLog("spotify| read=notConnected — nothing stored to read with")
+                case .signInExpired:        NSLog("spotify| read=signInExpired — the grant is dead and has been cleared")
+                case .busy:                 NSLog("spotify| read=busy — 429, Spotify is rate-limiting")
+                case .refused(let status):  NSLog("spotify| read=refused status=%d", status)
+                case .unreachable:          NSLog("spotify| read=unreachable — nothing answered")
+                case .unreadable:           NSLog("spotify| read=unreadable — 200 whose shape moved")
+                case .alreadyRunning:       NSLog("spotify| read=alreadyRunning — the sweep holds it; re-run")
+                }
+            }
+        },
         // `-slackProbe YES` re-syncs the ALREADY-connected session (mentions
         // of you via `search.messages`) — a connect can't be scripted, since
         // PKCE needs a live human tap through Slack's real consent screen;

@@ -126,6 +126,33 @@ enum BridgeHealth {
 
     static func record(for bridge: String) -> Record? { load()[bridge] }
 
+    /// Mark a bridge shut out when the refusal did NOT arrive as a 401 or 403.
+    ///
+    /// OAuth's token endpoint is the one place in this app where an auth
+    /// refusal is spelled something else: RFC 6749 §5.2 reserves `400
+    /// invalid_grant` for a refresh token that is expired, revoked, or was
+    /// never ours. That is exactly the "unambiguous, actionable, never heals
+    /// on its own" class `folded` makes sticky — arriving under a status
+    /// `folded` is right to call transient for every REST bridge in the app.
+    ///
+    /// `lastStatus` is deliberately NOT written. It is the record of what the
+    /// wire actually said, and stamping 401 over a 400 to reuse the state
+    /// machine would put a number in the probe that no response ever carried.
+    /// First sighting wins, for the reason it does in `folded`: the longer a
+    /// bridge has been shut out the more it matters, and restamping would make
+    /// a month-old breakage read as fresh.
+    ///
+    /// Nothing else clears this that doesn't already clear a 401 — a 2xx
+    /// through the funnel, or `forget` when a new credential is pasted.
+    static func markAuthRefused(_ bridge: String) {
+        var book = load()
+        var record = book[bridge] ?? Record()
+        guard record.authFailedAt == nil else { return }
+        record.authFailedAt = .now
+        book[bridge] = record
+        save(book)
+    }
+
     /// The whole book, name-ordered — for the probe. Keyed by bridge name
     /// already, so nothing here needs the `BridgeStore` (which the probe hook
     /// table's `(String, ModelContext)` signature cannot hand it anyway).

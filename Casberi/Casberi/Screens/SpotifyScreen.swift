@@ -46,7 +46,11 @@ struct SpotifyScreen: View {
                 BridgeSetupHeader(
                     name: "Spotify",
                     mode: .signIn,
-                    intro: "Sign in on Spotify's own page and what you save and listen to keeps arriving. Read-only: it can never play, queue, or change a playlist.")
+                    // "what you save and listen to" promised a second half
+                    // that does not exist: the only scope asked for is
+                    // `user-library-read` and the only endpoint read is
+                    // `/me/tracks`, so listening history never arrives (§83).
+                    intro: "Sign in on Spotify's own page and the songs you like keep arriving. Read-only: it can never play, queue, or change a playlist.")
                 connectSection.listRowSeparator(.hidden)
             }
         }
@@ -166,11 +170,42 @@ struct SpotifyScreen: View {
     private func sync() async {
         guard !syncing else { return }
         syncing = true
-        let added = await SpotifyIngest.refresh(context: modelContext)
+        let outcome = await SpotifyIngest.refresh(context: modelContext)
         syncing = false
-        guard let added else {
-            result = String(localized: "Couldn't read your liked songs — try again in a moment.")
-            resultIsError = true
+        // One sentence per outcome the read can actually tell apart — the
+        // rule the connect half of this screen has followed since the
+        // 2026-07-31 audit, and which the read half never did: it said
+        // "Couldn't read your liked songs — try again in a moment" for all
+        // six, advice that is true of `.busy` alone and can never work for a
+        // retired sign-in, a refusal, or a shape that moved.
+        let added: Int
+        switch outcome {
+        case .landed(let n):
+            added = n
+        case .notConnected:
+            fail(String(localized: "Not connected — tap Connect to sign in with Spotify."))
+            return
+        case .signInExpired:
+            // `SpotifyAuth` has already cleared the dead credentials, so the
+            // screen behind this sentence now offers Connect rather than
+            // showing a green check over a connection Spotify has retired.
+            fail(String(localized: "Spotify's sign-in has expired — tap Connect to sign in again."))
+            return
+        case .busy:
+            fail(String(localized: "Spotify is busy right now — try again in a moment."))
+            return
+        case .refused:
+            fail(String(localized: "Spotify wouldn't share your liked songs — tap Connect to sign in again."))
+            return
+        case .unreachable:
+            fail(String(localized: "Couldn't reach Spotify — check your connection."))
+            return
+        case .unreadable:
+            fail(String(localized: "Spotify answered with something this version can't read."))
+            return
+        case .alreadyRunning:
+            // The sweep is mid-read. Say nothing rather than overwrite the
+            // last real result with a verdict this call didn't reach.
             return
         }
         resultIsError = false

@@ -5205,7 +5205,7 @@ enum DemoSeedAll {
         ("RSS", "4 feeds", "Follows any feed you add."),
         ("Substack", "2 publications", "Follows writers you read."),
         ("Podcasts", "3 shows", "Follows shows you listen to."),
-        ("Spotify", "Synced 20m ago", "Reads what you played."),
+        ("Spotify", "Synced 20m ago", "Reads your liked songs."),
         ("Apple Music", "Synced 35m ago", "Reads what you played."),
         ("Steam", "Synced 2h ago", "Reads what you played."),
         ("Readwise", "Synced 1h ago", "Brings your highlights in."),

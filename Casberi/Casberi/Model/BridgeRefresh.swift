@@ -519,6 +519,17 @@ enum BridgeRefresh {
                 _ = await TwitchIngest.refresh(context: context)
             }
         }
+        // Spotify was never in this sweep at all — its only caller was its own
+        // setup screen's `onAppear`, so liked songs arrived when you went to
+        // look at the connect screen and at no other moment. The connected row
+        // says "liked songs land in your feed", and for a person who connected
+        // once and never returned to that screen, they did not.
+        if SpotifyAuth.connected {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await SpotifyIngest.refresh(context: context)
+            }
+        }
         if VibenetWatch.shared.connected {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
