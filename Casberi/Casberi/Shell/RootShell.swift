@@ -2520,18 +2520,11 @@ struct RootShell: View {
                      return (try? modelContext.fetch(FetchDescriptor<Thing>(
                          predicate: #Predicate { $0.id == uuid })))?.first
                  },
-                 // The Bankr door (prd §529). Lowers the agent FIRST, then
-                 // pushes: a setup screen rising under a risen agent is the
-                 // sources-tray-under-the-panel bug this file already records,
-                 // and the whole point of the offer is that you go and do it.
-                 onConnectBankr: {
-                     composerOpen = false
-                     sceneState.route.pushBridge(.bankr)
-                 },
-                 // The agents catalog (prd §550). Lowers the agent FIRST for
-                 // `onConnectBankr`'s stated reason one line up — a catalog
-                 // rising under a risen agent is the sources-tray-under-the-
-                 // panel bug this file already records.
+                 // The agents catalog (prd §550, the terminal's "+" key since
+                 // §581). Lowers the agent FIRST — a catalog rising under a
+                 // risen agent is the sources-tray-under-the-panel bug this
+                 // file already records, and the whole point of the door is
+                 // that you go and do it.
                  //
                  // `openCategory` rather than a category-carrying route node:
                  // `HomeRoute.Node.apps` is pushed from ten places and the

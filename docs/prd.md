@@ -46487,3 +46487,190 @@ The sim's stored Bankr key answers **401** (`bankrProbe| failed=rejectedKey`, 43
 ### 7. Verification ceiling
 
 iOS build green in an isolated worktree at HEAD, 29 static audits green, `ask-destination-selftest` at 16 mutations and 66 drift guards, `bankr-selftest` green, the String Catalog synced and the five new keys translated into all four languages. **The receipt wait itself is UNSEEN**: reaching it needs a keyed ask, `-uiAnswerProbe` commits to the device, and no launch-arg picks a destination — the tile row, the inverted selection and the Stop pill were seen on the device path and the receipt was not. First thing to look at on a device.
+
+## 581. The chat becomes a terminal — blank paper, the switcher in the foot, and the answer as the screen (user: "please totallay reimagine teh chat interface and ux. it is horrible. it is cconfusing. we want it simple and extremem proportinos so it seem slike an interface not a chat window", then "i'm speaking of bankr specifically", then "why an ask or do button they are basically the same. also bankr icon should be large", then "i like the swirtcher tho at the footer", then "we don't even need the logo at the top of the screen in rest until user selects it", then "i hate all the versions of the response so far. the text just always looks like ass and blends into the question and bankr name", then "lets d C", then "ok do a", 2026-09-03)
+
+Six mockups over one session, each answering one objection, and the result is
+that **§575, §577, §577a, §577b, §577c, §578, §579 and §580 were all fixing the
+same surface by adding a part to it.** The greeting, the 158pt deck, the Bankr
+offer banner, the kept-ask pill row, the Send-to chips, the draft count crown,
+the brief nav, the receipt paper, the destination tile row, the turn discs and
+the provenance paragraph were each a correct local answer, and together they
+were the thing the user called confusing. This deletes them.
+
+`Composer.swift` goes from **5,932 lines to 4,023**; `AskDestinationRail.swift`
+and `AskDestinationCapsule.swift` are deleted outright.
+
+### 1. THE PAPER IS BLANK UNTIL YOU ASK
+
+The surface has three parts and no fourth: the **roll** of answers, the
+**words**, and the **foot**. Everything above the foot is paper — blank at rest,
+your words while typing, a stopwatch while working, the answer once it lands.
+Nothing above the foot has a fixed height, which is the entire point and is what
+the tiles could not allow: the answer can take all of it.
+
+At rest nothing is drawn at all. Not a greeting, not a badge, not an offer, and
+**not the destination's mark blown up as decoration** — the user asked for the
+Bankr logo large, then ruled the same session that it is not needed "until user
+selects it", and then that the selection itself does not need it either, because
+the lit key in the foot already says who. What survives of "large" is the
+invitation at `price48` and every control at 88pt.
+
+### 2. THE SWITCHER IS IN THE FOOT (`AgentDestinationKeys`)
+
+§578's 158pt deck and §580's 64pt tile row were one control drawn twice at two
+sizes, and both sat ABOVE the words — so the head of the screen was a picker for
+a decision most people make once. It is one control now, in one place, in every
+state: **88pt round keys, scrolling, beside the verb.**
+
+- **A circle again, and this time it is not a portrait.** §578 lost the round
+  face because at 88pt with a caption under it a circle read as somebody's
+  avatar. Here there is no caption — the key is 88pt of pressable ink with a
+  mark in it, beside a capsule verb of exactly the same height, so it reads as
+  hardware. The name it lost is not missed, because the paper above says whose
+  answer you are looking at.
+- **Selection is a WHITE fill, not tint.** §563 allows one saturated block and
+  the armed verb has it; a second blue would be the ambiguity that budget
+  exists to prevent (§580's inverted-strip ruling, kept).
+- **No slot cap and no overflow menu** — §578's ruling, guarded now rather than
+  merely stated: nothing is reachable only through a menu.
+- **A "+" key when no agent is configured.** A destination-shaped hole rather
+  than a banner, so the offer lives exactly where the choice is made, needs no
+  dismissal, and can never be the dead control §83 bans. `BankrOfferBanner`
+  leaves this surface entirely and keeps its Wallet-room placement.
+
+### 3. ASK AND DO COLLAPSE INTO ONE SEND (§529 amended)
+
+The user's objection was exact: "why an ask or do button they are basically the
+same." On the wire they were — free text to a remote agent — and the only
+difference was a prefix we added. **What Bankr may do is the scope of the key
+you minted**, which its setup screen already says in as many words ("read-only
+answers, a full key can act"), so the surface stops re-asking a question the
+credential has already answered.
+
+`BankrAgent.prompt` is unchanged and still carries no `ANSWER ONLY` rail —
+§529's own 2026-08-31 amendment had already removed it. What goes is the second
+button and the echo-back confirmation sheet.
+
+### 4. THE VERB IS WHATEVER IS AVAILABLE
+
+One capsule, one height, one position, wearing whatever can be done:
+
+| state | verb |
+|---|---|
+| rest | the mic, icon only |
+| a draft, device lit | a round Find, then a wide **Ask** |
+| a draft, agent lit | a wide **Send** |
+| in flight | **Stop** |
+| recording | **Stop and keep** |
+
+**A dim Send with nothing to send was a dead control**, so at rest the slot
+carries the verb that really is available: Record — the voice-note capture path,
+a thing that enters the corpus rather than dictation. That is how the mic keeps
+its door without taking a key, and dropping the mic key is what lets two
+destinations and a full-width verb fit at 88pt across a phone.
+
+**Find is offered on the DEVICE alone.** Bankr cannot search your things, so a
+Find key beside it would be the control that provably does nothing. It is also
+the one place two verbs are right where Ask/Do were not: Ask reaches a model and
+Find provably reaches none, which is a difference somebody can act on. Icon
+only, at the user's ruling — the mic and the magnifier say what they are.
+
+### 5. THE ANSWER IS THE SCREEN (`AgentReply`, `AgentProseAnswer`)
+
+Reported as: "i hate all the versions of the response so far. the text just
+always looks like ass and blends into the question and bankr name." It did.
+Question, destination and reply were three things in one bold sans on one ink at
+40 / 24 / 20, and **size is the weakest separator there is when everything on
+the surface is already large.**
+
+Three mocks (a printed slip in a serif; a blue block; the answer as the screen),
+and the user picked the third:
+
+- The question folds to a ONE-LINE CAPTION behind a "You asked" stamp. You wrote
+  it; the surface spends nothing restating it.
+- The reply's **first sentence takes the display rung in white**, and whatever
+  follows steps down to `heading22` in secondary ink. That is a real hierarchy
+  rather than a size ladder.
+- The receipt is the existing `provenanceBadge`, kept whole and unchanged — it
+  is the §83-critical line and rewriting it as stamps would have put six honesty
+  guarantees at risk for a visual preference.
+
+**It works because of what Bankr's own prompt already asks for** — "a few plain
+sentences, no preamble" — so the first sentence is reliably the news. That
+dependency is why the split is a FUNCTION and not a view: it is the one part of
+the treatment that can be wrong about a real reply, so it is the part with a
+harness.
+
+**A DOCUMENT IS NEVER RE-SET.** `AgentReply.prose` recognises exactly one shape
+— a root `Stack` over one `Insight` and nothing else, which is what
+`RootShell.proseDoc` emits — and returns nil for everything else. A false nil
+merely costs the treatment; a false positive would take a brief, a Find or an
+answer with things attached and draw it as a bare paragraph, dropping every row,
+on a screen that otherwise looks perfect.
+
+### 6. THE ROLL, NOT A THREAD, AND NOT A SHEET
+
+Three ways to reach earlier answers were mocked (a roll, a pager in the receipt
+row, a stack you pull down) and the user took the roll. **A sheet was refused
+first**: a sheet over a surface that itself rose from the button reads as a
+stack of trays ("a sheet on a window that came from the fab just looks weird").
+
+Answers sit on one column in order, newest at the bottom where the foot is,
+separated by DATED rules. No bubbles, no alternating sides, no per-turn chrome —
+which is what a printed roll looks like and what a chat does not. The divider is
+also the only thing that says there is more above: a count stamp saying so would
+be chrome for a fact the scroll already tells.
+
+**The cost, stated:** the current answer sits at the bottom of a scroll view
+rather than in a fixed region, so the paper scrolls where the tiled version did
+not. That is the one thing the sheet avoided and it is worth it.
+
+### 7. THE BLUE GROUND IS GONE
+
+§577 turned the whole surface `DS.tint` while a keyed ask was out and §577b
+pulled it back to the wait alone after "we really went overkill with all this
+blue". The last of it goes here: the wait is a white stopwatch on ink, so the
+one saturated block on this surface is the armed verb — §563's budget spent on
+something you can act on. `chrome.askOnTint` stays wired and is written false,
+because `RootShell` still reads it and a stale true would leave a blue screen
+behind a surface that no longer paints one.
+
+### 8. What is guarded, and what each guard catches
+
+`ask-destination-selftest.sh` keeps its 16 mutations over `AskDestination` (the
+picker's arithmetic is unchanged) and its drift half is rewritten to 47 guards
+over the new surface. Four were **mutation-proven against the real tree**, each
+restoring a bug that renders as an ordinary control: the send routed back to
+`askWithKey` (§579's dead control, which did nothing on the first message of
+every conversation), a mid-wait pick no longer re-addressing, the foot reading
+`AgentKey.configured` per keystroke (§579's seven decrypting Keychain round
+trips), and a written reply no longer being set.
+
+`agent-reply-selftest.sh` is new: `AgentReply` compiled WHOLE beside the real
+`GenParser` (both Foundation-only), 32 assertions, 10 mutations, 7 drift guards.
+
+**Three of its own fixtures proved the right result for the wrong reason** and
+had to be corrected before the mutations could fail — the fourth, fifth and
+sixth instances of that lesson in this repo:
+
+1. The digit rule had no discriminating fixture at all. `"$0.04"` is five
+   characters (so the length rule would not split it) and carries a stop inside
+   it (so the dotted-abbreviation rule would refuse to), which makes it the only
+   input where the digit test is what ends the sentence.
+2. The newline fixture read `"Done.\nThe order id…"` — the stop breaks it first,
+   so deleting the newline rule left the suite green.
+3. Nothing exercised a non-`Stack` root, so removing that guard survived. A
+   `Bento` wrapping one Insight is the fixture that holds it up.
+
+A real defect fell out of the same pass: `looksLikeAbbreviation` handled `"Mr."`
+and `"ETH."` and got `"U.S."` wrong, splitting a sentence in its middle.
+
+### 9. Verification ceiling
+
+iOS build green; all 33 static audits green; both harnesses green with every new
+guard mutation-proven. **UNSEEN on a device or a simulator** — every screen here
+is layout and weight judgement, the keyed wait needs a live Bankr key (the
+stored sim key answers 401, which is why `-bankrFake` exists), and no screenshot
+of the roll, the foot or the prose answer has been taken. Look at the answered
+state first: it is the one the user rejected three times.

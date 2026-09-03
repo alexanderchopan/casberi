@@ -294,12 +294,21 @@ mutate "the ledger grows without bound" \
 # things it must not do ("never a hardcoded iPhone", "there is no send button"),
 # so a guard grepping raw source fires on the prose explaining it — the
 # Obsidian/Cursor lesson, earned again here.
+#
+# REWRITTEN 2026-09-03 (prd §581). Everything below used to guard the deck, the
+# capsule, the greeting, the kept pills, the Send-to chips, the brief nav, the
+# receipt paper and the turn disc. All of them are deleted with the chat they
+# belonged to, so guarding them would be a suite proving a surface that is not
+# on any screen. The MUTATION half above is untouched: `AskDestination` is the
+# picker's own arithmetic and every rule in it still holds.
 strip_comments() { perl -pe 's{//.*$}{}' "$1"; }
 
 COMPOSER="Casberi/Casberi/Shell/Composer.swift"
-CAPSULE="Casberi/Casberi/Shell/AskDestinationCapsule.swift"
+TERMINAL="Casberi/Casberi/Shell/AgentTerminal.swift"
+REPLY="Casberi/Casberi/Model/AgentReply.swift"
 strip_comments "$COMPOSER" > "$WORK/composer.nc"
-strip_comments "$CAPSULE"  > "$WORK/capsule.nc"
+strip_comments "$TERMINAL" > "$WORK/terminal.nc"
+strip_comments "$REPLY"    > "$WORK/reply.nc"
 # A WHITESPACE-FLATTENED copy for the guards that span lines. `grep` is
 # line-based, so a multi-line pattern matches NOTHING — and this file already
 # records paying for exactly that once ("the first cut of this guard matched
@@ -318,328 +327,159 @@ guard_absent() {
   else print "  ok   $what"; fi
 }
 
-# The capsule is mounted, and it is mounted in the bar's control row.
-guard "the capsule is in the composer's input bar" "$WORK/composer.nc" \
-      'AskDestinationCapsule\('
-# THE SEND BUTTON STAYS GONE. Its return is the confusion §543 removed: an
-# unnamed arrow beside named agent segments makes the device the odd one out.
-guard_absent "no send button returns to the bar" "$WORK/composer.nc" \
-      'private var sendButton'
-# NOTHING IS PREPOPULATED. Each of these was a door onto a document the field
-# can ask for by name; a chip row growing back needs an argument against §543.
-guard_absent "the launcher chips stay deleted" "$WORK/composer.nc" \
-      'private var launcherChips'
-guard_absent "the ask chips stay deleted" "$WORK/composer.nc" \
-      'private var askChips'
-guard_absent "the category chip row stays deleted" "$WORK/composer.nc" \
-      'private var categoryChipsRow'
-guard_absent "the day card stays deleted" "$WORK/composer.nc" \
-      'private var dayCard'
-# The kept pills are the ONE thing that may appear at rest — and they must,
-# or "Keep" mints a standing question with nowhere to appear (§83).
-guard "the kept pills are mounted at rest" "$WORK/composer.nc" \
-      '^\s+keptAskPills\s*$'
-# The greeting greets by name.
-guard "the greeting uses the named clock greeting" "$WORK/composer.nc" \
-      'Text\(clockGreeting\(\)\)'
-guard_absent "the weekday greeting is not restored" "$WORK/composer.nc" \
-      'Text\(timeGreeting\(\)\)'
-# VOICE ANSWERS ON DEVICE. A voice note must never silently spend a key.
-guard "the capsule stands its agents down while recording" "$WORK/capsule.nc" \
-      'guard !recording else \{ return \(\[\], \[\]\) \}'
-# THE FILL MARKS THE ACTIVE DESTINATION, not the usual one (2026-09-01). A
-# device pill filled unconditionally names a destination the return key stops
-# using the moment a conversation goes keyed.
-guard "the capsule orders on the active destination" "$WORK/capsule.nc" \
-      'active: active\?\.rawValue'
-guard "the device segment fills only when it is the destination" "$WORK/capsule.nc" \
-      'segment\(glyph: deviceGlyph, title: deviceLabel, filled: active == nil\)'
-guard_absent "the device pill is never filled unconditionally" "$WORK/capsule.nc" \
-      'filled: true'
-guard "the answering agent's segment fills" "$WORK/capsule.nc" \
-      'filled: provider == active'
+# ---- THE SWITCHER IS IN THE FOOT ----------------------------------------
+# The user's own ruling (2026-09-03: "i like the switcher at the footer").
+# Above the words it was a picker for a decision most people make once, and it
+# made the head of the screen a control rather than an answer.
+guard "the destination keys are mounted in the foot" "$WORK/composer.nc" \
+      'AgentDestinationKeys\('
+guard "the foot holds the keys and the verb on one row" "$WORK/composer.flat" \
+      'AgentDestinationKeys\(.*footSlot'
+# EVERY CONFIGURED AGENT GETS A KEY. §578 retired the overflow menu because a
+# scroller has no width budget; nothing here may reintroduce a cap.
+guard "the keys scroll rather than folding into a menu" "$WORK/terminal.nc" \
+      'ScrollView\(.horizontal'
+guard_absent "no slot cap returns to the keys" "$WORK/terminal.nc" \
+      'AskDestination\.(split|slots)\('
+# THE "+" IS THE OFFER. A destination-shaped hole rather than a banner — it
+# needs no dismissal and can never be a dead control.
+guard "an empty agent list offers the catalog as a key" "$WORK/terminal.nc" \
+      'onAddAgent'
 
-# ---- prd §575: the composer takes the design language --------------------
-# FIND IS A SEGMENT, NOT A SECOND TINT BLOCK. The solid `DS.tint` Find capsule
-# sat a thumb-width from this row's own filled segment, so the draft surface
-# carried TWO saturated blocks and neither read as the act (§563's tint budget,
-# which `hero-tint-audit.py` enforces for hero TILES and cannot see here). Both
-# halves are guarded: the segment must exist, and the capsule must not return.
-guard "Find is a segment of the ask capsule" "$WORK/capsule.nc" \
-      'title: String\(localized: "Find"\), filled: false'
-guard_absent "the Find segment never wears the fill" "$WORK/capsule.nc" \
-      'localized: "Find"\), filled: true'
-guard "the composer hands Find to the capsule" "$WORK/composer.nc" \
-      'find: \(hasDraft'
-guard_absent "the solid Find capsule does not return to the draft band" \
-      "$WORK/composer.nc" 'background\(DS\.tint, in: Capsule'
-# THE ROW SIZES ITSELF FOR FIND. Passing the default slot count with Find in
-# the row draws three agent-width segments where two fit.
-guard "the capsule sizes its agent slots for Find" "$WORK/capsule.nc" \
-      'slots: AskDestination\.slots\(findShown: find != nil\)'
-
-# ONE EXIT. The ✕ and the control row's chevron both called `close()` — one
-# surface, one verb, two controls, which is the duplication §543 removed from
-# the send row. The chevron survives because it is in the thumb corner the
-# whole floating cluster was moved to; this asserts both halves.
-guard_absent "the ✕ stays deleted" "$WORK/composer.nc" \
-      'accessibilityLabel\("Close"\)'
-guard "the chevron is still the way out" "$WORK/composer.nc" \
-      'accessibilityLabel\("Lower"\)'
-
-# THE CROWN IS THE COUNT WHILE THERE IS A DRAFT, and it is the ONLY crown on
-# the surface (§506, one per surface). Both halves matter: the figure must be
-# at the crown rung, and the greeting must have left it — two 40pt objects is
-# two crowns and neither reads as the subject.
-guard "the draft's match count draws at the crown rung" "$WORK/composer.nc" \
-      'dsText\(\.price48\)'
-guard "the crown is not drawn under one match" "$WORK/composer.nc" \
-      'let liveCount, liveCount > 0'
-# A LINE-BASED grep cannot span two lines, so the first cut of this guard --
-# matching `Text(clockGreeting())` and the `.dsText(.heading34)` beneath it --
-# matched nothing and passed vacuously, which is a guard that cannot fail.
-# The rung is asserted on the line that carries it instead.
-guard "the greeting sits at the body rung" "$WORK/composer.nc" \
-      'dsText\(\.body17\)'
-
-# THE ASK PANEL IS THE CROWN AT REST — the one act on the surface, at the head
-# rung, sharing its gate with the `Spacer` that makes room for it.
-#
-# AMENDED 2026-09-02 (prd §578), and UPWARD. §575 put the invitation at
-# `heading34` and switched it to `body17` on focus, because a 40pt placeholder
-# beside a 17pt caret is a mismatch. §578 raised the invitation to `price48`
-# and removed the switch: the placeholder is a separate view inside
-# `.placeholder(when:)`'s ZStack, so it can take the display rung while the
-# field's own text stays constant — and the field's text MUST stay constant,
-# because changing `.dsText` on a live `TextField` rebuilds its `UITextView`
-# (§577c's watchdog hang, by a second route).
-#
-# The ruling this guard protects is "the invitation is the crown on this
-# surface". It is more true than it was, so the guard asserts the higher rung
-# and, separately, that the field's own text is NOT sized from a state the
-# field produces — which is the half that can actually hang a phone.
-guard "the resting invitation takes the crown rung" "$WORK/composer.nc" \
-      'dsText\(embedded \? \.price48 : \.body17\)'
-guard "the field's own text is not sized from the draft" "$WORK/composer.nc" \
-      'dsText\(embedded \? \.heading34 : \.body17\)'
-guard "the resting panel shares the rest gate" "$WORK/composer.nc" \
-      'private var restingPanel: Bool \{ restChrome\(keepBrief: false\) \}'
-
-# WHO IS ANSWERING LEADS THE TURN, from the first frame — the badge below can
-# only say it once the answer exists, which left the longest moment in the app
-# silent about where the question had gone.
-guard "every turn leads with the destination disc" "$WORK/composer.nc" \
-      'turnDisc\(agent: agent\)'
-guard "the live turn names the agent it is asking" "$WORK/composer.nc" \
-      'agent: keyedCurrent'
-
-# NO PREPOPULATED QUESTION UNDER AN ANSWER (§543's rule, arriving late). The
-# §177 map is dormant, not deleted — this guards the MOUNT, not the function.
-guard_absent "the follow-up chip stays unmounted" "$WORK/composer.nc" \
-      'glyph: "arrow.turn.down.right"'
-guard "the §177 map stays available to re-mount" "$WORK/composer.nc" \
-      'private func nextAsk\(for question'
-
-# THE RECEIPT SITS UNDER THE ANSWER IT DESCRIBES. An ordering rule, so it is
-# checked as one: the document must be rendered BEFORE the badge in both the
-# settled turn and the live one, or the badge has crept back to the lead.
-badge_below() {
-  local what="$1" doc="$2" badge="$3"
-  local d b
-  # `grep ... | head -1` is the SIGPIPE trap this repo has paid for twice: head
-  # closes the pipe on its first line, grep dies 141, and `pipefail` hands that
-  # to `set -e` -- so this whole block exited SILENTLY on its first run, after
-  # printing every guard above it. `grep -m1` stops grep itself, so nothing
-  # closes a pipe early.
-  d=$(grep -nE -m1 "$doc" "$WORK/composer.nc" | cut -d: -f1)
-  b=$(grep -nE -m1 "$badge" "$WORK/composer.nc" | cut -d: -f1)
-  if [[ -n "$d" && -n "$b" && "$d" -lt "$b" ]]; then print "  ok   $what"
-  else print -u2 "  ✗ drift: $what (doc=$d badge=$b)"; exit 1; fi
-}
-badge_below "the settled turn's receipt sits under its document" \
-      'GenRender\(id: "root", els: turn\.els\)' 'provenanceBadge\(keyed: turn\.keyed'
-badge_below "the live turn's receipt sits under its document" \
-      'GenRender\(id: "root", els: answerStream\.els\)' 'provenanceBadge\(keyed: keyedCurrent'
-# The capsule must never resolve the agent itself: `AgentKey.active` says which
-# key a keyed answer would SPEND, not whether this conversation is keyed at
-# all, so reading it here lights a segment for somebody who has only ever asked
-# their phone — and costs a keychain read per keystroke of a follow-up.
-guard_absent "the capsule does not read the active key itself" "$WORK/capsule.nc" \
-      'AgentKey\.active'
-guard "the composer names the destination for the capsule" "$WORK/composer.nc" \
-      'active: activeAskAgent'
-# In flight it is who is ANSWERING; settled it is where the next plain send
-# goes — `commit`'s own `stayKeyed` term, spelled the same way so the fill and
-# the routing can never disagree.
-guard "the fill reads in-flight and settled state apart" "$WORK/composer.nc" \
-      'inFlight \? keyedCurrent : \(conversationIsKeyed && keyAvailable\)'
-# The device is never hardcoded in the view either.
-guard_absent "the capsule does not hardcode a device name" "$WORK/capsule.nc" \
-      '"(iPhone|iPad|Mac)"'
-guard "the capsule asks the model for the device name" "$WORK/capsule.nc" \
-      'AskDestination\.deviceLabel'
-# A DOCUMENT opens at its top — §288's rule, extended to the wallet.
-guard "the wallet answer is a document for the scroll anchor" "$WORK/composer.nc" \
-      'WalletAsk\.matches\(currentQuestion\)'
-guard "the anchor and the typewriter guard read the same term" "$WORK/composer.nc" \
-      'documentInView'
-
-# ---- the send actually sends what you typed (2026-09-03) ------------------
-# THE CLASS: `askWithKey()` re-asks `currentQuestion`, which `commit()` is the
-# only writer of — so routing a DRAFT send there asks the previous question,
-# and on a first send returns at its own empty guard and does nothing at all.
-# It shipped in both embedded send doors at once, so with an agent picked the
-# send pill and the return key were dead controls on the first message of
-# every conversation, with the words left sitting in the field. Reported as
-# "I should be able to send anything to bankr, but I can't."
-#
-# Every one of these renders as a perfectly ordinary armed blue pill, which is
-# why they are greps and not something a screenshot could catch.
-guard "the send pill sends the draft, never the last question" "$WORK/composer.nc" \
-      'if activeAskAgent != nil \{ askDirectly\(\) \} else \{ commit\(\) \}'
-guard_absent "the send pill never routes to the retry verb" "$WORK/composer.nc" \
-      'if activeAskAgent != nil \{ askWithKey\(\)'
-# `commit`'s picked-agent fast path returns BEFORE `currentQuestion = draft`,
-# so it has the identical exposure and the identical fix.
-guard "the picked-agent fast path sends the draft" "$WORK/composer.flat" \
-      'chosenAgent != nil, hasDraft, keyAvailable,[^;]*askDirectly\(\)'
-# `askDirectly` is the draft-send verb BECAUSE it goes through commit, which
-# adopts the draft as the question and clears the field. A version that stopped
-# doing that would satisfy every guard above while restoring the bug.
-guard "askDirectly commits the draft as the question" "$WORK/composer.flat" \
-      'askDirectly\(\) \{ forceKeyedThisAsk = true commit\(forceAsk: true\) \}'
-guard "commit is the one place a draft becomes the question" "$WORK/composer.nc" \
-      'currentQuestion = draft'
-# The retry keeps exactly one caller: the deferred keyed follow-up, which fires
-# after a settle and therefore has a real `currentQuestion`. A third call site
-# is how this came back.
-askwithkey_calls=$(grep -cE '(^|[^a-zA-Z.])askWithKey\(\)' "$WORK/composer.nc" || true)
-if [[ "$askwithkey_calls" == "2" ]]; then
-  print "  ok   askWithKey is the retry alone (1 call + 1 definition)"
-else
+# ---- THE SEND ACTUALLY SENDS (prd §579, the shipped dead control) --------
+# `askWithKey()` re-asks `currentQuestion`, which is empty until a `commit()`
+# has run — so routing a DRAFT there did nothing on the first message of every
+# conversation and asked the PREVIOUS question on every one after it.
+# `askDirectly()` is the draft-send. A dead control renders as a perfectly
+# ordinary armed blue pill, so this is guarded rather than remembered.
+guard "the send routes the draft through askDirectly" "$WORK/composer.nc" \
+      'AgentWideKey\(title: String\(localized: "Send"\), tone: .tint\) \{ askDirectly\(\) \}'
+askwithkey_calls=$(grep -c 'askWithKey()' "$WORK/composer.nc")
+if [[ $askwithkey_calls -ne 2 ]]; then
   print -u2 "  ✗ drift: askWithKey has $askwithkey_calls sites, expected 2 (its definition and the deferred retry)"
   exit 1
 fi
+print "  ok   askWithKey keeps exactly one caller, the deferred keyed follow-up"
 
-# ---- the destination shown is the destination used ------------------------
-# An explicit device pick must stand the conversation's keyed default down, or
-# the pill reads "Ask" while `commit`'s `stayKeyed` still spends the key.
-#
-# ONE VERB, and that is what is guarded. The first cut asserted the clear was
-# PRESENT, which two handlers can satisfy between them: deleting it from the
-# rail SURVIVED, because the capsule's copy held the guard up. Counting the two
-# would have worked and still described a rule kept in two places. So the rule
-# lives in one function both pickers call, and the guard is that they call it.
-guard "the device pick stands the keyed default down" "$WORK/composer.flat" \
-      'func pickDevice\(\) \{ AskDestination.used\(AskDestination.deviceRaw\) chosenAgent = nil guard !readdressed\(to: nil\) else \{ return \} askProvider = nil conversationIsKeyed = false \}'
-# A pick still governs the NEXT ask — `askProvider` labels the settling turn,
-# so clearing it mid-flight would credit an agent's answer to whatever key
-# happens to be active — but §579's `guard !inFlight` is AMENDED in one
-# direction (2026-09-02, user: "what would be the point of 'stopping' to
-# switch models?"): a pick made WHILE a request is out re-addresses that
-# question to the tile you tapped instead of being ignored. The rule it was
-# protecting (no stray tap silently re-bills a running job) is kept by
-# `readdressed`, which withdraws the turn first and re-commits through the
-# one door that turns words into a question.
-guard "an agent pick re-addresses rather than being swallowed" "$WORK/composer.flat" \
-      'func pickAgent\(_ provider: AgentProvider\) \{ AskDestination.used\(provider.rawValue\) chosenAgent = provider guard !readdressed\(to: provider\) else \{ return \} askProvider = provider \}'
-# The re-address withdraws the running turn before it sends anything: without
-# that, two jobs are live at once and the older one's answer can land over the
-# newer one's.
-guard "the re-address withdraws before it re-commits" "$WORK/composer.flat" \
-      'func readdressed\(to provider: AgentProvider\?\) -> Bool \{ let words = currentQuestion guard inFlight, !isRecording, provider != activeAskAgent, !words.isEmpty else \{ return false \} withdrawAsk\(keepingWords: false\)'
-# Neither picker may keep a handler of its own — a second copy is how the two
-# drifted in the first place (the capsule cleared `chosenAgent` alone).
-picker_handlers=$(grep -oE 'AskDestination.used\(' "$WORK/composer.flat" | wc -l | tr -d ' ')
-if [[ "$picker_handlers" == "2" ]]; then
-  print "  ok   the pick is recorded in the two shared verbs and nowhere else"
-else
+# ---- ONE PICKER, ONE HANDLER (prd §579) ---------------------------------
+# Two pickers were two copies of one handler and they had already drifted (one
+# cleared `askProvider`, the other did not). Counting them would have worked and
+# still described a rule kept in two places; one function both callers reach is
+# the stronger answer, and this is that they reach it.
+picker_handlers=$(grep -c 'AskDestination.used(' "$WORK/composer.nc")
+if [[ $picker_handlers -ne 2 ]]; then
   print -u2 "  ✗ drift: AskDestination.used has $picker_handlers sites, expected 2 (pickDevice and pickAgent)"
   exit 1
 fi
+print "  ok   both picks go through one handler each, and only those"
 
-# ---- PERF: no keychain round trip per keystroke (2026-09-03) --------------
-# `AgentKey.configured` is seven `SecItemCopyMatching` calls with kSecReturnData
-# — an XPC hop to securityd that DECRYPTS each secret, and `filter` visits all
-# seven every time. The input bar's body reads `draft`, so it re-evaluates per
-# keystroke on the path that has to finish inside a frame. Three call sites
-# there cost ~21 decrypting reads a keystroke. That is the jitter, and a mirror
-# is the fix; these guards keep the reads out of the body.
-guard "the rail is fed the mirrored list" "$WORK/composer.nc" \
-      'providers: configuredAgents'
-guard_absent "the rail never reads the keychain per render" "$WORK/composer.nc" \
+# ---- A PICK MID-WAIT RE-ADDRESSES (prd §580) ----------------------------
+# The one resend that is safe, and the reason is the change of ADDRESS: one
+# question asked of somebody else, with the key you pressed as the consent.
+guard "a key pressed mid-wait re-addresses the running question" "$WORK/composer.flat" \
+      'if readdressed\(to: provider\) \{ return \}'
+
+# ---- THE KEYCHAIN IS NOT READ PER KEYSTROKE (prd §579) ------------------
+# `AgentKey.configured` is seven decrypting Keychain round trips; the foot's
+# body reads `draft`, so a direct read there fires on every character typed.
+guard_absent "the foot reads the mirror, never the Keychain" "$WORK/composer.nc" \
       'providers: AgentKey\.configured'
-guard_absent "no view gate reads the keychain per render" "$WORK/composer.nc" \
-      'AgentKey\.configured\.isEmpty'
-guard_absent "the keyed-ask gate reads the mirror" "$WORK/composer.nc" \
-      'isRecording && AgentKey\.isConfigured'
-# The mirror is refreshed at the raise and at each settle — the three moments
-# `keyAvailable` already trusted, so freshness is unchanged. Fewer than three
-# and a key pasted in Settings, or one cleared mid-conversation, goes unnoticed.
-mirror_writes=$(grep -cE 'configuredAgents = AgentKey\.configured' "$WORK/composer.nc" || true)
-if [[ "$mirror_writes" -ge 3 ]]; then
-  print "  ok   the key mirror is refreshed at the raise and both settles ($mirror_writes)"
-else
+guard "the foot reads the mirrored key list" "$WORK/composer.nc" \
+      'providers: configuredAgents'
+mirror_writes=$(grep -c 'configuredAgents = ' "$WORK/composer.nc")
+if [[ $mirror_writes -lt 3 ]]; then
   print -u2 "  ✗ drift: the key mirror is written $mirror_writes times, expected at least 3"
   exit 1
 fi
-# Derived, never a second stored flag — two mirrors of one keychain drift, and
-# then the pill lights for a key the send cannot find.
-guard "keyAvailable is derived from the mirror" "$WORK/composer.nc" \
-      'var keyAvailable: Bool \{ !configuredAgents.isEmpty \}'
+print "  ok   the key mirror refreshes at the raise and both settles"
 
+# ---- THE VERB IS WHATEVER IS AVAILABLE ----------------------------------
+# A dim Send with nothing to send is the dead control §83 bans. At rest the
+# slot carries Record — the voice-note capture path, a thing that really enters
+# the corpus — which is also how the mic keeps its door without taking a key.
+guard "the resting verb is the mic, not a dead send" "$WORK/composer.flat" \
+      'AgentWideKey\(glyph: "mic", tone: .ink, compact: true\)'
+guard "a live ask offers Stop" "$WORK/composer.nc" \
+      'AgentWideKey\(title: String\(localized: "Stop"\)'
+# FIND IS OFFERED ON THE DEVICE ALONE. Bankr cannot search your things, so a
+# Find key beside it would be a control that provably does nothing.
+guard "Find is gated on the device being the destination" "$WORK/composer.flat" \
+      'if activeAskAgent == nil \{ AgentWideKey\(glyph: "magnifyingglass"'
+# NO RETRY ON A LIVE JOB (§580): a second identical job on an agent that can act
+# can act twice.
+SLOT=$(awk '/private var footSlot/,/^    }$/' "$WORK/composer.nc")
+print -r -- "$SLOT" | grep -qiE 'retry|resend' \
+  && { print -u2 "  ✗ drift: the foot offers a retry — a live job must never be re-sent"; exit 1 }
+print "  ok   the foot offers no retry"
 
-# ---- THE WAIT IS A RECEIPT, AND ITS TWO VERBS (2026-09-02) ----------------
-# §577a drew the wait as a 132pt face over a 64pt numeral — an anatomy the app
-# owns nowhere else (user: "this is ridiculous looking"). §363 already has the
-# shape for "sent somewhere, not landed yet": the receipt paper, FLAT until the
-# job is final. The tear is the state, not a style.
-guard "the wait wears the receipt paper, flat" "$WORK/composer.nc" \
-      'dsReceiptPaper\(tear: 0\)'
-guard "the wait wears the working stamp" "$WORK/composer.nc" \
-      'DSStamp\(word: String\(localized: "Working"\)'
-guard_absent "the 132pt working face stays deleted" "$WORK/composer.nc" \
-      'private func workingFace'
-# A STOP IS AN UNDO, AND EDIT IS THE HALF THAT KEEPS YOUR WORDS. One verb did
-# both, so leaving a wait handed you a draft you then had to clear (user: "this
-# is also a weird ux" about the "Stopped." card it used to settle). Neither may
-# settle a card.
+# ---- A STOP LEAVES NO TOMBSTONE (prd §580) ------------------------------
 guard "stop and edit are one withdrawal with two answers about your words" \
       "$WORK/composer.nc" 'if keepingWords \{'
-guard "stop leaves the field alone" "$WORK/composer.nc" \
-      'withdrawAsk\(keepingWords: false\)'
-guard "edit returns the question to the field" "$WORK/composer.nc" \
-      'withdrawAsk\(keepingWords: true\)'
 WITHDRAW=$(awk '/private func withdrawAsk/,/^    }$/' "$WORK/composer.nc")
 print -r -- "$WITHDRAW" | grep -q 'Insight' \
   && { print -u2 "  ✗ drift: a withdrawal settles a card — the tombstone the user called weird"; exit 1 }
 print "  ok   a withdrawal leaves no tombstone"
-# NO RETRY ON A LIVE JOB: a second identical job on an agent that can act can
-# act twice. Re-addressing to another tile is a different question, not the
-# same one sent twice.
-CONSOLE=$(awk '/private var askConsole/,/^    }$/' "$WORK/composer.nc")
-print -r -- "$CONSOLE" | grep -qiE 'retry|resend|again' \
-  && { print -u2 "  ✗ drift: the wait offers a retry — a live job must never be re-sent"; exit 1 }
-print "  ok   the wait offers no retry"
 
-# ---- THE DESTINATIONS ARE A SCROLLING TILE ROW ---------------------------
-RAIL="Casberi/Casberi/Shell/AskDestinationRail.swift"
-strip_comments "$RAIL" > "$WORK/rail.nc"
-# Unlabelled marks in the middle of a screen read as a tab bar for the thread
-# above them; the row is a control for the NEXT question.
-guard "the strip says what it is" "$WORK/rail.nc" 'Text\("Send to"\)'
-guard "every key carries its name and ground" "$WORK/rail.nc" 'Text\(ground\)'
-# A ROW, never a grid: a 2×2 is right for exactly four destinations and wrong
-# for two (a hole) and six (a second page).
-guard "the destinations scroll horizontally" "$WORK/rail.nc" \
-      'ScrollView\(.horizontal'
-# The label sits outside the scroller, or it slides away from what it names.
-awk '/private var scroller/,0' "$WORK/rail.nc" | grep -q 'Send to' \
-  && { print -u2 "  ✗ drift: the strip's label scrolls with the keys"; exit 1 }
-print "  ok   the label never scrolls away from the keys"
-# THE DISC IS THE WAIT'S, NOT THE QUESTION'S: on a settled turn it names who
-# was ASKED, one line above a badge naming who ANSWERED.
-guard "the turn disc stands down once the answer lands" "$WORK/composer.nc" \
-      'let showsDisc = waiting'
+# ---- THE ANSWER IS THE SCREEN (prd §581) --------------------------------
+# The question folds to a caption and the reply's first sentence takes the
+# display rung. The user's verdict on every version before this one was that
+# the text "blends into the question and bankr name" — three things in one
+# voice with only size between them.
+guard "the question is a caption, not a heading" "$WORK/composer.nc" \
+      'AgentAskedCaption\(question:'
+guard "a written reply is set rather than poured" "$WORK/composer.nc" \
+      'AgentReply\.prose\(els\)'
+guard "the lead takes the display rung" "$WORK/terminal.nc" \
+      'dsText\(.price40\)'
+guard "the rest steps down to reading size" "$WORK/terminal.nc" \
+      'dsText\(.heading22\)'
+# A DOCUMENT KEEPS ITS ROWS. `AgentReply.prose` recognises one shape and
+# returns nil for everything else; a false positive would delete content.
+guard "a document still renders through GenRender" "$WORK/composer.nc" \
+      'GenRender\(id: "root", els: els\)'
+guard "prose is recognised only as a lone Insight" "$WORK/reply.nc" \
+      'only.comp == "Insight"'
+guard "a growing document is never mistaken for prose" "$WORK/reply.nc" \
+      'els.count == 2'
 
-print "  ok   AskDestination — 16 mutations, 66 drift guards"
+# ---- THE ROLL, NOT A THREAD (prd §581) ----------------------------------
+# Answers sit on one column in order, newest at the bottom, separated by dated
+# rules. No bubbles and no alternating sides — and no sheet, because a sheet
+# over a surface that itself rose from a button reads as a stack of trays.
+guard "the roll dates the rule between answers" "$WORK/composer.nc" \
+      'AgentTurnDivider\(landed:'
+guard "a turn knows when it landed" "$WORK/composer.nc" \
+      'var landedAt = Date\(\)'
+guard_absent "no sheet of earlier questions returns" "$WORK/composer.nc" \
+      'private var earlierSheet'
+
+# ---- THE RETIRED CHROME STAYS RETIRED (prd §581) ------------------------
+# Each of these was a part added to fix the chat, and together they were the
+# confusion. A return needs an argument, not an omission.
+for dead in draftCrown keptAskPills takeChips briefNav agentChoiceHeader \
+            askWorking askConsole waitPaper sendPill lowerButton micButton \
+            turnHeader turnDisc clockGreeting inputBar; do
+  guard_absent "the retired $dead stays deleted" "$WORK/composer.nc" \
+        "private (var|func) ${dead}[^A-Za-z0-9_]"
+done
+guard_absent "the 158pt deck stays deleted" "$WORK/composer.nc" \
+      'AskDestinationRail\('
+guard_absent "the ask capsule stays deleted" "$WORK/composer.nc" \
+      'AskDestinationCapsule\('
+[[ -e Casberi/Casberi/Shell/AskDestinationRail.swift ]] \
+  && { print -u2 "  ✗ drift: the deck's file is back"; exit 1 }
+[[ -e Casberi/Casberi/Shell/AskDestinationCapsule.swift ]] \
+  && { print -u2 "  ✗ drift: the capsule's file is back"; exit 1 }
+print "  ok   both retired picker files stay deleted"
+
+# ---- THE BLUE GROUND IS GONE (prd §581) ---------------------------------
+# §577 turned the whole surface `DS.tint` while a keyed ask was out; §577b
+# pulled it back to the wait after "we really went overkill with all this
+# blue". The one saturated block left is the armed verb, which is §563's budget
+# spent on something you can act on.
+guard_absent "nothing paints the surface blue" "$WORK/composer.nc" \
+      'chrome.askOnTint = (now|true)'
+guard "the tint flag is written false so no stale blue is left behind" \
+      "$WORK/composer.nc" 'chrome.askOnTint = false'
+
+print "  ok   AskDestination — 16 mutations, 47 drift guards"

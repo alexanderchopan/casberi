@@ -1742,12 +1742,26 @@ harness "Vibenet scope drawings self-test" "8 mutations, 9 drift guards" "script
 # the row between opens, which destroys the one property it needs — being in
 # the same place every time; and a device segment reading "iPhone" on Mac
 # Catalyst is a claim about where the answer runs, made on the control whose
-# whole job is to say where the answer runs. Its drift half is what keeps the
-# deletions deleted: a returning send button, a returning chip row or a
-# returning day card each rebuild the confusion this pass removed, and the
-# kept pills must stay mounted or "Keep" mints a standing question with
-# nowhere to appear (§83).
-harness "Ask capsule self-test" "14 mutations, 53 drift guards — incl. the send actually sending the draft" "scripts/ask-destination-selftest.sh" "the ask capsule self-test failed — run scripts/ask-destination-selftest.sh"
+# whole job is to say where the answer runs. Its drift half was rewritten for
+# the terminal (prd §581) and is what keeps the deletions deleted: the deck,
+# the capsule, the greeting, the kept pills, the Send-to chips and the brief
+# nav were each a part added to fix the chat, and together they were the
+# confusion — a return needs an argument, not an omission. It also holds the
+# two wiring bugs §579 found, both of which render as perfectly ordinary
+# controls: a send routed to `askWithKey` does nothing on the first message of
+# every conversation, and a foot reading `AgentKey.configured` spends seven
+# decrypting Keychain round trips per keystroke.
+harness "Ask destination self-test" "16 mutations, 47 drift guards — incl. the send actually sending the draft" "scripts/ask-destination-selftest.sh" "the ask destination self-test failed — run scripts/ask-destination-selftest.sh"
+
+# THE ANSWER IS THE SCREEN (prd §581). `AgentReply` decides how every written
+# answer is set, and both of its judgements are invisible to a build: `prose`
+# must recognise the ONE document shape it can safely re-set — a false positive
+# takes a brief, a Find or an answer with things attached and draws it as a
+# bare paragraph, silently dropping every row — and `split` must never cut
+# inside a number, because Bankr writes about money and a decimal read as a
+# sentence end puts "Swapped 0." at 40pt across the top of the screen. Both
+# failures render as a perfectly ordinary answer.
+harness "Agent reply self-test" "32 assertions, 10 mutations, 7 drift guards — the prose split behind the terminal" "scripts/agent-reply-selftest.sh" "the agent reply self-test failed — run scripts/agent-reply-selftest.sh"
 
 # The design system's first mechanical check (prd §299). Every other rule in
 # this file is enforced by a script; the design system was enforced by memory,

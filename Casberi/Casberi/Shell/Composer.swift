@@ -97,14 +97,6 @@ struct Composer: View {
     /// content inside an answer PUSHES a thing-view rather than presenting a
     /// sheet). nil ids, or ids that no longer resolve, render nothing.
     var resolveThing: (String) -> Thing? = { _ in nil }
-    /// Opens Bankr's setup screen (prd §529). A CLOSURE rather than a route
-    /// read, because this view is a ZStack layer inside `RootShell.shell` and
-    /// therefore sits ABOVE that view's `.environment(...)` injections — an
-    /// `@Environment(HomeRoute.self)` here would die on first read, which is
-    /// the crash `rootPresented`'s own doc records. `agentChoiceHeader` draws
-    /// only when this is non-nil, so the CTA can never be a control that does
-    /// nothing (§83).
-    var onConnectBankr: (() -> Void)? = nil
     /// Opens the catalog filtered to Agents (prd §550) — a CLOSURE for
     /// `onConnectBankr`'s reason, stated in full above: this view is a ZStack
     /// layer inside `RootShell.shell` and sits above that view's environment
@@ -175,6 +167,9 @@ struct Composer: View {
         /// a ranked list of your own things and a sentence something wrote is
         /// exactly the kind of thing the honesty rule exists to keep visible.
         var found = false
+        /// When this answer landed. The roll's dividers are dated, so a turn
+        /// that does not know its own moment cannot be placed on one.
+        var landedAt = Date()
     }
     @State private var turns: [ConvoTurn] = []
     /// The question currently being answered — shown above the live answer
@@ -383,7 +378,6 @@ struct Composer: View {
     /// statically, which SwiftUI does not track; without this the banner would
     /// fade on Not now and leave its padding behind until something unrelated
     /// invalidated this body.
-    @AppStorage(BankrOfferBanner.dismissedKey) private var bankrOfferDismissed = false
     /// The keepable text of a synthesis answer — a synthesis is one Insight
     /// carrying the prose (RootShell's proseDoc). Only that shape is worth
     /// keeping: a lookup answer IS the things, which already live in the feed;
@@ -713,7 +707,6 @@ struct Composer: View {
     /// (`briefNav`, mounted above the input bar) can scroll it — see that
     /// property's note for why a second `ScrollViewReader` down there would
     /// silently scroll nothing.
-    @State private var briefScroll: ScrollViewProxy?
     /// The docked nav's travelling blob — its own namespace, never the
     /// bar-morph's `glassNamespace`: two matched pairs sharing a namespace
     /// with different ids is fine, but keeping them apart means neither can
@@ -739,7 +732,6 @@ struct Composer: View {
     /// it. Updated from the headings' own reported offsets; empty before the
     /// first frame, so the nav simply shows no active chip rather than
     /// guessing at one.
-    @State private var activeSection = ""
 
     /// The one predicate for "the composer is idle and showing its rest-screen
     /// chrome" — open, nothing typed, nothing recording, no answer in flight.
@@ -979,26 +971,6 @@ struct Composer: View {
     /// tile is "what's overdue", and the whole screen is "what landed today".
     private static let briefAnswers: Set<String> = ["wallet", "watchlist", "overdue", "today"]
 
-    /// The chips as actually docked. Beneath the brief LANDING they drop the
-    /// asks the brief is already answering in view (prd §187, user: "it also
-    /// has two wallet chips which is redundant" — the money hero and the
-    /// watchlist tile were both on screen while chips offered to fetch each
-    /// again). Offering a chip for an answer the person is looking at is the
-    /// chip-shaped form of a dead control: it can only ever re-state what's
-    /// already there, so the row spends its width on what the brief DIDN'T say.
-    /// Everywhere else the full set stands.
-    private var dockedSuggestions: [AskOption] {
-        guard briefLanding else { return suggestions }
-        // `observation` joins the suppressed set under the brief (prd §386e):
-        // §386d put the notice INSIDE the document as its own module, so the
-        // chip beside it now offers to fetch something already on screen —
-        // the same duplication `shownCategoryChips` just stood down for, and
-        // the reason the chip existed (the glint's payoff needed a door) is
-        // exactly what putting it in the page removed.
-        return suggestions.filter {
-            !Self.briefAnswers.contains($0.kind) && $0.kind != "observation"
-        }
-    }
 
     /// Tag completions for the word being typed — your real tags, prefix-
     /// matched on the draft's last token (2+ chars).
@@ -1567,152 +1539,9 @@ struct Composer: View {
         return handle
     }
 
-    /// "Saturday morning." — the day and its moment, ruled as the greeting's
-    /// first line (docs/agent-brief.md ruling 4). The weekday comes from the
-    /// current calendar/locale; the moment splits the day the way people
-    /// actually say it (morning until noon, afternoon until 6, evening
-    /// after) — no "Good ..." prefix, the period IS the warmth.
-    private func timeGreeting(now: Date = .now) -> String {
-        let weekday = now.formatted(.dateTime.weekday(.wide))
-        let hour = Calendar.current.component(.hour, from: now)
-        let moment = hour < 5 ? String(localized: "night")
-                   : hour < 12 ? String(localized: "morning")
-                   : hour < 18 ? String(localized: "afternoon")
-                   : String(localized: "evening")
-        return "\(weekday) \(moment)."
-    }
 
-    /// The brief masthead's greeting (2026-08-15, the deck mockup's ruling —
-    /// see the masthead's own note for the ruling-4 override). Whole phrases,
-    /// never a composed "Good " + word: a translator needs the sentence.
-    /// Before 5am the evening word holds — "Good night" is a farewell, and a
-    /// 3am open is a late evening, not a greeted dawn.
-    ///
-    /// **The name is part of the phrase, not appended to it (2026-08-29).**
-    /// Six whole sentences rather than three plus a comma and a variable: a
-    /// name goes in front in Japanese and Korean and takes an honorific there,
-    /// so "Good morning" + ", " + name is a sentence no translator can fix.
-    /// `ProfileStore.name` is nil by default and nil is not a gap — the
-    /// greeting alone is already a complete sentence, which is why nothing
-    /// asks for a name and nothing marks its absence.
-    private func clockGreeting(now: Date = .now) -> String {
-        let hour = Calendar.current.component(.hour, from: now)
-        if let name = ProfileStore.shared.name {
-            return hour >= 5 && hour < 12 ? String(localized: "Good morning, \(name)")
-                 : hour >= 12 && hour < 18 ? String(localized: "Good afternoon, \(name)")
-                 : String(localized: "Good evening, \(name)")
-        }
-        return hour >= 5 && hour < 12 ? String(localized: "Good morning")
-             : hour >= 12 && hour < 18 ? String(localized: "Good afternoon")
-             : String(localized: "Good evening")
-    }
 
-    /// One conversation turn — the question as the answer's own TITLE, then
-    /// its answer. Heading weight (was subhead-muted, fixed 2026-07-20):
-    /// ruling 8 calls each answer a "sovereign screen", and its question is
-    /// that screen's title — one step down from the greeting's own
-    /// `.heading34` since this repeats per turn rather than leading the
-    /// whole surface.
-    @ViewBuilder
-    private func convoTurn<Content: View>(question: String, animateIn: Bool = false,
-                                          agent: String? = nil, waiting: Bool = false,
-                                          @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            if !question.isEmpty {
-                turnHeader(question: question, agent: agent, waiting: waiting)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, DS.Space.s4)
-                    // The question lift (delight, 2026-07-21): a freshly-sent
-                    // ask rises into its header rather than popping cold —
-                    // the felt hand-off from field to answer. Settled turns
-                    // (scroll-back) never animate; this plays once, for the
-                    // turn that just became live.
-                    .transition(animateIn
-                                ? .move(edge: .bottom).combined(with: .opacity)
-                                : .identity)
-            }
-            content()
-        }
-    }
 
-    /// WHAT YOU HAVE ALREADY FOUND, at the rung it deserves (prd §575,
-    /// 2026-09-02).
-    ///
-    /// `liveCount` is the debounced read `Retriever.find` already runs against
-    /// the draft on every keystroke — the app answering before you ask. Until
-    /// this, its whole appearance was a 15pt numeral inside the Find capsule,
-    /// beside the verb: the most useful thing on the draft surface, set two
-    /// rungs under the words the person typed. §563's inversion, on the
-    /// surface where the app is most obviously working for you.
-    ///
-    /// **`price48` is the CROWN rung and §506 allows one per surface, which is
-    /// what makes this legal.** While a draft is live and no answer is drawn,
-    /// this is the only figure on the screen; the moment either stops being
-    /// true it is not drawn at all. Its gate is deliberately the same shape as
-    /// `takeChips`' — the two are the draft's chrome and must appear and leave
-    /// together, or the crown outlives the band that explains it.
-    ///
-    /// **THE FOUND STATE DELIBERATELY DOES NOT GET THIS, and the reason is a
-    /// measurement rather than a taste.** The mock this implements drew the
-    /// same lockup over the results, so the count you watched climb became the
-    /// count that settled. `KeptAskComposers.search` already opens its
-    /// document with `"\(hits.count) thing match. In …. Showing the N
-    /// closest."` — so a lockup there is the same number twice, ten points
-    /// apart, which is §213's restatement. The composer is shared (the kept
-    /// `search:` pill, the digest refresh, the widget) so its sentence is not
-    /// the view's to remove. The continuity survives anyway and is the better
-    /// version of it: the figure you were watching is confirmed in words by
-    /// the document that replaces it.
-    ///
-    /// **Nothing is drawn under one match.** A `0` at 64pt is a verdict on
-    /// your typing delivered in the largest type the app owns, and a read
-    /// still in flight is honestly absent rather than stale (`liveCount` is
-    /// nil until a pass completes — see its own note), so the two silences
-    /// read the same and neither is a claim.
-    @ViewBuilder
-    private var draftCrown: some View {
-        // `!showsRail` (prd §577c) — where the panel wears the rail it also
-        // carries this reading as `askSubline`, under the words, at the
-        // caption rung rather than the crown rung. Two crowns on one surface
-        // is the §506 breach §575 removed from the greeting.
-        if isOpen, hasDraft, !showsRail, !isRecording, !handingOff, !answering, turns.isEmpty,
-           let liveCount, liveCount > 0 {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Image(systemName: "magnifyingglass")
-                    .dsGlyph(18, weight: .semibold)
-                    .foregroundStyle(DS.textPrimary)
-                    .frame(width: DS.Face.list, height: DS.Face.list)
-                    .background(DS.gray100, in: Circle())
-                    .accessibilityHidden(true)
-                HStack(alignment: .lastTextBaseline, spacing: DS.Space.s2) {
-                    Text("\(liveCount)")
-                        .dsText(.price48)
-                        .foregroundStyle(DS.textPrimary)
-                        // The digits ROLL as the read refreshes rather than
-                        // cutting — this number changes on a debounce while
-                        // you are still typing, and a 64pt figure swapping
-                        // whole reads as the screen breaking.
-                        .contentTransition(.numericText())
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.9)
-                    Text("match so far")
-                        .dsText(.price16)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
-                // The filters that produced it, under the figure they narrow.
-                // They were in the dock beside "Send to", two bands away from
-                // the number they explain.
-                if !liveScopes.isEmpty || !droppedScopes.isEmpty { scopeChips }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s3)
-            .animation(DS.Motion.standard, value: liveCount)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(liveCount) things match so far")
-        }
-    }
 
     // MARK: - The ask panel's readings (prd §577, restructured §577c)
     //
@@ -1724,271 +1553,12 @@ struct Composer: View {
     // pill is the control row's trailing item, and the reading below is
     // `askSubline`, unchanged.
 
-    /// The one line under the draft. At most one of the two, ever — the corpus
-    /// reading and the agent note answer the same question ("what will this
-    /// read?") for different destinations, so drawing both would mean one of
-    /// them is describing a destination that was not chosen.
-    @ViewBuilder
-    private var askSubline: some View {
-        if let note = AskSubject.draftNote(ground: askGround,
-                                           agent: activeAskAgent?.agent) {
-            Text(note)
-                .dsText(.body17)
-                .foregroundStyle(onTint ? Color.white.opacity(0.78) : DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.top, DS.Space.s2)
-                .transition(.opacity)
-                .animation(DS.Motion.standard, value: activeAskAgent)
-        } else if hasDraft, let reading = AskSubject.corpus(matches: liveCount) {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(reading.figure)
-                        .dsText(.price16)
-                        .foregroundStyle(onTint ? Color.white : DS.textPrimary)
-                        // The figure changes on a debounce while you are still
-                        // typing, so it ROLLS rather than cutting.
-                        .contentTransition(.numericText())
-                    Text(reading.caption)
-                        .dsText(.body17)
-                        .foregroundStyle(onTint ? Color.white : DS.textSecondary)
-                }
-                if !liveScopes.isEmpty || !droppedScopes.isEmpty { scopeChips }
-            }
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s2)
-            .animation(DS.Motion.standard, value: liveCount)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(reading.figure) \(reading.caption)")
-        }
-    }
 
-    /// The send, as one white pill that NAMES where it is going.
-    ///
-    /// The capsule stands down on this surface because the rail has taken its
-    /// picking job, and a picker plus a capsule is the "choosing and sending as
-    /// two controls" §543 removed, restored with an extra step. So the pill is
-    /// the send alone, and it says the destination for the same reason the
-    /// capsule's segments do: a bare arrow made the device the one unnamed
-    /// destination.
-    ///
-    /// Dim until there is something to send, and the dim state is a real
-    /// background swap rather than `.disabled` — a hand-rolled button that
-    /// paints its own fill reads as live while inert otherwise (§83's own
-    /// corollary).
-    @ViewBuilder
-    private var sendPill: some View {
-        // ONE CONTROL, TWO STATES (2026-09-02). A device wait renders the
-        // input bar rather than the receipt console, so without this the only
-        // way out of one is to close the surface. While a request is out this
-        // is the only live thing on the row, so it is ARMED rather than dim:
-        // `inFlight` no longer disables the pill, it changes what it is.
-        let stopping = inFlight
-        let armed = stopping || (hasDraft && !inFlight)
-        let name = activeAskAgent?.agent
-        Button {
-            guard armed else { return }
-            if stopping { stopAsk(); return }
-            // THE BUZZ MATCHES THE CONSEQUENCE (prd §577a). `tap()` for a
-            // question the phone answers; `lift()` — the heavier one this app
-            // reserves for a gesture that had to be held — for a send to an
-            // agent acting on an account of its own, which may spend money and
-            // cannot be undone by us. Feel is the one channel that reaches
-            // somebody who is not reading, and this is the send where that
-            // matters.
-            if askGround == .ownAccount { DSHaptic.lift() } else { DSHaptic.tap() }
-            // `askDirectly()`, NEVER `askWithKey()` (prd §579). This pill is
-            // reached with a DRAFT — `armed` is `hasDraft` — and `askWithKey`
-            // re-asks `currentQuestion`, which `commit()` is the only writer
-            // of. So on a first send it read the empty string and returned at
-            // its own guard: the tap did nothing, silently, with the words
-            // still sitting in the field. `askDirectly()` is the draft-send
-            // verb (`forceKeyedThisAsk` + `commit(forceAsk:)`), which adopts
-            // the draft as the question, clears the field, and routes to the
-            // picked agent — the path the non-embedded capsule beside this one
-            // has always taken.
-            if activeAskAgent != nil { askDirectly() } else { commit() }
-        } label: {
-            HStack(spacing: DS.Space.s2) {
-                Text(stopping ? String(localized: "Stop")
-                              : (name.map { String(localized: "Send to \($0)") }
-                                    ?? String(localized: "Ask")))
-                    .dsText(.label12).fontWeight(.semibold)
-                    .foregroundStyle(armed ? Color.white : DS.textTertiary)
-                    .lineLimit(1)
-                Image(systemName: stopping ? "stop.fill" : "arrow.up")
-                    .dsGlyph(13, weight: .bold)
-                    .foregroundStyle(armed ? DS.tint : DS.textTertiary)
-                    .frame(width: 28, height: 28)
-                    .background(armed ? AnyShapeStyle(Color.white)
-                                      : AnyShapeStyle(DS.gray100),
-                                in: Circle())
-                    .accessibilityHidden(true)
-            }
-            .padding(.leading, DS.Space.s4)
-            .padding(.trailing, DS.Space.s1 + 2)
-            .padding(.vertical, DS.Space.s1 + 2)
-            // The SEND is the one saturated block on the ask surface now —
-            // §563's tint budget, spent on the act rather than on the ground.
-            .background(armed ? AnyShapeStyle(DS.tint)
-                              : AnyShapeStyle(DS.gray100),
-                        in: Capsule(style: .continuous))
-            .dsHover()
-        }
-        .buttonStyle(PressSpring())
-        .disabled(!armed)
-        .animation(DS.Motion.standard, value: armed)
-        .animation(DS.Motion.standard, value: name)
-        .accessibilityLabel(name.map { "Send to \($0)" } ?? "Ask")
-    }
 
     // MARK: - The wait, as a clock (prd §577)
 
-    /// WHAT A KEYED JOB LOOKS LIKE WHILE IT RUNS.
-    ///
-    /// Bankr submits a prompt and polls for up to ~90 seconds with **no
-    /// partial text of any kind** — the wire has no stream, only a job that is
-    /// pending until it is not. Until now that stretch drew `answerSkeleton`,
-    /// which is the shape of a document about to paint; there is no such
-    /// document here and none of its shape is known to us, so the skeleton was
-    /// a promise nobody could keep, holding still for a minute and a half.
-    ///
-    /// The face grows and the seconds count. That is the whole of what is
-    /// true, and it is enough — the ring fills across the interval Bankr
-    /// itself publishes as typical and then **keeps turning past it** rather
-    /// than completing, because a bar that fills and stops says finished.
-    ///
-    /// **`TimelineView`, not a timer.** Nothing is started, stopped or
-    /// invalidated; the view renders off one stamp and costs nothing when it is
-    /// not on screen.
-    @ViewBuilder
-    private var askWorking: some View {
-        let started = askStartedAt ?? .now
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            TimelineView(.periodic(from: started, by: 1)) { context in
-                // Frozen at the settle: the beat after the answer must not
-                // keep counting, or the last thing the clock does is tell you
-                // the wait was a second longer than it was.
-                let live = max(0, Int(context.date.timeIntervalSince(started)))
-                let elapsed = askWaitSeconds ?? live
-                waitPaper(elapsed: elapsed)
-            }
-            askConsole
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
 
-    /// THE WAIT IS A RECEIPT, AND A RECEIPT ALREADY KNOWS HOW TO WAIT
-    /// (2026-09-02, user: "this is ridiculous looking. please prepare a new
-    /// mockup … consider the rest of our app and language and even like the
-    /// devnet rooms that have the send and top up").
-    ///
-    /// §577a drew this as a 132pt face over a 64pt numeral — an anatomy the
-    /// app owns nowhere else, and at phone scale a logo the size of a fist
-    /// above a lone digit. §363 already has the shape for "money is moving
-    /// and has not landed": the receipt paper, with a stamp at the head, a
-    /// lead, the subject, ONE figure at `price40`, a sentence, and a bottom
-    /// edge that is FLAT while the paper is still in the machine. A keyed ask
-    /// is that same object — an instruction sent somewhere, outstanding — so
-    /// it borrows the whole anatomy rather than inventing a second one. The
-    /// clock is the receipt's figure; "Working" is its stamp.
-    ///
-    /// **Flat, never torn.** `tear: 0` is the state, not a style: the paper
-    /// tears when the job is final, and this one is not. The answer that
-    /// replaces it is the tear.
-    ///
-    /// The mark stays at `DS.Face.list` — the tier for a row you tap through
-    /// — because on a receipt the subject disc is a small identifying stamp,
-    /// not the subject itself. The QUESTION is the subject here.
-    @ViewBuilder
-    private func waitPaper(elapsed: Int) -> some View {
-        let name = activeAskAgent?.agent
-            ?? AskDestination.deviceLabel(isMac: DS.isMac, isPad: DS.isPad)
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 0) {
-                turnDisc(agent: activeAskAgent?.agent)
-                Spacer(minLength: DS.Space.s3)
-                DSStamp(word: String(localized: "Working"), weight: .waiting)
-                    .accessibilityHidden(true)
-            }
-            VStack(alignment: .leading, spacing: 1) {
-                Text(String(localized: "Asking \(name)"))
-                    .dsText(.callout15)
-                    .foregroundStyle(DS.textPrimary)
-                Text(verbatim: currentQuestion)
-                    .dsText(.heading22)
-                    .foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.top, DS.Space.s3)
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2 - 2) {
-                Text("\(elapsed)")
-                    .dsText(.price40)
-                    .foregroundStyle(DS.textPrimary)
-                    .contentTransition(.numericText())
-                    .lineLimit(1)
-                Text(verbatim: "s")
-                    .dsText(.heading22)
-                    .foregroundStyle(DS.textSecondary)
-            }
-            .padding(.top, DS.Space.s3)
-            // THE OVERRUN IS NARRATED ONCE, AT THE MOMENT IT HAPPENS (prd
-            // §577a, kept whole). Printing "most jobs land inside 30 seconds"
-            // from the first frame is an excuse made before anything went
-            // wrong; arriving AS the clock passes it is the app telling you
-            // something it just learned. It is Bankr's own published figure.
-            Text(elapsed > Int(Self.typicalKeyedWait) && !askSettling
-                 ? String(localized: "Most jobs land inside 30 seconds. This one is taking longer.")
-                 : (askGround == .ownAccount
-                    ? String(localized: "\(name) answers from its own account.")
-                    : String(localized: "\(name) is reading your things.")))
-                .dsText(.callout15)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, DS.Space.s4)
-                .animation(DS.Motion.standard, value: elapsed > Int(Self.typicalKeyedWait))
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Asking \(name): \(currentQuestion)"))
-        .accessibilityValue(Text("Working for \(elapsed) seconds"))
-        .dsReceiptPaper(tear: 0)
-    }
 
-    /// THE TWO VERBS OF A WAIT, as the console the devnet rooms already use
-    /// (2026-09-02). `DevnetSendPanel`'s anatomy — a 36pt disc, a gap, one
-    /// word at `price40`, on a widget-radius tile with a 132pt floor — and
-    /// its rule about which one is tinted: the act you came for wears the
-    /// colour, the other sits on ink.
-    ///
-    /// **EDIT is the tinted one, and STOP is not.** Stop is an exit; Edit is
-    /// the thing somebody who is watching a wait usually actually wants — the
-    /// question back, one word changed, sent again — and it is the only one
-    /// of the two that leads anywhere. §563's budget allows exactly one
-    /// saturated block on a surface and this is where it is spent.
-    ///
-    /// **There is deliberately no Retry here.** Retrying a job that is still
-    /// running means a SECOND identical job, and on an agent that can act the
-    /// same instruction run twice can act twice. Retry belongs after the job
-    /// is over — where the failure copy already offers it — and switching
-    /// destination is a tap on another tile, which is a different question to
-    /// a different addressee rather than the same one sent twice.
-    private var askConsole: some View {
-        HStack(spacing: DS.Space.s3) {
-            // `DSActVerb`, not a hand-rolled tile: it is this app's verb-at-
-            // `price40` object, it carries the widget radius, the 36pt disc
-            // and `PressSpring` for free, and `hero-tint-audit` fails the
-            // build on the hand-rolled version for the reason §83 gives — a
-            // tile that paints its own fill reads live while inert.
-            //
-            // Stop takes `DS.inkGround` so it sits ON the page rather than
-            // above it; Edit keeps the tint. One saturated block (§563), and
-            // it is on the verb that leads somewhere.
-            DSActVerb(title: String(localized: "Stop"), glyph: "stop.fill",
-                      tint: DS.inkGround, act: stopAsk)
-            DSActVerb(title: String(localized: "Edit"), glyph: "pencil",
-                      act: editAsk)
-        }
-    }
 
     /// The chosen face at 132pt, with the ring around it.
     ///
@@ -2002,157 +1572,8 @@ struct Composer: View {
     /// disagree about where the line is.
     static let typicalKeyedWait = 30.0
 
-    /// WHO IS ANSWERING, as a 36pt disc at the head of every turn (prd §575).
-    ///
-    /// The provenance badge has named the agent since 2026-08-31 and it can
-    /// only do so once the answer has SETTLED — which left the longest, most
-    /// uncertain moment in the app (a keyed ask can run for many seconds)
-    /// saying nothing at all about who was working. The capsule already knows
-    /// the destination at commit, so this is drawn from the first frame.
-    ///
-    /// nil is the device, and the device gets its own glyph rather than a
-    /// mark: the promise there is the phone, never a vendor (the badge's own
-    /// 2026-08-31 ruling, one rung larger).
-    @ViewBuilder
-    private func turnDisc(agent: String?) -> some View {
-        Group {
-            if let agent {
-                BridgeIcon(name: agent, size: DS.Face.list, circular: true)
-            } else {
-                Image(systemName: AskDestination.deviceGlyph(isMac: DS.isMac, isPad: DS.isPad))
-                    .dsGlyph(17, weight: .regular)
-                    .foregroundStyle(DS.textPrimary)
-                    .frame(width: DS.Face.list, height: DS.Face.list)
-                    .background(DS.gray100, in: Circle())
-            }
-        }
-        .accessibilityHidden(true)
-    }
 
-    /// A turn's header, as ONE view — shared by the live turn, every settled
-    /// turn, and the rising frame the handoff window paints (`risingHandoff`).
-    ///
-    /// Extracted 2026-08-21 for the reason this codebase keeps re-learning: the
-    /// rising frame's whole job is to be INDISTINGUISHABLE from the real one, so
-    /// a second copy of this markup would reintroduce the pop it exists to
-    /// remove, in a form nobody would think to look for.
-    @ViewBuilder
-    private func turnHeader(question: String, agent: String? = nil,
-                            waiting: Bool = false) -> some View {
-        // THE DISC LEADS EVERY TURN (prd §575, 2026-09-02) — who answered,
-        // from the FIRST frame rather than at the settle. Before this the only
-        // statement of who was working was `provenanceBadge`, which cannot
-        // exist until the answer does, so the longest and least certain moment
-        // in the app (a keyed ask runs for many seconds) said nothing about
-        // where it had gone. The capsule already resolves the destination at
-        // commit; this draws it.
-        //
-        // WHILE WAITING it takes §559's anatomy: the disc, then the
-        // destination's own NAME at the head rung, the question stepping back
-        // to the body rung beneath it. That is the room saying what it is
-        // doing at the size the app reserves for the subject of a surface, and
-        // it is only ever true while nothing else is on screen — the moment a
-        // single element of the document paints, the name is gone and the
-        // question is the title again. One thing large, and only while it is
-        // the only thing (§506's one crown per surface, kept by the clock
-        // rather than by a gate somebody has to remember).
-        HStack(alignment: .top, spacing: DS.Space.s3) {
-            // THE DISC IS THE WAIT'S, NOT THE QUESTION'S (2026-09-02). §575
-            // put it here because while a keyed ask runs nothing else says
-            // where it went — true, and it stops being true the moment the
-            // answer lands: `provenanceBadge` then says who answered, from
-            // what, and how long, under the thing it describes. Left on the
-            // question it answers a DIFFERENT question — who was asked — and
-            // the two disagree on every keyed fallback to the phone. The wait
-            // carries it on its receipt now.
-            let showsDisc = waiting && !TodayBrief.matches(question)
-            turnDisc(agent: agent)
-                // The brief wears a masthead whose greeting is its own subject
-                // — a disc there would put a phone glyph beside "Good morning"
-                // and claim the day was answered by a device. It is the one
-                // turn in the app that is not a question, so it is the one
-                // that takes no disc.
-                .opacity(showsDisc ? 1 : 0)
-                .frame(width: showsDisc ? DS.Face.list : 0)
-                .allowsHitTesting(false)
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                if waiting, !TodayBrief.matches(question) {
-                    Text(agent ?? AskDestination.deviceLabel(isMac: DS.isMac, isPad: DS.isPad))
-                        .dsText(.heading34)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.9)
-                        .transition(.opacity)
-                }
-                header(question: question, waiting: waiting)
-            }
-        }
-        .animation(DS.Motion.standard, value: waiting)
-    }
 
-    /// The question itself — extracted so the waiting and settled shapes above
-    /// share it rather than each spelling the masthead's two branches.
-    @ViewBuilder
-    private func header(question: String, waiting: Bool) -> some View {
-        Group {
-                    // The Today brief wears a MASTHEAD, not the typed question
-                    // (2026-07-22). The whisper capsule promises "Your
-                    // Wednesday brief"; landing on a screen titled "How's my
-                    // day?" broke that continuity — §165a's lesson (name the
-                    // artifact) applied one screen deeper. The eyebrow states
-                    // the window the brief actually covers, which no other
-                    // answer needs to say.
-                    if TodayBrief.matches(question) {
-                        // THE GREETING LEADS (2026-08-15, the approved deck
-                        // mockup: "Good morning · Fri, Aug 15"). This
-                        // OVERRIDES agent-brief ruling 4's "no 'Good…'
-                        // prefix, the period IS the warmth" for this masthead
-                        // — the user approved the mock's greeting twice, and
-                        // the clock that picks the word is the same clock
-                        // §386d already lets compose the deck's order, so the
-                        // greeting and the ordering come from one fact. The
-                        // date rides beside it in the quiet voice;
-                        // `briefWindowLine`'s window fact lives on in the
-                        // lede, which already counts what arrived since.
-                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                            Text(clockGreeting())
-                                .dsText(.heading22)
-                                .foregroundStyle(DS.textPrimary)
-                                // A greeting carrying a name is longer than
-                                // the two words this line was measured for, so
-                                // it SHRINKS rather than truncates — a name cut
-                                // to "Alexa…" reads as the app getting it
-                                // wrong, and the date beside it is short,
-                                // fixed, and must never be the thing that goes.
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-                                // The whisper's title morph is DELETED here
-                                // too (prd §550, §167 item 1 retired). This
-                                // was the receiving half: the capsule's own
-                                // words flew into it via RootShell's proxy
-                                // title, all three sharing the id
-                                // "whisperTitleMorph". The capsule above the
-                                // bar no longer opens this document, so there
-                                // is nothing left to fly and a lone half of a
-                                // matched pair pairs with nothing.
-                            Text(Date.now.formatted(.dateTime.weekday(.abbreviated)
-                                                        .month(.abbreviated).day()))
-                                .dsText(.subhead13)
-                                .foregroundStyle(DS.textTertiary)
-                                .lineLimit(1)
-                                .fixedSize(horizontal: true, vertical: false)
-                        }
-                    } else {
-                        Text(question)
-                            // Steps back while the destination's name is above
-                            // it: two objects at the row-title rung read as
-                            // two titles, and the one that is the subject of
-                            // the wait is the name.
-                            .dsText(waiting ? .body17 : .heading17)
-                            .foregroundStyle(waiting ? DS.textSecondary : DS.textPrimary)
-                    }
-        }
-    }
 
     /// The shape of an answer that hasn't come — as ONE view, shared by the
     /// live turn and the rising frame above it (2026-08-21, the `turnHeader`
@@ -2264,85 +1685,20 @@ struct Composer: View {
     // MARK: - Open
 
     private var openBubble: some View {
+        // THE TERMINAL (prd §581, 2026-09-03). Three parts and no fourth: the
+        // ROLL of answers, the words, and the FOOT that holds every
+        // destination and the one verb that is available.
+        //
+        // What was here before was a chat that had been fixed four times by
+        // adding a part — a greeting, a deck, an offer banner, kept-ask pills,
+        // Send-to chips, a receipt, a tile row, a provenance paragraph, a
+        // brief nav — and the user's verdict was that it was "confusing…
+        // force fitting these large tiles". Everything above the foot is
+        // PAPER now: blank at rest, your words while typing, a stopwatch while
+        // working, the answer once it lands. Nothing above the foot has a
+        // fixed height, which is the whole point — the answer can take all of
+        // it, which is what the tiles could not allow.
         VStack(alignment: .leading, spacing: 0) {
-            // The greeting (embedded sheet only) — frames the whole surface as
-            // one question the tools and the field both answer, and gives the
-            // sheet its warmth (design pass 2026-07-12, "B: greeting-led").
-            // Hidden once a conversation is underway: the answer is the header.
-            // …and hidden for a HANDOFF (2026-08-17, reported again: "it
-            // briefly opens the composer then switches to the brief"). This
-            // was the one band on the rest surface never gated on
-            // `handingOff` — every other one goes through `restChrome`, which
-            // has held that condition since 2026-08-16 — so a FAB tap still
-            // painted "Sunday afternoon." and its pairing line, with their own
-            // `settleIn` entrances, into the window before the answer commits.
-            // An open that owes an answer shows the answer and nothing else.
-            if embedded, turns.isEmpty, !answering, !handingOff {
-                // The greeting (docs/agent-brief.md ruling 4, built
-                // 2026-07-20): the day and its moment, "Saturday morning."
-                // ONE line since 2026-07-31 — the corpus stat that used to
-                // follow it ("2,481 things, across 14 apps."), the milestone
-                // ("1,000 things banked.") and the anniversary ("3 years
-                // since your first thing.") are all gone, and for ONE reason
-                // rather than three (user: "casberi is about insight and
-                // management, over tons of stuff, seeing numbers is just
-                // annoyance"): each was a FACT ABOUT THE PILE, a scoreboard
-                // for having saved things, sitting on the surface whose whole
-                // job is to say what the pile MEANS. The day's own sentence
-                // (`dayCard`) is the room's lead now — insight, not inventory.
-                // THE GREETING GREETS YOU BY NAME (prd §543, 2026-08-31, user:
-                // "it should say Hello Username, or Good Morning, Username" and
-                // "i don't think we need to say the exact day"). It was
-                // `timeGreeting()` — "Saturday morning." — which named the
-                // weekday, a fact the person already has, and named nobody.
-                // `clockGreeting()` is the phrase the brief masthead has used
-                // since §521: whole localized sentences with the name INSIDE
-                // them (a name goes in front in Japanese and Korean and takes
-                // an honorific), falling back to the bare greeting when
-                // `ProfileStore.name` is nil — which is not a gap, since "Good
-                // morning" is already a complete sentence.
-                // THE GREETING KEEPS ITS NAME AND LOSES ITS RUNG (prd §575,
-                // 2026-09-02). It was `heading34` — the head rung — directly
-                // above an ask panel that now takes the same rung for its own
-                // invitation, and §506's rule is one crown per surface: two
-                // 40pt objects on one screen is two crowns, so neither reads
-                // as the subject. The one you can ACT on wins, which is the
-                // panel; this is the room saying hello, not the room's job.
-                //
-                // §543's ruling is untouched in the part that was ruled on —
-                // it greets you BY NAME through `clockGreeting()`, whole
-                // localized sentences with the name inside them — and the
-                // change is the size alone.
-                //
-                // The two fit modifiers go with the rung: `minimumScaleFactor`
-                // was there because a name at display scale overran the line,
-                // and the trailing 64 cleared the ✕ this same pass deleted.
-                // At the body rung a long name simply wraps, which is what a
-                // sentence is allowed to do.
-                Text(clockGreeting())
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.top, DS.Space.s2)
-                    .settleIn()
-                // THE PAIRING LINE IS DELETED (prd §543, user: "we don't need
-                // a 'ask or write or send it out' subtext"). It taught the
-                // sheet's dual nature in prose, at a moment when the surface
-                // below it was a row of chips that did not say it. The bar
-                // says it now and says it better: the field's own placeholder
-                // reads "Ask or search", and the capsule beside it names every
-                // destination an ask can go to. A sentence restating the
-                // controls under it is §213's restatement in miniature.
-            }
-            // The content sizes to ITSELF (no filling scroll) so the sheet can
-            // hug it — no stranded empty space. The answer conversation carries
-            // its own capped scroll, so nothing overflows. (2026-07-12)
-              VStack(alignment: .leading, spacing: 0) {
-
-            // Ask chips moved DOWN to sit by the input (2026-07-12) — rendered
-            // as `askChips` just above the bottom bar, near where you compose.
-
-            // Tag completions — your real tags finish the word being typed.
             if !tagMatches.isEmpty {
                 HStack(spacing: DS.Space.s2) {
                     ForEach(tagMatches, id: \.self) { tag in
@@ -2357,718 +1713,9 @@ struct Composer: View {
                 .padding(.top, DS.Space.s2)
             }
 
-            // THE DRAFT'S OWN ANSWER, before it is asked (prd §575).
-            draftCrown
+            terminalRoll
 
-            // The conversation (2026-07-12): answered asks stack as turns you
-            // can keep following up on. The last answer stays LIVE (answerStream)
-            // until you ask the next one or close — so a typewriter reveal never
-            // gets cut. The scroll keeps the newest in view.
-            // The document STEPS ASIDE for the ask surface (2026-08-15). Both
-            // are gated on `answering`, so without this the greeting and the
-            // day card would render stacked on top of a brief that is still
-            // there — and the mockup this implements is deliberately empty
-            // above the card. Touching the field means "I want to ask", and
-            // the answer comes back the moment focus leaves with nothing
-            // typed, so nothing is lost: the turns are still in `turns`.
-            //
-            // THE RISING FRAME (PERF 2026-08-21) — the handoff window's own
-            // band, standing exactly where the live turn is about to stand and
-            // wearing exactly what it will wear. See `risingHandoff` for why an
-            // open that owes an answer used to paint nothing at all here and
-            // then grow a lone greeting. `turns.isEmpty` because a follow-up
-            // asked from inside a conversation already has the previous turns
-            // on screen and needs no scaffold; `!askSurfaceShowing` mirrors the
-            // real turn's own gate so the focus door still clears the document.
-            if risingHandoff, turns.isEmpty, !askSurfaceShowing,
-               let pending = pendingAsk {
-                VStack(alignment: .leading, spacing: DS.Space.s1) {
-                    // The handoff's own frame must be the same pixels the real
-                    // turn will wear or the swap pops (2026-08-21) — including
-                    // the disc and the waiting name. A handed-over ask is free
-                    // by construction (`chrome.askRequest` never carries a
-                    // key), so its destination is the device.
-                    turnHeader(question: pending, agent: nil, waiting: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, DS.Space.s4)
-                    answerSkeleton
-                        .padding(.horizontal, DS.Space.s4)
-                }
-                .padding(.top, DS.Space.s2)
-                .dsAdaptiveContentWidth(.reading)
-            }
-            if (!turns.isEmpty || answering), !askSurfaceShowing {
-                ScrollViewReader { proxy in
-                    VStack(alignment: .leading, spacing: 0) {
-                    // THE NAV MOVED TO THE DOCK (2026-08-15, the approved
-                    // mockup). It is rendered near the input bar now — see
-                    // `briefNav`, mounted just above it — because the berry
-                    // that opens this surface sits in the bottom-right corner,
-                    // so the hand is already at the bottom while these chips
-                    // were at the top, the hardest reach on a phone. The
-                    // proxy is published to `briefScroll` on appear so the
-                    // docked row can still resolve `scrollTo` against THIS
-                    // reader; a second `ScrollViewReader` down there would
-                    // resolve against its own scroll views and scroll nothing
-                    // (§386n's own bug, which is why the id namespacing
-                    // exists).
-                    //
-                    // The §386i reasoning it keeps: pinned rather than
-                    // scrolling with the document, because a table of contents
-                    // that leaves the screen is one you have to go back for.
-                    // Only the EDGE it is pinned to changed.
-                    Color.clear.frame(height: 0)
-                        .onAppear { briefScroll = proxy }
-                        .onDisappear { briefScroll = nil }
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: DS.Space.s4) {
-                            ForEach(turns) { turn in
-                                convoTurn(question: turn.question,
-                                          agent: turn.keyed ? turn.agent : nil) {
-                                    VStack(alignment: .leading, spacing: DS.Space.s1) {
-                                        GenRender(id: "root", els: turn.els)
-                                            .environment(\.genAgentAnswerContext, true)
-                                            .environment(\.genAskRequest, askFromAnswer)
-                                            // Mac polish (2026-07-28): applied
-                                            // ONCE at the root rather than
-                                            // inside GenRenderer's own
-                                            // recursive component switch —
-                                            // .textSelection is an environment
-                                            // value, so it cascades to every
-                                            // Text the whole document tree
-                                            // renders without adding any new
-                                            // nesting depth to a view already
-                                            // erased via AnyView for exactly
-                                            // that stack-depth reason.
-                                            .textSelection(.enabled)
-                                        // THE RECEIPT SITS UNDER THE ANSWER
-                                        // (prd §575, 2026-09-02). It led the
-                                        // turn from 2026-08-31 so the mark
-                                        // would say who wrote it before you
-                                        // read it — and the 36pt disc in the
-                                        // header does that now, larger, and
-                                        // from the first frame rather than at
-                                        // the settle. What is left here is the
-                                        // part the disc cannot say and which
-                                        // is only true once the answer exists:
-                                        // what was actually DONE to make it.
-                                        // That belongs after the thing it
-                                        // describes, in the quiet voice, the
-                                        // way a source line does.
-                                        if !turn.failed {
-                                            provenanceBadge(keyed: turn.keyed,
-                                                            agent: turn.agent,
-                                                            searchedWeb: turn.searchedWeb,
-                                                            imagesSeen: turn.imagesSeen,
-                                                            pagesRead: turn.pagesRead,
-                                                            toolRounds: turn.toolRounds,
-                                                            model: turn.model,
-                                                            found: turn.found)
-                                                .padding(.top, DS.Space.s1)
-                                        }
-                                    }
-                                }
-                                // Each turn wears the cap ITS doc earns
-                                // (§274): a front-page doc gets the wide
-                                // column its two-column layout needs, prose
-                                // keeps the reading column — 1040pt lines
-                                // are bad typography, and most answers are
-                                // prose. `GenFrontPage.qualifies` is the
-                                // same test the renderer's own column split
-                                // consults, so the cap and the layout can't
-                                // disagree.
-                                .dsAdaptiveContentWidth(
-                                    GenFrontPage.qualifies(turn.els) ? .wide : .reading)
-                            }
-                            if answering {
-                                // `animateIn` is the question LIFT — the felt
-                                // hand-off from field to answer, right for a
-                                // typed ask and wrong for a handoff whose
-                                // header is already standing in the exact place
-                                // it would slide up to (PERF 2026-08-21, see
-                                // `risingFramePainted`).
-                                //
-                                // `turns.isEmpty` bounds it to the turn the
-                                // rising frame actually scaffolded — its own
-                                // gate is the same condition. Without that, the
-                                // flag outlives its turn and a TYPED follow-up
-                                // asked from inside the conversation silently
-                                // loses the lift, which is the one place that
-                                // gesture means exactly what it was built to
-                                // mean.
-                                // A FOUND turn wears no header (2026-08-31,
-                                // reported: "shows the question twice when
-                                // its searching"). THE DRAFT SURVIVES A FIND
-                                // on purpose (`runFind()`, 2026-08-13) — the
-                                // field keeps the words so the scope chips
-                                // stay live for refinement — which means the
-                                // query is already sitting right there, still
-                                // editable, the moment this header would also
-                                // print it above the results. Ask has no such
-                                // echo (the field clears), so its header is
-                                // the only place the question appears — this
-                                // is scoped to the live turn's OWN state, not
-                                // `convoTurn`'s general contract, because a
-                                // settled find scrolled into history has long
-                                // since lost its field echo (the draft moved
-                                // on) and needs the header to say what it was.
-                                convoTurn(question: foundCurrent ? "" : currentQuestion,
-                                          animateIn: !(risingFramePainted && turns.isEmpty),
-                                          agent: keyedCurrent
-                                              ? (askProvider ?? AgentKey.active)?.agent : nil,
-                                          // The head-rung name stands only
-                                          // while the document is genuinely
-                                          // empty — the same gate the skeleton
-                                          // takes, for the same 2026-08-14
-                                          // reason: `inFlight` is cleared at
-                                          // the settle while the brief paints
-                                          // its corpus half seconds earlier,
-                                          // so reading it alone leaves a 40pt
-                                          // agent name standing over an answer
-                                          // that has already arrived.
-                                          waiting: inFlight && answerStream.els.isEmpty) {
-                                    VStack(alignment: .leading, spacing: DS.Space.s2) {
-                                        // The wait, drawn as the SHAPE of the
-                                        // answer coming (2026-07-31). A
-                                        // breathing berry stood here from
-                                        // 2026-07-13 — and the brief takes
-                                        // several real seconds to assemble
-                                        // (measured: the on-device model read
-                                        // alone is ~2.1s), which made this the
-                                        // longest, most visible logo moment in
-                                        // the app, inside the one screen the
-                                        // user ruled it out of ("i like our
-                                        // logo in the search / whisper bar,
-                                        // but not inside the daily brief
-                                        // itself"). Skeleton rows are the
-                                        // app's own loading grammar
-                                        // (`GenSkeletonRow`, what a streaming
-                                        // module already shows before its line
-                                        // lands), so the wait now says "an
-                                        // answer is arriving, here's its
-                                        // shape" instead of "a brand is
-                                        // thinking" — which is also what the
-                                        // build brief asked for all along: no
-                                        // thinking indicators, agency renders
-                                        // as results.
-                                        //
-                                        // THREE shapes, not one (2026-08-09,
-                                        // user: "i'd rather see it look like
-                                        // generative UI preparing to
-                                        // populate") — a short lede-shaped
-                                        // line, a tall hero-shaped block, then
-                                        // note-shaped rows, echoing the real
-                                        // brief's own layout (`DayLede` →
-                                        // `MoneyHero`/`TagMap` → `DayNotes`)
-                                        // rather than one undifferentiated
-                                        // rectangle. Each pulses on its own
-                                        // clock (`GenSkeletonPulse`), so the
-                                        // group breathes like something is
-                                        // actually assembling.
-                                        //
-                                        // Gated on an EMPTY stream, not on
-                                        // `inFlight` alone (2026-08-14).
-                                        // `inFlight` is only cleared at the
-                                        // settle, while the brief paints its
-                                        // corpus half seconds earlier — so
-                                        // the skeleton went on standing ABOVE
-                                        // a document that had already
-                                        // arrived, pushing the real lede down
-                                        // the screen behind four pulsing
-                                        // placeholders for whatever was still
-                                        // out. The skeleton is the shape of
-                                        // an answer that hasn't come; the
-                                        // moment any of it has, it has done
-                                        // its job and the content speaks for
-                                        // itself.
-                                        if inFlight, answerStream.els.isEmpty {
-                                            answerSkeleton
-                                        }
-                                        GenRender(id: "root", els: answerStream.els)
-                                            .textSelection(.enabled)
-                                            .environment(\.genProseStreaming, proseStreaming)
-                                            // Cited rows glint once as they
-                                            // mount — "I went and found
-                                            // these", as a gesture. Live
-                                            // answer only, so a scroll-back
-                                            // never replays it.
-                                            .environment(\.genCitationGlint, true)
-                                            .environment(\.genAgentAnswerContext, true)
-                                            .environment(\.genAskRequest, askFromAnswer)
-                                            // A section header is a door to
-                                            // the room it summarises (prd
-                                            // §386j) — the brief as the app's
-                                            // index. Same landing the panel's
-                                            // tiles take, so "open a room"
-                                            // means one thing everywhere.
-                                            .environment(\.genRoomOpen) { source in
-                                                ChipMemory.visited(source)
-                                                filter.source = source
-                                                filter.tag = "All"
-                                                close()
-                                            }
-                                        // The receipt, under the answer it
-                                        // describes (prd §575) — see the
-                                        // settled turn's own note. It says
-                                        // what was DONE, which is only knowable
-                                        // once the answer exists; who is
-                                        // answering is the header's disc and
-                                        // has been on screen since the first
-                                        // frame.
-                                        if !inFlight, !answerFailed {
-                                            provenanceBadge(keyed: keyedCurrent,
-                                                            agent: (askProvider ?? AgentKey.active)?.agent,
-                                                            searchedWeb: keyedSearchedWeb,
-                                                            imagesSeen: keyedImagesSeen,
-                                                            pagesRead: keyedPagesRead,
-                                                            toolRounds: keyedToolRounds,
-                                                            model: keyedModel,
-                                                            found: foundCurrent,
-                                                            waited: askWaitSeconds)
-                                                .padding(.top, DS.Space.s1)
-                                        }
-                                        if !proseStreaming, !inFlight {
-                                            // FlowRow, not HStack (2026-07-21):
-                                            // three chips don't fit one line once
-                                            // Keep wears its long proactive label
-                                            // ("You ask this a lot — keep it?"),
-                                            // and the HStack squeezed them until
-                                            // "Try with your key" broke across two
-                                            // lines mid-phrase. Chips wrap as whole
-                                            // chips now, the way the ask chips
-                                            // already do.
-                                            FlowRow(spacing: DS.Space.s2) {
-                                                // The standing-ask verb (docs/agent-brief.md
-                                                // ruling 5/12): mints a KEPT ASK — a pill on
-                                                // the agent's rest screen that recomposes
-                                                // fresh every open, wearing a dot when its
-                                                // answer changed. Only offered when the
-                                                // question matches a real, deterministic
-                                                // composer (KeptAskComposers) — no dead
-                                                // control once kept.
-                                                if let kind = keepableAskKind {
-                                                    // Proactive minting (2026-07-20): asked
-                                                    // often enough (AskMemory.askedOften, the
-                                                    // neglect counter's inverse), the quiet
-                                                    // pill upgrades to a prompt that names WHY
-                                                    // — same action, same component, just the
-                                                    // label earning the attention a repeated
-                                                    // ask deserves.
-                                                    let askedOften = AskMemory.askedOften(kind)
-                                                    Button {
-                                                        DSHaptic.success()
-                                                        KeptAskStore.shared.keep(kind, title: currentQuestion)
-                                                        if !firstKeptAskDone {
-                                                            firstKeptAskDone = true
-                                                            chrome.flash("Kept — I'll keep it fresh.",
-                                                                         tone: .success)
-                                                        } else {
-                                                            chrome.flash("Kept — it'll stay fresh.",
-                                                                         tone: .success)
-                                                        }
-                                                        // The chip morphs to its own receipt for
-                                                        // a beat before it retires (delight,
-                                                        // 2026-07-21) — Keep earns a felt moment
-                                                        // instead of just vanishing.
-                                                        withAnimation(.spring(response: 0.22, dampingFraction: 0.6)) {
-                                                            keepJustLanded = true
-                                                        }
-                                                        Task { @MainActor in
-                                                            try? await Task.sleep(for: .milliseconds(420))
-                                                            keepableAskKind = nil
-                                                            keepJustLanded = false
-                                                        }
-                                                    } label: {
-                                                        // Tint is reserved for what genuinely
-                                                        // wants attention (design pass
-                                                        // 2026-07-21): the just-landed receipt,
-                                                        // and the proactive "Asked often"
-                                                        // prompt. A plain Keep is a routine save
-                                                        // and sits at neutral — so the row's one
-                                                        // consequential verb (Try with your key,
-                                                        // which sends your things off this
-                                                        // iPhone and spends your own money) can
-                                                        // be the thing that stands out.
-                                                        // A composed SCREEN gets a verb that
-                                                        // names it (2026-07-22) — a bare "Keep"
-                                                        // under the day brief undersold what
-                                                        // keeping would do. "this view", not
-                                                        // "this brief", since §193 (the screen
-                                                        // stopped being a daily brief).
-                                                        Chip(text: keepJustLanded ? "Kept"
-                                                                : (askedOften
-                                                                   ? "Asked often — keep it?"
-                                                                   : (kind == "today" ? "Keep this view" : "Keep")),
-                                                             style: (keepJustLanded || askedOften) ? .tint : .neutral,
-                                                             glyph: keepJustLanded ? "checkmark"
-                                                                : (askedOften ? "sparkles" : "pin.fill"))
-                                                    }
-                                                    .buttonStyle(.plain)
-                                                    .scaleEffect(keepJustLanded ? 1.08 : 1)
-                                                    .disabled(keepJustLanded)
-                                                }
-                                                // Save a settled synthesis as a note
-                                                // (2026-07-12; relabelled 2026-07-19 — "Keep"
-                                                // above is a different verb now): lands the
-                                                // recap in the corpus so it isn't ephemeral.
-                                                // The consent tap IS the save, like the parse
-                                                // card's save-on-send.
-                                                if !keptCurrent, currentStreamed,
-                                                   let text = keepableText(answerStream.els) {
-                                                    Button {
-                                                        DSHaptic.tap()
-                                                        keptCurrent = true
-                                                        onKeepAnswer(text)
-                                                    } label: {
-                                                        Chip(text: "Save as a note", style: .neutral,
-                                                             glyph: "tray.and.arrow.down")
-                                                    }
-                                                    .buttonStyle(.plain)
-                                                }
-                                                // "Try with your key" retired 2026-08-30
-                                                // (user: "the 'try your key' to go away")
-                                                // — "Ask <agent>" is the one door to a
-                                                // keyed answer now, tapped BEFORE the
-                                                // free answer exists rather than offered
-                                                // as a second thought after it. A failed
-                                                // automatic keyed retry (askWithKey()'s
-                                                // `.failure` case) has no manual retry
-                                                // here anymore; re-asking with the "Ask
-                                                // <agent>" chip is the way back.
-                                                // The related follow-up (§177) — the next
-                                                // natural ask, offered where the thumb is,
-                                                // teaching the vocabulary at the moment it's
-                                                // most wanted. A bare tap sends it, the same
-                                                // as any chip; neutral, so it never competes
-                                                // with the row's real verbs. Suppressed on
-                                                // the brief LANDING (prd §181): the docked
-                                                // suggestion row below already carries the
-                                                // next asks (the away chip among them), so
-                                                // showing it here too would double it.
-                                                // THE FOLLOW-UP CHIP IS NOT
-                                                // DRAWN (prd §575, 2026-09-02).
-                                                // §177 offered one related next
-                                                // ask under every settled
-                                                // answer, and it is a
-                                                // PREPOPULATED QUESTION — the
-                                                // exact class §543 deleted from
-                                                // the rest surface, arriving
-                                                // late rather than early. It
-                                                // survived that sweep only
-                                                // because §543 audited the
-                                                // chips a person sees BEFORE
-                                                // asking; the reasoning ("four
-                                                // doors onto two documents", a
-                                                // tap whose value you cannot
-                                                // know until you spend it)
-                                                // reads identically here.
-                                                //
-                                                // It also cost this row its
-                                                // weighting: three same-shaped
-                                                // neutral chips are three peers,
-                                                // and two of them are verbs on
-                                                // the answer you are reading
-                                                // while the third is a
-                                                // different question. Keep and
-                                                // Save as a note are what is
-                                                // left, which is one act per
-                                                // consequence.
-                                                //
-                                                // DORMANT, NOT DELETED (the
-                                                // §386a shape): `nextAsk`, its
-                                                // state and every assignment
-                                                // stay exactly as they are, so
-                                                // re-admitting it is one mount
-                                                // away and the deterministic map
-                                                // that is the interesting half
-                                                // of §177 is not thrown away.
-                                                // It costs nothing per answer —
-                                                // string matches over a corpus
-                                                // that is already fetched.
-                                            }
-                                            .padding(.horizontal, DS.Space.s4)
-                                            // One settled VERB ROW (2026-07-20):
-                                            // clear air above and below so
-                                            // Keep / Save / Try-with-key read
-                                            // as the answer's own action band,
-                                            // not trailing content stuck to
-                                            // the last row.
-                                            .padding(.top, DS.Space.s3)
-                                            .padding(.bottom, DS.Space.s2)
-                                        }
-                                    }
-                                }
-                                // Same per-turn cap as the settled turns
-                                // above (§274). Live, this flips reading→wide
-                                // the moment the root line's chapters parse —
-                                // which is the doc's first line, so it lands
-                                // before any module has content to move.
-                                .dsAdaptiveContentWidth(
-                                    GenFrontPage.qualifies(answerStream.els) ? .wide : .reading)
-                            }
-                            // THE PANEL DOES NOT DOCK HERE (2026-08-15, prd
-                            // §386e, user: "there is duplicative stuff on the
-                            // composer … there are two of the same wallet
-                            // charts etc. all the old stuff is below it at the
-                            // bottom").
-                            //
-                            // §386d docked `AgentOpenBoard` under the brief so
-                            // the §336 reversal would not leave the panel
-                            // unreachable. That was the wrong half to keep:
-                            // the panel REPEATS the brief. The brief's money
-                            // hero is a wallet balance curve and the panel's
-                            // `walletCurve` tile is a wallet balance curve;
-                            // the brief's `flow` module is the sankey and the
-                            // panel's `walletFlow` card is the same sankey;
-                            // the brief's themes map and the panel's per-room
-                            // treemaps are the same shapes over the same rows.
-                            // Stacking them put every one of those on screen
-                            // twice, with the second copy reading as leftovers
-                            // from the surface this session spent four rulings
-                            // collapsing.
-                            //
-                            // THE DOCK IS GONE FOR GOOD (prd §386k, user:
-                            // "there is duplicate stuff on the composer wtf").
-                            // §386j made the map a real doc module and this
-                            // session forgot to remove the docked copy — the
-                            // §386e duplication, FOURTH instance, and the
-                            // final proof the §386f allowlist was still a
-                            // second rendering path waiting to disagree. The
-                            // brief is the landing; nothing rides below it,
-                            // and any figure that earns the screen earns it
-                            // as a module.
-                            Color.clear.frame(height: 1).id("bottom")
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    // PULL TO REFRESH THE BRIEF (prd §386j). It is the app's
-                    // daily screen now, and the daily-screen gesture on iOS is
-                    // a pull — without it the only way to re-read the day was
-                    // to lower the agent and raise it again.
-                    //
-                    // Brief only: an ordinary answer is a REPLY to a question
-                    // that was already asked, and re-running it on a pull
-                    // would either repeat itself or quietly answer a different
-                    // question than the one on screen. `refreshable` attaches
-                    // to the scroll, so the gesture belongs to the document.
-                    .refreshable {
-                        guard briefLanding else { return }
-                        // Straight through `commit()`'s own door rather than a
-                        // shortcut — one composer, one path (§132), so a
-                        // pulled brief and a typed one can never differ.
-                        // The holdings window is what makes a re-read return
-                        // the same number (§216's 10-minute cache) — a pull
-                        // that re-composed over a cached portfolio would
-                        // redraw an identical brief and read as broken.
-                        await WalletIngest.invalidateHoldingsCache()
-                        draft = TodayBrief.title
-                        commit()
-                    }
-                    // SCROLLSPY (prd §386j) — the heading closest to the top
-                    // of the viewport that hasn't scrolled off it. A heading
-                    // just below the fold is where you are ABOUT to be, not
-                    // where you are, so the reader takes the last one at or
-                    // above the anchor and falls back to the first heading
-                    // while the document is still below it.
-                    .onPreferenceChange(GenSectionOffsetKey.self) { offsets in
-                        guard !offsets.isEmpty else { return }
-                        let anchor: CGFloat = 220
-                        let above = offsets.filter { $0.value <= anchor }
-                        let pick = above.max { $0.value < $1.value }?.key
-                            ?? offsets.min { $0.value < $1.value }?.key
-                        if let pick, pick != activeSection {
-                            withAnimation(DS.Motion.standard) { activeSection = pick }
-                        }
-                    }
-                    // The 300pt cap made sense hugging a SHEET's height; on
-                    // the full-screen agent (ruling 3) there's a whole screen
-                    // to use instead.
-                    .frame(maxHeight: .infinity)
-                    // The conversation settles at the BOTTOM (design pass
-                    // 2026-07-21). Top-anchored, a one-answer conversation
-                    // left more than half the screen empty below it and put
-                    // the answer's own verbs — Keep, Save, Try with your key
-                    // — at the far top of the display, the furthest possible
-                    // point from the thumb that just typed the question. Now
-                    // the answer rises out of the composer it was asked from
-                    // and its verbs land within reach; a long conversation
-                    // still scrolls exactly as before.
-                    // …except on Mac (2026-07-31), where the reason doesn't
-                    // hold. Bottom-anchoring is a THUMB argument: it puts the
-                    // answer's verbs within reach of the hand that just typed
-                    // the question. A Mac has no thumb and a much taller
-                    // surface — the same anchor there starts a fresh answer at
-                    // the bottom edge of a 760pt+ window with a void above it,
-                    // which is a document read from its own footer. A brief
-                    // opens at its masthead instead; a long conversation
-                    // scrolls exactly as before either way.
-                    //
-                    // …and the brief anchors to its top on EVERY platform
-                    // (2026-08-03, user: "when it finishes, it leaves you at
-                    // the bottom of the page. It should keep you at the top").
-                    // The Mac comment above already had the argument; it was
-                    // scoped to the wrong axis. Bottom-anchoring is a REPLY
-                    // argument, not a Mac-vs-phone one — it puts a conversational
-                    // answer's verbs under the thumb that just typed the
-                    // question. The brief isn't a reply: it's a composed
-                    // document with a masthead, an eyebrow naming its window,
-                    // and a money hero as its crown, and a document read from
-                    // its own footer is the same mistake on a phone as on a
-                    // Mac. Every other answer keeps the thumb rule exactly.
-                    .defaultScrollAnchor(DS.isMac || documentInView ? .top : .bottom)
-                    // `.wide` is the CONTAINER's cap, not any turn's (§274):
-                    // each turn caps itself just above — prose at the reading
-                    // column, a front-page doc at the wide one — so this
-                    // outer bound only has to be as wide as the widest turn
-                    // can ever be. Leaving it at `.reading` would clamp the
-                    // front page back to one column with extra steps.
-                    .dsAdaptiveContentWidth(.wide)
-                    // Tapping empty space puts the keyboard away WITHOUT
-                    // lowering the agent — a separate action from the ✕/⌄
-                    // exits (ruling 7). Without this, the only tap that
-                    // reached past the keyboard was wired to lowering the
-                    // whole agent, so asking something and wanting to just
-                    // SEE the answer meant leaving the agent entirely to get
-                    // there (found and fixed in the throwaway prototype,
-                    // ported verbatim). Buttons inside (Keep, chips, a
-                    // drill-down row) still take their own tap first.
-                    .onTapGesture { fieldFocused = false }
-                    // The completion tick (delight, 2026-07-22) — a single
-                    // SOFT haptic when the brief finishes visibly assembling,
-                    // distinct from the louder "real content landed" tick that
-                    // already fires the moment the doc is COMPOSED (well
-                    // before the typewriter finishes painting it — see the
-                    // settle block's own `DSHaptic.success()`). `.selection()`
-                    // on purpose: `.success()` again here would be a second,
-                    // redundant buzz for the same answer. Scoped to the Today
-                    // brief only — every other answer's completion already
-                    // reads as "done" the moment the settle haptic fires, so
-                    // adding a second tick there would be noise, not delight.
-                    .onChange(of: answerStream.completed) { _, done in
-                        guard done, TodayBrief.matches(currentQuestion) else { return }
-                        DSHaptic.selection()
-                    }
-                    // Follow the typewriter down as prose arrives — so a long
-                    // answer keeps its newest line in view instead of writing
-                    // itself off the bottom of the screen.
-                    //
-                    // NOT for the brief (2026-08-03). The anchor above is only
-                    // half the fix: a top anchor sets where the document STARTS,
-                    // and this handler then dragged the reader away from it on
-                    // every tick, so the brief scrolled itself past its own
-                    // masthead, hero and themes map and parked at the last thing
-                    // it composed. Following the cursor is right for a reply
-                    // being written to you and wrong for a document being
-                    // assembled for you — the brief is read top-down, and the
-                    // modules that arrive last are the least important ones
-                    // (that's the compose order). It stays put now; scrolling
-                    // down through it is the reader's own gesture.
-                    // A keyboard over an answer must always have a way out
-                    // (2026-08-11). The re-focus rule at settle decides whether
-                    // one APPEARS — a typed ask keeps it, a tapped chip no
-                    // longer raises it — but a keyboard raised any other way (a
-                    // typed ask whose answer is longer than the space left, a
-                    // tap on the field before the answer lands) would still sit
-                    // over the document with nothing to dismiss it: this scroll
-                    // view had no dismissal at all, and the composer's only
-                    // tap-to-unfocus is on a different surface. Dragging the
-                    // answer now clears it, which is the gesture a person
-                    // already makes when they are trying to read past it.
-                    .scrollDismissesKeyboard(.interactively)
-                    .onChange(of: answerStream.progress) { _, _ in
-                        // A DOCUMENT does not follow its own typewriter down
-                        // (§288, extended to the wallet by §543) — it would
-                        // undo the top anchor one frame after it was set.
-                        guard !documentInView else { return }
-                        withAnimation(DS.Motion.standard) { proxy.scrollTo("bottom", anchor: .bottom) }
-                    }
-                    .onChange(of: turns.count) { _, _ in
-                        withAnimation(DS.Motion.standard) { proxy.scrollTo("bottom", anchor: .bottom) }
-                    }
-                    // The deferred half of the ask-time keyed tap (prd §242):
-                    // fires strictly AFTER commit()'s own Task has fully
-                    // settled (inFlight true → false) and returned, rather
-                    // than calling askWithKey() from inside that Task —
-                    // which would race its own later settle work
-                    // (keepableAskKind, nextAsk) against askWithKey()'s state
-                    // writes. Watching the value drop from the OUTSIDE, once
-                    // SwiftUI has already delivered the settled state, avoids
-                    // that race entirely.
-                    .onChange(of: inFlight) { was, now in
-                        guard was, !now, pendingKeyedFollowUp else { return }
-                        pendingKeyedFollowUp = false
-                        askWithKey()
-                    }
-                    }   // the document column
-                }
-                .padding(.top, DS.Space.s2)
-                // THE DOCUMENT ENDS ABOVE THE CHROME (2026-08-15). This scroll
-                // had no bottom inset at all, so the last section rendered
-                // UNDER the input bar and the reader could not scroll it clear
-                // — reported on a device as the closing card being sliced. It
-                // was already wrong before this pass and the nav dock below
-                // makes the overlap taller, so the inset lands with the move
-                // rather than after the next report. `safeAreaInset` and not
-                // padding: it extends the SCROLLABLE region, so the last card
-                // can actually travel above the bar instead of merely starting
-                // higher.
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    Color.clear.frame(height: DS.Space.s4)
-                }
-                // …AND IT DISSOLVES INTO THE CHROME RATHER THAN BEING CUT BY
-                // IT (2026-08-22, prd §445, user: "the bottom of the screen
-                // has a hard black box you can see"). The inset above gives
-                // the last card somewhere to travel to; it says nothing about
-                // the EDGE, which stayed a hard horizontal clip straight
-                // across whatever card happened to be crossing it. On a black
-                // page with two chips and the field floating below it, a card
-                // guillotined mid-sentence does not read as "the document
-                // continues" — it reads as a black rectangle laid over the
-                // document, which is what was reported.
-                //
-                // An overlay, deliberately not a `.mask`: a mask composites
-                // the whole scrolling document into an offscreen layer on
-                // every frame, which is a real cost on the one surface this
-                // session is making smoother. A gradient drawn on top is one
-                // more layer and no offscreen pass — and it can be exact here
-                // because the ground behind this surface is always the flat
-                // `DS.page` colour (`RootShell`'s agent layer paints the
-                // colour, never `DSPageBackground`'s photo), so the fade lands
-                // on precisely the tone it is fading into.
-                .overlay(alignment: .bottom) {
-                    LinearGradient(colors: [DS.page.opacity(0), DS.page],
-                                   startPoint: .top, endPoint: .bottom)
-                        .frame(height: 40)
-                        .allowsHitTesting(false)
-                }
-            }
-
-            // Recording — the red dot, the clock, and the words arriving live.
-            // Save keeps the piece; the chevron discards it.
-            if isRecording {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    HStack(spacing: DS.Space.s2) {
-                        Circle().fill(DS.destructive).frame(width: 8, height: 8)
-                            .opacity(0.4 + 0.6 * abs(sin(voice.elapsed * 2)))
-                        Text(String(format: "%d:%02d", Int(voice.elapsed) / 60, Int(voice.elapsed) % 60))
-                            .dsText(.label12).foregroundStyle(DS.textSecondary)
-                            .contentTransition(.numericText())
-                        Text("Listening")
-                            .dsText(.label12).foregroundStyle(DS.textTertiary)
-                        Spacer()
-                    }
-                    if !voice.transcript.isEmpty {
-                        Text(voice.transcript)
-                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                            .lineLimit(4)
-                    }
-                }
-                .padding(DS.Space.s3)
-                .dsWell()
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.top, DS.Space.s3)
-                .animation(DS.Motion.standard, value: voice.elapsed)
-            }
+            if isRecording { recordingBand }
             if voice.phase == .denied {
                 Text("No mic access — allow Casberi in \(DS.settingsAppName)")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
@@ -3076,105 +1723,15 @@ struct Composer: View {
                     .padding(.top, DS.Space.s2)
             }
 
-              }
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .padding(.top, DS.Space.s3)
-
-            // The rest screen settles at the BOTTOM (2026-07-31) — the same
-            // ruling the conversation already keeps ("the answer rises out of
-            // the composer it was asked from and its verbs land within
-            // reach"). At rest there was no expanding element at all, so the
-            // greeting, the chips and the bar floated as one block with the
-            // whole lower screen empty beneath them, and the input bar — whose
-            // own doc has said "pinned to the bottom" since it hugged a sheet
-            // — was nowhere near it. Only at rest: once an answer exists the
-            // conversation's own scroll is the expanding element.
-            // The rest screen settles at the BOTTOM (2026-07-31).
-            if restChrome(keepBrief: false) {
-                Spacer(minLength: DS.Space.s4)
-            }
-            // THE AGENT PANEL IS DELETED (2026-08-15, prd §386p, user: "we
-            // don't need it"). It was §334's bento of one figure per
-            // connected room, and it was what a bare bar tap used to show —
-            // until §386d made that tap open the brief, after which it had no
-            // door at all. The brief draws the figures worth seeing, ranked
-            // and edited; the panel was the older unranked version of the
-            // same idea, and it cost a ~40-room composition on every open to
-            // fill a screen nobody could reach.
-            // The day, as the room's lead — the FALLBACK now (§332). It stood
-            // in for a synthesis the open couldn't show; the board is that
-            // synthesis, so the two never appear together.
-            agentChoiceHeader
-            // `agentsLink` MOVED INTO THE ASK PANEL'S HEAD (prd §575). §550
-            // put it "on the empty chat, where 'who is going to answer this?'
-            // is the live question" — which is exactly the panel, so this is
-            // that ruling drawn closer rather than reversed. It kept its own
-            // gate (`AgentKey.configured.isEmpty` plus `restChrome`), so it
-            // still retires the moment an agent exists.
-            //
-            // The Bankr banner stays HERE, above, and the ordering argument
-            // survives the move: that one names a single seat and its
-            // capability, this one names the category. They are simply no
-            // longer adjacent, which costs nothing — neither was reading as a
-            // pair.
-            // NOTHING IS PREPOPULATED ANY MORE (prd §543, 2026-08-31, user:
-            // "i don't think the prepopulated things are helpful … we honestly
-            // just delete all the prepopulated stuff"). Gone in one pass: the
-            // three launcher chips (Wallet / Work / Day), the observation chip
-            // that was all `askChips` still rendered, the lone category chip,
-            // and `dayCard`. The reasoning that survives every one of them is
-            // that they were four doors onto two documents — Work ran the SAME
-            // composer as Day filtered to one category, the day card and the
-            // category chip sent byte-identical queries, and Wallet offered a
-            // room the feed is one tap from. Deleting a chip deletes no
-            // ANSWER: every one of those questions is still typed, still
-            // deterministic, still composed by the same `KeptAskComposers`
-            // kind.
-            //
-            // THE KEPT PILLS COME BACK (§386c reversed, deliberately). They
-            // were removed as part of the same chips-for-chips' sake sweep,
-            // and that read was right while they sat in a row of five
-            // identical-looking suggestions. With every suggested chip gone
-            // they are the opposite thing: the only content on this surface,
-            // and there only because the person pinned it. That also repairs
-            // an honesty hole this pass would otherwise have opened — "Keep"
-            // on an answer would mint a standing question with nowhere to
-            // appear, which is a control that does nothing (§83).
-            keptAskPills
-            // THE SEND-TO ROW STANDS DOWN ON THE BLUE (prd §577b). Reminders,
-            // Calendar and Notes are destinations for a NOTE, and the ask
-            // surface is where a question goes to an agent — so on that screen
-            // they were dark chips on the tint offering to file the sentence
-            // you are writing as a to-do. Find is already a face on the rail,
-            // which is the only part of this row the ask surface wants.
-            if !showsRail { takeChips }
-            // The brief's table of contents (2026-08-15) — the LAST band
-            // before the field, where the mockup put it and where the
-            // composer's own stacking already sends a chip row.
-            briefNav
-            // THE ASK SURFACE STANDS IN PLACE OF THE INPUT BAR (prd §577).
-            // Not beside it: the rail has taken the capsule's picking job and
-            // the pill has taken its sending job, so drawing both would put
-            // two pickers and two sends on one screen — the exact duplication
-            // §543 collapsed into the capsule in the first place.
-            //
-            // Every other band above is already standing down through
-            // `restChrome`'s `!onTint` term, so this is the one place the
-            // swap has to be spelled.
-            // ONE CONTAINER, ALWAYS (prd §577c). This was `if asking {
-            // askSurface } else { inputBar }`, and the field lived in BOTH —
-            // so the first keystroke moved it to a different position in the
-            // view tree, SwiftUI destroyed and rebuilt the UITextView, and a
-            // device hung until the watchdog killed it (0x8BADF00D, stack in
-            // `TextViewAdaptor.makeUIView`). The field now has ONE identity
-            // for the life of the surface and never moves.
-            if workingClock {
-                askWorking
-            } else {
-                inputBar
-            }
+            agentFoot
         }
-        .frame(maxWidth: .infinity, alignment: .top)
+        // THE SURFACE FILLS (prd §581). It used to HUG, which was right when
+        // the body was a stack of chrome bands and is wrong now: the terminal
+        // is paper over a foot, so at rest — blank paper — a hugging column
+        // floats the invitation and the keys in the middle of the screen
+        // instead of standing them on the bottom edge. Filling is what makes
+        // the paper's `Spacer` push the foot down.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         // Report the content's natural height so the hosting sheet hugs it.
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { h in
             if embedded { onHeight(h) }
@@ -3210,18 +1767,16 @@ struct Composer: View {
         // cards a real floor to sit on. Opaque now too — the 0.97 was
         // letting the feed glow through a surface that claims to be a room.
         // THE BLUE (prd §577) — under the surface's own ground rather than
-        // replacing it, and reaching past the safe areas, because a tint that
-        // stops at the status bar reads as a card that failed to fill rather
-        // than as the screen being in a state. It is the only saturated block
-        // on the surface while it is up, which is §563's budget kept: there is
-        // nothing else here to spend colour on.
-        // The tint is published to `ShellChrome` and painted by `RootShell`
-        // (prd §577b) — see `ShellChrome.askOnTint` for why a background here
-        // could never reach the status bar or the home indicator.
-        .onChange(of: onTint, initial: true) { _, now in
-            guard embedded else { return }
-            chrome.askOnTint = now
-        }
+        // THE BLUE GROUND IS GONE (prd §581). §577 turned the whole surface
+        // `DS.tint` while a keyed ask was out, and §577b had already pulled it
+        // back to the wait alone after the user's "we really went overkill with
+        // all this blue". The terminal retires the last of it: the wait is a
+        // white stopwatch on ink, so the ONE saturated block on this surface is
+        // the armed verb in the foot, which is §563's budget spent where it
+        // says something you can act on. `askOnTint` stays wired and is written
+        // false, because RootShell still reads it and a stale true would leave
+        // a blue screen behind a surface that no longer paints one.
+        .onAppear { if embedded { chrome.askOnTint = false } }
         .onDisappear { if embedded { chrome.askOnTint = false } }
         .background(embedded ? Color.clear : DS.inkGround, in: bubbleShape)
         .clipShape(embedded ? AnyShape(Rectangle()) : AnyShape(bubbleShape))
@@ -3487,6 +2042,329 @@ struct Composer: View {
         // permanently-looping motion, which the motion law only ever
         // sanctions while something real is pending; nothing was.
     }
+
+    // MARK: - The roll (prd §581)
+
+    /// Every answer, oldest above newest, on one column of paper.
+    ///
+    /// **A ROLL, NOT A THREAD.** There are no bubbles, no alternating sides
+    /// and no per-turn chrome — one column of full-size answers separated by
+    /// dated rules, with the newest at the bottom where the foot is, which is
+    /// how a printed roll reads and is exactly what a chat does not look like.
+    /// Scrolling up reaches last week's question; the divider carries the date,
+    /// so paging back through a month is legible with no list to open.
+    ///
+    /// The sheet §580 would have needed is deliberately not built: a sheet over
+    /// a surface that itself rose from a button reads as a stack of trays
+    /// (user, 2026-09-03 — "a sheet on a window that came from the fab just
+    /// looks weird"). The cost of the roll, stated: the current answer sits at
+    /// the bottom of a scroll view rather than in a fixed region, so the paper
+    /// scrolls where the tiled version did not.
+    @ViewBuilder
+    private var terminalRoll: some View {
+        if turns.isEmpty, !answering, !risingHandoff {
+            // BLANK PAPER. Nothing is drawn until you ask — no greeting, no
+            // badge, no offer, and no destination's mark blown up as
+            // decoration (user, 2026-09-03: the logo is not needed "until
+            // user selects it", and then not even then, because the lit key
+            // in the foot already says who).
+            Spacer(minLength: 0)
+        } else {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(turns.enumerated()), id: \.element.id) { index, turn in
+                            if index > 0 { AgentTurnDivider(landed: turn.landedAt) }
+                            turnBlock(question: turn.question, els: turn.els,
+                                      failed: turn.failed, keyed: turn.keyed,
+                                      agent: turn.agent, found: turn.found,
+                                      searchedWeb: turn.searchedWeb,
+                                      imagesSeen: turn.imagesSeen,
+                                      pagesRead: turn.pagesRead,
+                                      toolRounds: turn.toolRounds,
+                                      model: turn.model, waited: nil, live: false)
+                        }
+                        if answering || risingHandoff {
+                            if !turns.isEmpty { AgentTurnDivider(landed: .now) }
+                            liveBlock
+                        }
+                        Color.clear.frame(height: 1).id("bottom")
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s3)
+                }
+                .refreshable {
+                    guard briefLanding else { return }
+                    await WalletIngest.invalidateHoldingsCache()
+                    draft = TodayBrief.title
+                    commit()
+                }
+                // A reply settles at the bottom, under the thumb; a DOCUMENT
+                // (a brief, a Find) anchors to its own top, because it is
+                // read from the beginning (§288's ruling, unchanged).
+                .defaultScrollAnchor(DS.isMac || documentInView ? .top : .bottom)
+                .scrollDismissesKeyboard(.interactively)
+                .onTapGesture { fieldFocused = false }
+                .onChange(of: answerStream.progress) { _, _ in
+                    guard !documentInView else { return }
+                    withAnimation(DS.Motion.standard) { proxy.scrollTo("bottom", anchor: .bottom) }
+                }
+                .onChange(of: turns.count) { _, _ in
+                    withAnimation(DS.Motion.standard) { proxy.scrollTo("bottom", anchor: .bottom) }
+                }
+                .onChange(of: answerStream.completed) { _, done in
+                    guard done, TodayBrief.matches(currentQuestion) else { return }
+                    DSHaptic.selection()
+                }
+                .onChange(of: inFlight) { was, now in
+                    guard was, !now, pendingKeyedFollowUp else { return }
+                    pendingKeyedFollowUp = false
+                    askWithKey()
+                }
+                .frame(maxHeight: .infinity)
+                .overlay(alignment: .bottom) {
+                    LinearGradient(colors: [DS.page.opacity(0), DS.page],
+                                   startPoint: .top, endPoint: .bottom)
+                        .frame(height: 40)
+                        .allowsHitTesting(false)
+                }
+            }
+        }
+    }
+
+    /// The turn being answered — the stopwatch while it runs, the answer once
+    /// it lands.
+    @ViewBuilder
+    private var liveBlock: some View {
+        if inFlight, keyedCurrent, answerStream.els.isEmpty, !currentQuestion.isEmpty {
+            AgentWaitPaper(question: currentQuestion,
+                           elapsed: askWaitSeconds ?? 0,
+                           typical: Int(Self.typicalKeyedWait),
+                           subject: (askProvider ?? AgentKey.active)?.agent)
+        } else {
+            turnBlock(question: foundCurrent ? "" : currentQuestion,
+                      els: answerStream.els,
+                      failed: answerFailed, keyed: keyedCurrent,
+                      agent: (askProvider ?? AgentKey.active)?.agent,
+                      found: foundCurrent,
+                      searchedWeb: keyedSearchedWeb, imagesSeen: keyedImagesSeen,
+                      pagesRead: keyedPagesRead, toolRounds: keyedToolRounds,
+                      model: keyedModel, waited: askWaitSeconds, live: true)
+        }
+    }
+
+    /// One answer on the roll: the question as a caption, the reply, the
+    /// receipt.
+    ///
+    /// **The reply is SET rather than poured** when it is prose and nothing
+    /// else — `AgentReply.prose` recognises that one shape and
+    /// `AgentProseAnswer` gives its first sentence the display rung. A
+    /// document (a brief, a Find, an answer with things attached) keeps going
+    /// through `GenRender`, because there its rows ARE the answer.
+    @ViewBuilder
+    private func turnBlock(question: String, els: GenEls, failed: Bool, keyed: Bool,
+                           agent: String?, found: Bool, searchedWeb: Bool,
+                           imagesSeen: Int, pagesRead: Int, toolRounds: Int,
+                           model: String?, waited: Int?, live: Bool) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            if !question.isEmpty { AgentAskedCaption(question: question) }
+            if live, inFlight, els.isEmpty {
+                answerSkeleton
+            } else if let prose = AgentReply.prose(els) {
+                AgentProseAnswer(text: prose, attention: failed)
+            } else {
+                GenRender(id: "root", els: els)
+                    .textSelection(.enabled)
+                    .environment(\.genProseStreaming, live ? proseStreaming : false)
+                    .environment(\.genCitationGlint, live)
+                    .environment(\.genAgentAnswerContext, true)
+                    .environment(\.genAskRequest, askFromAnswer)
+                    .environment(\.genRoomOpen) { source in
+                        ChipMemory.visited(source)
+                        filter.source = source
+                        filter.tag = "All"
+                        close()
+                    }
+            }
+            if !failed, !(live && inFlight) {
+                provenanceBadge(keyed: keyed, agent: agent, searchedWeb: searchedWeb,
+                                imagesSeen: imagesSeen, pagesRead: pagesRead,
+                                toolRounds: toolRounds, model: model,
+                                found: found, waited: waited)
+            }
+            if live, !proseStreaming, !inFlight { keepVerbs }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // A FRONT PAGE GETS THE WIDE CAP, everything else the reading cap.
+        // One call site now instead of two (prd §581): every turn — settled or
+        // live — is rendered by this one function, so the two can no longer
+        // disagree, which was the whole thing the paired guard was watching
+        // for. A doc with the wide cap and no columns is one file of modules
+        // stretched across a phone; columns under the reading cap are crushed.
+        .dsAdaptiveContentWidth(GenFrontPage.qualifies(els) ? .wide : .reading)
+        .padding(.bottom, DS.Space.s4)
+    }
+
+    /// Keep this ask / Save as a note — the two things you can do with an
+    /// answer, under the answer they belong to rather than in the chrome.
+    @ViewBuilder
+    private var keepVerbs: some View {
+        FlowRow(spacing: DS.Space.s2) {
+            if let kind = keepableAskKind {
+                let askedOften = AskMemory.askedOften(kind)
+                Button {
+                    DSHaptic.success()
+                    KeptAskStore.shared.keep(kind, title: currentQuestion)
+                    chrome.flash(firstKeptAskDone ? String(localized: "Kept — it'll stay fresh.")
+                                                  : String(localized: "Kept — I'll keep it fresh."),
+                                 tone: .success)
+                    firstKeptAskDone = true
+                    withAnimation(.spring(response: 0.22, dampingFraction: 0.6)) {
+                        keepJustLanded = true
+                    }
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(420))
+                        keepableAskKind = nil
+                        keepJustLanded = false
+                    }
+                } label: {
+                    Chip(text: keepJustLanded ? String(localized: "Kept")
+                            : (askedOften ? String(localized: "Asked often — keep it?")
+                               : (kind == "today" ? String(localized: "Keep this view")
+                                  : String(localized: "Keep"))),
+                         style: (keepJustLanded || askedOften) ? .tint : .neutral,
+                         glyph: keepJustLanded ? "checkmark"
+                            : (askedOften ? "sparkles" : "pin.fill"))
+                }
+                .buttonStyle(.plain)
+                .scaleEffect(keepJustLanded ? 1.08 : 1)
+                .disabled(keepJustLanded)
+            }
+            if !keptCurrent, currentStreamed, let text = keepableText(answerStream.els) {
+                Button {
+                    DSHaptic.tap()
+                    keptCurrent = true
+                    onKeepAnswer(text)
+                } label: {
+                    Chip(text: String(localized: "Save as a note"), style: .neutral,
+                         glyph: "tray.and.arrow.down")
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    /// The live mic, above the foot.
+    private var recordingBand: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(spacing: DS.Space.s2) {
+                Circle().fill(DS.destructive).frame(width: 8, height: 8)
+                    .opacity(0.4 + 0.6 * abs(sin(voice.elapsed * 2)))
+                Text(String(format: "%d:%02d", Int(voice.elapsed) / 60, Int(voice.elapsed) % 60))
+                    .dsText(.label12).foregroundStyle(DS.textSecondary)
+                    .contentTransition(.numericText())
+                Text("Listening")
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                Spacer()
+            }
+            if !voice.transcript.isEmpty {
+                Text(voice.transcript)
+                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .lineLimit(4)
+            }
+        }
+        .padding(DS.Space.s3)
+        .dsWell()
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s3)
+        .animation(DS.Motion.standard, value: voice.elapsed)
+    }
+
+    // MARK: - The foot (prd §581)
+
+    /// The words, and under them every destination beside the one verb that is
+    /// available.
+    ///
+    /// **One row, one height, one position** — 88pt keys and an 88pt capsule,
+    /// so what is under your thumb is always what acts. The destination keys
+    /// live HERE rather than above the words (user, 2026-09-03: "i like the
+    /// switcher at the footer"), which is what lets the paper above be free.
+    private var agentFoot: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            draftField
+                .lineLimit(writingRoom ? 4...8 : 1...5)
+                .padding(.horizontal, DS.Space.s1)
+                .padding(.top, DS.Space.s1)
+            if hasDraft,
+               let note = AskSubject.draftNote(ground: askGround, agent: activeAskAgent?.agent) {
+                Text(note)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .padding(.horizontal, DS.Space.s1)
+                    .transition(.opacity)
+            }
+            HStack(spacing: DS.Space.s2) {
+                AgentDestinationKeys(
+                    providers: configuredAgents,
+                    active: activeAskAgent,
+                    onAddAgent: onOpenAgents,
+                    onDevice: { pickDevice() },
+                    onAgent: { provider in
+                        // A pick mid-wait RE-ADDRESSES the running question
+                        // rather than being swallowed (§580, kept whole).
+                        if readdressed(to: provider) { return }
+                        pickAgent(provider)
+                    })
+                .layoutPriority(0)
+                footSlot
+            }
+            .animation(DS.Motion.standard, value: hasDraft)
+            .animation(DS.Motion.standard, value: inFlight)
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+    }
+
+    /// The verb that is available, and only that one.
+    ///
+    /// A dim Send with nothing to send is a dead control, so at rest the slot
+    /// carries **Record** — the voice-note capture path, a thing that really
+    /// enters the corpus. Icon only, at the user's ruling: the mic and the
+    /// magnifier say what they are without a word beside them.
+    ///
+    /// **Find is offered on the DEVICE alone**, because Bankr cannot search
+    /// your things and a Find key beside it would be the dead control §83
+    /// bans. It is also the one place two verbs are right where §529's
+    /// Ask/Do pair was not: Ask reaches a model and Find provably reaches
+    /// none, which is a difference somebody can act on.
+    @ViewBuilder
+    private var footSlot: some View {
+        if inFlight || handingOff {
+            AgentWideKey(title: String(localized: "Stop"), glyph: "stop.fill",
+                         tone: .ink) { stopAsk() }
+                .layoutPriority(1)
+        } else if isRecording {
+            AgentWideKey(title: String(localized: "Stop and keep"),
+                         glyph: "stop.circle.fill", tone: .tint) { commit() }
+                .layoutPriority(1)
+        } else if hasDraft {
+            if activeAskAgent == nil {
+                AgentWideKey(glyph: "magnifyingglass", tone: .ink, compact: true) { runFind() }
+                AgentWideKey(title: String(localized: "Ask"), tone: .tint) { commit() }
+                    .layoutPriority(1)
+            } else {
+                AgentWideKey(title: String(localized: "Send"), tone: .tint) { askDirectly() }
+                    .layoutPriority(1)
+            }
+        } else {
+            AgentWideKey(glyph: "mic", tone: .ink, compact: true) {
+                DSHaptic.tap()
+                Task { await voice.start() }
+            }
+        }
+    }
+
 
     /// A doc trivial enough to land WITHOUT the typewriter — a root `Stack`
     /// over exactly one `Insight` and nothing else (2026-07-22). Structural,
@@ -4324,193 +3202,9 @@ struct Composer: View {
 
     // MARK: - Kept-ask pills (docs/agent-brief.md ruling 4/5 — B1)
 
-    /// The standing questions someone chose to keep, as pill chips — a
-    /// FAMILIAR pattern (over a plainer list) and DIFFERENTIATED from the
-    /// app's own rows (user ruling 2026-07-19: chips are agent-language,
-    /// rows/cards are app-language). Changed-first sort; a dot only when the
-    /// kept ask's current digest doesn't match what was last seen (never a
-    /// model judgment — a plain string compare, `KeptAskStore.changed`).
-    /// Ruling 5's other half, wired in now: a pill nobody's tapped in
-    /// `AskMemory.neglectThreshold` opens decay-dims, same counters the
-    /// empty-composer suggestion tiles already use — `computeSuggestions()`
-    /// excludes kept kinds, so a key's counter only ever moves from one side.
-    /// A pill whose answer just changed never dims, even if it was neglected
-    /// before — a fresh signal is worth noticing regardless of history.
-    @ViewBuilder
-    private var keptAskPills: some View {
-        // Docked beneath the brief LANDING too (prd §181) — a kept standing
-        // ask must stay reachable when the agent opens onto the brief, not
-        // only from the old empty state.
-        // Hidden while the panel is up (§336): "one intro sentence and the rest
-        // ONLY visualizations" — a row of text pills under the figures is
-        // exactly the non-visualization the ruling removes. They return the
-        // moment the panel has nothing to draw, which is the state they were
-        // designed for.
-        if restChrome(keepBrief: true), !keptKinds.isEmpty {
-            let sorted = keptKinds.sorted { a, b in
-                let store = KeptAskStore.shared
-                let changedA = store.changed(a, digest: store.currentDigests[a] ?? "")
-                let changedB = store.changed(b, digest: store.currentDigests[b] ?? "")
-                return changedA != changedB ? changedA && !changedB
-                                            : (store.titles[a] ?? "") < (store.titles[b] ?? "")
-            }
-            // Horizontal scroll, matching `askChips` (§187) — the two docked
-            // rows are one chip language and must not wrap differently.
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s2) {
-                ForEach(Array(sorted.enumerated()), id: \.element) { i, kind in
-                    let store = KeptAskStore.shared
-                    let digest = store.currentDigests[kind] ?? ""
-                    let title = store.titles[kind] ?? kind
-                    let changed = store.changed(kind, digest: digest)
-                    let neglected = !changed && AskMemory.neglected(kind)
-                    Button {
-                        DSHaptic.selection()
-                        store.markSeen(kind, digest: digest)
-                        AskMemory.tapped(kind)
-                        draft = title
-                        commit()
-                    } label: {
-                        // Hero treatment (2026-07-20): these pills ARE the
-                        // board's replacement — the standing per-app glance
-                        // surface — so they earn real presence: callout-size
-                        // title, roomier padding, and a CHANGED pill wears a
-                        // full tint wash (not just its dot) so a live signal
-                        // reads as a filled element against the steady gray
-                        // of its unchanged neighbors. Still text-only chips
-                        // (ruling 5's tripwire: never a thumbnail).
-                        //
-                        // A PIN leads each one since 2026-07-31. The two docked
-                        // rows were the same shape, size, radius and fill, so
-                        // the questions YOU kept and the ones the app is
-                        // merely proposing read as one undifferentiated set —
-                        // and the kept ones actually looked plainer, since
-                        // only the suggestions carry a glyph. The pin is the
-                        // verb that made them ("Keep" wears `pin.fill` in the
-                        // answer's verb row), so the row now says whose
-                        // questions these are in the vocabulary that already
-                        // exists. An outline would have read better still and
-                        // was drawn first — design law §8 forbids it ("no
-                        // hairlines, zero exceptions"), so it's a glyph.
-                        //
-                        // No digest number (user ruling 2026-07-31: "i don't
-                        // want to see a count of 'things'"). The digest is
-                        // still computed and still decides the dot — a plain
-                        // string compare, `KeptAskStore.changed` — it just
-                        // isn't printed. The dot says something moved; the
-                        // answer says what.
-                        HStack(spacing: DS.Space.s2) {
-                            if changed {
-                                Circle().fill(DS.tint).frame(width: 7, height: 7)
-                            } else {
-                                Image(systemName: "pin.fill")
-                                    .dsGlyph(12)
-                                    .foregroundStyle(DS.tint)
-                                    .accessibilityHidden(true)
-                            }
-                            Text(title)
-                                .dsText(.callout15)
-                                .foregroundStyle(changed ? DS.textPrimary : DS.textSecondary)
-                        }
-                        .opacity(neglected ? 0.55 : 1)
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.vertical, DS.Space.s3)
-                        .background(changed ? AnyShapeStyle(DS.tintDim) : AnyShapeStyle(DS.gray100),
-                                    in: RoundedRectangle(cornerRadius: DS.Radius.control,
-                                                         style: .continuous))
-                        .dsHover()
-                    }
-                    .buttonStyle(PressSpring())
-                    // The kept pills carry the staggered rise-in the ask
-                    // chips used to (prd §543) — with those deleted, this is
-                    // the one chip row left at rest, and it should settle in
-                    // rather than simply be present. Reduce Motion handled
-                    // inside the modifier.
-                    .modifier(ChipEntrance(index: i, shown: chipsAppeared,
-                                           reduceMotion: reduceMotion))
-                    // Keeping was ONE-WAY until now (2026-08-10, user: "how
-                    // does someone remove it"). `KeptAskStore.remove` has
-                    // existed since the store did, and its only callers were a
-                    // DEBUG clear-all and the demo teardown — so a pill kept by
-                    // mistake, or one whose question stopped mattering, stayed
-                    // on the rest screen for the life of the install. That is
-                    // the honesty rule's own shape inverted: not a dead
-                    // control, but a live one with no undo.
-                    //
-                    // A context menu rather than a swipe or an × : these pills
-                    // sit in a HORIZONTAL scroller, where a swipe is the scroll
-                    // gesture (the 2026-07-08 arbitration lesson), and an ×
-                    // on every pill would put a destructive control permanently
-                    // beside a routine one. Long-press is also what the feed's
-                    // own rows already use for their secondary verbs.
-                    .contextMenu {
-                        Button(role: .destructive) {
-                            DSHaptic.selection()
-                            KeptAskStore.shared.remove(kind)
-                        } label: {
-                            Label("Stop keeping this", systemImage: "pin.slash")
-                        }
-                    }
-                }
-                }
-                // The inset rides the content, not the scroll view — see
-                // `askChips` for why.
-                .padding(.horizontal, DS.Space.s4)
-            }
-            .padding(.top, DS.Space.s3)
-            // Clear of the deck below (prd §578) — the pills used to sit flush
-            // on the panel's top edge, which is the "boxes touching each
-            // other" reading in miniature.
-            .padding(.bottom, DS.Space.s4)
-        }
-    }
 
     // MARK: - Ask chips + input bar (chat grammar: by the bottom)
 
-    /// The ask chips — asks the corpus can answer now, as pills while the
-    /// field is empty. Unified with `keptAskPills` (2026-07-20, user: "your
-    /// chips design was better") — was a 2×2 `AskTile` grid; now the SAME pill
-    /// vocabulary the kept asks above already wear, so the whole rest screen
-    /// reads as one language instead of two. Every specific query is unchanged;
-    /// the ONE trade made explicit: the away chip's rolling-digit-climb delight
-    /// (`AskTile.rollCount`) is gone, replaced by the same static "· N" digest
-    /// suffix every kept pill already shows.
-    ///
-    /// ONE horizontally scrolling row since §187 (user: "i thought the mockup
-    /// we did had scrolling horizontal chips, but in my app they are stacked").
-    /// The `FlowRow` it used to be WRAPS, and these chips are wide once they
-    /// wear their signals ("What's going on? · 44") — so under the brief they
-    /// stacked one-per-line into a tall column instead of the single docked row
-    /// the design called for. A scroll row also lets the set stay generous
-    /// without costing height: what doesn't fit slides.
-    /// The Bankr offer, at the top of the rest surface (prd §529). The view
-    /// and every word of it live in `BankrOfferBanner` — one copy, one
-    /// dismissal, shared with the Wallet room's head, because two copies of
-    /// one piece of copy drift and then two surfaces promise different things.
-    ///
-    /// Gated on `restChrome` so it never sits over a conversation, and on the
-    /// door existing at all: `onConnectBankr` is nil for any host that cannot
-    /// push, and a CTA that does nothing is the dead control §83 bans.
-    @ViewBuilder private var agentChoiceHeader: some View {
-        // `keepBrief: true`, and that is a FIX not a preference (2026-08-29):
-        // §386d made the bar's own tap open the brief, so the surface a person
-        // actually lands on has `answering == true` — and `keepBrief: false`
-        // is false there. The banner was therefore gated off on the one screen
-        // it was written for, reported as "i still don't see it in the daily
-        // brief". `askChips` already carries the same flag for the same
-        // reason: the brief is the one answer state that keeps its chrome.
-        // `BankrOfferBanner.offers` for the same reason the Wallet room asks
-        // it: the paddings below are applied to the banner, not inside it, so
-        // once the offer is waved off (or Bankr is connected) the view draws
-        // nothing and its `s3` bottom padding stays behind as dead air at the
-        // top of the rest surface.
-        if let onConnectBankr, restChrome(keepBrief: true),
-           !bankrOfferDismissed, BankrOfferBanner.offers {
-            BankrOfferBanner(onConnect: onConnectBankr)
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.bottom, DS.Space.s3)
-        }
-    }
 
     /// WHERE AGENTS COME FROM (prd §550, 2026-09-01, user: "empty chat has a
     /// link to where to set up agents").
@@ -4581,192 +3275,8 @@ struct Composer: View {
     /// and `dockedSuggestions` is still the definition of "an ask the brief
     /// already answers", which the docked-kept-pill rules read.
 
-    /// Category chips (scoped-brief-spec.md) — "How's my Money stuff?",
-    /// "How's my Work stuff?", "How's my Life stuff?", one per BRIEF SCOPE
-    /// the corpus holds a connected app in. No "Everything" chip (user,
-    /// 2026-08-08) — that brief is already the default and reachable via the
-    /// whisper capsule or the kept "today" pill. Deliberately a SEPARATE,
-    /// always-offered row from `askChips` above: those rank, decay and
-    /// compete for one of 7 slots (tap-learning, §95), while these are scope
-    /// pickers under the input a person reaches for repeatedly — decaying
-    /// "Work" behind an unrelated chip because it went untapped for a while
-    /// would be exactly the wrong lesson for a control whose job is to
-    /// always be there.
-    ///
-    /// A LABELED two-row band (user ruling, 2026-08-08) — "What's going on"
-    /// as a section label, every chip in a row beneath it, both always
-    /// visible together. No expand step, no tap-to-reveal, no typing: three
-    /// parent verbs now sit in the composer — Find and Send-to in the typed-
-    /// draft band (`takeChips`, needs `hasDraft`), What's-going-on here in
-    /// the REST band (needs `!hasDraft`) — because unlike Find/Send-to, which
-    /// act on text you've already typed, asking what's going on needs no
-    /// typed input at all; that's the point of a chip. The two bands are
-    /// mutually exclusive by construction (`restChrome`'s `!hasDraft` vs.
-    /// `takeChips`' `hasDraft`), so they never compete for the same line.
-    ///
-    /// Tapping a chip runs the query IMMEDIATELY (spec: "Do not prefill the
-    /// input and wait for send") — the same `draft = …; commit()` mechanism
-    /// `askChips` already uses, minus `AskMemory.tapped`: a fixed scope
-    /// picker isn't part of the decaying-suggestion vocabulary that counter
-    /// tracks.
-    ///
-    /// NOT gated on `!boardShowing` (user, 2026-08-08) — that exclusion
-    /// predates this row and belonged to the instrument panel alone. For
-    /// anyone with a real corpus the panel almost always has something to
-    /// draw, so inheriting its gate made this row nearly invisible in
-    /// practice: exactly the corpus where "what's going on with Work?" is
-    /// worth asking. The panel is a visualization; this is a control —
-    /// a control shouldn't disappear because a visualization is present.
-    /// The scope chips as actually offered, plus the DAY itself whenever a
-    /// scoped brief is what's on screen (2026-08-13, user: "presumably back to
-    /// the day").
-    ///
-    /// This does not reopen the 2026-08-08 "no Everything chip" ruling, it
-    /// honours its reasoning. That ruling rests on the unscoped brief being
-    /// "the default you get by asking nothing in particular" — true at the
-    /// agent's own root, and false the moment a scope brief is the thing you
-    /// are standing in: from there the day is not the default, it is somewhere
-    /// else, and the two doors that ruling named as sufficient are both gone
-    /// (the whisper capsule lives above the lowered agent, and the kept "today"
-    /// pill only exists for someone who has kept that ask). So the chip appears
-    /// exactly where the row would otherwise be a one-way trip, and nowhere
-    /// else — at the root the row is still the three tight choices it was.
-    /// The brief's own SECTIONS, as jump targets (2026-08-15, prd §386i,
-    /// user: "maybe we put chips back in but they just take you to the
-    /// section in the same brief where they are?").
-    ///
-    /// The opposite of the chips §386b deleted, and the distinction is the
-    /// whole reason these earn their place: those FIRED ASKS — every one a
-    /// question you had to spend a tap to find out the value of — while these
-    /// only move you inside a document that is already composed and already
-    /// on screen. Nothing runs, nothing is fetched, and no chip can lead
-    /// anywhere the brief isn't.
-    ///
-    /// Derived from the rendered doc rather than from the section plan, so a
-    /// section that DECLINED (no money today, nobody around) has no chip by
-    /// construction — the nav can never offer a heading that isn't there.
-    /// THE BRIEF'S NAV, DOCKED (2026-08-15, the approved deck mockup) — the
-    /// table of contents, moved from above the document to just above the
-    /// input bar.
-    ///
-    /// The berry that opens this surface rests in the bottom-right corner, so
-    /// the hand that raised the agent is already at the bottom of the phone
-    /// while these chips sat at the top — the hardest place to reach one-handed
-    /// — and the composer's own stacking already says where a chip row goes:
-    /// `askChips` → `categoryChipsRow` → `inputBar`, the field always last.
-    /// This joins that run.
-    ///
-    /// It resolves `scrollTo` against the DOCUMENT's `ScrollViewReader` via
-    /// the published `briefScroll` proxy rather than wrapping itself in a
-    /// second reader — a reader resolves against the scroll views it contains,
-    /// so a local one here would find nothing to scroll and the chips would go
-    /// dead again in a new way (§386n's bug, whose fix is the `chip-` id
-    /// namespace that also survives this move).
-    @ViewBuilder
-    private var briefNav: some View {
-        if !briefSections.isEmpty, let proxy = briefScroll {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s2) {
-                    // The chip's identity is NAMESPACED (prd §386n).
-                    // `ForEach(id: \.id)` gave each chip the SAME id as the
-                    // document module it points at, and a `ScrollViewReader`
-                    // resolves `scrollTo` against every scroll view it
-                    // contains — so the proxy found the CHIP first and
-                    // scrolled the NAV into view while the document sat
-                    // still. That is exactly what "the chips don't lead
-                    // anywhere" looked like: something moved, just never the
-                    // thing you were reading.
-                    ForEach(briefSections, id: \.chipID) { section in
-                        let here = section.title == activeSection
-                        Button {
-                            DSHaptic.selection()
-                            withAnimation(DS.Motion.standard) {
-                                proxy.scrollTo(section.id, anchor: .top)
-                            }
-                        } label: {
-                            // THE FEED STRIP'S OWN GRAMMAR (2026-08-15,
-                            // user-approved mock `chip-gradient-mock.html`,
-                            // superseding both the §386n hue tints — mud
-                            // over ink — and the brief solid-hue cut that
-                            // followed them): an unselected chip is BARE
-                            // gradient type with no background at all, and
-                            // the active one carries the glass blob, which
-                            // TRAVELS between chips on a switch via the
-                            // same per-chip matchedGeometryEffect pattern
-                            // `WordChipFill` documents at length. The
-                            // section hues retire from this row entirely —
-                            // the gradient is one shared voice, and "which
-                            // section am I in" is the blob's position.
-                            // The feed strip's own restored grammar
-                            // (2026-08-16, user: "revert and make them same
-                            // color as the blue we now use in the composer"):
-                            // the active chip is the SAME `DS.tint` blue the
-                            // lede card above wears — one token — with white
-                            // ink, travelling between chips; unselected chips
-                            // are quiet neutral capsules. The gradient-words
-                            // experiment lived one night; its record is on
-                            // `DS.chipGradient`.
-                            Text(section.title)
-                                .dsText(.subhead13)
-                                .fontWeight(here ? .semibold : .regular)
-                                .foregroundStyle(here ? .white : DS.textSecondary)
-                                .lineLimit(1)
-                                .padding(.horizontal, DS.Space.s4)
-                                .padding(.vertical, DS.Space.s2)
-                                .background {
-                                    if here {
-                                        let blob = Capsule(style: .continuous)
-                                            .fill(DS.tint)
-                                        if reduceMotion {
-                                            blob
-                                        } else {
-                                            blob.matchedGeometryEffect(
-                                                id: "briefNavBlob", in: briefNavNS)
-                                        }
-                                    } else {
-                                        Capsule(style: .continuous)
-                                            .fill(DS.fillFaint)
-                                    }
-                                }
-                                .dsHover()
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, DS.Space.s4)
-            }
-            // No trailing inset any more: the ✕ this row used to pass under
-            // is pinned TOP-trailing, and down here nothing overlaps it.
-            .padding(.bottom, DS.Space.s2)
-        }
-    }
 
-    private var briefSections: [(id: String, chipID: String, title: String, hue: String)] {
-        guard briefLanding else { return [] }
-        let els = answerStream.els
-        guard let root = els["root"], root.comp == "Stack" else { return [] }
-        return root.refs(0).compactMap { ref in
-            guard let el = els[ref], el.comp == "Section", !el.str(0).isEmpty
-            else { return nil }
-            return (ref, "chip-" + ref, el.str(0), el.str(2))
-        }
-    }
 
-    private var shownCategoryChips: [CategoryChip] {
-        // The scoped-answer special case (prepending a "The day" chip) died
-        // with the scope chips (prd §386): the one chip left IS the day, so
-        // the prepend would mint a duplicate id. A typed scoped ask still
-        // shows this row — the door back out to the whole overview.
-        //
-        // …and it stands down entirely under the UNSCOPED brief (prd §386e):
-        // the one chip left asks "What's going on?", which is the exact
-        // document already filling the screen. A control offering to fetch
-        // what you are reading is the duplication the user reported, in its
-        // smallest form. A SCOPED brief still gets it, because there it is a
-        // real door — back out to the whole day.
-        if briefLanding, !TodayBrief.matchesScoped(currentQuestion) { return [] }
-        return categoryChips
-    }
 
     // `categoryChipsRow` is DELETED (prd §543). It was one chip reading
     // "What's going on?", i.e. a fourth door onto the day the greeting sits
@@ -4788,48 +3298,7 @@ struct Composer: View {
     /// preview, not writing.
     private var writingRoom: Bool { (fieldFocused || hasDraft) && !isRecording }
 
-    /// THE PANEL IS THE CROWN AT REST (prd §575, 2026-09-02).
-    ///
-    /// The one act on this surface — asking — was its quietest object: a
-    /// 17pt placeholder in a one-line door, under a 40pt greeting. §563 found
-    /// exactly that inversion on the empty room ("the only thing a person
-    /// could DO on the screen was the quietest thing on it") and fixed it by
-    /// giving the act the head rung; this is the same fix on the surface whose
-    /// entire reason for existing is that act.
-    ///
-    /// So at rest the field is a PANEL: a disc naming where a plain send goes,
-    /// air, then the invitation at the head rung, then the controls. §559's
-    /// anatomy — disc top-left, the big thing hard against the bottom-left,
-    /// the air pooled above it — on a surface that is not a tile and takes no
-    /// tint, because it has no colour to spend and does not need one (§564's
-    /// reach screen made the same move with proportion alone).
-    ///
-    /// **It is the rest state ONLY**, and it shares `restChrome(keepBrief:
-    /// false)` with the `Spacer` that pushes this whole block to the bottom —
-    /// deliberately the same gate, so the panel can never grow while the
-    /// spacer that makes room for it has gone. The moment there is a draft, a
-    /// recording, a handoff or an answer, this is a tool rather than an
-    /// invitation and returns to the compact shape it has always had: that is
-    /// when the crown belongs to the count (`draftCrown`) or to the answer.
-    private var restingPanel: Bool { restChrome(keepBrief: false) }
 
-    /// WHETHER THE PANEL WEARS THE FACE RAIL (prd §577c).
-    ///
-    /// **It must not read `hasDraft` or `fieldFocused`, and that is the whole
-    /// bug this constant exists to prevent.** Everything above the field lives
-    /// in the same `VStack`, so a band that appears when you start typing moves
-    /// the field's position in that stack — and SwiftUI answers a moved
-    /// `TextField` by destroying and rebuilding its `UITextView`. On a device
-    /// that hung until the watchdog killed the app (0x8BADF00D, 11s of CPU,
-    /// stack in `TextViewAdaptor.makeUIView`).
-    ///
-    /// So this is a fact about the CONVERSATION, not about the draft: an
-    /// asking surface with nothing answered wears the rail, from the moment it
-    /// opens until an answer exists, and it does not flinch at a keystroke.
-    private var showsRail: Bool {
-        isOpen && embedded && !answering && turns.isEmpty
-            && !handingOff && !isRecording
-    }
 
     /// THE SURFACE TURNS BLUE WHILE YOU ARE ASKING (prd §577, 2026-09-02,
     /// user: "we could be using the extreme sizes b/c it's just a question…
@@ -4859,210 +3328,15 @@ struct Composer: View {
     /// surface's STRUCTURE from the field's own focus and draft is what
     /// rebuilt the text view on every keystroke boundary.
 
-    /// The wait, on the same blue — a keyed ask only.
-    ///
-    /// **The device keeps its skeleton and that is a measurement, not an
-    /// oversight.** `answerSkeleton` is the shape of an answer that is about to
-    /// paint, which is honest when the answer is ~2s away and the document's
-    /// own layout is what is coming. A keyed job is up to 90s away and its
-    /// shape is unknown to us, so a skeleton there is a promise about a
-    /// document nobody has seen. The clock promises nothing except the one
-    /// thing we know.
-    ///
-    /// Gated on an EMPTY stream rather than on `inFlight` alone, for the
-    /// skeleton's own 2026-08-14 reason: `inFlight` is cleared at the settle
-    /// while a document can paint seconds earlier, so reading it alone leaves
-    /// the clock standing over an answer that has already arrived.
-    private var workingClock: Bool {
-        // `|| askSettling` is the completion beat — see that flag. The clock
-        // outlives its own gate by one beat on purpose, and by exactly one:
-        // the flag is cleared on a fixed timer, so no failure path can leave
-        // the blue standing over an answer.
-        askSettling
-            || (isOpen && embedded && inFlight && keyedCurrent
-                && answerStream.els.isEmpty && turns.isEmpty && !handingOff)
-    }
 
-    /// Blue is on the surface for either of them — one property, so the ground
-    /// and the contents can never disagree about which palette they are in.
-    /// THE BLUE IS THE WAIT, NOT THE WRITING (prd §577b, user: "i think we
-    /// really went overkill with all this blue").
-    ///
-    /// It was `asking || workingClock` — the surface turned blue the moment
-    /// the field took focus and stayed blue for as long as you sat there. On a
-    /// device that is most of a screen of saturated colour carrying no
-    /// information: the faces and the words are already the subject, and the
-    /// tint was decorating a state the person is in CONTROL of.
-    ///
-    /// §563's rule is that colour marks the one act on a surface. While you
-    /// are typing, the act has not happened yet. The moment it has, the answer
-    /// belongs to somebody else's server for up to ninety seconds — and THAT
-    /// is worth a colour you can read across a room, because it is the one
-    /// state you cannot do anything about. Blue now means exactly that, it
-    /// lasts as long as the job, and the completion beat (§577a) is what ends
-    /// it.
-    ///
-    /// The ask surface keeps everything else §577 gave it — the 88pt face, the
-    /// words at the head rung, the air, the named send — on ink.
-    private var onTint: Bool { workingClock }
 
     /// What the chosen destination will actually read from.
     private var askGround: AskSubject.Ground {
         AskSubject.ground(forAgent: activeAskAgent?.rawValue)
     }
 
-    private var inputBar: some View {
-        // ONE ANATOMY IN EVERY STATE (prd §543, 2026-08-31): the field line on
-        // top, the control row beneath it — at rest, with a draft, and under a
-        // settled answer. It was two shapes, a one-line door that grew a
-        // second row once focused, and the capsule cannot live in the
-        // one-line shape without competing with the field for the same
-        // horizontal space. Holding one shape is also what makes the capsule
-        // learnable: it is in the same place before and after you type, and
-        // typing changes only what a tap does.
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            // THE DECK IS THE HEAD, ALWAYS (prd §578). Present for the whole
-            // life of the embedded surface; only its SIZE changes — 158pt keys
-            // while nothing is answered, 64pt once a turn exists — because a
-            // head that appears or disappears moves the field below it, and a
-            // moved `TextField` is a rebuilt `UITextView` (§577c).
-            if embedded, !isRecording {
-                AskDestinationRail(
-                    providers: configuredAgents,
-                    active: activeAskAgent,
-                    recording: isRecording,
-                    size: showsRail ? .deck : .strip,
-                    onDevice: { pickDevice() },
-                    onAgent: { provider in pickAgent(provider) })
-                if showsRail, configuredAgents.isEmpty {
-                    HStack { Spacer(minLength: 0); agentsLink }
-                        .padding(.horizontal, DS.Space.s1)
-                        .padding(.top, DS.Space.s2)
-                }
-                Spacer(minLength: showsRail ? DS.Space.s6 : DS.Space.s3)
-            }
-            draftField
-                // Four lines reserved once there is writing to do, one line
-                // otherwise — the room-to-write ruling, unchanged; only the
-                // surrounding shape stopped changing with it.
-                .lineLimit(writingRoom ? 4...8 : 1...5)
-                .padding(.horizontal, DS.Space.s1)
-                .padding(.top, DS.Space.s1)
-            // What the chosen destination will read from — the corpus count,
-            // or Bankr's disclosure. Under the words it is about.
-            if showsRail { askSubline }
-            // ONE WIDE VERB, TWO ROUND KEYS (prd §578). The capsule is gone
-            // from the embedded surface: the deck above is the picker, so a
-            // second, smaller picker beside the send is the duplication §543
-            // collapsed into the capsule in the first place. It is untouched
-            // in the non-embedded bubble, which has no deck.
-            HStack(spacing: DS.Space.s2) {
-                lowerButton
-                micButton
-                if embedded, hasDraft, !isRecording, !inFlight, !handingOff {
-                    // Find is a VERB here, not a destination — it keeps you
-                    // inside the app and writes nothing (§215). Its own gate,
-                    // never `hasDraft` alone, because `runFind` refuses an
-                    // in-flight ask and a control that refuses is the dead
-                    // control §83 bans.
-                    Button { runFind() } label: {
-                        Image(systemName: "magnifyingglass")
-                            .dsGlyph(20, weight: .regular)
-                            .foregroundStyle(DS.textPrimary)
-                            .frame(width: 52, height: 52)
-                            .background(DS.surfaceRaised, in: Circle())
-                            .dsHover()
-                    }
-                    .buttonStyle(PressSpring())
-                    .accessibilityLabel("Find in your things")
-                }
-                Spacer(minLength: 0)
-                if embedded {
-                    sendPill
-                } else {
-                    AskDestinationCapsule(
-                        providers: configuredAgents,
-                        hasDraft: hasDraft,
-                        recording: isRecording,
-                        active: activeAskAgent,
-                        find: (hasDraft && !isRecording && !inFlight && !handingOff)
-                            ? { runFind() } : nil,
-                        onDevice: {
-                            pickDevice()
-                            if hasDraft || isRecording { commit() } else { fieldFocused = true }
-                        },
-                        onAgent: { provider in
-                            pickAgent(provider)
-                            if hasDraft { askDirectly() } else { fieldFocused = true }
-                        })
-                }
-            }
-            .animation(DS.Motion.standard, value: hasDraft)
-        }
-        .padding(embedded ? 0 : DS.Space.s2 + 4)
-        // THE SLAB IS GONE ON THE EMBEDDED SURFACE (prd §578). It was "the
-        // hero of the sheet, by tone and shadow alone" — an elevated ink card
-        // holding a one-line field — and that reading died with the field: the
-        // deck's keys are now the raised objects, so a raised card BEHIND them
-        // is a box inside a box, which is what the user saw twice ("the boxes
-        // touching each other like an error"). A console has controls sitting
-        // on the ink, not a card holding them.
-        //
-        // The non-embedded bubble keeps it: it really is a card floating over
-        // the feed, and it has no deck.
-        .background {
-            if !embedded {
-                Color.clear
-                    .dsInkFill(cornerRadius: writingRoom ? 22 : 26)
-                    .shadow(color: DS.cardShadow, radius: 10, x: 0, y: 3)
-            }
-        }
-        .animation(DS.Motion.standard, value: hasDraft || isRecording)
-        .animation(DS.Motion.standard, value: fieldFocused)
-        .animation(DS.Motion.standard, value: restingPanel)
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.bottom, DS.Space.s3)
-    }
 
-    private var lowerButton: some View {
-            Button {
-                close()
-            } label: {
-                Image(systemName: "chevron.down")
-                    .dsGlyph(16)
-                    .foregroundStyle(DS.textTertiary)
-                    .frame(width: 32, height: 36)
-                    .dsTapTarget()
-                    .dsHover()
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Lower")
-            .dsTooltip(String(localized: "Lower"))
-    }
 
-    private var micButton: some View {
-            Button {
-                if isRecording { commit() }   // the live mic is STOP + keep
-                else { DSHaptic.tap(); Task { await voice.start() } }
-            } label: {
-                Image(systemName: isRecording ? "stop.circle.fill" : "mic")
-                    .dsSymbolSwap(isRecording)
-                    .dsGlyph(17, weight: .regular)
-                    .foregroundStyle(isRecording ? DS.destructive : DS.textSecondary)
-                    .frame(width: 36, height: 36)
-                    .background(DS.fillFaint, in: Circle())
-                    // After the background, so the drawn circle stays 36 and
-                    // only the target grows.
-                    .dsTapTarget(Circle())
-                    .dsHover()
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(isRecording ? "Stop and keep" : "Record a voice note")
-            // The glyph swaps mid-recording and so must the name — the same
-            // ternary as the label above, so the two can't drift.
-            .dsTooltip(isRecording ? String(localized: "Stop and keep")
-                                   : String(localized: "Record a voice note"))
-    }
 
     private var draftField: some View {
             TextField("", text: $draft, axis: .vertical)
@@ -5245,162 +3519,8 @@ struct Composer: View {
         hasDraft && !isRecording && keyAvailable
     }
 
-    /// The typed-draft band (2026-07-16, fourth form — see TakeTool), in the
-    /// ask chips' slot. Two verbs now, in the order the app's own priorities
-    /// put them (2026-07-25):
-    ///
-    ///   **Find** — keep it here. Searches your own things, deterministically.
-    ///   Leads the row because it is the app's own job; the outbound jumps are
-    ///   the guest verbs. Shown for ANY draft, a question included: "climate
-    ///   links" and "what did I save about climate?" are the same search to
-    ///   `Retriever.rank`, and hiding the door behind a grammar check would
-    ///   reintroduce exactly the guess-the-phrasing problem it exists to fix.
-    ///
-    ///   **Send to** — take it there. What you typed is a FACT bound for
-    ///   another app; the text rides the jump (Messages/Mail body, Google
-    ///   query, Calendar at the detected date) or the clipboard where no URL
-    ///   carries it (the flash says so). Still sits out for a question, so a
-    ///   question's one honest exit stays obvious. A found date earns a
-    ///   receipt line — proof the Calendar jump lands on the right day.
-    /// The filters the engine resolved out of the draft, each one droppable —
-    /// and each dropped one offered back (2026-08-13, see `Retriever.Scope`).
-    ///
-    /// Sits ABOVE the verb row on purpose: it describes what the Find beneath
-    /// it will do, and reading it after tapping is the situation this replaces.
-    /// Deliberately quieter than the verbs — tint on tintDim at 28pt against
-    /// their 40pt — because these are a report you may act on, not the action.
-    @ViewBuilder
-    private var scopeChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DS.Space.s2) {
-                ForEach(liveScopes, id: \.kind) { scope in
-                    Button {
-                        DSHaptic.selection()
-                        droppedScopes.append(scope)
-                        scheduleLiveRead(immediate: true)
-                    } label: {
-                        scopeCapsule(scope.label, glyph: "xmark", on: true)
-                    }
-                    .buttonStyle(PressSpring())
-                    .accessibilityLabel("Searching only \(scope.label). Tap to search everything.")
-                }
-                ForEach(droppedScopes, id: \.kind) { scope in
-                    Button {
-                        DSHaptic.selection()
-                        droppedScopes.removeAll { $0.kind == scope.kind }
-                        scheduleLiveRead(immediate: true)
-                    } label: {
-                        scopeCapsule(scope.label, glyph: "plus", on: false)
-                    }
-                    .buttonStyle(PressSpring())
-                    .accessibilityLabel("Not searching only \(scope.label). Tap to narrow to it.")
-                }
-            }
-            .padding(.horizontal, 2)
-        }
-    }
 
-    private func scopeCapsule(_ label: String, glyph: String, on: Bool) -> some View {
-        HStack(spacing: DS.Space.s1) {
-            Text(label).dsText(.label12).lineLimit(1)
-            Image(systemName: glyph).dsGlyph(9, weight: .semibold).accessibilityHidden(true)
-        }
-        .foregroundStyle(on ? DS.tint : DS.textTertiary)
-        .padding(.horizontal, DS.Space.s2 + 2)
-        .frame(minHeight: 28)
-        .background(on ? DS.tintDim : DS.gray100, in: Capsule(style: .continuous))
-        .dsHover()
-    }
 
-    @ViewBuilder
-    private var takeChips: some View {
-        // Three independent gates, so each is purely ADDITIVE — the older
-        // two bands' own visibility rules are byte-for-byte what they were.
-        // Find no longer sits out for a paste (2026-08-30) — paste stopped
-        // being its own capture path the same day ("paste should not save"),
-        // so pasted text is searchable exactly like typed text now.
-        let offerFind = true
-        let offerSend = !answering && !draftIsQuestion
-        // `!handingOff` — a seeded question fills the draft on its way to the
-        // commit, and this band flashing Find/Send-to over it was the second
-        // of the three surfaces one FAB tap used to paint.
-        if isOpen && hasDraft && !isRecording && !handingOff,
-           offerFind || offerSend {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                if offerFind && !liveScopes.isEmpty { scopeChips }
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: DS.Space.s2) {
-                        // THE SOLID FIND CAPSULE IS GONE (prd §575,
-                        // 2026-09-02). It was `DS.tint`-filled and 40pt tall,
-                        // a thumb-width above the ask capsule's own filled
-                        // segment — TWO saturated blocks on one surface, which
-                        // is §563's tint budget broken in the place the
-                        // budget's own audit cannot look (that check governs
-                        // hero TILES). The verb moved into the capsule as its
-                        // leading segment, where it is one of the destinations
-                        // the text can go to rather than a competing primary.
-                        //
-                        // ITS COUNT MOVED UP, not away: `liveCount` is the
-                        // crown of the draft surface now (`draftCrown`), at
-                        // the rung a figure that IS the answer earns. Said
-                        // once, in one place, at the size that makes it worth
-                        // reading — the chip's 15pt number was the same fact
-                        // whispered beside the verb.
-                        //
-                        // `offerFind` survives because the SCOPE CHIPS still
-                        // read it (they belong to the find, not to the send),
-                        // and they are drawn with the crown now.
-
-                        // THE "Ask <agent>" CHIPS MOVED INTO THE CAPSULE
-                        // (prd §543). One chip per provider was right when the
-                        // bar had a bare arrow beside them; it also meant the
-                        // agents existed only once a draft did, so a key you
-                        // configured was invisible on the rest surface. The
-                        // capsule carries them in every state now, and keeping
-                        // a second copy here would be two controls doing the
-                        // identical thing — the confusion this pass removes.
-
-                        if offerSend {
-                            Text("Send to")
-                                .dsText(.subhead13)
-                                .foregroundStyle(DS.textTertiary)
-                            // Chunkier pills than the shell Chip — the same
-                            // bold grammar as the ask tiles (option A,
-                            // 2026-07-16), so the field's exits read as one
-                            // design.
-                            ForEach(TakeTool.offered) { tool in
-                                Button { runTake(tool) } label: {
-                                    HStack(spacing: DS.Space.s2) {
-                                        Image(systemName: tool.glyph)
-                                            .accessibilityHidden(true)
-                                            .dsGlyph(14, weight: .medium)
-                                            .foregroundStyle(DS.tint)
-                                        Text(tool.label)
-                                            .dsText(.callout15).fontWeight(.semibold)
-                                            .foregroundStyle(DS.textPrimary)
-                                    }
-                                    .padding(.horizontal, DS.Space.s3 + 2)
-                                    .frame(minHeight: 40)
-                                    .background(DS.gray100, in: Capsule(style: .continuous))
-                                    .dsHover()
-                                }
-                                .buttonStyle(PressSpring())
-                            }
-                        }
-                    }
-                    .padding(.horizontal, DS.Space.s4)
-                }
-                if offerSend, let date = detectedDate {
-                    Text("Found a time: \(date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().hour().minute()))")
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                        .padding(.horizontal, DS.Space.s4)
-                }
-            }
-            .padding(.top, DS.Space.s4)
-            .padding(.bottom, DS.Space.s2)
-        }
-    }
 
     /// Re-reads the draft for a date (NSDataDetector) — called on each edit.
     /// Cheap at typing cadence; cached in `detectedDate` so the band and the
@@ -5416,22 +3536,6 @@ struct Composer: View {
         detectedDate = detector.firstMatch(in: text, range: range)?.date
     }
 
-    /// A Send-to chip jumps out to that app with the typed text and closes
-    /// the composer — it never writes there and nothing lands in Casberi
-    /// (rulings: people create in their own tools; we jump, we don't write).
-    /// Where no URL can carry the text, the chip copies it first and the
-    /// flash says exactly that (honesty rule: no silent blank jump).
-    private func runTake(_ tool: TakeTool) {
-        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, let url = tool.makeURL(text, detectedDate) else { return }
-        DSHaptic.tap()
-        if tool.copiesFirst {
-            DSPasteboard.copy(text)
-            chrome.flash("Copied — paste it in \(tool.label)")
-        }
-        openURL(url)
-        close()
-    }
 
     /// `forceAsk` (2026-08-30, user: "it should show ask bankr no matter
     /// what... let them" — any typed text, ANY topic, always asks when

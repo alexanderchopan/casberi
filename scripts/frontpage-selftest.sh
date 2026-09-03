@@ -38,8 +38,16 @@ SRC="Casberi/Casberi/GenUI/GenRenderer.swift"
 # modules stretched wide) or columns crushed into the reading cap.
 grep -q 'GenFrontPage(el: el' "$SRC" \
   || { echo "✗ the Stack case no longer routes chapters into GenFrontPage"; exit 1; }
-(( $(grep -c 'GenFrontPage\.qualifies(' Casberi/Casberi/Shell/Composer.swift) == 2 )) \
-  || { echo "✗ Composer no longer caps both turns via GenFrontPage.qualifies"; exit 1; }
+# ONE call site since prd §581, and that is stronger than the two this guard
+# used to demand: every turn on the roll — settled or live — is drawn by
+# `turnBlock`, so the settled cap and the live cap are the same expression and
+# can no longer drift apart. What still has to be true is that the cap is
+# applied at all.
+(( $(grep -c 'GenFrontPage\.qualifies(' Casberi/Casberi/Shell/Composer.swift) >= 1 )) \
+  || { echo "✗ Composer no longer caps its turns via GenFrontPage.qualifies"; exit 1; }
+grep -q 'dsAdaptiveContentWidth(GenFrontPage.qualifies(els) ? .wide : .reading)' \
+     Casberi/Casberi/Shell/Composer.swift \
+  || { echo "✗ the turn's width cap no longer follows the front-page test"; exit 1; }
 
 TMP=$(mktemp -d /tmp/frontpage-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
