@@ -2501,7 +2501,6 @@ struct RootShell: View {
     /// unchanged, now hosted as a persistent ZStack layer instead of a sheet.
     private var agentSurface: some View {
         Composer(isOpen: .constant(true), draft: $draft, embedded: true,
-                 onCommitVoice: saveVoice,
                  answer: answerDocument,
                  answerWithKey: keyedAnswerDocument,
                  knownSources: { bridges.bridges.map(\.name) },
@@ -2671,29 +2670,6 @@ struct RootShell: View {
         CorpusSignal.shared.bump()
     }
 
-    /// A finished voice note lands as a voice thing; the transcript is its
-    /// content, the audio file rides sourceRef (M6 local half).
-    private func saveVoice(transcript: String, sourceRef: String) {
-        let title = transcript.isEmpty
-            ? "Voice note"
-            : {
-                let line = transcript.split(separator: "\n", maxSplits: 1).first.map(String.init) ?? transcript
-                return line.count > 80 ? String(line.prefix(80)) + "…" : line
-            }()
-        let thing = Thing(kind: .voice, title: title, content: transcript,
-                          source: "Voice", sourceRef: sourceRef)
-        // The recording moves INTO the store — externalStorage carries it,
-        // and sync can too. The loose file goes; the model owns the bytes.
-        if let url = VoiceCapture.audioURL(for: sourceRef),
-           let data = try? Data(contentsOf: url) {
-            thing.audio = data
-            try? FileManager.default.removeItem(at: url)
-        }
-        modelContext.insert(thing)
-        modelContext.saveHonestly()
-        SpotlightIndex.index([thing])
-        land(thing)
-    }
 
     /// Keep a synthesis answer — the recap lands as a note in your things so
     /// it isn't ephemeral (2026-07-12). A quiet outcome toast, no flight: the

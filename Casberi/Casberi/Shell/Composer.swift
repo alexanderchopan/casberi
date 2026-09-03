@@ -45,8 +45,6 @@ struct Composer: View {
     /// Reports the content's natural height (embedded only) so the hosting sheet
     /// can hug it — no stranded empty space.
     var onHeight: (CGFloat) -> Void = { _ in }
-    /// A finished voice note: transcript + the audio file's sourceRef.
-    var onCommitVoice: (String, String) -> Void = { _, _ in }
     /// Answers a query, returning the final AnswerStream document (engine
     /// grammar). While a synthesis answer streams, it calls `onProseDoc` with
     /// each growing doc so prose renders live; lookups and the non-AI fallback

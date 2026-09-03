@@ -46857,3 +46857,62 @@ prose is bubbled, evidence is not.
 The lead/rest split survives inside the bubble and keeps its harness, but comes
 off the display rung — a 40pt headline inside a bubble is a poster in an
 envelope, and the bubble now does the separating that type was doing alone.
+
+### 581c. Voice asks, and recording-as-capture is retired on purpose (user: "The voice also doesn't work because once you record your voice… save it to your things which that's not what somebody wants if you're using her voice question", then "i don't want recording as capture back", 2026-09-03)
+
+§581 gave the resting verb to **Record** and argued it well: a voice note is a
+real thing that enters the corpus, where dictation is a typing shortcut, so the
+mic kept its door without taking a key. Every word of that is true and it is
+the wrong answer on this surface. You are standing on the ask screen, with a
+destination lit and a question in mind; having your words FILED rather than
+ASKED is the surface answering a question nobody put to it.
+
+**The transcript lands in the field and the ask proceeds exactly as a typed one
+would** — same destination, same verb, same everything below. Nothing is written
+on the way.
+
+**Recording-as-capture is DELETED, and that is a ruling rather than a side
+effect** (asked directly, answered: "i don't want recording as capture back").
+Both `voice.start()` call sites in the app were this surface, so there is no
+other door and none is being built. `Composer.onCommitVoice` and
+`RootShell.saveVoice` are removed rather than left as wiring nothing can reach.
+**Voice notes already in a corpus are untouched** — they render as they always
+did, and they now actually play, which is the half that still matters.
+
+### The bug in the fix, caught before it built
+
+`VoiceCapture.stop` clears `transcript` in a `defer` and returns nil under
+`keep: false`, so reading `voice.transcript` after the call gets an empty
+string — the guard would have returned and the whole dictation would have
+silently done nothing, on the path that had just been rewritten to fix a
+silence. The transcript is read BEFORE the stop.
+
+### And playback never played (same report)
+
+`ThingContent`'s audio toggle set the session's **category** and never
+activated it. Setting `.playback` states what the app intends to do with audio;
+it does not take the route. And `VoiceCapture.stop` ends every recording with
+`setActive(false, options: .notifyOthersOnDeactivation)` — which is exactly how
+these notes come to exist — so after recording anything the session is down,
+`play()` returns false, and nothing anywhere reports it. Indistinguishable from
+a broken file, and it had been that way for as long as the sheet existed.
+
+Activated on every toggle rather than once at player creation, because anything
+else may have taken the session since: a second recording, a phone call,
+another player.
+
+### Two more from the same round
+
+**The lit destination key is `DS.tint`.** §581a made it white on §580's
+reasoning that the armed verb owns the one saturated block — but the verb is
+only armed once there are words, so at rest the foot carried no colour at all
+while the one thing worth pointing at was the destination. The two never
+compete for a meaning: the ring says WHO, the verb says WHAT HAPPENS NEXT.
+
+**The paper's bottom fade is deleted.** Reported as "when you type a second
+response it overlaps w the past one and is hard to read" — it was not an
+overlap. The gradient painted `DS.page` over the last 40pt of the paper, and
+the last 40pt is where the newest sentence of an answer sits, so the one line
+you most want to read was the one being dimmed. A fade earns its place where
+content runs UNDER floating chrome, which is what this surface used to be; the
+foot is opaque and adjacent now, and the field's own bar is the boundary.
