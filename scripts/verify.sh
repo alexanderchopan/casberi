@@ -1747,7 +1747,7 @@ harness "Vibenet scope drawings self-test" "8 mutations, 9 drift guards" "script
 # returning day card each rebuild the confusion this pass removed, and the
 # kept pills must stay mounted or "Keep" mints a standing question with
 # nowhere to appear (§83).
-harness "Ask capsule self-test" "11 mutations, 15 drift guards" "scripts/ask-destination-selftest.sh" "the ask capsule self-test failed — run scripts/ask-destination-selftest.sh"
+harness "Ask capsule self-test" "14 mutations, 53 drift guards — incl. the send actually sending the draft" "scripts/ask-destination-selftest.sh" "the ask capsule self-test failed — run scripts/ask-destination-selftest.sh"
 
 # The design system's first mechanical check (prd §299). Every other rule in
 # this file is enforced by a script; the design system was enforced by memory,

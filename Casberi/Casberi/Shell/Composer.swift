@@ -307,10 +307,30 @@ struct Composer: View {
     /// over the live answer (review 2026-07-13: a slow first answer was
     /// clobbering the follow-up that overtook it).
     @State private var askGeneration = 0
+    /// The configured agents, mirrored at the same three moments `keyAvailable`
+    /// is — and `keyAvailable` is now DERIVED from it rather than read
+    /// separately, so the two can never disagree about whether a key exists.
+    ///
+    /// PERF prd §579, and the note above was right about the cost while
+    /// being enforced in exactly one place. `AgentKey.configured` filters ALL
+    /// SEVEN providers through `TokenVault.get`, which is a
+    /// `SecItemCopyMatching` with `kSecReturnData` — an XPC round trip to
+    /// securityd that DECRYPTS the secret, per provider, with no short-circuit
+    /// (`filter` visits every element). The input bar called it twice per body
+    /// pass (the rail's `providers:`, the agents-link gate) and `offerKeyedAsk`
+    /// a third time, so a body pass cost up to ~21 decrypting keychain reads —
+    /// and the body reads `draft`, so it re-evaluates on every keystroke, on
+    /// the one path that has to finish inside a frame. That is the jitter.
+    ///
+    /// A mirror, not a cache with an invalidation rule: it is refreshed at the
+    /// raise and at each settle, which are the same moments `keyAvailable`
+    /// already trusted, so nothing about freshness changes — a key pasted in
+    /// Settings has always landed on the next open either way.
+    @State private var configuredAgents: [AgentProvider] = []
     /// Whether a key is configured, mirrored once per settled answer — the
     /// chip gate can't afford a Keychain round-trip per render (typing a
     /// follow-up re-renders per keystroke).
-    @State private var keyAvailable = false
+    private var keyAvailable: Bool { !configuredAgents.isEmpty }
     /// The one-tap version of the same consent (2026-07-31, prd §242) for an
     /// ask a SURFACE handed over already wanting a key (`chrome.askWithKey` —
     /// a thing sheet's "Ask about this"): the on-device answer runs first
@@ -1770,7 +1790,17 @@ struct Composer: View {
             // somebody who is not reading, and this is the send where that
             // matters.
             if askGround == .ownAccount { DSHaptic.lift() } else { DSHaptic.tap() }
-            if activeAskAgent != nil { askWithKey() } else { commit() }
+            // `askDirectly()`, NEVER `askWithKey()` (prd §579). This pill is
+            // reached with a DRAFT — `armed` is `hasDraft` — and `askWithKey`
+            // re-asks `currentQuestion`, which `commit()` is the only writer
+            // of. So on a first send it read the empty string and returned at
+            // its own guard: the tap did nothing, silently, with the words
+            // still sitting in the field. `askDirectly()` is the draft-send
+            // verb (`forceKeyedThisAsk` + `commit(forceAsk:)`), which adopts
+            // the draft as the question, clears the field, and routes to the
+            // picked agent — the path the non-embedded capsule beside this one
+            // has always taken.
+            if activeAskAgent != nil { askDirectly() } else { commit() }
         } label: {
             HStack(spacing: DS.Space.s2) {
                 Text(name.map { String(localized: "Send to \($0)") }
@@ -3255,11 +3285,13 @@ struct Composer: View {
                 //
                 // Once per OPEN, which is precisely what the "can't afford a
                 // Keychain round-trip per render" note was protecting (a
-                // follow-up re-renders per keystroke). The rail two hundred
-                // lines below already reads `AgentKey.configured` on every
-                // render, so this is strictly cheaper than what it sits
-                // beside.
-                keyAvailable = AgentKey.isConfigured
+                // follow-up re-renders per keystroke). This line used to say
+                // it was "strictly cheaper than what it sits beside", because
+                // the rail two hundred lines below read `AgentKey.configured`
+                // on every render — which was true, and was an argument for
+                // fixing the rail rather than for joining it. It is fixed
+                // (see `configuredAgents`), and this is now the read.
+                configuredAgents = AgentKey.configured
                 riseT0 = .now
                 risePhase("raise")
                 // Flip BEFORE the heavy synchronous work, then yield once —
@@ -4005,6 +4037,41 @@ struct Composer: View {
         }
     }
 
+    /// PICKING A DESTINATION — one verb, both pickers (prd §579).
+    ///
+    /// The rail and the capsule are two views of one choice, and they were two
+    /// copies of the handler: the capsule's cleared `chosenAgent` alone while
+    /// the rail's cleared `askProvider` too. Copies of a rule drift, and this
+    /// one decides where somebody's words — and their money — go, so it is one
+    /// function that both call.
+    ///
+    /// **A pick governs the NEXT ask, never the one running.** `askProvider`
+    /// is what a settling turn is labelled with (`(askProvider ?? …)?.agent`)
+    /// and the rail stays live while an answer streams, so clearing it
+    /// mid-flight would credit an agent's answer to whatever key happened to
+    /// be active. `chosenAgent` is cleared either way because `activeAskAgent`
+    /// already ignores it while in flight.
+    private func pickDevice() {
+        AskDestination.used(AskDestination.deviceRaw)
+        chosenAgent = nil
+        guard !inFlight else { return }
+        askProvider = nil
+        // STAND THE CONVERSATION'S KEYED DEFAULT DOWN. `activeAskAgent` lets
+        // an explicit pick win over every inference, so the device key lights
+        // — but `commit`'s `stayKeyed` read `conversationIsKeyed` alone, so
+        // mid-thread the pill said "Ask" and the words still went to the
+        // agent, and were still billed to it. §543's confusion in the
+        // direction §577 did not check.
+        conversationIsKeyed = false
+    }
+
+    private func pickAgent(_ provider: AgentProvider) {
+        AskDestination.used(provider.rawValue)
+        chosenAgent = provider
+        guard !inFlight else { return }
+        askProvider = provider
+    }
+
     private func askDirectly() {
         forceKeyedThisAsk = true
         commit(forceAsk: true)
@@ -4038,11 +4105,22 @@ struct Composer: View {
         return keyed ? askProvider : nil
     }
 
-    /// The BYO-key retry: the same question, re-answered by the person's own
-    /// agent key (Claude, ChatGPT, Gemini, or Venice). The on-device answer
-    /// settles into the thread first, so the two sit side by side — the tap
-    /// is the consent, the badge is the receipt, and a failure is worded
-    /// plainly (never faked).
+    /// The BYO-key RETRY, and only the retry: the same question — the one
+    /// already in `currentQuestion` — re-answered by the person's own agent
+    /// key. The on-device answer settles into the thread first, so the two sit
+    /// side by side; the tap is the consent, the badge is the receipt, and a
+    /// failure is worded plainly (never faked).
+    ///
+    /// **IT DOES NOT SEND A DRAFT, and that is not a detail (prd §579).**
+    /// `currentQuestion` is written by `commit()` alone, so calling this to
+    /// send typed words asks the PREVIOUS question — or, on a first send,
+    /// returns at the guard below and does nothing at all, silently, with the
+    /// words still sitting in the field. That shipped: both embedded send
+    /// doors routed here once a destination could be picked, so with an agent
+    /// chosen the send pill and the return key were dead controls on the first
+    /// message of every conversation. **A draft is sent with `askDirectly()`.**
+    /// Guarded mechanically in `ask-destination-selftest.sh`, because a rule
+    /// with no check is one this repo has re-broken before.
     private func askWithKey() {
         let q = currentQuestion
         guard !q.isEmpty, !inFlight else { return }
@@ -4109,7 +4187,7 @@ struct Composer: View {
             // Closed, or a newer ask overtook this one — retire silently.
             guard isOpen, gen == askGeneration else { return }
             withAnimation(DS.Motion.standard) { proseStreaming = false; inFlight = false }
-            keyAvailable = AgentKey.isConfigured
+            configuredAgents = AgentKey.configured
             switch outcome {
             case .success(let answer):
                 currentStreamed = true   // a keyed synthesis is keepable too
@@ -4355,7 +4433,7 @@ struct Composer: View {
     /// seat to the category.
     ///
     /// **It retires the moment an agent exists.** Gated on
-    /// `AgentKey.configured.isEmpty`, so it is a first-run answer and not
+    /// `configuredAgents.isEmpty`, so it is a first-run answer and not
     /// permanent furniture — chrome is priced by frequency of use
     /// (`AgentBar`'s rest ruling), and somebody who has pasted a key already
     /// knows where these live; the ask capsule beside the field names their
@@ -4367,7 +4445,7 @@ struct Composer: View {
     /// that fired a question you had to spend a tap to learn the value of.
     /// This runs nothing and fetches nothing; it opens a catalog.
     @ViewBuilder private var agentsLink: some View {
-        if let onOpenAgents, restChrome(keepBrief: false), AgentKey.configured.isEmpty {
+        if let onOpenAgents, restChrome(keepBrief: false), configuredAgents.isEmpty {
             Button {
                 DSHaptic.tap()
                 onOpenAgents()
@@ -4759,21 +4837,13 @@ struct Composer: View {
             // moved `TextField` is a rebuilt `UITextView` (§577c).
             if embedded, !isRecording {
                 AskDestinationRail(
-                    providers: AgentKey.configured,
+                    providers: configuredAgents,
                     active: activeAskAgent,
                     recording: isRecording,
                     size: showsRail ? .deck : .strip,
-                    onDevice: {
-                        AskDestination.used(AskDestination.deviceRaw)
-                        chosenAgent = nil
-                        askProvider = nil
-                    },
-                    onAgent: { provider in
-                        AskDestination.used(provider.rawValue)
-                        chosenAgent = provider
-                        askProvider = provider
-                    })
-                if showsRail, AgentKey.configured.isEmpty {
+                    onDevice: { pickDevice() },
+                    onAgent: { provider in pickAgent(provider) })
+                if showsRail, configuredAgents.isEmpty {
                     HStack { Spacer(minLength: 0); agentsLink }
                         .padding(.horizontal, DS.Space.s1)
                         .padding(.top, DS.Space.s2)
@@ -4820,21 +4890,18 @@ struct Composer: View {
                     sendPill
                 } else {
                     AskDestinationCapsule(
-                        providers: AgentKey.configured,
+                        providers: configuredAgents,
                         hasDraft: hasDraft,
                         recording: isRecording,
                         active: activeAskAgent,
                         find: (hasDraft && !isRecording && !inFlight && !handingOff)
                             ? { runFind() } : nil,
                         onDevice: {
-                            AskDestination.used(AskDestination.deviceRaw)
-                            chosenAgent = nil
+                            pickDevice()
                             if hasDraft || isRecording { commit() } else { fieldFocused = true }
                         },
                         onAgent: { provider in
-                            AskDestination.used(provider.rawValue)
-                            chosenAgent = provider
-                            askProvider = provider
+                            pickAgent(provider)
                             if hasDraft { askDirectly() } else { fieldFocused = true }
                         })
                 }
@@ -5084,7 +5151,7 @@ struct Composer: View {
     /// `!isRecording` is the one real requirement left: there is no
     /// committed text yet to ask about while a voice capture is running.
     private var offerKeyedAsk: Bool {
-        hasDraft && !isRecording && AgentKey.isConfigured
+        hasDraft && !isRecording && keyAvailable
     }
 
     /// The typed-draft band (2026-07-16, fourth form — see TakeTool), in the
@@ -5301,7 +5368,12 @@ struct Composer: View {
         // navigation, not a question anybody meant to pay for.
         if !isRecording, !forceAsk, chosenAgent != nil, hasDraft, keyAvailable,
            NavigateCommand.parse(draft, tags: tagPool, sources: knownSources()) == nil {
-            askWithKey()
+            // `askDirectly()`, never `askWithKey()` — see `sendPill`. This
+            // branch returns BEFORE the `currentQuestion = draft` below it, so
+            // routing straight to the retry verb asked the empty string on the
+            // first send and the PREVIOUS question on every one after it.
+            // `forceAsk` is what stops the re-entry recursing back into here.
+            askDirectly()
             return
         }
         if isRecording {
@@ -5537,7 +5609,7 @@ struct Composer: View {
                    !docHasFallback(finalDoc) {
                     fieldFocused = true
                 }
-                keyAvailable = AgentKey.isConfigured   // one read per settle
+                configuredAgents = AgentKey.configured   // one read per settle
                 // The settle haptic is keyed to honesty (delight, 2026-07-21):
                 // real content earns the tick, the "nothing matches" fallback
                 // earns nothing — celebrating a miss would violate the

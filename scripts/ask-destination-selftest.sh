@@ -273,6 +273,12 @@ COMPOSER="Casberi/Casberi/Shell/Composer.swift"
 CAPSULE="Casberi/Casberi/Shell/AskDestinationCapsule.swift"
 strip_comments "$COMPOSER" > "$WORK/composer.nc"
 strip_comments "$CAPSULE"  > "$WORK/capsule.nc"
+# A WHITESPACE-FLATTENED copy for the guards that span lines. `grep` is
+# line-based, so a multi-line pattern matches NOTHING — and this file already
+# records paying for exactly that once ("the first cut of this guard matched
+# nothing and passed vacuously"). Flattening makes the span expressible instead
+# of forcing each guard down to a single line it can be satisfied by alone.
+tr '\n' ' ' < "$WORK/composer.nc" | tr -s ' ' > "$WORK/composer.flat"
 
 guard() {
   local what="$1" file="$2" pattern="$3"
@@ -451,4 +457,97 @@ guard "the wallet answer is a document for the scroll anchor" "$WORK/composer.nc
 guard "the anchor and the typewriter guard read the same term" "$WORK/composer.nc" \
       'documentInView'
 
-print "  ok   AskDestination — 15 mutations, 38 drift guards"
+# ---- the send actually sends what you typed (2026-09-03) ------------------
+# THE CLASS: `askWithKey()` re-asks `currentQuestion`, which `commit()` is the
+# only writer of — so routing a DRAFT send there asks the previous question,
+# and on a first send returns at its own empty guard and does nothing at all.
+# It shipped in both embedded send doors at once, so with an agent picked the
+# send pill and the return key were dead controls on the first message of
+# every conversation, with the words left sitting in the field. Reported as
+# "I should be able to send anything to bankr, but I can't."
+#
+# Every one of these renders as a perfectly ordinary armed blue pill, which is
+# why they are greps and not something a screenshot could catch.
+guard "the send pill sends the draft, never the last question" "$WORK/composer.nc" \
+      'if activeAskAgent != nil \{ askDirectly\(\) \} else \{ commit\(\) \}'
+guard_absent "the send pill never routes to the retry verb" "$WORK/composer.nc" \
+      'if activeAskAgent != nil \{ askWithKey\(\)'
+# `commit`'s picked-agent fast path returns BEFORE `currentQuestion = draft`,
+# so it has the identical exposure and the identical fix.
+guard "the picked-agent fast path sends the draft" "$WORK/composer.flat" \
+      'chosenAgent != nil, hasDraft, keyAvailable,[^;]*askDirectly\(\)'
+# `askDirectly` is the draft-send verb BECAUSE it goes through commit, which
+# adopts the draft as the question and clears the field. A version that stopped
+# doing that would satisfy every guard above while restoring the bug.
+guard "askDirectly commits the draft as the question" "$WORK/composer.flat" \
+      'askDirectly\(\) \{ forceKeyedThisAsk = true commit\(forceAsk: true\) \}'
+guard "commit is the one place a draft becomes the question" "$WORK/composer.nc" \
+      'currentQuestion = draft'
+# The retry keeps exactly one caller: the deferred keyed follow-up, which fires
+# after a settle and therefore has a real `currentQuestion`. A third call site
+# is how this came back.
+askwithkey_calls=$(grep -cE '(^|[^a-zA-Z.])askWithKey\(\)' "$WORK/composer.nc" || true)
+if [[ "$askwithkey_calls" == "2" ]]; then
+  print "  ok   askWithKey is the retry alone (1 call + 1 definition)"
+else
+  print -u2 "  ✗ drift: askWithKey has $askwithkey_calls sites, expected 2 (its definition and the deferred retry)"
+  exit 1
+fi
+
+# ---- the destination shown is the destination used ------------------------
+# An explicit device pick must stand the conversation's keyed default down, or
+# the pill reads "Ask" while `commit`'s `stayKeyed` still spends the key.
+#
+# ONE VERB, and that is what is guarded. The first cut asserted the clear was
+# PRESENT, which two handlers can satisfy between them: deleting it from the
+# rail SURVIVED, because the capsule's copy held the guard up. Counting the two
+# would have worked and still described a rule kept in two places. So the rule
+# lives in one function both pickers call, and the guard is that they call it.
+guard "the device pick stands the keyed default down" "$WORK/composer.flat" \
+      'func pickDevice\(\) \{ AskDestination.used\(AskDestination.deviceRaw\) chosenAgent = nil guard !inFlight else \{ return \} askProvider = nil conversationIsKeyed = false \}'
+# A pick governs the NEXT ask, never the one running: `askProvider` labels the
+# settling turn and the rail stays live while an answer streams, so clearing it
+# mid-flight credits an agent's answer to whatever key happens to be active.
+guard "an agent pick leaves an answer in flight alone" "$WORK/composer.flat" \
+      'func pickAgent\(_ provider: AgentProvider\) \{ AskDestination.used\(provider.rawValue\) chosenAgent = provider guard !inFlight else \{ return \} askProvider = provider \}'
+# Neither picker may keep a handler of its own — a second copy is how the two
+# drifted in the first place (the capsule cleared `chosenAgent` alone).
+picker_handlers=$(grep -oE 'AskDestination.used\(' "$WORK/composer.flat" | wc -l | tr -d ' ')
+if [[ "$picker_handlers" == "2" ]]; then
+  print "  ok   the pick is recorded in the two shared verbs and nowhere else"
+else
+  print -u2 "  ✗ drift: AskDestination.used has $picker_handlers sites, expected 2 (pickDevice and pickAgent)"
+  exit 1
+fi
+
+# ---- PERF: no keychain round trip per keystroke (2026-09-03) --------------
+# `AgentKey.configured` is seven `SecItemCopyMatching` calls with kSecReturnData
+# — an XPC hop to securityd that DECRYPTS each secret, and `filter` visits all
+# seven every time. The input bar's body reads `draft`, so it re-evaluates per
+# keystroke on the path that has to finish inside a frame. Three call sites
+# there cost ~21 decrypting reads a keystroke. That is the jitter, and a mirror
+# is the fix; these guards keep the reads out of the body.
+guard "the rail is fed the mirrored list" "$WORK/composer.nc" \
+      'providers: configuredAgents'
+guard_absent "the rail never reads the keychain per render" "$WORK/composer.nc" \
+      'providers: AgentKey\.configured'
+guard_absent "no view gate reads the keychain per render" "$WORK/composer.nc" \
+      'AgentKey\.configured\.isEmpty'
+guard_absent "the keyed-ask gate reads the mirror" "$WORK/composer.nc" \
+      'isRecording && AgentKey\.isConfigured'
+# The mirror is refreshed at the raise and at each settle — the three moments
+# `keyAvailable` already trusted, so freshness is unchanged. Fewer than three
+# and a key pasted in Settings, or one cleared mid-conversation, goes unnoticed.
+mirror_writes=$(grep -cE 'configuredAgents = AgentKey\.configured' "$WORK/composer.nc" || true)
+if [[ "$mirror_writes" -ge 3 ]]; then
+  print "  ok   the key mirror is refreshed at the raise and both settles ($mirror_writes)"
+else
+  print -u2 "  ✗ drift: the key mirror is written $mirror_writes times, expected at least 3"
+  exit 1
+fi
+# Derived, never a second stored flag — two mirrors of one keychain drift, and
+# then the pill lights for a key the send cannot find.
+guard "keyAvailable is derived from the mirror" "$WORK/composer.nc" \
+      'var keyAvailable: Bool \{ !configuredAgents.isEmpty \}'
+
+print "  ok   AskDestination — 14 mutations, 53 drift guards"

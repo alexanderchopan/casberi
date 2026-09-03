@@ -46402,3 +46402,42 @@ So: `askSurface` and the `asking` gate are deleted. The panel is ONE container i
 **And the slab under it all is gone.** `dsInkFill` + shadow was "the hero of the sheet, by tone and shadow alone", written when the panel held a one-line field. The deck's keys are the raised objects now, so a raised card behind them is a box inside a box — which is exactly what the user saw twice ("the boxes touching each other like an error"). Controls sit on the ink. The bubble keeps its card, because there it really is one floating over the feed.
 
 **Verification:** iOS build green; rest, draft and the three-key multi-agent case all seen on the simulator. **Unseen:** the `.strip` size under a settled answer, and the wait clock, which still needs a live Bankr key.
+
+## 579. The send that sent nothing, and the keystroke that read the Keychain (user: "I should be able to send anything to banker, but I can't. also, the performance when you first start clicking, it's just not good... The window needs to not be jittery", 2026-09-03)
+
+Two reports, two separate causes, both invisible to every check in this repo — the build is green, the screen is right, and the audits are static.
+
+### 1. The send pill was a dead control on the first message of every conversation
+
+`askWithKey()` is the BYO-key **retry**: it re-asks `currentQuestion`, the question a previous `commit()` already recorded. `currentQuestion` has exactly three writers — cleared on close, set by `runFind`, and set by `commit()` **inside its own typed-question branch**. So it is empty until a `commit()` has run.
+
+§577's send pill (`if activeAskAgent != nil { askWithKey() }`) and §577's amendment to `commit()` (the picked-agent fast path, which `return`s *before* `currentQuestion = draft`) both routed a DRAFT there. With an agent picked:
+
+- **the first send did nothing at all** — `guard !q.isEmpty` returned, silently, with the typed words still sitting in the field;
+- **every send after it asked the PREVIOUS question**, ignoring what had just been typed.
+
+Reported against Bankr because Bankr is the destination somebody picks deliberately, but it was never a Bankr bug: `keyedAnswerDocument` bypasses its empty-corpus guard for Bankr correctly, and `BankrAgent` has carried no answer-only rail since 2026-08-31. Nothing downstream was ever reached.
+
+The fix is the verb that already existed. **`askDirectly()` is the draft-send** (`forceKeyedThisAsk = true` + `commit(forceAsk: true)`, which adopts the draft as the question, clears the field, and routes to the picked agent) — the path the non-embedded capsule has taken since §242. `askWithKey()` keeps exactly one caller, the deferred keyed follow-up, which fires after a settle and therefore has a real `currentQuestion`.
+
+**Why no check saw it.** A dead control renders as a perfectly ordinary armed blue pill. The harness compiles `AskDestination.swift`, which is the picker's arithmetic and knows nothing about what a tap runs; the screen sweep proves a surface painted; the liveness audit asks about tombstones. It is a wiring bug between two files, so it is guarded the way this repo guards wiring — greps on a comment-stripped copy, mutation-proven, in `ask-destination-selftest.sh`.
+
+### 2. The destination shown was not always the destination used
+
+Found while tracing the above. `activeAskAgent` lets an explicit pick win over every inference, so tapping the iPhone key lights the device — but `commit()`'s `stayKeyed` read `conversationIsKeyed` alone, so mid-thread the pill said "Ask" and the words still went to the agent, **and were still billed to it**. §543's confusion in the direction §577 did not check.
+
+The two pickers were also two copies of one handler (the rail cleared `askProvider`, the capsule did not). They are `pickDevice()`/`pickAgent(_:)` now — one implementation, both callers — and **a pick governs the NEXT ask, never the one running**: `askProvider` labels the settling turn and the rail stays live while an answer streams, so clearing it mid-flight would credit an agent's answer to whatever key happened to be active. `chosenAgent` is cleared either way, since `activeAskAgent` ignores it while in flight.
+
+The first cut of that guard asserted the clear was PRESENT, which two handlers satisfy between them — deleting it from the rail SURVIVED, with the capsule's copy holding the guard up. **A fixture only tests the rule it names if it fails that rule**, fourth instance. Counting the two would have worked and still described a rule kept in two places; one function both pickers call is the stronger answer, and the guard is that they call it.
+
+### 3. The jitter: ~21 decrypting Keychain reads per keystroke
+
+`AgentKey.configured` is `AgentProvider.allCases.filter { TokenVault.get($0.vaultKey) != nil }` — **seven** `SecItemCopyMatching` calls with `kSecReturnData`, an XPC round trip to securityd that DECRYPTS each secret, and `filter` visits every element with no short-circuit. The input bar called it **twice per body pass** (the rail's `providers:`, the agents-link gate) and `offerKeyedAsk` a third time. That body reads `draft`, so it re-evaluates **on every keystroke**, on the one path that has to finish inside a frame.
+
+The cost was known and enforced in exactly one place: `keyAvailable` was mirrored precisely so the chip gate "can't afford a Keychain round-trip per render", and §577's own amendment note argued its new read was "strictly cheaper than what it sits beside" — which was true, and was an argument for fixing the rail rather than for joining it.
+
+`configuredAgents` is that mirror, refreshed at the same three moments `keyAvailable` already trusted (the raise and both settles), and **`keyAvailable` is now DERIVED from it** rather than read separately — two mirrors of one Keychain drift, and then the pill lights for a key the send cannot find. Freshness is unchanged: a key pasted in Settings has always landed on the next open either way.
+
+**Not the whole of the open's cost, and said rather than implied.** The raise's other expense — `computeSuggestions`' full corpus walk, ~761ms on a 13,412-row corpus — was already cached to once per launch (PERF 2026-08-12). This is the typing half.
+
+**Verification:** all 33 static audits green; every new guard mutation-proven both ways (the shipped bug restored fails each one; the fixed tree passes). **UNBUILT and UNMEASURED** — authored on Linux with no Xcode and no Swift toolchain, so nothing here has been compiled, `verify.sh` has not run, and the keystroke cost is arithmetic over the call sites rather than a profile. Run `scripts/verify.sh` before shipping.
