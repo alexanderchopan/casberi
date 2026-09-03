@@ -115,7 +115,13 @@ def grab(signature):
     return src[start:k + 1]
 
 parts = [grab("struct Record: Codable"),
-         grab("static func folded(")]
+         grab("static func folded("),
+         # The SECOND writer of `authFailedAt` (2026-09-03, prd §579). OAuth's
+         # token endpoint spells an auth refusal `400 invalid_grant`, which
+         # `folded` is right to call transient for every REST bridge here — so
+         # that path marks the seat directly, and until this line the harness
+         # could not see the rule at all.
+         grab("static func markingAuthRefused(")]
 open(out, "w").write(
     "import Foundation\n\nenum BridgeHealth {\n"
     + "\n\n".join(p.replace("private ", "") for p in parts)
@@ -183,8 +189,31 @@ check("arc remembers the last good read", arc.lastOK == t0)
 arc = fold(arc, 200, t2)
 check("arc heals on a good read", arc.authFailedAt == nil)
 
+// 8. The OAuth door (prd §579). `markingAuthRefused` is the other way in.
+let marked = BridgeHealth.markingAuthRefused(R(), now: t1)
+check("an OAuth refusal flags the seat", marked.authFailedAt == t1)
+// The honesty rule, and the whole reason this is not `folded(_, status: 401)`:
+// the wire said 400, the caller has already recorded that truthfully, and a
+// 401 written here would put a number in the probe no response ever carried.
+check("it does not invent a status", marked.lastStatus == nil)
+check("it does not touch lastOK", marked.lastOK == nil)
+
+// FIRST SIGHTING WINS — a month-old lockout must not read as fresh. The
+// refresh path retries on every foreground, so this runs again and again.
+let restamped = BridgeHealth.markingAuthRefused(marked, now: t2)
+check("a second refusal does not restamp", restamped.authFailedAt == t1)
+
+// It composes with `folded` in both directions, which is what makes the seat
+// heal: being let back in is still the only thing that clears the flag.
+check("a 2xx clears what the OAuth door set",
+      fold(marked, 200, t2).authFailedAt == nil)
+check("a transient does not clear it",
+      fold(marked, 500, t2).authFailedAt == t1)
+check("it does not re-flag a seat already shut out by a 401",
+      BridgeHealth.markingAuthRefused(fold(R(), 401, t0), now: t2).authFailedAt == t0)
+
 if failures > 0 { print("✗ bridge-health self-test: \(failures) failure(s)"); exit(1) }
-print("✓ bridge-health self-test: state machine verified")
+print("✓ bridge-health self-test: state machine + OAuth door verified")
 SWIFT
 
 swiftc -O -o "$TMP/run" "$TMP/extracted.swift" "$TMP/main.swift" 2>&1 \
@@ -229,5 +258,23 @@ mutate "success range narrowed" "case 200...299:" "case 200...200:" || mut_fail=
 # lastOK stops moving, so "when did this last work" is frozen at the first read.
 mutate "lastOK frozen" "next.lastOK = now" "next.lastOK = next.lastOK ?? now" || mut_fail=1
 
+# --- the OAuth door (prd §579) ---------------------------------------------
+# Anchored on `guard`, which only `markingAuthRefused` uses — `folded` spells
+# the same test with `if`, so a loose pattern would edit the wrong function and
+# pass for the wrong reason.
+GUARD="guard next.authFailedAt == nil else { return next }"
+# It stops flagging at all — an OAuth lockout the seat never hears about.
+mutate "OAuth refusal no longer flags" \
+  "$GUARD
+        next.authFailedAt = now" "$GUARD" || mut_fail=1
+# First-sighting lost. The refresh runs on every foreground, so this one turns
+# a month-old lockout into news, every single pass.
+mutate "OAuth refusal restamps every pass" "$GUARD" "_ = next.authFailedAt" || mut_fail=1
+# It writes a status no response carried — the honesty rule, and the reason
+# this is a door of its own rather than `folded(_, status: 401)`.
+mutate "OAuth refusal invents a status" "$GUARD" \
+  "$GUARD
+        next.lastStatus = 401" || mut_fail=1
+
 [[ $mut_fail -eq 0 ]] || { echo "✗ bridge-health self-test: a mutation survived"; exit 1; }
-echo "✓ bridge-health self-test: 6 mutations caught, drift guards green"
+echo "✓ bridge-health self-test: 9 mutations caught, drift guards green"

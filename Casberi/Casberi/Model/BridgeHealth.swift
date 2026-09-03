@@ -146,11 +146,31 @@ enum BridgeHealth {
     /// through the funnel, or `forget` when a new credential is pasted.
     static func markAuthRefused(_ bridge: String) {
         var book = load()
-        var record = book[bridge] ?? Record()
-        guard record.authFailedAt == nil else { return }
-        record.authFailedAt = .now
-        book[bridge] = record
+        let before = book[bridge] ?? Record()
+        let after = markingAuthRefused(before, now: .now)
+        guard after.authFailedAt != before.authFailedAt else { return }
+        book[bridge] = after
         save(book)
+    }
+
+    /// The rule above, pure — one record, one refusal.
+    ///
+    /// Split from its plumbing for exactly the reason `folded` is, and the
+    /// reason is sharper here: this is the SECOND writer of `authFailedAt`,
+    /// and the harness could only see the first. A rule the proof cannot
+    /// reach is a rule with no proof, and every way this one breaks is a
+    /// silent wrong answer — a month-old breakage restamped as fresh, or a
+    /// status written that no response ever carried.
+    static func markingAuthRefused(_ record: Record, now: Date) -> Record {
+        var next = record
+        // First sighting wins, as in `folded`. And `lastStatus` and `lastOK`
+        // are untouched on purpose: this refusal arrived under a status the
+        // caller has already recorded truthfully, and overwriting it to reuse
+        // the state machine would put a number in the probe that never came
+        // off the wire.
+        guard next.authFailedAt == nil else { return next }
+        next.authFailedAt = now
+        return next
     }
 
     /// The whole book, name-ordered — for the probe. Keyed by bridge name
