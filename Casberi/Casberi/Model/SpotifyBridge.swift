@@ -25,6 +25,19 @@ enum SpotifyAuth {
 
     static var connected: Bool { TokenVault.get(refreshKey) != nil }
 
+    /// Posted the moment a refused refresh deletes the stored sign-in.
+    ///
+    /// `connected` is a plain Keychain read, so a screen showing the connected
+    /// face has nothing to tell it the credential underneath just went away.
+    /// That did not matter while the setup screen was the only caller — it did
+    /// the clearing itself, in a function that then wrote its own `@State`.
+    /// Since Spotify joined the foreground sweep there is a SECOND caller that
+    /// is not a view at all, and its clearing repainted nothing: a green
+    /// "Connected" over a credential that no longer existed. Posted rather
+    /// than solved with an `@Observable` wrapper because the fact is an event
+    /// ("this just stopped being true"), not a state anything polls.
+    static let credentialsCleared = Notification.Name("casberi.spotify.credentialsCleared")
+
     /// Seconds until the cached access token stops being trusted — negative
     /// once the next read will spend the refresh token instead. For
     /// `-spotifyProbe` only: the cache is trusted on a CLOCK, so a phone whose
@@ -211,6 +224,11 @@ enum SpotifyAuth {
         case .refused(_, let error):
             guard error == "invalid_grant" else { return .unreachable }
             disconnect()
+            // Main, because every observer is a view. `refreshToken` is
+            // reached from the sweep's own task as well as from the screen.
+            Task { @MainActor in
+                NotificationCenter.default.post(name: credentialsCleared, object: nil)
+            }
             // The seat outlives the credential on purpose — the rows stay, the
             // room door stays, and the catalog says "needs reconnecting"
             // rather than silently forgetting Spotify was ever set up. Without
@@ -248,7 +266,19 @@ enum SpotifyAuth {
         }
         let me = await ask("https://api.spotify.com/v1/me")
         let tracks = await ask("https://api.spotify.com/v1/me/tracks?limit=1")
-        return "me=[\(me)] tracks=[\(tracks)]"
+        // Ask once more on a token minted RIGHT NOW. A cached access token was
+        // issued under whatever the app was entitled to at issue time, so when
+        // an owner fixes the app's standing (buying Premium, joining the
+        // allowlist) the question "does an existing connection heal by itself,
+        // or must every user reconnect?" is a product fact, not a curiosity —
+        // and a 403 never triggers the 401 retry that would have re-minted it.
+        var fresh = "(not re-asked)"
+        if case .ok(let minted) = await SpotifyAuth.token(forceRefresh: true) {
+            let answer = await IngestSupport.getJSONBody(
+                "https://api.spotify.com/v1/me", auth: "Bearer \(minted)")
+            fresh = "\(answer.status)"
+        }
+        return "me=[\(me)] tracks=[\(tracks)] freshToken.me=[\(fresh)]"
     }
 #endif
 
