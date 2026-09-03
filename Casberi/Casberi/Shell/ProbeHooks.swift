@@ -5665,6 +5665,25 @@ enum ProbeHooks {
                 NSLog("Dropbox probe: %@ new", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-spotifySeedDeadGrant YES` plants a refresh token Spotify is
+        // certain to refuse, so the ONE outcome this bridge's fix exists for
+        // — a sign-in Spotify has retired, showing a green Connected row over
+        // a dead grant — can be walked on demand. Declared BEFORE
+        // `-spotifyProbe`: hooks run in list order, and the probe must see the
+        // seeded credential. Pair them in one launch.
+        //
+        // It is a REAL end-to-end proof, not a stub: the seeded token goes to
+        // the live token endpoint and comes back `400 invalid_grant`, which is
+        // the code `SpotifyAuth.refreshToken` clears on — so one launch
+        // exercises the refresh, the classification, the credential clearing,
+        // the `BridgeHealth` mark, and the screen's own state, in that order.
+        // The alternative is an account whose grant has actually been revoked,
+        // which nobody can arrange and everybody would have to wait for.
+        Hook(key: "spotifySeedDeadGrant") { _, _ in
+            SpotifyAuth.seedDeadGrant()
+            NSLog("spotify| seeded a dead grant — connected=%@ (the next read must refuse it)",
+                  SpotifyAuth.connected ? "YES" : "NO")
+        },
         // `-spotifyProbe YES` re-reads the ALREADY-connected liked-songs
         // library and NSLogs WHICH way it ended — one line per fact (the
         // `-todayProbe` truncation lesson). A connect can't be scripted (PKCE

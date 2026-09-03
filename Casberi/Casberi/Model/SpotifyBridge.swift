@@ -41,6 +41,31 @@ enum SpotifyAuth {
         UserDefaults.standard.removeObject(forKey: expiryKey)
     }
 
+#if DEBUG
+    /// Plant a refresh token Spotify is certain to refuse, for
+    /// `-spotifySeedDeadGrant`. It exists because the branch this file was
+    /// written on turns on ONE outcome — a sign-in Spotify has retired — and
+    /// that outcome cannot otherwise be reached on demand: it needs a real
+    /// account whose grant has been revoked, which is not something a test can
+    /// arrange and not something anybody should wait for. Seeding it walks the
+    /// whole path against the LIVE token endpoint (measured 2026-09-02: a
+    /// refresh token Spotify does not know answers `400 invalid_grant`, which
+    /// is exactly the code `refreshToken` clears on), so the proof is of the
+    /// real wire and not of a stub.
+    ///
+    /// It writes into the same Keychain items a real sign-in uses, which is
+    /// the point — `connected` must read true, or the screen shows Connect and
+    /// the state under test never exists. The expiry is stamped in the PAST so
+    /// the very next read spends the refresh token rather than trusting a
+    /// cached access token that was never real. Nothing here is a credential:
+    /// the value is a literal that cannot authenticate anything.
+    static func seedDeadGrant() {
+        TokenVault.set("casberi-dead-grant-probe", for: refreshKey)
+        TokenVault.set("casberi-dead-access-probe", for: tokenKey)
+        UserDefaults.standard.set(Date.now.timeIntervalSince1970 - 3600, forKey: expiryKey)
+    }
+#endif
+
     // MARK: - Sign in (PKCE: verifier stays here, challenge goes out)
 
     /// Why a connect attempt ended the way it did, so the screen can say the
