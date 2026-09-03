@@ -126,6 +126,53 @@ enum BridgeHealth {
 
     static func record(for bridge: String) -> Record? { load()[bridge] }
 
+    /// Mark a bridge shut out when the refusal did NOT arrive as a 401 or 403.
+    ///
+    /// OAuth's token endpoint is the one place in this app where an auth
+    /// refusal is spelled something else: RFC 6749 §5.2 reserves `400
+    /// invalid_grant` for a refresh token that is expired, revoked, or was
+    /// never ours. That is exactly the "unambiguous, actionable, never heals
+    /// on its own" class `folded` makes sticky — arriving under a status
+    /// `folded` is right to call transient for every REST bridge in the app.
+    ///
+    /// `lastStatus` is deliberately NOT written. It is the record of what the
+    /// wire actually said, and stamping 401 over a 400 to reuse the state
+    /// machine would put a number in the probe that no response ever carried.
+    /// First sighting wins, for the reason it does in `folded`: the longer a
+    /// bridge has been shut out the more it matters, and restamping would make
+    /// a month-old breakage read as fresh.
+    ///
+    /// Nothing else clears this that doesn't already clear a 401 — a 2xx
+    /// through the funnel, or `forget` when a new credential is pasted.
+    static func markAuthRefused(_ bridge: String) {
+        var book = load()
+        let before = book[bridge] ?? Record()
+        let after = markingAuthRefused(before, now: .now)
+        guard after.authFailedAt != before.authFailedAt else { return }
+        book[bridge] = after
+        save(book)
+    }
+
+    /// The rule above, pure — one record, one refusal.
+    ///
+    /// Split from its plumbing for exactly the reason `folded` is, and the
+    /// reason is sharper here: this is the SECOND writer of `authFailedAt`,
+    /// and the harness could only see the first. A rule the proof cannot
+    /// reach is a rule with no proof, and every way this one breaks is a
+    /// silent wrong answer — a month-old breakage restamped as fresh, or a
+    /// status written that no response ever carried.
+    static func markingAuthRefused(_ record: Record, now: Date) -> Record {
+        var next = record
+        // First sighting wins, as in `folded`. And `lastStatus` and `lastOK`
+        // are untouched on purpose: this refusal arrived under a status the
+        // caller has already recorded truthfully, and overwriting it to reuse
+        // the state machine would put a number in the probe that never came
+        // off the wire.
+        guard next.authFailedAt == nil else { return next }
+        next.authFailedAt = now
+        return next
+    }
+
     /// The whole book, name-ordered — for the probe. Keyed by bridge name
     /// already, so nothing here needs the `BridgeStore` (which the probe hook
     /// table's `(String, ModelContext)` signature cannot hand it anyway).

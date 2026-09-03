@@ -25,11 +25,59 @@ enum SpotifyAuth {
 
     static var connected: Bool { TokenVault.get(refreshKey) != nil }
 
+    /// Posted the moment a refused refresh deletes the stored sign-in.
+    ///
+    /// `connected` is a plain Keychain read, so a screen showing the connected
+    /// face has nothing to tell it the credential underneath just went away.
+    /// That did not matter while the setup screen was the only caller — it did
+    /// the clearing itself, in a function that then wrote its own `@State`.
+    /// Since Spotify joined the foreground sweep there is a SECOND caller that
+    /// is not a view at all, and its clearing repainted nothing: a green
+    /// "Connected" over a credential that no longer existed. Posted rather
+    /// than solved with an `@Observable` wrapper because the fact is an event
+    /// ("this just stopped being true"), not a state anything polls.
+    static let credentialsCleared = Notification.Name("casberi.spotify.credentialsCleared")
+
+    /// Seconds until the cached access token stops being trusted — negative
+    /// once the next read will spend the refresh token instead. For
+    /// `-spotifyProbe` only: the cache is trusted on a CLOCK, so a phone whose
+    /// clock is wrong looks exactly like one whose clock is right, and this is
+    /// the only place that shows it. An accessor rather than the probe reading
+    /// the defaults key itself, so the key stays spelled once.
+    static var secondsUntilTokenRefresh: Int {
+        Int(UserDefaults.standard.double(forKey: expiryKey) - Date.now.timeIntervalSince1970)
+    }
+
     static func disconnect() {
         TokenVault.delete(tokenKey)
         TokenVault.delete(refreshKey)
         UserDefaults.standard.removeObject(forKey: expiryKey)
     }
+
+#if DEBUG
+    /// Plant a refresh token Spotify is certain to refuse, for
+    /// `-spotifySeedDeadGrant`. It exists because the branch this file was
+    /// written on turns on ONE outcome — a sign-in Spotify has retired — and
+    /// that outcome cannot otherwise be reached on demand: it needs a real
+    /// account whose grant has been revoked, which is not something a test can
+    /// arrange and not something anybody should wait for. Seeding it walks the
+    /// whole path against the LIVE token endpoint (measured 2026-09-02: a
+    /// refresh token Spotify does not know answers `400 invalid_grant`, which
+    /// is exactly the code `refreshToken` clears on), so the proof is of the
+    /// real wire and not of a stub.
+    ///
+    /// It writes into the same Keychain items a real sign-in uses, which is
+    /// the point — `connected` must read true, or the screen shows Connect and
+    /// the state under test never exists. The expiry is stamped in the PAST so
+    /// the very next read spends the refresh token rather than trusting a
+    /// cached access token that was never real. Nothing here is a credential:
+    /// the value is a literal that cannot authenticate anything.
+    static func seedDeadGrant() {
+        TokenVault.set("casberi-dead-grant-probe", for: refreshKey)
+        TokenVault.set("casberi-dead-access-probe", for: tokenKey)
+        UserDefaults.standard.set(Date.now.timeIntervalSince1970 - 3600, forKey: expiryKey)
+    }
+#endif
 
     // MARK: - Sign in (PKCE: verifier stays here, challenge goes out)
 
@@ -92,36 +140,172 @@ enum SpotifyAuth {
               let code = items.first(where: { $0.name == "code" })?.value
         else { return .refused }
 
-        return await exchange(form: [
+        switch await exchange(form: [
             "grant_type": "authorization_code",
             "code": code,
             "redirect_uri": redirectURI,
             "client_id": clientID,
             "code_verifier": verifier,
-        ])
+        ]) {
+        case .ok: return .ok
+        case .unreachable: return .unreachable
+        case .refused: return .refused
+        }
+    }
+
+    /// What asking for a live access token came back with.
+    ///
+    /// It used to be `String?`, which collapsed three outcomes the caller has
+    /// to tell apart: a sign-in Spotify has RETIRED (reconnect), a network
+    /// that never answered (wait), and never having connected at all. All
+    /// three surfaced as one sentence on the setup screen — the same
+    /// undiagnosable shape `getJSONBody` was added for (prd §530).
+    enum Token {
+        case ok(String)
+        /// The refresh grant came back `invalid_grant` — the stored sign-in
+        /// is dead and will never work again, so the credentials are cleared
+        /// and the screen honestly reads disconnected. See `refreshToken`.
+        case expired
+        /// The exchange never reached Spotify, or Spotify answered with
+        /// something transient. The sign-in is kept; try again later.
+        case unreachable
+        /// Nothing stored — this bridge was never connected on this device.
+        case noCredential
     }
 
     /// A live access token — refreshed through the stored refresh token when
     /// the current one has expired.
-    static func accessToken() async -> String? {
+    ///
+    /// `forceRefresh` skips the cached token and mints a new one. It exists
+    /// for the 401 retry in `SpotifyIngest`: the cache is trusted on a CLOCK
+    /// (`expires_in` written at exchange time), and a token Spotify has since
+    /// stopped honouring — the authorization revoked from spotify.com, a
+    /// server-side invalidation, a phone whose clock is behind — still looks
+    /// live by that clock. Without this the bridge answers "couldn't read
+    /// your liked songs" on every open until the recorded hour runs out, with
+    /// a perfectly good refresh token sitting unused in the Keychain.
+    static func token(forceRefresh: Bool = false) async -> Token {
         let expiry = UserDefaults.standard.double(forKey: expiryKey)
-        if let token = TokenVault.get(tokenKey),
+        if !forceRefresh, let token = TokenVault.get(tokenKey),
            Date.now.timeIntervalSince1970 < expiry - 60 {
-            return token
+            return .ok(token)
         }
-        guard let refresh = TokenVault.get(refreshKey) else { return nil }
-        let ok = await exchange(form: [
+        return await refreshToken()
+    }
+
+    /// Spend the stored refresh token on a new access token.
+    ///
+    /// **A refused grant CLEARS the credentials, and that is the fix for the
+    /// green-check-over-a-dead-connection screen.** `connected` is "is there
+    /// a refresh token in the Keychain", and the iOS Keychain OUTLIVES the
+    /// app — deleting Casberi and reinstalling it leaves the old item behind,
+    /// so the setup screen said "Connected — liked songs land in your feed."
+    /// over a sign-in the person never made in this install and Spotify no
+    /// longer honours. Nothing healed it: the read failed, the token stayed,
+    /// and the only way out was noticing Disconnect.
+    ///
+    /// Only `invalid_grant` clears. RFC 6749 §5.2 reserves that code for a
+    /// grant that is expired, revoked or was never ours, which is precisely
+    /// "this will never work again" — a 5xx, a 429 or a dead network must
+    /// never cost somebody their connection, so those keep it and report
+    /// `.unreachable`. An answer this build can't classify keeps it too.
+    private static func refreshToken() async -> Token {
+        guard let refresh = TokenVault.get(refreshKey) else { return .noCredential }
+        switch await exchange(form: [
             "grant_type": "refresh_token",
             "refresh_token": refresh,
             "client_id": clientID,
-        ]) == .ok
-        return ok ? TokenVault.get(tokenKey) : nil
+        ]) {
+        case .ok:
+            guard let token = TokenVault.get(tokenKey) else { return .unreachable }
+            return .ok(token)
+        case .unreachable:
+            return .unreachable
+        case .refused(_, let error):
+            guard error == "invalid_grant" else { return .unreachable }
+            disconnect()
+            // Main, because every observer is a view. `refreshToken` is
+            // reached from the sweep's own task as well as from the screen.
+            Task { @MainActor in
+                NotificationCenter.default.post(name: credentialsCleared, object: nil)
+            }
+            // The seat outlives the credential on purpose — the rows stay, the
+            // room door stays, and the catalog says "needs reconnecting"
+            // rather than silently forgetting Spotify was ever set up. Without
+            // this the tile would keep its green proof line over a sign-in
+            // this function just deleted, which is the fake status §83 bans.
+            BridgeHealth.markAuthRefused("Spotify")
+            return .expired
+        }
+    }
+
+#if DEBUG
+    /// Ask two endpoints with the SAME live token and report both statuses,
+    /// for `-spotifyProbe`. It exists because a 403 out of `/me/tracks` has
+    /// two causes that are one sentence apart and only one is ours to fix:
+    /// a scope the stored grant predates (Spotify answers
+    /// `{"error":{"message":"Insufficient client scope"}}`) versus an app
+    /// still in Development Mode whose allowlist this account is not on
+    /// (Spotify answers a BARE 403, no body at all). `/me` needs no scope, so
+    /// the pair separates them: 403 on both is the account being shut out of
+    /// the whole app, 200 then 403 is the scope.
+    ///
+    /// The token is used and never logged, here or by the caller.
+    static func diagnose() async -> String {
+        let token: String
+        switch await SpotifyAuth.token() {
+        case .ok(let live):  token = live
+        case .expired:       return "no live token — the sign-in is expired"
+        case .unreachable:   return "no live token — could not reach Spotify"
+        case .noCredential:  return "no live token — nothing stored"
+        }
+        func ask(_ url: String) async -> String {
+            let answer = await IngestSupport.getJSONBody(url, auth: "Bearer \(token)")
+            let said = ((answer.json as? [String: Any])?["error"] as? [String: Any])?["message"] as? String
+            return "\(answer.status) \(said ?? "(no body)")"
+        }
+        let me = await ask("https://api.spotify.com/v1/me")
+        let tracks = await ask("https://api.spotify.com/v1/me/tracks?limit=1")
+        // Ask once more on a token minted RIGHT NOW. A cached access token was
+        // issued under whatever the app was entitled to at issue time, so when
+        // an owner fixes the app's standing (buying Premium, joining the
+        // allowlist) the question "does an existing connection heal by itself,
+        // or must every user reconnect?" is a product fact, not a curiosity —
+        // and a 403 never triggers the 401 retry that would have re-minted it.
+        var fresh = "(not re-asked)"
+        if case .ok(let minted) = await SpotifyAuth.token(forceRefresh: true) {
+            let answer = await IngestSupport.getJSONBody(
+                "https://api.spotify.com/v1/me", auth: "Bearer \(minted)")
+            fresh = "\(answer.status)"
+        }
+        return "me=[\(me)] tracks=[\(tracks)] freshToken.me=[\(fresh)]"
+    }
+#endif
+
+    /// What the token endpoint said. Finer than `SignIn` on purpose: the
+    /// refresh path needs the OAuth error CODE to tell a dead grant from a
+    /// bad afternoon (see `refreshToken`), and the sign-in path throws that
+    /// detail away one line later.
+    private enum Exchange {
+        case ok
+        /// No response at all — offline, DNS, a reset connection.
+        case unreachable
+        /// Spotify answered and turned it down. `error` is the OAuth code out
+        /// of the body (`invalid_grant`, `invalid_client`, …) where there was
+        /// one; a 200 carrying no `access_token` lands here too, with nil.
+        case refused(status: Int, error: String?)
     }
 
     /// The token exchange, reporting WHICH way it failed — a request that
     /// never landed and one Spotify turned down are different sentences on the
-    /// setup screen. The refresh path above only cares whether it worked.
-    private static func exchange(form: [String: String]) async -> SignIn {
+    /// setup screen.
+    ///
+    /// The body is read on a NON-200 as well, which every other helper in this
+    /// app deliberately doesn't do (`IngestSupport.getJSONBody`'s own reason,
+    /// prd §530): for OAuth the refusal's `error` field is the entire
+    /// diagnosis, and dropping it is what made a retired sign-in and an
+    /// unreachable host the same sentence.
+    private static func exchange(form: [String: String]) async -> Exchange {
         var request = URLRequest(url: URL(string: "https://accounts.spotify.com/api/token")!)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
@@ -130,11 +314,20 @@ enum SpotifyAuth {
             .joined(separator: "&")
             .data(using: .utf8)
         NetworkLedger.shared.record(request)
-        guard let (data, response) = try? await URLSession.shared.data(for: request)
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              let http = response as? HTTPURLResponse
         else { return .unreachable }
-        guard (response as? HTTPURLResponse)?.statusCode == 200,
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let access = json["access_token"] as? String else { return .refused }
+        // The sign-in host reached the health book for the first time here.
+        // Every other read in the app rides `IngestSupport.send`, which folds
+        // its status in for free — this one holds its own `URLSession` (it is
+        // form-encoded, not JSON), so a refused token exchange was invisible
+        // to `BridgeHealth` and the seat read healthy while it was shut out.
+        BridgeHealth.record(host: request.url?.host, status: http.statusCode, named: nil)
+        let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        let oauthError = json?["error"] as? String
+        guard http.statusCode == 200, let json,
+              let access = json["access_token"] as? String
+        else { return .refused(status: http.statusCode, error: oauthError) }
         TokenVault.set(access, for: tokenKey)
         if let refresh = json["refresh_token"] as? String {
             TokenVault.set(refresh, for: refreshKey)
@@ -205,21 +398,97 @@ enum SpotifyIngest {
 
     @MainActor private static var running = false
 
+    /// How a read of the liked-songs library ended.
+    ///
+    /// It used to be `Int?`, and the nil carried SIX outcomes the setup screen
+    /// printed one sentence for: not connected, a retired sign-in, a network
+    /// that never answered, a rate limit, a refusal from Spotify, and a body
+    /// this build couldn't parse. "Couldn't read your liked songs — try again
+    /// in a moment" is true of exactly one of those (the rate limit) and is
+    /// advice that can never work for three of them. Each case here has a
+    /// different next move, which is the bar `SpotifyAuth.SignIn` already set
+    /// on the other half of this file.
+    enum Read {
+        /// The read worked. 0 is a real answer — you have liked nothing new.
+        case landed(Int)
+        /// Nothing stored to read with.
+        case notConnected
+        /// The sign-in is retired and has been cleared; connect again.
+        case signInExpired
+        /// Spotify is rate-limiting us (429). The one case where trying again
+        /// in a moment is the right advice.
+        case busy
+        /// Spotify answered and said no — a scope the stored token predates,
+        /// an account restriction, or an app still in Development Mode whose
+        /// allowlist this account is not on. `message` is Spotify's own words
+        /// out of the error body, carried for the reason `invalid_grant` is
+        /// carried on the auth half: at this status the refusal's own text is
+        /// the entire diagnosis, and the three causes above are one sentence
+        /// apart. Nothing DISPLAYS it — the screen still says the one true
+        /// thing for the whole status — it exists so `-spotifyProbe` can name
+        /// which of them happened in a single launch.
+        case refused(status: Int, message: String?)
+        /// Nothing answered at all.
+        case unreachable
+        /// A 200 whose body this build could not read — the endpoint's shape
+        /// moved. Not a thing the person can act on, and it must not be
+        /// reported as one.
+        case unreadable
+        /// Another pass is mid-read. NOT `.landed(0)`, which is what this
+        /// returned while the setup screen was the only caller: the sweep is
+        /// a second caller now (`BridgeRefresh`), so opening the screen just
+        /// after a foreground would have printed "Up to date" — a claim about
+        /// a read this call never made.
+        case alreadyRunning
+    }
+
     /// Liked songs, newest 30 — "Song — Artist" things linking to Spotify,
     /// each wearing its album's cover and the album it came off.
     @MainActor
-    static func refresh(context: ModelContext) async -> Int? {
-        guard SpotifyAuth.connected, !running else {
-            return SpotifyAuth.connected ? 0 : nil
-        }
+    static func refresh(context: ModelContext) async -> Read {
+        guard SpotifyAuth.connected else { return .notConnected }
+        guard !running else { return .alreadyRunning }
         running = true
         defer { running = false }
 
-        guard let token = await SpotifyAuth.accessToken() else { return nil }
-        guard let root = await IngestSupport.getJSON(
-            "https://api.spotify.com/v1/me/tracks?limit=30",
-            auth: "Bearer \(token)") as? [String: Any],
-              let items = root["items"] as? [[String: Any]] else { return nil }
+        let token: String
+        switch await SpotifyAuth.token() {
+        case .ok(let live):    token = live
+        case .expired:         return .signInExpired
+        case .unreachable:     return .unreachable
+        case .noCredential:    return .notConnected
+        }
+
+        let url = "https://api.spotify.com/v1/me/tracks?limit=30"
+        var answer = await IngestSupport.getJSONBody(url, auth: "Bearer \(token)")
+        // A 401 here means the token Spotify handed us has stopped being
+        // honoured EARLY — before the `expires_in` we cached it against. One
+        // forced refresh, once: the stored refresh token is a different
+        // credential and is very often still good, and without this retry the
+        // bridge stays dead until that cached hour elapses.
+        if answer.status == 401 {
+            switch await SpotifyAuth.token(forceRefresh: true) {
+            case .ok(let minted):
+                answer = await IngestSupport.getJSONBody(url, auth: "Bearer \(minted)")
+            case .expired:     return .signInExpired
+            case .unreachable: return .unreachable
+            case .noCredential: return .notConnected
+            }
+        }
+        switch answer.status {
+        case 200:  break
+        case 0:    return .unreachable
+        case 429:  return .busy
+        default:
+            // Spotify's Web API wraps its refusals as
+            // `{"error": {"status": 403, "message": "..."}}` — a different
+            // shape from the token endpoint's flat OAuth `error`, which is why
+            // this is read here and not in `exchange`.
+            let body = (answer.json as? [String: Any])?["error"] as? [String: Any]
+            return .refused(status: answer.status, message: body?["message"] as? String)
+        }
+        guard let root = answer.json as? [String: Any],
+              let items = root["items"] as? [[String: Any]] else { return .unreadable }
 
         let existing = IngestSupport.existingSourceRefs(context, source: "Spotify")
         var added = 0
@@ -278,7 +547,7 @@ enum SpotifyIngest {
             added += 1
         }
         if added > 0 { context.saveHonestly() }
-        return added
+        return .landed(added)
     }
 
     // MARK: - Album facts (both read off `track.album`, already in hand)

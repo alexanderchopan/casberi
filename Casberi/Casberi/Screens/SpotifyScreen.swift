@@ -19,9 +19,18 @@ struct SpotifyScreen: View {
 
     /// The connection door, open (prd §186).
     @State private var showConnection = false
+    /// Bumped when the credentials are cleared from anywhere, purely to
+    /// re-evaluate this body — `SpotifyAuth.connected` reads the Keychain and
+    /// is not observable, so without a `@State` change nothing repaints. Read
+    /// in `body` for exactly that reason; a value nobody reads is a value
+    /// SwiftUI is free to ignore.
+    @State private var authGeneration = 0
 
     var body: some View {
-        List {
+        // Reading `authGeneration` is what ties the notification above to this
+        // body's re-evaluation. It must not be optimised away.
+        let _ = authGeneration
+        return List {
             if SpotifyAuth.connected {
                 // Connected (prd §186). NO identity passed on purpose: the
                 // PKCE flow stores tokens only — no display name — so leading
@@ -46,7 +55,11 @@ struct SpotifyScreen: View {
                 BridgeSetupHeader(
                     name: "Spotify",
                     mode: .signIn,
-                    intro: "Sign in on Spotify's own page and what you save and listen to keeps arriving. Read-only: it can never play, queue, or change a playlist.")
+                    // "what you save and listen to" promised a second half
+                    // that does not exist: the only scope asked for is
+                    // `user-library-read` and the only endpoint read is
+                    // `/me/tracks`, so listening history never arrives (§83).
+                    intro: "Sign in on Spotify's own page and the songs you like keep arriving. Read-only: it can never play, queue, or change a playlist.")
                 connectSection.listRowSeparator(.hidden)
             }
         }
@@ -65,6 +78,30 @@ struct SpotifyScreen: View {
         }
         .onAppear {
             if SpotifyAuth.connected { Task { await sync() } }
+        }
+        // `SpotifyAuth.connected` is a plain static reading the Keychain, so
+        // nothing invalidates this body when the credentials are cleared by
+        // somebody else — and since 2026-09-02 there IS somebody else: the
+        // foreground sweep runs `SpotifyIngest.refresh` too. Its slots land
+        // ~1.8–8.8s after activation, so opening this screen in that window
+        // gives the screen's own `sync()` an `.alreadyRunning`, which by
+        // design says nothing, while the sweep discovers the sign-in is dead
+        // and deletes it. The result was a green "Connected — liked songs land
+        // in your feed." over a credential that no longer existed, with no
+        // sentence at all — the exact screen this branch exists to end,
+        // reached by the branch's own new caller.
+        //
+        // Bumping `@State` is the whole fix: it re-runs the body, which
+        // re-reads the Keychain and offers Connect. Posted for ANY caller, so
+        // it holds however the clearing was reached.
+        .onReceive(NotificationCenter.default.publisher(for: SpotifyAuth.credentialsCleared)) { _ in
+            authGeneration &+= 1
+            // Only speak if the screen has nothing else to say — a sentence
+            // this screen's own read already produced is the better one, and
+            // the sweep must never overwrite it.
+            if result == nil {
+                fail(String(localized: "Spotify's sign-in has expired — tap Connect to sign in again."))
+            }
         }
         .onDisappear { flow?.cancel() }
     }
@@ -166,11 +203,63 @@ struct SpotifyScreen: View {
     private func sync() async {
         guard !syncing else { return }
         syncing = true
-        let added = await SpotifyIngest.refresh(context: modelContext)
+        let outcome = await SpotifyIngest.refresh(context: modelContext)
         syncing = false
-        guard let added else {
-            result = String(localized: "Couldn't read your liked songs — try again in a moment.")
-            resultIsError = true
+        // One sentence per outcome the read can actually tell apart — the
+        // rule the connect half of this screen has followed since the
+        // 2026-07-31 audit, and which the read half never did: it said
+        // "Couldn't read your liked songs — try again in a moment" for all
+        // six, advice that is true of `.busy` alone and can never work for a
+        // retired sign-in, a refusal, or a shape that moved.
+        let added: Int
+        switch outcome {
+        case .landed(let n):
+            added = n
+        case .notConnected:
+            fail(String(localized: "Not connected — tap Connect to sign in with Spotify."))
+            return
+        case .signInExpired:
+            // `SpotifyAuth` has already cleared the dead credentials, so the
+            // screen behind this sentence now offers Connect rather than
+            // showing a green check over a connection Spotify has retired.
+            fail(String(localized: "Spotify's sign-in has expired — tap Connect to sign in again."))
+            return
+        case .busy:
+            fail(String(localized: "Spotify is busy right now — try again in a moment."))
+            return
+        case .refused(let status, _):
+            // 403 is the one refusal a person CANNOT act on, and it is the one
+            // that actually happens (measured against a real account
+            // 2026-09-02): Spotify blocks an app in development mode whose
+            // owner has no Premium subscription, and blocks any account not on
+            // that app's five-name allowlist. Both answer a BARE 403 to every
+            // endpoint, `/v1/me` included, which needs no scope at all — so
+            // the token is fine, the grant is fine, and signing in again
+            // re-mints a credential that is refused identically.
+            //
+            // "tap Connect to sign in again" for that is the advice-that-can-
+            // never-work this whole screen was rewritten to remove (§579),
+            // pointing at the screen's own button. It says the true thing
+            // instead, and deliberately does not name development mode or
+            // Premium: that is the DEVELOPER's problem with their dashboard,
+            // and nothing the person reading this owns or can change.
+            if status == 403 {
+                fail(String(localized: "Spotify isn't letting this app read your library — signing in again won't change it."))
+            } else {
+                fail(String(localized: "Spotify wouldn't share your liked songs — tap Connect to sign in again."))
+            }
+            return
+        case .unreachable:
+            fail(String(localized: "Couldn't reach Spotify — check your connection."))
+            return
+        case .unreadable:
+            fail(String(localized: "Spotify answered with something this version can't read."))
+            return
+        case .alreadyRunning:
+            // The sweep is mid-read. Say nothing rather than overwrite the
+            // last real result with a verdict this call didn't reach — but the
+            // sweep may be about to clear the credentials underneath us, which
+            // is what `credentialsCleared` below is for.
             return
         }
         resultIsError = false
