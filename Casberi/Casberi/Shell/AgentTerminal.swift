@@ -56,14 +56,25 @@ struct AgentDestinationKeys: View {
                 key(chosen: active == nil, action: onDevice) {
                     Image(systemName: deviceGlyph)
                         .dsGlyph(38, weight: .regular)
-                        .foregroundStyle(active == nil ? DS.inkGround : DS.textSecondary)
+                        .foregroundStyle(active == nil ? DS.inkGround : DS.textTertiary)
                 }
                 .accessibilityLabel("Answer on \(deviceLabel)")
                 .accessibilityAddTraits(active == nil ? [.isSelected] : [])
 
                 ForEach(providers) { provider in
                     key(chosen: provider == active, action: { onAgent(provider) }) {
+                        // A BRAND MARK IS OPAQUE AND FULL-BLEED, so the key's
+                        // own fill survives only as a ring around it — which
+                        // is why the first cut of this control was reported as
+                        // "you can't tell when you selected which agent"
+                        // (2026-09-03). The selection cannot be carried by the
+                        // fill on these keys, so it is carried by the MARK:
+                        // the chosen agent is the only one at full strength
+                        // and the rest stand down. Legible whatever the
+                        // artwork happens to look like, which a ring is not.
                         BridgeIcon(name: provider.agent, size: DS.Face.shelf, circular: true)
+                            .opacity(provider == active ? 1 : 0.38)
+                            .saturation(provider == active ? 1 : 0)
                     }
                     .accessibilityLabel("Ask \(provider.agent)")
                     .accessibilityAddTraits(provider == active ? [.isSelected] : [])
@@ -90,7 +101,7 @@ struct AgentDestinationKeys: View {
         Button(action: { DSHaptic.selection(); action() }) {
             ZStack {
                 Circle().fill(chosen ? AnyShapeStyle(DS.textPrimary)
-                                     : AnyShapeStyle(DS.surfaceRaised))
+                                     : AnyShapeStyle(DS.fillFaint))
                 mark()
             }
             .frame(width: Self.side, height: Self.side)
@@ -98,10 +109,16 @@ struct AgentDestinationKeys: View {
             .dsHover()
         }
         .buttonStyle(PressSpring())
-        // The key that becomes the subject flips once — `coinFlip` is this
-        // app's word for "this mark just became what the screen is about"
-        // (§578's rule, unchanged).
-        .coinFlip(trigger: chosen, enabled: chosen)
+        // NO FLIP. §578 gave the chosen key a `coinFlip` — this app's word for
+        // "this mark just became what the screen is about" — and on a row you
+        // tap to switch back and forth it was reported as "too much"
+        // (2026-09-03). That gesture is right for a mark that becomes the
+        // SUBJECT of a screen once; here it fires on an ordinary toggle, every
+        // time, twice if you change your mind. The state change is carried by
+        // the mark's own opacity and colour, crossfaded by the row's
+        // animation, and by the line above it. The press already has
+        // `PressSpring` and a selection haptic; a flip on top is a third
+        // answer to a question already answered twice.
     }
 }
 
@@ -237,52 +254,6 @@ struct AgentProseAnswer: View {
         .textSelection(.enabled)
     }
 }
-
-/// The rule between one answer and the next on the roll.
-///
-/// The paper is a ROLL, not a thread (2026-09-03): answers sit on it in order,
-/// the newest at the bottom where the foot is, and scrolling up reaches last
-/// week's question. There are no bubbles and no alternating sides — one column
-/// of full-size answers separated by dated rules, which is how a printed roll
-/// reads and is exactly what a chat does not look like.
-///
-/// The divider carries the DATE, so paging back through a month is legible
-/// without a list to open. It is also the only thing that says there is
-/// anything above: a count stamp saying so would be chrome for a fact the
-/// scroll already tells.
-struct AgentTurnDivider: View {
-    let landed: Date
-
-    var body: some View {
-        HStack(spacing: DS.Space.s2) {
-            line
-            Text(Self.phrase(landed))
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-                .lineLimit(1)
-            line
-        }
-        .padding(.vertical, DS.Space.s3)
-        .accessibilityHidden(true)
-    }
-
-    private var line: some View {
-        Rectangle()
-            .fill(DS.fillFaint)
-            .frame(height: 1)
-    }
-
-    /// Relative while it is minutes, a weekday inside the week, a date beyond.
-    static func phrase(_ date: Date, now: Date = .now) -> String {
-        let gap = now.timeIntervalSince(date)
-        if gap < 60 { return String(localized: "just now") }
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
-        if gap < 60 * 60 * 24 * 7 { return formatter.localizedString(for: date, relativeTo: now) }
-        return date.formatted(.dateTime.day().month(.abbreviated))
-    }
-}
-
 /// The wait, as a stopwatch (prd §580's clock, on §581's paper).
 ///
 /// The receipt paper §580 gave this state is gone with the tiles: on a roll

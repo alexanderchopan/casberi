@@ -376,8 +376,13 @@ print "  ok   both picks go through one handler each, and only those"
 # ---- A PICK MID-WAIT RE-ADDRESSES (prd §580) ----------------------------
 # The one resend that is safe, and the reason is the change of ADDRESS: one
 # question asked of somebody else, with the key you pressed as the consent.
-guard "a key pressed mid-wait re-addresses the running question" "$WORK/composer.flat" \
-      'if readdressed\(to: provider\) \{ return \}'
+# The foot must NOT test `readdressed` itself: `pickAgent` already does, and a
+# test in front of it returned before the pick was recorded — which left a
+# mid-wait switch out of `chosenAgent` and off the recency ledger.
+guard "the foot's key calls one picker and lets it re-address" "$WORK/composer.flat" \
+      'onAgent: \{ provider in pickAgent\(provider\) \}'
+guard "the picker is what re-addresses a running question" "$WORK/composer.flat" \
+      'guard !readdressed\(to: provider\) else \{ return \}'
 
 # ---- THE KEYCHAIN IS NOT READ PER KEYSTROKE (prd §579) ------------------
 # `AgentKey.configured` is seven decrypting Keychain round trips; the foot's
@@ -401,10 +406,37 @@ guard "the resting verb is the mic, not a dead send" "$WORK/composer.flat" \
       'AgentWideKey\(glyph: "mic", tone: .ink, compact: true\)'
 guard "a live ask offers Stop" "$WORK/composer.nc" \
       'AgentWideKey\(title: String\(localized: "Stop"\)'
-# FIND IS OFFERED ON THE DEVICE ALONE. Bankr cannot search your things, so a
-# Find key beside it would be a control that provably does nothing.
-guard "Find is gated on the device being the destination" "$WORK/composer.flat" \
-      'if activeAskAgent == nil \{ AgentWideKey\(glyph: "magnifyingglass"'
+# ONE VERB, ALWAYS (prd §581 amendment). The device used to add a second round
+# key for Find, which put four controls in the row that is meant to be read
+# without looking. The foot holds exactly one wide verb per state — and that
+# really does delete Find rather than move it, since Mac's "Find…" only ever
+# raised the composer focused. Guarded so a fourth control cannot drift back
+# in without the deletion being reconsidered on purpose.
+guard_absent "Find is not a key in the foot" "$WORK/composer.nc" \
+      'AgentWideKey\(glyph: "magnifyingglass"'
+guard "the device's verb is Ask" "$WORK/composer.nc" \
+      'AgentWideKey\(title: String\(localized: "Ask"\), tone: .tint\)'
+
+# WHO ANSWERS IS SAID IN WORDS. Reported 2026-09-03: "you can't tell when you
+# selected which agent" — a brand mark is opaque and full-bleed, so the lit
+# key's fill survives only as a ring around it. Two independent things carry
+# the selection now, and BOTH are guarded, because either alone is one
+# refactor from leaving the control mute again.
+guard "the foot names its destination" "$WORK/composer.nc" \
+      'Text\(destinationLine\)'
+guard "the line takes its ground from AskSubject, never its own words" \
+      "$WORK/composer.nc" 'AskSubject.ground\(forAgent: activeAskAgent'
+guard "an unchosen mark stands down" "$WORK/terminal.nc" \
+      'opacity\(provider == active \? 1 : 0.38\)'
+guard "an unchosen mark loses its colour" "$WORK/terminal.nc" \
+      'saturation\(provider == active \? 1 : 0\)'
+# NO FLIP ON A TOGGLE (2026-09-03, user: "i don't like how the icons flip
+# eihter, tit's too much"). `coinFlip` is for a mark that becomes the subject
+# of a screen ONCE; on a row you tap to switch back and forth it fires every
+# time, twice if you change your mind. The press already has a spring and a
+# haptic, and the state is carried by the mark and by the line above it.
+guard_absent "the destination keys do not flip" "$WORK/terminal.nc" \
+      'coinFlip\('
 # NO RETRY ON A LIVE JOB (§580): a second identical job on an agent that can act
 # can act twice.
 SLOT=$(awk '/private var footSlot/,/^    }$/' "$WORK/composer.nc")
@@ -442,14 +474,22 @@ guard "prose is recognised only as a lone Insight" "$WORK/reply.nc" \
 guard "a growing document is never mistaken for prose" "$WORK/reply.nc" \
       'els.count == 2'
 
-# ---- THE ROLL, NOT A THREAD (prd §581) ----------------------------------
-# Answers sit on one column in order, newest at the bottom, separated by dated
-# rules. No bubbles and no alternating sides — and no sheet, because a sheet
-# over a surface that itself rose from a button reads as a stack of trays.
-guard "the roll dates the rule between answers" "$WORK/composer.nc" \
-      'AgentTurnDivider\(landed:'
-guard "a turn knows when it landed" "$WORK/composer.nc" \
-      'var landedAt = Date\(\)'
+# ---- ONE ANSWER ON THE PAPER (prd §581a item 6) -------------------------
+# The roll is retired. Reported on a device: "you can't tell what is history
+# and what isn't" and "scrolling up is confusing to a user" — a settled answer
+# and an earlier one were drawn identically, and the gesture that reached the
+# stack was the gesture that reads one long answer. The paper holds one turn
+# and the pager states WHERE you are, which is the fact the roll could not
+# carry. No sheet either: a sheet over a surface that itself rose from a
+# button reads as a stack of trays.
+guard "the paper shows one turn" "$WORK/composer.nc" \
+      'private var shownTurn: ConvoTurn\?'
+guard "the pager says where you are, not just which way to go" "$WORK/composer.flat" \
+      'Text\("\\\(index \+ 1\) of \\\(turns.count\)"\)'
+guard "a new answer takes the paper back from history" "$WORK/composer.flat" \
+      'onChange\(of: turns.count\) \{ _, _ in browsing = nil'
+guard_absent "the dated roll does not return" "$WORK/composer.nc" \
+      'AgentTurnDivider\('
 guard_absent "no sheet of earlier questions returns" "$WORK/composer.nc" \
       'private var earlierSheet'
 
@@ -482,4 +522,4 @@ guard_absent "nothing paints the surface blue" "$WORK/composer.nc" \
 guard "the tint flag is written false so no stale blue is left behind" \
       "$WORK/composer.nc" 'chrome.askOnTint = false'
 
-print "  ok   AskDestination — 16 mutations, 47 drift guards"
+print "  ok   AskDestination — 16 mutations, 54 drift guards"

@@ -46674,3 +46674,115 @@ is layout and weight judgement, the keyed wait needs a live Bankr key (the
 stored sim key answers 401, which is why `-bankrFake` exists), and no screenshot
 of the roll, the foot or the prose answer has been taken. Look at the answered
 state first: it is the one the user rejected three times.
+
+### 581a. You could not tell which agent was selected, and the row was still too busy (user: "the chat is still buggy. you can't tell whe you selected which agent", then "i think we need to simpolify it somehow too", 2026-09-03)
+
+Two reports, one hour after §581 shipped as builds 498/499.
+
+### 1. THE SELECTION WAS REAL AND INVISIBLE
+
+Not a wiring bug — `pickAgent` sets `chosenAgent`, `activeAskAgent` returns it,
+and the key's `chosen` really did flip. **The state had nowhere to show.**
+`BridgeIcon` draws a brand mark as an OPAQUE, FULL-BLEED image clipped to a
+circle, so a 56pt mark inside an 88pt key leaves the key's own fill visible as
+a 16pt ring — and §581 spent the selection entirely on that fill. Selected and
+unselected differed by a ring of white against a ring of dark grey, on black.
+
+The device key was fine and that is what hid it: its mark is an SF Symbol whose
+COLOUR flips with the state, so the one key that read correctly was the one
+whose mark is not an image. Every agent key — the ones the complaint is about —
+was mute.
+
+**The fix does not touch the fill, because the fill can never be trusted here:
+whatever a vendor's artwork looks like, it covers the key.** Selection is
+carried by the MARK instead — the chosen agent is the only one at full opacity
+and full saturation, the rest go to 0.38 and greyscale — and by WORDS.
+
+### 2. A LINE THAT SAYS WHO, AND WHAT THEY ANSWER FROM
+
+`destinationLine` sits above the keys, always: **"Bankr · its own account"**,
+"iPhone · on your things". It is the thing a row of circles structurally cannot
+say, and it is drawn from `AskSubject.ground` rather than written in the view,
+so the key and the words can never disagree about whose account Bankr uses.
+
+It **REPLACES** the draft-gated `AskSubject.draftNote` rather than joining it —
+one line always, instead of a second line appearing as you type. So the foot
+has fewer elements than it did, not more, which is the other half of the report.
+
+**Both carriers are guarded, and each was mutation-proven**, because either
+alone is one refactor away from leaving the control mute again.
+
+### 3. ONE VERB, AND FIND IS DELETED RATHER THAN MOVED
+
+With a draft on the device the foot held FOUR controls — two destination
+circles, a magnifier and a pill — in the row that exists to be read without
+looking, on the surface whose whole complaint is that it is busy. The foot
+holds exactly one wide verb per state now: Ask on the device, Send on an agent,
+Stop in flight, the mic at rest.
+
+**Said plainly: this deletes Find, it does not re-home it.** The obvious
+consolation was wrong and was caught before it shipped — Mac's "Find…" menu
+item calls `ShellChrome.openFind`, which raises the composer with the field
+focused **and nothing else**; it has never run a Find. So the foot key was
+Find's only door and `runFind` now survives for `-findProbe` alone.
+
+What is NOT lost is the engine: `Retriever.rank` still grounds every device
+answer over your own things, which is exactly what that destination's ground
+line says. What IS lost is §215's separate promise — "Matched on this iPhone —
+nothing was written", an answer you could point at and know no model ran. That
+is a real capability and it is being traded for the row, deliberately; one line
+brings the key back.
+
+### 4. A defect found while reading, not reported
+
+The foot tested `readdressed(to:)` before calling `pickAgent`, and `pickAgent`
+tests it too. Mid-wait the outer test won and returned, so the pick never
+reached `chosenAgent` or `AskDestination.used` — a re-addressed question went to
+the new agent while the ledger and the lit key still named the old one. The foot
+calls the one picker now, guarded both ways.
+
+### 5. AND THE KEYS STOP FLIPPING (same day, user: "i don't like how the icons flip eihter, tit's too much")
+
+§578 gave the chosen key a `coinFlip` — this app's word for "this mark just
+became what the screen is about" — and it was right for the deck, where you
+pressed a key once and the screen became about that agent. In the foot it fires
+on an ordinary toggle, every time, twice if you change your mind, on a control
+whose whole purpose is that switching is cheap.
+
+**The state is already said twice** — the mark's own opacity and colour,
+crossfaded by the row's animation, and the line above it — and the press
+already carries `PressSpring` and a selection haptic. A flip on top is a third
+answer to a question answered twice. Guarded as a negative, because the
+motion law's default is to reach for this exact modifier.
+
+### 6. THE ROLL IS RETIRED AFTER ONE DAY (user: "you als can't tell what is history and what isn't", then "like scrolling up is confusing to a user")
+
+§581 chose the roll over a pager and a stack, and the argument for it was that
+it needs no control and cannot be mistaken for a chat. Both still hold. What it
+could not do is say WHERE YOU ARE: a settled answer and one from last week were
+drawn identically, the only marker was a thin dated rule you had already
+scrolled past, and the gesture that reached history was the same gesture that
+reads one long answer. Two complaints, one fault.
+
+**The paper holds exactly one turn now.** The scroll view survives for the
+ordinary reason — an answer can be longer than the screen — and stops meaning
+two things at once. `AgentTurnDivider` is deleted with the roll.
+
+**The pager states the position, not just the direction**: "3 of 5" between two
+chevrons, under the receipt, drawn only when there is more than one answer,
+because "1 of 1" is chrome for a fact nobody needs. An arrow alone would have
+answered "which way" and left "am I looking at history" exactly as unanswered
+as the roll did.
+
+**A new answer always takes the paper back.** `browsing` clears on every landing,
+so asking again while reading last week never leaves the thing you just asked
+for hiding behind a control. Mutation-proven, because it renders as an ordinary
+screen showing an ordinary answer — the wrong one.
+
+This is the pager that was mocked and passed over on the way to the roll. The
+roll was the better idea and it did not survive contact with a device.
+
+### 7. Ceiling
+
+Still UNSEEN on a device: the dimming ratio, the line's rung, the pager's
+placement and the row's balance are weight judgements no check here can make.

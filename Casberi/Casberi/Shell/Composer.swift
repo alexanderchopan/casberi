@@ -172,6 +172,10 @@ struct Composer: View {
         var landedAt = Date()
     }
     @State private var turns: [ConvoTurn] = []
+    /// Which settled answer the paper is showing — nil is the newest, which is
+    /// where every new answer puts it back. §581's roll is retired: one turn
+    /// on the paper, and this is the only way to another (prd §581a item 6).
+    @State private var browsing: Int?
     /// The question currently being answered — shown above the live answer
     /// until it settles into a turn.
     @State private var currentQuestion = ""
@@ -2045,21 +2049,25 @@ struct Composer: View {
 
     // MARK: - The roll (prd §581)
 
-    /// Every answer, oldest above newest, on one column of paper.
+    /// ONE ANSWER ON THE PAPER, and history behind a control.
     ///
-    /// **A ROLL, NOT A THREAD.** There are no bubbles, no alternating sides
-    /// and no per-turn chrome — one column of full-size answers separated by
-    /// dated rules, with the newest at the bottom where the foot is, which is
-    /// how a printed roll reads and is exactly what a chat does not look like.
-    /// Scrolling up reaches last week's question; the divider carries the date,
-    /// so paging back through a month is legible with no list to open.
+    /// §581 made this a ROLL — every answer in one column, newest at the
+    /// bottom, dated rules between them — and the device verdict was that "you
+    /// can't tell what is history and what isn't" and "scrolling up is
+    /// confusing to a user" (2026-09-03). Both are true and they are the same
+    /// fault: a settled answer and an earlier one were drawn identically, so
+    /// the only thing saying where you were in the stack was a thin rule you
+    /// had already scrolled past, and the gesture that reached the stack was
+    /// the same gesture that reads one long answer.
     ///
-    /// The sheet §580 would have needed is deliberately not built: a sheet over
-    /// a surface that itself rose from a button reads as a stack of trays
-    /// (user, 2026-09-03 — "a sheet on a window that came from the fab just
-    /// looks weird"). The cost of the roll, stated: the current answer sits at
-    /// the bottom of a scroll view rather than in a fixed region, so the paper
-    /// scrolls where the tiled version did not.
+    /// So the paper holds exactly one turn. The scroll view survives for the
+    /// ordinary reason — a single answer can be longer than the screen — and
+    /// it no longer means two things at once. Moving between answers is an
+    /// explicit control that says how many there are and where you are, which
+    /// is the fact the roll could not carry.
+    ///
+    /// This is the pager that was mocked and passed over on the way to the
+    /// roll. The roll was the better idea and it did not survive contact.
     @ViewBuilder
     private var terminalRoll: some View {
         if turns.isEmpty, !answering, !risingHandoff {
@@ -2073,8 +2081,9 @@ struct Composer: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(turns.enumerated()), id: \.element.id) { index, turn in
-                            if index > 0 { AgentTurnDivider(landed: turn.landedAt) }
+                        if answering || risingHandoff {
+                            liveBlock
+                        } else if let turn = shownTurn {
                             turnBlock(question: turn.question, els: turn.els,
                                       failed: turn.failed, keyed: turn.keyed,
                                       agent: turn.agent, found: turn.found,
@@ -2083,10 +2092,7 @@ struct Composer: View {
                                       pagesRead: turn.pagesRead,
                                       toolRounds: turn.toolRounds,
                                       model: turn.model, waited: nil, live: false)
-                        }
-                        if answering || risingHandoff {
-                            if !turns.isEmpty { AgentTurnDivider(landed: .now) }
-                            liveBlock
+                            historyPager
                         }
                         Color.clear.frame(height: 1).id("bottom")
                     }
@@ -2110,7 +2116,11 @@ struct Composer: View {
                     guard !documentInView else { return }
                     withAnimation(DS.Motion.standard) { proxy.scrollTo("bottom", anchor: .bottom) }
                 }
+                // A NEW ANSWER ALWAYS WINS THE PAPER. Browsing back and then
+                // asking again must not leave you reading last week while the
+                // thing you just asked for sits behind a control.
                 .onChange(of: turns.count) { _, _ in
+                    browsing = nil
                     withAnimation(DS.Motion.standard) { proxy.scrollTo("bottom", anchor: .bottom) }
                 }
                 .onChange(of: answerStream.completed) { _, done in
@@ -2131,6 +2141,63 @@ struct Composer: View {
                 }
             }
         }
+    }
+
+    /// The turn the paper is showing: the one you browsed to, else the newest.
+    private var shownTurn: ConvoTurn? {
+        guard !turns.isEmpty else { return nil }
+        let index = min(max(browsing ?? turns.count - 1, 0), turns.count - 1)
+        return turns[index]
+    }
+
+    /// Where you are in the stack, and the only way through it.
+    ///
+    /// Drawn ONLY when there is more than one answer — with a single turn
+    /// there is no history and a control saying "1 of 1" is chrome for a fact
+    /// nobody needs. It states the position rather than merely offering
+    /// arrows, because "you can't tell what is history and what isn't" is a
+    /// complaint about not knowing WHERE you are, which an arrow alone does
+    /// not answer.
+    @ViewBuilder
+    private var historyPager: some View {
+        if turns.count > 1 {
+            let index = min(max(browsing ?? turns.count - 1, 0), turns.count - 1)
+            HStack(spacing: DS.Space.s2) {
+                pagerStep(glyph: "chevron.left", enabled: index > 0) {
+                    browsing = index - 1
+                }
+                Text("\(index + 1) of \(turns.count)")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                pagerStep(glyph: "chevron.right", enabled: index < turns.count - 1) {
+                    browsing = index + 1
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.top, DS.Space.s3)
+            .animation(DS.Motion.standard, value: index)
+        }
+    }
+
+    private func pagerStep(glyph: String, enabled: Bool,
+                           _ action: @escaping () -> Void) -> some View {
+        Button {
+            DSHaptic.selection()
+            action()
+        } label: {
+            Image(systemName: glyph)
+                .dsGlyph(15, weight: .semibold)
+                .foregroundStyle(enabled ? DS.textSecondary : DS.textTertiary.opacity(0.4))
+                .frame(width: 34, height: 34)
+                .background(DS.fillFaint, in: Circle())
+                .dsTapTarget(Circle())
+                .dsHover()
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .accessibilityLabel(glyph == "chevron.left" ? "Earlier answer" : "Later answer")
     }
 
     /// The turn being answered — the stopwatch while it runs, the answer once
@@ -2296,26 +2363,35 @@ struct Composer: View {
                 .lineLimit(writingRoom ? 4...8 : 1...5)
                 .padding(.horizontal, DS.Space.s1)
                 .padding(.top, DS.Space.s1)
-            if hasDraft,
-               let note = AskSubject.draftNote(ground: askGround, agent: activeAskAgent?.agent) {
-                Text(note)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .padding(.horizontal, DS.Space.s1)
-                    .transition(.opacity)
-            }
+            // WHO ANSWERS, IN WORDS (2026-09-03, reported: "you can't tell
+            // when you selected which agent"). A brand mark is opaque and
+            // full-bleed, so a lit key's fill survives only as a ring around
+            // it — the dimming above makes the row read at a glance, and this
+            // line is what makes it read with certainty. It also carries the
+            // GROUND, which is the disclosure §529 requires anyway, so it
+            // REPLACES the draft-gated note rather than joining it: one line,
+            // always present, instead of a second one that appeared as you
+            // typed. Drawn from `AskSubject` so the key and the words can
+            // never disagree about whose account Bankr uses.
+            Text(destinationLine)
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+                .lineLimit(1)
+                .padding(.horizontal, DS.Space.s1)
+                .contentTransition(.opacity)
+                .animation(DS.Motion.standard, value: destinationLine)
             HStack(spacing: DS.Space.s2) {
                 AgentDestinationKeys(
                     providers: configuredAgents,
                     active: activeAskAgent,
                     onAddAgent: onOpenAgents,
                     onDevice: { pickDevice() },
-                    onAgent: { provider in
-                        // A pick mid-wait RE-ADDRESSES the running question
-                        // rather than being swallowed (§580, kept whole).
-                        if readdressed(to: provider) { return }
-                        pickAgent(provider)
-                    })
+                    // `pickAgent` re-addresses a running question itself
+                    // (§580), so this must not test for it first — doing that
+                    // returned before the pick was recorded, which left a
+                    // mid-wait switch off `AskDestination.used` and out of
+                    // `chosenAgent`.
+                    onAgent: { provider in pickAgent(provider) })
                 .layoutPriority(0)
                 footSlot
             }
@@ -2324,6 +2400,22 @@ struct Composer: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
+    }
+
+    /// Who answers, and what they answer FROM — one line, always.
+    ///
+    /// Two facts and no more: the destination's name, which is the thing the
+    /// keys below could not say on their own, and its ground, which is the
+    /// disclosure Bankr's seat owes on every screen that can reach it.
+    private var destinationLine: String {
+        let ground: String
+        switch AskSubject.ground(forAgent: activeAskAgent?.rawValue) {
+        case .ownAccount:     ground = String(localized: "its own account")
+        case .corpus, .search: ground = String(localized: "on your things")
+        }
+        let who = activeAskAgent?.agent
+            ?? AskDestination.deviceLabel(isMac: DS.isMac, isPad: DS.isPad)
+        return "\(who) · \(ground)"
     }
 
     /// The verb that is available, and only that one.
@@ -2349,8 +2441,23 @@ struct Composer: View {
                          glyph: "stop.circle.fill", tone: .tint) { commit() }
                 .layoutPriority(1)
         } else if hasDraft {
+            // ONE VERB, ALWAYS (2026-09-03, user: "i think we need to
+            // simpolify it somehow too"). The device used to add a second
+            // round key for Find, which put four controls in a row that is
+            // supposed to be read without looking — two destinations, a
+            // magnifier and a pill — on the surface whose whole complaint was
+            // that it is busy.
+            //
+            // SAID PLAINLY: this DELETES Find as a verb, it does not re-home
+            // it. Mac's "Find…" menu item never ran one — `openFind` raises
+            // the composer with the field focused and nothing else — so the
+            // foot key was its only door, and `runFind` now survives for
+            // `-findProbe` alone. What is NOT lost is the engine: every
+            // device answer is still grounded by `Retriever.rank` over your
+            // own things, which is what the destination's own ground line
+            // says. What is lost is §215's separate promise that nothing was
+            // written and no model ran. One line brings the key back.
             if activeAskAgent == nil {
-                AgentWideKey(glyph: "magnifyingglass", tone: .ink, compact: true) { runFind() }
                 AgentWideKey(title: String(localized: "Ask"), tone: .tint) { commit() }
                     .layoutPriority(1)
             } else {
