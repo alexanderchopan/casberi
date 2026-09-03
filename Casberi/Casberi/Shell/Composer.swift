@@ -3236,6 +3236,30 @@ struct Composer: View {
         // content never enters the effect.
         .task(id: isOpen) {
             if isOpen {
+                // A PICK IS ONLY LIVE IF WE ALREADY KNOW A KEY EXISTS (prd
+                // §577 amendment, reported 2026-09-02: "when i click 'bankr'
+                // it doesn't become active").
+                //
+                // `keyAvailable` mirrors the Keychain and was written in
+                // exactly TWO places, both of them AFTER an answer had
+                // settled. So on every fresh open it was still `false` — and
+                // `activeAskAgent` requires it before it will honour an
+                // explicit pick, so tapping a face on an open composer set
+                // `chosenAgent` and then lit nothing at all.
+                //
+                // The invisible half is worse than the visible one: `commit`'s
+                // keyed branch is gated on the same term, so the return key
+                // went to the phone while the largest object on the screen
+                // named an agent — §543's confusion exactly, committed by the
+                // control §577 built to end it.
+                //
+                // Once per OPEN, which is precisely what the "can't afford a
+                // Keychain round-trip per render" note was protecting (a
+                // follow-up re-renders per keystroke). The rail two hundred
+                // lines below already reads `AgentKey.configured` on every
+                // render, so this is strictly cheaper than what it sits
+                // beside.
+                keyAvailable = AgentKey.isConfigured
                 riseT0 = .now
                 risePhase("raise")
                 // Flip BEFORE the heavy synchronous work, then yield once —
