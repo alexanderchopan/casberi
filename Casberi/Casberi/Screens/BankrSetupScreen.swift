@@ -1,8 +1,8 @@
 import SwiftUI
 import SwiftData
 
-/// Bankr, connected — by key (2026-07-16, prd §82; the sign-up and the acting
-/// permission joined 2026-08-29, prd §529). Bankr is an agent with a wallet,
+/// Bankr, connected — by key (2026-07-16, prd §82; the in-app sign-up joined
+/// 2026-08-29, prd §529). Bankr is an agent with a wallet,
 /// so unlike the other key seats its answers can weigh what you hold and what
 /// the market is doing, not only what you saved. The key is checked with Bankr
 /// before it saves (no dead key claiming a capability — honesty rule), lands
@@ -24,14 +24,15 @@ import SwiftData
 /// remove that last step (see prd §529: a "Connect with Bankr" button is
 /// theirs to build, not ours to fake).
 ///
-/// ## THE READ-ONLY ASK BECAME A CHOICE
+/// ## READ-ONLY IS THE ASK, AND THE SCREEN SAYS IT TWICE
 ///
 /// The same key that answers can also trade — that has always been true, and
-/// until now the answer was to ask for a read-only key and prefix every prompt
-/// "answer only". Both still hold for the ANSWER path. What changed is that
-/// the capability is named where it actually lives: the key's own scope
-/// makes it a switch, off by default, and the conversation gives it a door
-/// with a person standing in it.
+/// the answer is the one this seat shipped with: ask for a read-only key, and
+/// prefix every prompt "answer only — never execute" (`BankrAgent.prompt`).
+/// §529's acting switch and its second verb are gone (2026-09-03), so this
+/// screen names the key's scope as a boundary rather than as a choice: the
+/// step line asks for read-only, and the note under the field says what
+/// Casberi does with whatever you paste.
 struct BankrSetupScreen: View {
     @Environment(BridgeStore.self) private var store
     @Environment(HomeRoute.self) private var route
@@ -49,7 +50,7 @@ struct BankrSetupScreen: View {
             BridgeSetupHeader(
                 name: "Bankr",
                 mode: .pasteKey,
-                intro: "Make a key in a page that opens here. Bankr answers and acts on its own account at bankr.bot, never on the wallets you watch in Casberi, and what it may do there is set by the key you mint.",
+                intro: "Make a key in a page that opens here. Bankr answers from its own account at bankr.bot, never from the wallets you watch in Casberi.",
                 flipTrigger: flipTrigger)
             setupSection
             if configured { conversationSection }
@@ -68,23 +69,19 @@ struct BankrSetupScreen: View {
     private var setupSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                // Verb over address, the 2026-08-14 anatomy. Two doors, and
-                // the ORDER is the point: somebody who has never heard of
-                // Bankr needs the account first, and the old screen offered
-                // only the key page, which is a dead end without one.
+                // Verb over address, the 2026-08-14 anatomy. ONE door: the
+                // account. It used to be followed by a second straight to
+                // Bankr's key page, and that deep link is gone (2026-09-03) —
+                // an account is where somebody who has never heard of Bankr
+                // has to start anyway, and a key page is reached from inside
+                // it. The step line below says what to do once there.
                 DSSlabButton(title: configured ? "Open Bankr" : "Create an account or sign in",
                              detail: "bankr.bot",
                              systemImage: "person.crop.circle") {
                     DSHaptic.tap()
                     web = URL(string: "https://bankr.bot")
                 }
-                DSSlabButton(title: "Get your API key",
-                             detail: "bankr.bot/api-keys",
-                             systemImage: "key") {
-                    DSHaptic.tap()
-                    web = URL(string: "https://bankr.bot/api-keys")
-                }
-                BridgeStepLines(steps: ["Sign in, then mint a key — read-only answers, a full key can act."],
+                BridgeStepLines(steps: ["Sign in, then mint a read-only key and paste it below."],
                                 numbered: false)
                 DSSlabField(placeholder: AgentProvider.bankr.placeholder, text: $keyDraft,
                             actionLabel: checking ? "Checking…" : (configured ? "Update" : "Connect"),
@@ -106,15 +103,14 @@ struct BankrSetupScreen: View {
                 AgentActiveStatusRow(provider: .bankr)
                 AgentModelRow(provider: .bankr)
                 AgentSpendRow(provider: .bankr)
-                DSSlabNote(text: "Answers re-run on Bankr — wallet and live markets included — only when you tap.")
+                DSSlabNote(text: "Casberi only asks Bankr questions — every prompt says answer only — never execute. Answers re-run on Bankr, live markets included, only when you tap.")
             }
         }
         .dsSlabSection()
     }
 
-    /// The conversation, and the permission that changes what it can do. Only
-    /// once a key exists: a switch governing a credential nobody has pasted is
-    /// the dead control §83 bans.
+    /// The conversation. Only once a key exists: a door onto an agent nobody
+    /// has a credential for is the dead control §83 bans.
     private var conversationSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
@@ -125,8 +121,8 @@ struct BankrSetupScreen: View {
                 // own field — so the two never knew what you had said in the
                 // other. It raises the one composer now, exactly as the berry
                 // does, and Bankr is a chip in it like every other key.
-                DSSlabButton(title: "Talk to Bankr",
-                             detail: "Ask about your wallets, or tell it what to do",
+                DSSlabButton(title: "Ask Bankr",
+                             detail: "Ask about your wallets and live markets",
                              systemImage: "bubble.left.and.bubble.right") {
                     DSHaptic.tap()
                     chrome.composerRequest += 1
@@ -150,8 +146,8 @@ struct BankrSetupScreen: View {
             if outcome == .accepted {
                 AgentKey.set(candidate, for: .bankr)
                 configured = true
-                // No permission to carry over any more (2026-08-31): what a
-                // key may do travels with the key itself.
+                // Nothing to carry over: there is no stored permission and
+                // no second verb (2026-09-03).
                 keyDraft = ""
                 flipTrigger += 1
                 DSHaptic.success()
@@ -159,13 +155,12 @@ struct BankrSetupScreen: View {
                 result = String(localized: "Connected — \"Ask Bankr\" now appears when you type.")
                 store.registerConnected(id: "bankr", name: "Bankr",
                                         proof: String(localized: "Key in the Keychain"),
-                                        // What Bankr may do is the KEY's scope,
-                                        // not a switch in here (2026-08-31) —
-                                        // so this claims only what is true of
-                                        // every key.
+                                        // Three reads and no writes, which is
+                                        // the whole of what this seat does
+                                        // (2026-09-03).
                                         can: ["Answers with your key — only when you tap.",
-                                              "Reads your wallet and live markets to answer.",
-                                              "What it may do is set by the key you minted."])
+                                              "Reads live markets to answer.",
+                                              "Only ever asked: answer only — never execute."])
             } else {
                 // Four ways this can fail and four sentences for them (audit
                 // 2026-07-31) — a rate limit, a blocked account and a dropped

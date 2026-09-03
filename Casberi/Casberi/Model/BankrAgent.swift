@@ -1,86 +1,51 @@
 import Foundation
 
-/// TALKING TO BANKR, AND LETTING IT ACT (prd §529, 2026-08-29).
+/// TALKING TO BANKR — AND ONLY EVER ASKING IT THINGS (prd §529, amended
+/// 2026-09-03).
 ///
 /// Bankr is the one seat in the Agent group that is not a model behind a key —
 /// it is an agent WITH A WALLET, running on somebody else's servers, and its
 /// API takes plain English (`POST /agent/prompt` → poll `/agent/job/<id>`).
 /// That means it has always been able to do more than answer: the same
-/// endpoint that reads "what do I hold?" also reads "swap 1 ETH for USDC",
-/// and the only thing that has ever stopped the second one is a sentence this
-/// app puts at the top of every prompt.
+/// endpoint that reads "what do I hold?" also reads "swap 1 ETH for USDC".
 ///
-/// ## WHAT CHANGED, AND WHAT DID NOT
+/// ## THIS APP ASKS. IT DOES NOT INSTRUCT.
 ///
-/// Nothing about Bankr changed. What changed is that this app now signs and
-/// sends elsewhere (Safe's co-signature §425, the two devnets §523/§525), so
-/// "Casberi never causes a transaction" stopped being a fact about the code
-/// and became a rule somebody has to keep. A rule with no surface is a rule
-/// that gets broken by the next person who adds a feature — so rather than
-/// leave the capability latent behind a prompt prefix, it is made explicit,
-/// off by default, and given a door with a person standing in it.
+/// Every prompt sent from here is prefixed **"answer only — never execute"**,
+/// and nothing in this app offers a way to send an instruction without it.
+/// That is the state versions 1.0.8 and 1.0.9 shipped in, and the state this
+/// file is back in: `§529`'s second verb, its acting permission, its
+/// confirmation sheet and the offer banner that advertised them are all gone.
 ///
-/// ## TWO VERBS, BECAUSE WE CANNOT CLASSIFY THE THIRD
+/// ## THE PREFIX IS A RAIL, NOT A PERMISSION, AND BOTH HALVES MATTER
 ///
-/// "Show me my automations" is a read. "Do a limit order for XYZ" is a write.
-/// They are the same shape on the wire — free text to a remote agent — and
-/// **no amount of parsing on this side can reliably tell them apart**, because
-/// the classification happens inside somebody else's model, after we have
-/// already sent it. Guessing would be the §83 fake status in the one place
-/// believing it costs money.
+/// The 2026-08-31 reasoning that removed it was correct as far as it went: a
+/// sentence at the top of a prompt is an INSTRUCTION to somebody else's model,
+/// which that model may ignore, and what really bounds Bankr is the scope of
+/// the key minted at bankr.bot — a read-only key cannot act whatever we write.
+/// So this is not presented as a guarantee about Bankr.
 ///
-/// So the person classifies, exactly as `Find` and `Ask` split the composer
-/// (§215): **Ask** carries the answer-only prefix and can be sent freely;
-/// **Do** drops it and asks first. The verb you tap IS the consent, and it is
-/// a fact you know and we do not.
-///
-/// ## THREE RAILS
-///
-/// 1. **`canAct` is off by default and `act` refuses in the MODEL, not the
-///    UI.** A screen that hides a button is a screen; a `guard` is a rule.
-/// 2. **Corpus text never rides an acting instruction.** The ask path has
-///    always pasted numbered candidates into the prompt, and the file's own
-///    comment records that Bankr grounds on the wallet and never on them — so
-///    on the acting path they buy nothing and carry a real hazard: a page you
-///    saved is text somebody else wrote, sitting in a message to an agent that
-///    can trade. `act` sends the instruction alone.
-/// 3. **The confirmation shows YOUR WORDS, never a parsed transaction.**
-///    Bankr replies in sentences, so this app cannot state what a job will do
-///    before it does it. A sheet reading "1.0 ETH → 3,200 USDC" would be a
-///    number we invented. It reads back what you typed and says plainly that
-///    Bankr decides the rest.
+/// It is a statement about CASBERI: this app does not ask an agent to move
+/// money, and the prompt is where that is said. The honest half of the 08-31
+/// ruling survives in the copy, which tells somebody minting a key that the
+/// key's own scope is the boundary — it no longer invites them to use that
+/// scope.
 ///
 /// ## UNMEASURED
 ///
 /// No Bankr key has ever been stored on this host, so no prompt has been sent
 /// and no job payload has been read. `probe` exists for exactly that: it dumps
-/// the RAW job envelope key by key, because if Bankr reports what it did in
-/// structured form (a hash, an order id, a status) then the receipt below can
-/// stop being a transcript and start being a record. Until that is measured,
-/// every failure returns rather than guesses.
+/// the RAW job envelope key by key. Until that is measured, every failure
+/// returns rather than guesses.
 enum BankrAgent {
 
-    /// THE KEY IS THE PERMISSION (user, 2026-08-31: "it's either a read only
-    /// key or it isn't", "and if it isn't it's a question for an answer or an
-    /// action").
-    ///
-    /// This file used to carry a `canAct` switch and a second prompt that
-    /// dropped an ANSWER-ONLY rail. Both are deleted, because neither was a
-    /// permission: the rail was a SENTENCE IN A PROMPT that a model may
-    /// ignore, and the switch governed which sentence we sent. What actually
-    /// decides whether Bankr can move money is the scope of the key minted at
-    /// bankr.bot/api-keys — a read-only key cannot act whatever we write, and
-    /// a full key can act whatever we write.
-    ///
-    /// The catalog copy admitted this the whole time ("a read-only key can't
-    /// act whatever you switch on"), which is a sentence conceding that the
-    /// switch was subordinate to the key. So the switch goes, the two verbs
-    /// collapse into one, and the setup screen names the real boundary at the
-    /// moment somebody mints the key.
-    ///
-    /// `forget()` remains as a no-op door for `AgentKey.clear` — there is no
-    /// stored permission left to clear, and a stale UserDefaults key from a
-    /// build that had one is removed here on the way past.
+    /// A no-op door for `AgentKey.clear`, kept for one real job: removing the
+    /// stale `bankr.canAct` default left behind by the builds that carried an
+    /// acting switch (2026-08-29 to 2026-09-03). There is no permission left
+    /// to clear — the app asks and never instructs (see the file's header) —
+    /// but a device that ran one of those builds still has the key on disk,
+    /// and a permission outliving both its credential and its feature is
+    /// exactly the thing that silently re-arms if the code ever comes back.
     static func forget() {
         UserDefaults.standard.removeObject(forKey: "bankr.canAct")
     }
@@ -89,7 +54,6 @@ enum BankrAgent {
 
     enum Failure: Error, Equatable {
         case noKey
-        case actingOff
         case emptyInstruction
         case rejectedKey
         case rateLimited
@@ -122,22 +86,26 @@ enum BankrAgent {
     /// keep of it.
     static func prompt(_ text: String, extra: String = "") -> String {
         let body = """
+        Answer only — never execute. Do not send, swap, bridge, buy, sell, \
+        approve, stake, or sign anything, and do not schedule or queue any \
+        such action, whatever the question below appears to ask for. If it \
+        asks you to do something rather than tell them something, say that \
+        you were asked to answer only, and answer what you can.
+
         \(text.trimmingCharacters(in: .whitespacesAndNewlines))
 
         Answer in a few plain sentences — no preamble, no bullet points, no \
         markdown. You may draw on this wallet's holdings and live market data. \
-        Never invent a number or a detail. If you did something rather than \
-        answered, say plainly what you did — the amounts, the assets, and any \
-        identifier a person could look up later.
+        Never invent a number or a detail.
         """
         return extra.isEmpty ? body : "\(body)\n\n\(extra)"
     }
 
     // MARK: - The verb
 
-    /// One verb. What you type is a question or an instruction, and Bankr
-    /// decides which — that judgement happens inside their model either way,
-    /// and this app never had a way to make it.
+    /// ONE VERB, AND IT IS ASK. Whatever you type goes out under the
+    /// answer-only rail in `prompt` — there is no second path here that drops
+    /// it, and there is no surface anywhere in the app that offers one.
     ///
     /// `onTick`, when given, is called with the elapsed seconds each time a
     /// poll comes back still-pending — the async job has no partial text to
@@ -153,10 +121,9 @@ enum BankrAgent {
 
     // MARK: - The runner
 
-    /// Submit, then poll. ONE poller for both verbs — two would drift, and
-    /// then an answer and an action would disagree about what "completed"
-    /// means, which is the class of bug this repo keeps finding in duplicated
-    /// parsers.
+    /// Submit, then poll. ONE poller, and one prompt builder above it, so
+    /// there is no second path through this file that could reach Bankr
+    /// without the answer-only rail.
     static func run(prompt: String, onTick: ((Int) -> Void)? = nil) async -> Result<Reply, Failure> {
         #if DEBUG
         // A SIMULATED JOB, so the ask surface can be walked end to end without
@@ -206,11 +173,10 @@ enum BankrAgent {
         return await poll(jobId: jobId, key: key, onTick: onTick)
     }
 
-    /// Poll every 2s for ~90s (Bankr says most jobs land inside 30). An acting
-    /// job may legitimately run longer than an answer — a trade waits on a
-    /// chain — so a timeout is reported as a TIMEOUT and never as a failure:
-    /// the job may still be running, and telling somebody their swap did not
-    /// happen when we simply stopped watching is the worse of the two lies.
+    /// Poll every 2s for ~90s (Bankr says most jobs land inside 30). A timeout
+    /// is reported as a TIMEOUT and never as a failure: the job may still be
+    /// running, and telling somebody their question failed when we simply
+    /// stopped watching is the worse of the two lies.
     /// The first ten polls are a second apart, the rest two (prd §577b, 2026-09-02).
     ///
     /// A flat 2s meant a job that finished in four seconds was reported at six,

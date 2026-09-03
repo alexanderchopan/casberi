@@ -2166,14 +2166,14 @@ enum AgentAnswer {
 }
 
 extension BankrAgent.Failure {
-    /// The answer path speaks `AgentAnswerFailure`, which has no case for a
-    /// permission this verb cannot hit — `actingOff`/`emptyInstruction` are
-    /// unreachable from `ask` and map to `refused` defensively. A TIMEOUT
+    /// The answer path speaks `AgentAnswerFailure`, which has no case for
+    /// `emptyInstruction` — unreachable from `ask`, and mapped to `refused`
+    /// defensively. A TIMEOUT
     /// keeps its own honest case (`stillRunning`, since 2026-08-31) rather
     /// than folding into `unreachable`: a job Bankr is still running and a
     /// dead connection are different problems with different advice, and
-    /// collapsing them told somebody their swap "couldn't be reached" when it
-    /// may have still been landing the whole time.
+    /// collapsing them told somebody their question "couldn't be reached"
+    /// when the job may have still been running the whole time.
     var answerFailure: AgentAnswerFailure {
         switch self {
         case .noKey:                       .noKey
@@ -2183,7 +2183,7 @@ extension BankrAgent.Failure {
         case .unreachable:                 .unreachable
         case .timedOut(let jobID):         .stillRunning(jobID)
         case .providerError(let status):   .providerError(status)
-        case .refused, .actingOff, .emptyInstruction: .refused
+        case .refused, .emptyInstruction:  .refused
         }
     }
 }

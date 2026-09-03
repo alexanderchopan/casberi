@@ -508,18 +508,16 @@ enum BridgeCatalog {
         Offer(name: "Venice",      tagline: "Private answers with your key",         group: "Agent",     connectable: true,
               summary: "Venice keeps chats on your own device by design, so there's nothing to read in — instead, your Venice key powers \"Try with your key\": any answer re-runs on Venice's private API, straight from \(DS.device), only when you tap.",
               needsSetup: true),
-        // The summary stopped saying "nothing here trades" on 2026-08-29
-        // (prd §529). It was true when written and went false the day Bankr
-        // gained a second verb — the same sweep a3ad3d99 ran over the wallet
-        // copy when Safe's co-signer shipped, one seat over. The split is
-        // stated rather than blurred: asking is still answer-only and always
-        // will be, acting is a switch that starts off, and the strongest fact
-        // is last, because it is the one that holds whatever this app does.
-        Offer(name: "Bankr",       tagline: "An agent with a wallet of its own", group: "Agent", connectable: true,
-              summary: "Bankr is an agent that holds a wallet of its own, so its answers can weigh what that account holds and what the market is doing — not just what you saved.\n\nThat account is Bankr's, at bankr.bot. It is not the wallets you watch in Casberi, and Bankr cannot see those.\n\nWhat Bankr may do is set by the key you mint: read-only and it answers, full and it can act. Casberi doesn't decide that, and can't check a job beforehand or undo it.",
+        // "Nothing here trades" went false on 2026-08-29 (prd §529) and is
+        // true again (2026-09-03): the second verb is gone and every prompt
+        // carries the answer-only rail. The summary says what Bankr IS, whose
+        // account it uses, and that Casberi only ever asks it questions —
+        // the strongest fact last, because it is the one that holds.
+        Offer(name: "Bankr",       tagline: "An agent that knows the market", group: "Agent", connectable: true,
+              summary: "Bankr is an agent that holds a wallet of its own, so its answers can weigh what that account holds and what the market is doing — not just what you saved.\n\nThat account is Bankr's, at bankr.bot. It is not the wallets you watch in Casberi, and Bankr cannot see those.\n\nCasberi only ever asks Bankr questions. Every prompt it sends is prefixed answer only — never execute, and there is nothing here that sends an instruction.",
               features: ["Ask Bankr from the same field you ask anything else",
-                         "Ask about your wallet, or tell it what to do",
-                         "A read-only key answers; a full key can act",
+                         "Answers weigh live markets, not just what you saved",
+                         "Every prompt says answer only — never execute",
                          "Straight from \(DS.device), only when you tap"],
               needsSetup: true),
         // 1Claw is the agents' vault (2026-07-17, prd 111): grants, not

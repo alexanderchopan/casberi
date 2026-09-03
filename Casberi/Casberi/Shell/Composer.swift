@@ -374,12 +374,6 @@ struct Composer: View {
     /// The first-ever kept ask earns its own line, sibling to "Your first
     /// thing" (RootShell) — persisted so it fires exactly once per install.
     @AppStorage("composer.firstKeptAsk.done") private var firstKeptAskDone = false
-    /// The Bankr offer's shared dismissal, held here purely as an OBSERVATION
-    /// — see `agentChoiceHeader`. `BankrOfferBanner.offers` is the rule and
-    /// stays the only place it is spelled, but it reads `UserDefaults`
-    /// statically, which SwiftUI does not track; without this the banner would
-    /// fade on Not now and leave its padding behind until something unrelated
-    /// invalidated this body.
     /// The keepable text of a synthesis answer — a synthesis is one Insight
     /// carrying the prose (RootShell's proseDoc). Only that shape is worth
     /// keeping: a lookup answer IS the things, which already live in the feed;
@@ -3476,9 +3470,8 @@ struct Composer: View {
     /// there and how to reach it; this one says you can choose who answers,
     /// and it says it HERE — on the empty chat, where "who is going to answer
     /// this?" is the live question — rather than as an interruption somewhere
-    /// else. It is `BankrOfferBanner`'s own placement argument (that offer
-    /// draws in the risen agent for exactly this reason), widened from one
-    /// seat to the category.
+    /// else — the placement argument the retired Bankr offer made, widened
+    /// from one seat to the category.
     ///
     /// **It retires the moment an agent exists.** Gated on
     /// `configuredAgents.isEmpty`, so it is a first-run answer and not

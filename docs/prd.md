@@ -79,6 +79,8 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §529 | Bankr gains a second verb that can ACT, and an offer banner that says so at the head of the Wallet room | amended by §582 (Apple's macOS 1.0.11 review named that banner under 3.1.5, and the measured delta says why it had to: the acting verb landed 2026-08-29 and iOS 1.0.9 was cut 08-28, so it is new since every approved version — and unlike the devnet sends it is on production networks, where the faucet-token argument has nothing to say. The banner, the acting copy and the key-page deep link go; the seat stays as an ordinary answering agent) |
+| §529 amendment (2026-08-31) | The answer-only prompt prefix is DELETED — a sentence in a prompt is not a permission, and the key's own scope is what bounds Bankr | reversed by §582 (the reasoning stands and the copy still says it; the conclusion was wrong. The rail is not a claim about Bankr, it is a statement about Casberi — this app does not ask an agent to move money — and dropping it left that stated nowhere in the code) |
 | §545 | The vibenet roster moves onto the room's own Accounts scope, and `VibenetAddressBookScreen` is deleted with its route | amended by §562 (the ruling stands; the deleted screen took `VibenetWatchSheet`'s ONLY presenter with it, so the roster could be renamed and unwatched from and not added to, and §479's discovery is in the empty branch — the moment you watch one account the lookup is off the screen for good. The door is restored as a head row routed through `FeedSheetRoute.vibenetWatch`, and five §517 guards re-pointed in the same move turned out to be dead) |
 | §569 | The profile card's Watch tile is tinted with the NETWORK's own hue, since that is the seat the act happens on | reversed by §570 (user: "changing different colors is going to make the language drift wont' it" — and it would: a hero tile is loud because ONE colour means "this is the act" everywhere, so a per-seat hue makes the reader learn a palette instead of a shape. §524 had already drawn the line — colour says what is happening, not where it came from — and a Watch tile is the same act on every network. §553's devnet panel is untouched: there one tinted half against one ink half carries a DISTINCTION between two verbs rather than decorating one) |
 | §165 | The whisper capsule carries the DAY BRIEF — one glass card above the agent bar on the first foreground of every calendar day, tapping through to the Today brief | superseded by §550 (that made it the last prepopulated door onto the brief after §543 deleted the rest, on the one surface that repeats forever — and the day reading was never only there: the All feed's own Today header has drawn `DayBrief.whisper` since §385 and the iPad pane since 2026-07-31, both untouched. The SLOT survives and changes subject: it teaches the hold §390 hid, once ever, retiring the first time the agent rises by any door) |
@@ -46916,3 +46918,104 @@ the last 40pt is where the newest sentence of an answer sits, so the one line
 you most want to read was the one being dimmed. A fade earns its place where
 content runs UNDER floating chrome, which is what this surface used to be; the
 foot is opaque and adjacent now, and the field's own bar is the boundary.
+
+## 582. Bankr stops being promoted, and asks again (§529 amended, 2026-09-03)
+
+Apple rejected macOS **1.0.11** under **Guideline 3.1.5** — "your wallet app
+facilitates the transmission and/or storage of a virtual currency but was
+submitted by an Apple Developer Program account registered to an individual" —
+and attached **two screenshots**: the Bankr offer banner at the head of the
+Wallet room, and a wallet screen. So the target is NAMED, which is worth more
+than the boilerplate: the guess recorded in the ship notes (that the Frames
+Devnet tagline "Send a transaction no wallet can make" was the trigger) is
+wrong, and that copy fix is moot.
+
+### The measured delta, which changes what may honestly be said
+
+The reply to a 3.1.5 rejection turns on which features are new since the last
+approval, and the answer had been half-measured. `VibenetSend`, `HegotaSend`
+and `FramesSend` are new — that was known. **`BankrOfferBanner` and Bankr's
+acting verb are new too**: they landed in `f31a7b04` on **2026-08-29**, and iOS
+1.0.9 was build **437**, cut **2026-08-28**, with Mac 1.0.8 older still. So the
+acting half of §529 sits in exactly the same bucket as the devnet sends — and
+unlike them it is on **production networks with real money**, where the
+faucet-token argument ("no price, no market, cannot reach a production network")
+has nothing to say.
+
+It is also the weakest ground in the app to argue from, because the claim was
+made in the app's own voice, in the largest type on the surface: *"Bankr reads
+your wallet and live markets — and acts onchain when you tell it to"*, under a
+**Set up Bankr** button, at the head of the room whose subject is money.
+
+### What goes
+
+1. **`BankrOfferBanner`, deleted.** Both placements (the overlay over the
+   wallet crown, and the `bankrFlows` row it fell back to at accessibility
+   sizes), the shared `agent.bankrOfferDismissed` observation in two files, and
+   the crown's **range-chip stand-down** — the chips no longer yield to glass
+   that is never there. This was the app's only promotion of a single seat, and
+   §529's own argument for it (a capability rather than a price) is the
+   capability being removed.
+2. **The copy that offered an action**, in five places: the catalog tagline
+   ("An agent with a wallet of its own" → "An agent that knows the market"),
+   its summary and two of its four features, the setup screen's intro, step
+   line, note and connected `can:` list, `NetworkReach`'s purpose sentence, and
+   the website mini-cell's `data-tag`.
+3. **The `bankr.bot/api-keys` deep link**, which was also the single weak spot
+   in the open **3.1.1** argument on Mac 1.0.5 (the only external key-page link
+   in the app, and therefore the only evidence for Apple's "call to action for
+   purchase outside the app" reading). The account door stays; a key page is
+   reached from inside it, and the step line says so.
+4. **`-bankrCanAct` and `-bankrAct`**, and the dead `Failure.actingOff`.
+
+### What comes back: the answer-only rail
+
+`BankrAgent.prompt` prefixes every prompt **"Answer only — never execute"**
+again, naming the verbs (send, swap, bridge, buy, sell, approve, stake, sign)
+and the queueing of one for later. This **reverses the 2026-08-31 removal**,
+and the reasoning that removed it was right in a way worth restating rather
+than quietly dropping:
+
+> a sentence at the top of a prompt is an INSTRUCTION to somebody else's model,
+> which that model may ignore, and what actually bounds Bankr is the scope of
+> the key minted at bankr.bot — a read-only key cannot act whatever we write.
+
+Every word of that is still true, and it is still what the setup copy says. It
+was the wrong **conclusion**, for a reason the ruling could not see from
+inside: the rail is not a claim about BANKR, it is a statement about
+**CASBERI** — this app does not ask an agent to move money — and removing it
+left the app with no such statement anywhere in the code, on the one seat where
+the absence is expensive. A rail that a third party may ignore is still a rail
+we are on the right side of.
+
+### What stays
+
+**The seat.** Bankr remains an ordinary catalog tile in the Agent group that
+answers questions about live markets, which is what it was in 1.0.8 and 1.0.9 —
+both approved. Removing it would buy nothing and cost the seat its point.
+
+### The harness was inverted, not deleted
+
+`scripts/bankr-selftest.sh` asserted the rail's **absence** for three days
+(`check("the prompt never says ANSWER ONLY", …)`), with a mutation pinning it.
+That is a ruling to amend, not a check to delete: it now asserts the rail from
+four angles — present, above the question, naming each verb, surviving both an
+instruction-shaped question and extra material — plus one prompt builder, one
+verb, no promotion anywhere, and no action offered in either the catalog or the
+setup copy. 11 drift guards, 20 assertions, **7 mutations, all caught**,
+including a rail that drifts below the question, which is the failure that
+renders as a perfectly ordinary screen.
+
+Its own rewrite cost the zsh trap this repo keeps paying: `PROMO=$(grep -rl …)`
+exits 1 when nothing matches, and an assignment from a failing command
+substitution under `set -e` kills the script **printing nothing at all** — a
+check that reads, from outside, exactly like a check that ran and passed.
+
+### Ceiling, stated rather than hoped
+
+Removing this does not guarantee the pass. Apple sent **two** screenshots, and
+the second was a wallet screen — if their position is that watching public
+addresses is itself within 3.1.5, no copy change reaches it and the remedy is
+the organization account they named. That is why the reply asks them to name
+the feature and the screen. Everything here is reversible in one commit the day
+the account converts.

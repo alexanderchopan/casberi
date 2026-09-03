@@ -703,17 +703,15 @@ enum NetworkReach {
                  hosts: ["api.anthropic.com", "api.openai.com", "generativelanguage.googleapis.com",
                          "api.venice.ai", "openrouter.ai", "api.x.ai"]),
 
-        // Bankr is split out of the line above (2026-08-29, prd §529) because
-        // its reach stopped matching it. The other six providers answer a
-        // question; Bankr is an agent with a wallet, and once its acting
-        // switch is on, what leaves this device can be an instruction that
-        // moves money. A shared sentence saying "your question and the matched
-        // things" would describe the wrong thing on exactly the seat where
-        // being wrong costs the most — and this screen exists so a promise can
-        // be checked rather than believed.
+        // Bankr stays split out of the line above (2026-08-29, prd §529)
+        // even now that its acting path is gone (2026-09-03), because the
+        // GROUND still differs: the other six answer from what you saved,
+        // Bankr answers from its own wallet and live markets. The rail is
+        // named here rather than merely kept in code, since this screen
+        // exists so a promise can be checked rather than believed.
         Endpoint(service: "Bankr",
                  reach: .onTapWithKey,
-                 purpose: "Only when you tap. Asking sends your question, prefixed answer only. If you turned acting on and confirmed an instruction, that instruction goes too — and your saved things never ride along with one.",
+                 purpose: "Only when you tap. Your question goes out prefixed answer only — never execute. Casberi sends Bankr nothing else and never sends it an instruction.",
                  hosts: ["api.bankr.bot"]),
     ]
 
