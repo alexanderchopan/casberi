@@ -93,6 +93,50 @@ enum DemoMode {
         ("wallet", String(localized: "How's my wallet?")),
     ]
 
+    /// Asks this demo USED to pin, and the titles it pinned them under.
+    ///
+    /// `exit` iterates the CURRENT list, so an ask the demo planted and later
+    /// stopped planting can never be taken back by it: it stays pinned for
+    /// good on every device that ran that build. Three of them shipped —
+    /// found 2026-09-02 on a simulator carrying "How's my day?", "Show
+    /// Release" and "What's new in Linear?" long after the list had been cut
+    /// to one — and a pinned question nobody chose is exactly wrong in the one
+    /// place the product promises the person's OWN standing questions.
+    ///
+    /// The title must match too, and that is the whole safety argument. A
+    /// person is free to keep "How's my day?" themselves, and by KIND alone
+    /// this would delete it — so the seeded title is the strongest evidence
+    /// available that the pin is ours rather than theirs. It is
+    /// `String(localized:)` on both sides, so a device that ran the demo in
+    /// Spanish matches its own Spanish title; anything else simply does not
+    /// match and the pill stays, which is the right way to be wrong.
+    private static let retiredKeptAsks: [(kind: String, title: String)] = [
+        ("today", String(localized: "How's my day?")),
+        ("showtag:Release", String(localized: "Show Release")),
+        ("context:Linear", String(localized: "What's new in Linear?")),
+    ]
+
+    private static let retiredAsksSweptKey = "demo.mode.retiredAsksSwept.v1"
+
+    /// Take back the pins the demo left behind, ONCE.
+    ///
+    /// Once, because a person who re-keeps one of these on purpose afterwards
+    /// must keep it — a sweep that ran every launch would delete their choice
+    /// every launch, which is a far worse bug than the one it fixes.
+    ///
+    /// Gated on `hasSeen` because only a device that ran the demo can be
+    /// holding one, so an install that never did is never touched at all.
+    @MainActor
+    static func sweepRetiredKeptAsks() {
+        guard !ScratchDefaults.standard.bool(forKey: retiredAsksSweptKey) else { return }
+        ScratchDefaults.standard.set(true, forKey: retiredAsksSweptKey)
+        guard hasSeen else { return }
+        for ask in retiredKeptAsks
+        where KeptAskStore.shared.titles[ask.kind] == ask.title {
+            KeptAskStore.shared.remove(ask.kind)
+        }
+    }
+
     /// The prior-window brief history, the tap-learning counters, and the
     /// away window — the agent's MEMORY, as distinct from its corpus. A
     /// furnished feed with none of this composes a Today brief with no

@@ -1663,6 +1663,13 @@ struct RootShell: View {
             await DemoMode.pourIfNeeded(context: modelContext)
             await DemoMode.restampIfStale(context: modelContext)
         }
+        // Take back the questions an older demo pinned and never removed. Its
+        // own teardown iterates the CURRENT list, so a pin it stopped planting
+        // survives every exit — see `DemoMode.sweepRetiredKeptAsks`. Here
+        // rather than in `exit` because the person may never enter the demo
+        // again, and it costs a `UserDefaults` bool on every launch after the
+        // first.
+        DemoMode.sweepRetiredKeptAsks()
         // (The placeholder crossfade used to live here — it is hoisted to the
         // top of this function now, above the debounce guard.)
         // Warm the model so the first Ask is fast — but OFF the launch
