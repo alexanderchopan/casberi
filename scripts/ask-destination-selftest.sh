@@ -406,6 +406,23 @@ print "  ok   the key mirror refreshes at the raise and both settles"
 # round mic beside the round destination keys read as a fourth destination.
 guard "the resting verb is the mic, not a dead send" "$WORK/composer.flat" \
       'AgentWideKey\(glyph: "mic", tone: .ink\)'
+# THERE IS A WAY BACK, AND IT IS VISIBLE (prd §581c amendment, reported in
+# capitals: "THERE IS NO WAY TO GO BACK TO THE APP"). §581 deleted the ✕ and
+# the chevron as duplicated exits and replaced them with a swipe that was
+# described in a mockup caption and never built — so the risen agent had NO
+# exit and the app was a trap. An invisible way out is indistinguishable from
+# none, so BOTH halves are guarded: a control you can see, and the gesture.
+guard "the surface has a visible way back" "$WORK/composer.flat" \
+      'Image\(systemName: "chevron.down"\)'
+guard "and a swipe that reaches the same verb" "$WORK/composer.flat" \
+      'DragGesture\(minimumDistance: 24\)'
+# STOPPING A DICTATION KEEPS NOTHING. The word `keep` promised the capture
+# §581c retired, and it survived that retirement because the label lived in the
+# foot while the behaviour lived in `commit`.
+guard_absent "the stop-and-keep verb stays deleted" "$WORK/composer.nc" \
+      'Stop and keep'
+guard "a dictation ends in the field, asking nothing" "$WORK/composer.flat" \
+      'private func endDictation\(\) \{'
 guard_absent "the verb slot is never a circle" "$WORK/composer.nc" \
       'AgentWideKey\(.*compact: true'
 guard "a live ask offers Stop" "$WORK/composer.nc" \
@@ -539,4 +556,4 @@ guard_absent "nothing paints the surface blue" "$WORK/composer.nc" \
 guard "the tint flag is written false so no stale blue is left behind" \
       "$WORK/composer.nc" 'chrome.askOnTint = false'
 
-print "  ok   AskDestination — 16 mutations, 57 drift guards"
+print "  ok   AskDestination — 16 mutations, 61 drift guards"

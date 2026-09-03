@@ -1715,6 +1715,51 @@ struct Composer: View {
                 .padding(.top, DS.Space.s2)
             }
 
+            // THE WAY BACK (2026-09-03, reported in capitals: "THERE IS NO WAY
+            // TO GO BACK TO THE APP"). §581 deleted the ✕ and the chevron as
+            // duplicated exits and replaced them with a swipe — which was
+            // written in a mockup caption and never built, so the risen agent
+            // had NO exit at all and the app was a trap from the moment it
+            // opened. A gesture would not have been enough either: an
+            // invisible way out is indistinguishable from none for anyone who
+            // has not been told, which is everyone.
+            //
+            // A visible control AND the swipe, in that order of trust.
+            HStack(spacing: 0) {
+                Button {
+                    DSHaptic.tap()
+                    close()
+                } label: {
+                    Image(systemName: "chevron.down")
+                        .dsGlyph(18, weight: .semibold)
+                        .foregroundStyle(DS.textSecondary)
+                        .frame(width: 44, height: 44)
+                        .background(DS.fillFaint, in: Circle())
+                        .dsTapTarget(Circle())
+                        .dsHover()
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel("Back to your things")
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s2)
+            // AND THE SWIPE, on the strip that carries the button rather than
+            // on the paper — a drag on the paper fights the scroll view, and
+            // the one thing worse than no exit is an exit that fires while you
+            // are reading.
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 24)
+                    .onEnded { drag in
+                        guard drag.translation.height > 60,
+                              abs(drag.translation.height) > abs(drag.translation.width)
+                        else { return }
+                        DSHaptic.tap()
+                        close()
+                    }
+            )
+
             terminalRoll
 
             if isRecording { recordingBand }
@@ -2497,6 +2542,22 @@ struct Composer: View {
         return "\(who) · \(ground)"
     }
 
+    /// End a dictation: the words go to the field, nothing is asked and
+    /// nothing is written.
+    ///
+    /// The transcript is read BEFORE the stop — `VoiceCapture.stop` clears it
+    /// in a `defer` and returns nil under `keep: false`, so reading it
+    /// afterwards gets an empty string and the dictation silently does
+    /// nothing (§581c's own near-miss, kept from recurring by being in one
+    /// function rather than at each call site).
+    private func endDictation() {
+        let spoken = voice.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        voice.stop(keep: false)
+        guard !spoken.isEmpty else { return }
+        draft = spoken
+        fieldFocused = true
+    }
+
     /// The verb that is available, and only that one.
     ///
     /// A dim Send with nothing to send is a dead control, so at rest the slot
@@ -2516,8 +2577,18 @@ struct Composer: View {
                          tone: .ink) { stopAsk() }
                 .layoutPriority(1)
         } else if isRecording {
-            AgentWideKey(title: String(localized: "Stop and keep"),
-                         glyph: "stop.circle.fill", tone: .tint) { commit() }
+            // "STOP AND KEEP" IS GONE (2026-09-03, reported in capitals). The
+            // word `keep` promised the thing §581c just retired — filing what
+            // you said — and it survived the retirement because the label
+            // lived in the foot while the behaviour lived in `commit`.
+            //
+            // Stopping now ENDS THE DICTATION AND NOTHING ELSE: your words land
+            // in the field and the ordinary Ask or Send appears beneath them.
+            // Deliberately not "stop and ask": a transcript is the one input
+            // you have not read yet, and sending it unseen is how a
+            // misheard word becomes an instruction to an agent with a wallet.
+            AgentWideKey(title: String(localized: "Stop"),
+                         glyph: "stop.fill", tone: .tint) { endDictation() }
                 .layoutPriority(1)
         } else if hasDraft {
             // ONE VERB, ALWAYS (2026-09-03, user: "i think we need to
@@ -3781,13 +3852,10 @@ struct Composer: View {
             // `defer`, and with `keep: false` it returns nil — so reading
             // `voice.transcript` after the call gets an empty string and the
             // whole dictation silently does nothing. Caught before this built.
-            let spoken = voice.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-            voice.stop(keep: false)
-            guard !spoken.isEmpty else { return }
-            draft = spoken
-            // Re-entered rather than falling through, because everything below
-            // reads `isRecording` and `draft` and both have just changed.
-            commit(forceAsk: forceAsk)
+            // The words go to the field and stop there — a transcript is the
+            // one input you have not read yet, and sending it unseen is how a
+            // misheard word becomes an instruction to an agent with a wallet.
+            endDictation()
             return
         } else if !forceAsk, let intent = NavigateCommand.parse(draft, tags: tagPool,
                                                      sources: knownSources()) {
