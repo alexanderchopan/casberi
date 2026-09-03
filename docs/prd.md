@@ -46786,3 +46786,74 @@ roll was the better idea and it did not survive contact with a device.
 
 Still UNSEEN on a device: the dimming ratio, the line's rung, the pager's
 placement and the row's balance are weight judgements no check here can make.
+
+### 581b. The first time anybody looked at it (user: "why is it so fucking buggy why can't we fix it", 2026-09-03)
+
+Fair, and the cause is not subtle: **§581 and §581a were shipped to two
+TestFlights without anyone ever seeing the screen.** Every fault reported —
+invisible selection, the flip, the confusing roll, a clipped answer — is
+visible in one second in a screenshot and invisible to every check in this
+repo. The build compiles, 33 audits pass, 86 harnesses pass, and not one of
+them renders a pixel. Verified hard, verified the wrong things.
+
+The HTML mockups made it worse rather than better. A mockup is a drawing of the
+intent; the app is the intent plus every component it actually uses. The mock
+drew destination keys as circles with clean white fills because that is what
+was drawn — the real `BridgeIcon` covers the fill with an opaque full-bleed
+image, which is §581a's entire bug, and one glance at a simulator would have
+shown it.
+
+**The standing change: this surface is looked at before it ships.** Boot the
+simulator, walk rest / typed / working / answered / switched, read the
+screenshots. Minutes against the hours of round-tripping it replaces.
+
+### What looking found, in order
+
+1. **"Ask or search" rendered TWICE**, at 64pt and again at 24pt, over a
+   screen-tall void — §581b's own first fix had put an invitation on the paper
+   while the field kept its placeholder. One invitation, in the field.
+2. **The destination keys rendered as NOTHING.** A `ScrollView` is greedy and
+   so is a `maxWidth: .infinity` verb beside it; the verb won and the whole key
+   row collapsed to zero, leaving a foot with no destinations on it at all. A
+   layout priority cannot settle a fight between two views that both want
+   everything — a WIDTH can, and it must be a hard `frame(width:)` rather than
+   a `maxWidth`, which is only a ceiling and may still be handed zero.
+3. **The mic read as a fourth destination**: three circles, then another
+   circle. The verb slot is a capsule in every state now, which is also the
+   "screen can't change shape" rule applied to the foot itself.
+4. **A third key was cut down its middle** by the verb beside it — a partial
+   circle is a peek only when there is air after it, and against a capsule it
+   is a rendering fault. Two whole keys, and a fade where the row continues,
+   because a configured agent that is simply absent with nothing pointing at it
+   is a destination you cannot reach by any means you can see (§83).
+5. **The wait counter sat on 0** for the whole minute. `askWaitSeconds` has
+   exactly one writer, `closeWaitBeat`, and it runs when the ask SETTLES — so a
+   live wait always read nil. It is DERIVED from `askStartedAt` against a
+   `TimelineView`'s own clock now, so there is no state left to forget.
+6. **The 64pt stopwatch is deleted.** User: "i don't know we want that to be a
+   large number. maybe have the icon there breathing while it is thinkign
+   inside the selector." The chosen key's mark breathes instead — a slow scale
+   on the one thing already saying who answers — and the elapsed seconds ride
+   the small destination line. Reduce Motion holds the mark at full size, which
+   is a resting state rather than a frozen half-breath.
+
+### And both sides get a bubble (user: "lets make it so my question when a user types looks like a chat bubble too bc it is confusing what text is what", then "we should have the responses be in a bubble too")
+
+§581 folded the question to a 12pt caption on the reasoning that you wrote it
+and already know what it says. True, and beside the point: a caption cannot say
+WHOSE WORDS THESE ARE, and the screen held a grey question, a grey destination
+line and a grey reply with nothing announcing an author.
+
+**The question trails, the reply leads.** That mirror is the whole mechanism —
+a lone bubble says somebody said this and not who — and it is the one
+convention every person on a phone already reads without being taught.
+
+**A DOCUMENT DOES NOT GET ONE.** The bubble is for the agent's WORDS; a brief,
+a Find, a balance chart and its tiles already carry their own cards, and
+wrapping those in a second container is the box-in-a-box §578 was told about in
+as many words ("the boxes touching each other like an error"). So the rule is:
+prose is bubbled, evidence is not.
+
+The lead/rest split survives inside the bubble and keeps its harness, but comes
+off the display rung — a 40pt headline inside a bubble is a poster in an
+envelope, and the bubble now does the separating that type was doing alone.

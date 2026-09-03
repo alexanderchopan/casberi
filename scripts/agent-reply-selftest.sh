@@ -280,10 +280,20 @@ strip_comments "$REPLY"    > "$WORK/reply.nc"
 # arithmetic, and the treatment is the point.
 grep -q 'AgentReply.split(text)' "$WORK/terminal.nc" \
   || { echo "  ✗ drift: the prose answer no longer splits its lead"; exit 1; }
-grep -q 'dsText(.price40)' "$WORK/terminal.nc" \
-  || { echo "  ✗ drift: the lead lost the display rung"; exit 1; }
+# THE LEAD LEADS INSIDE THE BUBBLE (prd §581b). It came OFF the display rung
+# when both sides gained bubbles: a 40pt headline inside a bubble is a poster
+# in an envelope, and the bubble now does the separating that type was doing
+# alone. What must survive is the STEP — a lead that is heavier and a rest that
+# is a rung down and secondary — because that is the hierarchy `split` exists
+# to produce, and without it the split is arithmetic nothing draws.
 grep -q 'dsText(.heading22)' "$WORK/terminal.nc" \
-  || { echo "  ✗ drift: the rest lost its reading rung"; exit 1; }
+  || { echo "  ✗ drift: the lead lost its rung"; exit 1; }
+grep -q 'dsText(.reading20)' "$WORK/terminal.nc" \
+  || { echo "  ✗ drift: the rest no longer steps down from the lead"; exit 1; }
+# AND IT IS IN A BUBBLE, LEADING, where the question's trails. That mirror is
+# what makes authorship legible before a word is read.
+grep -q 'Spacer(minLength: DS.Space.s8)' "$WORK/terminal.nc" \
+  || { echo "  ✗ drift: the reply's bubble no longer leads"; exit 1; }
 # THE LEAD IS WHITE AND THE REST IS SECONDARY. That contrast is the whole
 # separation — same size in two greys was the blend the user reported.
 grep -q 'foregroundStyle(DS.textSecondary)' "$WORK/terminal.nc" \

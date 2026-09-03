@@ -402,8 +402,12 @@ print "  ok   the key mirror refreshes at the raise and both settles"
 # A dim Send with nothing to send is the dead control §83 bans. At rest the
 # slot carries Record — the voice-note capture path, a thing that really enters
 # the corpus — which is also how the mic keeps its door without taking a key.
+# The resting verb is the mic, and it is a CAPSULE like every other verb — a
+# round mic beside the round destination keys read as a fourth destination.
 guard "the resting verb is the mic, not a dead send" "$WORK/composer.flat" \
-      'AgentWideKey\(glyph: "mic", tone: .ink, compact: true\)'
+      'AgentWideKey\(glyph: "mic", tone: .ink\)'
+guard_absent "the verb slot is never a circle" "$WORK/composer.nc" \
+      'AgentWideKey\(.*compact: true'
 guard "a live ask offers Stop" "$WORK/composer.nc" \
       'AgentWideKey\(title: String\(localized: "Stop"\)'
 # ONE VERB, ALWAYS (prd §581 amendment). The device used to add a second round
@@ -423,7 +427,14 @@ guard "the device's verb is Ask" "$WORK/composer.nc" \
 # the selection now, and BOTH are guarded, because either alone is one
 # refactor from leaving the control mute again.
 guard "the foot names its destination" "$WORK/composer.nc" \
-      'Text\(destinationLine\)'
+      'Text\(destinationLine\(now: tick.date\)\)'
+# THE WAIT CLOCK IS DERIVED, NEVER STORED. `askWaitSeconds` is written once,
+# by `closeWaitBeat`, when an ask SETTLES — so a live wait read it as nil and
+# the counter sat on "0" for the whole minute (reported 2026-09-03).
+guard "the elapsed time is derived from the start, not from stored state" \
+      "$WORK/composer.flat" 'now.timeIntervalSince\(started\)'
+guard_absent "the wait no longer reads a figure written at the settle" \
+      "$WORK/composer.nc" 'elapsed: askWaitSeconds'
 guard "the line takes its ground from AskSubject, never its own words" \
       "$WORK/composer.nc" 'AskSubject.ground\(forAgent: activeAskAgent'
 guard "an unchosen mark stands down" "$WORK/terminal.nc" \
@@ -461,10 +472,16 @@ guard "the question is a caption, not a heading" "$WORK/composer.nc" \
       'AgentAskedCaption\(question:'
 guard "a written reply is set rather than poured" "$WORK/composer.nc" \
       'AgentReply\.prose\(els\)'
-guard "the lead takes the display rung" "$WORK/terminal.nc" \
-      'dsText\(.price40\)'
-guard "the rest steps down to reading size" "$WORK/terminal.nc" \
+# BOTH SIDES WEAR A BUBBLE, and the mirror is the point: the question trails,
+# the reply leads. A lone bubble says somebody said this and not who.
+guard "the reply sits in a bubble of its own" "$WORK/terminal.nc" \
+      'Spacer\(minLength: DS.Space.s8\)'
+guard "the question's bubble trails" "$WORK/terminal.nc" \
+      'Spacer\(minLength: DS.Space.s6\)'
+guard "the lead leads inside the bubble" "$WORK/terminal.nc" \
       'dsText\(.heading22\)'
+guard "the rest steps down beneath it" "$WORK/terminal.nc" \
+      'dsText\(.reading20\)'
 # A DOCUMENT KEEPS ITS ROWS. `AgentReply.prose` recognises one shape and
 # returns nil for everything else; a false positive would delete content.
 guard "a document still renders through GenRender" "$WORK/composer.nc" \
@@ -522,4 +539,4 @@ guard_absent "nothing paints the surface blue" "$WORK/composer.nc" \
 guard "the tint flag is written false so no stale blue is left behind" \
       "$WORK/composer.nc" 'chrome.askOnTint = false'
 
-print "  ok   AskDestination — 16 mutations, 54 drift guards"
+print "  ok   AskDestination — 16 mutations, 57 drift guards"

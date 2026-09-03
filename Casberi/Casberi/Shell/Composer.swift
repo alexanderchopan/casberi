@@ -2071,16 +2071,17 @@ struct Composer: View {
     @ViewBuilder
     private var terminalRoll: some View {
         if turns.isEmpty, !answering, !risingHandoff {
-            // BLANK PAPER. Nothing is drawn until you ask — no greeting, no
-            // badge, no offer, and no destination's mark blown up as
-            // decoration (user, 2026-09-03: the logo is not needed "until
-            // user selects it", and then not even then, because the lit key
-            // in the foot already says who).
+            // BLANK PAPER, and nothing drawn on it. The invitation belongs
+            // to the FIELD; a second copy here rendered "Ask or search" TWICE
+            // on one screen, at two sizes, over a screen-tall void — seen on
+            // the simulator on 2026-09-03, which is the first time anybody
+            // looked at this surface instead of reasoning about it.
             Spacer(minLength: 0)
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
+                        Color.clear.frame(height: 0).id("top")
                         if answering || risingHandoff {
                             liveBlock
                         } else if let turn = shownTurn {
@@ -2099,6 +2100,14 @@ struct Composer: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
+                    // THE PAPER ENDS ABOVE THE FOOT (2026-09-03, reported:
+                    // "the responses shouldn't be clipping the 'ask about
+                    // this' it should have clear separattioh"). The content
+                    // ran flush to the field, so the last card of a document
+                    // was cut by the placeholder beneath it and the two read
+                    // as one collided block. The fade below is a soft edge on
+                    // scrolling content and was never a gap; this is the gap.
+                    .padding(.bottom, DS.Space.s8)
                 }
                 .refreshable {
                     guard briefLanding else { return }
@@ -2106,22 +2115,43 @@ struct Composer: View {
                     draft = TodayBrief.title
                     commit()
                 }
-                // A reply settles at the bottom, under the thumb; a DOCUMENT
-                // (a brief, a Find) anchors to its own top, because it is
-                // read from the beginning (§288's ruling, unchanged).
-                .defaultScrollAnchor(DS.isMac || documentInView ? .top : .bottom)
+                // THE PAPER ANCHORS TO ITS TOP, ALWAYS (2026-09-03, reported:
+                // "the response is clipped and off screen").
+                //
+                // Anchoring to the BOTTOM is a chat rule: in a thread the
+                // newest words are the last words, so the bottom is where you
+                // look. §581 kept it and then made it wrong twice over — the
+                // paper holds ONE turn rather than a growing thread, and that
+                // turn's FIRST SENTENCE is the answer, set at the display
+                // rung. Landing at the bottom scrolled the headline off the
+                // top and left you reading the tail beside the pager, which
+                // from the outside is an answer that is clipped and off
+                // screen. §288's document rule is not amended — it said a
+                // document is read from its beginning, and this makes every
+                // answer one.
+                .defaultScrollAnchor(.top)
                 .scrollDismissesKeyboard(.interactively)
                 .onTapGesture { fieldFocused = false }
-                .onChange(of: answerStream.progress) { _, _ in
-                    guard !documentInView else { return }
-                    withAnimation(DS.Motion.standard) { proxy.scrollTo("bottom", anchor: .bottom) }
-                }
+                // AND IT DOES NOT CHASE THE STREAM. Following the tail as
+                // text arrives is the same chat rule by another route: it
+                // walks the lead off the top the moment the reply runs past
+                // one screen. The lead paints first and is the answer; what
+                // grows below it is the detail, and it waits.
                 // A NEW ANSWER ALWAYS WINS THE PAPER. Browsing back and then
                 // asking again must not leave you reading last week while the
                 // thing you just asked for sits behind a control.
+                // A NEW ANSWER ALWAYS WINS THE PAPER, and you land on its
+                // head. Browsing back and then asking again must not leave you
+                // reading last week while the thing you just asked for sits
+                // behind a control.
                 .onChange(of: turns.count) { _, _ in
                     browsing = nil
-                    withAnimation(DS.Motion.standard) { proxy.scrollTo("bottom", anchor: .bottom) }
+                    withAnimation(DS.Motion.standard) { proxy.scrollTo("top", anchor: .top) }
+                }
+                // Paging to another answer lands on ITS head too, or the
+                // second answer you look at opens part-way down.
+                .onChange(of: browsing) { _, _ in
+                    withAnimation(DS.Motion.standard) { proxy.scrollTo("top", anchor: .top) }
                 }
                 .onChange(of: answerStream.completed) { _, done in
                     guard done, TodayBrief.matches(currentQuestion) else { return }
@@ -2204,11 +2234,18 @@ struct Composer: View {
     /// it lands.
     @ViewBuilder
     private var liveBlock: some View {
-        if inFlight, keyedCurrent, answerStream.els.isEmpty, !currentQuestion.isEmpty {
-            AgentWaitPaper(question: currentQuestion,
-                           elapsed: askWaitSeconds ?? 0,
-                           typical: Int(Self.typicalKeyedWait),
-                           subject: (askProvider ?? AgentKey.active)?.agent)
+        if inFlight, answerStream.els.isEmpty, !currentQuestion.isEmpty {
+            // THE WAIT IS THE QUESTION AND NOTHING ELSE. The 64pt stopwatch is
+            // deleted: the breathing mark in the foot says it is working, the
+            // destination line says who and for how long, and the paper stays
+            // the shape it will be when the answer lands — which is the whole
+            // of "the screen can't change shape 900 times".
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                AgentAskedCaption(question: currentQuestion)
+                answerSkeleton
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.bottom, DS.Space.s4)
         } else {
             turnBlock(question: foundCurrent ? "" : currentQuestion,
                       els: answerStream.els,
@@ -2359,10 +2396,32 @@ struct Composer: View {
     /// switcher at the footer"), which is what lets the paper above be free.
     private var agentFoot: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
+            // ONE LINE, ALWAYS, AT ONE SIZE. It grew to eight lines while
+            // writing and shrank back after, and its placeholder was at the
+            // display rung — three ways for the bottom of the screen to
+            // resize under your thumb while you read ("the screen can't change
+            // shape 900 times"). The invitation moved to the empty paper, so
+            // nothing is lost by holding this still.
+            // THE FIELD IS A BAR, NOT LOOSE TEXT (2026-09-03, reported: "even
+            // the 'ask about this' by itself ends up looking like part of the
+            // response"). It was grey type on the same ink as the answer,
+            // directly under a fading card — nothing in it said "this is where
+            // you type" rather than "this is one more line of the reply".
+            //
+            // A container is the separation, and it is the ONE box on this
+            // surface. §578's slab is not coming back: that was a raised card
+            // behind the whole panel INCLUDING the keys, which is what made
+            // "the boxes touching each other like an error". This is around
+            // the field alone, which is the shape every other text input in
+            // the app already has.
             draftField
-                .lineLimit(writingRoom ? 4...8 : 1...5)
-                .padding(.horizontal, DS.Space.s1)
-                .padding(.top, DS.Space.s1)
+                .lineLimit(1...3)
+                .padding(.horizontal, DS.Space.s3)
+                .padding(.vertical, DS.Space.s3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(DS.fillFaint,
+                            in: RoundedRectangle(cornerRadius: DS.Radius.sheet,
+                                                 style: .continuous))
             // WHO ANSWERS, IN WORDS (2026-09-03, reported: "you can't tell
             // when you selected which agent"). A brand mark is opaque and
             // full-bleed, so a lit key's fill survives only as a ring around
@@ -2373,18 +2432,23 @@ struct Composer: View {
             // always present, instead of a second one that appeared as you
             // typed. Drawn from `AskSubject` so the key and the words can
             // never disagree about whose account Bankr uses.
-            Text(destinationLine)
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-                .lineLimit(1)
-                .padding(.horizontal, DS.Space.s1)
-                .contentTransition(.opacity)
-                .animation(DS.Motion.standard, value: destinationLine)
+            TimelineView(.periodic(from: .now, by: 1)) { tick in
+                Text(destinationLine(now: tick.date))
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+                    .monospacedDigit()
+                    .padding(.horizontal, DS.Space.s1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(height: 18)
+            .padding(.bottom, DS.Space.s2)
             HStack(spacing: DS.Space.s2) {
                 AgentDestinationKeys(
                     providers: configuredAgents,
                     active: activeAskAgent,
                     onAddAgent: onOpenAgents,
+                    thinking: inFlight,
                     onDevice: { pickDevice() },
                     // `pickAgent` re-addresses a running question itself
                     // (§580), so this must not test for it first — doing that
@@ -2399,6 +2463,7 @@ struct Composer: View {
             .animation(DS.Motion.standard, value: inFlight)
         }
         .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s2)
         .padding(.bottom, DS.Space.s3)
     }
 
@@ -2407,14 +2472,25 @@ struct Composer: View {
     /// Two facts and no more: the destination's name, which is the thing the
     /// keys below could not say on their own, and its ground, which is the
     /// disclosure Bankr's seat owes on every screen that can reach it.
-    private var destinationLine: String {
+    private func destinationLine(now: Date) -> String {
+        let who = activeAskAgent?.agent
+            ?? AskDestination.deviceLabel(isMac: DS.isMac, isPad: DS.isPad)
+        // WORKING, AND FOR HOW LONG — in the small line rather than at the
+        // display rung. `askWaitSeconds` could never drive this: it is written
+        // once, by `closeWaitBeat`, when the ask SETTLES, so a live wait read
+        // it as nil and the clock sat on "0" for the whole minute (reported
+        // 2026-09-03, "the counter for time doesn't work, stays at 0"). It is
+        // DERIVED from `askStartedAt` against a clock the view already ticks,
+        // so there is no state left to forget to update.
+        if inFlight, let started = askStartedAt {
+            let seconds = max(0, Int(now.timeIntervalSince(started)))
+            return String(localized: "\(who) · working · \(seconds)s")
+        }
         let ground: String
         switch AskSubject.ground(forAgent: activeAskAgent?.rawValue) {
         case .ownAccount:     ground = String(localized: "its own account")
         case .corpus, .search: ground = String(localized: "on your things")
         }
-        let who = activeAskAgent?.agent
-            ?? AskDestination.deviceLabel(isMac: DS.isMac, isPad: DS.isPad)
         return "\(who) · \(ground)"
     }
 
@@ -2465,10 +2541,16 @@ struct Composer: View {
                     .layoutPriority(1)
             }
         } else {
-            AgentWideKey(glyph: "mic", tone: .ink, compact: true) {
+            // A ROUND MIC READS AS A FOURTH DESTINATION. Seen on the
+            // simulator: three circles and then a fourth circle beside them,
+            // with nothing in the shape saying the last one is a verb. The
+            // slot is always a capsule now, in every state — the "screen can't
+            // change shape" rule applied to the foot itself.
+            AgentWideKey(glyph: "mic", tone: .ink) {
                 DSHaptic.tap()
                 Task { await voice.start() }
             }
+            .layoutPriority(1)
         }
     }
 
@@ -3494,34 +3576,31 @@ struct Composer: View {
                 // Everywhere else (the resting panel over a conversation, the
                 // non-embedded bubble) §575's shrink-on-focus is untouched.
                 .placeholder(when: !hasDraft) {
-                    Text(answering || !turns.isEmpty ? String(localized: "Ask about this…")
-                                                     : AskSubject.invitation(ground: askGround))
-                        // ONE SIZE, ALWAYS, ON THE EMBEDDED SURFACE (prd
-                        // §577c, user: "the ask or search i think could be
-                        // LARGER extreme size"). It was three ternaries over
-                        // `asking`/`restingPanel`/`fieldFocused` — and a
-                        // `TextField` whose FONT changes is a `UITextView`
-                        // rebuilt, which is the §577c hang arriving by a
-                        // second route. The invitation is the crown here in
-                        // every state, so there is nothing left to switch on.
-                        // THE INVITATION IS AT THE DISPLAY RUNG (prd §578,
-                        // user: "the ask or search i think could be LARGER
-                        // extreme size"). It CAN be and the field's own text
-                        // cannot: the placeholder is a separate view inside
-                        // `.placeholder(when:)`'s ZStack, so sizing it costs
-                        // the `UITextView` nothing, while changing `.dsText`
-                        // on the field itself is a rebuild (§577c).
-                        .dsText(embedded ? .price48 : .body17)
+                    // THE ONE SIZE CHANGE THAT EARNS ITSELF (2026-09-03).
+                    // §578 put the invitation at the display rung and kept it
+                    // there in every state — right on an empty surface, where
+                    // it is the only thing to look at, and wrong the moment
+                    // there is a reply: a 64pt "Ask about this…" under a
+                    // clipped answer is chrome outranking content, which is
+                    // what "the response should be clearly visible" was
+                    // reported over, with a screenshot.
+                    //
+                    // Sizing the PLACEHOLDER is safe where sizing the field is
+                    // not: it is a separate view inside `.placeholder(when:)`'s
+                    // ZStack, so it costs the `UITextView` nothing, while
+                    // changing `.dsText` on the field itself is a rebuild and
+                    // the §577c hang by a second route. The field's own rung
+                    // below is a constant for exactly that reason.
+                    let answered = answering || !turns.isEmpty
+                    Text(answered ? String(localized: "Ask about this…")
+                                  : AskSubject.invitation(ground: askGround))
+                        .dsText(answered ? .heading22 : (embedded ? .price48 : .body17))
                         .foregroundStyle(DS.textTertiary)
-                        // ONE LINE. At 64pt "Ask or search" wraps on a phone
-                        // and eats the air the deck needs; scaled it holds the
-                        // rung and the shape of a single statement.
                         .lineLimit(1)
                         .minimumScaleFactor(0.45)
-                        .minimumScaleFactor(0.9)
                         .contentTransition(.opacity)
                 }
-                .dsText(embedded ? .heading34 : .body17)
+                .dsText(embedded ? .heading22 : .body17)
                 .foregroundStyle(DS.textPrimary)
                 .tint(DS.tint)
                 .focused($fieldFocused)

@@ -37,12 +37,35 @@ struct AgentDestinationKeys: View {
     /// where the choice is made, so it needs no dismissal and can never be the
     /// dead control §83 bans.
     var onAddAgent: (() -> Void)? = nil
+    /// The chosen destination is working. Its mark BREATHES — a slow scale on
+    /// the one thing already saying who answers — which replaces the 64pt
+    /// stopwatch §580 put on the paper (user, 2026-09-03: "i don't know we
+    /// want that to be a large number. maybe have the icon there breathing
+    /// while it is thinkign inside the selector"). A number that large is the
+    /// biggest thing on the screen for the one moment there is nothing to
+    /// read, and it pushed the answer out of view when it arrived.
+    var thinking: Bool = false
     let onDevice: () -> Void
     let onAgent: (AgentProvider) -> Void
 
     /// 88pt, which is what makes this a key you press without looking. It is
     /// also the wide verb's height, so the foot is one row of one size.
     static let side: CGFloat = 88
+
+    /// The widest the key row may grow before it starts scrolling.
+    ///
+    /// EXACTLY TWO KEYS, and the number is a whole one on purpose: at 214 the
+    /// third key was cut down its middle by the verb beside it, which reads as
+    /// a rendering fault rather than as "there are more" (seen on the
+    /// simulator, 2026-09-03). A partial circle is only a peek when there is
+    /// air after it; against a capsule it is a broken one.
+    static let keysCeiling: CGFloat = side * 2 + DS.Space.s2
+
+    /// What the keys would take if nothing constrained them.
+    private var intrinsicWidth: CGFloat {
+        let count = CGFloat(providers.count + 1 + (providers.isEmpty && onAddAgent != nil ? 1 : 0))
+        return count * Self.side + max(0, count - 1) * DS.Space.s2
+    }
 
     private var deviceGlyph: String { AskDestination.deviceGlyph(isMac: DS.isMac, isPad: DS.isPad) }
     private var deviceLabel: String { AskDestination.deviceLabel(isMac: DS.isMac, isPad: DS.isPad) }
@@ -57,6 +80,7 @@ struct AgentDestinationKeys: View {
                     Image(systemName: deviceGlyph)
                         .dsGlyph(38, weight: .regular)
                         .foregroundStyle(active == nil ? DS.inkGround : DS.textTertiary)
+                        .agentBreath(thinking && active == nil)
                 }
                 .accessibilityLabel("Answer on \(deviceLabel)")
                 .accessibilityAddTraits(active == nil ? [.isSelected] : [])
@@ -75,6 +99,7 @@ struct AgentDestinationKeys: View {
                         BridgeIcon(name: provider.agent, size: DS.Face.shelf, circular: true)
                             .opacity(provider == active ? 1 : 0.38)
                             .saturation(provider == active ? 1 : 0)
+                            .agentBreath(thinking && provider == active)
                     }
                     .accessibilityLabel("Ask \(provider.agent)")
                     .accessibilityAddTraits(provider == active ? [.isSelected] : [])
@@ -91,8 +116,40 @@ struct AgentDestinationKeys: View {
             }
             .padding(.horizontal, 1)
         }
+        // THE KEYS TAKE THEIR OWN WIDTH AND NO MORE. A `ScrollView` is
+        // greedy and so is a `maxWidth: .infinity` verb beside it, and the
+        // verb won: the keys collapsed to ZERO and the foot rendered as a
+        // lone capsule with no destinations at all (seen on the simulator,
+        // 2026-09-03). A layout priority cannot settle a fight between two
+        // views that both want everything — a width can.
+        //
+        // The cap leaves the verb at least `verbFloor`, so past three
+        // destinations the row scrolls and the next key shows past the edge,
+        // which is what a scroller is for.
+        // A HARD WIDTH, not a ceiling. `maxWidth` is only an upper bound and
+        // SwiftUI is free to hand this view ZERO — which is exactly what a
+        // `maxWidth: .infinity` verb beside it caused: the whole key row
+        // rendered as nothing and the foot was a lone capsule with no
+        // destinations on it (seen on the simulator twice, 2026-09-03).
+        .frame(width: min(intrinsicWidth, Self.keysCeiling))
+        // A FADE WHEN THERE IS MORE. Two keys fit; a third scrolls, and
+        // SwiftUI draws no indicator for it — so without this a configured
+        // agent is simply absent with nothing saying to look for it, which is
+        // a destination you cannot reach by any means you can see (§83). A cut
+        // circle said it and read as a rendering fault; a fade says it and
+        // reads as an edge.
+        .mask(alignment: .leading) {
+            LinearGradient(stops: intrinsicWidth > Self.keysCeiling
+                           ? [.init(color: .black, location: 0),
+                              .init(color: .black, location: 0.86),
+                              .init(color: .clear, location: 1)]
+                           : [.init(color: .black, location: 0),
+                              .init(color: .black, location: 1)],
+                           startPoint: .leading, endPoint: .trailing)
+        }
         .scrollBounceBehavior(.basedOnSize)
         .animation(DS.Motion.standard, value: active)
+        .animation(DS.Motion.standard, value: thinking)
     }
 
     @ViewBuilder
@@ -119,6 +176,37 @@ struct AgentDestinationKeys: View {
         // animation, and by the line above it. The press already has
         // `PressSpring` and a selection haptic; a flip on top is a third
         // answer to a question already answered twice.
+    }
+}
+
+/// A slow scale that says "still going" without claiming to know how long.
+///
+/// The motion law's rule for a loop: it may run only while something real is
+/// pending, and it must stand down for Reduce Motion — where it holds the
+/// mark at full size, which is a legible resting state rather than a frozen
+/// half-breath.
+private struct AgentBreath: ViewModifier {
+    let active: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var inhaled = false
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(active && inhaled && !reduceMotion ? 1.08 : 1)
+            .opacity(active && inhaled && !reduceMotion ? 0.72 : 1)
+            .animation(active && !reduceMotion
+                       ? .easeInOut(duration: 0.9).repeatForever(autoreverses: true)
+                       : DS.Motion.standard,
+                       value: inhaled)
+            .onChange(of: active, initial: true) { _, now in
+                inhaled = now
+            }
+    }
+}
+
+extension View {
+    func agentBreath(_ active: Bool) -> some View {
+        modifier(AgentBreath(active: active))
     }
 }
 
@@ -197,35 +285,62 @@ struct AgentWideKey: View {
 
 // MARK: - The paper
 
-/// "You asked" plus the question, on one line.
+/// YOUR QUESTION, AS A BUBBLE.
 ///
-/// The question is a CAPTION and never a heading: you wrote it, so the surface
-/// spends nothing restating it, and the reply below is left as the only large
-/// thing on the paper. This is what §575's turn header stopped being when it
-/// grew a 56pt destination disc above the words.
+/// §581 folded it to a 12pt "You asked" caption on the reasoning that you
+/// wrote it and already know what it says. True, and beside the point: what a
+/// caption cannot do is say WHOSE WORDS THESE ARE. Reported 2026-09-03 — "it is
+/// confusing what text is what" — over a screen holding a grey question, a
+/// grey destination line and a grey reply, none of which announced its author.
+///
+/// A bubble is the one convention every person on a phone already reads
+/// without being taught, and using it HERE costs nothing that §581 was
+/// protecting: the surface is still not a chat, because there is exactly one
+/// bubble and it is always yours. The agent's words never take one — they are
+/// set on the paper, at the display rung, which is what keeps the answer the
+/// subject and the question the label.
+///
+/// Trailing-aligned and raised, so authorship reads from the SHAPE before a
+/// word is read.
 struct AgentAskedCaption: View {
     let question: String
 
     var body: some View {
-        HStack(spacing: DS.Space.s2) {
-            DSStamp(word: String(localized: "You asked"))
+        HStack {
+            Spacer(minLength: DS.Space.s6)
             Text(question)
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-            Spacer(minLength: 0)
+                .dsText(.callout15)
+                .foregroundStyle(DS.textPrimary)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, DS.Space.s3)
+                .padding(.vertical, DS.Space.s2)
+                .background(DS.surfaceRaised, in: RoundedRectangle(cornerRadius: DS.Radius.sheet,
+                                                                   style: .continuous))
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("You asked: \(question)")
     }
 }
 
-/// A written reply, set as the screen (prd §581).
+/// The agent's written reply, in a bubble of its own.
 ///
-/// The first sentence takes the display rung in white; the rest steps down to
-/// `heading22` in secondary ink. `AgentReply.split` owns which is which and is
-/// harnessed — see its own header for why the rule is a function.
+/// §581 set a reply as the SCREEN — first sentence at the display rung, the
+/// rest below it — and the device verdict was that the question, the
+/// destination line and the reply were three greys with nothing saying whose
+/// words were whose ("it is confusing what text is what", 2026-09-03). The
+/// answer is the same one the question got: **a bubble**, the one convention
+/// every person on a phone already reads without being taught.
+///
+/// LEADING, where the question's is trailing. That single mirror is what makes
+/// authorship legible before a word is read, and it is why both sides needed
+/// one — a lone bubble says "somebody said this" and not who.
+///
+/// The lead/rest split survives INSIDE it and still earns its harness: the
+/// first sentence is white and heavier, what follows is secondary and a rung
+/// down. What changed is the scale — a 40pt headline inside a bubble is a
+/// poster in an envelope, and the bubble is now what separates the voices, so
+/// the type no longer has to do that job alone.
 struct AgentProseAnswer: View {
     let text: String
     /// A failure is an answer and wears this same anatomy, with one colour
@@ -235,89 +350,27 @@ struct AgentProseAnswer: View {
 
     var body: some View {
         let parts = AgentReply.split(text)
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            if !parts.lead.isEmpty {
-                Text(parts.lead)
-                    .dsText(.price40)
-                    .foregroundStyle(attention ? DS.attention : DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if !parts.rest.isEmpty {
-                Text(parts.rest)
-                    .dsText(.heading22)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .textSelection(.enabled)
-    }
-}
-/// The wait, as a stopwatch (prd §580's clock, on §581's paper).
-///
-/// The receipt paper §580 gave this state is gone with the tiles: on a roll
-/// the wait is simply the newest thing on the paper, so it takes the paper's
-/// own anatomy — the question as a caption, one figure, one sentence — and the
-/// Stop verb lives in the foot like every other verb.
-///
-/// The track is Bankr's OWN published typical (`BankrAgent`'s poll note: most
-/// jobs land inside a minute), so you can see whether this one is ordinary. It
-/// never claims to be a progress bar for work we cannot see: it fills against
-/// the clock and stops at full rather than pretending to know more.
-struct AgentWaitPaper: View {
-    let question: String
-    let elapsed: Int
-    /// nil where no typical is published — then no track is drawn at all,
-    /// rather than a bar against a number we invented (§83).
-    var typical: Int?
-    var subject: String?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: DS.Space.s2) {
-                DSStamp(word: String(localized: "Working"), weight: .waiting)
-                if let subject {
-                    Text(subject)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
+        HStack {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                if !parts.lead.isEmpty {
+                    Text(parts.lead)
+                        .dsText(.heading22)
+                        .foregroundStyle(attention ? DS.attention : DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer(minLength: 0)
-            }
-            Text(question)
-                .dsText(.heading22)
-                .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, DS.Space.s3)
-            HStack(alignment: .lastTextBaseline, spacing: DS.Space.s1) {
-                Text("\(elapsed)")
-                    .dsText(.price48)
-                    .foregroundStyle(DS.textPrimary)
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
-                Text("s")
-                    .dsText(.heading22)
-                    .foregroundStyle(DS.textTertiary)
-            }
-            .padding(.top, DS.Space.s4)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(elapsed) seconds so far")
-            if let typical, typical > 0 {
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(DS.fillFaint)
-                        Capsule().fill(DS.textPrimary)
-                            .frame(width: geo.size.width *
-                                   min(1, Double(elapsed) / Double(typical)))
-                    }
+                if !parts.rest.isEmpty {
+                    Text(parts.rest)
+                        .dsText(.reading20)
+                        .foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .frame(height: 6)
-                .padding(.top, DS.Space.s3)
-                .animation(DS.Motion.standard, value: elapsed)
-                .accessibilityHidden(true)
             }
+            .padding(.horizontal, DS.Space.s3)
+            .padding(.vertical, DS.Space.s3)
+            .background(DS.surfaceRaised,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous))
+            .textSelection(.enabled)
+            Spacer(minLength: DS.Space.s8)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
