@@ -2163,12 +2163,17 @@ struct Composer: View {
                     askWithKey()
                 }
                 .frame(maxHeight: .infinity)
-                .overlay(alignment: .bottom) {
-                    LinearGradient(colors: [DS.page.opacity(0), DS.page],
-                                   startPoint: .top, endPoint: .bottom)
-                        .frame(height: 40)
-                        .allowsHitTesting(false)
-                }
+                // NO BOTTOM FADE (2026-09-03, reported: "when you type a
+                // second response it overlaps w the past one and is hard to
+                // read"). It was not an overlap — the gradient was painting
+                // `DS.page` over the last 40pt of the paper, and the last 40pt
+                // is where the newest sentence of the answer sits, so the one
+                // line you most want to read was the one being dimmed.
+                //
+                // A fade earns its place where content runs UNDER floating
+                // chrome, which is what this surface used to be. The foot is
+                // opaque and adjacent now: the field's own bar is the boundary,
+                // and content simply ends above it.
             }
         }
     }
@@ -3758,11 +3763,34 @@ struct Composer: View {
             return
         }
         if isRecording {
-            // Voice is a capture path — send keeps the piece.
-            if let piece = voice.stop(keep: true) {
-                onCommitVoice(piece.transcript, piece.sourceRef)
-            }
-            close()
+            // VOICE ON THIS SURFACE IS DICTATION, NOT A CAPTURE (2026-09-03,
+            // reported: "once you record your voice… save it to your things
+            // which that's not what somebody wants if you're using her voice
+            // question").
+            //
+            // §581 gave the resting verb to Record on the reasoning that a
+            // voice note is a real thing that enters the corpus, which is true
+            // and is the wrong answer HERE: you are standing on the ask
+            // screen, with a destination lit and a question in mind, and
+            // holding the mic to have your words FILED rather than ASKED is
+            // the surface answering a question nobody asked. A voice note is
+            // still a voice note from the capture paths that exist for it.
+            //
+            // So the transcript lands in the FIELD and the ask proceeds
+            // exactly as a typed one would — same destination, same verb, same
+            // everything below. Nothing is written on the way.
+            // READ THE TRANSCRIPT FIRST. `VoiceCapture.stop` clears it in a
+            // `defer`, and with `keep: false` it returns nil — so reading
+            // `voice.transcript` after the call gets an empty string and the
+            // whole dictation silently does nothing. Caught before this built.
+            let spoken = voice.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+            voice.stop(keep: false)
+            guard !spoken.isEmpty else { return }
+            draft = spoken
+            // Re-entered rather than falling through, because everything below
+            // reads `isRecording` and `draft` and both have just changed.
+            commit(forceAsk: forceAsk)
+            return
         } else if !forceAsk, let intent = NavigateCommand.parse(draft, tags: tagPool,
                                                      sources: knownSources()) {
             // A place, named — go there. Reads only (a navigation), so no

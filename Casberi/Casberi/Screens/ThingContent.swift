@@ -1136,13 +1136,28 @@ private struct VoiceContent: View {
             return
         }
         if player == nil {
-            try? AVAudioSession.sharedInstance().setCategory(.playback)
             if let audio {
                 player = try? AVAudioPlayer(data: audio)
             } else if let url = audioURL {
                 player = try? AVAudioPlayer(contentsOf: url)
             }
+            player?.prepareToPlay()
         }
+        // THE SESSION MUST BE ACTIVATED, NOT MERELY CATEGORISED (2026-09-03,
+        // reported: "it doesn't playback"). Setting `.playback` says what this
+        // app INTENDS to do with audio; it does not take the route. And
+        // `VoiceCapture.stop` deactivates the session on every recording —
+        // `setActive(false, options: .notifyOthersOnDeactivation)` — so after
+        // recording anything, which is exactly how most of these notes come to
+        // exist, the session is down and `play()` returns false with no error
+        // anywhere. Silent, and indistinguishable from a broken file.
+        //
+        // Done on every toggle rather than once at creation, because anything
+        // else in the app may have deactivated it since — a second recording,
+        // a phone call, another player.
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.playback, mode: .spokenAudio)
+        try? session.setActive(true)
         player?.play()
         playing = player?.isPlaying ?? false
     }

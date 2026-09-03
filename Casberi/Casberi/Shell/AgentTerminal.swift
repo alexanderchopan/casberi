@@ -79,7 +79,7 @@ struct AgentDestinationKeys: View {
                 key(chosen: active == nil, action: onDevice) {
                     Image(systemName: deviceGlyph)
                         .dsGlyph(38, weight: .regular)
-                        .foregroundStyle(active == nil ? DS.inkGround : DS.textTertiary)
+                        .foregroundStyle(active == nil ? Color.white : DS.textTertiary)
                         .agentBreath(thinking && active == nil)
                 }
                 .accessibilityLabel("Answer on \(deviceLabel)")
@@ -157,7 +157,16 @@ struct AgentDestinationKeys: View {
                                  @ViewBuilder mark: () -> Mark) -> some View {
         Button(action: { DSHaptic.selection(); action() }) {
             ZStack {
-                Circle().fill(chosen ? AnyShapeStyle(DS.textPrimary)
+                // THE LIT KEY IS BLUE (2026-09-03, user: "we should make the
+                // white around the active icon blue"). §581a made it white on
+                // the §580 reasoning that the armed verb owns the one
+                // saturated block — but the verb is only armed once there are
+                // words, and at rest the foot had no colour at all while the
+                // one thing worth pointing at was the destination. Tint says
+                // "this is the live one" in the app's own voice, and the two
+                // never compete for the same meaning: the ring says WHO, the
+                // verb says WHAT HAPPENS NEXT.
+                Circle().fill(chosen ? AnyShapeStyle(DS.tint)
                                      : AnyShapeStyle(DS.fillFaint))
                 mark()
             }
