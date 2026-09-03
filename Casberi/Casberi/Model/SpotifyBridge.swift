@@ -221,6 +221,37 @@ enum SpotifyAuth {
         }
     }
 
+#if DEBUG
+    /// Ask two endpoints with the SAME live token and report both statuses,
+    /// for `-spotifyProbe`. It exists because a 403 out of `/me/tracks` has
+    /// two causes that are one sentence apart and only one is ours to fix:
+    /// a scope the stored grant predates (Spotify answers
+    /// `{"error":{"message":"Insufficient client scope"}}`) versus an app
+    /// still in Development Mode whose allowlist this account is not on
+    /// (Spotify answers a BARE 403, no body at all). `/me` needs no scope, so
+    /// the pair separates them: 403 on both is the account being shut out of
+    /// the whole app, 200 then 403 is the scope.
+    ///
+    /// The token is used and never logged, here or by the caller.
+    static func diagnose() async -> String {
+        let token: String
+        switch await SpotifyAuth.token() {
+        case .ok(let live):  token = live
+        case .expired:       return "no live token — the sign-in is expired"
+        case .unreachable:   return "no live token — could not reach Spotify"
+        case .noCredential:  return "no live token — nothing stored"
+        }
+        func ask(_ url: String) async -> String {
+            let answer = await IngestSupport.getJSONBody(url, auth: "Bearer \(token)")
+            let said = ((answer.json as? [String: Any])?["error"] as? [String: Any])?["message"] as? String
+            return "\(answer.status) \(said ?? "(no body)")"
+        }
+        let me = await ask("https://api.spotify.com/v1/me")
+        let tracks = await ask("https://api.spotify.com/v1/me/tracks?limit=1")
+        return "me=[\(me)] tracks=[\(tracks)]"
+    }
+#endif
+
     /// What the token endpoint said. Finer than `SignIn` on purpose: the
     /// refresh path needs the OAuth error CODE to tell a dead grant from a
     /// bad afternoon (see `refreshToken`), and the sign-in path throws that
@@ -358,8 +389,15 @@ enum SpotifyIngest {
         /// in a moment is the right advice.
         case busy
         /// Spotify answered and said no — a scope the stored token predates,
-        /// an account restriction. Reconnecting is what re-mints the grant.
-        case refused(status: Int)
+        /// an account restriction, or an app still in Development Mode whose
+        /// allowlist this account is not on. `message` is Spotify's own words
+        /// out of the error body, carried for the reason `invalid_grant` is
+        /// carried on the auth half: at this status the refusal's own text is
+        /// the entire diagnosis, and the three causes above are one sentence
+        /// apart. Nothing DISPLAYS it — the screen still says the one true
+        /// thing for the whole status — it exists so `-spotifyProbe` can name
+        /// which of them happened in a single launch.
+        case refused(status: Int, message: String?)
         /// Nothing answered at all.
         case unreachable
         /// A 200 whose body this build could not read — the endpoint's shape
@@ -411,7 +449,13 @@ enum SpotifyIngest {
         case 200:  break
         case 0:    return .unreachable
         case 429:  return .busy
-        default:   return .refused(status: answer.status)
+        default:
+            // Spotify's Web API wraps its refusals as
+            // `{"error": {"status": 403, "message": "..."}}` — a different
+            // shape from the token endpoint's flat OAuth `error`, which is why
+            // this is read here and not in `exchange`.
+            let body = (answer.json as? [String: Any])?["error"] as? [String: Any]
+            return .refused(status: answer.status, message: body?["message"] as? String)
         }
         guard let root = answer.json as? [String: Any],
               let items = root["items"] as? [[String: Any]] else { return .unreadable }

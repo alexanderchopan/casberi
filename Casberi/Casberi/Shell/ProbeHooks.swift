@@ -5708,12 +5708,15 @@ enum ProbeHooks {
                           .map { "lastStatus=\($0.lastStatus.map(String.init) ?? "none") authFailedAt=\($0.authFailedAt.map(\.description) ?? "none")" }
                           ?? "no record")
                 NSLog("spotify| expiresIn=%ds", SpotifyAuth.secondsUntilTokenRefresh)
+                NSLog("spotify| %@", await SpotifyAuth.diagnose())
                 switch await SpotifyIngest.refresh(context: context) {
                 case .landed(let n):        NSLog("spotify| read=landed new=%d", n)
                 case .notConnected:         NSLog("spotify| read=notConnected — nothing stored to read with")
                 case .signInExpired:        NSLog("spotify| read=signInExpired — the grant is dead and has been cleared")
                 case .busy:                 NSLog("spotify| read=busy — 429, Spotify is rate-limiting")
-                case .refused(let status):  NSLog("spotify| read=refused status=%d", status)
+                case .refused(let status, let message):
+                    NSLog("spotify| read=refused status=%d said=%@", status,
+                          message ?? "(no message)")
                 case .unreachable:          NSLog("spotify| read=unreachable — nothing answered")
                 case .unreadable:           NSLog("spotify| read=unreadable — 200 whose shape moved")
                 case .alreadyRunning:       NSLog("spotify| read=alreadyRunning — the sweep holds it; re-run")
