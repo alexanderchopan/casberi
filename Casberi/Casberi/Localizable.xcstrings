@@ -2092,6 +2092,34 @@
         }
       }
     },
+    "%@ answers from its own account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ responde desde su propia cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ は自身のアカウントから回答します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@이(가) 자체 계정에서 답변합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 使用自己的账户作答。"
+          }
+        }
+      }
+    },
     "%@ answers on tap" : {
       "localizations" : {
         "es" : {
@@ -5413,6 +5441,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 正在限制此密钥的请求速率 — 请一分钟后重试。"
+          }
+        }
+      }
+    },
+    "%@ is reading your things." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ está leyendo tus cosas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ があなたのものを読んでいます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@이(가) 내 항목을 읽고 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 正在读取你的内容。"
           }
         }
       }
@@ -37707,6 +37763,34 @@
         }
       }
     },
+    "Asking %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Preguntando a %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ に質問中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에게 묻는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在询问 %@"
+          }
+        }
+      }
+    },
     "Asking %@ what it offers…" : {
       "localizations" : {
         "es" : {
@@ -37731,6 +37815,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在询问 %@ 提供哪些内容…"
+          }
+        }
+      }
+    },
+    "Asking %@: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Asking %1$@: %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Preguntando a %@: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ に質問中: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에게 묻는 중: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在询问 %@：%@"
           }
         }
       }
@@ -101468,6 +101586,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已停止触发"
+          }
+        }
+      }
+    },
+    "Stopped waiting — the job may still be running on %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dejaste de esperar: puede que la tarea siga en marcha en %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "待機を終了しました。%@ でジョブがまだ実行中の可能性があります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대기를 중단했습니다. %@에서 작업이 계속 실행 중일 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已停止等待——该任务可能仍在 %@ 上运行。"
           }
         }
       }

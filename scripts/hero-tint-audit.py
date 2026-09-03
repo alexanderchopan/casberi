@@ -66,6 +66,13 @@ SOURCES = ["Casberi/Casberi", "Casberi/CasberiWidgets", "Casberi/Shared"]
 KNOWN_PAIR = {
     "DSActVerb.swift",        # the component; it defines the tile
     "DevnetSendConsole.swift",  # §553's split panel: one tint half, one ink half
+    # The wait's console (2026-09-02): Stop and Edit are that same split panel
+    # one room over — Stop takes `DS.inkGround`, so exactly ONE block on the
+    # surface is saturated and the budget this audit protects is kept. They
+    # are a designed pair for the reason §553's are: two answers to one
+    # moment, and folding them to a single call site would mean a tile whose
+    # verb changes under the thumb.
+    "Composer.swift",
 }
 
 CALL = re.compile(r"\bDSActVerb\s*\(")

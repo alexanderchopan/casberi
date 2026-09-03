@@ -158,6 +158,22 @@ enum BankrAgent {
     /// means, which is the class of bug this repo keeps finding in duplicated
     /// parsers.
     static func run(prompt: String, onTick: ((Int) -> Void)? = nil) async -> Result<Reply, Failure> {
+        #if DEBUG
+        // A SIMULATED JOB, so the ask surface can be walked end to end without
+        // a key and without spending one (2026-09-02). It sits FIRST, ahead of
+        // the key guard, because the whole point is to reach the reply on a
+        // device whose stored key is stale — which is the state that made this
+        // path untestable in the first place.
+        //
+        // DEBUG ONLY, and the guard is the feature: a release build that could
+        // fake an agent's words is the §83 fake status in the one place
+        // believing it costs money. Nothing is recorded to `NetworkLedger`
+        // either, since no byte left — a receipt for a request nobody made is
+        // the same lie one screen over. The job id says `fake-` out loud so a
+        // `-bankrProbe` dump can never be mistaken for a measurement of the
+        // real envelope, which is that probe's whole job.
+        if let simulated = await fakeOutcome(onTick: onTick) { return simulated }
+        #endif
         guard let key = TokenVault.get(AgentProvider.bankr.vaultKey), !key.isEmpty else {
             return .failure(.noKey)
         }
@@ -203,6 +219,49 @@ enum BankrAgent {
     /// 2s is 90 seconds either way, so this buys latency on the jobs that land
     /// quickly and gives up nothing on the jobs that do not. It costs at most
     /// five extra requests against an endpoint we hit once per ask.
+    #if DEBUG
+    /// `-bankrFake "<reply text>"` — answer with those words after a
+    /// simulated wait. `YES` takes a canned sentence; one of the failure
+    /// names below simulates that failure instead:
+    ///
+    ///     rejectedKey  rateLimited  unreachable  empty  refused  timedOut
+    ///
+    /// `-bankrFakeDelay <seconds>` sets the wait (default 6). The wait is real
+    /// and ticks once a second through `onTick`, because the composer's clock
+    /// and the settle beat are half of what is being tested — an instant reply
+    /// exercises neither.
+    ///
+    /// nil means no simulation was asked for, and `run` proceeds untouched.
+    private static func fakeOutcome(onTick: ((Int) -> Void)?) async -> Result<Reply, Failure>? {
+        guard let raw = UserDefaults.standard.string(forKey: "bankrFake"),
+              !raw.isEmpty else { return nil }
+        let seconds = UserDefaults.standard.string(forKey: "bankrFakeDelay")
+            .flatMap(Int.init).map { max(0, min($0, 120)) } ?? 6
+        if seconds > 0 {
+            for elapsed in 1...seconds {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                onTick?(elapsed)
+            }
+        }
+        let id = "fake-\(UUID().uuidString.prefix(8))"
+        NSLog("[Casberi] bankrFake| simulated %@ after %ds", raw, seconds)
+        switch raw {
+        case "rejectedKey": return .failure(.rejectedKey)
+        case "rateLimited": return .failure(.rateLimited)
+        case "unreachable": return .failure(.unreachable)
+        case "empty":       return .failure(.empty)
+        case "refused":     return .failure(.refused("simulated refusal"))
+        case "timedOut":    return .failure(.timedOut(id))
+        default:
+            let text = raw == "YES"
+                ? "Simulated Bankr reply — no request was made and no job ran."
+                : raw
+            return .success(Reply(text: text, jobID: id,
+                                  envelopeKeys: ["simulated"]))
+        }
+    }
+    #endif
+
     private static let fastPolls = 10
 
     private static func poll(jobId: String, key: String,

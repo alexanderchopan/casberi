@@ -132,7 +132,31 @@ grep -q 'AgentKey.isConfigured(.bankr)' "$BANNER" \
 grep -q 'if configured { conversationSection }' "$SETUP" \
   || { echo "✗ BankrSetupScreen offers the chat door without a key"; exit 1; }
 
-echo "  ✓ 8 drift guards"
+# 9. THE SIMULATOR IS DEBUG-ONLY, and this is the sharpest guard in the file.
+#    `-bankrFake` lets a build answer in Bankr's voice with no request made and
+#    no job run — which is exactly what a release build must never be able to
+#    do (§83, on the surface where believing it costs money). Every line naming
+#    it must sit inside a `#if DEBUG` region; nesting is tracked rather than
+#    grepped, because a `#if DEBUG` earlier in the file proves nothing about a
+#    line after its `#endif`.
+awk '
+  /^[[:space:]]*#if[[:space:]]+DEBUG/ { depth++; next }
+  /^[[:space:]]*#if/                  { if (depth) depth++; next }
+  /^[[:space:]]*#endif/               { if (depth) depth--; next }
+  /bankrFake|fakeOutcome/             { if (!depth) { print NR": "$0; bad=1 } }
+  END { exit bad ? 1 : 0 }
+' "$AGENT" || { echo "✗ the Bankr simulator is reachable outside #if DEBUG"; exit 1; }
+
+# 10. The simulation returns BEFORE a request is built. Reached after the
+#     submit it would be unreachable in the state it exists for (a stale key
+#     never gets that far), and a `NetworkLedger` record for a request nobody
+#     made is a receipt claiming a reach that never happened.
+FAKE_AT=$(grep -n 'if let simulated = await fakeOutcome' "$AGENT" | head -1 | cut -d: -f1)
+SUBMIT_AT=$(grep -n 'api.bankr.bot/agent/prompt' "$AGENT" | head -1 | cut -d: -f1)
+[[ -n "$FAKE_AT" && -n "$SUBMIT_AT" && "$FAKE_AT" -lt "$SUBMIT_AT" ]] \
+  || { echo "✗ the Bankr simulator no longer returns before the submit request"; exit 1; }
+
+echo "  ✓ 10 drift guards"
 
 # --- the compiled harness ---------------------------------------------------
 

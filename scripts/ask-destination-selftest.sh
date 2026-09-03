@@ -69,6 +69,26 @@ let recent = AskDestination.split(configured: three, recent: ["bankr"])
 check(recent.shown == ["bankr", "anthropic"], "the most recent agent leads")
 check(recent.overflow == ["openai"], "the displaced one overflows")
 
+// DISPLAY ORDER IS FIXED (2026-09-02, user: "i don't like how these chips
+// change position it is confusing b/c the phone is first but isn't the one
+// that is active"). `split` decides membership from recency; `display` puts
+// the survivors back where they always sit. A key that moves under the thumb
+// makes you read the whole row before every tap.
+let declared = ["anthropic", "bankr", "openai"]
+check(AskDestination.display(["bankr", "anthropic"], configured: declared)
+        == ["anthropic", "bankr"],
+      "display restores declared order whatever the pick was")
+check(AskDestination.display(["openai", "bankr", "anthropic"], configured: declared)
+        == declared,
+      "a fully shuffled row comes back in declared order")
+let promoted = AskDestination.split(configured: declared, recent: [], active: "openai")
+check(AskDestination.display(promoted.shown + promoted.overflow, configured: declared)
+        == declared,
+      "the active agent keeps its position — the fill says it is chosen, not the place")
+check(AskDestination.display(["ghost", "bankr"], configured: declared)
+        == ["bankr", "ghost"],
+      "an unknown destination sorts last and is never dropped")
+
 let recentTwo = AskDestination.split(configured: three, recent: ["bankr", "openai"])
 check(recentTwo.shown == ["bankr", "openai"], "two recents fill both slots in recency order")
 check(recentTwo.overflow == ["anthropic"], "canonical order survives in the overflow")
@@ -215,6 +235,13 @@ PYEOF
   fi
   print "  ok   mutation caught — $label"
 }
+
+mutate "display leaves the pick promoted, so keys move under the thumb" \
+       "let ra = rank[a.element] ?? Int.max, rb = rank[b.element] ?? Int.max" \
+       "let ra = a.offset, rb = b.offset"
+mutate "an unknown destination is sorted first instead of last" \
+       "?? Int.max, rb = rank[b.element] ?? Int.max" \
+       "?? Int.min, rb = rank[b.element] ?? Int.min"
 
 mutate "the remainder is dropped instead of overflowing" \
        "return (Array(ordered.prefix(slots)), Array(ordered.dropFirst(slots)))" \
@@ -504,12 +531,23 @@ fi
 # would have worked and still described a rule kept in two places. So the rule
 # lives in one function both pickers call, and the guard is that they call it.
 guard "the device pick stands the keyed default down" "$WORK/composer.flat" \
-      'func pickDevice\(\) \{ AskDestination.used\(AskDestination.deviceRaw\) chosenAgent = nil guard !inFlight else \{ return \} askProvider = nil conversationIsKeyed = false \}'
-# A pick governs the NEXT ask, never the one running: `askProvider` labels the
-# settling turn and the rail stays live while an answer streams, so clearing it
-# mid-flight credits an agent's answer to whatever key happens to be active.
-guard "an agent pick leaves an answer in flight alone" "$WORK/composer.flat" \
-      'func pickAgent\(_ provider: AgentProvider\) \{ AskDestination.used\(provider.rawValue\) chosenAgent = provider guard !inFlight else \{ return \} askProvider = provider \}'
+      'func pickDevice\(\) \{ AskDestination.used\(AskDestination.deviceRaw\) chosenAgent = nil guard !readdressed\(to: nil\) else \{ return \} askProvider = nil conversationIsKeyed = false \}'
+# A pick still governs the NEXT ask — `askProvider` labels the settling turn,
+# so clearing it mid-flight would credit an agent's answer to whatever key
+# happens to be active — but §579's `guard !inFlight` is AMENDED in one
+# direction (2026-09-02, user: "what would be the point of 'stopping' to
+# switch models?"): a pick made WHILE a request is out re-addresses that
+# question to the tile you tapped instead of being ignored. The rule it was
+# protecting (no stray tap silently re-bills a running job) is kept by
+# `readdressed`, which withdraws the turn first and re-commits through the
+# one door that turns words into a question.
+guard "an agent pick re-addresses rather than being swallowed" "$WORK/composer.flat" \
+      'func pickAgent\(_ provider: AgentProvider\) \{ AskDestination.used\(provider.rawValue\) chosenAgent = provider guard !readdressed\(to: provider\) else \{ return \} askProvider = provider \}'
+# The re-address withdraws the running turn before it sends anything: without
+# that, two jobs are live at once and the older one's answer can land over the
+# newer one's.
+guard "the re-address withdraws before it re-commits" "$WORK/composer.flat" \
+      'func readdressed\(to provider: AgentProvider\?\) -> Bool \{ let words = currentQuestion guard inFlight, !isRecording, provider != activeAskAgent, !words.isEmpty else \{ return false \} withdrawAsk\(keepingWords: false\)'
 # Neither picker may keep a handler of its own — a second copy is how the two
 # drifted in the first place (the capsule cleared `chosenAgent` alone).
 picker_handlers=$(grep -oE 'AskDestination.used\(' "$WORK/composer.flat" | wc -l | tr -d ' ')
@@ -550,4 +588,58 @@ fi
 guard "keyAvailable is derived from the mirror" "$WORK/composer.nc" \
       'var keyAvailable: Bool \{ !configuredAgents.isEmpty \}'
 
-print "  ok   AskDestination — 14 mutations, 53 drift guards"
+
+# ---- THE WAIT IS A RECEIPT, AND ITS TWO VERBS (2026-09-02) ----------------
+# §577a drew the wait as a 132pt face over a 64pt numeral — an anatomy the app
+# owns nowhere else (user: "this is ridiculous looking"). §363 already has the
+# shape for "sent somewhere, not landed yet": the receipt paper, FLAT until the
+# job is final. The tear is the state, not a style.
+guard "the wait wears the receipt paper, flat" "$WORK/composer.nc" \
+      'dsReceiptPaper\(tear: 0\)'
+guard "the wait wears the working stamp" "$WORK/composer.nc" \
+      'DSStamp\(word: String\(localized: "Working"\)'
+guard_absent "the 132pt working face stays deleted" "$WORK/composer.nc" \
+      'private func workingFace'
+# A STOP IS AN UNDO, AND EDIT IS THE HALF THAT KEEPS YOUR WORDS. One verb did
+# both, so leaving a wait handed you a draft you then had to clear (user: "this
+# is also a weird ux" about the "Stopped." card it used to settle). Neither may
+# settle a card.
+guard "stop and edit are one withdrawal with two answers about your words" \
+      "$WORK/composer.nc" 'if keepingWords \{'
+guard "stop leaves the field alone" "$WORK/composer.nc" \
+      'withdrawAsk\(keepingWords: false\)'
+guard "edit returns the question to the field" "$WORK/composer.nc" \
+      'withdrawAsk\(keepingWords: true\)'
+WITHDRAW=$(awk '/private func withdrawAsk/,/^    }$/' "$WORK/composer.nc")
+print -r -- "$WITHDRAW" | grep -q 'Insight' \
+  && { print -u2 "  ✗ drift: a withdrawal settles a card — the tombstone the user called weird"; exit 1 }
+print "  ok   a withdrawal leaves no tombstone"
+# NO RETRY ON A LIVE JOB: a second identical job on an agent that can act can
+# act twice. Re-addressing to another tile is a different question, not the
+# same one sent twice.
+CONSOLE=$(awk '/private var askConsole/,/^    }$/' "$WORK/composer.nc")
+print -r -- "$CONSOLE" | grep -qiE 'retry|resend|again' \
+  && { print -u2 "  ✗ drift: the wait offers a retry — a live job must never be re-sent"; exit 1 }
+print "  ok   the wait offers no retry"
+
+# ---- THE DESTINATIONS ARE A SCROLLING TILE ROW ---------------------------
+RAIL="Casberi/Casberi/Shell/AskDestinationRail.swift"
+strip_comments "$RAIL" > "$WORK/rail.nc"
+# Unlabelled marks in the middle of a screen read as a tab bar for the thread
+# above them; the row is a control for the NEXT question.
+guard "the strip says what it is" "$WORK/rail.nc" 'Text\("Send to"\)'
+guard "every key carries its name and ground" "$WORK/rail.nc" 'Text\(ground\)'
+# A ROW, never a grid: a 2×2 is right for exactly four destinations and wrong
+# for two (a hole) and six (a second page).
+guard "the destinations scroll horizontally" "$WORK/rail.nc" \
+      'ScrollView\(.horizontal'
+# The label sits outside the scroller, or it slides away from what it names.
+awk '/private var scroller/,0' "$WORK/rail.nc" | grep -q 'Send to' \
+  && { print -u2 "  ✗ drift: the strip's label scrolls with the keys"; exit 1 }
+print "  ok   the label never scrolls away from the keys"
+# THE DISC IS THE WAIT'S, NOT THE QUESTION'S: on a settled turn it names who
+# was ASKED, one line above a badge naming who ANSWERED.
+guard "the turn disc stands down once the answer lands" "$WORK/composer.nc" \
+      'let showsDisc = waiting'
+
+print "  ok   AskDestination — 16 mutations, 66 drift guards"

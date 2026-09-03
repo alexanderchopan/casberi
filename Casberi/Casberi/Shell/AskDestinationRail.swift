@@ -52,15 +52,29 @@ struct AskDestinationRail: View {
     let onDevice: () -> Void
     let onAgent: (AgentProvider) -> Void
 
-    private var keySide: CGFloat { size == .deck ? 158 : 64 }
+    /// THE STRIP IS A TILE ROW (2026-09-02, user: "can we make the 'send to'
+    /// row with the icons fill the space below the buttons somehow. can they
+    /// be tiles too", then "what if a user has more than four, or only has
+    /// two? they should be a horizontal scrolling row").
+    ///
+    /// A row of 64pt marks under a wait was the smallest object on a screen
+    /// full of large ones, and it had to be read as icons. The tile is the
+    /// deck's own anatomy at working size — mark, name, ground — so the
+    /// control is ONE object in both states and only its scale changes. A
+    /// ROW rather than a grid, deliberately: a 2×2 grid is right for exactly
+    /// four destinations and wrong for two (a hole) and for six (a second
+    /// page), while a row is correct at every count and says so by letting
+    /// the next tile show past the edge.
+    private var keySide: CGFloat { size == .deck ? 158 : 150 }
+    private var keyHeight: CGFloat { size == .deck ? 158 : 104 }
     /// The mark's own tier off the ramp (`face-ramp-audit`): `shelf` on a
     /// deck key, which is the tier for "a horizontal face shelf, a profile
     /// head, a sheet's stage", and `list` on a strip key, the tier for a row
     /// you tap through. The WELL around it is larger than the mark by design —
     /// that is a button's target, not a face.
     private var markTier: CGFloat { size == .deck ? DS.Face.shelf : DS.Face.list }
-    private var markSide: CGFloat { size == .deck ? 64 : 34 }
-    private var radius: CGFloat { size == .deck ? 28 : 20 }
+    private var markSide: CGFloat { size == .deck ? 64 : DS.Face.list }
+    private var radius: CGFloat { size == .deck ? 28 : DS.Radius.widget }
 
     private var deviceLabel: String { AskDestination.deviceLabel(isMac: DS.isMac, isPad: DS.isPad) }
     private var deviceGlyph: String { AskDestination.deviceGlyph(isMac: DS.isMac, isPad: DS.isPad) }
@@ -94,7 +108,10 @@ struct AskDestinationRail: View {
                                          recent: AskDestination.recent(),
                                          active: active?.rawValue,
                                          slots: AskDestination.slots(findShown: false))
-        return (parts.shown + parts.overflow)
+        // Fixed positions (2026-09-02) — `split` chose the set, `display`
+        // puts it back in declared order so no key ever moves under the thumb.
+        return AskDestination.display(parts.shown + parts.overflow,
+                                      configured: providers.map(\.rawValue))
             .compactMap { value in providers.first { $0.rawValue == value } }
     }
 
@@ -103,8 +120,35 @@ struct AskDestinationRail: View {
         // third has to go somewhere; a second grid row would double the head's
         // height, and height is the one dimension the field below cannot
         // afford to have move.
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            // THE STRIP SAYS WHAT IT IS (2026-09-02, user: "and how would u
+            // improve this"). At 64pt with a thread above it and the field
+            // below, an unlabelled row of marks in the middle of a screen
+            // reads as a TAB BAR for the answer you are looking at — it is
+            // the opposite, a control for the NEXT question. Two words fix
+            // the reading, and they sit OUTSIDE the scroller so they cannot
+            // slide away from the thing they name.
+            //
+            // The deck needs none: its keys carry their own names and their
+            // own grounds, and it is the head of an empty surface where
+            // nothing else could be meant.
+            if size == .strip {
+                Text("Send to")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+                    .padding(.leading, DS.Space.s1)
+                    .accessibilityHidden(true)
+            }
+            scroller
+        }
+        .animation(DS.Motion.standard, value: active)
+        .animation(DS.Motion.standard, value: recording)
+    }
+
+    private var scroller: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DS.Space.s3) {
+            HStack(alignment: .top, spacing: DS.Space.s3) {
                 key(title: deviceLabel, glyph: deviceGlyph,
                     ground: ground(for: nil), chosen: active == nil) {
                     DSHaptic.selection()
@@ -128,8 +172,6 @@ struct AskDestinationRail: View {
         // The fill TRAVELS between keys rather than one going dark as another
         // lights — the source chips' 2026-07-14 ruling ("selection is an
         // object traveling, not two states blinking").
-        .animation(DS.Motion.standard, value: active)
-        .animation(DS.Motion.standard, value: recording)
     }
 
     @ViewBuilder
@@ -137,9 +179,48 @@ struct AskDestinationRail: View {
                      ground: String, chosen: Bool,
                      action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 0) {
+            tile(title: title, glyph: glyph, mark: mark,
+                 ground: ground, chosen: chosen)
+        }
+        .buttonStyle(PressSpring())
+        // The key that becomes the subject flips once — `coinFlip` is this
+        // app's word for "this mark just became what the screen is about", and
+        // choosing who answers is that event. Gated on CHOSEN, so the key you
+        // pressed turns and the ones you did not are still.
+        .coinFlip(trigger: chosen, enabled: chosen)
+    }
+
+    /// The key itself — the mark's well, its fill, and (on the deck) the name
+    /// and ground inside it. Split out so the strip can hang a name UNDER the
+    /// filled tile rather than inside it.
+    @ViewBuilder
+    /// HOW SELECTION READS, and why the two sizes differ.
+    ///
+    /// The deck fills with `DS.tint`: it is the head of an empty surface,
+    /// nothing else on it is saturated, and that is §578's shipped form.
+    /// The STRIP inverts to white instead, because it appears alongside the
+    /// wait's console — where `Edit` is the tinted tile — and §563 allows one
+    /// saturated block per surface. Two blues, one meaning "this is who
+    /// answers" and one meaning "press me", is the ambiguity that budget
+    /// exists to prevent. The two sizes never appear together, so the control
+    /// still only ever shows one idea of "chosen" at a time.
+    private func chosenFill(_ chosen: Bool) -> AnyShapeStyle {
+        guard chosen else { return AnyShapeStyle(DS.surfaceRaised) }
+        return size == .deck ? AnyShapeStyle(DS.tint) : AnyShapeStyle(DS.textPrimary)
+    }
+
+    /// The ink ON a chosen tile — white on the deck's blue, the page's own
+    /// ground on the strip's white, so the mark's well and the words agree.
+    private var chosenInk: Color { size == .deck ? Color.white : DS.inkGround }
+
+    /// The well behind the mark on a chosen tile: white on blue, ink on white.
+    private var markWell: Color { size == .deck ? Color.white : DS.inkGround }
+
+    private func tile(title: String, glyph: String? = nil, mark: String? = nil,
+                      ground: String, chosen: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
                 ZStack {
-                    Circle().fill(chosen ? AnyShapeStyle(Color.white)
+                    Circle().fill(chosen ? AnyShapeStyle(markWell)
                                          : AnyShapeStyle(Color.white.opacity(0.14)))
                     if let mark {
                         BridgeIcon(name: mark, size: markTier, circular: true)
@@ -150,34 +231,23 @@ struct AskDestinationRail: View {
                     }
                 }
                 .frame(width: markSide, height: markSide)
-                if size == .deck {
-                    Spacer(minLength: DS.Space.s2)
-                    Text(title)
-                        .dsText(.heading22)
-                        .foregroundStyle(chosen ? Color.white : DS.textSecondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    Text(ground)
-                        .dsText(.label12)
-                        .foregroundStyle(chosen ? Color.white.opacity(0.75) : DS.textTertiary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .padding(.top, 2)
-                }
+                Spacer(minLength: DS.Space.s2)
+                Text(title)
+                    .dsText(size == .deck ? .heading22 : .heading22)
+                    .foregroundStyle(chosen ? chosenInk : DS.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Text(ground)
+                    .dsText(.label12)
+                    .foregroundStyle(chosen ? chosenInk.opacity(0.75) : DS.textTertiary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .padding(.top, 2)
             }
-            .padding(size == .deck ? DS.Space.s4 : 0)
-            .frame(width: keySide, height: keySide,
-                   alignment: size == .deck ? .topLeading : .center)
-            .background(chosen ? AnyShapeStyle(DS.tint) : AnyShapeStyle(DS.surfaceRaised),
-                        in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+            .padding(size == .deck ? DS.Space.s4 : DS.Space.s3)
+            .frame(width: keySide, height: keyHeight, alignment: .topLeading)
+            .background(chosenFill(chosen), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
             .dsHover()
-        }
-        .buttonStyle(PressSpring())
-        // The key that becomes the subject flips once — `coinFlip` is this
-        // app's word for "this mark just became what the screen is about", and
-        // choosing who answers is that event. Gated on CHOSEN, so the key you
-        // pressed turns and the ones you did not are still.
-        .coinFlip(trigger: chosen, enabled: chosen)
     }
 }

@@ -1778,10 +1778,17 @@ struct Composer: View {
     /// corollary).
     @ViewBuilder
     private var sendPill: some View {
-        let armed = hasDraft && !inFlight
+        // ONE CONTROL, TWO STATES (2026-09-02). A device wait renders the
+        // input bar rather than the receipt console, so without this the only
+        // way out of one is to close the surface. While a request is out this
+        // is the only live thing on the row, so it is ARMED rather than dim:
+        // `inFlight` no longer disables the pill, it changes what it is.
+        let stopping = inFlight
+        let armed = stopping || (hasDraft && !inFlight)
         let name = activeAskAgent?.agent
         Button {
             guard armed else { return }
+            if stopping { stopAsk(); return }
             // THE BUZZ MATCHES THE CONSEQUENCE (prd §577a). `tap()` for a
             // question the phone answers; `lift()` — the heavier one this app
             // reserves for a gesture that had to be held — for a send to an
@@ -1803,12 +1810,13 @@ struct Composer: View {
             if activeAskAgent != nil { askDirectly() } else { commit() }
         } label: {
             HStack(spacing: DS.Space.s2) {
-                Text(name.map { String(localized: "Send to \($0)") }
-                        ?? String(localized: "Ask"))
+                Text(stopping ? String(localized: "Stop")
+                              : (name.map { String(localized: "Send to \($0)") }
+                                    ?? String(localized: "Ask")))
                     .dsText(.label12).fontWeight(.semibold)
                     .foregroundStyle(armed ? Color.white : DS.textTertiary)
                     .lineLimit(1)
-                Image(systemName: "arrow.up")
+                Image(systemName: stopping ? "stop.fill" : "arrow.up")
                     .dsGlyph(13, weight: .bold)
                     .foregroundStyle(armed ? DS.tint : DS.textTertiary)
                     .frame(width: 28, height: 28)
@@ -1856,60 +1864,130 @@ struct Composer: View {
     @ViewBuilder
     private var askWorking: some View {
         let started = askStartedAt ?? .now
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
             TimelineView(.periodic(from: started, by: 1)) { context in
                 // Frozen at the settle: the beat after the answer must not
                 // keep counting, or the last thing the clock does is tell you
                 // the wait was a second longer than it was.
                 let live = max(0, Int(context.date.timeIntervalSince(started)))
                 let elapsed = askWaitSeconds ?? live
-                VStack(alignment: .leading, spacing: DS.Space.s6) {
-                    workingFace(elapsed: elapsed)
-                    VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        HStack(alignment: .lastTextBaseline, spacing: DS.Space.s2) {
-                            Text("\(elapsed)")
-                                .dsText(.price48)
-                                .foregroundStyle(Color.white)
-                                .contentTransition(.numericText())
-                                .lineLimit(1)
-                            Text(verbatim: "s")
-                                .dsText(.price16)
-                                .foregroundStyle(Color.white.opacity(0.78))
-                        }
-                        Text(currentQuestion)
-                            .dsText(.body17)
-                            .foregroundStyle(Color.white.opacity(0.78))
-                            .fixedSize(horizontal: false, vertical: true)
-                        // THE OVERRUN IS NARRATED ONCE, AT THE MOMENT IT
-                        // HAPPENS (prd §577a). Printing "most jobs land inside
-                        // 30 seconds" from the first frame is an excuse made
-                        // before anything went wrong; arriving AS the ring
-                        // stops filling is the app telling you something it
-                        // just learned. It is Bankr's own published figure, so
-                        // it is a claim they made and not one we invented.
-                        if elapsed > Int(Self.typicalKeyedWait), !askSettling {
-                            Text("Most jobs land inside 30 seconds. This one is taking longer.")
-                                .dsText(.body17)
-                                .foregroundStyle(Color.white.opacity(0.55))
-                                .fixedSize(horizontal: false, vertical: true)
-                                .transition(.opacity)
-                        }
-                    }
-                    .animation(DS.Motion.standard, value: elapsed > Int(Self.typicalKeyedWait))
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Working for \(elapsed) seconds")
-                }
+                waitPaper(elapsed: elapsed)
             }
-            Spacer(minLength: DS.Space.s4)
-            HStack(spacing: DS.Space.s2) {
-                lowerButton
-                Spacer(minLength: 0)
-            }
-            .padding(.bottom, DS.Space.s3)
+            askConsole
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s6)
+    }
+
+    /// THE WAIT IS A RECEIPT, AND A RECEIPT ALREADY KNOWS HOW TO WAIT
+    /// (2026-09-02, user: "this is ridiculous looking. please prepare a new
+    /// mockup … consider the rest of our app and language and even like the
+    /// devnet rooms that have the send and top up").
+    ///
+    /// §577a drew this as a 132pt face over a 64pt numeral — an anatomy the
+    /// app owns nowhere else, and at phone scale a logo the size of a fist
+    /// above a lone digit. §363 already has the shape for "money is moving
+    /// and has not landed": the receipt paper, with a stamp at the head, a
+    /// lead, the subject, ONE figure at `price40`, a sentence, and a bottom
+    /// edge that is FLAT while the paper is still in the machine. A keyed ask
+    /// is that same object — an instruction sent somewhere, outstanding — so
+    /// it borrows the whole anatomy rather than inventing a second one. The
+    /// clock is the receipt's figure; "Working" is its stamp.
+    ///
+    /// **Flat, never torn.** `tear: 0` is the state, not a style: the paper
+    /// tears when the job is final, and this one is not. The answer that
+    /// replaces it is the tear.
+    ///
+    /// The mark stays at `DS.Face.list` — the tier for a row you tap through
+    /// — because on a receipt the subject disc is a small identifying stamp,
+    /// not the subject itself. The QUESTION is the subject here.
+    @ViewBuilder
+    private func waitPaper(elapsed: Int) -> some View {
+        let name = activeAskAgent?.agent
+            ?? AskDestination.deviceLabel(isMac: DS.isMac, isPad: DS.isPad)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 0) {
+                turnDisc(agent: activeAskAgent?.agent)
+                Spacer(minLength: DS.Space.s3)
+                DSStamp(word: String(localized: "Working"), weight: .waiting)
+                    .accessibilityHidden(true)
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(String(localized: "Asking \(name)"))
+                    .dsText(.callout15)
+                    .foregroundStyle(DS.textPrimary)
+                Text(verbatim: currentQuestion)
+                    .dsText(.heading22)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.top, DS.Space.s3)
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2 - 2) {
+                Text("\(elapsed)")
+                    .dsText(.price40)
+                    .foregroundStyle(DS.textPrimary)
+                    .contentTransition(.numericText())
+                    .lineLimit(1)
+                Text(verbatim: "s")
+                    .dsText(.heading22)
+                    .foregroundStyle(DS.textSecondary)
+            }
+            .padding(.top, DS.Space.s3)
+            // THE OVERRUN IS NARRATED ONCE, AT THE MOMENT IT HAPPENS (prd
+            // §577a, kept whole). Printing "most jobs land inside 30 seconds"
+            // from the first frame is an excuse made before anything went
+            // wrong; arriving AS the clock passes it is the app telling you
+            // something it just learned. It is Bankr's own published figure.
+            Text(elapsed > Int(Self.typicalKeyedWait) && !askSettling
+                 ? String(localized: "Most jobs land inside 30 seconds. This one is taking longer.")
+                 : (askGround == .ownAccount
+                    ? String(localized: "\(name) answers from its own account.")
+                    : String(localized: "\(name) is reading your things.")))
+                .dsText(.callout15)
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, DS.Space.s4)
+                .animation(DS.Motion.standard, value: elapsed > Int(Self.typicalKeyedWait))
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Asking \(name): \(currentQuestion)"))
+        .accessibilityValue(Text("Working for \(elapsed) seconds"))
+        .dsReceiptPaper(tear: 0)
+    }
+
+    /// THE TWO VERBS OF A WAIT, as the console the devnet rooms already use
+    /// (2026-09-02). `DevnetSendPanel`'s anatomy — a 36pt disc, a gap, one
+    /// word at `price40`, on a widget-radius tile with a 132pt floor — and
+    /// its rule about which one is tinted: the act you came for wears the
+    /// colour, the other sits on ink.
+    ///
+    /// **EDIT is the tinted one, and STOP is not.** Stop is an exit; Edit is
+    /// the thing somebody who is watching a wait usually actually wants — the
+    /// question back, one word changed, sent again — and it is the only one
+    /// of the two that leads anywhere. §563's budget allows exactly one
+    /// saturated block on a surface and this is where it is spent.
+    ///
+    /// **There is deliberately no Retry here.** Retrying a job that is still
+    /// running means a SECOND identical job, and on an agent that can act the
+    /// same instruction run twice can act twice. Retry belongs after the job
+    /// is over — where the failure copy already offers it — and switching
+    /// destination is a tap on another tile, which is a different question to
+    /// a different addressee rather than the same one sent twice.
+    private var askConsole: some View {
+        HStack(spacing: DS.Space.s3) {
+            // `DSActVerb`, not a hand-rolled tile: it is this app's verb-at-
+            // `price40` object, it carries the widget radius, the 36pt disc
+            // and `PressSpring` for free, and `hero-tint-audit` fails the
+            // build on the hand-rolled version for the reason §83 gives — a
+            // tile that paints its own fill reads live while inert.
+            //
+            // Stop takes `DS.inkGround` so it sits ON the page rather than
+            // above it; Edit keeps the tint. One saturated block (§563), and
+            // it is on the verb that leads somewhere.
+            DSActVerb(title: String(localized: "Stop"), glyph: "stop.fill",
+                      tint: DS.inkGround, act: stopAsk)
+            DSActVerb(title: String(localized: "Edit"), glyph: "pencil",
+                      act: editAsk)
+        }
     }
 
     /// The chosen face at 132pt, with the ring around it.
@@ -1923,103 +2001,6 @@ struct Composer: View {
     /// 30"), as a constant so the ring and the sentence it triggers can never
     /// disagree about where the line is.
     static let typicalKeyedWait = 30.0
-
-    @ViewBuilder
-    private func workingFace(elapsed: Int) -> some View {
-        let progress = min(1, Double(elapsed) / Self.typicalKeyedWait)
-        let overrun = Double(elapsed) > Self.typicalKeyedWait && !askSettling
-        // THE ARC COMPLETES (prd §577a). At the settle it snaps to a full turn
-        // whatever it was doing — mid-fill, or spinning at a fifth of a circle
-        // because the job outran its own typical. A ring that simply
-        // disappeared said the wait was abandoned; a ring that closes says it
-        // finished.
-        let trim: CGFloat = askSettling ? 1 : (overrun ? 0.22 : max(0.02, progress))
-        ZStack {
-            Circle()
-                .stroke(Color.white.opacity(0.18), lineWidth: 6)
-            Circle()
-                .trim(from: 0, to: trim)
-                .stroke(Color.white, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-                .modifier(WorkingSpin(spinning: overrun))
-                // The flash — one soft bloom on the completed ring, the beat
-                // before the colour drains. Reduce Motion keeps the completed
-                // arc and drops the glow, which is less motion and the same
-                // information.
-                .shadow(color: askSettling && !reduceMotion
-                        ? Color.white.opacity(0.9) : .clear, radius: 12)
-                .animation(DS.Motion.standard, value: askSettling)
-            Group {
-                if let agent = activeAskAgent?.agent {
-                    // `profile` — the tier for "a surface whose whole subject
-                    // is the identity", which for the next ninety seconds is
-                    // exactly what this is.
-                    BridgeIcon(name: agent, size: DS.Face.profile, circular: true)
-                } else {
-                    Image(systemName: AskDestination.deviceGlyph(isMac: DS.isMac,
-                                                                 isPad: DS.isPad))
-                        .dsGlyph(56, weight: .regular)
-                        .foregroundStyle(DS.tint)
-                }
-            }
-            .frame(width: 132, height: 132)
-            .background(Color.white, in: Circle())
-            // ALIVE WHILE IT RUNS, STILL THE MOMENT IT LANDS. The breath is
-            // the app's own "waiting" idiom (`AgentBar`'s berry, the in-flight
-            // composer) and it is the one thing on this screen that is not a
-            // number — so the face reads as somebody working rather than as a
-            // logo above a timer. It stops at the settle, which is how the
-            // completion beat reads as a full stop rather than as one more
-            // second of the same.
-            .modifier(WorkingBreath(alive: !askSettling))
-        }
-        .frame(width: 132, height: 132)
-        .accessibilityHidden(true)
-    }
-
-    /// The overrun turn — the ring rotating once a job has outrun the interval
-    /// its own service publishes as typical. `repeatForever` is the one loop
-    /// this file allows and it is gated on Reduce Motion by its caller, per
-    /// `design-motion-audit`'s rule: a drawing sized from data needs an
-    /// entrance, and an appear-triggered animation needs the guard.
-    /// The face's breath while a keyed job runs. `.breathing()` already exists
-    /// and is what the berry uses, but it is unconditional — this one has to
-    /// STOP, because stopping is what makes the completion beat a full stop.
-    private struct WorkingBreath: ViewModifier {
-        let alive: Bool
-        @State private var big = false
-        @Environment(\.accessibilityReduceMotion) private var reduceMotion
-        private func run() {
-            guard alive, !reduceMotion else { big = false; return }
-            withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
-                big = true
-            }
-        }
-        func body(content: Content) -> some View {
-            content
-                .scaleEffect(big ? 1.03 : 1)
-                .onChange(of: alive) { _, _ in run() }
-                .onAppear(perform: run)
-        }
-    }
-
-    private struct WorkingSpin: ViewModifier {
-        let spinning: Bool
-        @State private var angle: Double = 0
-        @Environment(\.accessibilityReduceMotion) private var reduceMotion
-        private func start() {
-            guard spinning, !reduceMotion else { angle = 0; return }
-            withAnimation(.linear(duration: 1.6).repeatForever(autoreverses: false)) {
-                angle = 360
-            }
-        }
-        func body(content: Content) -> some View {
-            content
-                .rotationEffect(.degrees(angle))
-                .onChange(of: spinning) { _, _ in start() }
-                .onAppear(perform: start)
-        }
-    }
 
     /// WHO IS ANSWERING, as a 36pt disc at the head of every turn (prd §575).
     ///
@@ -2076,14 +2057,23 @@ struct Composer: View {
         // the only thing (§506's one crown per surface, kept by the clock
         // rather than by a gate somebody has to remember).
         HStack(alignment: .top, spacing: DS.Space.s3) {
+            // THE DISC IS THE WAIT'S, NOT THE QUESTION'S (2026-09-02). §575
+            // put it here because while a keyed ask runs nothing else says
+            // where it went — true, and it stops being true the moment the
+            // answer lands: `provenanceBadge` then says who answered, from
+            // what, and how long, under the thing it describes. Left on the
+            // question it answers a DIFFERENT question — who was asked — and
+            // the two disagree on every keyed fallback to the phone. The wait
+            // carries it on its receipt now.
+            let showsDisc = waiting && !TodayBrief.matches(question)
             turnDisc(agent: agent)
                 // The brief wears a masthead whose greeting is its own subject
                 // — a disc there would put a phone glyph beside "Good morning"
                 // and claim the day was answered by a device. It is the one
                 // turn in the app that is not a question, so it is the one
                 // that takes no disc.
-                .opacity(TodayBrief.matches(question) ? 0 : 1)
-                .frame(width: TodayBrief.matches(question) ? 0 : DS.Face.list)
+                .opacity(showsDisc ? 1 : 0)
+                .frame(width: showsDisc ? DS.Face.list : 0)
                 .allowsHitTesting(false)
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 if waiting, !TodayBrief.matches(question) {
@@ -4054,7 +4044,7 @@ struct Composer: View {
     private func pickDevice() {
         AskDestination.used(AskDestination.deviceRaw)
         chosenAgent = nil
-        guard !inFlight else { return }
+        guard !readdressed(to: nil) else { return }
         askProvider = nil
         // STAND THE CONVERSATION'S KEYED DEFAULT DOWN. `activeAskAgent` lets
         // an explicit pick win over every inference, so the device key lights
@@ -4068,8 +4058,109 @@ struct Composer: View {
     private func pickAgent(_ provider: AgentProvider) {
         AskDestination.used(provider.rawValue)
         chosenAgent = provider
-        guard !inFlight else { return }
+        guard !readdressed(to: provider) else { return }
         askProvider = provider
+    }
+
+    /// PICKING A DESTINATION MID-WAIT RE-ADDRESSES THE QUESTION (2026-09-02,
+    /// user: "what would be the point of 'stopping' to switch models?").
+    ///
+    /// This AMENDS §579's "a pick governs the NEXT ask, never the one
+    /// running" in one direction only, and the reason is what that rule was
+    /// protecting: it exists so a stray tap cannot silently re-bill a running
+    /// job to somebody else. Changing your mind mid-wait is not a stray tap —
+    /// it is the same intent a pick always carries, and under the old rule it
+    /// cost three gestures (stop, retype or re-pick, send) for a question the
+    /// app was already holding.
+    ///
+    /// **This is the one resend that is safe, and the reason is the change of
+    /// ADDRESS.** `askConsole` refuses a Retry because a second identical job
+    /// on an agent that can act can act twice; re-addressing is not that — it
+    /// is one question asked of somebody else, and the tile you pressed is
+    /// the consent, exactly as it is for any other send.
+    ///
+    /// Returns true when it took the ask, so the caller stops. Never while
+    /// RECORDING (a voice capture has no committed question yet, and agents
+    /// stand down there anyway) and never onto the destination already
+    /// answering — that is a no-op somebody would read as a cancel.
+    @discardableResult
+    private func readdressed(to provider: AgentProvider?) -> Bool {
+        let words = currentQuestion
+        guard inFlight, !isRecording, provider != activeAskAgent,
+              !words.isEmpty else { return false }
+        withdrawAsk(keepingWords: false)
+        // The pick survives the withdrawal — it clears the turn, not the
+        // address — and the ask is re-committed through the one door that
+        // turns words into a question.
+        chosenAgent = provider
+        askProvider = provider
+        draft = words
+        commit()
+        return true
+    }
+
+    /// STOP — leave the wait, on purpose (2026-09-02, user: "need an easy way
+    /// to stop a request if you want it to when its already in progress").
+    ///
+    /// **A stop is an UNDO, not a result.** The first cut settled a card
+    /// reading "Stopped." under the question, and the user's verdict was
+    /// "this is also a weird ux" — a tombstone for something you chose not to
+    /// wait for, sitting in the thread as if it were an answer. The turn is
+    /// withdrawn instead; nothing you did not ask for is left on screen.
+    ///
+    /// **What it claims is narrow.** A keyed ask is a job on somebody else's
+    /// server and our cancel does not reach it — `BankrAgent`'s timeout ruling
+    /// ("telling somebody their swap did not happen when we simply stopped
+    /// watching is the worse of the two lies"). So a keyed stop says, in a
+    /// flash rather than a card, that the job may still be running there.
+    private func stopAsk() {
+        withdrawAsk(keepingWords: false)
+    }
+
+    /// EDIT — the same withdrawal, with your words back in the field and the
+    /// cursor waiting (2026-09-02, user: "what if a user wants to edit their
+    /// question without having to type it over").
+    ///
+    /// It is the constructive half of the pair and the reason `stopAsk` no
+    /// longer hands the words back itself: when one verb did both, there was
+    /// no way to leave WITHOUT being handed a draft you then had to clear.
+    /// Stop means "I am done"; Edit means "I asked it wrong".
+    private func editAsk() {
+        withdrawAsk(keepingWords: true)
+    }
+
+    /// The withdrawal both verbs share.
+    ///
+    /// The mechanism is the one this file already trusts: bumping
+    /// `askGeneration` retires every partial, result and settle, so nothing
+    /// can paint over the field a minute later. The blue's closing beat is
+    /// played BEFORE the flags come down — `closeWaitBeat` is gated on
+    /// `keyedCurrent`, which is cleared below.
+    private func withdrawAsk(keepingWords: Bool) {
+        guard inFlight else { return }
+        DSHaptic.tap()
+        askGeneration += 1
+        askWaitSeconds = max(0, Int(Date.now.timeIntervalSince(askStartedAt ?? .now)))
+        let agent = keyedCurrent ? (askProvider ?? AgentKey.active)?.agent : nil
+        let words = currentQuestion
+        closeWaitBeat()
+        withAnimation(DS.Motion.standard) {
+            proseStreaming = false
+            inFlight = false
+            answering = false      // the turn is withdrawn, not settled
+            answerFailed = false
+            currentStreamed = false
+            keyedCurrent = false
+            currentQuestion = ""
+        }
+        answerStream.paint([])
+        if keepingWords {
+            draft = words
+            fieldFocused = true
+        }
+        if let agent {
+            chrome.flash(String(localized: "Stopped waiting — the job may still be running on \(agent)."))
+        }
     }
 
     private func askDirectly() {

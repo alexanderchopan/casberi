@@ -107,7 +107,13 @@ struct AskDestinationCapsule: View {
         let byRaw = { (values: [String]) in
             values.compactMap { value in providers.first { $0.rawValue == value } }
         }
-        return (byRaw(parts.shown), byRaw(parts.overflow))
+        // Fixed positions (2026-09-02), the rail's own rule: the split chose
+        // WHICH segments show, `display` decides where each one sits, and a
+        // pick never reorders the row it was picked from.
+        let ordered = { (values: [String]) in
+            byRaw(AskDestination.display(values, configured: raw))
+        }
+        return (ordered(parts.shown), ordered(parts.overflow))
     }
 
     var body: some View {

@@ -46441,3 +46441,49 @@ The cost was known and enforced in exactly one place: `keyAvailable` was mirrore
 **Not the whole of the open's cost, and said rather than implied.** The raise's other expense — `computeSuggestions`' full corpus walk, ~761ms on a 13,412-row corpus — was already cached to once per launch (PERF 2026-08-12). This is the typing half.
 
 **Verification:** all 33 static audits green; every new guard mutation-proven both ways (the shipped bug restored fails each one; the fixed tree passes). **UNBUILT and UNMEASURED** — authored on Linux with no Xcode and no Swift toolchain, so nothing here has been compiled, `verify.sh` has not run, and the keystroke cost is arithmetic over the call sites rather than a profile. Run `scripts/verify.sh` before shipping.
+
+## 580. The wait becomes a receipt, the destinations become tiles, and a pick mid-wait re-addresses the question (user: "this is ridiculous looking. please prepare a new mockup for how we can do this better. consider the rest of our app and language and even like the devnet rooms that have the send and top up", then "can they be tiles too", then "what would be the point of 'stopping' to switch models?", 2026-09-02)
+
+### 1. THE WAIT IS A RECEIPT, AND A RECEIPT ALREADY KNOWS HOW TO WAIT
+
+§577a drew the keyed wait as a **132pt face over a 64pt numeral** — an anatomy the app owns nowhere else, and at phone scale a logo the size of a fist above a lone digit. The user's verdict on a screenshot was exact: "this is ridiculous looking."
+
+§363 already has the shape for *an instruction sent somewhere that has not landed*: the **receipt paper** — a `DS.pourInk` top, `DSStamp` at the head, a lead, the subject at `heading22`, ONE figure at `price40`, a sentence, and a bottom edge that is **FLAT while the paper is still in the machine** and torn when it is final. A keyed ask is that same object, so it borrows the whole anatomy rather than inventing a second one: the clock is the receipt's figure, `Working` is its stamp, `dsReceiptPaper(tear: 0)` is the state and not a style. `workingFace`, `WorkingSpin` and `WorkingBreath` are deleted with it.
+
+**The mark drops to `DS.Face.list`** — on a receipt the subject disc is a small identifying stamp; the QUESTION is the subject.
+
+### 2. STOP AND EDIT — the devnet console, one room over
+
+`DevnetSendPanel`'s Send/Top up pair is the app's shape for *two answers to one moment*, and the wait has exactly two: **Stop** ("I am done") and **Edit** ("I asked it wrong" — the question back in the field, cursor waiting). One verb did both until now, so leaving a wait handed you a draft you then had to clear.
+
+Both are `DSActVerb`, never a hand-rolled tile — `hero-tint-audit` fails the build on the hand-rolled version for §83's reason, and it took a `KNOWN_PAIR` entry with that reasoning. **Edit takes the tint and Stop takes `DS.inkGround`**: §563 allows one saturated block per surface and it is spent on the verb that leads somewhere.
+
+**A stop leaves no tombstone.** Its first cut settled a card reading "Stopped." under the question; the user's verdict was "this is also a weird ux" — a marker for something you chose not to wait for, sitting in the thread as if it were an answer. The turn is withdrawn instead, and the keyed case says in a FLASH (never a card) that the job may still be running there, which is `BankrAgent`'s own timeout ruling: our cancel does not reach somebody else's server.
+
+**There is deliberately NO Retry.** Retrying a job still running means a SECOND identical job, and on an agent that can act the same instruction run twice can act twice.
+
+### 3. A PICK MID-WAIT RE-ADDRESSES THE QUESTION — §579 amended in one direction
+
+§579 ruled "a pick governs the NEXT ask, never the one running", and that rule exists so a stray tap cannot silently re-bill a running job. Changing your mind mid-wait is not a stray tap. Under the old rule it cost three gestures — stop, retype or re-pick, send — for a question the app was already holding.
+
+`readdressed(to:)` withdraws the turn and re-commits through `commit()`. **This is the one resend that is safe, and the reason is the change of ADDRESS**: one question asked of somebody else, with the tile you pressed as the consent — not the same one sent twice. Never while recording, and never onto the destination already answering (a no-op somebody would read as a cancel).
+
+### 4. THE DESTINATIONS ARE A SCROLLING TILE ROW
+
+The 64pt strip was the smallest object on a screen full of large ones and had to be read as icons. It is the deck's own anatomy at working size now — mark, name, ground — so the control is ONE object in both states and only its scale changes, under a "Send to" label that sits OUTSIDE the scroller so it cannot slide away from what it names.
+
+**A ROW, never a grid** (user: "what if a user has more than four, or only has two?"): a 2×2 is right for exactly four destinations and wrong for two (a hole) and for six (a second page), while a row is correct at every count and says so by letting the next tile show past the edge.
+
+**Selection INVERTS on the strip** — white tile, ink words — rather than filling with tint, because the strip appears beside the console where `Edit` is the tinted tile. Two blues, one meaning "this is who answers" and one meaning "press me", is the ambiguity §563's budget exists to prevent. The deck keeps its tint; the two sizes never appear together.
+
+### 5. THE DISC IS THE WAIT'S, NOT THE QUESTION'S
+
+§575 put a destination disc on every turn header because while a keyed ask runs nothing else says where it went — true, and it stops being true the moment the answer lands: `provenanceBadge` then says who answered, from what, and how long, under the thing it describes. Left on the question it answers a DIFFERENT question — who was ASKED — one line above a badge naming who ANSWERED, and the two disagree on every keyed fallback to the phone. It leads while waiting and stands down at the settle.
+
+### 6. `-bankrFake` — the simulator for a path no key could reach
+
+The sim's stored Bankr key answers **401** (`bankrProbe| failed=rejectedKey`, 436ms), so every real ask there dies at the credential and none of the above could be walked. `-bankrFake "<text>|YES|<failure name>"` with `-bankrFakeDelay <s>` answers in Bankr's voice after a real, ticking wait — **`#if DEBUG` only, and the guard is the feature**: a release build that could fake an agent's words is §83 in the one place believing it costs money. Nothing is recorded to `NetworkLedger` (no byte left), the job id says `fake-` out loud so a probe dump can never be mistaken for a measurement of the real envelope, and it sits AHEAD of the key guard because reaching the reply on a device whose key is stale is the whole point. `bankr-selftest` tracks the `#if DEBUG` nesting rather than grepping for it — a `#if DEBUG` earlier in a file proves nothing about a line after its `#endif`.
+
+### 7. Verification ceiling
+
+iOS build green in an isolated worktree at HEAD, 29 static audits green, `ask-destination-selftest` at 16 mutations and 66 drift guards, `bankr-selftest` green, the String Catalog synced and the five new keys translated into all four languages. **The receipt wait itself is UNSEEN**: reaching it needs a keyed ask, `-uiAnswerProbe` commits to the device, and no launch-arg picks a destination — the tile row, the inverted selection and the Stop pill were seen on the device path and the receipt was not. First thing to look at on a device.

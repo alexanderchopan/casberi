@@ -111,6 +111,42 @@ enum AskDestination {
         return (Array(ordered.prefix(slots)), Array(ordered.dropFirst(slots)))
     }
 
+    /// WHERE THEY SIT — always the same place (2026-09-02, user: "i don't
+    /// like how these chips change position it is confusing b/c the phone is
+    /// first but isn't the one that is active").
+    ///
+    /// `split` answers WHICH agents are shown and this answers WHERE, and the
+    /// two questions want opposite things. Membership has to be learned, or a
+    /// fourth key folds the agent you just used into a menu. Position must be
+    /// FIXED, because a control whose keys move under the thumb makes you read
+    /// the whole row before every tap — and reading it is exactly what the
+    /// marks were supposed to save you.
+    ///
+    /// The report names the specific harm: the device key never moves (it is
+    /// drawn outside the split), so a leading key that is not the chosen one
+    /// reads as the chosen one, and "first" and "active" say different things
+    /// on the same row. Once nothing moves, the fill is the only thing that
+    /// ever claims to be the selection.
+    ///
+    /// This is `MarketsRoom`'s ruling in a second place: learned order decides
+    /// membership, declared order decides display. `configured` is that
+    /// declared order — `AgentProvider`'s own — so it is stable across
+    /// launches and identical on every surface.
+    ///
+    /// An unknown value sorts last rather than being dropped: this decides a
+    /// position, and a function that can silently remove a destination is one
+    /// that can hide the key somebody is trying to reach.
+    static func display(_ shown: [String], configured: [String]) -> [String] {
+        var rank: [String: Int] = [:]
+        for (i, raw) in configured.enumerated() where rank[raw] == nil { rank[raw] = i }
+        return shown.enumerated().sorted { a, b in
+            let ra = rank[a.element] ?? Int.max, rb = rank[b.element] ?? Int.max
+            // The incoming order breaks ties, so the sort is TOTAL — two
+            // unranked values must not swap between renders.
+            return ra == rb ? a.offset < b.offset : ra < rb
+        }.map(\.element)
+    }
+
     static func recent(_ defaults: UserDefaults = .standard) -> [String] {
         defaults.stringArray(forKey: recentKey) ?? []
     }
