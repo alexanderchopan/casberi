@@ -1690,7 +1690,7 @@ struct FeedScreen: View {
             // pure text while its thumbnails sat in the store undrawn.
             case "Notes", "Day One", "Apple Journal", "Obsidian": self = .notes
             case "You", "Voice":        self = .you
-            case "Apple Music", "Spotify": self = .music
+            case "Apple Music": self = .music
             // The media room (prd §219, 2026-07-25): art at the medium's own
             // proportions instead of the All feed's 26pt square. Music is NOT
             // here — `MusicRow` has led with the cover since 2026-07-11 and is

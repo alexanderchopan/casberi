@@ -115,7 +115,6 @@ enum BridgeRouter {
         case files
         case dropbox
         case twitch
-        case spotify
         case slack
         case substack
         case reddit
@@ -261,7 +260,7 @@ enum BridgeRouter {
         /// deciding you were done. Those stay up until they're closed.
         var finishesOnConnect: Bool {
             switch self {
-            case .token, .steam, .obsidian, .files, .dropbox, .twitch, .spotify, .slack,
+            case .token, .steam, .obsidian, .files, .dropbox, .twitch, .slack,
                  .icloudMail, .gmail, .exchange,
                  // Grok is `OpenRouterSetupScreen` structurally (its own
                  // doc-comment says so) and was missed here when it landed
@@ -358,7 +357,6 @@ enum BridgeRouter {
             case .files:          "files"
             case .dropbox:        "dropbox"
             case .twitch:         "twitch"
-            case .spotify:        "spotify"
             case .slack:          "slack"
             case .substack:       "substack"
             case .reddit:         "reddit"
@@ -472,7 +470,6 @@ enum BridgeRouter {
         Row(offer: "Files",     id: "files",  destination: .files),
         Row(offer: "Dropbox",   id: "dropbox", destination: .dropbox),
         Row(offer: "Twitch",    id: "twitch", destination: .twitch),
-        Row(offer: "Spotify",   id: "spotify", destination: .spotify),
         Row(offer: "Slack",    id: "slack",   destination: .slack),
         Row(offer: "Substack",  id: "substack", destination: .substack),
         Row(offer: "Reddit",    id: "reddit",   destination: .reddit),
@@ -687,7 +684,6 @@ struct BridgeDestinationView: View {
         case .files:          FilesScreen()
         case .dropbox:        DropboxScreen()
         case .twitch:         TwitchScreen()
-        case .spotify:        SpotifyScreen()
         case .slack:          SlackScreen()
         case .substack:       HandleSetupScreen(bridge: .substack)
         case .reddit:         HandleSetupScreen(bridge: .reddit)

@@ -138,7 +138,7 @@ enum VerbDerivation {
             // as a fallback for a library play that carries no per-track URL, so
             // every music row can hand off the way events and items do (user,
             // 2026-07-13).
-            if thing.source == "Apple Music" || thing.source == "Spotify" {
+            if thing.source == "Apple Music" {
                 if let url = Capture.detectURL(in: thing.content) ?? sourceURL(thing.source) {
                     out.append(Verb(label: "Open in \(thing.source)",
                                     icon: "music.note", action: .openURL(url)))

@@ -75,7 +75,7 @@ enum FeedInsight {
             return counted(things, title: "Who writes you", unit: ("message", "messages"), key: sender)
         case "Readwise", "Kindle":
             return counted(things, title: "Most highlighted", unit: ("highlight", "highlights"), key: book)
-        case "Spotify", "Apple Music":
+        case "Apple Music":
             return counted(things, title: "Your top artists", unit: ("track", "tracks"), key: artist)
         case "Raindrop":
             return counted(things, title: "Where you save from", unit: ("bookmark", "bookmarks"), key: domain)

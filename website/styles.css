@@ -218,7 +218,6 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-reddit    { background: #ff4500; }
 .ai-youtube   { background: #ff0000; font-size: 17px; }
 .ai-music     { background: linear-gradient(160deg, #fb5c74, #fa233b); font-size: 22px; }
-.ai-spotify   { background: #1db954; font-size: 22px; }
 .ai-telegram  { background: #229ed9; font-size: 18px; }
 .ai-readwise  { background: #1e3a8a; font-size: 24px; }
 .ai-raindrop  { background: #2f80ed; }

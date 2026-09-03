@@ -260,7 +260,7 @@ enum StorePreview {
             "w = Widget(\"Live now\", null, [r1])",
             "r1 = Row(\"LIVE: northernlion — Balatro\", \"Link\", \"Twitch\", \"now\")",
         ]
-        case "Apple Music", "Spotify": [
+        case "Apple Music": [
             "root = Stack([w])",
             "w = Widget(\"Listening\", null, [r1])",
             "r1 = Row(\"Liked: Verano porteño\", \"Link\", \"\(name)\", \"1d\")",

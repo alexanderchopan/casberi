@@ -104,7 +104,7 @@ struct DropboxScreen: View {
             }
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your Dropbox…"),
                                  result: result, resultIsError: resultIsError)
-            DSSlabNote(text: "On Dropbox's own page — PKCE, no password in the app.")
+            DSSlabNote(text: "On Dropbox's own page — your password never enters this app.")
         }
         .dsSlabSection()
     }

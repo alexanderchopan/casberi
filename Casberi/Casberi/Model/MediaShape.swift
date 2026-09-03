@@ -60,7 +60,7 @@ enum MediaShape {
     static func art(for source: String) -> Art? {
         switch source {
         case "YouTube", "Twitch":            .still
-        case "Podcasts", "Spotify", "Apple Music": .cover
+        case "Podcasts", "Apple Music": .cover
         case "Steam":                        .capsule
         case "Pinterest":                    .pin
         default:                             nil

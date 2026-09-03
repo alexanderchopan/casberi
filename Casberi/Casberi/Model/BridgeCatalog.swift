@@ -799,9 +799,6 @@ enum BridgeCatalog {
               needsSetup: true),
         Offer(name: "Apple Music", tagline: "What you play stays in reach",          group: "Listening", connectable: true,
               summary: "What you've recently played lands in your feed, opening back in Apple Music.\n\nUses Apple's own MusicKit with your permission — read-only, nothing added to your library, and everything stays on \(DS.device)."),
-        Offer(name: "Spotify",     tagline: "Liked songs join your things",          group: "Listening", connectable: true,
-              summary: "Your liked songs become things you can find and revisit alongside everything else. Connects with Spotify's own sign-in — PKCE, entirely on \(DS.device), no server holds a secret.",
-              needsSetup: true),
         Offer(name: "Apple Health", tagline: "Workouts land in your feed",           group: "Fitness",   connectable: true,
               summary: "Your workouts join your things — a run shows up next to the plan that inspired it. Everything stays on \(DS.device): HealthKit never touches a server.",
               unavailableOnMac: true),
@@ -1081,7 +1078,7 @@ enum BridgeCatalog {
         // dedicated content type.
         ("Life",    "Photos",      ["Photos", "Schedule", "Fitness", "People", "Home", "Storage", "Mail"]),
         ("Agents",  "Claude",      ["Agent"]),
-        ("Media",   "Spotify",     ["Watching", "Listening", "Games", "Images"]),
+        ("Media",   "YouTube",     ["Watching", "Listening", "Games", "Images"]),
         ("Social",  "Bluesky",     ["Network"]),
         // Reading sits AHEAD of Shopping (user ruling 2026-08-06, "should
         // reading come before shopping?"). Two reasons, both about the band

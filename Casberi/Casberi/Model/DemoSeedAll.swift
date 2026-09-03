@@ -2213,22 +2213,6 @@ enum DemoSeedAll {
     private static func listening() -> [Thing] {
         var out: [Thing] = []
         // Music groups on "Song — Artist" in the TITLE.
-        let spotify: [(String, Double)] = [
-            ("Weightless — Marconi Union", 1), ("Motion — Kiasmos", 2),
-            ("Blue — Kiasmos", 5), ("Lull — Marconi Union", 9),
-            ("Swept — Kiasmos", 13), ("Distance — Nils Frahm", 19),
-            ("Says — Nils Frahm", 27), ("Ode — Marconi Union", 36),
-        ]
-        out += spotify.enumerated().map { i, s in
-            row(.link, s.0, source: "Spotify", ref: "demo:spotify:\(i)", days: s.1, hour: 18) { t in
-                t.previewImageURL = art(i)
-                // `SpotifyBridge` stamps the show's own description onto
-                // `summary` (2026-08-17) — the sentence that says what an
-                // episode IS, which a track title never does.
-                t.summary = "\(s.0) — the episode's own description, as the "
-                    + "publisher wrote it."
-            }
-        }
         let music: [(String, Double)] = [
             ("Reckoner — Radiohead", 3), ("Nude — Radiohead", 7),
             ("Teardrop — Massive Attack", 12), ("Angel — Massive Attack", 22),
@@ -5205,7 +5189,6 @@ enum DemoSeedAll {
         ("RSS", "4 feeds", "Follows any feed you add."),
         ("Substack", "2 publications", "Follows writers you read."),
         ("Podcasts", "3 shows", "Follows shows you listen to."),
-        ("Spotify", "Synced 20m ago", "Reads what you played."),
         ("Apple Music", "Synced 35m ago", "Reads what you played."),
         ("Steam", "Synced 2h ago", "Reads what you played."),
         ("Readwise", "Synced 1h ago", "Brings your highlights in."),
