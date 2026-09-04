@@ -47972,3 +47972,21 @@ no screenshot of the dock has been taken on hardware, and the two things only a
 device answers are whether three stacked rows at the bottom of a Social room
 leave enough reading height, and whether the reserved seat lands the bar clear
 of the first chip at the real metrics.
+
+## 592. The room's empty state overruled the rescue that had already saved it (user: "i clicked on activity and this is what happened", over a demo Wallet room full of transactions, 2026-09-03)
+
+The screenshot is the whole-room empty state — the Wallet mark, "Nothing from Wallet yet.", a "Show everything" button and the shape preview — drawn over a corpus that plainly holds Wallet rows, on a tap that changes nothing about the corpus.
+
+**The room draws from one array and tests another.** `FeedScreen.feedThings` prefers `sourceRoomFallbackSnapshot` — the per-source safety net's rescue array, filled when the `@Query` disagrees with a raw fetch on the same store — while `roomBody`'s `roomHasContent` asked `things`, the very query that net exists **because it cannot be trusted**. So the rescue could hand a full room to `visible` and the branch one level up still said the room was empty.
+
+**The net has therefore never once rescued a room.** Both commits that built it (`85adc007`, `fee89e1e`) added the fetch and neither touched the emptiness test, so from the day it shipped the fallback fed the ROWS while the EMPTY STATE overruled them. The failure it was written for — 2026-08-31's "the room says connected and shows nothing while its rows are plainly visible in All" — was fixed one branch upstream of where the room decides whether to draw at all.
+
+`roomHasContent` consults the fallback now, one-directionally like the snapshot term beside it: a non-empty fallback proves content and short-circuits, an empty or absent one still asks `hasSurfaced`, so the PERF property that note claims is untouched.
+
+**Why nothing here could see it.** It renders as a perfectly ordinary empty room; the build is green, the screen sweep photographs a screen that looks intentional, and the underlying `@Query` lie is the OS-version-dependent SwiftData behaviour this file already records (the reporting device is on iOS 18.6, this project's simulator on 26 — the same binary is correct on one and wrong on the other). So the check is mechanical: `body-publish-audit.py` check 3 asserts the emptiness test names every array `feedThings` can hand back, mutation-proven against the real file (reverting the fix flags it, the fixed file is clean).
+
+**The other half: the net never looked twice.** `safetyNetKey` was the scene phase and the swipe's transient bound, and a room that is populated when it mounts and goes empty LATER moves neither — so the net that exists to catch exactly that never re-ran for the life of the mount. That is the reported sequence: a room drawing rows, one tap, an empty room that stays empty until you leave it. The room's own emptiness is in the key now. It costs nothing to ask (`roomBody` already reads `things` on the same pass) and flips at most twice in a room's life; an honestly empty room re-runs one bounded fetch and returns without writing, which the net's own `guard !scoped.isEmpty` is what makes free. Guarded the same way, mutation-proven the same way. **Neither half works alone** — without the key the rescue never fires mid-session, without the test the rescue is overruled — so if either is reverted, revert both.
+
+**What this does NOT explain, said rather than implied.** Why the query went empty on that device on that tap is unfixed and probably unfixable from here — it is the SwiftData predicate defect, not ours. This makes the rescue work, which is the difference between a room that recovers by itself and one that stays blank until you leave and come back.
+
+**Unreproduced on the simulator**, and structurally so: the sim is on the OS where the query does not lie, so the condition cannot be staged there. The fix is proven by reading and by the guard, not by a screenshot.

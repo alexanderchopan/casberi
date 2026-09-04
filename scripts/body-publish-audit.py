@@ -36,6 +36,19 @@ WHAT IT DELIBERATELY DOES NOT FLAG, so it cannot become a lint that cries wolf:
   * A write to `@State`/`@Binding` from a closure. Different mechanism, and
     SwiftUI's own runtime warns about the ones that matter.
 
+CHECK 3 is a third mechanism and the same spirit: the room's own emptiness test
+must consult every array the room can DRAW from. `FeedScreen.feedThings` prefers
+`sourceRoomFallbackSnapshot` — the per-source safety net's rescue array, filled
+when the `@Query` disagrees with a raw fetch on the same store — while
+`roomBody`'s `roomHasContent` asked `things`, the very query that net exists
+because it cannot be trusted. So a rescued room drew "Nothing from <source>
+yet." over a full list, and the net could never once rescue anything: both
+commits that built it (85adc007, fee89e1e) added the fetch and neither touched
+the test one branch upstream. Reported as a Wallet room going empty on a tap
+(prd §592). It renders as a perfectly ordinary empty room, on the exact devices
+where the query lies and nowhere else, so no build and no screen sweep can see
+it.
+
 CHECK 2 is unrelated in mechanism and identical in spirit: `FeedScreen`'s two
 `@Query`-staleness safety nets must keep declining while the swipe's transient
 `rowBudget` is set. Without that guard the mismatch they test for is
@@ -129,6 +142,41 @@ def missing_budget_guard(text: str):
     return out
 
 
+def emptiness_ignores_fallback(text: str):
+    """`roomHasContent` must name every array `feedThings` can hand back."""
+    clean = strip_comments(text)
+    out = []
+    for m in re.finditer(r"let\s+roomHasContent\s*=", clean):
+        # The expression runs to the `if` that consumes it — the next
+        # statement — so take everything up to it rather than a line count,
+        # which a re-wrap would silently defeat.
+        tail = clean[m.end():]
+        stop = tail.find("if ")
+        expr = tail[:stop if stop != -1 else 400]
+        if "sourceRoomFallbackSnapshot" not in expr:
+            out.append(clean.count("\n", 0, m.start()) + 1)
+    return out
+
+
+def net_key_ignores_emptiness(text: str):
+    """`safetyNetKey` must move when the room's own emptiness moves."""
+    clean = strip_comments(text)
+    out = []
+    for m in re.finditer(r"private\s+var\s+safetyNetKey:\s*String\s*\{", clean):
+        depth, i, n = 0, m.end() - 1, len(clean)
+        while i < n:
+            if clean[i] == "{":
+                depth += 1
+            elif clean[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            i += 1
+        if "things.isEmpty" not in clean[m.end():i]:
+            out.append(clean.count("\n", 0, m.start()) + 1)
+    return out
+
+
 def self_test() -> bool:
     ok = True
 
@@ -172,6 +220,31 @@ def self_test() -> bool:
     check("nested braces do not end the block early", missing_budget_guard(
         '.task(id: safetyNetKey) { if a { b() }\n guard rowBudget == nil else { return } }'), [])
 
+    # --- check 3 fixtures ---
+    # The shipped bug, verbatim: the test asks the query the safety net exists
+    # to distrust, while the rows come from the rescue array.
+    check("the shipped emptiness bug", len(emptiness_ignores_fallback(
+        "let roomHasContent = (debouncedAllSnapshot.map { !$0.isEmpty } ?? false)\n"
+        "    || Corpus.hasSurfaced(things)\n"
+        "if !roomHasContent { empty() }")), 1)
+    check("consulting the fallback passes", emptiness_ignores_fallback(
+        "let roomHasContent = (debouncedAllSnapshot.map { !$0.isEmpty } ?? false)\n"
+        "    || (sourceRoomFallbackSnapshot.map { !$0.isEmpty } ?? false)\n"
+        "    || Corpus.hasSurfaced(things)\n"
+        "if !roomHasContent { empty() }"), [])
+    # Prose naming the array is not the array being consulted — the same
+    # comment-stripped rule every other check here keeps.
+    check("a comment naming it is not enough", len(emptiness_ignores_fallback(
+        "let roomHasContent = Corpus.hasSurfaced(things) // not sourceRoomFallbackSnapshot\n"
+        "if !roomHasContent { empty() }")), 1)
+
+    # A net keyed only on the scene and the budget never looks again when a
+    # populated room goes empty mid-mount — prd §592's other half.
+    check("a key without emptiness is a finding", len(net_key_ignores_emptiness(
+        'private var safetyNetKey: String {\n  "\\(scenePhase)" + (rowBudget == nil ? "|full" : "|b")\n}')), 1)
+    check("a key with emptiness passes", net_key_ignores_emptiness(
+        'private var safetyNetKey: String {\n  "\\(scenePhase)" + (things.isEmpty ? "|empty" : "|rows")\n}'), [])
+
     return ok
 
 
@@ -197,6 +270,18 @@ def main() -> int:
                     f"Publish from .onChange(of:initial:) instead, the way the wallet and "
                     f"vibenet rooms already do.")
             if path.name == "FeedScreen.swift":
+                for line in emptiness_ignores_fallback(text):
+                    findings.append(
+                        f"{rel}:{line}: `roomHasContent` does not consult "
+                        f"`sourceRoomFallbackSnapshot` — the room DRAWS from it "
+                        f"(`feedThings` prefers it) but this asks `things`, the query "
+                        f"the safety net exists because it cannot be trusted. A rescued "
+                        f"room then paints its empty state over a full list (prd §592).")
+                for line in net_key_ignores_emptiness(text):
+                    findings.append(
+                        f"{rel}:{line}: `safetyNetKey` no longer moves when the room's "
+                        f"emptiness moves — a room that goes empty AFTER it mounts then "
+                        f"never re-runs the net that exists to rescue it (prd §592).")
                 for line in missing_budget_guard(text):
                     findings.append(
                         f"{rel}:{line}: a `.task(id: safetyNetKey)` lost its "

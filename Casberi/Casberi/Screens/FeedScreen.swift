@@ -2074,8 +2074,22 @@ struct FeedScreen: View {
     /// DISABLED, on exactly the device it exists to save (FB14619787). Same trap
     /// `headKey` documents above, same shape of fix: the budget is in the id, so
     /// the check follows a few hundred ms later on its own.
+    ///
+    /// **EMPTINESS IS IN THE KEY, and it is the other half of prd §592.** The
+    /// two terms above move on a scene change and on a swipe, and a room that
+    /// is populated when it mounts and goes empty LATER moves neither — so the
+    /// net that exists to catch exactly that never looked again for the life of
+    /// the mount. That is the reported sequence: a Wallet room drawing rows,
+    /// one tap, and an empty room that stays empty until you leave it.
+    ///
+    /// It costs nothing to ask: `roomBody` already reads `things` on this pass
+    /// (`Corpus.hasSurfaced`), so the query is materialised either way, and the
+    /// value flips at most twice in a room's life. A room that is HONESTLY
+    /// empty re-runs one bounded fetch and returns without writing anything —
+    /// the net's own `guard !scoped.isEmpty` is what makes that free.
     private var safetyNetKey: String {
         "\(scenePhase)" + (rowBudget == nil ? "|full" : "|bounded")
+            + (things.isEmpty ? "|empty" : "|rows")
     }
 
     /// The room's own narrowing, as ONE rule — the lane strip scopes everything
@@ -4187,7 +4201,30 @@ case .vibenetSend(let account):
     /// the cost is the whole chain rather than any one arm of it.
     @ViewBuilder
     private var roomBody: some View {
+        // **THE EMPTINESS TEST READS WHAT THE ROOM DRAWS (2026-09-03, prd
+        // §592, user: "i clicked on activity and this is what happened" over a
+        // demo Wallet room full of transactions).**
+        //
+        // `feedThings` prefers `sourceRoomFallbackSnapshot` — the per-source
+        // safety net's rescue array, filled when the `@Query` disagrees with a
+        // raw fetch on the same store — and this test asked `things`, the very
+        // query the net exists BECAUSE it cannot be trusted. So the rescue
+        // could land a full room in `visible` and this line still said the
+        // room was empty, which drew "Nothing from <source> yet." over it.
+        //
+        // **The net has never once been able to rescue a room.** Both commits
+        // that built it (85adc007, fee89e1e) added the fetch and neither
+        // touched this line, so from the day it shipped the fallback fed the
+        // ROWS while the EMPTY STATE overruled them — the exact failure it was
+        // written to fix, one branch upstream of the fix.
+        //
+        // ONE-DIRECTIONAL, like the snapshot term beside it: a NON-EMPTY
+        // fallback proves content and short-circuits, and an empty or absent
+        // one still asks `hasSurfaced`. That ordering also keeps the PERF
+        // property the note below claims — the rescue path never pays for a
+        // `Corpus.surfaced` allocation it does not need.
         let roomHasContent = (debouncedAllSnapshot.map { !$0.isEmpty } ?? false)
+            || (sourceRoomFallbackSnapshot.map { !$0.isEmpty } ?? false)
             || Corpus.hasSurfaced(things)
         if !roomHasContent && !LiveRoomSources.has(source) {
             Group { emptyState }
