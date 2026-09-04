@@ -321,12 +321,17 @@ struct MainSurface: View {
     @ViewBuilder
     private var bandContent: some View {
         VStack(spacing: 0) {
-            if demoActive {
-                DemoBanner()
-                    .padding(.top, ProcessInfo.processInfo.isMacCatalystApp
-                             ? DS.Space.s2 : DS.Space.s4)
-                    .padding(.bottom, DS.Space.s1)
-            }
+            // The demo's marking is NOT in this band any more (§591 amendment,
+            // user: "i think for demo purposes the demo banner should be at the
+            // top of the screen"). Its 2026-08-07 note said it had to join this
+            // inset because two attempts to host it on `RootShell` drew it
+            // straight over the chips — and that was a fact about the CHIPS
+            // being at the top, not about the banner. With the band at the
+            // bottom the top of the screen is empty, so the obstacle is gone
+            // and the reason to move is plain: this is a marking about the
+            // whole app state, not a control, and at the bottom it was pushing
+            // the dock up by its own height while sitting in the thumb zone
+            // reserved for things you press. See `demoBannerInset`.
             // The room's own two controls, ABOVE the strip and BELOW the feed
             // (prd §357, moved to this edge by §591). Both were
             // `safeAreaInset`s on `FeedScreen` until §357 — see `roomControls`
@@ -335,31 +340,16 @@ struct MainSurface: View {
             roomControls
             if !showsRail {
                 sourceStrip(axis: .horizontal)
-                    // **THE DOCK'S FIRST SEAT BELONGS TO THE AGENT (§591).**
-                    // The bar is pinned bottom-LEADING now and is hosted on
-                    // `RootShell`'s own ZStack, one layer above this band — so
-                    // without this the run would scroll chips underneath it and
-                    // the leading source would be a room you can see and cannot
-                    // tap, which is exactly the objection that took the bar off
-                    // the top of the sources panel on 2026-08-16.
-                    //
-                    // **Reserved rather than hosted, and that is the whole
-                    // design.** Putting the bar INSIDE this band would make one
-                    // view of the dock and read best in a screenshot — and the
-                    // bar would then die with this inset, which is applied
-                    // inside the `NavigationStack` and is therefore covered by
-                    // every pushed room, every bridge form and Settings. The
-                    // bar's own note is explicit that it lives on the shell so
-                    // it works from all of those. So the two stay separate
-                    // views that share a row: the strip yields the corner, the
-                    // bar stands in it, and when a room is pushed the strip
-                    // goes and the bar remains — which is precisely today's
-                    // behaviour, one corner over.
-                    //
-                    // `DSDock.agentSeat` is the one number both sides read, so
-                    // the gap cannot drift into an overlap on one side or a
-                    // hole on the other.
-                    .padding(.leading, DSDock.agentSeat)
+                    // **THE DOCK'S FIRST SEAT BELONGS TO THE AGENT (§591), and
+                    // the strip runs UNDER it rather than beside it.** The bar
+                    // is hosted on `RootShell`'s ZStack one layer above this
+                    // band, so it survives into every pushed room the way this
+                    // inset does not; the strip yields nothing here and instead
+                    // melts its chips out as they pass beneath the bar
+                    // (`SourceChips.headTrailingEdge` reads `DSDock.agentSeat`).
+                    // A `.padding(.leading, agentSeat)` stood here first and
+                    // drew the scroll view's clip as a flat vertical line
+                    // against the bar's round glass.
                     // **The s6 of air is GONE and its reason went with it
                     // (§591).** It replaced iPhone's hidden system nav bar —
                     // a fact about the TOP of the screen and nothing else —
@@ -373,6 +363,30 @@ struct MainSurface: View {
                     .padding(.top, DS.Space.s2)
                     .padding(.bottom, chrome.minimized ? DS.Space.s1 : DS.Space.s2)
             }
+        }
+    }
+
+    /// The demo's marking, on the top edge (§591 amendment).
+    ///
+    /// Its own `.safeAreaInset(edge: .top)`, applied beside the band's bottom
+    /// one, rather than a `RootShell` overlay — the 2026-08-07 finding that an
+    /// inset applied further out is drawn over by this stack's own chrome is
+    /// unchanged, and this is that stack's inset. What changed is only which
+    /// edge it takes, which is now free.
+    ///
+    /// No scrim of its own: `crownPour` already darkens this exact region, and
+    /// a second wash under a capsule that carries its own fill would read as a
+    /// header band the page stops at.
+    @ViewBuilder
+    private var demoBannerInset: some View {
+        if demoActive {
+            DemoBanner()
+                .padding(.top, ProcessInfo.processInfo.isMacCatalystApp
+                         ? DS.Space.s2 : DS.Space.s4)
+                .padding(.bottom, DS.Space.s2)
+                .frame(maxWidth: showsRail ? PadLayout.readingMaxWidth : .infinity,
+                       alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -420,7 +434,35 @@ struct MainSurface: View {
     /// social room, never both — so the two `if`s are alternatives, not a stack.
     @ViewBuilder
     private var roomControls: some View {
-        categorySwitcher
+        // The octopus's folder (§591 amendment). It sits in the same slot the
+        // room's own row uses — one row, one folder — so the two can never
+        // stack, and it reaches this band rather than a raised tray because the
+        // ruling was that the bar "needs to open the same way the others do in
+        // a strip", "not in a tray".
+        if chrome.openFolder == .doors {
+            DoorsStrip(compact: chrome.minimized && !showsRail,
+                       onAgent: {
+                           chrome.openFolder = nil
+                           chrome.openComposer()
+                       },
+                       onApps: {
+                           chrome.openFolder = nil
+                           route.present(.apps)
+                       },
+                       onAddressBook: {
+                           chrome.openFolder = nil
+                           route.push(.addressBook)
+                       },
+                       onSettings: {
+                           chrome.openFolder = nil
+                           route.present(.settings)
+                       })
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.bottom, DS.Space.s2)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+        }
+        if roomControlsShown {
+            categorySwitcher
         socialScopeRail
         // **VIBENET'S FACE RAIL IS FOLDED INTO ITS CROWN (prd §482
         // amendment, 2026-08-26, user: "we cannot have four rows of chips").**
@@ -430,11 +472,39 @@ struct MainSurface: View {
         // down into those chips, which costs a row of chrome and loses
         // nothing. Wallet's rail is untouched: its crown carries no
         // per-account strip to fold into.
+        }
+    }
+
+    // `roomControlsAvailable` was DELETED in the §591 amendment. It existed to
+    // decide whether a re-tap on the active chip should toggle the room's row
+    // or fall back to popping the stack, back when a chip tap ALSO switched
+    // rooms and the two behaviours had to share one gesture. A folder tap no
+    // longer switches anything, so `CategoryFold.isCategory` answers the whole
+    // question at the call site: a category chip opens, everything else moves.
+
+    /// The category the room you are STANDING IN belongs to, if any.
+    private var currentCategory: String? {
+        BridgeCatalog.category(forSource: filter.source)
+    }
+
+    private var roomControlsShown: Bool {
+        if case .category = chrome.openFolder { return true }
+        // §357: a live scope forces its own room's rail open whatever the
+        // folder says — a filter you are standing in must show you that you are
+        // in it, and must show its own exit.
+        return chrome.personScope != nil
     }
 
     @ViewBuilder
     private var categorySwitcher: some View {
-        if let category = BridgeCatalog.category(forSource: filter.source) {
+        // **THE OPEN FOLDER, NOT THE CURRENT ROOM (§591 amendment).** This read
+        // `BridgeCatalog.category(forSource: filter.source)` while a category
+        // chip's tap switched rooms, so the two questions had one answer. A
+        // folder tap no longer moves the feed, so they diverge: you can open
+        // Social while standing in Kalshi, and this row must then list Social's
+        // seats. `active:` stays `filter.source`, so nothing in the row is lit
+        // in that case — which is the honest drawing, not a gap.
+        if case .category(let category) = chrome.openFolder {
             let venues = categoryVenues[category] ?? []
             if venues.count >= CategoryFold.switcherFloor {
                 CategoryVenueSwitcher(
@@ -1249,23 +1319,37 @@ struct MainSurface: View {
             // Markets chip while standing in Kalshi is a re-tap of the chip
             // you're on, and comparing raw sources would read it as a switch
             // and silently do nothing (the guard in `go(to:)` catches it).
+            // **A FOLDER OPENS; IT DOES NOT MOVE THE FEED (§591 amendment,
+            // user: "if you tap a folder on mac dock for example it doesn't
+            // switch what is on your screen").** Every source-bearing chip is a
+            // category chip with no floor (§351), so this is nearly every tap:
+            // it toggles that category's sources above the strip and leaves the
+            // room alone. Picking one of those sources is what moves you, via
+            // `chrome.sourceRequest`.
+            //
+            // Compared against the LABEL, so re-tapping an open folder shuts
+            // it — including the folder of the room you are standing in, which
+            // is the "make the second row go away" the amendment started from.
+            if CategoryFold.isCategory(label) {
+                withAnimation(DS.Motion.standard) {
+                    chrome.openFolder =
+                        chrome.openFolder == .category(label) ? nil : .category(label)
+                }
+                return
+            }
+            // "All" and any bare source are not folders — there is nothing
+            // inside them to open, so their tap is the switch it always was,
+            // and it shuts whatever folder was showing.
             if label == chips.active {
-                // Re-tapping the chip you're already on pops back to
-                // root (the old per-tab habit) instead of doing nothing.
+                // Re-tapping the room you are already in pops back to root, the
+                // old per-tab habit, as it did before folders existed.
                 chrome.popHome += 1
                 return
             }
             let before = filter.source
+            withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
             go(to: label)
-            // Tap-learning (ChipMemory) counts an actual switch, not the
-            // re-tap-to-pop branch above — and counts the SEAT, never the
-            // folded label, so the weights keep ranking real venues and the
-            // fold's own position stays derived from them. Gated on the source
-            // really moving, because `go` can refuse (a folded chip with
-            // nothing to resolve to), and crediting a visit for a tap that
-            // changed nothing would inflate the weight of the room you are
-            // already standing in.
-            if filter.source != before { ChipMemory.visited(filter.source) }
+                        if filter.source != before { ChipMemory.visited(filter.source) }
         }
     }
 
@@ -1531,6 +1615,24 @@ struct MainSurface: View {
         // Every folded room's scopes — see `ShellChrome.categoryVenues`.
         .onChange(of: categoryVenues, initial: true) { _, venues in
             chrome.categoryVenues = venues
+        }
+        // The folder opens on arrival (§591 amendment) — see
+        // `ShellChrome.openFolder`. Keyed off `filter.source` itself so
+        // EVERY way into a room opens its row: a chip tap, a swipe, a deep
+        // link, the panel's All capsule. Only a re-tap of the chip you are
+        // standing on closes it, and only until you leave.
+        // Arriving in a room opens ITS folder (§591 amendment) — every route
+        // counts: a venue pick, a swipe, a deep link, the composer. Only a
+        // re-tap on an open folder closes it, and only until you leave.
+        .onChange(of: filter.source, initial: true) { _, source in
+            chrome.openFolder = BridgeCatalog.category(forSource: source)
+                .map { ShellChrome.OpenFolder.category($0) }
+        }
+        // A scope taken while its own folder is shut re-opens it, or §357's
+        // exit is behind a tap nobody knows to make.
+        .onChange(of: chrome.personScope) { _, scope in
+            guard scope != nil, let category = currentCategory else { return }
+            chrome.openFolder = .category(category)
         }
         // Where each folded chip reopens (prd §351, generalizing 2026-08-10).
         // Keyed off `filter.source` itself rather than written inside
@@ -1888,6 +1990,7 @@ struct MainSurface: View {
             // two differ on exactly one thing: this strip is allowed to
             // vanish into a pushed room and the rail is not.
             .safeAreaInset(edge: .bottom, spacing: 0) { bandInset }
+            .safeAreaInset(edge: .top, spacing: 0) { demoBannerInset }
             // THE ROOM'S OWN SETTINGS DOOR (2026-08-21) — see `RoomGear` for
             // why a bare gear is legible here and why the room needed one.
             //

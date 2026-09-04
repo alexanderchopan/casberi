@@ -468,11 +468,12 @@ struct CasberiApp: App {
                     .disabled(focusedScene?.detail.thing == nil)
                 Divider()
                 // ⌘0, continuing the ⌘1–⌘9 chip run below: nine numbered
-                // sources, and the zero that shows you all of them. The tray's
-                // only other trigger is a 0.45s hold on the agent bar — a
-                // gesture a mouse will never discover, since click-and-wait
-                // isn't something anyone tries (see `BarSecondaryMenu`).
-                Button("Your Sources") { focusedChrome?.openSources() }
+                // sources, and the zero that opens the dock's first folder —
+                // the four doors that are not a feed (§591 amendment). It named
+                // "Your Sources" while that folder held a grid of every source;
+                // the sources are the numbered chips themselves now, and what
+                // is left behind the octopus is everything else.
+                Button("Everything Else") { focusedChrome?.openSources() }
                     .keyboardShortcut("0", modifiers: .command)
             }
             // Help → the real docs, Mac convention (2026-07-28) — replaces

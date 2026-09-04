@@ -554,11 +554,11 @@ grep -qs 'bookTitle: String(localized: "Address book")' "$SHELL_MAIN" "Casberi/C
 # row there rather than an unlabelled glyph in `SourcesOverlay`'s header. The
 # invariant is unchanged and if anything stronger: it is still the one door no
 # state can hide, and it now says its own name.
-grep -q 'act: onOpenAddressBook' "Casberi/Casberi/Shell/DoorsPanel.swift" \
-  || { echo "✗ the doors panel lost its address-book door — that is the ONE door no state can hide, and every other way in (the rails) needs something already watched (§498/§570/§591)"; exit 1; }
+grep -q 'onAddressBook'  "Casberi/Casberi/Shell/DoorsStrip.swift" \
+  || { echo "✗ the doors strip lost its address-book door — that is the ONE door no state can hide, and every other way in (the rails) needs something already watched (§498/§570/§591)"; exit 1; }
 python3 - <<'GATE' || exit 1
 import re, sys
-src = open("Casberi/Casberi/Shell/DoorsPanel.swift", encoding="utf-8").read()
+src = open("Casberi/Casberi/Shell/DoorsStrip.swift", encoding="utf-8").read()
 i = src.find("act: onOpenAddressBook")
 if i < 0:
     sys.exit(0)
@@ -566,7 +566,7 @@ if i < 0:
 # whole point is that this door is drawn unconditionally.
 above = src[:i].split("\n")[-8:]
 if any(re.match(r"\s*(if|guard)\b", line) for line in above):
-    print("✗ the doors panel's address-book door grew a condition — it is the")
+    print("✗ the doors strip's address-book door grew a condition — it is the")
     print("  unconditional way in, and gating it re-creates the dead end §570 removed")
     sys.exit(1)
 GATE

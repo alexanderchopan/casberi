@@ -42,7 +42,7 @@ ROOTS="Casberi/Casberi/Shell/RootShell.swift"
 CHIPS="Casberi/Casberi/Shell/SourceChips.swift"
 BAR="Casberi/Casberi/Shell/AgentBar.swift"
 DOCK="Casberi/Casberi/Design/DSDock.swift"
-PANEL="Casberi/Casberi/Shell/DoorsPanel.swift"
+PANEL="Casberi/Casberi/Shell/DoorsStrip.swift"
 
 for f in "$MAIN" "$ROOTS" "$CHIPS" "$BAR" "$DOCK" "$PANEL"; do
   [ -f "$f" ] || { echo "✗ $f not found"; exit 1; }
@@ -90,12 +90,15 @@ grep -q 'safeAreaInset(edge: .top, spacing: 0) { bandInset }' "$TMP/main.nc" \
   && { echo "✗ the band is back on the TOP edge."; fail=1; }
 
 # --- 2. the seat is one number, read by both sides --------------------------
+# The strip runs UNDER the bar and melts its chips out before the bar's edge —
+# it does not start beside it. A `.padding(.leading, agentSeat)` drew the scroll
+# view's clip as a flat vertical line against the bar's round glass.
+grep -q 'DSDock.agentSeat' "$TMP/chips.nc" \
+  || { echo "✗ SourceChips no longer measures its melt from DSDock.agentSeat — chips will"; \
+       echo "  either collide with the agent bar or be cut off by a hard clip edge."; fail=1; }
 grep -q 'padding(.leading, DSDock.agentSeat)' "$TMP/main.nc" \
-  || { echo "✗ the strip no longer yields DSDock.agentSeat — the leading source will scroll"; \
-       echo "  under the agent bar and be a room you can see and cannot tap."; fail=1; }
-grep -qE 'padding\(\.leading, (44|46|54|56)\)' "$TMP/main.nc" \
-  && { echo "✗ the agent's seat is spelled as a literal in MainSurface — it must read"; \
-       echo "  DSDock.agentSeat, or the two sides drift into an overlap or a hole."; fail=1; }
+  && { echo "✗ MainSurface pads the strip past the bar again — that draws the scroll view's"; \
+       echo "  clip as a flat line against the bar's round glass instead of melting."; fail=1; }
 grep -q 'static var agentSeat' "$DOCK" \
   || { echo "✗ DSDock.agentSeat is gone — the shared metric both layers read."; fail=1; }
 
@@ -121,12 +124,37 @@ grep -q 'heldForAgent\|consumeHold' "$TMP/bar.nc" \
   && { echo "✗ AgentBar still carries the hold's swallow-the-tap state."; fail=1; }
 
 # --- 6. the panel offers the agent, and the tray is really gone -------------
-grep -q 'onAgent: onAgent' "Casberi/Casberi/Shell/SourcesOverlay.swift" \
-  || { echo "✗ SourcesOverlay no longer threads the agent door to DoorsPanel — with the hold"; \
-       echo "  deleted this is the bar's ONLY route to the agent."; fail=1; }
-[ -f "Casberi/Casberi/Shell/SourcesTray.swift" ] \
-  && { echo "✗ SourcesTray is back — the source grid was a second way to a set that is now"; \
-       echo "  in the dock one thumb-width below the panel."; fail=1; }
+# --- 6. the octopus is a FOLDER, not a tray ---------------------------------
+grep -q 'chrome.openFolder == .doors' "$TMP/main.nc" \
+  || { echo "✗ MainSurface no longer draws DoorsStrip from the open folder — the octopus"; \
+       echo "  must open a row above the dock like every other chip, not a raised tray."; fail=1; }
+grep -q 'onAgent:' "$PANEL" \
+  || { echo "✗ DoorsStrip lost its agent door — with the hold deleted this is the bar's"; \
+       echo "  ONLY route to the agent."; fail=1; }
+for gone in SourcesTray SourcesOverlay DoorsPanel; do
+  [ -f "Casberi/Casberi/Shell/$gone.swift" ] \
+    && { echo "✗ $gone is back — the octopus opens a strip in the band, never a tray."; fail=1; }
+done
+
+# --- 7. a folder tap opens; it never moves the feed -------------------------
+grep -q 'if CategoryFold.isCategory(label)' "$TMP/main.nc" \
+  || { echo "✗ a category chip tap no longer branches on isCategory — it will call go(to:)"; \
+       echo "  and switch the room, which is what a folder must not do."; fail=1; }
+python3 - <<'GATE' || fail=1
+import re, sys
+src = open("Casberi/Casberi/Shell/MainSurface.swift", encoding="utf-8").read()
+i = src.find("if CategoryFold.isCategory(label)")
+if i < 0:
+    sys.exit(0)
+# The folder branch must RETURN before anything that writes the filter.
+branch = src[i:i + 900]
+end = branch.find("return")
+if end < 0 or "go(to:" in branch[:end]:
+    print("✗ the folder branch reaches go(to:) — tapping a folder would switch the room,")
+    print("  which the §591 amendment forbids ('if you tap a folder on mac dock for")
+    print("  example it doesn't switch what is on your screen').")
+    sys.exit(1)
+GATE
 
 if [ $fail -eq 0 ]; then
   echo "✓ dock self-test"

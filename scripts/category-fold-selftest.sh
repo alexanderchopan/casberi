@@ -67,9 +67,14 @@ BOOK="Casberi/Casberi/Screens/PredictionRoomBook.swift"
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
 RAIL="Casberi/Casberi/Shell/FaceScopeRail.swift"
 CHROME="Casberi/Casberi/Shell/ShellChrome.swift"
-OVERLAY="Casberi/Casberi/Shell/SourcesOverlay.swift"
+# `SourcesOverlay` was DELETED in the §591 amendment along with the tray it
+# raised — the octopus opens a strip in the band now (`DoorsStrip`), not a
+# panel over the shell. Nothing below reads `$TMP/overlay.nc` any more; the
+# two guards that did (the tray must be fed the UNFOLDED order, and must never
+# be fed the folded one) went with the grid they defended — see the block
+# further down that records why.
 TILES="Casberi/Casberi/Screens/WalletFeedTiles.swift"
-for f in "$FOLD" "$ROOM" "$MAIN" "$CHIPS" "$FEED" "$SWITCHER" "$BROWSE" "$BOOK" "$CATALOG" "$ROOT" "$APP" "$RAIL" "$CHROME" "$OVERLAY" "$TILES"; do
+for f in "$FOLD" "$ROOM" "$MAIN" "$CHIPS" "$FEED" "$SWITCHER" "$BROWSE" "$BOOK" "$CATALOG" "$ROOT" "$APP" "$RAIL" "$CHROME" "$TILES"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -101,7 +106,6 @@ strip_comments "$SWITCHER" > "$TMP/switcher.nc"
 strip_comments "$FEED"     > "$TMP/feed.nc"
 strip_comments "$RAIL"     > "$TMP/rail.nc"
 strip_comments "$CHROME"   > "$TMP/chrome.nc"
-strip_comments "$OVERLAY"  > "$TMP/overlay.nc"
 strip_comments "$TILES"    > "$TMP/tiles.nc"
 
 # --- drift guards -----------------------------------------------------------
@@ -762,9 +766,28 @@ grep -q 'PadLayout.readingMaxWidth' "$TMP/topinset.nc" \
 # (user: "each category should have a switcher"). A gate re-narrowed to
 # `MarketsRoom.isMember(source)` would silently take the switcher away from
 # every other category while this exact grep still finds `CategoryVenueSwitcher(`.
-grep -qE 'let category = BridgeCatalog\.category\(forSource: filter\.source\)' "$MAIN" \
-  || { echo "✗ the switcher no longer resolves ITS OWN category from the room's source —"; \
-       echo "  it would still be gated to Markets alone (or one other hardcoded category)."; exit 1; }
+# EVERY category, not Markets alone — the whole point of this follow-up
+# (user: "each category should have a switcher"). A gate re-narrowed to
+# `MarketsRoom.isMember(source)` would silently take the switcher away from
+# every other category while this exact grep still finds `CategoryVenueSwitcher(`.
+#
+# **The expression MOVED in the §591 amendment and this guard moved with it**
+# (the `roomFigure` lesson). It used to read
+# `BridgeCatalog.category(forSource: filter.source)` inside `categorySwitcher`,
+# because "which folder is open" and "which room am I in" were one question. A
+# folder tap no longer switches rooms, so they are two: the switcher draws the
+# OPEN folder's category, and the open folder is set from
+# `BridgeCatalog.category(forSource:)` on arrival. Both halves are asserted, so
+# neither can be narrowed to one hardcoded category.
+grep -qE 'if case \.category\(let category\) = chrome\.openFolder' "$MAIN" \
+  || { echo "✗ the switcher no longer draws the OPEN folder's category — either it is back"; \
+       echo "  to following the room (so a folder you are not standing in cannot be opened)"; \
+       echo "  or it is gated to one hardcoded category."; exit 1; }
+grep -qE 'BridgeCatalog\.category\(forSource: source\)' "$MAIN" \
+  || { echo "✗ nothing resolves a room's own category to its folder any more — arriving in a"; \
+       echo "  room would leave no folder open, so its venue switcher never draws (§357)."; exit 1; }
+grep -q 'MarketsRoom.isMember' "$TMP/main.nc" \
+  && { echo "✗ the switcher is gated on Markets membership again — every category has one."; exit 1; }
 
 # The switcher and the prediction book must not BOTH offer a venue control —
 # two capsules over one book, each able to change which venue you're reading,

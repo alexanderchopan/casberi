@@ -220,12 +220,22 @@ struct SourceChips: View {
     /// dead band under the minimized chip where scrolling chips are melted out
     /// for no reason.
     private var headTrailingEdge: CGFloat {
-        // On the phone the head draws nothing (§591), so the melt's ramp is
-        // measured from the strip's own leading margin — which is where the
-        // agent's seat ends, so chips still dissolve as they pass under the
-        // bar's corner rather than colliding with it. The RAIL still pins
-        // "All" and still measures past it.
-        axis == .vertical ? DS.Space.s4 + chipSize : DS.Space.s4
+        // **On the phone the "head" is the AGENT BAR, which is not this view
+        // at all (§591).** It stands on `RootShell`'s layer in the dock's
+        // leading seat, and this strip runs the FULL width underneath it — so
+        // the melt is measured from where that bar ends (`DSDock.agentSeat`),
+        // exactly as it used to be measured from where the pinned "All" ended.
+        // Chips dissolve as they slide under the bar and are gone before its
+        // edge, which is the 2026-07-19 ruling ("disappear into it, not into
+        // a hard line") kept for a head that changed layers.
+        //
+        // The first cut instead PADDED this whole strip by the seat, so the
+        // scroll view began beside the bar — and its clip edge drew as a flat
+        // vertical line against the bar's round glass, with chips cut off
+        // rather than melted (user: "it isn't hitting a flat hard line when it
+        // goes behind the octopus. the octopus should be on the same row").
+        // The RAIL still pins "All" and still measures past it.
+        axis == .vertical ? DS.Space.s4 + chipSize : DSDock.agentSeat
     }
     private var fadeClear: CGFloat { headTrailingEdge - 8 }
     private static let fadeRamp: CGFloat = 24
@@ -237,7 +247,14 @@ struct SourceChips: View {
     /// now, so the padding that buys that position is the difference. Derived
     /// rather than spelled as a literal 16, so it stays correct if `fadeRamp`
     /// or the head's own metrics move.
-    private var contentLead: CGFloat { stripInset - headTrailingEdge }
+    private var contentLead: CGFloat {
+        // On the phone nothing in this view occupies the head's space any more
+        // (§591) — the bar is on another layer — so the resting position is
+        // the absolute `stripInset` from the viewport's own edge, as it was
+        // when the strip ran beneath an overlay. The rail's head is real
+        // layout, so the rail keeps the relative form.
+        axis == .vertical ? stripInset - headTrailingEdge : stripInset
+    }
 
     var body: some View {
         switch axis {
@@ -354,8 +371,33 @@ struct SourceChips: View {
                 // but it costs nothing either, and `scrollTo` below still
                 // resolves because `ForEach`'s ids are known whether or not the
                 // chip is realized.
-                LazyHStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
-                    Section {
+                // **NO `Section`, NO `pinnedViews` SINCE §591.** Both existed for
+                // exactly one thing: pinning "All" so it never scrolled away
+                // while still belonging to the scroll view, which is what made
+                // a drag starting on it pan like a drag starting anywhere else.
+                // "All" scrolls now (see `scrollingLabels`) and the fixed
+                // leading seat belongs to the agent, which is a view on another
+                // layer entirely — so there is no header left to pin.
+                //
+                // **Keeping the empty `Section` was tried first and SHIPPED THE
+                // STRIP AT ZERO HEIGHT.** A `Section` whose header draws
+                // nothing still asks the lazy stack to lay out a pinned header,
+                // and the `.fixedSize(vertical: true)` below — which exists to
+                // force this subtree back to its own ideal height, see its own
+                // note — then resolved that ideal to approximately nothing. The
+                // band reserved a few points, the chips were never on screen at
+                // all, and the app looked exactly like one whose source strip
+                // had been deleted. Caught on the simulator, not by the build:
+                // every static check was green.
+                //
+                // A plain `HStack` rather than a lazy one, for the reason the
+                // laziness was only ever tolerated: `pinnedViews` REQUIRED a
+                // lazy stack, and laziness buys nothing at this scale since the
+                // fold caps the strip at eleven categories. Without the pin the
+                // requirement is gone, and an eager stack is one fewer thing
+                // between `scrollTo` and a chip that has to be realized to be
+                // scrolled to.
+                HStack(spacing: 0) {
                         // The active chip's fill is a real glass element that MORPHS
                         // from the old chip to the new (prd §359, user: "if the
                         // category chips and the source chips are controls why not
@@ -412,9 +454,6 @@ struct SourceChips: View {
                         // position is expressed relative to it.
                         .padding(.leading, contentLead)
                         .padding(.trailing, DS.Space.s4)
-                    } header: {
-                        head
-                    }
                 }
                 // **PINNED SECTION HEADERS UNDID THE STRIP'S OWN HEIGHT
                 // (found 2026-08-24, hours after `LazyHStack`+`pinnedViews`
@@ -472,61 +511,11 @@ struct SourceChips: View {
             }
         }
     }
-
-    /// The phone strip's pinned head: **"All", and nothing else** (2026-08-24).
-    ///
-    /// **THE TWO DOORS MOVED TO THE SOURCES TRAY** (user ruling, mocked in
-    /// `prototype/strip-doors-in-tray-v1.html`). The avatar has anchored this
-    /// head since 2026-07-20 and the catalogue since 2026-07-17, and the reason
-    /// they left is that they were the wrong CLASS of thing to be here: they
-    /// OPEN A SCREEN, while every other member of this strip FILTERS the screen
-    /// you are on. The row was two verbs wearing one grammar, and this file was
-    /// paying for it in prose — the note that used to live here spent a
-    /// paragraph justifying a wider seam between the door pair and "All" purely
-    /// so nobody would read the third circle as a third door. **A spacing
-    /// constant whose job is to prevent a misreading is the grouping telling
-    /// you it is wrong.** They are in `SourcesOverlay`'s header now, one tap
-    /// away on the bar that is already in the thumb zone, which is where the
-    /// sources tray itself was put in 2026-07-31 for the same reachability
-    /// reason: the top of a phone is the hardest place to reach, so the two
-    /// controls nobody opens daily should not be the ones parked there.
-    ///
-    /// **The cost, stated rather than hidden:** Settings goes from
-    /// always-visible to two taps. That is the trade the ruling names — a rare
-    /// destination should not hold permanent chrome — and it buys ~92pt back
-    /// for the chips, which is most of a whole extra category on a phone.
-    ///
-    /// **Why "All" STAYS pinned even though it IS a filter.** The strip's
-    /// founding ruling (2026-07-13, the tab bar's replacement) is that
-    /// navigation is always in reach and never scrolls away with content — and
-    /// "All" is the way back to the whole feed, the one destination every other
-    /// chip is a departure from. It was nonetheless the FIRST thing to leave
-    /// the screen before 2026-08-16: the strip re-centres the active chip (see
-    /// `horizontalStrip`'s `onChange`), so standing in any room past the second
-    /// chip pushed it off the leading edge, and the way home was a scroll you
-    /// had to know was there. Pinning it costs nothing in scrollability now
-    /// that the head is a sticky header INSIDE the scroll rather than a layer
-    /// above it — the whole row drags either way — so the only thing pinning
-    /// still spends is width, and one chip's worth is what the way home is
-    /// worth.
-    ///
-    /// It is also NOT the only way back: `SourcesOverlay`'s header carries an
-    /// All capsule too (§407). Two doors onto one room is right here — the
-    /// panel is the map, this is the road.
-    /// **EMPTY on the phone since §591** — "All" scrolls with the run (see
-    /// `scrollingLabels`) and the fixed leading seat is the agent's, which is
-    /// a view on another layer entirely (`RootShell`'s cluster, reserved by
-    /// `MainSurface` through `DSDock.agentSeat`).
-    ///
-    /// The `Section(header:)` is KEPT rather than unwound, and that is
-    /// deliberate: the pinning machinery around it — `LazyHStack`,
-    /// `pinnedViews`, and the height correction recorded at the call site —
-    /// is what the strip's measured height depends on, and unwinding it to
-    /// delete a zero-width view is a change to the thing that reports the
-    /// band's height for a change to the thing that draws nothing.
-    private var head: some View {
-        Color.clear.frame(width: 0, height: 0)
-    }
+    // `head` was DELETED in §591 along with the `Section` that pinned it. It
+    // drew "All" in the strip's fixed head; "All" scrolls now, and the fixed
+    // leading seat belongs to the agent bar, which `MainSurface` reserves with
+    // `DSDock.agentSeat` and `RootShell` stands in. There is nothing left for a
+    // header to hold.
 
     /// The two fixed doors as ONE glass capsule (2026-08-06) — see
     /// `dsGlassDoor` for why they are one object.

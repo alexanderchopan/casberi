@@ -71,15 +71,11 @@ struct RootShell: View {
     /// explanation, and re-explaining on every cold launch is what made them
     /// permanent furniture in the first place.
     ///
-    /// It tracks the TRAY since §390, not the agent — the words name the tap,
-    /// so the tap is what spends them. Gating on the agent would have left the
-    /// grace standing for everyone who never finds the hold, which is a label
-    /// that outlives its own explanation.
+    /// It tracks what is BEHIND the bar, not the agent — the words name the
+    /// tap, so the tap is what spends them. Since the §591 amendment that is
+    /// the doors folder (`toggleDoors`), which every route goes through so the
+    /// grace can't depend on which one you reached it by.
     @AppStorage("sources.everOpened") private var sourcesEverOpened = false
-    /// Every source at once (`SourcesTray`) — raised by holding the agent bar.
-    /// Never set directly by a door: they all go through `openSources()`, so
-    /// the tray's own feel can't depend on which one you reached it by.
-    @State private var sourcesOpen = false
     /// A drag is over the window and a drop would land (one flag per payload
     /// type `dropDestination` accepts) — drives `DropGlow`'s edge answer.
     @State private var dropTargetedURL = false
@@ -224,7 +220,7 @@ struct RootShell: View {
         // take those keys away from a composer field, a tray, or a sheet's own
         // Escape otherwise. ONE expression over every presentation this view
         // owns, rather than a handler per flag each re-ORing the others.
-        .onChange(of: composerOpen || sourcesOpen || deepLinkThing != nil
+        .onChange(of: composerOpen || deepLinkThing != nil
                   || deepLinkPerson != nil || !onboarded, initial: true) { _, modal in
             chrome.walkModalOpen = modal
         }
@@ -700,7 +696,7 @@ struct RootShell: View {
             // looking at the rendered panel, and there was no way to render it
             // without a human holding a finger down.
             if UserDefaults.standard.bool(forKey: "openSources") {
-                openSources()
+                toggleDoors()
             }
             // `-openAppsDelay <s>` pushes the store after a delay — records
             // "tapping the grid door" (the zoom plays on the real push path).
@@ -1315,9 +1311,8 @@ struct RootShell: View {
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(600))
                     NSLog("[Casberi] openSources: %@", chrome.chipOrder.joined(separator: ", "))
-                    // Through the same door as the hold it stands in for, so a
-                    // probe exercises what a finger does.
-                    openSources()
+                    // Through the same door a finger uses.
+                    toggleDoors()
                 }
             }
             // `-openComposerDelay <s>` opens the composer after a delay.
@@ -1547,7 +1542,7 @@ struct RootShell: View {
         // The tray, asked for from the menu bar or the bar's own right-click
         // (2026-07-31) — the hold is not the only door anymore.
         .onChange(of: chrome.sourcesRequest) { _, _ in
-            openSources()
+            toggleDoors()
         }
         // Privacy as the default (goal 6): leaving the app redacts the
         // corpus — the app-switcher snapshot shows choreography, not content.
@@ -2021,83 +2016,11 @@ struct RootShell: View {
             // object of type BridgeStore found", on every open, with a clean
             // compile and every static audit green. The helper is about
             // position in the chain, not about sheets.
-            if sourcesOpen {
-                rootPresented(SourcesOverlay(
-                    active: filter.source,
-                    onDismiss: { closeSources() },
-                    // The empty tray's door (2026-08-18). The SAME push the
-                    // strip's own catalogue button makes — one catalog, one
-                    // way in — and it closes the panel first, because a door
-                    // that pushes a screen behind a raised panel reads as
-                    // having done nothing.
-                    onOpenCatalog: {
-                        closeSources()
-                        withAnimation(DS.Motion.standard) {
-                            sceneState.route.present(.apps)
-                        }
-                    },
-                    // The Settings door, which lives in this panel's header
-                    // since 2026-08-24 (the chip strip no longer carries one).
-                    // Same shape as the catalog door above it, for the same
-                    // reason: close first, then push, or the screen arrives
-                    // behind a raised panel and the tap reads as a no-op.
-                    onSettings: {
-                        closeSources()
-                        withAnimation(DS.Motion.standard) {
-                            sceneState.route.present(.settings)
-                        }
-                    },
-                    // The address book's global door (prd §498) — same
-                    // close-then-push shape as its two neighbours.
-                    onOpenAddressBook: {
-                        closeSources()
-                        withAnimation(DS.Motion.standard) {
-                            sceneState.route.push(.addressBook)
-                        }
-                    },
-                    // THE AGENT (prd §591) — the door the bar's 0.45s hold used
-                    // to be. Same close-then-open shape as its three
-                    // neighbours, and for a sharper version of their reason:
-                    // the risen agent is a full-screen ZStack layer on this
-                    // shell, so raising it under a panel that is still up would
-                    // put the panel's glass over the composer's own field.
-                    //
-                    // A bare rise seeding NOTHING, exactly as the hold did —
-                    // `chrome.askRequest` is left alone so a surface that
-                    // seeded a specific ask a moment ago still wins — and it
-                    // clears the notice glint for the same reason the hold did:
-                    // rising is seeing.
-                    onAgent: {
-                        closeSources()
-                        DSHaptic.lift()
-                        AgentNoticed.shared.markSeen()
-                        withAnimation(DS.Motion.standard) { composerOpen = true }
-                    }) { label in
-                    closeSources()
-                // Land ON the feed that was named. A pick made from a pushed
-                // room would otherwise switch the source BEHIND a Settings
-                // screen still standing on the stack — the tray would close
-                // onto the same room it was opened from, having visibly done
-                // nothing.
-                sceneState.route.path = []
-                // A pick means the whole source — the kind filter clears for
-                // every label, and BEFORE the same-source guard, so a re-tap
-                // drops it. The chip strip's own rule (`MainSurface.go(to:)`),
-                // restated rather than shared because the two call sites still
-                // differ on what the re-tap branch does with the source itself.
-                if filter.tag != "All" {
-                    withAnimation(DS.Motion.standard) { filter.tag = "All" }
-                }
-                guard label != filter.source else { return }
-                withAnimation(DS.Motion.standard) {
-                    filter.source = label
-                }
-                // A pick here teaches the strip exactly as a chip tap does —
-                // this is the same act, reached by a different gesture.
-                ChipMemory.visited(label)
-                })
-            }
-
+            // The sources tray's presentation block was DELETED in the §591
+            // amendment. Every feed is a chip in the dock now and the four
+            // doors that are not a feed open as a row above it (`DoorsStrip`,
+            // rendered by `MainSurface.roomControls`), so nothing is raised
+            // over the shell here any more — "not in a tray" was the ruling.
             // The cluster stands down for the sources panel too (2026-08-16,
             // user: "if you can drag the panel to close it then the fab
             // doesn't need to be showing").
@@ -2115,7 +2038,7 @@ struct RootShell: View {
             // What was actually lost with the sheet was DETENTS — dragging UP
             // to full height — not drag-to-dismiss, which is rebuilt in
             // `SourcesOverlay`. Those two got conflated for a moment here.
-            if !composerOpen && !sourcesOpen {
+            if !composerOpen {
                 // The floating cluster (whisper + bar) renders as one
                 // coordinated glass system (2026-07-23) — the container gives
                 // both elements a SHARED backdrop sample, so as feed content
@@ -2201,7 +2124,7 @@ struct RootShell: View {
                              // ever opening the tray.
                              expanded: !sourcesEverOpened && !chrome.minimized,
                              morphNS: agentMorph,
-                             onSources: { toggleSources() },
+                             onSources: { toggleDoors() },
                              // NIL since 2026-08-15, the crown-pour ruling's
                              // other half. The user killed the per-wallet
                              // crown pour because it argued with the wallet
@@ -2282,7 +2205,11 @@ struct RootShell: View {
                 .padding(.leading, padShell.railInset)
                 .padding(.trailing, padShell.paneInset)
                 .padding(.horizontal, DS.Space.s4)
-                .padding(.bottom, DS.Space.s2)
+                // Aligned to the chip row's CENTRE, not to the bottom edge
+                // (§591 amendment) — see `DSDock.agentBottomInset` for why a
+                // shared bottom padding leaves the bar sitting 6pt low, and why
+                // the number has to follow the fold.
+                .padding(.bottom, DSDock.agentBottomInset(minimized: chrome.minimized))
                 .transition(.opacity)
             }
 
@@ -2355,37 +2282,32 @@ struct RootShell: View {
     ///
     /// `tap()`, not the `lift()` it fired until §390: this is an ordinary tap
     /// now, and `lift()` is the weight of a gesture that had to be held.
-    private func openSources() {
-        DSHaptic.tap()
-        // The teaching grace is spent the first time the tray opens by any
-        // path — the bar's words have done their one job.
-        sourcesEverOpened = true
-        withAnimation(DS.Motion.standard) { sourcesOpen = true }
-    }
-
-    /// One way out, used by every closer — the panel's drag, its tap-catcher,
-    /// a pick, and the bar itself — so the exit animates identically however
-    /// it is reached.
-    private func closeSources() {
-        withAnimation(DS.Motion.standard) { sourcesOpen = false }
-    }
-
-    /// The bar's own verb TOGGLES since 2026-08-16 (user: "user could tap the
-    /// fab to dismiss it").
+    /// The octopus's folder (§591 amendment) — the dock's first chip opens the
+    /// same way every other chip does, as a row above the strip rather than as
+    /// a raised tray (user: "the octopus button needs to open the same way the
+    /// others do in a strip", "not in a tray").
     ///
-    /// It could only open before, which was invisible while the tray was a
-    /// sheet — the sheet covered the bar, so the closed state was the only one
-    /// you could ever tap it in. The panel is a ZStack layer under the cluster
-    /// now, so the bar stays visible above a raised tray, and a control you
-    /// can see while its surface is open must be able to close it. Otherwise
-    /// it reads as dead.
-    private func toggleSources() {
-        if sourcesOpen {
-            DSHaptic.tap()
-            closeSources()
-        } else {
-            openSources()
+    /// **It pops to root first, and that is a real behaviour change said out
+    /// loud.** The tray this replaces was hosted on this shell's own ZStack, so
+    /// it opened over Settings, a bridge form, anywhere. A row in
+    /// `MainSurface`'s bottom band is applied INSIDE the `NavigationStack` and
+    /// is therefore covered by every pushed room — so opening it from one would
+    /// be a tap with nothing on screen to show for it. Going home first is the
+    /// honest reading of the gesture: you asked for the doors, so here is the
+    /// surface that has them.
+    ///
+    /// `sourcesEverOpened` still rides this, unchanged: it is what spends the
+    /// bar's one-time teaching label, and the label's job is done the first
+    /// time the thing behind the bar is seen, by whatever route.
+    private func toggleDoors() {
+        DSHaptic.tap()
+        sourcesEverOpened = true
+        if chrome.openFolder == .doors {
+            withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
+            return
         }
+        if !sceneState.route.path.isEmpty { sceneState.route.path = [] }
+        withAnimation(DS.Motion.standard) { chrome.openFolder = .doors }
     }
 
     /// Everything the shell hands its own tree, re-applied to a ROOT-PRESENTED

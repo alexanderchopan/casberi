@@ -47990,3 +47990,93 @@ The screenshot is the whole-room empty state — the Wallet mark, "Nothing from 
 **What this does NOT explain, said rather than implied.** Why the query went empty on that device on that tap is unfixed and probably unfixable from here — it is the SwiftData predicate defect, not ours. This makes the rescue work, which is the difference between a room that recovers by itself and one that stays blank until you leave and come back.
 
 **Unreproduced on the simulator**, and structurally so: the sim is on the OS where the query does not lie, so the condition cannot be staged there. The fix is proven by reading and by the guard, not by a screenshot.
+
+### 591a. amendment — the chips are folders, and nothing else changes (2026-09-03)
+
+Three sessions of iteration on §591 that ended by keeping the chips as they
+were. **Worth recording as a decision rather than a diff**, because the route
+to it was a design proposal that turned out to describe what the app already
+did, and the next person to have the idea should find this instead of building
+it.
+
+**What was proposed and dropped.** Category chips redrawn as iOS home-screen
+folders — a frosted squircle carrying the category's name, with source marks
+appearing only when one is open. Mocked three ways (`prototype/
+folder-chips-mock.html`). The user's own reading killed it: *"aren't we back
+where we started now? what's different than what we had originally?"* And they
+were right — §351 already folds EVERY source-bearing category to one chip with
+no floor, that chip already carries its name AND the mark of the venue you last
+used, and its sources already live in the row that appears when you open it. The
+squircle would have cost the venue mark and bought nothing. A single-source
+category was drawn in the mock as a bare round mark, which was the mock being
+wrong rather than the app: §351 has no floor, so Wallet is a named chip like
+every other category.
+
+**What survived, and it is the whole of this amendment.**
+
+**1. A FOLDER TAP DOES NOT MOVE THE FEED** (user, twice: *"i guess i am saying
+if you tap a chip it shouldn't switch the room"*, then *"if you tap a folder on
+mac dock for example it doesn't switch what is on your screen"*). Tapping a
+category chip opens that category's sources above the strip and leaves the room
+exactly where it was; tapping it again closes them; only picking one of those
+sources moves you. "All" is not a folder and still switches on its own tap.
+I argued the other way first — a category chip is a room you have been in and
+§351's landing rule already knows which venue, so making you re-pick costs a tap
+and throws that knowledge away — and the counter-argument that settles it is the
+user's: a folder that launches something when you open it is not a folder. The
+two-tap cost is also smaller than it looks, because the page swipe still steps
+between rooms (*"the user can still swipe between rooms so it is fine"*).
+
+This is what made `ShellChrome.openFolder` carry its category rather than a
+bare Bool: you can open Social while standing in Kalshi, so "which folder is
+open" and "which room am I in" stopped being one question.
+`MainSurface.categorySwitcher` reads the OPEN folder and lights `filter.source`,
+so a folder you are not standing in draws with nothing lit — the honest
+drawing, not a gap. The FACE rail is the exception and is drawn only for the
+room's own folder, since a Social rail opened from inside Kalshi would offer to
+scope a feed it has nothing to do with.
+
+**2. The octopus is the dock's first folder** (user: *"the octopus button needs
+to open the same way the others do in a strip"*, *"not in a tray"*, *"and also
+doesn't anymore need 'all'"*). `SourcesOverlay`, `SourcesTray` and the one-day
+`DoorsPanel` are all deleted; `DoorsStrip` draws the four doors as marks in the
+same capsule the venue switcher uses, in the same slot, folding on the same
+scroll signal. **It pops to root first and that is a stated behaviour change**:
+the tray was hosted on `RootShell`'s ZStack and opened over Settings or a bridge
+form, while a row in the band is covered by every pushed room — so opening it
+from one would be a tap with nothing to show for it.
+
+**3. The demo's marking moved back to the top** (user: *"i think for demo
+purposes the demo banner should be at the top of the screen"*). Its 2026-08-07
+note said it had to ride the chip band because two attempts to host it elsewhere
+drew it over the chips — a fact about the CHIPS being at the top. With the band
+at the bottom the top is empty, so it takes its own `.safeAreaInset(edge: .top)`.
+
+**4. Two geometry fixes only a device could find.** The bar and the chips wore
+the same bottom padding and were still misaligned (*"the octopus is lower"*),
+because a chip is 56pt and the bar 44 — the gap is half the difference and it
+CHANGES when the strip folds, so `DSDock.agentBottomInset(minimized:)` follows
+the fold rather than being a constant. And the strip runs UNDER the bar rather
+than beside it: a `.padding(.leading, agentSeat)` drew the scroll view's clip as
+a flat vertical line against the bar's round glass (*"it isn't hitting a flat
+hard line when it goes behind the octopus"*), so the melt is measured from
+`DSDock.agentSeat` instead and chips dissolve before the bar's edge.
+
+**Bankr and the on-device model stay out of the dock, asked and answered.** The
+user proposed moving them into the Agents category so the app does not name
+agents in two places. Measured: `source: "Bankr"` appears nowhere in the tree —
+it is a key and a provider choice, not a feed — and the on-device model is not a
+catalog seat at all. A chip for either opens a room that is permanently empty,
+which is the dead control §83 bans. The duplication they named is real and this
+pass already resolved it: the octopus stopped being the agent, so "Agents" means
+exactly one thing.
+
+**Guarded** by `scripts/dock-selftest.sh`, extended to seven checks and
+mutation-proven four more ways — including a parse of the folder branch proving
+it returns before anything that writes the filter, which is rule 1 as a test.
+`address-book-selftest.sh`'s door guard moved file with the door for the third
+time (the `roomFigure` lesson).
+
+**UNVERIFIED on hardware**, but every rule above was driven on the simulator:
+tapping Work opened its eight sources with All still lit and the feed unmoved,
+a re-tap closed it, and the octopus opened its four doors in the same slot.

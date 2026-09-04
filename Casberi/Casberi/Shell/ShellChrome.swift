@@ -49,6 +49,57 @@ final class ShellChrome {
     /// Bumped when the active chip is tapped again — the surface pops
     /// everything (pushed screens, sheets) back to its root (the tab era's
     /// "re-tap to pop" habit, now the "re-tap the active chip" habit).
+    /// **WHICH FOLDER IS OPEN (prd §591 amendment, 2026-09-03, user: "maybe
+    /// you should be able to tap the active category chip to make the second
+    /// row go away, so that it really behaves like a dock" — "with folders").**
+    ///
+    /// A chip in the dock is a folder and the row above the strip is what is
+    /// inside it: a category's venue switcher and face rail, or — for the
+    /// octopus, which is the dock's first chip — the four doors that are not a
+    /// feed. One row, one folder, so the two can never stack.
+    ///
+    /// **A FOLDER TAP DOES NOT CHANGE THE ROOM (user, 2026-09-03: "if you tap
+    /// a folder on mac dock for example it doesn't switch what is on your
+    /// screen").** Tapping a category chip opens its sources above the strip
+    /// and leaves the feed exactly where it was; tapping it again closes them;
+    /// only picking one of those sources moves you. "All" is not a folder and
+    /// still switches on its own tap, because there is nothing inside it to
+    /// open.
+    ///
+    /// I argued for the opposite first — that a category chip is a room you
+    /// have been in and the app already knows which venue (§351's landing
+    /// rule), so making you re-pick costs a tap and throws that knowledge away.
+    /// The user's answer is the one recorded above, twice, and it is the
+    /// stronger reading of the metaphor the whole dock is built on: a folder
+    /// that launches something when you open it is not a folder.
+    ///
+    /// **The room's own folder OPENS ON ARRIVAL and closes on a re-tap.** The first cut
+    /// defaulted closed, reasoning that a folded chip already wears its active
+    /// venue's mark (§351) so the row was a picker rather than a label. A
+    /// second session's user read the missing switcher as the app being broken,
+    /// and the user's own correction settled it: *"you can't get to kalshi
+    /// without first tapping markets anyways"* — the tap that takes you into a
+    /// category is the tap that shows its contents, so nobody reaches a venue
+    /// without having seen the row it lives in. `MainSurface` resets this to
+    /// `.room` on every source change; only a deliberate re-tap on the chip you
+    /// are standing on closes it, and only until you leave.
+    ///
+    /// **§357 is NOT overturned** — it is enforced one level up, in
+    /// `MainSurface.roomControlsShown`: a live person scope forces the room's
+    /// row open whatever this says, because a filter you are standing in must
+    /// show you that you are in it and must show its own exit.
+    enum OpenFolder: Equatable {
+        /// A category's own sources, by category name. The row shows THAT
+        /// category's venues whether or not you are standing in it, which is
+        /// what makes a folder a folder: you can look inside Social from
+        /// Kalshi without leaving Kalshi.
+        case category(String)
+        /// The octopus's four doors (`DoorsStrip`).
+        case doors
+    }
+
+    var openFolder: OpenFolder? = nil
+
     var popHome = 0
 
 
