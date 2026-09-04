@@ -175,23 +175,45 @@ extension PrivacyDevnetRoomCard {
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// **THE CROWN SAYS WHAT IT IS; THE TAIL SAYS WHICH ONE** (§571).
+    ///
+    /// Every list here first shipped inverted — a truncated hash at `body17` in
+    /// the crown with the meaning in `subhead13` tertiary underneath — and a
+    /// person with a fully populated room reported seeing "nothing in the
+    /// lists", which was exactly right: four of seven scopes were a column of
+    /// hex. **A hash IDENTIFIES, it does not INFORM.** It belongs in a
+    /// monospace tail, quiet, where somebody who needs to match one can find
+    /// it; the crown belongs to what happened.
+    @ViewBuilder private func row(_ crown: String, _ tail: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(crown)
+                .dsText(.body17)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(tail)
+                .dsText(.mono12)
+                .foregroundStyle(DS.textTertiary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     @ViewBuilder private func list(_ moves: [PrivacyDevnetLiveState.Move]) -> some View {
         if moves.isEmpty {
             empty(String(localized: "Nothing from this address on the chain yet."))
         } else {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 ForEach(moves) { move in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(WalletStore.shortAddress(move.hash))
-                            .dsText(.body17).monospaced()
-                        Text(Self.moveLine(move))
-                            .dsText(.subhead13)
-                            .foregroundStyle(DS.textTertiary)
-                    }
+                    row(Self.moveLine(move), Self.tail(move))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    /// The identity line — which transaction, and where it landed.
+    static func tail(_ m: PrivacyDevnetLiveState.Move) -> String {
+        let short = m.hash.count > 12
+            ? String(m.hash.prefix(8)) + "…" + String(m.hash.suffix(4)) : m.hash
+        return m.block > 0 ? "\(short) · block \(m.block)" : short
     }
 
     /// What one transaction did, in the room's own vocabulary.
@@ -211,19 +233,14 @@ extension PrivacyDevnetRoomCard {
     @ViewBuilder private var roster: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             ForEach(accounts) { account in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(PrivacyDevnetWatch.shared.name(for: account.address)
-                         ?? WalletStore.shortAddress(account.address))
-                        .dsText(.body17)
-                    // **Nil is not zero.** An address the chain did not answer
-                    // for says so, rather than showing a balance of 0 — which
-                    // would be a claim made from a failed read (§515a).
-                    Text(account.reached
-                         ? (Self.eth(account.balanceWei) ?? String(localized: "Balance unread"))
-                         : String(localized: "The chain didn't answer"))
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textTertiary)
-                }
+                // **Nil is not zero.** An address the chain did not answer for
+                // says so in the crown, rather than showing a balance of 0 —
+                // which would be a claim made from a failed read (§515a).
+                row(account.reached
+                        ? (Self.eth(account.balanceWei) ?? String(localized: "Balance unread"))
+                        : String(localized: "The chain didn't answer"),
+                    PrivacyDevnetWatch.shared.name(for: account.address)
+                        ?? WalletStore.shortAddress(account.address))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -248,9 +265,9 @@ extension PrivacyDevnetRoomCard {
                 Text(String(localized: "Each of these was used once and can never be used again. That is what stops a spend being repeated — it does not hide who sent it."))
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textSecondary)
-                ForEach(Array(keys.enumerated()), id: \.offset) { _, key in
-                    Text(Self.shortHex(key))
-                        .dsText(.body17).monospaced()
+                ForEach(Array(keys.enumerated()), id: \.offset) { i, key in
+                    row(String(localized: "Spent once"), Self.shortHex(key))
+                        .accessibilityLabel(String(localized: "Spend key \(i + 1), used once"))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -264,13 +281,8 @@ extension PrivacyDevnetRoomCard {
         } else {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 ForEach(PrivacyDevnetRoots.bySource(refs), id: \.source) { group in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(Self.shortHex(group.newest.root))
-                            .dsText(.body17).monospaced()
-                        Text(Self.standingLine(group.newest, headSlot: headSlot, count: group.count))
-                            .dsText(.subhead13)
-                            .foregroundStyle(DS.textTertiary)
-                    }
+                    row(Self.standingLine(group.newest, headSlot: headSlot, count: group.count),
+                        Self.shortHex(group.newest.root))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

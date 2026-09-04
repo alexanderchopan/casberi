@@ -369,7 +369,24 @@ extension PrivacyDevnetLiveState {
     /// method exposes the slot.
     /// Refresh only if the last answer has gone stale — what the room's own
     /// task calls, so opening it twice in a row costs one sweep.
+    ///
+    /// **THE DEMO RE-INSTALLS ITS FIXTURE HERE, and without it the room is
+    /// permanently stuck.** `DemoSeedAll` runs on demo ENTRY only, this state
+    /// is in-memory, and `DemoMode` is sticky across launches — so relaunching
+    /// inside a demo leaves the fixture gone AND the live read refused, and the
+    /// room says "Reading the chain…" forever over a chain it is not allowed to
+    /// read. Reported from a device, then reproduced here by opening the room
+    /// on a second launch. `HegotaLiveState.refreshIfStale` had already solved
+    /// exactly this and says so in its own comment — I did not read it before
+    /// writing this file, which is the whole cost of the bug.
+    ///
+    /// Idempotent and in-memory: it reaches nothing, which is the rule this
+    /// seat inherits.
     func refreshIfStale() async {
+        if DemoMode.isActive {
+            if accounts.isEmpty { PrivacyDevnetLiveState.seedDemo() }
+            return
+        }
         if let readAt, Date().timeIntervalSince(readAt) < Self.staleAfter { return }
         await refresh()
     }

@@ -31,11 +31,16 @@ enum PrivacyDevnetRoomSource {
     /// room, which is how the Hegotá room reached a device four times. The one
     /// nil is "not connected at all", where the room does not draw either.
     @MainActor
-    static func compose(scope: String? = nil) -> PrivacyDevnetRoom.Head? {
+    static func compose(scope: String? = nil) -> PrivacyDevnetRoom.Head {
         let live = PrivacyDevnetLiveState.shared
         let watched = PrivacyDevnetWatch.shared.addresses
-        guard !watched.isEmpty || !live.accounts.isEmpty || DemoMode.isActive else { return nil }
-
+        // **NEVER NIL.** The seat is in `LiveRoomSources`, which tells the feed
+        // not to draw the corpus-shaped empty state — so a nil here is a BLACK
+        // SCREEN, not an empty room, and a deep link reaches this room whether
+        // or not anything is watched. That is not hypothetical: it happened on
+        // a simulator when a permission sheet swallowed the tap that would have
+        // watched an address. `PrivacyDevnetRoom.head` answers `.unwatched`
+        // rather than nothing.
         let shown = accounts(scope: scope)
         return PrivacyDevnetRoom.head(
             accounts: shown.map {

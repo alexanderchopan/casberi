@@ -190,7 +190,14 @@ for hasRead in [false, true] {
                                             roots: [r])]] {
       let h = PrivacyDevnetRoom.head(accounts: accs, watching: 0, hasRead: hasRead,
                                      headSlot: base + 10, wasReset: reset)
-      check(h.watching >= 1, "the head always claims at least one watched address")
+      // `.unwatched` legitimately claims zero — it is the state where nothing
+      // IS watched. Every other lede must claim at least one, or a room says
+      // it watches nothing while describing what it watched.
+      if case .unwatched = h.lede {
+          check(h.watching == 0, "the unwatched head claims zero, not one")
+      } else {
+          check(h.watching >= 1, "every other head claims at least one watched address")
+      }
       check(!PrivacyDevnetRoom.sentence(h).isEmpty, "every head has a sentence")
     }
   }
@@ -213,6 +220,16 @@ if case .reading = PrivacyDevnetRoom.head(accounts: [], watching: 1, hasRead: fa
                                           headSlot: base, wasReset: false).lede {} else {
     check(false, "no read and no accounts reads as reading")
 }
+// NOTHING WATCHED reads as `.unwatched`, never nil and never "reading" — see
+// the black-screen note above.
+if case .unwatched = PrivacyDevnetRoom.head(accounts: [], watching: 0, hasRead: false,
+                                            headSlot: base, wasReset: false).lede {} else {
+    check(false, "nothing watched reads as unwatched")
+}
+check(!PrivacyDevnetRoom.sentence(
+        PrivacyDevnetRoom.head(accounts: [], watching: 0, hasRead: false,
+                               headSlot: base, wasReset: false)).isEmpty,
+      "the unwatched head still has a sentence")
 if case .reading = PrivacyDevnetRoom.head(accounts: rich, watching: 1, hasRead: false,
                                           headSlot: base + 10, wasReset: false).lede {
     check(false, "accounts are themselves evidence of a read")
@@ -488,6 +505,26 @@ grep -qF 'walkChunk' "$work/bridge.bare" \
 # report a busy address as quiet — the exact failure the code claimed to prevent.
 grep -qF 'hashes.reverse()' "$work/bridge.bare" \
   && fail "the walk orders by reversing the node's own order again — sort on blockNumber/logIndex instead"
+
+# THE UNWATCHED ROOM (§593). The seat is in `LiveRoomSources`, which tells the
+# feed not to draw the corpus-shaped empty state — so a nil head is a BLACK
+# SCREEN, and a deep link reaches this room whether or not anything is watched.
+# Reproduced on a simulator when a permission sheet swallowed the tap that
+# would have watched an address.
+grep -qE 'static func compose\(scope: String\? = nil\) -> PrivacyDevnetRoom\.Head \{' \
+  "Casberi/Casberi/Model/PrivacyDevnetRoomSource.swift" \
+  || fail "PrivacyDevnetRoomSource.compose is Optional again — a nil head on a LiveRoomSources seat is a BLACK SCREEN, not an empty room"
+grep -qF 'case unwatched' "$work/room.bare" \
+  || fail "the unwatched lede is gone — the room has nothing to say before anything is watched, which renders as nothing at all"
+
+# THE RELAUNCHED DEMO (§593). `DemoSeedAll` runs on demo ENTRY only, this state
+# is in-memory, and DemoMode is sticky across launches — so a relaunch inside a
+# demo leaves the fixture gone AND the live read refused, and the room says
+# "Reading the chain…" forever over a chain it is not allowed to read. Reported
+# from a device. `HegotaLiveState.refreshIfStale` had already solved it.
+grep -qE 'if DemoMode\.isActive \{[^}]*seedDemo' "$work/bridge.bare" \
+  || grep -qF 'if accounts.isEmpty { PrivacyDevnetLiveState.seedDemo() }' "$work/bridge.bare" \
+  || fail "refreshIfStale no longer re-installs the demo fixture — a relaunched demo would sit on 'Reading the chain…' over a chain it is not allowed to read"
 
 # THE OBSERVATION MECHANISM (§593). This shipped as `ObservableObject` +
 # `@Published`, and the room reads it through STATIC functions — where a

@@ -19,6 +19,16 @@ enum PrivacyDevnetRoom {
     enum Lede: Equatable, Sendable {
         /// No read has landed yet. Not an error — the first sweep has not run.
         case reading(watching: Int)
+        /// Nothing is watched at all.
+        ///
+        /// **This case exists because its absence was a BLACK SCREEN.** The
+        /// seat is in `LiveRoomSources`, which tells the feed "this room has
+        /// live content, do not draw the corpus-shaped empty state" — so a nil
+        /// head there renders NOTHING, and a deep link can reach this room
+        /// before anything is watched. Found on a simulator after a permission
+        /// sheet swallowed the tap that would have watched an address, which is
+        /// exactly the kind of ordinary accident that reaches a person.
+        case unwatched
         /// The chain answered and this address has done nothing on it. The
         /// honest common case: 14 type-`0x6` transactions exist chain-wide.
         case quiet(watching: Int)
@@ -63,6 +73,12 @@ enum PrivacyDevnetRoom {
     /// definite `true` may claim a relaunch.
     static func head(accounts: [Account], watching: Int, hasRead: Bool,
                      headSlot: UInt64, wasReset: Bool?) -> Head {
+        // Nothing watched and nothing read: say so, rather than leaving the
+        // caller to return nil into a room that suppresses its own empty state.
+        if watching <= 0 && accounts.isEmpty && wasReset != true {
+            return Head(lede: .unwatched, watching: 0, windowFraction: nil,
+                        nullifierCount: 0, frameCount: 0, sponsoredCount: 0)
+        }
         let nullifiers = accounts.reduce(0) { $0 + $1.nullifierCount }
         let frames = accounts.reduce(0) { $0 + $1.frameCount }
         let sponsored = accounts.reduce(0) { $0 + $1.sponsoredCount }
@@ -129,6 +145,8 @@ enum PrivacyDevnetRoom {
         switch head.lede {
         case .relaunched:
             return String(localized: "This devnet was relaunched from genesis, so everything it held is gone. The addresses you watch are still yours.")
+        case .unwatched:
+            return String(localized: "Watch an address to see what it did on this chain.")
         case .reading:
             return String(localized: "Reading the chain…")
         case .quiet(let watching):
