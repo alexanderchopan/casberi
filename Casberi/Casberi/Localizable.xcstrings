@@ -38616,6 +38616,34 @@
         }
       }
     },
+    "Back to your things" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volver a tus cosas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分のものに戻る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 항목으로 돌아가기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "返回你的内容"
+          }
+        }
+      }
+    },
     "Back where it started this %@ window." : {
       "localizations" : {
         "es" : {
@@ -125937,6 +125965,62 @@
         }
       }
     },
+    "agent runs, across %lld repos" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ejecuciones del agente, en %lld repositorios"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "件のエージェント実行、%lld個のリポジトリ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "개 에이전트 실행, %lld개 저장소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次代理运行，跨 %lld 个仓库"
+          }
+        }
+      }
+    },
+    "agent runs, in %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ejecuciones del agente, en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "件のエージェント実行、%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "개 에이전트 실행, %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次代理运行，在 %@"
+          }
+        }
+      }
+    },
     "all time · next %@" : {
       "localizations" : {
         "es" : {
@@ -127325,6 +127409,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "一天"
+          }
+        }
+      }
+    },
+    "days" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "días"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "天"
           }
         }
       }
@@ -131418,6 +131530,96 @@
         }
       }
     },
+    "on your card in %lld days" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "en tu tarjeta en %lld días"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "過去%lld日間のカード利用"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최근 %lld일 카드 사용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "近 %lld 天的卡片消费"
+          }
+        }
+      }
+    },
+    "on your card in %lld days, plus %lld other currencies" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "on your card in %1$lld days, plus %2$lld other currencies"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "en tu tarjeta en %lld días, más %lld monedas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "過去%lld日間のカード利用、他%lld通貨"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최근 %lld일 카드 사용, 외 %lld개 통화"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "近 %lld 天的卡片消费，另有 %lld 种货币"
+          }
+        }
+      }
+    },
+    "on your card in %lld days, plus another currency" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "en tu tarjeta en %lld días, más otra moneda"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "過去%lld日間のカード利用、他1通貨"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최근 %lld일 카드 사용, 외 1개 통화"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "近 %lld 天的卡片消费，另有 1 种货币"
+          }
+        }
+      }
+    },
     "on your list" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -132322,6 +132524,34 @@
         }
       }
     },
+    "pending, waiting on others" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pendientes, esperando a otros"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保留中、他の署名待ち"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "건 대기 중, 다른 서명 대기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "笔待处理，等待他人签名"
+          }
+        }
+      }
+    },
     "people" : {
       "localizations" : {
         "es" : {
@@ -132458,6 +132688,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "发布"
+          }
+        }
+      }
+    },
+    "posts you liked, from %@ accounts" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "publicaciones que te gustaron, de %@ cuentas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "件のいいねした投稿、%@アカウントから"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "개 좋아요한 게시물, %@개 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "条点赞的帖子，来自 %@ 个账户"
+          }
+        }
+      }
+    },
+    "posts you saved, from %@ accounts" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "publicaciones que guardaste, de %@ cuentas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "件の保存した投稿、%@アカウントから"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "개 저장한 게시물, %@개 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "条保存的帖子，来自 %@ 个账户"
           }
         }
       }
@@ -133551,6 +133837,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "根密钥"
+          }
+        }
+      }
+    },
+    "runs didn't finish, across %lld repos" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ejecuciones sin terminar, en %lld repositorios"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "件の未完了の実行、%lld個のリポジトリ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "개 실행 미완료, %lld개 저장소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次运行未完成，跨 %lld 个仓库"
+          }
+        }
+      }
+    },
+    "runs didn't finish, in %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ejecuciones sin terminar, en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "件の未完了の実行、%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "개 실행 미완료, %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次运行未完成，在 %@"
           }
         }
       }
@@ -134704,6 +135046,34 @@
         }
       }
     },
+    "straight, in %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "seguidos, en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "連続、%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연속, %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连续，%@"
+          }
+        }
+      }
+    },
     "supplied" : {
       "localizations" : {
         "es" : {
@@ -135288,6 +135658,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "今天晚上"
+          }
+        }
+      }
+    },
+    "this month · most of it at %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "este mes · la mayor parte en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今月 · 大部分は%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 달 · 대부분 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本月 · 大部分在 %@"
+          }
+        }
+      }
+    },
+    "this month, all at %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "este mes, todo en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今月、すべて%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 달, 모두 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本月，全部在 %@"
           }
         }
       }
@@ -136460,6 +136886,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "等待你提供证明"
+          }
+        }
+      }
+    },
+    "waiting on your signature" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "esperando tu firma"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "件があなたの署名待ち"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "건이 서명을 기다림"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "笔等待你的签名"
           }
         }
       }
