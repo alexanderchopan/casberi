@@ -548,6 +548,51 @@ enum VibenetSend {
                                  maxPriorityFeePerGas: maxPriorityFeePerGas)
     }
 
+    /// **WHICH AUTHENTICATOR THIS PHONE'S KEY ACTUALLY USES, ASKED OF THE
+    /// KEYSTORE (2026-09-04).**
+    ///
+    /// Every write here composes its `sender_auth` through an authenticator
+    /// address, and until now that address came from the contracts document
+    /// alone. **The 2026-09-02 reset moved it and stopped publishing it**:
+    /// measured, the app's cached `0x8130c89f…` appears in ZERO of the 117
+    /// live `ActorAuthorized` events on the current chain. A signature composed
+    /// through an authenticator the Keystore does not associate with this actor
+    /// is refused — loudly, but every time.
+    ///
+    /// **The Keystore already knows.** `getActorConfig(account, actorId)`
+    /// returns that actor's authenticator in word 0, which is not an inference
+    /// about which address is "probably" the P-256 one but the Keystore's own
+    /// record for THIS key on THIS account. So it is asked rather than guessed.
+    ///
+    /// **THE GUESS THIS REPLACES, and why it is worth naming.** The obvious
+    /// fix was to take the most-used `0x8130…` authenticator out of recent
+    /// events — 12 uses against everyone else's 1 or 2. The evidence refutes
+    /// it: that address is paired with ten ADDRESS-shaped actorIds and two
+    /// hash-shaped ones, and a P-256 actorId is `keccak(x‖y)`, i.e.
+    /// hash-shaped. It is far more likely a delegate/secp256k1 authenticator,
+    /// so shipping it would have pointed every Face ID signature at the wrong
+    /// contract. **Frequency is not evidence.**
+    ///
+    /// **STATED CEILING: this can only answer for an account that EXISTS.** A
+    /// creation names its authenticator before any actor is on chain, so
+    /// `createAccount` still takes the config's and there is no way around
+    /// that — you cannot ask a Keystore about an actor it has never seen.
+    /// Nil falls back to the config, which is the behaviour that shipped.
+    static func liveAuthenticator(for account: Data, keystore: String) async -> Data? {
+        guard let actorID = VibenetDeviceKey.actorID() else { return nil }
+        let address = "0x" + VibenetTransaction.hex(account)
+        guard let raw = await VibenetChain.call(
+                method: "eth_call",
+                params: [["to": keystore,
+                          "data": VibenetABI.actorConfigCall(address, actorId: actorID)],
+                         "latest"]) as? String,
+              let hex = VibenetABI.addressWord(raw, at: 0),
+              hex.lowercased() != VibenetAuthenticatorKind.zeroAddress,
+              let data = VibenetTransaction.data(fromHex: hex), data.count == 20
+        else { return nil }
+        return data
+    }
+
     /// The nonce for one CHANNEL.
     ///
     /// **MEASURED 2026-09-04, and it is what makes a nonce-channel control
@@ -637,16 +682,22 @@ enum VibenetSend {
                                maxPriorityFeePerGas: UInt64 = 0xf4240) async throws -> Sent {
         guard let publicKey = VibenetDeviceKey.publicKeyXY() else { throw Failure.noKey }
         if VibenetConfig.signingUnavailable { throw Failure.noAccountStack }
-        guard let contracts = await VibenetConfig.current(),
-              // Unwrapped rather than defaulted: an EMPTY authenticator would
-              // compose a `sender_auth` naming address zero, which is a
-              // well-formed signature over a transaction no Keystore will ever
-              // accept — the loud-vs-silent line this file is built on, landing
-              // on the wrong side. The type is optional now precisely so this
-              // cannot be written by accident.
-              let p256 = contracts.p256Authenticator,
-              let authenticator = VibenetTransaction.data(fromHex: p256)
-        else { throw Failure.cannotCompose }
+        guard let contracts = await VibenetConfig.current() else { throw Failure.cannotCompose }
+        // **THE CHAIN'S ANSWER BEATS THE DOCUMENT'S.** The Keystore's own
+        // record for this actor is authoritative and survives a redeploy that
+        // stops publishing the address; the config is the fallback for a device
+        // whose account the chain could not be asked about. Unwrapped rather
+        // than defaulted: an EMPTY authenticator would compose a `sender_auth`
+        // naming address zero — well-formed, and refused by every Keystore.
+        let authenticator: Data
+        if let live = await liveAuthenticator(for: account, keystore: contracts.keystore) {
+            authenticator = live
+        } else if let p256 = contracts.p256Authenticator,
+                  let fallback = VibenetTransaction.data(fromHex: p256) {
+            authenticator = fallback
+        } else {
+            throw Failure.noAccountStack
+        }
         // An empty batch is not a cheap no-op — it is a signature over a
         // transaction that does nothing, which costs gas and a Face ID.
         guard !legs.isEmpty, legs.count <= VibenetBatch.maxCalls,
@@ -843,16 +894,22 @@ enum VibenetSend {
                                          maxPriorityFeePerGas: UInt64) async throws -> Sent {
         guard let publicKey = VibenetDeviceKey.publicKeyXY() else { throw Failure.noKey }
         if VibenetConfig.signingUnavailable { throw Failure.noAccountStack }
-        guard let contracts = await VibenetConfig.current(),
-              // Unwrapped rather than defaulted: an EMPTY authenticator would
-              // compose a `sender_auth` naming address zero, which is a
-              // well-formed signature over a transaction no Keystore will ever
-              // accept — the loud-vs-silent line this file is built on, landing
-              // on the wrong side. The type is optional now precisely so this
-              // cannot be written by accident.
-              let p256 = contracts.p256Authenticator,
-              let authenticator = VibenetTransaction.data(fromHex: p256)
-        else { throw Failure.cannotCompose }
+        guard let contracts = await VibenetConfig.current() else { throw Failure.cannotCompose }
+        // **THE CHAIN'S ANSWER BEATS THE DOCUMENT'S.** The Keystore's own
+        // record for this actor is authoritative and survives a redeploy that
+        // stops publishing the address; the config is the fallback for a device
+        // whose account the chain could not be asked about. Unwrapped rather
+        // than defaulted: an EMPTY authenticator would compose a `sender_auth`
+        // naming address zero — well-formed, and refused by every Keystore.
+        let authenticator: Data
+        if let live = await liveAuthenticator(for: account, keystore: contracts.keystore) {
+            authenticator = live
+        } else if let p256 = contracts.p256Authenticator,
+                  let fallback = VibenetTransaction.data(fromHex: p256) {
+            authenticator = fallback
+        } else {
+            throw Failure.noAccountStack
+        }
 
         let change = changeType == VibenetAccountChanges.revokeActor
             ? VibenetTransaction.Change.revokeActor(payload)
