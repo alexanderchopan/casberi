@@ -6361,6 +6361,160 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-privacyDevnetProbe YES` — Ethrex Privacy's read, phase by phase,
+        // then ONE LINE PER ACCOUNT (the `-todayProbe` truncation lesson: a
+        // joined multi-line NSLog gets cut by the log reader).
+        //
+        // **The seat had no headless door at all until prd §593d**, which is
+        // why every defect it shipped with was found by opening the room on a
+        // simulator or by reading. A blank Privacy room has FIVE causes that
+        // render as one silence and only one is a bug: nothing watched, no host
+        // answered, the chain was relaunched under a new genesis, the address is
+        // genuinely one of the many here that never transacted, or a parse
+        // drifted. The `reached=` / `genesis=` / `slot=` triple separates them
+        // in a single launch, and `genesis=` is first because it governs
+        // everything below — on a relaunched devnet every read answers
+        // perfectly and about a chain nothing was done on.
+        Hook(key: "privacyDevnetProbe") { _, _ in
+            Task { @MainActor in
+                async let idCall = PrivacyDevnetRPC.call(method: "eth_chainId", params: [])
+                async let genesisCall = PrivacyDevnetRPC.call(
+                    method: "eth_getBlockByNumber", params: ["0x0", false])
+                async let gasCall = PrivacyDevnetSend.suggestedGasPrice()
+                let (rawID, rawGenesis, gas) = await (idCall, genesisCall, gasCall)
+                let chainID = PrivacyDevnetRPC.hexInt(rawID)
+                let genesis = (rawGenesis as? [String: Any])?["hash"] as? String
+                NSLog("[Casberi] privacy| reached=%@ chain=%@ expected=8141 gasPrice=%@",
+                      rawID == nil ? "NO" : "YES",
+                      chainID.map(String.init) ?? "-",
+                      gas.map(String.init) ?? "-")
+                // A relaunch is GENESIS ALONE on this seat — §594's finding one
+                // chain over is that a measured reset left the chain id
+                // unchanged and the tip above its old high-water, so neither of
+                // those is a signal.
+                NSLog("[Casberi] privacy| genesis=%@ expected=%@ relaunched=%@",
+                      genesis ?? "-", PrivacyDevnetChain.genesis,
+                      genesis.map { $0.caseInsensitiveCompare(PrivacyDevnetChain.genesis) != .orderedSame ? "YES" : "NO" } ?? "unknown")
+                let live = PrivacyDevnetLiveState.shared
+                await live.refresh()
+                let cut = live.walkCut
+                NSLog("[Casberi] privacy| slot=%llu watching=%d accounts=%d unreadTx=%d scannedTo=%@",
+                      live.headSlot,
+                      PrivacyDevnetWatch.shared.addresses.count,
+                      live.accounts.count, cut.unread,
+                      cut.scannedTo.map(String.init) ?? "whole chain")
+                for a in live.accounts {
+                    NSLog("[Casberi] privacyAccount| %@ reached=%@ eth=%@ nonce=%@ frames=%d keys=%d roots=%d sponsored=%d moves=%d",
+                          a.address, a.reached ? "YES" : "NO",
+                          a.balanceWei.map { PrivacyDevnetMoney.line(wei: $0) } ?? "-",
+                          a.nonce.map(String.init) ?? "-",
+                          a.frameCount, a.nullifiers.count, a.roots.count,
+                          a.sponsoredCount, a.moves.count)
+                }
+                // The key is reported here too, because "Send is not on Home"
+                // and "the chain did not answer" look identical from outside.
+                NSLog("[Casberi] privacy| key=%@ canSend=%@",
+                      PrivacyDevnetKey.address() ?? "none on this phone",
+                      PrivacyDevnetKey.address() == nil ? "NO" : "YES")
+            }
+        },
+        // `-privacyRootProbe YES` — whether the roots this room draws were
+        // really registered, asked of the predeploy's own storage (prd §593d).
+        //
+        // **This is a WIRE-DRIFT assertion, not a verdict about a proof.** The
+        // EIP-8272 predeploy is write-only, so there is no `eth_call` that asks
+        // it anything; what it leaves behind is one storage word per ring
+        // index, and `PrivacyDevnetRoots.registrationKey`/`registrationValue`
+        // derive both from the reference the transaction carried. A match
+        // proves the source, slot and root we parsed are the ones the chain
+        // recorded. It proves NOTHING about whether the reference is still
+        // inside the window — a ring entry is only overwritten when a NEW
+        // registration lands on the same index, and on a chain this quiet that
+        // may never happen. Measured 2026-09-04: all four root-carrying
+        // transactions matched, including two whose slots left the window more
+        // than 14,000 slots ago. So `standing(of:headSlot:)` stays the only
+        // answer to "is this still good", and this is the check that our
+        // reading of `recentRootReferences` has not drifted.
+        Hook(key: "privacyRootProbe") { _, _ in
+            Task { @MainActor in
+                let refs = PrivacyDevnetLiveState.shared.accounts.flatMap(\.roots)
+                let head = PrivacyDevnetLiveState.shared.headSlot
+                NSLog("[Casberi] privacyRoot| refs=%d headSlot=%llu window=%llu",
+                      refs.count, head, PrivacyDevnetRoots.windowSlots)
+                if refs.isEmpty {
+                    NSLog("[Casberi] privacyRoot| nothing to check — watch %@ first, which is the only measured address whose transactions reference a root",
+                          PrivacyDevnetExample.all.first?.address ?? "-")
+                    return
+                }
+                for r in refs {
+                    let key = PrivacyDevnetRoots.registrationKey(
+                        sourceID: r.sourceID, slot: r.slot,
+                        hash: { Data(Keccak256.hash([UInt8]($0))) })
+                    let want = PrivacyDevnetRoots.registrationValue(
+                        sourceID: r.sourceID, slot: r.slot, root: r.root,
+                        hash: { Data(Keccak256.hash([UInt8]($0))) })
+                    let got = await PrivacyDevnetRPC.call(
+                        method: "eth_getStorageAt",
+                        params: [PrivacyDevnetChain.recentRoots,
+                                 "0x" + RLP.hex(key), "latest"]) as? String
+                    let stored = PrivacyDevnetRPC.hexData(got ?? "0x")
+                    NSLog("[Casberi] privacyRoot| slot=%llu ring=%llu standing=%@ registered=%@",
+                          r.slot, PrivacyDevnetRoots.ringIndex(slot: r.slot),
+                          String(describing: PrivacyDevnetRoots.standing(of: r, headSlot: head)),
+                          stored == want ? "YES" : (got == nil ? "unread" : "NO"))
+                }
+                NSLog("[Casberi] privacyRoot| ceiling: %@", PrivacyDevnetRoots.registrationCeiling)
+            }
+        },
+        // `-privacyKeyProbe YES|claim` — this phone's Ethrex Privacy key, and
+        // optionally the faucet.
+        //
+        // **`claim` is a WORD, not a flag** (`-framesKeyProbe`'s ruling): the
+        // faucet is rate limited, so a probe that spent the allowance on every
+        // headless run is one nobody could put in a sweep.
+        Hook(key: "privacyKeyProbe") { value, _ in
+            let spend = value.lowercased() == "claim"
+            Task { @MainActor in
+                let presence = PrivacyDevnetKey.presence()
+                let address = PrivacyDevnetKey.address()
+                // Read BEFORE create(), because afterwards there is an item
+                // either way and the orphan is no longer distinguishable.
+                let orphaned = PrivacyDevnetKey.keychainHoldsItem() && address == nil
+                NSLog("[Casberi] privacyKey| presence=%@ address=%@ item=%@ orphaned=%@",
+                      String(describing: presence), address ?? "-",
+                      PrivacyDevnetKey.keychainHoldsItem() ? "YES" : "NO",
+                      orphaned ? "YES" : "NO")
+                if presence != .present {
+                    do {
+                        let made = try PrivacyDevnetKey.create()
+                        NSLog("[Casberi] privacyKey| created=%@ adopted=%@",
+                              made, orphaned ? "YES" : "NO")
+                    } catch {
+                        NSLog("[Casberi] privacyKey| createFailed=%@", String(describing: error))
+                    }
+                }
+                guard let account = PrivacyDevnetKey.address() else {
+                    NSLog("[Casberi] privacyKey| no account — nothing to claim for"); return
+                }
+                guard spend else {
+                    NSLog("[Casberi] privacyKey| faucet=not asked (pass -privacyKeyProbe claim to spend the allowance)")
+                    return
+                }
+                do {
+                    let hash = try await PrivacyDevnetSend.claim(address: account)
+                    NSLog("[Casberi] privacyKey| faucet=sent tx=%@", hash)
+                } catch let f as PrivacyDevnetSend.Failure {
+                    if case .faucet(let verdict) = f {
+                        NSLog("[Casberi] privacyKey| faucet=%@ says=%@",
+                              String(describing: verdict), verdict.sentence ?? "-")
+                    } else {
+                        NSLog("[Casberi] privacyKey| faucet=%@", String(describing: f))
+                    }
+                } catch {
+                    NSLog("[Casberi] privacyKey| faucet=%@", String(describing: error))
+                }
+            }
+        },
         // `-framesProbe YES` — the Frames devnet's read, phase by phase, then
         // ONE LINE PER FRAME of the newest frame transaction (the
         // `-todayProbe` truncation lesson: a joined multi-line NSLog gets cut

@@ -767,8 +767,11 @@ enum PrivacyDevnetScopeRail {
     /// asset has no market, so no currency symbol and no conversion may appear.
     private static func eth(_ account: PrivacyDevnetAccount) -> String? {
         guard account.reached, let wei = account.balanceWei else { return nil }
-        let eth = wei / Decimal(sign: .plus, exponent: 18, significand: 1)
-        return "\(NSDecimalNumber(decimal: eth).doubleValue.formatted(.number.precision(.fractionLength(4)))) ETH"
+        // `PrivacyDevnetMoney` rather than the arithmetic inline (prd §593d):
+        // the send sheet states the same balance, and two spellings of one
+        // number is how a rail and a form come to disagree about what an
+        // account holds.
+        return PrivacyDevnetMoney.line(wei: wei)
     }
 
     static func matches(_ scope: String?, _ id: String) -> Bool {

@@ -717,7 +717,15 @@ enum BridgeCatalog {
                          "Which snapshot a proof named, and how long it stays valid",
                          "The steps each transaction ran, frame by frame",
                          "Who paid the gas, when it wasn't you",
-                         "Watching only — nothing is signed and nothing is sent"],
+                         // **THIS BULLET PROMISED THE SEAT ONLY WATCHED, UNTIL
+                         // prd §593d.** True when it shipped, and false the day
+                         // the room got its acts. A promise the app has
+                         // outgrown is the §83 fake status pointed at
+                         // ourselves; `privacy-selftest.sh` now fails the build
+                         // if the old wording comes back, so it cannot rot in
+                         // either direction. (The old sentence is deliberately
+                         // not quoted here — that guard greps this file.)
+                         "Make a test account on this phone, and spend on a key that can't be tied to your last"],
               needsSetup: true, added: day(2026, 9, 4)),
         Offer(name: "Linear",      tagline: "Your issues stay in reach",             group: "Work",      connectable: true,
               summary: "The issues assigned to you join your things and surface when they matter. Connects with a personal API key from Linear settings — it stays in \(DS.device)'s Keychain.",

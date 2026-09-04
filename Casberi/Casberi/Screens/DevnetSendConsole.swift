@@ -643,6 +643,25 @@ struct DevnetSendLeg: Identifiable, Equatable {
 /// one act, which is vibenet and Hegotá — they get byte-identical behaviour to
 /// before, and that is the whole reason this is a parameter rather than a
 /// rewrite of the two screens they share.
+/// **ONE TWO-STATE CHOICE ABOUT THE TRANSACTION (prd §593d).**
+///
+/// Shaped after `DevnetStitch.Atomicity.chosen` and for the same reason: a
+/// control whose OFF state is undescribed reads as a feature you are switching
+/// on rather than as a choice between two things the chain really does.
+struct DevnetSendChoice {
+    let title: String
+    /// What the transaction does with the choice ON.
+    let on: String
+    /// What it does with the choice OFF. **Never omitted** — this is the state
+    /// most people will be in, and leaving it unsaid is how a control comes to
+    /// imply that not using it is a failure to do something.
+    let off: String
+    /// **OFF unless the venue says otherwise, and a venue should think twice.**
+    /// A default that changes what gets signed without anybody choosing it is a
+    /// setting pretending to be a behaviour.
+    var defaultOn = false
+}
+
 struct DevnetStitch {
     /// The head row's words, or **nil for a venue with no built leg at all
     /// (2026-09-04)**.
@@ -877,8 +896,29 @@ struct DevnetSendSheet: View {
     let maxAmount: String?
     let isValidAddress: (String) -> Bool
     let isValidAmount: (String) -> Bool
-    /// Returns nil on success, or the sentence to show on failure.
-    let perform: (String, String, VibenetAdvanced) async -> String?
+    /// Returns nil on success, or the sentence to show on failure. The final
+    /// `Bool` is `choice`'s state — passed as a PARAMETER rather than read from
+    /// shared state at send time, for the reason `advancedSupported` already
+    /// gives below: a value written in one place and read in another is a race,
+    /// and this one would sign a transaction with a setting somebody was still
+    /// changing. Venues with no choice name it `_`, which is the compiler
+    /// recording that they were asked.
+    let perform: (String, String, VibenetAdvanced, Bool) async -> String?
+
+    /// **A TWO-STATE CHOICE ABOUT THE TRANSACTION ITSELF (prd §593d).**
+    ///
+    /// Nil for every venue but Ethrex Privacy, whose one-time spend key is a
+    /// capability neither sibling chain has — a send on a fresh 32-byte nonce
+    /// key cannot be tied to the last one, which is the unlinkability that seat
+    /// is named for and which its room could READ from the day it shipped
+    /// without ever being able to make one.
+    ///
+    /// **BOTH STATES ARE SPELLED**, `DevnetStitch.atomicity`'s rule: what the
+    /// unusual answer does is exactly what a person cannot infer, and leaving
+    /// OFF undescribed makes the control read as a feature rather than as a
+    /// choice between two real behaviours.
+    var choice: DevnetSendChoice? = nil
+
     /// **What this send BECOMES, if the venue has anything to say.** Given the
     /// destination and amount currently entered, return the steps the
     /// transaction will run. Nil for every venue whose send is one act.
@@ -927,6 +967,9 @@ struct DevnetSendSheet: View {
     /// this chain's answer is the unusual one.
     @State private var atomicChoice = false
     @State private var advanced = VibenetAdvanced.default
+    /// Seeded from the venue's own default in `onAppear`, never here — a
+    /// `@State` initialiser cannot read another stored property.
+    @State private var choiceOn = false
     @State private var showingAdvanced = false
 
     /// What this send will DO. For a venue whose batch is atomic by
@@ -967,6 +1010,9 @@ struct DevnetSendSheet: View {
         .background(DS.surfaceSheet)
         .animation(DS.Motion.standard, value: picked)
         .animation(DS.Motion.standard, value: addingLeg)
+        // Seeded once, here rather than in the `@State` initialiser, which
+        // cannot read another stored property.
+        .onAppear { if let choice { choiceOn = choice.defaultOn } }
     }
 
     // MARK: Who
@@ -1177,6 +1223,18 @@ struct DevnetSendSheet: View {
             // height is a term in that audit's sum.
             if let plan {
                 let steps = plan(destination, amount)
+                // **THE CONTROL IS DRAWN UNCONDITIONALLY AND THE EXPLANATION
+                // BELOW IT YIELDS** — this file's own rule, stated in the
+                // strip's comment: "Stepping aside is honest here because the
+                // strip is an EXPLANATION… A control would have to shrink the
+                // screen instead." So the choice takes its ~36pt on every
+                // phone and the plan strip is what gives way when there is no
+                // room for both.
+                if let choice {
+                    choiceRow(choice)
+                    Spacer(minLength: DS.Space.s3)
+                }
+
                 if !steps.isEmpty {
                     // **`ViewThatFits`, NOT a fixed height** (prd §548). The
                     // first cut reserved 40pt and added it to this file's own
@@ -1534,6 +1592,34 @@ struct DevnetSendSheet: View {
         .dsHover()
     }
 
+    /// The venue's own two-state choice, above the keypad.
+    ///
+    /// **Compact on purpose.** `atomicRow` is the same control one screen over
+    /// and can afford `callout15` over `label12` with `s3` padding, because the
+    /// leg list scrolls; this screen does not, and its own budget note records
+    /// that it has negative slack on a 736pt phone before anything optional
+    /// exists. So this is one line and a toggle, and the plan strip below it is
+    /// what yields when both cannot fit.
+    private func choiceRow(_ choice: DevnetSendChoice) -> some View {
+        HStack(spacing: DS.Space.s3) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(choice.title)
+                    .dsText(.callout15).fontWeight(.semibold)
+                    .foregroundStyle(DS.textPrimary)
+                Text(choiceOn ? choice.on : choice.off)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: DS.Space.s2)
+            Toggle("", isOn: $choiceOn)
+                .labelsHidden()
+                .tint(tint)
+        }
+        .padding(.vertical, DS.Space.s2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     /// **THE DOOR ONTO THE ADVANCED FIELDS, and it STATES its setting.**
     ///
     /// A row reading only "Advanced" makes a window left set from a previous
@@ -1729,7 +1815,7 @@ struct DevnetSendSheet: View {
         busy = true
         errorText = nil
         Task { @MainActor in
-            let failure = await perform(to, spending, advanced)
+            let failure = await perform(to, spending, advanced, choiceOn)
             busy = false
             if let failure {
                 errorText = failure

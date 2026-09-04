@@ -3,8 +3,14 @@ import LocalAuthentication
 import P256K
 import Security
 
-/// THE KEY THIS PHONE SIGNS THE FRAMES DEVNET WITH (prd §548, 2026-09-01) —
+/// THE KEY THIS PHONE SIGNS ETHREX PRIVACY WITH (prd §593a, 2026-09-04) —
 /// secp256k1, stored on this device, for a devnet whose money is worthless.
+///
+/// The header said FRAMES DEVNET until §593d: this file was started from
+/// `FramesKey` and its first line came with it. Harmless to the compiler and
+/// not to a reader — the keychain service below is the thing that actually
+/// keeps the two apart, and a comment naming the wrong chain is how somebody
+/// later concludes they are the same key.
 ///
 /// ## A SEPARATE KEY FROM HEGOTÁ'S, AND THAT IS THE POINT
 ///
@@ -15,7 +21,8 @@ import Security
 /// key" on one screen silently empties the other seat, and a devnet bug in one
 /// reaches the other's account. Different chain, different key, its own
 /// keychain service. The harness fails the build if this file reaches for
-/// either `casberi-hegota-signer` or `casberi-dev-signer`.
+/// either `casberi-hegota-signer`, `casberi-frames-signer` or
+/// `casberi-dev-signer`.
 ///
 /// ## WHY THIS IS NOT THE VIBENET KEY, AND WHY IT IS A WEAKER PROMISE
 ///

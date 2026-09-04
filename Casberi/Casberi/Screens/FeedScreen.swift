@@ -495,6 +495,9 @@ struct FeedScreen: View {
         /// The Frames devnet's send, routed here for `hegotaSend`'s reason: a
         /// `.sheet` inside a List row half-opens and closes (§548).
         case framesSend
+        /// Ethrex Privacy's send, here for the same reason as its three
+        /// siblings: a `.sheet` inside a List row half-opens and closes.
+        case privacyDevnetSend
         /// ONE FRAMES TRANSACTION, and the three routes below it — all four
         /// here for `hegotaMove`'s two reasons at once: the seat lands no
         /// `Thing` so nothing can ride `.thing`, and every card that opens one
@@ -555,6 +558,7 @@ struct FeedScreen: View {
             case .vibenetWatch: "vibenetWatch"
             case .hegotaSend: "hegotaSend"
             case .framesSend: "framesSend"
+            case .privacyDevnetSend: "privacyDevnetSend"
             case .framesMove(let m, _): "framesMove:\(m.id)"
             case .framesFrame(let m, let i): "framesFrame:\(m.id)#\(i)"
             case .framesPayer(let p, _): "framesPayer:\(p.id)"
@@ -781,6 +785,104 @@ struct FeedScreen: View {
               }), account.reached else { return nil }
         return FramesMoney.balanceLine(weiHex: account.balanceWeiHex)
             .map { String(localized: "\($0) available") }
+    }
+
+    /// Who Ethrex Privacy can send to, watched addresses first.
+    ///
+    /// The same shape as `framesSendCandidates` and for the same reason: a
+    /// watch list is empty on every fresh install, so the picker would open
+    /// onto nothing to send TO — the dead end §83 bans wearing a picker's
+    /// clothes. Both examples are MEASURED addresses that have really
+    /// transacted on 8141 (`PrivacyDevnetExample`), and this phone's own
+    /// account is excluded, since sending to yourself is the one destination
+    /// the picker should never suggest.
+    private var privacyDevnetSendCandidates: [(address: String, name: String?)] {
+        let me = PrivacyDevnetKey.address()
+        var seen = Set<String>()
+        var out: [(address: String, name: String?)] = []
+        for address in PrivacyDevnetWatch.shared.addresses + PrivacyDevnetExample.all.map(\.address) {
+            let key = address.lowercased()
+            guard !seen.contains(key) else { continue }
+            guard me == nil || address.caseInsensitiveCompare(me!) != .orderedSame else { continue }
+            seen.insert(key)
+            out.append((address, PrivacyDevnetWatch.shared.name(for: address)
+                                 ?? PrivacyDevnetExample.all.first { $0.address == address }?.title))
+        }
+        return out
+    }
+
+    /// What the sending account holds, off the last sweep — never a live read,
+    /// so a keystroke never spends a request. Nil when the sweep could not
+    /// reach the chain: a failed read and a real zero must not look alike
+    /// (§83), so the line is absent rather than claiming nothing is held.
+    private var privacyDevnetHeldLine: String? {
+        guard let mine = PrivacyDevnetKey.address(),
+              let account = PrivacyDevnetLiveState.shared.accounts.first(where: {
+                  $0.address.caseInsensitiveCompare(mine) == .orderedSame
+              }), account.reached, let wei = account.balanceWei else { return nil }
+        return String(localized: "\(PrivacyDevnetMoney.line(wei: wei)) available")
+    }
+
+    /// Watch one of the room's example addresses, from the room (prd §593d).
+    ///
+    /// **The room does not navigate away.** The whole point of the door is that
+    /// somebody standing in a quiet room gets something to read without leaving
+    /// it, so this watches and refreshes in place — where the connect screen's
+    /// own first watch routes here, because there the room IS the new place.
+    private func watchPrivacyDevnetExample(_ address: String) {
+        guard PrivacyDevnetWatch.shared.add(address) else { return }
+        PrivacyDevnetBridge.registerBridge(store: bridges)
+        Task { await PrivacyDevnetLiveState.shared.refresh() }
+        chrome.refreshPulse &+= 1
+    }
+
+    /// Send on Ethrex Privacy.
+    ///
+    /// **`freshKey` is this chain's own control and neither sibling has one**
+    /// (prd §593d): a spend on a brand-new 32-byte nonce key cannot be tied to
+    /// the last one, which is the unlinkability the seat is named for and which
+    /// the room could READ since it shipped without ever being able to make one.
+    private func sendPrivacyDevnet(to: String, amount: String, freshKey: Bool) async -> String? {
+        guard !DemoMode.isActive else {
+            return String(localized: "Nothing is sent in the demo — this is where your own key would sign it.")
+        }
+        guard DevnetSendParse.isValidAddress(to),
+              let wei = DevnetSendParse.weiData(from: amount),
+              PrivacyDevnetKey.address() != nil else {
+            return String(localized: "Couldn't send.")
+        }
+        // A fresh key that the system generator refused is DROPPED rather than
+        // sent weak: a predictable "unlinkable" key is worse than an honest
+        // linkable one, because the person believes it.
+        var key: Data?
+        if freshKey {
+            let made = PrivacyDevnetSend.freshNonceKey()
+            guard !made.isEmpty else {
+                return String(localized: "Couldn't make a one-time spend key on this phone — nothing was sent.")
+            }
+            key = made
+        }
+        do {
+            let hash = try await PrivacyDevnetSend.sendValue(
+                to: to, weiHex: "0x" + (wei.isEmpty ? "0" : RLP.hex(wei)), freshKey: key)
+            _ = hash
+            await PrivacyDevnetLiveState.shared.refresh()
+            return nil
+        } catch let failure as PrivacyDevnetSend.Failure {
+            switch failure {
+            case .noKey:            return String(localized: "There's no account on this phone yet.")
+            case .signingRefused:   return String(localized: "The signature was refused.")
+            case .chainUnreachable: return String(localized: "Couldn't reach the chain — nothing was sent.")
+            // The node's OWN words (§530). This chain's refusals name the field
+            // they were decoding, which is what made its envelope findable at
+            // all — throwing that away would discard the most useful thing it
+            // says, on the screen where a refusal costs the most.
+            case .refused(let why): return String(localized: "The network refused it: \(why)")
+            case .faucet(let verdict): return verdict.sentence
+            }
+        } catch {
+            return String(localized: "Couldn't send.")
+        }
     }
 
     /// The batch being built, in the shape the ROOM reads a finished one.
@@ -4181,7 +4283,7 @@ struct FeedScreen: View {
                 // `_` is the compiler recording that this venue was asked and has
                 // nothing to set — Hegotá's envelope carries no nonce channel,
                 // validity window or metadata.
-                perform: { to, amount, _ in await sendHegota(to: to, amount: amount) })
+                perform: { to, amount, _, _ in await sendHegota(to: to, amount: amount) })
                 case .framesSend:
             DevnetSendSheet(
                 venue: String(localized: "Frames"),
@@ -4196,7 +4298,7 @@ struct FeedScreen: View {
                 maxAmount: nil,
                 isValidAddress: DevnetSendParse.isValidAddress,
                 isValidAmount: { DevnetSendParse.weiData(from: $0) != nil },
-                perform: { to, amount, _ in await sendFrames(to: to, amount: amount) },
+                perform: { to, amount, _, _ in await sendFrames(to: to, amount: amount) },
                 // The one thing neither neighbour can say — see
                 // `FramesSendPlanSteps`.
                 plan: FramesSendPlanSteps.steps,
@@ -4257,7 +4359,44 @@ struct FeedScreen: View {
                             .filter { $0.frame.mode != 1 }
                             .map(\.joinedToNext)
                     }))
-case .vibenetSend(let account):
+        // **ETHREX PRIVACY'S SEND (prd §593d)** — the seat's first act. It
+        // shipped watch-only because §593a could not reproduce the type-`0x6`
+        // envelope; §593c settled that against the node and wrote the encoder,
+        // and then nothing in the app ever called it.
+        case .privacyDevnetSend:
+            DevnetSendSheet(
+                venue: String(localized: "Ethrex Privacy"),
+                tint: DS.brandHue(for: PrivacyDevnetIdentity.source) ?? DS.tint,
+                unit: String(localized: "test ETH"),
+                candidates: privacyDevnetSendCandidates,
+                heldLine: privacyDevnetHeldLine,
+                // **NO MAX**, Hegotá's and Frames' rule and this chain's too:
+                // the sender pays its own gas, so an amount equal to the whole
+                // balance cannot pay for itself and is a guaranteed failure —
+                // the dead control §83 bans wearing a convenience's clothing.
+                maxAmount: nil,
+                isValidAddress: DevnetSendParse.isValidAddress,
+                isValidAmount: { DevnetSendParse.weiData(from: $0) != nil },
+                perform: { to, amount, _, fresh in
+                    await sendPrivacyDevnet(to: to, amount: amount, freshKey: fresh)
+                },
+                // **THE ONE THING NEITHER SIBLING CAN DO.** Both states are
+                // spelled because OFF is the one that matters: the ordinary
+                // channel is what every measured transaction on this chain uses
+                // and what links a person's sends to each other, and leaving
+                // that undescribed makes the control read as a feature rather
+                // than as the choice it is. OFF by default — a default that
+                // changes what gets signed without anybody choosing it is a
+                // setting pretending to be a behaviour, and this one also
+                // changes which nonce sequence the transaction claims.
+                choice: DevnetSendChoice(
+                    title: String(localized: "One-time spend key"),
+                    on: String(localized: "Spends on a fresh key, so this can't be tied to your last send."),
+                    off: String(localized: "Spends on your usual key, where each send follows the last.")),
+                // Two frames, and the first one is what makes the second legal
+                // — see `PrivacyDevnetSendPlanSteps`.
+                plan: PrivacyDevnetSendPlanSteps.steps)
+        case .vibenetSend(let account):
             DevnetSendSheet(
                 venue: String(localized: "vibenet"),
                 tint: DS.brandHue(for: VibenetIdentity.source) ?? Color.fixed("#0052ff"),
@@ -4267,7 +4406,7 @@ case .vibenetSend(let account):
                 maxAmount: nil,
                 isValidAddress: DevnetSendParse.isValidAddress,
                 isValidAmount: { DevnetSendParse.weiData(from: $0) != nil },
-                perform: { to, amount, advanced in
+                perform: { to, amount, advanced, _ in
                     await sendVibenet(from: account, to: to, amount: amount, advanced: advanced)
                 },
                 // **THE SECOND VENUE THAT BATCHES, and it batches a different
@@ -4589,13 +4728,33 @@ case .vibenetSend(let account):
                     head: head,
                     section: privacyScope,
                     accounts: PrivacyDevnetRoomSource.accounts(scope: chrome.privacyDevnetScope),
-                    headSlot: PrivacyDevnetLiveState.shared.headSlot)
+                    headSlot: PrivacyDevnetLiveState.shared.headSlot,
+                    walkCut: PrivacyDevnetLiveState.shared.walkCut)
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                       bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
             .task { await PrivacyDevnetLiveState.shared.refreshIfStale() }
+            // **THE ROWS AND THE ACTS, OUTSIDE THE CLIPPED SLOT (prd §593d).**
+            // `DSRoomSlot` is a hard 300pt box, so drawing the list inside it
+            // cut every row past the third off the bottom with no scroll and no
+            // sign — reported as the lists not showing at all. `FramesRoomList`
+            // is the same split one seat over.
+            Section {
+                PrivacyDevnetRoomList(
+                    head: head,
+                    section: privacyScope,
+                    accounts: PrivacyDevnetRoomSource.accounts(scope: chrome.privacyDevnetScope),
+                    headSlot: PrivacyDevnetLiveState.shared.headSlot,
+                    walkCut: PrivacyDevnetLiveState.shared.walkCut,
+                    onSend: { feedSheet = .privacyDevnetSend },
+                    onWatchExample: watchPrivacyDevnetExample)
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                      bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
             // **THE SWITCHER WAS MISSING ON THE FIRST BUILD**, found by opening
             // the room on a simulator rather than by any check: the seven scopes
             // existed, `present()` computed them correctly, and six of them were

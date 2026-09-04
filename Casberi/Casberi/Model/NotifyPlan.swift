@@ -534,12 +534,20 @@ struct NotifyLedger {
 /// facts here keep: a reset stays sayable for a week, a timelock for 36 hours.
 enum NotifyDevnet {
 
-    /// The two seats, closed. Each carries its own copy so the words live
-    /// where the harness can read them.
+    /// The seats, closed. Each carries its own copy so the words live where
+    /// the harness can read them.
+    ///
+    /// **Ethrex Privacy joined in §593d and Ethrex Frames deliberately did
+    /// not.** A relaunch is only news about a chain somebody has state on, and
+    /// the Privacy seat now makes a key, claims from a faucet and sends — so a
+    /// relaunch there really does take something that was somebody's. Frames
+    /// has the same claim and no reset detection of its own to feed this, which
+    /// is a gap worth closing and not one to close by inventing a signal here.
     enum Seat: String, Sendable, CaseIterable {
-        case vibenet, hegota
+        case vibenet, hegota, privacy
 
-        /// **MUST equal `VibenetIdentity.source` / `HegotaIdentity.source`.**
+        /// **MUST equal `VibenetIdentity.source` / `HegotaIdentity.source` /
+        /// `PrivacyDevnetIdentity.source`.**
         /// It routes the deep link and picks the brand mark for the right-hand
         /// slot, and a wrong string fails at neither — the notification arrives
         /// with a blank slot and opens the All feed. Tied to both constants by
@@ -548,6 +556,7 @@ enum NotifyDevnet {
             switch self {
             case .vibenet: return "Base Vibenet"
             case .hegota:  return "Ethrex Hegotá"
+            case .privacy: return "Ethrex Privacy"
             }
         }
 
@@ -608,6 +617,12 @@ enum NotifyDevnet {
             body = String(localized: "vibenet was reset since you last looked, so its history starts again from here. Your accounts keep their addresses.")
         case .hegota:
             body = String(localized: "Ethrex Hegotá was relaunched from genesis, so everything it held is gone. The addresses you watch are still yours.")
+        case .privacy:
+            // **THE ROOM'S OWN SENTENCE, WORD FOR WORD.** `PrivacyDevnetRoom
+            // .sentence(.relaunched)` says exactly this, and a notification
+            // that words it differently lands somebody in a room that appears
+            // to be talking about something else.
+            body = String(localized: "This devnet was relaunched from genesis, so everything it held is gone. The addresses you watch are still yours.")
         }
         return NotifyPlan(id: "devnet:reset:\(r.seat.rawValue):\(r.key)",
                           kind: .chainReset,

@@ -48175,6 +48175,169 @@ The `row(crown, tail)` rule from §593 is kept and generalised: the anatomy draw
 
 **Its harness block was landed separately (`c7ca00f8`) by this session**, since `privacy-selftest.sh` was open here and two sessions editing one file is how one loses work. **One of its assertions could not fail**: the label-cap fixture collapsed to exactly `labelCap` marks, so removing the cap changed nothing and its own suggested mutation SURVIVED on the first run. A fixture only tests the rule it NAMES if it fails that rule and passes every other one — the fourth instance of that lesson in one day. Replaced with five marks spread wider than `labelGap`, asserting its own premise first so it cannot quietly stop discriminating.
 
+### 593d. The Privacy room gets its acts, its rows out of the box, and a nightly proof the roots are real (user: "how would you improve our Privacy room" / "UI and UX and data" / "do all", then "lists weren't showing in the privacy room, will they now?", 2026-09-04)
+
+Ten items, and the two that mattered most were not on the list: a bug the user
+reported mid-pass, and a measurement that refuted one of the ten.
+
+**1. THE ROOM COULD READ THE CHAIN AND NOT TOUCH IT.** `PrivacyDevnetSend` and
+`PrivacyDevnetKey` were written when §593c settled the envelope, are held
+byte-exact by `privacy-tx-selftest.sh`, and **had ZERO callers in the app** —
+next to three sibling devnets that all send, on the one chain in the family
+whose defining capability is something you have to DO. The connect screen still
+said "The seat makes no key". `PrivacyDevnetSendCard` is Frames' shape: Create
+where there is no key, then the split panel (Send tinted, Top up the ink half).
+**Two acts, so §559's crown rung stays** — Create and Authorize are vibenet's
+acts and there is no account abstraction here to authorize a key against, so a
+third tile would be the dead control §83 bans. The acts are in the ROOM and not
+on the connect screen, which is §594's line: an act that WRITES moves to Home,
+an act that changes what you are LOOKING AT stays with the view.
+
+**2. `DSRoomSlot` IS A HARD 300pt BOX THAT CLIPS, AND THIS ROOM DREW ITS LISTS
+INSIDE IT.** Reported while the pass was running (*"lists weren't showing in the
+privacy room… lists should be on every scope screen and i'm not sure why they
+aren't"*), and that is exactly what it was: the rows were drawn, and cut off the
+bottom of a fixed box with no scroll and no sign. The figure's 84pt plus its gap
+left ~200pt, so everything past the third or fourth row was gone; on Home the
+sentence, the ring and the tallies filled the box on their own, so the moves
+that scope's own summary promises were clipped away entirely. **Frames already
+had the answer and this room had not taken it** — `FramesRoomFigure` sits in the
+slot and `FramesRoomList` is its own feed section underneath, unclipped. So
+`PrivacyDevnetRoomList` is a second section now, and the acts went with it: the
+send panel is two 146pt tiles and a gap, so **the feature in item 1 would have
+been clipped out of existence by the box it was added to.** Guarded by a check
+that reads the card's `content` and fails if it reaches `scopeList` — putting
+the rows back inside would look like an ordinary tidy-up.
+
+**3. THE PREDEPLOY'S STORAGE, DISASSEMBLED AND THEN MEASURED — and the
+measurement REFUSED the feature it was for.** The proposal was to verify a root
+by reading the chain rather than by arithmetic. `eth_getCode` on `0x…8272`
+returns 144 bytes which disassemble to a WRITE-ONLY entry point: given 64 bytes
+of calldata it derives `sourceId = keccak(caller ‖ calldata[0..32])`, then
+stores `keccak(K1 ‖ sourceId ‖ uint64(slot) ‖ root)` at storage key
+`keccak(K2 ‖ sourceId ‖ uint64(slot & 0x1fff))`. All four root-carrying
+transactions on the chain verify byte-exactly against that derivation.
+**And two of the four had left the window more than 14,000 slots ago and STILL
+MATCHED** — because a ring entry is only overwritten when a NEW registration
+lands on the same index, which on a chain this quiet may never happen. So the
+storage read cannot improve the standing verdict, and the feature as proposed
+would have reported an aged root as live: the exact §83 failure, arriving
+through a check meant to make the room MORE honest. It ships as
+`-privacyRootProbe` and a nightly wire-drift assertion instead, with the ceiling
+stated in the source as a constant so it travels with the function. **The
+`0x1fff` in that mask is also where `windowSlots` comes from**, so the 8192 the
+room has always claimed is now measured against the deployed code rather than
+asserted beside it.
+
+**4. THE FRESH SPEND KEY, and its nonce semantics were MEASURED rather than
+reasoned.** A send on a brand-new 32-byte nonce key cannot be tied to the last
+one — the unlinkability the seat is named for, which the room could READ from
+the day it shipped without ever being able to make one. The open question was
+what sequence a fresh channel starts at, and this node **refuses the read that
+would answer it** (a third `eth_getTransactionCount` argument is "Invalid
+params: Expected 2 params"). Reading every type-`0x6` transaction on the chain
+settled it: all four carrying 32-byte keys report `nonceSeq: 0x0`, as do the
+three on the numbered channels, and the **only** non-zero sequences (`0xa`,
+`0x13`) both belong to one sender on the ordinary `0x0` channel. Per-channel,
+starting at zero. It also fails safely if that changes — a wrong sequence is
+refused in the node's own words. A generator failure DROPS the option rather
+than sending a weak key, because a predictable "unlinkable" key is worse than an
+honest linkable one: the person believes it.
+
+**WHERE THE CONTROL GOES, and the file's own rule decided it.** The amount
+screen records that it has negative slack on a 736pt phone before anything
+optional exists, which is why the plan strip lives in a `ViewThatFits`. Its
+comment also says why that is allowed: *"Stepping aside is honest here because
+the strip is an EXPLANATION… A control would have to shrink the screen
+instead."* So `DevnetSendChoice` draws unconditionally and the plan strip is what
+yields. The value travels through `perform` as a parameter, never read from
+shared state at send time — the same race `advancedSupported` already names.
+
+**5. THE WALK SAYS WHAT IT DID NOT READ.** Two silent ceilings: `walkCap` drops
+the oldest candidates and `walkChunkCap` can stop the log scan before the tip.
+A truncated room and a complete one look IDENTICAL from outside (§307, §309) —
+and it bit here in a form the figures were already guarding against, since
+`PrivacyDevnetFigure`'s own stated rule is "a truncated list SAYS SO" and every
+drawing obeyed it while the walk feeding them cut in silence. **Neither cut is
+ever attributed to an address**: the cap drops candidates chain-wide, and which
+of them were whose is exactly what reading them would have told us.
+
+**6. A RELAUNCH REACHES THE LOCK SCREEN.** §593 ruled this seat raises no
+notification; that ruling was about the ROOT WINDOW — a deadline nobody can act
+on — and it still holds, enforced against `PrivacyDevnetRoots`. A relaunch is
+the opposite: the one fact that makes every reading in the room describe a chain
+that no longer exists. Genesis alone is the signal (§594's finding one chain
+over: a measured reset left the chain id unchanged and the tip above its old
+high-water), stamped on FIRST sight and never re-stamped, or the moment we claim
+to have noticed moves forward forever and it is permanently news. **Frames
+deliberately did not join** — it has the same claim and no reset detection to
+feed this, which is a gap worth closing and not one to close by inventing a
+signal here.
+
+**7. THE QUIET STATE HAD NO DOOR.** Somebody who pasted their own address landed
+on "Nothing on this chain from the address you watch, yet." with no next step
+anywhere on screen, while the two addresses that DO have something to show lived
+only on the connect screen — which you reach this room by leaving.
+`PrivacyDevnetExample` is shared by three surfaces now (connect rows, the send
+picker, the room), and the room offers them only where they are really the
+answer: never while a relaunch is being announced, and never once there is
+something to read.
+
+**8. THE ACTIVITY FIGURE COLLAPSED ON THE REAL CHAIN.** Marks were placed at
+their true fraction of the block span, which is the honest drawing and useless
+here: the pool address's four transactions sit in two pairs five blocks apart
+across ~10,500, which is 0.05% of the width — four marks rendering as two, on
+the figure whose whole job is how many there were. `PrivacyDevnetFigure.spaced`
+keeps order and span exact and refuses to draw two marks closer than one mark's
+width, sweeping back from the right so the last one stays on the track. A NUDGE,
+never a re-ranking: a figure that reordered marks to fit would be a worse lie
+than the one it fixed. The block range underneath is where the precision it
+costs actually lives.
+
+**9. Smaller, and each its own class.** The frames strip was a flat 240pt, a
+phone's measurement wearing no label, which on an iPad sat in the left third of
+an empty row; it takes the width it is given, capped. The Roots scope states the
+window in hours ONCE, hedged and naming the assumption — `duration(slots:)`
+existed for exactly that and was called by nothing, and a per-row countdown in
+minutes would be the same assumption repeated as a fact on the one number
+somebody might act on. `PrivacyDevnetKey`'s header said **"THE KEY THIS PHONE
+SIGNS THE FRAMES DEVNET WITH"**, carried in from the file it was started from —
+harmless to the compiler, and how somebody later concludes the two are the same
+key. And `FaceScopeRail` carried a private copy of the balance arithmetic the
+send sheet now needs, so `PrivacyDevnetMoney` is the one spelling.
+
+**10. THE SEAT HAD NO HEADLESS DOOR AT ALL**, which is why every defect it
+shipped with was found by opening the room or by reading. Three probes now, each
+because silence is the healthy answer with several causes and only one is a bug.
+`NetworkReach` gains the faucet host and the purpose gains its signature
+sentence — the day the app really posts to it and not before (§531's lesson, one
+seat over). The catalog's "Watching only — nothing is signed and nothing is
+sent" bullet is REPLACED and its old wording is now a build failure: a promise
+the app has outgrown is §83 pointed at ourselves.
+
+**FOUR HARNESS DEFECTS FOUND, and three were in checks written this session.**
+(a) A pre-existing mutation **had never run**: a trailing space after an empty
+replacement broke a zsh line continuation, so the next line executed as a
+command and "command not found: static func isNullifier…" scrolled past in the
+middle of a passing run. A guard that cannot fail certifies nothing, which is
+this repo's own rule turned on its own harness. (b) The ring-index fixture used
+slot `0xaf1`, which is INSIDE the first turn — so "hashes the ring index" and
+"hashes the raw slot" were the same assertion and the mutation swapping them
+survived; 13361 wraps to 5169 and is the only shape that tells them apart. (c)
+The mask mutation matched the DOC COMMENT above the function, which quotes the
+expression verbatim, so it edited the prose explaining the rule and left the
+rule alone — the Obsidian/Cursor lesson arriving through a mutation instead of a
+grep. (d) Two new drift guards did not fire when mutated: one read the wrong
+region of the file, the other a string a second call site also satisfied. All
+four are the same lesson and it is the one this repo keeps paying for: **a check
+is not a check until it has been made to fail.**
+
+**UNSEEN ON A DEVICE.** The build is green, `privacy-selftest.sh` passes with 38
+mutations and 18 drift guards, and no simulator was opened: the send has never
+been tapped from the app, the faucet has never been claimed from it, and the
+room's two sections have never been looked at side by side. The list split is
+reasoned from `FramesRoomList`, which ships today in the same shape.
+
 ### 591b. amendment — one cover per feed, and the agent's door stops being the berry (2026-09-04)
 
 Two reports after the dock landed on a device (user: *"i saw the dock. it works

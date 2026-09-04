@@ -185,4 +185,108 @@ enum PrivacyDevnetRoots {
     /// also the honest common case, since most transactions on this chain carry
     /// an empty `recentRootReferences` (measured: 10 of 14).
     static func present(_ references: [Reference]) -> Bool { !references.isEmpty }
+
+    // MARK: - What the predeploy actually stored (prd §593d)
+
+    /// The two constants the EIP-8272 predeploy hashes with, READ OFF ITS OWN
+    /// DEPLOYED BYTECODE and then confirmed against live state — not from any
+    /// specification, because none of this is specified anywhere this project
+    /// can reach.
+    ///
+    /// `eth_getCode` on `0x…8272` returns 144 bytes which disassemble to a
+    /// WRITE-ONLY entry point: given 64 bytes of calldata it derives
+    /// `sourceId = keccak(caller ‖ calldata[0..32])`, then stores
+    /// `keccak(K1 ‖ sourceId ‖ uint64(slot) ‖ root)` at storage key
+    /// `keccak(K2 ‖ sourceId ‖ uint64(slot & 0x1fff))`.
+    ///
+    /// **The `0x1fff` in that mask is where `windowSlots` comes from**, and it
+    /// is the same 8192 the constant above states — so the two agree, measured
+    /// rather than assumed.
+    static let registrationHashDomain = "8f42481679c8e6fefa040974b3c905e0ce3f2e464ba93acdb074a41181617efc"
+    static let registrationSlotDomain = "bdc897da2177d260ff5f4be5d4b2aad43f89c3347a305b584fa5a2546d053daa"
+
+    /// The ring index a slot occupies. `slot & (windowSlots - 1)`, which is the
+    /// predeploy's own `0x1fff` mask rather than a modulo we chose — and the
+    /// reason the window is a power of two at all.
+    static func ringIndex(slot: UInt64) -> UInt64 { slot & (windowSlots - 1) }
+
+    /// Where the predeploy keeps this source's entry for this slot.
+    ///
+    /// Pair it with `registrationValue` and one `eth_getStorageAt`: equal means
+    /// the chain really holds the registration this transaction referenced.
+    static func registrationKey(sourceID: Data, slot: UInt64,
+                                hash: (Data) -> Data) -> Data {
+        var pre = bytes(hex: registrationSlotDomain)
+        pre.append(padded32(sourceID))
+        pre.append(bigEndian64(ringIndex(slot: slot)))
+        return hash(pre)
+    }
+
+    /// What the predeploy stored there, if this reference was really registered.
+    static func registrationValue(sourceID: Data, slot: UInt64, root: Data,
+                                  hash: (Data) -> Data) -> Data {
+        var pre = bytes(hex: registrationHashDomain)
+        pre.append(padded32(sourceID))
+        pre.append(bigEndian64(slot))
+        pre.append(padded32(root))
+        return hash(pre)
+    }
+
+    /// **WHAT A MATCH DOES AND DOES NOT PROVE — the whole reason this is a
+    /// probe and not a verdict in the room.**
+    ///
+    /// A match proves the registration is GENUINE: the source, the slot and the
+    /// root this transaction named are the ones the chain recorded. It says
+    /// NOTHING about whether the reference is still inside the window, because
+    /// a ring entry is only overwritten when a NEW registration lands on the
+    /// same index — and on a chain this quiet that may never happen. Measured
+    /// 2026-09-04: all four root-carrying transactions matched, including two
+    /// whose slots left the window more than 14,000 slots ago.
+    ///
+    /// So `standing(of:headSlot:)` above stays the only answer to "is this
+    /// still good", and this pair answers a different question: has our reading
+    /// of the wire drifted. That is a nightly assertion, not a card.
+    static let registrationCeiling =
+        "a match proves the registration is real, never that it is still inside the window"
+
+    /// 32 bytes, left-padded — the wire is quantity-encoded, so a `sourceID` or
+    /// a `root` whose first byte is zero arrives 31 bytes long and hashing it
+    /// as-is derives a key that matches nothing.
+    static func padded32(_ d: Data) -> Data {
+        if d.count >= 32 { return Data(d.suffix(32)) }
+        return Data(repeating: 0, count: 32 - d.count) + d
+    }
+
+    /// A slot as the eight big-endian bytes the predeploy hashes. Eight, never
+    /// a full word: the contract writes the slot into memory as a word and then
+    /// overwrites all but its last eight bytes, so the preimage is 104 bytes
+    /// rather than 128.
+    static func bigEndian64(_ v: UInt64) -> Data {
+        var out = Data(count: 8)
+        for i in 0..<8 { out[7 - i] = UInt8((v >> (8 * UInt64(i))) & 0xff) }
+        return out
+    }
+
+    /// Bytes from a hex string, with or without an `0x`.
+    ///
+    /// **An odd length or a non-hex character yields an EMPTY value, never a
+    /// partial one.** A half-read domain constant derives a storage key that
+    /// matches nothing, which reads as the chain having forgotten a
+    /// registration it is still holding — a wrong answer wearing a right one's
+    /// clothes. Kept inside this enum rather than as a `Data` extension: a
+    /// second hex reader in this tree is how two spellings of one rule drift.
+    static func bytes(hex: String) -> Data {
+        var s = Substring(hex)
+        if s.hasPrefix("0x") || s.hasPrefix("0X") { s = s.dropFirst(2) }
+        guard s.count % 2 == 0 else { return Data() }
+        var out = Data(); out.reserveCapacity(s.count / 2)
+        var i = s.startIndex
+        while i < s.endIndex {
+            let j = s.index(i, offsetBy: 2)
+            guard let b = UInt8(s[i..<j], radix: 16) else { return Data() }
+            out.append(b)
+            i = j
+        }
+        return out
+    }
 }

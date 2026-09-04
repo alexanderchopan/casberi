@@ -376,4 +376,71 @@ enum PrivacyDevnetFigure {
         // duplication §555 removed from the Accounts scope next door.
         return min(fits, 3)
     }
+    // MARK: - Keeping marks countable (prd §593d)
+
+    /// Where to draw one mark per value along a track, in points from the left.
+    ///
+    /// **The problem this solves is real on this chain and not hypothetical.**
+    /// The Activity figure placed each transaction at its true fraction of the
+    /// block span, which is the honest drawing and collapses here: the pool
+    /// address's four transactions sit in two pairs five blocks apart across a
+    /// span of ~10,500 blocks, so two of the four marks land 0.05% of the width
+    /// from their neighbour and render as one dot. Four transactions drawn as
+    /// two, on the figure whose entire job is how many there were.
+    ///
+    /// **ORDER AND SPAN ARE EXACT; only the crowding is relieved.** Values are
+    /// placed at their true fraction, then swept left-to-right pushing any mark
+    /// that would overlap its predecessor to exactly one mark-width away, then
+    /// swept back from the right so the last mark still ends at the track's end
+    /// — so the first and last marks keep their true positions and nothing ever
+    /// crosses a neighbour. It is a NUDGE, never a re-ranking: a figure that
+    /// reordered marks to fit would be a different and much worse lie than the
+    /// one it fixed.
+    ///
+    /// **A track too narrow for the marks gives up and spreads them evenly**
+    /// rather than stacking them all at the right edge, which is what clamping
+    /// alone produces. The precision the nudge costs is stated in words beside
+    /// the figure (the block range), which is where it belongs — no arrangement
+    /// of dots this size was ever going to carry a block number.
+    ///
+    /// Returns an empty array for an empty input, and a SINGLE value centres,
+    /// because a lone dot at the left edge reads as "at the beginning of
+    /// something" and there is no something.
+    static func spaced(_ values: [UInt64], width: Double, mark: Double) -> [Double] {
+        guard !values.isEmpty else { return [] }
+        let usable = max(0, width - mark)
+        guard values.count > 1 else { return [usable / 2] }
+        guard let lo = values.min(), let hi = values.max() else { return [] }
+        let sorted = values.sorted()
+        // Every value identical: no span to place them along, so spread them.
+        guard hi > lo else {
+            return even(count: sorted.count, usable: usable)
+        }
+        var out = sorted.map { usable * Double($0 - lo) / Double(hi - lo) }
+        // Not enough room for one mark each — an even spread is the honest
+        // surrender, and it keeps the count readable.
+        guard usable >= mark * Double(out.count - 1) else {
+            return even(count: out.count, usable: usable)
+        }
+        for i in 1..<out.count where out[i] - out[i - 1] < mark {
+            out[i] = out[i - 1] + mark
+        }
+        // The right-hand sweep: the forward pass can push the last mark past
+        // the end, and a mark drawn off the track is one nobody counts.
+        if out[out.count - 1] > usable {
+            out[out.count - 1] = usable
+            for i in stride(from: out.count - 2, through: 0, by: -1)
+            where out[i + 1] - out[i] < mark {
+                out[i] = out[i + 1] - mark
+            }
+        }
+        return out.map { min(max($0, 0), usable) }
+    }
+
+    private static func even(count: Int, usable: Double) -> [Double] {
+        guard count > 1 else { return [usable / 2] }
+        let step = usable / Double(count - 1)
+        return (0..<count).map { Double($0) * step }
+    }
+
 }

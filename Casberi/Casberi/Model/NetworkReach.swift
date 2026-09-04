@@ -307,18 +307,21 @@ enum NetworkReach {
         // commitment and its spend, which is a fact about the chain's own
         // pool contract rather than about what this app sends.
         //
-        // WATCH-ONLY at present: no key is made and nothing is signed, because
-        // this chain's type-0x6 envelope could not be reproduced byte-exactly
-        // (§593a) and signing a guessed layout authorises something other than
-        // what the screen said. When that changes, this purpose gains the
-        // signature and faucet sentences its two siblings already carry — and
-        // faucet.privacy.ethrex.xyz joins the host list, which it must NOT do
-        // before the app really posts to it (§531's lesson, one seat over).
+        // NO LONGER WATCH-ONLY (prd §593d). This entry said the seat made no
+        // key and signed nothing, on §593a's then-true reasoning that the
+        // type-0x6 envelope could not be reproduced. §593c settled the envelope
+        // against the node and §593d gave the room the acts, so the purpose now
+        // carries the signature and faucet sentences its two siblings already
+        // had, and faucet.privacy.ethrex.xyz is in the host list — which is the
+        // day it belongs there and not before (§531's lesson, one seat over,
+        // where a faucet the app really posted to sat in the reach audit's
+        // denylist for a day and the privacy screen omitted it).
         Endpoint(service: "Ethrex Privacy",
                  reach: .whenConnected(bridge: "Ethrex Privacy"),
-                 purpose: "Reads a watched address's balance, its transfers, the steps each transaction ran, the one-time spend keys it used and which recent snapshot a proof named, from a public devnet testing Ethereum's privacy proposals. A read carries only the address you watch. Nothing is signed and nothing is sent.",
+                 purpose: "Reads a watched address's balance, its transfers, the steps each transaction ran, the one-time spend keys it used and which recent snapshot a proof named, from a public devnet testing Ethereum's privacy proposals. A read carries only the address you watch. If you make an account here, asking the faucet for test ETH sends its address, and a send you make carries the transaction you signed on this device — both to the same devnet, and only when you tap.",
                  hosts: ["rpc1.privacy.ethrex.xyz", "rpc2.privacy.ethrex.xyz",
-                         "rpc3.privacy.ethrex.xyz"]),
+                         "rpc3.privacy.ethrex.xyz",
+                         "faucet.privacy.ethrex.xyz"]),
         // Frames devnet (prd §548, 2026-09-01). A SEPARATE seat from Hegotá
         // and therefore a separate entry: different chain (81410), different
         // hosts, different faucet, and a signing key of its own. The faucet

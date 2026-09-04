@@ -58,7 +58,6 @@ KNOWN_NON_REACH=(
   # for a day after §525 gave it a Claim button that POSTs to it, so the
   # privacy screen omitted a host the app really reached. Move it to
   # NetworkReach in the same commit that lands the claim, not after.
-  faucet.privacy.ethrex.xyz
   # vibenet's own explorer (VibenetExplorer) — a landed event's permalink
   # and the room's "Explorer" door, both `Link(destination:)` the person's
   # own browser opens; this app never fetches chain.base.org itself.

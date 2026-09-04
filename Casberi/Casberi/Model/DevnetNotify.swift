@@ -18,7 +18,7 @@ import Foundation
 @MainActor
 enum DevnetNotify {
 
-    /// Everything the two seats would tell you right now.
+    /// Everything the three seats would tell you right now.
     ///
     /// Composed, never submitted: `WalletBackgroundRefresh.runNotifySweep` adds
     /// these to the corpus sweep's own plans and submits ONCE, so a devnet
@@ -36,7 +36,7 @@ enum DevnetNotify {
         VibenetUnlockBook.prune(now: now)
     }
 
-    /// Why the two seats said nothing, when they said nothing — for
+    /// Why the seats said nothing, when they said nothing — for
     /// `-notifyProbe` only.
     ///
     /// **Silence is the healthy answer here almost every day**, and it has
@@ -63,6 +63,11 @@ enum DevnetNotify {
                        (due > .now ? "still counting" : "elapsed"))
         }
 
+        let pWatching = PrivacyDevnetWatch.shared.addresses.count
+        let pReset = PrivacyDevnetLiveState.observedRelaunch()
+        out.append("privacy watching=\(pWatching) accounts=\(PrivacyDevnetLiveState.shared.accounts.count) relaunch=" +
+                   (pReset.map { "\($0.key) observed \($0.at)" } ?? "none observed"))
+
         let hWatching = HegotaWatch.shared.addresses.count
         let hRestart = HegotaLiveState.observedRestart()
         out.append("hegota watching=\(hWatching) accounts=\(HegotaLiveState.shared.accounts.count) restart=" +
@@ -82,6 +87,15 @@ enum DevnetNotify {
         if let seen = HegotaLiveState.observedRestart() {
             out.append(.init(seat: .hegota, key: seen.key, observedAt: seen.at,
                              watching: HegotaWatch.shared.addresses.count))
+        }
+        // Ethrex Privacy (prd §593d). Its relaunch signal is GENESIS ALONE and
+        // compared against a SHIPPED constant rather than a stored baseline —
+        // §594's finding one seat over is that the chain id survived a measured
+        // reset unchanged and the tip climbed past its old high-water in the
+        // same one, so neither of those is a signal.
+        if let seen = PrivacyDevnetLiveState.observedRelaunch() {
+            out.append(.init(seat: .privacy, key: seen.key, observedAt: seen.at,
+                             watching: PrivacyDevnetWatch.shared.addresses.count))
         }
         return out
     }

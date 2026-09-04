@@ -16,9 +16,14 @@ import SwiftUI
 /// is to hand somebody an address that has something to show. Both below are
 /// real and were read off `rpc1.privacy.ethrex.xyz` on 2026-09-04.
 ///
-/// **The seat makes no key**, unlike Frames and Hegotá: its type-`0x6`
-/// envelope is unreproduced (§593a), so there is no account act to offer and
-/// the slab carries no "This phone" row.
+/// **THE SEAT MAKES A KEY AND SENDS SINCE §593c, AND THE ACTS ARE NOT HERE.**
+/// This paragraph said the opposite until §593d — that the envelope was
+/// unreproduced so there was no account act to offer — which stopped being
+/// true the day the node taught us its field order. The acts live in the
+/// ROOM, on Home, because §594's line is that an act which WRITES to the chain
+/// moves to Home and an act that changes WHAT YOU ARE LOOKING AT stays with
+/// the view. Watching an address changes the roster, not the chain, so it
+/// stays here.
 ///
 /// **This screen is the CONNECT ACT and nothing else (prd §465)** — what you do
 /// ONCE. The room keeps what you do repeatedly.
@@ -53,7 +58,7 @@ struct PrivacyDevnetScreen: View {
                 DevnetAccountsSlab(
                     watch: watch,
                     tint: Self.mark,
-                    examples: Self.examples,
+                    examples: PrivacyDevnetExample.all,
                     idleNote: watch.addresses.isEmpty
                         ? String(localized: "Nothing is watched yet.") : nil,
                     register: { PrivacyDevnetBridge.registerBridge(store: store) },
@@ -100,19 +105,6 @@ struct PrivacyDevnetScreen: View {
         .dsScreenTitle(PrivacyDevnetIdentity.source)
     }
 
-    /// Two real addresses, and each is here for a DIFFERENT reading — the pool
-    /// participant is the only one of the two whose transactions reference a
-    /// root, so watching it is the only way to see the Roots scope at all
-    /// without waiting for somebody to use the chain. Measured 2026-09-04.
-    private static let examples: [DevnetExample] = [
-        DevnetExample(address: "0x062901d23f7e2d3bf9949c8a8cfd2c7a5ae3f980",
-                      title: String(localized: "An address that used the pool"),
-                      detail: String(localized: "One-time spend keys, and a proof")),
-        DevnetExample(address: "0x248ac8584135c94469a90fbb02ba053b17f1cc60",
-                      title: String(localized: "An address that sent early"),
-                      detail: String(localized: "The chain's first hour")),
-    ]
-
     /// **ONLY THE FIRST WATCH ROUTES.** The room is a new place then, and going
     /// there is the point; on the second you are adding to a list you can see,
     /// and yanking it away is the 2026-08-28 vibenet report ("after you follow
@@ -127,4 +119,30 @@ struct PrivacyDevnetScreen: View {
         route.path = []
         chrome.sourceRequest = PrivacyDevnetIdentity.source
     }
+}
+
+/// **THE TWO ADDRESSES THAT HAVE SOMETHING TO SHOW (prd §593d).**
+///
+/// Lifted out of `PrivacyDevnetScreen` because three surfaces need them now —
+/// the connect screen's example rows, the send picker (which otherwise opens on
+/// nothing to send TO, the dead end §83 bans wearing a picker's clothes), and
+/// the ROOM'S OWN quiet state, which until §593d dead-ended somebody who
+/// pasted an address of their own into "Nothing on this chain from the address
+/// you watch, yet." with no next step anywhere on screen.
+///
+/// **Each is here for a DIFFERENT reading and both are MEASURED.** The pool
+/// participant is the only one of the two whose transactions reference a root,
+/// so watching it is the only way to see the Roots scope at all without waiting
+/// for somebody else to use the chain. Read off `rpc1.privacy.ethrex.xyz` on
+/// 2026-09-04, and re-confirmed the same day when the root storage derivation
+/// was checked against live state.
+enum PrivacyDevnetExample {
+    static let all: [DevnetExample] = [
+        DevnetExample(address: "0x062901d23f7e2d3bf9949c8a8cfd2c7a5ae3f980",
+                      title: String(localized: "An address that used the pool"),
+                      detail: String(localized: "One-time spend keys, and a proof")),
+        DevnetExample(address: "0x248ac8584135c94469a90fbb02ba053b17f1cc60",
+                      title: String(localized: "An address that sent early"),
+                      detail: String(localized: "The chain's first hour")),
+    ]
 }

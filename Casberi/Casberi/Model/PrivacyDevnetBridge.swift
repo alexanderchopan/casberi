@@ -142,6 +142,9 @@ final class PrivacyDevnetLiveState {
     /// only signal that catches one (see `PrivacyDevnetChain.genesis`).
     private(set) var observedGenesis: String?
 
+    /// What the last walk could not read (prd §593d). Empty on every pass today.
+    private(set) var walkCut = WalkCut()
+
     private init() {}
 
     func account(_ address: String) -> PrivacyDevnetAccount? {
@@ -162,6 +165,7 @@ final class PrivacyDevnetLiveState {
     }
 
     func replace(_ accounts: [PrivacyDevnetAccount]) { self.accounts = accounts }
+    func setCut(_ cut: WalkCut) { walkCut = cut }
     func setHead(slot: UInt64) { headSlot = slot }
     func setGenesis(_ hash: String?) { observedGenesis = hash }
 
@@ -176,11 +180,73 @@ final class PrivacyDevnetLiveState {
         return seen.caseInsensitiveCompare(PrivacyDevnetChain.genesis) != .orderedSame
     }
 
+    // MARK: - The relaunch, recorded so something can SAY it (prd §593d)
+
+    private static let relaunchHashKey = "privacydevnet.genesis.relaunchHash"
+    private static let relaunchAtKey = "privacydevnet.genesis.relaunchAt"
+
+    /// Stamp a relaunch on FIRST sight of a given genesis and never again.
+    ///
+    /// **Re-stamping would move the moment we claim to have noticed forward
+    /// forever**, which keeps it permanently inside the news window and makes
+    /// it permanently news — Hegotá's own §522 lesson, and the reason this is a
+    /// first-sight write rather than an every-pass one.
+    private func noteRelaunch(_ hash: String) {
+        guard hash.caseInsensitiveCompare(PrivacyDevnetChain.genesis) != .orderedSame
+        else { return }
+        guard UserDefaults.standard.string(forKey: Self.relaunchHashKey) != hash else { return }
+        UserDefaults.standard.set(hash, forKey: Self.relaunchHashKey)
+        UserDefaults.standard.set(Date(), forKey: Self.relaunchAtKey)
+    }
+
+    /// The relaunch this device has observed, for the notification sweep.
+    ///
+    /// **A READ, never a claim** (`HegotaLiveState.observedRestart`'s rule): it
+    /// consults no ledger and clears nothing, so a sweep on every foreground
+    /// costs two `UserDefaults` reads and decides nothing on its own.
+    nonisolated static func observedRelaunch() -> (key: String, at: Date)? {
+        guard let hash = UserDefaults.standard.string(forKey: relaunchHashKey),
+              let at = UserDefaults.standard.object(forKey: relaunchAtKey) as? Date
+        else { return nil }
+        return (hash, at)
+    }
+
+    /// Forget the observation. Used by the demo teardown alone — this seat has
+    /// no "accept the new chain" act, because it compares against a SHIPPED
+    /// genesis constant rather than a baseline it stored, so there is no
+    /// baseline for a person to re-set.
+    nonisolated static func forgetRelaunch() {
+        UserDefaults.standard.removeObject(forKey: relaunchHashKey)
+        UserDefaults.standard.removeObject(forKey: relaunchAtKey)
+    }
+
     func clear() {
         accounts = []
         headSlot = 0
         observedGenesis = nil
         readAt = nil
+        walkCut = WalkCut()
+    }
+}
+
+/// A balance on this chain, in words (prd §593d).
+///
+/// **ONE SPELLING, because there were two.** `FaceScopeRail` carried a private
+/// copy of exactly this arithmetic and the send sheet needed the same sentence
+/// — and two formatters of one balance is how a rail and a form come to
+/// disagree about what an account holds, in the room where that is the only
+/// number on screen.
+///
+/// **NEVER MONEY.** Test ETH has no market, so there is no currency symbol, no
+/// conversion and no total — §83 in the room whose whole subject is what can
+/// and cannot be claimed.
+enum PrivacyDevnetMoney {
+    /// Four places, which is what a faucet chain's balances need: the drip is
+    /// 0.1 ETH and a send is typically a thousandth of it.
+    static func line(wei: Decimal) -> String {
+        let eth = wei / Decimal(sign: .plus, exponent: 18, significand: 1)
+        let n = NSDecimalNumber(decimal: eth).doubleValue
+        return "\(n.formatted(.number.precision(.fractionLength(4)))) ETH"
     }
 }
 
@@ -446,6 +512,7 @@ extension PrivacyDevnetLiveState {
                                                params: ["0x0", false]) as? [String: Any],
            let hash = g["hash"] as? String {
             setGenesis(hash)
+            noteRelaunch(hash)
         }
 
         // `0x4b` = SLOT. The init code is <op> PUSH1 00 MSTORE PUSH1 20 PUSH1
@@ -481,7 +548,8 @@ extension PrivacyDevnetLiveState {
         // The walk that fills Frames, Nullifiers, Roots and Sponsors. Done
         // ONCE for every watched address rather than per address, because its
         // expensive half — reading every transaction a log touched — is shared.
-        if let walked = await walkTransactions(for: watched) {
+        if let (walked, cut) = await walkTransactions(for: watched) {
+            setCut(cut)
             for i in out.indices {
                 if let w = walked[out[i].address.lowercased()] {
                     out[i].frameCount = w.frames
@@ -544,6 +612,33 @@ extension PrivacyDevnetLiveState {
                     var roots: [PrivacyDevnetRoots.Reference] = []; var sponsored = 0
                     var moves: [Move] = [] }
 
+    /// **WHAT THE WALK DID NOT READ (prd §593d).**
+    ///
+    /// A truncated room and a complete one look IDENTICAL from outside — this
+    /// repo's oldest recurring defect (§307, §309) — and it bit here in a form
+    /// the figures were already guarding against: `PrivacyDevnetFigure`'s own
+    /// stated rule is "a truncated list SAYS SO", which every drawing obeyed
+    /// while the walk feeding them cut silently. Every count in the room is
+    /// derived from the transactions this walk read, so an unreported cut makes
+    /// all of them quietly low.
+    ///
+    /// **Both numbers are facts about the WALK, never about an address.** The
+    /// `walkCap` drops the oldest candidates chain-wide, and which of them
+    /// belonged to whom is exactly what reading them would have told us — so
+    /// attributing a cut to one roster row would be inventing the answer the
+    /// cut prevented.
+    struct WalkCut: Equatable, Sendable {
+        /// Candidate transactions beyond `walkCap` that were never opened.
+        var unread = 0
+        /// The block the log scan stopped at when `walkChunkCap` bit before the
+        /// tip. Nil when the whole chain was scanned, which is every pass today
+        /// — 40 chunks of 50,000 covers two million blocks against a tip of
+        /// ~17,000. Separate from `unread` because it is strictly worse: those
+        /// transactions were never even candidates.
+        var scannedTo: UInt64?
+        var isEmpty: Bool { unread == 0 && scannedTo == nil }
+    }
+
     /// What each watched address has DONE on this chain.
     ///
     /// **There is no indexer and no `eth_getLogs` filter that answers this**, so
@@ -565,8 +660,8 @@ extension PrivacyDevnetLiveState {
     /// Returns nil when the log read itself failed, which callers keep distinct
     /// from an empty walk: an unreached read must not blank scopes that were
     /// drawing a moment ago.
-    func walkTransactions(for watched: [String]) async -> [String: Walked]? {
-        guard !watched.isEmpty else { return [:] }
+    func walkTransactions(for watched: [String]) async -> (walked: [String: Walked], cut: WalkCut)? {
+        guard !watched.isEmpty else { return ([:], WalkCut()) }
         // **CHUNKED, because an unbounded range is refused by a sibling node
         // ALREADY.** This asked `fromBlock: 0x0, toBlock: latest` with no
         // address filter, which 8141 answers happily today (32 logs, 1.2s) and
@@ -595,6 +690,15 @@ extension PrivacyDevnetLiveState {
             from = to &+ 1
             chunks += 1
         }
+        // **THE SCAN'S OWN CEILING, said rather than left to be inferred
+        // (prd §593d).** If the chunk cap bit before the tip, every block past
+        // `from` was never looked at — strictly worse than the candidate cap
+        // below, because those transactions were never even candidates. Two
+        // million blocks against a tip of ~17,000 means this is nil today, and
+        // it is recorded so the day it is not is a sentence rather than a
+        // room that has quietly stopped covering recent history.
+        var cut = WalkCut()
+        if from <= tip { cut.scannedTo = from == 0 ? 0 : from &- 1 }
 
         // **SORTED, NOT REVERSED.** The first cut called `reverse()` and said
         // in a comment that this kept recent history when the cap bites — a
@@ -613,11 +717,14 @@ extension PrivacyDevnetLiveState {
             if let seen = newest[h], seen.block > key.block { continue }
             newest[h] = key
         }
-        let hashes = newest.sorted {
+        let ranked = newest.sorted {
             $0.value.block == $1.value.block ? $0.value.index > $1.value.index
                                              : $0.value.block > $1.value.block
         }
-        .prefix(Self.walkCap).map(\.key)
+        .map(\.key)
+        // Counted BEFORE the prefix, or the number is always zero.
+        cut.unread = max(0, ranked.count - Self.walkCap)
+        let hashes = ranked.prefix(Self.walkCap)
 
         let wanted = Set(watched.map { $0.lowercased() })
         var out: [String: Walked] = [:]
@@ -669,7 +776,7 @@ extension PrivacyDevnetLiveState {
                                 sponsored: w.sponsored > before.sponsored))
             out[sender] = w
         }
-        return out
+        return (out, cut)
     }
 }
 

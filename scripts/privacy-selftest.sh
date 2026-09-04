@@ -31,8 +31,11 @@ SECTION="Casberi/Casberi/Model/PrivacyDevnetSection.swift"
 ROOTS="Casberi/Casberi/Model/PrivacyDevnetRoots.swift"
 ROOM="Casberi/Casberi/Model/PrivacyDevnetRoom.swift"
 FIG="Casberi/Casberi/Model/PrivacyDevnetFigure.swift"
+# Foundation-only, and compiled here so the root derivation can be pinned
+# against a hash the chain really produced rather than against a stub.
+KECCAK="Casberi/Casberi/Model/Keccak256.swift"
 VERIFY="scripts/verify.sh"
-for f in "$SECTION" "$ROOTS" "$ROOM" "$FIG"; do [[ -f "$f" ]] || fail "$f not found"; done
+for f in "$SECTION" "$ROOTS" "$ROOM" "$FIG" "$KECCAK"; do [[ -f "$f" ]] || fail "$f not found"; done
 
 # `swiftc` needs a main file; the sources are compiled WHOLE and unmodified.
 cat > "$work/main.swift" <<'SWIFT'
@@ -370,11 +373,122 @@ check(PF.rowCap(box: 10, rowHeight: 14, spacing: 6, chrome: 40) == 1,
 check(!PrivacyDevnetRoots.present([]), "no references means no roots scope")
 check(PrivacyDevnetRoots.present(refs), "references mean the scope draws")
 
+// ───────────────── the predeploy's own storage (prd §593d) ─────────────────
+// MEASURED against live state on 2026-09-04: all four root-carrying
+// transactions on 8141 matched byte-for-byte. These pin the derivation read off
+// the deployed bytecode, and every failure below renders as a probe that says a
+// registration is missing when the chain is holding it.
+
+check(PrivacyDevnetRoots.ringIndex(slot: 2801) == 2801, "a slot inside the first turn is its own index")
+check(PrivacyDevnetRoots.ringIndex(slot: 13361) == 13361 - 8192, "a slot past one turn wraps by exactly the window")
+check(PrivacyDevnetRoots.ringIndex(slot: 8192) == 0, "the first slot of the second turn lands on index 0")
+
+check(PrivacyDevnetRoots.bigEndian64(1) == d("0000000000000001"), "a slot is EIGHT big-endian bytes")
+check(PrivacyDevnetRoots.bigEndian64(0xaf1) == d("0000000000000af1"), "0xaf1 as eight bytes")
+
+// 32-BYTE PADDING. The wire is quantity-encoded, so a sourceId or root whose
+// first byte is zero arrives 31 bytes long — hashing it as-is derives a key
+// that matches nothing, which reads as the chain having forgotten a
+// registration it still holds.
+check(PrivacyDevnetRoots.padded32(d("0cca26d3")).count == 32, "a short value is left-padded to 32")
+check(PrivacyDevnetRoots.padded32(d("0cca26d3")).first == 0, "the padding goes on the LEFT")
+check(PrivacyDevnetRoots.padded32(d("0cca26d3")).last == 0xd3, "the value keeps its low byte")
+
+check(PrivacyDevnetRoots.bytes(hex: "0x0a0b") == d("0a0b"), "an 0x prefix is accepted")
+check(PrivacyDevnetRoots.bytes(hex: "0a0b") == d("0a0b"), "a bare hex string is accepted")
+check(PrivacyDevnetRoots.bytes(hex: "0a0") == Data(), "an odd length yields EMPTY, never a partial key")
+check(PrivacyDevnetRoots.bytes(hex: "zz") == Data(), "a non-hex character yields EMPTY")
+check(PrivacyDevnetRoots.bytes(hex: PrivacyDevnetRoots.registrationHashDomain).count == 32,
+      "the value domain is a full word")
+check(PrivacyDevnetRoots.bytes(hex: PrivacyDevnetRoots.registrationSlotDomain).count == 32,
+      "the slot domain is a full word")
+
+// THE PREIMAGE LENGTHS, which are what the disassembly actually pinned: the
+// contract hashes 0x68 (104) bytes for the value and 0x48 (72) for the key. An
+// off-by-a-word here compiles, runs, and matches nothing.
+var valuePre = Data()
+_ = PrivacyDevnetRoots.registrationValue(
+    sourceID: d("b08f15750c491f4cfd65215c11a33b3962903a8896fc586bbd7c697851c26e20"),
+    // Past the window, for the reason spelled at the key fixture below: inside
+    // the first turn the raw slot and the ring index are the same number.
+    slot: 13361,
+    root: d("2dd32b6609c5a8e80505ac44c5cb8e9f712115c1f63f59b18be08fc9b9250bf4"),
+    hash: { valuePre = $0; return Data(repeating: 0, count: 32) })
+check(valuePre.count == 104, "the value preimage is 104 bytes: domain, source, an EIGHT-byte slot, root")
+// **THE SLOT HERE MUST BE PAST THE WINDOW, AND THE FIRST CUT'S WAS NOT.** With
+// slot 0xaf1 (2801) the ring index IS 2801, so "hashes the ring index" and
+// "hashes the raw slot" are the same assertion and the mutation swapping them
+// SURVIVED on the first run. 13361 wraps to 5169, which is the only shape that
+// tells the two apart — a fixture only tests the rule it names if it fails that
+// rule and passes every other one.
+check(PrivacyDevnetRoots.ringIndex(slot: 13361) != 13361,
+      "the fixture's own premise: this slot really is past one turn of the ring")
+var keyPre = Data()
+_ = PrivacyDevnetRoots.registrationKey(
+    sourceID: d("b08f15750c491f4cfd65215c11a33b3962903a8896fc586bbd7c697851c26e20"),
+    slot: 13361,
+    hash: { keyPre = $0; return Data(repeating: 0, count: 32) })
+check(keyPre.count == 72, "the key preimage is 72 bytes: domain, source, an EIGHT-byte ring index")
+check(keyPre.suffix(8) == PrivacyDevnetRoots.bigEndian64(13361 - 8192),
+      "the key hashes the RING INDEX, not the raw slot — the whole point of the mask")
+check(valuePre.suffix(40).prefix(8) == PrivacyDevnetRoots.bigEndian64(13361),
+      "the VALUE hashes the raw slot, not the ring index")
+check(PrivacyDevnetRoots.windowSlots == 8192,
+      "the window is the predeploy's own 0x1fff mask plus one")
+
+// **THE MEASURED VECTOR, END TO END.** Everything above pins a preimage's
+// SHAPE; this pins the answer. `0xfa32623718…` on chain 8141 references this
+// source, slot and root, and `eth_getStorageAt(0x…8272, key)` really returns
+// this word — read on 2026-09-04. Without it the two domain constants can be
+// swapped and every length assertion above still passes, which is exactly what
+// happened on this harness's first run.
+let realSource = d("a0dfea37afb843c1fc18cfa21205766b96e6f7c7d7993ab5d5e041e0b1964f54")
+let realRoot = d("2dd32b6609c5a8e80505ac44c5cb8e9f712115c1f63f59b18be08fc9b9250bf4")
+func kec(_ x: Data) -> Data { Data(Keccak256.hash([UInt8](x))) }
+check(kec(Data()).map { String(format: "%02x", $0) }.joined()
+      == "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
+      "the harness's own keccak is Keccak-256 and not NIST SHA3 — different padding, different hash")
+check(PrivacyDevnetRoots.registrationKey(sourceID: realSource, slot: 13361, hash: kec)
+      == d("0bb304652ae43d052d74492ecf73f05b142ecafb1f8b13f42f81f119699b398e"),
+      "the storage key for a real reference, measured")
+check(PrivacyDevnetRoots.registrationValue(sourceID: realSource, slot: 13361, root: realRoot, hash: kec)
+      == d("26dd34bbf3729b0bbfad49ee5f9e41a4fcc02cd165398ffe69453ee48c18bc2e"),
+      "the word the chain is really storing there, measured")
+
+// ─────────────────── marks stay countable (prd §593d) ───────────────────
+// The Activity figure collapsed on the real chain: the pool address's four
+// transactions sit in two pairs five blocks apart across ~10,500, so two marks
+// rendered as one. Every failure below draws a figure that under-reports how
+// many transactions there were.
+
+let crowded = PrivacyDevnetFigure.spaced([13351, 13356, 2801, 2806], width: 300, mark: 9)
+check(crowded.count == 4, "one mark per value, always")
+check(zip(crowded, crowded.dropFirst()).allSatisfy { $1 - $0 >= 8.999 },
+      "no two marks are closer than one mark's width — the collapse this exists to fix")
+check(crowded == crowded.sorted(), "marks come back in ascending position: a nudge, never a re-ranking")
+check(crowded.allSatisfy { $0 >= 0 && $0 <= 300 - 9 }, "every mark is on the track")
+check(abs(crowded[0] - 0) < 0.001, "the earliest keeps the left edge exactly")
+check(abs(crowded[crowded.count - 1] - (300 - 9)) < 0.001, "the latest keeps the right edge exactly")
+
+check(PrivacyDevnetFigure.spaced([], width: 300, mark: 9).isEmpty, "nothing in, nothing out")
+let one = PrivacyDevnetFigure.spaced([42], width: 300, mark: 9)
+check(one.count == 1 && abs(one[0] - (300 - 9) / 2) < 0.001,
+      "a lone mark CENTRES — at the left edge it reads as the beginning of something that isn't there")
+let same = PrivacyDevnetFigure.spaced([7, 7, 7], width: 300, mark: 9)
+check(same.count == 3 && zip(same, same.dropFirst()).allSatisfy { $1 - $0 >= 8.999 },
+      "three transactions in ONE block still draw three marks")
+// A track too narrow to hold them: an even spread rather than a stack at the
+// right edge, which is what clamping alone produces.
+let tight = PrivacyDevnetFigure.spaced([1, 2, 3, 4, 5], width: 20, mark: 9)
+check(tight.count == 5, "a narrow track still draws every mark")
+check(tight == tight.sorted(), "and still in order")
+check(Set(tight).count == 5, "and does not stack them all on one point")
+
 if failures == 0 { print("  ok   \(0) failures") } else { exit(1) }
 SWIFT
 
 print "  building…"
-xcrun swiftc -Onone -o "$work/pv" "$SECTION" "$ROOTS" "$ROOM" "$FIG" "$work/main.swift" 2>"$work/build.log" \
+xcrun swiftc -Onone -o "$work/pv" "$SECTION" "$ROOTS" "$ROOM" "$FIG" "$KECCAK" "$work/main.swift" 2>"$work/build.log" \
   || { cat "$work/build.log"; fail "the sources did not compile — they must stay Foundation-only" }
 "$work/pv" || fail "assertions failed"
 print "  ok   assertions"
@@ -387,6 +501,7 @@ mutate() {
   local dir="$work/m"; rm -rf "$dir"; mkdir -p "$dir"
   cp "$SECTION" "$dir/PrivacyDevnetSection.swift"; cp "$ROOTS" "$dir/PrivacyDevnetRoots.swift"
   cp "$ROOM" "$dir/PrivacyDevnetRoom.swift"; cp "$FIG" "$dir/PrivacyDevnetFigure.swift"
+  cp "$KECCAK" "$dir/Keccak256.swift"
   local target="$dir/$(basename $file)"
   grep -qF -- "$from" "$target" || fail "mutation '$name' matches nothing — it is stale and tests the shipped code"
   python3 - "$target" "$from" "$to" <<'PY'
@@ -396,7 +511,7 @@ s = io.open(p, encoding="utf-8").read()
 io.open(p, "w", encoding="utf-8").write(s.replace(a, b, 1))
 PY
   if xcrun swiftc -Onone -o "$dir/pv" "$dir/PrivacyDevnetSection.swift" "$dir/PrivacyDevnetRoots.swift" \
-        "$dir/PrivacyDevnetRoom.swift" "$dir/PrivacyDevnetFigure.swift" "$work/main.swift" 2>/dev/null && "$dir/pv" >/dev/null 2>&1; then
+        "$dir/PrivacyDevnetRoom.swift" "$dir/PrivacyDevnetFigure.swift" "$dir/Keccak256.swift" "$work/main.swift" 2>/dev/null && "$dir/pv" >/dev/null 2>&1; then
     fail "mutation SURVIVED: $name"
   fi
   print "  ok   caught: $name"
@@ -427,9 +542,14 @@ mutate "roots separated from nullifiers" \
   "$SECTION" ".nullifiers, .roots, .sponsors]" ".roots, .nullifiers, .sponsors]"
 mutate "a named nonce channel counted as a nullifier" \
   "$ROOTS" 'significant.count >= nullifierFloor' '!significant.isEmpty'
+# **THIS MUTATION HAD NEVER RUN (found by prd §593d).** A trailing space after
+# the empty replacement broke the line continuation, so zsh executed the next
+# line as a command — "command not found: static func isNullifier…" scrolled
+# past in the middle of a passing run, and the check it names has been inert
+# since it was written. A guard that cannot fail certifies nothing, which is
+# this repo's own standing rule turned on its own harness.
 mutate "the nullifier floor measured on RAW bytes (a stripped leading zero drops a real key)" \
-  "$ROOTS" 'while significant.first == 0 { significant.removeFirst() }' '' 
-  "static func isNullifier(_ key: Data) -> Bool { !key.isEmpty }"
+  "$ROOTS" 'while significant.first == 0 { significant.removeFirst() }' ''
 # The figures' own mutations, from the session that wrote them. Each is a
 # silent wrong drawing: an ordinary-looking ring, strip or tally that says
 # something the chain does not.
@@ -465,6 +585,48 @@ mutate "the head claiming zero watched addresses (a room that says it watches no
 mutate "a chip allowed to wear a dot" \
   "$SECTION" "static func attention() -> Set<PrivacyDevnetSection> { [] }" \
   "static func attention() -> Set<PrivacyDevnetSection> { [.roots] }"
+
+# ── prd §593d ──────────────────────────────────────────────────────────
+# The predeploy derivation and the mark spacing. Each of these renders as an
+# ordinary probe or an ordinary figure while saying something the chain does not.
+mutate "the storage key hashing the RAW SLOT instead of the ring index" \
+  "$ROOTS" "pre.append(bigEndian64(ringIndex(slot: slot)))" "pre.append(bigEndian64(slot))"
+mutate "the stored VALUE hashing the ring index instead of the raw slot" \
+  "$ROOTS" "pre.append(bigEndian64(slot))
+        pre.append(padded32(root))" "pre.append(bigEndian64(ringIndex(slot: slot)))
+        pre.append(padded32(root))"
+mutate "the two domain constants swapped (both are 32 bytes, so nothing else notices)" \
+  "$ROOTS" "var pre = bytes(hex: registrationSlotDomain)" "var pre = bytes(hex: registrationHashDomain)"
+mutate "a slot written as a full WORD, so the preimage is 128 bytes not 104" \
+  "$ROOTS" "var out = Data(count: 8)" "var out = Data(count: 32)"
+mutate "a slot written little-endian" \
+  "$ROOTS" "out[7 - i] = UInt8((v >> (8 * UInt64(i))) & 0xff)" \
+  "out[i] = UInt8((v >> (8 * UInt64(i))) & 0xff)"
+mutate "a short value padded on the RIGHT, which is what a quantity-encoded root needs least" \
+  "$ROOTS" "return Data(repeating: 0, count: 32 - d.count) + d" \
+  "return d + Data(repeating: 0, count: 32 - d.count)"
+mutate "an odd-length hex string read as a partial key instead of refused" \
+  "$ROOTS" "guard s.count % 2 == 0 else { return Data() }" "guard true else { return Data() }"
+# **ANCHORED TO THE BODY, because the doc above it quotes the expression
+# verbatim.** The first cut matched the COMMENT — `mutate` replaces the first
+# occurrence — so it edited the prose explaining the rule and left the rule
+# alone, and survived. The Obsidian/Cursor lesson arriving through a mutation
+# rather than through a grep guard.
+mutate "the ring mask widened, so a wrapped slot never collides with its own index" \
+  "$ROOTS" "-> UInt64 { slot & (windowSlots - 1) }" "-> UInt64 { slot & (windowSlots * 2 - 1) }"
+
+mutate "marks allowed to overlap again — the collapse the Activity figure shipped with" \
+  "$FIG" "for i in 1..<out.count where out[i] - out[i - 1] < mark {" \
+  "for i in 1..<out.count where false {"
+mutate "a lone mark drawn at the left edge instead of centred" \
+  "$FIG" "guard values.count > 1 else { return [usable / 2] }" \
+  "guard values.count > 1 else { return [0] }"
+mutate "marks re-ranked to fit, which is a worse lie than the crowding" \
+  "$FIG" "var out = sorted.map" "var out = values.map"
+mutate "the right-hand sweep dropped, so the last mark is pushed off the track" \
+  "$FIG" "if out[out.count - 1] > usable {" "if false {"
+mutate "a track too narrow stacking every mark on one point" \
+  "$FIG" "guard usable >= mark * Double(out.count - 1) else {" "guard true else {"
 
 # ── drift guards ───────────────────────────────────────────────────────
 # The rules that live in ANOTHER file, which the compiled sources cannot prove.
@@ -534,16 +696,30 @@ strip_comments "$BRIDGE" > "$work/bridge.bare"
 # which the first cut of this guard did, and which would have read as the seat
 # being broken rather than as the guard being wrong. `postJSONBody` IS banned:
 # it is the broadcast helper (§530), and nothing this seat reads needs it.
+# **THE SEAT SIGNS AND SENDS SINCE prd §593d, so this guard changed shape
+# rather than being retired.** It used to assert that the whole seat was
+# watch-only and that the catalog said so; both stopped being true the day the
+# room got its acts. What still holds — and is worth more — is that the READ
+# FILE stays a read file: `PrivacyDevnetBridge` is what every room open drives,
+# on a timer, with no tap behind it, and a signing verb reaching it would mean
+# the seat can act without anybody asking. The signing lives in
+# `PrivacyDevnetSend`, which the room calls from a button and nowhere else.
 for verb in 'eth_sendRawTransaction' 'eth_sendTransaction' 'eth_sign' 'personal_sign' \
             'eth_signTransaction' 'postJSONBody' 'PrivacyDevnetSend' 'PrivacyDevnetKey' \
             'SecItemAdd' 'secp256k1' 'signingPreimage'; do
   grep -qF -- "$verb" "$work/bridge.bare" \
-    && fail "PrivacyDevnetBridge names $verb — the seat is watch-only until the envelope is reproduced (§593a); retire this guard and the catalog bullet in the same commit"
+    && fail "PrivacyDevnetBridge names $verb — the sweep runs on a timer with no tap behind it, so signing must stay in PrivacyDevnetSend"
 done
-# And the copy must keep SAYING it, or the guard protects a promise nobody made.
+# And the catalog must no longer make the promise the seat has outgrown.
 grep -qF 'Watching only — nothing is signed and nothing is sent' \
   "Casberi/Casberi/Model/BridgeCatalog.swift" \
-  || fail "the catalog no longer says this seat only watches, but nothing here signs — restore the bullet or land the write with it"
+  && fail "the catalog still promises this seat only watches, and it now signs and sends (§593d) — a promise the app has outgrown is §83 pointed at ourselves"
+
+# THE FAUCET HOST IS DISCLOSED (§531's lesson, one seat over, where a faucet the
+# app really posted to sat in the reach audit's denylist for a day and the
+# privacy screen omitted it).
+grep -qF 'faucet.privacy.ethrex.xyz' "Casberi/Casberi/Model/NetworkReach.swift" \
+  || fail "faucet.privacy.ethrex.xyz is not in the reach registry, and the seat now posts to it"
 
 # THE DEMO FIXTURE'S HEX VALUES ARE PINNED (§593). Two of the four nullifiers
 # in `seedDemo` were FABRICATED and shipped — the count was measured by running
@@ -652,10 +828,61 @@ grep -qE "static func head\(.*\) -> Head\?" "$work/room.bare" \
 grep -qE "case +coins" "$work/section.bare" \
   && fail "a coins scope reappeared — the UTXO vault has no code on 8141, so the chip could never light"
 
+# ── prd §593d: the room split, the acts, the notification ─────────────
+CARD="Casberi/Casberi/Screens/PrivacyDevnetRoomCard.swift"
+strip_comments "$CARD" > "$work/card.bare"
+
+# **THE LIST LIVES OUTSIDE THE CLIPPED SLOT.** `DSRoomSlot` is a hard 300pt box
+# that clips, and this card drew the figure AND the scope's rows inside it — so
+# everything past the third or fourth row was cut off the bottom with no scroll
+# and no sign it had been. Reported as the lists not showing at all. The fix is
+# `FramesRoomList`'s split, one seat over, and putting the rows back inside the
+# box would look like an ordinary tidy-up.
+grep -qF 'struct PrivacyDevnetRoomList' "$work/card.bare"   || fail "PrivacyDevnetRoomList is gone — the rows would be back inside DSRoomSlot's 300pt box, which clips them away with no scroll"
+# The card's `content` — everything DSRoomSlot's 300pt box draws — must reach
+# the figure and never the rows.
+python3 - "$work/card.bare" <<'PY2' || fail "the card's slot content draws a scope list again — DSRoomSlot clips at 300pt, so the rows vanish with no scroll"
+import sys, io, re
+s = io.open(sys.argv[1], encoding="utf-8").read()
+i = s.index("private var content: some View {")
+j = s.index("\n    }\n", i)
+body = s[i:j]
+if "scopeList" in body or "withFigure" in body: sys.exit(1)
+if "figure(for: section)" not in body: sys.exit(1)
+sys.exit(0)
+PY2
+
+# **THE ACTS ARE ON HOME AND ONLY ON HOME** (§594's line: an act that WRITES to
+# the chain moves to Home; an act that changes what you are LOOKING AT stays
+# with the view). A send panel repeated under every scope is one control four
+# times.
+grep -qF 'if section == .home, let onSend' "$work/card.bare"   || fail "the send panel is no longer scoped to Home — repeated under every scope it is the same control four times (§594)"
+
+# The connect screen keeps the WATCH and hands the writes to the room.
+grep -qE 'PrivacyDevnetSend|PrivacyDevnetKey'   "Casberi/Casberi/Screens/PrivacyDevnetScreen.swift"   && fail "an act that writes to the chain came back to the connect screen — §594 puts those on Home, and a door in both places makes three places"
+
+# **THE RELAUNCH REACHES THE LOCK SCREEN (§593d).** §593's ruling that this seat
+# raises no notification was about the ROOT WINDOW — a deadline nobody can act
+# on — and that ban is still enforced against `PrivacyDevnetRoots` above. A
+# relaunch is the opposite: it is the one fact that makes every reading in the
+# room describe a chain that no longer exists.
+grep -qF 'case vibenet, hegota, privacy' "Casberi/Casberi/Model/NotifyPlan.swift"   || fail "the Privacy seat left NotifyDevnet — a relaunch would again be discoverable only by opening the room (§522's report)"
+grep -qF 'out.append(.init(seat: .privacy, key: seen.key, observedAt: seen.at,' "Casberi/Casberi/Model/DevnetNotify.swift"   || fail "nothing gathers the Privacy relaunch into resets(), so its NotifyDevnet seat can never fire"
+grep -qF 'nonisolated static func observedRelaunch()'   "Casberi/Casberi/Model/PrivacyDevnetBridge.swift"   || fail "the relaunch is no longer recorded across launches — an in-memory genesis cannot be read by a notify sweep"
+
+# **ONE SPELLING OF A BALANCE.** The rail carried a private copy of this
+# arithmetic and the send sheet needed the same sentence.
+grep -qF 'PrivacyDevnetMoney.line' "Casberi/Casberi/Shell/FaceScopeRail.swift"   || fail "the face rail formats a Privacy balance itself again — two formatters of one number is how a rail and a form disagree about what an account holds"
+
+# **THE WALK SAYS WHAT IT DID NOT READ (§307, §309).** A truncated room and a
+# complete one look identical from outside.
+grep -qF 'cut.unread = max(0, ranked.count - Self.walkCap)' "$work/bridge.bare"   || fail "the walk no longer counts what the cap dropped — a truncated room reads as a quiet one"
+grep -qF 'walkCeiling' "$work/card.bare"   || fail "the Activity list stopped stating the walk's ceiling — a room found by following logs must say so"
+
 # This harness must stay in verify.sh's hand list (that guard fails the build
 # until it is named WITH its reason, which is the part that gets skipped).
 grep -q "privacy-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
 print "  ok   drift guards: no price, no notification, slots not blocks, no coins scope"
-print "✓ privacy: 7 scopes, the 8272 window, the room head, the figures, 25 mutations, 7 drift guards"
+print "✓ privacy: 7 scopes, the 8272 window, the room head, the figures, the roots' own storage, 38 mutations, 18 drift guards"

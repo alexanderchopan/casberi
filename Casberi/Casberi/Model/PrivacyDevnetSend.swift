@@ -1,4 +1,5 @@
 import Foundation
+import Security
 
 /// SENDING ON ETHREX PRIVACY (prd §593a, 2026-09-04) — the second thing this
 /// app writes to chain 8141, and the only caller of `PrivacyDevnetKey.sign`.
@@ -67,6 +68,97 @@ enum PrivacyDevnetSend {
                                              txHash: root?["txhash"] as? String)
         if case .sent(let hash) = verdict { return hash }
         throw Failure.faucet(verdict)
+    }
+
+    // MARK: - What the chain says before we sign
+
+    /// This account's next nonce, READ rather than taken from the snapshot.
+    ///
+    /// **Two parameters only.** Measured on 8141: a third nonce-channel
+    /// argument is refused outright ("Invalid params: Expected 2 params")
+    /// where vibenet's node honours one, so there is no per-channel read here
+    /// and `freshNonceKey` below has to reason about that.
+    static func currentNonce(for address: String) async -> UInt64? {
+        PrivacyDevnetRPC.hexInt(
+            await PrivacyDevnetRPC.call(method: "eth_getTransactionCount",
+                                        params: [address, "latest"]))
+    }
+
+    static func suggestedGasPrice() async -> UInt64? {
+        PrivacyDevnetRPC.hexInt(
+            await PrivacyDevnetRPC.call(method: "eth_gasPrice", params: []))
+    }
+
+    /// A spend key nobody has used, so this send cannot be tied to the last one.
+    ///
+    /// **This is the one capability this chain has that neither sibling does,
+    /// and the room could read it without ever making one.** Every transaction
+    /// carries `nonce_keys`, and the ordinary channel is `0` — which is what
+    /// every send in this app used until now, and what makes a person's sends
+    /// trivially linkable to each other. A fresh 32-byte key is what the pool
+    /// contract emits as a nullifier, spent once (`nonceSeq` 0 on every one
+    /// measured), and it is the unlinkability the whole seat is named for.
+    ///
+    /// 32 bytes from the system generator. **Not a hash of anything we hold** —
+    /// a key derived from the address or the clock is linkable to exactly the
+    /// thing it is supposed to break the link to.
+    ///
+    /// **THE SEQUENCE FOR A FRESH KEY IS 0, AND THAT IS MEASURED** (prd §593d),
+    /// which matters because this node refuses the per-channel read that would
+    /// otherwise settle it (`currentNonce` above). Every type-`0x6` transaction
+    /// on 8141 was read and grouped: all four carrying 32-byte keys report
+    /// `nonceSeq: 0x0`, as do the three on the numbered channels
+    /// (`0x81410003`, `0x82500001`, `0x82500000`) — and the ONLY non-zero
+    /// sequences on the chain (`0xa`, `0x13`) both belong to one sender on the
+    /// ordinary `0x0` channel. So the sequence is per-CHANNEL and a channel
+    /// nobody has used starts at zero.
+    ///
+    /// It also fails safely if that ever stops being true: a wrong sequence is
+    /// refused by the node in its own words ("Nonce mismatch: expected N, got
+    /// M"), which `Failure.refused` puts on the screen — so the cost is a send
+    /// that does not happen, never one that sends something else.
+    ///
+    /// **A real pool transaction carries TWO 32-byte keys, not one** (measured,
+    /// 4 of 4). This sends one, which is what an ordinary transfer needs; a
+    /// second would be a claim about a pool operation this app does not make.
+    static func freshNonceKey() -> Data {
+        var bytes = [UInt8](repeating: 0, count: 32)
+        // A failure here must not fall back to a weak key — a predictable
+        // "unlinkable" key is worse than an honest linkable one, because the
+        // person believes it. The caller drops the option instead.
+        guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess
+        else { return Data() }
+        return Data(bytes)
+    }
+
+    /// Sign and broadcast an ordinary transfer.
+    ///
+    /// `freshKey` is the §593d control: nil keeps the ordinary `0` channel that
+    /// every measured transaction on this chain uses, and a 32-byte value
+    /// spends on a channel of its own. An EMPTY value is treated as no key
+    /// rather than as an empty list, which the node refuses outright.
+    static func sendValue(to recipient: String, weiHex: String,
+                          freshKey: Data? = nil) async throws -> String {
+        guard let address = PrivacyDevnetKey.address() else { throw Failure.noKey }
+        // A fresh channel has no history, so its sequence starts at 0; the
+        // default channel's is the account's own count.
+        let usingFresh = (freshKey?.isEmpty == false)
+        let nonce: UInt64
+        if usingFresh {
+            nonce = 0
+        } else {
+            guard let read = await currentNonce(for: address) else {
+                throw Failure.chainUnreachable
+            }
+            nonce = read
+        }
+        guard let gasPrice = await suggestedGasPrice() else {
+            throw Failure.chainUnreachable
+        }
+        let fields = try transfer(to: recipient, weiHex: weiHex, nonce: nonce,
+                                  gasPrice: gasPrice,
+                                  nonceKeys: usingFresh ? [freshKey!] : [])
+        return try await send(fields)
     }
 
     // MARK: - Sending
