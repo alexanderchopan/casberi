@@ -3110,6 +3110,9 @@ struct FeedScreen: View {
             .onChange(of: framesSectionPublication, initial: true) { _, now in
                 chrome.framesSections = now
             }
+            .onChange(of: privacyDevnetSectionPublication, initial: true) { _, now in
+                chrome.privacyDevnetSections = now
+            }
             // Cleared on the way OUT, which the body-path writes never did:
             // every room evaluated those lines, so the list left behind was
             // whatever the last devnet visit put there. The list is also each
@@ -3667,6 +3670,11 @@ struct FeedScreen: View {
     private var framesSectionPublication: [FramesSection] {
         guard source == FramesIdentity.source else { return [] }
         return FramesRoomSource.sections()
+    }
+
+    private var privacyDevnetSectionPublication: [PrivacyDevnetSection] {
+        guard source == PrivacyDevnetIdentity.source else { return [] }
+        return PrivacyDevnetRoomSource.sections(scope: chrome.privacyDevnetScope)
     }
 
     /// Whether the vibenet room is currently drawing its event rows — true for
@@ -4343,14 +4351,73 @@ case .vibenetSend(let account):
             // Hegotá's branch below documents. This seat lands no `Thing`
             // EVER, so without this arm both arms above fall through and the
             // room renders nothing at all.
+            // Published from `.onChange(of: privacyDevnetSectionPublication)` up
+            // in `body`, NOT written here — see that property for what a body
+            // writing its own observed state costs.
+            let privacyScope = PrivacyDevnetSection.resolve(
+                chrome.privacyDevnetSection, present: chrome.privacyDevnetSections)
+            // **FIGURE FIRST, THEN THE SLAB** — Wallet's order. The Frames room
+            // shipped the switcher above its figure once and it was reported
+            // from a screenshot: it puts the control that scopes the room above
+            // the drawing it scopes.
             Section {
-                PrivacyDevnetRoomCard(head: head)
+                PrivacyDevnetRoomCard(
+                    head: head,
+                    section: privacyScope,
+                    accounts: PrivacyDevnetRoomSource.accounts(scope: chrome.privacyDevnetScope),
+                    headSlot: PrivacyDevnetLiveState.shared.headSlot)
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                       bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
-            .task { await PrivacyDevnetLiveState.shared.refresh() }
+            .task { await PrivacyDevnetLiveState.shared.refreshIfStale() }
+            // **THE SWITCHER WAS MISSING ON THE FIRST BUILD**, found by opening
+            // the room on a simulator rather than by any check: the seven scopes
+            // existed, `present()` computed them correctly, and six of them were
+            // unreachable because nothing drew a control. Nothing static can see
+            // that — the scopes are right, the room draws, and the strip simply
+            // is not there.
+            // **THE RAIL LISTS EVERY ACCOUNT, NOT THE SCOPED ONE.** It is the
+            // control that SETS the scope, so feeding it the scoped list would
+            // leave one face on screen with no way back — a filter that can be
+            // entered and not left.
+            let privacyAccounts = PrivacyDevnetRoomSource.accounts(scope: nil)
+            let showsPrivacyRail = PrivacyDevnetScopeRail.shows(
+                source: source, watched: privacyAccounts.count)
+            if showsPrivacyRail || PrivacyDevnetSection.shows(present: chrome.privacyDevnetSections) {
+                Section {
+                    DSRoomRailSlab(
+                        showsRail: showsPrivacyRail,
+                        showsSwitcher: PrivacyDevnetSection.shows(present: chrome.privacyDevnetSections),
+                        sections: chrome.privacyDevnetSections,
+                        active: privacyScope,
+                        attention: PrivacyDevnetSection.attention(),
+                        onPick: { chrome.privacyDevnetSection = $0 }
+                    ) {
+                        // **THE SILHOUETTES**, fused with the switcher rather
+                        // than drawn as a second strip (§547). Passing
+                        // `EmptyView` here is what the first cut did, and it
+                        // draws half of a fused control.
+                        FaceScopeRail(
+                            items: PrivacyDevnetScopeRail.items(privacyAccounts),
+                            scope: chrome.privacyDevnetScope,
+                            compact: false,
+                            // A deck of the slab, not a strip of its own (§547).
+                            embedded: true,
+                            matches: PrivacyDevnetScopeRail.matches,
+                            onPick: { picked in
+                                withAnimation(DS.Motion.standard) {
+                                    chrome.privacyDevnetScope = (picked?.isEmpty ?? true) ? nil : picked
+                                }
+                            })
+                    }
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                              bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+            }
         } else if source == HegotaIdentity.source, let head = HegotaRoomSource.compose() {
             // **A ROOM WITH LIVE CONTENT AND NO ROWS.** Without this branch the
             // `if/else if` above falls through BOTH arms and renders nothing at

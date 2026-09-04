@@ -713,6 +713,55 @@ enum FramesScopeRail {
     }
 }
 
+/// The Ethrex Privacy room's face rail (prd §593).
+enum PrivacyDevnetScopeRail {
+    /// **Draws for ONE watched address, and that is Frames' rule rather than
+    /// Hegotá's** — §547's fusion is the reason. That ruling joined the rail
+    /// and the switcher so they would stop reading as two unrelated strips, so
+    /// a room drawing only the switcher is that failure wearing the fused
+    /// component's name. The first cut of this room did exactly that, passing
+    /// `showsRail: false` and an `EmptyView`, and it was caught by looking at
+    /// the room on a simulator — nothing static can see half a fused control.
+    ///
+    /// Unlike Frames the account here is NOT necessarily yours (this seat makes
+    /// no key), so the face is the room's SUBJECT rather than its owner. That
+    /// still earns the rail: it says whose room this is, and picking it does
+    /// something perceptible.
+    static func shows(source: String, watched: Int) -> Bool {
+        source == PrivacyDevnetIdentity.source && watched > 0
+    }
+
+    /// **The caption is what the address HOLDS**, which is this rail's stated
+    /// job — one row saying both whose room this is and what is in it.
+    ///
+    /// **Nil is not zero**: an address that did not answer gets its short form
+    /// back rather than "0", which would be a claim about somebody's balance
+    /// made from a failed read (§515a, on the line most likely to be believed).
+    static func items(_ accounts: [PrivacyDevnetAccount]) -> [FaceScopeRail.Item] {
+        accounts.map { account in
+            FaceScopeRail.Item(
+                id: account.address,
+                caption: PrivacyDevnetWatch.shared.name(for: account.address)
+                    ?? Self.eth(account)
+                    ?? WalletStore.shortAddress(account.address),
+                face: .wallet(address: account.address))
+        }
+    }
+
+    /// A balance as test ETH, to four places, and NEVER as money — this chain's
+    /// asset has no market, so no currency symbol and no conversion may appear.
+    private static func eth(_ account: PrivacyDevnetAccount) -> String? {
+        guard account.reached, let wei = account.balanceWei else { return nil }
+        let eth = wei / Decimal(sign: .plus, exponent: 18, significand: 1)
+        return "\(NSDecimalNumber(decimal: eth).doubleValue.formatted(.number.precision(.fractionLength(4)))) ETH"
+    }
+
+    static func matches(_ scope: String?, _ id: String) -> Bool {
+        guard let scope else { return false }
+        return scope.caseInsensitiveCompare(id) == .orderedSame
+    }
+}
+
 enum WalletScopeRail {
     /// Whether the rail draws at all — which is ALSO the test for whether it,
     /// rather than a room's own header, carries the add-a-wallet verb

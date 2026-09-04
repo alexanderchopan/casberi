@@ -150,6 +150,36 @@ enum PrivacyDevnetRoots {
         }
     }
 
+    /// The narrowest a nullifier can be, in bytes.
+    ///
+    /// 16 bytes = 128 bits. Everything above it is a value nobody picked;
+    /// everything below is a number somebody typed.
+    static let nullifierFloor = 16
+
+    /// Whether a nonce key is a NULLIFIER rather than a named nonce channel.
+    ///
+    /// **Non-zero is NOT the test, and assuming it was over-counted on the real
+    /// chain.** EIP-8250 keys are a namespace, and this devnet uses them as one:
+    /// the measured keys include `0x81410003`, `0x82500001`, `0x82502001` and
+    /// `0x78050000` — four-byte values numbered after the EIPs under test
+    /// (8141, 8250, 7805). Those are channels somebody chose, and counting them
+    /// lights the Nullifiers scope for an address that has never touched the
+    /// pool. Found by running the walk against the live chain and reading the
+    /// result, not from the code.
+    ///
+    /// A real nullifier is derived from a hash and fills its width: every one
+    /// measured on this chain is 31 or 32 bytes. So the discriminator is SIZE,
+    /// and it is measured on the significant bytes — the wire is
+    /// quantity-encoded, so `0x0cca26d3…` arrives with its leading zero
+    /// stripped and a raw-length test would drop exactly that case.
+    ///
+    /// `0x0` fails this for free, being both zero and short.
+    static func isNullifier(_ key: Data) -> Bool {
+        var significant = key
+        while significant.first == 0 { significant.removeFirst() }
+        return significant.count >= nullifierFloor
+    }
+
     /// Whether the scope has anything to draw. A watched address that has never
     /// referenced a root gets no chip, rather than an empty page — which is
     /// also the honest common case, since most transactions on this chain carry

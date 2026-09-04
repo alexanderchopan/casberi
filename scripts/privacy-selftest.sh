@@ -260,6 +260,27 @@ if case .quiet = PrivacyDevnetRoom.head(accounts: [PrivacyDevnetRoom.Account()],
     check(false, "an address that has done nothing reads as quiet")
 }
 
+// THE NULLIFIER RULE. `0x0` is the default nonce channel every ordinary
+// transaction uses, so counting it lights the scope on an address that has
+// never touched the pool.
+check(!PrivacyDevnetRoots.isNullifier(Data()), "an empty key is not a nullifier")
+check(!PrivacyDevnetRoots.isNullifier(Data([0])), "0x0 is an ordinary nonce, not a nullifier")
+check(!PrivacyDevnetRoots.isNullifier(Data(repeating: 0, count: 32)), "32 zero bytes is not a nullifier")
+check(PrivacyDevnetRoots.isNullifier(d("0cca26d343c75c5d092b41abc4c7372c0105537e6f5209967fee5bb6b6ca390c")),
+      "a real 32-byte key is a nullifier")
+// The wire is QUANTITY-encoded, so a real key's leading zero is stripped and it
+// arrives as 31 bytes — a length test would drop exactly the measured case.
+check(PrivacyDevnetRoots.isNullifier(d("cca26d343c75c5d092b41abc4c7372c0105537e6f5209967fee5bb6b6ca390c")),
+      "a 31-byte key (leading zero stripped on the wire) is still a nullifier")
+// THE NAMED CHANNELS. Measured on the live chain: this devnet numbers its nonce
+// channels after the EIPs under test, and a non-zero test counted every one of
+// them as a nullifier — which lights the scope for an address that has never
+// touched the pool. Found by running the walk and reading the result.
+check(!PrivacyDevnetRoots.isNullifier(d("81410003")), "0x81410003 is a named channel (EIP-8141), not a nullifier")
+check(!PrivacyDevnetRoots.isNullifier(d("82500001")), "0x82500001 is a named channel (EIP-8250), not a nullifier")
+check(!PrivacyDevnetRoots.isNullifier(d("82502001")), "0x82502001 is a named channel, not a nullifier")
+check(!PrivacyDevnetRoots.isNullifier(d("78050000")), "0x78050000 is a named channel (EIP-7805), not a nullifier")
+
 check(!PrivacyDevnetRoots.present([]), "no references means no roots scope")
 check(PrivacyDevnetRoots.present(refs), "references mean the scope draws")
 
@@ -318,6 +339,11 @@ mutate "a conditional scope promoted into the stable head" \
   "case .nullifiers, .roots, .sponsors: return true\n        case .frames: return false"
 mutate "roots separated from nullifiers" \
   "$SECTION" ".nullifiers, .roots, .sponsors]" ".roots, .nullifiers, .sponsors]"
+mutate "a named nonce channel counted as a nullifier" \
+  "$ROOTS" 'significant.count >= nullifierFloor' '!significant.isEmpty'
+mutate "the nullifier floor measured on RAW bytes (a stripped leading zero drops a real key)" \
+  "$ROOTS" 'while significant.first == 0 { significant.removeFirst() }' '' 
+  "static func isNullifier(_ key: Data) -> Bool { !key.isEmpty }"
 mutate "an unobserved genesis claiming a relaunch (not knowing read as knowing)" \
   "$ROOM" "if wasReset == true { return finish(.relaunched) }" \
   "if wasReset != false { return finish(.relaunched) }"
@@ -417,6 +443,21 @@ done
 grep -qF 'Watching only — nothing is signed and nothing is sent' \
   "Casberi/Casberi/Model/BridgeCatalog.swift" \
   || fail "the catalog no longer says this seat only watches, but nothing here signs — restore the bullet or land the write with it"
+
+# THE WALK'S BOUNDS (§593). Its stated ceiling is that a transaction emitting no
+# log is invisible, and its cost is bounded three ways. Each of these failing is
+# invisible from outside: a room that is merely slow, or one that reports a busy
+# address as quiet.
+grep -qF 'hashes.reverse()' "$work/bridge.bare" \
+  || fail "the walk no longer takes the NEWEST transactions first — on a chain that outgrows walkCap that reports a busy address as quiet"
+grep -qF 'prefix(Self.walkCap)' "$work/bridge.bare" \
+  || fail "the walk is unbounded — its cost would grow with the chain until a room open costs minutes"
+grep -qF 'refreshIfStale' "$work/bridge.bare" \
+  || fail "the walk lost its staleness guard — it is ~15s and would run on every room open"
+# The receipt is read ONLY for a transaction already matched to a watched
+# address. Reading one per log-touched transaction triples the walk for nothing.
+grep -qF 'wanted.contains(sender) else { continue }' "$work/bridge.bare" \
+  || fail "the walk no longer filters to watched senders before reading receipts"
 
 # THE BLACK-SCREEN RULE, mechanically: this seat lands no Thing, so a nil head
 # is not an empty room but a black screen. `head` must return a non-optional.

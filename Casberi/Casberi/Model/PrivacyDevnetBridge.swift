@@ -81,6 +81,8 @@ struct PrivacyDevnetAccount: Equatable, Sendable, Identifiable {
     var nullifiers: [Data] = []
     var roots: [PrivacyDevnetRoots.Reference] = []
     var sponsoredCount = 0
+    /// The transactions the walk saw, newest first.
+    var moves: [PrivacyDevnetLiveState.Move] = []
 
     var hasFrames: Bool { frameCount > 0 }
     var hasNullifiers: Bool { !nullifiers.isEmpty }
@@ -97,6 +99,23 @@ struct PrivacyDevnetAccount: Equatable, Sendable, Identifiable {
 @MainActor
 final class PrivacyDevnetLiveState: ObservableObject {
     static let shared = PrivacyDevnetLiveState()
+
+    /// How many log-touched transactions one walk will read.
+    ///
+    /// 18 exist chain-wide today, so this is headroom rather than a limit — but
+    /// it is a real bound, and without it the walk grows with the chain until a
+    /// room open costs minutes.
+    static let walkCap = 60
+
+    /// How long a sweep's answers stand before another is worth making.
+    ///
+    /// **The walk is ~15 seconds** (measured: 21 requests, most of them
+    /// sequential transaction reads), so running it on every room open would
+    /// make the room feel broken while it re-derived what it already knew. A
+    /// devnet with 14 transactions in two weeks does not change inside a
+    /// minute.
+    static let staleAfter: TimeInterval = 120
+    private(set) var readAt: Date?
 
     @Published private(set) var accounts: [PrivacyDevnetAccount] = []
     @Published private(set) var headSlot: UInt64 = 0
@@ -142,6 +161,7 @@ final class PrivacyDevnetLiveState: ObservableObject {
         accounts = []
         headSlot = 0
         observedGenesis = nil
+        readAt = nil
     }
 }
 
@@ -168,6 +188,24 @@ enum PrivacyDevnetRPC {
             if root["error"] != nil { return nil }
         }
         return nil
+    }
+
+    /// A hex string as raw bytes, with an odd-length quantity left-padded.
+    ///
+    /// **The padding matters**: the wire is quantity-encoded, so a real 32-byte
+    /// nonce key whose first byte is zero arrives as 63 hex characters, and
+    /// dropping the odd nibble would corrupt every byte of it.
+    static func hexData(_ s: String) -> Data {
+        var t = s.hasPrefix("0x") ? String(s.dropFirst(2)) : s
+        if t.count % 2 == 1 { t = "0" + t }
+        var out = Data()
+        var i = t.startIndex
+        while i < t.endIndex {
+            let j = t.index(i, offsetBy: 2)
+            guard let b = UInt8(t[i..<j], radix: 16) else { return Data() }
+            out.append(b); i = j
+        }
+        return out
     }
 
     static func hexInt(_ any: Any?) -> UInt64? {
@@ -310,6 +348,13 @@ extension PrivacyDevnetLiveState {
     /// via an `eth_call` over init code that executes the single opcode and
     /// returns its stack word, which is the only way to reach it — no RPC
     /// method exposes the slot.
+    /// Refresh only if the last answer has gone stale — what the room's own
+    /// task calls, so opening it twice in a row costs one sweep.
+    func refreshIfStale() async {
+        if let readAt, Date().timeIntervalSince(readAt) < Self.staleAfter { return }
+        await refresh()
+    }
+
     func refresh() async {
         guard !DemoMode.isActive else { return }
         let watched = PrivacyDevnetWatch.shared.addresses
@@ -352,14 +397,124 @@ extension PrivacyDevnetLiveState {
             a.reached = bal != nil || cnt != nil
             a.balanceWei = PrivacyDevnetRPC.hexWei(bal)
             a.nonce = PrivacyDevnetRPC.hexInt(cnt)
-            // Frames, nullifiers and roots need a transaction walk, which this
-            // sweep does NOT do yet — so those three scopes stay absent rather
-            // than reading zero. Absent and empty are different claims, and
-            // `PrivacyDevnetSection.present` is gated on evidence the address
-            // produced rather than on the read having run.
             out.append(a)
         }
+        // The walk that fills Frames, Nullifiers, Roots and Sponsors. Done
+        // ONCE for every watched address rather than per address, because its
+        // expensive half — reading every transaction a log touched — is shared.
+        if let walked = await walkTransactions(for: watched) {
+            for i in out.indices {
+                if let w = walked[out[i].address.lowercased()] {
+                    out[i].frameCount = w.frames
+                    out[i].nullifiers = w.nullifiers
+                    out[i].roots = w.roots
+                    out[i].sponsoredCount = w.sponsored
+                    out[i].moves = w.moves
+                }
+            }
+        }
         replace(out)
+        readAt = Date()
+    }
+
+    /// One transaction, as the walk saw it. Kept because Activity and Frames
+    /// have nothing to draw without it, and re-fetching on a scope tap would
+    /// spend 15 seconds to redraw what is already in memory.
+    struct Move: Equatable, Sendable, Identifiable {
+        var hash: String
+        var frames: Int
+        var nullifiers: Int
+        var roots: Int
+        var sponsored: Bool
+        var id: String { hash }
+    }
+
+    struct Walked { var frames = 0; var nullifiers: [Data] = []
+                    var roots: [PrivacyDevnetRoots.Reference] = []; var sponsored = 0
+                    var moves: [Move] = [] }
+
+    /// What each watched address has DONE on this chain.
+    ///
+    /// **There is no indexer and no `eth_getLogs` filter that answers this**, so
+    /// the walk is the cheapest honest shape the chain allows: one all-time log
+    /// read, then the transactions those logs sit in, then the receipts of the
+    /// ones that turn out to be yours. Measured 2026-09-04 on the real chain —
+    /// 32 logs in 1.2s, 18 distinct transactions, 21 requests total for one
+    /// address, and it recovers exactly the right shape for the pool
+    /// participant (4 frames, 4 nullifiers, 2 roots).
+    ///
+    /// **STATED CEILING, and it is the reason for every bound below.** A
+    /// transaction that emitted NO log is invisible to this walk. That is
+    /// currently a small set and it is the honest trade: the alternative is
+    /// scanning every block, which is ~15,000 requests today and grows without
+    /// limit. It also means the counts are a FLOOR — which is why nothing here
+    /// renders as "you have exactly N", and why an absent scope means "we found
+    /// none", never "there are none".
+    ///
+    /// Returns nil when the log read itself failed, which callers keep distinct
+    /// from an empty walk: an unreached read must not blank scopes that were
+    /// drawing a moment ago.
+    func walkTransactions(for watched: [String]) async -> [String: Walked]? {
+        guard !watched.isEmpty else { return [:] }
+        guard let logs = await PrivacyDevnetRPC.call(
+                method: "eth_getLogs",
+                params: [["fromBlock": "0x0", "toBlock": "latest"]]) as? [[String: Any]]
+        else { return nil }
+
+        var hashes: [String] = []
+        var seen = Set<String>()
+        for log in logs {
+            guard let h = log["transactionHash"] as? String else { continue }
+            if seen.insert(h).inserted { hashes.append(h) }
+        }
+        // Newest first, so a chain that outgrows the cap keeps the RECENT
+        // history rather than the genesis fixtures — the opposite choice
+        // reports a busy address as quiet.
+        hashes.reverse()
+        hashes = Array(hashes.prefix(Self.walkCap))
+
+        let wanted = Set(watched.map { $0.lowercased() })
+        var out: [String: Walked] = [:]
+        for hash in hashes {
+            guard let tx = await PrivacyDevnetRPC.call(method: "eth_getTransactionByHash",
+                                                       params: [hash]) as? [String: Any],
+                  let sender = (tx["sender"] as? String ?? tx["from"] as? String)?.lowercased(),
+                  wanted.contains(sender) else { continue }
+            var w = out[sender] ?? Walked()
+            let before = (nullifiers: w.nullifiers.count, roots: w.roots.count, sponsored: w.sponsored)
+            w.frames += (tx["frames"] as? [[String: Any]])?.count ?? 0
+            for key in (tx["nonceKeys"] as? [String] ?? []) {
+                let data = PrivacyDevnetRPC.hexData(key)
+                // `0x0` is the ordinary nonce channel, not a nullifier — see
+                // `PrivacyDevnetRoots.isNullifier`. Counting it would light the
+                // scope for every address that ever sent anything.
+                if PrivacyDevnetRoots.isNullifier(data) { w.nullifiers.append(data) }
+            }
+            for r in (tx["recentRootReferences"] as? [[String: Any]] ?? []) {
+                guard let src = r["sourceId"] as? String,
+                      let root = r["root"] as? String,
+                      let slot = PrivacyDevnetRPC.hexInt(r["slot"]) else { continue }
+                w.roots.append(PrivacyDevnetRoots.Reference(
+                    sourceID: PrivacyDevnetRPC.hexData(src), slot: slot,
+                    root: PrivacyDevnetRPC.hexData(root)))
+            }
+            // The receipt is read ONLY for a transaction already known to be
+            // yours, which is what keeps the walk's cost proportional to what
+            // you watch rather than to the chain.
+            if let rc = await PrivacyDevnetRPC.call(method: "eth_getTransactionReceipt",
+                                                    params: [hash]) as? [String: Any],
+               let payer = (rc["payer"] as? String)?.lowercased(),
+               payer != sender {
+                w.sponsored += 1
+            }
+            w.moves.append(Move(hash: hash,
+                                frames: (tx["frames"] as? [[String: Any]])?.count ?? 0,
+                                nullifiers: w.nullifiers.count - before.nullifiers,
+                                roots: w.roots.count - before.roots,
+                                sponsored: w.sponsored > before.sponsored))
+            out[sender] = w
+        }
+        return out
     }
 }
 
@@ -390,13 +545,19 @@ extension PrivacyDevnetLiveState {
         a.reached = true
         a.balanceWei = Decimal(string: "448132919986930440")   // 0.448133 ETH
         a.nonce = 1
-        a.frameCount = 2
+        a.frameCount = 4
         // The two 32-byte keys off block 13347, which are byte-identical to the
         // pool's own spent-key log topics — the evidence that a keyed nonce is
         // a nullifier on this chain.
+        // FOUR, not two: the walk was run against this address on the real
+        // chain and it has TWO pool transactions, each carrying two keys. The
+        // fixture claimed one transaction's worth until the walk existed to
+        // measure it, which would have made the demo quieter than the truth.
         a.nullifiers = [
             Self.hex("0cca26d343c75c5d092b41abc4c7372c0105537e6f5209967fee5bb6b6ca390c"),
             Self.hex("277a116036d2c29207c09c18015780c8e161402d2017d07012147a1d4b7240fe"),
+            Self.hex("055b6c2720e71fbe4d5fa4ad130f4f7b68879ee7d062d0e21af30c5e8ce5839c"),
+            Self.hex("08cda6582e3ed667ed4b907d27093659da30882f1d1437ee86125664ecf6f9ce"),
         ]
         a.roots = [
             PrivacyDevnetRoots.Reference(
@@ -407,6 +568,17 @@ extension PrivacyDevnetLiveState {
                 sourceID: Self.hex("a0dfea37afb843c1fc18cfa21205766b96e6f7c7d7993ab5d5e041e0b1964f54"),
                 slot: 0x3436,
                 root: Self.hex("1ea261e94b9f2b02699e293bd4ad36b4c39cf23975b84c4cc39794bb577df422")),
+        ]
+        // THE TWO REAL TRANSACTIONS, so Activity and Frames draw in the demo
+        // rather than saying "nothing yet" under a chip that only exists
+        // because the counts above are non-zero. Hashes and shapes are this
+        // address's own, off blocks 13352 and 13347 — obtained by running the
+        // walk's own path against the live chain, not by hand.
+        a.moves = [
+            Move(hash: "0xfa32623718a4ac87bca85daa2f62af32522f4e2f763adec8ac2fbde5aeb5cf0f",
+                 frames: 2, nullifiers: 2, roots: 1, sponsored: false),
+            Move(hash: "0xeda9b1c8231c7ba375c831d63655acc813cf8c7d3ac2b095b23e3011d7b2999a",
+                 frames: 2, nullifiers: 2, roots: 1, sponsored: false),
         ]
         // Zero, and CORRECT: no transaction measured on this chain carries a
         // `payer` differing from its sender, so the Sponsors chip is absent in
