@@ -50,15 +50,15 @@ enum DSDock {
 
     /// Where the bar's leading edge sits, measured from the window.
     ///
-    /// **`slabInset + slabPad`, not `slabInset` (§591d).** The bar and the glass
+    /// **`slabInset + railLead`, not `slabInset` (§591d).** The bar and the glass
     /// bar behind it were both inset by `DS.Space.s4` and therefore landed on
     /// the SAME line — measured on the simulator at slab 18.0pt against pill
     /// 18.3pt, so the octopus sat flush against the rail's edge with no air at
-    /// all (user: "the octopus still touches the slab edge"). Adding the slab's
-    /// own padding gives the bar the same seat every chip inside the rail gets,
+    /// all (user: "the octopus still touches the slab edge"). Insetting it by the rail's own
+    /// leading air gives the bar the same seat every chip inside the rail gets,
     /// which is what it is: the rail's first item, not something laid on top of
     /// its border.
-    static let clusterInset: CGFloat = slabInset + slabPad
+    static let clusterInset: CGFloat = slabInset + railLead
 
     /// Where the bar's trailing edge sits, measured from the window — what the
     /// strip's melt is aligned against so chips dissolve UNDER the bar rather
@@ -111,6 +111,23 @@ enum DSDock {
     /// bar's window-space trailing edge into viewport space; spelled here so
     /// the inset and that conversion cannot drift.
     static let slabInset: CGFloat = DS.Space.s4
+
+    /// The air INSIDE the rail's leading edge, before its first item.
+    ///
+    /// **`s2`, the same as every gap in the row, and separate from `slabPad`
+    /// for a measured reason** (user, 2026-09-04: "should we make the chips on
+    /// the nav bar closer to each other? then the octopus wouldn't be so close
+    /// to the rail edge?"). Measured first, which changed the answer: the chip
+    /// gap and the seam after the octopus are BOTH `s2` already, so the chips
+    /// were not loose — the rail's own edge padding was the only number out of
+    /// step, at `slabPad`'s 5 against everything else's 10. Tightening the
+    /// chips would not have moved the octopus at all, since its distance from
+    /// the edge is this padding and nothing else.
+    ///
+    /// It cannot simply BE `slabPad`, because that value is also the rail's
+    /// vertical air and raising it to 10 would make the whole bar 10pt taller
+    /// to fix a horizontal gap. One axis, one number.
+    static let railLead: CGFloat = DS.Space.s2
 
     /// How far the strip's chips sit off the band's bottom edge.
     static func chipBottomInset(minimized: Bool) -> CGFloat {

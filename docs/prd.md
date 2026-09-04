@@ -48253,6 +48253,25 @@ for a floating pill and wrong for the first item in a row.
   read from the design layer, so the dock self-test pins the two in both states
   (mutation-proven each way).
 
+**Then the edge air, and measuring changed the answer** (user: *"should we make
+the chips on the nav bar closer to each other? then the octopus wouldn't be so
+close to the rail edge?"*). Two different numbers, and only one was wrong. The
+chip gap and the seam after the octopus are BOTH `DS.Space.s2` already, so the
+chips were never loose — the rail's own leading padding was the only value out
+of step, `slabPad`'s 5 against everything else's 10. **Tightening the chips
+would not have moved the octopus at all**, since its distance from the edge is
+that padding and nothing else.
+
+So `DSDock.railLead` is `s2`, the same as every gap in the row, and is separate
+from `slabPad` because that value is also the rail's VERTICAL air — raising it
+to 10 would have made the whole bar 10pt taller to fix a horizontal gap. One
+axis, one number. Measured after: rail edge 18.0pt, octopus 28.0pt.
+
+A pixel measurement also corrected my own first reading here: a threshold-based
+scan put the chip gap at 14.7pt, because a capsule's soft edge fades over ~3pt
+on each side. The constants are the truth; use a screenshot to check a
+RELATIONSHIP, not to derive a value that is already written down.
+
 The centring survives that change rather than being retired by it: the marks are
 the same size now, but a chip's FRAME is larger than its mark because it carries
 the active ring's room, so bottom-aligning would still drop the bar half that
