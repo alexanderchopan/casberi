@@ -444,12 +444,69 @@ grep -qF 'Watching only — nothing is signed and nothing is sent' \
   "Casberi/Casberi/Model/BridgeCatalog.swift" \
   || fail "the catalog no longer says this seat only watches, but nothing here signs — restore the bullet or land the write with it"
 
+# THE DEMO FIXTURE'S HEX VALUES ARE PINNED (§593). Two of the four nullifiers
+# in `seedDemo` were FABRICATED and shipped — the count was measured by running
+# the walk, the values were then written from a different block's census, and
+# the comment above them claimed the measurement while standing over invented
+# bytes. Nothing here could see it: a fixture that LOOKS like a 32-byte key is
+# indistinguishable from one that is, so eye review cannot catch it and the
+# harness pinned only the named channels and the width rule.
+#
+# These four keys, two hashes and two roots were read back off
+# `eth_getTransactionByHash` against rpc1.privacy.ethrex.xyz. This guard cannot
+# prove a value is real — nothing offline can — but it fails the build the
+# moment one CHANGES, which forces the next edit to be a deliberate one that
+# says where the new value came from.
+for v in \
+  '0cca26d343c75c5d092b41abc4c7372c0105537e6f5209967fee5bb6b6ca390c' \
+  '277a116036d2c29207c09c18015780c8e161402d2017d07012147a1d4b7240fe' \
+  '1871055c1947afa152d04f00757f94f890efa87190de3d8e481d7c22b6b381e1' \
+  '1a3f0e61700a2fc8652d33787331f955bff2b1a500426b4dfd83481f5c645ffe' \
+  '0xfa32623718a4ac87bca85daa2f62af32522f4e2f763adec8ac2fbde5aeb5cf0f' \
+  '0xeda9b1c8231c7ba375c831d63655acc813cf8c7d3ac2b095b23e3011d7b2999a' \
+  '448132919986930440'; do
+  grep -qF -- "$v" "$work/bridge.bare" \
+    || fail "a measured demo fixture value changed or vanished ($v) — every hex value here was read back off the chain, and two were once fabricated; re-measure and say so rather than editing in place"
+done
+# And the two that were fabricated must never come back.
+for v in '055b6c2720e71fbe4d5fa4ad130f4f7b68879ee7d062d0e21af30c5e8ce5839c' \
+         '08cda6582e3ed667ed4b907d27093659da30882f1d1437ee86125664ecf6f9ce'; do
+  grep -qF -- "$v" "$work/bridge.bare" \
+    && fail "a FABRICATED nullifier is back in the demo fixture ($v) — it is on neither of this address's transactions"
+done
+
+# THE UNBOUNDED RANGE. A sibling ethrex node already refuses `fromBlock: 0x0`
+# with `query exceeds max block range 100000`, and walkCap cannot help because
+# it is applied after the response arrives — a refused query returns nil and
+# four scopes go silently absent.
+grep -qF 'fromBlock": "0x0"' "$work/bridge.bare" \
+  && fail "the walk asks for the whole chain in one eth_getLogs again — a sibling node refuses exactly that"
+grep -qF 'walkChunk' "$work/bridge.bare" \
+  || fail "the walk is no longer chunked"
+# THE ORDERING. `reverse()` assumed eth_getLogs answers oldest-first, which no
+# spec guarantees; a newest-first node would keep the genesis fixtures and
+# report a busy address as quiet — the exact failure the code claimed to prevent.
+grep -qF 'hashes.reverse()' "$work/bridge.bare" \
+  && fail "the walk orders by reversing the node's own order again — sort on blockNumber/logIndex instead"
+
+# THE OBSERVATION MECHANISM (§593). This shipped as `ObservableObject` +
+# `@Published`, and the room reads it through STATIC functions — where a
+# `@Published` read establishes no dependency at all. The demo fixture installs
+# asynchronously, SwiftUI never learns, and the room sits on "Reading the
+# chain…" forever over a fixture already in memory. It passed my own testing
+# because the install happened to land before the first compose, which is what
+# makes it a race rather than a miss. Both sibling seats use `@Observable`.
+grep -qF '@Observable' "$work/bridge.bare" \
+  || fail "PrivacyDevnetLiveState is not @Observable — the room reads it from static functions, so ObservableObject would leave it on 'Reading the chain…' whenever the install loses the race"
+grep -qF 'ObservableObject' "$work/bridge.bare" \
+  && fail "PrivacyDevnetLiveState is an ObservableObject again — a @Published read from a static context tracks nothing"
+
 # THE WALK'S BOUNDS (§593). Its stated ceiling is that a transaction emitting no
 # log is invisible, and its cost is bounded three ways. Each of these failing is
 # invisible from outside: a room that is merely slow, or one that reports a busy
 # address as quiet.
-grep -qF 'hashes.reverse()' "$work/bridge.bare" \
-  || fail "the walk no longer takes the NEWEST transactions first — on a chain that outgrows walkCap that reports a busy address as quiet"
+grep -qE 'value.block > .1.value.block' "$work/bridge.bare" \
+  || fail "the walk no longer orders newest-first — on a chain that outgrows walkCap that reports a busy address as quiet"
 grep -qF 'prefix(Self.walkCap)' "$work/bridge.bare" \
   || fail "the walk is unbounded — its cost would grow with the chain until a room open costs minutes"
 grep -qF 'refreshIfStale' "$work/bridge.bare" \

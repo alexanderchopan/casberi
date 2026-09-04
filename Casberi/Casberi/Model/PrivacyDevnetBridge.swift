@@ -96,8 +96,19 @@ struct PrivacyDevnetAccount: Equatable, Sendable, Identifiable {
 /// **no `Thing` at all**: every reading here is live chain state, and a devnet
 /// test address has no news. That is why the seat is rowless in `DemoSeedAll`
 /// and why its whole demo furnishing is the fixture below.
+/// **`@Observable`, NOT `ObservableObject` — and the difference is a bug this
+/// shipped with.** The room reads this through `PrivacyDevnetRoomSource`'s
+/// static functions, and with `ObservableObject` + `@Published` a read from a
+/// static context establishes NO dependency: the demo fixture installs
+/// asynchronously, SwiftUI never learns, and the room sits on whatever it
+/// composed first — "Reading the chain…", forever, over a fixture that is
+/// right there in memory. Reported from a device; it worked in my own testing
+/// purely because the install happened to land before the first compose.
+/// `@Observable` tracks the property read itself, which is why both sibling
+/// seats use it.
 @MainActor
-final class PrivacyDevnetLiveState: ObservableObject {
+@Observable
+final class PrivacyDevnetLiveState {
     static let shared = PrivacyDevnetLiveState()
 
     /// How many log-touched transactions one walk will read.
@@ -106,6 +117,14 @@ final class PrivacyDevnetLiveState: ObservableObject {
     /// it is a real bound, and without it the walk grows with the chain until a
     /// room open costs minutes.
     static let walkCap = 60
+
+    /// Blocks per `eth_getLogs` page. Under the 100,000 that a sibling ethrex
+    /// deployment enforces, with room to spare.
+    static let walkChunk: UInt64 = 50_000
+    /// How many pages one walk will read — a bound on the bound, so a chain
+    /// that grows enormous cannot turn one room open into an unbounded scan.
+    /// At 50k blocks a page this reaches 2,000,000 blocks; 8141 is at ~15,000.
+    static let walkChunkCap = 40
 
     /// How long a sweep's answers stand before another is worth making.
     ///
@@ -117,11 +136,11 @@ final class PrivacyDevnetLiveState: ObservableObject {
     static let staleAfter: TimeInterval = 120
     private(set) var readAt: Date?
 
-    @Published private(set) var accounts: [PrivacyDevnetAccount] = []
-    @Published private(set) var headSlot: UInt64 = 0
+    private(set) var accounts: [PrivacyDevnetAccount] = []
+    private(set) var headSlot: UInt64 = 0
     /// The genesis the chain last reported. A CHANGE here is a reset, and the
     /// only signal that catches one (see `PrivacyDevnetChain.genesis`).
-    @Published private(set) var observedGenesis: String?
+    private(set) var observedGenesis: String?
 
     private init() {}
 
@@ -422,6 +441,10 @@ extension PrivacyDevnetLiveState {
     /// spend 15 seconds to redraw what is already in memory.
     struct Move: Equatable, Sendable, Identifiable {
         var hash: String
+        /// The block it landed in — the only time this walk can know, since a
+        /// transaction carries no timestamp and reading every block header to
+        /// date them would double the walk for a figure's x-axis.
+        var block: UInt64 = 0
         var frames: Int
         var nullifiers: Int
         var roots: Int
@@ -456,22 +479,57 @@ extension PrivacyDevnetLiveState {
     /// drawing a moment ago.
     func walkTransactions(for watched: [String]) async -> [String: Walked]? {
         guard !watched.isEmpty else { return [:] }
-        guard let logs = await PrivacyDevnetRPC.call(
-                method: "eth_getLogs",
-                params: [["fromBlock": "0x0", "toBlock": "latest"]]) as? [[String: Any]]
-        else { return nil }
+        // **CHUNKED, because an unbounded range is refused by a sibling node
+        // ALREADY.** This asked `fromBlock: 0x0, toBlock: latest` with no
+        // address filter, which 8141 answers happily today (32 logs, 1.2s) and
+        // which Base vibenet's node rejects outright with `query exceeds max
+        // block range 100000` — so this is a measurement of what a maturing
+        // ethrex deployment does, not a worry about one. The `walkCap` does not
+        // help: it is applied AFTER the response arrives, so a refused query
+        // returns nil and four scopes go silently absent.
+        guard let tipHex = await PrivacyDevnetRPC.call(method: "eth_blockNumber", params: []),
+              let tip = PrivacyDevnetRPC.hexInt(tipHex) else { return nil }
+        var logs: [[String: Any]] = []
+        var from: UInt64 = 0
+        var chunks = 0
+        while from <= tip && chunks < Self.walkChunkCap {
+            let to = min(from &+ Self.walkChunk &- 1, tip)
+            guard let page = await PrivacyDevnetRPC.call(
+                    method: "eth_getLogs",
+                    params: [["fromBlock": "0x" + String(from, radix: 16),
+                              "toBlock": "0x" + String(to, radix: 16)]]) as? [[String: Any]]
+            // A refused or unreached chunk abandons the WHOLE walk rather than
+            // returning a partial one: a half-read chain reports an address as
+            // quieter than it is, which is worse than saying nothing.
+            else { return nil }
+            logs.append(contentsOf: page)
+            if to == tip { break }
+            from = to &+ 1
+            chunks += 1
+        }
 
-        var hashes: [String] = []
-        var seen = Set<String>()
+        // **SORTED, NOT REVERSED.** The first cut called `reverse()` and said
+        // in a comment that this kept recent history when the cap bites — a
+        // claim that rests entirely on `eth_getLogs` answering oldest-first,
+        // which the JSON-RPC spec does not guarantee. A node answering
+        // newest-first would make the reverse produce oldest-first, the cap
+        // would keep the genesis fixtures, and a busy address would report as
+        // quiet: precisely the failure the comment claimed to prevent, silently.
+        // Sorting on the block and the log's place in it costs nothing and
+        // makes the claim true rather than assumed.
+        var newest: [String: (block: UInt64, index: UInt64)] = [:]
         for log in logs {
             guard let h = log["transactionHash"] as? String else { continue }
-            if seen.insert(h).inserted { hashes.append(h) }
+            let key = (block: PrivacyDevnetRPC.hexInt(log["blockNumber"]) ?? 0,
+                       index: PrivacyDevnetRPC.hexInt(log["logIndex"]) ?? 0)
+            if let seen = newest[h], seen.block > key.block { continue }
+            newest[h] = key
         }
-        // Newest first, so a chain that outgrows the cap keeps the RECENT
-        // history rather than the genesis fixtures — the opposite choice
-        // reports a busy address as quiet.
-        hashes.reverse()
-        hashes = Array(hashes.prefix(Self.walkCap))
+        let hashes = newest.sorted {
+            $0.value.block == $1.value.block ? $0.value.index > $1.value.index
+                                             : $0.value.block > $1.value.block
+        }
+        .prefix(Self.walkCap).map(\.key)
 
         let wanted = Set(watched.map { $0.lowercased() })
         var out: [String: Walked] = [:]
@@ -508,6 +566,7 @@ extension PrivacyDevnetLiveState {
                 w.sponsored += 1
             }
             w.moves.append(Move(hash: hash,
+                                block: PrivacyDevnetRPC.hexInt(tx["blockNumber"]) ?? 0,
                                 frames: (tx["frames"] as? [[String: Any]])?.count ?? 0,
                                 nullifiers: w.nullifiers.count - before.nullifiers,
                                 roots: w.roots.count - before.roots,
@@ -549,15 +608,25 @@ extension PrivacyDevnetLiveState {
         // The two 32-byte keys off block 13347, which are byte-identical to the
         // pool's own spent-key log topics — the evidence that a keyed nonce is
         // a nullifier on this chain.
-        // FOUR, not two: the walk was run against this address on the real
-        // chain and it has TWO pool transactions, each carrying two keys. The
-        // fixture claimed one transaction's worth until the walk existed to
-        // measure it, which would have made the demo quieter than the truth.
+        // FOUR, not two: this address has TWO pool transactions, each carrying
+        // two keys.
+        //
+        // **TWO OF THESE WERE FABRICATED AND SHIPPED**, caught in review. The
+        // COUNT was measured by running the walk; the VALUES were then written
+        // from a different block's census, and the comment here claimed the
+        // measurement while standing over invented bytes. All four are now read
+        // back off `eth_getTransactionByHash` for the two hashes below —
+        // 13347's pair, then 13352's.
+        //
+        // The lesson is the one that makes eye review useless here: a fixture
+        // that LOOKS like a 32-byte key is indistinguishable from one that is,
+        // and a confident comment tells the next reader not to check. Read
+        // every hex value back, or do not claim it was measured.
         a.nullifiers = [
             Self.hex("0cca26d343c75c5d092b41abc4c7372c0105537e6f5209967fee5bb6b6ca390c"),
             Self.hex("277a116036d2c29207c09c18015780c8e161402d2017d07012147a1d4b7240fe"),
-            Self.hex("055b6c2720e71fbe4d5fa4ad130f4f7b68879ee7d062d0e21af30c5e8ce5839c"),
-            Self.hex("08cda6582e3ed667ed4b907d27093659da30882f1d1437ee86125664ecf6f9ce"),
+            Self.hex("1871055c1947afa152d04f00757f94f890efa87190de3d8e481d7c22b6b381e1"),
+            Self.hex("1a3f0e61700a2fc8652d33787331f955bff2b1a500426b4dfd83481f5c645ffe"),
         ]
         a.roots = [
             PrivacyDevnetRoots.Reference(
@@ -576,9 +645,9 @@ extension PrivacyDevnetLiveState {
         // walk's own path against the live chain, not by hand.
         a.moves = [
             Move(hash: "0xfa32623718a4ac87bca85daa2f62af32522f4e2f763adec8ac2fbde5aeb5cf0f",
-                 frames: 2, nullifiers: 2, roots: 1, sponsored: false),
+                 block: 13347, frames: 2, nullifiers: 2, roots: 1, sponsored: false),
             Move(hash: "0xeda9b1c8231c7ba375c831d63655acc813cf8c7d3ac2b095b23e3011d7b2999a",
-                 frames: 2, nullifiers: 2, roots: 1, sponsored: false),
+                 block: 13352, frames: 2, nullifiers: 2, roots: 1, sponsored: false),
         ]
         // Zero, and CORRECT: no transaction measured on this chain carries a
         // `payer` differing from its sender, so the Sponsors chip is absent in

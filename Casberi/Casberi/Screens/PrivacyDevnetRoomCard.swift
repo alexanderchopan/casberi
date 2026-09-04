@@ -49,16 +49,29 @@ struct PrivacyDevnetRoomCard: View {
     @ViewBuilder private var content: some View {
         switch section {
         case .home:       home
-        case .activity:   list(moves)
-        case .accounts:   roster
-        case .frames:     framesScope
-        case .nullifiers: nullifierScope
-        case .roots:      rootScope
-        case .sponsors:   sponsorScope
+        case .activity:   withFigure(.activity) { list(moves) }
+        case .accounts:   withFigure(.accounts) { roster }
+        case .frames:     withFigure(.frames) { framesScope }
+        case .nullifiers: withFigure(.nullifiers) { nullifierScope }
+        case .roots:      withFigure(.roots) { rootScope }
+        case .sponsors:   withFigure(.sponsors) { sponsorScope }
         }
     }
 
     private var moves: [PrivacyDevnetLiveState.Move] { accounts.flatMap(\.moves) }
+
+    /// **FIGURE ABOVE, LIST BELOW** — Wallet's order, and the same reason the
+    /// switcher sits under the drawing it scopes: the shape is what you read
+    /// first and the rows are what you read after.
+    @ViewBuilder private func withFigure<Content: View>(
+        _ section: PrivacyDevnetSection,
+        @ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            figure(for: section)
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
     @ViewBuilder private var home: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
@@ -287,5 +300,205 @@ extension PrivacyDevnetRoomCard {
         let hex = d.map { String(format: "%02x", $0) }.joined()
         guard hex.count > 16 else { return "0x" + hex }
         return "0x" + hex.prefix(8) + "…" + hex.suffix(6)
+    }
+}
+
+// MARK: - The figures
+
+/// A figure for every scope (user, 2026-09-04: *"we need them for each scope"*).
+///
+/// **Each says something a list of the same rows cannot**, which is the bar a
+/// figure has to clear here — the room draws the list underneath either way, so
+/// a chart that merely restates it costs a slot and earns nothing.
+///
+///   • Activity — WHEN, which the hashes cannot say. Blocks, not dates: a
+///     transaction carries no timestamp and reading every header to date them
+///     would double the walk for an axis.
+///   • Accounts — the SHARE each address holds, which reading four balances
+///     down a column does not give you.
+///   • Frames — how DEEP each transaction was. The whole point of this chain is
+///     that one transaction is several steps, and a count of 4 hides whether
+///     that was four one-step sends or two two-step ones.
+///   • Nullifiers — one mark per key, spent. The visual IS the claim: each was
+///     used once and can never be used again.
+///   • Roots — every snapshot's remaining window at once, which the Home meter
+///     shows for the freshest one only.
+///
+/// **No colour carries state anywhere below.** Every fill is the one tint, and
+/// nothing is red or green — a spent key is not bad and an aged root is not a
+/// failure. Scale is the only encoding.
+extension PrivacyDevnetRoomCard {
+
+    /// The height every figure occupies, so the six scopes align.
+    static let figureHeight: CGFloat = 84
+
+    @ViewBuilder func figure(for section: PrivacyDevnetSection) -> some View {
+        switch section {
+        case .activity:   blocks(moves)
+        case .frames:     depth(moves.filter { $0.frames > 0 })
+        case .accounts:   shares
+        case .nullifiers: spentKeys
+        case .roots:      windows
+        case .sponsors:   depth(moves.filter(\.sponsored))
+        case .home:       EmptyView()
+        }
+    }
+
+    /// WHEN each transaction landed, along the span it landed in.
+    ///
+    /// A single transaction draws ONE mark centred rather than a span of zero
+    /// width — a lone dot at the left edge reads as "at the beginning of
+    /// something", and there is no something.
+    @ViewBuilder private func blocks(_ moves: [PrivacyDevnetLiveState.Move]) -> some View {
+        let blocks = moves.map(\.block).filter { $0 > 0 }
+        if blocks.isEmpty {
+            EmptyView()
+        } else {
+            let lo = blocks.min()!, hi = blocks.max()!
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(DS.fillFaint).frame(height: 3)
+                    ForEach(Array(blocks.enumerated()), id: \.offset) { _, b in
+                        let t = hi == lo ? 0.5 : Double(b - lo) / Double(hi - lo)
+                        Circle()
+                            .fill(DS.tint)
+                            .frame(width: 9, height: 9)
+                            .offset(x: (geo.size.width - 9) * t)
+                    }
+                }
+                .frame(height: geo.size.height, alignment: .center)
+            }
+            .frame(height: Self.figureHeight)
+            .accessibilityElement()
+            .accessibilityLabel(String(localized: "When these landed"))
+            .accessibilityValue(hi == lo
+                ? String(localized: "All in block \(hi)")
+                : String(localized: "Blocks \(lo) to \(hi)"))
+        }
+    }
+
+    /// How many steps each transaction ran — the reading this chain exists for.
+    @ViewBuilder private func depth(_ moves: [PrivacyDevnetLiveState.Move]) -> some View {
+        let counts = moves.map(\.frames)
+        if counts.isEmpty {
+            EmptyView()
+        } else {
+            let peak = max(counts.max() ?? 1, 1)
+            HStack(alignment: .bottom, spacing: DS.Space.s2) {
+                ForEach(Array(counts.enumerated()), id: \.offset) { _, n in
+                    VStack(spacing: 4) {
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(DS.tint)
+                            .frame(height: max(4, Self.figureHeight * 0.62
+                                                  * Double(n) / Double(peak)))
+                        Text("\(n)")
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textTertiary)
+                            .monospacedDigit()
+                    }
+                    .frame(maxWidth: 40)
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(height: Self.figureHeight, alignment: .bottom)
+            .accessibilityElement()
+            .accessibilityLabel(String(localized: "Steps per transaction"))
+            .accessibilityValue(counts.map(String.init).joined(separator: ", "))
+        }
+    }
+
+    /// What SHARE of the watched total each address holds.
+    ///
+    /// Addresses the chain did not answer for are excluded rather than drawn at
+    /// zero — a share computed over a failed read is a claim about somebody's
+    /// balance (§515a). With nothing readable there is no figure at all.
+    @ViewBuilder private var shares: some View {
+        let readable = accounts.filter { $0.reached && $0.balanceWei != nil }
+        let total = readable.compactMap(\.balanceWei).reduce(Decimal(0), +)
+        if readable.isEmpty || total == 0 {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                ForEach(readable) { account in
+                    let share = NSDecimalNumber(
+                        decimal: (account.balanceWei ?? 0) / total).doubleValue
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(DS.fillFaint)
+                            Capsule().fill(DS.tint)
+                                .frame(width: geo.size.width * min(max(share, 0), 1))
+                        }
+                    }
+                    .frame(height: 8)
+                }
+            }
+            .frame(height: Self.figureHeight, alignment: .center)
+            .accessibilityElement()
+            .accessibilityLabel(String(localized: "Share of the balance you watch"))
+        }
+    }
+
+    /// One mark per spent key. The drawing IS the claim: each was used once.
+    @ViewBuilder private var spentKeys: some View {
+        let keys = accounts.flatMap(\.nullifiers)
+        if keys.isEmpty {
+            EmptyView()
+        } else {
+            // A cap, so an address with hundreds does not draw hundreds — the
+            // count is stated beside it, so the figure is a sense of scale
+            // rather than an inventory.
+            let shown = Array(keys.prefix(24))
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                HStack(spacing: 6) {
+                    ForEach(Array(shown.enumerated()), id: \.offset) { _, _ in
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .fill(DS.tint)
+                            .frame(width: 10, height: 22)
+                    }
+                    Spacer(minLength: 0)
+                }
+                if keys.count > shown.count {
+                    Text(String(localized: "and \(keys.count - shown.count) more"))
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textTertiary)
+                }
+            }
+            .frame(height: Self.figureHeight, alignment: .center)
+            .accessibilityElement()
+            .accessibilityLabel(String(localized: "Spend keys used"))
+            .accessibilityValue("\(keys.count)")
+        }
+    }
+
+    /// Every referenced snapshot's remaining window at once — the Home meter
+    /// shows only the freshest.
+    @ViewBuilder private var windows: some View {
+        let refs = accounts.flatMap(\.roots)
+        if refs.isEmpty {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                ForEach(PrivacyDevnetRoots.bySource(refs), id: \.source) { group in
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(DS.fillFaint)
+                            // **An aged root draws NO bar, not an empty one.**
+                            // `fraction` returns nil rather than zero for
+                            // exactly this: "nearly gone" and "gone" are
+                            // different claims.
+                            if let f = PrivacyDevnetRoots.fraction(group.newest,
+                                                                   headSlot: headSlot) {
+                                Capsule().fill(DS.tint)
+                                    .frame(width: geo.size.width * min(max(f, 0), 1))
+                            }
+                        }
+                    }
+                    .frame(height: 8)
+                }
+            }
+            .frame(height: Self.figureHeight, alignment: .center)
+            .accessibilityElement()
+            .accessibilityLabel(String(localized: "How much window each snapshot has left"))
+        }
     }
 }
