@@ -877,6 +877,81 @@ extension PrivacyDevnetLiveState {
         // show a reading this chain has never produced.
         a.sponsoredCount = 0
 
+        // **TWO MORE REAL ACCOUNTS (prd §593d, user: "you need to seed the demo
+        // with activity so it is present").** One account with two moves left
+        // most of the room's figures near-empty. Both below are the chain's own
+        // — every hash, key, frame budget, root, balance and nonce read back
+        // off `rpc1.privacy.ethrex.xyz` on 2026-09-04, the same rule the
+        // fixture above already enforces — and each furnishes a DIFFERENT
+        // reading: `b` is the other pool participant, whose two roots (slots
+        // 0xaf1/0xaf6) are AGED against the demo head, so the ring shows
+        // hollow marks past the edge beside `a`'s live pair; `c` is the
+        // chain's first-hour sender, whose keys are the ordinary channel and a
+        // NAMED channel (0x81410003) — so it lights Frames and correctly does
+        // NOT light Nullifiers, which is the per-evidence scope rule on
+        // display.
+        var b = PrivacyDevnetAccount(address: "0x753d91eef10c8e26924aabcb0ad73052f8fc4522")
+        b.reached = true
+        b.balanceWei = Decimal(string: "447999725722746562")   // 0.448000 ETH
+        b.nonce = 1
+        b.frameCount = 4
+        // **These four include the two the fixture above once misattributed.**
+        // They were called fabricated because they appear on neither of THAT
+        // address's transactions; they are byte-real on THIS one's (blocks
+        // 2787 and 2792), which is where they now live. The harness pins the
+        // attribution both ways.
+        b.nullifiers = [
+            Self.hex("055b6c2720e71fbe4d5fa4ad130f4f7b68879ee7d062d0e21af30c5e8ce5839c"),
+            Self.hex("08cda6582e3ed667ed4b907d27093659da30882f1d1437ee86125664ecf6f9ce"),
+            Self.hex("060ed959302b15fe85a8e0358e936cb5ca584d174295b603d46d5c3dc1a654d4"),
+            Self.hex("19dcb924895a2dc08568ae34801b4a393d9a37a75091b3c0d9c2378f62fe7ae5"),
+        ]
+        b.roots = [
+            PrivacyDevnetRoots.Reference(
+                sourceID: Self.hex("b08f15750c491f4cfd65215c11a33b3962903a8896fc586bbd7c697851c26e20"),
+                slot: 0xaf1,
+                root: Self.hex("2dd32b6609c5a8e80505ac44c5cb8e9f712115c1f63f59b18be08fc9b9250bf4")),
+            PrivacyDevnetRoots.Reference(
+                sourceID: Self.hex("b08f15750c491f4cfd65215c11a33b3962903a8896fc586bbd7c697851c26e20"),
+                slot: 0xaf6,
+                root: Self.hex("1ea261e94b9f2b02699e293bd4ad36b4c39cf23975b84c4cc39794bb577df422")),
+        ]
+        b.moves = [
+            Move(hash: "0xb17e6a8292d3ed1f559d7e78f85b62fad2962b589e51ce90eb6462440b6d2a66",
+                 block: 2792,
+                 frames: [Frame(gasLimit: 0x4e200, stateLimit: 0),
+                          Frame(gasLimit: 0x155cc0, stateLimit: 0x86470)],
+                 nullifiers: [b.nullifiers[2], b.nullifiers[3]],
+                 roots: [b.roots[1]], sponsored: false),
+            Move(hash: "0x5ad114d29ed7e9326bbc300b951c6ee9a59c648985dbba9497dfea454cccaa4a",
+                 block: 2787,
+                 frames: [Frame(gasLimit: 0x4e200, stateLimit: 0),
+                          Frame(gasLimit: 0x155cc0, stateLimit: 0x86470)],
+                 nullifiers: [b.nullifiers[0], b.nullifiers[1]],
+                 roots: [b.roots[0]], sponsored: false),
+        ]
+
+        var c = PrivacyDevnetAccount(address: "0x248ac8584135c94469a90fbb02ba053b17f1cc60")
+        c.reached = true
+        // The chain's own figure for its first-hour sender — a genesis-scale
+        // balance, which is what a devnet fixture account holds. Real, not
+        // rounded to look plausible.
+        c.balanceWei = Decimal(string: "999999999912820000000000")
+        c.nonce = 406
+        c.frameCount = 4
+        c.moves = [
+            Move(hash: "0xd0b667abc741070f0bd46e156ed32848316261a3dcb550bab14db41bce06411b",
+                 block: 69,
+                 frames: [Frame(gasLimit: 0x13880, stateLimit: 0),
+                          Frame(gasLimit: 0x7530, stateLimit: 0x2cd30)],
+                 nullifiers: [], roots: [], sponsored: false),
+            Move(hash: "0xd4bf5b4d8d71d1cae6c2fe947daaa644f7b5770586f542ebe8ddc09b0040a51e",
+                 block: 66,
+                 frames: [Frame(gasLimit: 0x13880, stateLimit: 0),
+                          Frame(gasLimit: 0x7530, stateLimit: 0x2cd30)],
+                 nullifiers: [], roots: [], sponsored: false),
+        ]
+
         // **THE DEMO'S HEAD, and it must stay AHEAD of the fixture's roots but
         // inside the window**, or the one card this seat exists for draws
         // nothing. Slot 0x3436 is 13,366; a head of 13,366 + 4,096 puts both
@@ -886,7 +961,7 @@ extension PrivacyDevnetLiveState {
         // demo shown after the fixture is ~27 hours old in slot terms.
         let head: UInt64 = 0x3436 + (PrivacyDevnetRoots.windowSlots / 2)
         Task { @MainActor in
-            PrivacyDevnetLiveState.shared.installDemo([a], headSlot: head,
+            PrivacyDevnetLiveState.shared.installDemo([a, b, c], headSlot: head,
                                                 genesis: PrivacyDevnetChain.genesis)
         }
     }

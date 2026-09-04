@@ -294,53 +294,6 @@ struct PrivacyDevnetLegend: View {
     }
 }
 
-// MARK: - One transaction, as a row
-
-/// The row every list scope draws: what it is, what it did, and the words.
-///
-/// **The hash leads and the words trail**, which reverses what the room drew
-/// before. The hash is the row's identity and the only thing a person can carry
-/// to a block explorer; the sentence is a reading, and a reading belongs where
-/// the eye lands last.
-struct PrivacyDevnetMoveRow: View {
-    let hash: String
-    let block: UInt64?
-    let items: [PrivacyDevnetFigure.Item]
-    let words: String
-    let reduceMotion: Bool
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: DS.Space.s2) {
-                PrivacyDevnetAnatomy(items: items, reduceMotion: reduceMotion)
-                Text(words)
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-            }
-            Text(tail)
-                .dsText(.mono12)
-                .foregroundStyle(DS.textTertiary)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// The identity line — which transaction, and where it landed.
-    ///
-    /// **A hash IDENTIFIES, it does not INFORM** (§571): every list in this
-    /// room first shipped with the hash in the crown and a person with a full
-    /// room reported seeing "nothing in the lists". So the drawing and its
-    /// reading take the crown and the hash is the quiet tail, where somebody
-    /// matching one against a block explorer can still find it.
-    private var tail: String {
-        let short = hash.count > 12
-            ? String(hash.prefix(8)) + "…" + String(hash.suffix(4)) : hash
-        guard let block else { return short }
-        return "\(short) · block \(block)"
-    }
-}
 
 // MARK: - What an address has done
 

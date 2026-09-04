@@ -315,7 +315,11 @@ let fm = PF.marks([fref(13347), fref(13347), fref(12900), fref(5200)], headSlot:
 check(fm.count == 3, "two proofs against one snapshot are ONE mark, not two diamonds on one point")
 check(fm[0].slot == 13347 && fm[0].count == 2, "newest first, and the collapse carries its count")
 check(fm[2].position == nil && fm[2].agedBy == 1059, "an aged mark has no position — nil, never zero")
-check(fm[2].labelled, "an aged mark always gets words: its position says nothing")
+// **AGED MARKS ARE NOT LABELLED (prd §593d).** "gone N ago" stacked into a
+// double line under the track that read as broken; the hollow shape past the
+// leading edge and the axis label already say it. Only live marks earn words.
+check(!fm[2].labelled, "an aged mark carries no label — the hollow shape past the edge is the reading")
+check(fm.filter(\.labelled).allSatisfy { $0.position != nil }, "only live marks are labelled")
 check(fm.filter(\.labelled).count <= PF.labelCap, "labels are capped before the track becomes text")
 // **A DISCRIMINATING fixture for the cap.** The set above collapses to exactly
 // `labelCap` marks, so removing the cap leaves it unchanged — that mutation
@@ -745,12 +749,23 @@ for v in \
   grep -qF -- "$v" "$work/bridge.bare" \
     || fail "a measured demo fixture value changed or vanished ($v) — every hex value here was read back off the chain, and two were once fabricated; re-measure and say so rather than editing in place"
 done
-# And the two that were fabricated must never come back.
+# **THE TWO ONCE-FABRICATED VALUES ARE NOW REAL ON ACCOUNT `b` (prd §593d).**
+# They were called fabricated because they appear on NEITHER of account `a`'s
+# transactions. They ARE byte-real on the second pool participant's — blocks
+# 2787/2792 — and the §593d demo seeds that account, so they live here now,
+# correctly attributed. The guard flips: it fails if either reappears on `a`'s
+# hashes (the misattribution it was written to catch) but must find them on
+# `b`'s. `b`'s two hashes are read back off the chain the same as everything
+# else here.
 for v in '055b6c2720e71fbe4d5fa4ad130f4f7b68879ee7d062d0e21af30c5e8ce5839c' \
          '08cda6582e3ed667ed4b907d27093659da30882f1d1437ee86125664ecf6f9ce'; do
   grep -qF -- "$v" "$work/bridge.bare" \
-    && fail "a FABRICATED nullifier is back in the demo fixture ($v) — it is on neither of this address's transactions"
+    || fail "a once-fabricated nullifier vanished ($v) — it belongs on account b's real transactions now (§593d)"
 done
+grep -qF '0x5ad114d29ed7e9326bbc300b951c6ee9a59c648985dbba9497dfea454cccaa4a' "$work/bridge.bare" \
+  || fail "account b's block-2787 transaction hash is gone — the two once-fabricated keys ride it"
+grep -qF '0xb17e6a8292d3ed1f559d7e78f85b62fad2962b589e51ce90eb6462440b6d2a66' "$work/bridge.bare" \
+  || fail "account b's block-2792 transaction hash is gone"
 
 # THE UNBOUNDED RANGE. A sibling ethrex node already refuses `fromBlock: 0x0`
 # with `query exceeds max block range 100000`, and walkCap cannot help because

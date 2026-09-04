@@ -4736,35 +4736,6 @@ struct FeedScreen: View {
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                       bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
             .task { await PrivacyDevnetLiveState.shared.refreshIfStale() }
-            // **THE ROWS AND THE ACTS, OUTSIDE THE CLIPPED SLOT (prd §593d).**
-            // `DSRoomSlot` is a hard 300pt box, so drawing the list inside it
-            // cut every row past the third off the bottom with no scroll and no
-            // sign — reported as the lists not showing at all. `FramesRoomList`
-            // is the same split one seat over.
-            Section {
-                PrivacyDevnetRoomList(
-                    head: head,
-                    section: privacyScope,
-                    accounts: PrivacyDevnetRoomSource.accounts(scope: chrome.privacyDevnetScope),
-                    headSlot: PrivacyDevnetLiveState.shared.headSlot,
-                    walkCut: PrivacyDevnetLiveState.shared.walkCut,
-                    onSend: { feedSheet = .privacyDevnetSend },
-                    onWatchExample: watchPrivacyDevnetExample)
-            }
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                      bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
-            // **THE SWITCHER WAS MISSING ON THE FIRST BUILD**, found by opening
-            // the room on a simulator rather than by any check: the seven scopes
-            // existed, `present()` computed them correctly, and six of them were
-            // unreachable because nothing drew a control. Nothing static can see
-            // that — the scopes are right, the room draws, and the strip simply
-            // is not there.
-            // **THE RAIL LISTS EVERY ACCOUNT, NOT THE SCOPED ONE.** It is the
-            // control that SETS the scope, so feeding it the scoped list would
-            // leave one face on screen with no way back — a filter that can be
-            // entered and not left.
             let privacyAccounts = PrivacyDevnetRoomSource.accounts(scope: nil)
             let showsPrivacyRail = PrivacyDevnetScopeRail.shows(
                 source: source, watched: privacyAccounts.count)
@@ -4801,6 +4772,36 @@ struct FeedScreen: View {
                     .listRowSeparator(.hidden)
                 }
             }
+            // **THE ROWS AND THE ACTS, OUTSIDE THE CLIPPED SLOT (prd §593d).**
+            // `DSRoomSlot` is a hard 300pt box, so drawing the list inside it
+            // cut every row past the third off the bottom with no scroll and no
+            // sign — reported as the lists not showing at all. `FramesRoomList`
+            // is the same split one seat over.
+            Section {
+                PrivacyDevnetRoomList(
+                    head: head,
+                    section: privacyScope,
+                    accounts: PrivacyDevnetRoomSource.accounts(scope: chrome.privacyDevnetScope),
+                    headSlot: PrivacyDevnetLiveState.shared.headSlot,
+                    walkCut: PrivacyDevnetLiveState.shared.walkCut,
+                    onSend: { feedSheet = .privacyDevnetSend },
+                    onWatchExample: watchPrivacyDevnetExample)
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                      bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
+            // **THE SWITCHER WAS MISSING ON THE FIRST BUILD**, found by opening
+            // the room on a simulator rather than by any check: the seven scopes
+            // existed, `present()` computed them correctly, and six of them were
+            // unreachable because nothing drew a control. Nothing static can see
+            // that — the scopes are right, the room draws, and the strip simply
+            // is not there.
+            // **THE RAIL LISTS EVERY ACCOUNT, NOT THE SCOPED ONE.** It is the
+            // control that SETS the scope, so feeding it the scoped list would
+            // leave one face on screen with no way back — a filter that can be
+            // entered and not left.
+
         } else if source == HegotaIdentity.source, let head = HegotaRoomSource.compose() {
             // **A ROOM WITH LIVE CONTENT AND NO ROWS.** Without this branch the
             // `if/else if` above falls through BOTH arms and renders nothing at

@@ -109,15 +109,19 @@ enum PrivacyDevnetFigure {
         // ring in, and an aged mark always gets one: it is the only mark whose
         // position says nothing, so without its own words it is a hollow shape
         // with no reading at all.
+        // **AGED MARKS ARE NOT LABELLED (prd §593d, user report).** An aged
+        // mark once printed "gone N ago" beside its hollow shape, and two of
+        // them stacked into a double line of tertiary text under the track
+        // that read as broken. The hollow diamond just past the leading edge,
+        // beside the axis's own "leaves the chain's memory", already says it —
+        // and the head sentence carries the count. Only LIVE marks earn a
+        // label, spent newest-first, and even then only where they will not
+        // collide.
         var spent = 0
         var lastLabelled: Double?
         for i in out.indices {
             guard spent < labelCap else { break }
-            guard let p = out[i].position else {
-                out[i].labelled = true
-                spent += 1
-                continue
-            }
+            guard let p = out[i].position else { continue }
             if let last = lastLabelled, abs(last - p) < labelGap { continue }
             out[i].labelled = true
             lastLabelled = p

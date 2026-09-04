@@ -66,10 +66,31 @@ struct PrivacyDevnetRoomCard: View {
     /// what every scope here needs, and it is why the acts and the example
     /// doors moved out too — the send panel alone is ~300pt and would have been
     /// clipped out of existence by the box it was added to.
+    /// **THE CARD SLOT HOLDS THE CHART, THE LIST GOES BELOW THE RAIL (prd
+    /// §593d, user ruling: "the chart should be ABOVE the rail, and the list
+    /// should be BELOW the rail").**
+    ///
+    /// This is `FramesRoomCard`'s structure exactly: the figure sits in the
+    /// clipped 300pt slot above the switcher, and `PrivacyDevnetRoomList` draws
+    /// the rows below it. Home is the one scope whose "figure" IS the head
+    /// block — the sentence, the ring and the tallies — so it alone reads
+    /// `home` here; every other scope hands its figure the whole slot,
+    /// `maxHeight: .infinity`, so a thin drawing is TOP-anchored with its
+    /// breathing room below rather than stranded in the middle of a void.
     @ViewBuilder private var content: some View {
         switch section {
-        case .home:       home
-        default:          figure(for: section)
+        case .home:
+            home
+        default:
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                Text(section.summary)
+                    .dsText(.heading22)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                figure(for: section)
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
 
@@ -203,17 +224,9 @@ extension PrivacyDevnetRoomCard {
     /// hex. **A hash IDENTIFIES, it does not INFORM.** It belongs in a
     /// monospace tail, quiet, where somebody who needs to match one can find
     /// it; the crown belongs to what happened.
-    @ViewBuilder private func row(_ crown: String, _ tail: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(crown)
-                .dsText(.body17)
-                .fixedSize(horizontal: false, vertical: true)
-            Text(tail)
-                .dsText(.mono12)
-                .foregroundStyle(DS.textTertiary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
+    /// The seat's own hue for a leading symbol mark — the console is chrome
+    /// around the brand, never a new colour.
+    private static let tint = DS.brandHue(for: PrivacyDevnetIdentity.source) ?? DS.tint
 
     /// The scope's own rows, drawn by `PrivacyDevnetRoomList` OUTSIDE the
     /// clipped slot (prd §593d). Internal rather than private for exactly that
@@ -286,21 +299,25 @@ extension PrivacyDevnetRoomCard {
     /// deliberate rather than redundant — the shapes are what make a column of
     /// rows scannable (a pool transaction wears a disc and a diamond, a plain
     /// send does not), and the sentence is what makes one row readable.
+    /// One transaction, on the app's ONE row shape (`WalletRow`, prd §212/§588)
+    /// — the same anatomy Frames, Hegotá and vibenet draw, so this room stops
+    /// reading as a different font from its siblings. The mark says what the
+    /// transaction WAS (a pool spend wears the key, a plain send the arrows),
+    /// the title is what it did, the mono subtitle identifies it.
     @ViewBuilder func moveRow(_ move: PrivacyDevnetLiveState.Move) -> some View {
-        PrivacyDevnetMoveRow(
-            hash: move.hash,
-            block: move.block,
-            items: PrivacyDevnetFigure.anatomy(
-                frames: move.frames.map {
-                    PrivacyDevnetFigure.Frame(gasLimit: $0.gasLimit,
-                                              stateLimit: $0.stateLimit,
-                                              succeeded: $0.succeeded)
-                },
-                keys: move.nullifierCount,
-                roots: move.rootCount,
-                sponsored: move.sponsored),
-            words: Self.moveLine(move),
-            reduceMotion: reduceMotion)
+        WalletRow(terminal: move.nullifierCount > 0
+                      ? .symbol("key.fill", tint: Self.tint)
+                      : .symbol("arrow.up.right", tint: Self.tint),
+                  title: Self.moveLine(move),
+                  subtitle: Self.moveSubtitle(move))
+    }
+
+    /// Block and short hash, in one mono subline.
+    static func moveSubtitle(_ m: PrivacyDevnetLiveState.Move) -> String {
+        let id = m.hash.count > 14
+            ? "\(m.hash.prefix(8))…\(m.hash.suffix(4))" : m.hash
+        guard let block = m.block else { return id }
+        return String(localized: "\(id) · block \(String(block))")
     }
 
     /// What one transaction did, in the room's own vocabulary.
@@ -318,16 +335,18 @@ extension PrivacyDevnetRoomCard {
     }
 
     @ViewBuilder var roster: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
             ForEach(accounts) { account in
-                // **Nil is not zero.** An address the chain did not answer for
-                // says so in the crown, rather than showing a balance of 0 —
-                // which would be a claim made from a failed read (§515a).
-                row(account.reached
-                        ? (Self.eth(account.balanceWei) ?? String(localized: "Balance unread"))
-                        : String(localized: "The chain didn't answer"),
-                    PrivacyDevnetWatch.shared.name(for: account.address)
-                        ?? WalletStore.shortAddress(account.address))
+                // A wallet is a FACE in this app (`WalletRowMark.face`): the
+                // watched address leads with its own, title its name, subtitle
+                // its balance — the per-address row every wallet room draws.
+                // **Nil is not zero** (§515a): a failed read says so.
+                WalletRow(terminal: .face(account.address),
+                          title: PrivacyDevnetWatch.shared.name(for: account.address)
+                              ?? WalletStore.shortAddress(account.address),
+                          subtitle: account.reached
+                              ? (Self.eth(account.balanceWei) ?? String(localized: "Balance unread"))
+                              : String(localized: "The chain didn't answer"))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -348,12 +367,16 @@ extension PrivacyDevnetRoomCard {
         if keys.isEmpty {
             empty(String(localized: "No one-time spend keys from this address."))
         } else {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
                 Text(String(localized: "Each of these was used once and can never be used again. That is what stops a spend being repeated — it does not hide who sent it."))
                     .dsText(.subhead13)
-                    .foregroundStyle(DS.textSecondary)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.bottom, DS.Space.s1)
                 ForEach(Array(keys.enumerated()), id: \.offset) { i, key in
-                    row(String(localized: "Spent once"), Self.shortHex(key))
+                    WalletRow(terminal: .symbol("key.fill", tint: Self.tint),
+                              title: String(localized: "Spent once"),
+                              subtitle: Self.shortHex(key))
                         .accessibilityLabel(String(localized: "Spend key \(i + 1), used once"))
                 }
             }
@@ -366,15 +389,17 @@ extension PrivacyDevnetRoomCard {
         if refs.isEmpty {
             empty(String(localized: "This address hasn't proved against a snapshot."))
         } else {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
                 ForEach(PrivacyDevnetRoots.bySource(refs), id: \.source) { group in
-                    row(Self.standingLine(group.newest, headSlot: headSlot, count: group.count),
-                        Self.shortHex(group.newest.root))
+                    WalletRow(terminal: .symbol("clock.fill", tint: Self.tint),
+                              title: Self.standingLine(group.newest, headSlot: headSlot, count: group.count),
+                              subtitle: Self.shortHex(group.newest.root))
                 }
                 Text(Self.windowNote)
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, DS.Space.s1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -800,6 +825,12 @@ struct PrivacyDevnetRoomList: View {
             // control four times, and §594's own line is that an act belongs
             // where you land rather than everywhere you look.
             if section == .home, let onSend {
+                // **SIZED BY THE PANEL, NOT BY THIS SECTION** — the shape
+                // `FramesRoomList` already has. The first cut of this section
+                // sat ABOVE the scope switcher, which put the acts between the
+                // reading and the control that scopes it and left the tile
+                // stretching into the gap; the section moved below the rail,
+                // where its sibling's is, and the panel's own floor governs.
                 PrivacyDevnetSendCard(onSend: onSend)
             }
 

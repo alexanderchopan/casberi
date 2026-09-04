@@ -48338,6 +48338,57 @@ been tapped from the app, the faucet has never been claimed from it, and the
 room's two sections have never been looked at side by side. The list split is
 reasoned from `FramesRoomList`, which ships today in the same shape.
 
+### 593e. The Privacy room, made to look like the other wallets (user: "your design is just gross, it doesn't follow any of the rules we have for design on the other wallets" / "NONE OF THOSE LISTS ARE FORMATTED LIKE THE OTHER WALLETS ... PLS USE COMPONENTS" / "the chart should be ABOVE the rail, and the list should be BELOW the rail" / "you need to seed the demo with activity so it is present", 2026-09-04)
+
+§593d shipped the room's acts and rows with too many bugs, most of them
+visible the moment it was opened on a device. This is the correction pass, and
+every fix was seen on the simulator before it was kept.
+
+**THE LISTS NOW USE `WalletRow`, THE APP'S ONE ROW SHAPE (prd §212/§588).**
+The scope lists were hand-rolled — a private `row(crown, tail)` stacking two
+`Text`s — so the room read as a different font from Frames, Hegotá and vibenet,
+which all draw `WalletRow` with a leading mark, a `heading17` title and a
+tertiary subline. Every scope was rewritten to it: a move wears the key or the
+arrows and titles what it did with a mono block-and-hash subtitle; an account
+is a FACE with its balance (the per-address row every wallet room draws); a
+spend key and a root wear their symbol marks. The hand-rolled row is deleted,
+and `PrivacyDevnetMoveRow` with it.
+
+**CHART ABOVE THE RAIL, LIST BELOW IT (user ruling), which is
+`FramesRoomCard`'s structure exactly.** §593d had drawn the figure AND the
+rows inside the clipped 300pt `DSRoomSlot`, so the rows fell off the bottom
+with no scroll — the "lists weren't showing" report. The first correction put
+the figure in the slot and the rows below the SWITCHER but ABOVE it in source
+order, so the acts panel stretched into the gap between the reading and the
+control that scopes it. Now the card slot holds the chart (the head block on
+Home, each scope's figure elsewhere, top-anchored so a thin drawing is not
+stranded in a void), the rail sits under it, and `PrivacyDevnetRoomList` draws
+the rows below the rail.
+
+**THE AGED-ROOT LABELS ARE GONE.** An aged mark printed "gone 6465 ago" beside
+its hollow shape, and two of them stacked into a double line of tertiary text
+under the track that read as broken. Only LIVE marks are labelled now; the
+hollow diamond past the leading edge, beside the axis's own "leaves the chain's
+memory", already says an aged proof is out of the window, and the head sentence
+carries the count.
+
+**THE DEMO HAS ACTIVITY (user).** One seeded account left most of the room's
+figures near-empty. Two more are seeded, both the chain's own — every hash,
+key, frame budget, root, balance and nonce read back off
+`rpc1.privacy.ethrex.xyz` — and each furnishes a DIFFERENT reading: the second
+pool participant, whose roots are AGED against the demo head so the ring shows
+hollow marks beside the live pair, and the chain's first-hour sender, whose
+keys are the ordinary and a NAMED channel so it lights Frames and correctly
+does NOT light Nullifiers. The two hex values §593d's fixture once
+misattributed as "fabricated" are byte-real on this second participant's
+transactions and live there now; the harness guard flipped to assert exactly
+that.
+
+**Seen on the simulator, every scope**: Home, Activity, Accounts, Nullifiers
+and Roots each draw the chart above the rail and `WalletRow` rows below. The
+one thing still unproven on a device is a real send — no key has been made on
+hardware and no faucet claimed from the app.
+
 ### 591b. amendment — one cover per feed, and the agent's door stops being the berry (2026-09-04)
 
 Two reports after the dock landed on a device (user: *"i saw the dock. it works
