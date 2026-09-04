@@ -178,8 +178,13 @@ KNOWN_EXEMPT = {
     # this key is fragile BY DESIGN: it drifts safe (a stale key stops
     # exempting and the finding returns loudly), so re-pinning it is the cost
     # of a set that can never silently swallow something new.
-    "WalletFlowBand.swift:482",
-    "WalletFlowBand.swift:599",
+    # 482/599 → 494/611 (2026-09-04, prd §593d): re-pinned after work landed
+    # above these lines. Found because the audit is a verify.sh ship gate and
+    # was RED on `main` — all four keys in this set had drifted at once, which
+    # is the cost the note above calls fragile BY DESIGN. Every ruling below is
+    # unchanged; only the offsets moved.
+    "WalletFlowBand.swift:494",
+    "WalletFlowBand.swift:611",
     #
     # Vibenet's change flow (2026-08-26, prd §491) — the same figure-speaks-as-
     # one-sentence treatment (§299), and with a STRONGER claim than the band
@@ -190,7 +195,7 @@ KNOWN_EXEMPT = {
     # The gesture is therefore reachable to VoiceOver by the route the platform
     # prefers, and a trait on the face would add a stray label for a figure
     # that already speaks in full.
-    "VibenetChangeFlowCard.swift:124",
+    "VibenetChangeFlowCard.swift:131",
     #
     # The wallet Risk floor's columns (2026-08-26, prd §493) — same treatment
     # and same strength of claim as the change flow above: the figure speaks as
@@ -199,7 +204,7 @@ KNOWN_EXEMPT = {
     # the gesture is reachable by the route the platform prefers. A trait on
     # the column would add a stray label to a figure that already speaks in
     # full — which is what §299 forbade when this was dots on a track.
-    "WalletRiskStrip.swift:130",
+    "WalletRiskStrip.swift:146",
 }
 
 # Size expressions that already encode the floor, so an explicit number is not
