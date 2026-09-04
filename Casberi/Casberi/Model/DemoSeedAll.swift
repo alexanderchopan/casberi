@@ -4628,26 +4628,6 @@ enum DemoSeedAll {
                 ].map(\.encoded)
             }
         }
-        // One of each state — a reachable accessory and an unreachable one —
-        // because the whole point of this anatomy is that the two must not
-        // render identically, and a demo with only the happy one proves
-        // nothing.
-        let accessories: [(String, String, String, Bool)] = [
-            ("Front door", "Lock", "Entryway", true),
-            ("Studio heater", "Thermostat", "Studio", true),
-            ("Back gate", "Door", "Garden", false),
-        ]
-        out += accessories.enumerated().map { i, a in
-            row(.accessory, a.0, source: "HomeKit", ref: "demo:homekit:\(i)",
-                days: Double(20 + i),
-                content: "\(a.1) · \(a.2) · \(a.3 ? "Reachable" : "Unreachable")") { t in
-                t.facts = [
-                    ThingFact("Checked just now",
-                              a.3 ? "Reachable" : "Unreachable", .state),
-                    ThingFact("Type", a.1), ThingFact("Room", a.2),
-                ].map(\.encoded)
-            }
-        }
         return out
     }
 
@@ -5298,11 +5278,10 @@ enum DemoSeedAll {
         ("Todoist", "Synced 18m ago", "Reads your tasks."),
         ("Cal.com", "Synced 2h ago", "Reads what people booked."),
         ("Calendly", "Synced 2h ago", "Reads what people booked."),
-        // The two search-only Life seats (prd §365). Their rows never enter
-        // the feed by design, so the seat is the only place the demo can say
-        // they are connected at all.
+        // The search-only Life seat (prd §365). Its rows never enter the feed
+        // by design, so the seat is the only place the demo can say it is
+        // connected at all.
         ("Contacts", "Synced 6m ago", "Reads the people you know."),
-        ("HomeKit", "Live", "Reads your accessories, never controls them."),
         ("Voice", "3 notes", "Transcribes on device."),
     ]
 }

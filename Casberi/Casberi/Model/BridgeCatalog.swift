@@ -1038,9 +1038,6 @@ enum BridgeCatalog {
               needsSetup: true),
         Offer(name: "Contacts",    tagline: "The people you know, findable",         group: "People",    connectable: true,
               summary: "A name you're looking for turns up with everything it connects to. Search-only: they never crowd your feed.\n\nRead-only, and everything stays on \(DS.device) — Contacts never touches a server."),
-        Offer(name: "HomeKit",     tagline: "Your home's accessories, at a glance",  group: "Home",      connectable: true,
-              summary: "Your HomeKit accessories — locks, doors, sensors — land as things you can find, kept current while the app is open.\n\nSearch-only, so they never crowd your feed, and read-only, so nothing here controls anything.",
-              unavailableOnMac: true),
     ]
 
     /// What every screen actually reads (Apps page, Home tile count, the
@@ -1114,14 +1111,16 @@ enum BridgeCatalog {
         // is why the recap is written to tolerate an unknown name.
         ("Wallet",  "Wallet",      ["Wallet"]),
         ("Work",    "GitHub",      ["Work"]),
-        // Life absorbs Home (user ruling 2026-07-23): HomeKit was the lone app
-        // in its own category, and a one-app band wastes a whole 4-wide row —
-        // "one option would be we could put HomeKit in Life." "People"
+        // "Home" is GONE from this list, not merely empty (2026-09-04). Life
+        // absorbed it on 2026-07-23 because HomeKit was the lone app in its
+        // own category; with HomeKit itself retired (App Review 2.5.1) the
+        // group has no offers at all, and a named group that can never
+        // resolve one is a heading waiting to render blank. "People"
         // (Contacts) already lives here (2026-07-20). Storage joins for the
         // same reason (user ruling 2026-07-27): Files' folder contents are
         // unpredictable, so it reads as personal-life miscellany, not a
         // dedicated content type.
-        ("Life",    "Photos",      ["Photos", "Schedule", "Fitness", "People", "Home", "Storage", "Mail"]),
+        ("Life",    "Photos",      ["Photos", "Schedule", "Fitness", "People", "Storage", "Mail"]),
         ("Agents",  "Claude",      ["Agent"]),
         ("Media",   "YouTube",     ["Watching", "Listening", "Games", "Images"]),
         ("Social",  "Bluesky",     ["Network"]),

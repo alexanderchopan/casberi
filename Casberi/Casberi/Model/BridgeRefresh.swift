@@ -350,12 +350,6 @@ enum BridgeRefresh {
                 _ = await ContactsIngest.refresh(context: context)
             }
         }
-        if connected("homekit") {
-            let s = slot(); Task { @MainActor in
-                await BridgeRefresh.stagger(s)
-                _ = await HomeKitIngest.refresh(context: context)
-            }
-        }
         // Apple Wallet (prd §313). Gated on the bridge's OWN flag rather than
         // the catalog seat: the seat is registered by a successful read, so
         // gating on it would mean a device that connected but has nothing yet

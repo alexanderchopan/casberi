@@ -550,16 +550,6 @@ enum StorePreview {
             "r1 = Row(\"Sofia Reyes\", \"Contact\", \"Contacts\", \"\")",
             "r2 = Row(\"Blue Bottle Coffee\", \"Contact\", \"Contacts\", \"\")",
         ]
-        // Accessories are LIVE STATE refreshed in place, not events — HomeKit
-        // has no historical query at all — and the row is the accessory's own
-        // name, so no lock/on-off state may appear (only reachability is
-        // readable, and it lives off the title).
-        case "HomeKit": [
-            "root = Stack([w])",
-            "w = Widget(\"Findable, never in your feed\", null, [r1, r2])",
-            "r1 = Row(\"Front Door\", \"Accessory\", \"HomeKit\", \"\")",
-            "r2 = Row(\"Kitchen Ceiling\", \"Accessory\", \"HomeKit\", \"\")",
-        ]
         case "Open Food Facts": [
             "root = Stack([w])",
             "w = Widget(\"Scanned in\", null, [r1, r2])",

@@ -93,8 +93,6 @@ KNOWN_IOS_ONLY = {
     "com.apple.developer.healthkit":
         "HealthKit does not exist on macOS; the Strava seat rides it, so that "
         "seat is iOS-only by construction.",
-    "com.apple.developer.homekit":
-        "HomeKit does not exist on macOS.",
     "com.apple.developer.financekit":
         "FinanceKit is `@available(macOS, unavailable)` — and shipping it in "
         "the Catalyst entitlements FAILS a signed archive, because the Mac "

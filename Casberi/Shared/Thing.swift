@@ -24,10 +24,13 @@ enum ThingKind: String, Codable, CaseIterable {
     // A discrete item with a price and a store, so it fits the feed like a link
     // does; its own kind gives shopping a bag glyph and a "Products" pile.
     case product
-    // HomeKit (2026-07-17) — a home accessory's live state (a lock, a door, a
-    // sensor). Search-only, like Contacts: HomeKit has no historical-event
-    // API, so a home's accessories land as a handful of reference things kept
-    // current in place, not a growing feed of "the same door again."
+    // A home accessory's live state (a lock, a door, a sensor). RETIRED
+    // 2026-09-04: the HomeKit bridge that produced these rows is gone (App
+    // Review 2.5.1 — the entitlement requires a home-automation app, and
+    // Casberi only ever read). The CASE STAYS: an enum case removed from a
+    // persisted attribute cannot decode rows that a device still on an older
+    // build, or the iCloud zone, may hand back — and `SyncReconcile.purgeRetired`
+    // needs the corpus to keep parsing while it clears them.
     case accessory
 
     /// Set form for treemap cells ("Events" is the pile; "Event" is the thing).
@@ -69,7 +72,7 @@ enum ThingKind: String, Codable, CaseIterable {
 /// would bury the day's real captures. One rule, read by every surface that
 /// shows the corpus, so a search-only source is declared in exactly one place.
 enum Corpus {
-    static let searchOnlySources: Set<String> = ["Contacts", "HomeKit"]
+    static let searchOnlySources: Set<String> = ["Contacts"]
 
     /// Sources that keep their STAMP but earn no chip and no room (user
     /// ruling 2026-08-02: "i say get rid of the you chip and room").

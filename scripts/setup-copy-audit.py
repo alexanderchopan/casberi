@@ -329,7 +329,7 @@ def audit_door_table(name: str, body: str):
 # the door is the pattern that cannot drift at all (§311's own lesson: the
 # desync happened because a second file hardcoded the literal instead).
 # A source can be REAL and still have no room: `Corpus.searchOnlySources`
-# (Contacts, HomeKit) and `chiplessSources` ("You") are stamped on rows and
+# (Contacts) and `chiplessSources` ("You") are stamped on rows and
 # deliberately earn no chip and no room — `Corpus.earnsRoom` is the one place
 # that answer is declared. A door onto one of those passes the "is it stamped"
 # test and still lands nowhere, so it is checked separately and read OUT of

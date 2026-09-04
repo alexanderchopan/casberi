@@ -558,7 +558,6 @@
 				INFOPLIST_KEY_NSFinancialDataUsageDescription = "Casberi reads your Apple Card, Apple Cash and Savings transactions on this device so your spending appears in your feed. It stays on this device, is never uploaded, and can't spend or move money.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Casberi reads your workouts so they land in your feed.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Casberi only reads your workouts so they land in your feed — it never writes to Health.";
-				INFOPLIST_KEY_NSHomeKitUsageDescription = "Casberi reads your home's accessories — locks, doors, sensors — so their state lands as things.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Casberi reads your location once to show today's weather in Coming up — never in the background.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Casberi records your voice notes when you tap the mic.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Casberi reads screenshots you take so they land as things.";
@@ -612,7 +611,6 @@
 				INFOPLIST_KEY_NSFinancialDataUsageDescription = "Casberi reads your Apple Card, Apple Cash and Savings transactions on this device so your spending appears in your feed. It stays on this device, is never uploaded, and can't spend or move money.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Casberi reads your workouts so they land in your feed.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Casberi only reads your workouts so they land in your feed — it never writes to Health.";
-				INFOPLIST_KEY_NSHomeKitUsageDescription = "Casberi reads your home's accessories — locks, doors, sensors — so their state lands as things.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Casberi reads your location once to show today's weather in Coming up — never in the background.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Casberi records your voice notes when you tap the mic.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Casberi reads screenshots you take so they land as things.";

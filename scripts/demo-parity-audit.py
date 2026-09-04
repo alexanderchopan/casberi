@@ -189,7 +189,7 @@ def ref_family(ref):
 #
 # A source the demo seeds but no bridge lands (`You`, `Voice`) has no bridge
 # opinion to disagree with; those are the app's own capture paths.
-KNOWN_NO_BRIDGE_KIND = {"You", "Voice", "Contacts", "HomeKit"}
+KNOWN_NO_BRIDGE_KIND = {"You", "Voice", "Contacts"}
 
 
 def check_k_kinds(demo, bridges):

@@ -862,7 +862,7 @@ KNOWN_SEARCH_ONLY = {
     # `Thing.searchOnlySources` — reachable by search/Find, never a room or
     # a chip, by the SAME ruling as the two above but a different mechanism
     # (findable-not-browsable rather than no-distinct-source-at-all).
-    "Contacts", "HomeKit",
+    "Contacts",
 }
 
 

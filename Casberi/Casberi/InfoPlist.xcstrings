@@ -355,41 +355,6 @@
         }
       }
     },
-    "NSHomeKitUsageDescription": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Casberi reads your home's accessories — locks, doors, sensors — so their state lands as things."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Casberi lee los accesorios de tu hogar — cerraduras, puertas, sensores — para que su estado llegue como cosas."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Casberi は自宅のアクセサリー — 鍵、ドア、センサー — を読み込み、その状態を thing として届けます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Casberi는 집의 액세서리 — 잠금장치, 문, 센서 — 를 읽어 그 상태를 항목으로 담아요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Casberi 会读取你家中的配件 — 门锁、房门、传感器 — 让它们的状态作为内容进来。"
-          }
-        }
-      }
-    },
     "NSLocationWhenInUseUsageDescription": {
       "extractionState": "manual",
       "localizations": {

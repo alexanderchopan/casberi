@@ -77,22 +77,18 @@ ABSENT = re.compile(r"!\s*([A-Za-z_][\w.]*)\.contains\(")
 # second half exists because an exemption that merely switches the check off
 # is a snooze: the mechanism its reason names could be deleted tomorrow with
 # nothing noticing, which is the failure this whole audit exists to prevent,
-# one level up. Caught by mutation on this audit's first run — removing
-# HomeKit's `if !homes.isEmpty` guard left the tree green.
+# one level up. Caught by mutation on this audit's first run — removing the
+# HomeKit ingest's `if !homes.isEmpty` guard left the tree green. (That entry,
+# idiom (1) below, went with the HomeKit bridge on 2026-09-04; the numbering
+# is left alone so the surviving reasons keep the labels they were written
+# with.)
 #
 # A prune reaches this list only by proving its upstream read SUCCEEDED some
-# other way than testing the named set's emptiness. Nine of the ten shapes in
-# this tree do, by four different idioms, and naming which one is the whole
-# value of the entry: the next person to touch one of these functions needs to
-# know what they must not remove.
+# other way than testing the named set's emptiness. The shapes in this tree do,
+# by three surviving idioms, and naming which one is the whole value of the
+# entry: the next person to touch one of these functions needs to know what
+# they must not remove.
 KNOWN_SAFE = {
-    # (1) The emptiness test is on the collection the set was DERIVED from.
-    ("HomeKitIngest.swift", "ingest"):
-        ("guarded by `if !homes.isEmpty` — `seen` is built by walking `homes`, "
-        "so proving the walk found a home proves the read happened. Its own "
-        "comment names the hazard (iCloud homes still syncing).",
-         'if !homes.isEmpty {'),
-
     # (2) A reachability flag, which is STRONGER than an emptiness test: it
     #     separates 'the relay answered nothing' from 'no relay answered'.
     ("NostrIngest.swift", "heal"):

@@ -395,7 +395,7 @@ struct RootShell: View {
                 // One-time migrations run once per install (bump the version
                 // when adding one) — steady-state launches skip the scans.
                 let migrationsKey = "migrations.version"
-                let migrationsCurrent = 7
+                let migrationsCurrent = 8
                 let migrationsStored = UserDefaults.standard.integer(forKey: migrationsKey)
                 if migrationsStored < migrationsCurrent {
                     if migrationsStored < 1 {
@@ -538,6 +538,52 @@ struct RootShell: View {
                         // landed, so this is the repair for devices that have
                         // them today. It refuses while a demo is live.
                         _ = await DemoSeedAll.sweepEscapedRows(modelContext)
+                    }
+                    if migrationsStored < 8 {
+                        // One-time removal (2026-09-04): the HomeKit bridge is
+                        // gone. App Review rejected 1.0.11 under guideline
+                        // 2.5.1 — the HomeKit entitlement is for apps whose
+                        // purpose is home automation, and Casberi only ever
+                        // read accessory names and reachability into its
+                        // search index. The entitlement, the framework and the
+                        // catalog seat went with it.
+                        //
+                        // The ROWS have to go too, and not merely because they
+                        // are tidy to remove: nothing will ever refresh them
+                        // again. Every HomeKit row is pure LIVE STATE — the
+                        // ingest re-read reachability on each foreground and
+                        // reconciled unpaired accessories away — so a row left
+                        // behind is a lock that says "Reachable" forever,
+                        // which is the §83 fake status in the one place
+                        // somebody might act on it. A stale row is worse here
+                        // than for any activity bridge.
+                        //
+                        // Deleted by SOURCE, which also takes the demo's three
+                        // `demo:homekit:` rows (they land under the same
+                        // source). `.accessory` stays a `ThingKind`: an enum
+                        // case removed from a persisted attribute cannot
+                        // decode a row that a device still on 1.0.11, or the
+                        // iCloud zone, hands back mid-purge.
+                        //
+                        // The delete MIRRORS, which is the point — it clears
+                        // the rows off every device rather than leaving each
+                        // one to be swept whenever it next updates. A device
+                        // still on an older build will re-land them until it
+                        // updates too; that is self-limiting and preferable to
+                        // leaving them.
+                        let accessories = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                            predicate: #Predicate { $0.source == "HomeKit" }
+                        ))) ?? []
+                        var gone: [UUID] = []
+                        for thing in accessories where thing.isLive {
+                            gone.append(thing.id)
+                            modelContext.delete(thing)
+                        }
+                        if !gone.isEmpty { SpotlightIndex.remove(ids: gone) }
+                        // The seat itself. Without this the Apps screen keeps a
+                        // connected row for an offer the catalog no longer
+                        // lists — a dead control that opens nothing.
+                        bridges.remove("homekit")
                     }
                     modelContext.saveHonestly()
                     UserDefaults.standard.set(migrationsCurrent, forKey: migrationsKey)

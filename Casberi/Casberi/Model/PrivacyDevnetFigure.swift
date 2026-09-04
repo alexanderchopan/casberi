@@ -332,13 +332,36 @@ enum PrivacyDevnetFigure {
     ///
     /// Two with a track and four without, because the track and its end
     /// captions are the taller object and the sentence above them is the head.
+    /// `DSRoomChassis.visualSlot`, spelled here because this file is
+    /// Foundation-only and cannot import the design layer. Guarded against
+    /// drift in `privacy-selftest.sh`.
+    static let DSRoomChassisSlot = 300
+
     static func homeMoves(hasTrack: Bool, box: Double) -> Int {
-        // **The chrome assumes the sentence runs to THREE lines**, which is its
-        // real worst case (`PrivacyDevnetRoom.sentence`'s longest branch is the
-        // relaunch notice), because a budget computed against the short case
-        // clips the last row on exactly the corpora that have most to say.
-        // Sentence 81 + s3 + facts 45 + s3 is 154; the track and its end
-        // captions add 32 + s3.
+        // **FOUR lines, not three — measured on a device, where three clipped.**
+        // The estimate was written against the relaunch notice as the worst
+        // case, and the ORDINARY rootLive sentence is longer: "A proof here
+        // still names a snapshot the chain remembers, for another 4,096 slots."
+        // wraps to four lines at `heading22` on an iPhone 17 Pro, which is the
+        // commonest state this scope has. Three lines' worth of chrome left one
+        // row too many and the last one was cut mid-line by the slab below.
+        //
+        // A fixed estimate is a FLOOR, not a guarantee: a longer wording, a
+        // narrower device or a larger Dynamic Type size can each overrun it
+        // again. It is kept because `DSRoomSlot` reserves a fixed visual slot by
+        // design, so the alternative is measuring at draw time — and the cost of
+        // being wrong here is one row hidden, never one row clipped, as long as
+        // the estimate errs HIGH.
+        // **WITH A TRACK, HOME DRAWS NO MOVES AT ALL**, and that is a ruling
+        // rather than a bigger estimate. Two successive estimates (154, then
+        // 232) both left one row that fitted the arithmetic and was CLIPPED
+        // mid-line on a device — the third guess would have been another
+        // arithmetic answer to a layout question. The track plus a four-line
+        // sentence plus the facts row is what the slot holds, and the moves are
+        // one chip away in Activity, which is the scope for them.
+        //
+        // The no-track case keeps its budget: 112 (4 × 28) + s3 + facts 45 + s3
+        // is 186, and there the rows are the only content the scope has.
         // **`minimum: 0` — Home is the ONE list allowed to vanish**, and it is
         // what makes this future-proof rather than a number to revisit: when
         // the send panel lands on this scope the caller passes the box it has
@@ -346,7 +369,7 @@ enum PrivacyDevnetFigure {
         // other scope draws at least one row, because a scope whose whole
         // content is a list must not render empty.
         let fits = rowCap(box: box, rowHeight: 34, spacing: 6,
-                          chrome: hasTrack ? 200 : 154, minimum: 0)
+                          chrome: hasTrack ? Double(DSRoomChassisSlot) : 186, minimum: 0)
         // **"A few" is three.** The scope's own summary says "the last few
         // moves", and past three this stops being a lede and becomes the
         // Activity scope one chip away — two readings of one list, which is the

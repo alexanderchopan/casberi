@@ -350,7 +350,18 @@ if case .sponsor = an[5] {} else { check(false, "who paid is last") }
 check(PF.pips(0).empty == 1, "zero draws one empty pip so the column still reads as a comparison")
 check(PF.pips(12).overflow == 4, "over the cap the rest is COUNTED, never silently dropped")
 // FOUND: Home's budget was computed against a one-line sentence; the relaunch notice runs to three.
-check(PF.homeMoves(hasTrack: true, box: 300) <= 3, "\"a few\" is three — past that Home becomes Activity one chip away")
+// **WITH A TRACK, HOME DRAWS NO MOVES.** Two estimates in a row (154, then
+// 232) left one row that fitted the arithmetic and was CLIPPED mid-line on a
+// device — reported twice with a screenshot. A third estimate would have been
+// another arithmetic answer to a layout question.
+check(PF.homeMoves(hasTrack: true, box: 300) == 0,
+      "a track leaves no room for moves — they are one chip away in Activity")
+check(PF.homeMoves(hasTrack: false, box: 300) >= 1,
+      "without a track the moves ARE the content, so at least one draws")
+check(PF.homeMoves(hasTrack: false, box: 300) <= 3, "\"a few\" is three")
+// The slot constant is spelled here because this file is Foundation-only; if
+// the chassis moves, this silently starts budgeting against the wrong box.
+check(PF.DSRoomChassisSlot == 300, "the slot constant still matches DSRoomChassis.visualSlot")
 check(PF.rowCap(box: 10, rowHeight: 14, spacing: 6, chrome: 40, minimum: 0) == 0,
       "Home is the ONE list allowed to vanish, so the send panel needs no second decision")
 check(PF.rowCap(box: 10, rowHeight: 14, spacing: 6, chrome: 40) == 1,
@@ -578,6 +589,12 @@ grep -qF 'walkChunk' "$work/bridge.bare" \
 # report a busy address as quiet — the exact failure the code claimed to prevent.
 grep -qF 'hashes.reverse()' "$work/bridge.bare" \
   && fail "the walk orders by reversing the node's own order again — sort on blockNumber/logIndex instead"
+
+# The Foundation-only figure file spells DSRoomChassis.visualSlot itself, since
+# it cannot import the design layer. If the chassis moves, Home budgets against
+# the wrong box and clips again.
+grep -qE 'static let visualSlot: CGFloat = 300' "Casberi/Casberi/Design/DSRoomChassis.swift" \
+  || fail "DSRoomChassis.visualSlot changed — PrivacyDevnetFigure spells it as 300 and now budgets against the wrong box"
 
 # THE UNWATCHED ROOM (§593). The seat is in `LiveRoomSources`, which tells the
 # feed not to draw the corpus-shaped empty state — so a nil head is a BLACK

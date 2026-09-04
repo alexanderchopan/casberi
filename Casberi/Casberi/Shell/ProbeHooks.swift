@@ -2643,17 +2643,6 @@ enum ProbeHooks {
                 }
             }
         },
-        // `-homeKitProbe YES` — connects HomeKit headlessly and NSLogs the
-        // accessory count. Simulator caveat: no real HomeKit accessories
-        // exist there — expect 0 unless paired with the HomeKit Accessory
-        // Simulator or run on a real device (same honest-zero shape as the
-        // Strava probe).
-        Hook(key: "homeKitProbe") { _, context in
-            Task { @MainActor in
-                let n = await HomeKitIngest.connectAndIngest(context: context)
-                NSLog("HomeKit probe: %@", n.map { "\($0) accessories" } ?? "FAILED (denied)")
-            }
-        },
         // `-shopifyStore <url[,url]>` follows one or more Shopify stores and
         // syncs — headless bridge test. A blocked store logs FAILED honestly.
         Hook(key: "shopifyStore") { spec, context in

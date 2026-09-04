@@ -6,8 +6,6 @@
 	<true/>
 	<key>com.apple.developer.weatherkit</key>
 	<true/>
-	<key>com.apple.developer.homekit</key>
-	<true/>
 	<!-- FinanceKit — granted by Apple 2026-08-06 for team 35428TQK3S /
 	     com.casberi.app (request QVDBMBPMJU). Reads Apple Card, Apple Cash and
 	     Savings transactions and balances, on device, after the person grants
