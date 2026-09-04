@@ -55,6 +55,17 @@ struct SourceChips: View {
     let labels: [String]
     let active: String
     /// `.horizontal` is the iPhone strip; `.vertical` is the iPad rail.
+    /// The chip for the room you are STANDING IN, which since §591c is not
+    /// always the lit one: `active` is the OPEN FOLDER (what you last selected)
+    /// and this is where the feed actually is. They coincide unless you open
+    /// one folder while standing in another.
+    ///
+    /// It exists so that divergence costs nothing: §357's rule is that a filter
+    /// you are standing in must show you that you are standing in it, and a
+    /// strip whose only mark went to the folder you were merely peeking into
+    /// would break it. The standing chip keeps a tint ring.
+    var standing: String = ""
+
     var axis: Axis = .horizontal
     /// The seats behind every folded category chip, in learned order, keyed by
     /// category name (prd §351, 2026-08-11 — generalizes what was
@@ -962,6 +973,25 @@ struct SourceChips: View {
                 // without becoming unrecognisable — nothing about them changes
                 // colour, so removing the ring there would leave them with no
                 // active state whatsoever.
+                // **THE ROOM YOU ARE STANDING IN, when it is not the lit chip**
+                // (§591c). `isActive` is the OPEN FOLDER now, so opening Social
+                // while reading Kalshi lights Social and would leave nothing at
+                // all saying where the feed actually is — §357's rule, one
+                // surface over. A tint ring on the standing chip says it
+                // without competing with the fill: the filled chip is what you
+                // selected, the ringed one is where you are.
+                //
+                // Drawn on WORD chips too, unlike the active ring below, and
+                // that is the point: a category is a word chip, and the
+                // divergence this exists for can only happen between two
+                // categories. It is deliberately OUTSIDE `selectionNS` — the
+                // travelling selection is one object and this is a second,
+                // stationary mark, so joining the group would make them fight
+                // over the same geometry.
+                if !isActive, !standing.isEmpty, label == standing {
+                    Capsule(style: .circular)
+                        .strokeBorder(DS.tint.opacity(0.55), lineWidth: 2)
+                }
                 if isActive, !isWord {
                     // The active ring is always tint now — the feed sits on the
                     // neutral ink page (user ruling 2026-07-18: full ink), so

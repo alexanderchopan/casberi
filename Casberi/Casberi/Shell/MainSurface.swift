@@ -947,7 +947,8 @@ struct MainSurface: View {
     /// on every single body pass to prove a fold it was never going to find.
     /// (Now checked per-category, and per-category the same shortcut still
     /// applies — see the loop below.)
-    private func chipSnapshot() -> (labels: [String], active: String, venues: [String: [String]]) {
+    private func chipSnapshot()
+        -> (labels: [String], active: String, venues: [String: [String]], standing: String) {
         var walked: (labels: [String], venues: [String: [String]], sources: [String])?
         func walk() -> (labels: [String], venues: [String: [String]], sources: [String]) {
             if let walked { return walked }
@@ -969,10 +970,37 @@ struct MainSurface: View {
         for label in labels where CategoryFold.isCategory(label) && venues[label] == nil {
             venues[label] = walk().venues[label] ?? []
         }
+        // **THE LIT CHIP IS THE OPEN FOLDER (§591c, user: "when a user selects a
+        // category chip, it should turn blue" — "right now when i click wallet
+        // it stays white").**
+        //
+        // It was `chipLabel(for: filter.source)`, which was the whole answer
+        // while a chip tap switched rooms: what you tapped and where you stood
+        // were one thing. §591a made a folder tap open without moving the feed,
+        // so tapping Wallet left `filter.source` alone and the chip you had
+        // just pressed stayed unlit — a control that gives no sign it received
+        // your tap, which is the worst thing a control can do.
+        //
+        // The strip's selection is what you last SELECTED, so the open folder
+        // takes it. The two coincide almost always, because arriving in a room
+        // opens that room's folder; they diverge only when you deliberately
+        // open one folder while standing in another, and then the blue follows
+        // your finger, which is what was asked for.
+        //
+        // Where you are standing is not lost in that case — see `standingChip`,
+        // which the strip rings.
+        //
         // `filter.source` is always a REAL seat, so inside a folded category
         // room it names a source with no circle of its own — and an active
         // room with no lit chip reads as no filter at all.
-        return (labels, CategoryFold.chipLabel(for: filter.source, folded: labels), venues)
+        let standing = CategoryFold.chipLabel(for: filter.source, folded: labels)
+        let lit: String = {
+            if case .category(let open) = chrome.openFolder, labels.contains(open) {
+                return open
+            }
+            return standing
+        }()
+        return (labels, lit, venues, standing)
     }
 
     /// The chip that should read as active. See `chipSnapshot`, which is what
@@ -1308,6 +1336,7 @@ struct MainSurface: View {
         SwipeClock.mark("chips")
         #endif
         return SourceChips(labels: chips.labels, active: chips.active,
+                    standing: chips.standing,
                     axis: axis,
                     categoryVenues: chips.venues,
                     minimized: chrome.minimized,

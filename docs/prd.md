@@ -48127,3 +48127,36 @@ this tree already draws somewhere, or look at it.
 Both seen on the simulator: the feed opens on the hero alone with the former
 cover back in the run as an ordinary row, and the doors strip leads with a
 speech bubble.
+
+### 591c. amendment — the chip you tap turns blue (2026-09-04)
+
+User: *"when a user selects a category chip, it should turn blue"* → *"right now
+when i click wallet it stays white"*.
+
+**A defect §591a created and did not notice.** The strip's lit chip was
+`CategoryFold.chipLabel(for: filter.source)`, which was the complete answer
+while a chip tap switched rooms: what you tapped and where you stood were one
+thing. A folder tap no longer moves the feed, so tapping Wallet left
+`filter.source` untouched and the chip you had just pressed stayed white — **a
+control that gives no sign it received your tap**, which is the worst failure a
+control has, and worse here than doing nothing, because the row of sources DID
+open a few points above it and the eye had no reason to connect the two.
+
+The strip's selection is what you last SELECTED, so the open folder takes the
+fill. The two coincide almost always, since arriving in a room opens that room's
+folder; they diverge only when you deliberately open one folder while standing
+in another.
+
+**That divergence is why `standing` exists.** §357's rule is that a filter you
+are standing in must show you that you are standing in it, and a strip whose
+only mark went to the folder you were merely peeking into breaks it — open
+Social while reading Kalshi and nothing on screen would say where the feed is.
+So `SourceChips` takes a second label and rings it: **the filled chip is what
+you selected, the ringed one is where you are.** Drawn on WORD chips too, unlike
+the active ring beside it, because a category is a word chip and this divergence
+can only ever happen between two categories. Deliberately OUTSIDE `selectionNS`:
+the travelling selection is one object and this is a second, stationary mark, so
+joining the group would make them fight over the same geometry.
+
+Seen on the simulator: tapping Wallet fills it blue and opens its eight sources
+while All keeps a tint ring.
