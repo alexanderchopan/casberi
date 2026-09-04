@@ -145,6 +145,224 @@ final class PrivacyDevnetLiveState: ObservableObject {
     }
 }
 
+/// One JSON-RPC read, walking the three hosts until one answers.
+///
+/// **READS ONLY.** Every method named here is an `eth_*` read; the harness
+/// fails the build if this file ever names a signing or broadcasting verb. Note
+/// a JSON-RPC read is itself an HTTP POST, so "no POST" would be the wrong
+/// rule — the rule is no `eth_sendRawTransaction`, no signature, no key.
+enum PrivacyDevnetRPC {
+    /// Returns nil when NO host answered, which callers must keep distinct
+    /// from "answered with nothing": an unreached read is not evidence of an
+    /// empty account, and collapsing the two draws somebody's balance as zero.
+    static func call(method: String, params: [Any]) async -> Any? {
+        let body: [String: Any] = ["id": 1, "jsonrpc": "2.0", "method": method, "params": params]
+        for host in PrivacyDevnetChain.hosts {
+            guard let root = await IngestSupport.postJSON(host, body: body,
+                                                          service: PrivacyDevnetIdentity.source)
+                    as? [String: Any] else { continue }
+            if let result = root["result"], !(result is NSNull) { return result }
+            // A host that answered with an ERROR has answered — walking on
+            // would ask two more hosts the same malformed question and report
+            // "unreachable" for what is really our own bad request.
+            if root["error"] != nil { return nil }
+        }
+        return nil
+    }
+
+    static func hexInt(_ any: Any?) -> UInt64? {
+        guard let s = any as? String else { return nil }
+        return UInt64(s.hasPrefix("0x") ? String(s.dropFirst(2)) : s, radix: 16)
+    }
+
+    /// A hex quantity as a `Decimal`.
+    ///
+    /// **Not `UInt64`**, and that is measured rather than defensive: an address
+    /// on this chain holds 999,997.999 ETH, which is ~1e24 wei and overflows a
+    /// `UInt64` by six orders of magnitude. `FramesMoney` learned the same
+    /// thing one chain over.
+    static func hexWei(_ any: Any?) -> Decimal? {
+        guard let s = any as? String else { return nil }
+        let digits = s.hasPrefix("0x") ? String(s.dropFirst(2)) : s
+        guard !digits.isEmpty else { return nil }
+        var total = Decimal(0)
+        for ch in digits {
+            guard let d = ch.hexDigitValue else { return nil }
+            total = total * 16 + Decimal(d)
+        }
+        return total
+    }
+}
+
+/// The watch list.
+///
+/// **The seat registers on the WATCH LIST ALONE**, which is the divergence from
+/// Frames worth stating: that seat also registers off a key this phone made,
+/// because its chain is days old and making an account is the common path.
+/// Here no key exists — the seat is watch-only while the envelope is
+/// unreproduced (§593a) — so registering on a key would be registering on a
+/// thing that can never be true, and the honest gate is the watch list.
+@Observable
+final class PrivacyDevnetWatch {
+    static let shared = PrivacyDevnetWatch()
+    private static let key = "privacydevnet.watch.addresses.v1"
+
+    private var addressList: [String] { didSet { persist() } }
+
+    private init() {
+        if let data = UserDefaults.standard.data(forKey: Self.key),
+           let saved = try? JSONDecoder().decode([String].self, from: data) {
+            addressList = saved
+        } else {
+            addressList = []
+        }
+    }
+
+    private func persist() {
+        guard let data = try? JSONEncoder().encode(addressList) else { return }
+        UserDefaults.standard.set(data, forKey: Self.key)
+    }
+
+    var addresses: [String] { addressList }
+    var connected: Bool { !addressList.isEmpty }
+
+    func isWatching(_ address: String) -> Bool {
+        addressList.contains { $0.caseInsensitiveCompare(address) == .orderedSame }
+    }
+
+    static func isValidAddress(_ raw: String) -> Bool {
+        let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard s.count == 42, s.hasPrefix("0x") else { return false }
+        return s.dropFirst(2).allSatisfy(\.isHexDigit)
+    }
+
+    @discardableResult
+    func add(_ raw: String) -> Bool {
+        let address = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard Self.isValidAddress(address), !isWatching(address) else { return false }
+        addressList.append(address)
+        let book = AddressBook.shared
+        if book.entry(for: address) == nil {
+            book.setName(WalletStore.shortAddress(address), for: address,
+                         networks: [AddressBook.Network.privacyDevnet])
+        } else {
+            book.addNetwork(AddressBook.Network.privacyDevnet, for: address)
+        }
+        return true
+    }
+
+    func remove(_ address: String) {
+        addressList.removeAll { $0.caseInsensitiveCompare(address) == .orderedSame }
+    }
+
+    func removeAll() { addressList = [] }
+
+    func name(for address: String) -> String? { AddressBook.shared.name(for: address) }
+}
+
+// MARK: - Bridge registration
+
+enum PrivacyDevnetBridge {
+    static func registerBridge(store: BridgeStore) {
+        let addresses = PrivacyDevnetWatch.shared.addresses
+        guard !addresses.isEmpty else { store.remove(PrivacyDevnetIdentity.seatID); return }
+        let proof = addresses.count == 1
+            ? String(localized: "1 address watched")
+            : String(localized: "\(addresses.count) addresses watched")
+        // The `can:` lines are the seat's own promise and are held to it: the
+        // second says the seat only watches, and `privacy-selftest.sh` fails
+        // the build if this file gains a write verb. Both retire together on
+        // the day the envelope is reproduced (§593a) — never one without the
+        // other, which is the §83 failure in the room whose whole subject is
+        // what can and cannot be claimed.
+        store.registerConnected(
+            id: PrivacyDevnetIdentity.seatID,
+            name: PrivacyDevnetIdentity.source,
+            proof: proof,
+            can: [
+                String(localized: "Reads a watched address's balance, the steps each transaction ran, the one-time spend keys it used and which recent snapshot a proof named, on a public devnet testing Ethereum's privacy proposals."),
+                String(localized: "Reading needs no key. This seat only ever reads \u{2014} it makes no key, signs nothing and sends nothing."),
+                String(localized: "It does not hide who you are. Every transaction on this chain names its sender in the open; what a proof hides is which earlier deposit it is spending."),
+            ])
+    }
+
+    /// Undone BY NAME, never a blanket wipe.
+    static func disconnect(store: BridgeStore) {
+        PrivacyDevnetWatch.shared.removeAll()
+        Task { @MainActor in PrivacyDevnetLiveState.shared.clear() }
+        store.remove(PrivacyDevnetIdentity.seatID)
+    }
+}
+
+// MARK: - The live read
+
+extension PrivacyDevnetLiveState {
+    /// One sweep over every watched address.
+    ///
+    /// **Reads only, and it never runs in the demo** — `DemoMode` reaches no
+    /// network by ruling, and a live sweep here would answer with empty
+    /// accounts and overwrite the fixture, drawing the seat as a room with
+    /// nothing in it.
+    ///
+    /// **The head slot comes from `0x4b`, not from `eth_blockNumber`.** They
+    /// are not interchangeable: measured, frames runs 5,223 slots ahead of its
+    /// own block height, and the whole root-window reading is in slots. Read
+    /// via an `eth_call` over init code that executes the single opcode and
+    /// returns its stack word, which is the only way to reach it — no RPC
+    /// method exposes the slot.
+    func refresh() async {
+        guard !DemoMode.isActive else { return }
+        let watched = PrivacyDevnetWatch.shared.addresses
+        guard !watched.isEmpty else { return }
+
+        // Genesis first: a relaunch invalidates every reading below it, and
+        // knowing that early means the room can say so rather than describing
+        // a chain that is gone.
+        if let g = await PrivacyDevnetRPC.call(method: "eth_getBlockByNumber",
+                                               params: ["0x0", false]) as? [String: Any],
+           let hash = g["hash"] as? String {
+            setGenesis(hash)
+        }
+
+        // `0x4b` = SLOT. The init code is <op> PUSH1 00 MSTORE PUSH1 20 PUSH1
+        // 00 RETURN — one opcode, its word returned. Measured on all three
+        // ethrex devnets; the neighbouring `0x4e` is NOT an opcode, which was
+        // believed from reading the pool's bytecode and refuted by probing.
+        if let word = await PrivacyDevnetRPC.call(
+            method: "eth_call",
+            params: [["data": "0x4b60005260206000f3"], "latest"]),
+           let slot = PrivacyDevnetRPC.hexInt(word) {
+            setHead(slot: slot)
+        }
+
+        var out: [PrivacyDevnetAccount] = []
+        for address in watched {
+            var a = PrivacyDevnetAccount(address: address)
+            // Two params ONLY. Measured: this node refuses a third
+            // nonce-channel argument ("Invalid params: Expected 2 params")
+            // where vibenet's honours one, so the feature is per-deployment
+            // rather than per-fork and a channel control here would be dead.
+            let bal = await PrivacyDevnetRPC.call(method: "eth_getBalance",
+                                                  params: [address, "latest"])
+            let cnt = await PrivacyDevnetRPC.call(method: "eth_getTransactionCount",
+                                                  params: [address, "latest"])
+            // `reached` is the two reads answering, NOT the balance being
+            // non-zero — an address with nothing in it is a real answer and a
+            // host that did not reply is not.
+            a.reached = bal != nil || cnt != nil
+            a.balanceWei = PrivacyDevnetRPC.hexWei(bal)
+            a.nonce = PrivacyDevnetRPC.hexInt(cnt)
+            // Frames, nullifiers and roots need a transaction walk, which this
+            // sweep does NOT do yet — so those three scopes stay absent rather
+            // than reading zero. Absent and empty are different claims, and
+            // `PrivacyDevnetSection.present` is gated on evidence the address
+            // produced rather than on the read having run.
+            out.append(a)
+        }
+        replace(out)
+    }
+}
+
 // MARK: - Demo
 
 extension PrivacyDevnetLiveState {

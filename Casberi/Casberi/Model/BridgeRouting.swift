@@ -76,6 +76,7 @@ enum BridgeRouter {
         /// moment the first watched address registered the seat.
         case hegota
         case frames
+        case privacyDevnet
         case shopify
         case deals
         case openFoodFacts
@@ -327,6 +328,7 @@ enum BridgeRouter {
             case .radicle:        "radicle"
             case .vibenet:        VibenetIdentity.seatID
             case .hegota:         HegotaIdentity.seatID
+            case .privacyDevnet:  PrivacyDevnetIdentity.seatID
             case .frames:         FramesIdentity.seatID
             case .shopify:        "shopify"
             case .deals:          "deals"
@@ -443,6 +445,7 @@ enum BridgeRouter {
         Row(offer: "Radicle",    id: "radicle",    destination: .radicle),
         Row(offer: "Base Vibenet", id: VibenetIdentity.seatID, destination: .vibenet),
         Row(offer: "Ethrex Hegotá", id: HegotaIdentity.seatID, destination: .hegota),
+        Row(offer: "Ethrex Privacy", id: PrivacyDevnetIdentity.seatID, destination: .privacyDevnet),
         Row(offer: "Frames Devnet", id: FramesIdentity.seatID, destination: .frames),
         Row(offer: "Shopify",    id: "shopify",    destination: .shopify),
         Row(offer: "Deals",      id: "deals",      destination: .deals),
@@ -656,6 +659,7 @@ struct BridgeDestinationView: View {
         case .radicle:        RadicleScreen()
         case .vibenet:        VibenetScreen()
         case .hegota:         HegotaScreen()
+        case .privacyDevnet:  PrivacyDevnetScreen()
         case .frames:         FramesScreen()
         case .shopify:        ShopifyScreen()
         case .deals:          DealsScreen()

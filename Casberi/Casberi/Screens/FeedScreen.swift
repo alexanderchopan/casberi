@@ -2031,6 +2031,14 @@ struct FeedScreen: View {
                 // Scoped to the room for the perf reason the Hegotá term
                 // above gives, and with the same nothing lost.
                 source == FramesIdentity.source ? (chrome.framesScope ?? "") : "",
+                // **AND THE THIRD SEAT OF THAT KIND** (prd §593). Same
+                // reasoning as the two above, word for word — it lands no row,
+                // so its revision is frozen — plus one this room has and they
+                // do not: its headline is a COUNTDOWN, so a head memoised
+                // across a slot change keeps claiming a stale number of slots
+                // remaining. `identity` carries the head slot for that.
+                source == PrivacyDevnetIdentity.source ? PrivacyDevnetRoomSource.identity : "",
+                source == PrivacyDevnetIdentity.source ? (chrome.privacyDevnetScope ?? "") : "",
                 String(revision.count), String(revision.signal)]
             .joined(separator: "|")
     }
@@ -3111,6 +3119,7 @@ struct FeedScreen: View {
             .onDisappear {
                 if source == HegotaIdentity.source { chrome.hegotaSections = [] }
                 if source == FramesIdentity.source { chrome.framesSections = [] }
+                if source == PrivacyDevnetIdentity.source { chrome.privacyDevnetSections = [] }
             }
     }
 
@@ -4328,6 +4337,20 @@ case .vibenetSend(let account):
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                       bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
             .task { await FramesLiveState.shared.refresh() }
+        } else if source == PrivacyDevnetIdentity.source,
+                  let head = PrivacyDevnetRoomSource.compose(scope: chrome.privacyDevnetScope) {
+            // A ROOM WITH LIVE CONTENT AND NO ROWS — the same structural gap
+            // Hegotá's branch below documents. This seat lands no `Thing`
+            // EVER, so without this arm both arms above fall through and the
+            // room renders nothing at all.
+            Section {
+                PrivacyDevnetRoomCard(head: head)
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                      bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
+            .task { await PrivacyDevnetLiveState.shared.refresh() }
         } else if source == HegotaIdentity.source, let head = HegotaRoomSource.compose() {
             // **A ROOM WITH LIVE CONTENT AND NO ROWS.** Without this branch the
             // `if/else if` above falls through BOTH arms and renders nothing at

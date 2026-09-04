@@ -29,8 +29,9 @@ fail() { print -u2 "✗ $1"; exit 1 }
 
 SECTION="Casberi/Casberi/Model/PrivacyDevnetSection.swift"
 ROOTS="Casberi/Casberi/Model/PrivacyDevnetRoots.swift"
+ROOM="Casberi/Casberi/Model/PrivacyDevnetRoom.swift"
 VERIFY="scripts/verify.sh"
-for f in "$SECTION" "$ROOTS"; do [[ -f "$f" ]] || fail "$f not found"; done
+for f in "$SECTION" "$ROOTS" "$ROOM"; do [[ -f "$f" ]] || fail "$f not found"; done
 
 # `swiftc` needs a main file; the sources are compiled WHOLE and unmodified.
 cat > "$work/main.swift" <<'SWIFT'
@@ -175,6 +176,90 @@ let tied = PrivacyDevnetRoots.bySource([tieA, tieB])
 check(tied.count == 2 && tied.map(\.source) == PrivacyDevnetRoots.bySource([tieB, tieA]).map(\.source),
       "a slot tie orders the same regardless of input order")
 
+// ──────────────────────────── PrivacyDevnetRoom ───────────────────────
+
+// THE BLACK-SCREEN RULE. This seat lands no `Thing` ever, so the head is the
+// room's whole content and every branch must return one. Asserted over the
+// cross product of the states that reach it, because a nil here is not an
+// empty room — it is a black screen, which is how the Hegota room reached a
+// device four times.
+for hasRead in [false, true] {
+  for reset in [nil, false, true] as [Bool?] {
+    for accs in [[], [PrivacyDevnetRoom.Account()],
+                 [PrivacyDevnetRoom.Account(nullifierCount: 2, frameCount: 2,
+                                            roots: [r])]] {
+      let h = PrivacyDevnetRoom.head(accounts: accs, watching: 0, hasRead: hasRead,
+                                     headSlot: base + 10, wasReset: reset)
+      check(h.watching >= 1, "the head always claims at least one watched address")
+      check(!PrivacyDevnetRoom.sentence(h).isEmpty, "every head has a sentence")
+    }
+  }
+}
+
+// RANKING. A relaunch outranks everything, because every other reading would
+// describe a chain that no longer exists.
+let rich = [PrivacyDevnetRoom.Account(nullifierCount: 2, frameCount: 2, roots: [r])]
+check(PrivacyDevnetRoom.head(accounts: rich, watching: 1, hasRead: true,
+                             headSlot: base + 10, wasReset: true).lede == .relaunched,
+      "a relaunch outranks a live root")
+// nil is NOT true: not knowing is not the same as knowing it was wiped.
+if case .relaunched = PrivacyDevnetRoom.head(accounts: rich, watching: 1, hasRead: true,
+                                             headSlot: base + 10, wasReset: nil).lede {
+    check(false, "an unobserved genesis must not claim a relaunch")
+}
+// A read that has not happened reads as reading — unless accounts are already
+// here, which are themselves evidence of a read.
+if case .reading = PrivacyDevnetRoom.head(accounts: [], watching: 1, hasRead: false,
+                                          headSlot: base, wasReset: false).lede {} else {
+    check(false, "no read and no accounts reads as reading")
+}
+if case .reading = PrivacyDevnetRoom.head(accounts: rich, watching: 1, hasRead: false,
+                                          headSlot: base + 10, wasReset: false).lede {
+    check(false, "accounts are themselves evidence of a read")
+}
+// A LIVE root outranks spends; an aged one does not outrank them.
+if case .rootLive = PrivacyDevnetRoom.head(accounts: rich, watching: 1, hasRead: true,
+                                           headSlot: base + 10, wasReset: false).lede {} else {
+    check(false, "a live root leads")
+}
+if case .rootsAged = PrivacyDevnetRoom.head(accounts: rich, watching: 1, hasRead: true,
+                                            headSlot: base + 99_999, wasReset: false).lede {} else {
+    check(false, "every root out of the window reads as aged, not as quiet")
+}
+// A meter is drawn only over a LIVE root.
+check(PrivacyDevnetRoom.head(accounts: rich, watching: 1, hasRead: true,
+                             headSlot: base + 99_999, wasReset: false).windowFraction == nil,
+      "an aged root draws no window meter")
+check(PrivacyDevnetRoom.head(accounts: rich, watching: 1, hasRead: true,
+                             headSlot: base + 10, wasReset: false).windowFraction != nil,
+      "a live root draws a window meter")
+// WHICH root leads, when there are several. The one-root fixture above cannot
+// tell max from min — a mutation swapping them SURVIVED on it — so this pins a
+// pair whose windows differ, and asserts the head reports the FRESHER one: the
+// reference somebody still has time to care about.
+let older = PrivacyDevnetRoots.Reference(sourceID: src, slot: base, root: root)
+let fresher = PrivacyDevnetRoots.Reference(sourceID: src2, slot: base + 4000, root: root2)
+let twoRoots = [PrivacyDevnetRoom.Account(nullifierCount: 1, roots: [older, fresher])]
+if case .rootLive(let remaining, let sources) =
+    PrivacyDevnetRoom.head(accounts: twoRoots, watching: 1, hasRead: true,
+                           headSlot: base + 4100, wasReset: false).lede {
+    // fresher: registered at base+4000, head at base+4100 → 8192 - 100 = 8092.
+    // older:   registered at base,      head at base+4100 → 8192 - 4100 = 4092.
+    check(remaining == 8092, "the head reports the root with the MOST window left")
+    check(sources == 2, "and counts every distinct source, not just the leader's")
+} else { check(false, "two live roots read as rootLive") }
+
+// Spends without a root are their own reading, not quiet.
+let spent = [PrivacyDevnetRoom.Account(nullifierCount: 3, frameCount: 1)]
+if case .spends(let n) = PrivacyDevnetRoom.head(accounts: spent, watching: 1, hasRead: true,
+                                                headSlot: base, wasReset: false).lede {
+    check(n == 3, "spends counts every nullifier across accounts")
+} else { check(false, "nullifiers with no root read as spends") }
+if case .quiet = PrivacyDevnetRoom.head(accounts: [PrivacyDevnetRoom.Account()], watching: 2,
+                                        hasRead: true, headSlot: base, wasReset: false).lede {} else {
+    check(false, "an address that has done nothing reads as quiet")
+}
+
 check(!PrivacyDevnetRoots.present([]), "no references means no roots scope")
 check(PrivacyDevnetRoots.present(refs), "references mean the scope draws")
 
@@ -182,7 +267,7 @@ if failures == 0 { print("  ok   \(0) failures") } else { exit(1) }
 SWIFT
 
 print "  building…"
-xcrun swiftc -Onone -o "$work/pv" "$SECTION" "$ROOTS" "$work/main.swift" 2>"$work/build.log" \
+xcrun swiftc -Onone -o "$work/pv" "$SECTION" "$ROOTS" "$ROOM" "$work/main.swift" 2>"$work/build.log" \
   || { cat "$work/build.log"; fail "the sources did not compile — they must stay Foundation-only" }
 "$work/pv" || fail "assertions failed"
 print "  ok   assertions"
@@ -194,6 +279,7 @@ mutate() {
   local name="$1" file="$2" from="$3" to="$4"
   local dir="$work/m"; rm -rf "$dir"; mkdir -p "$dir"
   cp "$SECTION" "$dir/PrivacyDevnetSection.swift"; cp "$ROOTS" "$dir/PrivacyDevnetRoots.swift"
+  cp "$ROOM" "$dir/PrivacyDevnetRoom.swift"
   local target="$dir/$(basename $file)"
   grep -qF -- "$from" "$target" || fail "mutation '$name' matches nothing — it is stale and tests the shipped code"
   python3 - "$target" "$from" "$to" <<'PY'
@@ -203,7 +289,7 @@ s = io.open(p, encoding="utf-8").read()
 io.open(p, "w", encoding="utf-8").write(s.replace(a, b, 1))
 PY
   if xcrun swiftc -Onone -o "$dir/pv" "$dir/PrivacyDevnetSection.swift" "$dir/PrivacyDevnetRoots.swift" \
-        "$work/main.swift" 2>/dev/null && "$dir/pv" >/dev/null 2>&1; then
+        "$dir/PrivacyDevnetRoom.swift" "$work/main.swift" 2>/dev/null && "$dir/pv" >/dev/null 2>&1; then
     fail "mutation SURVIVED: $name"
   fi
   print "  ok   caught: $name"
@@ -232,6 +318,23 @@ mutate "a conditional scope promoted into the stable head" \
   "case .nullifiers, .roots, .sponsors: return true\n        case .frames: return false"
 mutate "roots separated from nullifiers" \
   "$SECTION" ".nullifiers, .roots, .sponsors]" ".roots, .nullifiers, .sponsors]"
+mutate "an unobserved genesis claiming a relaunch (not knowing read as knowing)" \
+  "$ROOM" "if wasReset == true { return finish(.relaunched) }" \
+  "if wasReset != false { return finish(.relaunched) }"
+mutate "a relaunch demoted below a live root" \
+  "$ROOM" "if wasReset == true { return finish(.relaunched) }" "if false { return finish(.relaunched) }"
+mutate "a populated room put back into Reading the chain" \
+  "$ROOM" "guard hasRead || !accounts.isEmpty else {" "guard hasRead else {"
+mutate "the head leading with the root that has LEAST window left" \
+  "$ROOM" "a.1 == b.1 ? a.0.slot < b.0.slot : a.1 < b.1" "a.1 == b.1 ? a.0.slot < b.0.slot : a.1 > b.1"
+mutate "an aged root drawing a window meter anyway" \
+  "$ROOM" "return finish(.rootsAged(count: refs.count))" \
+  "return finish(.rootsAged(count: refs.count), fraction: 0)"
+mutate "spends swallowed into quiet" \
+  "$ROOM" "if nullifiers > 0 { return finish(.spends(nullifiers: nullifiers)) }" \
+  "if false { return finish(.spends(nullifiers: nullifiers)) }"
+mutate "the head claiming zero watched addresses (a room that says it watches nothing)" \
+  "$ROOM" "Head(lede: lede, watching: max(watching, 1)" "Head(lede: lede, watching: watching"
 mutate "a chip allowed to wear a dot" \
   "$SECTION" "static func attention() -> Set<PrivacyDevnetSection> { [] }" \
   "static func attention() -> Set<PrivacyDevnetSection> { [.roots] }"
@@ -268,6 +371,7 @@ PY
 }
 strip_comments "$ROOTS" > "$work/roots.bare"
 strip_comments "$SECTION" > "$work/section.bare"
+strip_comments "$ROOM" > "$work/room.bare"
 
 # NO PRICE, EVER. Test ETH has no market; a figure here would be §83 in the room
 # whose whole subject is what can and cannot be claimed.
@@ -297,8 +401,15 @@ grep -qF "8192" "$work/roots.bare" || fail "the 8192-slot window is no longer st
 BRIDGE="Casberi/Casberi/Model/PrivacyDevnetBridge.swift"
 [[ -f "$BRIDGE" ]] || fail "$BRIDGE not found"
 strip_comments "$BRIDGE" > "$work/bridge.bare"
+#
+# THE BAN IS ON SIGNING AND BROADCASTING, NOT ON POST. Every JSON-RPC read is a
+# POST, so an over-broad `postJSON` ban would stop the seat reading at all —
+# which the first cut of this guard did, and which would have read as the seat
+# being broken rather than as the guard being wrong. `postJSONBody` IS banned:
+# it is the broadcast helper (§530), and nothing this seat reads needs it.
 for verb in 'eth_sendRawTransaction' 'eth_sendTransaction' 'eth_sign' 'personal_sign' \
-            'httpMethod' 'postJSON' 'PrivacySend' 'PrivacyKey' 'SecItemAdd'; do
+            'eth_signTransaction' 'postJSONBody' 'PrivacyDevnetSend' 'PrivacyDevnetKey' \
+            'SecItemAdd' 'secp256k1' 'signingPreimage'; do
   grep -qF -- "$verb" "$work/bridge.bare" \
     && fail "PrivacyDevnetBridge names $verb — the seat is watch-only until the envelope is reproduced (§593a); retire this guard and the catalog bullet in the same commit"
 done
@@ -306,6 +417,11 @@ done
 grep -qF 'Watching only — nothing is signed and nothing is sent' \
   "Casberi/Casberi/Model/BridgeCatalog.swift" \
   || fail "the catalog no longer says this seat only watches, but nothing here signs — restore the bullet or land the write with it"
+
+# THE BLACK-SCREEN RULE, mechanically: this seat lands no Thing, so a nil head
+# is not an empty room but a black screen. `head` must return a non-optional.
+grep -qE "static func head\(.*\) -> Head\?" "$work/room.bare" \
+  && fail "PrivacyDevnetRoom.head became Optional — a nil head on a rowless seat is a BLACK SCREEN (the Hegota room reached a device four times that way)"
 
 # THE COINS BAN, mechanically. A `coins` case added later compiles fine.
 grep -qE "case +coins" "$work/section.bare" \
@@ -317,4 +433,4 @@ grep -q "privacy-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
 print "  ok   drift guards: no price, no notification, slots not blocks, no coins scope"
-print "✓ privacy: 7 scopes, the 8272 window, boundaries, grouping, 11 mutations, 6 drift guards"
+print "✓ privacy: 7 scopes, the 8272 window, the room head and its black-screen rule, 18 mutations, 7 drift guards"

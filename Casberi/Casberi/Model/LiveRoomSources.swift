@@ -32,8 +32,14 @@ enum LiveRoomSources {
     /// `PredictionRoomBook`, and adding Hegotá to the wrong one is why a device
     /// report read "when i click on hegota it is showing me prediction
     /// markets".
+    /// `PrivacyDevnetIdentity.source` joins for exactly Hegotá's and Frames'
+    /// reason, and it is the same ruling rather than a third one: it lands no
+    /// `Thing` ever. **NOT in `venues` below**, which is the mistake that
+    /// produced "when i click on hegota it is showing me prediction markets" —
+    /// that narrower set draws `PredictionRoomBook`.
     static let all: Set<String> = ["Kalshi", "Polymarket",
-                                   HegotaIdentity.source, FramesIdentity.source]
+                                   HegotaIdentity.source, FramesIdentity.source,
+                                   PrivacyDevnetIdentity.source]
 
     /// **The prediction venues, and ONLY them.**
     ///
