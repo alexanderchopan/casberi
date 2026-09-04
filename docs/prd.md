@@ -94,6 +94,7 @@ at all.
 | §495 | Every sheet head is a piece of paper — a raised surface, an ink pour, and the receipt silhouette | reversed by §583 (user: *"i think it looks WAY better without the card"*. §495 read "a jumble of text" as a missing OBJECT and shipped both halves of a fix — the paper AND the anatomy. The anatomy is what worked: with a disc, a stamp, a lead, a title at the head rung and one sentence, running 12 → 40 down the block, the paper was a second boundary around a block that already had one. §495's "deliberate exception to headers-no-cards" is withdrawn and the general rule applies) |
 | §363 | The money receipt's TEAR carries state — torn is history, flat is still in the machine | reversed by §583 (an edge cannot survive the surface it was an edge of. Checked rather than assumed before removing: every `.open` receipt built in `MoneyReceipt` stamps `.settling` / `.pending` / `.screening` / `.yourTurn` / `.needsProof` / `.openPosition`, none of them quiet — so the silhouette and the word were two renderings of one fact. `finality` itself is untouched, and the settle keeps its haptic) |
 | §498 | `DSReceiptPaper` is the shared silhouette, so two rooms cannot drift into two papers | amended by §583 (the reasoning is why a modifier SURVIVES the deletion: strip the ground, the pour, the clip and the shadow and what is left is spacing, and five heads composing their own insets is how they drift apart with every check still green. `DSSheetHeadBlock` is that modifier) |
+| §583 | A capsule is a small card, so the state stamp loses its fill | extended by §584 to the three hand-rolled news pills the `DSStamp` sweep could not reach — and BOUNDED there: measured over all 145 capsules in the app, most are progress tracks or controls, and a capsule that GROUPS (a glyph with its word, one token among several) is earning its place |
 | §500 | Hegotá does **no notifications** — no attention dots ever, because nothing in that room is urgent (nothing can move against you; the asset is test ETH) | amended by §522 for ONE event (the room's CONTENT rule stands whole and the dots stay off; a devnet RELAUNCH is not room content but the statement that everything the room shows describes a chain that no longer exists — §515a, two days after §500 and therefore unavailable to it, is a person losing an evening to exactly that on the sibling devnet) |
 | §306 | The classification lives in ONE file that reads what LANDED, so the never-fires list is reviewable in one screen | amended by §522 (two devnet seats carry facts no row holds — Hegotá lands no `Thing` at all, and a chain reset or an elapsed timelock belongs to no row — so `NotifyDevnet` is a second, harness-compiled door into the SAME submit; the headline also moved onto `NotifyKind` so the pure half can compose whole plans) |
 | §473 | The timelock's Live Activity is a CONTROL, never automatic, and its `staleDate` is the unlock instant | amended by §522 (the control stands, and becomes a persisted consent record: the moment the delay ends now reaches the lock screen, for a tracked address and no other — plus the relaunch bug where a surviving activity read as untracked) |
@@ -47179,3 +47180,109 @@ Every sheet here compiles and the harness is green; no screenshot of any of the
 seventeen has been taken. The money receipt is the one to look at first — it is
 the only head whose horizontal inset CHANGED rather than merely losing a
 surface, and the only one that lost a state it was drawing.
+
+## 584. The ramp is already right, and the pill was the real finding (2026-09-03)
+
+**Two recommendations were made, both measured, and only one survived.** The
+survivor is three lines of code. Recording the one that died is the point of
+this entry, because it looked obviously correct and would have flattened the
+app's whole visual identity.
+
+### 1. WHAT DIED: promoting 12pt captions to 17pt
+
+The observation was that **59% of the app's text is set at 12pt** — 1,110 of
+~1,880 `dsText` calls — and the conclusion drawn from it was that the page
+"reads grey" and that any 12pt line carrying a SENTENCE should be promoted.
+
+**The user stopped it: *"but i thought we were trying to use 'extreme'
+proportions like cash app"*, then *"are we now just making it 'normal'
+everywhere?"*** Both questions are the refutation. In an extreme-proportion
+system most text SHOULD whisper — that is what makes one thing shout — so the
+59% figure is not evidence of a defect, it is evidence the system is working.
+Promoting the captions would have bought comfort by spending the identity.
+
+**Standing lesson, and it is not the same as the `-rankSweep` one.** There the
+error was a plausible cause that measurement refuted. Here measurement was
+never the issue: the STATISTIC was real and the reading of it was wrong,
+because a number only means something against an intended design. Ask what the
+system is TRYING to do before calling a distribution a defect.
+
+### 2. WHAT ALSO DIED: room head headlines from 24 to 40
+
+The retreat position looked stronger. A thing sheet head shouts at
+`heading34` (40pt) over a 12pt caption — 3.3 : 1 — while **24 of the 27 room
+head cards shout at `heading22` (24pt)** over the same 12pt caption, 2 : 1.
+Two objects doing the same job at two ratios, with the room heads sitting in
+the mushy middle: too big to be a label, too small to be a hero. The fix
+appeared to be pushing the headline UP, which widens the ratio rather than
+narrowing it and puts an under-used rung to work (40pt has 38 callers against
+`heading22`'s 76).
+
+**Measured with CoreText against the real headline strings at the real card
+width (330pt), and it does not survive.** A room headline is a SENTENCE, not a
+name:
+
+| Headline | at 24pt | at 40pt |
+|---|---|---|
+| "Payments have stopped" | 28pt | 94pt |
+| "You wrote 14 days straight in 2023" | 56pt | 141pt |
+| "Your signature is needed on 3 transactions" | 56pt | 141pt |
+
+**141pt of headline on a feed card that is ~250pt tall.** The extreme
+proportion works on a thing sheet because that head's title is a NAME
+("Alex's account", "+0.42 ETH") — short by nature. A room head's headline is a
+composed sentence and cannot take the head rung without eating its own card.
+
+**And the obvious rescue is worse than the disease.** `AddressBookViews`
+already has the precedent — `name.count <= 32 ? .heading34 : .heading22` — so
+length-gating the rung is an established pattern here. Applied to these
+headlines it inverts the product: the SHORT ones are the empty states
+("Nothing to report", "Payments have stopped", "Nothing has settled yet"), so
+the card would shout loudest on the days it has nothing to say and drop to 24
+exactly when there is news. Caught by reading the copy, not by reading the
+code.
+
+**So the ramp stands as it is, and the 2 : 1 was never an incoherence.** §532's
+rule — the head rung goes to whatever the surface is about — already produces
+both numbers correctly: a sheet is about a name, a room card is about a
+sentence, and a sentence cannot be set at 40.
+
+### 3. WHAT SURVIVED: the solid news pill
+
+Of **145 capsules in the app**, the survey found the population is mostly
+legitimate and the proposal to "make a capsule mean one thing" was too broad:
+most are progress-bar TRACKS (not badges at all), 51 are real controls, and of
+the true badges most GROUP — a glyph with its word ("couldn't read", a count
+beside its mark), or one token among several in a row, where the capsule is
+what tells you where one ends and the next begins.
+
+**The rule that actually falls out is narrower and better: a SOLID-filled
+capsule that is not a control reads as a button.** A 0.14 wash reads as a tag
+and is fine. Nine solid non-control capsules exist; six are controls the
+scan mis-sorted or legitimate groupings. **Three are one pattern in three
+files** — `VibenetRoomCard`, `VibenetAccountDetail`, `VibenetKeyTraySheet`,
+each drawing a news badge as a solid `Self.mark` capsule with `DS.page` knocked
+out of it. That is the only treatment in the app that looks exactly like a
+filled button while being news you cannot tap.
+
+They lose the fill and keep the mark colour, which is §583's ruling for
+`DSStamp` reaching the badge that hand-rolled itself past that component's
+sweep. §295's same-weight ruling is untouched: a key added and a key revoked
+are both merely news and neither is graded.
+
+### 4. Two scans that mis-sorted, and why that is recorded
+
+The capsule survey's first pass reported **94 non-control capsules** and its
+second **47 badge-shaped** ones. Both were wrong in the same direction:
+`SourceChips` and `CategoryVenueSwitcher` are the app's two most obvious
+controls and both scanned as LABELS, because their `Button` sits further up
+than the window looked; `ThingContent`'s "Watch this token" scanned as a solid
+label for the same reason. **A blanket application of either scan would have
+stripped the fill off the source strip.** Every site that changed here was read
+by eye first. Recorded because the same shape — a scan that looks decisive,
+applied without reading the sites — is what the two dead recommendations above
+also had in common.
+
+### 5. Unseen on a device
+
+Three lines changed in three files; both platforms build. No screenshot taken.

@@ -955,11 +955,11 @@ struct VibenetAccountDetail: View {
                         .lineLimit(1)
                         .fixedSize()
                     if isNew(actor) {
+                        // A word, not a pill (prd §584) — see
+                        // `VibenetRoomCard`'s own note. Same badge, third file.
                         Text(String(localized: "New"))
                             .dsText(.label11).fontWeight(.semibold)
-                            .foregroundStyle(DS.page)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Capsule().fill(Self.mark))
+                            .foregroundStyle(Self.mark)
                             .fixedSize()
                     }
                 }

@@ -334,11 +334,11 @@ struct VibenetKeyTraySheet: View {
                     // state rather than an identity: it is why you are looking
                     // at this row, and it stops being true within a session.
                     if newKeyIDs.contains(key.id) {
+                        // A word, not a pill (prd §584) — see
+                        // `VibenetRoomCard`'s own note. Same badge, second file.
                         Text(String(localized: "New"))
                             .dsText(.label11).fontWeight(.semibold)
-                            .foregroundStyle(DS.page)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Capsule().fill(Self.mark))
+                            .foregroundStyle(Self.mark)
                             .fixedSize()
                     }
                 }

@@ -3086,11 +3086,20 @@ struct VibenetRoomCard: View {
             // merely news here and neither is graded (§295's same-weight
             // ruling, and `VibenetKeyChanges.line`'s own note).
             if let moved = keyChanges?.pillLine {
+                // A WORD, NOT A PILL (prd §584, 2026-09-03). This was a
+                // SOLID capsule in the room's mark with `DS.page` knocked out
+                // of it — the only treatment in the app that looks exactly
+                // like a filled button while being news you cannot tap. §583
+                // took the fill off `DSStamp` for that reason; this is the
+                // same object, hand-rolled in three files, so the sweep of
+                // that component never reached it.
+                //
+                // The mark colour is UNTOUCHED and is what carries it. §295's
+                // same-weight ruling still holds: a key added and a key
+                // revoked are both merely news and neither is graded.
                 Text(moved)
                     .dsText(.label11).fontWeight(.semibold)
-                    .foregroundStyle(DS.page)
-                    .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(Capsule().fill(Self.mark))
+                    .foregroundStyle(Self.mark)
                     .fixedSize()
             }
         }
