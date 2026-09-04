@@ -27,6 +27,11 @@ struct VibenetAccountSheet: View {
     let address: String
     let room: VibenetRoom
     var onRemove: (String) -> Void = { _ in }
+    /// **REVOKE, FROM THE ACCOUNT SHEET (2026-09-04)** — `(account, key)`.
+    /// The confirmation and the last-admin guard belong to `VibenetKeySheet`;
+    /// this only carries the decision up to whoever can send it. Nil where the
+    /// presenter cannot, and the verb is then absent rather than disabled.
+    var onRevoke: ((String, VibenetActor) -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
 
@@ -173,7 +178,17 @@ struct VibenetAccountSheet: View {
             // which this is not.
             .sheet(item: $openedKey) { key in
                 VibenetKeySheet(actor: key.actor, item: key.item,
-                                sharedKeys: VibenetKeyReuse.sharing(key.item, in: room.items))
+                                sharedKeys: VibenetKeyReuse.sharing(key.item, in: room.items),
+                                // The third door onto one key (2026-09-04). A
+                                // verb that exists on two of three doors is the
+                                // same object answering differently depending
+                                // on how you reached it.
+                                onRevoke: onRevoke.map { revoke in
+                                    { (actor: VibenetActor) in
+                                        openedKey = nil
+                                        revoke(key.item.address, actor)
+                                    }
+                                })
             }
             .sheet(isPresented: $editingNote) { noteTray }
             .alert(String(localized: "Name this account"), isPresented: $renaming) {

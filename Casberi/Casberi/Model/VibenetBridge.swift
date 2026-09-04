@@ -63,9 +63,23 @@ struct VibenetContracts: Equatable, Codable {
     let keystore: String
     let defaultAccount: String?
     let canonicalHighRatePayerAccount: String?
-    let p256Authenticator: String
-    let webAuthnAuthenticator: String
-    let delegateAuthenticator: String
+    /// **PER-CHAIN, AND OPTIONAL SINCE 2026-09-04.**
+    ///
+    /// These were non-optional because every config this app had ever seen
+    /// carried them. The 2026-09-02 reset shipped a contracts document with no
+    /// `eip8130` object at all — measured — and the eip8130.com guide says why
+    /// the two halves differ: the **Keystore is deterministic CREATE2 and
+    /// identical across chains**, while the authenticators are a *per-chain
+    /// deployment*. So one of them can be known without the document and the
+    /// others cannot.
+    ///
+    /// Nil is therefore a real, correct state and not a parse failure: it means
+    /// **this chain can be READ and not SIGNED FOR**. Collapsing the two — which
+    /// is what this file did for a day — turns a chain serving every request
+    /// into a room that refuses to look at it.
+    let p256Authenticator: String?
+    let webAuthnAuthenticator: String?
+    let delegateAuthenticator: String?
     let policyManager: String?
     let sessionPolicy: String?
     let usdv: String?
@@ -108,8 +122,22 @@ struct VibenetContracts: Equatable, Codable {
     }
 
     var knownAuthenticators: VibenetKnownAuthenticators {
-        VibenetKnownAuthenticators(p256: p256Authenticator, webAuthn: webAuthnAuthenticator,
-                                   delegate: delegateAuthenticator)
+        VibenetKnownAuthenticators(p256: p256Authenticator ?? "",
+                                   webAuthn: webAuthnAuthenticator ?? "",
+                                   delegate: delegateAuthenticator ?? "")
+    }
+
+    /// **WHETHER THIS PHONE CAN SIGN FOR THIS CHAIN AT ALL (2026-09-04).**
+    ///
+    /// Every write here composes a `sender_auth` through the P-256
+    /// authenticator, so its absence is the whole of the answer — and it is a
+    /// property of the DEPLOYMENT, not a fault, not a network problem, and not
+    /// something a retry fixes. Reads are unaffected and must stay unaffected:
+    /// the Keystore answers `getActorConfig`, `getLockStatus` and
+    /// `getChangeSequences` with or without this.
+    var canSign: Bool {
+        guard let p256 = p256Authenticator else { return false }
+        return !p256.isEmpty
     }
 }
 
@@ -209,6 +237,11 @@ enum VibenetConfig {
 
     private static func store(_ contracts: VibenetContracts) {
         guard let data = try? JSONEncoder().encode(contracts) else { return }
+        // ONE DOOR for the signing flag: a stored config knows whether it names
+        // an authenticator, so every writer answers here rather than each
+        // remembering to — which also covers `seedDemo`, whose fixture signs
+        // nothing but must not leave a real device's flag set.
+        UserDefaults.standard.set(!contracts.canSign, forKey: noStackKey)
         // The memo goes with it, or a fetch lands and every view keeps reading
         // the config it replaced.
         memo = contracts
@@ -222,9 +255,102 @@ enum VibenetConfig {
         return Date().timeIntervalSince(at) < ttl
     }
 
+    /// **WHETHER THE SERVED CONFIG STILL DESCRIBES AN ACCOUNT STACK AT ALL
+    /// (2026-09-04).**
+    ///
+    /// Not a cache and not a failure count — a FACT the document itself
+    /// asserted, which is why it is stored apart from the contracts and why it
+    /// outranks them. Measured on 2026-09-04: after the 2026-09-02 reset,
+    /// `api.vibes.base.org/api/vibenet/contracts` answers 200 with a complete,
+    /// well-formed document that carries **no `eip8130` object of any kind** —
+    /// no Keystore, no authenticators, no PolicyManager, no SessionPolicy —
+    /// and names an ERC-4337 EntryPoint v0.6 and a Coinbase Smart Wallet
+    /// factory in their place, with `activationRegistry` and `policyRegistry`
+    /// holding a single `0xef` placeholder byte each.
+    ///
+    /// **Before this flag, that read was indistinguishable from an outage**,
+    /// and `current()`'s last-config-this-device-ever-saw fallback — written to
+    /// survive a momentary network hiccup, which is the right thing for a
+    /// hiccup — served the PRE-RESET addresses instead. So every Keystore
+    /// `eth_call` and both token balances were aimed at contracts that no
+    /// longer held code, on a chain that had been re-genesised, and the room
+    /// showed the result as though it had read something.
+    ///
+    /// A document that parses clears this. A fetch that FAILS does not touch
+    /// it either way — not knowing is not evidence, the same rail
+    /// `VibenetChainReset` keeps one type over.
+    private static let noStackKey = "vibenet.contracts.noSigningContracts"
+
+    /// **THIS CHAIN CAN BE READ BUT NOT SIGNED FOR** — the config named no
+    /// P-256 authenticator (2026-09-04). A property of the deployment; no
+    /// retry changes it, and READS ARE FINE.
+    static var signingUnavailable: Bool {
+        UserDefaults.standard.bool(forKey: noStackKey)
+    }
+
     private static func fetch() async -> VibenetContracts? {
         guard let raw = await IngestSupport.getJSON(configURL) as? [String: Any] else { return nil }
-        return parse(raw)
+        guard var parsed = parse(raw) else { return nil }
+        // **NEVER OVERWRITE GOOD ADDRESSES WITH NIL (2026-09-04, and this is
+        // the correction that matters most in this whole pass).**
+        //
+        // `readOnlyFallback` carries nil authenticators because the DOCUMENT
+        // names none — not because the chain has none. Storing that over a
+        // cached config that HAS them takes a device where sending, creating
+        // and authorizing all work and makes three of them refuse, which is a
+        // strictly worse outcome than the stale-address bug this whole thread
+        // started from.
+        //
+        // **THE MISTAKE UNDERNEATH IT, worth keeping: an EIP-8130 authenticator
+        // is not necessarily a deployed contract.** `K1_AUTHENTICATOR` is
+        // `address(1)` and has no code by design, and all thirteen
+        // authenticators referenced by live Keystore logs on 2026-09-04 answer
+        // `eth_getCode` with zero bytes. So "it has no code" says nothing about
+        // whether the Keystore accepts it — only the Keystore can say that, and
+        // it says it by accepting or refusing a transaction.
+        //
+        // So the fallback MERGES rather than replaces: the document is
+        // authoritative for what it names, and the last config this device saw
+        // is kept for what it does not.
+        if parsed.p256Authenticator == nil, let held = cached() {
+            parsed = VibenetContracts(
+                branch: parsed.branch, commit: parsed.commit,
+                faucetAddress: parsed.faucetAddress ?? held.faucetAddress,
+                keystore: parsed.keystore,
+                defaultAccount: held.defaultAccount,
+                canonicalHighRatePayerAccount: held.canonicalHighRatePayerAccount,
+                p256Authenticator: held.p256Authenticator,
+                webAuthnAuthenticator: held.webAuthnAuthenticator,
+                delegateAuthenticator: held.delegateAuthenticator,
+                policyManager: held.policyManager,
+                sessionPolicy: held.sessionPolicy,
+                usdv: parsed.usdv ?? held.usdv,
+                nfv: parsed.nfv ?? held.nfv,
+                vibecheck: parsed.vibecheck ?? held.vibecheck)
+        }
+        // **THE DETERMINISTIC KEYSTORE MUST PROVE ITSELF.** `parse` will hand
+        // back the published CREATE2 address for a document that names none,
+        // and this file's standing rule is that no address is called on the
+        // strength of somebody saying where it is. `eth_getCode` belongs to the
+        // node and not to any contract (§515a's own lesson about a reachability
+        // gate the counterparty can delete), so it is the right proof.
+        //
+        // A miss is NOT recorded as "cannot sign" — it is a read that did not
+        // answer, so this returns nil and `current()` falls back to the last
+        // good config exactly as it does for any other network hiccup.
+        // The KEYSTORE is proven by code, and it alone — that is a contract and
+        // must have bytecode. The authenticators deliberately are NOT checked
+        // this way; see the merge above for why that test does not apply to
+        // them.
+        if parsed.keystore.caseInsensitiveCompare(deterministicKeystore) == .orderedSame {
+            guard let code = await VibenetChain.call(
+                    method: "eth_getCode",
+                    params: [parsed.keystore, "latest"]) as? String,
+                  VibenetDeployment.isDeployed(code: code)
+            else { return nil }
+        }
+        UserDefaults.standard.set(!parsed.canSign, forKey: noStackKey)
+        return parsed
     }
 
     /// `eip8130` is the one nested object this file reads today — the four
@@ -233,13 +359,44 @@ enum VibenetConfig {
     /// contracts set with a hole in the middle of it), so the whole parse
     /// fails rather than returning something that would silently point
     /// `getActorConfig` at an empty string.
+    /// **THE KEYSTORE'S DETERMINISTIC ADDRESS — the ONE documented exception to
+    /// this file's no-hardcoded-address rule (2026-09-04).**
+    ///
+    /// The header rule exists because vibenet's contracts MOVE, and reading a
+    /// stale address means reading a contract that no longer means what this
+    /// file thinks. That reasoning is untouched for every other address here.
+    /// It does not apply to this one, for a reason the protocol publishes:
+    /// eip8130.com states the Keystore is **deterministic CREATE2 and identical
+    /// across chains**, and this is that address — note its `0x8130` vanity
+    /// prefix, which is the protocol naming itself.
+    ///
+    /// **AND IT IS NEVER TRUSTED ON THE STRENGTH OF THE DOCUMENT SAYING SO.**
+    /// `fetch` proves it with `eth_getCode` before a single read is aimed at
+    /// it, so the failure this file's rule guards against — calling a contract
+    /// that is not there — cannot happen: no code means no config, which is
+    /// "we could not look", not a wrong answer. Measured 2026-09-04 on the
+    /// post-reset chain: 10,675 bytes, with `getActorConfig`, `getLockStatus`
+    /// and `getChangeSequences` all answering.
+    static let deterministicKeystore = "0x813012Bd8D971928475235BBac6F0488c4A100AC"
+
+    /// **A DOCUMENT WITH NO `eip8130` BLOCK IS NOT AN EMPTY CHAIN (2026-09-04).**
+    ///
+    /// This returned nil for such a document until today, and the day it
+    /// mattered that was exactly the §553-amendment failure written down two
+    /// entries above: *absence of a thing where we happened to look, read as
+    /// absence of the thing.* The contracts document stopped naming the
+    /// Keystore; the Keystore was serving every request the whole time.
+    ///
+    /// So the fallback carries what CAN be known — the deterministic Keystore —
+    /// and leaves the per-chain authenticators nil, which is the honest split:
+    /// this chain can be read and not signed for. See `canSign`.
     static func parse(_ raw: [String: Any]) -> VibenetContracts? {
         guard let eip8130 = raw["eip8130"] as? [String: Any],
               let keystore = eip8130["Keystore"] as? String, !keystore.isEmpty,
               let p256 = eip8130["P256Authenticator"] as? String, !p256.isEmpty,
               let webAuthn = eip8130["WebAuthnAuthenticator"] as? String, !webAuthn.isEmpty,
               let delegate = eip8130["DelegateAuthenticator"] as? String, !delegate.isEmpty
-        else { return nil }
+        else { return readOnlyFallback(raw) }
         return VibenetContracts(
             branch: raw["_branch"] as? String,
             commit: raw["_commit"] as? String,
@@ -257,6 +414,35 @@ enum VibenetConfig {
             vibecheck: raw["vibecheck"] as? String)
     }
 
+    /// The read-only config for a document that names no `eip8130` block.
+    ///
+    /// Deliberately keeps every NON-8130 field the document did serve (the
+    /// tokens, the faucet), because those are still true and a room that
+    /// dropped them would lose balances it can perfectly well read. Only the
+    /// four 8130 addresses are the question, and only one of them is knowable.
+    private static func readOnlyFallback(_ raw: [String: Any]) -> VibenetContracts? {
+        // A document that is not this API's shape at all yields nothing —
+        // `faucetAddress` and `usdv` are its own long-standing fields, so
+        // requiring one of them keeps a 404 page or an error body from being
+        // read as a stackless config.
+        guard raw["faucetAddress"] != nil || raw["usdv"] != nil else { return nil }
+        return VibenetContracts(
+            branch: raw["_branch"] as? String,
+            commit: raw["_commit"] as? String,
+            faucetAddress: raw["faucetAddress"] as? String,
+            keystore: deterministicKeystore,
+            defaultAccount: nil,
+            canonicalHighRatePayerAccount: nil,
+            p256Authenticator: nil,
+            webAuthnAuthenticator: nil,
+            delegateAuthenticator: nil,
+            policyManager: nil,
+            sessionPolicy: nil,
+            usdv: raw["usdv"] as? String,
+            nfv: raw["nfv"] as? String,
+            vibecheck: raw["vibecheck"] as? String)
+    }
+
     /// The config a read should use RIGHT NOW: a fresh cache when there is
     /// one, else a live fetch (which refreshes the cache), else — only when
     /// BOTH of those miss — the last config this device ever saw, so a
@@ -267,6 +453,14 @@ enum VibenetConfig {
     static func current() async -> VibenetContracts? {
         if fresh, let cached = cached() { return cached }
         if let live = await fetch() { store(live); return live }
+        // **NO REFUSAL HERE (corrected 2026-09-04, the same day it was added).**
+        // For a few hours this returned nil whenever the document named no
+        // `eip8130` block, on the reading that the account stack was gone. It
+        // was not gone: the Keystore was answering every request from its
+        // deterministic address the whole time, and refusing would have turned
+        // a working room into a blank one. `parse` carries the readable half
+        // now; the unreadable half is `canSign`, which only the WRITE paths
+        // consult.
         return cached()
     }
 }
@@ -1686,6 +1880,11 @@ enum VibenetSeenCommit {
 enum VibenetSeenChain {
     private static let chainKey = "vibenet.chain.lastSeenID"
     private static let tipKey = "vibenet.chain.highWaterTip"
+    /// Block zero's own timestamp — the chain INSTANCE's identity, and the
+    /// third reset signal (2026-09-04, `VibenetChainReset.Verdict.regenesis`).
+    /// Stored as whole seconds rather than a `Date` so the notification key
+    /// built from it is stable across encodings.
+    private static let genesisKey = "vibenet.chain.genesisAt"
     /// The verdict of the most recent check, so the room can state it without
     /// re-reading the chain (and without a second check ADVANCING the stored
     /// values, which would make the reset un-sayable one pass later).
@@ -1704,11 +1903,26 @@ enum VibenetSeenChain {
     static func check() async -> VibenetChainReset.Verdict {
         let liveID = await VibenetChain.chainIdentifier()
         let liveTip = await VibenetChain.cachedTip()
+        // ONE extra round trip per check, and it is the only one of the three
+        // signals that could see the 2026-09-02 reset. Block zero never
+        // changes on a chain that was not replaced, so this answer is as
+        // cacheable as it is cheap — but it is deliberately NOT cached here:
+        // the whole value of the read is noticing that the number moved, and a
+        // cache keyed on the chain we are trying to detect the replacement of
+        // is a cache that answers with the old chain.
+        let liveGenesis = await VibenetChain.blockTime(0).map { Int($0.timeIntervalSince1970) }
         let storedID = UserDefaults.standard.object(forKey: chainKey) as? Int
         let storedTip = UserDefaults.standard.object(forKey: tipKey) as? Int
+        let storedGenesis = UserDefaults.standard.object(forKey: genesisKey) as? Int
         let verdict = VibenetChainReset.verdict(storedChainID: storedID, liveChainID: liveID,
-                                                storedHighWater: storedTip, liveTip: liveTip)
+                                                storedHighWater: storedTip, liveTip: liveTip,
+                                                storedGenesis: storedGenesis, liveGenesis: liveGenesis)
         if let liveID { UserDefaults.standard.set(liveID, forKey: chainKey) }
+        // Written on EVERY check, reset or not, so a device that predates this
+        // key records the current genesis once and can compare from then on —
+        // and so a reset advances to the new chain's genesis rather than
+        // reporting the same wipe on every pass afterwards.
+        if let liveGenesis { UserDefaults.standard.set(liveGenesis, forKey: genesisKey) }
         if let next = VibenetChainReset.nextHighWater(stored: storedTip, liveTip: liveTip,
                                                       verdict: verdict) {
             UserDefaults.standard.set(next, forKey: tipKey)
@@ -1760,6 +1974,7 @@ enum VibenetSeenChain {
         case .same:                     return "same chain"
         case let .newChain(from, to):   return "RESET — chain id \(from) → \(to)"
         case let .rewound(from, to):    return "RESET — tip rewound \(from) → \(to)"
+        case let .regenesis(from, to):  return "RESET — genesis re-dated \(from) → \(to)"
         }
     }
 

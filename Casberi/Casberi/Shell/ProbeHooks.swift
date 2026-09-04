@@ -6882,10 +6882,14 @@ enum ProbeHooks {
                     return
                 }
                 NSLog("[Casberi] vibenetCreate| config=ok keystore=%@ defaultAccount=%@ authenticator=%@",
-                      c.keystore, c.defaultAccount ?? "-", c.p256Authenticator)
+                      c.keystore, c.defaultAccount ?? "-", c.p256Authenticator ?? "NONE")
                 guard let keystore = VibenetTransaction.data(fromHex: c.keystore),
                       let defaultAccount = c.defaultAccount.flatMap(VibenetTransaction.data(fromHex:)),
-                      let auth = VibenetTransaction.data(fromHex: c.p256Authenticator) else {
+                      // `authenticator=NONE` above is the interesting line
+                      // now: a deployment that publishes no signing contracts
+                      // reads exactly like an unparseable config from here, and
+                      // only the probe can tell them apart (2026-09-04).
+                      let auth = c.p256Authenticator.flatMap(VibenetTransaction.data(fromHex:)) else {
                     NSLog("[Casberi] vibenetCreate| contracts=UNPARSEABLE")
                     return
                 }

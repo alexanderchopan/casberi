@@ -100,6 +100,39 @@ enum VibenetSend {
         /// blaming the node for a dropped connection is the §515a mistake.
         case chainUnreachable
         case signingRefused
+        /// **THIS APP HAS NO AUTHENTICATOR ADDRESS FOR THIS CHAIN (2026-09-04,
+        /// reworded the same day).**
+        ///
+        /// The first wording blamed the DEPLOYMENT — "publishes no signing
+        /// contracts" — which overclaims: all we know is that the contracts
+        /// document does not name one and this device has none cached. The
+        /// chain may well accept a signature; we simply have no address to
+        /// compose one against. Saying otherwise is §83 pointed at the network
+        /// instead of at ourselves.
+        ///
+        /// Distinct from `cannotCompose`, which is what this used to fall to —
+        /// §530's lesson being that a write failing for six reasons under one
+        /// sentence is a write nobody can debug. Not a fault in the app, the
+        /// key or the network: the contracts document names no P-256
+        /// authenticator, so there is nothing to compose a `sender_auth`
+        /// through. The only failure here no retry can fix.
+        ///
+        /// **IT SAYS NOTHING ABOUT READING**, and the first cut of this got
+        /// that wrong for a few hours: the Keystore is deterministic and was
+        /// answering every read throughout. Reads must never consult this.
+        case noAccountStack
+        /// An advanced option the CHAIN would refuse — a window that has closed
+        /// or inverts, a note too long. Carries its own sentence because each
+        /// names a different field and "couldn't send" would send somebody
+        /// looking at the amount (2026-09-04).
+        case advancedRefused(String)
+
+        /// **SPELLED ONCE (2026-09-04).** Three screens catch this enum and each
+        /// words its own cases, which is right where the wording is about what
+        /// that screen was doing. This one is not: it is a fact about the CHAIN,
+        /// it must agree with `VibenetQuiet.emptyRoomNote`'s sentence for the
+        /// same fact, and three spellings of one fact drift.
+        static let noAccountStackSentence = String(localized: "This app doesn't have the signing contract's address for the chain vibenet is running right now, so it can't put a signature together. Reading is unaffected.")
     }
 
     /// **THE FAUCET'S REFUSAL IS ITS OWN ERROR, NOT A CASE ON `Failure`
@@ -490,36 +523,176 @@ enum VibenetSend {
     static func sendValue(from account: Data,
                           to recipient: Data,
                           valueWei: Data,
+                          advanced: VibenetAdvanced = .default,
                           gasLimit: UInt64 = 200_000,
                           maxFeePerGas: UInt64 = 0x3b9a_ca00,
                           maxPriorityFeePerGas: UInt64 = 0xf4240) async throws -> Sent {
+        // **ONE LEG THROUGH THE BATCH PATH (2026-09-04).** A forward rather
+        // than a second body: `VibenetBatch.phases` returns `[[call]]` for a
+        // single call, so the bytes this composes are byte-identical to the
+        // ones this function built for itself before — asserted in
+        // `vibenet-selftest.sh`, because "identical" is the entire safety
+        // argument for moving a proven signing path. Two composers of one
+        // envelope drift, and a drift here is a signature over a different
+        // transaction (this file's own opening warning).
+        //
+        // The gas limit is passed EXPLICITLY so this keeps its shipped 200,000
+        // rather than inheriting the batch scale — a one-leg send's cost did
+        // not change today, and quietly raising it would be a change to a
+        // measured path made as a side effect of adding an unmeasured one.
+        try await sendValueBatch(from: account,
+                                 legs: [(recipient: recipient, valueWei: valueWei)],
+                                 advanced: advanced,
+                                 gasLimit: gasLimit,
+                                 maxFeePerGas: maxFeePerGas,
+                                 maxPriorityFeePerGas: maxPriorityFeePerGas)
+    }
+
+    /// The nonce for one CHANNEL.
+    ///
+    /// **MEASURED 2026-09-04, and it is what makes a nonce-channel control
+    /// honest rather than a dead one**: this node accepts a THIRD parameter on
+    /// `eth_getTransactionCount` naming the channel. The payer account reads
+    /// `0x26c` at channel 0 and `0x0` at channels 1, 2 and 255 — so the
+    /// argument is genuinely read rather than ignored, which the control test
+    /// (channel 0 passed explicitly, still `0x26c`) confirms.
+    ///
+    /// Without this a non-zero channel would sign over channel 0's sequence and
+    /// be refused every time — the dead control §83 bans, wearing an advanced
+    /// option's clothes. Channel 0 omits the parameter, so the ordinary send is
+    /// byte-identical to the request it has always made.
+    static func nonce(for account: Data, channel: UInt64) async -> UInt64? {
+        let address = "0x" + VibenetTransaction.hex(account)
+        let params: [Any] = channel == 0
+            ? [address, "latest"]
+            : [address, "latest", "0x" + String(channel, radix: 16)]
+        guard let hex = await VibenetChain.call(method: "eth_getTransactionCount",
+                                                params: params) as? String,
+              let value = UInt64(hex.dropFirst(2), radix: 16)
+        else { return nil }
+        return value
+    }
+
+    /// **WHAT A BATCH MOVED, for its one receipt (2026-09-04).**
+    ///
+    /// Big-endian byte addition rather than an integer sum, and that is not
+    /// fussiness: a wei amount does not fit a `UInt64` past ~18.4 ETH
+    /// (`VibenetABIEncode.word`'s own note says so, and `FramesMoney` was
+    /// written for exactly this), so summing through one would silently
+    /// truncate a real balance in the number a receipt states.
+    ///
+    /// Carries are propagated and a final carry EXTENDS the result rather than
+    /// wrapping — the case a fixed-width version gets wrong by producing a
+    /// small plausible number instead of a large one.
+    static func totalWei(_ amounts: [Data]) -> Data {
+        var out: [UInt8] = []          // little-endian while accumulating
+        for amount in amounts {
+            var carry = 0
+            let bytes = Array(amount.reversed())
+            for i in 0..<max(out.count, bytes.count) {
+                let a = i < out.count ? Int(out[i]) : 0
+                let b = i < bytes.count ? Int(bytes[i]) : 0
+                let sum = a + b + carry
+                carry = sum >> 8
+                if i < out.count { out[i] = UInt8(sum & 0xff) } else { out.append(UInt8(sum & 0xff)) }
+            }
+            while carry > 0 { out.append(UInt8(carry & 0xff)); carry >>= 8 }
+        }
+        // Back to big-endian, with leading zeros dropped — the form every other
+        // quantity in this file carries, so a receipt and a call agree.
+        while let last = out.last, last == 0 { out.removeLast() }
+        return Data(out.reversed())
+    }
+
+    /// **SEVERAL SENDS UNDER ONE SIGNATURE (2026-09-04) — the capability the
+    /// encoder has had since §523 and never had a caller for.**
+    ///
+    /// A generalisation of `sendValue`, not a second copy of it: the two differ
+    /// in exactly one expression (`VibenetBatch.phases` over N calls rather than
+    /// `[[call]]` over one) and `sendValue` now forwards here, so there is one
+    /// composing path and no way for the two to drift about a field order that
+    /// would put a signature over a different transaction.
+    ///
+    /// **ONE FACE ID, whatever the length**, which is the whole point of it:
+    /// one transaction, one nonce, one signing digest. It is also why there is
+    /// no partial success to report — see `VibenetBatch`'s doc for why
+    /// all-or-nothing here is the chain's property rather than a control.
+    ///
+    /// **Gas scales with the list** (`VibenetBatch.gasLimit`). Keeping
+    /// `sendValue`'s flat 200,000 would have made every batch past the first
+    /// couple of legs a transaction guaranteed to run out part-way — a failure
+    /// that costs the gas and moves nothing.
+    ///
+    /// **UNMEASURED against the chain, and it cannot be measured today**: no
+    /// signing contracts are published on this deployment (`signingUnavailable`), so
+    /// the guard below refuses before anything is signed. When one returns, a
+    /// two-leg batch to two fresh addresses is the first thing to try, and the
+    /// node's own refusal is what would name a wrong phase shape — the loud
+    /// half of `VibenetTransaction.encoded`'s own distinction.
+    static func sendValueBatch(from account: Data,
+                               legs: [(recipient: Data, valueWei: Data)],
+                               advanced: VibenetAdvanced = .default,
+                               gasLimit: UInt64? = nil,
+                               maxFeePerGas: UInt64 = 0x3b9a_ca00,
+                               maxPriorityFeePerGas: UInt64 = 0xf4240) async throws -> Sent {
         guard let publicKey = VibenetDeviceKey.publicKeyXY() else { throw Failure.noKey }
+        if VibenetConfig.signingUnavailable { throw Failure.noAccountStack }
         guard let contracts = await VibenetConfig.current(),
-              let authenticator = VibenetTransaction.data(fromHex: contracts.p256Authenticator)
+              // Unwrapped rather than defaulted: an EMPTY authenticator would
+              // compose a `sender_auth` naming address zero, which is a
+              // well-formed signature over a transaction no Keystore will ever
+              // accept — the loud-vs-silent line this file is built on, landing
+              // on the wrong side. The type is optional now precisely so this
+              // cannot be written by accident.
+              let p256 = contracts.p256Authenticator,
+              let authenticator = VibenetTransaction.data(fromHex: p256)
         else { throw Failure.cannotCompose }
-        guard recipient.count == 20 else { throw Failure.cannotCompose }
+        // An empty batch is not a cheap no-op — it is a signature over a
+        // transaction that does nothing, which costs gas and a Face ID.
+        guard !legs.isEmpty, legs.count <= VibenetBatch.maxCalls,
+              legs.allSatisfy({ $0.recipient.count == 20 })
+        else { throw Failure.cannotCompose }
+        // **CHECKED ON THE NEAR SIDE OF THE PROMPT.** A closed window signs
+        // perfectly and is refused by the chain, so catching it after Face ID
+        // spends the one thing that cannot be given back.
+        if let why = advanced.refusal(now: UInt64(Date().timeIntervalSince1970)) {
+            throw Failure.advancedRefused(why)
+        }
 
-        guard let nonceHex = await VibenetChain.call(
-                method: "eth_getTransactionCount",
-                params: ["0x" + VibenetTransaction.hex(account), "latest"]) as? String,
-              let nonce = UInt64(nonceHex.dropFirst(2), radix: 16)
+        // **THE NONCE IS READ FOR THE CHANNEL BEING SENT ON.** Channel 0 makes
+        // the request this has always made; a non-zero channel reads its own
+        // sequence, which is what stops an advanced option from being a
+        // guaranteed refusal (see `nonce(for:channel:)` for the measurement).
+        guard let nonce = await nonce(for: account, channel: advanced.nonceKey)
         else { throw Failure.cannotCompose }
 
-        let call = VibenetTransaction.Call(
-            to: account, data: VibenetExecute.calldata(target: recipient, value: valueWei))
+        // Each leg is a SELF-CALL into the account's own `execute` — the same
+        // calldata `sendValue` has always built, N times, in one phase.
+        let calls = legs.map { leg in
+            VibenetTransaction.Call(
+                to: account,
+                data: VibenetExecute.calldata(target: leg.recipient, value: leg.valueWei))
+        }
+        let limit = gasLimit ?? VibenetBatch.gasLimit(callCount: calls.count)
 
         let feePayable = maxFeePerGas > 0 || maxPriorityFeePerGas > 0
         var payer: Data?
-        switch await payerOffer(for: account, gasLimit: gasLimit) {
+        // Asked at the BATCH's gas limit, not one leg's: a sponsor that would
+        // cover a single send may decline a batch, and asking at the wrong
+        // figure is how a sponsored transaction runs out of somebody else's gas.
+        switch await payerOffer(for: account, gasLimit: limit) {
         case .sponsored(let address): payer = address
         case .declined:    if feePayable { throw Failure.noSponsor }
         case .unreadable:  if feePayable { throw Failure.sponsorUnreadable }
         }
 
         let fields = VibenetTransaction.Fields(
-            chainID: VibenetSigner.chainID, sender: account, nonceSequence: nonce,
+            chainID: VibenetSigner.chainID, sender: account,
+            nonceKey: advanced.nonceKey, nonceSequence: nonce,
+            validAfter: advanced.validAfter, validBefore: advanced.validBefore,
             maxPriorityFeePerGas: maxPriorityFeePerGas, maxFeePerGas: maxFeePerGas,
-            gasLimit: gasLimit, calls: [[call]], payer: payer ?? Data())
+            gasLimit: limit, calls: VibenetBatch.phases(calls),
+            metadata: advanced.metadata, payer: payer ?? Data())
 
         let digest = Data(Keccak256.hash([UInt8](VibenetTransaction.senderSigningPreimage(fields))))
         let signature: Data
@@ -602,16 +775,90 @@ enum VibenetSend {
                                gasLimit: UInt64 = 250_000,
                                maxFeePerGas: UInt64 = 0x3b9a_ca00,
                                maxPriorityFeePerGas: UInt64 = 0xf4240) async throws -> Sent {
-        guard let publicKey = VibenetDeviceKey.publicKeyXY() else { throw Failure.noKey }
-        guard let contracts = await VibenetConfig.current(),
-              let authenticator = VibenetTransaction.data(fromHex: contracts.p256Authenticator)
-        else { throw Failure.cannotCompose }
-
+        // The key and the config are `sendConfigChange`'s guards now — checking
+        // them twice would be two places to keep a refusal correct.
         let payload = VibenetAccountChanges.authorizeActorPayload(
             actorId: newActorID, authenticator: newAuthenticator, scope: scope, policyData: policyData)
-        let change = VibenetTransaction.Change.authorizeActor(payload)
+        return try await sendConfigChange(on: account, changeType: VibenetAccountChanges.authorizeActor,
+                                          payload: payload, localEpoch: localEpoch,
+                                          localSequence: localSequence, gasLimit: gasLimit,
+                                          maxFeePerGas: maxFeePerGas,
+                                          maxPriorityFeePerGas: maxPriorityFeePerGas)
+    }
+
+    /// **REVOKING A KEY (2026-09-04) — the tag that has existed since §523 with
+    /// no caller anywhere in the app.**
+    ///
+    /// `Change.revokeActor` (tag `0x01`) and `revokeActorPayload` were both
+    /// written when authorize was, and nothing ever called either, so the room
+    /// could grant authority over an account and never take it back — half of
+    /// the explorer's "Rotate Keys, Keep Your Address", and the half that
+    /// matters when a key is lost.
+    ///
+    /// **UNMEASURED, and more sharply than its sibling.** `authorizeActor`'s
+    /// tag was measured against real transactions on this chain; no revoke has
+    /// ever landed on it, so tag `0x01` comes from `Keystore.sol`'s declaration
+    /// order alone (`Change.revokeActor`'s own note says so). A wrong tag is
+    /// refused by the Keystore rather than silently applied — the loud failure
+    /// class — but it is worth knowing before the first one is tried.
+    ///
+    /// **THE HAZARD IS THE CALLER'S, and this function will not adopt it.** An
+    /// account whose last authorized actor is revoked can never be signed for
+    /// again and can never be repaired — `SafeSigner`'s N-of-N ruling (§427) in
+    /// a chain with no recovery module at all. The count of remaining actors is
+    /// a fact the SCREEN has already read (`VibenetAccountDetail`'s roster) and
+    /// this function has not, so refusing here would mean re-reading the
+    /// Keystore to second-guess a caller that knows better. It signs what it is
+    /// asked to sign; `VibenetKeyRevokeSheet` is where the last-key case is
+    /// named and blocked.
+    static func revokeActor(on account: Data,
+                            actorID: Data,
+                            localEpoch: UInt32,
+                            localSequence: UInt32,
+                            gasLimit: UInt64 = 250_000,
+                            maxFeePerGas: UInt64 = 0x3b9a_ca00,
+                            maxPriorityFeePerGas: UInt64 = 0xf4240) async throws -> Sent {
+        try await sendConfigChange(on: account, changeType: VibenetAccountChanges.revokeActor,
+                                   payload: VibenetAccountChanges.revokeActorPayload(actorId: actorID),
+                                   localEpoch: localEpoch, localSequence: localSequence,
+                                   gasLimit: gasLimit, maxFeePerGas: maxFeePerGas,
+                                   maxPriorityFeePerGas: maxPriorityFeePerGas)
+    }
+
+    /// The two-signature config-change path, shared by authorize and revoke.
+    ///
+    /// **A GENERALISATION, not a new path**: this is `authorizeActor`'s body
+    /// with the payload and the change tag lifted into parameters, so a revoke
+    /// travels the exact sequence a real authorize has already travelled on
+    /// this chain. The alternative — a second function shaped like it — is how
+    /// two spellings of one signing sequence end up disagreeing about which
+    /// digest the Keystore recomputes.
+    private static func sendConfigChange(on account: Data,
+                                         changeType: UInt8,
+                                         payload: Data,
+                                         localEpoch: UInt32,
+                                         localSequence: UInt32,
+                                         gasLimit: UInt64,
+                                         maxFeePerGas: UInt64,
+                                         maxPriorityFeePerGas: UInt64) async throws -> Sent {
+        guard let publicKey = VibenetDeviceKey.publicKeyXY() else { throw Failure.noKey }
+        if VibenetConfig.signingUnavailable { throw Failure.noAccountStack }
+        guard let contracts = await VibenetConfig.current(),
+              // Unwrapped rather than defaulted: an EMPTY authenticator would
+              // compose a `sender_auth` naming address zero, which is a
+              // well-formed signature over a transaction no Keystore will ever
+              // accept — the loud-vs-silent line this file is built on, landing
+              // on the wrong side. The type is optional now precisely so this
+              // cannot be written by accident.
+              let p256 = contracts.p256Authenticator,
+              let authenticator = VibenetTransaction.data(fromHex: p256)
+        else { throw Failure.cannotCompose }
+
+        let change = changeType == VibenetAccountChanges.revokeActor
+            ? VibenetTransaction.Change.revokeActor(payload)
+            : VibenetTransaction.Change.authorizeActor(payload)
         let changeHash = VibenetAccountChanges.changeHash(
-            changeType: VibenetAccountChanges.authorizeActor, payload: payload)
+            changeType: changeType, payload: payload)
         let sequenceWord = VibenetAccountChanges.localSequenceWord(epoch: localEpoch, sequence: localSequence)
 
         // Signature 1: THIS PHONE, as the account's admin, approving the
@@ -690,6 +937,35 @@ enum VibenetSend {
             sourceRef: ref)
         thing.walletAddress = "0x" + VibenetTransaction.hex(sent.account)
         thing.summary = String(localized: "\(newActorHex) can now act for this account.")
+        context.insert(thing)
+        try? context.save()
+    }
+
+    /// **WHAT WAS REVOKED LANDS IN THE CORPUS (2026-09-04)** — a FOURTH
+    /// `sourceRef` namespace (`vibenet:revoke:`), so none of the four can ever
+    /// dedupe against another.
+    ///
+    /// It gets a row of its own rather than sharing `vibenet:authorize:` with
+    /// its inverse, and the reason is the reason the whole feature exists: an
+    /// authorize and a revoke are opposite facts about the same key, and one
+    /// namespace holding both means a corpus that can say a key was granted and
+    /// cannot say it was taken away.
+    @MainActor
+    static func landRevokeReceipt(_ sent: Sent, actorHex: String, in context: ModelContext) {
+        let ref = "vibenet:revoke:\(sent.transactionHash)"
+        let existing = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref })
+        if let found = try? context.fetch(existing), !found.isEmpty { return }
+
+        let thing = Thing(
+            kind: .transaction,
+            title: String(localized: "Revoked a key on a vibenet account"),
+            content: VibenetExplorer.tx(sent.transactionHash),
+            source: VibenetIdentity.source,
+            capturedAt: .now,
+            tags: sent.payer == nil ? ["Permissions"] : ["Permissions", "Sponsored"],
+            sourceRef: ref)
+        thing.walletAddress = "0x" + VibenetTransaction.hex(sent.account)
+        thing.summary = String(localized: "\(actorHex) can no longer act for this account.")
         context.insert(thing)
         try? context.save()
     }

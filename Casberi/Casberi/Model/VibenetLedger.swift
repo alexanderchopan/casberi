@@ -924,11 +924,35 @@ enum VibenetChainReset {
         /// device has seen. A chain cannot un-mine blocks, so this is a
         /// reset that reused its id (or a reorg deep enough to be one).
         case rewound(from: Int, to: Int)
+        /// **THE GENESIS BLOCK'S OWN TIMESTAMP CHANGED — proof, and the only
+        /// one of the three that catches today's shape of reset (2026-09-04).**
+        ///
+        /// The two signals above were written on 2026-08-29 against the reset
+        /// that had just happened, where the id stepped AND the tip fell. The
+        /// reset on 2026-09-02 did neither: measured, `eth_chainId` stayed
+        /// `0x509F455` and the tip climbed to 739,868 — four times the 169,545
+        /// high-water this device had stored — so `newChain` could not fire and
+        /// `rewound` compares a number that is far ABOVE its mark. The room
+        /// reported `.same` over a chain that had been re-genesised two days
+        /// earlier, and every read below it was aimed at contracts that no
+        /// longer existed.
+        ///
+        /// Genesis is the fact that identifies a chain INSTANCE: block zero is
+        /// written once and never again, so a changed timestamp there cannot be
+        /// anything but a different chain. §515a measured exactly this
+        /// (*"genesis re-dated to the previous evening"*) and used the two
+        /// weaker signals instead; this is that measurement finally doing the
+        /// work it was already evidence for.
+        ///
+        /// It is checked AFTER the id and BEFORE the tip because it is proof
+        /// where the tip is inference, and because a reset that steps the id is
+        /// better described by the id it stepped to.
+        case regenesis(from: Int, to: Int)
 
         var isReset: Bool {
             switch self {
-            case .firstSight, .same:        return false
-            case .newChain, .rewound:       return true
+            case .firstSight, .same:                    return false
+            case .newChain, .rewound, .regenesis:       return true
             }
         }
 
@@ -946,6 +970,9 @@ enum VibenetChainReset {
             case .firstSight, .same:        return nil
             case let .newChain(from, to):   return "id-\(from)-\(to)"
             case let .rewound(from, to):    return "tip-\(from)-\(to)"
+            // Both endpoints, the same rule the two above keep: a chain reset
+            // twice to timestamps near each other is two wipes, not one.
+            case let .regenesis(from, to):  return "gen-\(from)-\(to)"
             }
         }
     }
@@ -957,10 +984,20 @@ enum VibenetChainReset {
     /// reset drops the tip by six figures.
     static let rewindFloor = 1_000
 
-    /// `storedChainID`/`storedHighWater` are what this device last saw; nil
-    /// for either means it has never looked.
+    /// `storedChainID`/`storedHighWater`/`storedGenesis` are what this device
+    /// last saw; nil for any of them means it has never looked.
+    ///
+    /// **THE ORDER IS A RULING, not an accident of writing (2026-09-04).**
+    /// Id, then genesis, then tip: the first two are PROOF and the third is
+    /// inference, and a reset that stepped its id is better described by the id
+    /// it stepped to than by a timestamp nobody recognises. Genesis sits in the
+    /// middle because it is the only signal that catches a reset which reuses
+    /// its id AND climbs past the old high-water — which is the shape the
+    /// 2026-09-02 reset actually had, and the shape the two original signals
+    /// were both blind to.
     static func verdict(storedChainID: Int?, liveChainID: Int?,
-                        storedHighWater: Int?, liveTip: Int?) -> Verdict {
+                        storedHighWater: Int?, liveTip: Int?,
+                        storedGenesis: Int? = nil, liveGenesis: Int? = nil) -> Verdict {
         guard let liveChainID else {
             // The node did not say. Not knowing is not evidence of a reset —
             // the same rule `AgentBudget` keeps about an unreadable spend.
@@ -969,6 +1006,12 @@ enum VibenetChainReset {
         guard let storedChainID else { return .firstSight }
         if storedChainID != liveChainID {
             return .newChain(from: storedChainID, to: liveChainID)
+        }
+        // A genesis this device has never recorded cannot be compared, and a
+        // genesis the node did not serve is not evidence of anything — the same
+        // rail the chain id above keeps. Neither may fall through to a reset.
+        if let storedGenesis, let liveGenesis, storedGenesis != liveGenesis {
+            return .regenesis(from: storedGenesis, to: liveGenesis)
         }
         guard let storedHighWater, let liveTip else { return .same }
         if storedHighWater - liveTip >= rewindFloor {
@@ -1021,7 +1064,8 @@ enum VibenetQuiet {
     /// - `sawReset`: whether this device has observed a chain reset since it
     ///   last looked (`VibenetChainReset.Verdict.isReset`).
     static func emptyRoomNote(watching: Int, deployed: Int,
-                              reachedChain: Bool, sawReset: Bool) -> String? {
+                              reachedChain: Bool, sawReset: Bool,
+                              signingUnavailable: Bool = false) -> String? {
         // Nothing watched: the generic invitation is close enough, and the
         // room's own door already says what to do.
         guard watching > 0 else { return nil }
@@ -1032,6 +1076,7 @@ enum VibenetQuiet {
             return String(localized: "The devnet didn't answer this read, so there's nothing to show yet — not because it's empty, but because we couldn't look. It retries on its own.")
         }
 
+
         if sawReset {
             // The whole point: name what happened, and say the thing that is
             // easy to get wrong — the address survives.
@@ -1040,6 +1085,32 @@ enum VibenetQuiet {
                 : String(localized: "vibenet was reset since you last looked — the chain it ran on is gone. Your accounts keep their addresses: each one comes back the moment it transacts again.")
         }
 
+        // **THIS APP HAS NO AUTHENTICATOR ADDRESS FOR THIS CHAIN (2026-09-04,
+        // CORRECTED TWICE THE SAME DAY).**
+        //
+        // Second correction: the sentence blamed the DEPLOYMENT for publishing
+        // no signing contracts. All that is actually known is that the
+        // contracts document names none and this device has none cached — an
+        // EIP-8130 authenticator need not even be a deployed contract
+        // (`K1_AUTHENTICATOR` is address(1)), so we cannot tell from outside
+        // whether the chain would accept one. It says what WE lack.
+        //
+        // The first cut of this said the account LAYER was not deployed and
+        // that the accounts could not be read — which was wrong, and wrong in
+        // the most expensive direction: the Keystore is at a deterministic
+        // address and was answering every read throughout. A room that told
+        // somebody their accounts were unreadable while it could read them
+        // perfectly well is worse than the stale-address bug it replaced.
+        //
+        // What is true is narrower and still worth saying, because it is the
+        // one thing a person would otherwise discover by tapping Send: this
+        // chain can be watched and not acted on. It sits BELOW the reset
+        // sentence rather than above it — a wipe explains why the room is
+        // empty, and this explains why a verb will refuse, which is a different
+        // question and only worth raising once the room has been described.
+        if signingUnavailable, deployed > 0 {
+            return String(localized: "Your accounts are here and reading fine, but this app doesn't have the signing contract's address for the chain vibenet is running right now — so it can't send or authorize on it yet.")
+        }
         if deployed == 0 {
             // §463's explainer, at room scale. Reachable at last: before this
             // pass an undeployed account could never be `reached`, so the

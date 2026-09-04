@@ -155,8 +155,38 @@ def checks(console: str, hegota: str, vibenet: str, feed: str):
     # 2. THE VERB'S RUNG, asserted APART from the sum. A panel that fits because
     #    its verbs shrank has not been fixed — the 64pt IS the design, and it is
     #    the obvious place to find room the next time something is added here.
-    if console.count(".dsText(.price40)") < 2:
+    #
+    #    AMENDED 2026-09-04, and the amendment is §559 rather than a relaxation.
+    #    That ruling: "Two verbs is the ceiling, and the second is the ink half.
+    #    Three is a menu, and a hero verb among peers is just shouting." So the
+    #    crown rung belongs to the SPLIT panel and must not be demanded of the
+    #    menu — vibenet carries four acts now (user: "folks testing won't want
+    #    to just send, the others are just as important"), and a `price40` verb
+    #    among four peers is the shouting §559 names.
+    #
+    #    Both halves are asserted, because each protects the other's failure:
+    #    the split panel must KEEP the rung (a panel that fits by shrinking its
+    #    words is not this panel), and the menu must NOT take it (a hero among
+    #    peers, and a two-word act that cannot set at half width without
+    #    scaling down).
+    #    The literal spelling `.dsText(.price40)` is GONE from the real file —
+    #    the rung is chosen inside the ternary now — so this asserts the rung
+    #    exists at all and the ternary check below pins where.
+    if ".price40" not in c_bare:
         out.append("a verb left the crown rung — a panel that fits by shrinking its words is not this panel")
+    if "isMenu ? .stat24 : .price40" not in console:
+        out.append(
+            "the panel's verb no longer switches rung on its act count — either the split "
+            "panel lost the crown rung, or a menu of peers is wearing it (§559)")
+    if "private var isMenu: Bool { actCount > 2 }" not in console:
+        out.append(
+            "the menu switch is no longer §559's rule — a room that grows a third act can "
+            "keep shouting, or one that drops back to two cannot get its hero back")
+    # 2b. NO TINT FILL IN A MENU. The other half of "a hero among peers is just
+    #     shouting": the rung and the fill are the two things that rank a tile,
+    #     and dropping only one leaves the loudest signal in place.
+    if "let filled = isSend && !isMenu" not in c_bare:
+        out.append("a menu tile can take the tint fill — the hero is back among its peers (§559)")
 
     # 3. THE KEYPAD IS OURS. §552a swapped it for the system pad on arithmetic
     #    that was correct for a CARD and is meaningless on a sheet; what it cost
@@ -237,6 +267,23 @@ def checks(console: str, hegota: str, vibenet: str, feed: str):
         if "DemoMode.isActive" not in bare:
             out.append("%s's Top up acts in a demo — the tour reaches something real" % name)
 
+    # 8b. **THE FAUCET LIVES ON HOME, IN ALL THREE ROOMS (prd §594, 2026-09-04).**
+    #     Frames deleted its own faucet door on 2026-09-01 ("i don't think we
+    #     need to say get test eth here b/c it is on the home screen") and
+    #     Hegotá kept drawing one in `HegotaKeySheet` for three more days — the
+    #     same verb in two places, in the room next door, with nothing checking.
+    #     A ruling that lives in one room's comments is a ruling the next room
+    #     misses, so it is mechanical now.
+    try:
+        keysheet = open("Casberi/Casberi/Screens/HegotaKeySheet.swift").read()
+    except OSError:
+        keysheet = ""
+    if "HegotaSend.claimFaucet" in strip_comments(keysheet):
+        out.append(
+            "Hegotá's key sheet claims from the faucet again — the room's Home scope has "
+            "carried a Top up tile since §553, and two controls for one consequence teach "
+            "that neither is the real one (§190, §83)")
+
     # 9. THE THREE ENDINGS. The hourly refusal is EXPECTED (§525) and must be
     #    said in words rather than reported as a fault.
     if "rateLimited" not in hegota:
@@ -252,8 +299,10 @@ def self_test() -> int:
     static let mark: CGFloat = 36
     static let tileGap = DS.Space.s3
     struct DevnetKeypad { }
-    Text(x).dsText(.price40)
-    Text(y).dsText(.price40)
+    static let menuTileFloor: CGFloat = 104
+    private var isMenu: Bool { actCount > 2 }
+    let filled = isSend && !isMenu
+    Text(x).dsText(isMenu ? .stat24 : .price40)
     """
     good_h = 'DemoMode.isActive\nDevnetSendPanel(\nclaimFaucet(\nrateLimited\n'
     # §553b: vibenet claims in place like Hegotá, and carries no handsOff flag.
@@ -272,7 +321,7 @@ def self_test() -> int:
                   fat, good_h, good_v, good_f, True))
 
     cases.append(("the verb drops below the crown rung",
-                  good_console.replace("Text(y).dsText(.price40)", "Text(y).dsText(.stat24)"),
+                  good_console.replace("isMenu ? .stat24 : .price40", ".stat24"),
                   good_h, good_v, good_f, True))
     cases.append(("the system keypad comes back",
                   good_console.replace("struct DevnetKeypad { }", "keyboardType(.decimalPad)"),

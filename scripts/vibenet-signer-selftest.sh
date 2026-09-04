@@ -646,6 +646,100 @@ check("payer changes what gets signed",
       VibenetTransaction.senderSigningPreimage(sponsored) != pre)
 check("sender changes what gets signed",
       VibenetTransaction.senderSigningPreimage({ var f = fields; f.sender = hx("0x00000000000000000000000000000000000000bb"); return f }()) != pre)
+
+// ── VibenetBatch (2026-09-04) ────────────────────────────────────────────────
+// **THE SAFETY ARGUMENT FOR THE WHOLE BATCH FEATURE IS THIS ONE ASSERTION:**
+// `sendValue` no longer composes its own bytes, it forwards through the batch
+// path — so a one-leg batch must produce the transaction that path already
+// proved, byte for byte. If it does not, every ordinary send in this room is
+// now a signature over something the vector never covered.
+let oneCall = VibenetTransaction.Call(to: hx("0x00000000000000000000000000000000000000cc"),
+                                      data: Data([0x01, 0x02]))
+check("a ONE-leg batch is the shape the proven send always built",
+      VibenetBatch.phases([oneCall]) == [[oneCall]])
+check("an empty batch yields no calls at all, never a phase holding nothing",
+      VibenetBatch.phases([]).isEmpty)
+// ONE PHASE, N CALLS — the other shape (N phases of one call) is a DIFFERENT
+// transaction, because flattening/nesting `calls` changes the signing hash.
+// That is one of the sixteen candidate encodings the §523 proof rejected.
+let twoCalls = [oneCall, VibenetTransaction.Call(to: hx("0x00000000000000000000000000000000000000dd"),
+                                                 data: Data([0x03]))]
+check("a batch is ONE phase carrying every call, never one phase per call",
+      VibenetBatch.phases(twoCalls).count == 1 && VibenetBatch.phases(twoCalls)[0].count == 2)
+check("…and the two shapes really are different bytes to sign",
+      VibenetTransaction.senderSigningPreimage({ var f = fields; f.calls = VibenetBatch.phases(twoCalls); return f }())
+        != VibenetTransaction.senderSigningPreimage({ var f = fields; f.calls = twoCalls.map { [$0] }; return f }()))
+check("call ORDER is preserved — a batch that reorders sends somebody else's money first",
+      VibenetBatch.phases(twoCalls)[0] == twoCalls)
+// Gas must SCALE, or every batch past the first couple of legs is a
+// transaction guaranteed to run out part-way — it costs the gas and moves
+// nothing.
+check("gas grows with the number of calls",
+      VibenetBatch.gasLimit(callCount: 4) > VibenetBatch.gasLimit(callCount: 1))
+check("an empty batch is still quoted at least one call's gas, never zero",
+      VibenetBatch.gasLimit(callCount: 0) == VibenetBatch.gasLimit(callCount: 1))
+// The ties the send list draws. Asked of the encoder rather than re-spelled in
+// the view — a second spelling is how a screen promises a shape the signature
+// does not carry.
+check("every leg but the last is tied to the one below it",
+      VibenetBatch.joins(callCount: 3) == [true, true, false])
+check("a lone leg is tied to nothing",
+      VibenetBatch.joins(callCount: 1) == [false])
+check("no legs, no ties",
+      VibenetBatch.joins(callCount: 0).isEmpty)
+check("there is exactly one tie per leg, or the list draws them against the wrong rows",
+      VibenetBatch.joins(callCount: 5).count == 5)
+
+// ── VibenetAdvanced (2026-09-04) ─────────────────────────────────────────────
+// Every failure below signs PERFECTLY and is refused by the node, so it renders
+// as an ordinary send that mysteriously did not happen — which is the class
+// this harness exists for.
+let now: UInt64 = 1_788_000_000
+check("the default is the send this app has always made — no channel, no window, no note",
+      VibenetAdvanced.default.isDefault
+        && VibenetAdvanced.default.nonceKey == 0
+        && VibenetAdvanced.default.validAfter == 0
+        && VibenetAdvanced.default.validBefore == 0
+        && VibenetAdvanced.default.metadata.isEmpty)
+check("a default set is never refused",
+      VibenetAdvanced.default.refusal(now: now) == nil)
+// A CLOSED WINDOW is the whole reason `refusal` runs before the Face ID.
+check("a window that has already closed is refused",
+      VibenetAdvanced(validBefore: now - 1).refusal(now: now) != nil)
+check("a window closing exactly NOW is refused — the boundary is not a grace period",
+      VibenetAdvanced(validBefore: now).refusal(now: now) != nil)
+check("a window still open is fine",
+      VibenetAdvanced(validBefore: now + 60).refusal(now: now) == nil)
+// INVERTED is a different mistake from CLOSED and must not be reported as one.
+check("a window that closes before it opens is refused",
+      VibenetAdvanced(validAfter: now + 120, validBefore: now + 60).refusal(now: now) != nil)
+check("a window opening in the FUTURE is fine — that is what a window is for",
+      VibenetAdvanced(validAfter: now + 60, validBefore: now + 120).refusal(now: now) == nil)
+// validAfter alone is unbounded-above and must never be judged against the clock.
+check("an open-ended window is fine however old its start",
+      VibenetAdvanced(validAfter: now - 10_000).refusal(now: now) == nil)
+check("a note at the cap is fine, one past it is refused",
+      VibenetAdvanced(metadata: Data(repeating: 0x41, count: VibenetAdvanced.metadataCap))
+        .refusal(now: now) == nil
+        && VibenetAdvanced(metadata: Data(repeating: 0x41, count: VibenetAdvanced.metadataCap + 1))
+             .refusal(now: now) != nil)
+// A NONCE CHANNEL IS NEVER A REFUSAL. It is read from the chain
+// (`eth_getTransactionCount`'s measured third parameter), so any value is
+// legitimate — refusing one here would be inventing a rule the chain does not
+// have.
+check("no channel is ever refused — the chain reads whichever one you name",
+      VibenetAdvanced(nonceKey: 0).refusal(now: now) == nil
+        && VibenetAdvanced(nonceKey: 7).refusal(now: now) == nil
+        && VibenetAdvanced(nonceKey: UInt64.max).refusal(now: now) == nil)
+// THE FIELDS REACH THE SIGNING BODY. A control that sets a value the signature
+// does not cover is a control that does nothing, and the node would accept the
+// transaction — so this failure is SILENT, unlike the refusals above.
+check("the nonce channel changes what gets signed",
+      VibenetTransaction.senderSigningPreimage({ var f = fields; f.nonceKey = 3; return f }()) != pre)
+check("the validity window changes what gets signed",
+      VibenetTransaction.senderSigningPreimage({ var f = fields; f.validBefore = now; return f }()) != pre)
+check("the metadata changes what gets signed",
+      VibenetTransaction.senderSigningPreimage({ var f = fields; f.metadata = Data([0x68, 0x69]); return f }()) != pre)
 print("PREIMAGE=" + pre.map { String(format: "%02x", $0) }.joined())
 if fails == 0 { print("  ok") } else { exit(1) }
 SWIFT
@@ -785,6 +879,45 @@ rlpmutate "zero encoded as 0x00"    'guard value != 0 else { return Data() }' \
 # The type byte.
 txmutate "type byte changed"        'static let txType: UInt8 = 0x79' \
                                     'static let txType: UInt8 = 0x78' || TXMUT=1
+# ── VibenetAdvanced (2026-09-04) ─────────────────────────────────────────────
+# A closed window signs perfectly and is refused by the node AFTER the Face ID —
+# the one cost that cannot be given back.
+txmutate "a window that has already closed must be refused before the prompt" \
+                                    'if validBefore > 0 && validBefore <= now {' \
+                                    'if validBefore > 0 && validBefore < 0 {'
+# `> 0` is the wire's own "no bound". Dropping it refuses every ordinary send,
+# which is the opposite failure and just as invisible in a diff.
+txmutate "zero must mean NO BOUND, or every ordinary send is refused" \
+                                    'if validBefore > 0 && validBefore <= now {' \
+                                    'if validBefore >= 0 && validBefore <= now {'
+# An inverted window is a different mistake from a closed one and the chain
+# refuses it just as hard.
+txmutate "a window that closes before it opens must be refused" \
+                                    'if validBefore > 0 && validAfter > 0 && validBefore <= validAfter {' \
+                                    'if validBefore > 0 && validAfter > 0 && validBefore <= 0 {'
+txmutate "the note cap must be load-bearing — calldata is paid for by the byte" \
+                                    'if metadata.count > VibenetAdvanced.metadataCap {' \
+                                    'if metadata.count > VibenetAdvanced.metadataCap * 1000 {'
+
+# ── VibenetBatch (2026-09-04) ────────────────────────────────────────────────
+# ONE PHASE PER BATCH. The other shape is a DIFFERENT transaction — the signing
+# hash covers the nesting — so a batch emitted as N phases of one call is a
+# signature over something nobody composed, and the ONE-leg assertion above is
+# what makes that visible: it would stop matching the shape the proven send
+# built, which is every ordinary send in this room.
+txmutate "a batch must be ONE phase of N calls, never N phases of one" \
+                                    'calls.isEmpty ? [] : [calls]' \
+                                    'calls.isEmpty ? [] : calls.map { [$0] }' || TXMUT=1
+# Gas that does not scale is a batch guaranteed to run out part-way: it costs
+# the gas and moves nothing, which is worse than refusing.
+txmutate "batch gas must scale with the call count" \
+                                    'baseGas + perCallGas * UInt64(max(1, callCount))' \
+                                    'baseGas + perCallGas' || TXMUT=1
+# The list's ties come from here. The LAST leg must not be tied to a row that
+# does not exist, and an off-by-one draws every tie against the wrong pair.
+txmutate "the last leg must be tied to nothing below it" \
+                                    '(0..<callCount).map { $0 < callCount - 1 }' \
+                                    '(0..<callCount).map { _ in true }' || TXMUT=1
 # Field ORDER — a swap that still compiles and still produces a valid signature.
 txmutate "fee fields swapped"       '.bytes(quantity(f.maxPriorityFeePerGas)),
          .bytes(quantity(f.maxFeePerGas)),' \

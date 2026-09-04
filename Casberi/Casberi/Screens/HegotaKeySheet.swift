@@ -28,13 +28,6 @@ struct HegotaKeySheet: View {
     @State private var presence: HegotaKey.Presence = .none
     @State private var busy = false
     @State private var keyFailure: String?
-    @State private var faucetResult: String?
-    /// Whether `faucetResult` is a REFUSAL. A refusal set in the same tertiary
-    /// grey as a success reads as a footnote rather than as an answer — the
-    /// §83 rule that a screen must not state a failure in the voice it uses
-    /// for fine print.
-    @State private var faucetFailed = false
-    @State private var faucetBusy = false
     /// What the sheet's content actually measures — `trayHeight`'s whole
     /// input. 0 until the first layout pass.
     @State private var contentHeight: CGFloat = 0
@@ -270,39 +263,20 @@ struct HegotaKeySheet: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                caption(String(localized: "Test ETH"))
-                Button {
-                    DSHaptic.tap()
-                    claimFaucet()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "drop.fill").dsGlyph(13, weight: .semibold)
-                        Text(String(localized: "Claim from the faucet"))
-                        if faucetBusy { ProgressView().controlSize(.mini) }
-                    }
-                    .dsText(.callout15).fontWeight(.semibold)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, DS.Space.s3)
-                    .background(Self.mark, in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-                }
-                .buttonStyle(PressSpring())
-                .disabled(faucetBusy)
-                .dsHover()
-                if let faucetResult {
-                    Text(faucetResult)
-                        .dsText(.label11)
-                        .foregroundStyle(faucetFailed ? DS.destructive : DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                // Rate-limited to one claim per source IP per hour — measured,
-                // not guessed (§525) — so the copy says why a second tap may
-                // fail rather than leaving it to read as broken.
-                Text(String(localized: "One claim per hour."))
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
-            }
+            // **THE FAUCET BLOCK IS GONE TOO (prd §594, 2026-09-04), and it is
+            // the SEND block's own ruling one paragraph down applied to the
+            // other verb.** This drew "Claim from the faucet" as a full-width
+            // filled button while the room's Home scope has carried a Top up
+            // tile since §553 — the same verb in two places, which §190 and §83
+            // both push against: two controls for one consequence teach that
+            // neither is the real one.
+            //
+            // Frames deleted its equivalent on 2026-09-01 on the user's own
+            // words (*"i don't think we need to say get test eth here b/c it is
+            // on the home screen"*) and this room simply missed that pass. The
+            // faucet's rate-limit copy went with it: `DevnetSendPanel`'s Top up
+            // says its own refusals on tap (§525), so a standing sentence here
+            // explained a control that is no longer on this screen.
 
             // **THE SEND BLOCK IS GONE (prd §539, 2026-08-31).** It was a door
             // to `HegotaSendSheet` — a sheet, opened from inside this sheet,
@@ -380,43 +354,6 @@ struct HegotaKeySheet: View {
         chrome.flash(String(localized: "Key removed"))
     }
 
-    private func claimFaucet() {
-        guard let address = HegotaKey.address() else { return }
-        faucetBusy = true
-        faucetResult = nil
-        faucetFailed = false
-        Task {
-            defer { faucetBusy = false }
-            do {
-                let claim = try await HegotaSend.claimFaucet(for: address)
-                DSHaptic.success()
-                HegotaSend.landReceipt(txHash: claim.transactionHash, kind: .claimed, in: modelContext)
-                faucetFailed = false
-                faucetResult = String(localized: "Sent \u{2014} \(claim.transactionHash.prefix(10))\u{2026}")
-                // The small grey line under the button is easy to miss below
-                // the fold in a scrollable tray (user: "there is no toast
-                // when faucet is claimed") — a real toast is the confirmation
-                // that survives however far the sheet is scrolled.
-                chrome.flash(String(localized: "Test ETH sent to this account"), tone: .success)
-            } catch let f as HegotaSend.Failure {
-                // THE VERDICT SAYS IT, not this screen (prd §531). The old
-                // branch here grepped the failure TEXT for "429" — which
-                // `postJSON` had already thrown away, so the friendly
-                // rate-limit sentence could never once have been reached over
-                // the one refusal this faucet is known to make.
-                if case .faucet(let verdict) = f {
-                    faucetResult = verdict.sentence
-                    faucetFailed = true
-                } else {
-                    faucetResult = String(localized: "Couldn't reach the faucet.")
-                    faucetFailed = true
-                }
-            } catch {
-                faucetResult = String(localized: "Couldn't reach the faucet.")
-                faucetFailed = true
-            }
-        }
-    }
 
     private static func keySentence(for error: Error) -> String {
         guard let f = error as? HegotaKey.Failure else {

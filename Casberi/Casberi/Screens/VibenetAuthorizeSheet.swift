@@ -170,12 +170,18 @@ struct VibenetAuthorizeSheet: View {
         case 128:
             guard let xy = VibenetTransaction.data(fromHex: hex), xy.count == 64,
                   let actorID = VibenetP256Auth.actorID(publicKeyXY: xy),
-                  let authenticator = VibenetTransaction.data(fromHex: contracts.p256Authenticator)
+                  // Nil where the deployment publishes no authenticator
+                  // (2026-09-04) — this function's existing "can't read that"
+                  // answer, which the sheet already renders as a refusal to
+                  // arm rather than as an error.
+                  let authenticator = contracts.p256Authenticator
+                      .flatMap(VibenetTransaction.data(fromHex:))
             else { return nil }
             return (actorID, authenticator, false)
         case 40:
             guard let addr = VibenetTransaction.data(fromHex: hex), addr.count == 20,
-                  let authenticator = VibenetTransaction.data(fromHex: contracts.delegateAuthenticator)
+                  let authenticator = contracts.delegateAuthenticator
+                      .flatMap(VibenetTransaction.data(fromHex:))
             else { return nil }
             return (VibenetABIEncode.word(addr), authenticator, true)
         default:
@@ -352,6 +358,12 @@ struct VibenetAuthorizeSheet: View {
                     errorText = String(localized: "This phone has no key yet.")
                 case .cannotCompose:
                     errorText = String(localized: "Couldn't put the transaction together.")
+                // Spelled once on the type: it must agree with the room's own
+                // empty note about the same fact (§530, and `emptyRoomNote`).
+                case .noAccountStack:
+                    errorText = VibenetSend.Failure.noAccountStackSentence
+                case .advancedRefused(let why):
+                    errorText = why
                 }
             } catch {
                 errorText = String(localized: "Couldn't authorize.")

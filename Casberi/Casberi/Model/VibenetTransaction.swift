@@ -369,6 +369,159 @@ enum VibenetExecute {
 /// `auth` itself is the ordinary `authenticator(20) || data` blob every
 /// other signature in this file already wears — `VibenetP256Auth.senderAuth`
 /// is reused verbatim, not reimplemented.
+/// **THE THREE FIELDS THE ENVELOPE CARRIED AND NOTHING WROTE (2026-09-04).**
+///
+/// `Fields` has had `nonceKey`, `validAfter`/`validBefore` and `metadata`
+/// since §523 — all three inside the proven signing body — and every send
+/// this app made left them at their defaults. They are the explorer's
+/// "Advanced Transactions" card, and on a devnet the person here is the one
+/// who wants them.
+///
+/// A value type rather than four more parameters on each sender: the whole
+/// point is that they travel together from one control, and a send that
+/// takes them individually invites a caller to pass two of three.
+///
+/// **LIVES HERE, NOT ON `VibenetSend` (2026-09-04).** It was written there and
+/// moved the same hour: `VibenetSend` imports SwiftData, so no `swiftc` harness
+/// can compile it, and `refusal` is exactly the shape this project tests —
+/// pure judgement whose every failure renders as a perfectly ordinary screen
+/// (a window silently accepted, then a refusal from the node with no clue
+/// which field caused it). `VibenetTransaction.swift` is Foundation-only by
+/// design and already compiled WHOLE by two harnesses.
+
+struct VibenetAdvanced: Equatable {
+    /// **THE NONCE CHANNEL.** EIP-8130 nonces are two-dimensional — a key
+    /// and a sequence — so sends in different channels do not queue behind
+    /// one another. Zero is the ordinary channel every send has used.
+    var nonceKey: UInt64 = 0
+    /// Unix seconds. Zero means "no bound", which is the chain's own
+    /// encoding and the reason these are not `Date?`: the field is signed
+    /// over as a quantity, and an Optional would have to pick a sentinel
+    /// anyway — better the sentinel the wire actually uses.
+    var validAfter: UInt64 = 0
+    var validBefore: UInt64 = 0
+    /// Rides the transaction, on chain, forever. Bounded here rather than
+    /// left to the node: a refusal for size arrives after the Face ID.
+    var metadata: Data = Data()
+
+    static let `default` = VibenetAdvanced()
+    /// The bound on `metadata`. Not a protocol limit — a BILLING one, the
+    /// same kind as `VibenetBatch.maxCalls`: calldata is paid for by the
+    /// byte and a note is not worth an unbounded bill.
+    static let metadataCap = 256
+
+    var isDefault: Bool { self == .default }
+
+    /// **WHETHER THIS WOULD BE REFUSED BEFORE IT IS SIGNED.** A window that
+    /// has already closed, or one that closes before it opens, produces a
+    /// perfectly valid signature over a transaction the chain will never
+    /// accept — so it is worth catching on the near side of a Face ID.
+    /// Returns nil when there is nothing wrong.
+    func refusal(now: UInt64) -> String? {
+        if validBefore > 0 && validBefore <= now {
+            return String(localized: "That window has already closed, so the chain would refuse it.")
+        }
+        if validBefore > 0 && validAfter > 0 && validBefore <= validAfter {
+            return String(localized: "That window closes before it opens, so the chain would refuse it.")
+        }
+        if metadata.count > VibenetAdvanced.metadataCap {
+            return String(localized: "That note is too long to ride the transaction.")
+        }
+        return nil
+    }
+}
+
+/// **A BATCH: SEVERAL CALLS UNDER ONE SIGNATURE (2026-09-04).**
+///
+/// Batching is the one capability the explorer advertises that this app already
+/// had in its ENCODER and had never once built a caller for: `Fields.calls` has
+/// been `[[Call]]` since §523, its two-level shape is part of the proven signing
+/// hash, and every send this app has ever made passed exactly `[[one]]`.
+///
+/// ## ONE PHASE, N CALLS — and the alternative was rejected on the hash
+///
+/// `calls` is an ordered array of PHASES, each an ordered array of calls, and
+/// flattening it changes the hash (one of the sixteen candidate encodings the
+/// §523 proof rejected). So the two shapes a batch could take are N calls in one
+/// phase, or N phases of one call, and they are DIFFERENT TRANSACTIONS.
+///
+/// This emits one phase. Two reasons, and the second is the load-bearing one:
+/// the reference `DefaultAccount.sol` expresses a batch as `executeBatch` — one
+/// account-level act over a list of `(target, value, data)` triples — so a list
+/// of calls is what the account's own bytecode is written to receive; and each
+/// call here is a SELF-CALL into `execute`, which `_isAuthorizedCaller` clears
+/// trivially (`caller == address(this)`), so N of them need no more authority
+/// than one and reuse `VibenetExecute.calldata` byte for byte rather than
+/// needing an ABI encoder for a dynamic array of dynamic structs.
+///
+/// **STATED CEILING, and it is the honest grade for this whole type: the
+/// SEMANTICS of a phase are unmeasured.** The spec names the structure and this
+/// chain has served no batched transaction to compare against — measured
+/// 2026-09-04, 120 of the 121 most recent transactions on it are OP-stack system
+/// deposits and not one is type `0x79`. What is proven is that the encoding is
+/// stable and that a one-call batch is byte-identical to the send this app
+/// already makes (`vibenet-selftest.sh`), which is what makes a wrong guess here
+/// fail LOUDLY at the node rather than silently at the signature —
+/// `VibenetTransaction.encoded`'s own distinction.
+///
+/// ## ALL-OR-NOTHING IS NOT A CHOICE HERE, and that is why the toggle is absent
+///
+/// Frames stitches whole TRANSACTIONS and its atomic flag is a real control the
+/// chain reads (§548's sixth follow-up). A vibenet batch is one transaction:
+/// one nonce, one signature, one revert. There is no OFF to describe, so a
+/// toggle offering it would be the dead control §83 bans — wired to a property
+/// of the chain rather than to a decision anybody gets to make.
+enum VibenetBatch {
+
+    /// How many calls one batch may carry.
+    ///
+    /// A GAS bound rather than a protocol one: nothing in the encoding stops a
+    /// longer list, and a batch the node refuses for gas is refused after the
+    /// Face ID, naming no remedy. Eight is also more rows than the send list
+    /// shows without scrolling past its own commit tile, which is the number
+    /// Frames settled on for the same reason.
+    static let maxCalls = 8
+
+    /// Gas for a batch of `n` calls.
+    ///
+    /// **The per-call figure is a HEADROOM ESTIMATE and says so**, because the
+    /// alternative is worse in a specific way: `sendValue` has shipped a flat
+    /// 200,000 since §523 and a batch that keeps it is a transaction guaranteed
+    /// to run out part-way. `eth_estimateGas` is the right answer and this chain
+    /// cannot be asked for one today — no account stack is deployed on it — so
+    /// the estimate is deliberately generous and the limit is a CEILING, not a
+    /// charge: unused gas is not spent, and on a sponsored send it is not the
+    /// sender's in the first place.
+    static let baseGas: UInt64 = 120_000
+    static let perCallGas: UInt64 = 90_000
+
+    static func gasLimit(callCount: Int) -> UInt64 {
+        baseGas + perCallGas * UInt64(max(1, callCount))
+    }
+
+    /// The `Fields.calls` value for these calls — ONE phase, per this type's
+    /// own doc. An empty list yields an empty `calls`, which is legal and is
+    /// what a transaction that only changes config already sends.
+    static func phases(_ calls: [VibenetTransaction.Call]) -> [[VibenetTransaction.Call]] {
+        calls.isEmpty ? [] : [calls]
+    }
+
+    /// **WHICH LEGS ARE TIED TO THE ONE BELOW THEM**, for the send list's own
+    /// drawing (`DevnetStitch.joins`).
+    ///
+    /// Every leg but the last, and it is DERIVED from `phases` rather than
+    /// spelled beside it — that parameter's own rule is that the venue must ask
+    /// its encoder instead of re-stating the shape, because a second spelling is
+    /// how a screen ends up promising something the signer does not produce.
+    /// Here the encoder's answer is that they are all in one phase of one
+    /// transaction, so every adjacent pair is joined; the last has nothing below
+    /// it to be joined to.
+    static func joins(callCount: Int) -> [Bool] {
+        guard callCount > 0 else { return [] }
+        return (0..<callCount).map { $0 < callCount - 1 }
+    }
+}
+
 enum VibenetAccountChanges {
     /// `Keystore.sol`'s `ChangeType` enum, declaration order.
     static let authorizeActor: UInt8 = 0

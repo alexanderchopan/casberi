@@ -74,12 +74,6 @@ struct VibenetAccountDetail: View {
     /// plain read with NO chevron — a disclosure pointing at a sheet that
     /// cannot exist is the dead control §83 bans.
     var onOpenKey: ((VibenetActor) -> Void)? = nil
-    /// AUTHORIZE A NEW KEY on this account (prd §534) — nil where the caller
-    /// cannot present the sheet (this row is scoped to one account, so it
-    /// can only ever appear from a context that already knows which one) or
-    /// where this phone cannot sign for the account at all, matching
-    /// `onOpenKey`'s own no-dead-control rule.
-    var onAuthorize: (() -> Void)? = nil
     /// Keys this device is seeing for the FIRST time, as
     /// `VibenetKeySeenDiff.keyID`s (prd §479).
     ///
@@ -601,35 +595,23 @@ struct VibenetAccountDetail: View {
                 // here and a chip there can never disagree about a count.
                 keyFilterStrip
             }
-            // AUTHORIZE LEADS THE LIST (prd §534, the `createAccountRow`
-            // ruling one screen over: "a verb under a roster of twenty is a
-            // verb nobody finds"). Gated on `onAuthorize` rather than always
-            // drawn — a button that opens a sheet only this phone's key
-            // could ever complete, shown on an account this phone cannot
-            // sign for, is the dead control §83 bans.
-            if let onAuthorize {
-                Button {
-                    DSHaptic.selection()
-                    onAuthorize()
-                } label: {
-                    HStack(spacing: DS.Space.s3) {
-                        ZStack {
-                            Circle().fill(Self.mark.opacity(0.18))
-                                .frame(width: DS.Mark.row, height: DS.Mark.row)
-                            Image(systemName: "plus")
-                                .dsGlyph(12, weight: .semibold)
-                                .foregroundStyle(Self.mark)
-                        }
-                        Text(String(localized: "Authorize a key…"))
-                            .dsText(.heading17)
-                            .foregroundStyle(DS.textPrimary)
-                        Spacer(minLength: DS.Space.s2)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .dsHover()
-            }
+            // **AUTHORIZE MOVED TO HOME (2026-09-04, user ruling).** §534 put
+            // this verb at the head of the list on the "a verb under a roster of
+            // twenty is a verb nobody finds" rule, which was right about its
+            // POSITION and is now answered one level up: all four chain acts are
+            // Home's tiles, and the rail is five readings with no verbs — which
+            // is what Wallet's rail already is (§491's template, and the one
+            // place this room had not matched it).
+            //
+            // MOVED, not duplicated. A door here as well would make three
+            // places instead of one, which is the scattering the ruling was
+            // about. The EDIT path is untouched and never came through here:
+            // `VibenetKeySheet`'s "Edit permissions" routes to the same
+            // authorize sheet with an actor attached, straight from
+            // `FeedScreen`. So this row's closure had exactly one caller, and
+            // it is deleted with the row rather than left as a parameter
+            // nothing reads.
+
             ForEach(VibenetKeyGrouping.sections(filteredActors)) { section in
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     VStack(alignment: .leading, spacing: 2) {

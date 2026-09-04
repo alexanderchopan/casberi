@@ -670,7 +670,32 @@ struct FeedScreen: View {
         if let account = Self.signableVibenetAccount() {
             Section {
                 VibenetSendCard(account: account,
-                                onSend: { feedSheet = .vibenetSend(account) })
+                                onSend: { feedSheet = .vibenetSend(account) },
+                                // **CREATE IS A PEER NOW, NOT THE FALLBACK
+                                // BELOW (2026-09-04).** The `else` branch still
+                                // exists and still draws the create panel,
+                                // because with no signable account there is
+                                // nothing to send from, top up or authorize on
+                                // — one act is not a menu (§559), so that state
+                                // correctly keeps the single hero tile.
+                                onCreate: { feedSheet = .vibenetCreate },
+                                // **THE SUBJECT IS `account`**, which is sound
+                                // only while there is one signable account —
+                                // `signableVibenetAccount`'s own doc says "also
+                                // the only one". Promoting Create to a peer is
+                                // exactly what can make that false, so a second
+                                // signable account needs an account picker on
+                                // this tile before the assumption is trusted
+                                // again. Named here rather than left implicit
+                                // because it is a fact this pass introduced.
+                                onAuthorize: {
+                                    let seq = Self.vibenetChangeSequences(for: account)
+                                    feedSheet = .vibenetAuthorize(
+                                        account: account,
+                                        localEpoch: seq?.localEpoch ?? 0,
+                                        localSequence: seq?.localSequence ?? 0,
+                                        editing: nil)
+                                })
             }
         } else {
             // **A SCOPE NEVER DRAWS NOTHING (prd §552d), NOW IN THE ROOM'S OWN
@@ -972,7 +997,115 @@ struct FeedScreen: View {
         }
     }
 
-    private func sendVibenet(from account: Data, to: String, amount: String) async -> String? {
+    /// **REVOKING A KEY** (2026-09-04). The confirmation is `VibenetKeySheet`'s
+    /// and the last-admin guard is too — this only sends.
+    ///
+    /// **Reports through `chrome.flash`, not a returned string**, because
+    /// unlike a send there is no sheet left to show one: the key sheet was
+    /// dismissed before this ran (see the call site) and the room underneath
+    /// has no error slot. A revoke that failed silently would be the worst
+    /// outcome available here — somebody believing a key is gone when it is
+    /// still authorized — so the failure is spoken and the success is too.
+    private func revokeVibenetKey(account: Data, actorID: Data,
+                                  epoch: UInt32, sequence: UInt32) async {
+        guard !DemoMode.isActive else {
+            chrome.flash(String(localized: "Nothing is signed in the demo — this is where your own key would revoke it."))
+            return
+        }
+        do {
+            let sent = try await VibenetSend.revokeActor(on: account, actorID: actorID,
+                                                         localEpoch: epoch, localSequence: sequence)
+            VibenetSend.landRevokeReceipt(sent, actorHex: VibenetTransaction.hex(actorID),
+                                          in: modelContext)
+            chrome.flash(String(localized: "Key revoked."))
+            // The roster this room draws is read state, so it keeps showing the
+            // revoked key until a sweep replaces it — the same two halves the
+            // create branch needed (2026-08-30): read the chain now, then bump
+            // the term this screen's memoised head recomputes on.
+            _ = await VibenetRoomSource.compose()
+            chrome.refreshPulse += 1
+        } catch let f as VibenetSend.Failure {
+            chrome.flash(vibenetSendFailureText(f), tone: .failure)
+        } catch {
+            chrome.flash(String(localized: "Couldn't revoke the key."), tone: .failure)
+        }
+    }
+
+    /// **ONE SPELLING PER FAILURE** (2026-09-04). Extracted when the batch arm
+    /// landed: two `switch`es over one enum is two sets of sentences for one
+    /// set of facts, and the one that gets edited is whichever the next report
+    /// happens to come through.
+    private func vibenetSendFailureText(_ f: VibenetSend.Failure) -> String {
+        switch f {
+        case .noSponsor:
+            return String(localized: "Nobody is sponsoring right now, and this account has nothing to pay with. Try again later.")
+        case .sponsorUnreadable:
+            return String(localized: "Couldn't reach the sponsor to ask who pays, so nothing was signed.")
+        case .broadcastRefused(let why): return String(localized: "The network refused it: \(why)")
+        case .payerRefused(let why): return String(localized: "The sponsor refused: \(why)")
+        case .signingRefused: return String(localized: "Face ID didn't confirm, so nothing was signed.")
+        case .chainUnreachable: return String(localized: "Couldn't reach the network, so nothing was sent.")
+        case .noKey: return String(localized: "This phone has no key yet.")
+        case .cannotCompose: return String(localized: "Couldn't put the transaction together.")
+        // Spelled once on the type: it must agree with the room's own empty
+        // note about the same fact (§530, and `emptyRoomNote`).
+        case .noAccountStack: return VibenetSend.Failure.noAccountStackSentence
+        // Its own sentence: each names a different field, and a generic
+        // "couldn't send" would send somebody looking at the amount.
+        case .advancedRefused(let why): return why
+        }
+    }
+
+    /// **SEVERAL SENDS UNDER ONE SIGNATURE** (2026-09-04). The stitch arm of the
+    /// same door `sendVibenet` is the one-leg arm of.
+    ///
+    /// **The failure copy is `sendVibenet`'s, reached through one door**: the
+    /// sheet renders whatever string comes back, so two spellings of "the
+    /// sponsor refused" would be two sentences for one fact depending on how
+    /// many rows were in the list.
+    ///
+    /// **What it deliberately does NOT do is land a receipt per leg.** One
+    /// transaction is one act with one hash, so `landSendReceipt` is called
+    /// once — N rows sharing a hash would collide on `sourceRef`, and the
+    /// bridge's dedupe would keep exactly one of them anyway, silently. The
+    /// receipt names the batch; each leg's own destination is on the chain.
+    private func sendVibenetBatch(from account: Data, legs: [DevnetSendLeg],
+                                  advanced: VibenetAdvanced = .default) async -> String? {
+        guard !DemoMode.isActive else {
+            return String(localized: "Nothing is sent in the demo — this is where your own key would sign it.")
+        }
+        // Parsed ALL AT ONCE before anything is signed: a batch that validates
+        // leg by leg as it composes would raise Face ID and then fail on row
+        // four, having already asked for the one thing that cannot be undone.
+        var parsed: [(recipient: Data, valueWei: Data)] = []
+        for leg in legs {
+            guard let target = VibenetTransaction.data(fromHex: leg.address), target.count == 20,
+                  let valueWei = DevnetSendParse.weiData(from: leg.amount) else {
+                return String(localized: "Couldn't send.")
+            }
+            parsed.append((recipient: target, valueWei: valueWei))
+        }
+        do {
+            let sent = try await VibenetSend.sendValueBatch(from: account, legs: parsed,
+                                                            advanced: advanced)
+            // The receipt's amount is the batch's TOTAL, which is what one
+            // transaction moved — `landSendReceipt` takes one recipient, so the
+            // first leg names it and the corpus row says how much left.
+            if let first = parsed.first {
+                VibenetSend.landSendReceipt(sent, to: first.recipient,
+                                            valueWei: VibenetSend.totalWei(parsed.map(\.valueWei)),
+                                            in: modelContext)
+            }
+            return nil
+        } catch let f as VibenetSend.Failure {
+            return vibenetSendFailureText(f)
+        } catch {
+            return String(localized: "Couldn't send.")
+        }
+    }
+
+    private func sendVibenet(from account: Data, to: String, amount: String,
+                             advanced: VibenetAdvanced = .default) async -> String? {
         guard !DemoMode.isActive else {
             return String(localized: "Nothing is sent in the demo — this is where your own key would sign it.")
         }
@@ -981,22 +1114,12 @@ struct FeedScreen: View {
             return String(localized: "Couldn't send.")
         }
         do {
-            let sent = try await VibenetSend.sendValue(from: account, to: target, valueWei: valueWei)
+            let sent = try await VibenetSend.sendValue(from: account, to: target,
+                                                       valueWei: valueWei, advanced: advanced)
             VibenetSend.landSendReceipt(sent, to: target, valueWei: valueWei, in: modelContext)
             return nil
         } catch let f as VibenetSend.Failure {
-            switch f {
-            case .noSponsor:
-                return String(localized: "Nobody is sponsoring right now, and this account has nothing to pay with. Try again later.")
-            case .sponsorUnreadable:
-                return String(localized: "Couldn't reach the sponsor to ask who pays, so nothing was signed.")
-            case .broadcastRefused(let why): return String(localized: "The network refused it: \(why)")
-            case .payerRefused(let why): return String(localized: "The sponsor refused: \(why)")
-            case .signingRefused: return String(localized: "Face ID didn't confirm, so nothing was signed.")
-            case .chainUnreachable: return String(localized: "Couldn't reach the network, so nothing was sent.")
-            case .noKey: return String(localized: "This phone has no key yet.")
-            case .cannotCompose: return String(localized: "Couldn't put the transaction together.")
-            }
+            return vibenetSendFailureText(f)
         } catch {
             return String(localized: "Couldn't send.")
         }
@@ -1017,6 +1140,23 @@ struct FeedScreen: View {
             return VibenetTransaction.data(fromHex: item.address)
         }
         return nil
+    }
+
+    /// The change sequences for one account, for Home's Authorize tile
+    /// (2026-09-04).
+    ///
+    /// **Read off the last saved snapshot, never a live call** — this runs on a
+    /// tap inside a view body, the same rail `signableVibenetAccount` above
+    /// keeps. Nil is a real answer and the caller sends 0/0, which is what the
+    /// account-detail door has always done for an account whose sequences the
+    /// last read could not fetch: the Keystore refuses a stale sequence rather
+    /// than applying it, so a wrong guess costs a refusal and never a wrong
+    /// change.
+    private static func vibenetChangeSequences(for account: Data) -> VibenetChangeSequences? {
+        let hex = "0x" + VibenetTransaction.hex(account)
+        return VibenetState.saved?.items
+            .first { $0.address.caseInsensitiveCompare(hex) == .orderedSame }?
+            .changeSequences
     }
 
     /// **NOTHING IN THIS SCOPE, AS CONTENT (prd §538, 2026-08-31)** — the row
@@ -3952,6 +4092,24 @@ struct FeedScreen: View {
                                     feedSheet = nil
                                     chrome.vibenetScope = address
                                 },
+                                // Dismiss, THEN send — `onPick`'s own order,
+                                // one line up, for the same reason: the room
+                                // re-composes behind this sheet.
+                                onRevoke: { address, revoking in
+                                    guard let account = VibenetTransaction.data(fromHex: address),
+                                          let actorID = VibenetTransaction.data(fromHex: revoking.actorId),
+                                          let item = items.first(where: {
+                                              $0.address.caseInsensitiveCompare(address) == .orderedSame
+                                          })
+                                    else { return }
+                                    let seq = item.changeSequences
+                                    feedSheet = nil
+                                    Task {
+                                        await revokeVibenetKey(account: account, actorID: actorID,
+                                                               epoch: seq?.localEpoch ?? 0,
+                                                               sequence: seq?.localSequence ?? 0)
+                                    }
+                                },
                                 // The same new-key set the room card read and
                                 // spent, so a key marked "New" on the card's
                                 // own detail is marked here too (prd §479).
@@ -3967,6 +4125,21 @@ struct FeedScreen: View {
                 feedSheet = .vibenetAuthorize(
                     account: address, localEpoch: seq?.localEpoch ?? 0,
                     localSequence: seq?.localSequence ?? 0, editing: editing)
+            }, onRevoke: { revoking in
+                guard let address = VibenetTransaction.data(fromHex: item.address),
+                      let actorID = VibenetTransaction.data(fromHex: revoking.actorId) else { return }
+                let seq = item.changeSequences
+                // **DISMISS FIRST**, the `.vibenetKeys` ruling this file already
+                // keeps: the room re-composes behind this sheet once the revoke
+                // lands, and asking for that while the sheet is still up puts
+                // the change under a covered screen. The confirmation has
+                // already been given, so nothing here is a surprise.
+                feedSheet = nil
+                Task {
+                    await revokeVibenetKey(account: address, actorID: actorID,
+                                           epoch: seq?.localEpoch ?? 0,
+                                           sequence: seq?.localSequence ?? 0)
+                }
             })
         // **THE SEND FORM (prd §553).** Both rooms share one sheet and differ
         // only in what they hand it: who the book knows, what the account
@@ -3988,7 +4161,10 @@ struct FeedScreen: View {
                 maxAmount: nil,
                 isValidAddress: DevnetSendParse.isValidAddress,
                 isValidAmount: { DevnetSendParse.weiData(from: $0) != nil },
-                perform: sendHegota)
+                // `_` is the compiler recording that this venue was asked and has
+                // nothing to set — Hegotá's envelope carries no nonce channel,
+                // validity window or metadata.
+                perform: { to, amount, _ in await sendHegota(to: to, amount: amount) })
                 case .framesSend:
             DevnetSendSheet(
                 venue: String(localized: "Frames"),
@@ -4003,7 +4179,7 @@ struct FeedScreen: View {
                 maxAmount: nil,
                 isValidAddress: DevnetSendParse.isValidAddress,
                 isValidAmount: { DevnetSendParse.weiData(from: $0) != nil },
-                perform: sendFrames,
+                perform: { to, amount, _ in await sendFrames(to: to, amount: amount) },
                 // The one thing neither neighbour can say — see
                 // `FramesSendPlanSteps`.
                 plan: FramesSendPlanSteps.steps,
@@ -4015,7 +4191,8 @@ struct FeedScreen: View {
                 stitch: DevnetStitch(
                     headName: String(localized: "Verify"),
                     headDetail: String(localized: "Your signature · always first"),
-                    atomicTitle: String(localized: "All or nothing"),
+                    atomicity: .chosen(
+                        title: String(localized: "All or nothing"),
                     // **BOTH STATES ARE SPELLED, and OFF is the one that
                     // matters.** Measured on this chain (see
                     // `FramesTransaction.atomicFlag`): with the flag clear, a
@@ -4024,15 +4201,15 @@ struct FeedScreen: View {
                     // holds the money. No other send in this app behaves that
                     // way, so leaving OFF undescribed would be the §83 fake
                     // status in the place it costs money.
-                    atomicOn: String(localized: "If any frame fails, none of them send."),
-                    atomicOff: String(localized: "A frame that fails leaves the ones before it sent."),
+                        on: String(localized: "If any frame fails, none of them send."),
+                        off: String(localized: "A frame that fails leaves the ones before it sent.")),
                     // The chain bounds the verify prefix at 500,000 gas and its
                     // refusal names no remedy, so the sheet stops first. Eight
                     // is well inside it and is also more legs than a list this
                     // size can show without scrolling past the control.
                     maxLegs: 8,
                     atCapacity: String(localized: "That's as many frames as one transaction can carry here."),
-                    send: sendFramesStitched,
+                    send: { legs, atomic, _ in await sendFramesStitched(legs, atomic: atomic) },
                     // **THE SAME STRIP THE ROOM DRAWS.** Not a preview invented
                     // for this screen: `FramesSequenceStrip` is what the Frames
                     // scope uses to show what a transaction DID, so composing in
@@ -4073,7 +4250,50 @@ case .vibenetSend(let account):
                 maxAmount: nil,
                 isValidAddress: DevnetSendParse.isValidAddress,
                 isValidAmount: { DevnetSendParse.weiData(from: $0) != nil },
-                perform: { to, amount in await sendVibenet(from: account, to: to, amount: amount) })
+                perform: { to, amount, advanced in
+                    await sendVibenet(from: account, to: to, amount: amount, advanced: advanced)
+                },
+                // **THE SECOND VENUE THAT BATCHES, and it batches a different
+                // thing (2026-09-04).** Frames stitches whole TRANSACTIONS
+                // joined by a flag the chain reads; vibenet puts several calls
+                // inside ONE transaction — `Fields.calls`, whose two-level
+                // shape has been part of the proven signing hash since §523 and
+                // had never had a caller build more than one.
+                stitch: DevnetStitch(
+                    // **NO HEAD ROW HERE.** Frames draws one because its verify
+                    // frame is a real leg the chain requires and you did not
+                    // add — leaving it out is what makes somebody ask whether
+                    // they were supposed to. A vibenet batch has no such
+                    // prefix: every row in the list is a call you wrote, so a
+                    // head row would be a picture of nothing.
+                    headName: nil,
+                    headDetail: nil,
+                    // NOT a toggle. One transaction, one nonce, one revert —
+                    // see `VibenetBatch`'s doc for why offering the choice
+                    // would be a control wired to a property of the chain.
+                    atomicity: .inherent(
+                        String(localized: "These send together under one signature. If one fails, none of them do.")),
+                    maxLegs: VibenetBatch.maxCalls,
+                    atCapacity: String(localized: "That's as many sends as one transaction carries here."),
+                    send: { legs, _, advanced in
+                        await sendVibenetBatch(from: account, legs: legs, advanced: advanced)
+                    },
+                    // **NO PREVIEW.** Frames passes its room's own sequence
+                    // strip so you compose in the shape you will read the
+                    // result in; this room draws no such figure for a batch,
+                    // and inventing one for this sheet alone would be a second
+                    // drawing of a thing the room does not draw — the drift
+                    // `preview`'s own doc exists to refuse.
+                    // **THE TIES ARE ASKED OF THE ENCODER**, that parameter's
+                    // standing rule: `VibenetBatch.joins` derives them from the
+                    // same `phases` the signer uses, so the list cannot promise
+                    // a shape the signature does not carry. `atomic` is ignored
+                    // because on this chain it is not a variable.
+                    joins: { legs, _ in VibenetBatch.joins(callCount: legs.count) }),
+                // **THE ONLY VENUE WHOSE ENVELOPE CARRIES THESE** — see
+                // `advancedSupported`. After `stitch:` because Swift orders
+                // arguments by declaration.
+                advancedSupported: true)
         case .vibenetCreate:
             VibenetCreateSheet { address in
                 // Watching it is what puts it in the room — the sheet does
@@ -5381,18 +5601,12 @@ case .vibenetSend(let account):
                                             chrome.refreshPulse += 1
                                         }
                                     },
-                                    onRequestCreate: { feedSheet = .vibenetCreate },
                                     onRequestWatch: { feedSheet = .vibenetWatch },
                                     onOpenKeys: { newKeyIDs in
                                         feedSheet = .vibenetKeys(room.items, newKeyIDs: newKeyIDs)
                                     },
                                     onOpenKey: { actor, item, shared in
                                         feedSheet = .vibenetKey(actor, item, shared)
-                                    },
-                                    onAuthorize: { account, epoch, sequence in
-                                        feedSheet = .vibenetAuthorize(
-                                            account: account, localEpoch: epoch,
-                                            localSequence: sequence, editing: nil)
                                     },
                                     onScope: vibenetScoper,
                                     onOpenBook: { route.push(.addressBook) },
@@ -10507,7 +10721,10 @@ case .vibenetSend(let account):
             // No snapshot at all is not "unreachable" — it is a seat that has
             // never completed a read here, which the sentence below covers.
             reachedChain: room.map { $0.items.contains(where: \.reached) } ?? true,
-            sawReset: VibenetSeenChain.sawResetRecently())
+            sawReset: VibenetSeenChain.sawResetRecently(),
+            // A stored FACT the served config asserted, not a live call — this
+            // runs in a view body, same rail as the snapshot read above.
+            signingUnavailable: VibenetConfig.signingUnavailable)
     }
 
     /// The empty room.

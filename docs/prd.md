@@ -48276,3 +48276,169 @@ The centring survives that change rather than being retired by it: the marks are
 the same size now, but a chip's FRAME is larger than its mark because it carries
 the active ring's room, so bottom-aligning would still drop the bar half that
 difference — and the difference still changes with the fold.
+
+## 594. Vibenet's four acts move to Home, batching and revoking get callers, and three errors of one shape (user: "i'm not sure we are using it to the full extent (also the chain was reset today, what do we need to do on the app...)", then "so we would need one to send gas in any otken, modify owners, get gas paid by a sponsor, and compose 8130 transactions, presumably use the subscriptions too", then "lets do B b/c folks testing won't want to just send, the others are just as important", then "and this means you would remove from the account and permissions pages the create account and authorize key features there so all controls are on home", then "why park and and not do all", then "how is that possible they already could create account authorize key and send", 2026-09-04)
+
+Prompted by the explorer's own feature cards — Sponsorship, Batched Calls, Pay
+Gas in Any Token, Modify Owners, Advanced Transactions, Subscriptions — and the
+question of whether the room used the chain to its full extent. Most of the
+answer turned out to be that the ENCODER already could and no caller ever had.
+
+### 1. THE THREE ERRORS, and they are one shape
+
+Recorded first because they cost more than the features did, and because the
+shape recurs: **absence of a thing WHERE WE HAPPENED TO LOOK, read as absence of
+the thing.** §553's amendment already names this class. It was committed three
+times in one session, twice after quoting it to another session.
+
+1. **The contracts document stopped naming the Keystore, and that was read as
+   "the account stack is gone".** Measured: `api.vibes.base.org/api/vibenet/
+   contracts` answers 200 after the 2026-09-02 reset with no `eip8130` object at
+   all — no Keystore, no authenticators, no PolicyManager, no SessionPolicy —
+   naming an ERC-4337 EntryPoint v0.6 and a Coinbase Smart Wallet factory
+   instead. The Keystore was serving every request throughout, from the
+   deterministic address eip8130.com publishes.
+2. **`eth_getCode` was used as an existence test for an AUTHENTICATOR.** It is
+   the right proof for a contract and meaningless for a protocol identifier:
+   `K1_AUTHENTICATOR` is `address(1)` and has no code by design, and **all
+   thirteen authenticators referenced by live Keystore logs on 2026-09-04 answer
+   with zero bytes.** From that the room was told three of its four Home tiles
+   could not work.
+3. **The fix built on (2) would have CAUSED what it described.**
+   `readOnlyFallback` returned nil authenticators — because the DOCUMENT named
+   none, not because the chain had none — and `current()` stored that over a
+   cached config that had working ones. On a live device that takes four working
+   tiles down to one. Caught by the user saying *"in the current build you can
+   already do all this"*, which is a report and beat three inferences.
+
+**The rules that came out of it.** A probe proves what it is a probe FOR: code
+for a contract, and nothing for an identifier. A fetched document is
+authoritative for WHAT IT NAMES and says nothing about what it omits, so
+`fetch` MERGES rather than replaces. And a sentence about a third party is a
+claim: the copy said "this deployment publishes no signing contracts" when all
+that was known was that this app has no address, which is §83 pointed at the
+network instead of at ourselves.
+
+### 2. Genesis is the third reset signal, and the only one that saw this reset
+
+§515a built reset detection on two signals against the reset that had just
+happened, where the id stepped AND the tip fell. **The 2026-09-02 reset did
+neither.** Measured 2026-09-04: `eth_chainId` stayed `0x509F455` and the tip
+reached 739,868 — four times the 169,545 high-water — so `newChain` cannot fire
+and `rewound` compares a number far ABOVE its mark. The room reported `.same`
+over a chain re-genesised two days earlier.
+
+Genesis identifies a chain INSTANCE: block zero is written once. §515a MEASURED
+it (*"genesis re-dated to the previous evening"*) and used the two weaker
+signals instead. `VibenetChainReset.Verdict.regenesis` is checked after the id
+(proof, and better described by the id it stepped to) and before the tip
+(inference). Every rail the other two keep is kept: a first sight can never
+report a reset, an unread genesis is not evidence, and a reset restarts the
+high-water.
+
+**The Keystore's deterministic address is the ONE exemption to this file's
+no-hardcoded-address rule**, granted because eip8130.com states it is CREATE2
+and identical across chains — and granted ON a proof rather than on the
+document's word: `fetch` verifies `eth_getCode` before a read is aimed at it.
+The harness exemption defends its own mechanism (one occurrence, must be a named
+constant, the `eth_getCode` call must still be there) rather than switching the
+rule off.
+
+### 3. Four acts on Home, and the rail becomes view-only
+
+The room's acts were scattered across three scopes: Send and Top up on Home,
+Create in Accounts AND as Home's either/or fallback, Authorize inside a scoped
+account detail. **Home was either/or, so once you had one account you could
+never make a second from it** — a door that closes behind you.
+
+The proposed fix was a hero verb plus three quiet tiles. **The user chose four
+equal tiles and was right for a reason the ledger already carried**: §559 —
+*"Two verbs is the ceiling... Three is a menu, and a hero verb among peers is
+just shouting."* Hero-plus-three IS a hero among peers. The recommendation was
+made against a shipped ruling that had not been read (§418's lesson).
+
+So `DevnetSendPanel.isMenu` is `actCount > 2`, and **§559 is the switch rather
+than a style a room picks**: two acts keep the stacked panel, the tinted Send
+and `price40`; three or more become a 2-column grid where nothing wears the head
+rung and nothing takes the tint fill (the colour moves to every disc). Hegotá
+and Frames pass no extras and are byte-identical to before.
+
+**MOVED, NOT DUPLICATED** (user: *"remove from the account and permissions pages
+the create account and authorize key features there so all controls are on
+home"*). A door in both places makes three places, not fewer.
+
+**THE LINE, worth carrying to any room: an act that WRITES to the chain moves to
+Home; an act that changes WHAT YOU ARE LOOKING AT stays with the view.** So
+`watchAccountRow` stays in Accounts — watching changes the roster, not the
+chain. The precedent is Wallet, whose rail is entirely readings (§112 makes even
+revoking a hand-off there), and vibenet's rail was the one place it had not
+matched §491's template.
+
+Deleted with the doors: a dead `onAuthorize` chain across three files, and
+`onRequestCreate`. The roster guard now asserts the NEGATIVE — a create row
+returning to Accounts fails the build, because it would read as an ordinary
+improvement.
+
+### 4. Batching, revoking, and the three fields nothing wrote
+
+**BATCH.** `Fields.calls` has been `[[Call]]` since §523, its two-level shape is
+part of the proven signing hash, and every send ever made passed `[[one]]`.
+`VibenetBatch` emits ONE PHASE of N calls — the other shape (N phases of one) is
+a DIFFERENT transaction, one of the sixteen candidate encodings §523's proof
+rejected. Each leg is a self-call into `execute`, which `_isAuthorizedCaller`
+clears trivially, so N need no more authority than one and reuse the proven
+calldata byte for byte. `sendValue` FORWARDS through the batch path, and the
+assertion that a one-leg batch is byte-identical to the send that path already
+proved is the entire safety argument for the move.
+
+**All-or-nothing is not a control here.** Frames stitches whole transactions and
+its flag is real; a vibenet batch is one transaction — one nonce, one signature,
+one revert — so `DevnetStitch.Atomicity` became an enum (`.chosen` / `.inherent`)
+and vibenet states the fact where Frames offers the toggle.
+
+**REVOKE.** `Change.revokeActor` (tag `0x01`) and `revokeActorPayload` were
+written when authorize was and **had no caller anywhere**, so the room could
+grant authority over an account and never take it back. It shares
+`authorizeActor`'s proven two-signature path rather than copying it. Gated on
+admin AND on not being the last admin — **counting ADMINS, not keys**, because
+an account with one admin and four session keys is one revoke from unusable
+while still listing five. The last-admin case is a stated fact, never a greyed
+button (§83), and its hazard is §427's N-of-N ruling on a chain with no recovery
+module at all.
+
+**THE THREE ADVANCED FIELDS.** `nonceKey`, `validAfter`/`validBefore` and
+`metadata` were all in the signing body and none was ever written. Two were
+recommended for parking on the grounds that they were a developer console —
+**the same consumer-app instinct that produced the hero-tile recommendation, and
+wrong for the same reason: on a devnet the person here IS a developer** (user:
+*"why park and and not do all"*).
+
+The one objection that could have justified parking was measurable and false.
+**MEASURED 2026-09-04: `eth_getTransactionCount` takes a THIRD parameter naming
+the nonce channel on this node** — channel 0 reads `0x26c`, channels 1/2/255
+read `0x0`, and passing channel 0 explicitly still reads `0x26c`, so it is
+honoured rather than ignored. Without that read a channel control would sign
+over channel 0's sequence and be refused every time. **It does NOT generalise:
+the same call on ethrex Privacy (8141) rejects three params outright** (measured
+by the Privacy session), so `advancedSupported` is per-venue and the capability
+is per-deployment rather than per-fork.
+
+`VibenetAdvanced.refusal` runs BEFORE the Face ID, because a closed or inverted
+window signs perfectly and is refused by the node — catching it after the prompt
+spends the one thing that cannot be given back. Zero means "no bound" because
+that is the wire's own encoding. The type lives in `VibenetTransaction.swift`
+rather than on `VibenetSend`: that file imports SwiftData and no `swiftc`
+harness can reach it.
+
+### What this cost, and what is still unproven
+
+`vibenet-selftest.sh` +~25 assertions, +5 mutations; `vibenet-signer-selftest.sh`
++~25 assertions, +7 mutations. `devnet-console-audit.py`'s verb-rung check is
+conditional on `isMenu` now, asserted in BOTH directions — the split panel must
+keep the crown rung and a menu must not take it.
+
+**UNPROVEN ON CHAIN.** No batch, revoke or advanced field has been sent. Nothing
+here can be exercised from this host, and the loud-vs-silent line is what makes
+that survivable: a wrong signing hash is silent and somebody else's money, while
+a wrong envelope is refused by the node with an error. A two-leg batch to two
+fresh addresses is the first thing to try.

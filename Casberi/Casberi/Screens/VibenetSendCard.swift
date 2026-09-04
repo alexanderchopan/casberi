@@ -58,6 +58,15 @@ struct VibenetSendCard: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
 
+    /// Open the create sheet — Home's own door since 2026-09-04, no longer the
+    /// panel's stand-in for having nothing to send from.
+    let onCreate: () -> Void
+    /// Authorize a key on the account this panel sends from. Its SUBJECT is
+    /// that account, which is unambiguous only because `signableVibenetAccount`
+    /// answers with the one account this phone's key can act for — see the
+    /// caller, where the second-account case is named.
+    let onAuthorize: () -> Void
+
     @State private var topUpBusy = false
     /// Only ever set by a tap. **Not pre-populated**, in the demo or anywhere
     /// else: a tile wearing a permanent grey sentence explains itself before
@@ -72,7 +81,28 @@ struct VibenetSendCard: View {
         DevnetSendPanel(
             tint: Self.mark,
             topUp: .init(busy: topUpBusy, note: topUpNote, action: topUp),
-            onSend: onSend)
+            onSend: onSend,
+            // **ALL FOUR ACTS, ON HOME (2026-09-04, user ruling).** *"folks
+            // testing won't want to just send, the others are just as
+            // important"* — and the corollary the same ruling carried: these
+            // move here, they are not duplicated here. The Accounts scope's
+            // create door and the account detail's "Authorize a key…" row are
+            // deleted in the same pass, so the rail is five readings and no
+            // verbs, which is what Wallet's rail already is (§491's template,
+            // and the one place this room had not matched it).
+            //
+            // The panel takes the grid grammar on its own, off `actCount` —
+            // §559's rule as the switch rather than a style this card picks.
+            extras: [
+                // **CREATE STOPS BEING A FALLBACK.** It was drawn INSTEAD of
+                // this whole panel when no account could sign, so the moment
+                // you had one account you could never make a second from Home
+                // — a door that closes behind you.
+                .init(id: "create", title: String(localized: "Create\naccount"),
+                      glyph: "plus.rectangle.on.rectangle", act: onCreate),
+                .init(id: "authorize", title: String(localized: "Authorize\na key"),
+                      glyph: "key", act: onAuthorize),
+            ])
     }
 
     // MARK: - Top up

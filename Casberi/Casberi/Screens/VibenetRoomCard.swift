@@ -135,15 +135,6 @@ struct VibenetRoomCard: View {
     /// its own source is how the two get to disagree.
     var onWatched: () -> Void = {}
 
-    /// Raises the create sheet — but not HERE. §468 (found by `vibenet-
-    /// selftest.sh` the day this row shipped, exit code the proof rather than
-    /// a review catching it): this card lives inside `FeedScreen`'s List rows,
-    /// and a `.sheet` on a row resolves to the same presenting controller as
-    /// the screen's OWN single sheet — the half-open-then-close bug this
-    /// codebase has paid for three times, about to become a fourth. Routed
-    /// through `FeedSheetRoute.vibenetCreate` instead, the same door
-    /// `onOpenKeys`/`onOpenKey` already use.
-    var onRequestCreate: () -> Void = {}
     /// Raises the WATCH sheet (`VibenetWatchSheet`) — the lookup §517 made a
     /// sheet, restored to the surface §545 moved the roster to.
     ///
@@ -158,7 +149,8 @@ struct VibenetRoomCard: View {
     /// find the catalog and open the setup screen — which §479's own ruling
     /// names as the dead end it exists to close.
     ///
-    /// **Routed, not presented, for `onRequestCreate`'s reason verbatim**:
+    /// **Routed, not presented** (the reason the deleted `onRequestCreate`
+    /// carried, which outlives it):
     /// this card lives inside `FeedScreen`'s List rows, and a `.sheet` on a
     /// row resolves to the same presenting controller as the screen's own
     /// single sheet — the half-open-then-close bug this codebase has now paid
@@ -224,12 +216,6 @@ struct VibenetRoomCard: View {
     /// for, and the room-wide shared-key facts the sheet's "Also on" line
     /// needs — all value types, captured at tap time.
     var onOpenKey: ((VibenetActor, VibenetAccountItem, [VibenetSharedKey]) -> Void)? = nil
-    /// AUTHORIZE A NEW KEY on the scoped account (prd §534) — same
-    /// can't-own-the-presentation reason as `onOpenKey`. Carries the account
-    /// and its current change-sequence standing, since composing the
-    /// `AuthorizeActor` batch needs both and this card already has them from
-    /// the same read that draws the scoped detail.
-    var onAuthorize: ((Data, UInt32, UInt32) -> Void)? = nil
     /// Scope the room to one account (2026-08-25, prd §476).
     ///
     /// **§469 deleted an `onScope` and it was right to.** That one fired from
@@ -615,13 +601,6 @@ struct VibenetRoomCard: View {
                         onOpenKey: onOpenKey.map { open in
                             { actor in open(actor, lead, VibenetKeyReuse.sharing(lead, in: fullItems)) }
                         },
-                        onAuthorize: onAuthorize.map { open in
-                            {
-                                guard let address = VibenetTransaction.data(fromHex: lead.address) else { return }
-                                let seq = lead.changeSequences
-                                open(address, seq?.localEpoch ?? 0, seq?.localSequence ?? 0)
-                            }
-                        },
                         newKeyIDs: keyChanges?.added ?? [])
                 }
                 if shows(.holdings) { holdingsCard }
@@ -948,13 +927,6 @@ struct VibenetRoomCard: View {
                 // and a 26pt chip is a mark, not a portrait.
                 showsFace: true,
                 onOpenKey: onOpenKey.map { open in { actor in open(actor, lead, shared) } },
-                onAuthorize: onAuthorize.map { open in
-                    {
-                        guard let address = VibenetTransaction.data(fromHex: lead.address) else { return }
-                        let seq = lead.changeSequences
-                        open(address, seq?.localEpoch ?? 0, seq?.localSequence ?? 0)
-                    }
-                },
                 // The card read the ledger and spent it; the detail draws the
                 // answer (prd §479). Reading it there instead would erase the
                 // marker while it was being shown.
@@ -2667,7 +2639,20 @@ struct VibenetRoomCard: View {
                 // so a devnet account created there would land beside mainnet
                 // wallets — a confusion built in on purpose for renaming and
                 // exactly wrong for making.
-                createAccountRow
+                // **CREATE MOVED TO HOME (2026-09-04, user ruling).** All four
+                // chain acts live on the Home panel now — *"folks testing won't
+                // want to just send, the others are just as important"* — and
+                // the corollary the same ruling carried is that they MOVE
+                // rather than being duplicated: a door here as well would make
+                // three places instead of one, which is the scattering the
+                // ruling was about.
+                //
+                // **WATCH STAYS, and the line between them is what to keep.**
+                // Create WRITES to the chain; watching changes what this roster
+                // SHOWS. The rail is for viewing, so an act that changes the
+                // view belongs with the view — and unlike Create it has no
+                // subject on Home, since watching an address is the one act
+                // here that is not about an account you can sign for.
                 watchAccountRow
                 ForEach(Array(drawn.enumerated()), id: \.element.id) { index, item in
                     // The last ROW is only the last thing in the card when
@@ -2700,61 +2685,6 @@ struct VibenetRoomCard: View {
         }
     }
 
-    /// The one verb this room has. It says what the tap DOES — the phone's key
-    /// becomes the account's first key — because "Create an account" alone
-    /// hides the only fact that matters about it.
-    ///
-    /// **IT IS THE FIRST ROW OF THE LIST, NOT A BANNER ABOVE ONE (prd §538,
-    /// 2026-08-31; user: "create account should be indented same as the list
-    /// items below it").** It shipped on its own geometry — a `DS.Mark.row`
-    /// disc where every account row below it draws a `DS.Face.rowCircle` face,
-    /// and `s2` vertical padding where they take `s3` — so its title started
-    /// two points off theirs and its row stood a different height. Two points
-    /// is not a rounding error on a leading edge: it is the one thing the eye
-    /// reads down a list, and it made the verb look like it belonged to a
-    /// different screen than the things it acts on.
-    ///
-    /// So the disc is the FACE's size rather than the mark's, and the padding
-    /// is the row's. Both read off `accountRowBody`'s own tokens on purpose —
-    /// change that row's geometry and this one has to follow, which is what
-    /// "one list" means.
-    @ViewBuilder
-    private var createAccountRow: some View {
-        Button {
-            DSHaptic.selection()
-            onRequestCreate()
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                ZStack {
-                    Circle().fill(Self.mark.opacity(0.18))
-                        .frame(width: DS.Face.rowCircle, height: DS.Face.rowCircle)
-                    Image(systemName: "plus")
-                        .dsGlyph(12, weight: .semibold)
-                        .foregroundStyle(Self.mark)
-                }
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(String(localized: "Create an account"))
-                        .dsText(.heading17)
-                        .foregroundStyle(Self.mark)
-                        .lineLimit(1)
-                    Text(String(localized: "This phone becomes its first key"))
-                        .dsText(.label11)
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: DS.Space.s2)
-                Image(systemName: "chevron.right")
-                    .accessibilityHidden(true)
-                    .dsGlyph(11, weight: .semibold)
-                    .foregroundStyle(Self.mark.opacity(0.6))
-            }
-            .padding(.vertical, DS.Space.s3)
-            .padding(.horizontal, DSRoomChassis.contentInset)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .dsHover()
-    }
 
     /// The other way an account gets into this list: one you did not make.
     ///

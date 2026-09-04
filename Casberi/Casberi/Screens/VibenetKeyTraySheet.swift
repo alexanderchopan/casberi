@@ -65,6 +65,13 @@ struct VibenetKeyTraySheet: View {
     /// there is nothing to scope, so the rows stay plain rather than
     /// pretending at a door.
     var onPick: ((String) -> Void)? = nil
+    /// **REVOKE, FROM THE TRAY (2026-09-04)** — `(account address, the key)`.
+    ///
+    /// Same contract as `onPick` above and for the same reason: the CALLER
+    /// dismisses and then sends, in that order, because this tray does not own
+    /// its presentation. The confirmation and the last-admin guard are
+    /// `VibenetKeySheet`'s, so by the time this fires the decision is made.
+    var onRevoke: ((String, VibenetActor) -> Void)? = nil
     /// Keys this device has not seen before (prd §479) — the same set the
     /// account detail marks, so a new key is findable from either surface.
     /// Read and spent by `VibenetRoomCard`, handed in here.
@@ -170,6 +177,20 @@ struct VibenetKeyTraySheet: View {
                                 { address in
                                     openedKey = nil
                                     pick(address)
+                                }
+                            },
+                            // REVOKE REACHES THIS DOOR TOO (2026-09-04). One
+                            // key is one object; a verb that exists on the
+                            // room's key sheet and not on the tray's is the
+                            // same object answering differently depending on
+                            // how you got to it. Same contract as `onScope`
+                            // above — close the key sheet here, and the CALLER
+                            // closes the tray and sends, because this tray does
+                            // not own its own presentation.
+                            onRevoke: onRevoke.map { revoke in
+                                { (actor: VibenetActor) in
+                                    openedKey = nil
+                                    revoke(presented.key.address, actor)
                                 }
                             })
         }

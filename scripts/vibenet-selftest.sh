@@ -310,7 +310,37 @@ if grep -A 1 'VibenetRoomCard(room: room, onRemove: vibenetUnwatch,' "$FEED" | g
 fi
 
 
-if grep -qi '0x8130' "$TMP/room.nc.swift" "$TMP/bridge.nc.swift"; then
+# **ONE EXEMPTION, AND IT DEFENDS ITS OWN MECHANISM (2026-09-04).**
+#
+# The rule below is right for every vibenet address but one. eip8130.com states
+# the Keystore is deterministic CREATE2 and IDENTICAL ACROSS CHAINS, which is
+# why it wears the protocol's own `0x8130` vanity prefix — and the 2026-09-02
+# reset shipped a contracts document that stops naming it, so without a fallback
+# the room refuses to read a chain that is serving every request (measured: the
+# Keystore holds 10,675 bytes and answers getActorConfig, getLockStatus and
+# getChangeSequences).
+#
+# The exemption is ONE declaration, matched exactly, and the three guards under
+# it are what stop it becoming a snooze: the constant may appear once, it may
+# only be a `static let` (never inlined at a call site), and `fetch` must still
+# PROVE it with eth_getCode before any read is aimed at it. Delete the proof and
+# this fails — which is the whole reason the address is allowed at all.
+KEYSTORE_CONST='static let deterministicKeystore = "0x813012Bd8D971928475235BBac6F0488c4A100AC"'
+if [ "$(grep -c '0x813012Bd8D971928475235BBac6F0488c4A100AC' "$TMP/bridge.nc.swift")" != "1" ]; then
+  echo "✗ the deterministic Keystore appears more than once (or not at all) in VibenetBridge —"
+  echo "  it is ONE declaration by exemption; a second is the hardcoding the rule below bans"
+  exit 1
+fi
+grep -qF "$KEYSTORE_CONST" "$TMP/bridge.nc.swift" || {
+  echo "✗ the deterministic Keystore is no longer a named constant — an inlined address is"
+  echo "  exactly what the no-hardcoding rule bans, exemption or not"; exit 1; }
+grep -q 'method: "eth_getCode"' "$TMP/bridge.nc.swift" || {
+  echo "✗ the deterministic Keystore is used without proving it has code — the exemption is"
+  echo "  granted ON that proof (eth_getCode belongs to the node, not to any contract, §515a)"
+  exit 1; }
+# Now the rule itself, with the one exempt address removed from what it sees.
+sed 's/0x813012Bd8D971928475235BBac6F0488c4A100AC//g' "$TMP/bridge.nc.swift" > "$TMP/bridge.nk.swift"
+if grep -qi '0x8130' "$TMP/room.nc.swift" "$TMP/bridge.nk.swift"; then
   echo "✗ a literal vibenet contract address (0x8130…) is hardcoded outside a comment —"
   echo "  vibenet redeploys its contracts; this must come from VibenetConfig's live fetch"
   exit 1
@@ -4116,7 +4146,57 @@ check("only a reset is a reset",
       !VibenetChainReset.Verdict.firstSight.isReset
         && !VibenetChainReset.Verdict.same.isReset
         && VibenetChainReset.Verdict.newChain(from: 1, to: 2).isReset
-        && VibenetChainReset.Verdict.rewound(from: 9, to: 1).isReset)
+        && VibenetChainReset.Verdict.rewound(from: 9, to: 1).isReset
+        && VibenetChainReset.Verdict.regenesis(from: 1, to: 2).isReset)
+
+// GENESIS — the third signal, and the only one that could see the 2026-09-02
+// reset. Every figure below is MEASURED off the live chain on 2026-09-04:
+// chain id 0x509F455 = 84_538_453 unchanged across the wipe, the stored
+// high-water 169_545 from the 08-29 reset, the live tip 739_868 four times
+// above it, and genesis re-dated to 2026-09-02 23:30:42 UTC = 1_788_391_842.
+// The two original signals both report `.same` on exactly these numbers, which
+// is what left the room reading pre-reset contracts for two days.
+check("THE 2026-09-02 SHAPE: same id, tip far ABOVE the mark, genesis moved — a reset",
+      VibenetChainReset.verdict(storedChainID: 84_538_453, liveChainID: 84_538_453,
+                                storedHighWater: 169_545, liveTip: 739_868,
+                                storedGenesis: 1_787_951_000, liveGenesis: 1_788_391_842)
+        == .regenesis(from: 1_787_951_000, to: 1_788_391_842))
+check("…and WITHOUT the genesis signal those very numbers read as an ordinary day",
+      VibenetChainReset.verdict(storedChainID: 84_538_453, liveChainID: 84_538_453,
+                                storedHighWater: 169_545, liveTip: 739_868) == .same)
+check("an unchanged genesis is the ordinary answer",
+      VibenetChainReset.verdict(storedChainID: 1, liveChainID: 1,
+                                storedHighWater: 100, liveTip: 140,
+                                storedGenesis: 1_788_391_842, liveGenesis: 1_788_391_842) == .same)
+// NOT KNOWING IS NOT EVIDENCE, in the third signal too — a node that did not
+// serve block zero must not put "vibenet was wiped" on an offline screen.
+check("an unreadable genesis reports the ordinary answer, never a reset",
+      VibenetChainReset.verdict(storedChainID: 1, liveChainID: 1,
+                                storedHighWater: 100, liveTip: 140,
+                                storedGenesis: 1_788_391_842, liveGenesis: nil) == .same)
+check("a genesis this device has never recorded cannot be compared",
+      VibenetChainReset.verdict(storedChainID: 1, liveChainID: 1,
+                                storedHighWater: 100, liveTip: 140,
+                                storedGenesis: nil, liveGenesis: 1_788_391_842) == .same)
+// THE ORDER IS A RULING: proof outranks inference, and a reset that stepped its
+// id is better described by the id it stepped to.
+check("a changed id outranks a changed genesis",
+      VibenetChainReset.verdict(storedChainID: 1, liveChainID: 2,
+                                storedHighWater: 100, liveTip: 140,
+                                storedGenesis: 10, liveGenesis: 20) == .newChain(from: 1, to: 2))
+check("a changed genesis outranks a rewound tip",
+      VibenetChainReset.verdict(storedChainID: 1, liveChainID: 1,
+                                storedHighWater: 285_133, liveTip: 169_545,
+                                storedGenesis: 10, liveGenesis: 20) == .regenesis(from: 10, to: 20))
+check("a re-genesis restarts the high water, or every later pass reports it again",
+      VibenetChainReset.nextHighWater(stored: 169_545, liveTip: 739_868,
+                                      verdict: .regenesis(from: 10, to: 20)) == 739_868)
+check("a re-genesis carries its own key, distinct from the other two signals'",
+      VibenetChainReset.Verdict.regenesis(from: 1, to: 2).notifyKey != nil
+        && VibenetChainReset.Verdict.regenesis(from: 1, to: 2).notifyKey
+             != VibenetChainReset.Verdict.newChain(from: 1, to: 2).notifyKey
+        && VibenetChainReset.Verdict.regenesis(from: 1, to: 2).notifyKey
+             != VibenetChainReset.Verdict.rewound(from: 1, to: 2).notifyKey)
 
 check("the high water only ever climbs on an ordinary pass",
       VibenetChainReset.nextHighWater(stored: 285_133, liveTip: 200, verdict: .same) == 285_133)
@@ -4191,6 +4271,44 @@ check("deployed and quiet is the last case, and the only one that means \"wait\"
       VibenetQuiet.emptyRoomNote(watching: 1, deployed: 1,
                                  reachedChain: true, sawReset: false)?
         .contains("Nothing has happened") == true)
+
+// NO AUTHENTICATOR ADDRESS (2026-09-04). After the 2026-09-02 reset the
+// contracts document answers 200 with no `eip8130` object at all. TWO things
+// this sentence must not claim, each learned by getting it wrong the same day:
+// that the accounts cannot be READ (the Keystore is deterministic and answered
+// throughout), and that the CHAIN publishes nothing (an authenticator need not
+// be a deployed contract, so we cannot tell from outside). It says what THIS
+// APP lacks.
+check("a deployment with no signing contracts says so",
+      VibenetQuiet.emptyRoomNote(watching: 1, deployed: 1, reachedChain: true,
+                                 sawReset: false, signingUnavailable: true)?
+        .contains("signing contract") == true)
+// THE CORRECTION THIS REPLACED, PINNED: the first cut told somebody their
+// accounts were unreadable while the room could read them perfectly well.
+check("…and it says the accounts ARE reading, which is the half that was wrong",
+      VibenetQuiet.emptyRoomNote(watching: 1, deployed: 1, reachedChain: true,
+                                 sawReset: false, signingUnavailable: true)?
+        .contains("reading fine") == true)
+// IT SITS BELOW THE RESET SENTENCE. A wipe explains why the room is empty;
+// this explains why a verb will refuse, which is only worth raising once the
+// room has been described.
+check("a reset still leads — why the room is empty comes before why a verb refuses",
+      VibenetQuiet.emptyRoomNote(watching: 1, deployed: 1, reachedChain: true,
+                                 sawReset: true, signingUnavailable: true)?
+        .contains("reset") == true)
+check("…and NOT KNOWING still outranks both, the rail every sentence here keeps",
+      VibenetQuiet.emptyRoomNote(watching: 1, deployed: 1, reachedChain: false,
+                                 sawReset: true, signingUnavailable: true)?
+        .contains("couldn't look") == true)
+// NOTHING DEPLOYED is §463's own explainer and must still win: "you can't sign
+// here" over an account that does not exist yet answers a question nobody has.
+check("an undeployed account hears §463's explainer, not the signing one",
+      VibenetQuiet.emptyRoomNote(watching: 1, deployed: 0, reachedChain: true,
+                                 sawReset: false, signingUnavailable: true)?
+        .contains("first transaction") == true)
+check("nothing watched keeps the invitation — there is nobody to tell",
+      VibenetQuiet.emptyRoomNote(watching: 0, deployed: 0, reachedChain: true,
+                                 sawReset: false, signingUnavailable: true) == nil)
 
 if failures == 0 {
     print("✓ vibenet self-test: all assertions passed")
@@ -5029,6 +5147,38 @@ mutateLedger "the backward walk must subtract the transfer it is stepping over" 
 # The bounded read's earliest point is where OUR READING starts, not where the
 # account did — a series that claims otherwise is §307's silent truncation
 # drawn as a picture.
+# THE 2026-09-02 RESET'S OWN SHAPE. Deleting the genesis comparison leaves both
+# original signals reporting `.same` on the exact numbers measured that day —
+# which is what a silent wrong answer looks like here: a room that reads
+# pre-reset contracts and renders the result as an ordinary empty account.
+mutateLedger "the genesis comparison is what catches a reset that reused its id" \
+  'if let storedGenesis, let liveGenesis, storedGenesis != liveGenesis {' \
+  'if let storedGenesis, let liveGenesis, storedGenesis == liveGenesis {'
+
+# NOT KNOWING IS NOT EVIDENCE. Without the `liveGenesis` binding a node that did
+# not serve block zero would compare against nil and report a wipe to everyone
+# who opens the app offline.
+mutateLedger "an unread genesis must never be evidence of a reset" \
+  'if let storedGenesis, let liveGenesis, storedGenesis != liveGenesis {' \
+  'if let storedGenesis, storedGenesis != (liveGenesis ?? 0) {'
+
+# The order is a ruling: proof outranks inference. Moving the genesis test below
+# the tip test makes a re-genesis that also rewound report as `.rewound`, which
+# names the weaker fact and mints the wrong notification key for it.
+mutateLedger "a re-genesis must be filed as one — the weaker signal's key is the wrong news" \
+  'return .regenesis(from: storedGenesis, to: liveGenesis)' \
+  'return .rewound(from: storedGenesis, to: liveGenesis)'
+
+# A stackless deployment must lead. Below the reset sentence it is unreachable
+# on exactly the day both are true — and the reset sentence tells somebody to
+# wait for accounts that cannot come back while the contracts are gone.
+# A room that can be read must never be described as one that cannot. Deleting
+# the `deployed > 0` half makes this fire over an account that does not exist
+# yet, which answers a question nobody has and hides §463's own explainer.
+mutateLedger "the signing sentence must only speak about accounts that are really there" \
+  'if signingUnavailable, deployed > 0 {' \
+  'if signingUnavailable {'
+
 mutateLedger "a capped read must never report a COMPLETE series" \
   'isComplete: !dropped && !capReached' \
   'isComplete: !dropped'
@@ -5313,23 +5463,53 @@ if "VibenetDiscoverySection" in body:
     print("  between the way in and your own accounts, which is the ordering complaint")
     print("  that moved it to a sheet (§472 → §476 → §517, three rulings)")
     sys.exit(1)
-# WHAT YOU WATCH IS NEVER PUSHED DOWN BY THE WAY TO ADD. Both doors are single
-# rows at the head of the list — §538's ruling ("create account should be
-# indented same as the list items below it", and a verb under a roster of
-# twenty is a verb nobody finds) and §517's ordering fix at once: two fixed
-# rows cannot grow the way an unfold can.
+# WHAT YOU WATCH IS NEVER PUSHED DOWN BY THE WAY TO ADD. The watch door is a
+# single row at the head of the list — §538's ruling ("create account should be
+# indented same as the list items below it", and a verb under a roster of twenty
+# is a verb nobody finds) and §517's ordering fix at once: a fixed row cannot
+# grow the way an unfold can.
+#
+# **CREATE IS GONE FROM HERE, AND ITS ABSENCE IS NOW THE RULE (2026-09-04, user
+# ruling).** All four chain acts moved to the Home panel — "folks testing won't
+# want to just send, the others are just as important" — and MOVED rather than
+# duplicated, because a door here as well makes three places instead of one.
+# So this asserts the negative too: a create row coming back is the scattering
+# the ruling deleted, and it would read as an ordinary improvement.
+#
+# WATCH STAYS, and the line is worth keeping: an act that WRITES to the chain
+# belongs on Home; an act that changes WHAT THIS ROSTER SHOWS belongs with the
+# roster. Watching is the second kind.
+if "createAccountRow" in body:
+    print("✗ a create door is back on the Accounts scope — 2026-09-04 moved every chain act")
+    print("  to Home, and a door here as well is the scattering that ruling deleted")
+    sys.exit(1)
 try:
-    create = body.index("createAccountRow")
     watch = body.index("watchAccountRow")
     roster = body.index("ForEach(Array(drawn.enumerated())")
 except ValueError:
-    print("✗ the roster no longer composes create / watch / accounts — prd §538/§562")
+    print("✗ the roster no longer composes watch / accounts — prd §538/§562")
     sys.exit(1)
-if not (create < watch < roster):
-    print("✗ the two ways in are no longer the head of the list — prd §538: a verb under")
+if not (watch < roster):
+    print("✗ the way in is no longer the head of the list — prd §538: a verb under")
     print("  a roster of twenty is a verb nobody finds")
     sys.exit(1)
 GUARD
+
+# **THE FOUR ACTS ARE ON HOME, AND THE AUTHORIZE DOOR LEFT THE DETAIL
+# (2026-09-04, user ruling).** Both halves asserted, because each is how the
+# other fails: the tiles could land without the old doors being removed (three
+# places for one act), or the doors could be removed without the tiles landing
+# (a capability with no door at all, which is strictly worse than scattered).
+grep -q 'extras: \[' "$TMP/sendcard.nc.swift" 2>/dev/null \
+  || grep -q 'extras: \[' Casberi/Casberi/Screens/VibenetSendCard.swift \
+  || { echo "✗ vibenet's Home panel no longer carries its extra acts — Create and Authorize"
+       echo "  were MOVED here from the Accounts scope and the account detail, so losing them"
+       echo "  leaves those verbs with no door anywhere (2026-09-04)"; exit 1; }
+if grep -q 'Authorize a key…' Casberi/Casberi/Screens/VibenetAccountDetail.swift; then
+  echo "✗ the account detail's 'Authorize a key…' row is back — 2026-09-04 moved every chain"
+  echo "  act to Home, and two doors for one consequence teach that neither is the real one"
+  exit 1
+fi
 
 grep -q 'VibenetDiscoverySection' "$TMP/sheet.nc.swift" \
   || { echo "✗ the watch sheet no longer carries discovery — nobody has a devnet address to paste"; exit 1; }

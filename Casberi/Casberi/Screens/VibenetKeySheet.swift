@@ -69,6 +69,18 @@ struct VibenetKeySheet: View {
     /// sheet that can only fail.
     var onEditScope: ((VibenetActor) -> Void)? = nil
 
+    /// **REVOKE THIS KEY (2026-09-04)** — the other half of "Rotate Keys, Keep
+    /// Your Address", and the half that matters when a key is lost.
+    ///
+    /// The room could GRANT authority over an account from the day §523 landed
+    /// and could never take it back: `Change.revokeActor` and
+    /// `revokeActorPayload` were both written that day and neither had a caller
+    /// anywhere in the app. Nil where the presenter has no way to send one, and
+    /// the verb is then absent rather than disabled (§83).
+    var onRevoke: ((VibenetActor) -> Void)? = nil
+
+    @State private var confirmingRevoke = false
+
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
     private static var knownManagers: VibenetKnownPolicyManagers {
@@ -92,6 +104,10 @@ struct VibenetKeySheet: View {
                     facts
                     identity
                     doors
+                    // Below the quiet capsules and outside their flow — see
+                    // `revokeDoor`'s own doc for why a destructive verb is not
+                    // a peer of "Copy account".
+                    revokeDoor
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.bottom, DS.Space.s4)
@@ -120,6 +136,11 @@ struct VibenetKeySheet: View {
         var h: CGFloat = 420                       // subject + permissions + id + doors
         h += CGFloat(termRows.count) * 26          // one facts row each
         if origin != nil { h += 52 }               // authorized + block
+        // The revoke block (2026-09-04): a capsule, or the three-line sentence
+        // that stands in for it on a last-admin key — the taller of the two,
+        // because this estimate is a FLOOR and a tray in deficit hides the one
+        // thing on the sheet that cannot be undone.
+        if onRevoke != nil && thisPhoneIsAdmin { h += revocable ? 44 : 76 }
         return min(660, h)
     }
 
@@ -351,6 +372,102 @@ struct VibenetKeySheet: View {
                 }
             }
         }
+    }
+
+    /// **THE DESTRUCTIVE VERB, AND WHY IT IS NOT IN THE ROW ABOVE.**
+    ///
+    /// Every capsule in `doors` is recoverable — a copy, a book entry, a sheet
+    /// that opens. This one ends an authority on chain and cannot be undone by
+    /// anything in this app. Putting it in that flow would make it the same
+    /// weight as "Copy account" and, worse, put it under the same thumb.
+    ///
+    /// Same admin gate as Edit permissions, for the same on-chain reason
+    /// (`Keystore.applySignedAccountChanges` requires the signer's scope to be
+    /// exactly 0), plus one this verb has of its own — see `revocable`.
+    @ViewBuilder
+    private var revokeDoor: some View {
+        if let onRevoke, thisPhoneIsAdmin {
+            if revocable {
+                Button(role: .destructive) {
+                    DSHaptic.tap()
+                    confirmingRevoke = true
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "key.slash")
+                            .accessibilityHidden(true)
+                            .dsGlyph(11, weight: .semibold)
+                        Text(String(localized: "Revoke this key"))
+                    }
+                    .dsText(.label12).fontWeight(.semibold)
+                    .foregroundStyle(DS.destructive)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .padding(.horizontal, DS.Space.s3)
+                    .padding(.vertical, 7)
+                    .background(Capsule(style: .continuous).fill(DS.destructive.opacity(0.10)))
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(PressSpring())
+                .dsHover()
+                // **NATIVE, NOT AN INLINE ARMED STATE.** §478 closed the last
+                // inline expander in this room and this sheet is the surface it
+                // moved to; growing a confirmation inside it would rebuild
+                // exactly what that ruling deleted. A dialog also carries the
+                // destructive ROLE, which is what puts the act in red and the
+                // cancel where the thumb rests.
+                .confirmationDialog(revokeTitle, isPresented: $confirmingRevoke, titleVisibility: .visible) {
+                    Button(String(localized: "Revoke"), role: .destructive) { onRevoke(actor) }
+                    Button(String(localized: "Cancel"), role: .cancel) { }
+                } message: {
+                    Text(revokeMessage)
+                }
+            } else {
+                // **THE FACT, NOT A DISABLED BUTTON (§83).** The reason is the
+                // whole content here: an account whose last admin key is
+                // revoked can never be signed for again and can never be
+                // repaired — `SafeSigner`'s N-of-N ruling (§427) on a chain
+                // with no recovery module at all. A greyed control says "not
+                // now"; this says "not ever, and here is why".
+                Text(String(localized: "This is the only key that can administer this account. Revoking it would leave the account unusable for good, so it can't be revoked from here — authorize another admin key first."))
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    /// Whether revoking this key leaves the account with an admin.
+    ///
+    /// **Counts ADMINS, not keys**, and that distinction is the whole guard:
+    /// only a scope-0 actor can sign a config change, so an account holding one
+    /// admin and four session keys is one revoke away from being unusable while
+    /// still showing five keys in the list. A non-admin key is always revocable
+    /// — removing it cannot cost the account its ability to change itself.
+    private var revocable: Bool {
+        guard actor.scope.isAdmin else { return true }
+        return item.actors.filter { $0.scope.isAdmin }.count > 1
+    }
+
+    /// This phone revoking ITSELF is a different sentence, and the one most
+    /// worth saying: every other revoke takes authority from somebody else.
+    private var isThisPhone: Bool {
+        guard let ours = VibenetDeviceKey.actorID()?.lowercased() else { return false }
+        return actor.actorId.lowercased() == ours
+    }
+
+    private var revokeTitle: String {
+        isThisPhone
+            ? String(localized: "Revoke this phone's own key?")
+            : String(localized: "Revoke this key?")
+    }
+
+    private var revokeMessage: String {
+        let account = VibenetWatch.shared.name(for: item.address)
+            ?? VibenetRoom.shortAddress(item.address)
+        return isThisPhone
+            ? String(localized: "This phone will no longer be able to act for \(account), and it can't put itself back. It takes one signature now, and there is no undo.")
+            : String(localized: "This key will no longer be able to act for \(account). It takes one signature now, and there is no undo.")
     }
 
     /// Whether THIS PHONE'S own key is an unrestricted admin on `item` — the

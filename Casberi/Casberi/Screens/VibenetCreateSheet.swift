@@ -450,7 +450,12 @@ struct VibenetCreateSheet: View {
         guard let key = VibenetDeviceKey.publicKeyXY(),
               let keystore = VibenetTransaction.data(fromHex: c.keystore),
               let defaultAccount = c.defaultAccount.flatMap(VibenetTransaction.data(fromHex:)),
-              let auth = VibenetTransaction.data(fromHex: c.p256Authenticator) else { return nil }
+              // `flatMap`, not a default: a deployment that publishes no
+              // authenticator cannot have an account created on it, and nil
+              // here correctly makes the sheet refuse rather than draft an
+              // address against address zero (2026-09-04).
+              let auth = c.p256Authenticator.flatMap(VibenetTransaction.data(fromHex:))
+        else { return nil }
         return VibenetCreate.plan(keystore: keystore, defaultAccount: defaultAccount,
                                   authenticator: auth, publicKeyXY: key,
                                   userSalt: Data(repeating: 0, count: 32),
@@ -499,7 +504,13 @@ struct VibenetCreateSheet: View {
         guard let c = await VibenetConfig.current(),
               let keystore = VibenetTransaction.data(fromHex: c.keystore),
               let defaultAccount = c.defaultAccount.flatMap(VibenetTransaction.data(fromHex:)),
-              let auth = VibenetTransaction.data(fromHex: c.p256Authenticator) else {
+              // Nil authenticator = this deployment publishes no signing
+              // contracts (2026-09-04). It lands on `contractsUnreadable`
+              // deliberately rather than earning a case: from a creation's
+              // point of view "the config does not name what I need" is one
+              // situation, and splitting it would put two sentences on a screen
+              // whose next step is identical.
+              let auth = c.p256Authenticator.flatMap(VibenetTransaction.data(fromHex:)) else {
             phase = .refused(.contractsUnreadable); return
         }
         phase = .working
@@ -531,6 +542,12 @@ struct VibenetCreateSheet: View {
         switch f {
         case .noKey:            return String(localized: "This phone has no key yet.")
         case .cannotCompose:    return String(localized: "Couldn't put the transaction together.")
+        // Spelled once on the type: it must agree with the room's own empty
+        // note about the same fact (§530, and `emptyRoomNote`).
+        case .noAccountStack:   return VibenetSend.Failure.noAccountStackSentence
+        // Its own sentence: each names a different field, and "couldn't send"
+        // would send somebody looking at the amount.
+        case .advancedRefused(let why): return why
         case .noSponsor:
             // The one refusal that is not a fault. A brand-new account holds
             // nothing by construction, so without a sponsor there is nothing

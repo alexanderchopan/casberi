@@ -81,6 +81,13 @@ enum DevnetConsole {
     /// the first time.
     static let tileFloor: CGFloat = 132
 
+    /// A MENU tile's floor (2026-09-04). Lower than `tileFloor` because the
+    /// verb inside it is `stat24` rather than `price40` and there are two rows
+    /// of these rather than one — re-added by `devnet-console-audit.py` check 1
+    /// against the same room allowance, so the grid cannot quietly grow past
+    /// the budget the split panel was measured into.
+    static let menuTileFloor: CGFloat = 104
+
     // MARK: - The sheet
 
     /// The face on the amount screen is the SAME RUNG as the face in the
@@ -222,6 +229,48 @@ struct DevnetSendPanel: View {
     var topUp: TopUp? = nil
     let onSend: () -> Void
 
+    /// **THE ROOM'S OTHER ACTS (2026-09-04, user ruling).**
+    ///
+    /// *"folks testing won't want to just send, the others are just as
+    /// important"* — which is the premise the two-tile panel was built without.
+    /// On a devnet the person here came to make an account or authorize a key
+    /// at least as often as to move money, so Create and Authorize are not
+    /// supporting verbs, they are peers.
+    ///
+    /// Empty for Hegotá and Frames, which keep the split panel exactly as it
+    /// was — this is a room's decision about its own acts, not a new default.
+    var extras: [Act] = []
+
+    /// One act beyond Send and Top up. No busy or note state, deliberately:
+    /// both of those open a sheet that owns its own progress, where Top up
+    /// completes in place and has to say so.
+    struct Act: Identifiable {
+        let id: String
+        let title: String
+        let glyph: String
+        let act: () -> Void
+        init(id: String, title: String, glyph: String, act: @escaping () -> Void) {
+            self.id = id; self.title = title; self.glyph = glyph; self.act = act
+        }
+    }
+
+    /// How many acts this panel is carrying.
+    private var actCount: Int { 1 + (topUp == nil ? 0 : 1) + extras.count }
+
+    /// **§559 DECIDES THE LAYOUT, and it is a scope rather than a taste.**
+    ///
+    /// That ruling: *"Two verbs is the ceiling, and the second is the ink half.
+    /// Three is a menu, and a hero verb among peers is just shouting."* So the
+    /// panel does not offer a style — it reads its own act count and takes the
+    /// grammar §559 already assigned to it. Two acts keep the crown rung and
+    /// the tinted Send; three or more become a menu, where nothing wears the
+    /// head rung and nothing takes the tint fill.
+    ///
+    /// Encoding the rule as the switch means a room that grows a third act
+    /// cannot accidentally keep shouting, and one that loses back down to two
+    /// gets its hero back with no edit.
+    private var isMenu: Bool { actCount > 2 }
+
     /// What the ink half does, and what it is currently saying about itself.
     struct TopUp {
         var busy = false
@@ -234,23 +283,51 @@ struct DevnetSendPanel: View {
     }
 
     var body: some View {
-        VStack(spacing: DevnetConsole.tileGap) {
-            tile(kind: .send)
-            if topUp != nil { tile(kind: .topUp) }
+        if isMenu {
+            // TWO COLUMNS, not a stack. Four full-width tiles at the stacked
+            // height is most of a screen, and the room's crown and rail sit
+            // above them — the same budget `devnet-console-audit.py` check 1
+            // guards, which is why the grid halves the width rather than
+            // lengthening the scroll.
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: DevnetConsole.tileGap),
+                                GridItem(.flexible(), spacing: DevnetConsole.tileGap)],
+                      spacing: DevnetConsole.tileGap) {
+                tile(kind: .send)
+                if topUp != nil { tile(kind: .topUp) }
+                ForEach(extras) { extra in tile(kind: .extra(extra)) }
+            }
+        } else {
+            VStack(spacing: DevnetConsole.tileGap) {
+                tile(kind: .send)
+                if topUp != nil { tile(kind: .topUp) }
+            }
         }
     }
 
-    private enum Kind { case send, topUp }
+    private enum Kind {
+        case send, topUp
+        case extra(Act)
+    }
 
     @ViewBuilder
     private func tile(kind: Kind) -> some View {
-        let isSend = kind == .send
+        let isSend: Bool = { if case .send = kind { return true }; return false }()
+        let isTopUp: Bool = { if case .topUp = kind { return true }; return false }()
+        // **THE TINT FILL IS THE MENU'S ONE CASUALTY, and §559 is why.** A hero
+        // among peers is shouting, so in a menu no tile takes the fill — the
+        // room keeps its colour on every DISC instead, which says whose room
+        // this is without saying which act it is for.
+        let filled = isSend && !isMenu
         Button {
             DSHaptic.tap()
-            if isSend { onSend() } else { topUp?.action() }
+            switch kind {
+            case .send:  onSend()
+            case .topUp: topUp?.action()
+            case .extra(let extra): extra.act()
+            }
         } label: {
             VStack(alignment: .leading, spacing: 0) {
-                if !isSend, let note = topUp?.note {
+                if isTopUp, let note = topUp?.note {
                     Text(note)
                         .dsText(.callout15).fontWeight(.semibold)
                         .foregroundStyle(DS.textSecondary)
@@ -258,40 +335,63 @@ struct DevnetSendPanel: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 Spacer(minLength: 0)
-                disc(isSend: isSend)
+                disc(kind: kind, filled: filled)
                 Spacer().frame(height: DevnetConsole.markGap)
-                Text(isSend ? String(localized: "Send") : String(localized: "Top up"))
-                    .dsText(.price40)
-                    .foregroundStyle(isSend ? .white : DS.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.9)
+                Text(label(kind))
+                    // `price40` is the crown rung and belongs to a surface that
+                    // exists to do ONE thing (§559). In a menu the verb drops to
+                    // `stat24` — which is also what lets a two-word act like
+                    // "Authorize a key" set at half width without shrinking to
+                    // fit, the failure `devnet-console-audit.py` check 2 exists
+                    // to catch in the SPLIT panel and must not be confused with
+                    // this.
+                    .dsText(isMenu ? .stat24 : .price40)
+                    .foregroundStyle(filled ? .white : DS.textPrimary)
+                    // A menu label wraps rather than shrinks: two short lines
+                    // read, a scaled-down one just looks broken beside its
+                    // neighbour.
+                    .lineLimit(isMenu ? 2 : 1)
+                    .minimumScaleFactor(isMenu ? 1 : 0.9)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(DevnetConsole.tilePadding)
-            .frame(maxWidth: .infinity, minHeight: DevnetConsole.tileFloor, alignment: .leading)
-            .modifier(DevnetTileSurface(tint: isSend ? tint : nil))
+            .frame(maxWidth: .infinity,
+                   minHeight: isMenu ? DevnetConsole.menuTileFloor : DevnetConsole.tileFloor,
+                   alignment: .leading)
+            .modifier(DevnetTileSurface(tint: filled ? tint : nil))
             .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         }
         .buttonStyle(PressSpring())
-        .disabled(!isSend && (topUp?.busy ?? false))
+        .disabled(isTopUp && (topUp?.busy ?? false))
         .dsHover()
-        .accessibilityLabel(Text(isSend ? String(localized: "Send")
-                                        : String(localized: "Top up from the faucet")))
+        .accessibilityLabel(Text(isTopUp ? String(localized: "Top up from the faucet")
+                                         : label(kind)))
+    }
+
+    private func label(_ kind: Kind) -> String {
+        switch kind {
+        case .send:  return String(localized: "Send")
+        case .topUp: return String(localized: "Top up")
+        case .extra(let extra): return extra.title
+        }
     }
 
     @ViewBuilder
-    private func disc(isSend: Bool) -> some View {
+    private func disc(kind: Kind, filled: Bool) -> some View {
+        let isTopUp: Bool = { if case .topUp = kind { return true }; return false }()
         ZStack {
             Circle()
-                .fill(isSend ? AnyShapeStyle(Color.white.opacity(0.22))
+                .fill(filled ? AnyShapeStyle(Color.white.opacity(0.22))
                              : AnyShapeStyle(DS.fillFaint))
                 .frame(width: DevnetConsole.mark, height: DevnetConsole.mark)
-            if !isSend, topUp?.busy == true {
+            if isTopUp, topUp?.busy == true {
                 ProgressView().controlSize(.small)
             } else {
-                Image(systemName: glyph(isSend: isSend))
+                Image(systemName: glyph(kind))
                     .accessibilityHidden(true)
                     .dsGlyph(20, weight: .semibold)
-                    .foregroundStyle(isSend ? AnyShapeStyle(Color.white) : AnyShapeStyle(tint))
+                    .foregroundStyle(filled ? AnyShapeStyle(Color.white) : AnyShapeStyle(tint))
             }
         }
     }
@@ -301,8 +401,12 @@ struct DevnetSendPanel: View {
     /// the only room ever to set and no longer does — a flag with one possible
     /// value is a branch that cannot happen, so both are gone. A tile that
     /// LEAVES the app should say so again if one ever returns.
-    private func glyph(isSend: Bool) -> String {
-        isSend ? "arrow.up.right" : "drop"
+    private func glyph(_ kind: Kind) -> String {
+        switch kind {
+        case .send:  return "arrow.up.right"
+        case .topUp: return "drop"
+        case .extra(let extra): return extra.glyph
+        }
     }
 }
 
@@ -540,24 +644,56 @@ struct DevnetSendLeg: Identifiable, Equatable {
 /// before, and that is the whole reason this is a parameter rather than a
 /// rewrite of the two screens they share.
 struct DevnetStitch {
-    /// The head row's words. The VERIFY frame is BUILT, never chosen, so it is
-    /// drawn as a row you cannot tap rather than left out — leaving it out is
-    /// what makes somebody ask whether they were supposed to add it.
-    let headName: String
-    let headDetail: String
-    /// What all-or-nothing means here, in both states. **Both, not one**: off
-    /// is the default and is the behaviour no other send in this app has, so a
-    /// control that only describes ON leaves the dangerous state unexplained.
-    let atomicTitle: String
-    let atomicOn: String
-    let atomicOff: String
+    /// The head row's words, or **nil for a venue with no built leg at all
+    /// (2026-09-04)**.
+    ///
+    /// Frames' VERIFY frame is BUILT, never chosen, so it is drawn as a row you
+    /// cannot tap rather than left out — leaving it out is what makes somebody
+    /// ask whether they were supposed to add it. A vibenet batch has no such
+    /// prefix: every row in its list is a call somebody wrote, so a head row
+    /// there would be a picture of nothing, which is the opposite failure and
+    /// just as misleading.
+    let headName: String?
+    let headDetail: String?
+    /// **WHETHER ALL-OR-NOTHING IS A DECISION OR A PROPERTY OF THE CHAIN
+    /// (2026-09-04).**
+    ///
+    /// It was three `String`s and a `Toggle`, which was right while Frames was
+    /// the only venue that stitched. vibenet batches CALLS INSIDE ONE
+    /// TRANSACTION — one nonce, one signature, one revert — so there is no OFF
+    /// state to reach, and a toggle offering one would be the dead control §83
+    /// bans, wired to a property rather than to a choice.
+    ///
+    /// An enum rather than three optionals so the invalid states — a title with
+    /// no OFF sentence, a control described but not offered — cannot be built.
+    enum Atomicity: Equatable {
+        /// The chain lets you choose, and **BOTH states need describing**: off
+        /// is Frames' default and is behaviour no other send in this app has,
+        /// so a control that only describes ON leaves the dangerous state
+        /// unexplained.
+        case chosen(title: String, on: String, off: String)
+        /// The chain decided. One sentence, no control, and the sentence is
+        /// still REQUIRED: "these send together" is not obvious from a list,
+        /// and leaving it out makes somebody wonder whether the legs are
+        /// separate transactions they will be asked to approve one by one.
+        case inherent(String)
+
+        /// What the transaction will actually do, which for `.inherent` is not
+        /// the sheet's toggle to decide. Read by the sender and by the preview,
+        /// so a venue can never draw one shape and send another.
+        var isAlwaysAtomic: Bool {
+            if case .inherent = self { return true }
+            return false
+        }
+    }
+    let atomicity: Atomicity
     /// A ceiling, and the sentence for reaching it. The chain bounds the
     /// verify prefix, so a long batch is refused by the node with a message
     /// naming no remedy — better to stop before the signature.
     let maxLegs: Int
     let atCapacity: String
     /// Returns nil on success, or the sentence to show on failure.
-    let send: ([DevnetSendLeg], Bool) async -> String?
+    let send: ([DevnetSendLeg], Bool, VibenetAdvanced) async -> String?
     /// **WHAT THIS BATCH WILL LOOK LIKE ONCE IT HAS RUN**, drawn by the venue
     /// in the venue's own idiom, above the list.
     ///
@@ -584,6 +720,142 @@ struct DevnetStitch {
     var joins: ((_ legs: [DevnetSendLeg], _ atomic: Bool) -> [Bool])? = nil
 }
 
+/// **THE THREE ADVANCED FIELDS, AS A SHEET (2026-09-04).**
+///
+/// `Fields` has carried `nonceKey`, `validAfter`/`validBefore` and `metadata`
+/// since §523 and nothing ever wrote one. They are the explorer's "Advanced
+/// Transactions" card, and the ruling that put four tiles on Home is the same
+/// one that says they belong on screen: *"folks testing won't want to just
+/// send"* — on a devnet the person here is a developer, so a field they can set
+/// is the product rather than a distraction from it.
+///
+/// **BEHIND A ROW, NOT ON THE FORM.** An ordinary send must not grow three
+/// controls it will never use; §554's word budget and §563's "a screen standing
+/// in front of its own answer" both point the same way. The row states the
+/// current setting rather than the word "Advanced" alone, so a window left set
+/// from a previous send cannot be invisible.
+///
+/// **EVERY VALUE HERE IS SIGNED OVER**, which is why the sheet says so once and
+/// why `VibenetAdvanced.refusal` runs before the Face ID rather than after:
+/// a window that has closed produces a perfectly valid signature over a
+/// transaction the chain will never accept.
+struct DevnetAdvancedSheet: View {
+    @Binding var advanced: VibenetAdvanced
+    let tint: Color
+    @Environment(\.dismiss) private var dismiss
+
+    /// Held as text so a half-typed number is not a value — the amount field's
+    /// own rule, one sheet over.
+    @State private var channelText = ""
+    @State private var note = ""
+    @State private var hasWindow = false
+    @State private var opensAt = Date()
+    @State private var closesAt = Date().addingTimeInterval(3600)
+
+    var body: some View {
+        DSTray(title: String(localized: "Advanced"), height: 520) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DS.Space.s6) {
+                    channel
+                    window
+                    metadata
+                    // ONE sentence for the whole sheet, not one per field —
+                    // it is the same fact three times over and §554's budget
+                    // is spent on saying it well once.
+                    Text(String(localized: "All three are signed with the transaction. The chain enforces the window; the note is public and permanent."))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.bottom, DS.Space.s6)
+            }
+            .scrollIndicators(.hidden)
+        }
+        .onAppear(perform: load)
+        .onDisappear(perform: commit)
+    }
+
+    private var channel: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            caption(String(localized: "Nonce channel"))
+            TextField("0", text: $channelText)
+                .keyboardType(.numberPad)
+                .dsText(.heading17)
+                .padding(.horizontal, DS.Space.s3).padding(.vertical, DS.Space.s3)
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(DS.fillFaint))
+            Text(String(localized: "Sends in different channels don't queue behind each other."))
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var window: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Toggle(isOn: $hasWindow) {
+                Text(String(localized: "Only valid for a window"))
+                    .dsText(.callout15).fontWeight(.semibold)
+                    .foregroundStyle(DS.textPrimary)
+            }
+            .tint(tint)
+            if hasWindow {
+                DatePicker(String(localized: "From"), selection: $opensAt)
+                    .dsText(.callout15)
+                DatePicker(String(localized: "Until"), selection: $closesAt)
+                    .dsText(.callout15)
+                // The refusal the chain would make, said HERE rather than after
+                // a Face ID — the sheet's whole reason for validating early.
+                if let why = draft.refusal(now: UInt64(Date().timeIntervalSince1970)) {
+                    Text(why)
+                        .dsText(.label12).foregroundStyle(DS.destructive)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private var metadata: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            caption(String(localized: "Note on chain"))
+            TextField(String(localized: "Optional"), text: $note, axis: .vertical)
+                .lineLimit(1...3)
+                .dsText(.callout15)
+                .padding(.horizontal, DS.Space.s3).padding(.vertical, DS.Space.s3)
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(DS.fillFaint))
+        }
+    }
+
+    private func caption(_ t: String) -> some View {
+        Text(t).dsText(.label12).foregroundStyle(DS.textTertiary)
+    }
+
+    /// What the fields currently say, as the value that would be sent.
+    private var draft: VibenetAdvanced {
+        VibenetAdvanced(
+            nonceKey: UInt64(channelText) ?? 0,
+            validAfter: hasWindow ? UInt64(opensAt.timeIntervalSince1970) : 0,
+            validBefore: hasWindow ? UInt64(closesAt.timeIntervalSince1970) : 0,
+            // UTF-8 and capped at the byte level, because the cap is on the
+            // BYTES that ride the transaction and a character count would let a
+            // note of emoji through at four times the size.
+            metadata: Data(note.utf8.prefix(VibenetAdvanced.metadataCap)))
+    }
+
+    private func load() {
+        channelText = advanced.nonceKey == 0 ? "" : String(advanced.nonceKey)
+        note = String(decoding: advanced.metadata, as: UTF8.self)
+        hasWindow = advanced.validAfter > 0 || advanced.validBefore > 0
+        if advanced.validAfter > 0 { opensAt = Date(timeIntervalSince1970: TimeInterval(advanced.validAfter)) }
+        if advanced.validBefore > 0 { closesAt = Date(timeIntervalSince1970: TimeInterval(advanced.validBefore)) }
+    }
+
+    /// **COMMITTED ON DISMISS, NOT PER KEYSTROKE.** A binding written on every
+    /// character makes a half-typed channel ("1" on the way to "12") a real
+    /// value the send would use if the sheet were swiped away mid-edit.
+    private func commit() { advanced = draft }
+}
+
 struct DevnetSendSheet: View {
     /// What this room is, for the picker's own footnote.
     let venue: String
@@ -606,7 +878,7 @@ struct DevnetSendSheet: View {
     let isValidAddress: (String) -> Bool
     let isValidAmount: (String) -> Bool
     /// Returns nil on success, or the sentence to show on failure.
-    let perform: (String, String) async -> String?
+    let perform: (String, String, VibenetAdvanced) async -> String?
     /// **What this send BECOMES, if the venue has anything to say.** Given the
     /// destination and amount currently entered, return the steps the
     /// transaction will run. Nil for every venue whose send is one act.
@@ -622,6 +894,20 @@ struct DevnetSendSheet: View {
     /// screen then ADDS a leg instead of sending, and a third screen lists what
     /// has been built. Nil leaves every existing venue exactly as it was.
     var stitch: DevnetStitch? = nil
+
+    /// **THE ADVANCED FIELDS, FOR A VENUE WHOSE ENVELOPE CARRIES THEM
+    /// (2026-09-04).** False for Hegotá and Frames, whose transactions have no
+    /// nonce channel, validity window or metadata to set — a row there would be
+    /// the dead control §83 bans.
+    ///
+    /// The VALUE travels through `perform`/`stitch.send`, which take it as a
+    /// parameter rather than reading it from shared state: a value written in
+    /// one place and read in another is a race, and this one would sign a
+    /// transaction with somebody's half-typed window. The two venues that
+    /// ignore it name the parameter `_`, which is the compiler recording that
+    /// they were asked.
+    var advancedSupported: Bool = false
+
 
     @Environment(\.dismiss) private var dismiss
     @Environment(ShellChrome.self) private var chrome
@@ -639,7 +925,17 @@ struct DevnetSendSheet: View {
     /// on would be kinder and would misrepresent what the transaction does
     /// unless the person changed it — and the point of the control is that
     /// this chain's answer is the unusual one.
-    @State private var atomic = false
+    @State private var atomicChoice = false
+    @State private var advanced = VibenetAdvanced.default
+    @State private var showingAdvanced = false
+
+    /// What this send will DO. For a venue whose batch is atomic by
+    /// construction the toggle is never drawn and never read — deriving it here
+    /// rather than seeding `atomicChoice` to true means there is no state a
+    /// future edit could flip out from under the chain's own rule.
+    private var atomic: Bool {
+        (stitch?.atomicity.isAlwaysAtomic ?? false) || atomicChoice
+    }
     /// Whether the who/amount pair is currently being walked to add a leg.
     /// Starts true so a builder opens on the picker rather than on an empty
     /// list, which is a screen with nothing on it but a button.
@@ -1027,7 +1323,9 @@ struct DevnetSendSheet: View {
 
                 ScrollView {
                     VStack(spacing: DS.Space.s2) {
-                        headRow(stitch)
+                        if let name = stitch.headName, let detail = stitch.headDetail {
+                            headRow(name: name, detail: detail)
+                        }
                         ForEach(Array(legs.enumerated()), id: \.element.id) { index, leg in
                             legRow(leg, joinsNext: index < joins.count && joins[index])
                         }
@@ -1052,6 +1350,7 @@ struct DevnetSendSheet: View {
                 .animation(DS.Motion.standard, value: atomic)
 
                 atomicRow(stitch)
+                advancedRow
 
                 if let errorText {
                     Text(errorText)
@@ -1102,7 +1401,7 @@ struct DevnetSendSheet: View {
             .contentShape(Rectangle())
     }
 
-    private func headRow(_ stitch: DevnetStitch) -> some View {
+    private func headRow(name: String, detail: String) -> some View {
         rowShell(dash: DS.textTertiary.opacity(0.28)) {
             HStack(spacing: DS.Space.s3) {
                 Image(systemName: "checkmark.seal")
@@ -1111,10 +1410,10 @@ struct DevnetSendSheet: View {
                     .foregroundStyle(DS.textTertiary)
                     .frame(width: DevnetConsole.legFace, height: DevnetConsole.legFace)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(stitch.headName)
+                    Text(name)
                         .dsText(.callout15).fontWeight(.semibold)
                         .foregroundStyle(DS.textSecondary)
-                    Text(stitch.headDetail)
+                    Text(detail)
                         .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
                 }
@@ -1235,30 +1534,114 @@ struct DevnetSendSheet: View {
         .dsHover()
     }
 
+    /// **THE DOOR ONTO THE ADVANCED FIELDS, and it STATES its setting.**
+    ///
+    /// A row reading only "Advanced" makes a window left set from a previous
+    /// send invisible — which on a field the chain enforces is the §83 fake
+    /// status, since the next send would simply be refused with no clue why. So
+    /// the trailing text is the value, and "Default" is a real answer rather
+    /// than an empty slot.
+    ///
+    /// Quiet by construction: a `label12` row under the commit's own controls,
+    /// no fill, no disc. An ordinary send should be able to not notice it.
+    @ViewBuilder
+    private var advancedRow: some View {
+        if advancedSupported {
+            Button {
+                DSHaptic.tap()
+                showingAdvanced = true
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    Text(String(localized: "Advanced"))
+                        .dsText(.callout15).fontWeight(.semibold)
+                        .foregroundStyle(DS.textSecondary)
+                    Spacer(minLength: DS.Space.s2)
+                    Text(advancedSummary)
+                        .dsText(.label12)
+                        .foregroundStyle(advanced.isDefault ? DS.textTertiary : tint)
+                        .lineLimit(1)
+                    Image(systemName: "chevron.right")
+                        .accessibilityHidden(true)
+                        .dsGlyph(11, weight: .semibold)
+                        .foregroundStyle(DS.textTertiary)
+                }
+                .padding(.vertical, DS.Space.s3)
+                .padding(.horizontal, DS.Space.s1)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(PressSpring())
+            .dsHover()
+            .sheet(isPresented: $showingAdvanced) {
+                DevnetAdvancedSheet(advanced: $advanced, tint: tint)
+            }
+        }
+    }
+
+    /// What the row says on its right. Named parts, joined — never a count,
+    /// because "2 set" tells you something is on and not which thing.
+    private var advancedSummary: String {
+        var parts: [String] = []
+        if advanced.nonceKey != 0 { parts.append(String(localized: "channel \(advanced.nonceKey)")) }
+        if advanced.validAfter > 0 || advanced.validBefore > 0 {
+            parts.append(String(localized: "timed"))
+        }
+        if !advanced.metadata.isEmpty { parts.append(String(localized: "note")) }
+        return parts.isEmpty ? String(localized: "Default") : parts.joined(separator: " · ")
+    }
+
+    @ViewBuilder
     private func atomicRow(_ stitch: DevnetStitch) -> some View {
-        HStack(spacing: DS.Space.s3) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(stitch.atomicTitle)
-                    .dsText(.callout15).fontWeight(.semibold)
-                    .foregroundStyle(DS.textPrimary)
-                Text(atomic ? stitch.atomicOn : stitch.atomicOff)
+        switch stitch.atomicity {
+        case let .chosen(title, on, off):
+            HStack(spacing: DS.Space.s3) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .dsText(.callout15).fontWeight(.semibold)
+                        .foregroundStyle(DS.textPrimary)
+                    Text(atomicChoice ? on : off)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: DS.Space.s2)
+                Toggle("", isOn: $atomicChoice)
+                    .labelsHidden()
+                    .tint(tint)
+            }
+            .modifier(DevnetAtomicRowChrome(animatesOn: atomicChoice))
+        // **A FACT, IN THE TERTIARY TIER, WITH NO CONTROL BESIDE IT.** Not a
+        // disabled toggle showing ON: a control that cannot move is the dead
+        // control §83 bans, and one pinned to ON reads as a setting somebody
+        // chose rather than as how the chain works. Left-aligned and plain, so
+        // the eye goes to the list and the commit tile rather than to a switch
+        // that is not there.
+        case let .inherent(sentence):
+            HStack {
+                Text(sentence)
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: DS.Space.s2)
-            Toggle("", isOn: $atomic)
-                .labelsHidden()
-                .tint(tint)
+            .modifier(DevnetAtomicRowChrome(animatesOn: false))
         }
-        // **NO WELL** (prd §571). A well raises a control off the page, and
-        // this one sits directly above the tile it changes with nothing
-        // between them — the container was drawing a boundary where the
-        // relationship is the point. What the well bought was separation from
-        // the rows above, which the gap now gives for free.
-        .padding(.vertical, DS.Space.s4)
-        .padding(.horizontal, DS.Space.s1)
-        .animation(DS.Motion.standard, value: atomic)
+    }
+
+    /// The padding both arms share, lifted so the two can never drift apart in
+    /// the space they claim — which on a sheet this tight is visible.
+    private struct DevnetAtomicRowChrome: ViewModifier {
+        let animatesOn: Bool
+        func body(content: Content) -> some View {
+            // **NO WELL** (prd §571). A well raises a control off the page,
+            // and this one sits directly above the tile it changes with
+            // nothing between them — the container was drawing a boundary
+            // where the relationship is the point. What the well bought was
+            // separation from the rows above, which the gap now gives for free.
+            content
+                .padding(.vertical, DS.Space.s4)
+                .padding(.horizontal, DS.Space.s1)
+                .animation(DS.Motion.standard, value: animatesOn)
+        }
     }
 
     /// **THE COMMIT IS THE HERO TILE** (prd §571, §559's grammar).
@@ -1324,7 +1707,7 @@ struct DevnetSendSheet: View {
         let built = legs
         let allOrNothing = atomic
         Task { @MainActor in
-            let failure = await stitch.send(built, allOrNothing)
+            let failure = await stitch.send(built, allOrNothing, advanced)
             busy = false
             if let failure {
                 errorText = failure
@@ -1346,7 +1729,7 @@ struct DevnetSendSheet: View {
         busy = true
         errorText = nil
         Task { @MainActor in
-            let failure = await perform(to, spending)
+            let failure = await perform(to, spending, advanced)
             busy = false
             if let failure {
                 errorText = failure
