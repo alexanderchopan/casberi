@@ -252,7 +252,7 @@ struct SourceChips: View {
         // screen. Without the subtraction every chip rests 15pt further right
         // than it should and the melt begins 15pt late.
         axis == .vertical ? DS.Space.s4 + chipSize
-                          : DSDock.agentSeat - DSDock.slabInset
+                          : DSDock.agentSeat(minimized: folds) - DSDock.slabInset
     }
     /// Where a chip has finished dissolving — fully gone by here.
     ///

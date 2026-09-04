@@ -99,8 +99,21 @@ grep -q 'DSDock.agentSeat' "$TMP/chips.nc" \
 grep -q 'padding(.leading, DSDock.agentSeat)' "$TMP/main.nc" \
   && { echo "✗ MainSurface pads the strip past the bar again — that draws the scroll view's"; \
        echo "  clip as a flat line against the bar's round glass instead of melting."; fail=1; }
-grep -q 'static var agentSeat' "$DOCK" \
+grep -q 'static func agentSeat' "$DOCK" \
   || { echo "✗ DSDock.agentSeat is gone — the shared metric both layers read."; fail=1; }
+# The bar's mark is the SAME SIZE as a chip's (§591d). `DSDock.agentSize`
+# mirrors `SourceChips.iconSize`, which is private to that view and cannot be
+# read from the design layer — so the two are pinned here instead, in both
+# states. A 44 among 46s reads as a shrunken chip rather than a distinction,
+# and a bar that did not fold would grow relatively larger exactly when the row
+# got tighter.
+grep -q 'folds ? 40 : 46' "$TMP/chips.nc" \
+  || { echo "✗ SourceChips.iconSize moved off 46/40 — DSDock.agentSize mirrors it and"; \
+       echo "  cannot see it, so the agent bar is now a different size from the chips"; \
+       echo "  it sits beside in the rail."; fail=1; }
+grep -q 'minimized ? 40 : 46' "$DOCK" \
+  || { echo "✗ DSDock.agentSize no longer matches SourceChips.iconSize (46 at rest, 40"; \
+       echo "  folded) — the bar and the chip marks beside it are different sizes."; fail=1; }
 
 # --- 3. the bar stands in the LEADING corner --------------------------------
 grep -q 'VStack(alignment: .leading, spacing: DS.Space.s2)' "$TMP/root.nc" \

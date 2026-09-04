@@ -17,12 +17,27 @@ import SwiftUI
 /// Too large and the dock opens with a hole in it that reads as a missing
 /// chip. A constant in each file would drift the moment either one moved.
 enum DSDock {
-    /// The bar's own drawn width at rest — `AgentBar` frames itself to 44pt
-    /// when it is not expanded, and it hugs its contents rather than filling.
-    /// Measured on the simulator at 43pt of visible glass; 46 is that frame
-    /// plus the two points of soft edge `dsGlass` draws beyond it, because what
-    /// this constant has to clear is the glass, not the frame.
-    static let agentWidth: CGFloat = 46
+    /// The bar's drawn size — **the same as a chip's own mark** (user,
+    /// 2026-09-04: "why not just make it the same size as the All chip next to
+    /// it").
+    ///
+    /// It was a flat 44, which is `DS.Hit.min` and was the right number while
+    /// the bar was a floating pill in a corner answering to nothing. In the
+    /// rail it is the first item in a row of marks, and a 44 among 46s reads as
+    /// a slightly shrunken one — the kind of near-miss that looks like a bug
+    /// rather than a distinction. It also had to FOLD, since the chips shrink
+    /// 46→40 on scroll and a bar that did not would grow relatively larger
+    /// exactly when the row got tighter.
+    ///
+    /// Mirrors `SourceChips.iconSize`, which cannot be read from here (that
+    /// value is private to a view in another module-level file); the dock
+    /// self-test pins the two together.
+    static func agentSize(minimized: Bool) -> CGFloat { minimized ? 40 : 46 }
+
+    /// The chip's own FRAME, which is bigger than its mark — it carries the
+    /// active ring's room. Centring the bar on the row means centring on this,
+    /// not on the mark.
+    static func chipFrame(minimized: Bool) -> CGFloat { minimized ? 48 : 56 }
 
     /// The air between the bar's trailing edge and the first chip.
     ///
@@ -33,29 +48,32 @@ enum DSDock {
     /// tapping it does not change the room.
     static let seam: CGFloat = DS.Space.s2
 
-    /// The cluster's own outer inset — `RootShell` pays `DS.Space.s4` on the
-    /// horizontal padding of the floating cluster, so the bar's LEADING edge is
-    /// this far from the window and its trailing edge is this plus its width.
-    static let clusterInset: CGFloat = DS.Space.s4
+    /// Where the bar's leading edge sits, measured from the window.
+    ///
+    /// **`slabInset + slabPad`, not `slabInset` (§591d).** The bar and the glass
+    /// bar behind it were both inset by `DS.Space.s4` and therefore landed on
+    /// the SAME line — measured on the simulator at slab 18.0pt against pill
+    /// 18.3pt, so the octopus sat flush against the rail's edge with no air at
+    /// all (user: "the octopus still touches the slab edge"). Adding the slab's
+    /// own padding gives the bar the same seat every chip inside the rail gets,
+    /// which is what it is: the rail's first item, not something laid on top of
+    /// its border.
+    static let clusterInset: CGFloat = slabInset + slabPad
 
-    /// What the strip must yield at its leading edge for the bar to stand in.
+    /// Where the bar's trailing edge sits, measured from the window — what the
+    /// strip's melt is aligned against so chips dissolve UNDER the bar rather
+    /// than beside it.
     ///
     /// **The first cut counted the width and the seam and NOTHING ELSE, and it
-    /// shipped an overlap — measured on the simulator at 9pt of the "All" chip
-    /// sitting under the bar's glass.** The reasoning was that the cluster's
-    /// `s4` and the strip's own `s4` cancel; they do not, because the strip's
-    /// chips are inside a `ScrollView` whose leading padding is `contentLead`
-    /// (the melt's ramp, 16pt) rather than `s4`. So the two insets never met
-    /// and the run began 9pt to the LEFT of where the bar ends.
-    ///
-    /// Spelled from the window edge outward instead, which is the only frame of
-    /// reference both sides actually share: where the cluster starts, how wide
-    /// the bar is, then the seam.
-    static var agentSeat: CGFloat { clusterInset + agentWidth + seam }
-
-    /// The bar's own drawn HEIGHT at rest — the same 44pt square `AgentBar`
-    /// frames itself to when it is not expanded.
-    static let agentHeight: CGFloat = 44
+    /// shipped an overlap** — measured on the simulator at 9pt of the "All"
+    /// chip sitting under the bar's glass. The reasoning was that the cluster's
+    /// inset and the strip's own cancel; they do not, because the chips are
+    /// inside a `ScrollView` whose leading padding is the melt's ramp rather
+    /// than a margin. Spelled from the window edge outward instead, which is
+    /// the only frame of reference both sides share.
+    static func agentSeat(minimized: Bool) -> CGFloat {
+        clusterInset + agentSize(minimized: minimized) + seam
+    }
 
     /// How far the bar sits off the bottom edge so its centre lands on the
     /// chips' centre.
@@ -100,10 +118,12 @@ enum DSDock {
     }
 
     static func agentBottomInset(minimized: Bool) -> CGFloat {
-        let chip: CGFloat = minimized ? 48 : 56
-        // Centre on centre, not edge on edge: the chip is 56 (48 folded) and
-        // the bar is 44, so bottom-aligning them leaves the bar half the
-        // difference too low, and that difference CHANGES with the fold.
-        return chipBottomInset(minimized: minimized) + (chip - agentHeight) / 2
+        // Centre on centre, not edge on edge: the bar's mark and the chip's
+        // mark are the same size now, but the chip's FRAME is larger (it
+        // carries the ring's room), so bottom-aligning still leaves the bar
+        // half the difference too low — and that difference changes with the
+        // fold.
+        return chipBottomInset(minimized: minimized)
+            + (chipFrame(minimized: minimized) - agentSize(minimized: minimized)) / 2
     }
 }

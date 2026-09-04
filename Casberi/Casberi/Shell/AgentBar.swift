@@ -84,6 +84,10 @@ struct AgentBar: View {
     /// merely vague — "Menu" or "More" would name a container, and this names
     /// the complement of the row it sits in.
     var expanded: Bool = false
+    /// The bar's drawn size — `DSDock.agentSize`, so it matches the chip marks
+    /// it sits beside in the rail and folds with them (§591d).
+    var size: CGFloat = DS.Hit.min
+
     var morphNS: Namespace.ID?
     /// THE MAGNIFIER IS GONE (2026-08-15, prd §386o, user: "search and the
     /// agent button are the same really, if you click it you have a field you
@@ -178,7 +182,7 @@ struct AgentBar: View {
                 .padding(.trailing, expanded ? DS.Space.s4 : 0)
                 .padding(.leading, expanded ? DS.Space.s1 : 0)
                 .padding(.vertical, expanded ? DS.Space.s3 : 0)
-                .frame(width: expanded ? nil : 44, height: expanded ? nil : 44)
+                .frame(width: expanded ? nil : size, height: expanded ? nil : size)
                 .contentShape(Capsule())
                 .dsHover()
             }

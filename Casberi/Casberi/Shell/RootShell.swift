@@ -2123,6 +2123,7 @@ struct RootShell: View {
                              // early if that first-time reader scrolls before
                              // ever opening the tray.
                              expanded: !sourcesEverOpened && !chrome.minimized,
+                             size: DSDock.agentSize(minimized: chrome.minimized),
                              morphNS: agentMorph,
                              onSources: { toggleDoors() },
                              // NIL since 2026-08-15, the crown-pour ruling's
@@ -2204,7 +2205,12 @@ struct RootShell: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, padShell.railInset)
                 .padding(.trailing, padShell.paneInset)
-                .padding(.horizontal, DS.Space.s4)
+                // The bar's leading is the RAIL's seat, not the window's
+                // margin (§591d) — see `DSDock.clusterInset`, which both this
+                // and `agentSeat` read so the bar cannot drift onto the glass
+                // bar's own edge again.
+                .padding(.leading, DSDock.clusterInset)
+                .padding(.trailing, DS.Space.s4)
                 // Aligned to the chip row's CENTRE, not to the bottom edge
                 // (§591 amendment) — see `DSDock.agentBottomInset` for why a
                 // shared bottom padding leaves the bar sitting 6pt low, and why

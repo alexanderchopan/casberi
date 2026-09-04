@@ -48233,3 +48233,27 @@ to the clipped view, and the inset comes last so it moves the viewport too.
 That last part is why `SourceChips` converts `DSDock.agentSeat` from window
 space into viewport space by subtracting `slabInset`: without it every chip
 rests 15pt right of where it should and the melt begins 15pt late.
+
+**Then the bar sat ON the rail's edge, and then it was the wrong size.** Two
+more measured corrections, both of the same species — a number that was right
+for a floating pill and wrong for the first item in a row.
+
+- **Flush against the edge** (user: *"the octopus still touches the slab
+  edge"*): the bar and the glass behind it were both inset by `DS.Space.s4`, so
+  they landed on the same line — measured slab 18.0pt against pill 18.3pt.
+  `DSDock.clusterInset` is `slabInset + slabPad` now, which gives the bar the
+  same seat the rail gives every chip inside it.
+- **A 44 among 46s** (user: *"why not just make it the same size as the All chip
+  next to it"*): 44 is `DS.Hit.min` and was the right number while the bar was a
+  pill in a corner answering to nothing. Beside chip marks it reads as a
+  slightly shrunken one, which looks like a bug rather than a distinction — and
+  it had to FOLD, since the chips shrink 46→40 on scroll and a fixed bar would
+  grow relatively larger exactly when the row tightened. `DSDock.agentSize`
+  mirrors `SourceChips.iconSize`, which is private to that view and cannot be
+  read from the design layer, so the dock self-test pins the two in both states
+  (mutation-proven each way).
+
+The centring survives that change rather than being retired by it: the marks are
+the same size now, but a chip's FRAME is larger than its mark because it carries
+the active ring's room, so bottom-aligning would still drop the bar half that
+difference — and the difference still changes with the fold.
