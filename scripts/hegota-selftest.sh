@@ -1305,10 +1305,48 @@ deny send.bare 'HegotaRPC.call(method: "eth_sendRawTransaction"' \
 grep -qE 'case chainUnreachable[[:space:]]*$' "$work/send.bare" \
   || fail "HegotaSend can no longer tell an unreached node from a refusing one (§515a)"
 
+# NO DEVNET SEAT MAY CALL THIS APP A WALLET, OR IMPLY IT BY COMPARISON (user,
+# 2026-09-04). The Frames tagline read "Send a transaction no wallet can make"
+# and its lead bullet "no other wallet can encode one": both position the app AS
+# a wallet by saying it does what wallets cannot. This app has already been
+# rejected twice on crypto grounds (3.1.1 on BYOK, 3.1.5 on the devnet send), so
+# this is a ship risk rather than a wording preference, and a written reminder is
+# exactly the thing this repo keeps re-breaking.
+#
+# Scoped to the QUOTED STRINGS of each devnet Offer — `group: "Wallet"` is a
+# catalog CATEGORY and must stay, so a bare grep for the word over this file
+# fires on every seat in the group and gets turned off within a week. The
+# comments are stripped first: this rule is DOCUMENTED by naming the phrasing it
+# bans, so a guard reading raw source flags the paragraph explaining it (the
+# Obsidian/Cursor lesson).
+python3 - "$work/BridgeCatalog.swift.bare" <<'PYWALLET' > "$work/devnet-wallet-copy.txt" || true
+import re, sys
+src = open(sys.argv[1]).read()
+bad = []
+for seat in ('Ethrex Hegot', 'Frames Devnet', 'Privacy Devnet', 'vibenet'):
+    start = src.find('Offer(name: "%s' % seat)
+    if start < 0:
+        continue
+    nxt = src.find('Offer(name:', start + 10)
+    block = src[start:nxt if nxt > 0 else len(src)]
+    # Every quoted string in the block EXCEPT the group/name arguments, which
+    # are structural rather than prose.
+    for m in re.finditer(r'"((?:[^"\\]|\\.)*)"', block):
+        text = m.group(1)
+        if text in (seat, 'Wallet') or text.startswith(seat):
+            continue
+        if re.search(r'\bwallets?\b', text, re.I):
+            bad.append('%s: %s' % (seat, text[:90]))
+print('\n'.join(bad) if bad else 'CLEAN')
+PYWALLET
+DEVNET_WALLET_COPY="$(cat "$work/devnet-wallet-copy.txt" 2>/dev/null || echo CLEAN)"
+[[ "$DEVNET_WALLET_COPY" == "CLEAN" ]] \
+  || fail "a devnet seat's user-visible copy says 'wallet' — it positions this app as one, which is the 3.1.1/3.1.5 risk: $DEVNET_WALLET_COPY"
+
 # This harness must stay in verify.sh's hand list (that guard fails the build
 # until it is named WITH its reason, which is the part that gets skipped).
 grep -q "hegota-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
-echo "  ok   drift guards: Foundation-only, no price, no notification, the naming ruling, the frames caption and its populations, the read-only conduct guard"
-echo "✓ hegota: scopes, words, spent bitmap, coins, reconciliation, fees, room head, frames, census, clock, genesis, 45 mutations, 19 drift guards"
+echo "  ok   drift guards: Foundation-only, no price, no notification, the naming ruling, the frames caption and its populations, the read-only conduct guard, no wallet claim in devnet copy"
+echo "✓ hegota: scopes, words, spent bitmap, coins, reconciliation, fees, room head, frames, census, clock, genesis, 45 mutations, 20 drift guards"

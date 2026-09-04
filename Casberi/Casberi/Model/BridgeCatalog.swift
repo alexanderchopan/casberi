@@ -643,9 +643,10 @@ enum BridgeCatalog {
         // own ruling that a devnet with worthless money does not need
         // hardware-backed non-export. `hegota-selftest.sh` ties this bullet to
         // the code both ways.
-        Offer(name: "Ethrex Hegotá", tagline: "Watch an address on the frame-transaction devnet", group: "Wallet", connectable: true,
-              summary: "Hegotá is a public devnet testing frame transactions — a chain that publishes what most chains hide. No real funds. Watch any address, or make a key of your own to sign and send on the devnet directly.",
-              features: ["The coins an address holds, not just a balance",
+        Offer(name: "Ethrex Hegotá", tagline: "Explore UTXOs — coins as objects, not a balance", group: "Wallet", connectable: true,
+              summary: "A public devnet trying out a new way for Ethereum to hold money: as coins you can count, each an object with its own history, rather than one balance that goes up and down. No real funds, and the chain may be reset without notice. Watch any address, or make a key of your own to sign and send here directly.",
+              features: ["The coins an address holds, one by one, not just a balance",
+                         "Where each coin came from, and which are still unspent",
                          "What each transaction did, frame by frame",
                          "Who paid the gas, when it wasn't you",
                          "Sends running in parallel on their own nonces",
@@ -657,16 +658,27 @@ enum BridgeCatalog {
         // Hegotá's: this chain implements no keyed nonces, so no bullet claims
         // parallel sends, and no bullet claims coins — it has none. What it
         // has that nothing else does is the SENDING, which is why that bullet
-        // leads: EIP-8141 is a draft, so no wallet and no released library can
-        // encode a frame transaction at all.
+        // leads: EIP-8141 is a draft, so no released library encodes a frame
+        // transaction at all.
+        //
+        // NO USER-VISIBLE STRING IN ANY DEVNET SEAT MAY CALL THIS APP A WALLET,
+        // OR IMPLY IT BY COMPARISON (user, 2026-09-04). The tagline read "Send
+        // a transaction no wallet can make" and the lead bullet "no other
+        // wallet can encode one" — both position the app AS a wallet by saying
+        // it does what wallets cannot, and this app has already been rejected
+        // twice on crypto grounds (3.1.1 on BYOK, 3.1.5 on the devnet send).
+        // The capability is unchanged and still said: "no released library
+        // encodes one" is the same fact about EIP-8141 being a draft, with the
+        // comparison moved off the app and onto the tooling. `library` and
+        // `tooling` are safe words here; `wallet` is not.
         //
         // The reset bullet is not fine print. The network's own footer says it
         // may be reset without notice, and a seat that let somebody keep
         // something here without saying so would be the §83 failure on the
         // page where they decide whether to connect.
-        Offer(name: "Frames Devnet", tagline: "Send a transaction no wallet can make", group: "Wallet", connectable: true,
+        Offer(name: "Frames Devnet", tagline: "Try Ethereum's new frame transactions", group: "Wallet", connectable: true,
               summary: "The public test network for EIP-8141 frame transactions — where one transaction is a sequence of frames, each with its own target and gas. No real funds, and the chain may be reset without notice. Create an account the faucet funds, or watch any address.",
-              features: ["Send a frame transaction — no other wallet can encode one",
+              features: ["Stitch several frames into one transaction — a draft EIP no released library encodes yet",
                          "What each frame did, and what it spent",
                          "Who paid the gas, when it wasn't you",
                          "An account of your own, funded by the faucet",
