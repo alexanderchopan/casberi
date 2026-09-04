@@ -418,13 +418,23 @@ checkm "the matched view is a shape fill, not the risen surface" \
 checkm "a flat ground still sits under the matched shape" \
        "$ROOT" '\(chrome\.askOnTint \? DS\.tint : DS\.page\)\.ignoresSafeArea\(\)\s*\.animation\([^)]*\)\s*RoundedRectangle' yes
 
-# C5. The brief's document dissolves into the chrome instead of being cut by
-#     it. The `safeAreaInset` above it gives the last card somewhere to travel;
-#     it says nothing about the EDGE, which was a hard clip straight across
-#     whatever card happened to be crossing it — reported as "a hard black box"
-#     laid over the document.
-checkm "the document fades into the bottom chrome" \
-       "$COMPOSER" 'overlay\(alignment: \.bottom\)\s*\{\s*LinearGradient\(colors: \[DS\.page\.opacity\(0\), DS\.page\]' yes
+# C5. THERE IS NO BOTTOM FADE, and this check is INVERTED (prd §586a).
+#
+#     It used to demand one: §445 gave the brief's document a gradient into the
+#     chrome so the edge was a dissolve rather than a hard clip. §581b deleted
+#     it FROM A DEVICE REPORT — the fade painted `DS.page` over the last 40pt
+#     of the paper, and the last 40pt is where the newest sentence sits, so the
+#     line you most want to read was the one being dimmed. A fade earns its
+#     place where content runs under FLOATING chrome; this foot is opaque and
+#     adjacent, so there is nothing to run under.
+#
+#     The guard was not updated with the ruling, so it has been RED on the tree
+#     since 2026-09-03 — asserting a treatment a later ruling deliberately
+#     removed. Inverted rather than deleted, exactly as §583's tear assertions
+#     were: §445 is still in the ledger arguing for the gradient, and a fade is
+#     easy to re-add by someone reading that entry and not this one.
+checkm "the bottom fade stays gone (prd §581b)" \
+       "$COMPOSER" 'LinearGradient\(colors: \[DS\.page\.opacity\(0\), DS\.page\]' no
 
 if [[ "${1:-}" == "--checks-only" ]]; then
   exit $(( fails > 0 ))
@@ -481,8 +491,12 @@ mutate "the morph moves off the shape onto the risen surface"  root \
 mutate "the flat ground under the matched shape is dropped (corners leak on iPad and Mac)"  root \
   's/                    \(chrome\.askOnTint \? DS\.tint : DS\.page\)\.ignoresSafeArea\(\)\n\s*\.animation\(DS\.Motion\.standard, value: chrome\.askOnTint\)\n(?=\s*\/\/ THE MORPH RIDES)//' \
   || mfails=$((mfails + 1))
-mutate "the document is guillotined by the chrome again"  composer \
-  's/                \.overlay\(alignment: \.bottom\) \{\n                    LinearGradient.*?\n                \}\n//s' \
+# INVERTED with C5 (prd §586a): the old mutation DELETED the fade, and there is
+# no longer one to delete — so it was a no-op that "survived" every run, which
+# is how this pair announced that the ruling had moved out from under it. It
+# now ADDS the gradient back and proves the check refuses it.
+mutate "the bottom fade is re-added over the newest sentence"  composer \
+  's/^import SwiftUI$/import SwiftUI\nlet reAdded = LinearGradient(colors: [DS.page.opacity(0), DS.page], startPoint: .top, endPoint: .bottom)/m' \
   || mfails=$((mfails + 1))
 
 if (( mfails > 0 )); then

@@ -47473,3 +47473,35 @@ you look at what the items actually are.
 The tabular change is invisible at rest and only shows while a figure animates,
 which no screenshot captures. The voice timer and a token chart's scrub are the
 two places to watch it.
+
+### 586a. A guard left behind by its own ruling (2026-09-03)
+
+**`room-perf-selftest.sh` had been RED on the tree for hours, and the ship that
+went out today went out over it.** Found by running `verify.sh` AFTER the ship
+(the user's own instruction this pass) rather than before.
+
+The check demanded the brief's document fade into the bottom chrome — §445's
+gradient, so the edge was a dissolve rather than a hard clip. **§581b deleted
+that fade the same day, from a device report**: it painted `DS.page` over the
+last 40pt of the paper, and the last 40pt is where the newest sentence sits, so
+the line you most want to read was the one being dimmed. The ruling moved and
+the guard did not, so it spent the day asserting a treatment the app had
+deliberately removed.
+
+**Its paired MUTATION had gone quiet in the same move, and that is the sharper
+half.** The mutation deleted the fade to prove the check noticed — and with no
+fade left to delete it became a no-op that "survived" every run. A check that
+cannot fail and a mutation that cannot bite are the same defect wearing two
+faces, and this pair had both.
+
+Both are INVERTED rather than deleted, exactly as §583's tear assertions were:
+§445 is still in the ledger arguing for the gradient, and a fade is easy to
+re-add by somebody reading that entry and not §581b's. The check now refuses
+the gradient; the mutation re-adds it and proves the refusal bites.
+
+**The standing lesson is about ORDER, not about this fade.** A guard is written
+in the same commit as the behaviour it protects, and then outlives the ruling
+that replaced it — so *changing a behaviour means searching `scripts/` for what
+asserted the old one*, in the same pass. The alternative is what happened here:
+the harness goes red, the red is ambient, and it takes an unrelated full pass
+to notice.
