@@ -207,6 +207,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
    hiccups). Black ground because the artwork carries its own. */
 .ai-ethrexhegota { background: #000; }
 .ai-framesdevnet { background: #fff; }
+.ai-ethrexprivacy { background: #000; }
 .ai-sentry    { background: #fff; }
 .ai-vercel    { background: #000; }
 .ai-pagerduty { background: #04ac38; }

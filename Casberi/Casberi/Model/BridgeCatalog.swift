@@ -643,9 +643,10 @@ enum BridgeCatalog {
         // own ruling that a devnet with worthless money does not need
         // hardware-backed non-export. `hegota-selftest.sh` ties this bullet to
         // the code both ways.
-        Offer(name: "Ethrex Hegotá", tagline: "Watch an address on the frame-transaction devnet", group: "Wallet", connectable: true,
-              summary: "Hegotá is a public devnet testing frame transactions — a chain that publishes what most chains hide. No real funds. Watch any address, or make a key of your own to sign and send on the devnet directly.",
-              features: ["The coins an address holds, not just a balance",
+        Offer(name: "Ethrex Hegotá", tagline: "Explore UTXOs — coins as objects, not a balance", group: "Wallet", connectable: true,
+              summary: "A public devnet trying out a new way for Ethereum to hold money: as coins you can count, each an object with its own history, rather than one balance that goes up and down. No real funds, and the chain may be reset without notice. Watch any address, or make a key of your own to sign and send here directly.",
+              features: ["The coins an address holds, one by one, not just a balance",
+                         "Where each coin came from, and which are still unspent",
                          "What each transaction did, frame by frame",
                          "Who paid the gas, when it wasn't you",
                          "Sends running in parallel on their own nonces",
@@ -657,21 +658,67 @@ enum BridgeCatalog {
         // Hegotá's: this chain implements no keyed nonces, so no bullet claims
         // parallel sends, and no bullet claims coins — it has none. What it
         // has that nothing else does is the SENDING, which is why that bullet
-        // leads: EIP-8141 is a draft, so no wallet and no released library can
-        // encode a frame transaction at all.
+        // leads: EIP-8141 is a draft, so no released library encodes a frame
+        // transaction at all.
+        //
+        // NO USER-VISIBLE STRING IN ANY DEVNET SEAT MAY CALL THIS APP A WALLET,
+        // OR IMPLY IT BY COMPARISON (user, 2026-09-04). The tagline read "Send
+        // a transaction no wallet can make" and the lead bullet "no other
+        // wallet can encode one" — both position the app AS a wallet by saying
+        // it does what wallets cannot, and this app has already been rejected
+        // twice on crypto grounds (3.1.1 on BYOK, 3.1.5 on the devnet send).
+        // The capability is unchanged and still said: "no released library
+        // encodes one" is the same fact about EIP-8141 being a draft, with the
+        // comparison moved off the app and onto the tooling. `library` and
+        // `tooling` are safe words here; `wallet` is not.
         //
         // The reset bullet is not fine print. The network's own footer says it
         // may be reset without notice, and a seat that let somebody keep
         // something here without saying so would be the §83 failure on the
         // page where they decide whether to connect.
-        Offer(name: "Frames Devnet", tagline: "Send a transaction no wallet can make", group: "Wallet", connectable: true,
+        Offer(name: "Frames Devnet", tagline: "Try Ethereum's new frame transactions", group: "Wallet", connectable: true,
               summary: "The public test network for EIP-8141 frame transactions — where one transaction is a sequence of frames, each with its own target and gas. No real funds, and the chain may be reset without notice. Create an account the faucet funds, or watch any address.",
-              features: ["Send a frame transaction — no other wallet can encode one",
+              features: ["Stitch several frames into one transaction — a draft EIP no released library encodes yet",
                          "What each frame did, and what it spent",
                          "Who paid the gas, when it wasn't you",
                          "An account of your own, funded by the faucet",
                          "A key stored on this device, because the money here is worthless"],
               needsSetup: true, added: day(2026, 9, 1)),
+        // The THIRD ethrex devnet (prd §593, 2026-09-04), and a chain of its
+        // own — 8141, distinct genesis — not a re-host of Hegotá. A separate
+        // seat on the same reasoning that split Frames from Hegotá: no chain
+        // here is a superset of the others. Hegotá alone has the UTXO vault,
+        // this one alone has EIP-8272's recent-roots predeploy, and Frames has
+        // neither. Naming follows the family grammar, operator then chain:
+        // Base Vibenet, Ethrex Hegotá, Ethrex Privacy.
+        //
+        // THE COPY MAY NOT SAY THIS CHAIN MAKES YOU PRIVATE, and the reason is
+        // measured rather than cautious: all 14 type-0x6 transactions on it
+        // carry `sender` in the clear, and EIP-8182's protocol-level shielded
+        // pool is NOT deployed — the pool that exists is an ordinary contract
+        // somebody deployed. What is shielded is the LINK between a commitment
+        // and its spend. Somebody who reads "privacy features" and infers
+        // shielded transfers has been misled on the page where they decide
+        // whether to connect, which is §83 in the domain where believing it is
+        // most expensive. Hence "the proposals" and "what it does and doesn't
+        // hide" rather than any promise.
+        //
+        // WATCH-ONLY, and the bullets say so rather than leaving it to be
+        // discovered. §593a could not reproduce this chain's type-0x6 envelope
+        // byte-exactly — the shipped Hegotá encoder matches its own chain and
+        // nothing here across every candidate encoding — so a send would sign
+        // a guessed layout, which yields a signature that is well-formed,
+        // recovers to a real address, and authorises something other than what
+        // the screen said. The last bullet is the honest version of that and
+        // must be removed in the same commit that lands sending, never before.
+        Offer(name: "Ethrex Privacy", tagline: "Try Ethereum's new privacy proposals", group: "Wallet", connectable: true,
+              summary: "A public devnet testing the pieces a private Ethereum transaction would be built from — one-time spend keys, and proofs made against a recent snapshot of the chain. No real funds, and the chain may be reset without notice. Watch any address to see what it does, and what it doesn't yet hide.",
+              features: ["The one-time keys a spend used, so it can't be repeated",
+                         "Which snapshot a proof named, and how long it stays valid",
+                         "The steps each transaction ran, frame by frame",
+                         "Who paid the gas, when it wasn't you",
+                         "Watching only — nothing is signed and nothing is sent"],
+              needsSetup: true, added: day(2026, 9, 4)),
         Offer(name: "Linear",      tagline: "Your issues stay in reach",             group: "Work",      connectable: true,
               summary: "The issues assigned to you join your things and surface when they matter. Connects with a personal API key from Linear settings — it stays in \(DS.device)'s Keychain.",
               needsSetup: true),

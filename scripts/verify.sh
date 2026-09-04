@@ -1550,6 +1550,19 @@ harness "Wallet section scopes" "wallet sections" "scripts/wallet-section-selfte
 # real one. None of that fails a build or a sweep.
 harness "Hegota scopes and coins" "hegota" "scripts/hegota-selftest.sh" "the hegota self-test failed — run scripts/hegota-selftest.sh"
 
+# Pure-logic self-test for the FOURTH devnet seat, ethrex Privacy (prd §593).
+# Its chain cannot be reached from a harness or from CI, and no simulator has a
+# seat to open, so this is the only proof these rules are right. Every failure
+# renders as a perfectly ordinary room: a scope that never appears, a remembered
+# scope resolving to one nobody picked, a root reported live when it aged out
+# hours ago, or a source list that reshuffles between opens. The two sharpest
+# are invisible even to daily use — the 8192-slot window boundary (off by one
+# expires a root a slot early, visible only to somebody watching the boundary,
+# who is the only person the card is for) and the slot-vs-block confusion, which
+# is silently correct on a chain that has never missed a slot and wrong by
+# thousands on one that has (frames runs 5,223 slots ahead of its own height).
+harness "Privacy scopes and the 8272 window" "privacy" "scripts/privacy-selftest.sh" "the privacy self-test failed — run scripts/privacy-selftest.sh"
+
 # Pure-logic self-test for the Stripe and PostHog room heads (prd §298). Neither
 # bridge has ever run against a live account from this host, and every failure
 # here is a silent wrong answer: a dispute due tomorrow placed at the far end of

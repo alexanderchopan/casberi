@@ -893,6 +893,63 @@ PY
 fi
 
 hr
+# ── ethrex `privacy` devnet — a DISCOVERY row, not a regression row ──────────
+# ethrex names a devnet by the capability it tests and stands up a full quartet
+# per name (`{faucet,rpc1..3,dora}.<devnet>.ethrex.xyz`). We hold two: `hegota`
+# (§500) and `frames` (§548). A third appeared — `privacy` — and this app has
+# no seat for it, which is exactly why this row is shaped backwards from every
+# other one in this file.
+#
+# **THE POLARITY IS INVERTED ON PURPOSE.** Everywhere else, unreachable is the
+# failure. Nothing here depends on this host, so unreachable is the NORMAL
+# answer and costs nothing; it is REACHABLE that is the news, because it means
+# there is a chain to measure and a decision to make. A row that shouted every
+# night about a devnet we do not read would be turned off within a week.
+#
+# It answers one question and leaves the rest to
+# `scripts/support/privacy-devnet-probe.py`, which is the instrument for the
+# first real measurement: is this Hegotá re-hosted (our seat's hosts moved) or
+# a new chain (a third seat)? Chain id settles it, and nothing else here can.
+print -P "%F{cyan}ethrex privacy devnet%f (discovery — no seat reads this yet)"
+
+priv_up=0
+priv_id=""
+for h in rpc1 rpc2 rpc3; do
+  id=$(raw "https://$h.privacy.ethrex.xyz" '{"id":1,"jsonrpc":"2.0","method":"eth_chainId","params":[]}' \
+        | python3 -c 'import sys,json;print(json.load(sys.stdin).get("result",""))' 2>/dev/null)
+  if [[ -n "$id" ]]; then (( priv_up++ )); priv_id="$id"; fi
+done
+
+if (( priv_up == 0 )); then
+  pass "privacy devnet — not reachable from here (expected; no seat depends on it)"
+else
+  if [[ "$priv_id" == "0x301824" ]]; then
+    # The bad case, and the only one that touches shipped code: Hegotá moved
+    # house. The seat's three RPC hosts, its explorer and its faucet are all
+    # spelled `hegota.*` in `HegotaIdentity`/`HegotaRPC` and in NetworkReach.
+    warn "privacy devnet — $priv_up host(s) up serving chain 3151908, WHICH IS HEGOTÁ'S: the seat's hosts have moved, and NetworkReach names the old ones"
+  else
+    warn "privacy devnet — $priv_up host(s) up serving chain $((priv_id)) ($priv_id); a NEW chain, so Hegotá's seat is untouched and there is a third devnet to measure — run scripts/support/privacy-devnet-probe.py"
+  fi
+
+  # Do the two predeploys the Hegotá seat reads exist here? This is the cheapest
+  # signal for how much of that seat would port: no vault means no Coins scope,
+  # no 0x8250 means no Nonces scope, whatever else the chain turns out to be.
+  for pair in "0x0000000000000000000000000000000000008312:UTXO vault" \
+              "0x0000000000000000000000000000000000008250:keyed nonces"; do
+    addr="${pair%%:*}"; what="${pair#*:}"
+    code=$(raw "https://rpc1.privacy.ethrex.xyz" \
+      "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getCode\",\"params\":[\"$addr\",\"latest\"]}" \
+      | python3 -c 'import sys,json;print(json.load(sys.stdin).get("result",""))' 2>/dev/null)
+    if [[ -n "$code" && "$code" != "0x" ]]; then
+      pass "privacy devnet — $what predeploy carries code (that reading would port)"
+    else
+      warn "privacy devnet — $what predeploy has NO code here; the matching Hegotá scope cannot draw on this chain"
+    fi
+  done
+fi
+
+hr
 print -P "%F{cyan}Base vibenet — the devnet the room reads (prd §507)%f"
 
 # WHY THIS IS HERE. vibenet's own premise is that it redeploys, and every

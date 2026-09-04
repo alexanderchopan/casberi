@@ -174,13 +174,20 @@ final class AddressBook {
         /// labels it `.wallet` — a fake status on a screen about identity.
         static let frames = "frames"
 
+        /// The ethrex Privacy devnet (prd §593, chain 8141). In the set below
+        /// for the same reason as the other three, and one more: this chain
+        /// holds almost nothing, so a mainnet read would not merely mislabel
+        /// an address — it would label a devnet address that IS a contract
+        /// (the pool at 0x753d91ee…) as a plain wallet.
+        static let privacyDevnet = "privacydevnet"
+
         /// Chains `AddressKind.detect` must not ask about — its five reads
         /// are mainnet RPCs, and asking them about an account on a chain they
         /// do not cover answers "no code anywhere" and confidently mislabels
         /// it `.wallet`. A smart account on BNB is the case that made this
         /// wider than devnets alone; the name is kept because every caller
         /// spells it, and the question it asks is unchanged.
-        private static let devnets: Set<String> = [vibenet, hegota, altana, frames]
+        private static let devnets: Set<String> = [vibenet, hegota, altana, frames, privacyDevnet]
 
         static func isDevnet(_ tag: String) -> Bool { devnets.contains(tag) }
     }

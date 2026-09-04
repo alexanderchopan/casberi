@@ -203,6 +203,15 @@ final class ShellChrome {
     var framesSections: [FramesSection] = []
     var framesScope: String?
 
+    /// The Ethrex Privacy room's scope strip and face-rail pick (prd §593).
+    /// Held here rather than on the screen for §357's reason: the room is
+    /// rendered under an `.id(filter.source)`, so anything mounted on it dies
+    /// with every room change — and a control that outlives the interaction it
+    /// drives belongs on the shell.
+    var privacyDevnetSections: [PrivacyDevnetSection] = []
+    var privacyDevnetScope: String?
+    var privacyDevnetSection: PrivacyDevnetSection?
+
     var vibenetSection: VibenetSection?
 
     /// Which scopes the vibenet room currently HAS something for. The shell

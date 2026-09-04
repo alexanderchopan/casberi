@@ -297,6 +297,28 @@ enum NetworkReach {
                          // that POSTs to it, so the privacy screen omitted a
                          // host the app really reaches.
                          "faucet.hegota.ethrex.xyz"]),
+        // Ethrex Privacy (prd §593, 2026-09-04) — the THIRD ethrex devnet
+        // and a chain of its own (8141, distinct genesis), not a re-host of
+        // Hegotá. The purpose below is deliberately narrower than its
+        // neighbours' in one respect and must stay that way: this chain
+        // carries `sender` in the clear on every transaction and EIP-8182's
+        // protocol-level shielded pool is NOT deployed, so nothing here may
+        // describe a read as private. What is shielded is the link between a
+        // commitment and its spend, which is a fact about the chain's own
+        // pool contract rather than about what this app sends.
+        //
+        // WATCH-ONLY at present: no key is made and nothing is signed, because
+        // this chain's type-0x6 envelope could not be reproduced byte-exactly
+        // (§593a) and signing a guessed layout authorises something other than
+        // what the screen said. When that changes, this purpose gains the
+        // signature and faucet sentences its two siblings already carry — and
+        // faucet.privacy.ethrex.xyz joins the host list, which it must NOT do
+        // before the app really posts to it (§531's lesson, one seat over).
+        Endpoint(service: "Ethrex Privacy",
+                 reach: .whenConnected(bridge: "Ethrex Privacy"),
+                 purpose: "Reads a watched address's balance, its transfers, the steps each transaction ran, the one-time spend keys it used and which recent snapshot a proof named, from a public devnet testing Ethereum's privacy proposals. A read carries only the address you watch. Nothing is signed and nothing is sent.",
+                 hosts: ["rpc1.privacy.ethrex.xyz", "rpc2.privacy.ethrex.xyz",
+                         "rpc3.privacy.ethrex.xyz"]),
         // Frames devnet (prd §548, 2026-09-01). A SEPARATE seat from Hegotá
         // and therefore a separate entry: different chain (81410), different
         // hosts, different faucet, and a signing key of its own. The faucet
