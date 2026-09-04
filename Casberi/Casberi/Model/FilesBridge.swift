@@ -529,21 +529,27 @@ enum FilesIngest {
     /// timeout, so a bare flag can latch and never clear.
     @MainActor private static var healingSince: Date?
 
+    /// How many evicted iCloud files one heal pass asks iCloud to download.
+    /// A bound, not a target: the request is free but the DOWNLOAD is not,
+    /// and a folder of thousands asked for at once is a folder nobody can
+    /// use their network for. Later passes ask for the rest.
+    private static let downloadRequestsPerPass = 20
+
     /// Thumbnails, OCRs, and retitles the image files a sync already landed —
     /// the same land-fast/heal-later split `ScreenshotIngest.heal` uses,
     /// since a folder can be large (or live on iCloud Drive, not yet fully
     /// downloaded) and must never block the walk in `refresh`. Capped per
     /// pass so a big folder arrives in waves; returns what it actually did.
     @MainActor
-    static func heal(context: ModelContext) async -> (thumbed: Int, ocred: Int) {
+    static func heal(context: ModelContext) async -> (thumbed: Int, ocred: Int, pending: Int) {
         if let since = healingSince, Date.now.timeIntervalSince(since) < Self.stuckAfter {
-            return (0, 0)
+            return (0, 0, 0)
         }
         let mine = Date.now
         healingSince = mine
         defer { if healingSince == mine { healingSince = nil } }
 
-        guard let folder = FilesStore.shared.folderURL() else { return (0, 0) }
+        guard let folder = FilesStore.shared.folderURL() else { return (0, 0, 0) }
 
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Files" })
         // Kind/extension filters run in memory — #Predicate can't compare a
@@ -565,17 +571,59 @@ enum FilesIngest {
                 guard imageExtensions.contains(ext) else { return false }
                 return thing.previewImageData == nil || thing.ocrAt == nil
             }
-        guard !things.isEmpty else { return (0, 0) }
+        guard !things.isEmpty else { return (0, 0, 0) }
 
         // A FRESH walk, matched to `things` by ref — see `WalkedFile`'s doc
         // for why this replaced reconstructing each path from a string.
-        let byRef: [String: URL] = await Task.detached(priority: .utility) { () -> [String: URL] in
-            let scoped = folder.startAccessingSecurityScopedResource()
-            defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
-            var map: [String: URL] = [:]
-            for f in walk(folder) ?? [] { map[f.ref] = f.url }
-            return map
-        }.value
+        //
+        // AND THE ONE PLACE AN EVICTED iCLOUD FILE IS ASKED FOR (2026-09-03).
+        //
+        // `refresh` deliberately lands a not-yet-downloaded file on its SIZE
+        // and defers the read to this pass — "`heal` reads the text once the
+        // bytes are actually here". Nothing ever made the bytes get here. On
+        // iOS an evicted iCloud Drive item is a placeholder that a plain read
+        // does NOT materialize: `CGImageSourceCreateWithURL` fails, returns
+        // nil, `ocrRead` reports `attempted == false` (correctly, so `ocrAt`
+        // stays nil), and the same file is re-attempted and re-fails on every
+        // foreground pass for the life of the install. From outside that is a
+        // folder of images rendering as a wall of filenames — the room's own
+        // §283 failure, arriving by a route no screen can see. Reported
+        // 2026-09-03 over a folder of CleanShot PNGs: no thumbnail, no OCR,
+        // and every title still the raw filename, which is the tell (the
+        // retitle fires on exactly those names when OCR reads anything).
+        //
+        // `startDownloadingUbiquitousItem` is the documented request. It is
+        // made HERE because this is the one place inside the security scope
+        // that already knows which refs need healing, and it is BOUNDED
+        // because a folder of thousands would otherwise ask iCloud for the
+        // whole thing on one foreground — the bytes land in the background
+        // and the NEXT pass reads them, which is the same land-fast/read-later
+        // split this bridge is built on. Harmless when the folder is local:
+        // every file is `isDownloaded` and nothing is asked for.
+        let needing = Set(things.compactMap(\.sourceRef))
+        let walked: (byRef: [String: URL], pending: Set<String>) =
+            await Task.detached(priority: .utility) { () -> ([String: URL], Set<String>) in
+                let scoped = folder.startAccessingSecurityScopedResource()
+                defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+                var map: [String: URL] = [:]
+                var pending: Set<String> = []
+                var asked = 0
+                for f in walk(folder) ?? [] {
+                    map[f.ref] = f.url
+                    guard !f.isDownloaded, needing.contains(f.ref) else { continue }
+                    pending.insert(f.ref)
+                    // Re-asking for an item already downloading is cheap and
+                    // returns immediately, so no extra state is kept to avoid
+                    // it — the bound is the only thing standing between a
+                    // large folder and one enormous request.
+                    if asked < downloadRequestsPerPass {
+                        try? FileManager.default.startDownloadingUbiquitousItem(at: f.url)
+                        asked += 1
+                    }
+                }
+                return (map, pending)
+            }.value
+        let byRef = walked.byRef
 
         var thumbed = 0, ocred = 0, postered = 0
         var reindex: [Thing] = []
@@ -584,6 +632,11 @@ enum FilesIngest {
             // landed; `refresh` prunes it on its own next pass. Nothing to
             // read here.
             guard let ref = thing.sourceRef, let fileURL = byRef[ref] else { continue }
+            // Present in the folder, bytes not on this device yet — the
+            // download was requested above. Reading now would fail and cost a
+            // slot in the budgets below, which is what kept a downloaded file
+            // further along in the same pass from being healed.
+            if walked.pending.contains(ref) { continue }
             let originalName = fileURL.lastPathComponent
 
             let isVideo = videoExtensions
@@ -651,7 +704,7 @@ enum FilesIngest {
             context.saveHonestly()
             SpotlightIndex.index(reindex)
         }
-        return (thumbed, ocred)
+        return (thumbed, ocred, walked.pending.count)
     }
 
     /// One small JPEG for the corpus — 480pt longest side, the same target

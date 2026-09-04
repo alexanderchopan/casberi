@@ -5630,7 +5630,14 @@ enum ProbeHooks {
         Hook(key: "filesHealProbe") { _, context in
             Task { @MainActor in
                 let r = await FilesIngest.heal(context: context)
-                NSLog("[Casberi] filesHeal: thumbed=%d ocred=%d", r.thumbed, r.ocred)
+                // `pending` is the fact no screen shows and the one that
+                // separates the two ways this pass does nothing: an image
+                // whose bytes are not on this device yet (a download was
+                // requested; try again after it lands) from one that was
+                // read and had nothing to give. A row reading `thumb=no`
+                // beside a non-zero `pending` is iCloud, not a broken heal.
+                NSLog("[Casberi] filesHeal: thumbed=%d ocred=%d pending=%d",
+                      r.thumbed, r.ocred, r.pending)
                 let files = (try? context.fetch(FetchDescriptor<Thing>(
                     predicate: #Predicate { $0.source == "Files" },
                     sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
