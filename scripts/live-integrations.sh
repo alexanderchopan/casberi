@@ -946,6 +946,60 @@ else
     else
       warn "privacy devnet — $what predeploy has NO code here; the matching Hegotá scope cannot draw on this chain"
     fi
+
+# ── THE DEMO FIXTURE'S VALUES, READ BACK OFF THE CHAIN ───────────────────────
+#
+# **THIS ROW EXISTS BECAUSE A FABRICATED FIXTURE SHIPPED (2026-09-04).** Two of
+# the four `nullifiers` in `PrivacyDevnetLiveState.seedDemo` were invented — they
+# appear on neither of that address's two transactions — and the comment above
+# them claimed the walk had been run against the real chain, which told every
+# later reader not to check. Caught only by somebody reading the values back.
+#
+# **The point is the CLASS, not the instance.** A 32-byte hex string that is
+# wrong is indistinguishable by eye from one that is right, and no `swiftc`
+# harness can tell either: `privacy-selftest.sh` pins the named nonce channels
+# and the width rule, not the fixture's contents, so it passes whatever is in
+# there. The correction made on the ship review is unguarded in exactly the way
+# the bug was — which is the argument for a check that asks the chain.
+#
+# WARN-ONLY, like every row here: a devnet that moves on is not a build failure.
+print -P "%F{cyan}ethrex privacy demo fixture%f (are the seeded values still the chain's own?)"
+priv_addr="0x062901d23f7e2d3bf9949c8a8cfd2c7a5ae3f980"
+priv_bal=$(raw "https://rpc1.privacy.ethrex.xyz" \
+  "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"$priv_addr\",\"latest\"]}" \
+  | sed -n 's/.*"result":"\([^"]*\)".*/\1/p')
+if [ -z "$priv_bal" ]; then
+  pass "privacy fixture — chain not reachable from here, nothing to compare"
+elif [ "$priv_bal" = "0x638168433fac308" ]; then
+  pass "privacy fixture — the demo balance is still this address's own"
+else
+  warn "privacy fixture — demo claims 0x638168433fac308, chain says $priv_bal; seedDemo is describing a state that has moved"
+fi
+# Each seeded nullifier must appear on one of the two transactions the fixture
+# itself names. This is the exact check that would have caught the fabrication.
+priv_keys=$(for h in 0xfa32623718a4ac87bca85daa2f62af32522f4e2f763adec8ac2fbde5aeb5cf0f \
+                     0xeda9b1c8231c7ba375c831d63655acc813cf8c7d3ac2b095b23e3011d7b2999a; do
+  raw "https://rpc1.privacy.ethrex.xyz" \
+    "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionByHash\",\"params\":[\"$h\"]}"
+done)
+priv_missing=0
+for k in 0cca26d343c75c5d092b41abc4c7372c0105537e6f5209967fee5bb6b6ca390c \
+         277a116036d2c29207c09c18015780c8e161402d2017d07012147a1d4b7240fe \
+         1871055c1947afa152d04f00757f94f890efa87190de3d8e481d7c22b6b381e1 \
+         1a3f0e61700a2fc8652d33787331f955bff2b1a500426b4dfd83481f5c645ffe; do
+  # The wire strips a leading zero (quantity encoding), so match on the
+  # significant bytes rather than the padded 32 — the same width fact
+  # `PrivacyDevnetRoots.isNullifier` turns on.
+  sig="${k#0}"
+  print -r -- "$priv_keys" | grep -qF -- "$sig" || priv_missing=$((priv_missing+1))
+done
+if [ -z "$priv_keys" ]; then
+  pass "privacy fixture — transactions not readable from here, keys not compared"
+elif [ "$priv_missing" -eq 0 ]; then
+  pass "privacy fixture — all 4 seeded nullifiers are on the transactions the fixture names"
+else
+  warn "privacy fixture — $priv_missing of 4 seeded nullifiers appear on NEITHER named transaction; a value in seedDemo was not read off this chain"
+fi
   done
 fi
 
