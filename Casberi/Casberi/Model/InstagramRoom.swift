@@ -186,6 +186,24 @@ struct InstagramRoom: Equatable {
     /// not, and are interpolated as strings for `XRoom.headline`'s reason — a
     /// localized `Int` picks up the locale's grouping separator, so 2019 renders
     /// as "2,019", a year printed as an amount in the largest type on the card.
+    /// THE LEDE (prd §585) — how much you kept, as a figure.
+    ///
+    /// From `kept` and `accountCount`, the headline's own two values. §247's
+    /// no-summing ruling travels with it: saves and likes are different acts
+    /// and are never added, so the caption names WHICH act this figure counts
+    /// rather than leaving it ambiguous.
+    static func lede(_ room: InstagramRoom) -> RoomLede? {
+        guard room.kept > 0 else { return nil }
+        let accounts = room.accountCount.formatted()
+        let caption: String
+        switch room.act {
+        case .saved: caption = String(localized: "posts you saved, from \(accounts) accounts")
+        case .liked: caption = String(localized: "posts you liked, from \(accounts) accounts")
+        }
+        return RoomLede(figure: room.kept.formatted(), caption: caption,
+                        numeric: Double(room.kept))
+    }
+
     static func headline(_ room: InstagramRoom) -> String {
         let accounts = room.accountCount.formatted()
         let kept = room.kept.formatted()

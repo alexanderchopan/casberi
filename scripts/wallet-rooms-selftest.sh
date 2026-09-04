@@ -46,6 +46,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 PEER="Casberi/Casberi/Model/PeerRoom.swift"
+LEDE="Casberi/Casberi/Model/RoomLede.swift"   # prd §585 — the shared lede type these rooms now return
 POOLS="Casberi/Casberi/Model/PrivacyPoolsRoom.swift"
 GNOSIS="Casberi/Casberi/Model/GnosisPayRoom.swift"
 RAILGUN="Casberi/Casberi/Model/RailgunRoom.swift"
@@ -1630,7 +1631,7 @@ echo "wallet-rooms-selftest: compiling the five heads and the scope enum WHOLE a
 # behaviour (a trapping one prints NOTHING under `-O`), so this file was
 # proven equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
 # Re-probe before trusting it again after adding mutations.
-swiftc -Onone -o "$TMP/run" "$PEER" "$POOLS" "$GNOSIS" "$RAILGUN" "$SAFE" "$SECTION" "$TMP/main.swift" \
+swiftc -Onone -o "$TMP/run" "$PEER" "$POOLS" "$GNOSIS" "$RAILGUN" "$SAFE" "$SECTION" "$LEDE" "$TMP/main.swift" \
   || { echo "✗ the shipped room heads do not compile Foundation-only — something reached Thing/SwiftUI"; exit 1; }
 "$TMP/run" || exit 1
 
@@ -1676,7 +1677,7 @@ PY
   # behaviour (a trapping one prints NOTHING under `-O`), so this file was
   # proven equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
   # Re-probe before trusting it again after adding mutations.
-  if ! swiftc -Onone -o "$TMP/mut" "$a" "$b" "$c" "$d" "$e" "$g" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$a" "$b" "$c" "$d" "$e" "$g" "$LEDE" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

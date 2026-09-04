@@ -35,10 +35,15 @@ struct AppleWalletRoomCard: View {
             // head renders only inside its own source's room, under a chip strip
             // where that source's chip is the lit one — so the card introduced
             // itself with a word already on screen, one row up.
-            Text(room.headline)
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
+            // THE LEDE (prd §585) — see `JournalRoomCard` for the rule.
+            if let lede = room.lede {
+                RoomLedeView(lede: lede, spoken: room.headline)
+            } else {
+                Text(room.headline)
+                    .dsText(.heading22)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             if let subline = room.subline {
                 Text(subline)

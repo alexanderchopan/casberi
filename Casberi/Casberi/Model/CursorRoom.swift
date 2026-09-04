@@ -346,23 +346,78 @@ struct CursorRoom: Equatable {
     /// Trouble leads, always: what came back broken is the only thing here that
     /// changes what you do next. Failing that it states the volume, which is
     /// the everyday reading and the reason to open the room.
+    /// WHAT THE HEAD IS ABOUT — decided ONCE, read twice (prd §585).
+    ///
+    /// Breakage outranks volume; that inversion is what this card exists to
+    /// avoid. `headline` and `lede` must open on the same branch or the figure
+    /// and the sentence describe different runs, and writing the ladder twice
+    /// is how that happens — caught the hour it was written, when the
+    /// harness's own mutation edited the first copy and the assertion, which
+    /// reads `headline`, still passed.
+    ///
+    /// The branch conditions are deliberately not quoted in this comment: the
+    /// mutations are `sed`, and prose above the code they edit is prose they
+    /// edit instead.
+    enum Lead: Equatable {
+        /// Runs that did not finish, and how many repos they span.
+        case unfinished(count: Int, repos: Int)
+        /// Nothing broke; this is how much ran.
+        case volume(count: Int, repos: Int)
+        case quiet
+    }
+
+    static func lead(of room: CursorRoom) -> Lead {
+        guard room.lead != nil else { return .quiet }
+        if room.totalUnfinished > 0 {
+            return .unfinished(count: room.totalUnfinished, repos: failingRepos(room))
+        }
+        guard room.totalRuns > 0 else { return .quiet }
+        return .volume(count: room.totalRuns, repos: room.repos.count)
+    }
+
+    /// THE LEDE (prd §585) — the runs that did not finish, or the runs there
+    /// were. Nil on a room with no lead: "Nothing to report" is a statement,
+    /// and §584 measured that a statement belongs at `heading22`.
+    static func lede(_ room: CursorRoom) -> RoomLede? {
+        guard let name = room.lead?.name else { return nil }
+        switch lead(of: room) {
+        case .unfinished(let count, let repos):
+            let caption = repos > 1
+                ? String(localized: "runs didn't finish, across \(repos) repos")
+                : String(localized: "runs didn't finish, in \(name)")
+            return RoomLede(figure: count.formatted(), caption: caption,
+                            numeric: Double(count))
+        case .volume(let count, let repos):
+            let caption = repos > 1
+                ? String(localized: "agent runs, across \(repos) repos")
+                : String(localized: "agent runs, in \(name)")
+            return RoomLede(figure: count.formatted(), caption: caption,
+                            numeric: Double(count))
+        case .quiet:
+            return nil
+        }
+    }
+
     static func headline(_ room: CursorRoom) -> String {
         guard let lead = room.lead else { return String(localized: "Nothing to report") }
-        if room.totalUnfinished > 0 {
-            let failing = failingRepos(room)
-            if failing > 1 {
-                return String(localized: "\(room.totalUnfinished) runs didn't finish across \(failing) repos")
+        switch Self.lead(of: room) {
+        case .unfinished(let count, let repos):
+            if repos > 1 {
+                return String(localized: "\(count) runs didn't finish across \(repos) repos")
             }
-            return room.totalUnfinished == 1
+            return count == 1
                 ? String(localized: "1 run didn't finish in \(lead.name)")
-                : String(localized: "\(room.totalUnfinished) runs didn't finish in \(lead.name)")
+                : String(localized: "\(count) runs didn't finish in \(lead.name)")
+        case .volume(let count, let repos):
+            if repos > 1 {
+                return String(localized: "\(count) agent runs across \(repos) repos")
+            }
+            return count == 1
+                ? String(localized: "1 agent run in \(lead.name)")
+                : String(localized: "\(count) agent runs in \(lead.name)")
+        case .quiet:
+            return String(localized: "Nothing to report")
         }
-        if room.repos.count > 1 {
-            return String(localized: "\(room.totalRuns) agent runs across \(room.repos.count) repos")
-        }
-        return room.totalRuns == 1
-            ? String(localized: "1 agent run in \(lead.name)")
-            : String(localized: "\(room.totalRuns) agent runs in \(lead.name)")
     }
 
     /// The quiet line under the card: repositories not drawn, runs that could

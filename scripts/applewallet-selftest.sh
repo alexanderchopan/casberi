@@ -46,6 +46,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 ROOM="Casberi/Casberi/Model/AppleWalletRoom.swift"
+LEDE="Casberi/Casberi/Model/RoomLede.swift"   # prd §585 — the shared lede type these rooms now return
 [[ -f "$ROOM" ]] || { echo "✗ $ROOM not found"; exit 1; }
 
 SRC="Casberi/Casberi/Model/AppleWalletRoomSource.swift"
@@ -725,7 +726,7 @@ print(failures == 0 ? "\nAll assertions passed." : "\n\(failures) FAILED")
 exit(failures == 0 ? 0 : 1)
 SWIFT
 
-build() { swiftc -O -o "$TMP/aw-selftest" "$1" "$TMP/main.swift" 2>"$TMP/build.log"; }
+build() { swiftc -O -o "$TMP/aw-selftest" "$1" "$LEDE" "$TMP/main.swift" 2>"$TMP/build.log"; }
 
 if ! build "$ROOM"; then
   echo "✗ harness failed to compile against the shipped source"
@@ -757,7 +758,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$WORK/AppleWalletRoom.swift"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$WORK/AppleWalletRoom.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -O -o "$TMP/mut" "$WORK/AppleWalletRoom.swift" "$LEDE" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

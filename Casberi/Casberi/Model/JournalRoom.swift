@@ -290,9 +290,43 @@ struct JournalRoom: Equatable {
     /// grouping separator, so `2019` renders as "2,019" — a year printed as a
     /// quantity, in the largest type on the card. `XRoom` shipped exactly that
     /// bug and its harness caught it on the first run.
+    /// A YEAR IS A NAME, NEVER A QUANTITY — one place it becomes text
+    /// (prd §585).
+    ///
+    /// `String(year)` rather than `year.formatted()`, because the formatter
+    /// groups: 2023 renders as "2,023", a year printed as a count in the
+    /// largest type on the card. That is XRoom's own shipped bug, and this
+    /// harness mutates this function to prove it stays fixed.
+    ///
+    /// It is a FUNCTION rather than the literal spelled at each call site
+    /// because §585 gave this room a second reader — the lede's caption names
+    /// the year too — and two copies means the mutation edits one and the
+    /// other goes untested. That is not hypothetical: it happened here, twice
+    /// in one pass, in two different rooms.
+    static func yearLabel(_ year: Int) -> String { String(year) }
+
+    /// THE LEDE (prd §585) — the streak as a figure, its meaning as words.
+    ///
+    /// Composed from `streak` and `streakYear`, the SAME two values the
+    /// headline reads, never split back out of that sentence (§585's central
+    /// rule). It declines on exactly the headline's own condition, so a
+    /// journal with no run keeps the note it has always led with rather than
+    /// being handed a figure of 2 that means nothing.
+    static func lede(_ room: JournalRoom) -> RoomLede? {
+        guard room.streak >= streakFloor, let year = room.streakYear else { return nil }
+        return RoomLede(
+            figure: room.streak.formatted(),
+            unit: String(localized: "days"),
+            // The voice stays in the caption, which is the half §585 says the
+            // figure cannot carry alone: "straight, in 2023" is a person
+            // talking; "streak: 14" is a database.
+            caption: String(localized: "straight, in \(yearLabel(year))"),
+            numeric: Double(room.streak))
+    }
+
     static func headline(_ room: JournalRoom) -> String? {
         guard room.streak >= streakFloor, let year = room.streakYear else { return nil }
-        return String(localized: "You wrote \(room.streak.formatted()) days straight in \(String(year))")
+        return String(localized: "You wrote \(room.streak.formatted()) days straight in \(yearLabel(year))")
     }
 
     /// What the strip cannot say for itself: how much, how often, and over how

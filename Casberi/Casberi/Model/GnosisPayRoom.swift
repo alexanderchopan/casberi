@@ -427,6 +427,35 @@ struct GnosisPayRoom: Equatable {
     /// `mask` — see `currencyLine`. The two quiet answers below carry no money
     /// at all, so they are unaffected by it: "nothing spent" is a fact about
     /// activity, not an amount, and hiding it would say less than the truth.
+    /// THE LEDE (prd §585) — what the card spent, as a figure.
+    ///
+    /// **§374's mask is honoured and that is what decides the `numeric`.** When
+    /// balances are hidden the figure IS the mask, and no `numeric` is handed
+    /// over — a digit roll counting to a real value under a `••••` would leak
+    /// the magnitude through the animation, which is the one way a mask can
+    /// fail while looking correct.
+    ///
+    /// The currency code is the UNIT rather than part of the figure, so the
+    /// number reads first — and it is never summed across currencies (§349's
+    /// standing rule here: a total spanning EUR and GBP is a number that means
+    /// nothing). The caption carries what the headline says about the others.
+    static func lede(_ room: GnosisPayRoom, locale: Locale = .current,
+                     mask: String? = nil) -> RoomLede? {
+        guard let lead = room.lead else { return nil }
+        let amount = mask ?? money(lead.total, code: lead.code, locale: locale)
+        let caption: String
+        if room.currencies.count > 1 {
+            let others = room.currencies.count - 1
+            caption = others == 1
+                ? String(localized: "on your card in \(windowDays) days, plus another currency")
+                : String(localized: "on your card in \(windowDays) days, plus \(others) other currencies")
+        } else {
+            caption = String(localized: "on your card in \(windowDays) days")
+        }
+        return RoomLede(figure: amount, unit: lead.code, caption: caption,
+                        numeric: mask == nil ? lead.total : nil)
+    }
+
     static func headline(_ room: GnosisPayRoom, locale: Locale = .current,
                          mask: String? = nil) -> String {
         guard let lead = room.lead else {

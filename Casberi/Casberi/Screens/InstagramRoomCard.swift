@@ -54,17 +54,24 @@ struct InstagramRoomCard: View {
             // head renders only inside its own source's room, under a chip strip
             // where that source's chip is the lit one — so the card introduced
             // itself with a word already on screen, one row up.
-            Text(InstagramRoom.headline(room))
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                // The whole card is a tap target for touch and pointer and
-                // carries nothing for VoiceOver; this states the same verb on
-                // the line that names its destination.
-                .dsCardLead(Text("Opens the newest post you kept")) {
-                    DSHaptic.selection()
-                    if let lead { onOpen(lead) }
+            // THE LEDE (prd §585) — see `JournalRoomCard` for the rule.
+            Group {
+                if let lede = InstagramRoom.lede(room) {
+                    RoomLedeView(lede: lede, spoken: InstagramRoom.headline(room))
+                } else {
+                    Text(InstagramRoom.headline(room))
+                        .dsText(.heading22)
+                        .foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+            }
+            // The whole card is a tap target for touch and pointer and
+            // carries nothing for VoiceOver; this states the same verb on
+            // the line that names its destination.
+            .dsCardLead(Text("Opens the newest post you kept")) {
+                DSHaptic.selection()
+                if let lead { onOpen(lead) }
+            }
 
             Text(InstagramRoom.note(room))
                 .dsText(.subhead13)

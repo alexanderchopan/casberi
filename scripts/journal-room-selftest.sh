@@ -36,6 +36,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 ROOM="Casberi/Casberi/Model/JournalRoom.swift"
+LEDE="Casberi/Casberi/Model/RoomLede.swift"   # prd §585 — the shared lede type this room now returns
 SOURCE="Casberi/Casberi/Model/JournalRoomSource.swift"
 CARD="Casberi/Casberi/Screens/JournalRoomCard.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
@@ -85,8 +86,23 @@ grep -q 'JournalRoomCard(room: room, source: name)' "$FEED" \
 # Guarded on the card rather than the model, because the model returning nil is
 # already asserted above and a card that drew nothing in that slot would be a
 # head with no lead at all — which compiles, and which nothing else here sees.
-grep -q 'JournalRoom.headline(room) ?? JournalRoom.note(room)' "$CARD" \
-  || { echo "✗ the journal head no longer promotes the note when there is no run — a room with no streak would draw a head with no lead (§451)"; exit 1; }
+# Re-pointed for §585, which split that `??` into a lede/else branch: the run
+# is now a FIGURE at `price40` and the no-run case keeps the sentence. The
+# RULING is unchanged and so is the behaviour — `lede` declines on exactly
+# `headline`'s own condition, so the else branch is still the empty slot — but
+# the literal it was grepping for is gone. A red guard after a refactor is a
+# ruling to amend, not to delete.
+python3 - "$CARD" <<'PYCHK' || { echo "✗ the journal head no longer promotes the note when there is no run — a room with no streak would draw a head with no lead (§451)"; exit 1; }
+import re, sys
+src = open(sys.argv[1]).read()
+# the note must be drawn at the HEAD rung in the branch the lede declines to
+m = re.search(r'Text\(JournalRoom\.note\(room\)\)\s*\n\s*\.dsText\(\.heading22\)', src)
+sys.exit(0 if m else 1)
+PYCHK
+# …and the lede must decline on the same condition the headline does, or the
+# promotion fires on a room that has a run.
+grep -q 'guard room.streak >= streakFloor, let year = room.streakYear else { return nil }' "$ROOM" \
+  || { echo "✗ JournalRoom.lede no longer declines on the headline's own condition (§585)"; exit 1; }
 grep -q 'if JournalRoom.headline(room) != nil {' "$CARD" \
   || { echo "✗ the journal note is no longer gated — with no run the card would print the same sentence at two tiers (§451)"; exit 1; }
 
@@ -343,7 +359,7 @@ if failures > 0 {
 print("assertions: all pass")
 SWIFT
 
-if ! swiftc -O -o "$TMP/run" "$ROOM" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -O -o "$TMP/run" "$ROOM" "$LEDE" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ the harness did not compile against the shipped source:"
   cat "$TMP/build.log"
   exit 1
@@ -369,7 +385,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$target"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$target" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -O -o "$TMP/mut" "$target" "$LEDE" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -414,9 +430,13 @@ mutate "days are counted as entries" \
   'days: entries'
 # A year printed as a quantity, in the largest type on the card (XRoom's own
 # shipped bug).
+# Re-pointed for §585: the year became text in TWO places when the lede gained
+# a caption naming it, so the old pattern edited the first and left the other
+# untested. `yearLabel` is now the single site, which is what makes this
+# mutation cover both readers again.
 mutate "the headline groups the year as a number" \
-  'in \(String(year))' \
-  'in \(year)'
+  'static func yearLabel(_ year: Int) -> String { String(year) }' \
+  'static func yearLabel(_ year: Int) -> String { year.formatted() }'
 # The rows' order is the card's whole ranking.
 mutate "rows are drawn oldest-first instead of fullest-first" \
   'sorted { ($0.entries, $1.year) > ($1.entries, $0.year) }' \

@@ -244,25 +244,79 @@ struct SafeRoom: Equatable {
     /// there is one — the shape of news nothing else in this app carries:
     /// somebody else is waiting on a decision only you can make. Fully-signed
     /// leads next, because it is an act rather than a wait.
+    /// WHICH TRANSACTIONS THE HEAD IS ABOUT — decided ONCE, read twice
+    /// (prd §585).
+    ///
+    /// `headline` and `lede` both open on the same ladder (awaiting you, then
+    /// ready, then pending), which is §349's trouble-leads rule: one signature
+    /// needed from you outranks forty that are not. Spelling that ladder in
+    /// both functions is how they drift into naming different transactions —
+    /// and it is not hypothetical, it was caught the hour it was written.
+    /// `wallet-rooms-selftest` mutates the ready rung's own condition to prove
+    /// ready is ranked; with the ladder written twice that mutation edited the
+    /// FIRST copy and the assertion, which reads `headline`, still passed. The
+    /// harness reported its own guard as no longer testing anything.
+    ///
+    /// The rung's condition is deliberately NOT quoted in this comment: the
+    /// mutation is a `sed` and prose above the code it edits is prose the
+    /// `sed` edits instead (the comment-stripping lesson this repo has paid
+    /// for six times, arriving here within the hour).
+    enum Lead: Equatable {
+        case awaitsYou(Int)
+        case ready(Int)
+        case pending(Int)
+        case quiet
+    }
+
+    static func lead(_ room: SafeRoom) -> Lead {
+        if room.awaitsYouCount > 0 { return .awaitsYou(room.awaitsYouCount) }
+        if room.readyCount > 0 { return .ready(room.readyCount) }
+        if room.pendingCount > 0 { return .pending(room.pendingCount) }
+        return .quiet
+    }
+
+    /// THE LEDE (prd §585) — how many transactions are waiting, and on whom.
+    ///
+    /// Nil on the quiet state deliberately: "0" at the head rung on a Safe is
+    /// a figure that reads as an alarm about nothing.
+    static func lede(_ room: SafeRoom) -> RoomLede? {
+        switch lead(room) {
+        case .awaitsYou(let n):
+            return RoomLede(figure: n.formatted(),
+                            caption: String(localized: "waiting on your signature"),
+                            numeric: Double(n))
+        case .ready(let n):
+            return RoomLede(figure: n.formatted(),
+                            caption: String(localized: "fully signed, ready to execute"),
+                            numeric: Double(n))
+        case .pending(let n):
+            return RoomLede(figure: n.formatted(),
+                            caption: String(localized: "pending, waiting on others"),
+                            numeric: Double(n))
+        case .quiet:
+            return nil
+        }
+    }
+
     static func headline(_ room: SafeRoom) -> String {
-        if room.awaitsYouCount > 0 {
-            return room.awaitsYouCount == 1
+        switch lead(room) {
+        case .awaitsYou(let n):
+            return n == 1
                 ? String(localized: "Your signature is needed on 1 transaction")
-                : String(localized: "Your signature is needed on \(room.awaitsYouCount) transactions")
-        }
-        if room.readyCount > 0 {
-            return room.readyCount == 1
+                : String(localized: "Your signature is needed on \(n) transactions")
+        case .ready(let n):
+            return n == 1
                 ? String(localized: "1 transaction is fully signed — ready to execute")
-                : String(localized: "\(room.readyCount) transactions are fully signed — ready to execute")
-        }
-        if room.pendingCount > 0 {
-            return room.pendingCount == 1
+                : String(localized: "\(n) transactions are fully signed — ready to execute")
+        case .pending(let n):
+            return n == 1
                 ? String(localized: "1 signature pending — waiting on others")
-                : String(localized: "\(room.pendingCount) signatures pending — waiting on others")
+                : String(localized: "\(n) signatures pending — waiting on others")
+        case .quiet:
+            return room.safeCount == 1
+                ? String(localized: "Nothing pending on your Safe")
+                : String(localized: "Nothing pending across your \(room.safeCount) Safes")
         }
-        return room.safeCount == 1
-            ? String(localized: "Nothing pending on your Safe")
-            : String(localized: "Nothing pending across your \(room.safeCount) Safes")
     }
 
     /// The line under it — the module warning, when there is one. Nil rather

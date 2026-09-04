@@ -127,10 +127,19 @@ struct SafeRoomCard: View {
 
     @ViewBuilder
     private var headline: some View {
-        let text = Text(SafeRoom.headline(room))
-            .dsText(.heading22)
-            .foregroundStyle(DS.textPrimary)
-            .fixedSize(horizontal: false, vertical: true)
+        // THE LEDE (prd §585) — see `JournalRoomCard` for the rule. A count
+        // of transactions waiting on you is a FIGURE; "Nothing pending across
+        // your 3 Safes" is a statement and keeps `heading22`.
+        let text = Group {
+            if let lede = SafeRoom.lede(room) {
+                RoomLedeView(lede: lede, spoken: SafeRoom.headline(room))
+            } else {
+                Text(SafeRoom.headline(room))
+                    .dsText(.heading22)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
         // The whole card is a tap target for touch and pointer and carries
         // nothing for VoiceOver; this states the same verb on the line that
         // names its destination — and says nothing when there is no

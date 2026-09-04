@@ -157,6 +157,11 @@ enum AppleWalletRoom {
 
     struct Card: Equatable {
         var headline: String
+        /// The figure this month's spend leads with (prd §585), nil when the
+        /// headline is a statement with no figure in it. Precomputed with the
+        /// headline rather than derived at draw time, so the two are composed
+        /// from one pass over one window and cannot disagree.
+        var lede: RoomLede?
         var subline: String?
         var merchants: [MerchantRow]
         /// Merchants beyond `merchantCap`, folded rather than dropped.
@@ -277,6 +282,8 @@ enum AppleWalletRoom {
         let headline = headlineText(merchants: merchants, total: spentTotal,
                                     currency: currency)
         return Card(headline: headline,
+                    lede: lede(merchants: merchants, total: spentTotal,
+                               currency: currency),
                     subline: sublineText(creep: creepRow, silences: silenceRows,
                                          upcoming: rail,
                                          total: spentTotal, prevTotal: prevTotal,
@@ -616,6 +623,28 @@ enum AppleWalletRoom {
     }
 
     // MARK: - Copy
+
+    /// THE LEDE (prd §585) — the month's spend, as a figure.
+    ///
+    /// Takes the same `total` and `currency` the headline formats, and puts
+    /// the MERCHANT in the caption where the app's voice already lives ("all
+    /// at Tesco" rather than a bare figure). Nil with no merchants: the
+    /// headline's own empty branch is "Your card, this month", a statement
+    /// with no figure in it, and §584 measured that a statement belongs at
+    /// `heading22` rather than being handed a manufactured zero.
+    ///
+    /// §374's mask is applied by the CALLER here rather than taken as a
+    /// parameter, because this room's card already resolves it — see
+    /// `GnosisPayRoom.lede` for the version that takes it, and the reason the
+    /// mask must suppress `numeric` as well as the string.
+    static func lede(merchants: [MerchantRow], total: Double,
+                     currency: String) -> RoomLede? {
+        guard let top = merchants.first else { return nil }
+        let caption = merchants.count == 1
+            ? String(localized: "this month, all at \(top.name)")
+            : String(localized: "this month · most of it at \(top.name)")
+        return RoomLede(figure: money(total, currency), caption: caption, numeric: total)
+    }
 
     static func headlineText(merchants: [MerchantRow], total: Double,
                              currency: String) -> String {

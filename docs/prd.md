@@ -95,6 +95,7 @@ at all.
 | §363 | The money receipt's TEAR carries state — torn is history, flat is still in the machine | reversed by §583 (an edge cannot survive the surface it was an edge of. Checked rather than assumed before removing: every `.open` receipt built in `MoneyReceipt` stamps `.settling` / `.pending` / `.screening` / `.yourTurn` / `.needsProof` / `.openPosition`, none of them quiet — so the silhouette and the word were two renderings of one fact. `finality` itself is untouched, and the settle keeps its haptic) |
 | §498 | `DSReceiptPaper` is the shared silhouette, so two rooms cannot drift into two papers | amended by §583 (the reasoning is why a modifier SURVIVES the deletion: strip the ground, the pour, the clip and the shadow and what is left is spacing, and five heads composing their own insets is how they drift apart with every check still green. `DSSheetHeadBlock` is that modifier) |
 | §583 | A capsule is a small card, so the state stamp loses its fill | extended by §584 to the three hand-rolled news pills the `DSStamp` sweep could not reach — and BOUNDED there: measured over all 145 capsules in the app, most are progress tracks or controls, and a capsule that GROUPS (a glyph with its word, one token among several) is earning its place |
+| §584 | A room head's headline cannot take the head rung, because a composed sentence measures 141pt on a 250pt card | answered by §585 — the rung was never the problem, the CONTENT was. A room that opens on a FIGURE puts the figure at `price40` and demotes its sentence; a room that opens on a statement keeps `heading22`, exactly as §584 measured |
 | §500 | Hegotá does **no notifications** — no attention dots ever, because nothing in that room is urgent (nothing can move against you; the asset is test ETH) | amended by §522 for ONE event (the room's CONTENT rule stands whole and the dots stay off; a devnet RELAUNCH is not room content but the statement that everything the room shows describes a chain that no longer exists — §515a, two days after §500 and therefore unavailable to it, is a person losing an evening to exactly that on the sibling devnet) |
 | §306 | The classification lives in ONE file that reads what LANDED, so the never-fires list is reviewable in one screen | amended by §522 (two devnet seats carry facts no row holds — Hegotá lands no `Thing` at all, and a chain reset or an elapsed timelock belongs to no row — so `NotifyDevnet` is a second, harness-compiled door into the SAME submit; the headline also moved onto `NotifyKind` so the pure half can compose whole plans) |
 | §473 | The timelock's Live Activity is a CONTROL, never automatic, and its `staleDate` is the unlock instant | amended by §522 (the control stands, and becomes a persisted consent record: the moment the delay ends now reaches the lock screen, for a tracked address and no other — plus the relaunch bug where a surviving activity read as untracked) |
@@ -47286,3 +47287,101 @@ also had in common.
 ### 5. Unseen on a device
 
 Three lines changed in three files; both platforms build. No screenshot taken.
+
+## 585. The lede, given to every room that has a figure (2026-09-03)
+
+**User: *"what design changes can we do to add more personality… we have added
+exaggerated font sizes in the Devnets and the Chat functionality which i like,
+and we added it on the All feed too"*, then, naming it: *"for the lede"*.**
+
+### 1. The device is a SHORT FIGURE, not big type
+
+The three surfaces the user likes had each arrived at the same arrangement
+independently — a `price40` figure, its unit a rung down, the words demoted
+underneath — while the other twenty-odd room heads opened on a `heading22`
+sentence. Naming the shared device precisely is what made this buildable where
+§584 failed: **the loud rung belongs to a figure because a figure is short by
+nature.** §584 tried to make room heads louder by setting their existing
+HEADLINE at 40pt and measured 141pt of headline on a card ~250pt tall. A figure
+cannot do that. Same rung, different content, opposite outcome.
+
+`RoomLede` (Foundation-only) and `RoomLedeView` are that arrangement extracted
+rather than re-drawn, so a room joining it cannot become a fifth version of it
+— §498's rule, and the reason §583 kept a modifier when it deleted the paper.
+
+**Adopted in six rooms**: Journal (a run of days), Instagram (posts kept),
+Cursor (runs that did not finish), Safe (transactions waiting on you),
+Gnosis Pay and Apple Wallet (money). **Declining is a real answer and the
+common one** — measured across the 20 rooms with a headline, roughly half open
+on a statement with no figure at all ("Payments have stopped", "Evidence was
+due yesterday", "Nothing to report"). Those keep `heading22`, and forcing a
+figure out of them would be inventing one.
+
+**Never parsed out of the headline** (§363's rule for the money receipt): each
+room composes its lede from the same stored values its headline reads. The
+undrawn headline becomes the lede's SPOKEN label, so the localized sentence
+stays live for VoiceOver rather than being replaced by a bare number and a
+fragment.
+
+### 2. The arrival and the roll are inside the component
+
+Two of the four asks — one recognisable entrance, and every big figure counting
+to its value — are satisfied by putting them in `RoomLedeView` rather than
+leaving them to callers. The app had four entrance modifiers and `numericText`
+on sixteen files but not on every figure, so a number might count up in one
+room and blink in the next. Personality in motion comes from ONE move; a
+component makes that true by construction rather than by memory.
+
+### 3. `flourish148` is DELETED, and placing it would have been backwards
+
+The ramp's loudest rung had **zero callers** — its documented purpose, the
+onboarding step card's giant numeral, went with that screen in §563. It was
+proposed for re-use on the reasoning that an extreme-proportion system should
+spend its biggest type somewhere. **That is backwards: a figure gets its size
+because the CONTENT wants it, not because a token exists needing a home.** Both
+candidates failed on that test — the empty feed has no figure to draw, and the
+All lede sits under the day divider that already spends §506's one crown per
+surface. An unused rung is a fork waiting to drift back.
+
+### 4. THE HARNESSES CAUGHT A HAZARD THIS PASS CREATED, THREE TIMES
+
+The first cut wrote each `lede` as its own copy of the room's branch ladder,
+mirroring `headline`. Three harnesses failed, all the same way and none of them
+by asserting a wrong answer: **the mutation edited the new copy and left the
+real function untested**, so each reported its own guard as no longer testing
+anything.
+
+- `wallet-rooms` mutates Safe's ready rung; `lede` sat above `headline` and
+  took the edit.
+- `cursor-room` mutates the unfinished branch; same shape.
+- `journal-room` mutates the year's formatting, and the lede's caption named
+  the year too — so one of the two sites went untested.
+
+**Fixed at the root rather than by re-pointing the mutations**: each room now
+decides its lead ONCE (`SafeRoom.Lead`, `CursorRoom.Lead`,
+`JournalRoom.yearLabel`) and both `headline` and `lede` read that decision. Two
+functions independently implementing one ladder is how a figure and a sentence
+come to describe different transactions — which is the actual defect, and the
+mutation failures were only how it announced itself.
+
+**And the comment-stripping lesson arrived within the hour, in the fix itself.**
+The first version of `SafeRoom.Lead`'s doc QUOTED the mutation's own pattern,
+so the `sed` would have edited the prose above the code instead of the code.
+The rule generalises past the negative-grep case it was learned in: **a comment
+must not contain the literal any tool looks for**, mutations included.
+
+### 5. The copy rule, which is where the personality actually lives
+
+"You wrote 14 days straight in 2023" is the best sentence in the app, and under
+a big figure that sentence is what stops the number being a dashboard readout.
+The standing rule for a new head: **a figure, then one sentence that sounds like
+a person.** The captions here follow it — "straight, in 2023", "posts you
+saved, from 48 accounts", "waiting on your signature" — rather than the field
+names underneath them.
+
+### 6. Unseen on a device
+
+Six room heads changed shape and no screenshot has been taken. Gnosis Pay is
+the one to look at first: it is the only lede threading §374's mask, and the
+mask must suppress the digit ROLL as well as the string, or the magnitude leaks
+through the animation while the figure reads as hidden.

@@ -32,6 +32,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 ROOM="Casberi/Casberi/Model/InstagramRoom.swift"
+LEDE="Casberi/Casberi/Model/RoomLede.swift"   # prd §585 — the shared lede type these rooms now return
 SRC="Casberi/Casberi/Model/InstagramRoomSource.swift"
 IMPORT="Casberi/Casberi/Model/InstagramImport.swift"
 CAPTIONS="Casberi/Casberi/Model/InstagramCaptions.swift"
@@ -292,7 +293,7 @@ print("all assertions passed")
 SWIFT
 
 echo "instagram-selftest: compiling the head WHOLE and unmodified…"
-swiftc -O -o "$TMP/run" "$ROOM" "$TMP/main.swift" \
+swiftc -O -o "$TMP/run" "$ROOM" "$LEDE" "$TMP/main.swift" \
   || { echo "✗ InstagramRoom does not compile Foundation-only — something reached Thing/SwiftUI"; exit 1; }
 "$TMP/run" || exit 1
 
@@ -317,7 +318,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$TMP/InstagramRoom.swift"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$TMP/InstagramRoom.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -O -o "$TMP/mut" "$TMP/InstagramRoom.swift" "$LEDE" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

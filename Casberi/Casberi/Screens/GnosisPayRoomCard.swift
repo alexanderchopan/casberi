@@ -54,10 +54,21 @@ struct GnosisPayRoomCard: View {
             // head renders only inside its own source's room, under a chip strip
             // where that source's chip is the lit one — so the card introduced
             // itself with a word already on screen, one row up.
-            Text(GnosisPayRoom.headline(room, mask: BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil))
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
+            // THE LEDE (prd §585) — see `JournalRoomCard` for the rule. The
+            // mask is threaded through rather than applied after, so a hidden
+            // balance suppresses the digit ROLL as well as the string.
+            let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
+            Group {
+                if let lede = GnosisPayRoom.lede(room, mask: mask) {
+                    RoomLedeView(lede: lede,
+                                 spoken: GnosisPayRoom.headline(room, mask: mask))
+                } else {
+                    Text(GnosisPayRoom.headline(room, mask: mask))
+                        .dsText(.heading22)
+                        .foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
                 // The whole card is a tap target for touch and pointer and
                 // carries nothing for VoiceOver; this states the same verb on
                 // the line that names its destination.

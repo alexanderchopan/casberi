@@ -39,6 +39,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 ROOM="Casberi/Casberi/Model/CursorRoom.swift"
+LEDE="Casberi/Casberi/Model/RoomLede.swift"   # prd §585 — the shared lede type these rooms now return
 SOURCE="Casberi/Casberi/Model/CursorRoomSource.swift"
 CARD="Casberi/Casberi/Screens/CursorRoomCard.swift"
 BRIDGE="Casberi/Casberi/Model/CursorBridge.swift"
@@ -421,7 +422,7 @@ if failures > 0 { print("cursor-room-selftest: ✗ \(failures) of \(checks) asse
 print("cursor-room-selftest: OK — \(checks) assertions passed against the shipped source.")
 SWIFT
 
-if ! swiftc -O -o "$TMP/cr-selftest" "$ROOM" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -O -o "$TMP/cr-selftest" "$ROOM" "$LEDE" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ harness failed to compile against the shipped source"
   grep -E 'error:' "$TMP/build.log" | head -20
   exit 1
@@ -455,7 +456,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$target"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$target" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -O -o "$TMP/mut" "$target" "$LEDE" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

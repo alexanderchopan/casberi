@@ -65,17 +65,33 @@ struct JournalRoomCard: View {
             //
             // The note is NOT drawn twice: it appears once, at whichever tier
             // it is standing in.
-            Text(JournalRoom.headline(room) ?? JournalRoom.note(room))
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                // The whole card is a tap target for touch and pointer and
-                // carries nothing for VoiceOver; this states the same verb on
-                // the line that names its destination.
-                .dsCardLead(Text("Opens this year's last entry")) {
-                    DSHaptic.selection()
-                    onOpen(room.fullest)
+            // THE LEDE (prd §585). A run of days is a FIGURE, so it takes
+            // the loud rung with its meaning demoted underneath; a journal
+            // with no run has only a sentence to show and keeps `heading22`,
+            // which §584 measured is where a sentence belongs.
+            //
+            // The undrawn headline becomes the SPOKEN label, so the localized
+            // sentence stays live for VoiceOver rather than being replaced by
+            // a bare number and a fragment.
+            // The card lead rides the GROUP so it survives whichever branch
+            // draws — this headline is the card's only door.
+            Group {
+                if let lede = JournalRoom.lede(room) {
+                    RoomLedeView(lede: lede, spoken: JournalRoom.headline(room))
+                } else {
+                    Text(JournalRoom.note(room))
+                        .dsText(.heading22)
+                        .foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+            }
+            // The whole card is a tap target for touch and pointer and
+            // carries nothing for VoiceOver; this states the same verb on
+            // the line that names its destination.
+            .dsCardLead(Text("Opens this year's last entry")) {
+                DSHaptic.selection()
+                onOpen(room.fullest)
+            }
 
             if JournalRoom.headline(room) != nil {
                 Text(JournalRoom.note(room))

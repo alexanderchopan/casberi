@@ -61,17 +61,26 @@ struct CursorRoomCard: View {
             // head renders only inside its own source's room, under a chip strip
             // where that source's chip is the lit one — so the card introduced
             // itself with a word already on screen, one row up.
-            Text(CursorRoom.headline(room))
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                // The lead has no row of its own (see below), so this headline
-                // is the only place its destination can be reached.
-                .dsCardLead(Text("Opens this repository")) {
-                    guard let lead = room.lead else { return }
-                    DSHaptic.selection()
-                    onOpen(lead)
+            // THE LEDE (prd §585) — see `JournalRoomCard` for the rule. The
+            // card lead rides whichever branch draws, because this headline is
+            // still the ONLY place the lead repository's destination can be
+            // reached (see below) — a lede that dropped it would be a door
+            // deleted rather than restyled.
+            Group {
+                if let lede = CursorRoom.lede(room) {
+                    RoomLedeView(lede: lede, spoken: CursorRoom.headline(room))
+                } else {
+                    Text(CursorRoom.headline(room))
+                        .dsText(.heading22)
+                        .foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+            }
+            .dsCardLead(Text("Opens this repository")) {
+                guard let lead = room.lead else { return }
+                DSHaptic.selection()
+                onOpen(lead)
+            }
 
             // Only the repositories BEYOND the lead get a row — the lead is the
             // headline, and repeating its name directly underneath is the card

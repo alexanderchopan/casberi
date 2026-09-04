@@ -221,10 +221,20 @@ extension DSTextStyle {
     static let badgeInitial11 = DSTextStyle(size: 12, weight: .bold, tracking: 0, lineHeight: 16, relative: .caption2)
 
     // ======================================================== OUTSIDE THE FIVE
-    /// The onboarding step card's giant background numeral — accessibility-
-    /// hidden, sighted-only decoration with no reading job at all. The one
-    /// honest exemption from the five.
-    static let flourish148 = DSTextStyle(size: 148, weight: .heavy, tracking: 0, lineHeight: 150, relative: .largeTitle)
+    // `flourish148` WAS HERE and is deleted (prd §585, 2026-09-03). Its own
+    // doc named its single purpose — "the onboarding step card's giant
+    // background numeral" — and that card went with the onboarding fork in
+    // §563, leaving the app's loudest rung with ZERO callers.
+    //
+    // It was proposed for re-use, on the reasoning that a system whose
+    // personality is extreme proportions should spend its biggest type once
+    // somewhere. That is backwards and is the lesson worth keeping: **a figure
+    // gets its size because the CONTENT wants it, not because a token exists
+    // needing a home.** The two candidates were measured against that and both
+    // failed — the empty feed has no figure to draw (a count of nothing), and
+    // the All lede sits under the day divider that already spends §506's one
+    // crown per surface. An unused rung is a fork waiting to drift back (the
+    // pour's `Color?` precedent, and §583's deleted paper), so it goes.
 
     // ============================================== WIDGETS — THEIR OWN SCALE
     // A widget is not a phone screen. A small tile is ~155pt across and its
