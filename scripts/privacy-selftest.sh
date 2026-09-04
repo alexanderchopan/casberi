@@ -30,8 +30,9 @@ fail() { print -u2 "✗ $1"; exit 1 }
 SECTION="Casberi/Casberi/Model/PrivacyDevnetSection.swift"
 ROOTS="Casberi/Casberi/Model/PrivacyDevnetRoots.swift"
 ROOM="Casberi/Casberi/Model/PrivacyDevnetRoom.swift"
+FIG="Casberi/Casberi/Model/PrivacyDevnetFigure.swift"
 VERIFY="scripts/verify.sh"
-for f in "$SECTION" "$ROOTS" "$ROOM"; do [[ -f "$f" ]] || fail "$f not found"; done
+for f in "$SECTION" "$ROOTS" "$ROOM" "$FIG"; do [[ -f "$f" ]] || fail "$f not found"; done
 
 # `swiftc` needs a main file; the sources are compiled WHOLE and unmodified.
 cat > "$work/main.swift" <<'SWIFT'
@@ -298,6 +299,63 @@ check(!PrivacyDevnetRoots.isNullifier(d("82500001")), "0x82500001 is a named cha
 check(!PrivacyDevnetRoots.isNullifier(d("82502001")), "0x82502001 is a named channel, not a nullifier")
 check(!PrivacyDevnetRoots.isNullifier(d("78050000")), "0x78050000 is a named channel (EIP-7805), not a nullifier")
 
+// ─────────────────────────── PrivacyDevnetFigure ──────────────────────
+// Written by the session that built the figures; landed here because this
+// harness is mine. Every failure renders as an ordinary drawing: two diamonds
+// on one point, a mark claiming an age it no longer has, overlapping labels,
+// a floored frame silently below its floor, or a count quietly dropped.
+typealias PF = PrivacyDevnetFigure
+func fref(_ slot: UInt64) -> PrivacyDevnetRoots.Reference {
+    PrivacyDevnetRoots.Reference(sourceID: d("aa"), slot: slot, root: d("bb"))
+}
+let fm = PF.marks([fref(13347), fref(13347), fref(12900), fref(5200)], headSlot: 14450)
+check(fm.count == 3, "two proofs against one snapshot are ONE mark, not two diamonds on one point")
+check(fm[0].slot == 13347 && fm[0].count == 2, "newest first, and the collapse carries its count")
+check(fm[2].position == nil && fm[2].agedBy == 1059, "an aged mark has no position — nil, never zero")
+check(fm[2].labelled, "an aged mark always gets words: its position says nothing")
+check(fm.filter(\.labelled).count <= PF.labelCap, "labels are capped before the track becomes text")
+// **A DISCRIMINATING fixture for the cap.** The set above collapses to exactly
+// `labelCap` marks, so removing the cap leaves it unchanged — that mutation
+// SURVIVED on this block's first run. Five marks, spread far wider than
+// `labelGap` so the spacing rule cannot do the capping instead, is the case
+// that can actually fail.
+let wide = PF.marks([fref(14400), fref(13000), fref(11500), fref(10000), fref(8500)],
+                    headSlot: 14450)
+check(wide.count == 5, "the wide fixture really has five marks to label")
+check(wide.filter(\.labelled).count == PF.labelCap,
+      "and exactly labelCap of them are labelled — the cap, not the spacing, doing the work")
+check(PF.marks([fref(14400), fref(14399)], headSlot: 14450).filter(\.labelled).count == 1,
+      "two marks a slot apart never both label — the collision this rule exists for")
+check(PF.marks([fref(14999)], headSlot: 14450)[0].position == 1,
+      "a reference AHEAD of the head pins at now, never past it — a lagging RPC, not the future")
+// FOUND while writing: clamp-then-renormalise pushed a floored frame BACK BELOW its floor.
+let w = PF.shares([PF.Frame(gasLimit: 900), PF.Frame(gasLimit: 1)])
+check(abs(w.reduce(0,+) - 1) < 1e-9, "weighted shares fill the strip exactly")
+check(w[1] >= PF.minFrameShare - 1e-9, "the smallest step is still visible AFTER renormalising")
+check(w[0] > w[1], "the bigger budget is still the wider bar")
+let casc = PF.shares([PF.Frame(gasLimit: 10000), PF.Frame(gasLimit: 1), PF.Frame(gasLimit: 1)])
+check(casc.allSatisfy { $0 >= PF.minFrameShare - 1e-9 } && abs(casc.reduce(0,+) - 1) < 1e-9,
+      "flooring one frame can push the next below the floor — the cascade must settle")
+check(PF.shares([PF.Frame(gasLimit: 90), PF.Frame()])[0] == PF.shares([PF.Frame(gasLimit: 90), PF.Frame()])[1],
+      "ONE unread budget falls back to equal widths — never present a leftover as a budget")
+check(abs(PF.shares(Array(repeating: PF.Frame(gasLimit: 5), count: 12))[0] - 1.0/12) < 1e-9,
+      "too many frames for the floor stops pretending and draws equal")
+if case .frame(_, let bad) = PF.anatomy(frames: [PF.Frame(succeeded: nil)], keys: 0, roots: 0, sponsored: false)[0] {
+    check(!bad, "an UNREAD status is not a failure — gasUsed/succeeded are nil on 8141")
+}
+let an = PF.anatomy(frames: [PF.Frame(), PF.Frame()], keys: 2, roots: 1, sponsored: true)
+check(an.count == 6, "frames, keys, roots, payer — nothing dropped")
+if case .frame = an[0] {} else { check(false, "frames lead: what it DID before what it proved") }
+if case .sponsor = an[5] {} else { check(false, "who paid is last") }
+check(PF.pips(0).empty == 1, "zero draws one empty pip so the column still reads as a comparison")
+check(PF.pips(12).overflow == 4, "over the cap the rest is COUNTED, never silently dropped")
+// FOUND: Home's budget was computed against a one-line sentence; the relaunch notice runs to three.
+check(PF.homeMoves(hasTrack: true, box: 300) <= 3, "\"a few\" is three — past that Home becomes Activity one chip away")
+check(PF.rowCap(box: 10, rowHeight: 14, spacing: 6, chrome: 40, minimum: 0) == 0,
+      "Home is the ONE list allowed to vanish, so the send panel needs no second decision")
+check(PF.rowCap(box: 10, rowHeight: 14, spacing: 6, chrome: 40) == 1,
+      "every other scope draws at least one row — a list scope must not render empty")
+
 check(!PrivacyDevnetRoots.present([]), "no references means no roots scope")
 check(PrivacyDevnetRoots.present(refs), "references mean the scope draws")
 
@@ -305,7 +363,7 @@ if failures == 0 { print("  ok   \(0) failures") } else { exit(1) }
 SWIFT
 
 print "  building…"
-xcrun swiftc -Onone -o "$work/pv" "$SECTION" "$ROOTS" "$ROOM" "$work/main.swift" 2>"$work/build.log" \
+xcrun swiftc -Onone -o "$work/pv" "$SECTION" "$ROOTS" "$ROOM" "$FIG" "$work/main.swift" 2>"$work/build.log" \
   || { cat "$work/build.log"; fail "the sources did not compile — they must stay Foundation-only" }
 "$work/pv" || fail "assertions failed"
 print "  ok   assertions"
@@ -317,7 +375,7 @@ mutate() {
   local name="$1" file="$2" from="$3" to="$4"
   local dir="$work/m"; rm -rf "$dir"; mkdir -p "$dir"
   cp "$SECTION" "$dir/PrivacyDevnetSection.swift"; cp "$ROOTS" "$dir/PrivacyDevnetRoots.swift"
-  cp "$ROOM" "$dir/PrivacyDevnetRoom.swift"
+  cp "$ROOM" "$dir/PrivacyDevnetRoom.swift"; cp "$FIG" "$dir/PrivacyDevnetFigure.swift"
   local target="$dir/$(basename $file)"
   grep -qF -- "$from" "$target" || fail "mutation '$name' matches nothing — it is stale and tests the shipped code"
   python3 - "$target" "$from" "$to" <<'PY'
@@ -327,7 +385,7 @@ s = io.open(p, encoding="utf-8").read()
 io.open(p, "w", encoding="utf-8").write(s.replace(a, b, 1))
 PY
   if xcrun swiftc -Onone -o "$dir/pv" "$dir/PrivacyDevnetSection.swift" "$dir/PrivacyDevnetRoots.swift" \
-        "$dir/PrivacyDevnetRoom.swift" "$work/main.swift" 2>/dev/null && "$dir/pv" >/dev/null 2>&1; then
+        "$dir/PrivacyDevnetRoom.swift" "$dir/PrivacyDevnetFigure.swift" "$work/main.swift" 2>/dev/null && "$dir/pv" >/dev/null 2>&1; then
     fail "mutation SURVIVED: $name"
   fi
   print "  ok   caught: $name"
@@ -361,6 +419,21 @@ mutate "a named nonce channel counted as a nullifier" \
 mutate "the nullifier floor measured on RAW bytes (a stripped leading zero drops a real key)" \
   "$ROOTS" 'while significant.first == 0 { significant.removeFirst() }' '' 
   "static func isNullifier(_ key: Data) -> Bool { !key.isEmpty }"
+# The figures' own mutations, from the session that wrote them. Each is a
+# silent wrong drawing: an ordinary-looking ring, strip or tally that says
+# something the chain does not.
+mutate "an aged root placed at the far edge rather than nowhere" \
+  "$FIG" "return Mark(slot: slot, position: nil, agedBy: by," \
+  "return Mark(slot: slot, position: 0, agedBy: by,"
+mutate "two labels allowed to overlap (the commonest arrangement there is)" \
+  "$FIG" "if let last = lastLabelled, abs(last - p) < labelGap { continue }" \
+  "if false { continue }"
+mutate "the label cap removed — the track becomes text" \
+  "$FIG" "guard spent < labelCap else { break }" "guard true else { break }"
+mutate "pips dropping their overflow instead of counting it (§307 again)" \
+  "$FIG" "return (pipCap, 0, n - pipCap)" "return (pipCap, 0, 0)"
+mutate "zero drawing no pip at all, so the column stops reading as a comparison" \
+  "$FIG" "if n == 0 { return (0, 1, 0) }" "if n == 0 { return (0, 0, 0) }"
 mutate "an unobserved genesis claiming a relaunch (not knowing read as knowing)" \
   "$ROOM" "if wasReset == true { return finish(.relaunched) }" \
   "if wasReset != false { return finish(.relaunched) }"
@@ -568,4 +641,4 @@ grep -q "privacy-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
 print "  ok   drift guards: no price, no notification, slots not blocks, no coins scope"
-print "✓ privacy: 7 scopes, the 8272 window, the room head and its black-screen rule, 18 mutations, 7 drift guards"
+print "✓ privacy: 7 scopes, the 8272 window, the room head, the figures, 25 mutations, 7 drift guards"
