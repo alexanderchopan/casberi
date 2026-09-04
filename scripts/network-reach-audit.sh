@@ -49,6 +49,16 @@ KNOWN_NON_REACH=(
   # never touched.
   dora.hegota.ethrex.xyz
   dora.frames.ethrex.xyz
+  dora.privacy.ethrex.xyz
+  # The privacy devnet's faucet PAGE (prd §593). Here for a reason its two
+  # siblings' faucets no longer qualify for: this seat is WATCH-ONLY while its
+  # type-0x6 envelope is unreproduced (§593a), so the app makes no key and has
+  # no address to fund, and the only use of this host is a browser door. The
+  # day sending lands, this entry is wrong — faucet.hegota.ethrex.xyz sat here
+  # for a day after §525 gave it a Claim button that POSTs to it, so the
+  # privacy screen omitted a host the app really reached. Move it to
+  # NetworkReach in the same commit that lands the claim, not after.
+  faucet.privacy.ethrex.xyz
   # vibenet's own explorer (VibenetExplorer) — a landed event's permalink
   # and the room's "Explorer" door, both `Link(destination:)` the person's
   # own browser opens; this app never fetches chain.base.org itself.

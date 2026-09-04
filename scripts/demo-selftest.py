@@ -150,6 +150,7 @@ DEMO_FILES = {
     "ExchangeBridge": CASBERI / "Model/ExchangeBridge.swift",
     "HegotaBridge": CASBERI / "Model/HegotaBridge.swift",
     "FramesBridge": CASBERI / "Model/FramesBridge.swift",
+    "PrivacyBridge": CASBERI / "Model/PrivacyBridge.swift",
     "WalletPortfolio": CASBERI / "Model/WalletPortfolio.swift",
 }
 
@@ -531,6 +532,12 @@ KNOWN_ROWLESS_SEAT = {
     # address has no news. Its whole furnishing is the fixture account
     # `FramesLiveState.seedDemo` installs, which check M holds it to.
     "Frames Devnet",
+    # Ethrex Privacy (prd §593) — rowless for exactly the same reason, and
+    # the same ruling rather than a third one: its readings are live chain
+    # state and a devnet test address has no news, so it lands no `Thing` at
+    # all. Its whole furnishing is the fixture `PrivacyLiveState.seedDemo`
+    # installs, which check M holds it to.
+    "Ethrex Privacy",
 }
 
 # What proves each rowless seat is really furnished: (file key, regex). Each
@@ -563,6 +570,10 @@ ROWLESS_SEAT_FIXTURE = {
     # connected. `installDemo` is the only door that writes accounts without a
     # read, so naming it pins the whole chain.
     "Ethrex Hegotá": ("HegotaBridge", r'HegotaLiveState\.shared\.installDemo\('),
+    # Same rule, same reason. Matched in `PrivacyBridge` rather than in
+    # `DemoSeedAll`, because the call there is only the trigger and would keep
+    # passing over a `seedDemo` that had been emptied.
+    "Ethrex Privacy": ("PrivacyBridge", r'PrivacyLiveState\.shared\.installDemo\('),
     # Same rule, same reason: a fixture nothing installs furnishes nothing.
     # `installDemo` is the only door that writes accounts without a read, so
     # naming it pins the whole chain — and it is matched in `FramesBridge`

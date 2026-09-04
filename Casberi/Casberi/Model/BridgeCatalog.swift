@@ -684,6 +684,41 @@ enum BridgeCatalog {
                          "An account of your own, funded by the faucet",
                          "A key stored on this device, because the money here is worthless"],
               needsSetup: true, added: day(2026, 9, 1)),
+        // The THIRD ethrex devnet (prd §593, 2026-09-04), and a chain of its
+        // own — 8141, distinct genesis — not a re-host of Hegotá. A separate
+        // seat on the same reasoning that split Frames from Hegotá: no chain
+        // here is a superset of the others. Hegotá alone has the UTXO vault,
+        // this one alone has EIP-8272's recent-roots predeploy, and Frames has
+        // neither. Naming follows the family grammar, operator then chain:
+        // Base Vibenet, Ethrex Hegotá, Ethrex Privacy.
+        //
+        // THE COPY MAY NOT SAY THIS CHAIN MAKES YOU PRIVATE, and the reason is
+        // measured rather than cautious: all 14 type-0x6 transactions on it
+        // carry `sender` in the clear, and EIP-8182's protocol-level shielded
+        // pool is NOT deployed — the pool that exists is an ordinary contract
+        // somebody deployed. What is shielded is the LINK between a commitment
+        // and its spend. Somebody who reads "privacy features" and infers
+        // shielded transfers has been misled on the page where they decide
+        // whether to connect, which is §83 in the domain where believing it is
+        // most expensive. Hence "the proposals" and "what it does and doesn't
+        // hide" rather than any promise.
+        //
+        // WATCH-ONLY, and the bullets say so rather than leaving it to be
+        // discovered. §593a could not reproduce this chain's type-0x6 envelope
+        // byte-exactly — the shipped Hegotá encoder matches its own chain and
+        // nothing here across every candidate encoding — so a send would sign
+        // a guessed layout, which yields a signature that is well-formed,
+        // recovers to a real address, and authorises something other than what
+        // the screen said. The last bullet is the honest version of that and
+        // must be removed in the same commit that lands sending, never before.
+        Offer(name: "Ethrex Privacy", tagline: "Try Ethereum's new privacy proposals", group: "Wallet", connectable: true,
+              summary: "A public devnet testing the pieces a private Ethereum transaction would be built from — one-time spend keys, and proofs made against a recent snapshot of the chain. No real funds, and the chain may be reset without notice. Watch any address to see what it does, and what it doesn't yet hide.",
+              features: ["The one-time keys a spend used, so it can't be repeated",
+                         "Which snapshot a proof named, and how long it stays valid",
+                         "The steps each transaction ran, frame by frame",
+                         "Who paid the gas, when it wasn't you",
+                         "Watching only — nothing is signed and nothing is sent"],
+              needsSetup: true, added: day(2026, 9, 4)),
         Offer(name: "Linear",      tagline: "Your issues stay in reach",             group: "Work",      connectable: true,
               summary: "The issues assigned to you join your things and surface when they matter. Connects with a personal API key from Linear settings — it stays in \(DS.device)'s Keychain.",
               needsSetup: true),
