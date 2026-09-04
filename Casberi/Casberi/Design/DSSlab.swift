@@ -248,16 +248,35 @@ struct DSSlabField: View {
         // fills `DS.surfaceSheet` — black — which is the card's tone, not a
         // well's, and would put the field on the same plane as the thing
         // holding it.
+        // **THE WELL FILL IS GONE; THE POUR STAYS** (prd §590, 2026-09-03,
+        // user: *"the search apps bar looks like it has a card behind it too
+        // pls remove"*, after the same ruling took the cards off the catalog's
+        // sections and, before that, off every sheet head in §583).
+        //
+        // Everything above still holds and is why this is a TRIM rather than a
+        // deletion. §545's device report — the field reading as "a box cut off
+        // above its text" — was a field with NO edge at all, and the answer to
+        // it was the pour, not the fill: on ink the pour composites a top and
+        // redraws the corner, which is what makes this legible as a control.
+        // The fill was the part that made it read as an object sitting on the
+        // page rather than a recess in it, and it is the part the user is
+        // naming.
+        //
+        // Asked rather than assumed, because §545's report is real evidence
+        // against removing this wholesale — the choice was between a quieter
+        // field and no background at all, and the quieter field is the ruling.
+        //
+        // **On a CARD this now draws nothing but its own top.** That is the
+        // honest trade and it is the smaller loss: a slab inside a card is
+        // already bounded by the card, so the recess was the least load-bearing
+        // there; on the ink page, where this field mostly lives, the pour is
+        // doing all the work it ever did.
         .background {
-            size.shape
-                .fill(DS.surfaceWell)
-                .overlay {
-                    LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
-                                   startPoint: .top, endPoint: .bottom)
-                        .frame(height: 150)
-                        .frame(maxHeight: .infinity, alignment: .top)
-                        .clipShape(size.shape)
-                }
+            LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: 150)
+                .frame(maxHeight: .infinity, alignment: .top)
+                .clipShape(size.shape)
         }
     }
 

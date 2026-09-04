@@ -47597,3 +47597,71 @@ Two reports on the Wallet room, and neither was the bug it looked like.
 **Beside it, for the slot growth (prd 588, landing beside this):** `WalletFlowBand.bandHeight` was a literal 164 and now derives from `visualSlot` less its own 39pt of chrome, with the gate kept at the same ratio (0.475) rather than the literal 78 — byte-identical at today's box, and it follows the box when 588 grows it.
 
 **Unmeasured:** the reporter's own decline reason — the Diagnostics sheet's `Flow:` lines are how to read it.
+
+## 590. The catalogue's sections lose their cards, and the search field its well (2026-09-03)
+
+**User: *"in the app catalogue we have cards around the sections. for example if
+you click markets the list is on a card like we had on the thing sheets, please
+remove it"*, then *"the search apps bar looks like it has a card behind it
+too"*.** §583's ruling, carried to the last screen still drawing boxes around
+lists.
+
+### 1. Four cards, and the misalignment one of them was hiding
+
+`dsCard()` had exactly four callers left in the app and all four were in
+`AppsScreen`, each wrapping a run of `appRow`s: a category shelf, the flat list,
+the search results, and the RSS suggestion. They go.
+
+**Deleting them alone would have left three left edges on one screen.** The
+scroll content pads `s4`; a category heading added `s1` on top of that; and
+`appRow` added another `s4` of its own to hold its content off the card's edge.
+So a heading sat 19pt from the screen edge, its own rows 30pt, and the search
+field above both at 15. The card's edge is what made that read as deliberate.
+
+Both extra insets are removed, so heading, rows and field share the page's
+inset. **This is §583's money-receipt finding on a second screen, and the
+generalisation is worth stating: an object drawn around a block hides the
+block's own misalignment, so removing one is rarely just a deletion.**
+
+`appRow` needed no other change — it is already §586's row skeleton (a brand
+mark, a title at `body17`, a supporting line, `s2` of vertical rhythm), which
+is exactly why it reads bare. The mark is what separates one row from the next,
+the same way it does in the feed.
+
+### 2. The search field keeps its edge and loses its fill — ASKED, not assumed
+
+The field's background is not decoration and has a device report behind it.
+§545 shipped it with no edge at all, and the report came back that it read as
+*"a box cut off above its text"* — a placeholder floating in black. The fix was
+a `surfaceWell` fill PLUS a `DS.pourInk` top.
+
+Two parts, and only one of them is the card the user is naming. **The pour is
+what makes it legible** — on ink it composites a top and redraws the corner.
+**The fill is what makes it an object sitting on the page** rather than a recess
+in it. So the fill goes and the pour stays.
+
+**The choice was put to the user rather than taken**, because §545's report is
+real evidence against removing this wholesale and the two readings lead to
+different screens. The ruling is the quieter field.
+
+**Stated cost:** inside a card this slab now draws nothing but its own top. That
+is the smaller loss — a field within a card is already bounded by the card, so
+the recess was doing least there, while on the ink page where this field mostly
+lives the pour does everything it ever did.
+
+### 3. A section number collided, and this is what that looks like
+
+This entry was written as §588 and is §590. A concurrent session had claimed
+§588 in its own uncommitted `DSRoomChassis` work, which `prd-index-audit.py
+--next` correctly reported as taken — its whole reason for reading sibling
+worktrees. **The citations were already in two source files before the check was
+run**, which is the wrong order: take the number first, then write it. The
+audit's own stated ceiling is the rest of it — it reads working trees, so the
+number you take is said out loud or it is not taken.
+
+### 4. Unseen on a device
+
+The catalogue was verified against a screenshot the user sent BEFORE this
+change, not after. `DSSlabField` has 55 callers and only the catalogue's was
+looked at; a field sitting inside a card is the case to check, since that is
+where this trade gives something up.

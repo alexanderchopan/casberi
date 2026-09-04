@@ -527,10 +527,7 @@ struct AppsScreen: View {
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
                         Text("RSS can follow most sites.")
                             .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                            .padding(.horizontal, DS.Space.s1)
                         VStack(spacing: DS.Space.s1) { appRow(rss) }
-                            .padding(.vertical, DS.Space.s1)
-                            .dsCard()
                     }
                 }
             }
@@ -541,12 +538,11 @@ struct AppsScreen: View {
                     appRow(entry).modifier(StockEntrance(index: i))
                 }
             }
-            .padding(.vertical, DS.Space.s1)
-            // NO second horizontal inset (prd §518): the scroll content's own
-            // VStack already pads `s4`, so this card used to sit at twice the
-            // inset of the search field directly above it — and now at twice
-            // the inset of the catalog list it replaces on the same screen.
-            .dsCard()
+            // NO CARD (prd §590). §518's note about a second horizontal inset
+            // is kept in spirit and answered better: there is no card left to
+            // inset from, and `appRow` gave up its own `s4` in the same pass,
+            // so a row's words now sit on the page inset — the same left edge
+            // as the search field above them.
         }
     }
 
@@ -1151,8 +1147,6 @@ struct AppsScreen: View {
                 appRow(entry).modifier(StockEntrance(index: i))
             }
         }
-        .padding(.vertical, DS.Space.s1)
-        .dsCard()
     }
 
     /// One category: its name and size, then its apps as rows in a card.
@@ -1176,15 +1170,14 @@ struct AppsScreen: View {
                     .foregroundStyle(DS.textTertiary)
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, DS.Space.s1)
+            // Was `s1` — a category heading and its own rows on two edges
+            // (prd §590). One edge now, the page's.
             .landFlash(shelfComplete[name] ?? 0, tint: categoryColor(name))
             VStack(spacing: DS.Space.s1) {
                 ForEach(Array(apps.enumerated()), id: \.element.id) { i, entry in
                     appRow(entry).modifier(StockEntrance(index: i))
                 }
             }
-            .padding(.vertical, DS.Space.s1)
-            .dsCard()
         }
     }
 
@@ -1315,7 +1308,11 @@ struct AppsScreen: View {
                 }))
             capsule(entry)
         }
-        .padding(.horizontal, DS.Space.s4)
+        // NO HORIZONTAL INSET OF ITS OWN (prd §590). This `s4` held the row
+        // off the card's edge; with the card gone it was a second page inset
+        // stacked on the scroll content's, putting a row's words 30pt in while
+        // the search field above sat at 15. The §583 finding, one screen over:
+        // an object around a block hides the block's own misalignment.
         .padding(.vertical, DS.Space.s2)
         // The just-connected row lifts as the list re-sorts it into its
         // connected seat — a promotion you can feel, not a silent re-order.
