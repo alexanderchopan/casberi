@@ -166,111 +166,64 @@ struct VibenetDiscoverySection: View {
     @Bindable private var watch = VibenetWatch.shared
 
     var onWatched: () -> Void
+    /// The seat's colour, handed down so this list and the examples slab above
+    /// it can never disagree about which word is the actionable one.
+    var tint: Color = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
     @State private var discovered: [VibenetDiscoveredAccount] = []
     @State private var discoveryLoading = false
     @State private var discoveryAttempted = false
 
-    private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
-
-    /// A fixed, always-available account to peek at — a fallback for the
-    /// empty state's own fix, useful especially when live discovery can't
-    /// reach the chain at all (the `Couldn't reach vibenet…` branch below,
-    /// which otherwise leaves a new user with nothing to tap). Watched
-    /// exactly like any pasted or discovered address; nothing about
-    /// tapping it is different from typing it in by hand.
-    private static let peekAddress = "0x777804FDCc280c082Db9788EAE5BEca0Fc2BeD9b"
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
             if discoveryLoading {
                 BridgeSyncStatusRows(
                     syncing: true, syncingLine: String(localized: "Looking for accounts on vibenet…"),
                     result: nil, resultIsError: false)
             } else if discovered.isEmpty {
                 if discoveryAttempted {
-                    Text("Couldn't reach vibenet to find an account to suggest — paste an address above, peek at an example, or open the explorer to find one.")
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textSecondary)
+                    Text("Couldn't reach vibenet to find an account to suggest — paste an address above, or open the explorer to find one.")
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textTertiary)
                 }
             } else {
                 Text(String(localized: "Recently created on vibenet"))
                     .dsText(.label12).fontWeight(.semibold)
                     .foregroundStyle(DS.textSecondary)
                 ForEach(discovered) { account in
-                    discoveryRow(address: account.address, subtitle: account.createdAt.map {
-                        String(localized: "Created \($0.formatted(.relative(presentation: .named)))")
-                    })
+                    DevnetAccountRow(
+                        address: account.address,
+                        // The row's own claim. A discovered account has no
+                        // measured one to make — it is simply new — so the
+                        // title says that and the created-at line follows.
+                        title: String(localized: "An account on the chain"),
+                        // Omitted rather than guessed when the block-time
+                        // lookup failed — the same rule `expiryLabel` follows
+                        // for its own clock fact.
+                        detail: account.createdAt.map {
+                            String(localized: "Created \($0.formatted(.relative(presentation: .named)))")
+                        },
+                        watching: watch.isWatching(account.address),
+                        tint: tint) {
+                            take(account.address)
+                        }
                 }
             }
-            // Always offered, live discovery or not — a real address,
-            // always watchable, so a new user is never stuck with nothing
-            // to tap while waiting on (or after losing) a network read.
-            discoveryRow(address: Self.peekAddress, subtitle: String(localized: "Peek at an example account"))
         }
         .onAppear {
             if !discoveryAttempted { Task { await load() } }
         }
     }
 
-    /// One row, shared by a discovered account and the fixed peek address —
-    /// same face, same short-address line, same trailing verb, so the peek
-    /// option reads as one more real account rather than a visually distinct
-    /// special case.
-    ///
-    /// A row you have taken says so and stops being tappable. `.disabled` is
-    /// enough here and would not be on a button that painted its own
-    /// background (§83's own corollary — that dims the LABEL, not a
-    /// background you drew): the whole control is text, and the text changes.
-    private func discoveryRow(address: String, subtitle: String?) -> some View {
-        let watching = watch.isWatching(address)
-        return Button {
-            DSHaptic.tap()
-            guard VibenetWatch.shared.add(address) else { return }
-            // Registered HERE, in the control, not left to each embedder:
-            // three screens draw this list and a seat that forgot to register
-            // reads perfectly right up until the catalog disagrees with it.
-            VibenetBridge.registerBridge(store: store)
-            onWatched()
-        } label: {
-            HStack(spacing: DS.Space.s2) {
-                WalletFace(address: address, size: DS.Face.row, circular: true)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(VibenetRoom.shortAddress(address))
-                        .dsText(.label12).monospaced()
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    // Omitted rather than guessed when the block-time
-                    // lookup failed — the same rule `expiryLabel` follows
-                    // for its own clock fact.
-                    if let subtitle {
-                        Text(subtitle)
-                            .dsText(.label11)
-                            .foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                    }
-                }
-                Spacer(minLength: DS.Space.s2)
-                if watching {
-                    Label(String(localized: "Watching"), systemImage: "checkmark")
-                        .labelStyle(.titleAndIcon)
-                        .dsText(.label12).fontWeight(.semibold)
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                        .fixedSize()
-                } else {
-                    Text(String(localized: "Watch"))
-                        .dsText(.label12).fontWeight(.semibold)
-                        .foregroundStyle(Self.mark)
-                        .lineLimit(1)
-                        .fixedSize()
-                }
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(watching)
-        .animation(DS.Motion.standard, value: watching)
+    /// Watch a discovered account. Registered HERE, in the control, not left
+    /// to each embedder: three screens draw this list and a seat that forgot
+    /// to register reads perfectly right up until the catalog disagrees with
+    /// it.
+    private func take(_ address: String) {
+        guard VibenetWatch.shared.add(address) else { return }
+        VibenetBridge.registerBridge(store: store)
+        onWatched()
     }
 
     /// Once per appearance — never re-run by the embedding screen's own

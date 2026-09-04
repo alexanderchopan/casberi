@@ -48502,3 +48502,54 @@ here can be exercised from this host, and the loud-vs-silent line is what makes
 that survivable: a wrong signing hash is silent and somebody else's money, while
 a wrong envelope is refused by the node with an error. A two-leg batch to two
 fresh addresses is the first thing to try.
+
+## 595. The four devnet setup screens become one anatomy (user: "those designs look bad, the 'open the explorer' i mean doesn't really seem like rest of the style. also i think the watch / paste field should be at top not bottom", after "i think they should share common framework and also be better", 2026-09-04)
+
+Base Vibenet, Ethrex Hegotá, Frames Devnet and Ethrex Privacy ask somebody the same question — *which addresses on this chain do you want to read?* — and asked it four different ways. Measured across the four files as they stood, not inferred:
+
+* **Three affordances for one act.** Vibenet drew face rows carrying a `Watch` / `✓ Watching` state; Hegotá and Frames drew title-plus-address rows ending in a tint-coloured word; Privacy drew `DSSlabDoor`s under a heading. One tap, three shapes, and a person who connects two of these seats learns the control twice.
+* **Two field components.** Vibenet used `DSSlabField` with a live address preview; the other three used `BridgeFieldRow` with a hand-rolled result line under it — three copies of "That isn't an address", three wordings, and only one of the four showed you the face of what you were about to watch.
+* **A taken row behaved three ways.** Vibenet marked it and disabled it (the 2026-08-28 ruling); Hegotá and Frames dropped it out of an `unwatchedExamples` filter; Privacy left it tappable, where `add` refuses the duplicate and the tap does nothing — the §83 dead control, still shipping in the seat that landed most recently.
+* **Routing.** Vibenet never routes; the other three routed on the FIRST watch only, which is right, but two of them expressed it by handing an empty closure into a field rather than by saying so.
+
+### 1. The field is at the TOP, and that reverses every one of the four
+
+**User ruling: "i think the watch / paste field should be at top not bottom."** Every one of these four screens carries a doc comment saying, in its own words, that a pasted stranger's address shows a correct blank that reads like a broken feature — and every one of them then put the field first and the examples last. So the screen's own measured finding was buried under the control it contradicts.
+
+Now the accounts card reads: here is the box, and here are addresses to put in it if you have none of your own. One card, one act. The examples keep their claim (`An address holding coins · The vault's unspent pieces`), because an example is only worth a row if it says what watching it will SHOW.
+
+### 2. The explorer stops being a door onto another screen
+
+**User: "the 'open the explorer' i mean doesn't really seem like rest of the style."** It shipped as a `DSSlabDoor` — a filled full-width slab, leading title, trailing host, chevron — which is this app's grammar for a door onto ANOTHER SCREEN IN THIS APP. It is not that: it leaves the app entirely. And it sat between an inset-grouped card and a centred destructive row, matching neither.
+
+`DevnetExplorerRow` is a centred card row, the shape `BridgeDisconnectSection` already uses. The two rows at the foot of these screens are both exits now, one neutral and one destructive, in one shape. The host stays stated under the verb, because a door out of the app must be checkable against the address bar it lands on.
+
+### 3. A shared CONTROL, deliberately not a shared SCREEN
+
+`DevnetAccounts.swift` holds `DevnetWatchList`, `DevnetExample`, `DevnetAccountRow`, `DevnetAccountsSlab`, `DevnetWatchingSection` and `DevnetExplorerRow`. The four screen FILES survive, and that is a decision rather than laziness: `setup-copy-audit.py` discovers a connect screen by its `BridgeSetupHeader` call and reads its intro and its `RoomDoor(source:)` out of the same file, so folding the four bodies into one generic view would have moved four intros and four room sources out of the audit's reach and silently dropped four screens' copy coverage. `VibenetWatchViews`'s own header already draws this line: `AddressBookScreen`'s "copy the structure, not the type" governs a screen's LAYOUT, and this is one control appearing four times.
+
+**The watch list is a PROTOCOL, not four closures.** The four `@Observable` singletons already carry byte-identical APIs. A generic over them means the row reads the real list, so SwiftUI's observation redraws a row the moment its address is watched; a closure bag would have broken exactly that, and the failure is a `Watch` verb that never turns into a check — the dead control the shared row exists to delete.
+
+### 4. Two acts leave setup, one ruling arrives late
+
+**Hegotá's faucet door is deleted.** It read "Get test ETH" — the same verb the room's own Home tile performs in place since §553. Frames lost its copy of exactly this door on 2026-09-01 and Hegotá's was left behind; the ruling was one screen wide and the mistake was leaving it that way. Two controls for one consequence teach that neither is the real one (§190/§83).
+
+**Frames' "Create an account" moves to the room.** The measurement that put it on setup stands — the chain is days old and holds 18 addresses, so a pasted stranger shows almost nothing — and the placement no longer follows from it. §553 gives the room a permanent Send half, §594 moved vibenet's four acts to Home for this reason, and the faucet door had already left; keeping Create here left ONE of the chain's three acts on the setup page. What remains is a row offering to WATCH the key once it exists, which is this screen's own verb. The consequence, stated: a brand-new Frames user watches an example first, then creates in the room.
+
+### 5. The one place the four still differ, with its reason
+
+Hegotá, Frames and Privacy keep a `DevnetWatchingSection` with Remove; vibenet does not. §465 puts what you do REPEATEDLY in the room, and vibenet's accounts live on the room's own face rail. The other three rooms have no equivalent rail, so removing this would leave a pasted address with nowhere at all to be unwatched — a dead end, which is worse than an inconsistency. When those rooms grow a rail this section leaves with it.
+
+### 6. Three guards followed their rulings to a new address rather than being deleted
+
+All three went red on the refactor, and every one of them was right to: the ruling held and the mechanism moved.
+
+* `hegota-selftest`'s "both worked examples stay reachable" was anchored to `unwatchedExamples`, a filter that no longer exists. The new mechanism is **strictly stronger** — every example is drawn and a taken one is marked rather than dropped — so the guard is two assertions now, one per half, because the screen can stop handing its table over and the slab can start filtering the table it was handed.
+* `vibenet-selftest`'s two taken-row guards (`disabled(watching)`, `"Watching"`) now read `DevnetAccounts.swift`, which is **wider coverage than before**: the ruling was vibenet's alone and the other three seats had never kept it.
+* `vibenet-selftest`'s "one field, shared" now asserts the sheet reaches `VibenetWatchField` and the setup screen reaches `DevnetAccountsSlab`. Two addresses, one ruling: nobody writes a second paste field.
+
+All seven assertions were mutation-probed against the real tree before landing — each passes clean and fails on the exact drift it names.
+
+**NOT built, and named rather than left to be discovered.** Two proposals from the same review are unbuilt: **checking an example is still live** (one cheap read on appear, so an example that no longer shows what it promises loses its verb and says why — today a chain reset silently turns every example into a door onto an empty room), and **disclosing a reset** on the setup screen from §594's genesis verdict. Both need per-chain read plumbing and a measurement pass; neither is a design change.
+
+**UNSEEN on a device.** iOS and Mac Catalyst both compile, all 30 static audits pass and the four affected harnesses are green, but no screenshot of any of these four screens has been taken since the change.

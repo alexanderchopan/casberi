@@ -1,0 +1,162 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>devnet setup · one framework, four seats</title>
+<style>
+:root{
+  --p1:#0b0b0c; --p2:#5b5f66; --p3:#8b9099;
+  --fill:#f2f3f5; --well:#e9e9ef; --paper:#fff; --bad:#d92d20; --tint:#0a84ff;
+  --r:18px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#e9ebee;font:14px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;color:var(--p1);padding:28px 20px 60px}
+h1{font-size:19px;margin:0 0 4px;font-weight:700}
+.lede{color:var(--p2);font-size:13px;margin:0 0 22px;max-width:920px}
+.lede b{color:var(--p1)}
+.wrap{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+.col{flex:0 0 330px}
+.cap{font-size:12px;color:var(--p2);margin:0 0 8px;font-weight:600}
+.phone{background:var(--paper);border-radius:28px;padding:16px 14px 18px;box-shadow:0 1px 2px rgba(0,0,0,.05),0 10px 30px rgba(0,0,0,.09);position:relative;overflow:hidden}
+.pour{position:absolute;left:0;right:0;top:0;height:150px;background:linear-gradient(rgba(11,11,12,.078),rgba(11,11,12,0));pointer-events:none}
+.title{font-size:28px;font-weight:700;letter-spacing:-.5px;margin:6px 2px 14px;position:relative}
+/* header */
+.head{display:flex;gap:12px;align-items:center;padding:12px;border-radius:var(--r);background:var(--fill);position:relative}
+.mark{width:44px;height:44px;border-radius:12px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px}
+.tag{font-size:16px;font-weight:500;line-height:1.25}
+.chip{display:inline-block;margin-top:5px;font-size:11.5px;font-weight:600;color:var(--p2);background:#e2e5e9;border-radius:999px;padding:2px 9px}
+.sentence{font-size:15px;color:var(--p2);padding:10px 2px 2px;line-height:1.4}
+/* room door */
+.door{display:flex;gap:10px;align-items:center;padding:12px;border-radius:14px;background:var(--well);margin-top:12px}
+.door .face{width:20px;height:20px;border-radius:50%;flex:0 0 20px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:700;border:1.5px solid #e3e6ea}
+.door .t{font-size:16px;flex:1}
+.chev{color:var(--p3);font-size:14px}
+/* the accounts slab */
+.slab{background:var(--fill);border-radius:var(--r);padding:12px;margin-top:12px}
+/* the field, at the TOP */
+.field{display:flex;align-items:center;gap:8px;background:#fff;border-radius:14px;padding:0 14px;height:48px}
+.field .ph{flex:1;color:var(--p3);font-size:16px}
+.field .verb{font-size:13px;font-weight:700;letter-spacing:.3px;color:var(--p3)}
+.field .verb.armed{color:var(--tint)}
+.preview{display:flex;gap:10px;align-items:center;background:var(--well);border-radius:14px;padding:8px 12px;margin-top:10px}
+.idle{font-size:13px;color:var(--p3);padding:8px 2px 0}
+.slabh{font-size:12px;font-weight:600;color:var(--p2);margin:14px 2px 2px}
+/* one row shape */
+.row{display:flex;gap:12px;align-items:center;padding:8px 2px}
+.face{width:36px;height:36px;border-radius:50%;flex:0 0 36px;background:conic-gradient(from 20deg,#f5b,#5bf,#fb5,#f5b)}
+.face.me{background:#e5e5ea;display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--p2)}
+.body{flex:1;min-width:0}
+.t{font-size:15px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s{font-size:12px;color:var(--p3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.verb{font-size:12px;font-weight:600;white-space:nowrap}
+.verb.taken{color:var(--p3)}
+.rm{font-size:12px;font-weight:600;color:var(--p3)}
+/* the note */
+.note{font-size:13px;color:var(--p3);text-align:center;padding:14px 10px 0;line-height:1.4}
+/* the two exits, one shape */
+.exit{margin-top:12px;background:#fff;border-radius:14px;padding:11px 12px;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.04),0 6px 18px rgba(0,0,0,.05)}
+.exit .t1{font-size:16px;color:var(--tint)}
+.exit .t2{font-size:12px;color:var(--p3);margin-top:1px}
+.exit.bad .t1{color:var(--bad)}
+.legend{margin:26px 0 0;max-width:920px;font-size:13px;color:var(--p2)}
+.legend b{color:var(--p1)}
+.legend li{margin:5px 0}
+</style></head><body>
+<h1>Devnet setup — one anatomy, four seats</h1>
+<p class="lede">Same list on every screen: <b>header · View feed · Accounts (paste field at the top, examples under it) · one sentence · explorer · Disconnect</b>. What changes between seats is only the data — the mark, the measured examples and the claim each one makes, the sentence. Nothing here routes you anywhere after the first watch. Nothing here makes a key or asks a faucet; those are the room's Home tiles.</p>
+
+<div class="wrap">
+
+<!-- VIBENET -->
+<div class="col"><p class="cap">Base Vibenet — its live discovery list is the one extra section</p>
+<div class="phone"><div class="pour"></div>
+<div class="title">Base Vibenet</div>
+<div class="head"><div class="mark" style="background:#0052ff">V</div><div><div class="tag">Watch an account on Base's devnet</div><span class="chip">No account</span></div></div>
+<div class="sentence">Paste an account address, or watch any of the examples below.</div>
+<div class="door"><div class="face" style="background:#0052ff">V</div><div class="t">View feed</div><span class="chev">›</span></div>
+<div class="slab">
+  <div class="field"><span class="ph">0x… devnet address</span><span class="verb">WATCH</span></div>
+  <div class="slabh">Addresses worth watching</div>
+  <div class="row"><div class="face"></div><div class="body"><div class="t">An established account</div><div class="s">Its keys and what they may do · 0x7778…eD9b</div></div><span class="verb taken">✓ Watching</span></div>
+</div>
+<div class="slab">
+  <div class="slabh" style="margin-top:2px">Recently created on vibenet</div>
+  <div class="row"><div class="face" style="background:conic-gradient(from 90deg,#6f6,#66f,#f66,#6f6)"></div><div class="body"><div class="t">An account on the chain</div><div class="s">Created 2 hours ago · 0x3f1a…9c0e</div></div><span class="verb" style="color:#0052ff">Watch</span></div>
+  <div class="row"><div class="face" style="background:conic-gradient(from 200deg,#fc6,#6cf,#c6f,#fc6)"></div><div class="body"><div class="t">An account on the chain</div><div class="s">Created yesterday · 0x9c44…e21b</div></div><span class="verb" style="color:#0052ff">Watch</span></div>
+</div>
+<div class="note">Test ETH has no value, and the network may be reset without notice.</div>
+<div class="exit"><div class="t1">Open the explorer</div><div class="t2">chain.base.org</div></div>
+<div class="exit bad"><div class="t1">Disconnect Base Vibenet</div></div>
+</div></div>
+
+<!-- HEGOTA -->
+<div class="col"><p class="cap">Ethrex Hegotá — this phone's key as one more account row; the faucet door is gone</p>
+<div class="phone"><div class="pour"></div>
+<div class="title">Ethrex Hegotá</div>
+<div class="head"><div class="mark" style="background:#111">H</div><div><div class="tag">Explore UTXOs — coins as objects, not a balance</div><span class="chip">No account</span></div></div>
+<div class="sentence">Paste an address, or start with one that already has something to show.</div>
+<div class="door"><div class="face" style="background:#111">H</div><div class="t">View feed</div><span class="chev">›</span></div>
+<div class="slab">
+  <div class="field"><span class="ph">0x… devnet address</span><span class="verb">WATCH</span></div>
+  <div class="row"><div class="face me">▯</div><div class="body"><div class="t">This phone</div><div class="s">The key that signs here · 0x2f8c…10a4</div></div><span class="verb" style="color:#111">Watch</span></div>
+  <div class="slabh">Addresses worth watching</div>
+  <div class="row"><div class="face" style="background:conic-gradient(from 40deg,#fa8,#8af,#af8,#fa8)"></div><div class="body"><div class="t">An address holding coins</div><div class="s">The vault's unspent pieces · 0x8b54…a013</div></div><span class="verb taken">✓ Watching</span></div>
+  <div class="row"><div class="face" style="background:conic-gradient(from 300deg,#8fa,#a8f,#fa8,#8fa)"></div><div class="body"><div class="t">An address sending in parallel</div><div class="s">Two named nonce keys · 0x8943…a776</div></div><span class="verb" style="color:#111">Watch</span></div>
+</div>
+<div class="slab">
+  <div class="slabh" style="margin-top:2px">Watching</div>
+  <div class="row"><div class="face" style="background:conic-gradient(from 40deg,#fa8,#8af,#af8,#fa8)"></div><div class="body"><div class="t">0x8b54…a013</div><div class="s">0x8b54…a013</div></div><span class="rm">Remove</span></div>
+</div>
+<div class="note">Test ETH has no value, and the network may be reset without notice.</div>
+<div class="exit"><div class="t1">Open the explorer</div><div class="t2">dora.hegota.ethrex.xyz</div></div>
+<div class="exit bad"><div class="t1">Disconnect Ethrex Hegotá</div></div>
+</div></div>
+
+<!-- FRAMES -->
+<div class="col"><p class="cap">Frames Devnet — nothing watched yet, so no door and no roster</p>
+<div class="phone"><div class="pour"></div>
+<div class="title">Frames Devnet</div>
+<div class="head"><div class="mark" style="background:#5b3df5">F</div><div><div class="tag">Try Ethereum's new frame transactions</div><span class="chip">No account</span></div></div>
+<div class="sentence">Paste an address, or start with one that already has something to show.</div>
+<div class="slab">
+  <div class="field"><span class="ph">0x… devnet address</span><span class="verb">WATCH</span></div>
+  <div class="idle">Nothing is watched yet.</div>
+  <div class="slabh">Addresses worth watching</div>
+  <div class="row"><div class="face" style="background:conic-gradient(from 10deg,#c9f,#9cf,#fc9,#c9f)"></div><div class="body"><div class="t">An address that sent twice</div><div class="s">Two frame transactions · 0x80cf…2e32</div></div><span class="verb" style="color:#5b3df5">Watch</span></div>
+  <div class="row"><div class="face" style="background:conic-gradient(from 160deg,#9cf,#fc9,#c9f,#9cf)"></div><div class="body"><div class="t">A two-frame transfer</div><div class="s">A verify frame and a sender frame · 0x333e…3a0d</div></div><span class="verb" style="color:#5b3df5">Watch</span></div>
+</div>
+<div class="note">Test ETH has no value, and the network may be reset without notice.</div>
+<div class="exit"><div class="t1">Open the explorer</div><div class="t2">dora.frames.ethrex.xyz</div></div>
+</div></div>
+
+<!-- PRIVACY -->
+<div class="col"><p class="cap">Ethrex Privacy — mid-paste, and the sentence carries the thing people will assume</p>
+<div class="phone"><div class="pour"></div>
+<div class="title">Ethrex Privacy</div>
+<div class="head"><div class="mark" style="background:#2a2e35">P</div><div><div class="tag">Try Ethereum's new privacy proposals</div><span class="chip">No account</span></div></div>
+<div class="sentence">Paste an address to watch, or start with one that already has something to show.</div>
+<div class="door"><div class="face" style="background:#2a2e35">P</div><div class="t">View feed</div><span class="chev">›</span></div>
+<div class="slab">
+  <div class="field"><span class="ph" style="color:var(--p1)">0x9d1f2c44ab…7e0b</span><span class="verb armed">WATCH</span></div>
+  <div class="preview"><div class="face" style="background:conic-gradient(from 70deg,#8cf,#f8c,#cf8,#8cf)"></div><div class="body"><div class="t" style="font-weight:600">0x9d1f…7e0b</div><div class="s">New address</div></div></div>
+  <div class="slabh">Addresses worth watching</div>
+  <div class="row"><div class="face" style="background:conic-gradient(from 120deg,#9fc,#c9f,#fc9,#9fc)"></div><div class="body"><div class="t">An address that used the pool</div><div class="s">One-time spend keys, and a proof · 0x0629…f980</div></div><span class="verb taken">✓ Watching</span></div>
+  <div class="row"><div class="face" style="background:conic-gradient(from 250deg,#f9c,#9fc,#cf9,#f9c)"></div><div class="body"><div class="t">An address that sent early</div><div class="s">The chain's first hour · 0x248a…cc60</div></div><span class="verb" style="color:#2a2e35">Watch</span></div>
+</div>
+<div class="slab">
+  <div class="slabh" style="margin-top:2px">Watching</div>
+  <div class="row"><div class="face" style="background:conic-gradient(from 120deg,#9fc,#c9f,#fc9,#9fc)"></div><div class="body"><div class="t">0x0629…f980</div><div class="s">0x0629…f980</div></div><span class="rm">Remove</span></div>
+</div>
+<div class="note">Addresses on this chain are public — watching one is a read, and it hides nothing about you. Test ETH has no value, and the network may be reset without notice.</div>
+<div class="exit"><div class="t1">Open the explorer</div><div class="t2">dora.privacy.ethrex.xyz</div></div>
+<div class="exit bad"><div class="t1">Disconnect Ethrex Privacy</div></div>
+</div></div>
+
+</div>
+
+<ul class="legend">
+<li><b>The field is at the top of the accounts card</b>, above the examples: here is the box, and here are addresses to put in it if you have none of your own. It is one control (`DSSlabField`) on all four now, with the live address preview vibenet already had — three seats used a different field with a hand-rolled result line under it.</li>
+<li><b>One row shape for every account</b> — face, a claim in words, the address, a trailing verb. A row you have taken says <i>✓ Watching</i> and stops being tappable; before this, three of the four either dropped the row or left it tappable doing nothing.</li>
+<li><b>The two exits share one shape</b> at the foot of the screen: a centred card row, the shape Disconnect already used. The explorer was a filled full-width slab with a chevron — the grammar of a door onto another screen in this app, which is not what it is.</li>
+<li><b>Only the first watch routes.</b> The 2026-08-28 vibenet ruling, generalised — a second watch never yanks the list away from the thumb still using it.</li>
+<li><b>No key, no faucet here.</b> §465: setup is once. Creating an account and topping up are the room's Home tiles on the three chains that have them; Hegotá's leftover "Get test ETH" door is deleted, as Frames' was on Sep 1.</li>
+<li><b>The one place the four still differ</b> is the Watching roster with Remove. Vibenet's lives on the room's face rail per §465; the other three rooms have no rail yet, so removing it there would leave a pasted address with no way to be unwatched.</li>
+</ul>
+</body></html>

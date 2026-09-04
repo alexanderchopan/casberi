@@ -157,6 +157,14 @@ WATCHSHEET="Casberi/Casberi/Screens/VibenetWatchSheet.swift"
 [[ -f "$WATCHSHEET" ]] || { echo "✗ $WATCHSHEET not found"; exit 1; }
 strip_comments "$WATCHSHEET" > "$TMP/sheet.nc.swift"
 strip_comments "$FIELD" > "$TMP/watch.nc.swift"
+# The four devnet setup screens share one accounts control since 2026-09-04
+# (`DevnetAccountsSlab` / `DevnetAccountRow`), so two rulings this harness has
+# always asserted about vibenet's own file now live there: a taken row says so
+# and stops being tappable, and nobody hand-rolls a second paste field. The
+# guards follow the rulings to their new address rather than being deleted.
+SLAB="Casberi/Casberi/Screens/DevnetAccounts.swift"
+[[ -f "$SLAB" ]] || { echo "✗ $SLAB not found"; exit 1; }
+strip_comments "$SLAB" > "$TMP/slab.nc.swift"
 strip_comments "$SPINE" > "$TMP/spine.nc.swift"
 SECTION="Casberi/Casberi/Model/VibenetSection.swift"
 [[ -f "$SECTION" ]] || { echo "✗ $SECTION not found"; exit 1; }
@@ -222,28 +230,41 @@ if grep -qE 'if +!connected' "$TMP/setup.nc.swift"; then
   exit 1
 fi
 
-# A discovery row must SAY whether you already took it. `VibenetWatch.add`
-# refuses a duplicate, so without this a second tap on a row you have is the
-# dead control §83 bans — and the only feedback for a tap that worked and one
-# that did nothing is the same row, unchanged.
-# Anchored to the ROW's own two halves, never a bare `isWatching`: the paste
-# field in the same file has said "Already watching" since it shipped, so a
-# file-wide grep for that call passes whether or not the LIST marks anything.
-grep -q 'disabled(watching)' "$TMP/watch.nc.swift" \
-  || { echo "✗ a watched discovery row is tappable again — 2026-08-28: add() refuses it,"; \
+# AN ACCOUNT ROW MUST SAY WHETHER YOU ALREADY TOOK IT. `add` refuses a
+# duplicate, so without this a second tap on a row you have is the dead control
+# §83 bans — and the only feedback for a tap that worked and one that did
+# nothing is the same row, unchanged.
+#
+# Asserted against `DevnetAccountRow` since 2026-09-04, which is where the row
+# lives now that all four devnet seats draw it. That is strictly wider
+# coverage: the ruling was vibenet's and the other three had never kept it.
+# Anchored to the ROW's own two halves, never a bare `isWatching` — the paste
+# field says "Already watching" in its own preview, so a file-wide grep for
+# that call passes whether or not the LIST marks anything.
+grep -q 'disabled(watching)' "$TMP/slab.nc.swift" \
+  || { echo "✗ a watched account row is tappable again — 2026-08-28: add() refuses it,"; \
        echo "  so the tap does nothing and reads exactly like a tap that worked"; exit 1; }
-grep -q '"Watching"' "$TMP/watch.nc.swift" \
-  || { echo "✗ a watched discovery row no longer SAYS it is watched (2026-08-28)"; exit 1; }
+grep -q '"Watching"' "$TMP/slab.nc.swift" \
+  || { echo "✗ a watched account row no longer SAYS it is watched (2026-08-28)"; exit 1; }
+# The vibenet discovery list must go on drawing THAT row rather than growing
+# its own again — the shape it had before the four seats were folded together.
+grep -q 'DevnetAccountRow' "$TMP/watch.nc.swift" \
+  || { echo "✗ the vibenet discovery list hand-rolls its rows again — the taken-row"; \
+       echo "  state lives in DevnetAccountRow and a second row shape loses it"; exit 1; }
 
 # ONE field, shared. Copied, the two screens answer the same paste with two
 # different sentences within a release. §517 MOVED the book's copy into
 # `VibenetWatchSheet` — the ruling is unchanged, its address is not: the
 # lookup is a sheet now rather than an unfold, so the sheet is where the book
 # reaches the shared control.
-for f in "$TMP/setup.nc.swift" "$TMP/sheet.nc.swift"; do
-  grep -q 'VibenetWatchField' "$f" \
-    || { echo "✗ $f no longer uses the shared VibenetWatchField (prd §465)"; exit 1; }
-done
+# The SHEET still reaches the shared field directly; the SETUP screen reaches
+# it through `DevnetAccountsSlab`, which owns the field for all four devnets
+# (2026-09-04). Two addresses, one ruling: nobody writes a second paste field.
+grep -q 'VibenetWatchField' "$TMP/sheet.nc.swift" \
+  || { echo "✗ the watch sheet no longer uses the shared VibenetWatchField (prd §465)"; exit 1; }
+grep -q 'DevnetAccountsSlab' "$TMP/setup.nc.swift" \
+  || { echo "✗ VibenetScreen no longer uses the shared DevnetAccountsSlab — a fourth"; \
+       echo "  hand-rolled paste field is how these screens drifted apart the first time"; exit 1; }
 for f in "$TMP/setup.nc.swift" "$TMP/sheet.nc.swift" "$TMP/card.nc.swift"; do
   grep -q 'DSSlabField' "$f" \
     && { echo "✗ $f hand-rolls its own paste field — VibenetWatchField is the one control (prd §465)"; exit 1; }

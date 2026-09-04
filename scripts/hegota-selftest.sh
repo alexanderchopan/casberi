@@ -1122,8 +1122,14 @@ BRIDGE="Casberi/Casberi/Model/HegotaBridge.swift"
 CARD="Casberi/Casberi/Screens/HegotaRoomCard.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 SCREEN="Casberi/Casberi/Screens/HegotaScreen.swift"
+# The four devnet setup screens share one accounts control since 2026-09-04,
+# so the rule the guard below protects now lives half here and half in the
+# shared file. Both halves are asserted, because either one alone can lose an
+# example: the screen can stop handing its table over, and the slab can start
+# filtering the table it was handed.
+SLAB="Casberi/Casberi/Screens/DevnetAccounts.swift"
 LIVE="Casberi/Casberi/Model/LiveRoomSources.swift"
-for f in "$BRIDGE" "$CARD" "$SCREEN" "$LIVE" "$FEED"; do
+for f in "$BRIDGE" "$CARD" "$SCREEN" "$SLAB" "$LIVE" "$FEED"; do
   strip_comments "$f" > "$work/$(basename $f).bare"
 done
 need() { [[ -f "$work/$1" ]] || fail "guard points at a file never prepared: $1"; \
@@ -1149,10 +1155,24 @@ need HegotaRoomCard.swift.bare "refreshIfStale" \
 # Reading and unreachable are different sentences.
 need HegotaRoomCard.swift.bare "head.hasRead" \
   "the card no longer distinguishes 'not read yet' from 'could not reach'"
-# Both worked examples must stay reachable: nobody on this chain has both
-# halves of the room, so losing one loses half the room permanently.
-need HegotaScreen.swift.bare "unwatchedExamples" \
-  "the examples are gated on !connected again — watching one loses the other for good"
+# BOTH WORKED EXAMPLES MUST STAY REACHABLE: nobody on this chain has both
+# halves of the room, so losing one loses half the room permanently. Reported
+# from a device 2026-08-27 ("when you select one of the addresses to watch you
+# can't select the other, no way back to it").
+#
+# The MECHANISM changed on 2026-09-04 and the ruling did not. It used to be an
+# `unwatchedExamples` filter that dropped a taken row; the shared accounts slab
+# now draws EVERY example and marks the taken ones `✓ Watching` — strictly
+# stronger, since a row that is present and marked cannot go missing at all.
+# So the guard follows the ruling to its new mechanism rather than being
+# deleted, and it takes two assertions because either half alone can lose an
+# example.
+need HegotaScreen.swift.bare "examples: Self.examples" \
+  "the screen no longer hands its examples table to the accounts slab whole — a gated or filtered list loses half the room"
+need DevnetAccounts.swift.bare "ForEach(examples)" \
+  "the accounts slab no longer walks the examples it was handed — a taken example would vanish from the card"
+deny DevnetAccounts.swift.bare "examples.filter" \
+  "the accounts slab filters its examples again — a watched one disappears and the other half of the room goes with it"
 
 # THE FRAMES CAPTION AND ITS LEGEND, as guards rather than as memory. Both
 # were reported from a device as "how does this math add up" and neither is

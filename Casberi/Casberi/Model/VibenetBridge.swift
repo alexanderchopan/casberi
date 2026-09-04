@@ -2462,7 +2462,12 @@ enum VibenetBackfill {
 /// MEASURED, and it fails safe: a wrong tx path is a page that 404s in the
 /// person's own browser, never a crash or a wrong claim inside the app.
 enum VibenetExplorer {
-    private static let base = "https://chain.base.org/vibenet/explorer"
+    /// Internal rather than private since 2026-09-04: the setup screen's
+    /// `DevnetExplorerRow` opens the explorer's own front door, the same way
+    /// its three sibling devnets do. A browser door, never a fetch —
+    /// `chain.base.org` sits in `network-reach-audit.sh`'s denylist for
+    /// exactly that reason.
+    static let base = "https://chain.base.org/vibenet/explorer"
     static func address(_ address: String) -> String { "\(base)/address/\(address)" }
     static func tx(_ hash: String) -> String { "\(base)/tx/\(hash)" }
 

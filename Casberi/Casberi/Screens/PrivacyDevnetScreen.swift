@@ -2,12 +2,12 @@ import SwiftUI
 
 /// Ethrex Privacy, connected — chain 8141, the third ethrex devnet (prd §593).
 ///
-/// **THE WATCH FIELD LEADS, and that is a measurement rather than a taste.**
-/// `FramesScreen` opens on "create an account" because its chain is days old
-/// and holds almost nothing to look at. This screen cannot: the seat makes no
-/// key at all while its type-`0x6` envelope is unreproduced (§593a), so there
-/// is no account act to lead with. What it leads with instead is the two
-/// addresses that really carry the reading — measured, not invented.
+/// **ONE ANATOMY WITH ITS THREE SIBLINGS (user, 2026-09-04).** Header, room
+/// door, the accounts slab — paste field at the top, examples under it — the
+/// screen's one sentence, the explorer, Disconnect. What differs between the
+/// four devnet seats is the data: the mark, the measured examples and the
+/// claim each makes, the sentence. `DevnetAccounts.swift` carries the whole
+/// argument.
 ///
 /// **The examples are load-bearing here in a way they are not on the siblings.**
 /// This chain holds 14 type-`0x6` transactions across ~14,000 blocks, and only
@@ -15,6 +15,10 @@ import SwiftUI
 /// correct blank that reads exactly like a broken feature, and the honest fix
 /// is to hand somebody an address that has something to show. Both below are
 /// real and were read off `rpc1.privacy.ethrex.xyz` on 2026-09-04.
+///
+/// **The seat makes no key**, unlike Frames and Hegotá: its type-`0x6`
+/// envelope is unreproduced (§593a), so there is no account act to offer and
+/// the slab carries no "This phone" row.
 ///
 /// **This screen is the CONNECT ACT and nothing else (prd §465)** — what you do
 /// ONCE. The room keeps what you do repeatedly.
@@ -25,9 +29,7 @@ struct PrivacyDevnetScreen: View {
 
     @Bindable private var watch = PrivacyDevnetWatch.shared
 
-    @State private var typed = ""
-    @State private var note: String?
-    @State private var noteIsError = false
+    private static let mark = DS.brandHue(for: PrivacyDevnetIdentity.source) ?? DS.tint
 
     private var connected: Bool { watch.connected }
 
@@ -47,37 +49,41 @@ struct PrivacyDevnetScreen: View {
                     .listRowSeparator(.hidden)
             }
 
-            Section { watchField }
-                .dsSlabSection()
-                .listRowSeparator(.hidden)
-
-            if !unwatchedExamples.isEmpty {
-                Section { examples }
-                    .dsSlabSection()
-                    .listRowSeparator(.hidden)
+            Section {
+                DevnetAccountsSlab(
+                    watch: watch,
+                    tint: Self.mark,
+                    examples: Self.examples,
+                    idleNote: watch.addresses.isEmpty
+                        ? String(localized: "Nothing is watched yet.") : nil,
+                    register: { PrivacyDevnetBridge.registerBridge(store: store) },
+                    onWatched: watched)
             }
+            .dsSlabSection()
+            .listRowSeparator(.hidden)
 
             if !watch.addresses.isEmpty {
-                Section { roster }
-                    .dsSlabSection()
-                    .listRowSeparator(.hidden)
+                Section { DevnetWatchingSection(watch: watch) {
+                    PrivacyDevnetBridge.registerBridge(store: store)
+                } }
+                .dsSlabSection()
+                .listRowSeparator(.hidden)
             }
 
-            if connected {
-                Section {
-                    DSSlabDoor(title: String(localized: "Open the explorer"),
-                               detail: String(localized: "Opens dora.privacy.ethrex.xyz")) {
-                        DSHaptic.selection()
-                        if let url = URL(string: PrivacyDevnetIdentity.explorer) {
-                            UIApplication.shared.open(url)
-                        }
-                    }
-                }
-                .listRowInsets(EdgeInsets(top: DS.Space.s6, leading: DS.Space.s4,
-                                          bottom: 0, trailing: DS.Space.s4))
-                .listRowBackground(Color.clear)
+            // The seat's one §315 gray sentence, and it is spent on the thing
+            // somebody would otherwise assume. "Privacy devnet" invites the
+            // reading that watching here is private; it is not, and the chain
+            // itself is the reason rather than any choice of ours.
+            Section {
+                DSSlabNote(text: String(localized: "Addresses on this chain are public — watching one is a read, and it hides nothing about you. Test ETH has no value, and the network may be reset without notice."))
+            }
+            .dsSlabSection()
+            .listRowSeparator(.hidden)
+
+            DevnetExplorerRow(url: PrivacyDevnetIdentity.explorer)
                 .listRowSeparator(.hidden)
 
+            if connected {
                 BridgeDisconnectSection(
                     bridgeID: PrivacyDevnetIdentity.seatID,
                     name: PrivacyDevnetIdentity.source,
@@ -94,129 +100,31 @@ struct PrivacyDevnetScreen: View {
         .dsScreenTitle(PrivacyDevnetIdentity.source)
     }
 
-    // MARK: - Watching
-
-    @ViewBuilder private var watchField: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            BridgeFieldRow(placeholder: String(localized: "0x…"),
-                           text: $typed,
-                           buttonLabel: String(localized: "Watch")) { watchTyped() }
-            if let note {
-                Text(note)
-                    .dsText(.subhead13)
-                    .foregroundStyle(noteIsError ? DS.destructive : DS.textSecondary)
-            }
-            // The seat's one §315 gray sentence, and it is spent on the thing
-            // somebody would otherwise assume. "Privacy devnet" invites the
-            // reading that watching here is private; it is not, and the chain
-            // itself is the reason rather than any choice of ours.
-            DSSlabNote(text: String(localized: "Test ETH has no value, and the network may be reset without notice. Addresses on this chain are public — watching one is a read, and it hides nothing about you."))
-        }
-    }
-
-    private func watchTyped() {
-        let raw = typed.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return }
-        guard PrivacyDevnetWatch.isValidAddress(raw) else {
-            note = String(localized: "That doesn't look like an address. It should be 0x and 40 more characters.")
-            noteIsError = true
-            return
-        }
-        guard !watch.isWatching(raw) else {
-            note = String(localized: "Already watching that one.")
-            noteIsError = false
-            return
-        }
-        let wasFirst = watch.addresses.isEmpty
-        watch.add(raw)
-        PrivacyDevnetBridge.registerBridge(store: store)
-        typed = ""
-        note = nil
-        DSHaptic.success()
-        // Only on the FIRST watch: the room is a new place then, and going
-        // there is the point. On the second, staying put is — you are adding
-        // to a list you can see.
-        if wasFirst { openRoom() }
-    }
-
-    private func openRoom() {
-        route.closeConnectForm()
-        route.path = []
-        chrome.sourceRequest = PrivacyDevnetIdentity.source
-    }
-
-    // MARK: - Examples
-
     /// Two real addresses, and each is here for a DIFFERENT reading — the pool
     /// participant is the only one of the two whose transactions reference a
     /// root, so watching it is the only way to see the Roots scope at all
-    /// without waiting for somebody to use the chain.
-    private struct Example: Identifiable {
-        let address: String
-        let title: String
-        let detail: String
-        var id: String { address }
-    }
-
-    private let allExamples: [Example] = [
-        Example(address: "0x062901d23f7e2d3bf9949c8a8cfd2c7a5ae3f980",
-                title: String(localized: "An address that used the pool"),
-                detail: String(localized: "Two one-time spend keys, and a proof against a recent snapshot")),
-        Example(address: "0x248ac8584135c94469a90fbb02ba053b17f1cc60",
-                title: String(localized: "An address that sent early"),
-                detail: String(localized: "Frame transactions from the chain's first hour")),
+    /// without waiting for somebody to use the chain. Measured 2026-09-04.
+    private static let examples: [DevnetExample] = [
+        DevnetExample(address: "0x062901d23f7e2d3bf9949c8a8cfd2c7a5ae3f980",
+                      title: String(localized: "An address that used the pool"),
+                      detail: String(localized: "One-time spend keys, and a proof")),
+        DevnetExample(address: "0x248ac8584135c94469a90fbb02ba053b17f1cc60",
+                      title: String(localized: "An address that sent early"),
+                      detail: String(localized: "The chain's first hour")),
     ]
 
-    private var unwatchedExamples: [Example] {
-        allExamples.filter { !watch.isWatching($0.address) }
-    }
-
-    @ViewBuilder private var examples: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text(String(localized: "Start with one of these"))
-                .dsText(.heading17)
-            ForEach(unwatchedExamples) { example in
-                DSSlabDoor(title: example.title, detail: example.detail) {
-                    DSHaptic.selection()
-                    let wasFirst = watch.addresses.isEmpty
-                    watch.add(example.address)
-                    PrivacyDevnetBridge.registerBridge(store: store)
-                    if wasFirst { openRoom() }
-                }
-            }
-        }
-    }
-
-    // MARK: - The roster
-
-    @ViewBuilder private var roster: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text(watch.addresses.count == 1
-                 ? String(localized: "Watching")
-                 : String(localized: "Watching \(watch.addresses.count)"))
-                .dsText(.heading17)
-            ForEach(watch.addresses, id: \.self) { address in
-                HStack(spacing: DS.Space.s3) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(watch.name(for: address) ?? WalletStore.shortAddress(address))
-                            .dsText(.body17)
-                        Text(WalletStore.shortAddress(address))
-                            .dsText(.subhead13)
-                            .foregroundStyle(DS.textTertiary)
-                    }
-                    Spacer(minLength: 0)
-                    Button {
-                        DSHaptic.selection()
-                        watch.remove(address)
-                        PrivacyDevnetBridge.registerBridge(store: store)
-                    } label: {
-                        Text(String(localized: "Remove"))
-                            .dsText(.label12)
-                            .foregroundStyle(DS.textSecondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
+    /// **ONLY THE FIRST WATCH ROUTES.** The room is a new place then, and going
+    /// there is the point; on the second you are adding to a list you can see,
+    /// and yanking it away is the 2026-08-28 vibenet report ("after you follow
+    /// one address you can't choose any of the others").
+    ///
+    /// CLOSE, POP, ASK — `RoomDoor`'s order. This screen is RAISED as the
+    /// connect sheet, so `route.path` is the stack behind it and a bare
+    /// `sourceRequest` moves a room the form is still covering.
+    private func watched(_ address: String) {
+        guard watch.addresses.count == 1 else { return }
+        route.closeConnectForm()
+        route.path = []
+        chrome.sourceRequest = PrivacyDevnetIdentity.source
     }
 }
