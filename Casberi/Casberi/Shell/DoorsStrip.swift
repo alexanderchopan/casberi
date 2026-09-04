@@ -82,7 +82,7 @@ struct DoorsStrip: View {
                     .foregroundStyle(DS.textPrimary)
             }
         }
-        .padding(4)
+        .padding(2)
         // The capsule is the switcher's — `fillFaint`, never glass: this row
         // sits in the band's own scrim, which is chrome content scrolls under,
         // and design law puts Liquid Glass on the floating layer alone.
@@ -106,9 +106,29 @@ struct DoorsStrip: View {
             act()
         } label: {
             mark()
+                // **A DISC, so a door reads as the same kind of object a source
+                // does** (user, 2026-09-04: "so they mirror the other sources
+                // we have in the other chips"). A venue in a category's row is
+                // a `BridgeIcon(circular: true)` — a filled disc you recognise
+                // before you read it — and these were bare glyphs floating on
+                // the capsule, which is a different species in the same slot.
+                // `fillStrong` rather than a hue: there is no brand colour for
+                // "settings", and inventing one is `AssetMark`'s own ban on a
+                // mark whose colour claims an identity it does not have.
                 .frame(width: markSize, height: markSize)
-                // A `.frame()` does not make its empty space hit-testable — the
-                // catalogue door's own three bug reports (2026-07-26).
+                .background { Circle().fill(DS.fillStrong) }
+                // **DRAWN 36, TARGETED 44** — the switcher's own correction,
+                // and this row shipped with the bug it fixed: a
+                // `contentShape(Circle())` on a 36pt frame is a 36pt target,
+                // under `DS.Hit.min`. The ruling `dsTapTarget` states is that
+                // the drawn size stays and only the region grows, so the row's
+                // rhythm is unchanged and the thumb gets the whole seat.
+                //
+                // A `.frame()` alone does not make its empty space
+                // hit-testable — the catalogue door's own three bug reports
+                // (2026-07-26) — so the `contentShape` is what does the work,
+                // and it takes the WHOLE 44pt slot rather than the drawn disc.
+                .frame(width: DS.Hit.min, height: DS.Hit.min)
                 .contentShape(Circle())
         }
         .buttonStyle(PressSpring())
