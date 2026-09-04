@@ -919,6 +919,16 @@ struct LiveTimeText: View {
         Text(label)
             .dsText(.subhead13)
             .foregroundStyle(color)
+            // TABULAR, because it ROLLS (prd §586). `.numericText()` morphs
+            // one digit into the next, and on proportional digits each frame
+            // of that morph is a different width — so "9m" → "10m" reflows the
+            // row's trailing edge while it animates. This is the most-drawn
+            // changing number in the app (every feed row has one), so it is
+            // also the most visible place for that shift.
+            //
+            // Letters are untouched by the modifier, so "Yesterday" and "2h
+            // ago" set exactly as before.
+            .monospacedDigit()
             .contentTransition(.numericText())
             .animation(DS.Motion.standard, value: label)
             .accessibilityLabel(Self.spoken(date))

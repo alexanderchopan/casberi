@@ -1199,6 +1199,8 @@ struct VibenetRoomCard: View {
                         // different size class.
                         .minimumScaleFactor(0.9)
                         .padding(.top, 2)
+                        // Tabular, because it rolls — see `LiveTimeText` (prd §586).
+                        .monospacedDigit()
                         .contentTransition(.numericText())
                         .task {
                             guard !counted else { return }
@@ -3443,6 +3445,8 @@ struct VibenetRoomCard: View {
                                     .foregroundStyle(DS.textPrimary)
                                     .lineLimit(1)
                                     .dsTabularDigits(closing)
+                                    // Tabular, because it rolls — see `LiveTimeText` (prd §586).
+                                    .monospacedDigit()
                                     .contentTransition(.numericText())
                                     .animation(reduceMotion ? nil : DS.Motion.standard, value: countdown)
                                 // Only when BOTH endpoints are known — a bar

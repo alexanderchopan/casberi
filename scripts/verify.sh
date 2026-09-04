@@ -1916,6 +1916,20 @@ python3 "$ROOT/scripts/design-ramp-audit.py" >/dev/null \
   || fail "a glyph is frozen or a brand mark is off the DS.Mark ramp — run python3 scripts/design-ramp-audit.py"
 print -P "%F{green}✓ design-ramp audit%f"
 
+# The feed's own grammar (prd §586). The five feed rows already agreed on a
+# skeleton — mark, title at body17, one supporting line, the time in the same
+# corner, one vertical rhythm — and NOTHING enforced it: they were written
+# months apart and arrived there independently, which is the shape of every
+# drift this repo keeps a ledger entry for. The same check covers the rolling
+# figures, because `.numericText()` on proportional digits reflows the line
+# mid-animation and that was measured 12 sites unpaired against 8 paired.
+step "Feed-row skeleton audit"
+python3 "$ROOT/scripts/feed-row-skeleton-audit.py" --self-test >/dev/null \
+  || fail "the feed-row audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/feed-row-skeleton-audit.py" >/dev/null \
+  || fail "a feed row left the skeleton, or a figure rolls without tabular digits — run python3 scripts/feed-row-skeleton-audit.py"
+print -P "%F{green}✓ feed-row skeleton audit%f"
+
 # The VoiceOver and touch-target half of the same system (2026-08-13). The
 # design-ramp and design-motion audits already cover Dynamic Type and Reduce
 # Motion, and `ContrastStore` covers Increase Contrast — what nothing covered

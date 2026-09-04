@@ -10781,6 +10781,8 @@ case .vibenetSend(let account):
                     // "3 events", "5 screenshots" (2026-07-13). All keeps the
                     // bare number: mixed kinds have no one unit worth naming.
                     Text(countLabel(rows)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        // Tabular, because it rolls — see `LiveTimeText` (prd §586).
+                        .monospacedDigit()
                         .contentTransition(.numericText())
                 }
                 .textCase(nil)

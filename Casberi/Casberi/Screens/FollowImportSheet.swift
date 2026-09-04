@@ -100,6 +100,8 @@ struct FollowImportSheet: View {
             Text(read == 0 ? String(localized: "Reading the follow list…")
                            : String(localized: "Reading the follow list… \(read) so far"))
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                // Tabular, because it rolls — see `LiveTimeText` (prd §586).
+                .monospacedDigit()
                 .contentTransition(.numericText())
         }
         .frame(maxWidth: .infinity, alignment: .leading)

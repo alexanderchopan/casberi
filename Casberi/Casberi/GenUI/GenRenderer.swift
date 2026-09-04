@@ -802,6 +802,8 @@ private struct GenWidget: View {
                     Text(el.str(1))
                         .dsText(inAgentAnswer ? .subhead13 : .callout15)
                         .foregroundStyle(DS.textTertiary)
+                        // Tabular, because it rolls — see `LiveTimeText` (prd §586).
+                        .monospacedDigit()
                         .contentTransition(.numericText())
                         .animation(DS.Motion.standard, value: el.str(1))
                 }
@@ -1062,6 +1064,8 @@ private struct SoloTokenTile: View {
                 HStack(spacing: DS.Space.s2) {
                     Text(TokenChartStyle.priceText(chart.price))
                         .dsText(.subhead13).foregroundStyle(DS.textPrimary)
+                        // Tabular, because it rolls — see `LiveTimeText` (prd §586).
+                        .monospacedDigit()
                         .contentTransition(.numericText())
                     TokenDeltaPill(change: chart.change, label: "1D", compact: true)
                 }
@@ -2943,6 +2947,8 @@ private struct GenTokenChip: View {
                 VStack(alignment: .trailing, spacing: 1) {
                     Text(TokenChartStyle.priceText(chart.price))
                         .dsText(.subhead13).foregroundStyle(DS.textPrimary)
+                        // Tabular, because it rolls — see `LiveTimeText` (prd §586).
+                        .monospacedDigit()
                         .contentTransition(.numericText())
                     TokenDeltaPill(change: chart.change, label: "1D", compact: true)
                 }
@@ -5029,6 +5035,8 @@ private struct GenValueSpark: View {
                             Text(TokenChartStyle.priceText(series[scrubIndex]))
                                 .dsText(.callout15).fontWeight(.semibold)
                                 .foregroundStyle(DS.textPrimary)
+                                // Tabular, because it rolls — see `LiveTimeText` (prd §586).
+                                .monospacedDigit()
                                 .contentTransition(.numericText())
                         } else {
                             TokenDeltaPill(change: change, label: "")

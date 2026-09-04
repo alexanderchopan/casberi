@@ -2409,6 +2409,8 @@ struct Composer: View {
                     .opacity(0.4 + 0.6 * abs(sin(voice.elapsed * 2)))
                 Text(String(format: "%d:%02d", Int(voice.elapsed) / 60, Int(voice.elapsed) % 60))
                     .dsText(.label12).foregroundStyle(DS.textSecondary)
+                    // Tabular, because it rolls — see `LiveTimeText` (prd §586).
+                    .monospacedDigit()
                     .contentTransition(.numericText())
                 Text("Listening")
                     .dsText(.label12).foregroundStyle(DS.textTertiary)

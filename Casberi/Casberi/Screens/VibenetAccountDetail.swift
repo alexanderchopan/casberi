@@ -448,6 +448,8 @@ struct VibenetAccountDetail: View {
                             // without this it hard-cuts between values; the
                             // bar beside it moves continuously and the two
                             // read as one clock only if both do.
+                            // Tabular, because it rolls — see `LiveTimeText` (prd §586).
+                            .monospacedDigit()
                             .contentTransition(.numericText())
                             .animation(reduceMotion ? nil : DS.Motion.standard, value: countdown)
                         if let progress = item.unlockProgress(now: tick.date) {

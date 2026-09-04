@@ -149,6 +149,11 @@ struct CountUpText: View {
     var body: some View {
         if let parts {
             Text("\(shown)\(parts.rest)")
+                // Tabular, because it rolls — see `LiveTimeText` (prd §586).
+                // This modifier counts a figure UP, so every frame between the
+                // old value and the new one is a different number; without
+                // fixed digit widths the label breathes for the whole count.
+                .monospacedDigit()
                 .contentTransition(.numericText(value: Double(shown)))
                 .onAppear { roll(to: parts.n) }
                 .onChange(of: text) { if let p = self.parts { roll(to: p.n) } }

@@ -47385,3 +47385,91 @@ Six room heads changed shape and no screenshot has been taken. Gnosis Pay is
 the one to look at first: it is the only lede threading §374's mask, and the
 mask must suppress the digit ROLL as well as the string, or the magnitude leaks
 through the animation while the figure reads as hidden.
+
+## 586. The feed's grammar, made mechanical (2026-09-03)
+
+**Three design changes were proposed. Measuring them found TWO of the three
+were already right, and the third was real.** Recording the two non-changes is
+the point of this entry: each looked obviously broken from a distance, and each
+turned out to be a correct distinction the app was already observing.
+
+### 1. The row skeleton was DISCOVERED, not designed — so it becomes a check
+
+The proposal was that the feed has "twenty row species" and needs one skeleton
+imposed on it. **Both halves were wrong.** Twenty was every card in the app,
+room heads included; the feed itself draws SEVEN. And they already agree:
+
+    HStack(alignment: .top, spacing: DS.Space.s3)
+      mark        BridgeIcon at DS.Mark.row, or a thumb standing in for it
+      VStack      title at body17, supporting line at subhead13/label12
+      trailing    LiveTimeText — the same fact, in the same corner
+    .padding(.vertical, DS.Space.s2)
+
+`BandRow` was singled out as the one that "shares nothing with the other
+three". It shares all of it. That claim came from a grep that returned its
+image-handling code and never reached its text.
+
+**So there was nothing to redesign, and exactly one thing to build.** Five rows
+written months apart arrived at the same anatomy independently, and nothing
+enforced it — a sixth written tomorrow has nothing to arrive at except what its
+author remembers. `scripts/feed-row-skeleton-audit.py` is that enforcement,
+mutation-proven six ways against the real tree.
+
+**Two rows are exempt and it is CONTENT, not drift.** `TokenRow` and
+`PredictionRow` trail a live figure at `price16` where the others trail a time,
+which is correct: a watched token's row is about what it costs now, and a
+timestamp there would report when we last fetched. They are held to the rest of
+the skeleton, and the audit flags an exemption that stops applying — so it can
+never decay into a snooze.
+
+### 2. The empty states were already right
+
+"128 empty states written 128 times" was the proposal; the measurement says
+otherwise. Of 134 strings opening on *Nothing* / *No* / *Not*, **53 are short
+FIELD VALUES** ("No expiry", "No change", "No auto-renew") which are correct as
+terse labels and are not empty states at all. Of the 89 real sentences, 57 end
+with a period and 32 do not — which looked like the drift until the two groups
+were read:
+
+- the 32 without are **headlines** — "Nothing has settled yet", "Nothing on
+  your card yet", "Nothing pending on your Safe"
+- the 57 with are **body copy** — "No key saved — add one in Settings to ask
+  an agent."
+
+Headline no period, sentence period. That is the correct convention, applied
+consistently across 89 strings by people who never wrote it down. **No change.**
+
+### 3. A NUMBER THAT ROLLS MUST BE TABULAR — this one was real
+
+`.numericText()` morphs one digit into the next, and proportional digits are
+different widths, so every frame of that morph is a different length and the
+line reflows *while it animates*. Measured: **20 rolling figures, 8 paired with
+`monospacedDigit()` and 12 not** — no convention either way, which is why it is
+now a check rather than a note.
+
+All 12 are fixed, and the two that matter most are shared:
+
+- **`LiveTimeText`** — the trailing time on EVERY feed row, so the most-drawn
+  changing number in the app, and the most visible place for a shift.
+- **`MicroMotion`'s counting label** — it counts a figure UP, so every frame
+  between the old value and the new one is a different number and the label
+  breathes for the whole count.
+
+The rest are a voice-recording timer ticking seconds, a devnet countdown, and
+four chart prices — one of them the scrub readout, which changes on every
+movement of a finger.
+
+### 4. The pattern across three sessions
+
+This is the fourth proposal in two days to shrink or vanish on measurement
+(§584's two, §585's `flourish148`, and two of the three here). The common shape
+is worth naming: **a distribution is not a defect until you know what the design
+was trying to do.** 59% of text at 12pt, 128 sentences starting with "No", 20
+row species — each reads as drift in a spreadsheet and as a working system once
+you look at what the items actually are.
+
+### 5. Unseen on a device
+
+The tabular change is invisible at rest and only shows while a figure animates,
+which no screenshot captures. The voice timer and a token chart's scrub are the
+two places to watch it.
