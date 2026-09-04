@@ -360,7 +360,7 @@ struct MainSurface: View {
                     // survives is the 2026-07-30 half of that ruling, which
                     // was never about the nav bar: air is the first thing
                     // handed back when the strip folds.
-                    .padding(.vertical, 5)
+                    .padding(.vertical, DSDock.slabPad)
                     // **THE DOCK IS A GLASS BAR** (§591d, user: "it seems like
                     // the category chips are on a bar but you can't really see
                     // the bar. can we make it more glass like our silhouette
@@ -393,6 +393,10 @@ struct MainSurface: View {
                             .dsGlass(cornerRadius: DSRoomChassis.slabRadius)
                             .padding(.horizontal, DS.Space.s4)
                     }
+                    // The rest of the chips' offset from the band's edge —
+                    // `DSDock.chipBottomInset` is this plus `slabPad` above,
+                    // and the bar's own inset is measured from it so the two
+                    // share a centre line (§591d).
                     .padding(.bottom, chrome.minimized ? DS.Space.s1 : DS.Space.s2)
             }
         }

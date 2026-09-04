@@ -48194,3 +48194,13 @@ opening a folder to look inside. Two blue marks, one of them saying "you have
 not filtered anything", competing with the chip you just pressed.
 
 Both seen on the simulator, light and dark.
+
+**The slab's padding immediately broke the bar's alignment, which is the whole
+reason `DSDock` exists.** The glass gave the strip 5pt of vertical air, and the
+bar's own inset was still measured against the old geometry — so it sat 5pt low
+and hung off the bottom edge of the bar it is supposed to be the first seat of
+(user: *"the octopus is falling off the dock and doesn't share the same middle
+axis as the other chips"*). The padding is `DSDock.slabPad` now and
+`chipBottomInset` derives from it, so the bar and the chips cannot disagree
+about where the row's centre line is. Third time this pair has drifted; each
+time the fix was to name the number once rather than to correct the constant.

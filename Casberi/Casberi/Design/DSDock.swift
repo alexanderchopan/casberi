@@ -75,9 +75,25 @@ enum DSDock {
     /// because `RootShell` hosts the bar and cannot see inside `SourceChips`.
     /// They are the one thing in this file that must be re-derived if the chip
     /// ramp moves; the drift guard in `dock-selftest.sh` pins them together.
+    /// The air inside the dock's glass slab, above and below the chips (§591d).
+    /// Named here rather than spelled at the strip, because the bar's own
+    /// alignment is measured from it and the two must move together — adding
+    /// this padding without updating the inset is exactly what dropped the bar
+    /// 5pt below the slab's bottom edge on its first run (user: "the octopus is
+    /// falling off the dock and doesn't share the same middle axis as the other
+    /// chips").
+    static let slabPad: CGFloat = 5
+
+    /// How far the strip's chips sit off the band's bottom edge.
+    static func chipBottomInset(minimized: Bool) -> CGFloat {
+        slabPad + (minimized ? DS.Space.s1 : DS.Space.s2)
+    }
+
     static func agentBottomInset(minimized: Bool) -> CGFloat {
         let chip: CGFloat = minimized ? 48 : 56
-        let stripBottom = minimized ? DS.Space.s1 : DS.Space.s2
-        return stripBottom + (chip - agentHeight) / 2
+        // Centre on centre, not edge on edge: the chip is 56 (48 folded) and
+        // the bar is 44, so bottom-aligning them leaves the bar half the
+        // difference too low, and that difference CHANGES with the fold.
+        return chipBottomInset(minimized: minimized) + (chip - agentHeight) / 2
     }
 }
