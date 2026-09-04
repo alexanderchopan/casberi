@@ -213,19 +213,20 @@ extension PrivacyDevnetRoomCard {
     static func tail(_ m: PrivacyDevnetLiveState.Move) -> String {
         let short = m.hash.count > 12
             ? String(m.hash.prefix(8)) + "…" + String(m.hash.suffix(4)) : m.hash
-        return m.block > 0 ? "\(short) · block \(m.block)" : short
+        if let b = m.block { return "\(short) · block \(b)" }
+        return short
     }
 
     /// What one transaction did, in the room's own vocabulary.
     static func moveLine(_ m: PrivacyDevnetLiveState.Move) -> String {
         var parts: [String] = []
-        parts.append(m.frames == 1 ? String(localized: "1 frame")
-                                   : String(localized: "\(m.frames) frames"))
-        if m.nullifiers > 0 {
-            parts.append(m.nullifiers == 1 ? String(localized: "1 spend key")
-                                           : String(localized: "\(m.nullifiers) spend keys"))
+        parts.append(m.frameCount == 1 ? String(localized: "1 frame")
+                                       : String(localized: "\(m.frameCount) frames"))
+        if m.nullifierCount > 0 {
+            parts.append(m.nullifierCount == 1 ? String(localized: "1 spend key")
+                                               : String(localized: "\(m.nullifierCount) spend keys"))
         }
-        if m.roots > 0 { parts.append(String(localized: "named a snapshot")) }
+        if m.rootCount > 0 { parts.append(String(localized: "named a snapshot")) }
         if m.sponsored { parts.append(String(localized: "somebody else paid")) }
         return parts.joined(separator: " · ")
     }
@@ -253,7 +254,7 @@ extension PrivacyDevnetRoomCard {
     }
 
     @ViewBuilder private var framesScope: some View {
-        list(moves.filter { $0.frames > 0 })
+        list(moves.filter { $0.frameCount > 0 })
     }
 
     @ViewBuilder private var nullifierScope: some View {
@@ -347,7 +348,7 @@ extension PrivacyDevnetRoomCard {
     @ViewBuilder func figure(for section: PrivacyDevnetSection) -> some View {
         switch section {
         case .activity:   blocks(moves)
-        case .frames:     depth(moves.filter { $0.frames > 0 })
+        case .frames:     depth(moves.filter { $0.frameCount > 0 })
         case .accounts:   shares
         case .nullifiers: spentKeys
         case .roots:      windows
@@ -362,7 +363,7 @@ extension PrivacyDevnetRoomCard {
     /// width — a lone dot at the left edge reads as "at the beginning of
     /// something", and there is no something.
     @ViewBuilder private func blocks(_ moves: [PrivacyDevnetLiveState.Move]) -> some View {
-        let blocks = moves.map(\.block).filter { $0 > 0 }
+        let blocks = moves.compactMap(\.block)
         if blocks.isEmpty {
             EmptyView()
         } else {
@@ -391,7 +392,7 @@ extension PrivacyDevnetRoomCard {
 
     /// How many steps each transaction ran — the reading this chain exists for.
     @ViewBuilder private func depth(_ moves: [PrivacyDevnetLiveState.Move]) -> some View {
-        let counts = moves.map(\.frames)
+        let counts = moves.map(\.frameCount)
         if counts.isEmpty {
             EmptyView()
         } else {

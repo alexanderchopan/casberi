@@ -317,6 +317,49 @@ final class PrivacyDevnetWatch {
     func name(for address: String) -> String? { AddressBook.shared.name(for: address) }
 }
 
+/// Addresses worth watching when you have none of your own.
+///
+/// **This chain makes suggestions load-bearing rather than a nicety.** It holds
+/// 14 type-`0x6` transactions across ~15,000 blocks and only FOUR of them
+/// reference a root, so a pasted stranger's address shows a correct blank that
+/// reads exactly like a broken feature. Vibenet and Frames offer the same thing
+/// for the same reason.
+///
+/// **Declared ONCE and read by both the setup screen and the empty room.** Two
+/// copies of an address is how two screens end up suggesting different things,
+/// and the room is where somebody actually hits the wall — the setup screen is
+/// a place you pass through, the empty room is where you stand wondering what
+/// to do.
+///
+/// Both were read off `rpc1.privacy.ethrex.xyz` on 2026-09-04 by running the
+/// walk itself, and each is here for a DIFFERENT reading: only the first
+/// references a root, so it is the only way to see the Roots scope at all
+/// without waiting for somebody to use the chain.
+enum PrivacyDevnetSuggestions {
+    struct Entry: Identifiable, Sendable {
+        let address: String
+        let title: String
+        let detail: String
+        var id: String { address }
+    }
+
+    static let all: [Entry] = [
+        Entry(address: "0x062901d23f7e2d3bf9949c8a8cfd2c7a5ae3f980",
+              title: String(localized: "An address that used the pool"),
+              detail: String(localized: "Two one-time spend keys, and a proof against a recent snapshot")),
+        Entry(address: "0x248ac8584135c94469a90fbb02ba053b17f1cc60",
+              title: String(localized: "An address that sent early"),
+              detail: String(localized: "Frame transactions from the chain's first hour")),
+    ]
+
+    /// The ones not already watched — an offer to watch something you are
+    /// already watching is the dead control §83 bans.
+    @MainActor
+    static var unwatched: [Entry] {
+        all.filter { !PrivacyDevnetWatch.shared.isWatching($0.address) }
+    }
+}
+
 // MARK: - Bridge registration
 
 enum PrivacyDevnetBridge {
@@ -445,7 +488,10 @@ extension PrivacyDevnetLiveState {
                     out[i].nullifiers = w.nullifiers
                     out[i].roots = w.roots
                     out[i].sponsoredCount = w.sponsored
-                    out[i].moves = w.moves
+                    // **Newest first**, which the figures order on. `block` is
+                    // Optional, so an unread one sorts LAST rather than to the
+                    // beginning of time.
+                    out[i].moves = w.moves.sorted { ($0.block ?? 0) > ($1.block ?? 0) }
                 }
             }
         }
@@ -453,20 +499,45 @@ extension PrivacyDevnetLiveState {
         readAt = Date()
     }
 
-    /// One transaction, as the walk saw it. Kept because Activity and Frames
-    /// have nothing to draw without it, and re-fetching on a scope tap would
-    /// spend 15 seconds to redraw what is already in memory.
+    /// One frame of a transaction, as the walk saw it.
+    ///
+    /// **Every field is Optional and nil never means zero.** A budget the wire
+    /// did not carry draws an unweighted strip; a status the receipt did not
+    /// report must never mark a frame failed. This chain's own spellings are
+    /// `gasLimit`/`stateLimit` — Hegotá says `executionGasLimit`/`stateGasLimit`
+    /// and Frames says `gasLimit`/`stateGasLimit`, so a reader written for
+    /// either sibling gets nil here and draws frames that look budget-less.
+    struct Frame: Equatable, Sendable {
+        var gasLimit: UInt64?
+        var stateLimit: UInt64?
+        /// **Never read today.** `eth_getTransactionReceipt` on this chain
+        /// carries no per-frame breakdown, so this stays nil and a figure must
+        /// not weight or fail a frame off it. Measured on 8141, not assumed.
+        var gasUsed: UInt64?
+        /// Same: no per-frame status is served. Nil, always, for now.
+        var succeeded: Bool?
+    }
+
+    /// One transaction, as the walk saw it.
+    ///
+    /// Carries VALUES rather than only counts, because the Nullifiers scope
+    /// groups keys BY TRANSACTION and the Home scope draws the newest moves'
+    /// snapshots — both of which need the values on the move rather than only
+    /// in the account's flattened union.
     struct Move: Equatable, Sendable, Identifiable {
         var hash: String
-        /// The block it landed in — the only time this walk can know, since a
-        /// transaction carries no timestamp and reading every block header to
-        /// date them would double the walk for a figure's x-axis.
-        var block: UInt64 = 0
-        var frames: Int
-        var nullifiers: Int
-        var roots: Int
-        var sponsored: Bool
+        /// Nil when the transaction read carried none — never 0, which would
+        /// sort a real transaction to the beginning of time.
+        var block: UInt64?
+        var frames: [Frame] = []
+        var nullifiers: [Data] = []
+        var roots: [PrivacyDevnetRoots.Reference] = []
+        var sponsored = false
         var id: String { hash }
+
+        var frameCount: Int { frames.count }
+        var nullifierCount: Int { nullifiers.count }
+        var rootCount: Int { roots.count }
     }
 
     struct Walked { var frames = 0; var nullifiers: [Data] = []
@@ -582,11 +653,19 @@ extension PrivacyDevnetLiveState {
                payer != sender {
                 w.sponsored += 1
             }
+            let moveFrames = (tx["frames"] as? [[String: Any]] ?? []).map { f in
+                Frame(gasLimit: PrivacyDevnetRPC.hexInt(f["gasLimit"]),
+                      stateLimit: PrivacyDevnetRPC.hexInt(f["stateLimit"]),
+                      // Both nil, deliberately: no per-frame breakdown is
+                      // served on this chain (measured), and a figure must not
+                      // weight or fail a frame off a value nobody reported.
+                      gasUsed: nil, succeeded: nil)
+            }
             w.moves.append(Move(hash: hash,
-                                block: PrivacyDevnetRPC.hexInt(tx["blockNumber"]) ?? 0,
-                                frames: (tx["frames"] as? [[String: Any]])?.count ?? 0,
-                                nullifiers: w.nullifiers.count - before.nullifiers,
-                                roots: w.roots.count - before.roots,
+                                block: PrivacyDevnetRPC.hexInt(tx["blockNumber"]),
+                                frames: moveFrames,
+                                nullifiers: Array(w.nullifiers.dropFirst(before.nullifiers)),
+                                roots: Array(w.roots.dropFirst(before.roots)),
                                 sponsored: w.sponsored > before.sponsored))
             out[sender] = w
         }
@@ -661,10 +740,18 @@ extension PrivacyDevnetLiveState {
         // address's own, off blocks 13352 and 13347 — obtained by running the
         // walk's own path against the live chain, not by hand.
         a.moves = [
-            Move(hash: "0xfa32623718a4ac87bca85daa2f62af32522f4e2f763adec8ac2fbde5aeb5cf0f",
-                 block: 13347, frames: 2, nullifiers: 2, roots: 1, sponsored: false),
             Move(hash: "0xeda9b1c8231c7ba375c831d63655acc813cf8c7d3ac2b095b23e3011d7b2999a",
-                 block: 13352, frames: 2, nullifiers: 2, roots: 1, sponsored: false),
+                 block: 13352,
+                 frames: [Frame(gasLimit: 0x4e200, stateLimit: 0),
+                          Frame(gasLimit: 0x4e200, stateLimit: 0)],
+                 nullifiers: [a.nullifiers[2], a.nullifiers[3]],
+                 roots: [a.roots[1]], sponsored: false),
+            Move(hash: "0xfa32623718a4ac87bca85daa2f62af32522f4e2f763adec8ac2fbde5aeb5cf0f",
+                 block: 13347,
+                 frames: [Frame(gasLimit: 0x4e200, stateLimit: 0),
+                          Frame(gasLimit: 0x4e200, stateLimit: 0)],
+                 nullifiers: [a.nullifiers[0], a.nullifiers[1]],
+                 roots: [a.roots[0]], sponsored: false),
         ]
         // Zero, and CORRECT: no transaction measured on this chain carries a
         // `payer` differing from its sender, so the Sponsors chip is absent in

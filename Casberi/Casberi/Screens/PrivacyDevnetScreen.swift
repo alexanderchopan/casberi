@@ -147,28 +147,11 @@ struct PrivacyDevnetScreen: View {
 
     // MARK: - Examples
 
-    /// Two real addresses, and each is here for a DIFFERENT reading — the pool
-    /// participant is the only one of the two whose transactions reference a
-    /// root, so watching it is the only way to see the Roots scope at all
-    /// without waiting for somebody to use the chain.
-    private struct Example: Identifiable {
-        let address: String
-        let title: String
-        let detail: String
-        var id: String { address }
-    }
-
-    private let allExamples: [Example] = [
-        Example(address: "0x062901d23f7e2d3bf9949c8a8cfd2c7a5ae3f980",
-                title: String(localized: "An address that used the pool"),
-                detail: String(localized: "Two one-time spend keys, and a proof against a recent snapshot")),
-        Example(address: "0x248ac8584135c94469a90fbb02ba053b17f1cc60",
-                title: String(localized: "An address that sent early"),
-                detail: String(localized: "Frame transactions from the chain's first hour")),
-    ]
-
-    private var unwatchedExamples: [Example] {
-        allExamples.filter { !watch.isWatching($0.address) }
+    /// The shared list — see `PrivacyDevnetSuggestions`, which the empty room
+    /// reads too. A second copy here is how two screens end up suggesting
+    /// different addresses.
+    private var unwatchedExamples: [PrivacyDevnetSuggestions.Entry] {
+        PrivacyDevnetSuggestions.unwatched
     }
 
     @ViewBuilder private var examples: some View {
