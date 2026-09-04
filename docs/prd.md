@@ -48160,3 +48160,17 @@ Amends §593a, which recorded that the envelope could not be reproduced and that
 **Two encoding bugs the HARNESS found earlier the same day**, each producing a well-formed signature over the wrong transaction: `nonce_keys` are U256 quantities so a leading zero is stripped (writing the padded 32 changes the hash), and a frame's `value` is a quantity too — `0x0` must encode EMPTY, not as one zero byte. Found by diffing two encodings rather than by reading either; `RLP.minimal` is shared rather than copied, since two spellings of the minimal-integer rule is how one drifts.
 
 **Still true and worth not forgetting:** nothing has been sent from the APP itself. The proof above is the same encoder, the same field layout and the same signing rule driven from a script, and the Swift is held to it byte-for-byte by `privacy-tx-selftest.sh` — but no key has been minted on a device and no tap has broadcast anything.
+
+### 593b. The figures, written by another session (2026-09-04)
+
+Recorded by the Privacy session, not the one that did the work. That session cited `§593b` from `PrivacyDevnetFigure.swift` and `PrivacyDevnetFigures.swift` and ended before writing the entry, leaving the number dangling and `prd-index-audit` red. **What follows is its own account, from the handover message, deliberately NOT a reconstructed rationale** — §340's lesson is that inventing the reasoning is worse than a stub, because the ledger's whole value is that its rulings were actually made.
+
+Landed as `8bebb94c`. Two new files — `Model/PrivacyDevnetFigure.swift` (Foundation-only, so `privacy-selftest.sh` compiles it whole) and `Screens/PrivacyDevnetFigures.swift` — plus the room card.
+
+Per its own summary: Home's 6pt meter becomes an **8,192-slot track** with every referenced root at its age and aged ones hollow past the left edge; Activity gets **one anatomy row per move** (a bar per frame, a disc per spend key, a diamond per snapshot, an outlined pill when sponsored) with the words in a trailing column; Accounts trades a share-of-balance bar for **countable tallies**, on the reasoning that *on a faucet chain a share bar ranks addresses by who pulled the tap hardest* and the crown one line above is already the balance; Frames becomes a **budget strip weighted by `gasLimit`**; Roots becomes **lanes on the same ring** the Home track draws. One tint, no state colour, shapes carrying identity. `gasUsed`/`succeeded` are never drawn, because this chain serves neither (measured, §593).
+
+The `row(crown, tail)` rule from §593 is kept and generalised: the anatomy drawing joins the crown and the hash keeps the tail with its block.
+
+**Two defects it reports finding while writing**, both worth more than the drawings: `shares` clamped-then-renormalised, which pushed a floored frame **back below its own floor**; and Home's row budget was computed against a one-line sentence when the relaunch notice runs to three.
+
+**Its harness block was landed separately (`c7ca00f8`) by this session**, since `privacy-selftest.sh` was open here and two sessions editing one file is how one loses work. **One of its assertions could not fail**: the label-cap fixture collapsed to exactly `labelCap` marks, so removing the cap changed nothing and its own suggested mutation SURVIVED on the first run. A fixture only tests the rule it NAMES if it fails that rule and passes every other one — the fourth instance of that lesson in one day. Replaced with five marks spread wider than `labelGap`, asserting its own premise first so it cannot quietly stop discriminating.
