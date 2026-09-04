@@ -128,6 +128,49 @@ enum WalletFlow {
     /// $500,000 one.
     static let minLaneShare = 0.02
 
+    /// Why `band(legs:predating:)` answered nil — one case per gate, in the
+    /// order the gates fire, so the slot can SAY which rather than stand
+    /// empty (2026-09-03, prd §589, user: "the activity chart isn't showing.
+    /// for me or vitalik").
+    ///
+    /// A blank slot has four causes that render identically, and only one —
+    /// a read that failed to price moves it could have priced — is a bug. The
+    /// other three are honest answers about the window, and §83 says an
+    /// honest answer is drawn, never left as air. The probe and the screen
+    /// both read THIS enum, so the log and the slot cannot disagree about why
+    /// nothing was drawn.
+    enum Decline: Equatable {
+        /// No directional transfer in the window: swaps, self-moves and
+        /// flagged spam carry no side. `predating` legs were set aside as
+        /// older than price data (`WalletFlowSource.pricingEra`).
+        case noLegs(predating: Int)
+        /// Legs reached us and none carries a usable price — no scale.
+        case nothingPriced(total: Int)
+        /// Fewer than `minPricedShare` of the priceable legs are priced.
+        case belowFloor(priced: Int, total: Int)
+        /// Everything moved with one counterparty — a sentence, not a
+        /// comparison.
+        case oneLane
+    }
+
+    /// The reason the band declines, or nil when it draws. The exact inverse
+    /// of `band` on every input — asserted by the harness, because two
+    /// functions implementing one ladder is how a figure and its excuse come
+    /// to describe different windows.
+    static func decline(legs: [Leg], predating: Int = 0) -> Decline? {
+        guard band(legs: legs, predating: predating) == nil else { return nil }
+        if legs.isEmpty { return .noLegs(predating: predating) }
+        let priced = legs.filter { leg in
+            guard let usd = leg.usd, usd > 0, usd.isFinite else { return false }
+            return true
+        }.count
+        if priced == 0 { return .nothingPriced(total: legs.count) }
+        if Double(priced) / Double(legs.count) < minPricedShare {
+            return .belowFloor(priced: priced, total: legs.count)
+        }
+        return .oneLane
+    }
+
     /// Groups legs into a drawable band, or nil when there's nothing worth
     /// drawing.
     ///

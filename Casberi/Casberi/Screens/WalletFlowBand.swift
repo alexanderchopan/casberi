@@ -96,7 +96,16 @@ struct WalletFlowBand: View {
     /// not need is height the list below never gets. 164 rather than 148 on
     /// the device: at 148 the drawing cleared the slot by about 45pt, which is
     /// the dead band this pass was fixing wearing the opposite sign.
-    private let bandHeight: CGFloat = 164
+    ///
+    /// **DERIVED, not 164 (2026-09-03, prd §589; the slot growth is prd 588).** Wallet's scopes pass
+    /// `reservesHeadline: false`, so the band is offered the WHOLE
+    /// `visualSlot`, and a literal here is a second copy of that number that
+    /// cannot know when the box moves — prd 588 grew it, and the literal left
+    /// ~97pt of dead air under a top-aligned, clipped drawing. 39 is this
+    /// view's own chrome above the band: the `label12` caption (15), the `s3`
+    /// top inset (14), the `s2` below it (10). At the old 210 box this is 171,
+    /// which the 164 measured above was already within 7pt of.
+    private var bandHeight: CGFloat { DSRoomChassis.visualSlot - 39 }
     private let laneGap: CGFloat = 2
     private let spineWidth: CGFloat = 12
     /// One line of `label12` fits a 14pt slab; the floor keeps every lane
@@ -312,7 +321,10 @@ struct WalletFlowBand: View {
         let outSegs = segments(band.outLanes, sideTotal: band.outUSD)
         let cx = width * 0.50
         let cy = bandHeight / 2
-        let gate = min(bandHeight - 24, 78)
+        // 78 was chosen against a 164 band (0.475 of it); the ratio is kept
+        // rather than the literal so the gate grows with the box (prd 588) and
+        // the lines still fan across it rather than piling at a short gate.
+        let gate = min(bandHeight - 24, (bandHeight * 0.475).rounded())
         let gateTop = cy - gate / 2
         // The gate's lit share — what left, against what arrived. Clamped
         // because a wallet can spend more than it took in over a window, and a
@@ -677,5 +689,74 @@ struct WalletFlowBand: View {
         let money = WalletValue.money(lane.usd)
         guard lane.count > 1 else { return money }
         return "\(money) · \(lane.count) moves"
+    }
+}
+
+// MARK: - The band that is not there
+
+/// The Activity slot when the band declines (2026-09-03, prd §589) — the
+/// vibenet room's grammar for a declining figure, in the shape THIS scope would
+/// have drawn: the face the ribbons would converge on, the gate's outline with
+/// nothing running through it, and ONE sentence naming which of the four
+/// causes.
+///
+/// It exists because the reported symptom — *"the activity chart isn't
+/// showing. for me or vitalik"* — was a fixed slot of air over a stream full of
+/// moves, and from the screen a quiet window, an unpriced one and a broken
+/// price read are the same nothing. `WalletFlow.Decline` is the one ladder;
+/// this only words it (§83: an honest answer is drawn, never left as air).
+struct WalletFlowEmptyFigure: View {
+    let decline: WalletFlow.Decline
+    let windowLabel: String
+    let spineAddress: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            // The same first line the band wears, at the same rung, so the
+            // slot's first pixel lands where it does when the band draws.
+            Text(windowLabel)
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+                .lineLimit(1)
+                .padding(.top, DS.Space.s3)
+            HStack(spacing: DS.Space.s3) {
+                if let spineAddress {
+                    WalletFace(address: spineAddress, size: DS.Face.rowCircle, circular: true)
+                }
+                // Dashed and EMPTY rather than absent, and in no side's colour:
+                // a green ribbon here would draw money that never arrived.
+                Capsule(style: .continuous)
+                    .strokeBorder(DS.fillLine,
+                                  style: StrokeStyle(lineWidth: 1.4, dash: [3, 3]))
+                    .frame(height: 22)
+                    .opacity(0.6)
+            }
+            Text(line)
+                .dsText(.callout15)
+                .foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, WalletCardStyle.pad)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// One sentence per cause. Counts go through `String(_:)` — a `\(n)` in a
+    /// localized string groups the integer ("2,019"), the §375 lesson.
+    private var line: String {
+        switch decline {
+        case .noLegs(let predating):
+            return predating == 0
+                ? String(localized: "Nothing has moved in or out yet.")
+                : String(localized: "Nothing has moved since prices were kept — \(String(predating)) older moves can't be drawn.")
+        case .nothingPriced(let total):
+            return total == 1
+                ? String(localized: "1 move arrived without a price, so there's no scale to draw.")
+                : String(localized: "\(String(total)) moves arrived without a price, so there's no scale to draw.")
+        case .belowFloor(let priced, let total):
+            return String(localized: "Only \(String(priced)) of \(String(total)) moves carry a price — too few to draw the window honestly.")
+        case .oneLane:
+            return String(localized: "Everything moved with one address so far — the band needs two to compare.")
+        }
     }
 }

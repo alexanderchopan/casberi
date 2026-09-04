@@ -168,6 +168,15 @@ fi
 # (3) The tail is composed by the MODEL. A join assembled in the view would be
 # a second definition of concentration, and the two would drift — the reason
 # the old `concentrationLead` comment already gave for not inventing one.
+# (2b) The Activity slot DRAWS its decline (prd §589). A nil band used to leave
+# the fixed slot as a box of air — "the activity chart isn't showing" — and the
+# figure that names the cause must read the model's ladder, never re-derive it.
+grep -q 'WalletFlowEmptyFigure(decline: ' <<< "$FEED_CODE" \
+  || { echo "✗ walletFlowSection no longer draws WalletFlowEmptyFigure when the band"; \
+       echo "  declines (prd §589) — a fixed slot with nothing in it is a dead control"; exit 1; }
+grep -q 'WalletFlowSource.verdict(from: visible' <<< "$FEED_CODE" \
+  || { echo "✗ walletFlowSection no longer reads WalletFlowSource.verdict — band and"; \
+       echo "  decline must come from ONE walk of the room (prd §589)"; exit 1; }
 grep -q 'portfolio.shapeLine' <<< "$FEED_CODE" \
   || { echo "✗ the holdings tail no longer reads WalletPortfolio.shapeLine — compose it"; \
        echo "  in the model, never in the view"; exit 1; }
@@ -446,6 +455,34 @@ check(WalletFlow.band(legs: [leg(true, "Only", 500)]) == nil, "declines on a sin
 // A zero or non-finite price can't become a lane or poison the scale.
 check(WalletFlow.band(legs: [leg(true, "Zero", 0), leg(false, "Also", 0)]) == nil,
       "declines when every price is zero")
+
+// THE DECLINE NAMES ITSELF (2026-09-03, prd §589 — user: "the activity chart
+// isn't showing. for me or vitalik"). One ladder, read by the slot AND the
+// probe, and its answer is the exact inverse of `band`'s on every fixture —
+// the same fixtures, so a gate that moves in one and not the other fails here.
+do {
+    check(WalletFlow.decline(legs: []) == .noLegs(predating: 0), "no legs names itself")
+    check(WalletFlow.decline(legs: [], predating: 7) == .noLegs(predating: 7),
+          "…and carries what the adapter set aside")
+    check(WalletFlow.decline(legs: [leg(true, "A", nil), leg(false, "B", nil)])
+            == .nothingPriced(total: 2), "nothing priced names itself")
+    check(WalletFlow.decline(legs: [leg(true, "Zero", 0), leg(false, "Also", 0)])
+            == .nothingPriced(total: 2), "a zero price is not a price here either")
+    var legs = [leg(true, "Coinbase", 2100), leg(false, "Aave", 1000)]
+    legs += (0..<84).map { leg(true, "Old\($0)", nil) }
+    check(WalletFlow.decline(legs: legs) == .belowFloor(priced: 2, total: 86),
+          "the floor names its own ratio")
+    check(WalletFlow.decline(legs: [leg(true, "Only", 500)]) == .oneLane, "a single lane names itself")
+    // Inverse of `band` on the drawable fixtures above.
+    check(WalletFlow.decline(legs: [leg(true, "A", 100), leg(false, "B", 100)]) == nil,
+          "a drawable band has no excuse")
+    check(WalletFlow.decline(legs: [leg(true, "A", 100), leg(false, "B", 100),
+                                    leg(true, "C", nil), leg(false, "D", nil)]) == nil,
+          "exactly half priced draws, so it declines nothing")
+    check(WalletFlow.decline(legs: [leg(true, "Coinbase", 2100), leg(false, "Aave", 1000)],
+                             predating: 84) == nil,
+          "legs older than price data don't block, so they don't excuse either")
+}
 do {
     let band = WalletFlow.band(legs: [
         leg(true, "Real", 100), leg(true, "Broken", .infinity), leg(false, "Out", 40),

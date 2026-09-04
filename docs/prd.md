@@ -47583,3 +47583,17 @@ answer "what could hurt me", but nothing was measured, so nothing is proposed.
 Three rows changed size or position. The Wallet history screen is the one to
 look at: it is the only one where a title lost words as well as a slot gaining
 a figure, and the strip is a `range(of:)` on a localized string.
+
+## 589. The Activity slot draws its decline, and the rail stops touching the figure (user: "on my wallet the activity chart isn't showing. for me or vitalik" → "also the treemaps are clipping w/ the rail" → "the silhouette scope rail", 2026-09-03)
+
+Two reports on the Wallet room, and neither was the bug it looked like.
+
+**1. The chart was declining, not failing — and the slot said nothing.** `WalletFlowSource.band` is right to return nil on four windows: no directional move, nothing priced, fewer than half of the priceable moves priced (§270's floor, denominator fixed 2026-08-03), or a single counterparty. Every one of those rendered as the same thing — §483's fixed slot, top-aligned and clipped, holding 210pt of air above a stream full of transactions. From the screen a quiet window, an unpriced one and a broken price read were one nothing, which is why the report could only say "isn't showing". Measured against the demo the band draws; measured against Zerion for vitalik (50 newest transactions, 46 fungible legs, 27 priced, all inbound) the read is healthy — so the decline on the reporter's device is one of the four honest answers, and nothing on a phone could say which.
+
+`WalletFlow.Decline` is the one ladder (`noLegs(predating:)`, `nothingPriced(total:)`, `belowFloor(priced:total:)`, `oneLane`), the exact inverse of `band` on every input and asserted as such by `wallet-viz-selftest.sh` on the same fixtures. `WalletFlowSource.verdict` walks the room once and hands back the band or the reason. `WalletFlowEmptyFigure` draws the reason in the slot — the vibenet room's `activityEmptyFigure` grammar one venue over: the face the ribbons would converge on, the gate's outline with nothing through it, one sentence — and fills the box rather than spelling a height. The probe (`-flowProbe`) and the Diagnostics sheet read the same enum, so the log can never explain a blank the screen described differently. §83: an honest answer is drawn, never left as air.
+
+**2. The treemap was not clipped by the box, it was touching the rail.** Measured on the holdings scope: the bottom row's fill ends at 484pt and the slab's glass begins at 485pt. `DSRoomChassis.railGap` names a figure→rail distance and Vibenet pays it as its stack's spacing; Wallet's rail row had `listRowInsets(top: 0)`, so a figure that fills its whole box — the holdings map does, by construction since §495 — ended on the pixel the slab began, corners lost in the glass edge. The rail row takes `railGap` now. It moves the slab one rung on every scope equally, so §483's "the bar must land in the same place" holds.
+
+**Beside it, for the slot growth (prd 588, landing beside this):** `WalletFlowBand.bandHeight` was a literal 164 and now derives from `visualSlot` less its own 39pt of chrome, with the gate kept at the same ratio (0.475) rather than the literal 78 — byte-identical at today's box, and it follows the box when 588 grows it.
+
+**Unmeasured:** the reporter's own decline reason — the Diagnostics sheet's `Flow:` lines are how to read it.

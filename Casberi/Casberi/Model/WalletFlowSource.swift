@@ -36,6 +36,18 @@ enum WalletFlowSource {
         return WalletFlow.band(legs: split.legs, predating: split.predating)
     }
 
+    /// The band, or the reason there is none — exactly one of the two is
+    /// non-nil (prd §589). One walk of the room, so the slot can draw whichever
+    /// it got without reading the corpus twice.
+    static func verdict(from things: [Thing],
+                        since: Date?) -> (band: WalletFlow.Band?, decline: WalletFlow.Decline?) {
+        let split = partition(from: things, since: since)
+        if let band = WalletFlow.band(legs: split.legs, predating: split.predating) {
+            return (band, nil)
+        }
+        return (nil, WalletFlow.decline(legs: split.legs, predating: split.predating))
+    }
+
     /// The window's legs, split from the ones that can never carry a price.
     ///
     /// The split is what makes `minPricedShare` mean "how well is pricing
@@ -83,28 +95,32 @@ enum WalletFlowSource {
         ]
         guard let band = WalletFlow.band(legs: legs, predating: split.predating) else {
             // Each decline names itself, so a blank card is diagnosable from
-            // the log alone.
-            let pricedCount = legs.filter { $0.usd != nil }.count
-            if legs.isEmpty {
+            // the log alone — off the SAME ladder the slot draws (prd §589),
+            // so the log can never explain a blank the screen described
+            // differently.
+            switch WalletFlow.decline(legs: legs, predating: split.predating) {
+            case .noLegs(let predating):
                 out.append("DECLINED: no directional transfers in the window "
                             + "(swaps and self-moves carry no direction, and spam is excluded)"
-                            + (split.predating > 0
-                                ? " — \(split.predating) were set aside as older than price data"
+                            + (predating > 0
+                                ? " — \(predating) were set aside as older than price data"
                                 : ""))
-            } else if pricedCount == 0 {
-                out.append("DECLINED: nothing in the window could be priced")
-            } else if Double(pricedCount) / Double(legs.count) < WalletFlow.minPricedShare {
+            case .nothingPriced(let total):
+                out.append("DECLINED: nothing in the window could be priced (\(total) moves)")
+            case .belowFloor(let priced, let total):
                 // Legs older than price data are already out of this ratio, so
                 // unlike before it really does mean "the price read is
                 // failing" rather than "this corpus has history".
                 out.append(String(format:
                     "DECLINED: only %d of %d PRICEABLE moves are priced (%.0f%%, floor %.0f%%) — "
                         + "these could have been priced and weren't, so suspect the read",
-                    pricedCount, legs.count,
-                    Double(pricedCount) / Double(legs.count) * 100,
+                    priced, total,
+                    Double(priced) / Double(total) * 100,
                     WalletFlow.minPricedShare * 100))
-            } else {
+            case .oneLane:
                 out.append("DECLINED: fewer than two lanes survived")
+            case nil:
+                out.append("DECLINED: band and decline disagree — a ladder bug")
             }
             return out
         }

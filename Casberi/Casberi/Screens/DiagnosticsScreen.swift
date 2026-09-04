@@ -277,6 +277,12 @@ struct DiagnosticsScreen: View {
         log("Wallet: \(wallet.addresses.count) address(es)")
         if !wallet.addresses.isEmpty {
             for line in await WalletIngest.holdingsDiagnostic() { log(line) }
+            // The flow band's own verdict (prd §589): the one place on a
+            // device that says WHY the Activity slot declined, since
+            // `-flowProbe` needs a launch argument nobody has on a phone.
+            for line in WalletFlowSource.probeLines(context: modelContext, days: nil) {
+                log("Flow: \(line)")
+            }
         }
     }
 

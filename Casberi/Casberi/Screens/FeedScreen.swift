@@ -3432,7 +3432,16 @@ struct FeedScreen: View {
                 // fusion gives up — the faces stop reaching the screen edge.
                 // They scrolled at either inset (six 66pt slots overflow any
                 // phone), so nothing that used to fit stops fitting.
-                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                // **`railGap` ON TOP, NOT 0 (2026-09-03, prd §589, user: "the
+                // treemaps are clipping w/ the silhouette scope rail").** The
+                // chassis names a figure→rail gap and Vibenet pays it as its
+                // stack's spacing; this row paid nothing, so a figure that
+                // fills its whole box — the holdings treemap does, by
+                // construction since §495 — ended on the exact pixel the slab
+                // began (measured: cell to 484pt, glass from 485pt). The slab
+                // moves by one rung on every scope equally, so §483's "the
+                // bar must land in the same place" still holds.
+                .listRowInsets(EdgeInsets(top: DSRoomChassis.railGap, leading: DSRoomChassis.inset,
                                           bottom: DSRoomChassis.contentGap,
                                           trailing: DSRoomChassis.inset))
                 .listRowBackground(Color.clear)
@@ -8367,12 +8376,25 @@ case .vibenetSend(let account):
     ///
     /// Nothing renders without a band worth drawing — `WalletFlow.band`
     /// declines on an unpriceable or single-lane window.
+    ///
+    /// **A DECLINE IS DRAWN, NOT LEFT AS AIR (2026-09-03, prd §589).** The
+    /// slot is fixed (§483), so a nil band was a fixed box of nothing over a
+    /// stream full of moves — reported as "the activity chart isn't showing",
+    /// with no way from the screen to tell a quiet window from a broken price
+    /// read. `WalletFlowEmptyFigure` names the cause off the same ladder the
+    /// probe reads, the vibenet room's `activityEmptyFigure` rule one venue
+    /// over.
     @ViewBuilder
     private var walletFlowSection: some View {
-        if let band = WalletFlowSource.band(from: visible, since: flowWindowStart) {
+        let verdict = WalletFlowSource.verdict(from: visible, since: flowWindowStart)
+        if let band = verdict.band {
                             WalletFlowBand(band: band, windowLabel: balanceRange.flowLabel,
                                spineAddress: spineWalletAddress)
                     .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
+        } else if let decline = verdict.decline {
+            WalletFlowEmptyFigure(decline: decline, windowLabel: balanceRange.flowLabel,
+                                  spineAddress: spineWalletAddress)
+                .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
         }
     }
 
