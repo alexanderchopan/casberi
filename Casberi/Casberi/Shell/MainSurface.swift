@@ -144,7 +144,29 @@ struct MainSurface: View {
     /// not an axis one.
     private var showsRail: Bool { isRegular }
 
-    /// What sits above the feed: the demo's marking, then the source strip.
+    /// What sits BELOW the feed: the demo's marking, the room's own controls,
+    /// then the source strip against the bottom edge (prd §591, 2026-09-03,
+    /// user: *"what if the rail for source chips was at the bottom of the
+    /// screen instead of the top and fab became one of them but was first and
+    /// fixed on the left"* — "it would kind of be like a mac dock", "on the
+    /// phone").
+    ///
+    /// **The argument was already written in this codebase, against the
+    /// arrangement it shipped with.** `AgentBar`'s own note gives three reasons
+    /// the sources tray lives on the bar rather than on the strip's catalogue
+    /// door, and the first is *"this bar is in the bottom thumb zone and the
+    /// strip is at the top, which is the hardest place to reach on a phone"* —
+    /// said of the strip that IS this app's primary navigation. A door was
+    /// moved to the bottom because the top could not be reached; the fix is to
+    /// move the thing that could not be reached.
+    ///
+    /// **The stacking order is reading order, and it inverts with the edge.**
+    /// At the top the strip led and the room's controls sat under it, nearer
+    /// the room. At the bottom the same relationship puts the strip LAST —
+    /// against the edge, in the shortest reach, since it is the control used
+    /// most and from every room — with the room's own controls above it and
+    /// the demo's marking above those. Nothing about what each row IS changed;
+    /// only which edge the stack grows from.
     ///
     /// **Why the banner is HERE and not on the shell.** It was tried twice on
     /// `RootShell` — once as a top-aligned child of its ZStack, once as a
@@ -162,7 +184,7 @@ struct MainSurface: View {
     /// was split out of in `RootShell`, and it only appears on a cold build,
     /// so an incremental build will happily hide it until a TestFlight archive.
     @ViewBuilder
-    private var topInset: some View {
+    private var bandInset: some View {
         // **This band wears the FEED's own geometry — the rail's column reserved,
         // then the same reading cap, centred the same way (prd §361, 2026-08-11,
         // user: "the demo banner is too wide… lets make it thinner").**
@@ -242,52 +264,52 @@ struct MainSurface: View {
                                            value: proxy.size.height)
                 }
             }
-            // THE SCRIM (2026-08-23). This band had NO background of its
-            // own: each chip carries its own glass, and the gaps BETWEEN
-            // the strips were fully transparent — so scrolling content
-            // passed through the chrome and collided with it. Reported on
-            // the Wallet room, where three strips stack (source chips,
-            // venue switcher, face rail) and a card headline was legible
-            // in the gaps between all three at once.
+            // THE SCRIM (2026-08-23, inverted by §591). This band had NO
+            // background of its own: each chip carries its own glass, and the
+            // gaps BETWEEN the strips were fully transparent — so scrolling
+            // content passed through the chrome and collided with it. Reported
+            // on the Wallet room, where three strips stack (source chips,
+            // venue switcher, face rail) and a card headline was legible in
+            // the gaps between all three at once.
             //
             // A GRADIENT, not a plate: this band is up to three rows tall,
             // and a flat opaque block that deep reads as a second header
             // rather than as chrome the page slides under. Solid where the
-            // chips sit, clearing at the bottom edge, so the page still
-            // visibly continues underneath — the thing that makes this
-            // surface feel airy, kept, minus the collision.
+            // chips sit, clearing at the edge that faces the feed, so the
+            // page still visibly continues underneath — the thing that makes
+            // this surface feel airy, kept, minus the collision.
             //
             // `DS.page`, never a material: design law puts Liquid Glass on
             // the FLOATING layer alone, and this is chrome that content
             // scrolls beneath, not a floating panel.
             //
-            // **Composited with the crown pour, not a flat reset (fixed
-            // 2026-08-24, auditing the pour rules).** The first cut painted
-            // opaque `DS.page` alone across the top 75% of the band — which
-            // is exactly `crownPour`'s densest stop, so on All and inside a
-            // wallet the one field §159 promises "everywhere, always" went
-            // dark the moment the chip strip mounted. `.mask` fades the WHOLE
-            // composite (page + pour) the same way the old flat scrim faded,
-            // so the block-content job is unchanged and the pour reads as
-            // continuous with the page above and below it.
-            .background(alignment: .top) {
-                ZStack(alignment: .top) {
-                    DS.page
-                    LinearGradient(stops: crownPourRecipe.stops,
-                                   startPoint: .top, endPoint: .bottom)
-                        .opacity(crownPourRecipe.dose)
-                }
-                .mask(alignment: .top) {
-                    LinearGradient(
-                        stops: [
-                            .init(color: .black, location: 0),
-                            .init(color: .black, location: 0.75),
-                            .init(color: .black.opacity(0), location: 1),
-                        ],
-                        startPoint: .top, endPoint: .bottom)
-                }
-                .ignoresSafeArea(edges: .top)
-                .allowsHitTesting(false)
+            // **THE POUR IS NOT COMPOSITED HERE ANY MORE, and that is the
+            // edge change rather than a reversal of the 2026-08-24 fix.** That
+            // fix existed because this band sat in `crownPour`'s densest stop:
+            // an opaque plate there blanked the one field §159 promises
+            // "everywhere, always". At the bottom of the screen the pour has
+            // already faded to nothing (150pt from the top, `crownPourRecipe`),
+            // so there is nothing under this band to preserve — compositing it
+            // would paint a second, upside-down pour against the bottom edge,
+            // which is a wash §524 does not describe and no other surface
+            // wears. The pour itself is untouched and still drawn by `body`.
+            //
+            // The mask runs the other way for the same reason the stack does:
+            // solid against the bottom edge where the chips sit, clearing
+            // upward into the feed.
+            .background(alignment: .bottom) {
+                DS.page
+                    .mask(alignment: .bottom) {
+                        LinearGradient(
+                            stops: [
+                                .init(color: .black.opacity(0), location: 0),
+                                .init(color: .black, location: 0.25),
+                                .init(color: .black, location: 1),
+                            ],
+                            startPoint: .top, endPoint: .bottom)
+                    }
+                    .ignoresSafeArea(edges: .bottom)
+                    .allowsHitTesting(false)
             }
             .frame(maxWidth: showsRail ? PadLayout.readingMaxWidth : .infinity,
                    alignment: .leading)
@@ -305,26 +327,52 @@ struct MainSurface: View {
                              ? DS.Space.s2 : DS.Space.s4)
                     .padding(.bottom, DS.Space.s1)
             }
+            // The room's own two controls, ABOVE the strip and BELOW the feed
+            // (prd §357, moved to this edge by §591). Both were
+            // `safeAreaInset`s on `FeedScreen` until §357 — see `roomControls`
+            // for why that could not work, an argument the edge does not
+            // change.
+            roomControls
             if !showsRail {
                 sourceStrip(axis: .horizontal)
-                    // The s6 top padding replaces iPhone's hidden system nav
-                    // bar with air. A Mac window already has a REAL title bar
-                    // there — stacking a second s6 on top of it read as ~65pt
-                    // of dead chrome before the strip even starts (Mac polish,
-                    // 2026-07-28), so Mac gets only a small breathing gap.
-                    // …and that vacated space is the first thing handed back
-                    // when the strip folds (2026-07-30): air is what it was,
-                    // and content is what it's for. The demo banner replaces
-                    // that air with itself, so the strip drops its own.
-                    .padding(.top, ProcessInfo.processInfo.isMacCatalystApp
-                             || chrome.minimized || demoActive
-                             ? DS.Space.s2 : DS.Space.s6)
-                    .padding(.bottom, DS.Space.s2)
+                    // **THE DOCK'S FIRST SEAT BELONGS TO THE AGENT (§591).**
+                    // The bar is pinned bottom-LEADING now and is hosted on
+                    // `RootShell`'s own ZStack, one layer above this band — so
+                    // without this the run would scroll chips underneath it and
+                    // the leading source would be a room you can see and cannot
+                    // tap, which is exactly the objection that took the bar off
+                    // the top of the sources panel on 2026-08-16.
+                    //
+                    // **Reserved rather than hosted, and that is the whole
+                    // design.** Putting the bar INSIDE this band would make one
+                    // view of the dock and read best in a screenshot — and the
+                    // bar would then die with this inset, which is applied
+                    // inside the `NavigationStack` and is therefore covered by
+                    // every pushed room, every bridge form and Settings. The
+                    // bar's own note is explicit that it lives on the shell so
+                    // it works from all of those. So the two stay separate
+                    // views that share a row: the strip yields the corner, the
+                    // bar stands in it, and when a room is pushed the strip
+                    // goes and the bar remains — which is precisely today's
+                    // behaviour, one corner over.
+                    //
+                    // `DSDock.agentSeat` is the one number both sides read, so
+                    // the gap cannot drift into an overlap on one side or a
+                    // hole on the other.
+                    .padding(.leading, DSDock.agentSeat)
+                    // **The s6 of air is GONE and its reason went with it
+                    // (§591).** It replaced iPhone's hidden system nav bar —
+                    // a fact about the TOP of the screen and nothing else —
+                    // and at the bottom there is no vacated bar to stand in
+                    // for: the home indicator's own safe area is already
+                    // reserved beneath this inset, so a second s6 would be
+                    // ~40pt of dead chrome under the last row of chips. What
+                    // survives is the 2026-07-30 half of that ruling, which
+                    // was never about the nav bar: air is the first thing
+                    // handed back when the strip folds.
+                    .padding(.top, DS.Space.s2)
+                    .padding(.bottom, chrome.minimized ? DS.Space.s1 : DS.Space.s2)
             }
-            // The room's own two controls, BELOW the strip and ABOVE the feed
-            // (prd §357, 2026-08-11). Both were `safeAreaInset`s on `FeedScreen`
-            // until this — see `roomControls` for why that could not work.
-            roomControls
         }
     }
 
@@ -779,7 +827,6 @@ struct MainSurface: View {
         liveChips = computed.labels
         frozenChips = computed.labels
         categoryVenues = computed.venues
-        sourceOrder = computed.sources
     }
 
     /// Refresh the live set WITHOUT re-freezing — a source arriving or leaving
@@ -795,7 +842,6 @@ struct MainSurface: View {
         // foreground — the fold is what took away its own chip, so if this
         // waited it would be a source with no door at all.
         categoryVenues = computed.venues
-        sourceOrder = computed.sources
     }
 
     /// The seats behind every folded category chip, in LEARNED order, keyed by
@@ -803,9 +849,10 @@ struct MainSurface: View {
     /// 2026-08-11 — generalizes what was a single-array `marketVenues`).
     @State private var categoryVenues: [String: [String]] = [:]
 
-    /// Every source room, unfolded — the sources tray's list. See
-    /// `ShellChrome.sourceOrder` for why it is not `chipLabels`.
-    @State private var sourceOrder: [String] = ["All"]
+    // The unfolded `sourceOrder` mirror was DELETED in §591 with the tray that
+    // was its only reader — see `ShellChrome` for the whole reasoning.
+    // `computedChips().sources` still exists and is still computed, because
+    // `chipLabels` is derived FROM it; nothing publishes it any more.
 
     /// Everything the strip needs, from AT MOST ONE walk (2026-08-11).
     ///
@@ -1485,11 +1532,6 @@ struct MainSurface: View {
         .onChange(of: categoryVenues, initial: true) { _, venues in
             chrome.categoryVenues = venues
         }
-        // …and the UNFOLDED list the sources tray shows. Two lists on purpose;
-        // see `ShellChrome.sourceOrder`.
-        .onChange(of: sourceOrder, initial: true) { _, sources in
-            chrome.sourceOrder = sources
-        }
         // Where each folded chip reopens (prd §351, generalizing 2026-08-10).
         // Keyed off `filter.source` itself rather than written inside
         // `go(to:)`, so EVERY route into a category room counts: a chip tap, a
@@ -1845,15 +1887,20 @@ struct MainSurface: View {
             // inset is applied to the STACK rather than in here, because the
             // two differ on exactly one thing: this strip is allowed to
             // vanish into a pushed room and the rail is not.
-            .safeAreaInset(edge: .top, spacing: 0) { topInset }
+            .safeAreaInset(edge: .bottom, spacing: 0) { bandInset }
             // THE ROOM'S OWN SETTINGS DOOR (2026-08-21) — see `RoomGear` for
             // why a bare gear is legible here and why the room needed one.
             //
-            // Offset by the band's MEASURED height, not by the safe area and
-            // not by a constant. Both obvious placements were tried on device
-            // and both put the gear level with the demo banner: an overlay does
-            // not inherit the safe area a `.safeAreaInset` reserves, whichever
-            // side of the modifier it is attached on. See `BandHeightKey`.
+            // **It no longer chases the band (§591).** The offset below was
+            // the band's MEASURED height, because the band owned the top of
+            // the screen and an overlay does not inherit the safe area a
+            // `.safeAreaInset` reserves — so without it the gear sat level
+            // with the demo banner. The band is at the BOTTOM now, so that
+            // measurement would push the gear a whole band's height down into
+            // the feed to clear chrome that is no longer above it. A plain
+            // step of air off the top edge is what is left; `bandHeight` is
+            // still measured and still published, because `RoomGear` is not
+            // its only reader.
             //
             // INSIDE the NavigationStack, like `topInset` and for the same
             // reason: a pushed room must cover it. A settings door floating over
@@ -1866,7 +1913,7 @@ struct MainSurface: View {
             // category label — never a fold label (§351).
             .overlay(alignment: .topTrailing) {
                 RoomGear(source: filter.source)
-                    .padding(.top, bandHeight)
+                    .padding(.top, DS.Space.s2)
             }
             .onPreferenceChange(BandHeightKey.self) { bandHeight = $0 }
             // The detail pane (2026-07-25) — the iPad half of "a row tap

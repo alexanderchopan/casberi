@@ -71,13 +71,18 @@ struct AgentBar: View {
     /// width: since 2026-08-07 the pill hugs its contents in the corner in
     /// BOTH states, so this adds a line of text and nothing else.
     ///
-    /// It names the TAP (§390) — "Your feeds" (was "Your sources" until
-    /// 2026-08-24, user: "this should say your feeds not your sources" — the
-    /// tray shows what you actually READ, and "feed" is this app's own word
-    /// for that everywhere else CLAUDE.md's core-loop note names it), not
-    /// "Ask your things…". A label on a button is a promise about what
-    /// pressing it does, and after the swap that sentence would have been the
-    /// honesty rule's dead control wearing the wrong verb.
+    /// It names the TAP, which is the rule that has survived every change to
+    /// what this control reaches: a label on a button is a promise about what
+    /// pressing it does. It read "Your sources", then "Your feeds"
+    /// (2026-08-24, user: "this should say your feeds not your sources"), and
+    /// says **"Everything else"** since §591 — because the panel behind the tap
+    /// stopped being feeds. Every feed is in the dock beside this bar now, so
+    /// what is left behind it is precisely the four destinations that are not
+    /// one: the agent, the catalogue, the address book and settings.
+    ///
+    /// Plain words in this app's own voice, and exactly true rather than
+    /// merely vague — "Menu" or "More" would name a container, and this names
+    /// the complement of the row it sits in.
     var expanded: Bool = false
     var morphNS: Namespace.ID?
     /// THE MAGNIFIER IS GONE (2026-08-15, prd §386o, user: "search and the
@@ -124,23 +129,14 @@ struct AgentBar: View {
     /// Raise the agent — the bar's HOLD since §390 (its tap before that).
     var onAsk: () -> Void
 
-    /// A hold has fired, so the button's own touch-up must not act on top of
-    /// it: a SwiftUI Button fires on RELEASE however long the press lasted,
-    /// and the long-press gesture ends at its threshold while the finger is
-    /// still down — so this flag is always set before the tap it exists to
-    /// swallow. Cleared when the next press BEGINS, never on a timer (see the
-    /// gesture's own note).
-    @State private var heldForAgent = false
-
     var body: some View {
         HStack(spacing: 0) {
             Button {
-                guard !consumeHold() else { return }
                 onSources()
             } label: {
                 HStack(spacing: DS.Space.s3) {
                     if expanded {
-                        Text("Your feeds")
+                        Text("Everything else")
                             .dsText(.body17)
                             .foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
@@ -188,38 +184,31 @@ struct AgentBar: View {
             }
             .buttonStyle(.plain)
             // The words carried the button's name; compact, it needs its own.
-            .accessibilityLabel(Text("Your feeds"))
-            // The hold, reachable without holding. It rides THIS button rather
-            // than the container: a custom action on a plain layout view has no
-            // accessibility element of its own to be found on, and VoiceOver
-            // would simply never offer it. It names the AGENT since §390 — the
-            // action always states whichever verb the hold reaches, because
-            // that is the one a person can't discover by pressing.
-            .accessibilityAction(named: Text("Ask your things"), onAsk)
-            // The hold. It rides the berry rather than the pill (prd §384), so
-            // the control under the finger owns exactly one hold and the
-            // gesture does what that control says. §390 changed WHERE it goes
-            // (the agent, not the tray) and nothing else about it.
-            .simultaneousGesture(
-                LongPressGesture(minimumDuration: 0.45)
-                    // Cleared when the NEXT press BEGINS, never on a timer. A
-                    // timer has to guess how long a finger stays down, and it
-                    // guesses wrong in the most ordinary case there is: hold
-                    // until the agent rises, look at it, then let go — by which
-                    // time a 900ms clear has already expired and the release
-                    // opens the tray under the risen agent. Press-begin is the
-                    // one moment that is always before the release it has to
-                    // swallow and always after the last one.
-                    .onChanged { _ in heldForAgent = false }
-                    .onEnded { _ in
-                        heldForAgent = true
-                        // The buzz lives at the destination, not on the
-                        // recognizer (`RootShell`'s two doors), so the
-                        // accessibility action and the Mac menu feel the same
-                        // as the gesture does.
-                        onAsk()
-                    }
-            )
+            .accessibilityLabel(Text("Everything else"))
+            // **THE HOLD IS GONE (prd §591, 2026-09-03, user: "and no long
+            // press for it" — "that simplifies it!").**
+            //
+            // It existed because this one control had two destinations and a
+            // tap can only reach one. §390 gave the tap to the tray and the
+            // hold to the agent; §384 had given the hold to the tray. Both
+            // rounds were arguments about which of two things the undiscoverable
+            // gesture should hide, and §550 then had to ship a one-time capsule
+            // whose entire job was to teach that the gesture existed — a
+            // control that has to be advertised is a control that was not
+            // found.
+            //
+            // What removed it was not a better ruling about the gesture but
+            // the dock: every feed is in the strip beside this bar now, so the
+            // tray's source grid became a second way to a set already on
+            // screen, and the panel behind this tap became the four
+            // destinations that are NOT a feed — the agent among them. One
+            // control, one tap, one panel, and the thing the hold used to
+            // reach is a labelled row inside it.
+            //
+            // The accessibility action goes with it for the same reason: it
+            // existed to make an invisible gesture reachable, and there is no
+            // longer an invisible gesture. VoiceOver gets the tap, like
+            // everyone else.
         }
         // Collapsed there is nothing to its left to make room for, and this 4pt
         // would push the square off-centre inside the glass again — the same
@@ -235,31 +224,25 @@ struct AgentBar: View {
         // the screen answering one move, rather than a hard swap down here
         // under a gradient that glided.
         .animation(DS.Motion.standard, value: roomTint)
-        // The hold moved OFF the container and onto the button (prd §384), and
-        // §390 changed what it reaches. The button is a full 44pt control, so
-        // the finger has already chosen; `simultaneous` keeps its own tap, and
-        // the tap guards on `consumeHold()` for the release that follows a
-        // hold.
+        // The Mac's secondary-click menu SURVIVES the hold's deletion (§591)
+        // and is not a leftover. A right-click menu is a pointer idiom that
+        // was never the hidden gesture: it is listed, it is discoverable by
+        // the platform's own convention, and on a Mac the agent is reached by
+        // ⌘K and by this menu rather than by a 0.45s press nobody performs
+        // with a mouse. What it names is unchanged.
         .modifier(BarSecondaryMenu(onAsk: onAsk))
         .modifier(MorphMatch(ns: morphNS))
-    }
-
-    /// True if this touch-up is the tail of a hold that already acted.
-    private func consumeHold() -> Bool {
-        guard heldForAgent else { return false }
-        heldForAgent = false
-        return true
     }
 }
 
 /// The bar's hidden verb in words, for a pointer (2026-07-31) — Mac ONLY, and
 /// the `#if` is load-bearing rather than tidiness.
 ///
-/// The 0.45s hold has no visible affordance: a phone teaches that through
-/// repetition, a mouse never does, because click-and-wait is not something
-/// anyone tries. A right-click states the door in words instead. It names the
-/// AGENT since §390, following the hold rather than the destination — the tap
-/// needs no menu entry, it is the click.
+/// The phone reaches the agent through the panel this bar's tap opens (§591);
+/// a pointer should not have to. A right-click states the door in words and
+/// lands on it directly, which is the platform's own convention for a second
+/// verb on one control — and unlike the 0.45s hold it replaced, it is listed
+/// rather than hidden, so it never needed a capsule to teach it.
 ///
 /// It cannot ship on iOS, though. `.contextMenu` installs its own ~0.5s
 /// long-press recognizer, which on a touch screen would fire alongside the

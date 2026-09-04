@@ -544,19 +544,29 @@ grep -qs 'bookTitle: String(localized: "Address book")' "$SHELL_MAIN" "Casberi/C
 # lets the setup screens drop theirs — where the door was doing the roster's
 # job anyway, which Wallet's own intro said out loud ("Add, rename or stop
 # watching in the address book below").
-grep -q 'action: onOpenAddressBook' "Casberi/Casberi/Shell/SourcesOverlay.swift" \
-  || { echo "✗ the sources tray lost its address-book door — that is the ONE door no state can hide, and every other way in (the rails) needs something already watched (§498/§570)"; exit 1; }
+# **THE DOOR MOVED FILE IN §591 AND ITS GUARD MOVED WITH IT** — the standing
+# lesson this tree already wrote down for `roomFigure`: a guarded call that
+# changes files takes its guard with it, or the guard goes red against a
+# perfectly correct app and then gets deleted by whoever is in a hurry.
+#
+# The panel behind the agent bar stopped being a grid of sources and became the
+# four doors that are NOT a feed (`DoorsPanel`), so the book's door is a named
+# row there rather than an unlabelled glyph in `SourcesOverlay`'s header. The
+# invariant is unchanged and if anything stronger: it is still the one door no
+# state can hide, and it now says its own name.
+grep -q 'act: onOpenAddressBook' "Casberi/Casberi/Shell/DoorsPanel.swift" \
+  || { echo "✗ the doors panel lost its address-book door — that is the ONE door no state can hide, and every other way in (the rails) needs something already watched (§498/§570/§591)"; exit 1; }
 python3 - <<'GATE' || exit 1
 import re, sys
-src = open("Casberi/Casberi/Shell/SourcesOverlay.swift", encoding="utf-8").read()
-i = src.find("action: onOpenAddressBook")
+src = open("Casberi/Casberi/Shell/DoorsPanel.swift", encoding="utf-8").read()
+i = src.find("act: onOpenAddressBook")
 if i < 0:
     sys.exit(0)
 # The eight lines above the door must not open a conditional around it: the
 # whole point is that this door is drawn unconditionally.
 above = src[:i].split("\n")[-8:]
 if any(re.match(r"\s*(if|guard)\b", line) for line in above):
-    print("✗ the sources tray's address-book door grew a condition — it is the")
+    print("✗ the doors panel's address-book door grew a condition — it is the")
     print("  unconditional way in, and gating it re-creates the dead end §570 removed")
     sys.exit(1)
 GATE

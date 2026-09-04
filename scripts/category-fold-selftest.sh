@@ -144,36 +144,28 @@ grep -q 'CategoryFold.isCategory(label)' "$TMP/main.nc" \
 #
 # Both are invisible to a build and to every static audit, and the second is
 # invisible on iOS entirely.
-# THE TRAY'S FEED IS CHECKED IN TWO PLACES BECAUSE IT IS PRESENTED THROUGH A
-# WRAPPER (2026-08-17). This guard used to grep RootShell for the literal
-# `SourcesTray(labels: chrome.sourceOrder`, and then the tray moved behind
-# `SourcesOverlay` — so for every commit since, the guard matched nothing and
-# the whole self-test went red while the app was perfectly correct. A guard
-# that cannot pass is exactly as useless as one that cannot fail, and the
-# lesson is the one this tree already wrote down for `roomFigure`: a guarded
-# call that moves files takes its guard with it.
+# **THE TRAY'S TWO FEED CHECKS ARE GONE, AND SO IS THE TRAY (§591,
+# 2026-09-03).** They asserted that `SourcesTray` was handed
+# `chrome.sourceOrder` (the UNFOLDED list) and never `chrome.chipOrder` (the
+# folded one), because that grid was the screen claiming to show EVERY source:
+# fed the folded list it dropped every member of every category AND grew a
+# category cell whose tap wrote a non-source into `FeedFilter.source`.
 #
-# Spelled as a POSITIVE on the list that must be used plus a NEGATIVE on the
-# list that must not, so it survives the next wrapper: RootShell may never so
-# much as name the folded order, whatever it hands it to.
-grep -qE 'labels: chrome\.sourceOrder' "$TMP/root.nc" \
-  || { echo "✗ the sources tray is no longer fed chrome.sourceOrder — it would drop every folded category's members"; \
-       echo "  and offer a category cell that writes a non-source into FeedFilter.source."; exit 1; }
-# The negative is on the FEED, not on the name. A first cut banned
-# `chrome.chipOrder` from RootShell outright and immediately cried wolf: the
-# `-openSources` probe NSLogs that list as its readiness signal, which is a
-# diagnostic print and not a leak, and a lint that fires on correct code gets
-# turned off within a week. What must never happen is the folded list being
-# handed over AS the tray's labels.
-if grep -qE 'labels: chrome\.chipOrder' "$TMP/root.nc"; then
-  echo "✗ the sources tray is back on chrome.chipOrder — the FOLDED list. That tray claims to show"
-  echo "  every source: it would drop every folded category's members AND offer a category cell"
-  echo "  that writes a non-source into FeedFilter.source, opening a room matching nothing."
-  exit 1
-fi
-grep -q 'SourcesTray(labels: labels' "$TMP/overlay.nc" \
-  || { echo "✗ SourcesOverlay no longer passes its labels straight through to SourcesTray —"; \
-       echo "  the order RootShell chose can no longer be trusted to be the order the tray shows."; exit 1; }
+# The grid no longer exists. The strip moved to the bottom edge and the panel
+# behind the agent bar became the four doors that are NOT a feed
+# (`DoorsPanel`), so there is no second surface enumerating sources and no
+# second consumer of the unfolded order — `ShellChrome.sourceOrder` was deleted
+# with it rather than left as write-only state.
+#
+# DELETED rather than rewritten to name the new panel, and the distinction
+# matters: these guards defended a claim ("this screen shows every source")
+# that nothing in the app makes any more. A guard kept alive past the claim it
+# protects is the `roomFigure` lesson wearing the other face — not a guard that
+# cannot pass, but one that passes while proving nothing.
+#
+# What SURVIVES is the half that was never about the tray: Mac's ⌘1–⌘9 must
+# still resolve a folded label before writing a source, or the same dead room
+# arrives by a different door. That check is below and is unchanged.
 grep -q 'CategoryFold.isCategory(label)' "$TMP/app.nc" \
   || { echo "✗ ⌘1–⌘9 no longer resolves a folded label — it would write the category name"; \
        echo "  into FeedFilter.source and open a permanently empty room."; exit 1; }
@@ -392,7 +384,7 @@ grep -q 'guard roomTakesWalletScope' "$FEED" \
        echo "  every non-wallet room, since their rows carry no walletAddress (§356)."; exit 1; }
 # PINNED, not a List section — `walletSwitcherBar`'s 2026-07-20 ruling, kept
 # through the §357 move: the switcher and the wallet rail now ride
-# `MainSurface.topInset` (itself the shell's one top `safeAreaInset`), via
+# `MainSurface.bandInset` (itself the shell's one top `safeAreaInset`), via
 # `roomControls`. As a section either would scroll away with the room it
 # scopes, and its glass would blur nothing.
 # **`walletScopeRail` IS `socialScopeRail` SINCE §483** (2026-08-27). The rail
@@ -426,8 +418,13 @@ grep -q 'roomControls' "$MAIN" \
 # Comment-stripped, because the file DOCUMENTS the move by naming the very
 # modifier it must no longer carry — a guard grepping raw source fires on the
 # prose explaining it (the Obsidian/Cursor lesson, earned again here).
-grep -qE 'safeAreaInset\(edge: \.top' "$TMP/feed.nc" \
-  && { echo "✗ FeedScreen grew a top safeAreaInset again — chrome pinned inside the"; \
+# WIDENED to both edges in §591: the band moved to the bottom, and §357's
+# argument was never about which edge — chrome mounted inside the
+# .id(filter.source) subtree is destroyed by the move it commands whichever
+# side of the screen it is drawn on. A guard naming only `.top` would have gone
+# quiet the moment the mistake it prevents moved with the band.
+grep -qE 'safeAreaInset\(edge: \.(top|bottom)' "$TMP/feed.nc" \
+  && { echo "✗ FeedScreen grew a top/bottom safeAreaInset again — chrome pinned inside the"; \
        echo "  .id(filter.source) subtree is destroyed and re-slid on every room change,"; \
        echo "  which is the §357 bug (a switcher torn down by the tap it serves)."; exit 1; }
 
@@ -688,7 +685,7 @@ for gf in "$TMP"/*.nc; do
 done
 
 # --- the rail's column must be reserved for everything (prd §361/§371) ------
-# §361 gave `topInset` its OWN `.padding(.leading, railWidth)` on the premise
+# §361 gave `bandInset` its OWN `.padding(.leading, railWidth)` on the premise
 # that "the stack's CONTENT respects the leading safe area; a top inset view
 # does not". **The first half of that was wrong, and it was measured wrong on
 # 2026-08-12**: the feed's `safeAreaInsets.leading` reads 0 at every window
@@ -706,15 +703,26 @@ done
 # must both reserve. User ruling 2026-08-12: "the rail should be preserved and
 # content not go behind it."
 #
-# Scoped to `topInset`'s own body (up to `bandContent`, the property it was
+# Scoped to `bandInset`'s own body (up to `bandContent`, the property it was
 # split into) rather than the whole file — `dsAdaptiveContentWidth()` is the
 # app's general column cap and appears on plenty of screens, so a file-wide grep
 # would pass while this band had lost it. A fixed `-A<n>` window does NOT work
 # here: `strip_comments` blanks comment lines rather than deleting them, so the
 # doc block above the construction still counts toward the window.
-awk '/private var topInset/,/private var bandContent/' "$TMP/main.nc" > "$TMP/topinset.nc"
+# Renamed `topInset` -> `bandInset` in §591 when the band moved to the bottom
+# edge. The awk range MUST track the rename: a range that matches nothing
+# produces an empty file, every `grep -q ... && fail` below then finds nothing,
+# and all three checks pass VACUOUSLY — a silent green over a deleted guard,
+# which is the failure mode this repo's whole audit style exists to avoid.
+awk '/private var bandInset/,/private var bandContent/' "$TMP/main.nc" > "$TMP/topinset.nc"
+# Proves the range above actually matched something, so the three checks that
+# read this file can never pass by reading nothing.
+[ -s "$TMP/topinset.nc" ] \
+  || { echo "✗ the bandInset..bandContent awk range matched NOTHING — the property was"; \
+       echo "  renamed or removed, and the three rail checks below would all pass"; \
+       echo "  vacuously against an empty file."; fail=1; }
 grep -qE 'padding\(\.leading, showsRail \? PadLayout\.railWidth' "$TMP/topinset.nc" \
-  && { echo "✗ MainSurface.topInset reserves the rail AGAIN, on top of the pager's own"; \
+  && { echo "✗ MainSurface.bandInset reserves the rail AGAIN, on top of the pager's own"; \
        echo "  dsRailColumn — the band would be inset twice and sit 88pt right of every"; \
        echo "  card beneath it. One reservation, at the stack's content (§371)."; exit 1; }
 # Both halves of that one reservation: the pager (so the feed, the band and the
@@ -739,7 +747,7 @@ awk '/func dsRailColumn/,/^}/' "Casberi/Casberi/Design/PadLayout.swift" | grep '
 # an empty canvas. That cut built cleanly and passed every static check; only the
 # Mac renderer showed it (§361).
 grep -q 'Color.clear.frame(width:' "$TMP/topinset.nc" \
-  && { echo "✗ MainSurface.topInset reserves the rail with a spacer view again — Color fills"; \
+  && { echo "✗ MainSurface.bandInset reserves the rail with a spacer view again — Color fills"; \
        echo "  what it is offered, and constraining only its width leaves it full-height, so"; \
        echo "  the inset takes the whole window and the feed disappears (§361)."; exit 1; }
 # The other half of the same bug: without the cap the band runs PAST the feed
@@ -747,7 +755,7 @@ grep -q 'Color.clear.frame(width:' "$TMP/topinset.nc" \
 # it). It must be the feed's OWN modifier, not a hand-rolled width, or the two
 # can agree today and drift apart the next time the column changes.
 grep -q 'PadLayout.readingMaxWidth' "$TMP/topinset.nc" \
-  || { echo "✗ MainSurface.topInset no longer wears the reading cap — the band runs wider than"; \
+  || { echo "✗ MainSurface.bandInset no longer wears the reading cap — the band runs wider than"; \
        echo "  the column it sits above, so the demo banner and the room controls overhang"; \
        echo "  every card beneath them on Mac and iPad (§361)."; exit 1; }
 # EVERY category, not Markets alone — the whole point of this follow-up

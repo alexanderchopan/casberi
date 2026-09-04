@@ -69,7 +69,6 @@ import SwiftUI
 /// the tray vanished under it, which is a worse answer to "I tapped away from
 /// this" than simply closing.
 struct SourcesOverlay: View {
-    let labels: [String]
     let active: String
     let onDismiss: () -> Void
     /// The catalog door — threaded through to `SourcesTray` for its EMPTY
@@ -86,6 +85,10 @@ struct SourcesOverlay: View {
     /// close the panel FIRST, then push, or the screen arrives behind a raised
     /// panel and the tap reads as a no-op.
     let onOpenAddressBook: () -> Void
+    /// The agent (prd §591) — the destination the bar's 0.45s hold used to
+    /// reach, now a labelled row in the panel that same bar's tap opens. See
+    /// `DoorsPanel` for what that trade cost and why it was taken.
+    let onAgent: () -> Void
     /// Last so the call site reads as a trailing closure, matching the shape
     /// the `.sheet` call it replaced already had.
     let onPick: (String) -> Void
@@ -187,9 +190,14 @@ struct SourcesOverlay: View {
     private static let macPanelWidth: CGFloat = 460
 
     var body: some View {
-        let panel = SourcesTray(labels: labels, active: active,
-                                onPick: onPick, onDismiss: onDismiss,
-                                onOpenCatalog: onOpenCatalog)
+        // §591: the panel holds the four doors that are not a feed. See
+        // `DoorsPanel` for why the source grid left — every feed is in the dock
+        // one thumb-width below this, so a map of that same set was a second
+        // way to somewhere already on screen.
+        let panel = DoorsPanel(onAgent: onAgent,
+                               onOpenCatalog: onOpenCatalog,
+                               onOpenAddressBook: onOpenAddressBook,
+                               onSettings: onSettings)
 
         GeometryReader { geo in
             // The ceiling is the screen, not the corpus — a 40-source tray
@@ -316,13 +324,27 @@ struct SourcesOverlay: View {
         VStack(alignment: .leading, spacing: 0) {
             grabber
             HStack(spacing: DS.Space.s2) {
-                Text("Your feeds")
+                // Named for what the panel now holds (§591) — the same rename
+                // the bar's own label took, and for the same reason: the tray
+                // stopped being feeds when every feed moved into the dock.
+                Text("Everything else")
                     .dsText(.heading22)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                 Spacer(minLength: DS.Space.s2)
-                headDoors
+                // **`headDoors` is GONE from here (§591).** It carried the
+                // catalogue and the avatar as two icons in a glass capsule,
+                // which was right while the panel's body was a source grid and
+                // those were the only non-feed doors in reach. The body IS
+                // those doors now, so drawing them here as well would state
+                // the same two destinations twice on one surface — once as an
+                // unlabelled icon and once as a named row.
+                //
+                // The All capsule STAYS, and §591 made it more load-bearing
+                // rather than less: "All" scrolls with the run on the phone
+                // now (`SourceChips.scrollingLabels`), so this is the one door
+                // home that is present at a fixed place from every room.
                 allChip
             }
             .frame(height: Self.titleBandHeight)
@@ -420,76 +442,19 @@ struct SourcesOverlay: View {
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
-    /// The two doors, as one pair of circles in the header's trailing run.
-    ///
-    /// **They wear `fillStrong`, NOT `dsGlassDoor` — and that is this panel's
-    /// own rule, not an oversight.** In the chip strip both doors are glass,
-    /// because the strip is pinned chrome floating over a scrolling feed. Here
-    /// they sit on the panel's own opaque ink, which is content by design law
-    /// §8, not the floating layer glass belongs to — so a glass door here
-    /// would be the one material exception on a surface that has none. They
-    /// take the same rest fill the All capsule takes when it is not selected,
-    /// which makes the three read as one row of controls on one surface.
-    ///
-    /// **The glyphs are reused, the chrome is not.** `AvatarDoor` and
-    /// `AppsDoor` are the same marks the strip draws — including `AppsDoor`'s
-    /// attention state, so a broken connection still announces itself here —
-    /// but `AvatarChip`/`catalogueChip`, their strip-side wrappers, are not:
-    /// those carry glass, the pull-to-refresh spin, and the zoom-transition
-    /// anchors, none of which belong to a panel that is about to dismiss.
-    ///
-    /// **`contentShape(Circle())` is load-bearing, not tidy** — the catalogue
-    /// door's own three bug reports (2026-07-26) are that a `.frame()` does not
-    /// make its empty space hit-testable, so a 21pt glyph in a 44pt circle
-    /// takes presses in a small box in the middle and reads as a flaky button.
-    private var headDoors: some View {
-        HStack(spacing: DS.Space.s2) {
-            door(label: String(localized: "Settings"), action: onSettings) {
-                AvatarDoor()
-            }
-            door(label: String(localized: "Apps"), action: onOpenCatalog) {
-                AppsDoor()
-            }
-            // THE ADDRESS BOOK (prd §498, user: *"we could put it next to the
-            // user avatar, apps, and all feed buttons in the source tray"*).
-            //
-            // It belongs with these two rather than in the grid below for the
-            // reason this header exists at all: every cell in that grid
-            // FILTERS the screen you are on, and these OPEN a screen. §496
-            // made the book one ledger across two rooms, which is what turned
-            // it from a wallet detail into a place — and the rail glyphs in
-            // Wallet and vibenet stay, because those are contextual doors from
-            // the room whose addresses you are already looking at (§460's
-            // shape), while this is the global one.
-            //
-            // `person.text.rectangle` is the same glyph both rails draw
-            // (§461), so the three doors to one screen cannot read as three
-            // different destinations.
-            door(label: String(localized: "Address book"), action: onOpenAddressBook) {
-                Image(systemName: "person.text.rectangle")
-                    .dsGlyph(17, weight: .medium)
-                    .foregroundStyle(DS.textPrimary)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func door<Glyph: View>(label: String,
-                                   action: @escaping () -> Void,
-                                   @ViewBuilder glyph: () -> Glyph) -> some View {
-        Button {
-            DSHaptic.selection()
-            action()
-        } label: {
-            glyph()
-                .frame(width: DS.Hit.min, height: DS.Hit.min)
-                .background { Circle().fill(DS.fillStrong) }
-                .contentShape(Circle())
-        }
-        .buttonStyle(PressSpring())
-        .dsHover()
-        .accessibilityLabel(Text(label))
-    }
+    // `headDoors` and its `door(label:action:glyph:)` builder were DELETED in
+    // §591. They drew Settings, Apps and the address book as three unlabelled
+    // glyphs in this header, which was right while the panel's body was a grid
+    // of sources and these were the only non-feed doors within reach of it.
+    // The body is those doors now — named, in `DoorsPanel` — so keeping the
+    // glyphs would state one destination twice on one surface. The `door`
+    // helper went with them because it had no other caller; `allChip` builds
+    // its own capsule and always did.
+    //
+    // The panel's own rule they carried survives in `allChip`, which is now its
+    // sole expression: a control here wears `fillStrong` and NEVER
+    // `dsGlassDoor`, because this panel is opaque ink — content by design law
+    // §8 — and glass belongs to the floating layer alone.
 
     private var grabber: some View {
         Capsule()

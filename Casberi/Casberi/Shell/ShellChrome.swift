@@ -438,28 +438,13 @@ final class ShellChrome {
     /// not appear until the app was next backgrounded — which reads exactly
     /// like a control that did nothing (§83).
     var chipOrderPulse = 0
-
-    /// The same order BEFORE the Markets fold — every source room, one entry
-    /// each (2026-08-10).
-    ///
-    /// It exists because `chipOrder` and the sources tray want different
-    /// things, and folding taught that the hard way: `chipOrder` is "what the
-    /// strip is showing", so ⌘1–⌘9 can stay positional against what you can
-    /// see, and it therefore carries the folded LABEL "Markets". The tray is
-    /// the one screen whose own doc says it "claims to show every source" — fed
-    /// the folded list it would drop all seven market seats and grow a
-    /// "Markets" cell that writes a non-source into `FeedFilter.source`.
-    ///
-    /// So: two lists, each honest about its own surface. Anything that WRITES a
-    /// source takes this one; only the positional shortcut takes `chipOrder`,
-    /// and it resolves the label before writing (see `CasberiApp`).
-    ///
-    /// SOURCES ONLY, which is the same rule read from the other end: the Pinned
-    /// room is left out of this list too (2026-08-10). It is a real destination
-    /// and a real chip, but no thing carries "Pinned" as its source and the
-    /// catalog has no seat for it — so in the tray's category grid it could only
-    /// ever be an "Other" cell wearing the generic placeholder mark.
-    var sourceOrder: [String] = ["All"]
+    // `sourceOrder` (the UNFOLDED chip order) was DELETED in §591. It existed
+    // for exactly one reader — the sources tray, the screen that claimed to
+    // show every source and therefore could not be handed the folded list. The
+    // tray is gone (`DoorsPanel`), the strip at the bottom edge is the only
+    // enumeration of sources left, and it is `chipOrder`'s by definition. A
+    // published property with a writer and no reader is state that looks
+    // load-bearing to the next person to read this file.
 
     /// Every FOLDED category's present member seats this session, in learned
     /// order, keyed by category name (prd §351, 2026-08-11 — generalizes what

@@ -47833,3 +47833,142 @@ figure whose chrome I mis-counted by a few points shows it as a band of air or
 a clipped bottom edge, and the clipped direction is the one worth checking:
 `crownChrome` is documented as a floor for that reason, but a floor is only as
 good as the sum behind it.
+
+## 591. The dock (user: "what if the rail for source chips was at the bottom of the screen instead of the top and fab became one of them but was first and fixed on the left", 2026-09-03)
+
+Asked as a "bizarre question maybe dumb maybe wonderful", refined over the
+conversation to "it would kind of be like a mac dock" / "on the phone". **The
+argument for it was already written in this codebase, against the arrangement
+that shipped.** `AgentBar`'s own note gives three reasons the sources tray was
+hosted on the bar rather than behind the chip strip's catalogue door, and the
+first is *"this bar is in the bottom thumb zone and the strip is at the top,
+which is the hardest place to reach on a phone"* — said of the strip that IS
+this app's whole navigation since the tab bar died (§100). A door was moved to
+the bottom because the top could not be reached. The fix is to move the thing
+that could not be reached.
+
+**1. Every row moves to the bottom edge.** `MainSurface.topInset` is
+`bandInset` and rides `.safeAreaInset(edge: .bottom)`. The stack inverts with
+the edge: at the top the strip led and the room's controls sat under it, nearer
+the room; at the bottom the same relationship puts the strip LAST, against the
+edge, in the shortest reach, with the venue switcher and the face rail above it
+and the demo banner above those. **Nothing about what a row IS changed** —
+§357's ruling that both room controls are shell chrome, and §362's that one
+rail serves two rooms, are untouched and still hold for the reason they were
+made (a filter you are standing in must show you that you are standing in it,
+and chrome mounted inside the `.id(filter.source)` subtree is destroyed by the
+move it commands). The guard that enforced that was widened from `.top` to both
+edges, because §357's argument was never about which edge and a guard naming
+only the old one would have gone quiet the moment the mistake moved with the
+band.
+
+**The scrim inverts and the crown pour is deliberately NOT composited into it.**
+The 2026-08-24 fix that composited it existed because the band sat in
+`crownPour`'s densest stop, where an opaque plate blanked the field §159
+promises "everywhere, always". At the bottom the pour has already faded to
+nothing, so there is nothing to preserve — compositing it would paint a second,
+upside-down pour against the bottom edge, a wash §524 does not describe and no
+other surface wears. The `s6` of air the strip carried is gone with its reason:
+it replaced iPhone's hidden system nav bar, a fact about the top of the screen,
+and at the bottom the home indicator's own safe area is already reserved.
+
+**2. The agent takes the dock's leading seat, and it is RESERVED rather than
+hosted.** The bar moves from the bottom-trailing corner to bottom-leading. The
+2026-08-07 ruling that took it off the centre of the bottom edge stands whole —
+centred chrome sat over the middle of the reading column — and only the corner
+changed; the reach argument that picked trailing is spent differently now, since
+the whole of the app's navigation is in the thumb zone and a dock is read from
+its fixed end.
+
+It stays a separate view on `RootShell`'s own ZStack, and that is the design
+rather than a compromise. One view of the dock would read best in a screenshot
+and would make the bar die with an inset that is applied inside the
+`NavigationStack` — covered by every pushed room, every bridge form and
+Settings, all of which the bar's own note says it must survive. So the strip
+yields the corner and the bar stands in it: when a room is pushed the strip goes
+and the bar remains, which is exactly the old behaviour, one corner over.
+`DSDock.agentSeat` is the one number both layers read, because the failure is
+asymmetric and neither half can see the other — too small and the leading source
+scrolls under the bar and becomes a room you can see and cannot tap (the
+2026-08-16 objection, restated), too large and the dock opens with a hole that
+reads as a missing chip.
+
+**3. "All" scrolls, and only on the phone.** The user's own arithmetic: *"if all
+and the agent button are fixed, then there is less room to scroll. we could make
+all scroll too that way only the agent button is fixed."* Measured, the head cost
+112pt with the agent beside a pinned "All" against 56pt with the agent alone,
+which is one whole extra source visible at rest on a 393pt screen. **What that
+costs**: the 2026-08-16 pin existed because "All" is the way back to the whole
+feed, the one destination every other room needs a road to, and a road that can
+scroll off is one you have to look for. Two things pay it — "All" still leads the
+order by construction, so it is the first thing the run shows and one flick away
+from anywhere in it, and the panel's own All capsule (§407) is now the
+always-present door, reachable from every room and from every pushed screen the
+strip does not survive into. The RAIL still pins it: a rail has vertical room to
+spare, which is the same reason its own doc gives for having no fade mask, so it
+pays no budget for the pin. Two consequences that would have failed silently: the
+`onAppear` scroll-to-active is unconditional now, and the `guard now != "All"`
+that skipped re-centring was deleted — correct while "All" had no id in that
+scroll, and the bug it was preventing the moment it did (going home by a deep
+link, a swipe or the panel's capsule would leave the strip parked with the lit
+chip off screen).
+
+**4. The sources tray is deleted and the panel behind the bar becomes the four
+doors that are NOT a feed.** The user's first instinct was that the tray was
+worth keeping — *"i don't think the your sources tray is redundant b/c of how it
+is organized makes it easy for person to see all at once and go directly to a
+source"* — and that was right about the tray as it stood. What changed it is the
+dock: with every feed one thumb-width below the panel, a grouped map of that same
+set is a second surface for one set, which is the §518 collision the app catalog
+was rebuilt to end. The user's own reading: *"i get what you are saying now that
+the your feeds tray is maybe redundant, maybe the your feeds tray opens up
+settings app catalog address book and agent only"*. So the panel keeps its
+position, its glass, its drag and its All capsule, and holds `DoorsPanel`: the
+agent, the catalogue, the address book, settings. Its header's three unlabelled
+door glyphs go, because the body IS those doors and drawing them twice on one
+surface states one destination as two. `SourceRowPacking` and its harness went
+with the grid they packed, and `ShellChrome.sourceOrder` — the UNFOLDED order,
+which existed for that grid alone — was deleted rather than left as state with a
+writer and no reader.
+
+**5. The 0.45s hold is deleted, and this is what actually simplifies.** User:
+*"and no long press for it"* → *"that simplifies it!"*. The hold existed because
+one control had two destinations and a tap reaches one: §384 gave it to the
+tray, §390 gave it to the agent, and §550 then had to ship a one-time capsule
+whose entire content was that the gesture existed — **a control that has to be
+advertised is a control that was not found.** Three rounds arguing about which
+of two things an invisible gesture should hide, ended by removing the second
+thing rather than by choosing better. One control, one tap, one panel,
+everything labelled; the hint capsule is retired with the gesture it taught,
+since a hint naming a gesture the app no longer has is the honesty rule's dead
+control in the one place a first-time reader is being told how the app works.
+The Mac's secondary-click menu survives and is not a leftover: a right-click is
+a listed, discoverable platform convention, not a hidden press.
+
+**What it costs, stated rather than discovered.** Asking a question is a tap and
+a tap where it was one gesture — a real price for the app's headline verb, paid
+deliberately. It is not the only road: a typed ask, a kept-ask pill, the day
+strip, the Daily Brief quick action, `casberi://ask?q=`, the widgets' ask tiles
+and ⌘K all still open the agent directly, and every one arrives with the
+question already in hand, which a door cannot.
+
+**DECLINED, with the reason, because it was the session's other candidate.** The
+long-press-to-unfold-a-category-chip idea was mocked and refused twice over.
+Long-press on a chip is already the peek (§384), which answers the same question
+better by showing the room's own figure rather than a row of venue marks; and
+with every row at the bottom, the venue switcher IS that expansion, persistently,
+for the room you are standing in. Unfolding in place would also put two levels of
+selection in one row and, measured against the mock, ran off the right edge of a
+393pt screen on the very category it was designed for.
+
+**Mechanical**: `scripts/dock-selftest.sh` (in `verify.sh`) — six drift guards,
+mutation-proven six ways, every one of them a failure that renders as an app
+that works. Negative guards read a comment-stripped copy, because all four files
+document this change by naming the very thing they must no longer do (the
+Obsidian/Cursor lesson).
+
+**UNSEEN on a device.** Both platforms compile and every static check is green;
+no screenshot of the dock has been taken on hardware, and the two things only a
+device answers are whether three stacked rows at the bottom of a Social room
+leave enough reading height, and whether the reserved seat lands the bar clear
+of the first chip at the real metrics.

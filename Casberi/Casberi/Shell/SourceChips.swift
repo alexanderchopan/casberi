@@ -220,7 +220,12 @@ struct SourceChips: View {
     /// dead band under the minimized chip where scrolling chips are melted out
     /// for no reason.
     private var headTrailingEdge: CGFloat {
-        DS.Space.s4 + chipSize
+        // On the phone the head draws nothing (§591), so the melt's ramp is
+        // measured from the strip's own leading margin — which is where the
+        // agent's seat ends, so chips still dissolve as they pass under the
+        // bar's corner rather than colliding with it. The RAIL still pins
+        // "All" and still measures past it.
+        axis == .vertical ? DS.Space.s4 + chipSize : DS.Space.s4
     }
     private var fadeClear: CGFloat { headTrailingEdge - 8 }
     private static let fadeRamp: CGFloat = 24
@@ -431,7 +436,12 @@ struct SourceChips: View {
                 .fixedSize(horizontal: false, vertical: true)
             }
             .onAppear {
-                if active != "All" { proxy.scrollTo(active, anchor: .center) }
+                // Unconditional since §591: "All" is in this run now, so a
+                // strip restored on All must scroll to it like any other room.
+                // It leads the order, so this is usually a no-op — but only
+                // usually, and a selection you cannot see reads as no
+                // selection at all.
+                proxy.scrollTo(active, anchor: .center)
             }
             // **A chip you TAPPED is not re-centred (prd §359, 2026-08-11).**
             // This used to re-centre on every change, which quietly defeated
@@ -452,9 +462,12 @@ struct SourceChips: View {
             // just on it.
             .onChange(of: active) { _, now in
                 if tapped == now { tapped = nil; return }
-                // "All" lives in the pinned HEADER, not in the scrolled run,
-                // so there is no id here to scroll to and never needs to be.
-                guard now != "All" else { return }
+                // The `guard now != "All"` that stood here is GONE (§591): it
+                // was correct while "All" was pinned outside this scroll and
+                // had no id to reach, and it is now the bug it was preventing
+                // — going home by any route but a tap (a deep link, a swipe
+                // step, the panel's All capsule) would leave the strip parked
+                // wherever it was, with the lit chip off screen.
                 withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
             }
         }
@@ -500,9 +513,19 @@ struct SourceChips: View {
     /// It is also NOT the only way back: `SourcesOverlay`'s header carries an
     /// All capsule too (§407). Two doors onto one room is right here — the
     /// panel is the map, this is the road.
+    /// **EMPTY on the phone since §591** — "All" scrolls with the run (see
+    /// `scrollingLabels`) and the fixed leading seat is the agent's, which is
+    /// a view on another layer entirely (`RootShell`'s cluster, reserved by
+    /// `MainSurface` through `DSDock.agentSeat`).
+    ///
+    /// The `Section(header:)` is KEPT rather than unwound, and that is
+    /// deliberate: the pinning machinery around it — `LazyHStack`,
+    /// `pinnedViews`, and the height correction recorded at the call site —
+    /// is what the strip's measured height depends on, and unwinding it to
+    /// delete a zero-width view is a change to the thing that reports the
+    /// band's height for a change to the thing that draws nothing.
     private var head: some View {
-        chip("All", pinned: true)
-            .padding(.leading, DS.Space.s4)
+        Color.clear.frame(width: 0, height: 0)
     }
 
     /// The two fixed doors as ONE glass capsule (2026-08-06) — see
@@ -748,14 +771,39 @@ struct SourceChips: View {
             .wordChipFill(cornerRadius: iconSize / 2, active: isOn, ns: selectionNS)
     }
 
-    /// Everything the strip SCROLLS — the full order minus "All", which is
-    /// rendered once, pinned, at the head.
+    /// Everything the strip SCROLLS.
+    ///
+    /// **"All" SCROLLS on the phone since §591, and the reason is a budget.**
+    /// The dock's fixed leading seat belongs to the agent now, and a phone
+    /// strip cannot afford two fixed chips: measured, the head cost 112pt with
+    /// the agent beside a pinned "All" against 56pt with the agent alone —
+    /// which is one whole extra source visible at rest on a 393pt screen.
+    /// The user's own framing (2026-09-03): *"if all and the agent button are
+    /// fixed, then there is less room to scroll. we could make all scroll too
+    /// that way only the agent button is fixed."*
+    ///
+    /// **What that costs, and what pays it back.** The 2026-08-16 ruling that
+    /// pinned it said "All" is the way back to the whole feed, the one
+    /// destination every other room needs a road to — and a road that can
+    /// scroll off is a road you have to look for. Two things keep it: it still
+    /// leads the order by construction, so it is the first thing the run shows
+    /// and one flick away from anywhere in it; and the agent's own panel
+    /// carries an All capsule in its header (§407), which is now the ALWAYS
+    /// -present door, reachable in one tap from every room and from every
+    /// pushed screen the strip does not survive into.
+    ///
+    /// The RAIL is untouched and still pins it (see the vertical branch): a
+    /// rail has vertical room to spare, which is the same reason its own doc
+    /// gives for having no fade mask, so it pays no budget for the pin.
     ///
     /// A FILTER, not a `dropFirst()`: `labels` is handed in by the owner and
     /// "All" leads it by construction today (`MainSurface.computedChips`), but
-    /// an order that ever put it elsewhere would silently render it twice, and
-    /// two chips claiming one selection is worse than either placement.
-    private var scrollingLabels: [String] { labels.filter { $0 != "All" } }
+    /// an order that ever put it elsewhere would silently render it twice on
+    /// the rail, and two chips claiming one selection is worse than either
+    /// placement.
+    private var scrollingLabels: [String] {
+        axis == .vertical ? labels.filter { $0 != "All" } : labels
+    }
 
     /// - Parameter pinned: this chip is drawn in the fixed head rather than in
     ///   the scroll, so it sits out the scroll-edge ease. Everything else about

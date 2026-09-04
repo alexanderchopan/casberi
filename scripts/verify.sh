@@ -1137,13 +1137,29 @@ harness "Circle x402 pure-logic self-test" "x402 self-test" "scripts/x402-selfte
 # because `JSONEncoder` is not byte-stable.
 harness "Widget payload self-test" "widget self-test" "scripts/widget-selftest.sh" "the widget self-test failed — run scripts/widget-selftest.sh"
 
-# The sources tray's row packer (2026-08-10). Mechanical because the failure is
-# INVISIBLE: a tray packed one row worse than it could be renders perfectly, it
-# is just taller — and past the 620pt resting cap "taller" means the picker
-# scrolls, which is the one thing this tray has been redesigned three times to
-# avoid. The harness carries the exact optimiser the app deliberately does NOT
-# ship, and proves the three-line sort still ties it.
-harness "Sources-tray packing self-test" "source packing self-test" "scripts/source-packing-selftest.sh" "the sources-tray packing self-test failed — run scripts/source-packing-selftest.sh"
+# The sources tray's row packer was DELETED in §591 (2026-09-03) along with the
+# tray it packed. Its reason to exist was that a tray packed one row worse than
+# it could be renders perfectly and is merely taller — invisible to a build, a
+# screenshot and the screen sweep — and past the 620pt resting cap "taller"
+# means the picker scrolls. There is no picker: the source strip moved to the
+# bottom edge and the panel behind the agent bar became four labelled doors
+# (`DoorsPanel`), which has one row height and nothing to optimise.
+#
+# Recorded here rather than silently removed because this list is a CURATED set
+# and the comment above each line is the only written record of why that check
+# exists — so a deletion needs its reason on the record exactly as an addition
+# does. `SourceRowPacking.swift` went with it; the harness had no other subject.
+
+# The dock (prd §591, 2026-09-03). Mechanical because every failure here
+# renders as an app that works: a band that drifted back to the top edge is one
+# word and entirely usable afterwards; an agent seat spelled as a literal in one
+# of the two files that need it puts the leading source under the bar, where it
+# is a room you can see and cannot tap; a bar pinned trailing again covers the
+# LAST chip instead of standing before the first; and a returning long press
+# re-opens the §384/§390/§550 argument while the panel ALSO offers the agent —
+# two doors to one room, one of them unmarked. No build, no static audit and no
+# screen sweep can see any of it.
+harness "Dock self-test" "dock self-test" "scripts/dock-selftest.sh" "the dock self-test failed — run scripts/dock-selftest.sh"
 
 # Every folded chip's ordering and resolution rules (prd §351, 2026-08-11 —
 # supersedes the Markets-only harness this line used to run, generalizing it

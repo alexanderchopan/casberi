@@ -185,29 +185,30 @@ struct RootShell: View {
         chrome.paneBrief = DayBrief.whisper(things: things)
     }
 
-    /// The hint's gate (prd §550): show it once, after onboarding, until the
-    /// agent has been raised by any door.
+    /// **THE HINT IS RETIRED (prd §591, 2026-09-03) and this is its stub.**
     ///
-    /// Suppressed until `onboarded` for the whisper's own reason — the cover is
-    /// up, and chrome under it is chrome nobody can see being spent.
-    /// `-agentHintProbe YES` forces it past the spent flag so the capsule
-    /// still verifies headlessly. Renamed from `-whisperProbe` with the
-    /// feature: a probe named for a deleted thing is the drift this repo keeps
-    /// finding in registries nobody re-read.
+    /// §550 shipped a one-time glass capsule above the agent bar reading
+    /// "Talk to your agents · Press and hold the button below." Its entire
+    /// content was the 0.45s hold, which §390 had made the only route to the
+    /// agent from this control and which had no visible affordance — a control
+    /// that has to be advertised is a control that was not found.
+    ///
+    /// §591 deleted the hold: the bar's tap opens a panel and the agent is a
+    /// labelled row inside it, so there is nothing left to teach. A hint whose
+    /// sentence names a gesture the app no longer has is worse than no hint —
+    /// it is the honesty rule's dead control, in the one place a first-time
+    /// reader is being told how the app works.
+    ///
+    /// Kept as a function that arms nothing rather than unwound, so
+    /// `-agentHintProbe` and the two activation call sites still resolve and
+    /// still report; the flag simply never becomes true.
     @MainActor
     private func refreshAgentHint() {
-        var force = false
+        if agentHint { withAnimation(DS.Motion.standard) { agentHint = false } }
         #if DEBUG
-        force = UserDefaults.standard.bool(forKey: "agentHintProbe")
-        #endif
-        guard onboarded, force || !agentEverRaised else {
-            if agentHint { withAnimation(DS.Motion.standard) { agentHint = false } }
-            return
+        if UserDefaults.standard.bool(forKey: "agentHintProbe") {
+            NSLog("[Casberi] agentHint: retired (§591 — the hold it taught is gone)")
         }
-        guard !agentHint else { return }
-        withAnimation(DS.Motion.standard) { agentHint = true }
-        #if DEBUG
-        NSLog("[Casberi] agentHint: shown")
         #endif
     }
 
@@ -1483,18 +1484,19 @@ struct RootShell: View {
         .sheet(item: $deepLinkPerson) { person in
             rootPresented(SocialProfileCard(profile: person))
         }
-        // Every source at once (2026-07-31) — the agent bar's hold. Hosted
-        // HERE, beside the bar that raises it, so it opens over a pushed room
-        // (Apps, Settings, a bridge setup form) the same way it opens over the
-        // feed; the chip strip it complements only exists on `MainSurface`.
-        // `chrome.sourceOrder` is the strip's own frozen order, mirrored live —
-        // and deliberately the UNFOLDED one (2026-08-10). The Markets fold
-        // collapses seven seats into one chip up in the strip, which is right
-        // there and wrong here: this grid is the screen that claims to show
-        // EVERY source, so it keeps naming all seven. Handing it the folded
-        // list would have dropped them all AND grown a "Markets" cell whose tap
-        // writes a non-source into `filter.source` — a room whose predicate
-        // matches nothing, forever, under a chip that lights up as if it worked.
+        // The four doors that are NOT a feed (§591) — the panel the agent bar's
+        // TAP raises, where every source used to be. Hosted HERE, beside the
+        // bar that raises it, so it opens over a pushed room (Apps, Settings, a
+        // bridge setup form) the same way it opens over the feed; the chip
+        // strip it complements only exists on `MainSurface`, which is also why
+        // the agent had to become a row in it rather than stay a gesture on a
+        // control that outlives the strip.
+        //
+        // It no longer takes a source list at all. The unfolded-vs-folded
+        // question that governed this call site from 2026-08-10 to §591 — the
+        // grid claimed to show EVERY source, so it could not be handed the
+        // folded order — went with the grid; `ShellChrome.sourceOrder` is
+        // deleted rather than left as state with a writer and no reader.
         .fullScreenCover(isPresented: Binding(
             get: { !onboarded }, set: { if !$0 { onboarded = true } }
         ), onDismiss: {
@@ -2021,7 +2023,6 @@ struct RootShell: View {
             // position in the chain, not about sheets.
             if sourcesOpen {
                 rootPresented(SourcesOverlay(
-                    labels: chrome.sourceOrder,
                     active: filter.source,
                     onDismiss: { closeSources() },
                     // The empty tray's door (2026-08-18). The SAME push the
@@ -2053,6 +2054,24 @@ struct RootShell: View {
                         withAnimation(DS.Motion.standard) {
                             sceneState.route.push(.addressBook)
                         }
+                    },
+                    // THE AGENT (prd §591) — the door the bar's 0.45s hold used
+                    // to be. Same close-then-open shape as its three
+                    // neighbours, and for a sharper version of their reason:
+                    // the risen agent is a full-screen ZStack layer on this
+                    // shell, so raising it under a panel that is still up would
+                    // put the panel's glass over the composer's own field.
+                    //
+                    // A bare rise seeding NOTHING, exactly as the hold did —
+                    // `chrome.askRequest` is left alone so a surface that
+                    // seeded a specific ask a moment ago still wins — and it
+                    // clears the notice glint for the same reason the hold did:
+                    // rising is seeing.
+                    onAgent: {
+                        closeSources()
+                        DSHaptic.lift()
+                        AgentNoticed.shared.markSeen()
+                        withAnimation(DS.Motion.standard) { composerOpen = true }
                     }) { label in
                     closeSources()
                 // Land ON the feed that was named. A pick made from a pushed
@@ -2107,15 +2126,27 @@ struct RootShell: View {
                 // narrower to read as SEPARATE from the bar (2026-07-22, the
                 // double-bar ruling) — coordinated, not fused.
                 DSGlassContainer(spacing: 0) {
-                // TRAILING (user ruling 2026-08-07) — the cluster pins to the
-                // bottom-right instead of centring on the bottom edge. Centred
-                // chrome sat over the middle of the reading column, which is
-                // the one column this app exists to serve; in the corner the
-                // column runs clear beneath it and the bar is a shorter reach
-                // for the thumb of the hand a phone is actually held in.
-                // `.trailing` rather than a hard right edge so an RTL layout
-                // gets the mirrored corner for free.
-                VStack(alignment: .trailing, spacing: DS.Space.s2) {
+                // **LEADING since §591 (2026-09-03).** The 2026-08-07 ruling
+                // that moved this cluster off the centre of the bottom edge
+                // stands whole — centred chrome sat over the middle of the
+                // reading column, which is the one column this app exists to
+                // serve — and only the corner changed, because the bottom edge
+                // now holds the source dock and the bar is its first seat
+                // (user: "fab became one of them but was first and fixed on
+                // the left").
+                //
+                // The reach argument the trailing corner was chosen on is not
+                // reversed so much as spent differently: the strip that was
+                // hardest to reach is down here now, so the whole of the app's
+                // navigation is in the thumb zone and the corner is decided by
+                // reading order instead — a dock is read from its fixed end,
+                // and in an LTR layout that end is the left.
+                //
+                // `.leading` rather than a hard left edge, so an RTL layout
+                // gets the mirrored corner for free — unchanged, and now
+                // load-bearing on both sides, since `MainSurface` reserves the
+                // seat with a `.padding(.leading,)` that mirrors too.
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
                     // The hint rides ABOVE the bar (prd §550) — once ever,
                     // after onboarding, until the agent has been raised. It
                     // names the HOLD, which is the gesture §390 left with no
@@ -2154,7 +2185,7 @@ struct RootShell: View {
                         // keeps the phone's whole column and is only bounded on
                         // a shell wide enough to make that column silly.
                         .frame(maxWidth: PadLayout.floatingClusterMaxWidth,
-                               alignment: .trailing)
+                               alignment: .leading)
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
                     AgentBar(hasUnseenSignal: KeptAskStore.shared.anyChanged && !agentEverOpened,
@@ -2247,7 +2278,7 @@ struct RootShell: View {
                 // content — and on iPad the TRAILING inset is what now decides
                 // which edge "the corner" means, which is exactly why that
                 // arithmetic lives in `PadLayout` and not inline.
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, padShell.railInset)
                 .padding(.trailing, padShell.paneInset)
                 .padding(.horizontal, DS.Space.s4)
