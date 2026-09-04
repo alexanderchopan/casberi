@@ -166,11 +166,50 @@ private struct WalletHistoryRow: View {
                                           sourceRef: thing.sourceRef)
         WalletRow(mark: .kind(thing.kind, flagged: thing.isFlagged,
                               symbol: act.symbol, tint: Color(hex: act.hex)),
-                  title: WalletValue.title(thing), subtitle: walletLabel, titleWraps: true) {
-            Text(shortTime(thing.capturedAt))
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .monospacedDigit()
+                  title: titleText, subtitle: walletLabel, titleWraps: true) {
+            VStack(alignment: .trailing, spacing: 1) {
+                // THE AMOUNT IS A FIGURE, NOT PART OF THE SENTENCE (prd §587).
+                // It sat inside the title here — "Received 0.42 ETH from
+                // coinbase.eth" at the title rung — while the SAME transaction
+                // in the Wallet room draws it as a signed figure in this slot.
+                // One room, one pushed screen, two grammars for one fact.
+                if let money = moneyAmount {
+                    Text(money.text)
+                        .dsText(.price16)
+                        .foregroundStyle(money.received ? DS.confirm : DS.textPrimary)
+                        .monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
+                }
+                Text(shortTime(thing.capturedAt))
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .monospacedDigit()
+            }
         }
+    }
+
+    /// The signed amount, when this row really moved a token — `BandRow`'s own
+    /// rule and its own guard conditions (prd §587). Nil for everything else,
+    /// which is why the trailing slot degrades to just the time.
+    private var moneyAmount: (text: String, received: Bool)? {
+        guard let direction = thing.transferDirection,
+              let amount = thing.transferAmount, !amount.isEmpty,
+              direction == "received" || direction == "sent" else { return nil }
+        let received = direction == "received"
+        return ("\(received ? "+" : "−")\(amount)", received)
+    }
+
+    /// The title with the amount taken OUT once the column is saying it —
+    /// `BandRow.titleText`'s rule, verbatim, including why it is display-only:
+    /// `thing.title` is untouched, so search, Spotlight and the sheet all still
+    /// read the full sentence. Printing the figure twice was the first thing
+    /// that looked wrong on screen when the money column was added there.
+    ///
+    /// It reads `WalletValue.title` first, so §374's mask still governs: a
+    /// hidden balance is masked before this ever looks for a number to remove.
+    private var titleText: String {
+        let base = WalletValue.title(thing)
+        guard moneyAmount != nil, let amount = thing.transferAmount,
+              let range = base.range(of: " \(amount)") else { return base }
+        return base.replacingCharacters(in: range, with: "")
     }
 
     private func shortTime(_ date: Date) -> String {

@@ -2166,8 +2166,15 @@ struct HegotaMoveRow: View {
                 // channel a person can't be assumed to read — and green-vs-grey
                 // is a far weaker signal than a sign every other money row in
                 // this app carries.
+                // ONE RUNG FOR A SIGNED AMOUNT IN A ROW (prd §587). This was
+                // `subhead13` — 12pt — while the Wallet room's own activity
+                // rows draw the same fact at `price16` and Frames drew it at
+                // `callout15`. Four activity surfaces, three sizes, for one
+                // kind of figure. `price16` is the app's row-money rung and
+                // the one the most-drawn surface already uses, so the other
+                // two come to it.
                 Text(HegotaFormat.signed(move.wei, incoming: move.incoming))
-                    .dsText(.subhead13)
+                    .dsText(.price16)
                     .foregroundStyle(move.incoming ? DS.confirm : DS.textSecondary)
                     .monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
                 // The frame anatomy as texture. A legacy transaction draws

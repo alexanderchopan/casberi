@@ -42013,6 +42013,20 @@ defaults to showing it once.
 
 ## 551. One rung for every scope headline, an empty Accounts scope that is a drawing rather than three tiers of text, and the permissions census drawn whole (user: "on Wallet, Home, the balance is in such a large font, but on all the other screens … we should be consistent"; "this screen looks like shit and we shouldn't need subtext"; "on Permissions, this looks bad. really. we should use blocks", 2026-09-01)
 
+**AMENDED 2026-09-03 (§587) — to record the ATTEMPT, not to change the ruling.**
+This entry states the outcome (one rung, and the crown came down to meet the
+headlines) and the measurement behind the DIRECTION, but not the experiment
+that preceded it. The user, asked about it again today: *"the problem we had w/
+the balance being large there was it made the rest of the screen feel off and we
+couldn't get every screen to have the number large and still look good."*
+
+So the large crown was tried on a device across the scopes and abandoned on how
+the screens read, not merely on how the strings measure. That matters because
+§585 has since made a big FIGURE work elsewhere in the app, which makes this
+ruling look reopenable — and it was reopened today, on exactly that reasoning,
+before the user pointed out the experiment had already been run. **The rung
+here stands. A figure fitting is not the same as a screen working.**
+
 Three reports about the vibenet room's fixed figure slot, all landing on the
 same property: the slot is 210pt whatever it holds, so anything sized by how
 much there happens to be looks broken at the small end. Nothing here changes
@@ -47505,3 +47519,67 @@ that replaced it — so *changing a behaviour means searching `scripts/` for wha
 asserted the old one*, in the same pass. The alternative is what happened here:
 the harness goes red, the red is ambient, and it takes an unrelated full pass
 to notice.
+
+## 587. One rung for a signed amount in a row (2026-09-03)
+
+**Asked how to improve the Wallet room, and the answer that survived was the
+smallest of three.** The other two are recorded in §551's amendment above and
+in item 3 below.
+
+### 1. Four activity surfaces, three rungs, one buried
+
+The same fact — this transaction moved this much — was drawn four ways:
+
+| Surface | The amount |
+|---|---|
+| Wallet room (Home and Activity), `BandRow` | trailing, `price16`, stripped from the title |
+| Wallet's pushed "See activity" screen, `WalletHistoryRow` | **inside the title sentence** |
+| Hegotá Activity, `HegotaMoveRow` | trailing, `subhead13` — 12pt |
+| Frames Activity, `FramesMoveRow` | trailing, `callout15` — 17pt REGULAR |
+
+The worst of it is the second row: tapping "See activity" from the Wallet room
+redraws the very transactions you were just looking at in a different grammar,
+with the figure demoted into prose. The Frames case is subtler and still real —
+`callout15` is the same size as the sentence beside it, so the figure had no
+weight of its own.
+
+`price16` (17 bold) is the app's row-money rung and the one the most-drawn
+surface already used, so the other three come to it. **`BandRow` had already
+solved the hard half** — it strips the amount out of the displayed title once
+the column states it, display-only, leaving `thing.title` intact for search,
+Spotlight and the sheet. `WalletHistoryRow` now does the same, reading
+`WalletValue.title` first so §374's mask still governs: a hidden balance is
+masked before anything looks for a number to remove.
+
+**`VibenetEventRow` is exempt and it is CONTENT, not drift** — it draws events
+(a key added, an account created), not transfers, so it has no amount to state.
+The same shape as §586's watchlist rows trailing a price instead of a time, and
+named in `KNOWN_NO_AMOUNT` with its reason so it cannot decay into a snooze.
+
+Guarded in `feed-row-skeleton-audit.py`, mutation-proven on all four.
+
+### 2. A guard that reported a row as MISSING rather than checking it
+
+Written in the same pass and worth keeping: the audit's struct extractor
+required a line beginning `struct`, and `WalletHistoryRow` is a `private
+struct`. It reported the row as absent — which the check treats as a stale
+list and fails on, so it was caught — but the near miss is the point. Had the
+finding been phrased as a pass-by-default rather than a failure, the one row
+this section exists to fix would have been the one row the guard never read.
+**A check that cannot find its subject must fail, never skip.**
+
+### 3. The other two proposals, and why they are not here
+
+**The crown back at `price40`** — withdrawn on the user's own device
+experience; see §551's amendment. §585 makes a big figure work for a ROOM HEAD,
+and that does not generalise to a scope strip whose other six screens have to
+live around it.
+
+**Folding Risk into Permissions** — seven scopes is a lot of chips and both
+answer "what could hurt me", but nothing was measured, so nothing is proposed.
+
+### 4. Unseen on a device
+
+Three rows changed size or position. The Wallet history screen is the one to
+look at: it is the only one where a title lost words as well as a slot gaining
+a figure, and the strip is a `range(of:)` on a localized string.

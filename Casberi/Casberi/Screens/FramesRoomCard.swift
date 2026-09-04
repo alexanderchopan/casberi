@@ -733,8 +733,12 @@ struct FramesMoveRow: View {
             // (§548): every ETH movement is a log and the receipt names both
             // the fee and who paid it. Nil draws nothing rather than a zero.
             if let delta = move.deltaWei {
+                // One rung for a signed amount in a row (prd §587) — see
+                // `HegotaMoveRow` for the measurement. `callout15` is 17pt
+                // REGULAR, so this figure was the same size as the sentence
+                // beside it and lost to it; `price16` is 17 bold.
                 Text(FramesMoney.signedETH(wei: delta, compact: true))
-                    .dsText(.callout15)
+                    .dsText(.price16)
                     .foregroundStyle(delta > 0 ? DS.confirm : DS.textPrimary)
                     .monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
             }

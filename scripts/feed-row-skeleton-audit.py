@@ -52,7 +52,10 @@ KNOWN_NO_TIME = {
 }
 
 def body(src: str, name: str) -> str | None:
-    m = re.search(rf'^struct {re.escape(name)}: View \{{', src, re.M)
+    # `private struct` counts — `WalletHistoryRow` is one, and requiring a bare
+    # `struct` silently reported it MISSING rather than checking it.
+    m = re.search(rf'^(?:private |fileprivate |internal |public )?struct {re.escape(name)}: View \{{',
+                  src, re.M)
     if not m:
         return None
     depth, i = 0, m.end() - 1
@@ -108,6 +111,57 @@ def check(src: str) -> list[str]:
             bad.append(f"{name}: is exempted from the trailing time but draws one — "
                        f"remove the exemption, it is now a snooze")
     return bad
+
+# Every surface that draws a SIGNED AMOUNT in a row, and the file it lives in.
+# A row that moves money states the figure in its trailing slot at one rung —
+# see `check_money`.
+MONEY_ROWS = {
+    "BandRow": "Casberi/Casberi/Screens/ShapedRows.swift",
+    "WalletHistoryRow": "Casberi/Casberi/Screens/WalletHistoryScreen.swift",
+    "HegotaMoveRow": "Casberi/Casberi/Screens/HegotaRoomCard.swift",
+    "FramesMoveRow": "Casberi/Casberi/Screens/FramesRoomCard.swift",
+}
+
+# An activity row with no amount, and why. `VibenetEventRow` draws EVENTS — a
+# key added, an account created — not transfers, so it has no figure to state.
+# The same shape as `KNOWN_NO_TIME` above: content, not drift.
+KNOWN_NO_AMOUNT = {
+    "VibenetEventRow": "draws events (a key added, an account created), not "
+                       "transfers — there is no amount to state",
+}
+
+
+def check_money(files: "dict[str, str]") -> "list[str]":
+    """ONE RUNG FOR A SIGNED AMOUNT IN A ROW (prd §587).
+
+    Measured when this landed: four activity surfaces drew the same fact three
+    ways — `price16` in the Wallet room, `subhead13` on Hegota, `callout15` on
+    Frames, and buried INSIDE the title sentence on Wallet's own pushed history
+    screen. A reader crossing from a room to its "See activity" screen met the
+    same transaction in a different grammar.
+
+    `price16` is the app's row-money rung and the one the most-drawn surface
+    already used, so the others came to it.
+    """
+    bad = []
+    for name, path in MONEY_ROWS.items():
+        try:
+            src = pathlib.Path(path).read_text()
+        except OSError:
+            bad.append(f"{name}: {path} not found — the money-row list is stale")
+            continue
+        b = body(src, name)
+        if b is None:
+            bad.append(f"{name}: not found in {path} — the money-row list is stale")
+            continue
+        b = strip_comments(b)
+        if ".dsText(.price16)" not in b:
+            bad.append(f"{name}: a signed amount is not at price16 — four activity "
+                       f"surfaces state this fact and they share one rung")
+        if "monospacedDigit" not in b:
+            bad.append(f"{name}: the amount is not tabular")
+    return bad
+
 
 def check_rolls(files: "list[tuple[str, str]]") -> "list[str]":
     """A NUMBER THAT ROLLS MUST BE TABULAR (prd §586).
@@ -177,6 +231,30 @@ def self_test() -> None:
         if bool(check_rolls([("t.swift", src)])) != should_fail:
             print(f"  ✗ self-test: {label}"); sys.exit(1)
         print(f"  ok   {label}")
+    import tempfile, os
+    money = [
+        ("a signed amount at the shared rung passes",
+         "struct BandRow: View {\n .dsText(.price16)\n .monospacedDigit()\n}\n", False),
+        ("an amount off the shared rung is flagged",
+         "struct BandRow: View {\n .dsText(.subhead13)\n .monospacedDigit()\n}\n", True),
+        ("a non-tabular amount is flagged",
+         "struct BandRow: View {\n .dsText(.price16)\n}\n", True),
+        ("a COMMENTED rung does not satisfy it",
+         "struct BandRow: View {\n // .dsText(.price16)\n .monospacedDigit()\n}\n", True),
+        ("a renamed money row is flagged, not skipped",
+         "struct BandRowX: View {\n .dsText(.price16)\n .monospacedDigit()\n}\n", True),
+    ]
+    with tempfile.TemporaryDirectory() as td:
+        for label, src, should_fail in money:
+            f = os.path.join(td, "t.swift")
+            pathlib.Path(f).write_text(src)
+            found = [x for x in check_money({"BandRow": f}) if x.startswith("BandRow")]
+            saved = dict(MONEY_ROWS); MONEY_ROWS.clear(); MONEY_ROWS["BandRow"] = f
+            found = [x for x in check_money({}) if x.startswith("BandRow")]
+            MONEY_ROWS.clear(); MONEY_ROWS.update(saved)
+            if bool(found) != should_fail:
+                print(f"  ✗ self-test: {label}"); sys.exit(1)
+            print(f"  ok   {label}")
 
 if __name__ == "__main__":
     if "--self-test" in sys.argv:
@@ -187,11 +265,13 @@ if __name__ == "__main__":
     for d in ROLL_DIRS:
         for f in sorted(pathlib.Path(d).glob("*.swift")):
             files.append((str(f), f.read_text()))
-    bad = check(src) + check_rolls(files)
+    bad = check(src) + check_rolls(files) + check_money({})
     if bad:
         for b in bad: print(f"✗ {b}")
         sys.exit(1)
     rolls = sum(s.count("numericText") for _, s in files)
     print(f"✓ feed row skeleton: {len(FEED_ROWS)} row species, "
           f"{len(KNOWN_NO_TIME)} trailing a price with a reason; "
-          f"{rolls} rolling figures, all tabular")
+          f"{rolls} rolling figures, all tabular; "
+          f"{len(MONEY_ROWS)} money rows at one rung, "
+          f"{len(KNOWN_NO_AMOUNT)} stating no amount with a reason")
