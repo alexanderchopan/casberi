@@ -48220,3 +48220,16 @@ Measured after: 18pt, which is the row's own rhythm.
 **The lesson, since this is twice in one session:** measure before believing the
 report's own diagnosis. Both times the words named the vertical axis and both
 times a pixel measurement found the fault somewhere else.
+
+**And the bar was a plate, not a rail** (user: *"it's not full on the rail, and
+then the other categories not yet on the rail are off the screen, they should be
+inside the rail scrolling"*). The glass went in a `.background` with the inset
+applied to THAT alone, so the scroll still ran the window's full width: chips
+sailed out past both ends of the bar they were supposed to be inside, which
+reads as a plate lying under a row rather than a rail holding one. The strip is
+clipped to the slab's own shape now, then glassed, then inset — the clip is what
+makes the chips belong to the bar, it must precede the glass so the glass sizes
+to the clipped view, and the inset comes last so it moves the viewport too.
+That last part is why `SourceChips` converts `DSDock.agentSeat` from window
+space into viewport space by subtracting `slabInset`: without it every chip
+rests 15pt right of where it should and the melt begins 15pt late.

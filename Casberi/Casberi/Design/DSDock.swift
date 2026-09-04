@@ -84,6 +84,16 @@ enum DSDock {
     /// chips").
     static let slabPad: CGFloat = 5
 
+    /// How far the glass bar is inset from the window's edges (§591d).
+    ///
+    /// The bar needs edges to be separate FROM — full bleed is what made it
+    /// invisible — and the CHIPS SCROLL INSIDE IT, so this is also the scroll
+    /// viewport's own leading offset and therefore a term in the melt's
+    /// arithmetic. `SourceChips` subtracts it from `agentSeat` to convert the
+    /// bar's window-space trailing edge into viewport space; spelled here so
+    /// the inset and that conversion cannot drift.
+    static let slabInset: CGFloat = DS.Space.s4
+
     /// How far the strip's chips sit off the band's bottom edge.
     static func chipBottomInset(minimized: Bool) -> CGFloat {
         slabPad + (minimized ? DS.Space.s1 : DS.Space.s2)

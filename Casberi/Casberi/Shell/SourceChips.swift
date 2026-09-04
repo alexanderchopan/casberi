@@ -246,7 +246,13 @@ struct SourceChips: View {
         // rather than melted (user: "it isn't hitting a flat hard line when it
         // goes behind the octopus. the octopus should be on the same row").
         // The RAIL still pins "All" and still measures past it.
-        axis == .vertical ? DS.Space.s4 + chipSize : DSDock.agentSeat
+        // `agentSeat` is measured from the WINDOW's edge and this is the
+        // SCROLL VIEWPORT's space, which since §591d starts one `slabInset` in
+        // — the chips scroll inside the glass bar rather than across the whole
+        // screen. Without the subtraction every chip rests 15pt further right
+        // than it should and the melt begins 15pt late.
+        axis == .vertical ? DS.Space.s4 + chipSize
+                          : DSDock.agentSeat - DSDock.slabInset
     }
     /// Where a chip has finished dissolving — fully gone by here.
     ///

@@ -388,11 +388,26 @@ struct MainSurface: View {
                     // still run full width and still melt under the agent bar
                     // (`DSDock.agentSeat`), so nothing about the scroll or the
                     // seat moved — this is a background gaining a shape.
-                    .background {
-                        Color.clear
-                            .dsGlass(cornerRadius: DSRoomChassis.slabRadius)
-                            .padding(.horizontal, DS.Space.s4)
-                    }
+                    // **THE CHIPS SCROLL INSIDE THE BAR** (user: "the other
+                    // categories not yet on the rail are off the screen, they
+                    // should be inside the rail scrolling"). The first cut put
+                    // the glass in a `.background` and inset only THAT, so the
+                    // scroll still ran the window's full width and chips sailed
+                    // out past both ends of the bar they were supposed to be
+                    // in — the bar looked like a plate lying under a row rather
+                    // than a rail holding one.
+                    //
+                    // Clipped to the slab's own shape, then glassed, then
+                    // inset: the clip is what makes the chips belong to the
+                    // bar, and it has to come before the glass so the glass
+                    // sizes to the clipped view. The horizontal inset is
+                    // applied LAST so it moves the whole object, viewport
+                    // included — which is why `SourceChips` converts
+                    // `DSDock.agentSeat` into viewport space (see there).
+                    .clipShape(RoundedRectangle(cornerRadius: DSRoomChassis.slabRadius,
+                                                style: .continuous))
+                    .dsGlass(cornerRadius: DSRoomChassis.slabRadius)
+                    .padding(.horizontal, DSDock.slabInset)
                     // The rest of the chips' offset from the band's edge —
                     // `DSDock.chipBottomInset` is this plus `slabPad` above,
                     // and the bar's own inset is measured from it so the two
