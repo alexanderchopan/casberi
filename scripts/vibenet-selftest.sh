@@ -822,14 +822,24 @@ fi
 [[ "$heroFn" != *'.dsText(.price48)'* ]] \
   || { echo "✗ the aggregate crown went back to price48 — prd §551: it was two rungs above"
        echo "  every other scope's headline, so the strip changed the type scale of the screen"; exit 1; }
-# The 120pt rule is unchanged; the FUNCTION it lives in moved (prd §491). The
-# chart was nested inside `balanceHero` and is now `homeFigure`, drawn through
-# the same fixed slot every other scope's figure uses — which is what stopped
-# the account rail landing 24pt higher on Home than anywhere else. A guarded
-# figure that moves files takes its guard with it, so this looks at the card
-# rather than at one function of it.
+# **THE 120pt RULE IS AMENDED, NOT DROPPED (prd §588).** §475 gave this
+# sparkline Wallet's own height, and the POINT of that ruling was the word
+# "Wallet's" — the two rooms draw one figure, and a literal was how that was
+# said while both were 120. §588 grew `DSRoomChassis.visualSlot` 210 → 300, so
+# a literal 120 is now the one thing that would break the rule it was written
+# to keep: Wallet's line derives from the box, and a pinned vibenet line would
+# be 100pt shorter than the room it is supposed to match.
+#
+# So the guard asks for the DERIVATION, which is what §475 actually meant, and
+# it is a stronger check than the literal was — a room drawing its own number
+# again fails whatever that number happens to be.
+grep -q 'DSRoomChassis.crownLine(box: DSRoomChassis.visualSlot' "$TMP/card.nc.swift" \
+  || { echo "✗ the aggregate sparkline no longer derives from the room slot — prd §475"
+       echo "  gave it Wallet's own height and prd §588 made that height the box less the"
+       echo "  crown's chrome; a literal here is 100pt shorter than the room it must match"; exit 1; }
 grep -q 'height: 120' "$TMP/card.nc.swift" \
-  || { echo "✗ the aggregate sparkline is no longer 120pt — prd §475: Wallet's own height"; exit 1; }
+  && { echo "✗ the aggregate sparkline is pinned at 120 again — that was the shared number"
+       echo "  while the slot was 210 and is now a short line in a 300pt box (prd §588)"; exit 1; }
 grep -q '.dsText(.stat24)' "$TMP/detail.nc.swift" \
   || { echo "✗ the account sheet's crown is not stat24 — prd §475/§551: it drew the same"
        echo "  reading at a different rung from the room one tap above it"; exit 1; }

@@ -34,7 +34,42 @@ enum DSRoomChassis {
     /// stacked: Wallet's Positions scope opens "Deposited $61,000" in place of
     /// the wallet total, and a room that draws its crown AND a figure is a room
     /// whose bar sits a third of a screen lower than the one it copied.
-    static let visualSlot: CGFloat = 210
+    ///
+    /// **210 → 300 (prd §588, user: "the lists we have below the rail are long
+    /// and the crown charts are short … make the charts crown area larger, move
+    /// the rail down, and have less of the list above the fold. as long as
+    /// three items show user can scroll below the fold").**
+    ///
+    /// This REVERSES the direction §483 and §495 pushed and does not overturn
+    /// their reasoning, which is worth being precise about because both were
+    /// answering a real complaint. §483 shortened the wallet sparkline to 96
+    /// "to buy a third transaction row above the fold"; §495 closed ~22pt of
+    /// air between the three chassis gaps for the same row. Both treated the
+    /// list as the thing being bought and the drawing as what pays. That was
+    /// right while the drawing was the smaller claim; it stopped being right
+    /// once every scope in four rooms had a drawing built to fill this box.
+    /// The figure is why the room is opened. It had a fifth of the screen.
+    ///
+    /// **The arithmetic, because "three rows" is a number.** §495 measured the
+    /// chrome above the first row at 535pt of an 874pt screen, 48pt of which is
+    /// the demo banner no install has — so ~487 shipping, leaving 387pt of
+    /// list, of which the floating agent bar covers ~98. At the ~90pt a
+    /// two-line row costs that is 3.2 rows; at 300 it is 2.2, which is BELOW
+    /// the floor the user set.
+    ///
+    /// **So this constant does not stand alone: it is paid for by the row.**
+    /// §588's other half puts the three devnet rooms on `WalletRow`'s single
+    /// anatomy at ~56pt, which takes the same 199pt of clear list to 3.5 rows.
+    /// Growing the box without shrinking the row spends a row this ruling
+    /// promised to keep — if either half is ever reverted, revert both.
+    ///
+    /// Every figure that DERIVES from `figureSlot` grows for free, which is
+    /// what §548's "a figure whose cells are `figureSlot` divided by its own
+    /// row count cannot overflow" bought in advance. A figure that hard-codes
+    /// a height instead does not shrink or clip — it leaves a band of dead air
+    /// at the bottom of a top-aligned box, which is the silent failure to look
+    /// for when reading any screenshot of this change.
+    static let visualSlot: CGFloat = 300
 
     // **THE THREE GAPS WERE TIGHTENED ONE RUNG (prd §495, user: "should we
     // move the silouhette rail and the toggle rail higher on both vibenet and
@@ -51,6 +86,12 @@ enum DSRoomChassis {
     // vertical padding come to ~22pt with nothing behind them. That is a
     // quarter of a row, and it reads as more than it measures because four
     // separate gaps close at once. The slot is deliberately untouched.
+    //
+    // **The slot is no longer untouched — §588 grew it, in the opposite
+    // direction to this paragraph.** The three gaps stay closed: air with
+    // nothing behind it is still worth nothing, and that half of §495 is not
+    // reversed by anything. What is reversed is the premise that the list is
+    // what the chrome should be spent on. See `visualSlot`'s own note.
     //
     // Worth knowing when reading any screenshot of this: the 48pt demo banner
     // is not in a real install, so a shipping room already shows half a row
@@ -183,6 +224,60 @@ enum DSRoomChassis {
     /// cut in half). A figure whose cells are `figureSlot` divided by its own
     /// row count cannot overflow at all.
     static let figureSlot: CGFloat = visualSlot - headlineRow - DS.Space.s3
+
+    /// **THE HEIGHT A HOME CROWN'S LINE REALLY HAS** (prd §588).
+    ///
+    /// A Home scope passes `reservesHeadline: false` — its crown IS the
+    /// headline (§551) — so it draws into the whole of `visualSlot` rather
+    /// than into `figureSlot`, and a crown's own text chrome is not the
+    /// chassis's reserved row. This is that chrome, spelled with its terms so
+    /// the sum can be re-checked rather than re-guessed:
+    ///
+    ///     reading      caption `label12` 16 + `s1` 4 + `stat24` 30  = 50
+    ///     stack gap    `s1`                                         =  4
+    ///     chart inset  the plot's own `.padding(.top, s1)`          =  4
+    ///     stack gap    `s1`                                         =  4
+    ///     range chips  `label12` 16 + 5pt padding each side         = 26
+    ///     card padding `.padding(.vertical, s2)`, iOS `s2` being 10 = 20
+    ///
+    /// Spelled against the iOS rung deliberately: `s2` is 8 on Catalyst, so a
+    /// Mac crown has 4pt MORE line than this reserves. Air, not a clip — which
+    /// is the direction a floor is allowed to be wrong in.
+    ///
+    /// **It is a FLOOR for the line, not a fit.** The box clips, so being a
+    /// few points generous costs a band of dead air and being a few points
+    /// mean costs the bottom of the drawing — and §588's whole complaint was
+    /// air. Which direction to be wrong in is therefore settled: generous.
+    static let crownChrome: CGFloat = 108
+    /// What is left of `visualSlot` for WALLET's crown line to draw into.
+    static let crownChart: CGFloat = crownLine(box: visualSlot, chrome: crownChrome)
+
+    /// **A CROWN'S LINE, GIVEN ITS BOX AND ITS OWN CHROME** (prd §588).
+    ///
+    /// Two arguments rather than one shared constant, and both are
+    /// load-bearing — worth saying, because "one number for all three crowns"
+    /// was tried first and is wrong.
+    ///
+    /// **The BOX differs by whether the room reserves a headline.** Wallet and
+    /// vibenet open Home with `reservesHeadline: false` — the crown IS the
+    /// headline (§551) — so they draw into the whole of `visualSlot`. Hegotá
+    /// passes a headline, so its figure draws into `figureSlot`, 44pt less. A
+    /// single constant sized for one is either air or a clip in the other.
+    ///
+    /// **The CHROME differs by what each crown draws around its line.** Wallet
+    /// carries a range strip and vibenet deliberately does not (§491), which
+    /// is 30pt on its own. Forcing all three to one number measured 36–58pt of
+    /// dead air in two of them — the precise thing §588 exists to remove, so
+    /// spending it to make the constants look tidier would be answering the
+    /// complaint with the complaint.
+    ///
+    /// What IS shared is the EXPRESSION. Every crown says
+    /// `crownLine(box:chrome:)` with its own two terms spelled beside it, so
+    /// the day this slot moves again all three move with it and no room can be
+    /// left behind — which is the failure this whole ruling is cleaning up.
+    static func crownLine(box: CGFloat, chrome: CGFloat) -> CGFloat {
+        max(0, box - chrome)
+    }
 
     /// **THE COLUMN THE SETTINGS GEAR OWNS.**
     ///

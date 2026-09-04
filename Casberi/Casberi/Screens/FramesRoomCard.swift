@@ -71,11 +71,22 @@ struct FramesRoomFigure: View {
     /// toggle bar that scopes it — Hegotá's own note on the same line.
     var body: some View {
         DSRoomSlot(headline: slotHeadline) {
+            // **NO TRAILING `Spacer` (prd §588).** There was one here, and
+            // while the box was 166pt it was harmless — nothing inside
+            // `reading` wanted the leftover. Two of these figures now do
+            // (`FramesMovementBars` and `FramesSequenceStrip` both ask for
+            // `maxHeight: .infinity`), and a `Spacer` is a greedy sibling: it
+            // splits the new headroom with them instead of letting them have
+            // it, so growing the slot by 90 would have given each drawing 45
+            // and put the other 45 under it as air.
+            //
+            // Top alignment is what the `Spacer` was really providing, and the
+            // frame states it directly — which is also what a figure that does
+            // NOT want to fill still gets.
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 reading
-                Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             // **EVERY DRAWING IN THIS ROOM ENDS AT THE SAME x, AND IT IS THE
             // GEAR'S.** Applied here rather than per chart for the reason the
             // constant's own note gives: three charts each remembering the
@@ -140,7 +151,14 @@ struct FramesRoomFigure: View {
             // `AgentPanel.normalized` returns 0.5 for a flat series.
             if head.curve.count > 1 {
                 FramesBalanceCurve(points: head.curve)
-                    .frame(height: 56)
+                    // **THE BOX, NOT 56 (prd §588).** This was the biggest
+                    // dead band in the room: a 56pt curve top-pinned in a
+                    // 256pt box, so the scope somebody opens to see a balance
+                    // move spent four fifths of its drawing area on nothing.
+                    // The chrome is the account row below it (`DS.Face.list`
+                    // 36 in a ~48pt row) plus the `s2` between them.
+                    .frame(height: DSRoomChassis.crownLine(box: DSRoomChassis.figureSlot,
+                                                           chrome: 58))
                     .frame(maxWidth: .infinity)
             }
             if let account = accounts.first(where: \.reached) {
@@ -707,25 +725,43 @@ struct FramesMoveRow: View {
         return out
     }
 
+    /// **THE ROW'S OWN MARK (prd §588).** It had none, which is why this
+    /// room's list read as a different font from Hegotá's and vibenet's while
+    /// every rung in it was already the same size. Three states, and the mark
+    /// says the one thing the title cannot: a plain transfer and a framed one
+    /// are different objects on this chain, and a transaction with something
+    /// wrong in it should be findable without reading.
+    private var mark: WalletRow.Mark {
+        if verdict.isTrouble {
+            return .symbol("exclamationmark.triangle.fill", tint: DS.destructive)
+        }
+        return move.rows.isEmpty
+            ? .symbol("arrow.left.arrow.right", tint: DS.textSecondary)
+            : .symbol("square.stack.3d.up.fill", tint: DS.tint)
+    }
+
+    /// **AN ORDINARY TRANSACTION IS NOT "0 FRAMES".** This chain carries both
+    /// — the faucet pays out as a plain type-0x2 transfer — and a row reading
+    /// "0 frames" over one of them is a count where a noun belongs.
+    private var titleText: String {
+        move.rows.isEmpty
+            ? String(localized: "Transfer")
+            : move.rows.count == 1
+              ? String(localized: "1 frame")
+              : String(localized: "\(String(move.rows.count)) frames")
+    }
+
     var body: some View {
-        HStack(spacing: DS.Space.s3) {
-            VStack(alignment: .leading, spacing: 2) {
-                // **AN ORDINARY TRANSACTION IS NOT "0 FRAMES".** This chain
-                // carries both — the faucet pays out as a plain type-0x2
-                // transfer — and a row reading "0 frames" over one of them is
-                // a count where a noun belongs.
-                Text(move.rows.isEmpty
-                     ? String(localized: "Transfer")
-                     : move.rows.count == 1
-                       ? String(localized: "1 frame")
-                       : String(localized: "\(String(move.rows.count)) frames"))
-                    .dsText(.callout15)
-                    .foregroundStyle(DS.textPrimary)
-                if let meta {
-                    meta.dsText(.label12).lineLimit(1)
-                }
-            }
-            Spacer(minLength: DS.Space.s2)
+        // **ONE ANATOMY WITH THE OTHER THREE ROOMS (prd §588).** This was a
+        // hand-rolled `HStack`: no mark, a `callout15` title (17 REGULAR) and
+        // a `label12` metadata line, against `WalletRow`'s 36pt mark,
+        // `heading17` title and `subhead13` line — which Hegotá's own move row
+        // has used since it shipped. Same two type SIZES either way, which is
+        // why a grep found nothing wrong and the lists still read as four
+        // different fonts: what differed was weight, mark and rhythm.
+        WalletRow(mark: mark,
+                  title: titleText,
+                  subtitleText: meta) {
             // **WHAT IT MOVED, AND NOTHING ELSE IN THIS COLUMN.** The fee and
             // the gas were here and are now the sheet's — three stacked
             // figures made the money column wider than the words beside it,
@@ -743,7 +779,6 @@ struct FramesMoveRow: View {
                     .monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
             }
         }
-        .contentShape(Rectangle())
     }
 }
 
@@ -754,32 +789,27 @@ struct FramesMoveRow: View {
 struct FramesPayerRow: View {
     let payer: FramesPayer
 
-    /// **NO FACE, so the scope's two lists share a left edge** (user,
-    /// 2026-09-02: *"terrible indentation"*).
+    /// **THE FACE COMES BACK, BECAUSE THE ROW BELOW IT GREW ONE (prd §588).**
     ///
-    /// A `DS.Face.list` mark pushed this row's words 76pt right of the
-    /// transaction rows directly beneath it, under captions that both sit at
-    /// the margin — so the block read as a list that could not decide where it
-    /// started. A list's rows share a left content edge, and here there are
-    /// two lists stacked.
+    /// It was removed on 2026-09-02 (*"terrible indentation"*) and the reason
+    /// given was exactly right at the time: a `DS.Face.list` mark pushed this
+    /// row's words 76pt right of the transaction rows directly beneath it,
+    /// under captions that both sit at the margin, so the block read as a list
+    /// that could not decide where it started.
     ///
-    /// The identity is not lost, it MOVED: the payer sheet this row opens
-    /// leads with the same face at `DS.Face.shelf`, which is where a portrait
-    /// belongs (§435's own rule — a face is the subject of the sheet, and one
-    /// of several in a roster). The chevron and the two captions are what keep
-    /// the kinds apart here.
+    /// **That was never an argument against a face — it was an argument
+    /// against ONE of two stacked lists having one.** §588 puts `FramesMoveRow`
+    /// on `WalletRow` too, so the rows beneath now open at the same 36pt mark.
+    /// Restoring the face is what makes the two share a left edge again; it is
+    /// the same fix as the deletion, pointed the other way, and this scope is
+    /// about WHO paid, so the face is the subject rather than decoration.
     var body: some View {
-        HStack(spacing: DS.Space.s3) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(FramesWatch.shared.name(for: payer.address)
-                     ?? WalletStore.shortAddress(payer.address))
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary).lineLimit(1)
-                Text(payer.count == 1
-                     ? String(localized: "1 transaction")
-                     : String(localized: "\(String(payer.count)) transactions"))
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-            }
-            Spacer(minLength: DS.Space.s2)
+        WalletRow(mark: .face(payer.address),
+                  title: FramesWatch.shared.name(for: payer.address)
+                      ?? WalletStore.shortAddress(payer.address),
+                  subtitle: payer.count == 1
+                      ? String(localized: "1 transaction")
+                      : String(localized: "\(String(payer.count)) transactions")) {
             // **NOT A ZERO WHEN IT COULD NOT BE TOTALLED.** `FramesPayer
             // .gasWei` is all-or-nothing on purpose, and printing "0.000000"
             // for an incomplete sum understates a specific person's generosity
@@ -790,7 +820,6 @@ struct FramesPayerRow: View {
             }
             WalletRowChevron()
         }
-        .contentShape(Rectangle())
     }
 }
 
@@ -1019,7 +1048,21 @@ private struct FramesSequenceCanvas: View, Animatable {
         set { joinProgress = newValue }
     }
 
-    private static let rowHeight: CGFloat = 14
+    /// **A CEILING, and §588 raised it from 14 to 26.**
+    ///
+    /// The clamp below is `min(rowHeight, whatFits)`, so this number and not
+    /// the box is what a short strip draws at — which made the
+    /// `.frame(maxHeight: .infinity)` its caller asks for a no-op above six
+    /// runs. §566 moved the sentences off this figure so the strip could
+    /// "fill the slot", and it filled 114pt of it; two runs drew 34pt of strip
+    /// in a 256pt box.
+    ///
+    /// It stays a ceiling rather than becoming a pure fit, because a single
+    /// run stretched to the whole box is not a strip any more — it is one fat
+    /// bar, and §548's own note about the sponsor bar ("one bar filling the
+    /// box reads as a progress meter") is the same hazard one figure over.
+    /// 26 is six runs plus their gaps inside `figureSlot` less the legend.
+    private static let rowHeight: CGFloat = 26
     private static let gap: CGFloat = 6
     /// The space between two cells that are NOT joined. Joined cells touch, so
     /// this gap is the whole of how a person sees an atomic group.

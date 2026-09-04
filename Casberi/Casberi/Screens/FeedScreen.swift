@@ -7953,7 +7953,15 @@ case .vibenetSend(let account):
                             mover: nil,
                             drawsChart: drawsChart,
                             drawsReading: drawsChart,
-                            chartHeight: 96,
+                            // **DERIVED, not 96 (prd §588).** §483 set this
+                            // to 96 to buy a third transaction row; §588 buys
+                            // that row back from the row itself instead, and
+                            // gives the line the box. A literal here is a
+                            // second copy of `visualSlot`'s arithmetic that
+                            // cannot know when the box moves — which is
+                            // exactly how a grown box leaves dead air under a
+                            // drawing that never heard about it.
+                            chartHeight: DSRoomChassis.crownChart,
                             ranges: ranges,
                             range: active,
                             onPickRange: { r in

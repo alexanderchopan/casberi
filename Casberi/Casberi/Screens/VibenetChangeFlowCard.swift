@@ -38,7 +38,14 @@ struct VibenetChangeFlowCard: View {
     /// this and no further, and what is left over becomes an even margin
     /// above and below, so a short flow sits CENTRED in the slot rather than
     /// stretched across it or stranded at its top.
-    private let maxRowHeight: CGFloat = 56
+    ///
+    /// **56 → 76 (prd §588).** The reasoning above is unchanged and is why
+    /// this is still a ceiling rather than a fit; only the number moved, with
+    /// the box it was chosen against. At 56 in a 256pt slot a three-row flow
+    /// stopped at 168 and centred ~44pt of air above and below it — the cap
+    /// doing its job against a measurement that had expired. 76 is three rows
+    /// plus their gaps inside the new box.
+    private let maxRowHeight: CGFloat = 76
     /// The floor, for a flow with more rows than the slot can spend on them.
     private let minRowHeight: CGFloat = 34
     private let labelColumn: CGFloat = 112

@@ -47665,3 +47665,171 @@ The catalogue was verified against a screenshot the user sent BEFORE this
 change, not after. `DSSlabField` has 55 callers and only the catalogue's was
 looked at; a field sitting inside a card is the case to check, since that is
 where this trade gives something up.
+
+## 588. The crown gets the screen back, and four lists stop being four fonts (user: "the lists we have below the rail are long and the crown charts are short. i think we could make the charts crown area larger, move the rail down, and have less of the list above the fold. as long as three items show user can scroll below the fold", then "it also feels like the font size is inconsistent in the lists on each of those", then "do it all", 2026-09-03)
+
+Asked after three sets of mocks for the fused rail slab (§547) were all
+refused — the first proposing readings on it, the second motion on it, both
+answered *"i don't like any"* / *"unnatural"*. The user's own diagnosis is the
+one that was right, and it is not about the slab at all: the slab sits between
+a drawing that is too small and a list that is too long, and the fix is to
+move the boundary rather than to decorate the boundary marker.
+
+**This REVERSES the direction §483 and §495 pushed, and does not overturn
+their reasoning.** §483 shortened the wallet sparkline to 96 *"to buy a third
+transaction row above the fold"*; §495 closed ~22pt of air between the three
+chassis gaps for the same row. Both treated the list as the thing being bought
+and the drawing as what pays. That was right while the drawing was the smaller
+claim. It stopped being right once every scope in four rooms had a drawing
+built to fill this box — the figure is why the room is opened, and it had a
+fifth of the screen.
+
+### 1. `visualSlot` 210 → 300, and the row is what pays for it
+
+**"Three rows" is a number, so it was done as arithmetic.** §495 measured the
+chrome above the first row at 535pt of an 874pt screen, 48 of which is the
+demo banner no install has — so ~487 shipping, leaving 387pt of list, of which
+the floating agent bar covers ~98.
+
+| | crown 210 | crown 300 |
+|---|---|---|
+| chrome above row 1 | 487 | 577 |
+| clear of the agent bar | 289 | 199 |
+| rows at ~90pt (Wallet today) | 3.2 | **2.2** |
+| rows at ~56pt (one anatomy) | 5.2 | **3.5** |
+
+**So the two halves of this ruling pay for each other and neither survives
+alone.** Growing the box without shrinking the row spends the third row this
+ruling promised to keep. If either half is ever reverted, revert both — the
+constant's own doc says so where somebody changing it will read it.
+
+### 2. Sixteen figures had hard-coded their own height, and the failure is silent
+
+`DSRoomSlot` is a fixed frame, top-aligned, `.clipped()`. A figure that
+derives from `figureSlot` grows for free — which is what §548's *"a figure
+whose cells are `figureSlot` divided by its own row count cannot overflow"*
+bought in advance. A figure that hard-codes does not clip and does not shrink:
+it leaves a band of dead air under itself, which from outside is
+indistinguishable from a drawing that failed to load.
+
+An exhaustive survey found sixteen, up to **142pt dead each**. The worst were
+vibenet's holdings treemap (pinned at 120 by its own `.frame`, so the room's
+`maxHeight: .infinity` around it was governing where a short drawing SAT
+rather than how tall it drew), Frames' balance curve at 56 in a 256pt box, and
+Hegotá's UTXO treemap at 128 — whose own comment ended *"Re-do this sum before
+raising it"*, which is exactly what happened.
+
+**Three classes of fix, and the class matters more than the numbers.** A
+literal becomes a derivation (`crownLine(box:chrome:)` with both terms spelled
+at the call site); a CEILING is re-measured against the new box but stays a
+ceiling (a strip stretched to fill is a progress meter, not a texture — §548's
+own note about the sponsor bar, one figure over); and a pair like the risk
+strip's `chartHeight`/`floorY` becomes a RATIO, because five things offset
+from the second and a literal pair can be edited apart, which draws a floor
+line across the middle of columns that grew past it.
+
+**`crownLine` takes TWO arguments and "one number for all three crowns" was
+tried first and is wrong.** The BOX differs — Wallet and vibenet open Home
+with `reservesHeadline: false` so they draw into the whole `visualSlot`, while
+Hegotá passes a headline and gets `figureSlot`, 44pt less. The CHROME differs
+— Wallet carries a range strip and vibenet deliberately does not (§491), which
+is 30pt on its own. Forcing one constant measured 36–58pt of dead air in two
+rooms, which is answering the complaint with the complaint. What is shared is
+the EXPRESSION, so the day this slot moves again no room can be left behind.
+
+**Deliberately NOT grown, each with a reason**: `WalletPermissionsCard` (a 2×2
+grid of `price40` numerals — the extra room buys a third line per cell, which
+its own budget note already considered and refused, and that is a copy
+decision rather than a layout one), the Frames sponsor bar (a proportion bar
+at 200pt is a progress meter), and `WalletFlowEmptyFigure` (§589's, three
+lines of text that should not stretch).
+
+### 3. Four rooms, four row anatomies — and the ramp said they matched
+
+The user's second report was that the font sizes feel inconsistent in these
+lists. **A grep of the type ramp finds nothing wrong, and that is the finding**:
+`heading17`/`body17`/`callout15` are all 17pt and `subhead13`/`label12`/`label11`
+are all 12, so every title in all four rooms was already the same size as every
+other. What differed was everything else — the title's WEIGHT (regular in
+Wallet and both Frames rows, semibold in Hegotá and vibenet), the second line's
+weight and ink (`subhead13` regular tertiary against `label12` medium
+secondary), and the MARK (26pt in Wallet, 36 in Hegotá and vibenet, **none at
+all** in either Frames row).
+
+**The one anatomy already existed and three rooms had not adopted it.**
+`WalletRow` is §212's *"one row shape"* — 36pt circular mark, `heading17`
+title, `subhead13` line, `s2` rhythm — and `HegotaMoveRow` has used it since
+it shipped. `FramesMoveRow`, `FramesPayerRow` and `VibenetEventRow` each
+hand-rolled an `HStack` that expressed almost exactly it, differently.
+
+**Wallet's own list is deliberately left alone**, which is the one place this
+ruling stops. Its rows are `BandRow`, the app-wide FEED row, and
+`feed-row-skeleton-audit.py` pins every feed row's title to `body17` as a
+build gate for a stated reason — it is the feed's own reading rung, shared
+with every other room in the app. Changing it to match three devnet rooms
+would trade a four-room inconsistency for an app-wide one.
+
+Three things fell out of the adoption:
+
+**A coloured subtitle.** These rooms' second line is a `·`-joined run in which
+one clause — a reverted frame — is `DS.destructive` while the rest is
+tertiary, and that colour is the fact. `WalletRow.subtitle` is a `String`, so
+it gained `subtitleText: Text?`. Composing it as ONE `Text` rather than
+several in an `HStack` is `FramesMoveRow`'s own hard-won note carried across:
+SwiftUI squeezes an over-committed row by shrinking one child to its minimum,
+so a long middle clause wraps into a one-word column while its siblings sit at
+full width.
+
+**`Mark` lifted out of the generic.** It lived inside `WalletRow<Trailing>`,
+so `WalletRow<A>.Mark` and `WalletRow<B>.Mark` are different types and a
+caller computing its mark in a `private var` had nothing to declare it as.
+Inline `.symbol(…)` sites never noticed because those infer from the
+parameter. `WalletRowMark` is top-level now with a typealias inside the
+struct, so no existing call site changed.
+
+**THE FRAMES PAYER FACE COMES BACK, and it is the same fix as its deletion
+pointed the other way.** §571 removed it on *"terrible indentation"*, and that
+was right: a 36pt mark pushed the payer row's words 76pt right of the
+transaction rows directly beneath it, so the block read as a list that could
+not decide where it started. That was never an argument against a face — it
+was an argument against ONE of two stacked lists having one. With
+`FramesMoveRow` on the shared row, both open at the same mark, and restoring
+the face is what makes them share a left edge again.
+
+**A row with no kind still gets a mark.** `VibenetEventRow`'s tile drew only
+when its kind resolved, so a pre-§308 row had no mark AND no placeholder — the
+column collapsed and that one row started 48pt left of the rest.
+`WalletRowMark.kind` is the honest fallback rather than an invented glyph: it
+draws the `Thing`'s own `KindGlyph`, the mark that thing already wears in
+every other feed in the app.
+
+Also deleted: `VibenetEventRow`'s `.dsText(.label11)` on `LiveTimeText`, which
+was dead code — that component carries its own `subhead13` and the innermost
+font wins. Both resolve to 12pt, so the drift was invisible.
+
+### The guard that went red, and why it was amended rather than deleted
+
+`vibenet-selftest` asserted the aggregate sparkline is `height: 120`, citing
+§475. The POINT of §475 was the word "Wallet's" — the two rooms draw one
+figure, and a literal was how that was said while both were 120. At a 300pt
+slot the literal is the one thing that would BREAK the rule it was written to
+keep, since Wallet's line derives and a pinned vibenet line would be 100pt
+shorter than the room it must match. The guard asks for the derivation now,
+and both ways: a room drawing its own number again fails whatever that number
+happens to be.
+
+### Ceiling
+
+**UNSEEN on a device for the row half.** The build is green on both platforms,
+every static audit and the affected harnesses pass, and §589's session
+verified the 300pt slot on the simulator from its own side (the flow band
+scales to it, the holdings treemap clears the rail). But no screenshot of the
+three rewritten rows has been taken, and the thing to look at first is a
+Frames Sponsors scope, where two lists now stack with marks on both — the
+exact arrangement §571 removed a face to fix.
+
+The sixteen figure heights are arithmetic off the ramp, not measurements. A
+figure whose chrome I mis-counted by a few points shows it as a band of air or
+a clipped bottom edge, and the clipped direction is the one worth checking:
+`crownChrome` is documented as a floor for that reason, but a floor is only as
+good as the sum behind it.

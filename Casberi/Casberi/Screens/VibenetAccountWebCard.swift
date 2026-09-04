@@ -42,7 +42,11 @@ struct VibenetAccountWebCard: View {
 
     /// The most air allowed between two nodes once the web is filling its
     /// box — see the `Spacer`s in `body`.
-    private static let maxSpread: CGFloat = 34
+    ///
+    /// **34 → 52 (prd §588).** Same ceiling, same reason, a box 90pt taller:
+    /// at 34 the web topped out around 160 of 256 and put the rest under
+    /// itself as air.
+    private static let maxSpread: CGFloat = 52
 
     private var drawn: [VibenetAccountWeb.Node] {
         Array(web.nodes.prefix(VibenetAccountWeb.nodesShown))

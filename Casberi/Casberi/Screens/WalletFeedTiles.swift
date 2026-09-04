@@ -764,16 +764,31 @@ struct WalletCompositionStrip: View {
 
     /// The chart's own height inside the fixed slot, leaving the figure its
     /// line and the labels theirs.
-    private static let chartHeight: CGFloat = 150
+    ///
+    /// **DERIVED SINCE §588.** Wallet's scopes pass `reservesHeadline: false`,
+    /// so this figure has the whole of `visualSlot`; its chrome is the
+    /// `stat24` reading at 30, the `s2` under it and the `s3` the caller pads
+    /// the bottom with. At the old literal 150 this left ~96pt of dead air
+    /// once the box grew to 300.
+    private static var chartHeight: CGFloat {
+        DSRoomChassis.crownLine(box: DSRoomChassis.visualSlot, chrome: 54)
+    }
     /// Where the zero line sits within that height — deposits above, debt
     /// below. Not centred: most wallets borrow far less than they deposit, so
     /// an even split wastes half the chart on a tail that never reaches it.
-    private static let baseline: CGFloat = 96
+    ///
+    /// **A RATIO OF `chartHeight`, NOT A SECOND CONSTANT (prd §588).** Six
+    /// call sites offset from this and one sizes the columns against it
+    /// (`(baseline - 16)`), so it is this drawing's waistline rather than an
+    /// independent number — and a literal pair can be edited apart, which
+    /// draws a zero line across the middle of columns that grew past it. It
+    /// was 96 of 150; the ratio is what is preserved.
+    private static var baseline: CGFloat { (chartHeight * 96 / 150).rounded() }
     /// How far below the line a debt tail may reach. Capped rather than sharing
     /// the deposit scale outright, so the label strip has a fixed home and a
     /// wallet borrowing nearly all of its deposit cannot push the names off the
     /// bottom of the slot.
-    private static let debtSpan: CGFloat = 32
+    private static var debtSpan: CGFloat { (chartHeight * 32 / 150).rounded() }
     /// How many places the chart draws before folding. Four columns at 402pt
     /// leave each about 72pt, which is the width a name needs.
     private static let columnCap = 4

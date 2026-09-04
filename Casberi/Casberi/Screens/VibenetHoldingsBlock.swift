@@ -31,7 +31,19 @@ struct VibenetHoldingsBlock: View {
 
     /// 120pt — the design's own, and tall enough that the lead cell reads as
     /// an AREA rather than as a tall button with a word in it.
+    ///
+    /// **THE ROOM OVERRIDES IT, THE SHEET DOES NOT (prd §588).** This block
+    /// draws in two places and they want different things: inside the account
+    /// detail it is one reading among several on a scrolling sheet, so a fixed
+    /// 120 is right; inside the room it is THE drawing of a scope, in a fixed
+    /// box that grew from 166 to 256 — and a view that has already pinned
+    /// itself at 120 cannot be un-pinned by a `maxHeight: .infinity` outside
+    /// it, which is exactly what the room was applying and why the growth
+    /// would have read as 136pt of dead air rather than a bigger treemap.
     static let height: CGFloat = 120
+    /// What this block draws at. Defaults to `height`, so the sheet is
+    /// untouched; the room hands in `DSRoomChassis.figureSlot`.
+    var drawnHeight: CGFloat = Self.height
 
     var body: some View {
         if let lead = cells.first {
@@ -77,7 +89,7 @@ struct VibenetHoldingsBlock: View {
                     }
                 }
             }
-            .frame(height: Self.height)
+            .frame(height: drawnHeight)
         }
     }
 

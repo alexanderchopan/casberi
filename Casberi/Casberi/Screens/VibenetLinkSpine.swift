@@ -64,7 +64,16 @@ struct VibenetLinkSpine: View {
 
     /// Row pitch. Tall enough that two adjacent faces read as separate nodes
     /// and tight enough that four links stay inside a card.
+    ///
+    /// **A CEILING SINCE §588, not a constant.** The figure's height is
+    /// `rows × pitch`, so a literal here IS the drawing's height — three links
+    /// drew 121pt in a box that went 166 → 256, leaving ~135pt of air below a
+    /// spine that had simply stopped. It spends what the slot gives it now,
+    /// up to `maxPitch`, because a two-link spine stretched over the whole box
+    /// is two faces at opposite ends of an empty column.
     private static let pitch: CGFloat = 34
+    /// The tallest a row grows to once the spine is filling its box.
+    private static let maxPitch: CGFloat = 64
     /// `badge` — the ramp's smallest rung, and the right one: these sit
     /// beside dense inline text as MARKS identifying a node, never as
     /// portraits. Caught by `face-ramp-audit`, which is what the ramp is
@@ -94,7 +103,13 @@ struct VibenetLinkSpine: View {
     }
 
     private var rows: Int { max(actors.count, accounts.count) }
-    private var height: CGFloat { CGFloat(max(1, rows)) * Self.pitch }
+    /// The pitch this spine really draws at — `pitch` as a floor, the slot's
+    /// own share as the fit, `maxPitch` as the ceiling.
+    private var drawnPitch: CGFloat {
+        let room = DSRoomChassis.figureSlot - Self.headRoom
+        return min(Self.maxPitch, max(Self.pitch, room / CGFloat(max(1, rows))))
+    }
+    private var height: CGFloat { CGFloat(max(1, rows)) * drawnPitch }
 
     var body: some View {
         GeometryReader { proxy in
@@ -191,7 +206,7 @@ struct VibenetLinkSpine: View {
         VStack(alignment: alignment, spacing: 0) {
             ForEach(Array(addresses.enumerated()), id: \.offset) { index, address in
                 node(address, emphasised: emphasised)
-                    .frame(height: Self.pitch, alignment: .leading)
+                    .frame(height: drawnPitch, alignment: .leading)
                     .chartArrival(index: index, reduceMotion: reduceMotion)
             }
         }
@@ -259,8 +274,13 @@ struct VibenetLinkSpine: View {
         }
     }
 
+    /// **READS `drawnPitch`, NOT `pitch` (prd §588).** This is where the
+    /// ribbons are anchored and the nodes are laid out at the same value — two
+    /// readings of one number, so the moment the pitch became a fit rather
+    /// than a constant, a stale reader here would have drawn every link
+    /// terminating in the air beside its own face.
     private func rowCentre(_ row: Int) -> CGFloat {
-        CGFloat(row) * Self.pitch + Self.pitch / 2
+        CGFloat(row) * drawnPitch + drawnPitch / 2
     }
 
     private func index(of address: String, in column: [String]) -> Int? {

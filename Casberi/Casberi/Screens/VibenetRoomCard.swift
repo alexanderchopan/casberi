@@ -1356,8 +1356,20 @@ struct VibenetRoomCard: View {
                                                  change: VibenetValueHistory.delta(windowed) ?? 0),
                                accent: TokenChartStyle.accent(
                                    change: VibenetValueHistory.delta(windowed) ?? 0, scheme: scheme),
-                               // 120, Wallet's own height for this figure.
-                               height: 120, pulses: false,
+                               // **THE BOX, NOT 120 (prd §588)** — the same
+                               // EXPRESSION Wallet and Hegotá draw, with this
+                               // room's own two terms. The box is the whole
+                               // `visualSlot` because Home passes
+                               // `reservesHeadline: false`; the chrome is 78,
+                               // being `stat24` 30 + the delta row 22 + the
+                               // card's own `.padding(.vertical, s2)` 20 + the
+                               // 6 above the plot. It is 30 LESS than Wallet's
+                               // because §491 took the range strip off this
+                               // room and not that one — which is exactly why
+                               // this is not a shared constant.
+                               height: DSRoomChassis.crownLine(box: DSRoomChassis.visualSlot,
+                                                               chrome: 78),
+                               pulses: false,
                                lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true,
                                // THE SCRUB (prd §501) — Wallet's own handler,
                                // on Wallet's own plot. The cursor and the
@@ -1498,7 +1510,16 @@ struct VibenetRoomCard: View {
                 // while its Positions ("Deposited $61,000") and Risk ("Room to
                 // move") both do. A headline is per-scope, not per-slot.
                 scopeFigure(headline: nil) {
-                    VibenetHoldingsBlock(cells: cells, reduceMotion: reduceMotion)
+                    // **THE BOX, NOT 120 (prd §588).** The `maxHeight` below
+                    // was doing nothing for HEIGHT: the block pinned its own
+                    // frame at 120, so that modifier only decided where a
+                    // 120pt drawing sat inside the box — which is why growing
+                    // the box to 256 would have read as 136pt of dead air
+                    // under the treemap rather than as a bigger treemap. The
+                    // height is handed IN now; the alignment is kept for the
+                    // case it really governs, a block that declines to fill.
+                    VibenetHoldingsBlock(cells: cells, reduceMotion: reduceMotion,
+                                         drawnHeight: DSRoomChassis.figureSlot)
                         // **CLEARS THE GEAR, and fills what is left.** The room's
                         // settings button is an overlay on the trailing top of
                         // this whole block, and a figure with no headline starts
@@ -3666,60 +3687,50 @@ struct VibenetEventRow: View {
         return nil
     }
 
-    var body: some View {
-        if thing.isLive {
-            HStack(alignment: .center, spacing: DS.Space.s3) {
-                if let kind {
-                    RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                        .fill(kind.hue.opacity(0.16))
-                        .frame(width: Self.markSize, height: Self.markSize)
-                        .overlay {
-                            Image(systemName: kind.glyph)
-                                .accessibilityHidden(true)
-                                .dsGlyph(15, weight: .semibold)
-                                .foregroundStyle(kind.hue)
-                        }
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(thing.summary ?? thing.title)
-                        .dsText(.heading17)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(2)
-                    Text(accountLabel)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: DS.Space.s2)
-                // **THE CLOCK'S GRAMMAR, like every other row in this feed**
-                // (prd §495, user: *"another issue is wrapping text. would it
-                // be better if the alert went the whole way across and the
-                // timestamp was on line two?"*).
-                //
-                // Neither, as it turned out: the LAYOUT was fine and the
-                // FORMAT was the outlier. This row said "23 hours ago" —
-                // about 110pt of a 402pt screen — while every `BandRow` in
-                // the app says "23h" through `LiveTimeText`, so the title was
-                // wrapping to two lines for want of width the trailing slot
-                // did not need. Same component now, ~70pt returned to the
-                // title, and one less place where this room's rows read
-                // differently from the rooms either side of it.
-                //
-                // It also ticks: `LiveTimeText` re-renders on the minute, so
-                // a row read at 59 minutes does not still say "59m" an hour
-                // later — which the static format could not do.
-                LiveTimeText(date: thing.capturedAt, color: DS.textTertiary)
-                    .dsText(.label11)
-                    .lineLimit(1).fixedSize()
-            }
-            .padding(.vertical, DS.Space.s2)
-        }
+    /// **THE MARK, AND A ROW WITH NO KIND STILL HAS ONE (prd §588).**
+    ///
+    /// The tile drew only when `kind` resolved, so a pre-§308 row had no mark
+    /// AND no placeholder — the column collapsed and that one row started
+    /// 48pt left of every other. `WalletRow.Mark.kind` is the honest fallback
+    /// rather than an invented glyph: it draws the `Thing`'s own `KindGlyph`,
+    /// the mark that thing already wears in every other feed in the app.
+    private var mark: WalletRow.Mark {
+        guard let kind else { return .kind(thing.kind) }
+        return .symbol(kind.glyph, tint: kind.hue)
     }
 
-    /// `DS.Mark.list`, which is `DS.Face.list` — so a room that mixes these
-    /// rows with any face-led row keeps ONE leading column: the marks and the
-    /// faces sit on the same edge and every title starts at the same x.
-    private static let markSize: CGFloat = DS.Mark.list
+    var body: some View {
+        if thing.isLive {
+            // **ONE ANATOMY WITH THE OTHER THREE ROOMS (prd §588).** This was
+            // a hand-rolled `HStack`, and it differed from `WalletRow` in
+            // three ways, NONE of them a type size — which is why these four
+            // lists read as four different fonts while a grep of the ramp
+            // found nothing wrong. The mark was a rounded SQUARE where every
+            // other room's is a circle; the second line was `label12` (12
+            // MEDIUM, secondary) against the shared row's `subhead13` (12
+            // regular, tertiary); and the title was `lineLimit(2)` against a
+            // clamped one, so this room's rows stood at two heights.
+            //
+            // **THE CLOCK'S GRAMMAR IS KEPT WHOLE** (prd §495, user: *"would
+            // it be better if the alert went the whole way across and the
+            // timestamp was on line two?"* — neither, as it turned out: the
+            // layout was fine and the FORMAT was the outlier). This row said
+            // "23 hours ago", ~110pt of a 402pt screen, where every `BandRow`
+            // says "23h" through `LiveTimeText`. Same component, still
+            // ticking on the minute.
+            //
+            // Its `.dsText(.label11)` is GONE rather than moved: it was dead
+            // code, since `LiveTimeText` carries its own `subhead13` and the
+            // innermost font wins. Both resolve to 12pt, so the drift was
+            // invisible — and now it is one rung, said once.
+            WalletRow(mark: mark,
+                      title: thing.summary ?? thing.title,
+                      subtitle: accountLabel) {
+                LiveTimeText(date: thing.capturedAt, color: DS.textTertiary)
+                    .lineLimit(1).fixedSize()
+            }
+        }
+    }
 
     /// The account's nickname when it has one, else its short address —
     /// the same identity the room card and the sheet show, so one account

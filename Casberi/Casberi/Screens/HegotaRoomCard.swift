@@ -191,7 +191,21 @@ struct HegotaRoomFigure: View {
                                                  price: series.last ?? 0,
                                                  change: delta),
                                accent: TokenChartStyle.accent(change: delta, scheme: scheme),
-                               height: 120, pulses: false,
+                               // **THE BOX, NOT 120 (prd §588)** — the same
+                               // EXPRESSION Wallet and vibenet draw, with this
+                               // room's own two terms. The box is `figureSlot`
+                               // and NOT `visualSlot`: this room passes a
+                               // headline, so the chassis has already spent 44
+                               // of the slot on the row above. The chrome is
+                               // 28, being the `subhead13` delta line 18 and
+                               // the `s2` under it 10.
+                               //
+                               // Serves Home AND Sponsors — both scopes draw
+                               // this figure, so a literal here was two rooms'
+                               // worth of dead air, not one.
+                               height: DSRoomChassis.crownLine(box: DSRoomChassis.figureSlot,
+                                                               chrome: 28),
+                               pulses: false,
                                lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true)
             }
         }
@@ -436,7 +450,18 @@ struct HegotaRoomFigure: View {
     /// (prd §555).** The band's budget is 168 less the head's 22 + 16 and the
     /// `s3` under it: 118, against four rows at 24 plus three `s1` gaps = 108.
     /// It was 20 while two sentences held the rest.
-    private static let laneRowHeight: CGFloat = 24
+    ///
+    /// **§588 made it derive, and the sum above is the same sum.** The box
+    /// went 166 → 256, so the band's budget is `figureSlot` less the head's
+    /// `price40` 40 and the `s3` under it — and a row is that, divided by the
+    /// four-lane ceiling, less the three `s1` gaps between them. Written as
+    /// arithmetic rather than as 24 because this figure CENTRES what it does
+    /// not use (`:263`), so getting it wrong is symmetric air rather than a
+    /// clip — the quiet kind of wrong nobody reports.
+    private static var laneRowHeight: CGFloat {
+        let band = DSRoomChassis.figureSlot - 40 - DS.Space.s3
+        return max(24, (band - DS.Space.s1 * 3) / 4)
+    }
 
     /// One side of the band, as a mirrored bar chart.
     ///
@@ -674,7 +699,15 @@ struct HegotaRoomFigure: View {
         .frame(height: Self.rosterRowHeight)
     }
 
-    private static let rosterRowHeight: CGFloat = 48
+    /// **DERIVED SINCE §588.** Three rows (`HegotaRoom.cap`) filled 164 of the
+    /// old 166pt box exactly, which is why it was a literal; at 256 the same
+    /// three rows leave ~46pt of air each side, since this figure centres.
+    /// The fold row and its gap are subtracted whether or not they draw, so a
+    /// roster that gains a "…N more" line does not re-flow the three above it.
+    private static var rosterRowHeight: CGFloat {
+        let room = DSRoomChassis.figureSlot - 16 - DS.Space.s2
+        return max(48, (room - DS.Space.s2 * 2) / 3)
+    }
 
     /// One mark. **A figure only where the mark is an inventory** — see
     /// `HegotaRoster.Mark.counted`; the other two are a glyph in a circle,
@@ -814,7 +847,13 @@ struct HegotaRoomFigure: View {
                    + (hasMore ? 16 + DS.Space.s1 : 0)
         let gaps = 5 * CGFloat(rows - 1)
         let room = DSRoomChassis.figureSlot - chrome - gaps
-        return max(14, min(34, room / CGFloat(rows)))
+        // **THE CEILING WENT 34 → 44 (prd §588).** It is a ceiling and not a
+        // fit for the reason a strip is a strip: one run stretched to a whole
+        // 256pt box is a progress meter, not a texture. But 34 was chosen when
+        // the box was 166, so at 256 a one-row strip drew 34pt and left ~180
+        // under it. 44 is what five rows plus their gaps and this figure's own
+        // chrome spend of the new box.
+        return max(14, min(44, room / CGFloat(rows)))
     }
 
     @ViewBuilder private var framesFigure: some View {
@@ -1013,7 +1052,19 @@ struct HegotaRoomFigure: View {
                 // fixed that clip by overrunning the budget by less.
                 //
                 // **Re-do this sum before raising it.**
-                UnitTreemap(count: drawn.count, height: 128, cell: { i in
+                //
+                // **§588 re-did it, and made it stop being a literal.** The
+                // box went 166 → 256, and a 128pt map top-pinned in it was
+                // ~102pt of dead air under the drawing this scope exists for.
+                // The sum is unchanged in shape and is now written as itself:
+                // caption 16 + the stack's gap 10 + the same 12 of slack that
+                // absorbs a step of Dynamic Type = 38 of chrome. The tiles
+                // take it for free — `tall` is decided by RANK, not by height,
+                // and every tile is already `maxHeight: .infinity`.
+                UnitTreemap(count: drawn.count,
+                            height: DSRoomChassis.crownLine(box: DSRoomChassis.figureSlot,
+                                                            chrome: 38),
+                            cell: { i in
                     tile(drawn[i], rank: i)
                 }, readout: { i in
                     switch drawn[i] {
@@ -1301,7 +1352,15 @@ struct HegotaRoomFigure: View {
                 .lineLimit(3).fixedSize(horizontal: false, vertical: true)
                 .minimumScaleFactor(0.9)
         }
-        .frame(maxWidth: .infinity, minHeight: 88, alignment: .topLeading)
+        // **A FLOOR THAT NOW FILLS THE BOX (prd §588).** 88 was the whole of
+        // a stat block in a 166pt slot; at 256 three of them drew ~138 and
+        // centred the rest as air. A `minHeight` can only grow a block, so
+        // deriving it is safe in the direction that matters — the caption
+        // above is clamped and these blocks are the only other thing here.
+        .frame(maxWidth: .infinity,
+               minHeight: DSRoomChassis.crownLine(box: DSRoomChassis.figureSlot,
+                                                  chrome: 60),
+               alignment: .topLeading)
         .padding(.horizontal, DS.Space.s2)
         .padding(.vertical, DS.Space.s2)
         // A well, so three numbers in a row read as three FACTS rather than as

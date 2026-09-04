@@ -94,10 +94,26 @@ struct WalletRiskStrip: View {
         }
     }
 
-    private static let chartHeight: CGFloat = 158
+    /// **THE BOX, LESS THIS STRIP'S OWN CHROME (prd §588).** Wallet's scopes
+    /// pass `reservesHeadline: false`, so this figure gets the whole of
+    /// `visualSlot`; the chrome is the `label12` caption at 15 and the `s2`
+    /// under it. At the old literal 158 this drew ~117pt of dead air once the
+    /// box went to 300.
+    private static var chartHeight: CGFloat {
+        DSRoomChassis.crownLine(box: DSRoomChassis.visualSlot, chrome: 25)
+    }
     /// Where the floor sits. Columns grow UP from it, so the space below is
     /// only the label strip's.
-    private static let floorY: CGFloat = 118
+    ///
+    /// **DERIVED FROM `chartHeight`, AND THAT IS THE POINT (prd §588).** Five
+    /// things key off this number — the column heights
+    /// (`clamped(headroom) * (floorY - 22)`), the floor line, the
+    /// "liquidation" label and the name strip — so it is not a second constant
+    /// but the same drawing's waistline. As a literal pair the two could be
+    /// edited apart, and the failure is a floor line drawn across the middle
+    /// of columns that grew past it. They were 118 of 158; the RATIO is what
+    /// is preserved here, not either number.
+    private static var floorY: CGFloat { (chartHeight * 118 / 158).rounded() }
     /// How many positions the slot draws before folding.
     private static let columnCap = 4
 

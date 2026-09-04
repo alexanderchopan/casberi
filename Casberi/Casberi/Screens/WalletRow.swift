@@ -1,5 +1,51 @@
 import SwiftUI
 
+/// **THE ROW'S LEADING MARK, LIFTED OUT OF THE GENERIC (prd §588).**
+///
+/// It lived inside `WalletRow<Trailing>`, which meant it could not be NAMED
+/// without one: `WalletRow<A>.Mark` and `WalletRow<B>.Mark` are different
+/// types in Swift, so a caller wanting to compute its mark in a `private var`
+/// rather than inline had nothing to declare it as. Inline `.symbol(…)`
+/// call sites never noticed, because those infer from the parameter.
+///
+/// That stopped being academic when the three devnet rooms adopted this row:
+/// each picks its mark by a rule worth writing down beside the row rather
+/// than folding into the call. The typealias below keeps every existing site
+/// working unchanged.
+/// The leading 34pt mark. Five kinds, because the room has exactly five
+/// kinds of subject: a state (glyph), a wallet (its face — a wallet is a
+/// color in this app), a token or protocol (its REAL brand mark, 2026-08-04
+/// — see `.asset`), and a landed thing (its own `KindGlyph`, the same mark
+/// that thing wears in every other feed — the one case that keeps the
+/// app-icon squircle rather than the circle, because a thing is an object
+/// and the other three are people or states).
+enum WalletRowMark {
+    case symbol(String, tint: Color)
+    case face(String)
+    case monogram(String, tint: Color)
+    /// A token or protocol by name — its bundled brand mark where one
+    /// exists, an honest monogram where it doesn't (`AssetMark`).
+    ///
+    /// It replaced hand-written initials on 2026-08-04: Aave read "AA",
+    /// Morpho "MO", Hyperliquid "HL", while the app had shipped
+    /// `brand-aave`, `brand-morpho` and `brand-hyperliquid` for months —
+    /// so the room was drawing initials for logos it already owned. The
+    /// old case survives for a subject that genuinely has no artwork
+    /// anywhere (Spark, today).
+    ///
+    /// `tint` colours only the monogram fallback; `atRisk` puts the state
+    /// on a badge, because re-tinting a real brand mark would be a lie
+    /// about the brand.
+    case asset(String, tint: Color, atRisk: Bool = false)
+    /// Two assets overlapped — a liquidity pool's own pair.
+    case pair(String, String)
+    /// A landed thing's own `KindGlyph`. `symbol`/`tint` override the
+    /// kind's glyph and hue for a room where the kind says nothing — see
+    /// `WalletActionMark` (prd §516); nil everywhere else.
+    case kind(ThingKind, flagged: Bool = false, symbol: String? = nil,
+              tint: Color? = nil)
+}
+
 /// The wallet room's ONE row shape (prd §212, 2026-07-25 — the Cash App pass).
 ///
 /// Before this, every read in the room picked its own container and its own
@@ -27,39 +73,8 @@ import SwiftUI
 /// app's shared row-title rung on 2026-08-03 — same size, same weight, same
 /// face, one name.)
 struct WalletRow<Trailing: View>: View {
-    /// The leading 34pt mark. Five kinds, because the room has exactly five
-    /// kinds of subject: a state (glyph), a wallet (its face — a wallet is a
-    /// color in this app), a token or protocol (its REAL brand mark, 2026-08-04
-    /// — see `.asset`), and a landed thing (its own `KindGlyph`, the same mark
-    /// that thing wears in every other feed — the one case that keeps the
-    /// app-icon squircle rather than the circle, because a thing is an object
-    /// and the other three are people or states).
-    enum Mark {
-        case symbol(String, tint: Color)
-        case face(String)
-        case monogram(String, tint: Color)
-        /// A token or protocol by name — its bundled brand mark where one
-        /// exists, an honest monogram where it doesn't (`AssetMark`).
-        ///
-        /// It replaced hand-written initials on 2026-08-04: Aave read "AA",
-        /// Morpho "MO", Hyperliquid "HL", while the app had shipped
-        /// `brand-aave`, `brand-morpho` and `brand-hyperliquid` for months —
-        /// so the room was drawing initials for logos it already owned. The
-        /// old case survives for a subject that genuinely has no artwork
-        /// anywhere (Spark, today).
-        ///
-        /// `tint` colours only the monogram fallback; `atRisk` puts the state
-        /// on a badge, because re-tinting a real brand mark would be a lie
-        /// about the brand.
-        case asset(String, tint: Color, atRisk: Bool = false)
-        /// Two assets overlapped — a liquidity pool's own pair.
-        case pair(String, String)
-        /// A landed thing's own `KindGlyph`. `symbol`/`tint` override the
-        /// kind's glyph and hue for a room where the kind says nothing — see
-        /// `WalletActionMark` (prd §516); nil everywhere else.
-        case kind(ThingKind, flagged: Bool = false, symbol: String? = nil,
-                  tint: Color? = nil)
-    }
+    /// See `WalletRowMark` — lifted out of this generic so callers can name it.
+    typealias Mark = WalletRowMark
 
     let mark: Mark
     let title: String
@@ -68,6 +83,22 @@ struct WalletRow<Trailing: View>: View {
     /// unlimited USDC"); false for one whose tail is noise. Default clamps,
     /// because most rows here are labels, not sentences.
     var titleWraps = false
+    /// **A SUBTITLE THAT CARRIES ITS OWN INK (prd §588).**
+    ///
+    /// `subtitle` is a `String` and is right for almost every row here, whose
+    /// second line is one colour. It is not enough for the three devnet rooms
+    /// this row absorbed: their metadata line is a `·`-joined run in which one
+    /// clause — a reverted frame, a lapsing key — is `DS.destructive` while
+    /// the rest is tertiary, and that colour is the fact.
+    ///
+    /// Composing it as ONE `Text` rather than several in an `HStack` is
+    /// deliberate and is `FramesMoveRow`'s own hard-won note: SwiftUI squeezes
+    /// an over-committed row by shrinking one child to its minimum width, so a
+    /// long middle clause wraps into a one-word column while its siblings sit
+    /// at full width. Concatenated runs cannot do that.
+    ///
+    /// Wins over `subtitle` when both are set, which no caller should do.
+    var subtitleText: Text? = nil
     @ViewBuilder var trailing: Trailing
 
     private static var markSize: CGFloat { DS.Face.list }
@@ -80,7 +111,11 @@ struct WalletRow<Trailing: View>: View {
                     .dsText(.heading17).foregroundStyle(DS.textPrimary)
                     .lineLimit(titleWraps ? nil : 1)
                     .fixedSize(horizontal: false, vertical: titleWraps)
-                if let subtitle {
+                if let subtitleText {
+                    subtitleText
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                } else if let subtitle {
                     Text(subtitle)
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
