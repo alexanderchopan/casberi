@@ -360,7 +360,39 @@ struct MainSurface: View {
                     // survives is the 2026-07-30 half of that ruling, which
                     // was never about the nav bar: air is the first thing
                     // handed back when the strip folds.
-                    .padding(.top, DS.Space.s2)
+                    .padding(.vertical, 5)
+                    // **THE DOCK IS A GLASS BAR** (§591d, user: "it seems like
+                    // the category chips are on a bar but you can't really see
+                    // the bar. can we make it more glass like our silhouette
+                    // and scope chip rail in wallet is? that way it looks more
+                    // purposeful and separate").
+                    //
+                    // The band's own scrim is a page-coloured gradient whose
+                    // job is to stop content colliding with the chips — it
+                    // blocks, it does not CONTAIN, so the strip read as chips
+                    // floating at the bottom of the feed rather than as one
+                    // control. `DSRoomRailSlab` answered the identical question
+                    // for the wallet's fused rail (§547, "what if we made the
+                    // silhouette row and the scope rail seem like more of a
+                    // component together") and its answer is this modifier: the
+                    // same `dsGlass` at the same `DSRoomChassis.slabRadius`, so
+                    // the dock and that rail are visibly the same kind of
+                    // object rather than two dialects.
+                    //
+                    // Glass is correct here by the design law's own division —
+                    // this is chrome the feed scrolls UNDER, which is the
+                    // floating layer, never content.
+                    //
+                    // Inset by `s4` so the bar has edges to be separate FROM;
+                    // full bleed is what made it invisible. The chips inside
+                    // still run full width and still melt under the agent bar
+                    // (`DSDock.agentSeat`), so nothing about the scroll or the
+                    // seat moved — this is a background gaining a shape.
+                    .background {
+                        Color.clear
+                            .dsGlass(cornerRadius: DSRoomChassis.slabRadius)
+                            .padding(.horizontal, DS.Space.s4)
+                    }
                     .padding(.bottom, chrome.minimized ? DS.Space.s1 : DS.Space.s2)
             }
         }

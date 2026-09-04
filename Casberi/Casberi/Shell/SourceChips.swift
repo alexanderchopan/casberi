@@ -988,7 +988,16 @@ struct SourceChips: View {
                 // travelling selection is one object and this is a second,
                 // stationary mark, so joining the group would make them fight
                 // over the same geometry.
-                if !isActive, !standing.isEmpty, label == standing {
+                // **NEVER ON "All"** (user, 2026-09-04: "why does All have a blue
+                // circle around it?"). §357's rule is about a FILTER you are
+                // standing in — it must show you that you are in it, and show
+                // its exit. "All" is the ABSENCE of a filter and is itself the
+                // exit, so a ring there states nothing and does it in the most
+                // common arrangement there is: standing in All, opening a
+                // folder to look inside. Two blue marks, one of them saying
+                // "you have not filtered anything", competing with the chip you
+                // just pressed.
+                if !isActive, standing != "All", !standing.isEmpty, label == standing {
                     Capsule(style: .circular)
                         .strokeBorder(DS.tint.opacity(0.55), lineWidth: 2)
                 }

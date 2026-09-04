@@ -48160,3 +48160,37 @@ joining the group would make them fight over the same geometry.
 
 Seen on the simulator: tapping Wallet fills it blue and opens its eight sources
 while All keeps a tint ring.
+
+### 591d. amendment — the dock is a glass bar, and "All" loses its ring (2026-09-04)
+
+**1. The bar you could not see** (user: *"it seems like the category chips are
+on a bar but you can't really see the bar. can we make it more glass like our
+silhouette and scope chip rail in wallet is? that way it looks more purposeful
+and separate"*).
+
+The band's scrim is a page-coloured gradient whose whole job is to stop content
+colliding with the chips — it BLOCKS, it does not CONTAIN. So the strip read as
+chips floating at the bottom of the feed rather than as one control, which is
+precisely the diagnosis §547 made of the wallet's rail and switcher ("they read
+as two unrelated strips, and the reason was not the gap"). Its answer was
+`DSRoomRailSlab`, and the answer here is that same modifier at that same radius:
+`dsGlass(cornerRadius: DSRoomChassis.slabRadius)`, so the dock and the fused
+rail are visibly one kind of object rather than two dialects.
+
+Glass is correct by the design law's own division — this is chrome the feed
+scrolls UNDER, which is the floating layer, never content. Inset by `s4`,
+because full bleed is what made it invisible: a bar needs edges to be separate
+FROM. **The chips inside still run full width and still melt under the agent
+bar**, so nothing about the scroll, the melt or `DSDock.agentSeat` moved; this
+is a background gaining a shape.
+
+**2. "All" never takes the standing ring** (user: *"why does All have a blue
+circle around it?"*). §591c added that ring so opening one folder while standing
+in another does not lose where the feed is. §357's rule is about a FILTER you
+are standing in — it must show you that you are in it, and show its exit. **"All"
+is the ABSENCE of a filter and is itself the exit**, so a ring there states
+nothing, and it does so in the commonest arrangement there is: standing in All,
+opening a folder to look inside. Two blue marks, one of them saying "you have
+not filtered anything", competing with the chip you just pressed.
+
+Both seen on the simulator, light and dark.
