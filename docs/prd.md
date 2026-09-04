@@ -48080,3 +48080,50 @@ time (the `roomFigure` lesson).
 **UNVERIFIED on hardware**, but every rule above was driven on the simulator:
 tapping Work opened its eight sources with All still lit and the feed unmoved,
 a re-tap closed it, and the octopus opened its four doors in the same slot.
+
+### 591b. amendment — one cover per feed, and the agent's door stops being the berry (2026-09-04)
+
+Two reports after the dock landed on a device (user: *"i saw the dock. it works
+well"*).
+
+**1. ONE BIG THING ON TOP.** The All feed opened on a live-stream hero, a day
+header, and then `FeedLedeCard` — two full-width objects stacked with "Today"
+wedged between them, which the demo corpus reproduces every time (a Twitch hero
+over a GeckoTerminal cover). **§389's own justification for that card is what
+rules against it here**: it argues the card may break the band rhythm because it
+is "the feed's first object… the rhythm it breaks is one it precedes", and that
+holds only while it IS first. A hero precedes it.
+
+**The rule is not new, only newly applied.** `waitingSection`,
+`listeningLedeSection` and `readingLedeSection` are all already gated on
+`heroShown`; this card was the one lede that never got the gate, because it
+arrived (§389) after the rule did.
+
+Two details that are load-bearing rather than incidental. It is gated at the
+CHOICE (`memo.lede = heroShown ? nil : …`) and not at the draw, because
+`memo.lede` is also what `bundle(excluding:)` removes from the run — suppressing
+only the drawing would take the row off the screen entirely instead of returning
+it to the list. And **`heroShown` now rides the derivation key**: a stream going
+live flips it WITHOUT `visible` changing, and the memo keys on the snapshot's
+revision, so without that the feed would keep drawing a cover under a hero until
+the next write — the exact stacking the gate exists to stop.
+
+**2. The agent's door is a chat bubble, not the berry** (user: *"the octopus
+logo opens a second octopus logo for the chat, i think that should be a bot
+icon"*). The bar you just tapped IS the berry, so repeating it as the first mark
+inside its own folder said "this door leads back to the button you pressed" —
+the one reading it must not have. Every other door in `DoorsStrip` wears the
+mark of what it opens; this one now wears `bubble.left`, which `KindGlyph`
+already draws for a chat row and for ChatGPT, Claude and Gemini, so the glyph a
+person meets here is one this app has already taught them.
+
+**The trap it cost, worth remembering anywhere in this tree:** the first cut
+used `bubble.left.and.text.magnifyingglass` and drew NOTHING on the simulator.
+**An unavailable SF Symbol renders as empty space, not as an error** — the build
+was green, the audits were green, and the door was a blank circle you could
+still press, which is §83's dead control wearing an invisible coat. Use a symbol
+this tree already draws somewhere, or look at it.
+
+Both seen on the simulator: the feed opens on the hero alone with the former
+cover back in the run as an ordinary row, and the doors strip leads with a
+speech bubble.

@@ -48,7 +48,30 @@ struct DoorsStrip: View {
 
     var body: some View {
         HStack(spacing: 2) {
-            door("Ask your things", act: onAgent) { CasberiMark(size: markSize * 0.55) }
+            door("Ask your things", act: onAgent) {
+                // **NOT the berry (§591b, user: "the octopus logo opens a
+                // second octopus logo for the chat, i think that should be a
+                // bot icon").** The bar you just tapped IS the berry, so
+                // repeating it as the first mark inside its own folder said
+                // "this door leads back to the button you pressed" — the one
+                // reading it must not have. The berry is the app's mark, and
+                // every other door here wears the mark of what it opens, so
+                // this one should wear the agent's.
+                //
+                // `bubble.left`, which is what `KindGlyph` already draws for a
+                // chat row and for ChatGPT, Claude and Gemini — so the glyph a
+                // person meets here is one this app has already taught them.
+                // What the door opens is a conversation you ask questions in.
+                //
+                // The first cut used `bubble.left.and.text.magnifyingglass` and
+                // it drew NOTHING on the simulator: an unavailable SF Symbol
+                // renders as empty space rather than as an error, so the door
+                // was a blank circle you could still press. Only use a symbol
+                // this tree already draws somewhere, or look at it.
+                Image(systemName: "bubble.left")
+                    .dsGlyph(markSize * 0.46, weight: .medium)
+                    .foregroundStyle(DS.textPrimary)
+            }
             door("Apps", act: onApps) { AppsDoor() }
             door("Address book", act: onAddressBook) {
                 Image(systemName: "person.text.rectangle")

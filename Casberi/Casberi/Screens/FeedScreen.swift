@@ -6113,7 +6113,8 @@ case .vibenetSend(let account):
                 // All is where volume floods — bundles + the new-since
                 // divider live here. A single source's shape IS that source;
                 // bundling there would collapse the whole screen into one row.
-                bundledSections(visible, nextEventID: nextEventID)
+                bundledSections(visible, nextEventID: nextEventID,
+                                heroShown: heroShown)
                 corpusFloorSection(visible)
             } else {
                 // Threads fold BEFORE day-grouping (item 6, 2026-07-27): a
@@ -6350,7 +6351,8 @@ case .vibenetSend(let account):
     @MainActor private static var lastAllFeedCensus = ""
     #endif
 
-    private func bundledSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
+    private func bundledSections(_ visible: [Thing], nextEventID: UUID?,
+                                 heroShown: Bool) -> some View {
         // Derive ONCE per render, then share — the day bundles, each day's true
         // total, and the new-since boundary. Read inside the row/header loops
         // (as `newBoundaryID` and `dayGroups.first(where:)` were) they rebuilt
@@ -6359,7 +6361,12 @@ case .vibenetSend(let account):
         // Memoized (PERF 2026-07-31 — see `DerivationMemo`): recomputed only
         // when `visible` actually changed, not on all ~18 launch-window body
         // passes over the same set.
-        let key = derivationKey(visible)
+        // `heroShown` rides the key (§591b): the cover is chosen from it now,
+        // and a stream going live flips it WITHOUT `visible` changing — so
+        // without this the feed would keep drawing a cover under a hero until
+        // the next write, which is the exact stacking the gate exists to stop.
+        var key = derivationKey(visible)
+        key = key &* 31 &+ (heroShown ? 1 : 0)
         if memo.key != key {
             memo.key = key
             memo.days = perfAccum("dayGrouping") { recentDaysThenCoarseTail(visible) }
@@ -6367,7 +6374,28 @@ case .vibenetSend(let account):
             // which is the whole of the fix: chosen after it, the newest thing
             // could be inside a fold and the card would lead with something
             // older than a row beneath it.
-            memo.lede = ledeThingID(in: memo.days)
+            // **ONE COVER PER FEED (§591b, 2026-09-04, user: "we only have
+            // one big thing on top").** §389's own doc justifies this card as
+            // "the feed's first object… the rhythm it breaks is one it
+            // precedes" — an argument that holds only while it IS first. A
+            // live-stream hero, an anniversary, a topic map or any other head
+            // card precedes it, and then the feed opens on two full-width
+            // objects stacked with a day header wedged between them, which is
+            // what the demo corpus shows every time (a Twitch hero over a
+            // GeckoTerminal cover).
+            //
+            // The rule is not new here, only newly applied: `waitingSection`,
+            // `listeningLedeSection` and `readingLedeSection` are all already
+            // gated on `heroShown` for exactly this reason. This card was the
+            // one lede that never got the gate, because it arrived later
+            // (§389) than the rule did.
+            //
+            // Gated at the CHOICE rather than at the draw, which is
+            // load-bearing: `memo.lede` is also what `bundle(excluding:)`
+            // removes from the run, so suppressing only the drawing would take
+            // the row off the screen entirely instead of returning it to the
+            // list where it belongs.
+            memo.lede = heroShown ? nil : ledeThingID(in: memo.days)
             // `nextEventID` rides in so the clock carve-out (prd §377) can
             // spare the next-up row. Both it and the live set can change
             // WITHOUT `visible` changing, and this memo keys on the snapshot's
