@@ -208,7 +208,57 @@ struct DSSlabField: View {
         // edge it just pushed out.
         .padding(.vertical, DS.Space.s2)
         .frame(minHeight: size.height)
-        .background(DS.surfaceWell, in: size.shape)
+        // **THE TOP IS THE EDGE (prd §524/§542's rule, applied here
+        // 2026-09-03, reported: "address book search bar is still clipping and
+        // weird" — the SECOND report on this control).**
+        //
+        // §545 read the first report as a Dynamic Type overflow and swapped the
+        // pinned height above for a floor. Its own entry said what to do if
+        // that was wrong: *"if the report was at DEFAULT type size then
+        // something else is also wrong and this did not fix it."* It was at
+        // default type. The height was never the problem.
+        //
+        // **The fill was.** A bare `DS.surfaceWell` is `#080809` and the ink
+        // page is `#000000` — a 1.03:1 step, so on the screen where this field
+        // sits directly on the page it draws no top edge, no side edge and no
+        // corner. What is left is a placeholder floating in black with a verb
+        // beside it, which reads exactly as a box cut off above its text. This
+        // is prd §449's finding one control over, in the same words the wallet
+        // tray's pile earned them: on an ink page there is nothing darker than
+        // the page to dip toward, so a recess drawn by tone alone is an
+        // invisible one.
+        //
+        // It was the LAST member of its own family without an edge, which is
+        // what makes this a §542 miss rather than a design question: the sweep
+        // that made the page ink converted nine sites by anatomy, and every
+        // other slab already reads — `DSSlabDoor` and `DSSlabSwitch` are the
+        // same shape at the same height on `DS.gray100`, and every card on the
+        // page takes `dsInkFill`'s pour. Only the field kept a token chosen
+        // back when it sat on a `#111113` card.
+        //
+        // The fix is the app's own universal answer rather than a new one: the
+        // well tone KEPT (a field is still something you look into, and the
+        // recess is correct wherever this slab really does sit on a card) with
+        // `DS.pourInk` across the top, which is `dsSheetSurface`'s "the pour is
+        // the surface's only edge" verbatim. On ink the top composites to
+        // ~`#1a1a1b` and the corner is drawn again; on a card nothing moves but
+        // the same top every neighbour already wears.
+        //
+        // Spelled here rather than through `dsInkFill` because that helper
+        // fills `DS.surfaceSheet` — black — which is the card's tone, not a
+        // well's, and would put the field on the same plane as the thing
+        // holding it.
+        .background {
+            size.shape
+                .fill(DS.surfaceWell)
+                .overlay {
+                    LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
+                                   startPoint: .top, endPoint: .bottom)
+                        .frame(height: 150)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                        .clipShape(size.shape)
+                }
+        }
     }
 
     @ViewBuilder private var field: some View {
