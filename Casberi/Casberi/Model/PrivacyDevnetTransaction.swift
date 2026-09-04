@@ -26,6 +26,20 @@ import Foundation
 /// gave eight field names. **Build the cheap instrument, and when it fails, ask
 /// whether the SYSTEM can be made to answer rather than searching harder.**
 ///
+/// ## THE VECTOR THIS WAS PROVEN AGAINST
+///
+/// A transaction signed with THIS encoder and broadcast to the live chain on
+/// 2026-09-04. The node returned our own predicted hash, which is the proof —
+/// the bytes we hashed are the bytes it hashed.
+///
+///     hash    0x3b87ac123b82cb860e82ee864d418a0953d9de53780a7e9e89626e859bb03820
+///     block   16399, status 1, gasUsed 210,982
+///     shape   2 frames — verify (mode 1, flags 3, self) then sender
+///             (mode 2, flags 0), nonceKeys [0x0], 0.001 ETH delivered
+///
+/// Kept here the way `FramesTransaction` carries its own vectors: the next
+/// person to touch this envelope needs to know it was proven, and against what.
+///
 /// ## THE EIGHT FIELDS, AND WHY THEY ARE NEITHER SIBLING'S
 ///
 ///     chain_id, nonce_keys, nonce, sender, frames, signatures,
