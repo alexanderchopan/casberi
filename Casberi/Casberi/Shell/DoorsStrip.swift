@@ -48,6 +48,15 @@ struct DoorsStrip: View {
 
     var body: some View {
         HStack(spacing: 2) {
+            door("Settings", act: onSettings) { AvatarDoor() }
+            door("Apps", act: onApps) { AppsDoor() }
+            door("Address book", act: onAddressBook) {
+                // The same glyph both wallet rails draw (§461), so the three
+                // doors onto one screen cannot read as three destinations.
+                Image(systemName: "person.text.rectangle")
+                    .dsGlyph(markSize * 0.5, weight: .medium)
+                    .foregroundStyle(DS.textPrimary)
+            }
             door("Ask your things", act: onAgent) {
                 // **NOT the berry (§591b, user: "the octopus logo opens a
                 // second octopus logo for the chat, i think that should be a
@@ -72,13 +81,6 @@ struct DoorsStrip: View {
                     .dsGlyph(markSize * 0.46, weight: .medium)
                     .foregroundStyle(DS.textPrimary)
             }
-            door("Apps", act: onApps) { AppsDoor() }
-            door("Address book", act: onAddressBook) {
-                Image(systemName: "person.text.rectangle")
-                    .dsGlyph(markSize * 0.5, weight: .medium)
-                    .foregroundStyle(DS.textPrimary)
-            }
-            door("Settings", act: onSettings) { AvatarDoor() }
         }
         .padding(4)
         // The capsule is the switcher's — `fillFaint`, never glass: this row
