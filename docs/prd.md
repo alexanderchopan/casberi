@@ -48204,3 +48204,19 @@ axis as the other chips"*). The padding is `DSDock.slabPad` now and
 `chipBottomInset` derives from it, so the bar and the chips cannot disagree
 about where the row's centre line is. Third time this pair has drifted; each
 time the fix was to name the number once rather than to correct the constant.
+
+**And it was the HORIZONTAL axis that was actually wrong.** With the centres
+measured 0.7pt apart, the complaint that the bar "doesn't share the same middle
+axis as the other chips" turned out to be about a hole beside it, not a
+misalignment under it: **34pt between the bar and the first chip, against 10pt
+chip-to-chip.** The cause is `fadeClear`, which put the fully-gone point 8pt
+INSIDE the head and therefore the fully-opaque point a whole `fadeRamp` beyond
+it — harmless while the head was a pinned "All" chip in the same view, and 24pt
+of dead air once §591 made the head the agent bar on another layer. Subtracting
+the ramp instead puts the dissolve UNDER the bar, where the 2026-07-19 ruling
+wants it ("disappear into it, not into a hard line"), and hands the air back.
+Measured after: 18pt, which is the row's own rhythm.
+
+**The lesson, since this is twice in one session:** measure before believing the
+report's own diagnosis. Both times the words named the vertical axis and both
+times a pixel measurement found the fault somewhere else.

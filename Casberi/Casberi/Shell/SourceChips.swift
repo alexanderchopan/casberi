@@ -248,7 +248,25 @@ struct SourceChips: View {
         // The RAIL still pins "All" and still measures past it.
         axis == .vertical ? DS.Space.s4 + chipSize : DSDock.agentSeat
     }
-    private var fadeClear: CGFloat { headTrailingEdge - 8 }
+    /// Where a chip has finished dissolving — fully gone by here.
+    ///
+    /// **On the phone this is measured so the RAMP happens UNDER the bar
+    /// (§591d).** It was `headTrailingEdge - 8`, which put the fully-gone point
+    /// 8pt inside the head and therefore the fully-OPAQUE point a whole
+    /// `fadeRamp` beyond it — and since §591 made `headTrailingEdge` the agent
+    /// bar's seat, that ramp became 24pt of empty air between the bar and the
+    /// first chip. Measured on the simulator: a 34pt hole where chip-to-chip is
+    /// 10, so the bar read as stranded off the end of its own row (user: "the
+    /// octopus is falling off the dock").
+    ///
+    /// Subtracting the ramp instead puts the fully-gone point BEHIND the bar,
+    /// so a chip is solid the instant it clears the bar's trailing edge and
+    /// dissolves only while it is actually passing underneath — which is what
+    /// the 2026-07-19 ruling asks for ("disappear into it, not into a hard
+    /// line") and what the air was mistakenly paying for.
+    private var fadeClear: CGFloat {
+        axis == .vertical ? headTrailingEdge - 8 : headTrailingEdge - Self.fadeRamp
+    }
     private static let fadeRamp: CGFloat = 24
     private var stripInset: CGFloat { fadeClear + Self.fadeRamp }
     /// The air between the pinned head's TRAILING edge and the first chip at
