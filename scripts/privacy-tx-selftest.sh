@@ -195,6 +195,24 @@ grep -qE '^import (SwiftUI|UIKit|SwiftData)' "$work/tx.bare" \
 grep -qE 'var sourceID: Data' "$work/tx.bare" \
   || fail "RootReference.sourceID is no longer Data — a UInt64 cannot hold this chain's 32-byte value"
 
+# THE TWO RULES THE CHAIN ITSELF TAUGHT US (2026-09-04), each found by a real
+# broadcast and by nothing else. Both are REFUSALS rather than wrong sends, so
+# the cost is a send that never happens — invisible to the build, the harness's
+# own fixtures (which are real transactions and therefore already correct), and
+# every static audit.
+SEND="Casberi/Casberi/Model/PrivacyDevnetSend.swift"
+[[ -f "$SEND" ]] || fail "$SEND not found"
+strip_comments "$SEND" > "$work/send.bare"
+# `nonce_keys count must be between 1 and 16` — an empty list is refused.
+grep -qF 'nonceKeys.isEmpty ? [Data([0])] : nonceKeys' "$work/send.bare" \
+  || fail "the transfer no longer guarantees at least one nonce key — the node refuses an empty list outright"
+# `non-zero value only allowed in SENDER mode` — mode 2, not 0.
+grep -qE 'mode: 2, flags: 0' "$work/send.bare" \
+  || fail "the transfer frame is no longer SENDER mode — mode 2 carries value on this chain and 0 is refused"
+# The verify frame that gives the transaction a payer.
+grep -qE 'mode: 1, flags: 3' "$work/send.bare" \
+  || fail "the verify frame is gone — without it the transaction has no payer and is invalid"
+
 grep -q "privacy-tx-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 

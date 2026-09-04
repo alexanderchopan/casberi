@@ -13,6 +13,15 @@ import Foundation
 /// `privacy-tx-selftest.sh` holds it there through nine mutations. Nothing here
 /// signs anything the encoder underneath it has not proven.
 ///
+/// **PROVEN AGAINST THE CHAIN (2026-09-04).** A key was made, the faucet funded
+/// it, and a two-frame transfer of 0.001 ETH was signed and broadcast: the node
+/// returned OUR OWN PREDICTED HASH
+/// (`0x3b87ac12…`), which is the proof — the bytes we hashed are the bytes it
+/// hashed — and it mined in block 16399 with status 1, the recipient holding
+/// 0.001 ETH. Two bugs in this file were found by that run and by nothing else,
+/// each recorded at its line: an empty `nonceKeys` list is refused outright, and
+/// mode 2 is SENDER where the first cut used 0.
+///
 /// **The faucet is byte-identical to Hegotá's** — `POST /api/claim` with
 /// `{"address"}`, and an invalid address answers `400 {"msg":"invalid
 /// address"}` on both, measured — so `HegotaFaucetVerdict` is REUSED rather
@@ -70,27 +79,37 @@ enum PrivacyDevnetSend {
     /// which runs the default path, checks the outer signature and approves
     /// both. Without it the transaction has no payer and is invalid.
     static func transfer(to recipient: String, weiHex: String,
-                         nonce: UInt64, gasPrice: UInt64) throws -> PrivacyDevnetTransaction.Fields {
+                         nonce: UInt64, gasPrice: UInt64,
+                         nonceKeys: [Data] = []) throws -> PrivacyDevnetTransaction.Fields {
         guard let sender = PrivacyDevnetKey.address() else { throw Failure.noKey }
         let senderBytes = PrivacyDevnetRPC.hexData(sender)
         let verify = PrivacyDevnetTransaction.Frame(
             mode: 1, flags: 3, target: senderBytes,
             gasLimit: 0x13880, stateLimit: 0, value: Data(), data: Data())
+        // **MODE 2 IS SENDER, and mode 0 is not.** The node refuses a
+        // non-zero value in any other mode — `non-zero value only allowed in
+        // SENDER mode` — which is how this was found: the first cut used 0,
+        // which is what a reader of the sibling encoders would assume.
+        // Measured off a real transfer on this chain, whose second frame is
+        // `mode 0x2, flags 0x0`.
         let move = PrivacyDevnetTransaction.Frame(
-            mode: 0, flags: 0, target: PrivacyDevnetRPC.hexData(recipient),
+            mode: 2, flags: 0, target: PrivacyDevnetRPC.hexData(recipient),
             // A transfer to an address the chain has not seen GROWS STATE, and
             // execution gas cannot pay for state growth — the Frames devnet's
             // own measured lesson (§548), where `stateGas: 0` halts the frame
             // on that write and reports what reads as an execution failure.
-            gasLimit: 0x13880, stateLimit: 0xf4240,
+            gasLimit: 0x7530, stateLimit: 0x2cd30,
             value: PrivacyDevnetRPC.hexData(weiHex), data: Data())
         return PrivacyDevnetTransaction.Fields(
             chainID: PrivacyDevnetChain.chainID,
-            // A FRESH key per send is the unlinkability this chain is for: a
-            // sequential nonce orders your sends for anyone watching. Empty
-            // here means the default channel; the caller supplies a key when
-            // it wants a spend that cannot be linked to the last one.
-            nonceKeys: [],
+            // **AT LEAST ONE KEY, ALWAYS.** The node enforces
+            // `nonce_keys count must be between 1 and 16`, so an empty list is
+            // refused outright — the first cut passed one and was rejected.
+            // `0` is the default channel, which is what every ordinary
+            // transaction on this chain uses; a caller wanting a spend that
+            // cannot be linked to the last one supplies a fresh 32-byte key
+            // instead, which is the unlinkability this chain is for.
+            nonceKeys: nonceKeys.isEmpty ? [Data([0])] : nonceKeys,
             nonce: nonce,
             sender: senderBytes,
             frames: [verify, move],
