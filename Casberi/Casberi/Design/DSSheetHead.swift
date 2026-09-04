@@ -18,11 +18,16 @@ import SwiftUI
 /// the shape to it is what kept the shape in one room. What is shared here is
 /// the ARRANGEMENT, and each caller decides what fills it.
 ///
-/// The money receipt keeps its own card — it has a torn edge that carries
-/// state (§363: torn means final, flat means the paper is still in the
-/// machine) and an amount block with a signed figure, neither of which
-/// generalises. This is its head, made available to sheets that have no
-/// amount to draw.
+/// The money receipt keeps its own view — it has an amount block with a
+/// signed figure, which does not generalise. This is its head, made available
+/// to sheets that have no amount to draw.
+///
+/// **THERE IS NO PAPER UNDER IT ANY MORE** (prd §583, 2026-09-03, user: *"i
+/// think it looks WAY better without the card"*). §495's raised ground, ink
+/// pour and torn edge are deleted; the anatomy above is what fixed "a jumble
+/// of text", and the object around it was drawing a second boundary for a
+/// block that already had one. `DSSheetHeadBlock` at the bottom of this file
+/// carries the spacing that is left, and its doc has the reasoning.
 struct DSSheetHead<Disc: View>: View {
     /// The subject, drawn as this sheet's own mark — a face, an identicon, a
     /// tinted glyph. Handed in rather than derived, so a room that already
@@ -79,22 +84,15 @@ struct DSSheetHead<Disc: View>: View {
     /// What it means NOW, in a sentence. The receipt's own closing line, and
     /// the part that makes a head an answer rather than a label.
     var sentence: String?
-    /// Whether the paper is TORN along its bottom edge.
-    ///
-    /// On a money receipt this carries state (§363: torn means final, flat
-    /// means the paper is still in the machine). A sheet with no such
-    /// distinction passes true and simply gets the receipt's silhouette,
-    /// which is the part that makes it read as an object rather than as text
-    /// on a page — the difference the user named: *"right now it just looks
-    /// like a jumble of text"*.
-    var torn: Bool = true
-    // `inkCard` was HERE and is deleted (prd §542, 2026-08-31, user: "we have
-    // this gray colored card — i want that gone from everywhere in the app.
-    // should be the dark ink one"). The 2026-08-29 ruling that scoped ink to
-    // the three short trays — on the reasoning that a full-page surface has
-    // margin enough for a `DS.surfaceRaised` card to read as a paper resting
-    // on ink — is overturned: every paper is ink now, so there is no fork
-    // left for a caller to choose.
+    // `torn` was HERE and is deleted (prd §583, 2026-09-03, user: "i think it
+    // looks WAY better without the card"). It chose whether the paper's bottom
+    // edge was scalloped, and there is no paper left for an edge to belong to.
+    //
+    // On this head the tear was always DECORATION — §498's own door says so
+    // ("every caller here passes `true`") — so nothing it carried is lost.
+    // The money receipt's tear was STATE, and that is answered separately in
+    // `MoneyReceiptCard`: every `.open` receipt already carries a non-quiet
+    // stamp, so the word was saying it too.
 
     @Environment(\.colorScheme) private var scheme
     /// Set by `DSTray` — see `title` and `EnvironmentValues.dsSurfaceHasHead`.
@@ -165,117 +163,72 @@ struct DSSheetHead<Disc: View>: View {
                     .padding(.top, DS.Space.s4)
             }
         }
-        // **IT IS A PIECE OF PAPER, NOT A BLOCK OF TEXT** (prd §495).
+        // **IT IS THE ARRANGEMENT, NOT AN OBJECT** (prd §583, 2026-09-03).
         //
-        // The head was drawn bare on the page and read as "a jumble of text"
-        // beside Wallet's, whose whole legibility comes from being an OBJECT:
-        // a raised surface, a pour at the top (ink since 2026-08-29), and the
-        // scalloped bottom edge that makes it a receipt rather than a card.
-        // `ReceiptPaper` is that silhouette and is reused rather than
-        // re-drawn, so the two rooms cannot drift into two papers.
+        // §495 read the head's illegibility ("a jumble of text") as a missing
+        // OBJECT and gave it a raised surface, an ink pour and a scalloped
+        // bottom edge. It also gave it the anatomy above — disc and stamp on a
+        // row, lead, title at the head rung, one supporting line, one sentence
+        // — and that is the half that did the work. With a real ramp running
+        // 12 → 40 down the block, the paper was a second boundary around
+        // something that already had one, and it read as packaging.
         //
-        // This is a deliberate exception to "headers no cards": that ruling
-        // is about a LIST's rows and a room's readings, and this is a single
-        // object standing for a single moment — which is exactly what §363
-        // argued when it gave the receipt its paper in the first place.
-        .dsReceiptPaper(torn: torn)
+        // So §495's "deliberate exception to headers-no-cards" is withdrawn
+        // and the general rule applies here after all.
+        .dsSheetHeadBlock()
     }
 }
 
-/// THE PAPER ITSELF, without the arrangement on it (prd §498).
+/// THE HEAD'S OWN METRICS, with no object under them (prd §583, 2026-09-03,
+/// user: *"i think it looks WAY better without the card"*).
 ///
-/// `DSSheetHead` above is one anatomy AND one silhouette, which is right for
-/// every sheet whose head is a run of static facts. The address card is the
-/// one head that is partly a CONTROL — §444 moved renaming in place, because
-/// naming is the act that card exists for and an alert covered the cascade it
-/// triggers — so it cannot hand its title over as a `String`.
+/// **This replaces `DSReceiptPaper`, and the deletion is the ruling.** §495
+/// gave every sheet head a receipt paper — a raised ground, an ink pour and a
+/// scalloped bottom edge — on the reasoning that a head drawn bare read as
+/// "a jumble of text". That reasoning was about ARRANGEMENT, and the
+/// arrangement is what fixed it: a subject disc and a stamp on one row, then
+/// the lead, then the title at the head rung, then one supporting line and one
+/// sentence. With the ramp doing that work the paper was drawing a second
+/// boundary around a block that already had one, and the object read as
+/// packaging.
 ///
-/// The answer is not a second paper. Extracting the treatment means the two
-/// heads share the silhouette, the pour, the raised ground and the shadow, and
-/// can only ever differ in what stands on them — the failure mode a sibling
-/// session named the same day: *"shared COMPONENTS are not a shared
-/// TEMPLATE"*, five compositions of the same parts drifting apart with every
-/// check still green. `DSSheetHead` is itself the first caller, so the shared
-/// path is the one every existing sheet already runs.
-struct DSReceiptPaper: ViewModifier {
-    /// HOW FAR THE TEETH HAVE CUT: 0 flat, 1 fully torn — a fraction, not a
-    /// flag (2026-08-28).
-    ///
-    /// It was a `Bool`, and that is the one reason `MoneyReceiptCard` — the
-    /// card this modifier was lifted OUT of, so that "the two rooms cannot
-    /// drift into two papers" — never adopted it and went on spelling the
-    /// whole padding/pour/surface/clip/shadow stack inline. On a receipt the
-    /// tear is a TRANSITION (§363: a pending authorization settling is the
-    /// paper finishing its cut), and a Bool cannot be interpolated, so the
-    /// shared path could not carry the one caller it was extracted from.
-    ///
-    /// The bottom padding interpolates WITH the cut on purpose: at a fixed
-    /// padding the card jumps a tooth's worth of height the instant the
-    /// animation starts.
-    ///
-    /// Every other caller passes 0 or 1 through the `torn:` convenience
-    /// below, where the silhouette is decoration rather than state — see
-    /// `dsReceiptPaper(torn:)`.
-    var tear: CGFloat = 1
-
-    /// The paper's own fill, under the ink pour: `DS.inkGround`, always
-    /// (prd §542, 2026-08-31 — "i want that gone from everywhere in the app.
-    /// should be the dark ink one"). This was a `base: Color` parameter
-    /// defaulting to `DS.surfaceRaised`, with `DS.inkGround` scoped to the
-    /// three short trays via `DSSheetHead.inkCard`; the user ruled the gray
-    /// paper dead on sight of Hegotá's UTXO/frame/account/activity sheets,
-    /// so the parameter is REMOVED rather than re-defaulted — the pour's own
-    /// `Color?` precedent: an option nobody may take is a fork waiting to
-    /// drift back. On ink the paper's edge is carried by the pour, the torn
-    /// silhouette and (in light) `raisedShadow`, not by a tonal step.
-    private var base: Color { DS.inkGround }
-
+/// **What the paper actually contributed, and why a modifier survives it.**
+/// Strip the ground, the pour, the clip and the shadow and what is left is
+/// spacing — a horizontal inset and top/bottom room. That still wants to live
+/// in one place for §498's original reason: five heads composing their own
+/// insets is how they drift apart with every check still green. So the
+/// modifier stays and only its body changes.
+///
+/// **The inset is `s4` and it is load-bearing.** The paper ran full-bleed with
+/// its content inset `s4`, so removing it without this would put a 40pt title
+/// against the screen edge. On the money receipt the paper was ALSO inset `s4`
+/// by its call site, which double-indented that head one step deeper than the
+/// eyebrow above it and the rows below it — visible in the §583 mockup and
+/// noticed there before this shipped. One inset now, so every line on a sheet
+/// shares a left edge.
+///
+/// The top is `s4` rather than the paper's `s6`: `s6` was the object's own
+/// internal padding, and bare on the ground it reads as a gap where a heading
+/// should be. The bottom keeps `s6`, which is separation between the head and
+/// what follows rather than padding inside anything.
+struct DSSheetHeadBlock: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s6)
-            .padding(.bottom, DS.Space.s6 + (ReceiptPaper.tooth + 2) * tear)
+            .padding(.top, DS.Space.s4)
+            .padding(.bottom, DS.Space.s6)
             .frame(maxWidth: .infinity, alignment: .leading)
-            // THE POUR IS INK, AND EVERY PAPER GETS ONE (2026-08-29, user
-            // ruling — `DS.pourInk`'s own doc carries the reasoning and the
-            // words it was ruled in).
-            //
-            // It took a `Color?` and the nil meant "no pour at all", which
-            // was the honest answer while the colour was a claim: a room with
-            // no brand hue had nothing true to pour. A neutral makes no
-            // claim, so there is nothing left for a caller to opt out of —
-            // and the option is REMOVED rather than defaulted, because a
-            // paper without a top is the "jumble of text" §495 exists to fix
-            // and no sheet should be able to choose it by omission.
-            .background(alignment: .top) {
-                LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
-                               startPoint: .top, endPoint: .bottom)
-                    .frame(height: 150)
-                    .frame(maxWidth: .infinity, alignment: .top)
-            }
-            .background(base)
-            .clipShape(ReceiptPaper(tear: tear))
-            .shadow(color: DS.raisedShadow, radius: 10, y: 2)
     }
 }
 
 extension View {
-    /// The paper, torn or flat. **The tear is DECORATION on this door** — it
-    /// is the silhouette that makes a head read as an object rather than as
-    /// text on a page (§495), and every caller here passes `true`.
+    /// The head's spacing, with nothing drawn under it.
     ///
-    /// On a money receipt it is STATE (§363: torn means final, flat means the
-    /// paper is still in the machine), and that caller reaches for the
-    /// fraction below instead. The two doors are separate so the distinction
-    /// stays legible: nothing about a vibenet key sheet's edge is claiming to
-    /// mean anything, and nothing should read it as though it does.
-    func dsReceiptPaper(torn: Bool = true) -> some View {
-        modifier(DSReceiptPaper(tear: torn ? 1 : 0))
-    }
-
-    /// The paper mid-cut — for the one caller whose edge carries state and
-    /// animates between the two.
-    func dsReceiptPaper(tear: CGFloat) -> some View {
-        modifier(DSReceiptPaper(tear: tear))
+    /// `dsReceiptPaper(torn:)` and `dsReceiptPaper(tear:)` were HERE and are
+    /// deleted (prd §583). The `Color?` pour and the `inkCard` fork both set
+    /// the precedent this follows: an option nobody may take is a fork waiting
+    /// to drift back, so the paper is removed rather than defaulted off.
+    func dsSheetHeadBlock() -> some View {
+        modifier(DSSheetHeadBlock())
     }
 }

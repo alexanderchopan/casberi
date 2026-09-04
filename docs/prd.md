@@ -91,6 +91,9 @@ at all.
 | §500 | Hegotá **never touches the faucet** — a faucet claim is a write and the seat's whole claim is that it cannot write, so it links out and the person claims their own | overtaken by §525 (the key sheet grew a Claim button that POSTs to it) and then by §531, which is where the CONSEQUENCE was paid: the faucet host had been in the reach audit's non-reach denylist on §500's reasoning, so for a day the privacy screen omitted a host the app really reached |
 | §369 | A money receipt pours its SOURCE — nine hues, so ten money sheets read as ten places instead of ten rows | amended by §524 (the pour is ink on every paper; `MoneyReceipt.Hue` is still computed and still harnessed nine ways, and no view paints with it — the disc directly above the pour already states the source at full strength, so the wash was the same fact a second time and weaker) |
 | §495 | Every sheet head is a piece of paper — a raised surface, the ROOM'S HUE poured at the top, and the receipt silhouette | amended by §524 (the paper, the pour and the silhouette all stand; only the hue goes. `dsReceiptPaper` no longer TAKES a colour, which also ends the nil arm that gave a hueless app's page no top while a branded one got a coloured one) |
+| §495 | Every sheet head is a piece of paper — a raised surface, an ink pour, and the receipt silhouette | reversed by §583 (user: *"i think it looks WAY better without the card"*. §495 read "a jumble of text" as a missing OBJECT and shipped both halves of a fix — the paper AND the anatomy. The anatomy is what worked: with a disc, a stamp, a lead, a title at the head rung and one sentence, running 12 → 40 down the block, the paper was a second boundary around a block that already had one. §495's "deliberate exception to headers-no-cards" is withdrawn and the general rule applies) |
+| §363 | The money receipt's TEAR carries state — torn is history, flat is still in the machine | reversed by §583 (an edge cannot survive the surface it was an edge of. Checked rather than assumed before removing: every `.open` receipt built in `MoneyReceipt` stamps `.settling` / `.pending` / `.screening` / `.yourTurn` / `.needsProof` / `.openPosition`, none of them quiet — so the silhouette and the word were two renderings of one fact. `finality` itself is untouched, and the settle keeps its haptic) |
+| §498 | `DSReceiptPaper` is the shared silhouette, so two rooms cannot drift into two papers | amended by §583 (the reasoning is why a modifier SURVIVES the deletion: strip the ground, the pour, the clip and the shadow and what is left is spacing, and five heads composing their own insets is how they drift apart with every check still green. `DSSheetHeadBlock` is that modifier) |
 | §500 | Hegotá does **no notifications** — no attention dots ever, because nothing in that room is urgent (nothing can move against you; the asset is test ETH) | amended by §522 for ONE event (the room's CONTENT rule stands whole and the dots stay off; a devnet RELAUNCH is not room content but the statement that everything the room shows describes a chain that no longer exists — §515a, two days after §500 and therefore unavailable to it, is a person losing an evening to exactly that on the sibling devnet) |
 | §306 | The classification lives in ONE file that reads what LANDED, so the never-fires list is reviewable in one screen | amended by §522 (two devnet seats carry facts no row holds — Hegotá lands no `Thing` at all, and a chain reset or an elapsed timelock belongs to no row — so `NotifyDevnet` is a second, harness-compiled door into the SAME submit; the headline also moved onto `NotifyKind` so the pure half can compose whole plans) |
 | §473 | The timelock's Live Activity is a CONTROL, never automatic, and its `staleDate` is the unlock instant | amended by §522 (the control stands, and becomes a persisted consent record: the moment the delay ends now reaches the lock screen, for a tracked address and no other — plus the relaunch bug where a surviving activity read as untracked) |
@@ -47019,3 +47022,160 @@ addresses is itself within 3.1.5, no copy change reaches it and the remedy is
 the organization account they named. That is why the reply asks them to name
 the feature and the screen. Everything here is reversible in one commit the day
 the account converts.
+
+## 583. The sheet heads lose their paper (2026-09-03)
+
+**User, on a mockup: *"i think it looks WAY better without the card"*.**
+Reverses §495's paper, §363's tear and §524's pour-on-every-paper; amends
+§498, which is the one part that survives.
+
+### 1. What §495 got right, and the half it also shipped
+
+§495 was reported as *"right now it just looks like a jumble of text"* and it
+fixed that. But it shipped TWO things under one ruling — an ANATOMY (subject
+disc and state stamp on one row, then the lead, then the title at the head
+rung, then one supporting line, then one sentence saying what it means now) and
+an OBJECT to put that anatomy on (a raised ground, an ink pour, a scalloped
+bottom edge). Only the anatomy was load-bearing. Once a head runs a real ramp
+from `label12` to `heading34` down five distinct rungs, it already has a shape;
+the paper around it was a second boundary drawn for a block that had one, and
+what it added read as packaging.
+
+This is the same shape as §524's finding one layer in — that the pour was
+saying, in a wash, what the mark directly above it was already saying at full
+strength — arriving at the surface the pour was on.
+
+### 2. THE TEAR WAS THE ONE THING WORTH CHECKING, AND IT WAS REDUNDANT
+
+Every other part of the paper was decoration, which §498's own door says out
+loud ("the tear is DECORATION on this door — every caller here passes `true`").
+The money receipt was the exception: there the edge carried STATE (§363, torn
+means final, flat means the paper is still in the machine), and an edge cannot
+survive the surface it was an edge of.
+
+**Measured against the six construction sites rather than argued from the
+type.** Every `finality: .open` in `MoneyReceipt` sits beside a `stamp:` that
+resolves to `.settling`, `.pending`, `.screening`, `.yourTurn`, `.needsProof`
+or `.openPosition` — and every one of those weights is `waiting` or `urgent`,
+never `quiet`. The silhouette and the word were two renderings of one fact, and
+the word is the one that survives a screenshot, a VoiceOver pass and a
+colour-blind reader. So nothing is lost.
+
+What that costs is a new guard, because the redundancy is now load-bearing:
+`money-receipt-selftest.sh` asserts `.refund` is the ONLY case in the quiet arm.
+Put `pending` in there and the receipt goes silent about being unfinished with
+nothing left on screen to say so.
+
+`finality` itself is UNTOUCHED — `ThingSheetView` still gates the track-record
+Live Activity control on `.open`, which was always the more useful half of it —
+and the settle keeps its success haptic. Only the drawing is gone.
+
+### 3. The stamp loses its capsule for the same reason
+
+A capsule is a small card. The ruling that takes the card off the head takes
+the card off the badge in the corner of it, or the head is bare and the one
+word on it is still packaged. The INK is untouched: green still means it went
+well, attention still means in flight or waiting on you, so nothing `DSStamp`
+says is lost. `wash` is deleted, and its own doc had already recorded why it
+was awkward — "a tertiary-grey wash is invisible on a raised surface" was
+`quiet` telling us a fill behind one word was never carrying much.
+
+The 24pt minimum height STAYS and is not leftover chrome: it keeps the word's
+baseline where it was relative to the subject disc, so removing the wash does
+not silently re-align six heads.
+
+### 4. A MODIFIER SURVIVES THE PAPER, and §498 is why
+
+Strip the ground, the pour, the clip and the shadow and what is left is
+spacing. That still wants one home for §498's original reason — *"shared
+COMPONENTS are not a shared TEMPLATE"*, five heads composing their own insets
+and drifting apart with every check still green. So `DSReceiptPaper` becomes
+`DSSheetHeadBlock` and only its body changes.
+
+**The inset is `s4` and it is load-bearing.** The paper ran full-bleed with its
+content inset `s4`, so deleting it without this would put a 40pt title against
+the screen edge on eight devnet sheets.
+
+**And it fixed a defect nobody had reported.** On the money receipt the paper
+was ALSO inset `s4` by its call site in `ThingSheetView`, so that head's words
+sat 30pt in while the eyebrow above them and every row below them sat at 15 —
+one indent step deeper than the rest of its own sheet. The paper's edge hid it
+for eleven months. It was spotted in the §583 mockup within a minute of the
+paper coming off, which is the argument for the ruling restated as evidence: an
+object around a block will hide the block's own misalignment. One inset now, so
+every line on a sheet shares a left edge.
+
+The top drops from the paper's `s6` to `s4` (that `s6` was the object's own
+internal padding; bare on the ground it reads as a gap where a heading should
+be) and the bottom keeps `s6`, which is separation from what follows rather
+than padding inside anything.
+
+### 5. What this touches
+
+Eleven call sites, seventeen sheets: `DSSheetHead` (one site, six sheets —
+vibenet event, create, account, key, authorize, and Hegotá's key sheet),
+`MoneyReceiptCard` (every money thing sheet), four `FramesSheets`, four
+`HegotaRoomCard` sheets, and `AltanaKeyCard`. Plus `DSStamp`'s capsule, and the
+tray-height arithmetic in both devnet rooms, where the head is now ~19pt
+shorter and a deficit CLIPS.
+
+**TWO OF THOSE WERE FOUND BY SURVEY, NOT BY GREP, AND THAT IS §498'S OWN
+WARNING ARRIVING ON SCHEDULE.** `AltanaKeyCard` and the address book's identity
+stamp both HAND-ROLL the treatment they should have inherited — the card
+re-spells `s4` / pour / clipped rect / `raisedShadow` inline, and the stamp
+re-spells `label12` over a 0.14 wash against `DSStamp`'s 0.16. Neither matched
+a search for the shared component, so both would have survived as the app's
+only remaining head-with-a-card and only remaining pill-in-a-corner. *Shared
+COMPONENTS are not a shared TEMPLATE*: a caller that re-spells the recipe
+drifts out of every ruling aimed at it, and the only way to find those is to
+search for the SHAPE rather than the call.
+
+Deleted rather than defaulted off: `DSReceiptPaper`, the `ReceiptPaper` shape,
+`DSSheetHead.torn`, `DSStamp.wash` and `DS.Motion.tear`. The pour's own `Color?`
+precedent — **an option nobody may take is a fork waiting to drift back** — and
+a motion token nothing animates is exactly how a deleted treatment finds its
+way home. `money-receipt-selftest.sh`'s three tear assertions are INVERTED
+rather than removed for the same reason: §495 is still in the ledger arguing
+for a paper, and a paper is easy to re-add one head at a time.
+
+### 6. `PriceObjectCard` KEEPS its surface, and the line is the ramp
+
+A charted row's head is the price object, so it is a head and in scope by
+position — and it stays a card. §583's whole argument is that a run of type
+running `label12` → `heading34` down five rungs already has a shape and does
+not need a box drawn round it. **A chart has no ramp.** A plot needs a bounded
+plotting area to read against, and taking its surface away leaves marks
+floating on the page ground with nothing establishing where the drawing ends.
+
+So the rule this ruling actually sets is narrower than "no cards on heads": a
+head made of TYPE loses its card, a head that draws a FIGURE keeps its
+surface. `AltanaKeyCard` is the test of that line and it converts, because
+everything on it is words.
+
+### 7. Two type changes proposed and NOT made
+
+Asked whether the ramp wanted anything, two answers were offered and both were
+withdrawn on measurement rather than on taste — the `-rankSweep` lesson in a
+type ramp.
+
+**`heading34` from 40/40 to 40/44 would have done nothing.** `DSTextStyle`
+computes `lineSpacing = max(0, lineHeight - size * 1.18)`, so at size 40 any
+`lineHeight` below 47.2 clamps to zero and the style already renders at the
+system's own default leading. The "40/40 is cramped" reading came from the
+token's name, not from what it applies; `monoCode34`'s 44 resolves to zero too,
+so the precedent cited for it was equally hollow. Real added air would need
+`lineHeight: 52`, which is a change to make deliberately if wrapped titles ever
+prove tight in practice.
+
+**The amount's unit stays `heading22`.** "ETH" at 24 bold beside a 40 heavy
+figure is two headlines, and the right answer is 24 REGULAR — which the ramp
+does not have. Adding a rung to a closed ramp is its own ruling with its own
+audit, and dropping to `body17` makes the unit too small against a 40pt number.
+It is already `textSecondary`, which does most of the work.
+
+### 8. Unseen on a device
+
+Every sheet here compiles and the harness is green; no screenshot of any of the
+seventeen has been taken. The money receipt is the one to look at first — it is
+the only head whose horizontal inset CHANGED rather than merely losing a
+surface, and the only one that lost a state it was drawing.

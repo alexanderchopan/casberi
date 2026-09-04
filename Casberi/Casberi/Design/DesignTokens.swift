@@ -846,17 +846,15 @@ enum DS {
         /// finger is on the glass and the response has to feel attached to
         /// it. One token so every pressed control dips on the same clock.
         static let press = Animation.spring(duration: 0.2, bounce: 0.4)
-        /// The receipt becoming final (prd §369 amendment) — the teeth cutting
-        /// into `ReceiptPaper`'s bottom edge when a record settles while
-        /// somebody is looking at it.
-        ///
-        /// **Zero bounce, on purpose, and longer than `standard`.** Every other
-        /// spring here lands soft because it is moving a surface; this one is a
-        /// CUT, and a scalloped edge that springs past its teeth and settles
-        /// back reads as the paper wobbling rather than tearing. Slower too:
-        /// the whole point is that the moment is watchable, and at 250ms it is
-        /// over before the eye finds it.
-        static let tear = Animation.spring(duration: 0.42, bounce: 0)
+        // `tear` WAS HERE and is deleted (prd §583, 2026-09-03). It was the
+        // spring the receipt's teeth cut in on when a record settled while
+        // somebody was looking at it; §583 removed the paper, so there is no
+        // edge left to cut. A motion token nothing animates is how a deleted
+        // treatment finds its way back, which is why it goes rather than
+        // waiting here for a caller.
+        //
+        // The settle still has a HAPTIC (`MoneyReceiptCard`) and still turns
+        // the stamp over. Only the silhouette is gone.
     }
 }
 

@@ -146,10 +146,14 @@ struct FramesMoveSheet: View {
     }
 
     private var trayHeight: CGFloat {
-        // The paper's own chrome — `dsReceiptPaper` pads `s6` top and `s6`
-        // plus a tooth at the bottom, which is the term the Hegotá sheets'
-        // first arithmetic had no line for, and a deficit CLIPS.
-        let paper: CGFloat = 60
+        // The head block's own chrome — the term the Hegotá sheets' first
+        // arithmetic had no line for, and a deficit CLIPS.
+        // Was `60` for the receipt paper's own `s6` top and `s6`-plus-a-tooth
+        // bottom. §583 removed the paper; `dsSheetHeadBlock` pads `s4` top and
+        // `s6` bottom, so the head is ~19pt shorter. Kept as a named term
+        // rather than folded into the base, because a deficit CLIPS and the
+        // next person to change the head's padding needs a line to change.
+        let paper: CGFloat = 41
         let crossing: CGFloat = 76
         let sponsored: CGFloat = move.sponsored ? 46 : 0
         let watch: CGFloat = watchable == nil ? 0 : 34
@@ -199,7 +203,7 @@ struct FramesMoveSheet: View {
                     .padding(.top, DS.Space.s4)
             }
         }
-        .dsReceiptPaper()
+        .dsSheetHeadBlock()
     }
 
     /// `DSStamp.Weight` has no failure rung by design, so trouble wears
@@ -635,7 +639,7 @@ struct FramesFrameSheet: View {
                     .padding(.top, 2)
             }
         }
-        .dsReceiptPaper()
+        .dsSheetHeadBlock()
     }
 
     private var position: String {
@@ -1057,7 +1061,7 @@ struct FramesPayerSheet: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s4)
         }
-        .dsReceiptPaper()
+        .dsSheetHeadBlock()
     }
 
     /// Their share of every fee this room can see.
@@ -1245,7 +1249,7 @@ struct FramesAccountSheet: View {
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
                 .padding(.top, DS.Space.s4)
         }
-        .dsReceiptPaper()
+        .dsSheetHeadBlock()
     }
 
     /// **The nonce IS the count** — it is incremented per transaction the

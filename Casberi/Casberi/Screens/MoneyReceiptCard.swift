@@ -10,21 +10,22 @@ import Accessibility
 /// other blocks. This is a piece of paper carrying the whole moment, one card
 /// where the app says something about it, and the dial.
 ///
-/// **The tear carries state.** `ReceiptPaper`'s bottom edge is scalloped when
-/// the record is final and flat when it isn't — a pending authorization whose
-/// amount can still change, an unsigned Safe transaction, a deposit in
-/// screening. One glance, before a word is read, says whether this is history
-/// or something still happening. It is a silhouette, never a line, so the
-/// no-hairlines law holds with no exception.
+/// **NO PAPER, AND NO TEAR** (prd §583, 2026-09-03, user: *"i think it looks
+/// WAY better without the card"*). Until this pass the whole moment sat on a
+/// raised, ink-poured card whose bottom edge was scalloped when the record was
+/// final and flat when it wasn't. §495 had spread that paper to every sheet
+/// head in the app; §583 removes it from all of them, on the finding that the
+/// anatomy is what made a head legible and the object around it was a second
+/// boundary drawn for a block that already had one.
 ///
-/// **And it is spoken, and it happens** (prd §369 amendment, 2026-08-16). Two
-/// things were true of that tear until this pass and both undid it: VoiceOver
-/// could not reach it at all (the card read out as eight loose fragments, none
-/// of which mentioned finality — see `MoneyReceipt.spokenLabel`), and when a
-/// record became final while somebody was looking at it, the paper simply
-/// swapped. A receipt settling is the one moment this card exists for, so the
-/// teeth now CUT IN, on `DS.Motion.tear`, with the success haptic on the same
-/// frame.
+/// **What the tear said, the stamp already says.** That edge was the one piece
+/// of paper carrying real state, so it was checked rather than assumed: every
+/// `.open` receipt built in `MoneyReceipt` carries a stamp, and every one of
+/// those is `.settling` / `.pending` / `.screening` / `.yourTurn` /
+/// `.needsProof` / `.openPosition` — none of them quiet, all of them in
+/// attention ink. The silhouette and the word were two renderings of one fact.
+/// `MoneyReceipt.spokenLabel` still speaks that fact, so §369's VoiceOver fix
+/// stands untouched, and the success haptic still fires on the settle.
 ///
 /// Every view here takes VALUES, never a `Thing` — so none of them can hold a
 /// tombstoned model across a re-render (the build-188 leaf rule). The one place
@@ -39,18 +40,16 @@ struct MoneyReceiptCard: View {
     /// the disc inert, which is the honesty rule doing its job: a face with
     /// nowhere to go is not a door, and must not look like one.
     var onSubject: ((String) -> Void)?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    // `tear`, `torn` and `reduceMotion` were HERE and are deleted with the
+    // paper (prd §583). Nothing is animated on this card any more, so there is
+    // no motion for a motion preference to silence.
 
-    /// How far the teeth have cut: 0 flat, 1 fully torn.
+    /// Whether this card has finished its first render.
     ///
-    /// Held rather than derived from `receipt.finality` so the transition can
-    /// be animated. `settled` is what keeps it a TRANSITION and not an
-    /// entrance: a receipt that opens already final is history, and history
-    /// must not perform its own tearing every time the sheet is opened.
-    @State private var tear: CGFloat = 0
+    /// It is what keeps the settle haptic a TRANSITION and not an entrance: a
+    /// receipt that opens already final is history, and history must not buzz
+    /// every time the sheet is opened.
     @State private var settled = false
-
-    private var torn: Bool { receipt.finality == .torn }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -105,34 +104,42 @@ struct MoneyReceiptCard: View {
             .accessibilityLabel(Text(receipt.spokenLabel))
             .accessibilityValue(Text(receipt.spokenValue))
         }
-        // THE PAPER IS THE SHARED ONE (2026-08-28). This card is where the
-        // silhouette, the pour, the raised ground and the shadow were settled
-        // (§363), `DSReceiptPaper` was lifted out of it (§498) so "the two
-        // rooms cannot drift into two papers" — and this card then went on
-        // spelling the whole stack inline, which is two papers. The only thing
-        // that kept it here was the Bool: the tear ANIMATES on a receipt, so
-        // the shared modifier had to learn a fraction before its own origin
-        // could call it.
-        .dsReceiptPaper(tear: tear)
-        .onAppear {
-            tear = torn ? 1 : 0
-            settled = true
-        }
+        // NO PAPER (prd §583, 2026-09-03, user: *"i think it looks WAY better
+        // without the card"*). §363 gave this card its raised ground, its ink
+        // pour and its scalloped edge, §498 lifted them into `DSReceiptPaper`
+        // so two rooms could not drift into two papers, and §583 deletes the
+        // paper from both. The head is the arrangement, not the object around
+        // it — `DSSheetHeadBlock`'s doc carries the full reasoning.
+        //
+        // **THE TEAR WAS STATE HERE AND THAT IS WHY THIS NEEDED CHECKING** —
+        // torn meant final, flat meant the paper was still in the machine
+        // (§363), and an edge cannot survive the surface it was an edge of. It
+        // is not lost: every `.open` receipt in `MoneyReceipt` carries a stamp
+        // and every one of those stamps is `.settling` / `.pending` /
+        // `.screening` / `.yourTurn` / `.needsProof` / `.openPosition`, none of
+        // them quiet — so the word in the corner was already saying, in
+        // attention ink, exactly what the edge was saying in silhouette.
+        // Measured against the six construction sites rather than assumed.
+        //
+        // `finality` itself is UNTOUCHED: `ThingSheetView` still gates the
+        // track-record control on `.open`, which was always the more useful
+        // half of it.
+        .dsSheetHeadBlock()
+        .onAppear { settled = true }
         .onChange(of: receipt.finality) { _, now in
-            let target: CGFloat = now == .torn ? 1 : 0
-            if settled && !reduceMotion {
-                withAnimation(DS.Motion.tear) { tear = target }
-            } else {
-                tear = target
-            }
-            // Reduce Motion silences the animation, never the feedback — it is
-            // a motion preference, and the haptic is the half of this moment
-            // that does not move. Firing `DSHaptic` directly rather than
-            // through `ShellChrome.flash` is the documented exception rather
-            // than a shortcut: that rule exists so a felt outcome always has
-            // words on screen explaining it, and here the paper tearing and
-            // the stamp turning over ARE those words. A toast would be a
-            // second announcement of something the card just said better.
+            // The felt half of the settle SURVIVES the drawing (prd §583).
+            // Firing `DSHaptic` directly rather than through
+            // `ShellChrome.flash` is the documented exception rather than a
+            // shortcut: that rule exists so a felt outcome always has words on
+            // screen explaining it, and the stamp turning from "Pending" to
+            // "Settled" in the same instant IS those words — it was doing that
+            // beside the tear all along. A toast would be a second
+            // announcement of something the card just said better.
+            //
+            // Reduce Motion is no longer consulted, and that is correct rather
+            // than an oversight: it silenced an ANIMATION that no longer
+            // exists, never the haptic, which is a motion preference's
+            // deliberate exception here.
             if settled && now == .torn { DSHaptic.success() }
         }
     }
@@ -187,74 +194,13 @@ struct MoneyReceiptCard: View {
     }
 }
 
-/// The paper's silhouette. Scalloped along the bottom when the record is final.
-///
-/// Quadratic curves rather than `addArc`: an arc's sweep direction in a
-/// y-down coordinate space is the kind of detail that renders inverted on the
-/// first try and looks deliberate, and a quad curve with a control point above
-/// the baseline is unambiguous. Teeth are fitted to the width (never clipped
-/// mid-tooth) so the last scallop always lands flush with the right edge.
-///
-/// **`tear` is a fraction, not a Bool** (prd §369 amendment). It is the shape's
-/// `animatableData`, which is what lets the teeth cut in over a real duration
-/// rather than appearing between two frames. The bottom CORNER RADIUS is
-/// interpolated with it for the same reason: the flat state is a fully rounded
-/// rect and the torn state has square bottom corners, so animating the teeth
-/// alone would snap those corners square on the first frame of the cut.
-/// At `tear == 1` this is byte-for-byte the geometry that shipped.
-struct ReceiptPaper: Shape {
-    /// 0 = flat (still in the machine), 1 = fully torn (final).
-    var tear: CGFloat
-    static let tooth: CGFloat = 10
-
-    var animatableData: CGFloat {
-        get { tear }
-        set { tear = newValue }
-    }
-
-    func path(in rect: CGRect) -> Path {
-        let r = DS.Radius.card + 4
-        let cut = max(0, min(1, tear))
-        guard cut > 0 else {
-            return Path(roundedRect: rect, cornerRadius: r, style: .continuous)
-        }
-        let tooth = Self.tooth
-        let baseY = rect.maxY - tooth * cut
-        // Rounded at rest, square once the teeth are fully out.
-        let br = r * (1 - cut)
-        let left = rect.minX + br
-        let right = rect.maxX - br
-        let span = max(right - left, 1)
-        let count = max(1, Int((span / (tooth * 2)).rounded()))
-        let step = span / CGFloat(count)
-
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX, y: rect.minY + r))
-        path.addQuadCurve(to: CGPoint(x: rect.minX + r, y: rect.minY),
-                          control: CGPoint(x: rect.minX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX - r, y: rect.minY))
-        path.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.minY + r),
-                          control: CGPoint(x: rect.maxX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: baseY - br))
-        if br > 0 {
-            path.addQuadCurve(to: CGPoint(x: right, y: baseY),
-                              control: CGPoint(x: rect.maxX, y: baseY))
-        }
-        for i in 0..<count {
-            let toX = right - step * CGFloat(i + 1)
-            let midX = toX + step / 2
-            path.addQuadCurve(to: CGPoint(x: toX, y: baseY),
-                              control: CGPoint(x: midX, y: baseY - tooth * 1.5 * cut))
-        }
-        if br > 0 {
-            path.addQuadCurve(to: CGPoint(x: rect.minX, y: baseY - br),
-                              control: CGPoint(x: rect.minX, y: baseY))
-        }
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + r))
-        path.closeSubpath()
-        return path
-    }
-}
+// `ReceiptPaper` WAS HERE and is deleted (prd §583, 2026-09-03). It was the
+// scalloped silhouette every sheet head in the app was clipped to; with the
+// paper gone there is no shape left to clip. Its `tear` fraction, its fitted
+// teeth and its interpolated bottom corners are all recoverable from git if a
+// future ruling ever wants a receipt edge back — but note what §583 measured
+// before removing it: the tear's state was fully redundant with the stamp,
+// which says the same thing in words and in attention ink.
 
 /// Slot 0 — four species of disc, four grades of knowing.
 ///

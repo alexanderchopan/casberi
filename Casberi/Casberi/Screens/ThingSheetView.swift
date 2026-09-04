@@ -347,8 +347,8 @@ struct ThingSheetView: View {
                             openURL(url)
                         }
                     }
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.top, DS.Space.s4)
+                    // The head block carries the inset now (prd §583) — see
+                    // the money receipt below for why it must not be doubled.
                     .settleIn(delay: 0.06)
                 }
                 if let moneyReceipt {
@@ -357,10 +357,15 @@ struct ThingSheetView: View {
                     // and the gesture people try first is a tap on the face.
                     // The dial keeps its own verbs at parity, so nothing here
                     // is reachable ONLY by tapping a picture.
+                    // NO PADDING HERE (prd §583). `dsSheetHeadBlock` inside
+                    // the card carries the inset now. It used to sit outside
+                    // the paper, which — since the paper insets its own
+                    // content as well — indented this head one step deeper
+                    // than the eyebrow above it and every row below it. The
+                    // paper's edge hid that; without it the step is the first
+                    // thing you see, which is how it was caught.
                     MoneyReceiptCard(receipt: moneyReceipt,
                                      onSubject: openAddressCard)
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, DS.Space.s4)
                         .settleIn(delay: 0.06)
                     // The poisoning flag rides EVERY wallet stage now, not just
                     // Sent/Received — a spoofed-address warning on a Swap or a

@@ -1335,7 +1335,7 @@ enum HegotaModeStyle {
     /// **THE ROOM'S OWN HUE — and it no longer pours** (2026-08-29).
     ///
     /// It was the colour behind every Hegotá sheet head, on the reasoning
-    /// that `dsReceiptPaper` needed a colour or it drew a plain raised
+    /// that the sheet head's paper needed a colour or it drew a plain raised
     /// surface with nothing saying which room the paper came out of — and
     /// since the catalog gives this seat no brand mark (`DS.brandHue` answers
     /// nil for a devnet, which is right: there is no logo to be faithful to)
@@ -2338,10 +2338,15 @@ struct HegotaMoveSheet: View {
         // The crossing is a fixed block; the minted pieces are one more.
         let crossing: CGFloat = 72
         let becomes: CGFloat = minted.isEmpty ? 0 : (minted.count > 3 ? 96 : 78)
-        // The paper's own chrome — `dsReceiptPaper` pads `s6` at the top and
+        // The head block's own chrome — `dsSheetHeadBlock` pads `s4` at the top and
         // `s6` plus a tooth at the bottom. The old arithmetic had no term for
         // it because the head was drawn bare, and a deficit CLIPS.
-        let paper: CGFloat = 60
+        // Was `60` for the receipt paper's own `s6` top and `s6`-plus-a-tooth
+        // bottom. §583 removed the paper; `dsSheetHeadBlock` pads `s4` top and
+        // `s6` bottom, so the head is ~19pt shorter. Kept as a named term
+        // rather than folded into the base, because a deficit CLIPS and the
+        // next person to change the head's padding needs a line to change.
+        let paper: CGFloat = 41
         let sponsored: CGFloat = sponsorship == nil ? 0 : 46
         return min(860, 380 + extra + crossing + becomes + paper + sponsored
                         + CGFloat(move.frames?.count ?? 0) * 54)
@@ -2365,11 +2370,12 @@ struct HegotaMoveSheet: View {
     /// the receipt silhouette that makes a head read as one moment rather than
     /// as a column of facts.
     ///
-    /// **`dsReceiptPaper` directly rather than `DSSheetHead`, and §498 is the
+    /// **`dsSheetHeadBlock` directly rather than `DSSheetHead`, and §498 is the
     /// reason it exists to be composed this way**: that component's title slot
     /// is `heading22`, and a money sheet leads with its FIGURE. What is shared
-    /// is the paper — the silhouette, the pour, the raised ground and the
-    /// shadow — so this room and Wallet's cannot drift into two papers.
+    /// is the head's METRICS — the inset and the room above and below — so this
+    /// room and Wallet's cannot drift into two sets of margins. It was the
+    /// paper that was shared until §583 deleted it.
     ///
     /// The dateline moved UP here from the foot of the sheet, which is where a
     /// receipt's dateline belongs and why the old `stamp` block is gone.
@@ -2394,7 +2400,7 @@ struct HegotaMoveSheet: View {
                     .padding(.top, DS.Space.s4)
             }
         }
-        .dsReceiptPaper()
+        .dsSheetHeadBlock()
     }
 
     /// **The transaction's standing, summarised from the steps below it.**
@@ -2703,8 +2709,8 @@ struct HegotaFrameSheet: View {
 
     var body: some View {
         DSTray(title: frame?.mode.label ?? String(localized: "Step"),
-               // The paper's own chrome (`dsReceiptPaper` pads s6 top and s6
-               // plus a tooth at the bottom) plus the disc it now carries.
+               // The head block's own chrome (`dsSheetHeadBlock` pads s4 top
+               // and s6 bottom) plus the disc it now carries.
                height: total > 1 ? 720 : 640, ink: true,
                // Scrollable and drag-past — see `HegotaMoveSheet.body`.
                detents: [.height(total > 1 ? 720 : 640), .large]) {
@@ -2729,10 +2735,11 @@ struct HegotaFrameSheet: View {
         }
     }
 
-    /// **THE HEAD IS AN OBJECT** — the move sheet's paper, one level down
-    /// (prd §495), composed through `dsReceiptPaper` for that sheet's stated
-    /// reason: a step that moved value leads with its FIGURE, and
-    /// `DSSheetHead`'s title slot is `heading22`.
+    /// **THE HEAD IS AN ARRANGEMENT** — the move sheet's head, one level down
+    /// (prd §495, and §583 for why there is no paper under it), composed
+    /// through `dsSheetHeadBlock` for that sheet's stated reason: a step that
+    /// moved value leads with its FIGURE, and `DSSheetHead`'s title slot is
+    /// `heading22`.
     ///
     /// **The old `heading28` is gone and that was a real inversion**: it set
     /// the mode label one rung ABOVE the tray title sitting directly on top of
@@ -2784,7 +2791,7 @@ struct HegotaFrameSheet: View {
                     .padding(.top, 2)
             }
         }
-        .dsReceiptPaper()
+        .dsSheetHeadBlock()
     }
 
     /// Where the step sat, and whether it carried money — the two facts the
@@ -3105,8 +3112,8 @@ struct HegotaAccountSheet: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var copied = false
 
-    /// The paper's own chrome — `dsReceiptPaper` pads `s6` top and `s6` plus a
-    /// tooth at the bottom, which the old height had no term for. Hoisted out
+    /// The head block's own chrome — `dsSheetHeadBlock` pads `s4` top and `s6`
+    /// bottom, which the old height had no term for. Hoisted out
     /// of the call (prd §560) so the detent set below can name the same number
     /// rather than restating the arithmetic — two copies of a height is how
     /// the resting detent and the tray stop agreeing.
@@ -3234,8 +3241,9 @@ struct HegotaAccountSheet: View {
             ?? WalletStore.shortAddress(account.address)
     }
 
-    /// **THE HEAD IS AN OBJECT** — the move sheet's paper (prd §495), and
-    /// `dsReceiptPaper` rather than `DSSheetHead` for §498's own stated reason:
+    /// **THE HEAD IS AN ARRANGEMENT** — the move sheet's head (prd §495, with
+    /// no paper under it since §583), and
+    /// `dsSheetHeadBlock` rather than `DSSheetHead` for §498's own stated reason:
     /// this head is partly a CONTROL. The address is a copy button, so the
     /// title cannot be handed over as a `String`.
     ///
@@ -3287,7 +3295,7 @@ struct HegotaAccountSheet: View {
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
             splitBar
         }
-        .dsReceiptPaper()
+        .dsSheetHeadBlock()
     }
 
     /// The WHOLE address, not the short form: this is the one screen where
@@ -3472,8 +3480,8 @@ struct HegotaCoinSheet: View {
         }
     }
 
-    /// +60 for the paper's own chrome (`dsReceiptPaper` pads s6 top and s6 plus
-    /// a tooth at the bottom); a deficit clips. Hoisted out of the call (prd
+    /// +60 for the head block's own chrome (`dsSheetHeadBlock` pads s4 top and
+    /// s6 bottom); a deficit clips. Hoisted out of the call (prd
     /// §560) so the detent set names the same number instead of restating it.
     private var trayHeight: CGFloat {
         min(820, 460 + CGFloat(siblings.count) * 46 + (showsShare ? 64 : 0))
@@ -3516,7 +3524,7 @@ struct HegotaCoinSheet: View {
                  : String(localized: "sent to you by \(WalletStore.shortAddress(coin.source))"))
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
         }
-        .dsReceiptPaper()
+        .dsSheetHeadBlock()
     }
 
     /// **Spent or not — stated only when the sweep has proved a set.**

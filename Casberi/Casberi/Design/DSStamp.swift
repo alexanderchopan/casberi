@@ -45,9 +45,22 @@ struct DSStamp: View {
         Text(verbatim: word)
             .dsText(.label12)
             .foregroundStyle(ink)
-            .padding(.horizontal, DS.Space.s2)
+            // A WORD, NOT A CAPSULE (prd §583, 2026-09-03). The wash and the
+            // horizontal padding are deleted with the paper this pill used to
+            // sit on: a capsule is a small card, and the ruling that took the
+            // card off the head takes the card off the badge in the corner of
+            // it for the same reason.
+            //
+            // **The ink is what carried the meaning and the ink is untouched**
+            // — green still means it went well, attention still means it is in
+            // flight or waiting on you — so nothing this component says is
+            // lost. What goes is the second boundary drawn around one word.
+            //
+            // The 24pt minimum height STAYS, and is not leftover chrome: it is
+            // what keeps the word's baseline where it was relative to the
+            // subject disc across the row, so removing the wash does not
+            // silently re-align six heads.
             .frame(minHeight: 24)
-            .background(wash, in: Capsule(style: .continuous))
             // NOT hidden from VoiceOver here, deliberately. Whether the word
             // is already spoken is the CALLER's fact: `DSSheetHead` restates
             // it in the sentence below and hides the pill, the money receipt
@@ -66,13 +79,8 @@ struct DSStamp: View {
         }
     }
 
-    /// `quiet` takes the neutral fill rather than a wash of its own ink: a
-    /// tertiary-grey wash is invisible on a raised surface, and a stamp you
-    /// cannot see is worse than one that says nothing.
-    private var wash: Color {
-        switch weight {
-        case .quiet: return DS.fillFaint
-        default:     return ink.opacity(0.16)
-        }
-    }
+    // `wash` was HERE and is deleted with the capsule (prd §583). Its own doc
+    // recorded the reason it was awkward — "a tertiary-grey wash is invisible
+    // on a raised surface" — which was `quiet` telling us a fill behind one
+    // word was never carrying much.
 }

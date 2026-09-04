@@ -1053,9 +1053,11 @@ struct AddressCard: View {
     /// stamp, then the name, then supporting lines, all on the money receipt's
     /// own raised paper with a pour down it. This card was the
     /// last identity sheet still drawing its head bare on the page, which is
-    /// exactly what "a jumble of text" described one room over.
+    /// exactly what "a jumble of text" described one room over. §583 has since
+    /// taken the paper off every head, so "bare on the page" is what all of
+    /// them do now — the fix was the ARRANGEMENT, not the object.
     ///
-    /// It composes `dsReceiptPaper` rather than `DSSheetHead` for ONE reason,
+    /// It composes `dsSheetHeadBlock` rather than `DSSheetHead` for ONE reason,
     /// and it is a real one: this head is partly a control. §444 moved
     /// renaming in place because naming is the act this card exists for and an
     /// alert covered the retitle cascade — so the title is a field, not a
@@ -1077,13 +1079,19 @@ struct AddressCard: View {
             HStack {
                 Spacer(minLength: 0)
                 if let stamp = identityStamp {
+                    // A WORD, NOT A CAPSULE (prd §583). This is a hand-rolled
+                    // `DSStamp` — same slot, same `label12`, a wash at 0.14
+                    // against that component's 0.16 — which is why the §583
+                    // sweep of `DSStamp` did not reach it, and why it would
+                    // have been left as the app's only remaining pill in a
+                    // head's corner. It is drawn here rather than through the
+                    // component for the reason the paragraph above gives:
+                    // this head is partly a control and composes its own
+                    // parts. It still follows the component's rulings.
                     Text(stamp)
                         .dsText(.label12)
                         .foregroundStyle(DS.textSecondary)
-                        .padding(.horizontal, DS.Space.s2)
-                        .padding(.vertical, 3)
-                        .background(DS.textSecondary.opacity(0.14),
-                                    in: Capsule(style: .continuous))
+                        .frame(minHeight: 24)
                 }
             }
             .frame(height: 22)

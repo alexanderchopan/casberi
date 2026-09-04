@@ -256,9 +256,14 @@ extension View {
     /// is what makes the ink card possible: `DS.surfaceSheet` is `#000` in
     /// dark now, the same value as the default page, and `cardShadow` is black
     /// — so fill and shadow together would draw nothing at all. `DS.pourInk`
-    /// across the top is the card's edge, the same one `dsReceiptPaper` and
-    /// every §495 sheet head already use, so a card and a paper are finally
-    /// one treatment rather than two that merely sat near each other.
+    /// across the top is the card's edge, the same one the §495 sheet-head
+    /// paper used, so a card and a paper were finally one treatment rather
+    /// than two that merely sat near each other.
+    ///
+    /// The sheet heads have since given their paper up entirely (prd §583) —
+    /// this recipe is unaffected, because a CARD is still a card: §583 is
+    /// about a head that already had an arrangement to carry it, not about
+    /// every surface in the app.
     ///
     /// It rides INSIDE the same clipped shape as the fill (a second
     /// `RoundedRectangle` masking the gradient) rather than as a sibling

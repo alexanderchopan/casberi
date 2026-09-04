@@ -3,11 +3,12 @@ import Foundation
 import ActivityKit
 
 /// A record that hasn't finished, on the lock screen (prd §369 amendment,
-/// 2026-08-16) — the flat edge of `ReceiptPaper`, outside the app.
+/// 2026-08-16) — the receipt's unfinished state, outside the app.
 ///
-/// **Why the flat edge is the right thing to put here and the torn edge isn't.**
-/// The receipt already says finality in its silhouette: torn is history, flat is
-/// still in the machine. History does not need a lock screen. What does is the
+/// **Why an unfinished record is the right thing to put here and a finished one
+/// isn't.** The receipt already says finality — in its silhouette until prd
+/// §583 took the paper away, and in its stamp before and after. History does
+/// not need a lock screen. What does is the
 /// half-dozen states where you are WAITING on somebody else — a card
 /// authorization that can still change, a Privacy Pools deposit in screening, a
 /// Safe transaction short of its signatures — and the app's own answer to "has

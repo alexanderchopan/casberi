@@ -67,22 +67,20 @@ struct AltanaKeyCard: View {
                     .padding(.top, DS.Space.s2)
             }
         }
-        .padding(DS.Space.s4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        // INK with a pour (prd §542) — `PriceObjectCard`'s anatomy, which
-        // sits on the same ink ground in the same sheet, so the two cards a
-        // thing sheet can show read as one family instead of one gray and
-        // one not. The pour is load-bearing: `ThingSheetView` is `dsInk()`,
-        // so an ink fill with no top would be invisible.
-        .background(alignment: .top) {
-            LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
-                           startPoint: .top, endPoint: .bottom)
-                .frame(height: 110)
-                .frame(maxWidth: .infinity, alignment: .top)
-        }
-        .background(DS.inkGround)
-        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-        .shadow(color: DS.raisedShadow, radius: 10, y: 2)
+        // NO CARD (prd §583, 2026-09-03). This head hand-rolled the paper
+        // recipe — `s4` all round, an ink pour, a clipped rect and a shadow —
+        // rather than calling the shared modifier, which is why §583's sweep
+        // of `dsReceiptPaper` did not find it. That is §498's own warning
+        // arriving on schedule: shared COMPONENTS are not a shared TEMPLATE,
+        // and a caller that re-spells the recipe drifts out of every ruling
+        // aimed at it.
+        //
+        // It is a head made of TYPE — a title, a live line, a window, a facts
+        // list and two notes — so §583 applies to it exactly: the ramp gives
+        // the block its shape and the card around it was packaging. Contrast
+        // `PriceObjectCard`, which keeps its surface because it holds a PLOT,
+        // and a chart has no ramp to give it an edge.
+        .dsSheetHeadBlock()
     }
 
     // MARK: - Pieces

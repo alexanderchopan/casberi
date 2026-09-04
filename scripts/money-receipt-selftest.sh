@@ -85,19 +85,36 @@ grep -q 'accessibilityValue(Text(receipt.spokenValue))' "$CARD" \
 [[ $(grep -c 'accessibilityChartDescriptor(self)' "$CARD") -eq 2 ]] \
   || { echo "✗ ReceiptFlowStrip/ReceiptBars no longer carry an AXChartDescriptor"; exit 1; }
 
-# 2. The tear ANIMATES. `ReceiptPaper.tear` must stay a fraction with
-#    `animatableData` — as a Bool the teeth appear between two frames, which is
-#    the swap this change exists to replace, and every assertion still passes.
-grep -q 'var animatableData: CGFloat' "$CARD" \
-  || { echo "✗ ReceiptPaper is no longer animatable — the teeth would snap in"; exit 1; }
-grep -q 'withAnimation(DS.Motion.tear)' "$CARD" \
-  || { echo "✗ the tear no longer runs on DS.Motion.tear"; exit 1; }
-grep -q 'static let tear = Animation' "$TOKENS" \
-  || { echo "✗ DS.Motion.tear is gone — the tear would hold raw timing in a view"; exit 1; }
-# Reduce Motion lands it torn (prd §299), and the HAPTIC still fires: it is a
-# motion preference, and the feedback is the half that does not move.
-grep -q 'accessibilityReduceMotion' "$CARD" \
-  || { echo "✗ the tear no longer honours Reduce Motion (prd §299)"; exit 1; }
+# 2. THERE IS NO PAPER AND NO TEAR (prd §583, 2026-09-03). This block used to
+#    assert the opposite — that `ReceiptPaper.tear` stayed an animatable
+#    fraction, that it ran on `DS.Motion.tear`, and that Reduce Motion was
+#    honoured. All three are now inverted rather than deleted, because the
+#    treatment they guarded is exactly the kind that creeps back: a paper is
+#    easy to re-add one head at a time, and §495 is still in the ledger arguing
+#    for it.
+! grep -q 'dsReceiptPaper\|ReceiptPaper(tear:' "$CARD" \
+  || { echo "✗ the receipt paper is back (prd §583 removed it)"; exit 1; }
+! grep -q 'DS.Motion.tear' "$CARD" \
+  || { echo "✗ the tear animation is back (prd §583 removed the edge it cut)"; exit 1; }
+! grep -q 'static let tear = Animation' "$TOKENS" \
+  || { echo "✗ DS.Motion.tear is back — a motion token nothing animates"; exit 1; }
+grep -q 'dsSheetHeadBlock()' "$CARD" \
+  || { echo "✗ the receipt head no longer takes the shared head metrics"; exit 1; }
+# WHAT THE TEAR SAID, THE STAMP MUST GO ON SAYING. This is the load-bearing
+# half of §583: the edge carried finality, and deleting it was only safe
+# because every state that resolves to `.open` also stamps a word in a
+# NON-QUIET ink. `refund` is the only case allowed in the quiet arm — it is the
+# one stamp that pairs with `.torn`. Put `pending` (or any other open state)
+# in there and the receipt goes silent about being unfinished, with nothing
+# left on screen to say so.
+MODEL="Casberi/Casberi/Model/MoneyReceipt.swift"
+quiet_arm=$(grep -o 'case \.refund: *return \.quiet' "$MODEL" | head -1)
+[[ -n "$quiet_arm" ]] \
+  || { echo "✗ the quiet stamp arm changed — an unfinished receipt may now stamp quietly (prd §583)"; exit 1; }
+grep -qE 'case \.pending, \.settling, \.screening: *return \.waiting' "$MODEL" \
+  || { echo "✗ pending/settling/screening no longer stamp in attention ink (prd §583)"; exit 1; }
+grep -qE 'case \.yourTurn, \.needsProof, \.openPosition: *return \.urgent' "$MODEL" \
+  || { echo "✗ yourTurn/needsProof/openPosition no longer stamp urgent (prd §583)"; exit 1; }
 # The haptic has somewhere to land. The bus is global but the MAPPING is a view
 # modifier, and a `.sheet` covers the one RootShell attaches — so without this
 # every DSHaptic call in the thing sheet bumps a counter nothing listens to,
@@ -137,7 +154,9 @@ grep -q 'checkedAt' "$ACTVIEW" \
   || { echo "✗ the activity no longer shows when the state was last checked"; exit 1; }
 grep -q 'staleDate: .now + staleAfter' "$ACTDRV" \
   || { echo "✗ the activity no longer goes stale — it would state old news in the present tense"; exit 1; }
-# Only a FLAT record earns the control, and the tear is what ends it.
+# Only an UNFINISHED record earns the control. (This used to read "and the
+# tear is what ends it"; §583 removed the tear, and `finality` itself is
+# untouched — it was always the more useful half.)
 grep -q 'moneyReceipt.finality == .open' "$SHEET" \
   || { echo "✗ the lock-screen control is no longer gated on an unfinished record"; exit 1; }
 # `sync` runs off the pass that really re-read the sources. The background
