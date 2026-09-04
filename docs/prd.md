@@ -48141,6 +48141,40 @@ Amends §593, which said the eleven fields "PORT" on the strength of their names
 **Two smaller measurements from the same pass.** `eth_getTransactionCount` on 8141 takes **two parameters only** — a third nonce-channel argument is refused with "Invalid params: Expected 2 params", where vibenet's node honours one — so a nonce-channel control on this seat would be a dead control (§83) and must not be built. And the faucet claim endpoint is `POST /api/claim` on all three ethrex devnets, serving byte-identical landing pages, so `HegotaFaucetVerdict` ports with no change.
 
 **What unblocks send**, in the order they would settle it: ethrex publishing the type-`0x6` envelope spec for this fork; the `debug_` namespace being opened on any public endpoint; or a node that accepts a transaction we sign, which is the same proof §548 got from Frames when the node returned our own predicted hash.
+
+### 593c. It sends, and the node was the teacher twice (2026-09-04)
+
+Amends §593a, which recorded that the envelope could not be reproduced and that sending was blocked. Both are now false, and the way each was settled is the part worth keeping.
+
+**THE ENVELOPE WAS SOLVED BY ASKING THE NODE.** §593a's search was sound and its conclusion wrong: a Swift harness enumerated the three places the wire looked ambiguous, reproduced Hegotá byte-exactly as a control, matched nothing here, and concluded the layout was unreadable — `debug_getRawTransaction` and both raw-by-hash methods are refused on the public endpoint. But `eth_sendRawTransaction` on this chain answers a malformed envelope by **naming the field it was decoding and its Rust type** (`Error decoding field 'nonce_keys' of type alloc::vec::Vec<primitive_types::U256>`), so feeding it progressively longer RLP lists walks the structure in order with no guessing at all. Eight submissions, eight field names. **Build the cheap instrument, and when it fails, ask whether the SYSTEM can be made to answer rather than searching harder.**
+
+**Eight fields, neither sibling's**: `chain_id, nonce_keys, nonce, sender, frames, signatures, fees(NESTED), blob_versioned_hashes, recent_root_references`. Hegotá is eleven flat; Frames is seven with nested fees and no keyed nonces. Re-encodes **14 of 14** real transactions byte-exactly, keccak matching the RPC's own hash.
+
+**IT SENDS, PROVEN AGAINST THE NODE.** A key was made, the faucet funded it (`POST /api/claim`, byte-identical to Hegotá's), and a two-frame transfer of 0.001 ETH was signed and broadcast — **the node returned our own predicted hash** (`0x3b87ac12…`), which is the proof: the bytes we hashed are the bytes it hashed. Mined in block 16399, status 1, recipient holding 0.001 ETH.
+
+**Two bugs in the send path were found by that run and by nothing else**, and both are refusals rather than wrong sends — so the cost is a send that never happens, invisible to the build, to the harness (whose fixtures are real transactions and therefore already correct) and to every static audit. Both are mechanical now, and both were proven able to fail before landing:
+
+1. **`nonce_keys` must number between 1 and 16.** An empty list is refused outright. `0` is the default channel every ordinary transaction here uses; a caller wanting a spend that cannot be linked to the last one supplies a fresh 32-byte key, which is the unlinkability this chain is for.
+2. **MODE 2 IS SENDER, and mode 0 is not.** `non-zero value only allowed in SENDER mode`. Mode 0 is what a reader of either sibling encoder would assume, and it is refused. Measured off a real transfer, whose second frame is `mode 0x2, flags 0x0` with budgets `0x7530`/`0x2cd30`.
+
+**Two encoding bugs the HARNESS found earlier the same day**, each producing a well-formed signature over the wrong transaction: `nonce_keys` are U256 quantities so a leading zero is stripped (writing the padded 32 changes the hash), and a frame's `value` is a quantity too — `0x0` must encode EMPTY, not as one zero byte. Found by diffing two encodings rather than by reading either; `RLP.minimal` is shared rather than copied, since two spellings of the minimal-integer rule is how one drifts.
+
+**Still true and worth not forgetting:** nothing has been sent from the APP itself. The proof above is the same encoder, the same field layout and the same signing rule driven from a script, and the Swift is held to it byte-for-byte by `privacy-tx-selftest.sh` — but no key has been minted on a device and no tap has broadcast anything.
+
+### 593b. The figures, written by another session (2026-09-04)
+
+Recorded by the Privacy session, not the one that did the work. That session cited `§593b` from `PrivacyDevnetFigure.swift` and `PrivacyDevnetFigures.swift` and ended before writing the entry, leaving the number dangling and `prd-index-audit` red. **What follows is its own account, from the handover message, deliberately NOT a reconstructed rationale** — §340's lesson is that inventing the reasoning is worse than a stub, because the ledger's whole value is that its rulings were actually made.
+
+Landed as `8bebb94c`. Two new files — `Model/PrivacyDevnetFigure.swift` (Foundation-only, so `privacy-selftest.sh` compiles it whole) and `Screens/PrivacyDevnetFigures.swift` — plus the room card.
+
+Per its own summary: Home's 6pt meter becomes an **8,192-slot track** with every referenced root at its age and aged ones hollow past the left edge; Activity gets **one anatomy row per move** (a bar per frame, a disc per spend key, a diamond per snapshot, an outlined pill when sponsored) with the words in a trailing column; Accounts trades a share-of-balance bar for **countable tallies**, on the reasoning that *on a faucet chain a share bar ranks addresses by who pulled the tap hardest* and the crown one line above is already the balance; Frames becomes a **budget strip weighted by `gasLimit`**; Roots becomes **lanes on the same ring** the Home track draws. One tint, no state colour, shapes carrying identity. `gasUsed`/`succeeded` are never drawn, because this chain serves neither (measured, §593).
+
+The `row(crown, tail)` rule from §593 is kept and generalised: the anatomy drawing joins the crown and the hash keeps the tail with its block.
+
+**Two defects it reports finding while writing**, both worth more than the drawings: `shares` clamped-then-renormalised, which pushed a floored frame **back below its own floor**; and Home's row budget was computed against a one-line sentence when the relaunch notice runs to three.
+
+**Its harness block was landed separately (`c7ca00f8`) by this session**, since `privacy-selftest.sh` was open here and two sessions editing one file is how one loses work. **One of its assertions could not fail**: the label-cap fixture collapsed to exactly `labelCap` marks, so removing the cap changed nothing and its own suggested mutation SURVIVED on the first run. A fixture only tests the rule it NAMES if it fails that rule and passes every other one — the fourth instance of that lesson in one day. Replaced with five marks spread wider than `labelGap`, asserting its own premise first so it cannot quietly stop discriminating.
+
 ### 591b. amendment — one cover per feed, and the agent's door stops being the berry (2026-09-04)
 
 Two reports after the dock landed on a device (user: *"i saw the dock. it works

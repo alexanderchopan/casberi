@@ -96,8 +96,19 @@ struct PrivacyDevnetAccount: Equatable, Sendable, Identifiable {
 /// **no `Thing` at all**: every reading here is live chain state, and a devnet
 /// test address has no news. That is why the seat is rowless in `DemoSeedAll`
 /// and why its whole demo furnishing is the fixture below.
+/// **`@Observable`, NOT `ObservableObject` — and the difference is a bug this
+/// shipped with.** The room reads this through `PrivacyDevnetRoomSource`'s
+/// static functions, and with `ObservableObject` + `@Published` a read from a
+/// static context establishes NO dependency: the demo fixture installs
+/// asynchronously, SwiftUI never learns, and the room sits on whatever it
+/// composed first — "Reading the chain…", forever, over a fixture that is
+/// right there in memory. Reported from a device; it worked in my own testing
+/// purely because the install happened to land before the first compose.
+/// `@Observable` tracks the property read itself, which is why both sibling
+/// seats use it.
 @MainActor
-final class PrivacyDevnetLiveState: ObservableObject {
+@Observable
+final class PrivacyDevnetLiveState {
     static let shared = PrivacyDevnetLiveState()
 
     /// How many log-touched transactions one walk will read.
@@ -106,6 +117,14 @@ final class PrivacyDevnetLiveState: ObservableObject {
     /// it is a real bound, and without it the walk grows with the chain until a
     /// room open costs minutes.
     static let walkCap = 60
+
+    /// Blocks per `eth_getLogs` page. Under the 100,000 that a sibling ethrex
+    /// deployment enforces, with room to spare.
+    static let walkChunk: UInt64 = 50_000
+    /// How many pages one walk will read — a bound on the bound, so a chain
+    /// that grows enormous cannot turn one room open into an unbounded scan.
+    /// At 50k blocks a page this reaches 2,000,000 blocks; 8141 is at ~15,000.
+    static let walkChunkCap = 40
 
     /// How long a sweep's answers stand before another is worth making.
     ///
@@ -117,11 +136,11 @@ final class PrivacyDevnetLiveState: ObservableObject {
     static let staleAfter: TimeInterval = 120
     private(set) var readAt: Date?
 
-    @Published private(set) var accounts: [PrivacyDevnetAccount] = []
-    @Published private(set) var headSlot: UInt64 = 0
+    private(set) var accounts: [PrivacyDevnetAccount] = []
+    private(set) var headSlot: UInt64 = 0
     /// The genesis the chain last reported. A CHANGE here is a reset, and the
     /// only signal that catches one (see `PrivacyDevnetChain.genesis`).
-    @Published private(set) var observedGenesis: String?
+    private(set) var observedGenesis: String?
 
     private init() {}
 
@@ -298,6 +317,49 @@ final class PrivacyDevnetWatch {
     func name(for address: String) -> String? { AddressBook.shared.name(for: address) }
 }
 
+/// Addresses worth watching when you have none of your own.
+///
+/// **This chain makes suggestions load-bearing rather than a nicety.** It holds
+/// 14 type-`0x6` transactions across ~15,000 blocks and only FOUR of them
+/// reference a root, so a pasted stranger's address shows a correct blank that
+/// reads exactly like a broken feature. Vibenet and Frames offer the same thing
+/// for the same reason.
+///
+/// **Declared ONCE and read by both the setup screen and the empty room.** Two
+/// copies of an address is how two screens end up suggesting different things,
+/// and the room is where somebody actually hits the wall — the setup screen is
+/// a place you pass through, the empty room is where you stand wondering what
+/// to do.
+///
+/// Both were read off `rpc1.privacy.ethrex.xyz` on 2026-09-04 by running the
+/// walk itself, and each is here for a DIFFERENT reading: only the first
+/// references a root, so it is the only way to see the Roots scope at all
+/// without waiting for somebody to use the chain.
+enum PrivacyDevnetSuggestions {
+    struct Entry: Identifiable, Sendable {
+        let address: String
+        let title: String
+        let detail: String
+        var id: String { address }
+    }
+
+    static let all: [Entry] = [
+        Entry(address: "0x062901d23f7e2d3bf9949c8a8cfd2c7a5ae3f980",
+              title: String(localized: "An address that used the pool"),
+              detail: String(localized: "Two one-time spend keys, and a proof against a recent snapshot")),
+        Entry(address: "0x248ac8584135c94469a90fbb02ba053b17f1cc60",
+              title: String(localized: "An address that sent early"),
+              detail: String(localized: "Frame transactions from the chain's first hour")),
+    ]
+
+    /// The ones not already watched — an offer to watch something you are
+    /// already watching is the dead control §83 bans.
+    @MainActor
+    static var unwatched: [Entry] {
+        all.filter { !PrivacyDevnetWatch.shared.isWatching($0.address) }
+    }
+}
+
 // MARK: - Bridge registration
 
 enum PrivacyDevnetBridge {
@@ -350,7 +412,24 @@ extension PrivacyDevnetLiveState {
     /// method exposes the slot.
     /// Refresh only if the last answer has gone stale — what the room's own
     /// task calls, so opening it twice in a row costs one sweep.
+    ///
+    /// **THE DEMO RE-INSTALLS ITS FIXTURE HERE, and without it the room is
+    /// permanently stuck.** `DemoSeedAll` runs on demo ENTRY only, this state
+    /// is in-memory, and `DemoMode` is sticky across launches — so relaunching
+    /// inside a demo leaves the fixture gone AND the live read refused, and the
+    /// room says "Reading the chain…" forever over a chain it is not allowed to
+    /// read. Reported from a device, then reproduced here by opening the room
+    /// on a second launch. `HegotaLiveState.refreshIfStale` had already solved
+    /// exactly this and says so in its own comment — I did not read it before
+    /// writing this file, which is the whole cost of the bug.
+    ///
+    /// Idempotent and in-memory: it reaches nothing, which is the rule this
+    /// seat inherits.
     func refreshIfStale() async {
+        if DemoMode.isActive {
+            if accounts.isEmpty { PrivacyDevnetLiveState.seedDemo() }
+            return
+        }
         if let readAt, Date().timeIntervalSince(readAt) < Self.staleAfter { return }
         await refresh()
     }
@@ -409,7 +488,10 @@ extension PrivacyDevnetLiveState {
                     out[i].nullifiers = w.nullifiers
                     out[i].roots = w.roots
                     out[i].sponsoredCount = w.sponsored
-                    out[i].moves = w.moves
+                    // **Newest first**, which the figures order on. `block` is
+                    // Optional, so an unread one sorts LAST rather than to the
+                    // beginning of time.
+                    out[i].moves = w.moves.sorted { ($0.block ?? 0) > ($1.block ?? 0) }
                 }
             }
         }
@@ -417,16 +499,45 @@ extension PrivacyDevnetLiveState {
         readAt = Date()
     }
 
-    /// One transaction, as the walk saw it. Kept because Activity and Frames
-    /// have nothing to draw without it, and re-fetching on a scope tap would
-    /// spend 15 seconds to redraw what is already in memory.
+    /// One frame of a transaction, as the walk saw it.
+    ///
+    /// **Every field is Optional and nil never means zero.** A budget the wire
+    /// did not carry draws an unweighted strip; a status the receipt did not
+    /// report must never mark a frame failed. This chain's own spellings are
+    /// `gasLimit`/`stateLimit` — Hegotá says `executionGasLimit`/`stateGasLimit`
+    /// and Frames says `gasLimit`/`stateGasLimit`, so a reader written for
+    /// either sibling gets nil here and draws frames that look budget-less.
+    struct Frame: Equatable, Sendable {
+        var gasLimit: UInt64?
+        var stateLimit: UInt64?
+        /// **Never read today.** `eth_getTransactionReceipt` on this chain
+        /// carries no per-frame breakdown, so this stays nil and a figure must
+        /// not weight or fail a frame off it. Measured on 8141, not assumed.
+        var gasUsed: UInt64?
+        /// Same: no per-frame status is served. Nil, always, for now.
+        var succeeded: Bool?
+    }
+
+    /// One transaction, as the walk saw it.
+    ///
+    /// Carries VALUES rather than only counts, because the Nullifiers scope
+    /// groups keys BY TRANSACTION and the Home scope draws the newest moves'
+    /// snapshots — both of which need the values on the move rather than only
+    /// in the account's flattened union.
     struct Move: Equatable, Sendable, Identifiable {
         var hash: String
-        var frames: Int
-        var nullifiers: Int
-        var roots: Int
-        var sponsored: Bool
+        /// Nil when the transaction read carried none — never 0, which would
+        /// sort a real transaction to the beginning of time.
+        var block: UInt64?
+        var frames: [Frame] = []
+        var nullifiers: [Data] = []
+        var roots: [PrivacyDevnetRoots.Reference] = []
+        var sponsored = false
         var id: String { hash }
+
+        var frameCount: Int { frames.count }
+        var nullifierCount: Int { nullifiers.count }
+        var rootCount: Int { roots.count }
     }
 
     struct Walked { var frames = 0; var nullifiers: [Data] = []
@@ -456,22 +567,57 @@ extension PrivacyDevnetLiveState {
     /// drawing a moment ago.
     func walkTransactions(for watched: [String]) async -> [String: Walked]? {
         guard !watched.isEmpty else { return [:] }
-        guard let logs = await PrivacyDevnetRPC.call(
-                method: "eth_getLogs",
-                params: [["fromBlock": "0x0", "toBlock": "latest"]]) as? [[String: Any]]
-        else { return nil }
+        // **CHUNKED, because an unbounded range is refused by a sibling node
+        // ALREADY.** This asked `fromBlock: 0x0, toBlock: latest` with no
+        // address filter, which 8141 answers happily today (32 logs, 1.2s) and
+        // which Base vibenet's node rejects outright with `query exceeds max
+        // block range 100000` — so this is a measurement of what a maturing
+        // ethrex deployment does, not a worry about one. The `walkCap` does not
+        // help: it is applied AFTER the response arrives, so a refused query
+        // returns nil and four scopes go silently absent.
+        guard let tipHex = await PrivacyDevnetRPC.call(method: "eth_blockNumber", params: []),
+              let tip = PrivacyDevnetRPC.hexInt(tipHex) else { return nil }
+        var logs: [[String: Any]] = []
+        var from: UInt64 = 0
+        var chunks = 0
+        while from <= tip && chunks < Self.walkChunkCap {
+            let to = min(from &+ Self.walkChunk &- 1, tip)
+            guard let page = await PrivacyDevnetRPC.call(
+                    method: "eth_getLogs",
+                    params: [["fromBlock": "0x" + String(from, radix: 16),
+                              "toBlock": "0x" + String(to, radix: 16)]]) as? [[String: Any]]
+            // A refused or unreached chunk abandons the WHOLE walk rather than
+            // returning a partial one: a half-read chain reports an address as
+            // quieter than it is, which is worse than saying nothing.
+            else { return nil }
+            logs.append(contentsOf: page)
+            if to == tip { break }
+            from = to &+ 1
+            chunks += 1
+        }
 
-        var hashes: [String] = []
-        var seen = Set<String>()
+        // **SORTED, NOT REVERSED.** The first cut called `reverse()` and said
+        // in a comment that this kept recent history when the cap bites — a
+        // claim that rests entirely on `eth_getLogs` answering oldest-first,
+        // which the JSON-RPC spec does not guarantee. A node answering
+        // newest-first would make the reverse produce oldest-first, the cap
+        // would keep the genesis fixtures, and a busy address would report as
+        // quiet: precisely the failure the comment claimed to prevent, silently.
+        // Sorting on the block and the log's place in it costs nothing and
+        // makes the claim true rather than assumed.
+        var newest: [String: (block: UInt64, index: UInt64)] = [:]
         for log in logs {
             guard let h = log["transactionHash"] as? String else { continue }
-            if seen.insert(h).inserted { hashes.append(h) }
+            let key = (block: PrivacyDevnetRPC.hexInt(log["blockNumber"]) ?? 0,
+                       index: PrivacyDevnetRPC.hexInt(log["logIndex"]) ?? 0)
+            if let seen = newest[h], seen.block > key.block { continue }
+            newest[h] = key
         }
-        // Newest first, so a chain that outgrows the cap keeps the RECENT
-        // history rather than the genesis fixtures — the opposite choice
-        // reports a busy address as quiet.
-        hashes.reverse()
-        hashes = Array(hashes.prefix(Self.walkCap))
+        let hashes = newest.sorted {
+            $0.value.block == $1.value.block ? $0.value.index > $1.value.index
+                                             : $0.value.block > $1.value.block
+        }
+        .prefix(Self.walkCap).map(\.key)
 
         let wanted = Set(watched.map { $0.lowercased() })
         var out: [String: Walked] = [:]
@@ -507,10 +653,19 @@ extension PrivacyDevnetLiveState {
                payer != sender {
                 w.sponsored += 1
             }
+            let moveFrames = (tx["frames"] as? [[String: Any]] ?? []).map { f in
+                Frame(gasLimit: PrivacyDevnetRPC.hexInt(f["gasLimit"]),
+                      stateLimit: PrivacyDevnetRPC.hexInt(f["stateLimit"]),
+                      // Both nil, deliberately: no per-frame breakdown is
+                      // served on this chain (measured), and a figure must not
+                      // weight or fail a frame off a value nobody reported.
+                      gasUsed: nil, succeeded: nil)
+            }
             w.moves.append(Move(hash: hash,
-                                frames: (tx["frames"] as? [[String: Any]])?.count ?? 0,
-                                nullifiers: w.nullifiers.count - before.nullifiers,
-                                roots: w.roots.count - before.roots,
+                                block: PrivacyDevnetRPC.hexInt(tx["blockNumber"]),
+                                frames: moveFrames,
+                                nullifiers: Array(w.nullifiers.dropFirst(before.nullifiers)),
+                                roots: Array(w.roots.dropFirst(before.roots)),
                                 sponsored: w.sponsored > before.sponsored))
             out[sender] = w
         }
@@ -549,10 +704,20 @@ extension PrivacyDevnetLiveState {
         // The two 32-byte keys off block 13347, which are byte-identical to the
         // pool's own spent-key log topics — the evidence that a keyed nonce is
         // a nullifier on this chain.
-        // FOUR, not two: the walk was run against this address on the real
-        // chain and it has TWO pool transactions, each carrying two keys. The
-        // fixture claimed one transaction's worth until the walk existed to
-        // measure it, which would have made the demo quieter than the truth.
+        // FOUR, not two: this address has TWO pool transactions, each carrying
+        // two keys.
+        //
+        // **TWO OF THESE WERE FABRICATED AND SHIPPED**, caught in review. The
+        // COUNT was measured by running the walk; the VALUES were then written
+        // from a different block's census, and the comment here claimed the
+        // measurement while standing over invented bytes. All four are now read
+        // back off `eth_getTransactionByHash` for the two hashes below —
+        // 13347's pair, then 13352's.
+        //
+        // The lesson is the one that makes eye review useless here: a fixture
+        // that LOOKS like a 32-byte key is indistinguishable from one that is,
+        // and a confident comment tells the next reader not to check. Read
+        // every hex value back, or do not claim it was measured.
         a.nullifiers = [
             Self.hex("0cca26d343c75c5d092b41abc4c7372c0105537e6f5209967fee5bb6b6ca390c"),
             Self.hex("277a116036d2c29207c09c18015780c8e161402d2017d07012147a1d4b7240fe"),
@@ -586,10 +751,18 @@ extension PrivacyDevnetLiveState {
         // address's own, off blocks 13352 and 13347 — obtained by running the
         // walk's own path against the live chain, not by hand.
         a.moves = [
-            Move(hash: "0xfa32623718a4ac87bca85daa2f62af32522f4e2f763adec8ac2fbde5aeb5cf0f",
-                 frames: 2, nullifiers: 2, roots: 1, sponsored: false),
             Move(hash: "0xeda9b1c8231c7ba375c831d63655acc813cf8c7d3ac2b095b23e3011d7b2999a",
-                 frames: 2, nullifiers: 2, roots: 1, sponsored: false),
+                 block: 13352,
+                 frames: [Frame(gasLimit: 0x4e200, stateLimit: 0),
+                          Frame(gasLimit: 0x4e200, stateLimit: 0)],
+                 nullifiers: [a.nullifiers[2], a.nullifiers[3]],
+                 roots: [a.roots[1]], sponsored: false),
+            Move(hash: "0xfa32623718a4ac87bca85daa2f62af32522f4e2f763adec8ac2fbde5aeb5cf0f",
+                 block: 13347,
+                 frames: [Frame(gasLimit: 0x4e200, stateLimit: 0),
+                          Frame(gasLimit: 0x4e200, stateLimit: 0)],
+                 nullifiers: [a.nullifiers[0], a.nullifiers[1]],
+                 roots: [a.roots[0]], sponsored: false),
         ]
         // Zero, and CORRECT: no transaction measured on this chain carries a
         // `payer` differing from its sender, so the Sponsors chip is absent in

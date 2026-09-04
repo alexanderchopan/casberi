@@ -30,8 +30,9 @@ fail() { print -u2 "✗ $1"; exit 1 }
 SECTION="Casberi/Casberi/Model/PrivacyDevnetSection.swift"
 ROOTS="Casberi/Casberi/Model/PrivacyDevnetRoots.swift"
 ROOM="Casberi/Casberi/Model/PrivacyDevnetRoom.swift"
+FIG="Casberi/Casberi/Model/PrivacyDevnetFigure.swift"
 VERIFY="scripts/verify.sh"
-for f in "$SECTION" "$ROOTS" "$ROOM"; do [[ -f "$f" ]] || fail "$f not found"; done
+for f in "$SECTION" "$ROOTS" "$ROOM" "$FIG"; do [[ -f "$f" ]] || fail "$f not found"; done
 
 # `swiftc` needs a main file; the sources are compiled WHOLE and unmodified.
 cat > "$work/main.swift" <<'SWIFT'
@@ -190,7 +191,14 @@ for hasRead in [false, true] {
                                             roots: [r])]] {
       let h = PrivacyDevnetRoom.head(accounts: accs, watching: 0, hasRead: hasRead,
                                      headSlot: base + 10, wasReset: reset)
-      check(h.watching >= 1, "the head always claims at least one watched address")
+      // `.unwatched` legitimately claims zero — it is the state where nothing
+      // IS watched. Every other lede must claim at least one, or a room says
+      // it watches nothing while describing what it watched.
+      if case .unwatched = h.lede {
+          check(h.watching == 0, "the unwatched head claims zero, not one")
+      } else {
+          check(h.watching >= 1, "every other head claims at least one watched address")
+      }
       check(!PrivacyDevnetRoom.sentence(h).isEmpty, "every head has a sentence")
     }
   }
@@ -213,6 +221,16 @@ if case .reading = PrivacyDevnetRoom.head(accounts: [], watching: 1, hasRead: fa
                                           headSlot: base, wasReset: false).lede {} else {
     check(false, "no read and no accounts reads as reading")
 }
+// NOTHING WATCHED reads as `.unwatched`, never nil and never "reading" — see
+// the black-screen note above.
+if case .unwatched = PrivacyDevnetRoom.head(accounts: [], watching: 0, hasRead: false,
+                                            headSlot: base, wasReset: false).lede {} else {
+    check(false, "nothing watched reads as unwatched")
+}
+check(!PrivacyDevnetRoom.sentence(
+        PrivacyDevnetRoom.head(accounts: [], watching: 0, hasRead: false,
+                               headSlot: base, wasReset: false)).isEmpty,
+      "the unwatched head still has a sentence")
 if case .reading = PrivacyDevnetRoom.head(accounts: rich, watching: 1, hasRead: false,
                                           headSlot: base + 10, wasReset: false).lede {
     check(false, "accounts are themselves evidence of a read")
@@ -281,6 +299,63 @@ check(!PrivacyDevnetRoots.isNullifier(d("82500001")), "0x82500001 is a named cha
 check(!PrivacyDevnetRoots.isNullifier(d("82502001")), "0x82502001 is a named channel, not a nullifier")
 check(!PrivacyDevnetRoots.isNullifier(d("78050000")), "0x78050000 is a named channel (EIP-7805), not a nullifier")
 
+// ─────────────────────────── PrivacyDevnetFigure ──────────────────────
+// Written by the session that built the figures; landed here because this
+// harness is mine. Every failure renders as an ordinary drawing: two diamonds
+// on one point, a mark claiming an age it no longer has, overlapping labels,
+// a floored frame silently below its floor, or a count quietly dropped.
+typealias PF = PrivacyDevnetFigure
+func fref(_ slot: UInt64) -> PrivacyDevnetRoots.Reference {
+    PrivacyDevnetRoots.Reference(sourceID: d("aa"), slot: slot, root: d("bb"))
+}
+let fm = PF.marks([fref(13347), fref(13347), fref(12900), fref(5200)], headSlot: 14450)
+check(fm.count == 3, "two proofs against one snapshot are ONE mark, not two diamonds on one point")
+check(fm[0].slot == 13347 && fm[0].count == 2, "newest first, and the collapse carries its count")
+check(fm[2].position == nil && fm[2].agedBy == 1059, "an aged mark has no position — nil, never zero")
+check(fm[2].labelled, "an aged mark always gets words: its position says nothing")
+check(fm.filter(\.labelled).count <= PF.labelCap, "labels are capped before the track becomes text")
+// **A DISCRIMINATING fixture for the cap.** The set above collapses to exactly
+// `labelCap` marks, so removing the cap leaves it unchanged — that mutation
+// SURVIVED on this block's first run. Five marks, spread far wider than
+// `labelGap` so the spacing rule cannot do the capping instead, is the case
+// that can actually fail.
+let wide = PF.marks([fref(14400), fref(13000), fref(11500), fref(10000), fref(8500)],
+                    headSlot: 14450)
+check(wide.count == 5, "the wide fixture really has five marks to label")
+check(wide.filter(\.labelled).count == PF.labelCap,
+      "and exactly labelCap of them are labelled — the cap, not the spacing, doing the work")
+check(PF.marks([fref(14400), fref(14399)], headSlot: 14450).filter(\.labelled).count == 1,
+      "two marks a slot apart never both label — the collision this rule exists for")
+check(PF.marks([fref(14999)], headSlot: 14450)[0].position == 1,
+      "a reference AHEAD of the head pins at now, never past it — a lagging RPC, not the future")
+// FOUND while writing: clamp-then-renormalise pushed a floored frame BACK BELOW its floor.
+let w = PF.shares([PF.Frame(gasLimit: 900), PF.Frame(gasLimit: 1)])
+check(abs(w.reduce(0,+) - 1) < 1e-9, "weighted shares fill the strip exactly")
+check(w[1] >= PF.minFrameShare - 1e-9, "the smallest step is still visible AFTER renormalising")
+check(w[0] > w[1], "the bigger budget is still the wider bar")
+let casc = PF.shares([PF.Frame(gasLimit: 10000), PF.Frame(gasLimit: 1), PF.Frame(gasLimit: 1)])
+check(casc.allSatisfy { $0 >= PF.minFrameShare - 1e-9 } && abs(casc.reduce(0,+) - 1) < 1e-9,
+      "flooring one frame can push the next below the floor — the cascade must settle")
+check(PF.shares([PF.Frame(gasLimit: 90), PF.Frame()])[0] == PF.shares([PF.Frame(gasLimit: 90), PF.Frame()])[1],
+      "ONE unread budget falls back to equal widths — never present a leftover as a budget")
+check(abs(PF.shares(Array(repeating: PF.Frame(gasLimit: 5), count: 12))[0] - 1.0/12) < 1e-9,
+      "too many frames for the floor stops pretending and draws equal")
+if case .frame(_, let bad) = PF.anatomy(frames: [PF.Frame(succeeded: nil)], keys: 0, roots: 0, sponsored: false)[0] {
+    check(!bad, "an UNREAD status is not a failure — gasUsed/succeeded are nil on 8141")
+}
+let an = PF.anatomy(frames: [PF.Frame(), PF.Frame()], keys: 2, roots: 1, sponsored: true)
+check(an.count == 6, "frames, keys, roots, payer — nothing dropped")
+if case .frame = an[0] {} else { check(false, "frames lead: what it DID before what it proved") }
+if case .sponsor = an[5] {} else { check(false, "who paid is last") }
+check(PF.pips(0).empty == 1, "zero draws one empty pip so the column still reads as a comparison")
+check(PF.pips(12).overflow == 4, "over the cap the rest is COUNTED, never silently dropped")
+// FOUND: Home's budget was computed against a one-line sentence; the relaunch notice runs to three.
+check(PF.homeMoves(hasTrack: true, box: 300) <= 3, "\"a few\" is three — past that Home becomes Activity one chip away")
+check(PF.rowCap(box: 10, rowHeight: 14, spacing: 6, chrome: 40, minimum: 0) == 0,
+      "Home is the ONE list allowed to vanish, so the send panel needs no second decision")
+check(PF.rowCap(box: 10, rowHeight: 14, spacing: 6, chrome: 40) == 1,
+      "every other scope draws at least one row — a list scope must not render empty")
+
 check(!PrivacyDevnetRoots.present([]), "no references means no roots scope")
 check(PrivacyDevnetRoots.present(refs), "references mean the scope draws")
 
@@ -288,7 +363,7 @@ if failures == 0 { print("  ok   \(0) failures") } else { exit(1) }
 SWIFT
 
 print "  building…"
-xcrun swiftc -Onone -o "$work/pv" "$SECTION" "$ROOTS" "$ROOM" "$work/main.swift" 2>"$work/build.log" \
+xcrun swiftc -Onone -o "$work/pv" "$SECTION" "$ROOTS" "$ROOM" "$FIG" "$work/main.swift" 2>"$work/build.log" \
   || { cat "$work/build.log"; fail "the sources did not compile — they must stay Foundation-only" }
 "$work/pv" || fail "assertions failed"
 print "  ok   assertions"
@@ -300,7 +375,7 @@ mutate() {
   local name="$1" file="$2" from="$3" to="$4"
   local dir="$work/m"; rm -rf "$dir"; mkdir -p "$dir"
   cp "$SECTION" "$dir/PrivacyDevnetSection.swift"; cp "$ROOTS" "$dir/PrivacyDevnetRoots.swift"
-  cp "$ROOM" "$dir/PrivacyDevnetRoom.swift"
+  cp "$ROOM" "$dir/PrivacyDevnetRoom.swift"; cp "$FIG" "$dir/PrivacyDevnetFigure.swift"
   local target="$dir/$(basename $file)"
   grep -qF -- "$from" "$target" || fail "mutation '$name' matches nothing — it is stale and tests the shipped code"
   python3 - "$target" "$from" "$to" <<'PY'
@@ -310,7 +385,7 @@ s = io.open(p, encoding="utf-8").read()
 io.open(p, "w", encoding="utf-8").write(s.replace(a, b, 1))
 PY
   if xcrun swiftc -Onone -o "$dir/pv" "$dir/PrivacyDevnetSection.swift" "$dir/PrivacyDevnetRoots.swift" \
-        "$dir/PrivacyDevnetRoom.swift" "$work/main.swift" 2>/dev/null && "$dir/pv" >/dev/null 2>&1; then
+        "$dir/PrivacyDevnetRoom.swift" "$dir/PrivacyDevnetFigure.swift" "$work/main.swift" 2>/dev/null && "$dir/pv" >/dev/null 2>&1; then
     fail "mutation SURVIVED: $name"
   fi
   print "  ok   caught: $name"
@@ -344,6 +419,21 @@ mutate "a named nonce channel counted as a nullifier" \
 mutate "the nullifier floor measured on RAW bytes (a stripped leading zero drops a real key)" \
   "$ROOTS" 'while significant.first == 0 { significant.removeFirst() }' '' 
   "static func isNullifier(_ key: Data) -> Bool { !key.isEmpty }"
+# The figures' own mutations, from the session that wrote them. Each is a
+# silent wrong drawing: an ordinary-looking ring, strip or tally that says
+# something the chain does not.
+mutate "an aged root placed at the far edge rather than nowhere" \
+  "$FIG" "return Mark(slot: slot, position: nil, agedBy: by," \
+  "return Mark(slot: slot, position: 0, agedBy: by,"
+mutate "two labels allowed to overlap (the commonest arrangement there is)" \
+  "$FIG" "if let last = lastLabelled, abs(last - p) < labelGap { continue }" \
+  "if false { continue }"
+mutate "the label cap removed — the track becomes text" \
+  "$FIG" "guard spent < labelCap else { break }" "guard true else { break }"
+mutate "pips dropping their overflow instead of counting it (§307 again)" \
+  "$FIG" "return (pipCap, 0, n - pipCap)" "return (pipCap, 0, 0)"
+mutate "zero drawing no pip at all, so the column stops reading as a comparison" \
+  "$FIG" "if n == 0 { return (0, 1, 0) }" "if n == 0 { return (0, 0, 0) }"
 mutate "an unobserved genesis claiming a relaunch (not knowing read as knowing)" \
   "$ROOM" "if wasReset == true { return finish(.relaunched) }" \
   "if wasReset != false { return finish(.relaunched) }"
@@ -444,12 +534,89 @@ grep -qF 'Watching only — nothing is signed and nothing is sent' \
   "Casberi/Casberi/Model/BridgeCatalog.swift" \
   || fail "the catalog no longer says this seat only watches, but nothing here signs — restore the bullet or land the write with it"
 
+# THE DEMO FIXTURE'S HEX VALUES ARE PINNED (§593). Two of the four nullifiers
+# in `seedDemo` were FABRICATED and shipped — the count was measured by running
+# the walk, the values were then written from a different block's census, and
+# the comment above them claimed the measurement while standing over invented
+# bytes. Nothing here could see it: a fixture that LOOKS like a 32-byte key is
+# indistinguishable from one that is, so eye review cannot catch it and the
+# harness pinned only the named channels and the width rule.
+#
+# These four keys, two hashes and two roots were read back off
+# `eth_getTransactionByHash` against rpc1.privacy.ethrex.xyz. This guard cannot
+# prove a value is real — nothing offline can — but it fails the build the
+# moment one CHANGES, which forces the next edit to be a deliberate one that
+# says where the new value came from.
+for v in \
+  '0cca26d343c75c5d092b41abc4c7372c0105537e6f5209967fee5bb6b6ca390c' \
+  '277a116036d2c29207c09c18015780c8e161402d2017d07012147a1d4b7240fe' \
+  '1871055c1947afa152d04f00757f94f890efa87190de3d8e481d7c22b6b381e1' \
+  '1a3f0e61700a2fc8652d33787331f955bff2b1a500426b4dfd83481f5c645ffe' \
+  '0xfa32623718a4ac87bca85daa2f62af32522f4e2f763adec8ac2fbde5aeb5cf0f' \
+  '0xeda9b1c8231c7ba375c831d63655acc813cf8c7d3ac2b095b23e3011d7b2999a' \
+  '448132919986930440'; do
+  grep -qF -- "$v" "$work/bridge.bare" \
+    || fail "a measured demo fixture value changed or vanished ($v) — every hex value here was read back off the chain, and two were once fabricated; re-measure and say so rather than editing in place"
+done
+# And the two that were fabricated must never come back.
+for v in '055b6c2720e71fbe4d5fa4ad130f4f7b68879ee7d062d0e21af30c5e8ce5839c' \
+         '08cda6582e3ed667ed4b907d27093659da30882f1d1437ee86125664ecf6f9ce'; do
+  grep -qF -- "$v" "$work/bridge.bare" \
+    && fail "a FABRICATED nullifier is back in the demo fixture ($v) — it is on neither of this address's transactions"
+done
+
+# THE UNBOUNDED RANGE. A sibling ethrex node already refuses `fromBlock: 0x0`
+# with `query exceeds max block range 100000`, and walkCap cannot help because
+# it is applied after the response arrives — a refused query returns nil and
+# four scopes go silently absent.
+grep -qF 'fromBlock": "0x0"' "$work/bridge.bare" \
+  && fail "the walk asks for the whole chain in one eth_getLogs again — a sibling node refuses exactly that"
+grep -qF 'walkChunk' "$work/bridge.bare" \
+  || fail "the walk is no longer chunked"
+# THE ORDERING. `reverse()` assumed eth_getLogs answers oldest-first, which no
+# spec guarantees; a newest-first node would keep the genesis fixtures and
+# report a busy address as quiet — the exact failure the code claimed to prevent.
+grep -qF 'hashes.reverse()' "$work/bridge.bare" \
+  && fail "the walk orders by reversing the node's own order again — sort on blockNumber/logIndex instead"
+
+# THE UNWATCHED ROOM (§593). The seat is in `LiveRoomSources`, which tells the
+# feed not to draw the corpus-shaped empty state — so a nil head is a BLACK
+# SCREEN, and a deep link reaches this room whether or not anything is watched.
+# Reproduced on a simulator when a permission sheet swallowed the tap that
+# would have watched an address.
+grep -qE 'static func compose\(scope: String\? = nil\) -> PrivacyDevnetRoom\.Head \{' \
+  "Casberi/Casberi/Model/PrivacyDevnetRoomSource.swift" \
+  || fail "PrivacyDevnetRoomSource.compose is Optional again — a nil head on a LiveRoomSources seat is a BLACK SCREEN, not an empty room"
+grep -qF 'case unwatched' "$work/room.bare" \
+  || fail "the unwatched lede is gone — the room has nothing to say before anything is watched, which renders as nothing at all"
+
+# THE RELAUNCHED DEMO (§593). `DemoSeedAll` runs on demo ENTRY only, this state
+# is in-memory, and DemoMode is sticky across launches — so a relaunch inside a
+# demo leaves the fixture gone AND the live read refused, and the room says
+# "Reading the chain…" forever over a chain it is not allowed to read. Reported
+# from a device. `HegotaLiveState.refreshIfStale` had already solved it.
+grep -qE 'if DemoMode\.isActive \{[^}]*seedDemo' "$work/bridge.bare" \
+  || grep -qF 'if accounts.isEmpty { PrivacyDevnetLiveState.seedDemo() }' "$work/bridge.bare" \
+  || fail "refreshIfStale no longer re-installs the demo fixture — a relaunched demo would sit on 'Reading the chain…' over a chain it is not allowed to read"
+
+# THE OBSERVATION MECHANISM (§593). This shipped as `ObservableObject` +
+# `@Published`, and the room reads it through STATIC functions — where a
+# `@Published` read establishes no dependency at all. The demo fixture installs
+# asynchronously, SwiftUI never learns, and the room sits on "Reading the
+# chain…" forever over a fixture already in memory. It passed my own testing
+# because the install happened to land before the first compose, which is what
+# makes it a race rather than a miss. Both sibling seats use `@Observable`.
+grep -qF '@Observable' "$work/bridge.bare" \
+  || fail "PrivacyDevnetLiveState is not @Observable — the room reads it from static functions, so ObservableObject would leave it on 'Reading the chain…' whenever the install loses the race"
+grep -qF 'ObservableObject' "$work/bridge.bare" \
+  && fail "PrivacyDevnetLiveState is an ObservableObject again — a @Published read from a static context tracks nothing"
+
 # THE WALK'S BOUNDS (§593). Its stated ceiling is that a transaction emitting no
 # log is invisible, and its cost is bounded three ways. Each of these failing is
 # invisible from outside: a room that is merely slow, or one that reports a busy
 # address as quiet.
-grep -qF 'hashes.reverse()' "$work/bridge.bare" \
-  || fail "the walk no longer takes the NEWEST transactions first — on a chain that outgrows walkCap that reports a busy address as quiet"
+grep -qE 'value.block > .1.value.block' "$work/bridge.bare" \
+  || fail "the walk no longer orders newest-first — on a chain that outgrows walkCap that reports a busy address as quiet"
 grep -qF 'prefix(Self.walkCap)' "$work/bridge.bare" \
   || fail "the walk is unbounded — its cost would grow with the chain until a room open costs minutes"
 grep -qF 'refreshIfStale' "$work/bridge.bare" \
@@ -474,4 +641,4 @@ grep -q "privacy-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
 print "  ok   drift guards: no price, no notification, slots not blocks, no coins scope"
-print "✓ privacy: 7 scopes, the 8272 window, the room head and its black-screen rule, 18 mutations, 7 drift guards"
+print "✓ privacy: 7 scopes, the 8272 window, the room head, the figures, 25 mutations, 7 drift guards"

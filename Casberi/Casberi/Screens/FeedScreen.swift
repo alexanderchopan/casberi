@@ -4565,8 +4565,12 @@ case .vibenetSend(let account):
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                       bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
             .task { await FramesLiveState.shared.refresh() }
-        } else if source == PrivacyDevnetIdentity.source,
-                  let head = PrivacyDevnetRoomSource.compose(scope: chrome.privacyDevnetScope) {
+        } else if source == PrivacyDevnetIdentity.source {
+            // **NO `if let`.** `compose` is non-Optional precisely so this arm
+            // cannot be skipped: the seat is in `LiveRoomSources`, so falling
+            // through here draws NOTHING rather than an empty state — a black
+            // screen, reproduced on a simulator when nothing was watched yet.
+            let head = PrivacyDevnetRoomSource.compose(scope: chrome.privacyDevnetScope)
             // A ROOM WITH LIVE CONTENT AND NO ROWS — the same structural gap
             // Hegotá's branch below documents. This seat lands no `Thing`
             // EVER, so without this arm both arms above fall through and the

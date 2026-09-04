@@ -1563,6 +1563,14 @@ harness "Hegota scopes and coins" "hegota" "scripts/hegota-selftest.sh" "the heg
 # thousands on one that has (frames runs 5,223 slots ahead of its own height).
 harness "Privacy scopes and the 8272 window" "privacy" "scripts/privacy-selftest.sh" "the privacy self-test failed — run scripts/privacy-selftest.sh"
 
+# The ethrex Privacy type-0x6 envelope (prd §593a). Its own harness rather than
+# a block in the one above, because the failure class is different in kind: a
+# wrong field order, a flattened fee triple or a mis-applied elision rule
+# produces a signature that is well-formed, recovers to a real address, and
+# AUTHORISES A DIFFERENT TRANSACTION. Nothing else here can see that — the build
+# is happy, and this chain is unreachable from a harness and from CI.
+harness "Privacy transaction envelope" "privacy-tx" "scripts/privacy-tx-selftest.sh" "the privacy transaction self-test failed — run scripts/privacy-tx-selftest.sh"
+
 # Pure-logic self-test for the Stripe and PostHog room heads (prd §298). Neither
 # bridge has ever run against a live account from this host, and every failure
 # here is a silent wrong answer: a dispute due tomorrow placed at the far end of

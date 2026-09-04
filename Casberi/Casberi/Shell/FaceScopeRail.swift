@@ -741,11 +741,26 @@ enum PrivacyDevnetScopeRail {
         accounts.map { account in
             FaceScopeRail.Item(
                 id: account.address,
-                caption: PrivacyDevnetWatch.shared.name(for: account.address)
+                // **A REAL name wins; the AUTO one does not.** `add()` seeds the
+                // book with `shortAddress` when there is no entry, so a plain
+                // `name(for:) ?? balance` chain never reaches the balance —
+                // the caption was `…f980` six points under a face already
+                // saying `…f980`, which is the exact "rail costing a row and
+                // carrying nothing" that `FramesScopeRail` warns about. Seen
+                // on a simulator against a live watch.
+                caption: Self.chosenName(account.address)
                     ?? Self.eth(account)
                     ?? WalletStore.shortAddress(account.address),
                 face: .wallet(address: account.address))
         }
+    }
+
+    /// The name only if somebody CHOSE it — `add()` seeds the auto short form,
+    /// and echoing that under a face showing the same thing says nothing.
+    private static func chosenName(_ address: String) -> String? {
+        guard let name = PrivacyDevnetWatch.shared.name(for: address),
+              name != WalletStore.shortAddress(address) else { return nil }
+        return name
     }
 
     /// A balance as test ETH, to four places, and NEVER as money — this chain's
