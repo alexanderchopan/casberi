@@ -35,6 +35,22 @@ enum RLP {
         return Data(out)
     }
 
+    /// The same rule for a value too WIDE for `UInt64` — a `U256` on the wire.
+    ///
+    /// Added for ethrex Privacy's `nonce_keys`, which the node types
+    /// `Vec<U256>`: a real key beginning `0x0c…` rides the wire as 31 bytes,
+    /// and writing the padded 32 changes the hash. Shared here rather than
+    /// copied into that encoder, because two spellings of the minimal-integer
+    /// rule is exactly how one of them drifts.
+    ///
+    /// Zero is EMPTY, as above — a field of zero bytes and a field of one zero
+    /// byte are different encodings and only the first is canonical.
+    static func minimal(_ value: Data) -> Data {
+        var out = value
+        while out.first == 0 { out.removeFirst() }
+        return out
+    }
+
     static func encode(_ item: Item) -> Data {
         switch item {
         case .bytes(let d):

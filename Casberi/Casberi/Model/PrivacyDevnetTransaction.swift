@@ -71,6 +71,7 @@ enum PrivacyDevnetTransaction {
         var target: Data
         var gasLimit: UInt64
         var stateLimit: UInt64
+        /// Big-endian, and canonically MINIMAL when encoded — see `item`.
         var value: Data
         var data: Data
 
@@ -80,7 +81,12 @@ enum PrivacyDevnetTransaction {
                    .bytes(target),
                    .list([.bytes(RLP.quantity(gasLimit)),
                           .bytes(RLP.quantity(stateLimit))]),
-                   .bytes(value),
+                   // **A QUANTITY**, so a value of zero is EMPTY and not one
+                   // zero byte. `0x0` and `0x00` are different encodings and
+                   // only the first is canonical — the encoder failed both
+                   // fixtures on exactly this before it was caught by diffing
+                   // against a known-good encoding rather than by reading.
+                   .bytes(RLP.minimal(value)),
                    .bytes(data)])
         }
     }
@@ -146,7 +152,13 @@ enum PrivacyDevnetTransaction {
     /// is how a transaction gets signed in one shape and broadcast in another.
     static func body(_ f: Fields, elided: Bool) -> [RLP.Item] {
         [.bytes(RLP.quantity(f.chainID)),
-         .list(f.nonceKeys.map { .bytes($0) }),
+         // **QUANTITIES, not fixed-width bytes.** The node types these
+         // `Vec<U256>`, so RLP's minimal-integer rule applies and a leading
+         // zero is STRIPPED — a real key beginning `0x0c…` rides the wire as 31
+         // bytes. Writing the padded 32 changes the hash, which is how the
+         // first cut of this encoder failed both fixtures while a Python
+         // prototype that happened to strip them passed.
+         .list(f.nonceKeys.map { .bytes(RLP.minimal($0)) }),
          .bytes(RLP.quantity(f.nonce)),
          .bytes(f.sender),
          .list(f.frames.map(\.item)),
