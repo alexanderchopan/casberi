@@ -150,7 +150,7 @@ DEMO_FILES = {
     "ExchangeBridge": CASBERI / "Model/ExchangeBridge.swift",
     "HegotaBridge": CASBERI / "Model/HegotaBridge.swift",
     "FramesBridge": CASBERI / "Model/FramesBridge.swift",
-    "PrivacyBridge": CASBERI / "Model/PrivacyBridge.swift",
+    "PrivacyDevnetBridge": CASBERI / "Model/PrivacyDevnetBridge.swift",
     "WalletPortfolio": CASBERI / "Model/WalletPortfolio.swift",
 }
 
@@ -535,7 +535,7 @@ KNOWN_ROWLESS_SEAT = {
     # Ethrex Privacy (prd §593) — rowless for exactly the same reason, and
     # the same ruling rather than a third one: its readings are live chain
     # state and a devnet test address has no news, so it lands no `Thing` at
-    # all. Its whole furnishing is the fixture `PrivacyLiveState.seedDemo`
+    # all. Its whole furnishing is the fixture `PrivacyDevnetLiveState.seedDemo`
     # installs, which check M holds it to.
     "Ethrex Privacy",
 }
@@ -570,10 +570,10 @@ ROWLESS_SEAT_FIXTURE = {
     # connected. `installDemo` is the only door that writes accounts without a
     # read, so naming it pins the whole chain.
     "Ethrex Hegotá": ("HegotaBridge", r'HegotaLiveState\.shared\.installDemo\('),
-    # Same rule, same reason. Matched in `PrivacyBridge` rather than in
+    # Same rule, same reason. Matched in `PrivacyDevnetBridge` rather than in
     # `DemoSeedAll`, because the call there is only the trigger and would keep
     # passing over a `seedDemo` that had been emptied.
-    "Ethrex Privacy": ("PrivacyBridge", r'PrivacyLiveState\.shared\.installDemo\('),
+    "Ethrex Privacy": ("PrivacyDevnetBridge", r'PrivacyDevnetLiveState\.shared\.installDemo\('),
     # Same rule, same reason: a fixture nothing installs furnishes nothing.
     # `installDemo` is the only door that writes accounts without a read, so
     # naming it pins the whole chain — and it is matched in `FramesBridge`

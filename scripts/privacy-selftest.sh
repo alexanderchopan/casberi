@@ -2,8 +2,8 @@
 # Casberi Ethrex Privacy self-test — the two Foundation-only files behind the
 # fourth devnet seat (2026-09-04, prd §593):
 #
-#   Casberi/Casberi/Model/PrivacySection.swift  — the seven scopes
-#   Casberi/Casberi/Model/PrivacyRoots.swift    — the EIP-8272 window
+#   Casberi/Casberi/Model/PrivacyDevnetSection.swift  — the seven scopes
+#   Casberi/Casberi/Model/PrivacyDevnetRoots.swift    — the EIP-8272 window
 #
 # Both are Foundation-only BY DESIGN and compiled WHOLE AND UNMODIFIED here.
 #
@@ -27,8 +27,8 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 fail() { print -u2 "✗ $1"; exit 1 }
 
-SECTION="Casberi/Casberi/Model/PrivacySection.swift"
-ROOTS="Casberi/Casberi/Model/PrivacyRoots.swift"
+SECTION="Casberi/Casberi/Model/PrivacyDevnetSection.swift"
+ROOTS="Casberi/Casberi/Model/PrivacyDevnetRoots.swift"
 VERIFY="scripts/verify.sh"
 for f in "$SECTION" "$ROOTS"; do [[ -f "$f" ]] || fail "$f not found"; done
 
@@ -48,117 +48,117 @@ func d(_ hex: String) -> Data {
     return out
 }
 
-// ─────────────────────────── PrivacySection ───────────────────────────
+// ─────────────────────────── PrivacyDevnetSection ───────────────────────────
 
-check(PrivacySection.order.count == PrivacySection.allCases.count,
+check(PrivacyDevnetSection.order.count == PrivacyDevnetSection.allCases.count,
       "order lists every case — a case missing from order can never be shown")
-check(PrivacySection.order.first == .home, "home leads")
-check(PrivacySection.order.last == .sponsors, "sponsors is last, the rarest scope")
+check(PrivacyDevnetSection.order.first == .home, "home leads")
+check(PrivacyDevnetSection.order.last == .sponsors, "sponsors is last, the rarest scope")
 
 // THE ABSENT SCOPE. `coins` must not exist: the UTXO vault has no code on 8141,
 // so the chip could never light. Asserted on the raw values because a `case
 // coins` added later would compile fine and draw a permanently empty scope.
-check(!PrivacySection.allCases.contains { $0.rawValue == "coins" },
+check(!PrivacyDevnetSection.allCases.contains { $0.rawValue == "coins" },
       "no `coins` scope — the UTXO vault has no code on this chain")
-check(PrivacySection.allCases.contains { $0.rawValue == "nullifiers" },
+check(PrivacyDevnetSection.allCases.contains { $0.rawValue == "nullifiers" },
       "`nullifiers` exists, and is not spelled `nonces` as on Hegota")
-check(!PrivacySection.allCases.contains { $0.rawValue == "nonces" },
+check(!PrivacyDevnetSection.allCases.contains { $0.rawValue == "nonces" },
       "not `nonces` — here the keyed nonce is a nullifier (§593)")
-check(PrivacySection.allCases.contains { $0.rawValue == "roots" },
+check(PrivacyDevnetSection.allCases.contains { $0.rawValue == "roots" },
       "`roots` exists — the only chain in the app with EIP-8272 deployed")
 
 // THE TAIL RULE: no unconditional scope may sit after a conditional one, so the
 // strip's head never reflows as an address gains content.
-let firstConditional = PrivacySection.order.firstIndex { $0.isConditional }!
-let lastUnconditional = PrivacySection.order.lastIndex { !$0.isConditional }!
+let firstConditional = PrivacyDevnetSection.order.firstIndex { $0.isConditional }!
+let lastUnconditional = PrivacyDevnetSection.order.lastIndex { !$0.isConditional }!
 check(lastUnconditional < firstConditional,
       "every unconditional scope precedes every conditional one")
-check(PrivacySection.order[3] == .frames, "the conditional tail opens on frames")
+check(PrivacyDevnetSection.order[3] == .frames, "the conditional tail opens on frames")
 
 // THE PAIRING: nullifiers and roots are two halves of one mechanism and must be
 // adjacent, in that order — apart they read as two unrelated pieces of jargon.
-let ni = PrivacySection.order.firstIndex(of: .nullifiers)!
-let ri = PrivacySection.order.firstIndex(of: .roots)!
+let ni = PrivacyDevnetSection.order.firstIndex(of: .nullifiers)!
+let ri = PrivacyDevnetSection.order.firstIndex(of: .roots)!
 check(ri == ni + 1, "roots sits immediately after nullifiers")
 
-for s in PrivacySection.allCases {
+for s in PrivacyDevnetSection.allCases {
     check(!s.label.isEmpty, "\(s.rawValue) has a label")
     check(!s.summary.isEmpty, "\(s.rawValue) has an accessibility summary")
     check(s.summary != s.label, "\(s.rawValue)'s summary says more than its label")
 }
-check(PrivacySection.home.isAlwaysPresent && PrivacySection.activity.isAlwaysPresent
-        && PrivacySection.accounts.isAlwaysPresent,
+check(PrivacyDevnetSection.home.isAlwaysPresent && PrivacyDevnetSection.activity.isAlwaysPresent
+        && PrivacyDevnetSection.accounts.isAlwaysPresent,
       "the three unconditional scopes are always present")
-check(!PrivacySection.frames.isAlwaysPresent, "frames is conditional")
+check(!PrivacyDevnetSection.frames.isAlwaysPresent, "frames is conditional")
 
 // present(): the three constants survive an address with nothing else at all.
-let bare = PrivacySection.present(frames: false, nullifiers: false, roots: false, sponsors: false)
+let bare = PrivacyDevnetSection.present(frames: false, nullifiers: false, roots: false, sponsors: false)
 check(bare == [.home, .activity, .accounts], "a bare address keeps exactly the three constants")
-let full = PrivacySection.present(frames: true, nullifiers: true, roots: true, sponsors: true)
-check(full == PrivacySection.order, "an address with everything shows every scope, in order")
-let some = PrivacySection.present(frames: true, nullifiers: false, roots: true, sponsors: false)
+let full = PrivacyDevnetSection.present(frames: true, nullifiers: true, roots: true, sponsors: true)
+check(full == PrivacyDevnetSection.order, "an address with everything shows every scope, in order")
+let some = PrivacyDevnetSection.present(frames: true, nullifiers: false, roots: true, sponsors: false)
 check(some == [.home, .activity, .accounts, .frames, .roots],
       "present() drops exactly the absent scopes and keeps order")
 
 // resolve(): a remembered scope whose content has gone falls back to home,
 // never to "the first present scope".
-check(PrivacySection.resolve(.roots, present: full) == .roots, "a present scope resolves to itself")
-check(PrivacySection.resolve(.roots, present: bare) == .home, "an absent scope falls back to home")
-check(PrivacySection.resolve(nil, present: full) == .home, "no memory opens on home")
+check(PrivacyDevnetSection.resolve(.roots, present: full) == .roots, "a present scope resolves to itself")
+check(PrivacyDevnetSection.resolve(.roots, present: bare) == .home, "an absent scope falls back to home")
+check(PrivacyDevnetSection.resolve(nil, present: full) == .home, "no memory opens on home")
 
 // shows(): one chip is a label, not a control.
-check(!PrivacySection.shows(present: [.home]), "one scope draws no strip")
-check(PrivacySection.shows(present: bare), "three scopes draw a strip")
+check(!PrivacyDevnetSection.shows(present: [.home]), "one scope draws no strip")
+check(PrivacyDevnetSection.shows(present: bare), "three scopes draw a strip")
 
 // No dot can ever light — including on roots, which has a real clock.
-check(PrivacySection.attention().isEmpty, "no scope ever wears a dot")
+check(PrivacyDevnetSection.attention().isEmpty, "no scope ever wears a dot")
 
-// ──────────────────────────── PrivacyRoots ────────────────────────────
+// ──────────────────────────── PrivacyDevnetRoots ────────────────────────────
 
-check(PrivacyRoots.windowSlots == 8192, "the ring is 8192 slots — the predeploy's own 0x1fff mask")
+check(PrivacyDevnetRoots.windowSlots == 8192, "the ring is 8192 slots — the predeploy's own 0x1fff mask")
 
 let src = d("a0dfea37afb843c1fc18cfa21205766b96e6f7c7d7993ab5d5e041e0b1964f54")
 let src2 = d("b08f15750c491f4cfd65215c11a33b3962903a8896fc586bbd7c697851c26e20")
 let root = d("2dd32b6609c5a8e80505ac44c5cb8e9f712115c1f63f59b18be08fc9b9250bf4")
 let root2 = d("1ea261e94b9f2b02699e293bd4ad36b4c39cf23975b84c4cc39794bb577df422")
 // The real reference off block 13347.
-let real = PrivacyRoots.Reference(sourceID: src, slot: 0x3431, root: root)
+let real = PrivacyDevnetRoots.Reference(sourceID: src, slot: 0x3431, root: root)
 check(real.sourceID.count == 32, "sourceId is 32 bytes — the width Hegota's UInt64 cannot hold")
 
 // THE BOUNDARY. Three slots decide it and each renders identically from outside.
 let base: UInt64 = 100_000
-let r = PrivacyRoots.Reference(sourceID: src, slot: base, root: root)
-check(PrivacyRoots.standing(of: r, headSlot: base) == .live(remaining: 8192),
+let r = PrivacyDevnetRoots.Reference(sourceID: src, slot: base, root: root)
+check(PrivacyDevnetRoots.standing(of: r, headSlot: base) == .live(remaining: 8192),
       "a root registered this slot has the whole window left")
-check(PrivacyRoots.standing(of: r, headSlot: base + 8191) == .live(remaining: 1),
+check(PrivacyDevnetRoots.standing(of: r, headSlot: base + 8191) == .live(remaining: 1),
       "the last acceptable slot still reads live, with one left")
-check(PrivacyRoots.standing(of: r, headSlot: base + 8192) == .aged(by: 1),
+check(PrivacyDevnetRoots.standing(of: r, headSlot: base + 8192) == .aged(by: 1),
       "one slot past the window is aged by exactly one")
-check(PrivacyRoots.standing(of: r, headSlot: base + 8193) == .aged(by: 2),
+check(PrivacyDevnetRoots.standing(of: r, headSlot: base + 8193) == .aged(by: 2),
       "aged-by counts from the first aged slot, not from registration")
 
 // A head BEHIND the reference is not freshness, it is a stale head.
-check(PrivacyRoots.standing(of: r, headSlot: base - 1) == .ahead,
+check(PrivacyDevnetRoots.standing(of: r, headSlot: base - 1) == .ahead,
       "a reference ahead of the head reports .ahead, never live")
-check(PrivacyRoots.remaining(r, headSlot: base - 1) == nil, "an ahead reference has no remaining")
-check(PrivacyRoots.remaining(r, headSlot: base + 8192) == nil, "an aged reference has no remaining")
-check(PrivacyRoots.remaining(r, headSlot: base + 100) == 8092, "remaining counts down from the window")
+check(PrivacyDevnetRoots.remaining(r, headSlot: base - 1) == nil, "an ahead reference has no remaining")
+check(PrivacyDevnetRoots.remaining(r, headSlot: base + 8192) == nil, "an aged reference has no remaining")
+check(PrivacyDevnetRoots.remaining(r, headSlot: base + 100) == 8092, "remaining counts down from the window")
 
 // fraction(): nil rather than 0 for an aged root — "empty" and "nothing to say"
 // are different claims and the second must not be drawn as the first.
-check(PrivacyRoots.fraction(r, headSlot: base) == 1.0, "a fresh root reads full")
-check(PrivacyRoots.fraction(r, headSlot: base + 8192) == nil, "an aged root has NO fraction, not zero")
-check(PrivacyRoots.fraction(r, headSlot: base - 1) == nil, "an ahead root has no fraction")
+check(PrivacyDevnetRoots.fraction(r, headSlot: base) == 1.0, "a fresh root reads full")
+check(PrivacyDevnetRoots.fraction(r, headSlot: base + 8192) == nil, "an aged root has NO fraction, not zero")
+check(PrivacyDevnetRoots.fraction(r, headSlot: base - 1) == nil, "an ahead root has no fraction")
 
-check(PrivacyRoots.duration(slots: 8192) == 98_304, "the whole window is 98,304s ≈ 27.3h at 12s slots")
+check(PrivacyDevnetRoots.duration(slots: 8192) == 98_304, "the whole window is 98,304s ≈ 27.3h at 12s slots")
 
 // bySource(): grouping, and a TOTAL order so the card cannot reshuffle.
 let refs = [
-    PrivacyRoots.Reference(sourceID: src, slot: 0x3431, root: root),
-    PrivacyRoots.Reference(sourceID: src, slot: 0x3436, root: root2),
-    PrivacyRoots.Reference(sourceID: src2, slot: 0x0af1, root: root),
+    PrivacyDevnetRoots.Reference(sourceID: src, slot: 0x3431, root: root),
+    PrivacyDevnetRoots.Reference(sourceID: src, slot: 0x3436, root: root2),
+    PrivacyDevnetRoots.Reference(sourceID: src2, slot: 0x0af1, root: root),
 ]
-let grouped = PrivacyRoots.bySource(refs)
+let grouped = PrivacyDevnetRoots.bySource(refs)
 check(grouped.count == 2, "two sources group into two rows")
 check(grouped[0].source == src, "the newer source leads")
 check(grouped[0].newest.slot == 0x3436, "a group reports its NEWEST reference")
@@ -166,17 +166,17 @@ check(grouped[0].count == 2, "a group counts every reference it holds")
 check(grouped[1].source == src2, "the older source follows")
 // Determinism over identical input, run twice — the failure this catches is a
 // card that reorders between opens, which reads as broken rather than as wrong.
-check(PrivacyRoots.bySource(refs).map(\.source) == PrivacyRoots.bySource(refs).map(\.source),
+check(PrivacyDevnetRoots.bySource(refs).map(\.source) == PrivacyDevnetRoots.bySource(refs).map(\.source),
       "bySource is deterministic")
 // A TIE on slot must still order totally.
-let tieA = PrivacyRoots.Reference(sourceID: src, slot: 50, root: root)
-let tieB = PrivacyRoots.Reference(sourceID: src2, slot: 50, root: root2)
-let tied = PrivacyRoots.bySource([tieA, tieB])
-check(tied.count == 2 && tied.map(\.source) == PrivacyRoots.bySource([tieB, tieA]).map(\.source),
+let tieA = PrivacyDevnetRoots.Reference(sourceID: src, slot: 50, root: root)
+let tieB = PrivacyDevnetRoots.Reference(sourceID: src2, slot: 50, root: root2)
+let tied = PrivacyDevnetRoots.bySource([tieA, tieB])
+check(tied.count == 2 && tied.map(\.source) == PrivacyDevnetRoots.bySource([tieB, tieA]).map(\.source),
       "a slot tie orders the same regardless of input order")
 
-check(!PrivacyRoots.present([]), "no references means no roots scope")
-check(PrivacyRoots.present(refs), "references mean the scope draws")
+check(!PrivacyDevnetRoots.present([]), "no references means no roots scope")
+check(PrivacyDevnetRoots.present(refs), "references mean the scope draws")
 
 if failures == 0 { print("  ok   \(0) failures") } else { exit(1) }
 SWIFT
@@ -193,7 +193,7 @@ print "  ok   assertions"
 mutate() {
   local name="$1" file="$2" from="$3" to="$4"
   local dir="$work/m"; rm -rf "$dir"; mkdir -p "$dir"
-  cp "$SECTION" "$dir/PrivacySection.swift"; cp "$ROOTS" "$dir/PrivacyRoots.swift"
+  cp "$SECTION" "$dir/PrivacyDevnetSection.swift"; cp "$ROOTS" "$dir/PrivacyDevnetRoots.swift"
   local target="$dir/$(basename $file)"
   grep -qF -- "$from" "$target" || fail "mutation '$name' matches nothing — it is stale and tests the shipped code"
   python3 - "$target" "$from" "$to" <<'PY'
@@ -202,7 +202,7 @@ p, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
 s = io.open(p, encoding="utf-8").read()
 io.open(p, "w", encoding="utf-8").write(s.replace(a, b, 1))
 PY
-  if xcrun swiftc -Onone -o "$dir/pv" "$dir/PrivacySection.swift" "$dir/PrivacyRoots.swift" \
+  if xcrun swiftc -Onone -o "$dir/pv" "$dir/PrivacyDevnetSection.swift" "$dir/PrivacyDevnetRoots.swift" \
         "$work/main.swift" 2>/dev/null && "$dir/pv" >/dev/null 2>&1; then
     fail "mutation SURVIVED: $name"
   fi
@@ -233,8 +233,8 @@ mutate "a conditional scope promoted into the stable head" \
 mutate "roots separated from nullifiers" \
   "$SECTION" ".nullifiers, .roots, .sponsors]" ".roots, .nullifiers, .sponsors]"
 mutate "a chip allowed to wear a dot" \
-  "$SECTION" "static func attention() -> Set<PrivacySection> { [] }" \
-  "static func attention() -> Set<PrivacySection> { [.roots] }"
+  "$SECTION" "static func attention() -> Set<PrivacyDevnetSection> { [] }" \
+  "static func attention() -> Set<PrivacyDevnetSection> { [.roots] }"
 
 # ── drift guards ───────────────────────────────────────────────────────
 # The rules that live in ANOTHER file, which the compiled sources cannot prove.
@@ -272,18 +272,18 @@ strip_comments "$SECTION" > "$work/section.bare"
 # NO PRICE, EVER. Test ETH has no market; a figure here would be §83 in the room
 # whose whole subject is what can and cannot be claimed.
 for w in 'priceValue' 'priceCurrency' 'usdValue' 'formatted(currency'; do
-  grep -qF -- "$w" "$work/roots.bare" && fail "PrivacyRoots names $w — test ETH has no price"
+  grep -qF -- "$w" "$work/roots.bare" && fail "PrivacyDevnetRoots names $w — test ETH has no price"
 done
 
 # NO NOTIFICATION. §593's ruling: the root window is a deadline nobody can act
 # on, so it must never reach the notification sweep.
 grep -qE "Notif|NotifyKind|NotifySweep" "$work/roots.bare" \
-  && fail "PrivacyRoots reaches the notification sweep — the window is a deadline nobody can act on"
+  && fail "PrivacyDevnetRoots reaches the notification sweep — the window is a deadline nobody can act on"
 
 # THE SLOT/BLOCK RULE. `standing` must compare slots. A block-number parameter
 # creeping in is silently correct on a chain that never missed a slot.
 grep -qE "blockNumber|blockHeight" "$work/roots.bare" \
-  && fail "PrivacyRoots names a block number — the window is measured in SLOTS (frames runs 5,223 ahead)"
+  && fail "PrivacyDevnetRoots names a block number — the window is measured in SLOTS (frames runs 5,223 ahead)"
 
 # The chain's own numbers must stay where a reader can find them.
 grep -qF "8192" "$work/roots.bare" || fail "the 8192-slot window is no longer stated"
@@ -294,13 +294,13 @@ grep -qF "8192" "$work/roots.bare" || fail "the 8192-slot window is no longer st
 # other than what the screen said, and no build or sweep can see that. The
 # catalog bullet says "nothing is signed and nothing is sent", so this guard and
 # that copy must be retired in the SAME commit that lands sending.
-BRIDGE="Casberi/Casberi/Model/PrivacyBridge.swift"
+BRIDGE="Casberi/Casberi/Model/PrivacyDevnetBridge.swift"
 [[ -f "$BRIDGE" ]] || fail "$BRIDGE not found"
 strip_comments "$BRIDGE" > "$work/bridge.bare"
 for verb in 'eth_sendRawTransaction' 'eth_sendTransaction' 'eth_sign' 'personal_sign' \
             'httpMethod' 'postJSON' 'PrivacySend' 'PrivacyKey' 'SecItemAdd'; do
   grep -qF -- "$verb" "$work/bridge.bare" \
-    && fail "PrivacyBridge names $verb — the seat is watch-only until the envelope is reproduced (§593a); retire this guard and the catalog bullet in the same commit"
+    && fail "PrivacyDevnetBridge names $verb — the seat is watch-only until the envelope is reproduced (§593a); retire this guard and the catalog bullet in the same commit"
 done
 # And the copy must keep SAYING it, or the guard protects a promise nobody made.
 grep -qF 'Watching only — nothing is signed and nothing is sent' \

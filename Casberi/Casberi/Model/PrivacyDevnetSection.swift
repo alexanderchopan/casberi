@@ -31,7 +31,7 @@ import Foundation
 ///
 /// **`roots` has no counterpart anywhere in this app.** EIP-8272's predeploy
 /// `0x…8272` carries 144 bytes here and NO CODE on Hegotá, so this is the only
-/// chain where the reading exists at all. See `PrivacyRoots` for the window
+/// chain where the reading exists at all. See `PrivacyDevnetRoots` for the window
 /// arithmetic and for why the number it reports is a deadline rather than a
 /// count.
 ///
@@ -39,7 +39,7 @@ import Foundation
 /// and unmodified. Every failure it catches renders as a perfectly ordinary
 /// room — a scope that never appears, a remembered scope resolving to one
 /// nobody picked, or a strip drawn over a single chip.
-enum PrivacySection: String, CaseIterable, Identifiable, Sendable {
+enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
     case home
     case activity
     case accounts
@@ -66,7 +66,7 @@ enum PrivacySection: String, CaseIterable, Identifiable, Sendable {
     /// against — and a reader who meets them apart meets two unrelated pieces of
     /// jargon. Nullifiers leads because it is the half that concerns YOUR
     /// transaction; roots is the half that concerns the chain's state.
-    static let order: [PrivacySection] = [.home, .activity, .accounts, .frames,
+    static let order: [PrivacyDevnetSection] = [.home, .activity, .accounts, .frames,
                                           .nullifiers, .roots, .sponsors]
 
     /// Everything past `accounts` is conditional on the address actually having
@@ -130,7 +130,7 @@ enum PrivacySection: String, CaseIterable, Identifiable, Sendable {
     /// case does not exist, so a future caller cannot pass true and light a
     /// chip over a vault that has no code.
     static func present(frames: Bool, nullifiers: Bool, roots: Bool,
-                        sponsors: Bool) -> [PrivacySection] {
+                        sponsors: Bool) -> [PrivacyDevnetSection] {
         order.filter { section in
             switch section {
             case .home:       return true
@@ -153,20 +153,20 @@ enum PrivacySection: String, CaseIterable, Identifiable, Sendable {
     /// expiry is a fact about a proof somebody already made and landed: nothing
     /// is lost when the window closes, nothing can be done before it does, and
     /// a dot that lights on a deadline you cannot act on is chrome wearing
-    /// urgency. See `PrivacyRoots.expiry` — it reports, it never alarms.
-    static func attention() -> Set<PrivacySection> { [] }
+    /// urgency. See `PrivacyDevnetRoots.expiry` — it reports, it never alarms.
+    static func attention() -> Set<PrivacyDevnetSection> { [] }
 
     /// Resolve the scope actually shown from the one the person last picked.
     ///
     /// Falls back to `.home`, never to "the first present scope" — an
     /// unreachable branch that quietly picks `roots` is how a room starts
     /// opening somewhere nobody chose.
-    static func resolve(_ wanted: PrivacySection?, present: [PrivacySection]) -> PrivacySection {
+    static func resolve(_ wanted: PrivacyDevnetSection?, present: [PrivacyDevnetSection]) -> PrivacyDevnetSection {
         guard let wanted, present.contains(wanted) else { return .home }
         return wanted
     }
 
     /// Whether the strip is worth drawing at all. One scope is a label, not a
     /// control — §83's dead-control ban.
-    static func shows(present: [PrivacySection]) -> Bool { present.count > 1 }
+    static func shows(present: [PrivacyDevnetSection]) -> Bool { present.count > 1 }
 }

@@ -32,7 +32,7 @@ import Foundation
 /// Every failure it catches renders as an ordinary card: a root reported live
 /// when it has aged out, an expiry counted from the wrong end of the ring, or a
 /// window that wraps and reports a fresh root as ancient.
-enum PrivacyRoots {
+enum PrivacyDevnetRoots {
 
     /// The ring's size, from the predeploy's own `0x1fff` mask.
     static let windowSlots: UInt64 = 8192

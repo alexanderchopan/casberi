@@ -3589,7 +3589,7 @@ enum DemoSeedAll {
         // different route.
         HegotaLiveState.seedDemo()
         FramesLiveState.seedDemo()
-        PrivacyLiveState.seedDemo()
+        PrivacyDevnetLiveState.seedDemo()
         VibenetValueStore.replace(VibenetDemoHistoryShape.samples(now: .now))
         // Per account too, or picking a face on the rail drops the curve the
         // aggregate just showed — the scoped room reads its OWN series (see
