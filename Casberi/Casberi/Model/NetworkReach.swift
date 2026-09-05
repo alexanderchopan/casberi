@@ -182,7 +182,15 @@ enum NetworkReach {
                          "pulse.walletconnect.com", "rpc.walletconnect.com"]),
         Endpoint(service: "Wallet names",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Resolves .eth and .sol names and their avatars for the wallets you watch. Carries only the name or address being resolved.",
+                 // Widened 2026-09-04 (prd §597) and the widening is real: this
+                 // used to say "for the wallets you watch", and the names an
+                 // address goes by are now read for an address you OPEN in the
+                 // book too — which is a larger set than the five you watch.
+                 // The .wei/.gwei half is read straight off two contracts on
+                 // the mainnet RPC hosts already declared above, so it adds no
+                 // host here; it is named because the privacy screen answers
+                 // "what does this app ask about me", not "which hostnames".
+                 purpose: "Resolves .eth, .sol, .wei and .gwei names and their avatars — for the wallets you watch, and for an address when you open it in your address book. Carries only the name or address being looked up. The .wei and .gwei registries are read directly on Ethereum, through the public nodes listed under “Wallet activity”.",
                  hosts: ["api.ensideas.com", "metadata.ens.domains", "app.ens.domains",
                          "sns-sdk-proxy.bonfida.workers.dev", "lite-api.jup.ag"]),
         Endpoint(service: "Wallet DeFi & Safe",

@@ -1195,9 +1195,9 @@ final class AddressBook {
     /// Loose on purpose, exactly like `WalletStore.add`'s own validation: an
     /// address is public data and a bad one simply never resolves to anything.
     func looksLikeAddress(_ token: String) -> Bool {
-        ENS.isHexAddress(token) || ENS.looksLikeName(token)
-            || SNS.looksLikeName(token) || SNS.isAddress(token)
+        ENS.isHexAddress(token) || SNS.isAddress(token)
             || BitcoinAddress.isAddress(token)
+            || NameResolve.looksLikeName(token)
     }
 
     // MARK: - Migration

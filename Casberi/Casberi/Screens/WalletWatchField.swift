@@ -71,8 +71,7 @@ struct WalletWatchField: View {
                         actionLabel: String(localized: "Watch"),
                         focus: $addressFieldFocused,
                         isArmed: book.looksLikeAddress(draft)
-                                 || SNS.looksLikeName(draft)
-                                 || ENS.looksLikeName(draft),
+                                 || NameResolve.looksLikeName(draft),
                         action: watch)
             fieldNotice
             addressPreview
@@ -128,7 +127,7 @@ struct WalletWatchField: View {
     }
 
     private var resolving: Bool {
-        (SNS.looksLikeName(draft) || ENS.looksLikeName(draft)) && previewAddress == nil
+        NameResolve.looksLikeName(draft) && previewAddress == nil
     }
 
     private var draftIsUnsafe: Bool {
@@ -212,11 +211,10 @@ struct WalletWatchField: View {
 
     private func resolvePreview() async {
         let asked = draft
-        guard SNS.looksLikeName(asked) || ENS.looksLikeName(asked) else { return }
+        guard NameResolve.looksLikeName(asked) else { return }
         try? await Task.sleep(for: .milliseconds(450))
         guard !Task.isCancelled else { return }
-        let hit = SNS.looksLikeName(asked)
-            ? await SNS.resolve(asked) : await ENS.resolve(asked)
+        let hit = await NameResolve.resolve(asked)
         guard !Task.isCancelled, let hit else { return }
         withAnimation(DS.Motion.standard) {
             resolvedDraft = WalletResolvedDraft(input: asked, address: hit)
@@ -249,24 +247,21 @@ struct WalletWatchField: View {
     private func watch() {
         let input = draft
         guard !input.isEmpty else { return }
-        if SNS.looksLikeName(input) {
+        if let family = NameResolve.family(of: input) {
             Task {
-                guard let address = await SNS.resolve(input) else {
+                guard let address = await NameResolve.resolve(input) else {
                     resultIsError = true
-                    result = String(localized: "Couldn't resolve \(input) — check the name, or paste the address.")
+                    // The advice differs by family because the fallback does:
+                    // a `.sol` name's address is base58 and everything else's
+                    // is `0x`, and telling somebody to paste the wrong shape
+                    // is worse than not telling them anything.
+                    result = family == .sns
+                        ? String(localized: "Couldn't resolve \(input) — check the name, or paste the address.")
+                        : String(localized: "Couldn't resolve \(input) — check the name or paste a 0x address.")
                     return
                 }
-                WalletChainStore.shared.ensureEnabled("solana-mainnet")
+                if family == .sns { WalletChainStore.shared.ensureEnabled("solana-mainnet") }
                 addWatched(address: address, label: input)
-            }
-        } else if ENS.looksLikeName(input) {
-            Task {
-                guard let hex = await ENS.resolve(input) else {
-                    resultIsError = true
-                    result = String(localized: "Couldn't resolve \(input) — check the name or paste a 0x address.")
-                    return
-                }
-                addWatched(address: hex, label: input)
             }
         } else {
             // A legacy/P2SH Bitcoin address is base58-shaped too, the same

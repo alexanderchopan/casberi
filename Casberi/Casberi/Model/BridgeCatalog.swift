@@ -165,7 +165,7 @@ enum BridgeCatalog {
         Offer(name: "Reminders",   tagline: "Lists stay in reach",                   group: "Schedule",  connectable: true,
               summary: "Your reminders join your things and stay findable — and you can add one by asking."),
         Offer(name: "Wallet",      tagline: "Any address — holdings and moves",          group: "Wallet",    connectable: true,
-              summary: "Paste a wallet address — 0x…, a Bitcoin address, an ENS name, or a .sol name — and its onchain activity lands in your feed like anything else.\n\nRead-only, public data, no server: watching an address can never trade or move funds.",
+              summary: "Paste a wallet address — 0x…, a Bitcoin address, or a name: .eth, .sol, .wei or .gwei — and its onchain activity lands in your feed like anything else.\n\nRead-only, public data, no server: watching an address can never trade or move funds.",
               features: [
                 "Flags new token approvals, including through Permit2.",
                 "Warns if the wallet starts delegating its control.",

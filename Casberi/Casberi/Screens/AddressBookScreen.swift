@@ -593,19 +593,16 @@ struct AddressBookScreen: View {
             : parts.joined(separator: " · ")
     }
 
-    /// Resolves a typed ENS/SNS name for the preview, debounced — nine
-    /// prefixes of "vitalik.eth" each look like a name, and the pause is what
-    /// makes them one request. Nothing is saved, nothing is written.
+    /// Resolves a typed name for the preview, debounced — nine prefixes of
+    /// "vitalik.eth" each look like a name, and the pause is what makes them
+    /// one request. Nothing is saved, nothing is written. Which service is
+    /// asked is `NameResolve`'s decision (prd §597).
     private func resolvePreview() async {
         let asked = draft
-        guard SNS.looksLikeName(asked) || ENS.looksLikeName(asked) else { return }
+        guard NameResolve.looksLikeName(asked) else { return }
         try? await Task.sleep(for: .milliseconds(450))
         guard !Task.isCancelled else { return }
-        // `.sol` first — `ENS.looksLikeName` takes ANY dotted string and would
-        // send a `.sol` name to the ENS resolver, which answers with a null
-        // address rather than an error.
-        let hit = SNS.looksLikeName(asked)
-            ? await SNS.resolve(asked) : await ENS.resolve(asked)
+        let hit = await NameResolve.resolve(asked)
         guard !Task.isCancelled, let hit else { return }
         withAnimation(DS.Motion.standard) {
             resolvedDraft = ResolvedBookDraft(input: asked, address: hit)
@@ -1401,7 +1398,7 @@ struct AddressBookScreen: View {
         fieldFocused = false
         resolvedDraft = nil
         guard !addr.isEmpty else { return }
-        let isName = SNS.looksLikeName(addr) || ENS.looksLikeName(addr)
+        let isName = NameResolve.looksLikeName(addr)
         let name = isName ? addr : WalletStore.shortAddress(target)
         book.setName(name, for: target)
         // THE SAVE ANSWERS (prd §462). `applyCurrentName` has always returned
@@ -1425,12 +1422,7 @@ struct AddressBookScreen: View {
         }
         guard isName, previewAddress == nil else { return }
         Task {
-            // `.sol` first: `ENS.looksLikeName` takes ANY dotted string and
-            // would send a `.sol` name to the ENS resolver, which answers with
-            // a null address rather than an error.
-            let resolved = SNS.looksLikeName(addr)
-                ? await SNS.resolve(addr) : await ENS.resolve(addr)
-            guard let resolved else { return }
+            guard let resolved = await NameResolve.resolve(addr) else { return }
             await MainActor.run { wallet.noteResolution(addr, resolved: resolved) }
         }
     }

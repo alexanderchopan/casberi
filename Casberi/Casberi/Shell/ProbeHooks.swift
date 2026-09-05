@@ -3181,6 +3181,18 @@ enum ProbeHooks {
                 for line in lines { NSLog("aerodromeProbe| %@", line) }
             }
         },
+        // `-weiNameProbe <name|0x…|YES>` — the Wei/Gwei name read step by step
+        // (prd §597): a name's registry, its token id and the address it
+        // resolves to, or an address's primary name on all three services with
+        // the forward-verification verdict beside each. Bare `YES` reads the
+        // watched wallets. An empty answer is usually CORRECT here, which is
+        // why every step is printed rather than the result alone.
+        Hook(key: "weiNameProbe") { spec, _ in
+            Task { @MainActor in
+                let lines = await WeiNamesSource.probe(spec)
+                for line in lines { NSLog("weiName| %@", line) }
+            }
+        },
         // `-etherfiUnstakeProbe YES` NSLogs each watched wallet's outstanding
         // ether.fi unstake requests (amount, queued vs CLAIMABLE) or the
         // honest miss, then runs the reconciling sync. The queued/claimable

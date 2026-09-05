@@ -912,33 +912,28 @@ enum WalletIngest {
         return names
     }
 
-    /// Resolves watched entries to the addresses the APIs actually read — ENS
-    /// names to hex, `.sol` names to base58 — dropping any name that won't
-    /// resolve (a typo'd name simply lands nothing, honestly).
+    /// Resolves watched entries to the addresses the APIs actually read — ENS,
+    /// `.wei` and `.gwei` names to hex, `.sol` names to base58 — dropping any
+    /// name that won't resolve (a typo'd name simply lands nothing, honestly).
     ///
     /// The result deliberately MIXES families: the holdings read serves both and
     /// routes each address by shape. Callers that can only serve EVM (the
-    /// transfer sync, the NFT reads) narrow with `evmOnly`. `.sol` is tried
-    /// before ENS because `ENS.looksLikeName` takes ANY dotted string — it would
-    /// happily send `toly.sol` to the ENS resolver, which answers with a null
-    /// address rather than an error.
+    /// transfer sync, the NFT reads) narrow with `evmOnly`.
+    ///
+    /// The ORDER the families are tried in moved to `NameResolve` (prd §597) —
+    /// it was spelled by hand here and in five other places, each with its own
+    /// copy of the comment explaining why `.sol` must be asked before ENS.
     static func resolvedAddresses(_ raw: [String]) async -> [String] {
         var out: [String] = []
         for a in raw {
             if ENS.isHexAddress(a) || BitcoinAddress.isAddress(a) || SNS.isAddress(a) { out.append(a) }
-            else if SNS.looksLikeName(a) {
-                if let sol = await SNS.resolve(a) {
-                    out.append(sol)
-                    await MainActor.run { WalletStore.shared.noteResolution(a, resolved: sol) }
-                }
-            }
-            else if let hex = await ENS.resolve(a) {
-                out.append(hex)
+            else if let resolved = await NameResolve.resolve(a) {
+                out.append(resolved)
                 // Every resolution feeds the store's cache (2026-07-20) — the
                 // scoped feed, history page, and row labels all need to match
                 // a landed thing's RESOLVED hex back to the WATCHED spelling,
                 // and this loop is the one place both forms meet.
-                await MainActor.run { WalletStore.shared.noteResolution(a, resolved: hex) }
+                await MainActor.run { WalletStore.shared.noteResolution(a, resolved: resolved) }
             }
         }
         return out

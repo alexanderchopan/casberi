@@ -54,7 +54,14 @@ extension AddressBook.Entry {
     /// phrase is `AddressBookShape.lastPhrase`'s, stated only when there is a
     /// count to attach it to: a date with no dealings behind it would be
     /// describing something the count says didn't happen.
-    func subline(activity: AddressActivity.Summary?) -> String? {
+    /// `standingIn` is a name the ADDRESS set for itself that the row is
+    /// drawing in place of an auto name (prd §597). It makes the row a named
+    /// one, which is what brings the short form back to this line: once the
+    /// name reads `ross.wei`, the address is the second fact rather than the
+    /// same fact twice, which is the exact condition the `autoNamed` rule
+    /// below was written for.
+    func subline(activity: AddressActivity.Summary?,
+                 standingIn: String? = nil) -> String? {
         // A CONTACT or a SOCIAL profile says NOTHING under its name (user
         // ruling, 2026-08-27, on a device: *"i don't think we need the subtext
         // for them, just makes it clunky to read"*). Everything the line could
@@ -71,7 +78,8 @@ extension AddressBook.Entry {
         // rows read "bluesky:you · Bluesky · you"). Their provenance says
         // where they are from, which is the fact the short form was standing
         // in for everywhere else.
-        let autoNamed = kind.isMonogram || WalletStore.isAutoName(name, for: address)
+        let autoNamed = standingIn == nil
+            && (kind.isMonogram || WalletStore.isAutoName(name, for: address))
         if !autoNamed { parts.append(short) }
         if let activity, activity.count > 0 {
             parts.append(String(localized: "\(activity.count) together"))
@@ -207,12 +215,38 @@ struct AddressBookRow: View {
     /// nil draws no star at all — see the note above.
     var onToggleWatch: (() -> Void)?
 
+    /// The name to draw, which is the person's whenever they gave one.
+    ///
+    /// A resolved name only ever stands in for an AUTO name — the `…44b1`
+    /// display fallback `WalletStore.add` files a bare address under, which is
+    /// nobody's word. §169 says a name somebody typed is their data, so
+    /// "Mum" is never quietly replaced by `0xf00.eth` however true that is,
+    /// and nothing here writes to the book at all.
+    private var shownName: String {
+        standingIn ?? entry.name
+    }
+
+    /// What the ADDRESS calls itself (prd §597) — its ENS/Wei/Gwei primary
+    /// name, when one is already known. Read here, never fetched: see
+    /// `AddressNames`' rule that a read is bought by an intent.
+    ///
+    /// `AddressNames.shared` is reached INLINE rather than held as a property.
+    /// A stored `private` property drops the synthesized memberwise
+    /// initializer to `private` too, which puts this row out of reach of the
+    /// screen that builds it — and observation does not need the property:
+    /// this is read during `body`, so the `@Observable` tracking scope picks
+    /// it up either way.
+    private var standingIn: String? {
+        guard WalletStore.isAutoName(entry.name, for: entry.address) else { return nil }
+        return AddressNames.shared.rowName(for: entry.address)
+    }
+
     var body: some View {
         HStack(spacing: DS.Space.s3) {
             AddressMark(entry: entry, size: DS.Face.list)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: DS.Space.s1) {
-                    Text(entry.name)
+                    Text(shownName)
                         .dsText(.heading17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                         // The name reveal (2026-08-01), the list's quieter
@@ -222,7 +256,7 @@ struct AddressBookRow: View {
                         // List; `contentTransition` gets the same moment with
                         // none of that.
                         .contentTransition(.opacity)
-                        .animation(DS.Motion.standard, value: entry.name)
+                        .animation(DS.Motion.standard, value: shownName)
                     if colliding {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .dsGlyph(11)
@@ -232,7 +266,7 @@ struct AddressBookRow: View {
                 // RELATIONSHIP facts, never money (§435). Absent rather than
                 // empty when there is nothing to say — see `subline`.
                 HStack(spacing: 5) {
-                    if let line = entry.subline(activity: activity) {
+                    if let line = entry.subline(activity: activity, standingIn: standingIn) {
                         Text(line)
                             .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
@@ -286,8 +320,8 @@ struct AddressBookRow: View {
                         .dsTapTarget()
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text(watched ? "Watching \(entry.name), tap to stop"
-                                                 : "Watch \(entry.name)"))
+                .accessibilityLabel(Text(watched ? "Watching \(shownName), tap to stop"
+                                                 : "Watch \(shownName)"))
             } else if let activity, activity.count > 0,
                       let when = AddressBookShape.lastPhrase(activity.lastAt) {
                 // WHEN, down the trailing edge (prd §462) — the slot the star
@@ -889,6 +923,24 @@ struct AddressCard: View {
     /// zero it hasn't earned.
     @State private var exposure: WalletApprovalExposure?
 
+    /// The primary names this address has set (prd §597), filled by the task
+    /// below. Empty until the read answers AND when it answered nothing —
+    /// which is fine here precisely because both draw the same thing: no row.
+    /// The distinction that matters (asked vs never asked) is kept by
+    /// `AddressNames`, which is what stops the read being bought again.
+    @State private var primaryNames: [AddressNames.Entry] = []
+
+    /// THE NAME THAT ARRIVED WHILE YOU WERE LOOKING (prd §599) — the one
+    /// string `AddressArrivingName` types in, and nil on every visit where
+    /// nothing was learned.
+    ///
+    /// It holds the STRING rather than a flag, and that is the whole of its
+    /// correctness: `nameField`'s resting text is rebuilt by `.id(shownName)`
+    /// on any later rename too, so a flag would type back a name you had just
+    /// typed yourself — the app performing your own act. Comparing the string
+    /// types exactly the one that came off the wire.
+    @State private var arrivedName: String?
+
     /// A COPY JUST HAPPENED (2026-08-27, prd §502). Two pieces of state
     /// because they answer two different questions and one of them is a fact:
     /// `copyToken` runs the sweep (decoration, dropped under Reduce Motion),
@@ -1005,6 +1057,34 @@ struct AddressCard: View {
                 exposure = await WalletApprovalExposure.forSpender(entry.address,
                                                                    context: modelContext)
             }
+            .task(id: entry.address) {
+                // Shown first from whatever is already known, so a second
+                // visit draws the names on the first frame instead of
+                // flickering them in. `fill` returns immediately when the
+                // answer is fresh, so the common case buys nothing.
+                let names = AddressNames.shared
+                primaryNames = names.names(for: entry.address) ?? []
+                // What the card was standing under BEFORE it asked — nil when
+                // the address had nothing known, which is the only state an
+                // arrival can come out of.
+                let before = primaryNames.first?.name
+                await names.fill(entry.address)
+                let after = names.names(for: entry.address) ?? []
+                // AN ARRIVAL, not a redraw (prd §599). Three conditions and
+                // each rules out a different non-event: nothing was known a
+                // moment ago, something is now, and the card is standing under
+                // an auto name — so the string that landed is the one the
+                // title is about to start showing. On a second visit `fill`
+                // returns from cache having asked nothing and `before` already
+                // holds the name, so nothing types, which is right: nothing
+                // was learned.
+                if unnamed, before == nil, let landed = after.first?.name {
+                    arrivedName = landed
+                }
+                withAnimation(DS.Motion.standard) {
+                    primaryNames = after
+                }
+            }
         }
         .presentationBackground(DS.surfaceSheet)
         .dsColorScheme()
@@ -1092,9 +1172,18 @@ struct AddressCard: View {
                         .dsText(.label12)
                         .foregroundStyle(DS.textSecondary)
                         .frame(minHeight: 24)
+                        // IT LEAVES WHEN THE STATE DOES (prd §599). "Not kept"
+                        // is the state an address opened through a connections
+                        // node is in, and naming it is what ends that state —
+                        // `isInBook` flips in the same beat the title changes.
+                        // That is a real transition between two things the
+                        // card says about the same address, and it was drawn
+                        // as a word disappearing.
+                        .transition(.opacity)
                 }
             }
             .frame(height: 22)
+            .animation(DS.Motion.standard, value: identityStamp)
 
             // THE FACE IS MADE OF THE ADDRESS (prd §444) — see `AddressReveal`.
             // At `identityFace`, half again the old profile size: this is the
@@ -1361,25 +1450,42 @@ struct AddressCard: View {
         } else {
             Button { beginRename() } label: {
                 HStack(spacing: DS.Space.s2) {
-                    Text(current.name)
-                        .dsText(Self.nameRung(current.name)).foregroundStyle(DS.textPrimary)
-                        .multilineTextAlignment(.center)
-                        // The NAME reveal (2026-08-01) — `AddressMark`'s kind
-                        // turn-over (prd §171) applied to the other half of the
-                        // question. An address added bare stands under its own
-                        // short form; a beat later reverse ENS answers, or a
-                        // typed `.eth` resolves and `reconcileAliases` re-keys
-                        // the row, and the card learns what to call it while
-                        // you are looking at it.
+                    // The NAME reveal (2026-08-01) — `AddressMark`'s kind
+                    // turn-over (prd §171) applied to the other half of the
+                    // question. An address added bare stands under its own
+                    // short form; a beat later reverse ENS answers, or a
+                    // typed `.eth` resolves and `reconcileAliases` re-keys
+                    // the row, and the card learns what to call it while
+                    // you are looking at it.
+                    //
+                    // …and when what answered is the ADDRESS ITSELF, it is
+                    // WRITTEN IN rather than cross-faded (prd §599). The two
+                    // treatments run together and read as one moment: the
+                    // scale swap carries the placeholder out while the name
+                    // types itself over the space it left. See
+                    // `AddressArrivingName` for why only an arrival types.
+                    AddressArrivingName(name: shownName,
+                                        style: Self.nameRung(shownName),
+                                        typeOn: shownName == arrivedName)
                         .transition(.scale(scale: 0.9).combined(with: .opacity))
-                        .id(current.name)
-                        .animation(DS.Motion.standard, value: current.name)
+                        .id(shownName)
+                        .animation(DS.Motion.standard, value: shownName)
                     if unnamed, canRename {
+                        // THE INVITATION RETIRES (prd §599). The pencil is
+                        // here because naming is the thing to do, so the
+                        // moment it is done the mark has nothing left to ask
+                        // for — and it used to vanish between two frames,
+                        // which is the one part of naming that the card could
+                        // show and did not. It leaves the way the star flight
+                        // and the kind turn-over leave: as an object, not as a
+                        // value snapping.
                         Image(systemName: "pencil")
                             .dsGlyph(13)
                             .foregroundStyle(DS.textTertiary)
+                            .transition(.scale(scale: 0.6).combined(with: .opacity))
                     }
                 }
+                .animation(DS.Motion.standard, value: unnamed)
                 .contentShape(Rectangle())
                 .dsTapTarget()
             }
@@ -1390,7 +1496,7 @@ struct AddressCard: View {
             // is. `allowsHitTesting` rather than `.disabled`, which would dim
             // the name itself and make a perfectly good title read as inert.
             .allowsHitTesting(canRename)
-            .accessibilityLabel(Text(current.name))
+            .accessibilityLabel(Text(shownName))
             .accessibilityHint(canRename ? Text("Rename this address") : Text(""))
         }
     }
@@ -1402,6 +1508,19 @@ struct AddressCard: View {
     private var unnamed: Bool {
         WalletStore.isAutoName(current.name, for: current.address)
     }
+
+    /// The name the ADDRESS set for itself, drawn in place of an auto name
+    /// (prd §597) — the row's rule, so a row reading `ross.wei` opens a card
+    /// that says the same thing rather than falling back to `…5a20`.
+    ///
+    /// `unnamed` still governs the pencil, and correctly: a name the address
+    /// chose is not a name YOU chose, so the offer to give it one stands.
+    private var standingIn: String? {
+        guard unnamed else { return nil }
+        return primaryNames.first?.name
+    }
+
+    private var shownName: String { standingIn ?? current.name }
 
     /// Whether this card may be renamed at all (prd §498).
     ///
@@ -1484,6 +1603,19 @@ struct AddressCard: View {
         if !lines.isEmpty {
             VStack(spacing: 0) {
                 ForEach(lines, id: \.value) { line in
+                    // A NEW WAY TO REACH THEM ARRIVING (prd §599). The names
+                    // land asynchronously — the card is already on screen when
+                    // a registry answers — so this list GROWS while you read
+                    // it, and the row used to appear between two frames. The
+                    // same arrival the title types in, said once more in the
+                    // place it changes what you can do: there is now a name
+                    // here you can copy.
+                    //
+                    // The insertion is animated by the `withAnimation` around
+                    // `primaryNames` in the card's own task, not by a modifier
+                    // here — a transition needs a driving animation and this
+                    // list must NOT animate its own rebuild, or the address
+                    // row would scale every time the copy unfold redraws it.
                     Button {
                         didCopy(line.clipboard)
                     } label: {
@@ -1523,6 +1655,7 @@ struct AddressCard: View {
                     .buttonStyle(.plain)
                     .dsHover()
                     .accessibilityLabel(Text("\(line.label), \(line.value). Copy"))
+                    .transition(.scale(scale: 0.96).combined(with: .opacity))
                 }
             }
             .padding(.horizontal, DS.Space.s4)
@@ -1571,10 +1704,29 @@ struct AddressCard: View {
         // unfolds into the whole address, which is what the clipboard just
         // took. It folds back on its own — this is an answer to a verb, not a
         // second way to read the card.
-        return [ReachLine(label: AddressBookPeople.addressLabel(for: current),
-                          value: hex && !copyOpen ? current.short : current.address,
-                          copyValue: current.address,
-                          glyph: "cube", monospaced: true)]
+        let address = ReachLine(label: AddressBookPeople.addressLabel(for: current),
+                                value: hex && !copyOpen ? current.short : current.address,
+                                copyValue: current.address,
+                                glyph: "cube", monospaced: true)
+        // WHAT THIS ADDRESS CALLS ITSELF (prd §597) — its primary name on ENS,
+        // Wei and Gwei, each a genuine way to reach it and so a row of this
+        // list rather than a card of its own.
+        //
+        // They sit AFTER the address deliberately, and not only for reading
+        // order: `actionTiles` copies `reachLines.first`, so the Copy tile
+        // must keep meaning the address.
+        //
+        // No row is drawn for a service that answered nothing, and none is
+        // drawn before the read returns — an address with no names and one we
+        // have not asked about must not look alike (§83).
+        return [address] + primaryNames.map { entry in
+            ReachLine(label: entry.label, value: entry.name,
+                      copyValue: entry.name,
+                      // A name is read as a word, not compared character by
+                      // character, so it takes the reading face — this list's
+                      // own rule for a handle, one row up.
+                      glyph: "at", monospaced: false)
+        }
     }
 
     /// One way to reach this entry. `copyValue` is what the clipboard gets and
@@ -2094,6 +2246,19 @@ struct AddressCard: View {
                  : String(localized: "Transfers with \(current.name) land here as they arrive."))
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
+                // THE ONE THING NAMING CHANGES ON A YOUNG CARD (prd §599).
+                // §441 built the retitle cascade so you can watch a name sweep
+                // down every landed transfer — and §462 says the common card
+                // is a young one with nothing landed, where the cascade has
+                // nothing to sweep. This sentence is the only place such a
+                // card visibly learns the name, and it swapped silently.
+                //
+                // A cross-fade and not the title's typewriter: this is a
+                // sentence adopting a word you supplied, not a name arriving
+                // from somewhere else, and typing your own name back at you is
+                // the app performing your act (`AddressArrivingName`'s rule).
+                .contentTransition(.opacity)
+                .animation(DS.Motion.standard, value: current.name)
                 .frame(maxWidth: .infinity, alignment: events.isEmpty ? .center : .leading)
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.top, events.isEmpty ? DS.Space.s4 + 4 : DS.Space.s4)

@@ -126,11 +126,16 @@ enum WalletApprovals {
     }
 
     /// Whether Revoke.cash can serve this watched entry as stored — a hex
-    /// address or an ENS name (their page resolves names). Solana forms are
-    /// out (no EVM approvals there); a door to a 404 would be a dead control.
+    /// address or an ENS name (their page resolves those). Everything else is
+    /// out; a door to a 404 would be a dead control.
+    ///
+    /// Asked as "is this family exactly ENS?" rather than as a list of the
+    /// families to exclude (prd §597). The excluding form was already one
+    /// clause long for Solana, and it fails OPEN: a name service added later
+    /// is served to Revoke.cash by default, and `.wei`/`.gwei` — which their
+    /// page does not resolve — would have walked straight through it.
     static func canServe(_ address: String) -> Bool {
-        ENS.isHexAddress(address)
-            || (ENS.looksLikeName(address) && !SNS.looksLikeName(address))
+        ENS.isHexAddress(address) || NameResolve.family(of: address) == .ens
     }
 
     /// Every landed approval/Permit2-grant thing on the given wallets whose

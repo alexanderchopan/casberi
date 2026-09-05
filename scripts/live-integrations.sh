@@ -1263,6 +1263,69 @@ print(":".join([
 fi
 
 hr
+# ── Wei / Gwei name services (prd §597) ─────────────────────────────────────
+# The drift class `wei-names-selftest.sh` structurally cannot see: that harness
+# proves the ENCODING is right against fixtures, never that the two contracts
+# still answer or still answer in that shape. And when a name service stops
+# answering the app does not break, it goes QUIET — every row still draws, no
+# name ever appears, which from outside is indistinguishable from "this address
+# set no name" (§311's shape, and the reason this row exists).
+#
+# Pinned to REGISTERED names measured on 2026-09-04, and the expected answers
+# are pinned with them: `vitalik.wei` → vitalik's own address, `donnoh.gwei` →
+# 0xc046…f1a3. A registration cannot be un-made, so a changed answer here means
+# the read moved, not that somebody let a name lapse.
+print -P "%BWei / Gwei name registries%b  (keyless eth_call, Ethereum mainnet)"
+WNS_C='0x0000000000696760E15f265e828DB644A0c242EB'
+GNS_C='0x9D51D507BC7264d4fE8Ad1cf7Fe191933A0a81d6'
+ETH_RPC='https://eth.api.onfinality.io/public'
+# computeId("vitalik.wei") and computeId("donnoh.gwei"), byte for byte what the
+# app builds — see the harness's pinned fixtures.
+name_check() {   # $1 label  $2 contract  $3 computeId-calldata  $4 expected 0x address
+  local idr addr
+  idr=$(raw "$ETH_RPC" "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_call\",\"params\":[{\"to\":\"$2\",\"data\":\"$3\"},\"latest\"]}" \
+        | sed -nE 's/.*"result":"0x([0-9a-fA-F]{64})".*/\1/p')
+  if [[ -z "$idr" ]]; then
+    warn "$1 — computeId did not answer; the registry is unreachable tonight"
+    return
+  fi
+  addr=$(raw "$ETH_RPC" "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_call\",\"params\":[{\"to\":\"$2\",\"data\":\"0x4f896d4f$idr\"},\"latest\"]}" \
+         | sed -nE 's/.*"result":"0x0{24}([0-9a-fA-F]{40})".*/0x\1/p')
+  case "$addr" in
+    "") warn "$1 — resolve did not answer in the shape we parse" ;;
+    0x0000000000000000000000000000000000000000)
+        fail "$1 — a name that WAS registered now resolves to the zero address; either the registry moved or resolve() changed" ;;
+    "$4") pass "$1 — computeId → resolve still answers $4" ;;
+    *)  fail "$1 — resolves to $addr, not the measured $4; the read has drifted" ;;
+  esac
+}
+name_check "WNS · vitalik.wei" "$WNS_C" \
+  "0xfb0219390000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000b766974616c696b2e776569000000000000000000000000000000000000000000" \
+  "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+name_check "GNS · donnoh.gwei" "$GNS_C" \
+  "0xfb0219390000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000b646f6e6e6f682e67776569000000000000000000000000000000000000000000" \
+  "0xc04689227fa24785609b1174698dbe481437f1a3"
+# reverseResolve, the half the address book draws. `0x1c0a…5a20` answered
+# `ross.wei` when measured; an empty answer here would silently empty every
+# name row in the book.
+revname=$(raw "$ETH_RPC" "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_call\",\"params\":[{\"to\":\"$WNS_C\",\"data\":\"0x9af8b7aa0000000000000000000000001c0aa8ccd568d90d61659f060d1bfb1e6f855a20\"},\"latest\"]}" \
+          | python3 -c '
+import sys, json, binascii
+try:
+    r = json.load(sys.stdin).get("result") or ""
+    s = r[2:]
+    off = int(s[0:64], 16) * 2
+    ln = int(s[off:off+64], 16)
+    print(binascii.unhexlify(s[off+64:off+64+ln*2]).decode())
+except Exception:
+    print("")' 2>/dev/null)
+case "$revname" in
+  ross.wei) pass "WNS · reverseResolve still names 0x1c0a…5a20 as ross.wei" ;;
+  "")       warn "WNS — reverseResolve did not answer in the shape we parse; the book's name rows would be empty" ;;
+  *)        warn "WNS — reverseResolve now answers '$revname' for 0x1c0a…5a20 (the owner may have changed their primary name)" ;;
+esac
+
+hr
 if (( RED == 0 && AMBER == 0 )); then
   print -P "%F{green}All live-integration hosts healthy.%f"
 elif (( RED == 0 )); then

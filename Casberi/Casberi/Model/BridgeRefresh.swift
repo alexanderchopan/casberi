@@ -401,6 +401,13 @@ enum BridgeRefresh {
                 await BridgeRefresh.stagger(s2)
                 _ = await WalletIngest.topHoldingsByWallet()
                 await WalletStore.shared.loadAvatars()
+                // What your own wallets call themselves (prd §597) — ENS, Wei
+                // and Gwei primary names, so a wallet pasted as bare hex stops
+                // reading as `…44b1` everywhere. Bounded by the watch cap
+                // itself (five), and by `AddressNames`' own freshness window,
+                // so a foreground almost always buys nothing.
+                await AddressNames.shared.fill(
+                    WalletStore.shared.addresses.map(\.address))
             }
         }
         // Not an ingest — the watchlist's 24h pulse for the feed-row

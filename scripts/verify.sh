@@ -1426,6 +1426,21 @@ harness "GitHub room pure-logic self-test" "github-room self-test" "scripts/gith
 # never drop it and one endpoint is read twice every sweep.
 harness "GitHub person-watch pure-logic self-test" "github-person self-test" "scripts/github-person-selftest.sh" "the GitHub person self-test failed — run scripts/github-person-selftest.sh"
 
+# The Wei/Gwei name services (prd §597). Nothing on this host can register a
+# name, so this is the ONLY proof the encodings are right — and every failure
+# is a lookup that looks like it worked. The worst is measured and specific: an
+# unregistered name computes a perfectly good token id and resolves to the ZERO
+# ADDRESS, so a reader that trusts the id watches `0x0000…0000`, which holds
+# burned funds and a huge transfer history and therefore renders as a busy
+# wallet belonging to nobody. Beside it: `alice.gwei` claimed by the `.wei`
+# registry because it ends in `wei` (both contracts answer; the wrong one
+# answers zero), the two contracts transposed, and a 256-bit token id parsed
+# as an Int. The drift guards hold the parts the encoders cannot: that a
+# reverse record is FORWARD-VERIFIED before this app prints it beside money,
+# that the family order still asks the specific suffixes before ENS's
+# catch-all, and that a resolved name never overwrites one somebody typed.
+harness "Wei/Gwei name pure-logic self-test" "wei-names self-test" "scripts/wei-names-selftest.sh" "the Wei/Gwei name self-test failed — run scripts/wei-names-selftest.sh"
+
 # ENS (prd §534). Catches the silent wrong answer this ladder is built around: a lapsed
 # name reads as "expires" for its whole ninety-day grace period (the exact bug ENSExpiry
 # shipped with), a subname is followed into a row the registrar 404s forever, or a
