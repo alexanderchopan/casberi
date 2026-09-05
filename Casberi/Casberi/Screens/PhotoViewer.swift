@@ -26,11 +26,12 @@ struct PhotoViewer: View {
     let title: String
 
     @Environment(\.dismiss) private var dismiss
-    /// The shell redacts itself on background (`RootShell.redactNow`, driven by
-    /// privacy.hidePreviews). `.redacted(.placeholder)` blanks Text and shapes
-    /// but NOT Image, and a full-screen screenshot is the largest leak this app
-    /// could put in the app-switcher snapshot — so, like `PhotoWell`, it opts
-    /// out by hand rather than trusting the modifier.
+    /// The snapshot hide is `PrivacyCover`'s window since 2026-09-05; like
+    /// `PhotoWell`, this guard is kept. `.redacted(.placeholder)` blanks Text
+    /// and shapes but NOT Image, and a full-screen screenshot is the largest
+    /// leak this app could put in the app-switcher snapshot — the reason the
+    /// modifier was never trusted here, and the reason the hide is now a window
+    /// that covers this view whether it opts out or not.
     @Environment(\.redactionReasons) private var redaction
 
     @State private var image: UIImage?

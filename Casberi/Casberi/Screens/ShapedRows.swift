@@ -2277,13 +2277,15 @@ struct PhotoWell: View {
     let thing: Thing
     var size: CGFloat?   // nil = fill available
     @State private var image: UIImage?
-    /// The shell redacts itself on background (`RootShell.redactNow`, driven by
-    /// privacy.hidePreviews) so the app-switcher snapshot doesn't leak the
-    /// corpus. SwiftUI's `.redacted(.placeholder)` blanks Text and shapes but
-    /// NOT Image — so until 2026-07-25 every screenshot thumbnail survived into
-    /// that snapshot with the setting ON. Nothing in the app read this
-    /// environment value. A screenshot is the most sensitive thing this app
-    /// holds (a bank balance, a private message), so it opts out by hand.
+    /// The snapshot hide is `PrivacyCover`'s window since 2026-09-05, and this
+    /// guard is deliberately KEPT rather than deleted with the root
+    /// `.redacted` it was written for. It cost the leak it exists to stop:
+    /// `.redacted(.placeholder)` blanks Text and shapes but NOT Image, so until
+    /// 2026-07-25 every screenshot thumbnail survived into the app-switcher
+    /// snapshot with hidePreviews ON, and nothing in the app read this
+    /// environment value at all. A screenshot is the most sensitive thing this
+    /// app holds (a bank balance, a private message); an opaque window covers
+    /// it now, and this stays correct under any redaction anyone reintroduces.
     @Environment(\.redactionReasons) private var redaction
 
     /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI

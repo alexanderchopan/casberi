@@ -1,15 +1,30 @@
 #!/usr/bin/env python3
-"""Casberi privacy-cover audit (2026-08-29) — the app-switcher redaction can be
-RAISED but must never be un-raisable.
+"""Casberi privacy-cover audit (2026-08-29) — the app-switcher cover can be
+RAISED but must never be un-raisable, and must never be drawn by redacting the
+shell.
 
     Casberi/Casberi/Shell/RootShell.swift
+    Casberi/Casberi/Shell/PrivacyCover.swift
 
-`handleDeactivation` puts the whole shell under `.redacted(.placeholder)` on
-ANY non-active scene phase — a Control Centre pull, a Notification Centre
-swipe, a system alert, a two-second peek at the app switcher — so the
-app-switcher snapshot shows choreography and not content (§14, goal 6). Exactly
-one line anywhere in the app clears it again, and it lives in
-`handleActivation`.
+`handleDeactivation` covers the app on ANY non-active scene phase — a Control
+Centre pull, a Notification Centre swipe, a system alert, a two-second peek at
+the app switcher — so the snapshot iOS takes shows the mark and not content
+(§14, goal 6). Exactly one line anywhere in the app lowers it again, and it
+lives in `handleActivation`.
+
+**AMENDED 2026-09-05 — the cover is a `UIWindow`, and check D is why.** It was
+`.redacted(reason: redactNow ? .placeholder : [])` on `shellBase`, i.e. a
+`RedactionReasons` change at the ROOT of the app, which invalidates every view
+in the tree. That full-graph update lands in the `CATransaction` UIKit commits
+to take the snapshot, and a backgrounded app is CPU-throttled, so it killed two
+shipped builds with the same watchdog: `0x8BADF00D`, scene-update, "exhausted
+real (wall clock) time allowance of 10.00 seconds" — build 521 inside
+`-[UIApplication _createSnapshotContextForScene:…]` → `ForEachChild.updateValue`
+→ `AG::LayoutDescriptor::Compare`, build 511 in the same full-graph update
+flushed by the ordinary update sequence. Both reports name their own throttle:
+10.279s of app CPU at 16%, and 7.723s at 13%. So the mechanism is not a detail
+of how the cover is spelled — it is the whole difference between a cover and a
+crash, and check D holds the line.
 
 WHY THIS IS MECHANICAL. `handleActivation` opens with a two-second debounce
 (`guard Date.now.timeIntervalSince(lastActivation) > 2`), added 2026-08-01 so
@@ -23,22 +38,27 @@ everything else in the tree: it compiles, every static audit passes, the screen
 sweep photographs a redacted screen that looks like a screen mid-load, and no
 harness here can drive a scene phase at all.
 
-Three checks, all static, all on a COMMENT-STRIPPED copy — this file documents
+Four checks, all static, all on a COMMENT-STRIPPED copy — this file documents
 the bug by naming the very symbols it governs, so a guard reading raw source is
 satisfied by the prose explaining it (the Obsidian/Cursor lesson).
 
-  A. The cover is still APPLIED: a `.redacted(reason:` modifier reads the flag.
-     Without this the other two checks pass over a feature that no longer draws.
+  A. The cover still DRAWS: the shell calls `PrivacyCover.show()`, and
+     `PrivacyCover` really installs a `UIWindow` and unhides it. Without this
+     the other checks pass over a feature that no longer covers anything.
   B. The cover is RAISED in exactly one place, and that place is
-     `handleDeactivation`. A second setter elsewhere is a second way in that
+     `handleDeactivation`. A second raise elsewhere is a second way in that
      this audit's ordering rule would not cover.
-  C. The cover is CLEARED inside `handleActivation`, ABOVE the debounce guard.
-     This is the ordering the bug was.
+  C. The cover is LOWERED inside `handleActivation`, ABOVE the debounce guard.
+     This is the ordering the 2026-08-29 bug was.
+  D. The shell carries NO `.redacted(reason:` at all. A redaction anywhere in
+     this file is on the root modifier chain, which is the watchdog above.
 
-Deliberately NOT checked: whether redaction on `.inactive` is right (it is —
-iOS samples the snapshot before `.background`), and whether the Mac is exempt
-(it is, and that is `handleDeactivation`'s own business). This audit only
-proves the cover can always come off.
+Deliberately NOT checked: whether covering on `.inactive` is right (it is —
+iOS samples the snapshot before `.background`), whether the Mac is exempt (it
+is, and that is `handleDeactivation`'s own business), and whether individual
+image views still honour `redactionReasons` (they do and should, but the window
+covers them either way). This audit proves the cover always comes off, and that
+it is never drawn the way that crashed.
 
 Pure, local, deterministic. `--self-test` first, then the tree. Exit non-zero on
 failure.
@@ -51,11 +71,18 @@ import sys
 from pathlib import Path
 
 SHELL = Path("Casberi/Casberi/Shell/RootShell.swift")
+COVER = Path("Casberi/Casberi/Shell/PrivacyCover.swift")
 
-FLAG = "redactNow"
+RAISE = r"PrivacyCover\.show\s*\("
+LOWER = r"PrivacyCover\.hide\s*\("
 DEBOUNCE = r"guard\s+Date\.now\.timeIntervalSince\(lastActivation\)"
 ACTIVATION = r"func\s+handleActivation\s*\("
 DEACTIVATION = r"func\s+handleDeactivation\s*\("
+# The window itself. Both halves matter: a `UIWindow` that is never unhidden
+# covers nothing, and an unhidden view that is not a window cannot sit above a
+# presented sheet — which is where a screenshot is shown full-bleed.
+WINDOW = r"UIWindow\(windowScene:"
+UNHIDE = r"\bisHidden\s*=\s*false\b"
 
 
 def strip_comments(text: str) -> str:
@@ -125,45 +152,69 @@ def all_lines(lines: list[str], pattern: str) -> list[int]:
     return [i for i, line in enumerate(lines) if rx.search(line)]
 
 
-def audit(source: str) -> list[str]:
-    """Return a list of findings; empty means clean."""
+def audit(source: str, cover: str = "") -> list[str]:
+    """Return a list of findings; empty means clean.
+
+    `cover` is `PrivacyCover.swift`'s source. It defaults to empty ONLY so the
+    self-test can drive the shell checks on their own; the real run always
+    passes it, and an empty one is reported by check A rather than skipped.
+    """
     lines = strip_comments(source).split("\n")
     findings: list[str] = []
 
-    # --- A. the cover is still applied ---------------------------------------
-    if not re.search(r"\.redacted\(reason:[^)]*" + FLAG, "\n".join(lines)):
+    # --- A. the cover still draws --------------------------------------------
+    if not re.search(RAISE, "\n".join(lines)):
         findings.append(
-            f"no `.redacted(reason:` reads `{FLAG}` — the privacy cover no "
+            "the shell never calls `PrivacyCover.show()` — the cover no "
             "longer draws, so checks B and C prove nothing"
         )
+    cover_lines = strip_comments(cover)
+    if not (re.search(WINDOW, cover_lines) and re.search(UNHIDE, cover_lines)):
+        findings.append(
+            "`PrivacyCover` does not install and unhide a `UIWindow` — a cover "
+            "that is not a window cannot sit above a presented sheet, which is "
+            "where a screenshot is shown full-bleed"
+        )
 
-    # --- B. one setter, inside handleDeactivation ----------------------------
-    raises = all_lines(lines, rf"\b{FLAG}\s*=\s*true\b")
+    # --- D. and never by redacting the shell ---------------------------------
+    # The whole reason the cover is a window (see this file's header): a
+    # `.redacted(reason:` anywhere in the shell is on the root modifier chain,
+    # and invalidating the root tree on background is what tripped the
+    # scene-update watchdog on builds 511 and 521.
+    redacted = all_lines(lines, r"\.redacted\(reason:")
+    if redacted:
+        findings.append(
+            f"`.redacted(reason:` at line {redacted[0] + 1} — a redaction on "
+            "the shell's root chain invalidates the whole view tree on every "
+            "background, which is the 0x8BADF00D scene-update watchdog that "
+            "killed builds 511 and 521. The cover is a window; keep it one"
+        )
+
+    # --- B. one raise, inside handleDeactivation -----------------------------
+    raises = all_lines(lines, RAISE)
     deact = first_line(lines, DEACTIVATION)
-    if not raises:
-        findings.append(f"nothing ever sets `{FLAG} = true` — the cover never rises")
-    elif deact is None:
+    if raises and deact is None:
         findings.append("`handleDeactivation` not found — the cover has no owner")
-    else:
+    elif raises:
         stray = [i for i in raises if i < deact]
         if stray:
             findings.append(
-                f"`{FLAG} = true` at line {stray[0] + 1} sits outside "
+                f"`PrivacyCover.show()` at line {stray[0] + 1} sits outside "
                 "`handleDeactivation` — a second way to raise the cover that "
                 "check C's ordering rule does not cover"
             )
 
-    # --- C. cleared inside handleActivation, above the debounce --------------
+    # --- C. lowered inside handleActivation, above the debounce --------------
     act = first_line(lines, ACTIVATION)
     if act is None:
-        findings.append("`handleActivation` not found — nothing can clear the cover")
+        findings.append("`handleActivation` not found — nothing can lower the cover")
         return findings
 
-    clears = [i for i in all_lines(lines, rf"\b{FLAG}\s*=\s*false\b") if i > act]
+    clears = [i for i in all_lines(lines, LOWER) if i > act]
     if not clears:
         findings.append(
-            f"nothing sets `{FLAG} = false` inside `handleActivation` — once "
-            "the cover rises there is no way back"
+            "nothing calls `PrivacyCover.hide()` inside `handleActivation` — "
+            "once the cover rises there is no way back"
         )
         return findings
 
@@ -178,10 +229,10 @@ def audit(source: str) -> list[str]:
 
     if min(clears) > guard:
         findings.append(
-            f"`{FLAG} = false` (line {min(clears) + 1}) sits BELOW the "
+            f"`PrivacyCover.hide()` (line {min(clears) + 1}) sits BELOW the "
             f"activation debounce (line {guard + 1}) — a return inside the "
-            "debounce window leaves the whole app as placeholder bars, with no "
-            "way back except leaving again. Hoist the clear above the guard."
+            "debounce window leaves the whole app under the cover, with no "
+            "way back except leaving again. Hoist the lower above the guard."
         )
 
     return findings
@@ -189,53 +240,81 @@ def audit(source: str) -> list[str]:
 
 # --- fixtures ----------------------------------------------------------------
 
+COVER_CLEAN = """
+@MainActor
+enum PrivacyCover {
+    private static var window: UIWindow?
+    static func show() {
+        guard let scene = hostScene() else { return }
+        let w = UIWindow(windowScene: scene)
+        w.windowLevel = .alert + 1
+        w.rootViewController = UIHostingController(rootView: CoverContent())
+        w.isHidden = false
+        window = w
+    }
+    static func hide() { window?.isHidden = true; window = nil }
+}
+"""
+
+# A cover that builds a plain view instead of a window: it cannot rise above a
+# presented sheet, which is exactly where a full-bleed screenshot is shown.
+COVER_NOT_A_WINDOW = COVER_CLEAN.replace("let w = UIWindow(windowScene: scene)",
+                                         "let w = UIView()")
+
 CLEAN = """
     private var shellPhaseAware: some View {
         shellBase
-        .redacted(reason: redactNow ? .placeholder : [])
+        .onChange(of: scenePhase) { _, phase in }
     }
 
     @MainActor
     private func handleActivation() {
-        if redactNow { withAnimation { redactNow = false } }
+        PrivacyCover.hide()
         guard Date.now.timeIntervalSince(lastActivation) > 2 else { return }
         lastActivation = .now
     }
 
     @MainActor
     private func handleDeactivation(phase: ScenePhase) {
-        if hasBeenActive && hidePreviews { redactNow = true }
+        if hasBeenActive && hidePreviews { PrivacyCover.show() }
     }
 """
 
 BELOW_GUARD = CLEAN.replace(
-    "        if redactNow { withAnimation { redactNow = false } }\n"
+    "        PrivacyCover.hide()\n"
     "        guard Date.now.timeIntervalSince(lastActivation) > 2 else { return }\n",
     "        guard Date.now.timeIntervalSince(lastActivation) > 2 else { return }\n"
-    "        withAnimation { redactNow = false }\n",
+    "        PrivacyCover.hide()\n",
 )
 
-NO_CLEAR = CLEAN.replace(
-    "        if redactNow { withAnimation { redactNow = false } }\n", ""
-)
+NO_CLEAR = CLEAN.replace("        PrivacyCover.hide()\n", "")
 
-# The clear present only as PROSE above the guard, the real one below it — the
+# The lower present only as PROSE above the guard, the real one below it — the
 # exact shape a raw-source grep would score as compliant.
 COMMENT_ONLY = CLEAN.replace(
-    "        if redactNow { withAnimation { redactNow = false } }\n"
+    "        PrivacyCover.hide()\n"
     "        guard Date.now.timeIntervalSince(lastActivation) > 2 else { return }\n",
-    "        // the crossfade below does `redactNow = false` on every return\n"
+    "        // the return path below calls PrivacyCover.hide() on every wake\n"
     "        guard Date.now.timeIntervalSince(lastActivation) > 2 else { return }\n"
-    "        withAnimation { redactNow = false }\n",
+    "        PrivacyCover.hide()\n",
 )
 
 STRAY_RAISE = CLEAN.replace(
     "    private var shellPhaseAware: some View {\n",
-    "    private func somethingElse() { redactNow = true }\n"
+    "    private func somethingElse() { PrivacyCover.show() }\n"
     "    private var shellPhaseAware: some View {\n",
 )
 
-NOT_DRAWN = CLEAN.replace(".redacted(reason: redactNow ? .placeholder : [])", "")
+NOT_DRAWN = CLEAN.replace("if hasBeenActive && hidePreviews { PrivacyCover.show() }", "")
+
+# Check D's own mutation: the root redaction put back, cover and all. This is
+# the shape that shipped in 511 and 521 and tripped the scene-update watchdog,
+# and it passes every other check in this file — the cover still rises, still
+# lowers, still lowers above the guard.
+REDACTED_BACK = CLEAN.replace(
+    "        shellBase\n",
+    "        shellBase\n        .redacted(reason: redactNow ? .placeholder : [])\n",
+)
 
 NO_DEBOUNCE = CLEAN.replace(
     "        guard Date.now.timeIntervalSince(lastActivation) > 2 else { return }\n", ""
@@ -260,21 +339,25 @@ SLASHES_INSIDE_BLOCK = (
 )
 
 
-def self_test() -> int:
+def self_test() -> tuple[int, int]:
     cases = [
-        ("clean tree", CLEAN, False),
-        ("clear below the debounce guard", BELOW_GUARD, True),
-        ("no clear at all", NO_CLEAR, True),
-        ("clear above the guard only in a comment", COMMENT_ONLY, True),
-        ("a second raise outside handleDeactivation", STRAY_RAISE, True),
-        ("the cover no longer draws", NOT_DRAWN, True),
-        ("no debounce — nothing to swallow the clear", NO_DEBOUNCE, False),
-        ("a glob in a line comment does not blank the file", GLOB_IN_COMMENT, False),
-        ("slashes inside a one-line block comment", SLASHES_INSIDE_BLOCK, False),
+        ("clean tree", CLEAN, COVER_CLEAN, False),
+        ("lower below the debounce guard", BELOW_GUARD, COVER_CLEAN, True),
+        ("no lower at all", NO_CLEAR, COVER_CLEAN, True),
+        ("lower above the guard only in a comment", COMMENT_ONLY, COVER_CLEAN, True),
+        ("a second raise outside handleDeactivation", STRAY_RAISE, COVER_CLEAN, True),
+        ("the cover no longer draws", NOT_DRAWN, COVER_CLEAN, True),
+        ("the cover is not a window", CLEAN, COVER_NOT_A_WINDOW, True),
+        ("the root redaction put back", REDACTED_BACK, COVER_CLEAN, True),
+        ("no debounce — nothing to swallow the lower", NO_DEBOUNCE, COVER_CLEAN, False),
+        ("a glob in a line comment does not blank the file",
+         GLOB_IN_COMMENT, COVER_CLEAN, False),
+        ("slashes inside a one-line block comment",
+         SLASHES_INSIDE_BLOCK, COVER_CLEAN, False),
     ]
     bad = 0
-    for name, fixture, should_fail in cases:
-        findings = audit(fixture)
+    for name, fixture, cover, should_fail in cases:
+        findings = audit(fixture, cover)
         got = bool(findings)
         if got != should_fail:
             want = "a finding" if should_fail else "no findings"
@@ -282,23 +365,25 @@ def self_test() -> int:
             bad += 1
         else:
             print(f"  ✓ self-test: {name}")
-    return bad
+    return bad, len(cases)
 
 
 def main() -> int:
     if "--self-test" in sys.argv:
-        bad = self_test()
+        bad, total = self_test()
         if bad:
             print(f"✗ privacy-cover audit self-test: {bad} case(s) wrong")
             return 1
-        print("✓ privacy-cover audit self-test: 9/9")
+        print(f"✓ privacy-cover audit self-test: {total}/{total}")
         return 0
 
-    if not SHELL.is_file():
-        print(f"✗ {SHELL} not found (run from the repo root)")
-        return 1
+    for path in (SHELL, COVER):
+        if not path.is_file():
+            print(f"✗ {path} not found (run from the repo root)")
+            return 1
 
-    findings = audit(SHELL.read_text(encoding="utf-8"))
+    findings = audit(SHELL.read_text(encoding="utf-8"),
+                     COVER.read_text(encoding="utf-8"))
     if findings:
         print(f"✗ privacy-cover audit — {SHELL}")
         for f in findings:

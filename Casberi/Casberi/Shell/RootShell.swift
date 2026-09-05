@@ -99,7 +99,6 @@ struct RootShell: View {
     /// when the agent lowers (`onLowerAgent`), same lifecycle as every other
     /// per-conversation composer state.
     @State private var keyedHistory: [AgentTurn] = []
-    @State private var redactNow = false
     /// iPad (2026-07-25). The floating agent cluster lives in THIS ZStack,
     /// which is deliberately outside `MainSurface`'s safe-area insets (ruling
     /// 6 — the bar rides every screen this app can push, not just the feed),
@@ -1617,12 +1616,11 @@ struct RootShell: View {
         .onChange(of: chrome.sourcesRequest) { _, _ in
             toggleDoors()
         }
-        // Privacy as the default (goal 6): leaving the app redacts the
-        // corpus — the app-switcher snapshot shows choreography, not content.
-        // The person can turn it off in Privacy (Hide previews). Never before
-        // first activation: apps LAUNCH inactive, and the nav bar caches a
-        // title configured under redaction.
-        .redacted(reason: redactNow ? .placeholder : [])
+        // Privacy as the default (goal 6): leaving the app covers the corpus,
+        // so the app-switcher snapshot shows the mark rather than content. The
+        // person can turn it off in Privacy (Hide previews). The cover is a
+        // WINDOW, not a modifier on this tree — see `PrivacyCover`, which
+        // carries the two watchdog reports that moved it there.
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 // The phone's activation door. On Mac Catalyst the LAUNCH
@@ -1675,28 +1673,36 @@ struct RootShell: View {
     /// launch-time doors (the `.task` fallback and the notification) and a
     /// window that can flip focus rapidly; one activation per couple of
     /// seconds is plenty, and on the phone the debounce is invisible for the
-    /// WORK — but never for the redaction, which is why un-redacting is
+    /// WORK — but never for the privacy cover, which is why lowering it is
     /// hoisted above the guard (2026-08-29, see below).
     @MainActor
     private func handleActivation() {
-        // UN-REDACT FIRST, OUTSIDE THE DEBOUNCE. `handleDeactivation` redacts
-        // on ANY non-active phase — a Control Centre pull, a Notification
-        // Centre swipe, a system alert, a two-second peek at the app switcher
-        // — and this was the only place that ever cleared it. Sitting below
-        // the guard meant any return inside two seconds swallowed the clear
-        // and left the WHOLE APP as placeholder bars, with no way back except
-        // leaving again and waiting out the window. Reported 2026-08-29 as
-        // "the app is loading very slowly": nothing was loading, the corpus
-        // was on screen the entire time wearing `.placeholder`. The debounce
-        // exists to stop the activation WORK double-running (the Mac's two
-        // launch doors); it was never meant to gate a visual state.
-        // Returning crossfades from placeholder to content (§14); leaving
-        // redacts instantly — the snapshot must already hide.
-        if redactNow { withAnimation(.easeOut(duration: 0.2)) { redactNow = false } }
+        // LOWER THE COVER FIRST, OUTSIDE THE DEBOUNCE. `handleDeactivation`
+        // raises it on ANY non-active phase — a Control Centre pull, a
+        // Notification Centre swipe, a system alert, a two-second peek at the
+        // app switcher — and this is the only place that ever clears it.
+        // Sitting below the guard meant any return inside two seconds
+        // swallowed the clear and left the WHOLE APP hidden, with no way back
+        // except leaving again and waiting out the window. Reported 2026-08-29
+        // as "the app is loading very slowly": nothing was loading, the corpus
+        // was on screen the entire time wearing `.placeholder` (the cover was
+        // a root `.redacted` then — see `PrivacyCover`). The debounce exists
+        // to stop the activation WORK double-running (the Mac's two launch
+        // doors); it was never meant to gate a visual state.
+        //
+        // Unconditional, and NOT guarded by a `@State` flag. The flag this
+        // replaced (`redactNow`) lived on the ROOT view, so writing it
+        // invalidated the whole body on every foreground and every background
+        // — the exact cost `PrivacyCover` exists to remove. Returning
+        // crossfades the cover away (§14); `hide()` is a no-op when none is up.
+        PrivacyCover.hide(on: windowScene)
         guard Date.now.timeIntervalSince(lastActivation) > 2 else { return }
         lastActivation = .now
         let firstActivation = !hasBeenActive
-        hasBeenActive = true
+        // Guarded: this is `@State` on the ROOT view, so a redundant write on
+        // every single foreground re-evaluates the whole shell body for
+        // nothing. Same reasoning as `redactNow`'s removal above.
+        if !hasBeenActive { hasBeenActive = true }
         // Freeze the away window (librarian, prd §67 ⑥) — "while you
         // were away" grounds on it; things landing from here on are
         // arriving while you're present.
@@ -1974,13 +1980,13 @@ struct RootShell: View {
     /// bars) — only the launch-time activation precedes the observer.
     @MainActor
     private func handleDeactivation(phase: ScenePhase) {
-        // Redaction is an app-switcher-snapshot concern. A Mac window stays
+        // The cover is an app-switcher-snapshot concern. A Mac window stays
         // VISIBLE while unfocused, so blanking it on every focus-out reads
         // as the app breaking — and before the 2026-08-01 activation fix it
         // never happened there (`hasBeenActive` could not become true), so
         // skipping Catalyst also preserves the Mac's long-standing behavior.
         if hasBeenActive && hidePreviews
-            && !ProcessInfo.processInfo.isMacCatalystApp { redactNow = true }
+            && !ProcessInfo.processInfo.isMacCatalystApp { PrivacyCover.show(on: windowScene) }
         if phase == .background {
             // The away clock starts — the next foreground reads it.
             AppVisit.markClosed()

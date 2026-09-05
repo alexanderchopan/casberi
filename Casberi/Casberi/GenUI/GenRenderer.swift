@@ -1321,7 +1321,9 @@ struct OnThisDayHero: View {
     /// the one image view in this app that honours `redactionReasons` — a
     /// hand-rolled `Image` survives into the app-switcher snapshot with
     /// hidePreviews ON, which for a private photograph at 190pt is exactly the
-    /// leak that guard exists to stop.
+    /// leak that guard exists to stop. The snapshot hide itself is
+    /// `PrivacyCover`'s window since 2026-09-05, which covers a hand-rolled
+    /// `Image` too.
     private var picture: some View {
         Button {
             DSHaptic.selection()
