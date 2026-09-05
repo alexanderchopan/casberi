@@ -49347,3 +49347,72 @@ Asked *"so there are no more blue buttons with centered text anymore, we got all
 **ONE full-width centered fill is deliberately left, and it is a question rather than an oversight**: the onboarding greeting's "Try a demo". It is FLOATING CHROME in a `safeAreaInset`, where §8 puts glass and the slab law does not reach, so the audit exempts it by that shape and not by name. It sits against §559, which built `DSActVerb` for exactly *"the onboarding greeting's one honest first tap"* — so the two rulings disagree about this one tile and neither is obviously wrong. Left standing for a decision rather than changed unilaterally, because it is the first thing a new person taps and its own comment records a tap-eating hazard (interactive glass applied OUTSIDE a button intercepts touches — *"takes several taps"*, 2026-07-17) that any move here has to not reintroduce. That comment also named BridgeDetailScreen's Reconnect as the pattern it copied, which §613 turned into a slab; the cross-reference is corrected rather than deleted, since the glass-inside-the-label rule it teaches still holds.
 
 **UNSEEN on a device.** Both platforms compile and every audit is green, but no screenshot of a restyled connect page has been taken — the disc's wash against `gray100` in light mode, and the 28pt disc beside a roster of 36pt faces on the four wallet-riding screens, are the two things to look at first.
+
+## 614. Shield and View for the Privacy devnet, and why Unshield is deferred (user: "add shield and unshield", then "explain to me the on device prover and if we can actually do it", 2026-09-05)
+
+The Ethrex Privacy seat could read the pool and never touch it. This adds
+**Shield** — a deposit that turns test ETH into a private note in the pool — and
+**View** — the shielded balance, read back off the chain — as peers of the
+existing Send and Top up. Shipped to TestFlight (iOS + Mac, build 521) the same
+day. **Unshield was deliberately NOT shipped**, and the reason is a standing
+decision worth recording rather than re-deriving.
+
+**IT WAS PROVEN ON CHAIN BEFORE ANY OF IT WAS BUILT.** The pool is
+`lambdaclass/minimal-shielded-pool` on chain 8141. Working against the live node
+from the project's own key, a real shield of 0.1 ETH landed a leaf whose
+commitment the app had computed off-device — byte-identical — and a real
+unshield settled a 0.05 ETH withdrawal credit to a fresh recipient, the node
+returning our own predicted transaction hash both times. So the arithmetic is
+not doc-derived; it is what the chain accepted. `§593a`'s two-frame envelope
+(the same file's send path) carries the shield transaction unchanged: a
+self-verify frame, then a SENDER frame targeting the pool with `shield(inner)`
+and the deposit as `msg.value`, budgets `0x16e360`/`0xc3500` (a shield GROWS
+state, so it needs a real state budget — the §548 Frames lesson).
+
+**THE MATH IS ITS OWN VERIFIED FLOOR, because a wrong hash is invisible to every
+other check.** Poseidon over BN254 is the pool's one hash — a note commitment, a
+nullifier, every Merkle node — and a wrong one renders as a deposit nobody can
+spend and a proof that never verifies, with a green build the whole way.
+`PrivacyDevnetPoseidon`/`PrivacyDevnetNote` are Foundation-only, and
+`privacy-poseidon-selftest.sh` compiles them WHOLE and checks them against
+circomlibjs's own vectors AND the exact values the live shield produced (the
+commitment, the depth-20 root, the `shield(bytes32)` selector `0x26123548`
+measured off the on-chain transaction). The note secrets live in a device-only,
+non-syncing Keychain book (`keychain-audit` clean); the balance counts a note
+only when its commitment is a real leaf AND its nullifier is unspent. The UI is
+entirely existing components — a `DevnetSendPanel` act opening `DevnetSendSheet`
+in a new destinationless mode — so it inherited §613's button style with nothing
+to update (`primary-verb-audit` confirms it).
+
+**THE CITATION SLIP, said out loud: the code cites `prd §593e` throughout, and
+§593e is a DIFFERENT entry (the room's design pass). This entry, §614, is the
+real one.** It resolves (so no audit fails — check C tests resolution, not
+meaning), but it points at the wrong topic. Not worth a re-ship of a devnet
+seat to correct the comments; recorded here so a later reader is not misled.
+
+**UNSHIELD NEEDS AN ON-DEVICE GROTH16 PROVER, AND FOR A DEVNET THAT IS THE WRONG
+TRADE TODAY.** Spending a note is a zero-knowledge proof: it convinces the pool
+"I own a note worth X and am spending it correctly" without revealing which
+note — the whole privacy mechanism. Two steps, both on the phone because the app
+has no server: witness generation (run the secrets through `spend.circom`, via
+the compiled `.wasm`) and proof generation (feed the witness plus the ~8MB
+`spend_final.zkey` to a Groth16 prover). Measured on a Mac with snarkjs: **1.4
+seconds.** The computation is NOT the blocker — the circuit is a tiny 2-in/2-out
+join-split, and `mopro` (PSE's mobile-proving toolkit) wraps rapidsnark + the
+witness calculator into a Swift XCFramework built for exactly this; on a phone
+this proves in ~1–5s. The Swift half — the note math, the tree, the nullifiers —
+is already in the tree from this pass, so only the prover plumbing is missing.
+
+**What makes it not worth building now, for worthless test ETH on a chain whose
+own footer says it may reset without notice:** (1) a native prover into the
+hand-authored pbxproj is real, non-reusable build-system work; (2) **Mac
+Catalyst is the open question** — if the prover will not build for Catalyst the
+parity gate blocks everything, and the clean escape is to gate unshield
+iOS-only, which is itself a decision; (3) **~10MB** of app size for the bundled
+zkey (removable by downloading it on first use, but that trades size for a
+network dependency and staleness when the circuit is recompiled); (4)
+maintenance pinned to a resettable devnet. So: **deferred, not abandoned.** It
+earns its cost when there is real reason to prove the round-trip — a maturing
+devnet, or a real network where the money means something — and the day it does,
+the crypto is proven and the Swift is in place; only the prover integration
+remains. Shield and View, the substance, already shipped.
