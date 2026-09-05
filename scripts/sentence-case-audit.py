@@ -199,6 +199,11 @@ KNOWN_PHRASES: tuple[str, ...] = (
     "Security Council", "My Clippings", "Entries folder",
     # Proper nouns that happen to be two ordinary words.
     "Kansas City", "Apple Inc", "Smart Chain", "Nutri-Score",
+    # The two .wei/.gwei registries' own names (prd §597). `serviceName` is the
+    # copy with room to be explicit, so it prints the owner's spelling.
+    # Exempted as PHRASES so `Name` and `Service` — two of the most ordinary
+    # words this app has — stay findings everywhere else.
+    "Wei Name Service", "Gwei Name Service",
 )
 
 KNOWN_PROPER: set[str] = {

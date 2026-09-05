@@ -123,6 +123,12 @@ KNOWN_ACRONYMS: set[str] = {
     # chip, the frame mode and the sheets all say UTXO, so exempting the word
     # here is what keeps the ruling and this lint from contradicting each other.
     "UTXO",
+    # Ethereum Name Service. An initialism the app has used as its own word
+    # since the ENS seat shipped — the screen, the renew card and the router
+    # all say ENS — and `NameResolve.primaryNames` labels a resolved primary
+    # with it beside the registry's own label. Re-casing it would invent a
+    # spelling nobody, including ENS, uses (prd §597).
+    "ENS",
 }
 
 MIN_WORD = 3
