@@ -729,6 +729,34 @@
         }
       }
     },
+    "\"Ask Bankr\" now appears when you type." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«Ask Bankr» ahora aparece cuando escribes."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "入力すると「Ask Bankr」が表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "입력하면 \"Ask Bankr\"가 나타납니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "输入时会出现“Ask Bankr”。"
+          }
+        }
+      }
+    },
     "#%@" : {
       "localizations" : {
         "es" : {
@@ -1952,6 +1980,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 个地址，一个签名"
+          }
+        }
+      }
+    },
+    "%@ after you quit and reopen Casberi (⌘Q)" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ después de salir y volver a abrir Casberi (⌘Q)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi を終了して開き直すと%@（⌘Q）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi를 종료했다 다시 열면 %@ (⌘Q)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出并重新打开 Casberi 后%@（⌘Q）"
           }
         }
       }
@@ -4015,6 +4071,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "来自一次花费的 %@ · %@"
+          }
+        }
+      }
+    },
+    "%@ from your next launch" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ a partir del próximo inicio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次回の起動から%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음 실행부터 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从下次启动起%@"
           }
         }
       }
@@ -9507,6 +9591,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 测试 ETH"
+          }
+        }
+      }
+    },
+    "%@ the button below." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ el botón de abajo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下のボタンを%@。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아래 버튼을 %@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@下面的按钮。"
           }
         }
       }
@@ -35107,6 +35219,34 @@
         }
       }
     },
+    "Addresses" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Direcciones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "地址"
+          }
+        }
+      }
+    },
     "Addresses on this chain are public — watching one is a read, and it hides nothing about you. Test ETH has no value, and the network may be reset without notice." : {
       "localizations" : {
         "es" : {
@@ -46647,6 +46787,34 @@
         }
       }
     },
+    "Connected — %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectado: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続済み — %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연결됨 — %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已连接 — %@"
+          }
+        }
+      }
+    },
     "Connected — %lld apps" : {
       "localizations" : {
         "es" : {
@@ -46955,6 +47123,34 @@
         }
       }
     },
+    "Connected — nothing exchanged yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectado: aún no se ha intercambiado nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続済み — まだやり取りはありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연결됨 — 아직 주고받은 것이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已连接 — 尚无往来"
+          }
+        }
+      }
+    },
     "Connected — watching for activity." : {
       "localizations" : {
         "es" : {
@@ -47175,6 +47371,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "当你的内容开始同步，连接便生效。代码：%@"
+          }
+        }
+      }
+    },
+    "Connecting to iCloud…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectando con iCloud…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud に接続中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud에 연결 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在连接 iCloud…"
           }
         }
       }
@@ -51328,6 +51552,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法在本设备上签名。"
+          }
+        }
+      }
+    },
+    "Couldn't sync — will keep retrying" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo sincronizar; se seguirá intentando"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同期できませんでした — 再試行を続けます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "동기화하지 못했습니다 — 계속 다시 시도합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法同步 — 将继续重试"
           }
         }
       }
@@ -80440,6 +80692,34 @@
         }
       }
     },
+    "Nothing pinned. %@ anything to pin it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nada fijado. %@ cualquier cosa para fijarla."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ピン留めはありません。%@するとピン留めできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "고정된 항목이 없습니다. 무엇이든 %@ 고정하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未固定任何内容。%@任意内容即可固定。"
+          }
+        }
+      }
+    },
     "Nothing pinned. Press and hold anything to pin it." : {
       "localizations" : {
         "es" : {
@@ -88990,6 +89270,34 @@
         }
       }
     },
+    "Press and hold" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantén pulsado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "長押し"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "길게 누르기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "长按"
+          }
+        }
+      }
+    },
     "Press and hold the button below." : {
       "localizations" : {
         "es" : {
@@ -97413,6 +97721,34 @@
         }
       }
     },
+    "Right-click" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Haz clic derecho"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "右クリック"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "우클릭"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "右键点按"
+          }
+        }
+      }
+    },
     "Risk" : {
       "localizations" : {
         "es" : {
@@ -100461,6 +100797,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "发送了 %@ %@ %@"
+          }
+        }
+      }
+    },
+    "Sent %@ — nothing received yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviado %@; aún no se ha recibido nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ を送信 — まだ受信はありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 보냄 — 아직 받은 것이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已发送 %@ — 尚未收到"
           }
         }
       }
@@ -105240,6 +105604,34 @@
         }
       }
     },
+    "Stays on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se queda en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ に留まります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@에만 남습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅保留在%@"
+          }
+        }
+      }
+    },
     "Step" : {
       "localizations" : {
         "es" : {
@@ -106422,6 +106814,34 @@
         }
       }
     },
+    "Sync turned itself off after two launches that didn't finish connecting. Nothing was lost — it's all on %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La sincronización se desactivó tras dos inicios que no llegaron a conectarse. No se ha perdido nada: todo sigue en %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続が完了しない起動が 2 回続いたため、同期が自動的にオフになりました。失われたものはありません — すべて %@ にあります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연결을 마치지 못한 실행이 두 번 이어져 동기화가 스스로 꺼졌습니다. 잃어버린 것은 없으며 모두 %@에 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连续两次启动未能完成连接，同步已自动关闭。没有丢失任何内容 — 都还在%@上。"
+          }
+        }
+      }
+    },
     "Synced just now" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -106559,6 +106979,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "TLS 证书"
+          }
+        }
+      }
+    },
+    "Talk to Your Agents" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Habla con tus agentes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エージェントと話す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "에이전트와 대화하기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "与你的智能体对话"
           }
         }
       }
@@ -128640,6 +129088,34 @@
         }
       }
     },
+    "Your key · stored in %@'s Keychain" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu clave · guardada en el llavero de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あなたのキー · %@ のキーチェーンに保存"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 키 · %@의 키체인에 저장됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的密钥 · 保存在%@的钥匙串中"
+          }
+        }
+      }
+    },
     "Your longest ran %@ turns" : {
       "localizations" : {
         "es" : {
@@ -131701,6 +132177,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "还有 1 项"
+          }
+        }
+      }
+    },
+    "answers now offer \"Try with your key\" on Grok." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "las respuestas ahora ofrecen «Probar con tu clave» en Grok."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回答に Grok の「キーで試す」が表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이제 답변에 Grok의 \"내 키로 시도\"가 제공됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回答现在会提供 Grok 的“用你的密钥试试”。"
+          }
+        }
+      }
+    },
+    "answers now offer \"Try with your key\" on OpenRouter." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "las respuestas ahora ofrecen «Probar con tu clave» en OpenRouter."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回答に OpenRouter の「キーで試す」が表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이제 답변에 OpenRouter의 \"내 키로 시도\"가 제공됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回答现在会提供 OpenRouter 的“用你的密钥试试”。"
+          }
+        }
+      }
+    },
+    "answers now offer \"Try with your key\" on Venice." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "las respuestas ahora ofrecen «Probar con tu clave» en Venice."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回答に Venice の「キーで試す」が表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이제 답변에 Venice의 \"내 키로 시도\"가 제공됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回答现在会提供 Venice 的“用你的密钥试试”。"
           }
         }
       }
@@ -142792,6 +143352,34 @@
         }
       }
     },
+    "watching for activity." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "atento a la actividad."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アクティビティを見守っています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "활동을 지켜보고 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在留意动态。"
+          }
+        }
+      }
+    },
     "what sits near what" : {
       "localizations" : {
         "es" : {
@@ -143265,6 +143853,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你的 %1$@"
+          }
+        }
+      }
+    },
+    "your %@ balance now joins your wallets." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tu saldo de %@ ahora se suma a tus carteras."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ の残高がウォレットに加わります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 잔액이 이제 지갑에 합산됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的 %@ 余额现在会计入钱包。"
           }
         }
       }
