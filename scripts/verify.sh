@@ -2800,6 +2800,27 @@ fi
 # one-row day cards); the demo's tail is dense, so it correctly does not fire.
 # If the demo's history is ever thinned for its own reasons, move `coarse` into
 # REQUIRED in the same change.
+#
+# **`cover` LEFT REQUIRED ON 2026-09-04, and it is a RULING that moved it, not
+# a gap.** §591b — reported from a device — found the All feed opening on a
+# live-stream hero, a day header AND `FeedLedeCard` stacked, and gated the
+# cover on `heroShown`: one cover per feed. Its own commit message records that
+# "the demo corpus reproduces every time", which is the whole of why this
+# entry moves: the demo always earns a hero on All, so with that ruling in
+# force the cover can NEVER draw here. Reaching the gate would mean stripping
+# the demo's live stream to satisfy a check — padding a demo in reverse, which
+# `demo-parity-audit.py`'s own header forbids just as firmly.
+#
+# **STATED CEILING, because this is a real subtraction in ship coverage.** The
+# cover's own drawing is now proven by nothing in this pass. It is still
+# CENSUSED — `cover=` prints every run — so the number is visible and a future
+# reader can see it sitting at zero rather than wonder whether it was checked.
+# If the cover ever stops being mutually exclusive with the hero, move it back
+# into REQUIRED in the same change.
+#
+# It was red from §591b landing (09:34) until this ran, across builds 513–516,
+# because none of those shipped a full pass — the standing lesson being that a
+# gate is only as good as the ship that runs it.
 step "Demo All-room coverage"
 ALLFEED_LOG="$OUT/demo-allfeed-coverage.log"
 if [[ -z "$POURED" ]]; then
@@ -2808,7 +2829,7 @@ else
   # Each entry is one feature of the All room that exists in NO other room.
   # `cover`/`strip`/`bundle` are the load-bearing three: without them the
   # opening screen is a flat chronological list.
-  ALLFEED_REQUIRED=(cover strip bundle imageOnly)
+  ALLFEED_REQUIRED=(strip bundle imageOnly)
   xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
   xcrun simctl spawn "$DEVICE" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "allFeed|"' \
     --style compact > "$ALLFEED_LOG" 2>/dev/null &
