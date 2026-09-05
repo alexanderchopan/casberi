@@ -16,15 +16,14 @@ struct PeerScreen: View {
     // This window's stack (per-window since `SceneState`).
     @Environment(HomeRoute.self) private var route
     @State private var syncing = false
-    @State private var lastResult: String?
+    @State private var lastResult: BridgeProof?
     /// Whether `lastResult` is a failure — see `PrivacyPoolsScreen`.
-    @State private var lastResultIsError = false
 
     private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
     private var walletCount: Int { WalletStore.shared.addresses.count }
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Peer") {
             BridgeSetupHeader(
                 name: "Peer",
                 mode: .watchedWallets,
@@ -36,13 +35,6 @@ struct PeerScreen: View {
             }
             connectSection.listRowSeparator(.hidden)
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Peer")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Peer")
         .onAppear {
             // Watching is consent (prd §207): keep the catalog seat honest the
             // moment this screen appears, and refresh fills if a wallet's watched.
@@ -78,7 +70,7 @@ struct PeerScreen: View {
                 // twins (Safe, 0xBow, Exchange) all have one.
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading your fills…"),
-                                     result: lastResult, resultIsError: lastResultIsError)
+                                     proof: lastResult)
                 DSSlabNote(text: hasWallets
                     ? "On automatically. Read-only, never trades."
                     : "Watching a wallet is all it takes.")
@@ -99,12 +91,9 @@ struct PeerScreen: View {
         defer { syncing = false }
         let added = await PeerBridge.syncNow(context: modelContext)
         if let added {
-            lastResult = added > 0 ? String(localized: "\(added) new")
-                                   : String(localized: "Up to date")
-            lastResultIsError = false
+            lastResult = .landed(added)
         } else {
-            lastResult = String(localized: "Couldn't reach Base — check your connection.")
-            lastResultIsError = true
+            lastResult = .failed(String(localized: "Couldn't reach Base — check your connection."))
         }
     }
 }

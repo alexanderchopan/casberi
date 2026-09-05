@@ -16,15 +16,13 @@ struct TokenSetupScreen: View {
     /// A feed toggle (or paste) during an in-flight sync sets this so the
     /// running pass loops once more instead of dropping the request.
     @State private var syncPending = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
 
     /// GitHub only — watching a repo directly, privately (2026-07-16): unlike
     /// a star or subscribe, it never touches the GitHub account.
     @State private var watchField = ""
     @State private var watching = false
-    @State private var watchResult: String?
-    @State private var watchResultIsError = false
+    @State private var watchResult: BridgeProof?
 
     /// GitHub only — watching a PERSON, the same way (prd §519, 2026-08-29).
     /// Its own field and its own in-flight flag, but it SHARES the result
@@ -79,7 +77,6 @@ struct TokenSetupScreen: View {
     /// screen serving the LARGEST family of bridges — every paste-a-token seat
     /// — was the one that didn't, so the flagship path had the quietest
     /// success in the catalog.
-    @State private var flipTrigger = 0
 
     /// Trello only — the API-key stage (2026-08-03). Trello is the one bridge
     /// on this screen whose API takes TWO values on every request, so its form
@@ -98,7 +95,7 @@ struct TokenSetupScreen: View {
     @State private var jiraSite: String? = JiraAuth.storedDomain
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: bridge.rawValue, computedTitle: bridge.rawValue) {
             if bridge.connected {
                 connectedState
                 // The room, one tap away (2026-08-24). This screen serves the
@@ -121,13 +118,6 @@ struct TokenSetupScreen: View {
             // form over that page — so the preview it duplicates is literally
             // still on screen behind the sheet.
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: bridge.rawValue)
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle(bridge.rawValue)
         .sheet(isPresented: $showConnection) {
             BridgeConnectionSheet(title: bridge.rawValue) {
                 connectForm
@@ -174,7 +164,7 @@ struct TokenSetupScreen: View {
         BridgeSetupHeader(name: bridge.rawValue,
                           mode: deviceFlowOffered ? .signIn : .pasteKey,
                           intro: bridge.setupIntro,
-                          connected: bridge.connected, flipTrigger: flipTrigger)
+                          connected: bridge.connected)
         if deviceFlowOffered {
             // Sign-in is THE path; the token hunt folds away behind a
             // disclosure so the screen leads with one action instead of
@@ -245,8 +235,7 @@ struct TokenSetupScreen: View {
         if key != trelloKey, bridge.connected {
             TokenVault.delete(bridge.tokenKey)
             store.bridges.removeAll { $0.id == bridge.bridgeID }
-            result = String(localized: "New key stored — authorize again below to finish.")
-            resultIsError = false
+            result = .says(String(localized: "New key stored — authorize again below to finish."))
         }
         TrelloAuth.setKey(key)
         trelloKey = key
@@ -290,8 +279,7 @@ struct TokenSetupScreen: View {
         if (domain != jiraSite || email != JiraAuth.storedEmail), bridge.connected {
             TokenVault.delete(bridge.tokenKey)
             store.bridges.removeAll { $0.id == bridge.bridgeID }
-            result = String(localized: "New site stored — paste a token minted for it below to finish.")
-            resultIsError = false
+            result = .says(String(localized: "New site stored — paste a token minted for it below to finish."))
         }
         JiraAuth.setDomain(domain)
         JiraAuth.setEmail(email)
@@ -350,7 +338,7 @@ struct TokenSetupScreen: View {
                             secure: true, action: connect)
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Fetching your \(bridge.noun)…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
                 DSSlabNote(text: keychainNote)
             }
         }
@@ -504,8 +492,7 @@ struct TokenSetupScreen: View {
 
     private func finishDeviceFlow(error: String) {
         withAnimation(DS.Motion.standard) { devicePhase = .idle }
-        result = error
-        resultIsError = true
+        result = .failed(error)
     }
 
     private func cancelDeviceFlow() {
@@ -522,7 +509,7 @@ struct TokenSetupScreen: View {
         Section {
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Fetching your \(bridge.noun)…"),
-                                 result: result, resultIsError: resultIsError)
+                                 proof: result)
         }
         .dsSlabSection()
     }
@@ -599,7 +586,7 @@ struct TokenSetupScreen: View {
                                      syncingLine: watchingPerson
                                         ? String(localized: "Looking them up…")
                                         : String(localized: "Looking it up…"),
-                                     result: watchResult, resultIsError: watchResultIsError,
+                                     proof: watchResult,
                                      faces: watchFaces, faceFallback: bridge.rawValue)
                 DSSlabNote(text: "Private to \(DS.device) — nobody is followed or notified, and nothing shows on your GitHub account.")
             }
@@ -612,23 +599,20 @@ struct TokenSetupScreen: View {
         guard !q.isEmpty, !watching, let token = TokenVault.get(bridge.tokenKey) else { return }
         DSHaptic.tap()
         watching = true
-        watchResultIsError = false
         watchFaces = []
         Task {
             let resolved = await GitHubRepoWatch.resolve(q, token: token)
             watching = false
             guard let resolved else {
-                watchResult = String(localized: "Couldn't find that repo on GitHub.")
-                watchResultIsError = true
+                watchResult = .failed(String(localized: "Couldn't find that repo on GitHub."))
                 return
             }
             guard let thing = GitHubRepoWatch.add(resolved, context: modelContext) else {
-                watchResult = String(localized: "\(resolved.fullName) is already watched.")
-                watchResultIsError = true
+                watchResult = .failed(String(localized: "\(resolved.fullName) is already watched."))
                 return
             }
             watchField = ""
-            watchResult = String(localized: "Watching \(thing.title)")
+            watchResult = .says(String(localized: "Watching \(thing.title)"))
             await sync()
         }
     }
@@ -643,41 +627,30 @@ struct TokenSetupScreen: View {
         guard !q.isEmpty, !watchingPerson, let token = TokenVault.get(bridge.tokenKey) else { return }
         DSHaptic.tap()
         watchingPerson = true
-        watchResultIsError = false
         watchFaces = []
         Task {
             let resolved = await GitHubPersonWatch.resolve(q, token: token)
             watchingPerson = false
             guard let resolved else {
-                watchResult = String(localized: "No such account on GitHub — a username, or a link to a profile.")
-                watchResultIsError = true
+                watchResult = .failed(String(localized: "No such account on GitHub — a username, or a link to a profile."))
                 return
             }
             guard let thing = GitHubPersonWatch.add(resolved, context: modelContext) else {
-                watchResult = String(localized: "\(resolved.login) is already watched.")
-                watchResultIsError = true
+                watchResult = .failed(String(localized: "\(resolved.login) is already watched."))
                 return
             }
             personField = ""
             watchFaces = [resolved.avatarURL].compactMap { $0 }
-            watchResult = String(localized: "Watching \(thing.title)")
+            watchResult = .says(String(localized: "Watching \(thing.title)"))
             await sync()
         }
     }
 
     private var removeSection: some View {
-        Section {
-            Button("Remove token", role: .destructive) {
-                TokenVault.delete(bridge.tokenKey)
-                bridge.onRemove()
-                trelloKey = nil   // Trello's key goes with it (see `onRemove`)
-                store.bridges.removeAll { $0.id == bridge.bridgeID }
-                result = String(localized: "Token removed — your things stay.")
-                resultIsError = false
-                DSHaptic.tap()
-            }
-            .dsText(.callout15)
-            .dsListCardRow()
+        BridgeDisconnectSection(bridgeID: bridge.bridgeID, name: bridge.source) {
+            TokenVault.delete(bridge.tokenKey)
+            bridge.onRemove()
+            trelloKey = nil   // Trello's key goes with it (see `onRemove`)
         }
     }
 
@@ -735,7 +708,7 @@ struct TokenSetupScreen: View {
                     // "Update"/"Remove token" for a connection that never worked and
                     // retry a dead token on every foreground.
                     TokenVault.delete(bridge.tokenKey)
-                    result = String(localized: "That token didn't work — check it (and your connection) and paste again.")
+                    result = .says(String(localized: "That token didn't work — check it (and your connection) and paste again."))
                     // "Paste again" must point at a visible field — if the
                     // manual path is folded (a device-flow connect that failed
                     // on its first sync), unfold it so the error and the field
@@ -745,16 +718,12 @@ struct TokenSetupScreen: View {
                     // A background re-sync of an already-connected bridge failed. The
                     // user didn't just paste anything, so don't accuse the empty field
                     // — say what actually happened: the saved token or the network.
-                    result = String(localized: "Couldn't refresh \(bridge.rawValue) just now — your saved token may need renewing.")
+                    result = .says(String(localized: "Couldn't refresh \(bridge.rawValue) just now — your saved token may need renewing."))
                 }
-                resultIsError = true
                 return
             }
             connecting = false
-            resultIsError = false
-            result = added > 0
-                ? String(localized: "\(added) \(bridge.noun) in")
-                : (emptyReadNote() ?? String(localized: "Up to date"))
+            result = added > 0 ? .says(String(localized: "\(added) \(bridge.noun) in")) : emptyReadNote().map(BridgeProof.says) ?? .upToDate
             let proof = added > 0
                 ? String(localized: "\(added) \(bridge.noun) in")
                 : String(localized: "Synced just now")
@@ -765,7 +734,6 @@ struct TokenSetupScreen: View {
                 // the haptic. Gated on `registerConnected` returning true — the
                 // seat really changed — so a routine re-sync of a live bridge
                 // never celebrates.
-                flipTrigger += 1
             }
         } while syncPending
     }

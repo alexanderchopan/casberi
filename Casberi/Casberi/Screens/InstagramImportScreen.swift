@@ -50,8 +50,7 @@ struct InstagramImportScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @State private var importing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
     /// How old this import is, and how much of it is here (2026-08-05,
     /// prd §310). Both read off the import RECEIPT and a count — no new field.
     @State private var staleness: String?
@@ -60,11 +59,12 @@ struct InstagramImportScreen: View {
     @Query(instagramRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Instagram") {
             BridgeSetupHeader(
                 name: "Instagram",
                 mode: .oneTimeImport,
-                intro: "Instagram has no live connection — download your export, bring it here, and search your captions, comments, saves and likes. Saved posts get their words and cover picture back from Instagram's own public pages.")
+                intro: "Instagram has no live connection — download your export, bring it here, and search your captions, comments, saves and likes. Saved posts get their words and cover picture back from Instagram's own public pages.",
+                connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus,
             // not a connection flag: an import has no live connection, so
             // "has anything arrived" is the only honest test of whether
@@ -80,18 +80,10 @@ struct InstagramImportScreen: View {
             }
             ImportUpkeepSection(source: "Instagram", held: held, staleness: staleness) { gone in
                 reread()
-                resultIsError = false
-                result = String(localized: "\(gone) removed")
+                result = .says(String(localized: "\(gone) removed"))
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Instagram")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
         .onAppear { reread() }
-        .dsScreenTitle("Instagram")
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.folder]) { outcome in
             guard case .success(let url) = outcome else { return }
@@ -123,7 +115,7 @@ struct InstagramImportScreen: View {
                     pickTitle: "Choose folder",
                     alreadyImported: held > 0,
                     showsMessagesToggle: true) { importing = true }
-                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                BridgeSyncStatusRows(proof: result)
             }
         }
         .dsSlabSection()
@@ -157,21 +149,18 @@ struct InstagramImportScreen: View {
             // A running count in the status row the receipt will replace — a
             // large archive lands in chunks now (prd §310), and without this
             // the stretch between the tap and the receipt says nothing at all.
-            result = String(localized: "\(count) landed…")
-            resultIsError = false
+            result = .says(String(localized: "\(count) landed…"))
         })
         if summary.failed {
-            result = String(localized: "Couldn't read that folder. Pick the folder you unzipped — the one containing your_instagram_activity.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't read that folder. Pick the folder you unzipped — the one containing your_instagram_activity."))
             return
         }
-        resultIsError = false
         DSHaptic.success()
         // `held` is what collapses the archive block now, so a screen that
         // didn't re-read it would leave the tutorial open after a successful
         // import until the next visit.
         reread()
-        result = summary.imported > 0 ? landedLine(summary) : nothingNewLine(summary)
+        result = summary.imported > 0 ? .says(landedLine(summary)) : .says(nothingNewLine(summary))
         let proof = summary.imported > 0
             ? String(localized: "\(summary.imported) in")
             : String(localized: "Imported just now")

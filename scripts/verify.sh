@@ -493,6 +493,19 @@ step "Setup copy audit"
 "$ROOT/scripts/setup-copy-audit.py" || fail "a connect page drifted past its copy budget — see the output above"
 print -P "%F{green}✓ setup copy audit%f"
 
+# The setup screen's SHAPE, where the copy audit above governs its words
+# (prd §608). Static, no build. Mechanical for the reason the copy audit is:
+# the vocabulary was standard and the ANATOMY was not — sixty-two screens
+# arranging the same six shared blocks in forty-eight distinct orders, seven
+# chassis modifiers copy-pasted sixty-two times with two copies already
+# missing one, and a failure tone carried in a separate Bool that §252 had
+# already caught five screens getting wrong. None of that is visible from a
+# build, a screenshot, or the copy audit.
+step "Setup anatomy audit"
+python3 "$ROOT/scripts/setup-anatomy-audit.py" --self-test >/dev/null   || fail "the setup anatomy audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/setup-anatomy-audit.py"   || fail "a setup screen drifted out of the family's anatomy — see the output above"
+print -P "%F{green}✓ setup anatomy audit%f"
+
 # The devnet send console fits the room it draws in (prd §552). Static, no
 # build, and mechanical because the failure is invisible: a card that overflows
 # renders perfectly — every element drawn, correctly, in the right order — and

@@ -33,7 +33,7 @@ struct WalletScreen: View {
     @State private var sheetRoute: AddressBookSheetRoute?
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Wallet", title: "Addresses") {
             // A short header — the family-wide pass that put every "type
             // something to watch it" screen (Vibenet, Hegota, RSS, Tokens,
             // Stocktwits, …) on one shape: identity + mode chip + one action
@@ -92,13 +92,7 @@ struct WalletScreen: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
         }
-        .listStyle(.insetGrouped)
         .listSectionSpacing(.compact)
-        .scrollContentBackground(.hidden)
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Addresses")
         .sheet(item: $sheetRoute) { route in
             switch route {
             case .connectPicker(let accounts):

@@ -12,8 +12,7 @@ struct SlackScreen: View {
     @Environment(BridgeStore.self) private var store
     @State private var connecting = false
     @State private var syncing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
     @State private var flow: Task<Void, Never>?
     /// The last attempt was closed by hand. Kept apart from `result` because
     /// the status row speaks two voices — red for an error, green for a
@@ -24,7 +23,7 @@ struct SlackScreen: View {
     @State private var showConnection = false
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Slack") {
             if SlackAuth.connected {
                 BridgeConnectedState(
                     bridgeID: "slack",
@@ -48,13 +47,6 @@ struct SlackScreen: View {
                 connectSection.listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Slack")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Slack")
         .sheet(isPresented: $showConnection) {
             BridgeConnectionSheet(title: "Slack") {
                 removeSection.listRowSeparator(.hidden)
@@ -91,7 +83,7 @@ struct SlackScreen: View {
                 }
             }
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Checking your mentions…"),
-                                 result: result, resultIsError: resultIsError)
+                                 proof: result)
             // Says what LANDS before what's safe (audit, 2026-07-31) — this
             // named PKCE, the missing password, the absent server and the
             // search-only scope, and never once said what a mention becomes
@@ -105,16 +97,8 @@ struct SlackScreen: View {
     }
 
     private var removeSection: some View {
-        Section {
-            Button("Disconnect", role: .destructive) {
-                SlackAuth.disconnect()
-                store.bridges.removeAll { $0.id == "slack" }
-                result = String(localized: "Disconnected — your things stay.")
-                resultIsError = false
-                DSHaptic.tap()
-            }
-            .dsText(.callout15)
-            .dsListCardRow()
+        BridgeDisconnectSection(bridgeID: "slack", name: "Slack") {
+            SlackAuth.disconnect()
         }
     }
 
@@ -152,8 +136,7 @@ struct SlackScreen: View {
     }
 
     private func fail(_ message: String) {
-        result = message
-        resultIsError = true
+        result = .failed(message)
     }
 
     private func sync() async {
@@ -162,12 +145,10 @@ struct SlackScreen: View {
         let added = await SlackIngest.refresh(context: modelContext)
         syncing = false
         guard let added else {
-            result = String(localized: "Couldn't check your mentions — try again in a moment.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't check your mentions — try again in a moment."))
             return
         }
-        resultIsError = false
-        result = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
+        result = .landed(added)
         let proof = added > 0
             ? String(localized: "\(added) new")
             : String(localized: "Synced just now")

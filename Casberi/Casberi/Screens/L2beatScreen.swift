@@ -30,9 +30,7 @@ struct L2beatScreen: View {
 	@State private var watched: [Thing] = []
 	@State private var syncing = false
 	@State private var syncPending = false
-	@State private var result: String?
-	@State private var resultIsError = false
-	@State private var flipTrigger = 0
+	@State private var result: BridgeProof?
 	@State private var browsing = false
 	@State private var opened: String?
 	@FocusState private var fieldFocused: Bool
@@ -45,13 +43,12 @@ struct L2beatScreen: View {
 	private var connected: Bool { following || !watched.isEmpty }
 
 	var body: some View {
-		List {
+		BridgeSetupPage(name: "L2BEAT") {
 			BridgeSetupHeader(
 				name: "L2BEAT",
 				mode: .noAccount,
 				intro: "Follow L2BEAT below, and name the chains you use — their incidents and full risk assessments arrive, their judgments, never ours.",
-				connected: connected,
-				flipTrigger: flipTrigger)
+				connected: connected)
 
 			if connected {
 				RoomDoor(name: "L2BEAT", source: L2beatWatch.source)
@@ -90,13 +87,6 @@ struct L2beatScreen: View {
 				).listRowSeparator(.hidden)
 			}
 		}
-		.listStyle(.insetGrouped)
-		.scrollContentBackground(.hidden)
-		.bridgeSetupWash(name: "L2BEAT")
-		.dsAdaptiveContentWidth()
-		.dsPageBackground()
-		.dsSoftScrollEdges()
-		.dsScreenTitle("L2BEAT")
 		.navigationDestination(isPresented: $browsing) {
 			L2beatDirectoryScreen()
 		}
@@ -191,8 +181,7 @@ struct L2beatScreen: View {
 				BridgeSyncStatusRows(
 					syncing: syncing,
 					syncingLine: String(localized: "Reading L2BEAT…"),
-					result: result,
-					resultIsError: resultIsError)
+					proof: result)
 			}
 		}
 		.dsSlabSection()
@@ -279,11 +268,9 @@ struct L2beatScreen: View {
 
 	private func follow() {
 		DSHaptic.tap()
-		let wasConnected = connected
 		L2beatWatch.following = true
 		following = true
 		L2beatWatch.registerBridge(store: store, context: modelContext)
-		if !wasConnected { flipTrigger += 1 }
 		Task { await sync() }
 	}
 
@@ -293,7 +280,6 @@ struct L2beatScreen: View {
 	}
 
 	private func watch(_ project: L2beatProject) {
-		let wasEmpty = watched.isEmpty
 		guard L2beatWatch.add(project, context: modelContext) != nil else { return }
 		queryField = ""
 		// `add` turns following on (watching implies following) — mirror it, or the screen
@@ -301,7 +287,6 @@ struct L2beatScreen: View {
 		following = L2beatWatch.following
 		load()
 		L2beatWatch.registerBridge(store: store, context: modelContext)
-		if wasEmpty { flipTrigger += 1 }
 		Task { await sync() }
 	}
 
@@ -319,13 +304,9 @@ struct L2beatScreen: View {
 			// read the registry and is owed the same result line.
 			guard connected else { return }
 			if let added {
-				result = added > 0
-					? String(localized: "\(added) new")
-					: String(localized: "Up to date")
-				resultIsError = false
+				result = added > 0 ? .landed(added) : .upToDate
 			} else {
-				result = String(localized: "Couldn't reach L2BEAT — check your connection.")
-				resultIsError = true
+				result = .failed(String(localized: "Couldn't reach L2BEAT — check your connection."))
 			}
 		} while syncPending
 	}

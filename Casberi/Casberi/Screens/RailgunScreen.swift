@@ -17,17 +17,16 @@ struct RailgunScreen: View {
     // This window's stack (per-window since `SceneState`).
     @Environment(HomeRoute.self) private var route
     @State private var syncing = false
-    @State private var lastResult: String?
+    @State private var lastResult: BridgeProof?
     /// Whether `lastResult` is a failure — never hardcoded false, or a
     /// "couldn't reach the chain" line paints in confirm green with the
     /// count-up animation, which is the fake status §83 bans.
-    @State private var lastResultIsError = false
 
     private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
     private var walletCount: Int { WalletStore.shared.addresses.count }
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Railgun") {
             BridgeSetupHeader(
                 name: "Railgun",
                 mode: .watchedWallets,
@@ -39,13 +38,6 @@ struct RailgunScreen: View {
             }
             connectSection.listRowSeparator(.hidden)
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Railgun")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Railgun")
         .onAppear {
             // Watching is consent (prd §207): keep the catalog seat honest on
             // appear, and refresh if a wallet's watched.
@@ -74,7 +66,7 @@ struct RailgunScreen: View {
                 }
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading the pool's doors…"),
-                                     result: lastResult, resultIsError: lastResultIsError)
+                                     proof: lastResult)
                 DSSlabNote(text: hasWallets
                     ? String(localized: "On automatically — both doors land as they happen.")
                     : String(localized: "Read off the wallets you watch."))
@@ -94,12 +86,9 @@ struct RailgunScreen: View {
         defer { syncing = false }
         let added = await RailgunBridge.syncNow(context: modelContext)
         if let added {
-            lastResult = added > 0 ? String(localized: "\(added) new")
-                                   : String(localized: "Up to date")
-            lastResultIsError = false
+            lastResult = .landed(added)
         } else {
-            lastResult = String(localized: "Couldn't reach the chain — check your connection.")
-            lastResultIsError = true
+            lastResult = .failed(String(localized: "Couldn't reach the chain — check your connection."))
         }
     }
 }

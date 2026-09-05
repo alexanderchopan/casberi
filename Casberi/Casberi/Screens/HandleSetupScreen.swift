@@ -456,11 +456,9 @@ struct HandleSetupScreen: View {
     /// the single/multi bridges' plain add field.
     @State private var query = ""
     @State private var syncing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
     /// Bumped once when this screen first turns a connection live — the header
     /// icon coin-flips to acknowledge the handshake.
-    @State private var connectFlip = 0
     /// Shown after a first connect, once: a one-tap way to the board where the
     /// new card just landed. Cleared on tap.
     @State private var showHomeHint = false
@@ -491,16 +489,15 @@ struct HandleSetupScreen: View {
     @State private var exportURL: URL?
     // The import half (Telegram only — see `HandleBridge.importsArchive`).
     @State private var importing = false
-    @State private var importResult: String?
-    @State private var importIsError = false
+    @State private var importResult: BridgeProof?
     @State private var importHeld = 0
     @State private var importStaleness: String?
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: bridge.rawValue, computedTitle: bridge.rawValue) {
             BridgeSetupHeader(name: bridge.rawValue,
                               mode: .noAccount, intro: bridge.setupIntro,
-                              connected: bridge.isConnected, flipTrigger: connectFlip)
+                              connected: bridge.isConnected)
             // The way back to your things (§460).
             if bridge.isConnected {
                 RoomDoor(name: bridge.rawValue, source: bridge.rawValue)
@@ -554,13 +551,6 @@ struct HandleSetupScreen: View {
                 ).listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: bridge.rawValue)
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle(bridge.rawValue)
         // The list changing is the cheap trigger; a finished sync is the other
         // one, since that is when an entry's feed URL actually resolves (a
         // follow added seconds ago has a name and no address yet).
@@ -910,7 +900,7 @@ struct HandleSetupScreen: View {
                 }
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: omniSyncingLine,
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
                 DSSlabNote(text: omniNote)
                 exportLink
             }
@@ -976,7 +966,7 @@ struct HandleSetupScreen: View {
                 alreadyImported: importHeld > 0,
                 showsMessagesToggle: true
             ) { importing = true }
-            BridgeSyncStatusRows(result: importResult, resultIsError: importIsError)
+            BridgeSyncStatusRows(proof: importResult)
         }
         .dsSlabSection()
     }
@@ -996,13 +986,11 @@ struct HandleSetupScreen: View {
 
         let summary = await TelegramImport.run(folder: url, context: modelContext)
         if summary.failed {
-            importIsError = true
-            importResult = summary.reason ?? String(localized: "Couldn't read that folder — is it the unzipped export?")
+            importResult = .failed(summary.reason ?? String(localized: "Couldn't read that folder — is it the unzipped export?"))
             return
         }
-        importIsError = false
         DSHaptic.success()
-        importResult = summary.landedLine
+        importResult = .says(summary.landedLine)
         rereadImport()
         store.registerConnected(id: bridge.bridgeID, name: bridge.rawValue,
                                 proof: summary.landedLine, can: [bridge.canLine])
@@ -1160,7 +1148,6 @@ struct HandleSetupScreen: View {
         let name = FarcasterStore.normalizeChannel(raw)
         guard !name.isEmpty, !syncing else { return }
         syncing = true
-        resultIsError = false
         Task {
             if await FarcasterIngest.followChannel(name) != nil {
                 query = ""
@@ -1169,8 +1156,7 @@ struct HandleSetupScreen: View {
                 await sync()
             } else {
                 syncing = false
-                result = String(localized: "Couldn't find that channel — check the name.")
-                resultIsError = true
+                result = .failed(String(localized: "Couldn't find that channel — check the name."))
             }
         }
     }
@@ -1230,17 +1216,15 @@ struct HandleSetupScreen: View {
             // either — nil there is the node not answering.
             if let kind = bridge.feedKind,
                kind.store.entries.contains(where: { !$0.feedURL.isEmpty }) {
-                result = String(localized: "Saved — \(bridge.rawValue) didn't answer just now. It'll fill in on the next refresh.")
+                result = .says(String(localized: "Saved — \(bridge.rawValue) didn't answer just now. It'll fill in on the next refresh."))
             } else if bridge == .farcaster, accountNames.isEmpty {
-                result = String(localized: "Couldn't reach Farcaster — try again.")
+                result = .says(String(localized: "Couldn't reach Farcaster — try again."))
             } else {
-                result = String(localized: "Couldn't find that \(bridge.nameNoun) — check the spelling.")
+                result = .says(String(localized: "Couldn't find that \(bridge.nameNoun) — check the spelling."))
             }
-            resultIsError = true
             return
         }
-        resultIsError = false
-        result = added > 0 ? String(localized: "\(added) \(bridge.noun) in") : String(localized: "Up to date")
+        result = added > 0 ? .says(String(localized: "\(added) \(bridge.noun) in")) : .upToDate
         let proof = added > 0
             ? String(localized: "\(added) \(bridge.noun) in")
             : String(localized: "Synced just now")
@@ -1250,7 +1234,6 @@ struct HandleSetupScreen: View {
             // haptic fires, and the loop-to-Home hint appears once.
             DSHaptic.success()
             withAnimation(DS.Motion.standard) {
-                connectFlip += 1
                 // Every connected source always has its own feed now (no
                 // pin/hide to gate on) — the hint fires unconditionally.
                 showHomeHint = true

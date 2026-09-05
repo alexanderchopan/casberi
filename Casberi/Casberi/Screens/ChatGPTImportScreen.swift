@@ -22,17 +22,19 @@ struct ChatGPTImportScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @State private var importing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
+    @State private var staleness: String?
+    @State private var held = 0
 
     @Query(chatgptRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "ChatGPT") {
             BridgeSetupHeader(
                 name: "ChatGPT",
                 mode: .oneTimeImport,
-                intro: "ChatGPT has no live connection — export your conversations, bring them here, and every chat becomes searchable.")
+                intro: "ChatGPT has no live connection — export your conversations, bring them here, and every chat becomes searchable.",
+                connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus,
             // not a connection flag: an import has no live connection, so
             // "has anything arrived" is the only honest test of whether
@@ -46,14 +48,12 @@ struct ChatGPTImportScreen: View {
                 RecentThingsSection(header: "Imported", things: recent.live)
                     .listRowSeparator(.hidden)
             }
+            ImportUpkeepSection(source: "ChatGPT", held: held, staleness: staleness) { gone in
+                reread()
+                result = .says(String(localized: "\(gone) removed"))
+            }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "ChatGPT")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("ChatGPT")
+        .onAppear { reread() }
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.json]) { outcome in
             guard case .success(let url) = outcome else { return }
@@ -67,22 +67,26 @@ struct ChatGPTImportScreen: View {
     private var setupSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                // The last step said "Pick conversations.json below" directly
-                // above a button titled "Choose conversations.json", and the
-                // note said "your chats become findable things" directly below
-                // the header's own "Import your chats, keep them findable"
-                // (§220's finding, twice; 2026-07-31).
-                BridgeStepLines(steps: ["In ChatGPT, open Settings → Data controls → Export data.",
-                                     "OpenAI emails a link — unzip it in Files."], startingAt: 1)
-                DSSlabButton(title: "Choose conversations.json", systemImage: "square.and.arrow.down") {
-                    DSHaptic.tap()
-                    importing = true
-                }
-                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                DSSlabNote(text: "One-time import — re-importing later adds only what's new.")
+                ImportArchiveSection(
+                    source: "ChatGPT",
+                    steps: ["In ChatGPT, open Settings → Data controls → Export data.",
+                            "OpenAI emails a link — unzip it in Files."],
+                    pickTitle: "Choose conversations.json",
+                    pickIcon: "square.and.arrow.down",
+                    alreadyImported: held > 0) { importing = true }
+                BridgeSyncStatusRows(proof: result)
+                // "One-time import — re-importing later adds only what's new."
+                // moved out rather than being reworded: `ImportUpkeepSection`'s
+                // own footer already says an import can be run again and what
+                // that brings back, and §315 gives this screen one sentence.
             }
         }
         .dsSlabSection()
+    }
+
+    private func reread() {
+        staleness = ImportRemoval.stalenessLine(source: "ChatGPT", context: modelContext)
+        held = ImportRemoval.count(source: "ChatGPT", context: modelContext)
     }
 
     // MARK: - Run
@@ -91,23 +95,21 @@ struct ChatGPTImportScreen: View {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         guard let data = await SecurityScopedFileReader.readData(at: url) else {
-            result = String(localized: "Couldn't read that file. Pick conversations.json from the unzipped export.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't read that file. Pick conversations.json from the unzipped export."))
             return
         }
         let summary = ChatGPTImport.run(data: data, context: modelContext)
         if summary.failed {
-            result = String(localized: "That file isn't a ChatGPT export. Pick conversations.json.")
-            resultIsError = true
+            result = .failed(String(localized: "That file isn't a ChatGPT export. Pick conversations.json."))
             return
         }
-        resultIsError = false
         DSHaptic.success()
-        result = summary.imported > 0
+        reread()
+        result = .says(summary.imported > 0
             ? (summary.skipped > 0
                ? String(localized: "\(summary.imported) chats in · \(summary.skipped) already here")
                : String(localized: "\(summary.imported) chats in"))
-            : String(localized: "Nothing new — all \(summary.skipped) chats were already here.")
+            : String(localized: "Nothing new — all \(summary.skipped) chats were already here."))
         let proof = summary.imported > 0
             ? String(localized: "\(summary.imported) chats in")
             : String(localized: "Synced just now")

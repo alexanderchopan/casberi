@@ -58,33 +58,35 @@ struct DayOneImportScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @State private var importing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
+    @State private var staleness: String?
+    @State private var held = 0
 
     @Query(dayOneRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Day One") {
             BridgeSetupHeader(
                 name: "Day One",
                 mode: .oneTimeImport,
-                intro: "Day One has no live connection — export your journal, bring it here, and every entry becomes searchable on the day you wrote it.")
+                intro: "Day One has no live connection — export your journal, bring it here, and every entry becomes searchable on the day you wrote it.",
+                connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus:
             // an import has no live connection to gate on.
             if !recent.isEmpty {
                 RoomDoor(name: "Day One", source: "Day One")
                     .listRowSeparator(.hidden)
             }
-            // The third step was "Pick the .json inside below", above a button
-            // titled "Choose your Day One .json" (§220, 2026-07-31).
-            ImportStepsCard("Get your export", [
-                "In Day One, open Settings → Import/Export → Export → JSON.",
-                "Save the zip to Files and tap it once to unzip.",
-            ])
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    ImportPickRow(label: "Choose your Day One export") { importing = true }
-                    BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                    ImportArchiveSection(
+                        source: "Day One",
+                        steps: ["In Day One, open Settings → Import/Export → Export → JSON.",
+                                "Save the zip to Files and tap it once to unzip."],
+                        pickTitle: "Choose your Day One export",
+                        pickIcon: "square.and.arrow.down",
+                        alreadyImported: held > 0) { importing = true }
+                    BridgeSyncStatusRows(proof: result)
                     // The one fine print that changes what somebody DOES
                     // (§315): the folder and the .json both import, and only the
                     // folder can reach `photos/`.
@@ -96,14 +98,12 @@ struct DayOneImportScreen: View {
                 RecentThingsSection(header: "Imported", things: Array(recent))
                     .listRowSeparator(.hidden)
             }
+            ImportUpkeepSection(source: "Day One", held: held, staleness: staleness) { gone in
+                reread()
+                result = .says(String(localized: "\(gone) removed"))
+            }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Day One")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Day One")
+        .onAppear { reread() }
         // FOLDER OR FILE since 2026-08-17 (prd §398). The `.json` alone still
         // works and still imports every entry — but a scoped grant on a file
         // cannot read the `photos/` directory beside it, so the folder is the
@@ -114,6 +114,12 @@ struct DayOneImportScreen: View {
             guard case .success(let url) = outcome else { return }
             Task { await runImport(url) }
         }
+    }
+
+
+    private func reread() {
+        staleness = ImportRemoval.stalenessLine(source: "Day One", context: modelContext)
+        held = ImportRemoval.count(source: "Day One", context: modelContext)
     }
 
     private func runImport(_ url: URL) async {
@@ -127,19 +133,17 @@ struct DayOneImportScreen: View {
         let root = isFolder ? url : url.deletingLastPathComponent()
         guard let json = isFolder ? DayOneImport.findJSON(inFolder: url) : url,
               let data = await SecurityScopedFileReader.readData(at: json) else {
-            result = String(localized: "Couldn't read that. Pick the unzipped export folder, or the .json inside it.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't read that. Pick the unzipped export folder, or the .json inside it."))
             return
         }
         let summary = await DayOneImport.run(data: data, context: modelContext, exportRoot: root)
         if summary.failed {
-            result = String(localized: "That file isn't a Day One export. Pick the .json inside the unzipped folder.")
-            resultIsError = true
+            result = .failed(String(localized: "That file isn't a Day One export. Pick the .json inside the unzipped folder."))
             return
         }
-        resultIsError = false
         DSHaptic.success()
-        result = journalImportReceipt(summary)
+        reread()
+        result = .says(journalImportReceipt(summary))
         let proof = summary.imported > 0
             ? String(localized: "\(summary.imported) entries in")
             : String(localized: "Synced just now")
@@ -165,39 +169,39 @@ struct JournalImportScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @State private var importing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
+    @State private var staleness: String?
+    @State private var held = 0
 
     @Query(journalRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Apple Journal") {
             BridgeSetupHeader(
                 name: "Apple Journal",
                 mode: .oneTimeImport,
-                intro: "Journal has no live connection — export it from Settings, bring it here, and every entry becomes searchable on the day you wrote it.")
+                intro: "Journal has no live connection — export it from Settings, bring it here, and every entry becomes searchable on the day you wrote it.",
+                connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus:
             // an import has no live connection to gate on.
             if !recent.isEmpty {
                 RoomDoor(name: "Apple Journal", source: "Apple Journal")
                     .listRowSeparator(.hidden)
             }
-            // The third step was "Pick the unzipped folder below", above a
-            // button titled "Choose the export folder" (§220, 2026-07-31).
-            ImportStepsCard("Get your export", [
-                "In Journal, tap your profile picture → Export Journal.",
-                "Save the zip to Files and tap it once to unzip.",
-            ])
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    ImportPickRow(label: "Choose the export folder") { importing = true }
-                    BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                    ImportArchiveSection(
+                        source: "Apple Journal",
+                        steps: ["In Journal, tap your profile picture → Export Journal.",
+                                "Save the zip to Files and tap it once to unzip."],
+                        pickTitle: "Choose the export folder",
+                        alreadyImported: held > 0) { importing = true }
+                    BridgeSyncStatusRows(proof: result)
                     // The note that sat here ("Photos stay in the export for
                     // now") is DELETED rather than reworded: it stopped being
                     // true when §398 landed the pictures, and unlike Day One's
                     // there is no choice left for fine print to govern — this
                     // screen only ever picks the folder.
-                    
                 }
             }
             .dsSlabSection()
@@ -205,14 +209,12 @@ struct JournalImportScreen: View {
                 RecentThingsSection(header: "Imported", things: Array(recent))
                     .listRowSeparator(.hidden)
             }
+            ImportUpkeepSection(source: "Apple Journal", held: held, staleness: staleness) { gone in
+                reread()
+                result = .says(String(localized: "\(gone) removed"))
+            }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Apple Journal")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Apple Journal")
+        .onAppear { reread() }
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.folder]) { outcome in
             guard case .success(let url) = outcome else { return }
@@ -220,18 +222,22 @@ struct JournalImportScreen: View {
         }
     }
 
+    private func reread() {
+        staleness = ImportRemoval.stalenessLine(source: "Apple Journal", context: modelContext)
+        held = ImportRemoval.count(source: "Apple Journal", context: modelContext)
+    }
+
     private func runImport(_ url: URL) async {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         let summary = await JournalImport.run(folder: url, context: modelContext)
         if summary.failed {
-            result = String(localized: "No journal pages in that folder — pick the unzipped export (it holds an Entries folder).")
-            resultIsError = true
+            result = .failed(String(localized: "No journal pages in that folder — pick the unzipped export (it holds an Entries folder)."))
             return
         }
-        resultIsError = false
         DSHaptic.success()
-        result = journalImportReceipt(summary)
+        reread()
+        result = .says(journalImportReceipt(summary))
         let proof = summary.imported > 0
             ? String(localized: "\(summary.imported) entries in")
             : String(localized: "Synced just now")
@@ -260,16 +266,22 @@ struct NotesShareScreen: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Apple Notes") {
             BridgeSetupHeader(
                 name: "Apple Notes",
                 mode: .onThisDevice,
                 intro: "Apple offers no export and no read API for Notes, so there is nothing to connect. Share a note and it lands in your feed, findable like everything else.")
-            ImportStepsCard("How notes come in", [
-                "Open a note in Apple Notes.",
-                "Tap share, then Casberi.",
-                "It lands in your feed as a note — findable like everything else.",
-            ])
+            // Not an ImportArchiveSection: there is no export and no pick.
+            // These three lines describe the SHARE SHEET, which is the whole
+            // of this bridge — so the steps stand alone, in the same component
+            // every other screen's steps use.
+            Section {
+                BridgeStepLines(steps: ["Open a note in Apple Notes.",
+                                        "Tap share, then Casberi.",
+                                        "It lands in your feed as a note — findable like everything else."],
+                                startingAt: 1)
+            }
+            .dsSlabSection()
             Section {
                 // Gated 2026-08-14 (App Store review 2.1(a) on the Mac
                 // build). Nothing claims `mobilenotes` on Mac Catalyst, so
@@ -298,13 +310,6 @@ struct NotesShareScreen: View {
             }
             .listRowSeparator(.hidden)
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Apple Notes")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Apple Notes")
     }
 }
 
@@ -321,34 +326,44 @@ struct BookmarksImportScreen: View {
     @Environment(BridgeStore.self) private var store
     @State private var importing = false
     @State private var parsed: BookmarksImport.Parsed?
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
+    @State private var staleness: String?
+    @State private var held = 0
 
     @Query(bookmarksRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Bookmarks") {
             BridgeSetupHeader(
                 name: "Bookmarks",
                 mode: .oneTimeImport,
-                intro: "Export your bookmarks from any browser, bring the file here, and they become findable links — folders become tags.")
+                intro: "Export your bookmarks from any browser, bring the file here, and they become findable links — folders become tags.",
+                connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus:
             // an import has no live connection to gate on.
             if !recent.isEmpty {
                 RoomDoor(name: "Bookmarks", source: "Bookmarks")
                     .listRowSeparator(.hidden)
             }
-            ImportStepsCard("Get your export", [
-                "Chrome: chrome://bookmarks → ⋮ → Export bookmarks.",
-                "Safari (Mac): File → Export Bookmarks…",
-                // "then pick it below" was the button beneath it read out loud
-                // (§220, 2026-07-31).
-                "Save it to Files.",
-            ])
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    pickRows
-                    BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                    // The steps and the FIRST pick are the shared section; the
+                    // scope rows below are this screen's own, because a parsed
+                    // export offers a real either/or (reading list, or all)
+                    // that no other importer has.
+                    if parsed == nil {
+                        ImportArchiveSection(
+                            source: "Bookmarks",
+                            steps: ["Chrome: chrome://bookmarks → ⋮ → Export bookmarks.",
+                                    "Safari (Mac): File → Export Bookmarks…",
+                                    "Save it to Files."],
+                            pickTitle: "Choose your bookmarks export",
+                            pickIcon: "square.and.arrow.down",
+                            alreadyImported: held > 0) { importing = true }
+                    } else {
+                        pickRows
+                    }
+                    BridgeSyncStatusRows(proof: result)
                 }
             }
             .dsSlabSection()
@@ -356,14 +371,12 @@ struct BookmarksImportScreen: View {
                 RecentThingsSection(header: "Imported", things: Array(recent))
                     .listRowSeparator(.hidden)
             }
+            ImportUpkeepSection(source: "Bookmarks", held: held, staleness: staleness) { gone in
+                reread()
+                result = .says(String(localized: "\(gone) removed"))
+            }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Bookmarks")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Bookmarks")
+        .onAppear { reread() }
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.html]) { outcome in
             guard case .success(let url) = outcome else { return }
@@ -371,16 +384,20 @@ struct BookmarksImportScreen: View {
         }
     }
 
+
+    private func reread() {
+        staleness = ImportRemoval.stalenessLine(source: "Bookmarks", context: modelContext)
+        held = ImportRemoval.count(source: "Bookmarks", context: modelContext)
+    }
+
     private func runParse(_ url: URL) async {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         guard let data = await SecurityScopedFileReader.readData(at: url),
               let p = BookmarksImport.parse(data: data), !p.entries.isEmpty else {
-            result = String(localized: "That file isn't a bookmarks export. Pick the exported .html file.")
-            resultIsError = true
+            result = .failed(String(localized: "That file isn't a bookmarks export. Pick the exported .html file."))
             return
         }
-        resultIsError = false
         result = nil
         parsed = p
     }
@@ -406,15 +423,14 @@ struct BookmarksImportScreen: View {
     private func importScope(_ entries: [BookmarksImport.Entry]) {
         let summary = BookmarksImport.land(entries, context: modelContext)
         if summary.failed {
-            resultIsError = true
-            result = String(localized: "Couldn't save those bookmarks.")
+            result = .failed(String(localized: "Couldn't save those bookmarks."))
             return
         }
-        resultIsError = false
         DSHaptic.success()
-        result = summary.imported > 0
+        reread()
+        result = .says(summary.imported > 0
             ? "\(summary.imported) bookmarks in\(summary.skipped > 0 ? " · \(summary.skipped) already here" : "")"
-            : "Nothing new — all \(summary.skipped) bookmarks were already here."
+            : "Nothing new — all \(summary.skipped) bookmarks were already here.")
         let proof = summary.imported > 0
             ? String(localized: "\(summary.imported) bookmarks in")
             : String(localized: "Synced just now")
@@ -442,23 +458,12 @@ private let bookmarksRecentDescriptor: FetchDescriptor<Thing> = {
 /// hairlines, zero exceptions.
 /// The steps, plain (prd §218, 2026-07-25) — the card and its gray "Get your
 /// export" label went with the rest of the setup-screen furniture. The steps
-/// themselves are untouched: §186's ruling that they stay whole and visible
-/// is why this is a de-furnishing, not a disclosure.
-///
-/// The `header` argument is kept and ignored on purpose: every call site
-/// passes the same "Get your export", and removing the parameter would churn
-/// six screens to delete one word each.
-struct ImportStepsCard: View {
-    let steps: [String]
-    init(_ header: String, _ steps: [String]) { self.steps = steps }
-
-    var body: some View {
-        Section {
-            BridgeStepLines(steps: steps, startingAt: 1)
-        }
-        .dsSlabSection()
-    }
-}
+/// `ImportStepsCard` was DELETED in the §608 pass. It wrapped
+/// `BridgeStepLines` in a `Section` of its own and every one of its call
+/// sites has moved to `ImportArchiveSection`, which renders the same steps —
+/// numbered or not depending on whether a door did step one — beside the pick
+/// they lead to, and brings the staleness line and the scoped removal that
+/// these four screens never had. Its `header` argument was already ignored.
 
 /// The pick, as the screen's one filled block — an import screen does exactly
 /// one thing, and it should look like it (prd §218). It used to be a tinted

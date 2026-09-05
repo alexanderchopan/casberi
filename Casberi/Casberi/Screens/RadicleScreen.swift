@@ -27,12 +27,11 @@ struct RadicleScreen: View {
     @State private var syncPending = false
     @State private var searching = false
     @State private var found: [RadicleWire.Repo] = []
-    @State private var lastResult: String?
-    @State private var lastResultIsError = false
+    @State private var lastResult: BridgeProof?
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Radicle") {
             BridgeSetupHeader(
                 name: "Radicle",
                 mode: .noAccount,
@@ -53,13 +52,6 @@ struct RadicleScreen: View {
                 ).listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Radicle")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Radicle")
         .onAppear {
             seedField = radicle.seed
             // Opening the screen doesn't connect — watching a repo does.
@@ -95,7 +87,7 @@ struct RadicleScreen: View {
                                      syncingLine: searching
                                         ? String(localized: "Asking the seed…")
                                         : String(localized: "Reading the seed…"),
-                                     result: lastResult, resultIsError: lastResultIsError)
+                                     proof: lastResult)
                 DSSlabNote(text: "An id like rad:z3gqcJ…, or any Radicle link.")
             }
         }
@@ -189,13 +181,11 @@ struct RadicleScreen: View {
 
     private func watch(_ raw: String) {
         guard let id = RadicleWire.normalizeRID(raw) else {
-            lastResult = String(localized: "That isn't a Radicle repo id.")
-            lastResultIsError = true
+            lastResult = .failed(String(localized: "That isn't a Radicle repo id."))
             return
         }
         guard radicle.add(id) else {
-            lastResult = String(localized: "Already watching that repo.")
-            lastResultIsError = false
+            lastResult = .says(String(localized: "Already watching that repo."))
             repoField = ""
             return
         }
@@ -215,8 +205,7 @@ struct RadicleScreen: View {
         FollowPrune.remove(source: "Radicle", context: modelContext) {
             $0.sourceRef?.contains(":\(rid):") == true
         }
-        lastResult = String(localized: "Stopped watching \(name).")
-        lastResultIsError = false
+        lastResult = .says(String(localized: "Stopped watching \(name)."))
         DSHaptic.tap()
         Task { await sync() }
     }
@@ -238,10 +227,7 @@ struct RadicleScreen: View {
         Task {
             let (ok, version) = await RadicleIngest.probeSeed(host)
             guard !ok else { await sync(); return }
-            lastResult = version == nil
-                ? String(localized: "Couldn't reach \(host).")
-                : String(localized: "\(host) doesn't answer as a Radicle seed.")
-            lastResultIsError = true
+            lastResult = version == nil ? .says(String(localized: "Couldn't reach \(host).")) : .says(String(localized: "\(host) doesn't answer as a Radicle seed."))
         }
     }
 
@@ -257,8 +243,7 @@ struct RadicleScreen: View {
             if hits.isEmpty {
                 // Not an error: a seed genuinely may not hold it, which is the
                 // one thing about this network the copy must keep saying.
-                lastResult = String(localized: "\(radicle.seed) doesn't seed anything called that.")
-                lastResultIsError = false
+                lastResult = .says(String(localized: "\(radicle.seed) doesn't seed anything called that."))
             }
         }
     }
@@ -281,10 +266,7 @@ struct RadicleScreen: View {
             // resurrect the seat the person just removed.
             guard radicle.connected else { store.remove("radicle"); return }
             if let added {
-                lastResult = added > 0
-                    ? String(localized: "\(added) new")
-                    : String(localized: "Up to date")
-                lastResultIsError = false
+                lastResult = added > 0 ? .landed(added) : .upToDate
                 let proof = added > 0
                     ? String(localized: "\(added) in")
                     : String(localized: "Synced just now")
@@ -293,8 +275,7 @@ struct RadicleScreen: View {
                     can: ["Reads patches and issues from the repos you watch, on the seed you name.",
                           "Read-only — the gateway has no credential and no way to write."])
             } else {
-                lastResult = String(localized: "Couldn't reach \(radicle.seed) — check your connection.")
-                lastResultIsError = true
+                lastResult = .failed(String(localized: "Couldn't reach \(radicle.seed) — check your connection."))
             }
         } while syncPending && radicle.connected
     }

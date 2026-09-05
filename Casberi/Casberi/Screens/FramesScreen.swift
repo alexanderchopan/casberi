@@ -35,7 +35,7 @@ struct FramesScreen: View {
     private var connected: Bool { watch.connected || keyAddress != nil }
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: FramesIdentity.source, computedTitle: FramesIdentity.source) {
             BridgeSetupHeader(
                 name: FramesIdentity.source,
                 mode: .noAccount,
@@ -95,13 +95,6 @@ struct FramesScreen: View {
                 ).listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: FramesIdentity.source)
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle(FramesIdentity.source)
     }
 
     private static let examples = FramesExample.all

@@ -40,6 +40,7 @@ struct AppStoreConnectScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.openURL) private var openURL
 
+    @State private var showConnection = false
     @State private var keyField = ""
     @State private var keyIDField = ""
     @State private var issuerField = ""
@@ -52,9 +53,7 @@ struct AppStoreConnectScreen: View {
 
     @State private var connecting = false
     @State private var syncing = false
-    @State private var result: String?
-    @State private var resultIsError = false
-    @State private var flipTrigger = 0
+    @State private var result: BridgeProof?
 
     @State private var recent: [Thing] = []
     @State private var standings: [ASCStanding] = []
@@ -86,17 +85,32 @@ struct AppStoreConnectScreen: View {
     }
 
     var body: some View {
-        List {
-            BridgeSetupHeader(
-                name: "App Store Connect",
-                mode: .pasteKey,
-                // Trimmed 2026-08-06: the first cut listed the three shapes
-                // here AND the four reads in the checklist below — two lists of
-                // nearly the same thing, twenty words apart. The intro sells,
-                // the checklist bounds.
-                intro: "Add a key and Apple's verdicts, your customer reviews and expiring builds keep arriving. Apple has no read-only role, so this only reads.",
-                connected: hasKey,
-                flipTrigger: flipTrigger)
+        BridgeSetupPage(name: "App Store Connect") {
+            if hasKey {
+                // Connected (prd §186): the credential form retires behind one
+                // door, and identity, live proof and what this can do take the
+                // screen. This bridge stores only the secret — in the Keychain
+                // — so it leads with its own name over a truthful note about
+                // HOW it is connected, never an account name we would guess.
+                BridgeConnectedState(
+                    bridgeID: bridge.bridgeID,
+                    name: "App Store Connect",
+                    connectionNote: String(localized: "Your \(bridge.credentialNoun) · stored in \(DS.device)'s Keychain"),
+                    capabilitiesFallback: [bridge.canLine],
+                    openConnection: { showConnection = true })
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            } else {
+                BridgeSetupHeader(
+                    name: "App Store Connect",
+                    mode: .pasteKey,
+                    // Trimmed 2026-08-06: the first cut listed the three shapes
+                    // here AND the four reads in the checklist below — two lists of
+                    // nearly the same thing, twenty words apart. The intro sells,
+                    // the checklist bounds.
+                    intro: "Add a key and Apple's verdicts, your customer reviews and expiring builds keep arriving. Apple has no read-only role, so this only reads.",
+                    connected: hasKey)
+            }
             // The way back to your things (§460).
             if hasKey {
                 RoomDoor(name: "App Store Connect", source: ASCShape.source)
@@ -107,26 +121,10 @@ struct AppStoreConnectScreen: View {
                 if !recent.isEmpty {
                     RecentThingsSection(header: "Landed", things: recent.live)
                 }
-                BridgeDisconnectSection(bridgeID: bridge.bridgeID,
-                                        name: "App Store Connect",
-                                        teardown: {
-                                            TokenVault.delete(ASCAuth.keyVaultKey)
-                                            ASCAuth.clear()
-                                            credentialVersion += 1
-                                            load()
-                                        })
-                    .listRowSeparator(.hidden)
             } else {
                 keySection.listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "App Store Connect")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("App Store Connect")
         // `.data` rather than a `.p8` type: the extension is registered with
         // nobody, so a UTType built from it is a dynamic type no file on disk
         // conforms to — the picker would open with every file grayed out and
@@ -134,6 +132,12 @@ struct AppStoreConnectScreen: View {
         .fileImporter(isPresented: $pickingKey, allowedContentTypes: [.data]) { outcome in
             guard case .success(let url) = outcome else { return }
             Task { await readKeyFile(url) }
+        }
+        .sheet(isPresented: $showConnection) {
+            BridgeConnectionSheet(title: "App Store Connect") {
+                keySection
+                removeSection
+            }
         }
         .onAppear {
             load()
@@ -178,7 +182,6 @@ struct AppStoreConnectScreen: View {
         }
         keyField = text
         pickedName = name
-        resultIsError = false
         result = nil
         // Apple's own filename carries the Key ID, so the second field answers
         // itself. Never overwrites something already typed — a person who
@@ -281,7 +284,7 @@ struct AppStoreConnectScreen: View {
                 DSSlabNote(text: "Leave the Issuer ID empty if your key is an individual key rather than a team's.")
                 BridgeSyncStatusRows(syncing: connecting,
                                      syncingLine: String(localized: "Checking the key…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
             }
         }
         .dsSlabSection()
@@ -325,7 +328,7 @@ struct AppStoreConnectScreen: View {
                 }
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading App Store Connect…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
                 DSSlabNote(text: "Verdicts, reviews and expiring builds land on their own.")
             }
         }
@@ -387,10 +390,7 @@ struct AppStoreConnectScreen: View {
             case .ok(let count):
                 keyField = ""; keyIDField = ""; issuerField = ""; pickedName = ""
                 credentialVersion += 1
-                resultIsError = false
-                result = count == 1 ? String(localized: "Connected — 1 app")
-                                    : String(localized: "Connected — \(count) apps")
-                flipTrigger += 1
+                result = count == 1 ? .connected(String(localized: "1 app")) : .connected(String(localized: "\(count) apps"))
                 DSHaptic.success()
                 ASCWatch.registerBridge(store: store)
                 load()
@@ -441,8 +441,7 @@ struct AppStoreConnectScreen: View {
     }
 
     private func fail(_ message: String) {
-        resultIsError = true
-        result = message
+        result = .failed(message)
     }
 
     private func sync() async {
@@ -453,12 +452,9 @@ struct AppStoreConnectScreen: View {
         load()
         ASCWatch.registerBridge(store: store)
         if let added {
-            result = added > 0 ? String(localized: "\(added) new")
-                               : (bridge.emptyReadNote ?? String(localized: "Up to date"))
-            resultIsError = false
+            result = added > 0 ? .landed(added) : bridge.emptyReadNote.map(BridgeProof.says) ?? .upToDate
         } else {
-            result = String(localized: "Couldn't reach App Store Connect — check your connection.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't reach App Store Connect — check your connection."))
         }
         // An approval says nothing here — it lands in the feed, which is where
         // arrivals live (2026-08-19). A rejection still answers on the screen
@@ -470,4 +466,18 @@ struct AppStoreConnectScreen: View {
             chrome.flash(alarm, tone: .failure, seconds: 3.5)
         }
     }
+
+    /// The way out — the shared row, behind the Connection door with the form
+    /// it belongs to (prd §186/§608).
+    private var removeSection: some View {
+        BridgeDisconnectSection(bridgeID: bridge.bridgeID,
+                                name: "App Store Connect",
+                                teardown: {
+                                    TokenVault.delete(ASCAuth.keyVaultKey)
+                                    ASCAuth.clear()
+                                    credentialVersion += 1
+                                    load()
+                                })
+    }
+
 }

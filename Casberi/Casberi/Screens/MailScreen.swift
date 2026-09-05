@@ -13,14 +13,13 @@ struct MailScreen: View {
     @State private var addressField = ""
     @State private var passwordField = ""
     @State private var syncing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
 
     /// The credentials door, open (prd §186).
     @State private var showConnection = false
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: provider.source, computedTitle: provider.rawValue) {
             if provider.connected {
                 // Connected (prd §186): the ADDRESS is the identity — the one
                 // fact worth leading with — and the app-password field that
@@ -41,13 +40,6 @@ struct MailScreen: View {
                 connectForm
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: provider.source)
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle(provider.rawValue)
         .sheet(isPresented: $showConnection) {
             BridgeConnectionSheet(title: provider.rawValue) {
                 connectForm
@@ -95,7 +87,7 @@ struct MailScreen: View {
                             actionLabel: provider.connected ? "Update" : "Connect",
                             secure: true, isArmed: canConnect, action: connect)
                 BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your inbox…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
                 DSSlabNote(text: provider.footer)
             }
         }
@@ -126,19 +118,17 @@ struct MailScreen: View {
             if justConnected { TokenVault.delete(provider.passwordKey) }
             switch MailIngest.lastError {
             case .login:
-                result = String(localized: "Login rejected — check the address and app-specific password.")
+                result = .says(String(localized: "Login rejected — check the address and app-specific password."))
             case .connect:
-                result = String(localized: "Couldn't reach the mail server — check your connection.")
+                result = .says(String(localized: "Couldn't reach the mail server — check your connection."))
             case .select, .fetch, .timeout:
-                result = String(localized: "Signed in, but couldn't read the inbox — try again.")
+                result = .says(String(localized: "Signed in, but couldn't read the inbox — try again."))
             case nil:
-                result = String(localized: "Couldn't sign in — check the address and app-specific password.")
+                result = .says(String(localized: "Couldn't sign in — check the address and app-specific password."))
             }
-            resultIsError = true
             return
         }
-        resultIsError = false
-        result = added > 0 ? String(localized: "\(added) in your feed") : String(localized: "Up to date")
+        result = added > 0 ? .says(String(localized: "\(added) in your feed")) : .upToDate
         let proof = added > 0
             ? String(localized: "\(added) mail in")
             : String(localized: "Synced just now")

@@ -101,9 +101,15 @@ struct BridgeSetupHeader: View {
     /// same crown the thing sheet uses — so a live connection reads different
     /// from a catalog page at a glance (delight 2026-07-14).
     var connected: Bool = false
-    /// Bumped on the first successful connect: the icon coin-flips to
-    /// acknowledge the handshake, synced with the success haptic.
-    var flipTrigger: Int = 0
+
+    /// The coin flip is DERIVED, not driven (prd §608). It used to be a
+    /// caller-supplied counter, and seventeen of the fifty-two screens with a
+    /// proof row bumped it — so on the other thirty-five the handshake landed
+    /// with no acknowledgement at all, and nothing on either screen said which
+    /// group it was in. The moment it marks is `connected` going false→true,
+    /// which is what those seventeen were spelling by hand, so the state left
+    /// the call sites rather than being spread to the other thirty-five.
+    @State private var flip = 0
 
     var body: some View {
         Section {
@@ -119,7 +125,7 @@ struct BridgeSetupHeader: View {
                 HStack(alignment: .center, spacing: DS.Space.s3) {
                     BridgeIcon(name: name, size: DS.Mark.hero)
                         .settleIn()
-                        .coinFlip(trigger: flipTrigger)
+                        .coinFlip(trigger: flip)
                     VStack(alignment: .leading, spacing: DS.Space.s1) {
                         if let line = blurb ?? BridgeCatalog.offers.first(where: { $0.name == name })?.tagline {
                             // The catalog copy is stored as English key strings;
@@ -160,6 +166,12 @@ struct BridgeSetupHeader: View {
                 }
             }
             .animation(DS.Motion.standard, value: connected)
+            .onChange(of: connected) { _, now in
+                // Only the arrival. A screen whose `connected` flickers back
+                // — a key cleared, a wallet unwatched — must not flip a coin
+                // to celebrate the loss.
+                if now { flip += 1 }
+            }
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s1,
                                       bottom: DS.Space.s2, trailing: DS.Space.s1))
@@ -362,83 +374,13 @@ struct FacePile: View {
     }
 }
 
-/// The field-and-button row: type the way in, tap the capsule. The button
-/// greys out until there's text; submit does the same as the tap.
-struct BridgeFieldRow: View {
-    let placeholder: String
-    @Binding var text: String
-    let buttonLabel: String
-    var secure = false
-    var keyboard: UIKeyboardType = .default
-    var focus: FocusState<Bool>.Binding? = nil
-    /// Fixed affixes around the field — "farcaster.xyz/" before, or
-    /// ".bsky.social" after — so the person types only their name. The
-    /// suffix steps aside once the input carries its own domain (a dot).
-    var prefix: String? = nil
-    var suffix: String? = nil
-    let action: () -> Void
-
-    var body: some View {
-        HStack(spacing: DS.Space.s2) {
-            // A recessed well behind the typeable area so the field reads as a
-            // text box you can tap into — not flat card-colored placeholder that
-            // people mistook for a disabled control (user, 2026-07-15). The
-            // `surfaceWell` fill sits below the sheet, the same recess GenUI uses.
-            HStack(spacing: 0) {
-                if let prefix {
-                    Text(prefix)
-                        .dsText(.body17).foregroundStyle(DS.textTertiary)
-                        .layoutPriority(1)
-                }
-                if let focus {
-                    field.focused(focus)
-                } else {
-                    field
-                }
-                if let suffix, !text.contains(".") {
-                    Text(suffix)
-                        .dsText(.body17).foregroundStyle(DS.textTertiary)
-                        .layoutPriority(1)
-                }
-            }
-            .padding(.horizontal, DS.Space.s3)
-            .frame(minHeight: 44)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(DS.surfaceWell,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-            Button(LocalizedStringKey(buttonLabel), action: action)
-                .dsText(.callout15).fontWeight(.semibold)
-                .foregroundStyle(text.isEmpty ? DS.textTertiary : .white)
-                .padding(.horizontal, DS.Space.s4)
-                .frame(minHeight: 36)
-                .background(text.isEmpty ? AnyShapeStyle(DS.gray200) : AnyShapeStyle(DS.tint),
-                            in: Capsule(style: .continuous))
-                .animation(DS.Motion.standard, value: text.isEmpty)
-                .armedPop(!text.isEmpty)
-                .disabled(text.isEmpty)
-                .buttonStyle(PressSpring())
-        }
-        .padding(.vertical, DS.Space.s1)
-        .dsListCardRow()
-    }
-
-    private var field: some View {
-        Group {
-            if secure {
-                SecureField(LocalizedStringKey(placeholder), text: $text)
-            } else {
-                TextField(LocalizedStringKey(placeholder), text: $text)
-            }
-        }
-        .dsText(.body17)
-        .foregroundStyle(DS.textPrimary)
-        .tint(DS.tint)
-        .keyboardType(keyboard)
-        .textInputAutocapitalization(.never)
-        .autocorrectionDisabled()
-        .onSubmit(action)
-    }
-}
+/// `BridgeFieldRow` was DELETED in the §608 pass, and it had already stopped
+/// being used before that — its last call site went when §595 moved the four
+/// devnet screens onto `DSSlabField`. Every setup screen types into
+/// `DSSlabField` now: one shape holding the input AND its verb, where this was
+/// a field beside a filled capsule, which §190 called out by name as "two
+/// controls for one act". Its `prefix`/`suffix` affixes went with it (§595's
+/// ruling: the field's own words say what it wants). Do not bring it back.
 
 /// Which agent actually answers "Try with your key" (2026-07-31, prd §242) —
 /// shown on EACH of the four key-backed agent screens (Venice, Bankr,
@@ -494,11 +436,19 @@ struct AgentActiveStatusRow: View {
 /// The proof rows under the field: a spinner while fetching, then the
 /// result in confirm green (or attention red when it failed). Proof counts
 /// up ("3 games in" earns its number); failure knocks sideways once.
+///
+/// **The outcome is ONE value** (`BridgeProof`, prd §608). It used to be a
+/// `String?` beside a `Bool` saying whether that string was a failure, and
+/// §252 caught five screens passing a hardcoded `false` while assigning real
+/// failures into the string — a network error rendered in confirm green,
+/// counting up, with no shake and no failure haptic. Those five were fixed by
+/// hand and nothing stopped the sixth. The pair is unrepresentable now; see
+/// `BridgeProof` for why the READING line stays free text while the outcomes
+/// do not.
 struct BridgeSyncStatusRows: View {
     var syncing = false
     var syncingLine = ""
-    let result: String?
-    let resultIsError: Bool
+    let proof: BridgeProof?
     /// Avatars of who just landed — a facepile leads the proof so it reads
     /// "these people arrived," not "a number arrived" (delight 2026-07-14).
     var faces: [String] = []
@@ -513,24 +463,25 @@ struct BridgeSyncStatusRows: View {
                     .dsText(.callout15).foregroundStyle(DS.textTertiary)
             }
             .dsListCardRow()
-        } else if let result {
+        } else if let proof {
+            let failed = proof.isFailure
             HStack(spacing: DS.Space.s2) {
-                if !resultIsError, !faces.isEmpty {
+                if !failed, !faces.isEmpty {
                     FacePile(urls: faces, fallback: faceFallback)
                         .settleIn()
                 }
                 Group {
-                    if resultIsError {
-                        Text(result)
+                    if failed {
+                        Text(proof.line)
                             .shake(on: shakes)
                             .onAppear { shakes += 1; DSHaptic.failure() }
-                            .onChange(of: result) { if resultIsError { shakes += 1; DSHaptic.failure() } }
+                            .onChange(of: proof) { if proof.isFailure { shakes += 1; DSHaptic.failure() } }
                     } else {
-                        CountUpText(text: result)
+                        CountUpText(text: proof.line)
                     }
                 }
                 .dsText(.callout15)
-                .foregroundStyle(resultIsError ? DS.attention : DS.confirm)
+                .foregroundStyle(failed ? DS.attention : DS.confirm)
             }
             .dsListCardRow()
         }

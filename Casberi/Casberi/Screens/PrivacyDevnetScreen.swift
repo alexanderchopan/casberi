@@ -39,7 +39,7 @@ struct PrivacyDevnetScreen: View {
     private var connected: Bool { watch.connected }
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: PrivacyDevnetIdentity.source, computedTitle: PrivacyDevnetIdentity.source) {
             BridgeSetupHeader(
                 name: PrivacyDevnetIdentity.source,
                 mode: .noAccount,
@@ -96,13 +96,6 @@ struct PrivacyDevnetScreen: View {
                 ).listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: PrivacyDevnetIdentity.source)
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle(PrivacyDevnetIdentity.source)
     }
 
     /// **ONLY THE FIRST WATCH ROUTES.** The room is a new place then, and going

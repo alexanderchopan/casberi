@@ -20,7 +20,7 @@ struct KalshiScreen: View {
     }
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Kalshi") {
             BridgeSetupHeader(
                 name: "Kalshi",
                 mode: .noAccount,
@@ -33,12 +33,5 @@ struct KalshiScreen: View {
             }
             PredictionVenueConnect(ownVenue: .kalshi)
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Kalshi")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Kalshi")
     }
 }

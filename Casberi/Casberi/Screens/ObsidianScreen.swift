@@ -10,14 +10,13 @@ struct ObsidianScreen: View {
     @Bindable private var obsidian = ObsidianStore.shared
     @State private var picking = false
     @State private var syncing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
 
     /// The connection door, open (prd §186).
     @State private var showConnection = false
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Obsidian") {
             if obsidian.connected {
                 // Connected (prd §186): the VAULT is the identity — this
                 // screen was already closest to right, naming the folder it
@@ -49,13 +48,6 @@ struct ObsidianScreen: View {
                 vaultSection.listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Obsidian")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Obsidian")
         .sheet(isPresented: $showConnection) {
             BridgeConnectionSheet(title: "Obsidian") {
                 vaultSection.listRowSeparator(.hidden)
@@ -87,8 +79,7 @@ struct ObsidianScreen: View {
             DSHaptic.tap()
             Task { await sync(justConnected: true) }
         } else {
-            result = String(localized: "Couldn't keep access to that folder — try picking it again.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't keep access to that folder — try picking it again."))
         }
     }
 
@@ -121,7 +112,7 @@ struct ObsidianScreen: View {
                              systemImage: "folder.badge.plus") { picking = true }
             }
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your notes…"),
-                                 result: result, resultIsError: resultIsError)
+                                 proof: result)
             // Says what LANDS before what's safe — see `SteamScreen` (audit,
             // 2026-07-31). "beside everything else" left the same day: the
             // header three rows up is already "Your vault, beside your things".
@@ -136,16 +127,8 @@ struct ObsidianScreen: View {
     }
 
     private var removeSection: some View {
-        Section {
-            Button("Disconnect vault", role: .destructive) {
-                obsidian.disconnect()
-                store.bridges.removeAll { $0.id == "obsidian" }
-                result = String(localized: "Vault disconnected — your things stay.")
-                resultIsError = false
-                DSHaptic.tap()
-            }
-            .dsText(.callout15)
-            .dsListCardRow()
+        BridgeDisconnectSection(bridgeID: "obsidian", name: "Obsidian") {
+            obsidian.disconnect()
         }
     }
 
@@ -156,12 +139,10 @@ struct ObsidianScreen: View {
         syncing = false
         guard let added else {
             if justConnected { obsidian.disconnect() }
-            result = String(localized: "Couldn't read that folder — pick your vault again.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't read that folder — pick your vault again."))
             return
         }
-        resultIsError = false
-        result = added > 0 ? String(localized: "\(added) notes in") : String(localized: "Up to date")
+        result = .landed(added, noun: "notes")
         let proof = added > 0
             ? String(localized: "\(added) notes in")
             : String(localized: "Synced just now")

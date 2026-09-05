@@ -14,8 +14,7 @@ struct DropboxScreen: View {
     @Bindable private var dropbox = DropboxStore.shared
     @State private var connecting = false
     @State private var syncing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
     @State private var flow: Task<Void, Never>?
     @State private var folderField = ""
     /// The last attempt was closed by hand. Kept apart from `result` because
@@ -31,7 +30,7 @@ struct DropboxScreen: View {
     @State private var showConnection = false
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Dropbox") {
             if DropboxAuth.connected {
                 BridgeConnectedState(
                     bridgeID: "dropbox",
@@ -58,13 +57,6 @@ struct DropboxScreen: View {
                 connectSection.listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Dropbox")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Dropbox")
         .sheet(isPresented: $showConnection) {
             BridgeConnectionSheet(title: "Dropbox") {
                 folderSection.listRowSeparator(.hidden)
@@ -103,7 +95,7 @@ struct DropboxScreen: View {
                 }
             }
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your Dropbox…"),
-                                 result: result, resultIsError: resultIsError)
+                                 proof: result)
             DSSlabNote(text: "On Dropbox's own page — your password never enters this app.")
         }
         .dsSlabSection()
@@ -123,23 +115,15 @@ struct DropboxScreen: View {
                         alwaysEnabled: true,
                         action: saveFolder)
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your Dropbox…"),
-                                 result: result, resultIsError: resultIsError)
+                                 proof: result)
             DSSlabNote(text: "Changing the folder starts a fresh sync there.")
         }
         .dsSlabSection()
     }
 
     private var removeSection: some View {
-        Section {
-            Button("Disconnect", role: .destructive) {
-                dropbox.disconnect()
-                store.bridges.removeAll { $0.id == "dropbox" }
-                result = String(localized: "Disconnected — your things stay.")
-                resultIsError = false
-                DSHaptic.tap()
-            }
-            .dsText(.callout15)
-            .dsListCardRow()
+        BridgeDisconnectSection(bridgeID: "dropbox", name: "Dropbox") {
+            dropbox.disconnect()
         }
     }
 
@@ -177,8 +161,7 @@ struct DropboxScreen: View {
     }
 
     private func fail(_ message: String) {
-        result = message
-        resultIsError = true
+        result = .failed(message)
     }
 
     private func saveFolder() {
@@ -193,12 +176,10 @@ struct DropboxScreen: View {
         let added = await DropboxIngest.refresh(context: modelContext)
         syncing = false
         guard let added else {
-            result = String(localized: "Couldn't reach that folder — try again in a moment.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't reach that folder — try again in a moment."))
             return
         }
-        resultIsError = false
-        result = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
+        result = .landed(added)
         let proof = added > 0
             ? String(localized: "\(added) new")
             : String(localized: "Synced just now")

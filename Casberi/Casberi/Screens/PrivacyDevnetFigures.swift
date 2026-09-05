@@ -80,7 +80,7 @@ struct PrivacyDevnetRing: View {
     @ViewBuilder private func ring(now: Date) -> some View {
         let placed = PrivacyDevnetFigure.ringPlacements(drifted(now: now))
         ZStack {
-            // **THE TRACK IS THICK AND THE WINDOW IS FILLED (prd §606).**
+            // **THE TRACK IS THICK AND THE WINDOW IS FILLED (prd §608).**
             //
             // Reported, on the first device look: the ring "just looks like a
             // toy". It was a 5pt outline with saturated rotated squares
@@ -192,7 +192,7 @@ struct PrivacyDevnetRing: View {
     /// One snapshot, as a tick across the track.
     ///
     /// **A tick that CUTS the track is a measurement on it; a gem sitting
-    /// beside it is an ornament** (prd §606). It runs the rim's full width
+    /// beside it is an ornament** (prd §608). It runs the rim's full width
     /// plus a little either side so it reads over both the filled and the
     /// empty part, in ink rather than tint — the fill is the quantity, the
     /// ticks are the readings on it, and tinting both would merge them.
@@ -439,12 +439,12 @@ struct PrivacyDevnetAnatomy: View {
 struct PrivacyDevnetSpentKey: View {
     var size: CGFloat = 14
 
-    // **THE SEAL IS GONE WITH THE GRID IT LIVED ON (prd §606).**
+    // **THE SEAL IS GONE WITH THE GRID IT LIVED ON (prd §608).**
     //
     // §598 gave this ring a first-sight animation: a key this device had never
     // seen closed itself once, because the hole IS the claim. It fired in the
     // Spend keys scope's grid — and that grid was eight identical rings
-    // standing in for the number eight, which §606 deleted. An animation
+    // standing in for the number eight, which §608 deleted. An animation
     // attached to a figure that should not exist does not survive the figure;
     // moving it onto the sheet's key rows would put a 0.55s draw on a list
     // item, which is the fidget the motion law bans.
@@ -508,7 +508,7 @@ struct PrivacyDevnetLegend: View {
 }
 
 
-// **TWO FIGURES DELETED HERE (prd §606).**
+// **TWO FIGURES DELETED HERE (prd §608).**
 //
 // `PrivacyDevnetTally` drew three pip columns per address and
 // `PrivacyDevnetActivityChart` a column per transaction whose height was the
@@ -546,7 +546,7 @@ struct PrivacyDevnetMore: View {
     }
 }
 
-// MARK: - What this room's transactions are (prd §606)
+// MARK: - What this room's transactions are (prd §608)
 
 /// The kind mix, as one labelled bar.
 ///
@@ -562,7 +562,7 @@ struct PrivacyDevnetMore: View {
 /// **ONE KIND DRAWS NO BAR.** A single full-width segment is a sentence with a
 /// rectangle behind it saying 100%, and on a young room every transaction is
 /// the same kind — so the words stand alone and the figure declines. That is
-/// the rule the whole §606 pass turns on: a scope with nothing to compare
+/// the rule the whole §608 pass turns on: a scope with nothing to compare
 /// states its number instead of drawing one.
 struct PrivacyDevnetKindMix: View {
     let mix: [(kind: PrivacyDevnetFigure.Kind, count: Int)]
@@ -637,7 +637,7 @@ struct PrivacyDevnetKindMix: View {
     }
 }
 
-// MARK: - What the room asked the chain for (prd §606)
+// MARK: - What the room asked the chain for (prd §608)
 
 /// The two budgets a frame transaction carries, summed across the room.
 ///

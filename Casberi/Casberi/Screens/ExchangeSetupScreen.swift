@@ -26,8 +26,7 @@ struct ExchangeSetupScreen: View {
     @State private var keyDraft = ""
     @State private var secretDraft = ""
     @State private var checking = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
 
     /// Read straight from the Keychain, like `SpotifyAuth.connected` /
     /// `DropboxAuth.connected` — so a disconnect (which only ever touches
@@ -39,7 +38,10 @@ struct ExchangeSetupScreen: View {
     @State private var showConnection = false
 
     var body: some View {
-        List {
+        // `venue.display`, not `venue.rawValue` — `.geminiExchange`'s raw
+        // value has no space, so it would miss `washHue`'s "gemini exchange"
+        // key; `display` is what every other venue already matches on too.
+        BridgeSetupPage(name: venue.display, computedTitle: venue.display) {
             if connected {
                 // Connected (prd §186). The identity here is the VERDICT —
                 // the §163 permission check is this bridge's whole point, so
@@ -62,16 +64,6 @@ struct ExchangeSetupScreen: View {
                 connectForm
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        // `venue.display`, not `venue.rawValue` — `.geminiExchange`'s raw
-        // value has no space, so it would miss `washHue`'s "gemini exchange"
-        // key; `display` is what every other venue already matches on too.
-        .bridgeSetupWash(name: venue.display)
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle(venue.display)
         .sheet(isPresented: $showConnection) {
             BridgeConnectionSheet(title: venue.display) {
                 connectForm
@@ -90,20 +82,12 @@ struct ExchangeSetupScreen: View {
     }
 
     private var removeSection: some View {
-        Section {
-            Button("Disconnect", role: .destructive) {
-                ExchangeBridge.disconnect(venue)
-                store.bridges.removeAll { $0.id == venue.rawValue }
-                result = String(localized: "Disconnected — your things stay.")
-                resultIsError = false
-                DSHaptic.tap()
-            }
-            .dsText(.callout15)
-            .dsListCardRow()
-        } footer: {
-            Text("Its balance leaves your combined total.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
-        }
+        // No purge dialog here, and that falls out of the data rather than a
+        // flag: an exchange seat lands no `Thing` at all (§484's rowless
+        // nine), so `BridgeDisconnectSection` finds nothing to offer.
+        BridgeDisconnectSection(bridgeID: venue.rawValue, name: venue.display,
+                                teardown: { ExchangeBridge.disconnect(venue) },
+                                note: String(localized: "Its balance leaves your combined total."))
     }
 
     private var setupSection: some View {
@@ -125,7 +109,7 @@ struct ExchangeSetupScreen: View {
                             text: $secretDraft,
                             actionLabel: checking ? "Checking…" : (connected ? "Update" : "Connect"),
                             secure: true, isArmed: armed, action: connect)
-                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                BridgeSyncStatusRows(proof: result)
                 // Two sentences, not three paragraphs — but the §163
                 // permission check STAYS said (prd §192 protected this text as
                 // load-bearing trust content, not padding). What left is the
@@ -232,21 +216,18 @@ struct ExchangeSetupScreen: View {
                 keyDraft = ""
                 secretDraft = ""
                 DSHaptic.success()
-                resultIsError = false
-                result = String(localized: "Connected — your \(venue.display) balance now joins your wallets.")
+                result = .connected(String(localized: "your \(venue.display) balance now joins your wallets."))
                 store.registerConnected(id: venue.rawValue, name: venue.display,
                                         proof: String(localized: "View-only key, verified with \(venue.display)"),
                                         can: [String(localized: "Reads your balances."),
                                               String(localized: "Adds them to your combined total."),
                                               String(localized: "Can't place an order, withdraw, or transfer.")])
             case .tooPowerful(let permissions):
-                resultIsError = true
                 // Name what's wrong: the person has to go back and untick
                 // something specific, and only the exchange knows which.
-                result = String(localized: "That key can \(permissions.joined(separator: ", ")) — make a view-only one and paste that instead. It wasn't saved.")
+                result = .says(String(localized: "That key can \(permissions.joined(separator: ", ")) — make a view-only one and paste that instead. It wasn't saved."))
             case .unverifiable(let why):
-                resultIsError = true
-                result = why
+                result = .failed(why)
             }
         }
     }

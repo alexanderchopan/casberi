@@ -19,17 +19,16 @@ struct CircleX402Screen: View {
     /// A lane toggled mid-flight requeues rather than being stranded until the
     /// next visit — `GeckoTerminalScreen`'s pattern.
     @State private var syncPending = false
-    @State private var lastResult: String?
+    @State private var lastResult: BridgeProof?
     /// Whether `lastResult` is a failure — see `PrivacyPoolsScreen` (audit,
     /// 2026-07-31): hardcoding `false` painted a reach failure in confirm green.
-    @State private var lastResultIsError = false
 
     private var watchingEverything: Bool {
         x402.watched.count == X402Category.allCases.count
     }
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Circle x402") {
             BridgeSetupHeader(
                 name: "Circle x402",
                 mode: .noAccount,
@@ -49,13 +48,6 @@ struct CircleX402Screen: View {
                 ).listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Circle x402")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Circle x402")
         .onAppear {
             // Opening the screen doesn't connect — a lane switch is the consent.
             if x402.connected { Task { await sync() } }
@@ -94,7 +86,7 @@ struct CircleX402Screen: View {
                 }
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading the marketplace…"),
-                                     result: lastResult, resultIsError: lastResultIsError)
+                                     proof: lastResult)
                 DSSlabNote(text: "Switch a lane on and its companies land. Read-only.")
             }
         }
@@ -135,8 +127,7 @@ struct CircleX402Screen: View {
             // resurrect the seat the person just removed.
             guard x402.connected else { store.remove("x402"); return }
             if let added {
-                lastResult = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
-                lastResultIsError = false
+                lastResult = .landed(added)
                 let proof = added > 0
                     ? String(localized: "\(added) listed in")
                     : String(localized: "Synced just now")
@@ -144,8 +135,7 @@ struct CircleX402Screen: View {
                                         can: ["Reads Circle's public directory of x402 services.",
                                               "Read-only — never pays for a call."])
             } else {
-                lastResult = String(localized: "Couldn't reach Circle — check your connection.")
-                lastResultIsError = true
+                lastResult = .failed(String(localized: "Couldn't reach Circle — check your connection."))
             }
         } while syncPending && x402.connected
     }

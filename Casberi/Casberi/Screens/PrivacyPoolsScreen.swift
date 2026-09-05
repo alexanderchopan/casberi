@@ -16,18 +16,17 @@ struct PrivacyPoolsScreen: View {
     // This window's stack (per-window since `SceneState`).
     @Environment(HomeRoute.self) private var route
     @State private var syncing = false
-    @State private var lastResult: String?
+    @State private var lastResult: BridgeProof?
     /// Whether `lastResult` is a failure. Hardcoding `false` at the call site
     /// painted "Couldn't reach the chain" in confirm green with the count-up
     /// animation — the fake-status class §83 bans, in the component whose own
     /// doc-comment prohibits it (audit, 2026-07-31).
-    @State private var lastResultIsError = false
 
     private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
     private var walletCount: Int { WalletStore.shared.addresses.count }
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "0xBow Privacy Pools") {
             BridgeSetupHeader(
                 name: "0xBow Privacy Pools",
                 mode: .watchedWallets,
@@ -48,13 +47,6 @@ struct PrivacyPoolsScreen: View {
             }
             connectSection.listRowSeparator(.hidden)
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "0xBow Privacy Pools")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("0xBow Privacy Pools")
         .onAppear {
             // Watching is consent (prd §207): keep the catalog seat honest on
             // appear, and refresh deposits if a wallet's watched.
@@ -84,7 +76,7 @@ struct PrivacyPoolsScreen: View {
                 }
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading your deposits…"),
-                                     result: lastResult, resultIsError: lastResultIsError)
+                                     proof: lastResult)
                 // The bare "Read-only." left this note (duplication audit,
                 // 2026-07-31). It was in one branch only, while the footer's
                 // lede states the same promise in full — what it never
@@ -109,12 +101,9 @@ struct PrivacyPoolsScreen: View {
         defer { syncing = false }
         let added = await PrivacyPoolsBridge.syncNow(context: modelContext)
         if let added {
-            lastResult = added > 0 ? String(localized: "\(added) new")
-                                   : String(localized: "Up to date")
-            lastResultIsError = false
+            lastResult = .landed(added)
         } else {
-            lastResult = String(localized: "Couldn't reach the chain — check your connection.")
-            lastResultIsError = true
+            lastResult = .failed(String(localized: "Couldn't reach the chain — check your connection."))
         }
     }
 }

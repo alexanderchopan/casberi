@@ -26,30 +26,48 @@ struct GrokSetupScreen: View {
     @Environment(\.openURL) private var openURL
     @State private var keyDraft = ""
     @State private var checking = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
     @State private var configured = AgentKey.isConfigured(.grok)
-    @State private var flipTrigger = 0
+    @State private var showConnection = false
 
     var body: some View {
-        List {
-            BridgeSetupHeader(
-                name: "Grok",
-                mode: .pasteKey,
-                intro: "Paste a key and Grok can answer questions about your things when the free on-device model isn't enough. It's asked only when you tap for it, never on its own.",
-                flipTrigger: flipTrigger)
-            setupSection
-        }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
         // Grok's mark is pure black, so `DS.washHue` returns nil and this
         // paints nothing — called anyway so the family has no exception to
         // remember, and a rebrand with a real hue lands for free.
-        .bridgeSetupWash(name: "Grok")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Grok")
+        BridgeSetupPage(name: "Grok") {
+            if configured {
+                // Connected (prd §186): the form retires behind one door and the
+                // live facts about this key take the screen. A BYOK key stores no
+                // account name of its own — only the secret, in the Keychain — so
+                // this leads with the provider's own name over a truthful note
+                // about HOW it is connected, never a display name we would guess.
+                BridgeConnectedState(
+                    bridgeID: "grok",
+                    name: "Grok",
+                    connectionNote: String(localized: "Your key · stored in \(DS.device)'s Keychain"),
+                    capabilitiesFallback: ["Answers with your key — only when you tap.",
+                                       "Remembers a chat's earlier answers."],
+                    openConnection: { showConnection = true })
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                // These three are the CONNECTION's live facts, not the form's —
+                // which agent answers, on which model, at what spend — so they sit
+                // in the connected state rather than travelling into the sheet.
+                agentRows
+            } else {
+                BridgeSetupHeader(
+                    name: "Grok",
+                    mode: .pasteKey,
+                    intro: "Paste a key and Grok can answer questions about your things when the free on-device model isn't enough. It's asked only when you tap for it, never on its own.")
+                setupSection
+            }
+        }
+        .sheet(isPresented: $showConnection) {
+            BridgeConnectionSheet(title: "Grok") {
+                setupSection
+                removeSection
+            }
+        }
     }
 
     private var setupSection: some View {
@@ -71,10 +89,7 @@ struct GrokSetupScreen: View {
                             secure: true,
                             isArmed: !checking && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty,
                             action: connect)
-                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                AgentActiveStatusRow(provider: .grok)
-                AgentModelRow(provider: .grok)
-                AgentSpendRow(provider: .grok)
+                BridgeSyncStatusRows(proof: result)
                 // The opening clause was the header's own tagline — "Try with
                 // your key, on Grok" — restated a screen below it
                 // (2026-07-31). The consent clause it carried stays.
@@ -98,10 +113,8 @@ struct GrokSetupScreen: View {
                 AgentKey.set(candidate, for: .grok)
                 configured = true
                 keyDraft = ""
-                flipTrigger += 1
                 DSHaptic.success()
-                resultIsError = false
-                result = String(localized: "Connected — answers now offer \"Try with your key\" on Grok.")
+                result = .connected(String(localized: "answers now offer \"Try with your key\" on Grok."))
                 store.registerConnected(id: "grok", name: "Grok",
                                         proof: String(localized: "Key in the Keychain"),
                                         can: ["Answers with your key — only when you tap.",
@@ -115,9 +128,34 @@ struct GrokSetupScreen: View {
                 // key that can't answer — gets its own `.blocked` sentence
                 // pointing at the console. Nobody reads a fix meant for
                 // someone else's problem anymore.
-                resultIsError = true
-                result = outcome.line(for: .grok)
+                result = .failed(outcome.line(for: .grok))
             }
         }
     }
+
+    /// Which agent answers, on which model, and what it has cost — the live
+    /// facts about a key that is already working. They render nothing when
+    /// this provider is not configured, which is why they can sit here
+    /// unconditionally.
+    @ViewBuilder private var agentRows: some View {
+        Section {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                AgentActiveStatusRow(provider: .grok)
+                AgentModelRow(provider: .grok)
+                AgentSpendRow(provider: .grok)
+            }
+        }
+        .dsSlabSection()
+    }
+
+    /// The key's way out — the shared row, so this screen says "Disconnect"
+    /// the way every other setup screen does (prd §608). It lands no `Thing`,
+    /// so no purge is offered.
+    private var removeSection: some View {
+        BridgeDisconnectSection(bridgeID: "grok", name: "Grok") {
+            AgentKey.clear(.grok)
+            configured = false
+        }
+    }
+
 }

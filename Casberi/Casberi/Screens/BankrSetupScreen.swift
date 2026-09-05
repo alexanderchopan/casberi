@@ -39,30 +39,48 @@ struct BankrSetupScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @State private var keyDraft = ""
     @State private var checking = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
     @State private var configured = AgentKey.isConfigured(.bankr)
+    @State private var showConnection = false
     @State private var web: URL?
-    @State private var flipTrigger = 0
 
     var body: some View {
-        List {
-            BridgeSetupHeader(
-                name: "Bankr",
-                mode: .pasteKey,
-                intro: "Make a key in a page that opens here. Bankr answers from its own account at bankr.bot, never from the wallets you watch in Casberi.",
-                flipTrigger: flipTrigger)
-            setupSection
+        BridgeSetupPage(name: "Bankr") {
+            if configured {
+                // Connected (prd §186): the form retires behind one door and
+                // the live facts about this key take the screen. A BYOK key
+                // stores no account name of its own — only the secret, in the
+                // Keychain — so this leads with the provider's own name over a
+                // truthful note about HOW it is connected.
+                BridgeConnectedState(
+                    bridgeID: "bankr",
+                    name: "Bankr",
+                    connectionNote: String(localized: "Your key · stored in \(DS.device)'s Keychain"),
+                    capabilitiesFallback: ["Answers with your key — only when you tap.",
+                                       "Reads only Bankr's own account, never the wallets you watch."],
+                    openConnection: { showConnection = true })
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                // The CONNECTION's live facts, not the form's — which agent
+                // answers, on which model, at what spend.
+                agentRows
+            } else {
+                BridgeSetupHeader(
+                    name: "Bankr",
+                    mode: .pasteKey,
+                    intro: "Make a key in a page that opens here. Bankr answers from its own account at bankr.bot, never from the wallets you watch in Casberi.")
+                setupSection
+            }
             if configured { conversationSection }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Bankr")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Bankr")
         .dsWebSheet($web)
+
+        .sheet(isPresented: $showConnection) {
+            BridgeConnectionSheet(title: "Bankr") {
+                setupSection
+                removeSection
+            }
+        }
     }
 
     /// The connect form — steps whole, furniture gone (prd §218).
@@ -99,10 +117,7 @@ struct BankrSetupScreen: View {
                 }
                 .labelStyle(.titleAndIcon)
                 .buttonBorderShape(.capsule)
-                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                AgentActiveStatusRow(provider: .bankr)
-                AgentModelRow(provider: .bankr)
-                AgentSpendRow(provider: .bankr)
+                BridgeSyncStatusRows(proof: result)
                 DSSlabNote(text: "Casberi only asks Bankr questions — every prompt says answer only — never execute. Answers re-run on Bankr, live markets included, only when you tap.")
             }
         }
@@ -149,10 +164,8 @@ struct BankrSetupScreen: View {
                 // Nothing to carry over: there is no stored permission and
                 // no second verb (2026-09-03).
                 keyDraft = ""
-                flipTrigger += 1
                 DSHaptic.success()
-                resultIsError = false
-                result = String(localized: "Connected — \"Ask Bankr\" now appears when you type.")
+                result = .connected(String(localized: "\"Ask Bankr\" now appears when you type."))
                 store.registerConnected(id: "bankr", name: "Bankr",
                                         proof: String(localized: "Key in the Keychain"),
                                         // Three reads and no writes, which is
@@ -166,9 +179,33 @@ struct BankrSetupScreen: View {
                 // 2026-07-31) — a rate limit, a blocked account and a dropped
                 // connection are not the key, and one shared "check it and try
                 // again" sent people hunting a key that was never wrong.
-                resultIsError = true
-                result = outcome.line(for: .bankr)
+                result = .failed(outcome.line(for: .bankr))
             }
         }
     }
+
+    /// Which agent answers, on which model, and what it has cost — the live
+    /// facts about a key that is already working. Each renders nothing when
+    /// this provider is not configured.
+    @ViewBuilder private var agentRows: some View {
+        Section {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                AgentActiveStatusRow(provider: .bankr)
+                AgentModelRow(provider: .bankr)
+                AgentSpendRow(provider: .bankr)
+            }
+        }
+        .dsSlabSection()
+    }
+
+    /// The key's way out — the shared row, so this screen says "Disconnect"
+    /// the way every other setup screen does (prd §608). It lands no `Thing`,
+    /// so no purge is offered.
+    private var removeSection: some View {
+        BridgeDisconnectSection(bridgeID: "bankr", name: "Bankr") {
+            AgentKey.clear(.bankr)
+            configured = false
+        }
+    }
+
 }

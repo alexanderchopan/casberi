@@ -12,7 +12,7 @@ struct DealsScreen: View {
     @State private var lastResult: String?
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Deals") {
             BridgeSetupHeader(
                 name: "Deals",
                 mode: .noAccount,
@@ -31,13 +31,6 @@ struct DealsScreen: View {
                 ).listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Deals")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Deals")
         .onAppear {
             if deals.connected { Task { await sync() } }
         }

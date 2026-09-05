@@ -38,8 +38,7 @@ struct XArchiveImportScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @State private var importing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
     /// How old this import is, and how much of it is here (2026-08-05,
     /// prd §310). Both read off the import RECEIPT and a count — no new field.
     @State private var staleness: String?
@@ -54,7 +53,7 @@ struct XArchiveImportScreen: View {
     @Query(xRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "X") {
             // The bookmarks limit rides the intro rather than a footer point
             // (prd §315), and it is the one limit that earns the sentence's
             // second half: bookmarks are the pile an X user most expects this
@@ -64,7 +63,8 @@ struct XArchiveImportScreen: View {
             BridgeSetupHeader(
                 name: "X",
                 mode: .oneTimeImport,
-                intro: "X has no live connection — request your archive, bring it here, and search every post, reply and like you ever made. Bookmarks aren't in it: X has never put them there.")
+                intro: "X has no live connection — request your archive, bring it here, and search every post, reply and like you ever made. Bookmarks aren't in it: X has never put them there.",
+                connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus,
             // not a connection flag: an import has no live connection, so
             // "has anything arrived" is the only honest test of whether
@@ -81,18 +81,10 @@ struct XArchiveImportScreen: View {
             }
             ImportUpkeepSection(source: "X", held: held, staleness: staleness) { gone in
                 reread()
-                resultIsError = false
-                result = String(localized: "\(gone) removed")
+                result = .says(String(localized: "\(gone) removed"))
             }
         }
         .onAppear { reread() }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "X")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("X")
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.folder]) { outcome in
             guard case .success(let url) = outcome else { return }
@@ -118,7 +110,7 @@ struct XArchiveImportScreen: View {
                     pickTitle: "Choose folder",
                     alreadyImported: held > 0,
                     showsMessagesToggle: true) { importing = true }
-                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                BridgeSyncStatusRows(proof: result)
             }
         }
         .dsSlabSection()
@@ -201,22 +193,19 @@ struct XArchiveImportScreen: View {
             // A running count in the status row the receipt will replace — a
             // large archive lands in chunks now (prd §310), and without this
             // the stretch between the tap and the receipt says nothing at all.
-            result = String(localized: "\(count) landed…")
-            resultIsError = false
+            result = .says(String(localized: "\(count) landed…"))
         })
         if summary.failed {
-            result = String(localized: "Couldn't read that folder. Pick the folder you unzipped — the one containing data.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't read that folder. Pick the folder you unzipped — the one containing data."))
             return
         }
-        resultIsError = false
         DSHaptic.success()
         // The whole screen's corpus reading, not just the face queue — `held`
         // is what collapses the archive block now, so a screen that only
         // refreshed `pending` would leave the tutorial open after a successful
         // import until the next visit.
         reread()
-        result = summary.imported > 0 ? landedLine(summary) : nothingNewLine(summary)
+        result = summary.imported > 0 ? .says(landedLine(summary)) : .says(nothingNewLine(summary))
         let proof = summary.imported > 0
             ? String(localized: "\(summary.imported) in")
             : String(localized: "Imported just now")
@@ -295,11 +284,9 @@ struct XArchiveImportScreen: View {
         pending = XArchiveImport.pendingFaceCount(context: modelContext)
 
         if outcome.unreachable {
-            result = String(localized: "Couldn't reach X — your likes are still here, so try finding their authors again later.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't reach X — your likes are still here, so try finding their authors again later."))
             return
         }
-        resultIsError = false
         DSHaptic.success()
         var line = String(localized: "\(outcome.named) named")
         // GONE is its own clause, separate from a miss. They read alike and
@@ -312,7 +299,7 @@ struct XArchiveImportScreen: View {
             line += String(localized: " · \(outcome.missed) unreadable")
         }
         if pending > 0 { line += String(localized: " · \(pending) to go") }
-        result = line
+        result = .says(line)
     }
 
     /// The reply pass, reported with `runFetch`'s discipline: four outcomes,
@@ -326,11 +313,9 @@ struct XArchiveImportScreen: View {
         pendingContext = XArchiveImport.pendingContextCount(context: modelContext)
 
         if outcome.unreachable {
-            result = String(localized: "Couldn't reach X — your replies are still here, so try again later.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't reach X — your replies are still here, so try again later."))
             return
         }
-        resultIsError = false
         DSHaptic.success()
         var line = String(localized: "\(outcome.filled) replies now show what they answered")
         if outcome.gone > 0 {
@@ -340,6 +325,6 @@ struct XArchiveImportScreen: View {
             line += String(localized: " · \(outcome.missed) unreadable")
         }
         if pendingContext > 0 { line += String(localized: " · \(pendingContext) to go") }
-        result = line
+        result = .says(line)
     }
 }

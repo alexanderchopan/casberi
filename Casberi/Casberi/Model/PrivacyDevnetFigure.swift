@@ -445,7 +445,7 @@ enum PrivacyDevnetFigure {
         return min(1, Double(gasUsed) / Double(allowed))
     }
 
-    // MARK: - What this room's transactions ARE (prd §606)
+    // MARK: - What this room's transactions ARE (prd §608)
 
     /// The three things a transaction on this chain can be.
     ///
@@ -503,7 +503,7 @@ enum PrivacyDevnetFigure {
         }
     }
 
-    // MARK: - What the room asked the chain for (prd §606)
+    // MARK: - What the room asked the chain for (prd §608)
 
     /// The two budgets a frame transaction carries, summed across the room.
     ///
@@ -560,7 +560,7 @@ enum PrivacyDevnetFigure {
                        used: total(gasUsed))
     }
 
-    // **THE TALLY IS GONE (prd §606).** `Tally`, `pipCap` and `pips` fed one
+    // **THE TALLY IS GONE (prd §608).** `Tally`, `pipCap` and `pips` fed one
     // figure — three pip columns per address — and a count drawn as N
     // identical shapes is the number restated, not a reading. The Accounts
     // scope draws no figure now; its headline states the count and its rows

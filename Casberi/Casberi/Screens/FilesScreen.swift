@@ -11,14 +11,13 @@ struct FilesScreen: View {
     @Bindable private var files = FilesStore.shared
     @State private var picking = false
     @State private var syncing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
 
     /// The connection door, open (prd §186).
     @State private var showConnection = false
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Files") {
             if files.connected {
                 BridgeConnectedState(
                     bridgeID: "files",
@@ -46,13 +45,6 @@ struct FilesScreen: View {
                 folderSection.listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Files")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Files")
         .sheet(isPresented: $showConnection) {
             BridgeConnectionSheet(title: "Files") {
                 folderSection.listRowSeparator(.hidden)
@@ -84,8 +76,7 @@ struct FilesScreen: View {
             DSHaptic.tap()
             Task { await sync(justConnected: true) }
         } else {
-            result = String(localized: "Couldn't keep access to that folder — try picking it again.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't keep access to that folder — try picking it again."))
         }
     }
 
@@ -115,7 +106,7 @@ struct FilesScreen: View {
                              systemImage: "folder.badge.plus") { picking = true }
             }
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your files…"),
-                                 result: result, resultIsError: resultIsError)
+                                 proof: result)
             // Says what LANDS before what's safe — see `SteamScreen` (audit,
             // 2026-07-31). "findable by name" left the same day: the header
             // three rows up is already the offer's "Any folder, findable".
@@ -129,16 +120,8 @@ struct FilesScreen: View {
     }
 
     private var removeSection: some View {
-        Section {
-            Button("Disconnect folder", role: .destructive) {
-                files.disconnect()
-                store.bridges.removeAll { $0.id == "files" }
-                result = String(localized: "Folder disconnected — your things stay.")
-                resultIsError = false
-                DSHaptic.tap()
-            }
-            .dsText(.callout15)
-            .dsListCardRow()
+        BridgeDisconnectSection(bridgeID: "files", name: "Files") {
+            files.disconnect()
         }
     }
 
@@ -149,12 +132,10 @@ struct FilesScreen: View {
         syncing = false
         guard let added else {
             if justConnected { files.disconnect() }
-            result = String(localized: "Couldn't read that folder — pick it again.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't read that folder — pick it again."))
             return
         }
-        resultIsError = false
-        result = added > 0 ? String(localized: "\(added) files in") : String(localized: "Up to date")
+        result = .landed(added, noun: "files")
         let proof = added > 0
             ? String(localized: "\(added) files in")
             : String(localized: "Synced just now")

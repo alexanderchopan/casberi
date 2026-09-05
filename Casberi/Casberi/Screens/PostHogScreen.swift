@@ -13,6 +13,7 @@ struct PostHogScreen: View {
     @Environment(BridgeStore.self) private var store
     @Environment(\.openURL) private var openURL
 
+    @State private var showConnection = false
     @State private var hostField = PostHogAccount.host
     @State private var keyField = ""
     /// Bumped whenever the key or project changes, so the derived reads below
@@ -23,9 +24,7 @@ struct PostHogScreen: View {
 
     @State private var projects: [PostHogFetch.Project] = []
     @State private var resolving = false
-    @State private var result: String?
-    @State private var resultIsError = false
-    @State private var flipTrigger = 0
+    @State private var result: BridgeProof?
 
     /// The watch omnibox.
     @State private var queryField = ""
@@ -53,13 +52,27 @@ struct PostHogScreen: View {
     private var configured: Bool { hasKey && !projectID.isEmpty }
 
     var body: some View {
-        List {
-            BridgeSetupHeader(
-                name: "PostHog",
-                mode: .pasteKey,
-                intro: "Paste a read-only key, watch the metrics you care about, and only what's actually news arrives: a milestone crossed, a metric falling silent, a deploy you annotated. Aggregates only — nothing here reads an individual person's profile.",
-                connected: configured && !watched.isEmpty,
-                flipTrigger: flipTrigger)
+        BridgeSetupPage(name: "PostHog") {
+            if configured {
+                // Connected (prd §186). PostHog's form is THREE stages — key,
+                // project, then the watch list — and only the first two are
+                // set-once configuration, so those go behind the door and the
+                // watch list stays on the screen: it is what you come back to.
+                BridgeConnectedState(
+                    bridgeID: TokenBridge.posthog.bridgeID,
+                    name: "PostHog",
+                    connectionNote: String(localized: "Your \(TokenBridge.posthog.credentialNoun) · stored in \(DS.device)'s Keychain"),
+                    capabilitiesFallback: [TokenBridge.posthog.canLine],
+                    openConnection: { showConnection = true })
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            } else {
+                BridgeSetupHeader(
+                    name: "PostHog",
+                    mode: .pasteKey,
+                    intro: "Paste a read-only key, watch the metrics you care about, and only what's actually news arrives: a milestone crossed, a metric falling silent, a deploy you annotated. Aggregates only — nothing here reads an individual person's profile.",
+                    connected: configured && !watched.isEmpty)
+            }
             // The way back to your things (§460).
             if configured {
                 RoomDoor(name: "PostHog", source: PostHogWatch.source)
@@ -73,27 +86,14 @@ struct PostHogScreen: View {
                 watchSection.listRowSeparator(.hidden)
                 if !watched.isEmpty { rosterSection }
             }
-            if hasKey {
-                BridgeDisconnectSection(bridgeID: TokenBridge.posthog.bridgeID,
-                                        name: "PostHog",
-                                        teardown: {
-                                            PostHogWatch.unwatchAll(context: modelContext)
-                                            TokenVault.delete(TokenBridge.posthog.tokenKey)
-                                            PostHogAccount.clear()
-                                            projects = []
-                                            accountVersion += 1
-                                            load()
-                                        })
-                    .listRowSeparator(.hidden)
+        }
+        .sheet(isPresented: $showConnection) {
+            BridgeConnectionSheet(title: "PostHog") {
+                keySection
+                if hasKey, projectID.isEmpty { projectSection }
+                removeSection
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "PostHog")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("PostHog")
         .sheet(item: $openThing) { thing in
             ThingSheetView(thing: thing)
         }
@@ -131,6 +131,21 @@ struct PostHogScreen: View {
     }
 
     // MARK: - Step one: the key
+
+    /// The way out — the shared row, behind the Connection door with the form
+    /// it belongs to (prd §186/§608).
+    private var removeSection: some View {
+        BridgeDisconnectSection(bridgeID: TokenBridge.posthog.bridgeID,
+                                name: "PostHog",
+                                teardown: {
+                                    PostHogWatch.unwatchAll(context: modelContext)
+                                    TokenVault.delete(TokenBridge.posthog.tokenKey)
+                                    PostHogAccount.clear()
+                                    projects = []
+                                    accountVersion += 1
+                                    load()
+                                })
+    }
 
     private var keySection: some View {
         Section {
@@ -178,7 +193,7 @@ struct PostHogScreen: View {
                             action: saveKey)
                 BridgeSyncStatusRows(syncing: resolving,
                                      syncingLine: String(localized: "Checking the key…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
             }
         }
         .dsSlabSection()
@@ -200,7 +215,7 @@ struct PostHogScreen: View {
                 }
                 BridgeSyncStatusRows(syncing: resolving,
                                      syncingLine: String(localized: "Reading your projects…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
             }
         }
         .dsSlabSection()
@@ -223,7 +238,7 @@ struct PostHogScreen: View {
                 }
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading PostHog…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
                 DSSlabNote(text: "Deploys and launches you annotate land on their own.")
             }
         }
@@ -327,7 +342,6 @@ struct PostHogScreen: View {
         guard !key.isEmpty, !resolving else { return }
         DSHaptic.tap()
         resolving = true
-        resultIsError = false
         PostHogAccount.host = host.isEmpty ? PostHogAccount.defaultHost : host
         Task {
             let found = await PostHogFetch.projects(host: PostHogAccount.host, key: key)
@@ -335,10 +349,7 @@ struct PostHogScreen: View {
             guard let found, !found.isEmpty else {
                 // The honest split the probe also draws: a rejected key and an
                 // unreachable host are different problems with different fixes.
-                result = found == nil
-                    ? String(localized: "PostHog refused that key — check it and the host.")
-                    : String(localized: "That key can't see any project.")
-                resultIsError = true
+                result = found == nil ? .says(String(localized: "PostHog refused that key — check it and the host.")) : .says(String(localized: "That key can't see any project."))
                 return
             }
             TokenVault.set(key, for: TokenBridge.posthog.tokenKey)
@@ -346,7 +357,6 @@ struct PostHogScreen: View {
             keyField = ""
             projects = found
             result = nil
-            flipTrigger += 1
             DSHaptic.success()
             // One project is not a choice — take it and move on.
             if found.count == 1 { pick(found[0]) }
@@ -359,7 +369,6 @@ struct PostHogScreen: View {
         PostHogAccount.projectName = project.name
         accountVersion += 1
         result = nil
-        resultIsError = false
     }
 
     private func watchTyped() {
@@ -377,12 +386,11 @@ struct PostHogScreen: View {
 
     private func watch(_ event: String) {
         DSHaptic.tap()
-        resultIsError = false
         guard PostHogWatch.add(event, context: modelContext) != nil else {
-            result = String(localized: "\(event) is already watched.")
+            result = .says(String(localized: "\(event) is already watched."))
             return
         }
-        result = String(localized: "Watching \(event)")
+        result = .says(String(localized: "Watching \(event)"))
         queryField = ""
         hits = []
         load()
@@ -415,12 +423,9 @@ struct PostHogScreen: View {
             PostHogWatch.registerBridge(store: store, context: modelContext)
             guard !watched.isEmpty else { return }
             if let added {
-                result = added > 0 ? String(localized: "\(added) new")
-                                   : String(localized: "Up to date")
-                resultIsError = false
+                result = .landed(added)
             } else {
-                result = String(localized: "Couldn't reach PostHog — check your connection.")
-                resultIsError = true
+                result = .failed(String(localized: "Couldn't reach PostHog — check your connection."))
             }
         } while syncPending
     }

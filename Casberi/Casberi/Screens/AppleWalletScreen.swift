@@ -27,7 +27,6 @@ struct AppleWalletScreen: View {
     @State private var syncing = false
     @State private var result: String?
     @State private var resultIsError = false
-    @State private var flipTrigger = 0
     @State private var recent: [Thing] = []
     @State private var balances: [String: String] = [:]
     @State private var stateVersion = 0
@@ -38,13 +37,16 @@ struct AppleWalletScreen: View {
     }
 
     var body: some View {
-        List {
+        // Apple Card's mark is near-black graphite, so `DS.washHue` returns
+        // nil and this paints nothing — called anyway so the family has no
+        // exception to remember (the `GrokSetupScreen`/`OpenRouterSetupScreen`
+        // pattern; found missing here auditing the pour rules, 2026-08-24).
+        BridgeSetupPage(name: "Apple Wallet") {
             BridgeSetupHeader(
                 name: "Apple Wallet",
                 mode: .onThisDevice,
                 intro: "Apple Card, Apple Cash and Savings, with the merchant's real name. United States only, iOS 17.4 or later.",
-                connected: isConnected,
-                flipTrigger: flipTrigger)
+                connected: isConnected)
             // The way back to your things (§460).
             if isConnected {
                 RoomDoor(name: "Apple Wallet", source: AppleWalletBridge.sourceName)
@@ -80,14 +82,6 @@ struct AppleWalletScreen: View {
             }
 
         }
-        .dsPageBackground()
-        .scrollContentBackground(.hidden)
-        // Apple Card's mark is near-black graphite, so `DS.washHue` returns
-        // nil and this paints nothing — called anyway so the family has no
-        // exception to remember (the `GrokSetupScreen`/`OpenRouterSetupScreen`
-        // pattern; found missing here auditing the pour rules, 2026-08-24).
-        .bridgeSetupWash(name: "Apple Wallet")
-        .navigationTitle("Apple Wallet")
         .navigationBarTitleDisplayMode(.inline)
         .task { load() }
     }
@@ -179,7 +173,6 @@ struct AppleWalletScreen: View {
         switch outcome {
         case .connected:
             resultIsError = false
-            flipTrigger += 1
             DSHaptic.success()
             load()
         default:

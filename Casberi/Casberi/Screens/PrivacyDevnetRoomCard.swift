@@ -72,7 +72,7 @@ struct PrivacyDevnetRoomCard: View {
     /// reading twice.
     private var slotHeadline: String? {
         switch section {
-        // **HOME TAKES A HEADLINE WHEN A FIGURE DRAWS (prd §606, user: "isn't
+        // **HOME TAKES A HEADLINE WHEN A FIGURE DRAWS (prd §608, user: "isn't
         // it weird to have those sentences at the top of the charts?").**
         //
         // §596 removed the summary sentence from every other scope for exactly
@@ -168,7 +168,7 @@ struct PrivacyDevnetRoomCard: View {
     @ViewBuilder private var home: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             // The sentence stands only where there is no figure under it
-            // (prd §606) — see `slotHeadline`. Where the ring draws, it was
+            // (prd §608) — see `slotHeadline`. Where the ring draws, it was
             // the drawing restated in three lines of heading type above it.
             if marks.isEmpty {
                 Text(PrivacyDevnetRoom.sentence(head))
@@ -723,7 +723,7 @@ extension PrivacyDevnetRoomCard {
         switch section {
         case .activity:   kindMix(moves)
         case .frames:     budgetBar(moves.filter { $0.frameCount > 0 })
-        // **NO FIGURE (prd §606).** These two drew a count as N identical
+        // **NO FIGURE (prd §608).** These two drew a count as N identical
         // shapes — eight rings for eight keys, a row of pips per address —
         // over data with nothing to compare. "We can count; what does that
         // do." The chassis headline states the number and the rows below the
@@ -736,7 +736,7 @@ extension PrivacyDevnetRoomCard {
         }
     }
 
-    /// WHAT THESE TRANSACTIONS WERE — the kind mix (prd §606).
+    /// WHAT THESE TRANSACTIONS WERE — the kind mix (prd §608).
     ///
     /// Replaces a column per transaction whose height was the frame count, on
     /// a chain where nearly every transaction runs exactly two frames. The
@@ -753,7 +753,7 @@ extension PrivacyDevnetRoomCard {
     }
 
     /// WHAT THESE STEPS WERE ALLOWED, and what they cost — one bar for the
-    /// room rather than one strip per transaction (prd §606).
+    /// room rather than one strip per transaction (prd §608).
     @ViewBuilder private func budgetBar(_ moves: [PrivacyDevnetLiveState.Move]) -> some View {
         let frames = moves.flatMap(\.frames).map {
             PrivacyDevnetFigure.Frame(gasLimit: $0.gasLimit, stateLimit: $0.stateLimit,

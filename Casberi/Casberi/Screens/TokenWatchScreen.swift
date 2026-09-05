@@ -12,8 +12,7 @@ struct TokenWatchScreen: View {
     @Environment(BridgeStore.self) private var store
     @State private var queryField = ""
     @State private var working = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
     @State private var watched: [Thing] = []
     @FocusState private var fieldFocused: Bool
 
@@ -53,7 +52,7 @@ struct TokenWatchScreen: View {
     }
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Tokens") {
             // A short header, not the old "no header" §185 treatment — see
             // the family-wide pass that put every "type something to watch
             // it" screen (Wallet, Stocktwits, RSS, Vibenet, …) on one shape:
@@ -83,13 +82,6 @@ struct TokenWatchScreen: View {
                     .listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Tokens")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Tokens")
         .toolbar {
             // The sort choice lived in the old watchlist section's header;
             // the shelf has no header, so it rides the toolbar (prd §185).
@@ -134,7 +126,7 @@ struct TokenWatchScreen: View {
             }
             BridgeSyncStatusRows(syncing: working,
                                  syncingLine: String(localized: "Finding the token…"),
-                                 result: result, resultIsError: resultIsError)
+                                 proof: result)
             // Commas still build a watchlist in one go — that trick moved to
             // the placeholder's own example rather than a paragraph (§190).
             DSSlabNote(text: "Public price data only — no wallet, no trading.")
@@ -325,8 +317,7 @@ struct TokenWatchScreen: View {
             let token = await TokenWatch.resolve(raw)
             working = false
             guard let token else {
-                result = String(localized: "Couldn't find that token — try its contract address.")
-                resultIsError = true
+                result = .failed(String(localized: "Couldn't find that token — try its contract address."))
                 return
             }
             add(token)
@@ -353,17 +344,17 @@ struct TokenWatchScreen: View {
             hits = []
             loadWatched()
             register()
-            resultIsError = !failed.isEmpty
             if watchedCount == 0 {
-                result = String(localized: "Couldn't find any of those tokens — try contract addresses.")
+                result = .failed(String(localized: "Couldn't find any of those tokens — try contract addresses."))
             } else if failed.isEmpty {
-                result = String(localized: "Watching \(watchedCount) tokens")
+                result = .says(String(localized: "Watching \(watchedCount) tokens"))
                 DSHaptic.success()
             } else {
-                // Mixed outcome: resultIsError stays true for this line, so
-                // the shared status row's shake + failure haptic already
-                // covers it — no separate success buzz to compete with it.
-                result = String(localized: "Watching \(watchedCount) of \(queries.count) — couldn't find \(failed.joined(separator: ", "))")
+                // Mixed outcome is a FAILURE, and the type now says so where a
+                // separate `resultIsError` flag once had to be remembered three
+                // branches earlier. The shared row's shake and failure haptic
+                // cover it — no success buzz to compete with them.
+                result = .failed(String(localized: "Watching \(watchedCount) of \(queries.count) — couldn't find \(failed.joined(separator: ", "))"))
             }
         }
     }
@@ -377,16 +368,15 @@ struct TokenWatchScreen: View {
     }
 
     private func add(_ token: TokenWatch.Resolved) {
-        resultIsError = false
         if let thing = TokenWatch.add(token, context: modelContext) {
-            result = String(localized: "Watching \(thing.title)")
+            result = .says(String(localized: "Watching \(thing.title)"))
             DSHaptic.success()
             queryField = ""
             hits = []
             loadWatched()
             register()
         } else {
-            result = String(localized: "\(token.name) is already on your watchlist.")
+            result = .says(String(localized: "\(token.name) is already on your watchlist."))
         }
     }
 

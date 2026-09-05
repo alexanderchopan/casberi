@@ -17,17 +17,15 @@ struct CardPointersScreen: View {
 
     @State private var flow: Task<Void, Never>?
     @State private var pending: CardPointersWire.DeviceCode?
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
     @State private var needsPlus = false
     @State private var upgradeURL: String?
-    @State private var flipTrigger = 0
     @State private var codeCopied = false
 
     private var connected: Bool { CardPointersAuth.isConnected && CardPointersAuth.isPro }
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "CardPointers") {
             if connected {
                 BridgeConnectedState(
                     bridgeID: CardPointersAuth.seatKey,
@@ -44,8 +42,7 @@ struct CardPointersScreen: View {
                 BridgeSetupHeader(
                     name: "CardPointers",
                     mode: .signIn,
-                    intro: "Sign in on CardPointers' own page and the offers sitting unused on your cards keep arriving, each with the date it expires.",
-                    flipTrigger: flipTrigger)
+                    intro: "Sign in on CardPointers' own page and the offers sitting unused on your cards keep arriving, each with the date it expires.")
                 // The way back to your things (§460).
                 if connected {
                     RoomDoor(name: "CardPointers", source: CardPointersIngest.source)
@@ -54,13 +51,6 @@ struct CardPointersScreen: View {
                 connectSection.listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "CardPointers")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("CardPointers")
         .onDisappear { flow?.cancel() }
     }
 
@@ -138,7 +128,7 @@ struct CardPointersScreen: View {
             }
 
             BridgeSyncStatusRows(syncing: false, syncingLine: "",
-                                 result: result, resultIsError: resultIsError)
+                                 proof: result)
             DSSlabNote(text: "Requires CardPointers+ — a free account can't read its offers.")
         }
         .dsSlabSection()
@@ -147,13 +137,13 @@ struct CardPointersScreen: View {
     // MARK: - Flow
 
     private func connect() {
-        result = nil; resultIsError = false; needsPlus = false
+        result = nil
+        needsPlus = false
         flow?.cancel()
         flow = Task {
             guard let code = await CardPointersAuth.startDeviceFlow() else {
                 await MainActor.run {
-                    result = String(localized: "Couldn't reach CardPointers.")
-                    resultIsError = true
+                    result = .failed(String(localized: "Couldn't reach CardPointers."))
                 }
                 return
             }
@@ -203,21 +193,18 @@ struct CardPointersScreen: View {
             upgradeURL = "https://cardpointers.com/plus"
             return
         }
-        flipTrigger += 1
         _ = store.registerConnected(id: CardPointersAuth.seatKey,
                                     name: "CardPointers",
                                     proof: String(localized: "Signed in on \(DS.device)"),
                                     can: ["Reads your cards and their offers.",
                                           "Read-only — every tool they publish is a read."])
-        result = String(localized: "Connected.")
-        resultIsError = false
+        result = .connected()
     }
 
     @MainActor
     private func fail(_ message: String) {
         pending = nil
-        result = message
-        resultIsError = true
+        result = .failed(message)
     }
 
     private func disconnect() {

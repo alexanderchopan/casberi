@@ -11,14 +11,13 @@ struct PolarScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.openURL) private var openURL
 
+    @State private var showConnection = false
     @State private var tokenField = ""
     @State private var accountVersion = 0
 
     @State private var connecting = false
     @State private var syncing = false
-    @State private var result: String?
-    @State private var resultIsError = false
-    @State private var flipTrigger = 0
+    @State private var result: BridgeProof?
 
     @State private var recent: [Thing] = []
     @State private var mrr: String?
@@ -30,13 +29,28 @@ struct PolarScreen: View {
     }
 
     var body: some View {
-        List {
-            BridgeSetupHeader(
-                name: "Polar",
-                mode: .pasteKey,
-                intro: "Paste a read-only token and your sales arrive as they happen, alongside the money that needs you: a dispute and its deadline, a refund, a subscription leaving a healthy state. Renewals stay out, and nothing here reads a customer's name or card.",
-                connected: hasToken,
-                flipTrigger: flipTrigger)
+        BridgeSetupPage(name: "Polar") {
+            if hasToken {
+                // Connected (prd §186): the credential form retires behind one
+                // door, and identity, live proof and what this can do take the
+                // screen. This bridge stores only the secret — in the Keychain
+                // — so it leads with its own name over a truthful note about
+                // HOW it is connected, never an account name we would guess.
+                BridgeConnectedState(
+                    bridgeID: TokenBridge.polar.bridgeID,
+                    name: "Polar",
+                    connectionNote: String(localized: "Your \(TokenBridge.polar.credentialNoun) · stored in \(DS.device)'s Keychain"),
+                    capabilitiesFallback: [TokenBridge.polar.canLine],
+                    openConnection: { showConnection = true })
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            } else {
+                BridgeSetupHeader(
+                    name: "Polar",
+                    mode: .pasteKey,
+                    intro: "Paste a read-only token and your sales arrive as they happen, alongside the money that needs you: a dispute and its deadline, a refund, a subscription leaving a healthy state. Renewals stay out, and nothing here reads a customer's name or card.",
+                    connected: hasToken)
+            }
             if hasToken {
                 RoomDoor(name: "Polar", source: PolarWatch.source)
                     .listRowSeparator(.hidden)
@@ -46,26 +60,16 @@ struct PolarScreen: View {
                 if !recent.isEmpty {
                     RecentThingsSection(header: "Landed", things: recent.live)
                 }
-                BridgeDisconnectSection(bridgeID: TokenBridge.polar.bridgeID,
-                                        name: "Polar",
-                                        teardown: {
-                                            TokenVault.delete(TokenBridge.polar.tokenKey)
-                                            PolarAccount.clear()
-                                            accountVersion += 1
-                                            load()
-                                        })
-                    .listRowSeparator(.hidden)
             } else {
                 tokenSection.listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Polar")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Polar")
+        .sheet(isPresented: $showConnection) {
+            BridgeConnectionSheet(title: "Polar") {
+                tokenSection
+                removeSection
+            }
+        }
         .onAppear {
             load()
             if hasToken { Task { await sync() } }
@@ -101,7 +105,7 @@ struct PolarScreen: View {
                             action: saveToken)
                 BridgeSyncStatusRows(syncing: connecting,
                                      syncingLine: String(localized: "Checking the token…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
             }
         }
         .dsSlabSection()
@@ -127,7 +131,7 @@ struct PolarScreen: View {
                 }
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading Polar…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
                 DSSlabNote(text: "Sales, refunds, disputes and subscriptions leaving a healthy state land on their own. Renewals stay out.")
             }
         }
@@ -176,10 +180,7 @@ struct PolarScreen: View {
                 PolarAccount.orgSlug = slug
                 tokenField = ""
                 accountVersion += 1
-                resultIsError = false
-                result = name.isEmpty ? String(localized: "Connected")
-                                      : String(localized: "Connected to \(name)")
-                flipTrigger += 1
+                result = .connected(name.isEmpty ? nil : name)
                 DSHaptic.success()
                 PolarWatch.registerBridge(store: store)
                 load()
@@ -199,8 +200,7 @@ struct PolarScreen: View {
     }
 
     private func fail(_ message: String) {
-        resultIsError = true
-        result = message
+        result = .failed(message)
     }
 
     private func sync() async {
@@ -211,12 +211,23 @@ struct PolarScreen: View {
         load()
         PolarWatch.registerBridge(store: store)
         if let added {
-            result = added > 0 ? String(localized: "\(added) new")
-                               : String(localized: "Up to date")
-            resultIsError = false
+            result = .landed(added)
         } else {
-            result = String(localized: "Couldn't reach Polar — check your connection.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't reach Polar — check your connection."))
         }
     }
+
+    /// The way out — the shared row, behind the Connection door with the form
+    /// it belongs to (prd §186/§608).
+    private var removeSection: some View {
+        BridgeDisconnectSection(bridgeID: TokenBridge.polar.bridgeID,
+                                name: "Polar",
+                                teardown: {
+                                    TokenVault.delete(TokenBridge.polar.tokenKey)
+                                    PolarAccount.clear()
+                                    accountVersion += 1
+                                    load()
+                                })
+    }
+
 }

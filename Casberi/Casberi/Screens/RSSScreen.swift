@@ -32,8 +32,7 @@ struct RSSScreen: View {
     /// re-run reads EVERY feed anyway — the address is only carried so the
     /// status row can name the right one.
     @State private var pendingAdd: String?
-    @State private var lastResult: String?
-    @State private var resultIsError = false
+    @State private var lastResult: BridgeProof?
     @State private var importingOPML = false
     @State private var opmlParsed: OPMLImport.Parsed?
     @State private var exportURL: URL?
@@ -48,7 +47,7 @@ struct RSSScreen: View {
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "RSS") {
             BridgeSetupHeader(
                 name: "RSS",
                 mode: .noAccount,
@@ -72,13 +71,6 @@ struct RSSScreen: View {
                 ).listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "RSS")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("RSS")
         .onAppear {
             refreshExportURL()
             // A file handed in via AirDrop/Share Sheet before this screen
@@ -115,7 +107,7 @@ struct RSSScreen: View {
                             keyboard: .URL, focus: $fieldFocused, action: addFeed)
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading your feeds…"),
-                                     result: lastResult, resultIsError: resultIsError)
+                                     proof: lastResult)
                 // The note that used to sit here said "A site's own address
                 // works too" beneath a field placeheld "Site or feed URL" —
                 // §220's finding exactly, so it went rather than got tightened
@@ -262,20 +254,17 @@ struct RSSScreen: View {
     private func addFeed(){
         let typed = newFeed
         guard rss.normalized(typed) != nil else {
-            resultIsError = true
-            lastResult = String(localized: "That doesn't look like a web address.")
+            lastResult = .failed(String(localized: "That doesn't look like a web address."))
             return
         }
         guard rss.add(typed) else {
-            resultIsError = true
-            lastResult = String(localized: "You already follow that.")
+            lastResult = .failed(String(localized: "You already follow that."))
             return
         }
         let followed = rss.normalized(typed)
         newFeed = ""
         fieldFocused = false
-        resultIsError = false
-        DSHaptic.success()
+                DSHaptic.success()
         Task { await sync(justAdded: followed) }
     }
 
@@ -288,11 +277,9 @@ struct RSSScreen: View {
         guard let data = await SecurityScopedFileReader.readData(at: url),
               let parsed = OPMLImport.parse(data: data), !parsed.allFeeds.isEmpty else {
             opmlParsed = nil
-            lastResult = String(localized: "That file isn't an OPML export — pick the file your reader exported.")
-            resultIsError = true
+            lastResult = .failed(String(localized: "That file isn't an OPML export — pick the file your reader exported."))
             return
         }
-        resultIsError = false
         lastResult = nil
         opmlParsed = parsed
     }
@@ -307,13 +294,11 @@ struct RSSScreen: View {
             // Not a failure — nothing was wrong with the file, you're just
             // already following all of it. See `EthValidatorScreen` for the
             // ruling that settled this across the family (2026-07-31).
-            resultIsError = false
-            lastResult = String(localized: "Already following every feed in that file.")
+            lastResult = .says(String(localized: "Already following every feed in that file."))
             return
         }
-        resultIsError = false
         let addedLine = "\(summary.added) feeds added\(summary.skipped > 0 ? " · \(summary.skipped) already followed" : "")"
-        lastResult = addedLine
+        lastResult = .says(addedLine)
         DSHaptic.success()
         Task {
             await sync()
@@ -321,8 +306,7 @@ struct RSSScreen: View {
             // phrasing ("N new"/"Up to date") — the import's own receipt is
             // what belongs here, upgraded with the newest thing one of the
             // just-landed feeds actually produced, when there is one.
-            resultIsError = false
-            lastResult = addedLine
+            lastResult = .says(addedLine)
             await describeLanding(from: feeds, addedLine: addedLine)
         }
     }
@@ -344,7 +328,7 @@ struct RSSScreen: View {
         guard let recent = try? modelContext.fetch(descriptor),
               let newest = recent.first(where: { names.contains($0.authorHandle ?? "") })
         else { return }
-        lastResult = String(localized: "\(addedLine) — newest: \(IngestSupport.titleLine(newest.title))")
+        lastResult = .says(String(localized: "\(addedLine) — newest: \(IngestSupport.titleLine(newest.title))"))
     }
 
     /// Fetch + land; the status row carries the proof.
@@ -372,19 +356,16 @@ struct RSSScreen: View {
             return
         }
         guard let added else {
-            lastResult = String(localized: "Couldn't reach your feeds — check your connection.")
-            resultIsError = true
+            lastResult = .failed(String(localized: "Couldn't reach your feeds — check your connection."))
             return
         }
         // Reported, but NOT returned on: the bridge is still connected and its
         // other feeds still landed — one address publishing nothing is a fact
         // about that address, not a failed sync.
         if let justAdded, FeedFreshness.noFeedFound(at: justAdded) {
-            resultIsError = true
-            lastResult = String(localized: "No feed at that address — that page doesn't publish one.")
+            lastResult = .failed(String(localized: "No feed at that address — that page doesn't publish one."))
         } else {
-            resultIsError = false
-            lastResult = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
+            lastResult = .landed(added)
         }
         let proof = added > 0
             ? String(localized: "\(added) posts in")

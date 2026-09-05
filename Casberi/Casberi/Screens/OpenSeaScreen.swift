@@ -14,14 +14,13 @@ struct OpenSeaScreen: View {
     /// loops once more when it lands so the new chain isn't stranded until the
     /// next visit.
     @State private var syncPending = false
-    @State private var lastResult: String?
+    @State private var lastResult: BridgeProof?
     /// Whether `lastResult` is a failure — see `PrivacyPoolsScreen` (audit,
     /// 2026-07-31): hardcoding `false` painted "Couldn't reach OpenSea" in
     /// confirm green with the count-up animation.
-    @State private var lastResultIsError = false
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "OpenSea") {
             BridgeSetupHeader(
                 name: "OpenSea",
                 mode: .noAccount,
@@ -41,13 +40,6 @@ struct OpenSeaScreen: View {
                 ).listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "OpenSea")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("OpenSea")
         .onAppear {
             // Opening the screen doesn't connect — the person taps a chain to
             // watch it (like RSS wants a feed pasted). Only refresh if
@@ -79,7 +71,7 @@ struct OpenSeaScreen: View {
                 }
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading the chain…"),
-                                     result: lastResult, resultIsError: lastResultIsError)
+                                     proof: lastResult)
                 DSSlabNote(text: "Switch a chain on and its newest drops land. Read-only.")
             }
         }
@@ -119,8 +111,7 @@ struct OpenSeaScreen: View {
             // resurrect the seat the person just removed.
             guard opensea.connected else { store.remove("opensea"); return }
             if let added {
-                lastResult = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
-                lastResultIsError = false
+                lastResult = .landed(added)
                 let proof = added > 0
             ? String(localized: "\(added) drops in")
             : String(localized: "Synced just now")
@@ -128,8 +119,7 @@ struct OpenSeaScreen: View {
                                         can: ["Reads new NFT collections on the chains you watch.",
                                               "Read-only — never buys, sells, or bids."])
             } else {
-                lastResult = String(localized: "Couldn't reach OpenSea — check your connection.")
-                lastResultIsError = true
+                lastResult = .failed(String(localized: "Couldn't reach OpenSea — check your connection."))
             }
         } while syncPending && opensea.connected
     }

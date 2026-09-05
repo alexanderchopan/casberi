@@ -12,8 +12,7 @@ struct StocktwitsScreen: View {
     @Environment(BridgeStore.self) private var store
     @State private var queryField = ""
     @State private var working = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
     /// The watchlist rows — one per ticker, the watch itself. The landed
     /// posts no longer preview here (prd §185, the recents ruling: the feed
     /// shows what landed, a manager manages).
@@ -51,7 +50,7 @@ struct StocktwitsScreen: View {
     @State private var openThing: Thing?
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Stocktwits") {
             // A short header — the family-wide pass that put every "type
             // something to watch it" screen on one shape (identity + mode
             // chip + one action sentence, then the omnibox). No "Latest
@@ -88,13 +87,6 @@ struct StocktwitsScreen: View {
                     .listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Stocktwits")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Stocktwits")
         .sheet(item: $openThing) { thing in
             ThingSheetView(thing: thing)
         }
@@ -137,7 +129,7 @@ struct StocktwitsScreen: View {
                                  syncingLine: working
                                     ? String(localized: "Finding the ticker…")
                                     : String(localized: "Syncing takes…"),
-                                 result: result, resultIsError: resultIsError)
+                                 proof: result)
             // The header's intro sentence is pure action, on purpose — this
             // note carries the load-bearing honesty fact instead: a take is
             // its author's opinion, not a rating this app computed. Presenting
@@ -296,8 +288,7 @@ struct StocktwitsScreen: View {
             let stock = await StockWatch.resolve(q)
             working = false
             guard let stock else {
-                result = String(localized: "Couldn't find that ticker on Stocktwits.")
-                resultIsError = true
+                result = .failed(String(localized: "Couldn't find that ticker on Stocktwits."))
                 return
             }
             add(stock)
@@ -311,12 +302,11 @@ struct StocktwitsScreen: View {
     }
 
     private func add(_ stock: StockWatch.Resolved) {
-        resultIsError = false
         guard let thing = StockWatch.add(stock, context: modelContext) else {
-            result = String(localized: "\(stock.title) is already on your watchlist.")
+            result = .says(String(localized: "\(stock.title) is already on your watchlist."))
             return
         }
-        result = String(localized: "Watching \(thing.title)")
+        result = .says(String(localized: "Watching \(thing.title)"))
         queryField = ""
         hits = []
         load()
@@ -339,12 +329,9 @@ struct StocktwitsScreen: View {
             StockWatch.registerBridge(store: store, context: modelContext)
             guard !watched.isEmpty else { return }
             if let added {
-                result = added > 0 ? String(localized: "\(added) new")
-                                   : String(localized: "Up to date")
-                resultIsError = false
+                result = .landed(added)
             } else {
-                result = String(localized: "Couldn't reach Stocktwits — check your connection.")
-                resultIsError = true
+                result = .failed(String(localized: "Couldn't reach Stocktwits — check your connection."))
             }
         } while syncPending
     }

@@ -15,7 +15,7 @@ struct PolymarketScreen: View {
     }
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Polymarket") {
             BridgeSetupHeader(
                 name: "Polymarket",
                 mode: .noAccount,
@@ -28,12 +28,5 @@ struct PolymarketScreen: View {
             }
             PredictionVenueConnect(ownVenue: .polymarket)
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Polymarket")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Polymarket")
     }
 }

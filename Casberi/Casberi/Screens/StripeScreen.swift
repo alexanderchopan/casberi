@@ -18,6 +18,7 @@ struct StripeScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.openURL) private var openURL
 
+    @State private var showConnection = false
     @State private var keyField = ""
     /// Bumped whenever the key changes, so the derived reads below
     /// re-evaluate. The Keychain stays the source of truth — mirroring it into
@@ -27,9 +28,7 @@ struct StripeScreen: View {
 
     @State private var connecting = false
     @State private var syncing = false
-    @State private var result: String?
-    @State private var resultIsError = false
-    @State private var flipTrigger = 0
+    @State private var result: BridgeProof?
 
     @State private var recent: [Thing] = []
     /// The balance reading the sweep last stored — mirrored into state so the
@@ -43,13 +42,28 @@ struct StripeScreen: View {
     }
 
     var body: some View {
-        List {
-            BridgeSetupHeader(
-                name: "Stripe",
-                mode: .pasteKey,
-                intro: "Paste a read-only key and the money that needs you keeps arriving: a dispute and its deadline, a payout, a cancelled subscription, a failed payment. Individual charges never land, and nothing here reads a customer's name or card.",
-                connected: hasKey,
-                flipTrigger: flipTrigger)
+        BridgeSetupPage(name: "Stripe") {
+            if hasKey {
+                // Connected (prd §186): the credential form retires behind one
+                // door, and identity, live proof and what this can do take the
+                // screen. This bridge stores only the secret — in the Keychain
+                // — so it leads with its own name over a truthful note about
+                // HOW it is connected, never an account name we would guess.
+                BridgeConnectedState(
+                    bridgeID: TokenBridge.stripe.bridgeID,
+                    name: "Stripe",
+                    connectionNote: String(localized: "Your \(TokenBridge.stripe.credentialNoun) · stored in \(DS.device)'s Keychain"),
+                    capabilitiesFallback: [TokenBridge.stripe.canLine],
+                    openConnection: { showConnection = true })
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            } else {
+                BridgeSetupHeader(
+                    name: "Stripe",
+                    mode: .pasteKey,
+                    intro: "Paste a read-only key and the money that needs you keeps arriving: a dispute and its deadline, a payout, a cancelled subscription, a failed payment. Individual charges never land, and nothing here reads a customer's name or card.",
+                    connected: hasKey)
+            }
             // The way back to your things (§460).
             if hasKey {
                 RoomDoor(name: "Stripe", source: StripeWatch.source)
@@ -60,26 +74,16 @@ struct StripeScreen: View {
                 if !recent.isEmpty {
                     RecentThingsSection(header: "Landed", things: recent.live)
                 }
-                BridgeDisconnectSection(bridgeID: TokenBridge.stripe.bridgeID,
-                                        name: "Stripe",
-                                        teardown: {
-                                            TokenVault.delete(TokenBridge.stripe.tokenKey)
-                                            StripeAccount.clear()
-                                            accountVersion += 1
-                                            load()
-                                        })
-                    .listRowSeparator(.hidden)
             } else {
                 keySection.listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Stripe")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Stripe")
+        .sheet(isPresented: $showConnection) {
+            BridgeConnectionSheet(title: "Stripe") {
+                keySection
+                removeSection
+            }
+        }
         .onAppear {
             load()
             if hasKey { Task { await sync() } }
@@ -129,7 +133,7 @@ struct StripeScreen: View {
                             action: saveKey)
                 BridgeSyncStatusRows(syncing: connecting,
                                      syncingLine: String(localized: "Checking the key…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
             }
         }
         .dsSlabSection()
@@ -156,7 +160,7 @@ struct StripeScreen: View {
                 }
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading Stripe…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
                 DSSlabNote(text: "Disputes, payouts, cancellations and failed payments land on their own.")
             }
         }
@@ -221,10 +225,7 @@ struct StripeScreen: View {
                 StripeAccount.accountName = name
                 keyField = ""
                 accountVersion += 1
-                resultIsError = false
-                result = name.isEmpty ? String(localized: "Connected")
-                                      : String(localized: "Connected to \(name)")
-                flipTrigger += 1
+                result = .connected(name.isEmpty ? nil : name)
                 DSHaptic.success()
                 StripeWatch.registerBridge(store: store)
                 load()
@@ -246,8 +247,7 @@ struct StripeScreen: View {
     }
 
     private func fail(_ message: String) {
-        resultIsError = true
-        result = message
+        result = .failed(message)
     }
 
     /// Reads Stripe and lands whatever counts as news.
@@ -259,12 +259,9 @@ struct StripeScreen: View {
         load()
         StripeWatch.registerBridge(store: store)
         if let added {
-            result = added > 0 ? String(localized: "\(added) new")
-                               : String(localized: "Up to date")
-            resultIsError = false
+            result = .landed(added)
         } else {
-            result = String(localized: "Couldn't reach Stripe — check your connection.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't reach Stripe — check your connection."))
         }
         // Money arriving says nothing here — it lands in the feed, which is
         // where arrivals live (2026-08-19). Money being CHALLENGED still
@@ -276,4 +273,18 @@ struct StripeScreen: View {
             chrome.flash(alarm, tone: .failure, seconds: 3.5)
         }
     }
+
+    /// The way out — the shared row, behind the Connection door with the form
+    /// it belongs to (prd §186/§608).
+    private var removeSection: some View {
+        BridgeDisconnectSection(bridgeID: TokenBridge.stripe.bridgeID,
+                                name: "Stripe",
+                                teardown: {
+                                    TokenVault.delete(TokenBridge.stripe.tokenKey)
+                                    StripeAccount.clear()
+                                    accountVersion += 1
+                                    load()
+                                })
+    }
+
 }

@@ -23,17 +23,16 @@ struct ShopifyScreen: View {
     @Bindable private var shopify = ShopifyStore.shared
     @State private var newStore = ""
     @State private var syncing = false
-    @State private var lastResult: String?
+    @State private var lastResult: BridgeProof?
     /// Whether `lastResult` is a failure — see `PrivacyPoolsScreen` (audit,
     /// 2026-07-31): hardcoding `false` painted "Couldn't reach your stores" in
     /// confirm green with the count-up animation.
-    @State private var lastResultIsError = false
     @FocusState private var fieldFocused: Bool
 
     @Query(shopifyRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Shopify") {
             BridgeSetupHeader(
                 name: "Shopify",
                 mode: .noAccount,
@@ -65,13 +64,6 @@ struct ShopifyScreen: View {
                 ).listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Shopify")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Shopify")
         .onAppear {
             // Opening the screen doesn't connect — the person pastes a store to
             // follow it. Only refresh if something's already followed.
@@ -141,7 +133,7 @@ struct ShopifyScreen: View {
                         keyboard: .URL, focus: $fieldFocused, action: addStore)
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Reading the store…"),
-                                 result: lastResult, resultIsError: lastResultIsError)
+                                 proof: lastResult)
             DSSlabNote(text: "New drops, restocks, and sale prices land in your feed.")
             }
         }
@@ -163,18 +155,15 @@ struct ShopifyScreen: View {
             newStore = ""
             fieldFocused = false
             lastResult = nil
-            lastResultIsError = false
             DSHaptic.success()
             Task { await sync() }
         case .duplicate:
             newStore = ""
             fieldFocused = false
-            lastResult = String(localized: "Already following that store.")
-            lastResultIsError = false
+            lastResult = .says(String(localized: "Already following that store."))
             DSHaptic.selection()
         case .unreadable:
-            lastResult = String(localized: "That isn't a store web address — paste one like allbirds.com.")
-            lastResultIsError = true
+            lastResult = .failed(String(localized: "That isn't a store web address — paste one like allbirds.com."))
         }
     }
 
@@ -187,12 +176,10 @@ struct ShopifyScreen: View {
         guard let added else {
             // nil = every followed store refused or was unreachable — the
             // honest "won't share" line, not a silent empty.
-            lastResult = String(localized: "Couldn't reach your stores — check the address, or the store isn't Shopify / blocks reads.")
-            lastResultIsError = true
+            lastResult = .failed(String(localized: "Couldn't reach your stores — check the address, or the store isn't Shopify / blocks reads."))
             return
         }
-        lastResult = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
-        lastResultIsError = false
+        lastResult = .landed(added)
         let proof = added > 0
             ? String(localized: "\(added) drops in")
             : String(localized: "Synced just now")

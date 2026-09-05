@@ -49121,3 +49121,42 @@ Three instruments close it. `-syncProbe YES` is the first instrument this subsys
 ### A note on the nightly, which is why any of this is checkable
 
 `nightly-mac.log` was red on **eleven of the last twelve nights**, so the Mac has had no runtime verdict since 08-28. Every one of those reds resolves green on today's tree, including `sweep-clock-selftest.sh`, which failed three separate nights and passes 3/3 now. That is not flakiness — it is the ledger's own recorded pattern, that `main` was genuinely broken at push and fixed during the following day, with nothing saying so for up to twelve hours. The reds were real; the process gap is that nobody reads a log that is always red.
+## 608. The setup screens had one vocabulary and forty-eight anatomies (user: "how would you clean up and standardize the set up screens UI", then "do all", 2026-09-04)
+
+Sixty-two screens carry `BridgeSetupHeader`, and the words were already law: one header with a closed six-case mode chip and a one-sentence intro (§315, audited), one slab family (§190), one disconnect row, one proof row. Asked to standardize them, the census found the vocabulary intact and the drift somewhere nothing had ever looked — in the SHAPE.
+
+Measured on the tree as it stood, never inferred:
+
+* **Forty-eight distinct orders** of the same six shared blocks. Twelve screens put the room door or the connected state ABOVE the identity block; fifty put them below.
+* **Seven chassis modifiers, copy-pasted sixty-two times** — `.listStyle(.insetGrouped)`, `.scrollContentBackground(.hidden)`, `.bridgeSetupWash`, `.dsAdaptiveContentWidth`, `.dsPageBackground`, `.dsSoftScrollEdges`, the title. Two copies had already lost one each in silence: `AppleWalletScreen` had no `.listStyle` and used `.navigationTitle`, `WalletScreen` had no wash at all.
+* **Fifteen wordings for four outcomes** ("Up to date", "N new", "N in", "N landed…", "Connected", "Connected.", "Connected — 1 app", "Connected to X"), with the failure TONE carried in a separate `Bool` beside the string.
+* **Eight hand-rolled Disconnects**, spelling one verb five ways, and **not one of them offered the purge**.
+* **Eight import screens** with their own steps card and pick row, so none had the staleness line or the scoped removal §310 gave the other four.
+
+### 1. The chassis is a TYPE; the slot order is an AUDIT
+
+`BridgeSetupPage` holds the seven modifiers. The ORDER is `scripts/setup-anatomy-audit.py` rather than six generic slot closures, and the reason is §595's, four days old: `setup-copy-audit.py` discovers a connect screen by its `BridgeSetupHeader` call and reads that screen's intro and `RoomDoor(source:)` out of the same file, so folding sixty-two bodies into one generic view would move sixty-two intros out of the copy audit's reach. Slot order: **identity → room → act → more → recent → upkeep → exits**. A screen's OWN sections are deliberately not ordered by the check — no text rule can tell "the one act" from "a second act", and a lint that guesses gets turned off within a week.
+
+**The title kept BOTH spellings, which looks like fussiness and is not.** `.dsScreenTitle("Stripe")` resolves the `LocalizedStringKey` overload and `.dsScreenTitle(bridge.rawValue)` the `StringProtocol` one — and "Stripe" and "Railgun" have real entries in four languages. One initializer would have quietly changed which overload thirty screens take, in Spanish, Japanese, Korean and Chinese, with nothing on screen to say so.
+
+### 2. `BridgeProof` — because the Bool had already shipped wrong
+
+The outcome is one value now, so a green failure is unrepresentable. **§252 caught exactly that bug in five screens** passing a hardcoded `resultIsError: false` while assigning real failures into the same string — a network error in confirm green, counting up, with no shake and no failure haptic. Each was fixed by hand and nothing stopped the sixth. The READING line stays free text and that is not an oversight: "Reading the pool's doors…" is the one moment a bridge says what it is doing, and it differs because the work differs. `.says` exists for a genuine multi-fact receipt and **the audit forbids it carrying a line a case already covers** — which caught three real ones on its first run (AWS, Polar and Stripe all saying `.says("Connected")`).
+
+**The coin flip is DERIVED now.** It was a caller-supplied counter that seventeen of the fifty-two screens with a proof row bumped, so on the other thirty-five the handshake landed with no acknowledgement and nothing said which group a screen was in. It is `connected` going false→true — what those seventeen were spelling by hand.
+
+### 3. §186's connected state, finished
+
+Ten credential screens showed their key form forever: Venice, Grok, OpenRouter, Bankr, Stripe, Polar, Sentry, PostHog, AWS, App Store Connect. Each now retires the form behind one Connection door once it works. **PostHog is the one that is not uniform, with its reason**: its form is three stages and only the first two are set-once configuration, so the key and the project go behind the door and the WATCH LIST stays on the screen — it is what you come back to (§465). Twelve import headers gained `connected: held > 0`, which is also what earns them the flip on a first import.
+
+### 4. Two premises in the original audit were WRONG, and both were wrong the same way
+
+**`BridgeFieldRow` had zero call sites already** — its last went when §595 moved the devnet screens to `DSSlabField`. The count of five came from COMMENTS naming it. **`HandleSetupScreen`'s 1,243 lines are not drift**: it is one screen serving nine seats with per-bridge words, which is the shape §595 endorsed, and its five destructive verbs are all item-level Removes, not connection verbs — and §186 excludes watch-lists from the connected state by name. The generalisable half is this repo's oldest lesson arriving from the other direction: **it is not only that a grep over raw source finds prose and reports it as code — it is that a census built that way will propose work that is already done.** Resolve the symbol, not the mention.
+
+### 5. What the disconnect row gained
+
+`BridgeDisconnectSection` is the only disconnect on a setup screen now, and it **skips the keep-or-purge dialog when the bridge has landed nothing** — every exchange seat and §484's rowless nine — because offering "Remove its things too" there is a control that does nothing (§83, in a dialog). It takes an optional `note` for a consequence that reaches outside the bridge, which is one line on one screen (an exchange leaving your combined total) and not a licence for a second footer.
+
+**Seven checks, twelve fixtures, all six mutation-proven against the real tree** — a raw `List` chassis, a room door above the header, a re-added `resultIsError`, a hand-rolled Disconnect, a returning `BridgeFieldRow`, a returning `flipTrigger`. Its comment stripper is a character walk over comments AND string bodies, with a fixture for each: this audit's own docstring names every symbol it forbids, and a string holding `//` would otherwise blank the rest of a file and report it clean (the 2026-09-02 hero-tint defect, same shape).
+
+**UNSEEN on a device.** iOS and Mac Catalyst both compile, all static audits pass and the anatomy audit is green over all sixty screens, but not one of these screens has been screenshotted since the change. The connected state on the ten credential screens is the first thing to look at.

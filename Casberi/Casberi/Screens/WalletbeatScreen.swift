@@ -30,9 +30,7 @@ struct WalletbeatScreen: View {
 	@State private var watched: [Thing] = []
 	@State private var syncing = false
 	@State private var syncPending = false
-	@State private var result: String?
-	@State private var resultIsError = false
-	@State private var flipTrigger = 0
+	@State private var result: BridgeProof?
 	@State private var browsing = false
 	@State private var opened: String?
 	@FocusState private var fieldFocused: Bool
@@ -48,13 +46,12 @@ struct WalletbeatScreen: View {
 	private var connected: Bool { following || !watched.isEmpty }
 
 	var body: some View {
-		List {
+		BridgeSetupPage(name: "Walletbeat") {
 			BridgeSetupHeader(
 				name: "Walletbeat",
 				mode: .noAccount,
 				intro: "Follow Walletbeat and the wallet security incidents they publish arrive in your feed. Name the wallet apps you use and each one's full review comes too — their judgments, never ours.",
-				connected: connected,
-				flipTrigger: flipTrigger)
+				connected: connected)
 
 			if connected {
 				RoomDoor(name: "Walletbeat", source: WalletbeatWatch.source)
@@ -91,13 +88,6 @@ struct WalletbeatScreen: View {
 				).listRowSeparator(.hidden)
 			}
 		}
-		.listStyle(.insetGrouped)
-		.scrollContentBackground(.hidden)
-		.bridgeSetupWash(name: "Walletbeat")
-		.dsAdaptiveContentWidth()
-		.dsPageBackground()
-		.dsSoftScrollEdges()
-		.dsScreenTitle("Walletbeat")
 		.navigationDestination(isPresented: $browsing) {
 			WalletbeatDirectoryScreen()
 		}
@@ -201,8 +191,7 @@ struct WalletbeatScreen: View {
 				BridgeSyncStatusRows(
 					syncing: syncing,
 					syncingLine: String(localized: "Reading Walletbeat…"),
-					result: result,
-					resultIsError: resultIsError)
+					proof: result)
 			}
 		}
 		.dsSlabSection()
@@ -342,11 +331,9 @@ struct WalletbeatScreen: View {
 
 	private func follow() {
 		DSHaptic.tap()
-		let wasConnected = connected
 		WalletbeatWatch.following = true
 		following = true
 		WalletbeatWatch.registerBridge(store: store, context: modelContext)
-		if !wasConnected { flipTrigger += 1 }
 		Task { await sync() }
 	}
 
@@ -356,7 +343,6 @@ struct WalletbeatScreen: View {
 	}
 
 	private func watch(_ entry: WalletbeatEntry) {
-		let wasEmpty = watched.isEmpty
 		guard WalletbeatWatch.add(entry, context: modelContext) != nil else { return }
 		queryField = ""
 		// `add` turns following on (watching implies following) — mirror it, or the
@@ -364,7 +350,6 @@ struct WalletbeatScreen: View {
 		following = WalletbeatWatch.following
 		load()
 		WalletbeatWatch.registerBridge(store: store, context: modelContext)
-		if wasEmpty { flipTrigger += 1 }
 		Task { await sync() }
 	}
 
@@ -382,13 +367,9 @@ struct WalletbeatScreen: View {
 			// really just read the registry and is owed the same result line.
 			guard connected else { return }
 			if let added {
-				result = added > 0
-					? String(localized: "\(added) new")
-					: String(localized: "Up to date")
-				resultIsError = false
+				result = .landed(added)
 			} else {
-				result = String(localized: "Couldn't reach Walletbeat — check your connection.")
-				resultIsError = true
+				result = .failed(String(localized: "Couldn't reach Walletbeat — check your connection."))
 			}
 		} while syncPending
 	}

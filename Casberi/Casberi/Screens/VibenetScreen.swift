@@ -66,7 +66,7 @@ struct VibenetScreen: View {
     @State private var readError: String?
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: VibenetIdentity.source, computedTitle: VibenetIdentity.source) {
             BridgeSetupHeader(
                 name: VibenetIdentity.source,
                 mode: .noAccount,
@@ -134,13 +134,6 @@ struct VibenetScreen: View {
                 ).listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: VibenetIdentity.source)
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle(VibenetIdentity.source)
     }
 
     /// A fixed, always-available account to peek at — the fallback for when

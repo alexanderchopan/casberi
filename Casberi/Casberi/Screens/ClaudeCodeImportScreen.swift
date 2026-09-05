@@ -29,17 +29,19 @@ struct ClaudeCodeImportScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @State private var importing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
+    @State private var staleness: String?
+    @State private var held = 0
 
     @Query(claudeCodeRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Claude Code") {
             BridgeSetupHeader(
                 name: "Claude Code",
                 mode: .oneTimeImport,
-                intro: "Claude Code keeps every session as a file on this Mac — point at the folder and each one becomes searchable, whole.")
+                intro: "Claude Code keeps every session as a file on this Mac — point at the folder and each one becomes searchable, whole.",
+                connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus,
             // not a connection flag: an import has no live connection, so
             // "has anything arrived" is the only honest test of whether
@@ -53,14 +55,12 @@ struct ClaudeCodeImportScreen: View {
                 RecentThingsSection(header: "Imported", things: recent.live)
                     .listRowSeparator(.hidden)
             }
+            ImportUpkeepSection(source: "Claude Code", held: held, staleness: staleness) { gone in
+                reread()
+                result = .says(String(localized: "\(gone) removed"))
+            }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Claude Code")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Claude Code")
+        .onAppear { reread() }
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.folder]) { outcome in
             guard case .success(let url) = outcome else { return }
@@ -72,17 +72,25 @@ struct ClaudeCodeImportScreen: View {
     /// in the Files picker, so the shortcut to reveal it is a step — without it
     /// the folder is unreachable from the one control this screen has, which
     /// would make the whole screen a dead end.
+    private func reread() {
+        staleness = ImportRemoval.stalenessLine(source: "Claude Code", context: modelContext)
+        held = ImportRemoval.count(source: "Claude Code", context: modelContext)
+    }
+
     private var setupSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                BridgeStepLines(steps: ["Open Files and press Command-Shift-Period to show hidden folders.",
-                                        "Pick .claude → projects, or one project folder."],
-                                startingAt: 1)
-                DSSlabButton(title: "Choose folder", systemImage: "folder") {
-                    DSHaptic.tap()
-                    importing = true
-                }
-                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                ImportArchiveSection(
+                    source: "Claude Code",
+                    steps: ["Open Files and press Command-Shift-Period to show hidden folders.",
+                            "Pick .claude → projects, or one project folder."],
+                    pickTitle: "Choose folder",
+                    alreadyImported: held > 0) { importing = true }
+                BridgeSyncStatusRows(proof: result)
+                // Kept, unlike the sibling importers' notes: this one is not
+                // "you can import again", which the upkeep footer says — it is
+                // that a session which GREW is updated in place rather than
+                // landing twice, and nothing else on screen says it.
                 DSSlabNote(text: "Re-import later and sessions that grew are updated, not duplicated.")
             }
         }
@@ -104,17 +112,15 @@ struct ClaudeCodeImportScreen: View {
 
         let summary = await ClaudeCodeImport.run(folder: url, context: modelContext,
                                                  progress: { count in
-            result = String(localized: "\(count) landed…")
-            resultIsError = false
+            result = .says(String(localized: "\(count) landed…"))
         })
         if summary.failed {
-            result = String(localized: "No sessions in that folder. Pick .claude/projects, or one project folder inside it.")
-            resultIsError = true
+            result = .failed(String(localized: "No sessions in that folder. Pick .claude/projects, or one project folder inside it."))
             return
         }
-        resultIsError = false
         DSHaptic.success()
-        result = summary.landed > 0 ? landedLine(summary) : nothingNewLine(summary)
+        reread()
+        result = summary.landed > 0 ? .says(landedLine(summary)) : .says(nothingNewLine(summary))
         let proof = summary.landed > 0
             ? String(localized: "\(summary.landed) sessions in")
             : String(localized: "Imported just now")

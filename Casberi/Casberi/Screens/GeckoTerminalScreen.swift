@@ -16,14 +16,13 @@ struct GeckoTerminalScreen: View {
     /// loops once more when it lands so the new chain isn't stranded until the
     /// next visit.
     @State private var syncPending = false
-    @State private var lastResult: String?
+    @State private var lastResult: BridgeProof?
     /// Whether `lastResult` is a failure — see `PrivacyPoolsScreen` (audit,
     /// 2026-07-31): hardcoding `false` painted "Couldn't reach GeckoTerminal"
     /// in confirm green with the count-up animation.
-    @State private var lastResultIsError = false
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "GeckoTerminal") {
             BridgeSetupHeader(
                 name: "GeckoTerminal",
                 mode: .noAccount,
@@ -43,13 +42,6 @@ struct GeckoTerminalScreen: View {
                 ).listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "GeckoTerminal")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("GeckoTerminal")
         .onAppear {
             // Opening the screen doesn't connect — the person taps a chain to
             // watch it. Only refresh if something's already watched: viewing is
@@ -81,7 +73,7 @@ struct GeckoTerminalScreen: View {
                 }
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading the chain…"),
-                                     result: lastResult, resultIsError: lastResultIsError)
+                                     proof: lastResult)
                 DSSlabNote(text: "Switch a chain on and its top movers land. Read-only.")
             }
         }
@@ -126,8 +118,7 @@ struct GeckoTerminalScreen: View {
             // resurrect the seat the person just removed.
             guard gecko.connected else { store.remove("geckoterminal"); return }
             if let added {
-                lastResult = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
-                lastResultIsError = false
+                lastResult = .landed(added)
                 let proof = added > 0
             ? String(localized: "\(added) trending in")
             : String(localized: "Synced just now")
@@ -135,8 +126,7 @@ struct GeckoTerminalScreen: View {
                                         can: ["Reads the trending tokens on the chains you watch.",
                                               "Read-only — never buys, sells, or trades."])
             } else {
-                lastResult = String(localized: "Couldn't reach GeckoTerminal — check your connection.")
-                lastResultIsError = true
+                lastResult = .failed(String(localized: "Couldn't reach GeckoTerminal — check your connection."))
             }
         } while syncPending && gecko.connected
     }

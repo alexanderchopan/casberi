@@ -36,8 +36,7 @@ struct VibenetWatchField: View {
 
     @State private var addressField = ""
     @FocusState private var fieldFocused: Bool
-    @State private var addResult: String?
-    @State private var addResultIsError = false
+    @State private var addResult: BridgeProof?
     @Bindable private var watch = VibenetWatch.shared
 
     /// The typed address, trimmed once — kept separate from
@@ -80,8 +79,7 @@ struct VibenetWatchField: View {
             BridgeSyncStatusRows(
                 syncing: syncing,
                 syncingLine: String(localized: "Reading vibenet…"),
-                result: addResult ?? (previewAddress == nil ? idleNote : nil),
-                resultIsError: addResult == nil ? false : addResultIsError)
+                proof: addResult ?? (previewAddress == nil ? idleNote.map(BridgeProof.says) : nil))
         }
     }
 
@@ -121,14 +119,12 @@ struct VibenetWatchField: View {
     private func watchTyped() {
         let address = draft
         guard VibenetWatch.isValidAddress(address) else {
-            addResult = String(localized: "That doesn't look like a devnet address — it needs to be 0x followed by 40 hex characters.")
-            addResultIsError = true
+            addResult = .failed(String(localized: "That doesn't look like a devnet address — it needs to be 0x followed by 40 hex characters."))
             return
         }
         DSHaptic.tap()
         guard watch.add(address) else {
-            addResult = String(localized: "Already watching that address.")
-            addResultIsError = false
+            addResult = .says(String(localized: "Already watching that address."))
             addressField = ""
             return
         }
@@ -180,7 +176,7 @@ struct VibenetDiscoverySection: View {
             if discoveryLoading {
                 BridgeSyncStatusRows(
                     syncing: true, syncingLine: String(localized: "Looking for accounts on vibenet…"),
-                    result: nil, resultIsError: false)
+                    proof: nil)
             } else if discovered.isEmpty {
                 if discoveryAttempted {
                     Text("Couldn't reach vibenet to find an account to suggest — paste an address above, or open the explorer to find one.")

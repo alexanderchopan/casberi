@@ -585,7 +585,7 @@ check(tight.count == 5, "a narrow track still draws every mark")
 check(tight == tight.sorted(), "and still in order")
 check(Set(tight).count == 5, "and does not stack them all on one point")
 
-// ── prd §606: what these transactions ARE, and what they asked for ──
+// ── prd §608: what these transactions ARE, and what they asked for ──
 // Every failure here renders as an ordinary bar: the pool — this room's whole
 // subject — filed as an ordinary framed call, a single kind drawn as a
 // full-width bar saying 100%, or a partial sum presented as the room's total.
@@ -1287,7 +1287,7 @@ grep -qF 'PrivacyDevnetFigure.drifted' "$work/figv.bare" \
 # **THE SEAL IS ONCE, AND ONLY FOR A KEY THIS DEVICE HAS NEVER SEEN.** Sealing
 # every ring on every open is a room celebrating its own contents, and on an
 # install'"'"'s first read it would seal forty at once.
-# **THE SEAL AND ITS LEDGER ARE DELETED (prd §606)**, with the grid of N
+# **THE SEAL AND ITS LEDGER ARE DELETED (prd §608)**, with the grid of N
 # identical rings they lived on. Guarded in the negative so neither returns
 # without the figure that justified it.
 grep -qE 'PrivacyDevnetMoments\.(unseen|markSeen|hasSeenAnyKey)' "$work/card.bare" \
@@ -1374,13 +1374,13 @@ grep -qF 'This phone' "$work/sheets.bare" \
   || fail "this phone's own account lost its name — it is watched now, so without it the room shows the account it created as a stranger's hex"
 
 # **THE SPEND IS DRAWN AND STATED, off a receipt already fetched.**
-# The spend is drawn by the ROOM's budget bar now rather than per strip (§606),
+# The spend is drawn by the ROOM's budget bar now rather than per strip (§608),
 # so the guard follows it there: the Frames scope must still hand the figure
 # what the receipts reported, or it states every budget and no cost.
 grep -qF 'gasUsed: moves.map(\.gasUsed)' "$work/card.bare" \
   || fail "the Frames scope stopped handing the receipts' totals to its figure — it would state every transaction's budget and no transaction's cost"
 grep -qF 'PrivacyDevnetFigure.budgets(' "$work/card.bare" \
-  || fail "the Frames scope stopped summing the room's budgets — it drew one identical strip per transaction before, which is what §606 replaced"
+  || fail "the Frames scope stopped summing the room's budgets — it drew one identical strip per transaction before, which is what §608 replaced"
 grep -qF 'gasUsed: moveGasUsed' "$work/bridge.bare" \
   || fail "the walk stopped keeping the receipt's own total — a number already in memory, thrown away"
 # It must stay TRANSACTION level: no per-frame breakdown exists on this chain,

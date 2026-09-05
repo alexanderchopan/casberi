@@ -119,15 +119,14 @@ struct WalletWatchSyncSection: View {
     @Environment(BridgeStore.self) private var store
 
     @State private var syncing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
 
     var body: some View {
         Section {
             if syncing || result != nil {
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading onchain activity…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
                     .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
                                               bottom: 0, trailing: DS.Space.s4))
                     .listRowBackground(Color.clear)
@@ -148,18 +147,16 @@ struct WalletWatchSyncSection: View {
             let totals = await WalletIngest.topHoldingsByWallet()
             syncing = false
             guard let added else {
-                result = String(localized: "Couldn't reach the chain — check your connection.")
-                resultIsError = true
+                result = .failed(String(localized: "Couldn't reach the chain — check your connection."))
                 return
             }
-            resultIsError = false
             let nothingFound = added == 0 && totals.allSatisfy { $0.totalUSD < 1 }
             if added > 0 {
-                result = String(localized: "\(added) new")
+                result = .says(String(localized: "\(added) new"))
             } else if nothingFound && wallet.addresses.count == 1 {
-                result = String(localized: "No activity found on your chains yet — double-check the address, or give it a moment.")
+                result = .says(String(localized: "No activity found on your chains yet — double-check the address, or give it a moment."))
             } else {
-                result = String(localized: "Connected — watching for activity.")
+                result = .connected(String(localized: "watching for activity."))
             }
             let proof = added > 0
                 ? String(localized: "\(added) new")

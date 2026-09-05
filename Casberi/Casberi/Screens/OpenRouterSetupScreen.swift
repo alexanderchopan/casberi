@@ -13,30 +13,48 @@ struct OpenRouterSetupScreen: View {
     @Environment(\.openURL) private var openURL
     @State private var keyDraft = ""
     @State private var checking = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
     @State private var configured = AgentKey.isConfigured(.openrouter)
-    @State private var flipTrigger = 0
+    @State private var showConnection = false
 
     var body: some View {
-        List {
-            BridgeSetupHeader(
-                name: "OpenRouter",
-                mode: .pasteKey,
-                intro: "Paste a key and OpenRouter can answer questions about your things through whichever model you've picked there. It's asked only when you tap for it, never on its own.",
-                flipTrigger: flipTrigger)
-            setupSection
-        }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
         // OpenRouter's mark is near-black, so `DS.washHue` returns nil and this
         // paints nothing — called anyway so the family has no exception to
         // remember, and a rebrand with a real hue lands for free.
-        .bridgeSetupWash(name: "OpenRouter")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("OpenRouter")
+        BridgeSetupPage(name: "OpenRouter") {
+            if configured {
+                // Connected (prd §186): the form retires behind one door and
+                // the live facts about this key take the screen. A BYOK key
+                // stores no account name of its own — only the secret, in the
+                // Keychain — so this leads with the provider's own name over a
+                // truthful note about HOW it is connected.
+                BridgeConnectedState(
+                    bridgeID: "openrouter",
+                    name: "OpenRouter",
+                    connectionNote: String(localized: "Your key · stored in \(DS.device)'s Keychain"),
+                    capabilitiesFallback: ["Answers with your key — only when you tap.",
+                                       "Routes to whichever model fits, and remembers a chat's earlier answers."],
+                    openConnection: { showConnection = true })
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                // The CONNECTION's live facts, not the form's — which agent
+                // answers, on which model, at what spend.
+                agentRows
+            } else {
+                BridgeSetupHeader(
+                    name: "OpenRouter",
+                    mode: .pasteKey,
+                    intro: "Paste a key and OpenRouter can answer questions about your things through whichever model you've picked there. It's asked only when you tap for it, never on its own.")
+                setupSection
+            }
+        }
+
+        .sheet(isPresented: $showConnection) {
+            BridgeConnectionSheet(title: "OpenRouter") {
+                setupSection
+                removeSection
+            }
+        }
     }
 
     /// The connect form — steps whole, furniture gone (prd §218,
@@ -63,15 +81,7 @@ struct OpenRouterSetupScreen: View {
                             secure: true,
                             isArmed: !checking && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty,
                             action: connect)
-                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                AgentActiveStatusRow(provider: .openrouter)
-                AgentModelRow(provider: .openrouter)
-                // The two knobs only a router has (2026-08-23, prd §459). They
-                // sit under the model picker because both are about the request
-                // that model will serve, and above the receipt because one of
-                // them is what the receipt will end up costing.
-                OpenRouterRoutingRow(provider: .openrouter)
-                AgentSpendRow(provider: .openrouter)
+                BridgeSyncStatusRows(proof: result)
                 // The opening sentence ("auto-picks whichever model fits") was
                 // the header's own tagline — "One key, whichever model fits" —
                 // a screen apart (2026-07-31). "there" lost its antecedent
@@ -96,10 +106,8 @@ struct OpenRouterSetupScreen: View {
                 AgentKey.set(candidate, for: .openrouter)
                 configured = true
                 keyDraft = ""
-                flipTrigger += 1
                 DSHaptic.success()
-                resultIsError = false
-                result = String(localized: "Connected — answers now offer \"Try with your key\" on OpenRouter.")
+                result = .connected(String(localized: "answers now offer \"Try with your key\" on OpenRouter."))
                 store.registerConnected(id: "openrouter", name: "OpenRouter",
                                         proof: String(localized: "Key in the Keychain"),
                                         can: ["Answers with your key — only when you tap.",
@@ -115,9 +123,38 @@ struct OpenRouterSetupScreen: View {
                 // 2026-07-31) — a rate limit, a blocked account and a dropped
                 // connection are not the key, and one shared "check it and try
                 // again" sent people hunting a key that was never wrong.
-                resultIsError = true
-                result = outcome.line(for: .openrouter)
+                result = .failed(outcome.line(for: .openrouter))
             }
         }
     }
+
+    /// Which agent answers, on which model, and what it has cost — the live
+    /// facts about a key that is already working. Each renders nothing when
+    /// this provider is not configured.
+    @ViewBuilder private var agentRows: some View {
+        Section {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                AgentActiveStatusRow(provider: .openrouter)
+                AgentModelRow(provider: .openrouter)
+                // The two knobs only a router has (2026-08-23, prd §459). They
+                // sit under the model picker because both are about the request
+                // that model will serve, and above the receipt because one of
+                // them is what the receipt will end up costing.
+                OpenRouterRoutingRow(provider: .openrouter)
+                AgentSpendRow(provider: .openrouter)
+            }
+        }
+        .dsSlabSection()
+    }
+
+    /// The key's way out — the shared row, so this screen says "Disconnect"
+    /// the way every other setup screen does (prd §608). It lands no `Thing`,
+    /// so no purge is offered.
+    private var removeSection: some View {
+        BridgeDisconnectSection(bridgeID: "openrouter", name: "OpenRouter") {
+            AgentKey.clear(.openrouter)
+            configured = false
+        }
+    }
+
 }

@@ -51,14 +51,14 @@ struct AltanaScreen: View {
     /// than pretending the watch failed — and it keeps you here instead of
     /// routing into a room with no snapshot to compose from, which is the blank
     /// page this sequence exists to stop drawing.
-    @State private var connectError: String?
+    @State private var connectError: BridgeProof?
 
     private static let mark = DS.brandHue(for: "Altana") ?? Color.fixed("#3565e3")
 
     private var draft: String { addressField.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Altana") {
             BridgeSetupHeader(
                 name: "Altana",
                 mode: .noAccount,
@@ -73,8 +73,7 @@ struct AltanaScreen: View {
                     BridgeSyncStatusRows(
                         syncing: connecting,
                         syncingLine: String(localized: "Reading the keystore…"),
-                        result: connectError,
-                        resultIsError: connectError != nil)
+                        proof: connectError)
                 }
                 .dsSlabSection()
                 .listRowSeparator(.hidden)
@@ -112,13 +111,6 @@ struct AltanaScreen: View {
                 ).listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Altana")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Altana")
         .onAppear { if !discoveryAttempted { Task { await loadDiscovery() } } }
     }
 
@@ -174,7 +166,7 @@ struct AltanaScreen: View {
                 BridgeSyncStatusRows(
                     syncing: true,
                     syncingLine: String(localized: "Looking for accounts in the keystore…"),
-                    result: nil, resultIsError: false)
+                    proof: nil)
             } else if discovered.isEmpty, discoveryAttempted {
                 Text("Couldn't reach the explorer to list accounts — paste an address above, or watch the example below.")
                     .dsText(.label12)
@@ -276,11 +268,11 @@ struct AltanaScreen: View {
             // emptiness is the reachability question and `landed` is the
             // did-it-hold-anything one.
             guard !AltanaState.readings.isEmpty else {
-                connectError = String(localized: "Couldn't reach the keystore just now. The account is watched — its room fills in as soon as a read lands.")
+                connectError = .failed(String(localized: "Couldn't reach the keystore just now. The account is watched — its room fills in as soon as a read lands."))
                 return
             }
             guard landed > 0 || AltanaState.readings.contains(where: { !$0.keys.isEmpty }) else {
-                connectError = String(localized: "The keystore holds no credentials for that account. It stays watched — anything registered later lands here.")
+                connectError = .failed(String(localized: "The keystore holds no credentials for that account. It stays watched — anything registered later lands here."))
                 return
             }
             connectError = nil

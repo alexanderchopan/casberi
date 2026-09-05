@@ -16,6 +16,7 @@ struct SentryScreen: View {
     @Environment(BridgeStore.self) private var store
     @Environment(\.openURL) private var openURL
 
+    @State private var showConnection = false
     @State private var hostField = SentryAccount.host
     @State private var tokenField = ""
     /// Bumped whenever the token or org changes, so the derived reads below
@@ -27,11 +28,9 @@ struct SentryScreen: View {
     @State private var orgs: [SentryFetch.Org] = []
     @State private var resolving = false
     @State private var syncing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
     /// The delight pass's coin-flip on the header, fired the moment the
     /// connection really goes live.
-    @State private var flipTrigger = 0
     /// Whether the mint door has been tapped — the only observable fact about
     /// step one, since everything after it happens on Sentry's website.
     @State private var doorTapped = false
@@ -47,13 +46,27 @@ struct SentryScreen: View {
     private var configured: Bool { hasToken && !org.isEmpty }
 
     var body: some View {
-        List {
-            BridgeSetupHeader(
-                name: "Sentry",
-                mode: .pasteKey,
-                intro: "Paste a read-only token and three things arrive: an issue that's new, one that regressed, one that escalated. Never an event, a stack trace, or anything about the person who hit it.",
-                connected: configured,
-                flipTrigger: flipTrigger)
+        BridgeSetupPage(name: "Sentry") {
+            if configured {
+                // Connected (prd §186): the token form and the org picker
+                // retire behind one door. Sentry stores only the token, in the
+                // Keychain, so this leads with its own name over a truthful
+                // note about HOW it is connected.
+                BridgeConnectedState(
+                    bridgeID: TokenBridge.sentry.bridgeID,
+                    name: "Sentry",
+                    connectionNote: String(localized: "Your \(TokenBridge.sentry.credentialNoun) · stored in \(DS.device)'s Keychain"),
+                    capabilitiesFallback: [TokenBridge.sentry.canLine],
+                    openConnection: { showConnection = true })
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            } else {
+                BridgeSetupHeader(
+                    name: "Sentry",
+                    mode: .pasteKey,
+                    intro: "Paste a read-only token and three things arrive: an issue that's new, one that regressed, one that escalated. Never an event, a stack trace, or anything about the person who hit it.",
+                    connected: configured)
+            }
             if !configured {
                 tokenSection.listRowSeparator(.hidden)
                 if hasToken, !orgs.isEmpty {
@@ -69,26 +82,14 @@ struct SentryScreen: View {
                     .listRowSeparator(.hidden)
                 connectedSection.listRowSeparator(.hidden)
             }
-            if hasToken {
-                BridgeDisconnectSection(
-                    bridgeID: TokenBridge.sentry.bridgeID, name: "Sentry",
-                    teardown: {
-                        TokenVault.delete(TokenBridge.sentry.tokenKey)
-                        SentryAccount.clear()
-                        orgs = []
-                        hostField = SentryAccount.defaultHost
-                        accountVersion += 1
-                    }
-                ).listRowSeparator(.hidden)
+        }
+        .sheet(isPresented: $showConnection) {
+            BridgeConnectionSheet(title: "Sentry") {
+                tokenSection
+                if hasToken, !orgs.isEmpty { orgSection }
+                removeSection
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Sentry")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Sentry")
         .onAppear {
             // Opening the screen doesn't connect — a stored token and a picked
             // org do. Viewing is not consent.
@@ -138,7 +139,7 @@ struct SentryScreen: View {
                             action: saveToken)
                 BridgeSyncStatusRows(syncing: resolving,
                                      syncingLine: String(localized: "Checking the token…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
                 // Named because the failure is otherwise a bare 401 that reads
                 // exactly like a bad token — the one setup mistake here that
                 // has nothing to do with what you pasted.
@@ -198,7 +199,7 @@ struct SentryScreen: View {
                 .dsListCardRow()
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading your issues…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
             }
         }
         .dsSlabSection()
@@ -221,8 +222,7 @@ struct SentryScreen: View {
                 // a typo (the Stripe four-sentences ruling). The probe splits
                 // 401 from 403; here the one sentence has to carry both, so it
                 // names the host as well as the token.
-                result = String(localized: "Sentry refused that. Check the token — and the host, if your org is on the EU region or self-hosted.")
-                resultIsError = true
+                result = .failed(String(localized: "Sentry refused that. Check the token — and the host, if your org is on the EU region or self-hosted."))
                 return
             }
             TokenVault.set(token, for: TokenBridge.sentry.tokenKey)
@@ -235,8 +235,7 @@ struct SentryScreen: View {
                 // a screen that would only ever have one row on it.
                 pick(found[0])
             } else if found.isEmpty {
-                result = String(localized: "That token works but can't see any organizations — it may be missing org:read.")
-                resultIsError = true
+                result = .failed(String(localized: "That token works but can't see any organizations — it may be missing org:read."))
             } else {
                 result = nil
             }
@@ -260,20 +259,29 @@ struct SentryScreen: View {
         let added = await SentryIngest.refresh(context: modelContext)
         guard configured else { return }
         if let added {
-            resultIsError = false
-            result = added > 0
-                ? String(localized: "\(added) new")
-                : (TokenBridge.sentry.emptyReadNote ?? String(localized: "Up to date"))
+            result = added > 0 ? .landed(added) : TokenBridge.sentry.emptyReadNote.map(BridgeProof.says) ?? .upToDate
             let proof = added > 0
                 ? String(localized: "\(added) in")
                 : String(localized: "Synced just now")
             store.registerConnected(id: TokenBridge.sentry.bridgeID, name: "Sentry",
                                     proof: proof,
                                     can: [TokenBridge.sentry.canLine])
-            flipTrigger += 1
         } else {
-            result = String(localized: "Couldn't reach Sentry — check your connection.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't reach Sentry — check your connection."))
         }
     }
+    /// The way out — the shared row, behind the Connection door with the form
+    /// it belongs to (prd §186/§608).
+    private var removeSection: some View {
+        BridgeDisconnectSection(
+            bridgeID: TokenBridge.sentry.bridgeID, name: "Sentry",
+            teardown: {
+                TokenVault.delete(TokenBridge.sentry.tokenKey)
+                SentryAccount.clear()
+                orgs = []
+                hostField = SentryAccount.defaultHost
+                accountVersion += 1
+            })
+    }
+
 }

@@ -12,8 +12,7 @@ struct TwitchScreen: View {
     @State private var code: TwitchAuth.DeviceCode?
     @State private var waiting = false
     @State private var syncing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
     /// The in-flight device flow — one at a time, cancelled when the screen
     /// goes away (review 2026-07-08: double-taps raced two flows).
     @State private var flow: Task<Void, Never>?
@@ -25,7 +24,7 @@ struct TwitchScreen: View {
     @State private var showConnection = false
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Twitch") {
             if TwitchAuth.connected {
                 // Connected (prd §186). No identity passed: the device flow
                 // caches an opaque user id (`twitch.userid`), not a login
@@ -55,13 +54,6 @@ struct TwitchScreen: View {
                 connectSection.listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Twitch")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Twitch")
         .sheet(isPresented: $showConnection) {
             BridgeConnectionSheet(title: "Twitch") {
                 connectSection.listRowSeparator(.hidden)
@@ -166,23 +158,15 @@ struct TwitchScreen: View {
                              action: connect)
             }
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Checking who's live…"),
-                                 result: result, resultIsError: resultIsError)
+                                 proof: result)
             DSSlabNote(text: "On Twitch's own page — a short code, no password. It can never chat, follow, or subscribe.")
         }
         .dsSlabSection()
     }
 
     private var removeSection: some View {
-        Section {
-            Button("Disconnect", role: .destructive) {
-                TwitchAuth.disconnect()
-                store.bridges.removeAll { $0.id == "twitch" }
-                result = String(localized: "Disconnected — your things stay.")
-                resultIsError = false
-                DSHaptic.tap()
-            }
-            .dsText(.callout15)
-            .dsListCardRow()
+        BridgeDisconnectSection(bridgeID: "twitch", name: "Twitch") {
+            TwitchAuth.disconnect()
         }
     }
 
@@ -195,8 +179,7 @@ struct TwitchScreen: View {
             defer { flow = nil }
             guard let fresh = await TwitchAuth.startDeviceFlow() else {
                 waiting = false
-                result = String(localized: "Couldn't reach Twitch — check your connection.")
-                resultIsError = true
+                result = .failed(String(localized: "Couldn't reach Twitch — check your connection."))
                 return
             }
             guard !Task.isCancelled else { waiting = false; return }
@@ -209,8 +192,7 @@ struct TwitchScreen: View {
                 DSHaptic.success()
                 await sync()
             } else {
-                result = String(localized: "That code wasn't approved in time — tap Connect for a fresh one.")
-                resultIsError = true
+                result = .failed(String(localized: "That code wasn't approved in time — tap Connect for a fresh one."))
             }
         }
     }
@@ -231,15 +213,13 @@ struct TwitchScreen: View {
         let added = await TwitchIngest.refresh(context: modelContext)
         syncing = false
         guard let added else {
-            result = String(localized: "Couldn't read your follows — try again in a moment.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't read your follows — try again in a moment."))
             return
         }
-        resultIsError = false
         // The family's own "nothing new" line (audit, 2026-07-31). This said
         // "Connected — follows land when they go live." directly beneath the row
         // that already says "Connected — live follows land in your feed."
-        result = added > 0 ? String(localized: "\(added) live now") : String(localized: "Up to date")
+        result = added > 0 ? .says(String(localized: "\(added) live now")) : .upToDate
         let proof = added > 0
             ? String(localized: "\(added) live now")
             : String(localized: "Synced just now")

@@ -18,12 +18,11 @@ struct HuggingFaceScreen: View {
     /// An author added while a sync is mid-flight requeues it, so the new
     /// watch lands now rather than next visit (the GeckoTerminal lesson).
     @State private var syncPending = false
-    @State private var lastResult: String?
-    @State private var lastResultIsError = false
+    @State private var lastResult: BridgeProof?
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Hugging Face") {
             BridgeSetupHeader(
                 name: "Hugging Face",
                 mode: .noAccount,
@@ -49,13 +48,6 @@ struct HuggingFaceScreen: View {
                 ).listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Hugging Face")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Hugging Face")
         .onAppear {
             // Opening the screen doesn't connect — watching an author or
             // switching papers on does. Viewing is not consent.
@@ -73,7 +65,7 @@ struct HuggingFaceScreen: View {
                             focus: $fieldFocused, action: watch)
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading the hub…"),
-                                     result: lastResult, resultIsError: lastResultIsError)
+                                     proof: lastResult)
                 // Names the accepted shapes, because pasting a model page is
                 // how most people will arrive (`normalize` takes the owner).
                 DSSlabNote(text: "A name like meta-llama, or any Hugging Face link.")
@@ -147,8 +139,7 @@ struct HuggingFaceScreen: View {
         let name = HuggingFaceStore.normalize(authorField)
         guard !name.isEmpty else { return }
         guard hf.add(name) else {
-            lastResult = String(localized: "Already watching \(name).")
-            lastResultIsError = false
+            lastResult = .says(String(localized: "Already watching \(name)."))
             authorField = ""
             return
         }
@@ -200,8 +191,7 @@ struct HuggingFaceScreen: View {
             // resurrect the seat the person just removed.
             guard hf.connected else { store.remove("huggingface"); return }
             if let added {
-                lastResult = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
-                lastResultIsError = false
+                lastResult = .landed(added)
                 let proof = added > 0
             ? String(localized: "\(added) in")
             : String(localized: "Synced just now")
@@ -209,8 +199,7 @@ struct HuggingFaceScreen: View {
                                         can: ["Reads new models, datasets and Spaces from the authors you watch.",
                                               "Read-only — never publishes, stars, or downloads weights."])
             } else {
-                lastResult = String(localized: "Couldn't reach Hugging Face — check your connection.")
-                lastResultIsError = true
+                lastResult = .failed(String(localized: "Couldn't reach Hugging Face — check your connection."))
             }
         } while syncPending && hf.connected
     }

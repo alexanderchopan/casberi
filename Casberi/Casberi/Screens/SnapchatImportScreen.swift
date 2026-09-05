@@ -25,8 +25,7 @@ struct SnapchatImportScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @State private var importing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
     /// How old this import is, and how much of it is here (2026-08-05,
     /// prd §310). Both read off the import RECEIPT and a count — no new field.
     @State private var staleness: String?
@@ -37,14 +36,15 @@ struct SnapchatImportScreen: View {
     @Query(snapchatRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Snapchat") {
             // "Only saved chats exist" earns the second sentence: it is the
             // limit most likely to read as a bug, because a Snapchat user's
             // mental model is that they had far more conversation than this.
             BridgeSetupHeader(
                 name: "Snapchat",
                 mode: .oneTimeImport,
-                intro: "Snapchat has no live connection — request your export, bring it here, and keep your saved chats and memories for good. Only saved chats exist: Snapchat deletes the rest when it's viewed.")
+                intro: "Snapchat has no live connection — request your export, bring it here, and keep your saved chats and memories for good. Only saved chats exist: Snapchat deletes the rest when it's viewed.",
+                connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus,
             // not a connection flag: an import has no live connection, so
             // "has anything arrived" is the only honest test of whether
@@ -67,17 +67,9 @@ struct SnapchatImportScreen: View {
             // exactly like a screen that has nothing to say.
             ImportUpkeepSection(source: "Snapchat", held: held, staleness: staleness) { gone in
                 reread()
-                resultIsError = false
-                result = String(localized: "\(gone) removed")
+                result = .says(String(localized: "\(gone) removed"))
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Snapchat")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Snapchat")
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.folder]) { outcome in
             guard case .success(let url) = outcome else { return }
@@ -106,7 +98,7 @@ struct SnapchatImportScreen: View {
                     ],
                     pickTitle: "Choose folder",
                     alreadyImported: held > 0) { importing = true }
-                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                BridgeSyncStatusRows(proof: result)
             }
         }
         .dsSlabSection()
@@ -146,11 +138,9 @@ struct SnapchatImportScreen: View {
 
         let summary = await SnapchatImport.run(folder: url, context: modelContext)
         if summary.failed {
-            result = String(localized: "No Snapchat export in that folder — pick the unzipped folder (it holds chat_history.json).")
-            resultIsError = true
+            result = .failed(String(localized: "No Snapchat export in that folder — pick the unzipped folder (it holds chat_history.json)."))
             return
         }
-        resultIsError = false
         DSHaptic.success()
         // `held` is what collapses the archive block now, so re-read all three
         // rather than only the media queue.
@@ -168,7 +158,7 @@ struct SnapchatImportScreen: View {
         if summary.dropped > 0 {
             parts.append(String(localized: "\(summary.dropped) older not imported"))
         }
-        result = parts.joined(separator: " · ")
+        result = .says(parts.joined(separator: " · "))
 
         let landed = summary.chats + summary.memories
         let proof = landed > 0
@@ -186,14 +176,10 @@ struct SnapchatImportScreen: View {
         pending = SnapchatImport.pendingMediaCount(context: modelContext)
 
         if outcome.expired {
-            result = String(localized: "Snapchat's download links have expired — request a fresh export and import it again.")
-            resultIsError = true
+            result = .failed(String(localized: "Snapchat's download links have expired — request a fresh export and import it again."))
             return
         }
-        resultIsError = false
         DSHaptic.success()
-        result = outcome.failed > 0
-            ? "\(outcome.fetched) pictures in · \(outcome.failed) couldn't be fetched"
-            : "\(outcome.fetched) pictures in"
+        result = outcome.failed > 0 ? .says("\(outcome.fetched) pictures in · \(outcome.failed) couldn't be fetched") : .says("\(outcome.fetched) pictures in")
     }
 }

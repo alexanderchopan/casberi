@@ -18,8 +18,7 @@ struct ENSScreen: View {
 
     @State private var field = ""
     @State private var working = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
     @State private var syncing = false
     /// The follow rows — one per name, the follow itself.
     @State private var followed: [Thing] = []
@@ -39,7 +38,7 @@ struct ENSScreen: View {
     private var candidate: String? { ENSName.normalized(field) }
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "ENS") {
             BridgeSetupHeader(
                 name: "ENS",
                 mode: .noAccount,
@@ -61,13 +60,6 @@ struct ENSScreen: View {
                     .listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "ENS")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("ENS")
         .sheet(item: $openThing) { thing in
             ThingSheetView(thing: thing)
         }
@@ -101,7 +93,7 @@ struct ENSScreen: View {
                                      syncingLine: working
                                         ? String(localized: "Following…")
                                         : String(localized: "Reading the registrar…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
                 // The screen's one note, and it carries the honesty fact rather
                 // than the pitch: `.eth` is the only thing with a registrar
                 // expiry to read, so a `.com` or a subname is refused at the
@@ -196,8 +188,7 @@ struct ENSScreen: View {
 
     private func followTyped() {
         guard let name = candidate else {
-            result = String(localized: "That isn't a .eth name this can follow.")
-            resultIsError = true
+            result = .failed(String(localized: "That isn't a .eth name this can follow."))
             return
         }
         follow(name)
@@ -205,18 +196,16 @@ struct ENSScreen: View {
 
     private func follow(_ raw: String) {
         working = true
-        resultIsError = false
         result = nil
         switch ENSWatch.follow(raw, context: modelContext) {
         case .invalid:
-            result = String(localized: "That isn't a .eth name this can follow.")
-            resultIsError = true
+            result = .failed(String(localized: "That isn't a .eth name this can follow."))
         case .already:
-            result = String(localized: "Already following that name.")
+            result = .says(String(localized: "Already following that name."))
         case .followed(let thing), .adopted(let thing):
             field = ""
             fieldFocused = false
-            result = String(localized: "Following \(rowName(thing)).")
+            result = .says(String(localized: "Following \(rowName(thing))."))
         }
         working = false
         ENSWatch.registerBridge(store: store, context: modelContext)

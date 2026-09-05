@@ -15,6 +15,7 @@ struct AWSScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.openURL) private var openURL
 
+    @State private var showConnection = false
     @State private var accessKeyIDField = ""
     @State private var secretKeyField = ""
     @State private var regionField = AWSAuth.defaultRegion
@@ -22,9 +23,7 @@ struct AWSScreen: View {
     @State private var credentialVersion = 0
     @State private var connecting = false
     @State private var syncing = false
-    @State private var result: String?
-    @State private var resultIsError = false
-    @State private var flipTrigger = 0
+    @State private var result: BridgeProof?
     @State private var doorTapped = false
 
     @State private var recent: [Thing] = []
@@ -43,13 +42,28 @@ struct AWSScreen: View {
     }
 
     var body: some View {
-        List {
-            BridgeSetupHeader(
-                name: "AWS",
-                mode: .pasteKey,
-                intro: "Add a read-only key pair and what needs you keeps arriving — a firing alarm, a failed deploy, a spend anomaly. This only ever reads.",
-                connected: hasKey,
-                flipTrigger: flipTrigger)
+        BridgeSetupPage(name: "AWS") {
+            if hasKey {
+                // Connected (prd §186): the credential form retires behind one
+                // door, and identity, live proof and what this can do take the
+                // screen. This bridge stores only the secret — in the Keychain
+                // — so it leads with its own name over a truthful note about
+                // HOW it is connected, never an account name we would guess.
+                BridgeConnectedState(
+                    bridgeID: bridge.bridgeID,
+                    name: "AWS",
+                    connectionNote: String(localized: "Your \(bridge.credentialNoun) · stored in \(DS.device)'s Keychain"),
+                    capabilitiesFallback: [bridge.canLine],
+                    openConnection: { showConnection = true })
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            } else {
+                BridgeSetupHeader(
+                    name: "AWS",
+                    mode: .pasteKey,
+                    intro: "Add a read-only key pair and what needs you keeps arriving — a firing alarm, a failed deploy, a spend anomaly. This only ever reads.",
+                    connected: hasKey)
+            }
             if hasKey {
                 RoomDoor(name: "AWS", source: AWSShape.source)
                     .listRowSeparator(.hidden)
@@ -59,25 +73,16 @@ struct AWSScreen: View {
                 if !recent.isEmpty {
                     RecentThingsSection(header: "Landed", things: recent.live)
                 }
-                BridgeDisconnectSection(bridgeID: bridge.bridgeID,
-                                        name: "AWS",
-                                        teardown: {
-                                            AWSAuth.clear()
-                                            credentialVersion += 1
-                                            load()
-                                        })
-                    .listRowSeparator(.hidden)
             } else {
                 keySection.listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "AWS")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("AWS")
+        .sheet(isPresented: $showConnection) {
+            BridgeConnectionSheet(title: "AWS") {
+                keySection
+                removeSection
+            }
+        }
         .onAppear {
             load()
             if hasKey { Task { await sync() } }
@@ -128,7 +133,7 @@ struct AWSScreen: View {
                 DSSlabNote(text: "Cost Explorer always reads from us-east-1 — AWS's own rule, not a mistake here. Every other read uses the region above.")
                 BridgeSyncStatusRows(syncing: connecting,
                                      syncingLine: String(localized: "Checking the key pair…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
             }
         }
         .dsSlabSection()
@@ -154,7 +159,7 @@ struct AWSScreen: View {
                 }
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading AWS…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
                 DSSlabNote(text: "Alarms, deploys and a spend anomaly land on their own.")
             }
         }
@@ -204,10 +209,10 @@ struct AWSScreen: View {
             case .ok(let account, _):
                 accessKeyIDField = ""; secretKeyField = ""
                 credentialVersion += 1
-                resultIsError = false
-                result = account.isEmpty ? String(localized: "Connected")
-                                          : String(localized: "Connected — account \(account)")
-                flipTrigger += 1
+                // One shape for one event (§608): `.connected` renders
+                // "Connected" or "Connected — <what>", so the account name
+                // is the detail rather than a second sentence.
+                result = .connected(account.isEmpty ? nil : account)
                 DSHaptic.success()
                 AWSWatch.registerBridge(store: store)
                 load()
@@ -227,8 +232,7 @@ struct AWSScreen: View {
     }
 
     private func fail(_ message: String) {
-        resultIsError = true
-        result = message
+        result = .failed(message)
     }
 
     private func sync() async {
@@ -239,15 +243,25 @@ struct AWSScreen: View {
         load()
         AWSWatch.registerBridge(store: store)
         if let added {
-            result = added > 0 ? String(localized: "\(added) new")
-                               : (bridge.emptyReadNote ?? String(localized: "Up to date"))
-            resultIsError = false
+            result = added > 0 ? .landed(added) : bridge.emptyReadNote.map(BridgeProof.says) ?? .upToDate
         } else {
-            result = String(localized: "Couldn't reach AWS — check your connection.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't reach AWS — check your connection."))
         }
         if let alarm = AWSIngest.lastPassAlarm {
             chrome.flash(alarm, tone: .failure, seconds: 3.5)
         }
     }
+
+    /// The way out — the shared row, behind the Connection door with the form
+    /// it belongs to (prd §186/§608).
+    private var removeSection: some View {
+        BridgeDisconnectSection(bridgeID: bridge.bridgeID,
+                                name: "AWS",
+                                teardown: {
+                                    AWSAuth.clear()
+                                    credentialVersion += 1
+                                    load()
+                                })
+    }
+
 }

@@ -24,17 +24,19 @@ struct GeminiImportScreen: View {
     @Environment(BridgeStore.self) private var store
     @Environment(\.openURL) private var openURL
     @State private var importing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
+    @State private var staleness: String?
+    @State private var held = 0
 
     @Query(geminiRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Gemini") {
             BridgeSetupHeader(
                 name: "Gemini",
                 mode: .oneTimeImport,
-                intro: "Gemini has no live connection — take your activity out of Google Takeout, bring it here, and every prompt becomes searchable.")
+                intro: "Gemini has no live connection — take your activity out of Google Takeout, bring it here, and every prompt becomes searchable.",
+                connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus,
             // not a connection flag: an import has no live connection, so
             // "has anything arrived" is the only honest test of whether
@@ -48,14 +50,12 @@ struct GeminiImportScreen: View {
                 RecentThingsSection(header: "Imported", things: recent.live)
                     .listRowSeparator(.hidden)
             }
+            ImportUpkeepSection(source: "Gemini", held: held, staleness: staleness) { gone in
+                reread()
+                result = .says(String(localized: "\(gone) removed"))
+            }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Gemini")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Gemini")
+        .onAppear { reread() }
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.json]) { outcome in
             guard case .success(let url) = outcome else { return }
@@ -66,31 +66,25 @@ struct GeminiImportScreen: View {
     /// The connect form — steps whole, furniture gone (prd §218,
     /// 2026-07-25). The export happens on Google's side; the pick is the one
     /// thing this screen actually does, so it wears the filled slab.
+    private func reread() {
+        staleness = ImportRemoval.stalenessLine(source: "Gemini", context: modelContext)
+        held = ImportRemoval.count(source: "Gemini", context: modelContext)
+    }
+
     private var setupSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                // Verb over address, the 2026-08-14 anatomy.
-                DSSlabButton(title: "Get your export",
-                             detail: "takeout.google.com",
-                             systemImage: "arrow.up.right") {
-                    DSHaptic.tap()
-                    if let url = URL(string: "https://takeout.google.com") { openURL(url) }
-                }
-                // The last step said "Pick MyActivity.json below" directly above
-                // a button titled "Choose MyActivity.json", and the note said
-                // "your prompts become findable things" directly below the
-                // header's own "Import your chats, keep them findable" (§220's
-                // finding, twice; 2026-07-31). The Takeout path stays whole —
-                // nothing else on screen teaches it.
-                // Unnumbered — the door did step one (ruling 2026-08-14).
-                BridgeStepLines(steps: ["Tap Deselect all, then pick My Activity and set it to Gemini Apps only.",
-                                     "Under Multiple formats, choose JSON for activity records, then Export.",
-                                     "Google emails a link — unzip it in Files."], numbered: false)
-                DSSlabButton(title: "Choose MyActivity.json", systemImage: "square.and.arrow.down") {
-                    DSHaptic.tap()
-                    importing = true
-                }
-                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                ImportArchiveSection(
+                    source: "Gemini",
+                    doorTitle: "Get your export",
+                    doorURL: URL(string: "https://takeout.google.com"),
+                    steps: ["Tap Deselect all, then pick My Activity and set it to Gemini Apps only.",
+                            "Under Multiple formats, choose JSON for activity records, then Export.",
+                            "Google emails a link — unzip it in Files."],
+                    pickTitle: "Choose MyActivity.json",
+                    pickIcon: "square.and.arrow.down",
+                    alreadyImported: held > 0) { importing = true }
+                BridgeSyncStatusRows(proof: result)
             }
         }
         .dsSlabSection()
@@ -103,21 +97,19 @@ struct GeminiImportScreen: View {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         guard let data = await SecurityScopedFileReader.readData(at: url) else {
-            result = String(localized: "Couldn't read that file. Pick MyActivity.json from the unzipped export.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't read that file. Pick MyActivity.json from the unzipped export."))
             return
         }
         let summary = GeminiImport.run(data: data, context: modelContext)
         if summary.failed {
-            result = String(localized: "That file isn't a Gemini export. Pick MyActivity.json from your Takeout.")
-            resultIsError = true
+            result = .failed(String(localized: "That file isn't a Gemini export. Pick MyActivity.json from your Takeout."))
             return
         }
-        resultIsError = false
         DSHaptic.success()
-        result = summary.imported > 0
+        reread()
+        result = .says(summary.imported > 0
             ? "\(summary.imported) prompts in\(summary.skipped > 0 ? " · \(summary.skipped) already here" : "")"
-            : "Nothing new — all \(summary.skipped) prompts were already here."
+            : "Nothing new — all \(summary.skipped) prompts were already here.")
         let proof = summary.imported > 0
             ? String(localized: "\(summary.imported) prompts in")
             : String(localized: "Synced just now")

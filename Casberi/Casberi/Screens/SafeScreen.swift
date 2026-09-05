@@ -19,11 +19,10 @@ struct SafeScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.openURL) private var openURL
     @State private var syncing = false
-    @State private var lastResult: String?
+    @State private var lastResult: BridgeProof?
     /// Whether `lastResult` is a failure — see `PrivacyPoolsScreen` (audit,
     /// 2026-07-31): hardcoding `false` painted "Couldn't reach Safe" in
     /// confirm green with the count-up animation.
-    @State private var lastResultIsError = false
     /// Redrawn on create/delete — `SignerKey.address()` reads UserDefaults,
     /// which SwiftUI does not observe.
     @State private var signerAddress: String? = SignerKey.address()
@@ -42,7 +41,7 @@ struct SafeScreen: View {
     private var safeCount: Int { SafeBridge.detectedCount() }
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Safe") {
             BridgeSetupHeader(
                 name: "Safe",
                 mode: .watchedWallets,
@@ -60,13 +59,6 @@ struct SafeScreen: View {
             signerSection.listRowSeparator(.hidden)
             coSignersSection.listRowSeparator(.hidden)
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Safe")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Safe")
         .onAppear {
             // Watching is consent (prd §207): keep the catalog seat honest on
             // appear, and refresh the queue if a wallet's watched.
@@ -115,7 +107,7 @@ struct SafeScreen: View {
                 }
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading your Safe's queue…"),
-                                     result: lastResult, resultIsError: lastResultIsError)
+                                     proof: lastResult)
                 // The bare "Read-only." left this note (duplication audit,
                 // 2026-07-31): it was in one branch only, and the footer's
                 // lede says the same thing with the part that matters — where
@@ -353,12 +345,9 @@ struct SafeScreen: View {
         defer { syncing = false }
         let added = await SafeBridge.syncNow(context: modelContext)
         if let added {
-            lastResult = added > 0 ? String(localized: "\(added) new")
-                                   : String(localized: "Up to date")
-            lastResultIsError = false
+            lastResult = .landed(added)
         } else {
-            lastResult = String(localized: "Couldn't reach Safe — check your connection.")
-            lastResultIsError = true
+            lastResult = .failed(String(localized: "Couldn't reach Safe — check your connection."))
         }
     }
 }

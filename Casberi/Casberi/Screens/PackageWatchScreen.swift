@@ -22,22 +22,19 @@ struct PackageWatchScreen: View {
     /// A package added while a sync is mid-flight requeues it, so the new
     /// watch lands now rather than next visit (the GeckoTerminal lesson).
     @State private var syncPending = false
-    @State private var lastResult: String?
-    @State private var lastResultIsError = false
-    @State private var flipTrigger = 0
+    @State private var lastResult: BridgeProof?
     @FocusState private var fieldFocused: Bool
 
     private var watched: [String] { packages.list(registry) }
     private var connected: Bool { packages.connected(registry) }
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: registry.displayName, computedTitle: registry.displayName) {
             BridgeSetupHeader(
                 name: registry.displayName,
                 mode: .noAccount,
                 intro: registryIntro,
-                connected: connected,
-                flipTrigger: flipTrigger)
+                connected: connected)
             if connected {
                 // `registry.displayName` is what `PackageWatchBridge` stamps as
                 // `source:`, so the door and the rows can never disagree.
@@ -55,13 +52,6 @@ struct PackageWatchScreen: View {
                 ).listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: registry.displayName)
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle(registry.displayName)
         .onAppear {
             // Opening the screen doesn't connect — watching a package does.
             if connected { Task { await sync() } }
@@ -78,7 +68,7 @@ struct PackageWatchScreen: View {
                             focus: $fieldFocused, action: watch)
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading the registry…"),
-                                     result: lastResult, resultIsError: lastResultIsError)
+                                     proof: lastResult)
                 // Names the accepted shapes, because pasting a package page is
                 // how a lot of people will arrive (`normalize` takes the name).
                 DSSlabNote(text: note)
@@ -166,8 +156,7 @@ struct PackageWatchScreen: View {
         let name = registry.normalize(nameField)
         guard !name.isEmpty else { return }
         guard packages.add(registry, name) else {
-            lastResult = String(localized: "Already watching \(name).")
-            lastResultIsError = false
+            lastResult = .says(String(localized: "Already watching \(name)."))
             nameField = ""
             return
         }
@@ -215,10 +204,7 @@ struct PackageWatchScreen: View {
             // resurrect the seat the person just removed.
             guard connected else { store.remove(registry.bridgeID); return }
             if let added {
-                lastResult = added > 0
-                    ? String(localized: "\(added) new")
-                    : String(localized: "Up to date")
-                lastResultIsError = false
+                lastResult = added > 0 ? .landed(added) : .upToDate
                 let proof = added > 0
                     ? String(localized: "\(added) in")
                     : String(localized: "Synced just now")
@@ -226,10 +212,8 @@ struct PackageWatchScreen: View {
                     id: registry.bridgeID, name: registry.displayName, proof: proof,
                     can: ["Reads the current version of the packages you watch.",
                           "Read-only — it never installs, publishes, or signs in."])
-                flipTrigger += 1
             } else {
-                lastResult = String(localized: "Couldn't reach \(registry.displayName) — check your connection.")
-                lastResultIsError = true
+                lastResult = .failed(String(localized: "Couldn't reach \(registry.displayName) — check your connection."))
             }
         } while syncPending && connected
     }

@@ -42,7 +42,7 @@ struct HegotaScreen: View {
     private var connected: Bool { watch.connected }
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: HegotaIdentity.source, computedTitle: HegotaIdentity.source) {
             BridgeSetupHeader(
                 name: HegotaIdentity.source,
                 mode: .noAccount,
@@ -99,13 +99,6 @@ struct HegotaScreen: View {
                 ).listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: HegotaIdentity.source)
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle(HegotaIdentity.source)
     }
 
     /// The two worked examples, measured rather than picked.

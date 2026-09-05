@@ -11,14 +11,13 @@ struct SteamScreen: View {
     @State private var keyField = ""
     @State private var profileField = ""
     @State private var syncing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
 
     /// The credentials door, open (prd §186).
     @State private var showConnection = false
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Steam") {
             if SteamBridge.connected {
                 // Connected (prd §186): the profile IS the identity here —
                 // Steam stores what the person typed, so this screen can lead
@@ -42,13 +41,6 @@ struct SteamScreen: View {
                 connectForm
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Steam")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Steam")
         .sheet(isPresented: $showConnection) {
             BridgeConnectionSheet(title: "Steam") {
                 connectForm
@@ -108,7 +100,7 @@ struct SteamScreen: View {
                             actionLabel: SteamBridge.connected ? "Update" : "Connect",
                             secure: true, isArmed: canConnect, action: connect)
                 BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your games…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
                 // What LANDS is the header's own line — `BridgeSetupHeader`
                 // shows Steam's tagline, "What you play, in your feed", in
                 // primary body type at the top of this screen, so the sentence
@@ -123,16 +115,8 @@ struct SteamScreen: View {
     }
 
     private var removeSection: some View {
-        Section {
-            Button("Remove key", role: .destructive) {
-                SteamBridge.disconnect()
-                store.bridges.removeAll { $0.id == "steam" }
-                result = String(localized: "Key removed — your things stay.")
-                resultIsError = false
-                DSHaptic.tap()
-            }
-            .dsText(.callout15)
-            .dsListCardRow()
+        BridgeDisconnectSection(bridgeID: "steam", name: "Steam") {
+            SteamBridge.disconnect()
         }
     }
 
@@ -160,12 +144,10 @@ struct SteamScreen: View {
             // A fresh key that fails doesn't stay (same rule as the token
             // bridges) — no dead connection retrying on every foreground.
             if justConnected { SteamBridge.disconnect() }
-            result = String(localized: "Couldn't reach Steam — check the key, the profile name, and that the profile is public.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't reach Steam — check the key, the profile name, and that the profile is public."))
             return
         }
-        resultIsError = false
-        result = added > 0 ? String(localized: "\(added) games in") : String(localized: "Up to date")
+        result = .landed(added, noun: "games")
         let proof = added > 0
             ? String(localized: "\(added) games in")
             : String(localized: "Synced just now")

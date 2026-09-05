@@ -223,8 +223,7 @@ struct DevnetAccountsSlab<W: DevnetWatchList>: View {
 
     @State private var typed = ""
     @FocusState private var focused: Bool
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
 
     private var draft: String {
         typed.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -253,8 +252,7 @@ struct DevnetAccountsSlab<W: DevnetWatchList>: View {
             BridgeSyncStatusRows(
                 syncing: syncing,
                 syncingLine: syncingLine,
-                result: result ?? (previewAddress == nil ? idleNote : nil),
-                resultIsError: result == nil ? false : resultIsError)
+                proof: result ?? (previewAddress == nil ? idleNote.map(BridgeProof.says) : nil))
 
             if let mine {
                 DevnetAccountRow(address: mine,
@@ -313,14 +311,12 @@ struct DevnetAccountsSlab<W: DevnetWatchList>: View {
     private func watchTyped() {
         let address = draft
         guard W.isValidAddress(address) else {
-            result = String(localized: "That doesn't look like a devnet address — it needs to be 0x followed by 40 hex characters.")
-            resultIsError = true
+            result = .failed(String(localized: "That doesn't look like a devnet address — it needs to be 0x followed by 40 hex characters."))
             return
         }
         DSHaptic.tap()
         guard watch.add(address) else {
-            result = String(localized: "Already watching that address.")
-            resultIsError = false
+            result = .says(String(localized: "Already watching that address."))
             typed = ""
             return
         }

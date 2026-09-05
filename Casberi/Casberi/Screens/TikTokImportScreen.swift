@@ -32,8 +32,7 @@ struct TikTokImportScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @State private var importing = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
     /// How old this import is, and how much of it is here (2026-08-05,
     /// prd §310). Both read off the import RECEIPT and a count — no new field.
     @State private var staleness: String?
@@ -44,11 +43,12 @@ struct TikTokImportScreen: View {
     @Query(tiktokRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "TikTok") {
             BridgeSetupHeader(
                 name: "TikTok",
                 mode: .oneTimeImport,
-                intro: "TikTok has no live connection — request your export in their app, bring it here, and search your captions, comments, saves and likes.")
+                intro: "TikTok has no live connection — request your export in their app, bring it here, and search your captions, comments, saves and likes.",
+                connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus,
             // not a connection flag: an import has no live connection, so
             // "has anything arrived" is the only honest test of whether
@@ -65,17 +65,9 @@ struct TikTokImportScreen: View {
             }
             ImportUpkeepSection(source: "TikTok", held: held, staleness: staleness) { gone in
                 reread()
-                resultIsError = false
-                result = String(localized: "\(gone) removed")
+                result = .says(String(localized: "\(gone) removed"))
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "TikTok")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("TikTok")
         // Both, because the JSON download arrives sometimes as a bare file and
         // sometimes zipped around one — and which the person picks shouldn't be
         // something this screen has to explain.
@@ -108,7 +100,7 @@ struct TikTokImportScreen: View {
                     pickTitle: "Choose export",
                     pickIcon: "square.and.arrow.down",
                     alreadyImported: held > 0) { importing = true }
-                BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                BridgeSyncStatusRows(proof: result)
             }
         }
         .dsSlabSection()
@@ -162,20 +154,17 @@ struct TikTokImportScreen: View {
             // A running count in the status row the receipt will replace — a
             // large archive lands in chunks now (prd §310), and without this
             // the stretch between the tap and the receipt says nothing at all.
-            result = String(localized: "\(count) landed…")
-            resultIsError = false
+            result = .says(String(localized: "\(count) landed…"))
         })
         if summary.failed {
-            result = String(localized: "Couldn't read that — pick the user_data_tiktok.json file, or the folder holding it. A TXT export can't be read.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't read that — pick the user_data_tiktok.json file, or the folder holding it. A TXT export can't be read."))
             return
         }
-        resultIsError = false
         DSHaptic.success()
         // `held` is what collapses the archive block now, so re-read all three
         // rather than only the face queue.
         reread()
-        result = summary.imported > 0 ? landedLine(summary) : nothingNewLine(summary)
+        result = summary.imported > 0 ? .says(landedLine(summary)) : .says(nothingNewLine(summary))
 
         let proof = summary.imported > 0
             ? String(localized: "\(summary.imported) in")
@@ -192,11 +181,9 @@ struct TikTokImportScreen: View {
         pending = TikTokImport.pendingFaceCount(context: modelContext)
 
         if outcome.unreachable {
-            result = String(localized: "Couldn't reach TikTok — the videos are still saved, so try naming them again later.")
-            resultIsError = true
+            result = .failed(String(localized: "Couldn't reach TikTok — the videos are still saved, so try naming them again later."))
             return
         }
-        resultIsError = false
         DSHaptic.success()
         // "Gone" was a GUESS until 2026-08-05 (prd §309): every failure arrived
         // as one nil, so this line called any miss "gone from TikTok" without
@@ -210,7 +197,7 @@ struct TikTokImportScreen: View {
         if outcome.missed > 0 {
             line += String(localized: " · \(outcome.missed) unreadable")
         }
-        result = line
+        result = .says(line)
     }
 
     /// Names each category that actually landed rather than one total — the

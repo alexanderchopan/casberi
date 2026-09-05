@@ -11,13 +11,12 @@ struct EthValidatorScreen: View {
     @Bindable private var validatorStore = EthValidatorStore.shared
     @State private var indexField = ""
     @State private var working = false
-    @State private var result: String?
-    @State private var resultIsError = false
+    @State private var result: BridgeProof?
     @State private var positions: [Int: EthValidatorRead.Position] = [:]
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "ETH Validators") {
             // The one setup screen in the family with no header (audit,
             // 2026-07-31), so its tagline appeared nowhere and the slab note
             // below had to carry the what-lands fact alone. NOT the §185 case:
@@ -34,13 +33,6 @@ struct EthValidatorScreen: View {
                 watchlistSection
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "ETH Validators")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("ETH Validators")
         .onAppear {
             if !validatorStore.watched.isEmpty { Task { await refresh() } }
         }
@@ -56,7 +48,7 @@ struct EthValidatorScreen: View {
                             focus: $fieldFocused, action: watch)
                 BridgeSyncStatusRows(syncing: working,
                                      syncingLine: String(localized: "Checking the validator…"),
-                                     result: result, resultIsError: resultIsError)
+                                     proof: result)
                 // The what-lands sentence added here earlier the same day is
                 // gone again with the arrival of the header above, whose
                 // tagline — "Your validator balance, in your total" — says it
@@ -139,8 +131,7 @@ struct EthValidatorScreen: View {
     private func watch() {
         let text = indexField.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let index = Int(text), index >= 0, !working else {
-            resultIsError = true
-            result = String(localized: "That doesn't look like a validator index.")
+            result = .failed(String(localized: "That doesn't look like a validator index."))
             return
         }
         DSHaptic.tap()
@@ -150,8 +141,7 @@ struct EthValidatorScreen: View {
             let found = await EthValidatorRead.positions(indices: [index])
             working = false
             guard let found, let position = found.first(where: { $0.index == index }) else {
-                resultIsError = true
-                result = String(localized: "Couldn't find validator #\(index).")
+                result = .failed(String(localized: "Couldn't find validator #\(index)."))
                 return
             }
             guard validatorStore.add(index: index) else {
@@ -162,13 +152,11 @@ struct EthValidatorScreen: View {
                 // ways across the family (red here and in RSS, green in
                 // PostHog/Stocktwits, gray in Open Food Facts); settled as
                 // not-an-error, 2026-07-31.
-                resultIsError = false
-                result = String(localized: "Already watching validator #\(index).")
+                result = .says(String(localized: "Already watching validator #\(index)."))
                 return
             }
             positions[index] = position
-            resultIsError = false
-            result = String(localized: "Watching validator #\(index) — \(WalletValue.token(position.eth, "ETH"))")
+            result = .says(String(localized: "Watching validator #\(index) — \(WalletValue.token(position.eth, "ETH"))"))
             indexField = ""
             EthValidatorRead.registerBridge(store: store)
         }

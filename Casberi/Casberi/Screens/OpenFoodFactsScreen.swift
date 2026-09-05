@@ -21,9 +21,8 @@ struct OpenFoodFactsScreen: View {
     @State private var scanning = false
     @State private var code = ""
     @State private var looking = false
-    @State private var lastResult: String?
+    @State private var lastResult: BridgeProof?
     /// Whether `lastResult` is a failure — see `PrivacyPoolsScreen`.
-    @State private var lastResultIsError = false
     @FocusState private var fieldFocused: Bool
 
     @Query(offRecentDescriptor) private var recent: [Thing]
@@ -43,7 +42,7 @@ struct OpenFoodFactsScreen: View {
     }
 
     var body: some View {
-        List {
+        BridgeSetupPage(name: "Open Food Facts") {
             BridgeSetupHeader(
                 name: "Open Food Facts",
                 mode: .noAccount,
@@ -61,13 +60,6 @@ struct OpenFoodFactsScreen: View {
                     .listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Open Food Facts")
-        .dsAdaptiveContentWidth()
-        .dsPageBackground()
-        .dsSoftScrollEdges()
-        .dsScreenTitle("Open Food Facts")
         #if !targetEnvironment(macCatalyst)
         .fullScreenCover(isPresented: $scanning) {
             BarcodeScannerSheet { scanned in
@@ -102,7 +94,7 @@ struct OpenFoodFactsScreen: View {
                             action: { Task { await lookUp(code) } })
                 BridgeSyncStatusRows(syncing: looking,
                                      syncingLine: String(localized: "Looking it up…"),
-                                     result: lastResult, resultIsError: lastResultIsError)
+                                     proof: lastResult)
                 DSSlabNote(text: "The product lands in your feed with its name, picture, and Nutri-Score.")
             }
         }
@@ -131,8 +123,7 @@ struct OpenFoodFactsScreen: View {
         }
         if OpenFoodFacts.land(food, context: modelContext) != nil {
             code = ""
-            lastResult = String(localized: "Added \(food.name)")
-            lastResultIsError = false
+            lastResult = .says(String(localized: "Added \(food.name)"))
             DSHaptic.success()
             store.registerConnected(id: "off", name: "Open Food Facts",
                                     proof: "Scanned in",
@@ -141,14 +132,12 @@ struct OpenFoodFactsScreen: View {
         } else {
             // Already here isn't a failure — it's the thing you wanted, already
             // done. No red, no shake.
-            lastResult = String(localized: "Already in your feed.")
-            lastResultIsError = false
+            lastResult = .says(String(localized: "Already in your feed."))
         }
     }
 
     private func fail(_ message: String) {
-        lastResult = message
-        lastResultIsError = true
+        lastResult = .failed(message)
     }
 }
 
