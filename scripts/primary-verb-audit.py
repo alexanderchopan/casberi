@@ -90,9 +90,17 @@ EXEMPT_FILES = {
 }
 
 # A solid, non-decorative fill — the materials a primary verb is painted in.
+#
+# **`.borderedProminent` IS ONE, and leaving it out was this audit's real gap.**
+# Its first cut looked only for fills WE paint, so a full-width centered blue
+# button drawn by SwiftUI's OWN prominent style — `VibenetAccountSheet`'s note
+# "Save" — passed clean while being exactly the species. Asked whether every
+# centered blue button was gone, the answer was no, and this is why. A native
+# style is the same block with the same problem and one fewer line of evidence.
 FILL = re.compile(
     r"\.background\(\s*(?:AnyShapeStyle\(\s*)?(?:DS\.tint|DS\.confirm|DS\.destructive)\b"
     r"|\.dsGlassProminent\("
+    r"|\.buttonStyle\(\s*\.borderedProminent\s*\)"
     r"|(?:Capsule|RoundedRectangle)\([^)]*\)\s*\.fill\(\s*(?:AnyShapeStyle\(\s*)?DS\.tint\b"
 )
 FULL_WIDTH = re.compile(r"maxWidth:\s*\.infinity")
@@ -294,10 +302,40 @@ struct Neighbour: View {
 """
 
 
+# The gap this audit shipped with, pinned: SwiftUI's own prominent style is a
+# full-width centered blue button too, and the first cut could not see it.
+DIRTY_NATIVE = """
+struct BadNative: View {
+    var body: some View {
+        Button {
+            save()
+        } label: {
+            Text(String(localized: "Save"))
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(Self.mark)
+    }
+}
+"""
+
+# A prominent style on a CHIP is still not this species — width decides.
+NATIVE_CHIP_OK = """
+struct Chip: View {
+    var body: some View {
+        Button { go() } label: { Text("Add") }
+            .buttonStyle(.borderedProminent)
+    }
+}
+"""
+
+
 def self_test():
     cases = [
         ("clean tree passes", CLEAN, 0),
         ("a bare button is not blamed for its neighbour's fill", NEIGHBOUR_OK, 0),
+        ("catches a native .borderedProminent block", DIRTY_NATIVE, 1),
+        ("a prominent CHIP is not a block", NATIVE_CHIP_OK, 0),
         ("catches a hand-rolled tint capsule", DIRTY_CAPSULE, 1),
         ("catches a hand-rolled glass pill", DIRTY_GLASS, 1),
         ("floating chrome is not a slab", FLOATING_OK, 0),

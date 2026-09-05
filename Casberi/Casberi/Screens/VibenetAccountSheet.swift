@@ -238,7 +238,10 @@ struct VibenetAccountSheet: View {
     /// alert's single-line field would cut it back to a label the moment it
     /// tried to be one (2026-08-27, the address-book unification).
     private var noteTray: some View {
-        DSTray(title: String(localized: "Note"), height: 220) {
+        // 220 → 260: the slab is 56pt where `.borderedProminent` drew ~34, and
+        // a tray's height is a fixed budget rather than a minimum, so the
+        // extra rung has to be paid for here or the field loses lines to it.
+        DSTray(title: String(localized: "Note"), height: 260) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 TextField(String(localized: "Add a note…"), text: $noteDraft, axis: .vertical)
                     .dsText(.body17)
@@ -247,15 +250,19 @@ struct VibenetAccountSheet: View {
                     .padding(DS.Space.s3)
                     .background(DS.surfaceWell,
                                 in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-                Button {
+                // The component, not `.borderedProminent` (prd §613). This was
+                // the last full-width centered fill in the app, and it wore
+                // SwiftUI's own prominent style rather than a hand-rolled one
+                // — which is why the first cut of `primary-verb-audit.py`
+                // could not see it: the audit looked for fills WE paint. A
+                // native style is the same species with the same problem, so
+                // it reads the style too now. `DSSlabButton` inside a `DSTray`
+                // is `PredictionPreviewSheet`'s existing shape.
+                DSSlabButton(title: String(localized: "Save"),
+                             systemImage: "checkmark") {
                     AddressBook.shared.setNote(noteDraft, for: address)
                     editingNote = false
-                } label: {
-                    Text(String(localized: "Save"))
-                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Self.mark)
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s2)

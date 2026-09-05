@@ -582,8 +582,21 @@ struct HowItWorksSheet: View {
                             // button intercepts touches for its own press
                             // deformation and intermittently eats the tap —
                             // the user saw it as "takes several taps"
-                            // (2026-07-17). Matches BridgeDetailScreen's
-                            // Reconnect button, the pattern that works.
+                            // (2026-07-17). The glass-INSIDE-the-label rule is
+                            // what matters and it still holds; the sibling this
+                            // used to name — BridgeDetailScreen's Reconnect —
+                            // is a `DSSlabButton` since §613 and no longer an
+                            // example of anything glass.
+                            //
+                            // This tile is deliberately NOT that component:
+                            // it is FLOATING CHROME in a `safeAreaInset`, where
+                            // §8 puts glass and the slab law does not reach, so
+                            // `primary-verb-audit.py` exempts it by that shape
+                            // rather than by name. It is the app's one
+                            // remaining full-width centered fill, and it is a
+                            // standing question (§559 built `DSActVerb` for
+                            // "the onboarding greeting's one honest first tap")
+                            // rather than an oversight.
                             .dsGlassProminent(tint: DS.tint, cornerRadius: DS.Radius.pill)
                             .contentShape(Capsule())
                     }
