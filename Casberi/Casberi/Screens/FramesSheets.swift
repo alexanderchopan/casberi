@@ -164,7 +164,7 @@ struct FramesMoveSheet: View {
         // this sheet below its own edge. The `.large` detent made it
         // reachable and nothing said so — a sheet that must be dragged to
         // finish reading is a sheet that looks broken.
-        let facts: CGFloat = hasFacts ? 120 : 0
+        let facts: CGFloat = hasFacts ? 80 : 0
         let explorer: CGFloat = 40
         return min(920, 400 + paper + crossing + sponsored + watch + facts + explorer
                         + CGFloat(move.rows.count) * 56)
@@ -345,14 +345,7 @@ struct FramesMoveSheet: View {
     /// doors: a `Canvas` has no per-cell hit testing, and a strip whose cells
     /// are 12pt wide is not a tap target anybody could aim at.
     @ViewBuilder private var steps: some View {
-        if move.rows.isEmpty {
-            // **AN ORDINARY TRANSACTION IS NOT "0 FRAMES".** This chain carries
-            // both — the faucet pays out as a plain type-`0x2` transfer — and
-            // the row above already learned to say so.
-            Text(String(localized: "An ordinary transfer — one result, not a step per part."))
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        } else {
+        if !move.rows.isEmpty {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 Text(move.rows.count == 1 ? String(localized: "1 frame")
                                           : String(localized: "\(String(move.rows.count)) frames"))
@@ -398,7 +391,7 @@ struct FramesMoveSheet: View {
                         .monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
                 }
                 if let gas = row.outcome?.gasUsed {
-                    Text(String(localized: "\(String(gas)) gas"))
+                    Text(String(localized: "\(DSCount.grouped(gas)) gas"))
                         .dsText(.label12).foregroundStyle(DS.textTertiary).monospacedDigit()
                 }
             }
@@ -418,7 +411,10 @@ struct FramesMoveSheet: View {
 
     /// **THE FACTS AS A TABLE, NOT AS FOUR SENTENCES** (`DSSpecTable`).
     ///
-    /// The date is not here — it is the head's dateline, said once.
+    /// The date is not here — it is the head's dateline, said once. Nor is the
+    /// payer (the head's own sentence names them) nor the recipient count (the
+    /// crossing draws the faces and counts them) — both were rows here until
+    /// §605, saying on the same document what the block above already said.
     @ViewBuilder private var facts: some View {
         if hasFacts {
             DSSpecTable {
@@ -437,16 +433,7 @@ struct FramesMoveSheet: View {
                     // report 100 and 3,000 against a receipt of 210,790, so a
                     // sum is wrong by two orders of magnitude in the direction
                     // that looks plausible.
-                    DSSpecRow(label: Text("Gas"), value: Text(verbatim: String(gas)))
-                }
-                if move.sponsored {
-                    DSSpecRow(label: Text("Paid by"),
-                              value: Text(verbatim: FramesName.leading(
-                                move.payer, mine: mine, watched: watched)))
-                }
-                if move.recipients.count > 1 {
-                    DSSpecRow(label: Text("Paid"),
-                              value: Text(verbatim: String(localized: "\(String(move.recipients.count)) addresses, under one signature")))
+                    DSSpecRow(label: Text("Gas"), value: Text(verbatim: DSCount.grouped(gas)))
                 }
             }
         }
@@ -456,7 +443,6 @@ struct FramesMoveSheet: View {
     /// stack a `DS.Space.s6` gap — a hole in the sheet with nothing in it.
     private var hasFacts: Bool {
         move.feeWeiIfSelfPaid != nil || move.gasUsed != nil
-            || move.sponsored || move.recipients.count > 1
     }
 
     // MARK: The doors
@@ -689,11 +675,11 @@ struct FramesFrameSheet: View {
                 // that changes what somebody would DO (§315). The head above
                 // already says a VERIFY frame authorises.
                 if !execution && !payment {
-                    Text(String(localized: "It approves neither, so the transaction has no payer."))
+                    Text(String(localized: "Approves neither, so the transaction has no payer."))
                         .dsText(.subhead13).foregroundStyle(DS.destructive)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
-                    Text(String(localized: "Granted and spent inside this transaction — nothing to revoke."))
+                    Text(String(localized: "Spent inside this transaction — nothing to revoke."))
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -768,9 +754,8 @@ struct FramesFrameSheet: View {
                             used: used, limit: limit, tint: DS.confirm,
                             reduceMotion: reduceMotion)
         } else if let limit = row.frame.stateGas, limit > 0 {
-            Text(String(localized: "State budget \(String(limit)) — this chain doesn't report how much was used."))
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
+            Text(String(localized: "State budget \(DSCount.grouped(limit))"))
+                .dsText(.label12).foregroundStyle(DS.textTertiary).monospacedDigit()
         }
         if let starvation = row.outcome.flatMap({ FramesRead.starvation(frame: row.frame, outcome: $0) }) {
             Text(starvation == .state
@@ -794,20 +779,14 @@ struct FramesFrameSheet: View {
     @ViewBuilder private func evidence(_ row: FramesFrameRow) -> some View {
         switch row.valueLanded {
         case .some(true):
-            note(String(localized: "Its transfer is on the chain's log — the money moved."),
+            note(String(localized: "The money moved."),
                  tone: DS.textSecondary)
         case .some(false):
-            note(String(localized: "It reports success and emitted no log — rolled back, so the money did not move."),
+            note(String(localized: "Reports success — the money did not move."),
                  tone: DS.destructive)
         case .none:
             if row.outcome == nil {
-                note(String(localized: "Its receipt couldn't be paired, so what it did isn't readable."),
-                     tone: DS.textTertiary)
-            } else {
-                // NOT "it failed to move value": a VERIFY frame moves nothing
-                // by design and has nothing to land. Collapsing the two is a
-                // false alarm on the frame every transaction here carries.
-                note(String(localized: "Moves no value by design, so there is nothing to land."),
+                note(String(localized: "Its receipt couldn't be read."),
                      tone: DS.textTertiary)
             }
         }
@@ -966,11 +945,11 @@ struct FramesBudgetBar: View {
             // Sized from data, so it earns an entrance (design-motion law) and
             // stands still under Reduce Motion.
             .chartWipe(reduceMotion: reduceMotion)
-            Text(String(localized: "\(caption): \(String(used)) of \(String(limit))"))
+            Text(String(localized: "\(caption): \(DSCount.grouped(used)) of \(DSCount.grouped(limit))"))
                 .dsText(.label12).foregroundStyle(DS.textTertiary).monospacedDigit()
         }
         .accessibilityElement()
-        .accessibilityLabel(Text(String(localized: "\(caption) budget, \(String(used)) of \(String(limit)) used")))
+        .accessibilityLabel(Text(String(localized: "\(caption) budget, \(DSCount.grouped(used)) of \(DSCount.grouped(limit)) used")))
     }
 }
 
@@ -1049,14 +1028,14 @@ struct FramesPayerSheet: View {
                 // **NOT A ZERO.** A total we could not complete is not a
                 // sponsor who paid nothing — `FramesPayer.gasWei`'s
                 // all-or-nothing rule, and this is the line it exists for.
-                Text(String(localized: "What they spent couldn't be totalled"))
+                Text(String(localized: "The total couldn't be read"))
                     .dsText(.reading20).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s3)
             }
             Text(payer.count == 1
-                 ? String(localized: "They paid the gas on 1 transaction here.")
-                 : String(localized: "They paid the gas on \(String(payer.count)) transactions here."))
+                 ? String(localized: "Paid for 1 transaction")
+                 : String(localized: "Paid for \(String(payer.count)) transactions"))
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s4)
@@ -1096,7 +1075,7 @@ struct FramesPayerSheet: View {
                     }
                     .frame(height: 10)
                     .chartWipe(reduceMotion: reduceMotion)
-                    Text(String(localized: "\(String(Int((fraction * 100).rounded())))% of the gas spent in this room"))
+                    Text(String(localized: "\(String(Int((fraction * 100).rounded())))% of the room's gas"))
                         .dsText(.label12).foregroundStyle(DS.textTertiary)
                 }
             }
@@ -1240,7 +1219,7 @@ struct FramesAccountSheet: View {
                 // NOT a zero — an unreached read is not evidence of an empty
                 // account, which on a devnet that may have been reset is the
                 // likeliest reading of all (§515a).
-                Text(String(localized: "The chain didn't answer for this address"))
+                Text(String(localized: "The chain didn't answer"))
                     .dsText(.reading20).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s3)
@@ -1273,10 +1252,14 @@ struct FramesAccountSheet: View {
         let frames = account.moves.filter { $0.rows.count > 1 }.count
         let sponsored = account.moves.filter(\.sponsored).count
         DSSpecTable {
+            // A door onto an empty scope is §83's dead control: with no
+            // transactions the row states its zero and opens nothing.
+            let opens = !account.moves.isEmpty
             DSSpecRow(label: Text("Transactions"),
                       value: Text(verbatim: String(account.moves.count)),
-                      tint: DS.tint, glyph: "chevron.right",
-                      action: { onScope?(.activity) })
+                      tint: opens ? DS.tint : DS.textPrimary,
+                      glyph: opens ? "chevron.right" : nil,
+                      action: opens ? { onScope?(.activity) } : nil)
             if frames > 0 {
                 DSSpecRow(label: Text("Frame transactions"),
                           value: Text(verbatim: String(frames)),

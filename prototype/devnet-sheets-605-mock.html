@@ -1,0 +1,123 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Devnet sheets §605</title><style>
+:root{--bg:#e9e9ef}
+body{margin:0;background:var(--bg);color:#111;font:14px -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,sans-serif;padding:36px 24px}
+h1{font-size:18px;font-weight:600;margin:0 0 6px}
+p.lede{margin:0 0 26px;color:#555;max-width:900px;line-height:1.45}
+.pair{display:grid;grid-template-columns:240px 393px 393px;gap:28px;align-items:start;margin-bottom:40px}
+.why{font-size:13px;color:#444;line-height:1.45}.why b{display:block;color:#111;font-weight:600;margin-bottom:4px;font-size:14px}
+.why .n{display:block;margin-top:8px;padding:8px 10px;border-radius:10px;background:#dcdce3;color:#333;font-size:12px}
+.tag{font-size:11px;color:#777;margin-bottom:6px}
+.sheet{width:393px;box-sizing:border-box;padding:0 0 18px;border-radius:26px 26px 0 0;background:#fff;color:#000;position:relative;overflow:hidden;
+ --tp:#000;--ts:#3c3c4399;--tt:#3c3c4366;--tint:#0a84ff;--good:#34c759;--bad:#ff3b30;--well:rgba(0,0,0,.04);--faint:rgba(0,0,0,.06)}
+.sheet::before{content:"";position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,.078),transparent 150px);pointer-events:none}
+.sheet>*{position:relative}
+.grab{width:36px;height:5px;border-radius:3px;background:rgba(0,0,0,.18);margin:8px auto 0}
+.title{font-size:17px;font-weight:600;text-align:center;padding:10px 16px 0}
+.head{padding:16px 16px 24px}
+.body{padding:0 16px;display:flex;flex-direction:column;gap:24px}
+.stampline{display:flex;justify-content:space-between;align-items:flex-start;font-size:15px;color:var(--ts)}
+.stamp{font-size:12px;font-weight:600}.stamp.good{color:var(--good)}.stamp.bad{color:var(--bad)}.stamp.quiet{color:var(--tt)}
+.price{font-size:40px;font-weight:600;letter-spacing:0;line-height:1.05;margin-top:2px;font-variant-numeric:tabular-nums}
+.reading{font-size:20px;line-height:1.25}
+.callout{font-size:15px;line-height:1.35;color:var(--ts)}.callout.p{color:var(--tp)}
+.sub{font-size:13px;line-height:1.35;color:var(--tt)}.sub.bad{color:var(--bad)}
+.cap{font-size:12px;color:var(--tt)}
+.mono{font-family:ui-monospace,SF Mono,Menlo,monospace}
+.spec{display:grid;grid-template-columns:max-content 1fr;column-gap:12px;row-gap:12px;align-items:baseline}
+.spec .l{font-size:12px;color:var(--tt)}.spec .v{font-size:15px}.spec .v.door{color:var(--tint)}.spec .v.door::after{content:"  ›";color:var(--tt)}
+.sec{display:flex;flex-direction:column;gap:12px}
+.step{display:flex;gap:12px;align-items:flex-start}
+.step .pip{width:7px;height:7px;border-radius:50%;background:var(--tint);margin-top:6px;flex:none}
+.step .w{flex:1}.step .t{font-size:15px}.step .s{font-size:12px;color:var(--tt)}
+.step .r{text-align:right}.step .r .a{font-size:13px;color:var(--ts);font-variant-numeric:tabular-nums}.step .r .g{font-size:12px;color:var(--tt);font-variant-numeric:tabular-nums}
+.row{display:flex;gap:12px;align-items:center;min-height:44px}
+.row .mk{width:40px;height:40px;border-radius:50%;background:rgba(10,132,255,.14);display:flex;align-items:center;justify-content:center;color:var(--tint);font-size:16px;flex:none}
+.row .mk.sq{border-radius:10px;background:var(--well);color:var(--tp)}
+.row .w{flex:1}.row .t{font-size:15px}.row .s{font-size:13px;color:var(--tt)}
+.row .st{font-size:12px;color:var(--tt);font-weight:600}
+.row .chev{color:var(--tt)}
+.door{color:var(--tint);font-size:15px}
+.face{width:56px;height:56px;border-radius:50%;background:conic-gradient(#7fd3ff,#0a84ff,#5b4bd6,#7fd3ff)}
+.face.sm{width:40px;height:40px}
+.headrow{display:flex;justify-content:space-between;align-items:flex-start}
+.copy{font-size:12px;color:var(--tt)}
+.ana{display:flex;align-items:center;gap:3px;height:14px;margin-bottom:12px}
+.ana .f{height:12px;width:60px;border-radius:2px;background:var(--tint)}.ana .f.w2{width:36px}
+.ana .k{width:11px;height:11px;border-radius:50%;background:var(--tint);opacity:.85}
+.ana .r{width:11px;height:11px;border-radius:2px;transform:rotate(45deg);background:var(--tint)}
+.ana .p{font-size:10px;padding:0 6px;border-radius:9999px;border:1.5px solid var(--tint);color:var(--tint);line-height:14px}
+.bar{height:10px;border-radius:5px;background:var(--faint);position:relative;overflow:hidden}.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--tint);opacity:.85}
+.chips{display:flex;gap:8px}.chip{font-size:15px;padding:8px 12px;border-radius:12px;background:var(--well)}.chip.on::before{content:"✓ ";color:var(--good)}.chip.off{color:var(--tt)}.chip.off::before{content:"✕ "}
+.disc{width:56px;height:56px;border-radius:50%;background:rgba(60,60,67,.12);display:flex;align-items:center;justify-content:center;color:var(--tt);font-size:22px}
+.nb{display:flex;justify-content:space-between;color:var(--tint);font-size:15px}
+.strike{color:#c33;text-decoration:line-through;text-decoration-thickness:1.5px}
+.cut{background:rgba(255,59,48,.08);border-radius:6px;padding:2px 4px;margin:-2px -4px}
+</style>
+<h1>The devnet sheets say less (§605)</h1>
+<p class="lede">Left, what ships now with the cuts marked. Right, the pass. One test throughout: a sentence stays only if no stamp, title, figure or row on the same sheet already says it. Three sheets shown, one per room; the other seven take the same cuts.</p>
+
+<div class="pair">
+ <div class="why"><b>Privacy · a 2-frame transaction</b>The title says "2 frames". The strip draws the keys, the snapshot and the sponsor. The sections beneath are captioned. The lead sentence was the fourth telling. A spend key said "used once" three times per row.<span class="n">27-word explainer → 10 words, keeping §593's "doesn't hide who sent it".</span></div>
+ <div><div class="tag">Before</div><div class="sheet"><div class="grab"></div><div class="title">2 frames</div>
+  <div class="head"><div class="ana"><i class="f"></i><i class="f w2"></i><i class="k"></i><i class="k"></i><i class="r"></i><i class="p">paid</i></div>
+   <div class="reading cut">2 frames · 2 spend keys · named a snapshot · somebody else paid</div>
+   <div class="spec" style="margin-top:12px"><div class="l">From</div><div class="v">This phone</div><div class="l">Block</div><div class="v">13,347</div><div class="l">Transaction</div><div class="v mono">0x9d12f772…4a1c0e</div><div class="l">Gas</div><div class="v">21,000 of 320,000</div></div>
+   <div class="callout" style="margin-top:12px">0x1f…3c91 paid the gas.</div></div>
+  <div class="body">
+   <div class="sec"><div class="cap">2 steps</div><div class="step"><i class="pip"></i><div class="w"><div class="t">1. Verify</div><div class="s">This phone</div></div><div class="r"><div class="g">100,000 gas</div></div></div><div class="step"><i class="pip"></i><div class="w"><div class="t">2. Send</div><div class="s">0x8a…e2f0</div></div><div class="r"><div class="a">0.001 ETH</div><div class="g">220,000 gas · 1,000 state</div></div></div></div>
+   <div class="sec"><div class="cap">2 spend keys</div><div class="row"><div class="mk">⚿</div><div class="w"><div class="t mono">0x3be1a0c2…91d4f7</div><div class="s cut">One-time spend key</div></div><div class="st">used once</div></div><div class="row"><div class="mk">⚿</div><div class="w"><div class="t mono">0x77c00e19…20aa31</div><div class="s cut">One-time spend key</div></div><div class="st">used once</div></div>
+    <div class="sub cut">Each key was used once and can never be used again — that is what stops this spend being repeated. It does not hide who sent it.</div></div>
+   <div class="sec"><div class="cap"><span class="cut">The snapshot it proved against</span></div><div class="row"><div class="mk sq">1</div><div class="w"><div class="t">Set 1</div><div class="s mono">0x5e0c9a44…b7e210</div></div></div></div>
+   <div class="door">Watch 0x8a…e2f0</div><div class="door">Open in the explorer</div>
+  </div></div></div>
+ <div><div class="tag">After</div><div class="sheet"><div class="grab"></div><div class="title">2 frames</div>
+  <div class="head"><div class="ana"><i class="f"></i><i class="f w2"></i><i class="k"></i><i class="k"></i><i class="r"></i><i class="p">paid</i></div>
+   <div class="spec"><div class="l">From</div><div class="v">This phone</div><div class="l">Block</div><div class="v">13,347</div><div class="l">Transaction</div><div class="v mono">0x9d12f772…4a1c0e</div><div class="l">Gas</div><div class="v">21,000 of 320,000</div></div>
+   <div class="callout" style="margin-top:12px">0x1f…3c91 paid the gas.</div></div>
+  <div class="body">
+   <div class="sec"><div class="cap">2 steps</div><div class="step"><i class="pip"></i><div class="w"><div class="t">1. Verify</div><div class="s">This phone</div></div><div class="r"><div class="g">100,000 gas</div></div></div><div class="step"><i class="pip"></i><div class="w"><div class="t">2. Send</div><div class="s">0x8a…e2f0</div></div><div class="r"><div class="a">0.001 ETH</div><div class="g">220,000 gas · 1,000 state</div></div></div></div>
+   <div class="sec"><div class="cap">2 spend keys</div><div class="row"><div class="mk">⚿</div><div class="w"><div class="t mono">0x3be1a0c2…91d4f7</div></div><div class="st">used once</div></div><div class="row"><div class="mk">⚿</div><div class="w"><div class="t mono">0x77c00e19…20aa31</div></div><div class="st">used once</div></div>
+    <div class="sub">Spent once, never again — it doesn't hide who sent it.</div></div>
+   <div class="sec"><div class="cap">1 snapshot</div><div class="row"><div class="mk sq">1</div><div class="w"><div class="t">Set 1</div><div class="s mono">0x5e0c9a44…b7e210</div></div></div></div>
+   <div class="door">Watch 0x8a…e2f0</div><div class="door">Open in the explorer</div>
+  </div></div></div>
+</div>
+
+<div class="pair">
+ <div class="why"><b>Frames · a Verify step</b>The stamp already says "Ran"; the evidence line stops narrating the chain's log. "Moves no value by design…" goes entirely — the meaning at the head says what a Verify step is. The state budget stops apologising for the chain and becomes a caption in the bar's own register. Every figure groups.<span class="n">The starvation verdict, when it fires, keeps its full length — it is the one sentence anybody acts on.</span></div>
+ <div><div class="tag">Before</div><div class="sheet"><div class="grab"></div><div class="title">Verify</div>
+  <div class="head"><div class="headrow"><div class="disc">⛨</div><div class="stamp good">Ran</div></div><div class="callout" style="margin-top:12px">Step 1 of 2</div><div class="reading" style="margin-top:2px">Authorises the transaction — without one there is no payer.</div></div>
+  <div class="body">
+   <div class="sec"><div class="cap">What it approves</div><div class="chips"><div class="chip on">Running</div><div class="chip on">Payment</div></div><div class="sub cut">Granted and spent inside this transaction — nothing to revoke.</div></div>
+   <div class="sec"><div class="bar"><i style="width:2%"></i></div><div class="cap mono" style="font-family:inherit">Execution: <span class="cut">100 of 100000</span></div><div class="sub cut">State budget 250000 — this chain doesn't report how much was used.</div></div>
+   <div class="callout cut">Moves no value by design, so there is nothing to land.</div>
+   <div class="spec"><div class="l">Target</div><div class="v">You</div><div class="l">Calldata</div><div class="v">none</div></div>
+   <div class="nb"><span></span><span>Sender ›</span></div>
+  </div></div></div>
+ <div><div class="tag">After</div><div class="sheet"><div class="grab"></div><div class="title">Verify</div>
+  <div class="head"><div class="headrow"><div class="disc">⛨</div><div class="stamp good">Ran</div></div><div class="callout" style="margin-top:12px">Step 1 of 2</div><div class="reading" style="margin-top:2px">Authorises the transaction — without one there is no payer.</div></div>
+  <div class="body">
+   <div class="sec"><div class="cap">What it approves</div><div class="chips"><div class="chip on">Running</div><div class="chip on">Payment</div></div><div class="sub">Spent inside this transaction — nothing to revoke.</div></div>
+   <div class="sec"><div class="bar"><i style="width:2%"></i></div><div class="cap">Execution: 100 of 100,000</div><div class="cap">State budget 250,000</div></div>
+   <div class="spec"><div class="l">Target</div><div class="v">You</div><div class="l">Calldata</div><div class="v">none</div></div>
+   <div class="nb"><span></span><span>Sender ›</span></div>
+  </div></div></div>
+</div>
+
+<div class="pair">
+ <div class="why"><b>Hegotá · an account</b>The doors were a hand-rolled text-plus-chevron — a third shape beside Frames' spec rows and Privacy's WalletRows, for the same fact. All three account sheets draw the family's spec table now. "Unread" is the stamp; the sentence under it stops repeating it. The vault line loses "held as".<span class="n">A count of zero has no row, and a row with nobody to dispatch to draws no chevron. Hegotá's doors were always live, wired or not.</span></div>
+ <div><div class="tag">Before</div><div class="sheet"><div class="grab"></div><div class="title">alice</div>
+  <div class="head"><div class="headrow"><div class="face"></div><div class="stamp quiet">Unread</div></div><div class="callout mono" style="margin-top:12px;font-size:13px">0x4a9c…e17b</div><div class="callout cut" style="color:#ff9f0a;margin-top:2px">Couldn't be read — nothing below is current.</div><div class="price" style="margin-top:16px">12.4 ETH</div><div class="callout">in the account</div></div>
+  <div class="body">
+   <div class="row"><div class="w"><div class="t" style="color:var(--tint);font-size:22px;font-weight:600">3.2 ETH</div><div class="s" style="font-size:15px;color:var(--ts)"><span class="cut">held as</span> 4 UTXOs in the vault</div></div><div class="chev">›</div></div>
+   <div class="sec" style="gap:8px"><div class="callout cut">12 movements ›</div><div class="callout cut">2 nonce keys, each sending independently ›</div><div class="callout cut">3 paid for by somebody else ›</div></div>
+   <div class="door">Open in the explorer</div>
+  </div></div></div>
+ <div><div class="tag">After</div><div class="sheet"><div class="grab"></div><div class="title">alice</div>
+  <div class="head"><div class="headrow"><div class="face"></div><div class="stamp quiet">Unread</div></div><div class="callout mono" style="margin-top:12px;font-size:13px">0x4a9c…e17b</div><div class="callout" style="color:#ff9f0a;margin-top:2px">Nothing below is current.</div><div class="price" style="margin-top:16px">12.4 ETH</div><div class="callout">in the account</div></div>
+  <div class="body">
+   <div class="row"><div class="w"><div class="t" style="color:var(--tint);font-size:22px;font-weight:600">3.2 ETH</div><div class="s" style="font-size:15px;color:var(--ts)">4 UTXOs in the vault</div></div><div class="chev">›</div></div>
+   <div class="spec"><div class="l">Movements</div><div class="v door">12</div><div class="l">Nonce keys</div><div class="v door">2</div><div class="l">Somebody else paid</div><div class="v door">3</div></div>
+   <div class="door">Open in the explorer</div>
+  </div></div></div>
+</div>

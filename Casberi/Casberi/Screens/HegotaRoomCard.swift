@@ -1446,17 +1446,17 @@ enum HegotaModeStyle {
     static func meaning(_ mode: HegotaFrame.Mode) -> String {
         switch mode {
         case .verify:
-            return String(localized: "Checked that the transaction was really authorised by the account — the step that replaces a signature.")
+            return String(localized: "Checked the account authorised it — in place of a signature.")
         case .sender:
             return String(localized: "Moved value on the sender's behalf.")
         case .general:
-            return String(localized: "Called a contract, the way an ordinary transaction does.")
+            return String(localized: "Called a contract.")
         case .assertion:
-            return String(localized: "Checked a condition after the fact — if it hadn't held, the whole transaction would have failed.")
+            return String(localized: "Checked a condition afterwards — had it failed, so would the transaction.")
         case .utxo:
-            return String(localized: "Moved money into or out of the vault as discrete pieces, rather than as a balance.")
+            return String(localized: "Moved money into or out of the vault, as pieces.")
         case .unknown:
-            return String(localized: "A step this app doesn't have a name for yet.")
+            return String(localized: "A step this build doesn't know.")
         }
     }
 }
@@ -2180,6 +2180,15 @@ enum HegotaName {
             return HegotaWatch.shared.name(for: match) ?? WalletStore.shortAddress(match)
         }
     }
+
+    /// The same name at the head of a sentence ("The UTXO vault paid the
+    /// gas.") — `FramesName.leading`'s rule, so the two sponsorship lines
+    /// read alike.
+    static func leading(_ address: String, watched: [String]) -> String {
+        let name = of(address, watched: watched)
+        guard let first = name.first else { return name }
+        return first.uppercased() + name.dropFirst()
+    }
 }
 
 // MARK: - One movement
@@ -2491,10 +2500,10 @@ struct HegotaMoveSheet: View {
     /// gas also lives: one place for one fact.
     private var sponsorship: String? {
         guard move.isSponsored, let payer = move.payer else { return nil }
-        let who = HegotaName.of(payer, watched: watched)
+        let who = HegotaName.leading(payer, watched: watched)
         return move.feeWei.map {
-            String(localized: "It cost you nothing — \(who) paid \(HegotaFormat.eth($0)) in gas.")
-        } ?? String(localized: "It cost you nothing — \(who) paid the gas.")
+            String(localized: "\(who) paid the gas — \(HegotaFormat.eth($0)).")
+        } ?? String(localized: "\(who) paid the gas.")
     }
 
     /// **The facts as a TABLE, not as four sentences** (`DSSpecTable`).
@@ -2505,20 +2514,16 @@ struct HegotaMoveSheet: View {
     @ViewBuilder private var facts: some View {
         if hasFacts {
             DSSpecTable {
-                if let fee = move.feeWei {
+                if !move.isSponsored, let fee = move.feeWei {
                     DSSpecRow(label: Text("Gas"),
                               value: Text(verbatim: HegotaFormat.eth(fee)))
                 }
                 // Named only when it is NOT you: a receipt telling you that you
                 // paid your own gas is a row that says nothing.
-                if move.isSponsored, let payer = move.payer {
-                    DSSpecRow(label: Text("Paid by"),
-                              value: Text(verbatim: HegotaName.of(payer, watched: watched)))
-                }
                 if !move.nonceKeys.isEmpty {
                     DSSpecRow(label: Text(move.nonceKeys.count == 1 ? "Nonce key" : "Nonce keys"),
                               value: Text(move.nonceKeys.count == 1
-                                          ? String(localized: "\(move.nonceKeys[0]) — a queue of its own")
+                                          ? String(move.nonceKeys[0])
                                           : String(localized: "\(String(move.nonceKeys.count)) at once")))
                 }
             }
@@ -2529,7 +2534,7 @@ struct HegotaMoveSheet: View {
     /// enclosing stack a `DS.Space.s6` gap — a hole in the sheet with nothing
     /// in it.
     private var hasFacts: Bool {
-        move.feeWei != nil || move.isSponsored || !move.nonceKeys.isEmpty
+        (!move.isSponsored && move.feeWei != nil) || !move.nonceKeys.isEmpty
     }
 
     @ViewBuilder private var amount: some View {
@@ -2654,7 +2659,7 @@ struct HegotaMoveSheet: View {
                 // spend that made five pieces drawn as three is a lie about how
                 // many pieces the money is in (the coins figure's own rule).
                 if minted.count > 3 {
-                    Text(String(localized: "and \(String(minted.count - 3)) more, in the UTXOs scope"))
+                    Text(String(localized: "and \(String(minted.count - 3)) more"))
                         .dsText(.label12).foregroundStyle(DS.textTertiary)
                 }
             }
@@ -2685,12 +2690,6 @@ struct HegotaMoveSheet: View {
                     .buttonStyle(.plain)
                 }
             }
-        } else {
-            // An ordinary type-0x2 transaction has no frames and never will —
-            // said rather than left as an empty space.
-            Text(String(localized: "An ordinary transaction — it reports one result, not a step for each part."))
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -2734,7 +2733,7 @@ struct HegotaMoveSheet: View {
                 // separately, and a frame that only moves value runs no code —
                 // so a zero execution figure is a fact, not a missing reading.
                 if let gas = frame.gasUsed {
-                    Text(String(localized: "\(String(gas)) gas"))
+                    Text(String(localized: "\(DSCount.grouped(gas)) gas"))
                         .dsText(.label12).foregroundStyle(DS.textTertiary).monospacedDigit()
                 }
             }
@@ -2836,7 +2835,7 @@ struct HegotaFrameSheet: View {
                 // `urgent` (attention) rather than `destructive`.
                 DSStamp(word: outcomeWord(frame), weight: outcomeWeight(frame))
             }
-            Text(lead(frame))
+            Text(lead)
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
                 .padding(.top, DS.Space.s3)
             if frame.wei > 0 {
@@ -2860,18 +2859,13 @@ struct HegotaFrameSheet: View {
         .dsSheetHeadBlock()
     }
 
-    /// Where the step sat, and whether it carried money — the two facts the
-    /// figure below cannot say for itself. One line rather than two, because a
-    /// step of one is not a sequence and "moved no value" beside a figure of
-    /// zero would be the same fact twice.
-    private func lead(_ frame: HegotaFrame) -> String {
-        let where_ = total > 1
-            ? String(localized: "Step \(String(index + 1)) of \(String(total))")
-            : String(localized: "One step")
-        guard frame.wei > 0 else {
-            return String(localized: "\(where_) · moved no value")
-        }
-        return String(localized: "\(where_) · moved by this step")
+    /// Where the step sat — the one fact the figure below cannot say for
+    /// itself. It said "moved by this step" / "moved no value" too, beside a
+    /// `price40` figure that IS what it moved and a meaning that says when it
+    /// moved none: the same fact twice, cut in the §605 sweep.
+    private var lead: String {
+        total > 1 ? String(localized: "Step \(String(index + 1)) of \(String(total))")
+                  : String(localized: "One step")
     }
 
     private func outcomeWord(_ frame: HegotaFrame) -> String {
@@ -2974,11 +2968,11 @@ struct HegotaFrameSheet: View {
 
     /// Where this step sat in the sequence — the whole strip again, with this
     /// segment named. A step out of its order is a step without its meaning.
+    /// The strip carries no caption of its own: the head's lead already reads
+    /// "Step 2 of 4", and it was printed twice on one sheet.
     @ViewBuilder private var position: some View {
         if let frames = move.frames, frames.count > 1 {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text(String(localized: "Step \(String(index + 1)) of \(String(total))"))
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
                 HegotaFrameStrip(frames: frames, height: 20, labelled: true)
                     .opacity(0.55)
                     .overlay(alignment: .leading) { EmptyView() }
@@ -3004,11 +2998,11 @@ struct HegotaFrameSheet: View {
             // step that only moves value really does burn zero execution gas.
             if let gas = frame.gasUsed {
                 DSSpecRow(label: Text("Execution gas"),
-                          value: Text(verbatim: String(gas)))
+                          value: Text(verbatim: DSCount.grouped(gas)))
             }
             if let state = frame.stateGasUsed {
                 DSSpecRow(label: Text("State gas"),
-                          value: Text(verbatim: String(state)))
+                          value: Text(verbatim: DSCount.grouped(state)))
             }
             DSSpecRow(label: Text("When"),
                       value: Text(verbatim: HegotaFormat.stamp(move.timestamp, block: move.block,
@@ -3331,7 +3325,7 @@ struct HegotaAccountSheet: View {
             }
             addressLine.padding(.top, DS.Space.s3)
             if !account.reached {
-                Text(String(localized: "Couldn't be read — nothing below is current."))
+                Text(String(localized: "Nothing below is current."))
                     .dsText(.callout15).foregroundStyle(DS.attention)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 2)
@@ -3406,8 +3400,8 @@ struct HegotaAccountSheet: View {
                             .dsText(.heading22).foregroundStyle(DS.tint)
                             .monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
                         Text(held.count == 1
-                             ? String(localized: "held as 1 UTXO in the vault")
-                             : String(localized: "held as \(String(held.count)) UTXOs in the vault"))
+                             ? String(localized: "1 UTXO in the vault")
+                             : String(localized: "\(String(held.count)) UTXOs in the vault"))
                             .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     }
                     WalletRowChevron()
@@ -3422,40 +3416,26 @@ struct HegotaAccountSheet: View {
     /// already open, filtered to this account — so the sheet hands you the list
     /// instead of telling you a number and closing.
     @ViewBuilder private var doing: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            door(account.moves.count == 1 ? String(localized: "1 movement")
-                                          : String(localized: "\(String(account.moves.count)) movements"),
-                 to: .activity, enabled: !account.moves.isEmpty)
-            if !account.lanes.isEmpty {
-                door(account.lanes.count == 1
-                     ? String(localized: "1 nonce key of its own")
-                     : String(localized: "\(String(account.lanes.count)) nonce keys, each sending independently"),
-                     to: .nonces, enabled: true)
-            }
-            if !account.sponsored.isEmpty {
-                door(String(localized: "\(String(account.sponsored.count)) paid for by somebody else"),
-                     to: .sponsors, enabled: true)
-            }
+        DSSpecTable {
+            row(Text("Movements"), count: account.moves.count, section: .activity)
+            row(Text("Nonce keys"), count: account.lanes.count, section: .nonces)
+            row(Text("Somebody else paid"), count: account.sponsored.count, section: .sponsors)
         }
     }
 
-    @ViewBuilder private func door(_ text: String, to section: HegotaSection,
-                                   enabled: Bool) -> some View {
-        if enabled {
-            Button {
-                DSHaptic.selection()
-                onScope?(section)
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Text(text).dsText(.callout15).foregroundStyle(DS.textSecondary)
-                    WalletRowChevron()
-                    Spacer(minLength: 0)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-        } else {
-            Text(text).dsText(.callout15).foregroundStyle(DS.textSecondary)
+    /// **THE FAMILY'S ROW (prd §605).** These were a hand-rolled `Text` +
+    /// chevron in an `HStack` — a third door shape beside Frames' spec rows
+    /// and Privacy's `WalletRow`s, for the same fact on the same document.
+    /// A count of zero has no row (§83), and with nobody to dispatch to the
+    /// row states its number and draws no chevron.
+    @ViewBuilder private func row(_ label: Text, count: Int,
+                                  section: HegotaSection) -> some View {
+        if count > 0 {
+            let opens = onScope != nil
+            DSSpecRow(label: label, value: Text(verbatim: String(count)),
+                      tint: opens ? DS.tint : DS.textPrimary,
+                      glyph: opens ? "chevron.right" : nil,
+                      action: onScope.map { open in { DSHaptic.selection(); open(section) } })
         }
     }
 
@@ -3646,7 +3626,7 @@ struct HegotaCoinSheet: View {
                     }
                 }
                 .frame(height: 12)
-                Text(String(localized: "\(Int((pct * 100).rounded()))% of the \(String(held.count)) pieces you hold"))
+                Text(String(localized: "\(Int((pct * 100).rounded()))% of what you hold"))
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
             }
         }
@@ -3666,7 +3646,7 @@ struct HegotaCoinSheet: View {
                 // total is outputs plus a fee whose inputs are not published,
                 // so "the spend was X" would be a number we cannot support —
                 // which the note at the foot of this list already says.
-                Text(String(localized: "One spend made these \(String(siblings.count)) — \(HegotaFormat.eth(HegotaCoins.total(siblings))) in all"))
+                Text(String(localized: "\(String(siblings.count)) from one spend · \(HegotaFormat.eth(HegotaCoins.total(siblings)))"))
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                 // **THE SPEND DEALS ITS PIECES** (prd §503, moment 02). The
@@ -3689,13 +3669,10 @@ struct HegotaCoinSheet: View {
                 // consumed is unknowable, and the reason is that a spent UTXO
                 // is a bit rather than an event; everything else the old
                 // sentence carried was scaffolding around those.
-                Text(String(localized: "What it consumed isn't published — a spent UTXO is a bit in storage, not an event."))
+                Text(String(localized: "What it consumed isn't published."))
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-        } else if coin.createdBy != nil {
-            Text(String(localized: "The only UTXO its spend made."))
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
         }
     }
 

@@ -123,12 +123,12 @@ struct PrivacyDevnetMoveSheet: View {
         // Measured off the Frames sheet's own arithmetic (its comment: a
         // deficit CLIPS, and the `.large` detent hides the shortfall).
         let keysBlock: CGFloat = move.nullifiers.isEmpty ? 0
-            : CGFloat(move.nullifiers.count) * 46 + 70
+            : CGFloat(move.nullifiers.count) * 46 + 50
         let rootsBlock: CGFloat = move.roots.isEmpty ? 0
             : CGFloat(move.roots.count) * 46 + 30
         let sponsor: CGFloat = move.sponsored ? 30 : 0
         let watch: CGFloat = watchable == nil ? 0 : 34
-        return min(920, 300 + CGFloat(max(1, move.frames.count)) * 52
+        return min(920, 270 + CGFloat(max(1, move.frames.count)) * 52
                         + keysBlock + rootsBlock + sponsor + 40)
             + watch
     }
@@ -150,10 +150,6 @@ struct PrivacyDevnetMoveSheet: View {
                     keys: move.nullifierCount, roots: move.rootCount,
                     sponsored: move.sponsored),
                 stripWidth: 150, barHeight: 12, reduceMotion: true)
-            Text(PrivacyDevnetRoomCard.moveLine(move))
-                .dsText(.reading20)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
             // **THE TAIL IS A SPEC TABLE, NOT THREE STACKED LINES (prd
             // §598).** `DSSpecTable`/`DSSpecRow` is the app's own run of
             // label/value facts under a thing — the Frames sheets a person
@@ -209,11 +205,7 @@ struct PrivacyDevnetMoveSheet: View {
     /// per-frame outcome exists on this chain (measured, §593a), so no step is
     /// ever drawn as failed.
     @ViewBuilder private var steps: some View {
-        if move.frames.isEmpty {
-            Text(String(localized: "An ordinary transfer — one result, not a step per part."))
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        } else {
+        if !move.frames.isEmpty {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 Text(move.frames.count == 1 ? String(localized: "1 step")
                                             : String(localized: "\(String(move.frames.count)) steps"))
@@ -269,25 +261,12 @@ struct PrivacyDevnetMoveSheet: View {
     private func budgetLine(_ frame: PrivacyDevnetLiveState.Frame) -> String? {
         var parts: [String] = []
         if let gas = frame.gasLimit {
-            parts.append(String(localized: "\(Self.grouped(gas)) gas"))
+            parts.append(String(localized: "\(DSCount.grouped(gas)) gas"))
         }
         if let state = frame.stateLimit, state > 0 {
-            parts.append(String(localized: "\(Self.grouped(state)) state"))
+            parts.append(String(localized: "\(DSCount.grouped(state)) state"))
         }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
-    }
-
-    /// A count somebody reads, grouped for their locale.
-    ///
-    /// **Seen on a device (prd §602): the step budgets printed `320000` while
-    /// the Gas row two blocks down printed `21,000`** — two spellings of the
-    /// same kind of number on one sheet, which is the drift a shared helper
-    /// exists to prevent and which arrived the moment a second one was
-    /// written. These are quantities, never the hex the chain speaks, so they
-    /// group.
-    static func grouped(_ value: UInt64) -> String {
-        let f = NumberFormatter(); f.numberStyle = .decimal
-        return f.string(from: NSNumber(value: value)) ?? String(value)
     }
 
     // MARK: The keys
@@ -312,12 +291,11 @@ struct PrivacyDevnetMoveSheet: View {
                 // state (§593b), and a spent key is neither good nor bad.
                 ForEach(Array(move.nullifiers.enumerated()), id: \.offset) { _, key in
                     WalletRow(mark: .symbol("key.fill", tint: DS.tint),
-                              title: PrivacyDevnetName.shortHex(key),
-                              subtitle: String(localized: "One-time spend key")) {
+                              title: PrivacyDevnetName.shortHex(key)) {
                         DSStamp(word: String(localized: "used once"))
                     }
                 }
-                Text(String(localized: "Each key was used once and can never be used again — that is what stops this spend being repeated. It does not hide who sent it."))
+                Text(String(localized: "Spent once, never again — it doesn't hide who sent it."))
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -329,8 +307,8 @@ struct PrivacyDevnetMoveSheet: View {
     @ViewBuilder private var snapshots: some View {
         if !move.roots.isEmpty {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                Text(move.roots.count == 1 ? String(localized: "The snapshot it proved against")
-                                           : String(localized: "The snapshots it proved against"))
+                Text(move.roots.count == 1 ? String(localized: "1 snapshot")
+                                           : String(localized: "\(String(move.roots.count)) snapshots"))
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
                 // The room's own row again, wearing the SET'S ORDINAL — the
                 // same number the ring draws and the Snapshots rows carry, so
@@ -357,7 +335,7 @@ struct PrivacyDevnetMoveSheet: View {
     /// rather than hex the chain speaks.
     private var gasLine: String? {
         guard let used = move.gasUsed else { return nil }
-        let usedText = Self.grouped(used)
+        let usedText = DSCount.grouped(used)
         let figureFrames = move.frames.map {
             PrivacyDevnetFigure.Frame(gasLimit: $0.gasLimit, stateLimit: $0.stateLimit,
                                       succeeded: $0.succeeded)
@@ -365,7 +343,7 @@ struct PrivacyDevnetMoveSheet: View {
         guard let allowed = PrivacyDevnetFigure.allowance(figureFrames) else {
             return String(localized: "\(usedText) used")
         }
-        return String(localized: "\(usedText) of \(Self.grouped(allowed))")
+        return String(localized: "\(usedText) of \(DSCount.grouped(allowed))")
     }
 
     /// How many sets this transaction proved against.
@@ -438,6 +416,8 @@ struct PrivacyDevnetAccountSheet: View {
     /// scope, so this sheet never re-derives chrome state.
     var onPick: ((PrivacyDevnetSection) -> Void)? = nil
 
+    @State private var copied = false
+
     var body: some View {
         DSTray(title: PrivacyDevnetName.of(account.address),
                height: trayHeight, ink: true,
@@ -456,7 +436,7 @@ struct PrivacyDevnetAccountSheet: View {
     }
 
     private var trayHeight: CGFloat {
-        min(720, 300 + CGFloat(doorCount) * 52)
+        min(720, 330 + CGFloat(doorCount) * 34)
     }
 
     private var doorCount: Int {
@@ -466,31 +446,51 @@ struct PrivacyDevnetAccountSheet: View {
          account.roots.isEmpty ? 0 : 1].reduce(0, +)
     }
 
+    /// **THE FAMILY'S HEAD, NOT A THIRD ONE (prd §605).** `FramesAccountSheet`
+    /// and `HegotaAccountSheet` lead with the face at shelf size, the short
+    /// address as a copy button, the balance at `price40` and one line for
+    /// what the account has done; this sheet led with a list-size face, the
+    /// balance, and then the WHOLE address in mono beneath — a different
+    /// anatomy for the same document, one chip over.
     @ViewBuilder private var head: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            HStack(spacing: DS.Space.s3) {
-                WalletFace(address: account.address, size: DS.Face.list, circular: true)
-                VStack(alignment: .leading, spacing: 2) {
-                    // **Nil is not zero** (§515a) — an unread balance is not an
-                    // empty account, and this is the largest type on the sheet.
-                    if account.reached, let wei = account.balanceWei {
-                        Text(PrivacyDevnetMoney.line(wei: wei))
-                            .dsText(.price40)
-                            .monospacedDigit().lineLimit(1).minimumScaleFactor(0.5)
-                    } else {
-                        Text(account.reached
-                             ? String(localized: "Balance unread")
-                             : String(localized: "The chain didn't answer"))
-                            .dsText(.reading20).foregroundStyle(DS.textSecondary)
-                    }
-                    Text(sendLine)
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                }
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                WalletFace(address: account.address, size: DS.Face.shelf, circular: true)
                 Spacer(minLength: 0)
+                Button {
+                    DSHaptic.selection()
+                    DSPasteboard.copySensitive(account.address)
+                    copied = true
+                } label: {
+                    HStack(spacing: DS.Space.s2) {
+                        Text(WalletStore.shortAddress(account.address))
+                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                            .dsGlyph(13)
+                            .foregroundStyle(copied ? DS.confirm : DS.textTertiary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
-            Text(account.address)
-                .dsText(.mono12).foregroundStyle(DS.textTertiary)
-                .lineLimit(1).minimumScaleFactor(0.6)
+            // **Nil is not zero** (§515a) — an unread balance is not an empty
+            // account, and this is the largest type on the sheet.
+            if account.reached, let wei = account.balanceWei {
+                Text(PrivacyDevnetMoney.line(wei: wei))
+                    .dsText(.price40).foregroundStyle(DS.textPrimary)
+                    .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
+                    .padding(.top, DS.Space.s3)
+            } else {
+                Text(account.reached
+                     ? String(localized: "Balance unread")
+                     : String(localized: "The chain didn't answer"))
+                    .dsText(.reading20).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, DS.Space.s3)
+            }
+            Text(sendLine)
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .padding(.top, DS.Space.s4)
         }
         .dsSheetHeadBlock()
     }
@@ -508,47 +508,29 @@ struct PrivacyDevnetAccountSheet: View {
         }
     }
 
-    /// **FACTS AS DOORS.** Each row names a count the walk found and opens
-    /// the scope that draws it. A count of zero has no row — a door onto an
-    /// empty scope is the dead control §83 bans.
+    /// **FACTS AS DOORS, in the family's row.** Each names a count the walk
+    /// found and opens the scope that draws it — `FramesAccountSheet`'s spec
+    /// rows, where this sheet drew `WalletRow`s with a glyph and Hegotá's
+    /// hand-rolled a third shape. A count of zero has no row — a door onto an
+    /// empty scope is the dead control §83 bans — and a row with nobody to
+    /// dispatch to draws no chevron.
     @ViewBuilder private var facts: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if !account.moves.isEmpty {
-                door(String(localized: account.moves.count == 1
-                            ? "1 transaction" : "\(String(account.moves.count)) transactions"),
-                     symbol: "arrow.left.arrow.right", section: .activity)
-            }
-            if account.frameCount > 0 {
-                door(String(localized: account.frameCount == 1
-                            ? "1 step run" : "\(String(account.frameCount)) steps run"),
-                     symbol: "square.stack.3d.up.fill", section: .frames)
-            }
-            if !account.nullifiers.isEmpty {
-                door(String(localized: account.nullifiers.count == 1
-                            ? "1 one-time spend key" : "\(String(account.nullifiers.count)) one-time spend keys"),
-                     symbol: "key.fill", section: .nullifiers)
-            }
-            if !account.roots.isEmpty {
-                door(String(localized: account.roots.count == 1
-                            ? "1 proof against a snapshot" : "\(String(account.roots.count)) proofs against snapshots"),
-                     symbol: "clock.fill", section: .roots)
-            }
+        DSSpecTable {
+            row(Text("Transactions"), count: account.moves.count, section: .activity)
+            row(Text("Steps run"), count: account.frameCount, section: .frames)
+            row(Text("Spend keys"), count: account.nullifiers.count, section: .nullifiers)
+            row(Text("Snapshot proofs"), count: account.roots.count, section: .roots)
         }
     }
 
-    @ViewBuilder private func door(_ title: String, symbol: String,
-                                   section: PrivacyDevnetSection) -> some View {
-        if let onPick {
-            Button {
-                DSHaptic.selection()
-                onPick(section)
-            } label: {
-                WalletRow(mark: .symbol(symbol, tint: DS.tint), title: title)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-        } else {
-            WalletRow(terminal: .symbol(symbol, tint: DS.tint), title: title)
+    @ViewBuilder private func row(_ label: Text, count: Int,
+                                  section: PrivacyDevnetSection) -> some View {
+        if count > 0 {
+            let opens = onPick != nil
+            DSSpecRow(label: label, value: Text(verbatim: String(count)),
+                      tint: opens ? DS.tint : DS.textPrimary,
+                      glyph: opens ? "chevron.right" : nil,
+                      action: onPick.map { pick in { DSHaptic.selection(); pick(section) } })
         }
     }
 }
