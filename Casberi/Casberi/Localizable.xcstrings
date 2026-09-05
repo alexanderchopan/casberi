@@ -8605,6 +8605,62 @@
         }
       }
     },
+    "%@ slots" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ slots"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ スロット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 슬롯"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 个时隙"
+          }
+        }
+      }
+    },
+    "%@ slots left" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Quedan %@ slots"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "残り %@ スロット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 슬롯 남음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还剩 %@ 个时隙"
+          }
+        }
+      }
+    },
     "%@ smaller UTXOs — %@ together" : {
       "localizations" : {
         "en" : {
@@ -30340,6 +30396,34 @@
         }
       }
     },
+    "<1m" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "<1 min"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1分未満"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1분 미만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不到 1 分钟"
+          }
+        }
+      }
+    },
     "@%@" : {
       "localizations" : {
         "es" : {
@@ -32205,6 +32289,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "这里的证明仍指向链所记得的一个快照，还能保留 %@。"
+          }
+        }
+      }
+    },
+    "A proof here still names a snapshot the chain remembers." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una prueba de aquí todavía nombra una instantánea que la cadena recuerda."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここでの証明は、チェーンが記憶しているスナップショットをまだ指しています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기의 증명은 체인이 아직 기억하는 스냅샷을 가리킵니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这里的证明仍然指向链还记得的快照。"
           }
         }
       }
@@ -36399,6 +36511,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "使用过池子的地址"
+          }
+        }
+      }
+    },
+    "An address you watch used the pool — its spend keys are below" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una dirección que sigues usó el pool: sus claves de gasto están abajo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "追跡中のアドレスがプールを使いました。その使用キーは下にあります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "추적 중인 주소가 풀을 사용했습니다 — 사용 키는 아래에 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的地址使用了资金池 — 它的花费密钥在下方"
           }
         }
       }
@@ -53416,6 +53556,34 @@
         }
       }
     },
+    "ENS" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ENS"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ENS"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ENS"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ENS"
+          }
+        }
+      }
+    },
     "ETH" : {
       "localizations" : {
         "es" : {
@@ -60625,6 +60793,62 @@
         }
       }
     },
+    "Gwei" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gwei"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gwei"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gwei"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gwei"
+          }
+        }
+      }
+    },
+    "Gwei Name Service" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gwei Name Service"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gwei Name Service"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gwei Name Service"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gwei Name Service"
+          }
+        }
+      }
+    },
     "Handle, or search a feed" : {
       "localizations" : {
         "es" : {
@@ -67244,6 +67468,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "余额剩余"
+          }
+        }
+      }
+    },
+    "Left the chain's memory %@ slots ago" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Salió de la memoria de la cadena hace %@ slots"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ スロット前にチェーンの記憶から外れました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 슬롯 전에 체인의 기억에서 벗어났습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 个时隙前离开了链的记忆"
           }
         }
       }
@@ -88574,6 +88826,34 @@
         }
       }
     },
+    "Proofs here name %lld snapshots the chain still remembers." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las pruebas de aquí nombran %lld instantáneas que la cadena todavía recuerda."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここでの証明は、チェーンがまだ記憶している %lld 件のスナップショットを指しています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기의 증명은 체인이 아직 기억하는 스냅샷 %lld개를 가리킵니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这里的证明指向链仍然记得的 %lld 个快照。"
+          }
+        }
+      }
+    },
     "Proofs here name %lld snapshots, the freshest good for another %@." : {
       "localizations" : {
         "en" : {
@@ -99791,6 +100071,34 @@
         }
       }
     },
+    "Set %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conjunto %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "セット %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "세트 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "集合 %@"
+          }
+        }
+      }
+    },
     "Set to renew automatically — which still fails if the card behind it has expired." : {
       "localizations" : {
         "es" : {
@@ -102228,6 +102536,34 @@
         }
       }
     },
+    "Snapshots" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Instantáneas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スナップショット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "스냅샷"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "快照"
+          }
+        }
+      }
+    },
     "Social" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -103016,6 +103352,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "支出密钥 %lld，已使用一次。打开其所属交易。"
+          }
+        }
+      }
+    },
+    "Spend keys" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Claves de gasto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "使用キー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사용 키"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "花费密钥"
           }
         }
       }
@@ -109134,6 +109498,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你截取的屏幕截图会流入你的订阅流，可按其中的内容搜索 — 无需翻找相册。"
+          }
+        }
+      }
+    },
+    "The set" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El conjunto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "セット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "세트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该集合"
           }
         }
       }
@@ -115907,6 +116299,34 @@
         }
       }
     },
+    "Waiting for the chain to catch up" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esperando a que la cadena se ponga al día"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チェーンが追いつくのを待っています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "체인이 따라잡기를 기다리는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待链跟上"
+          }
+        }
+      }
+    },
     "Waiting for the chain to catch up · %lld proofs" : {
       "localizations" : {
         "es" : {
@@ -119761,6 +120181,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "周末"
+          }
+        }
+      }
+    },
+    "Wei" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wei"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wei"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wei"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wei"
+          }
+        }
+      }
+    },
+    "Wei Name Service" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wei Name Service"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wei Name Service"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wei Name Service"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wei Name Service"
           }
         }
       }
@@ -129139,6 +129615,174 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在此状态下，Cloudflare未提供服务的区域"
+          }
+        }
+      }
+    },
+    "about %@ days" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "unos %@ días"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約 %@ 日"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 %@일"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约 %@ 天"
+          }
+        }
+      }
+    },
+    "about %@ hours" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "unas %@ horas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約 %@ 時間"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 %@시간"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约 %@ 小时"
+          }
+        }
+      }
+    },
+    "about %@ minutes" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "unos %@ minutos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約 %@ 分"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 %@분"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约 %@ 分钟"
+          }
+        }
+      }
+    },
+    "about 1 day" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "un día aproximadamente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約 1 日"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 1일"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约 1 天"
+          }
+        }
+      }
+    },
+    "about 1 hour" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "una hora aproximadamente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約 1 時間"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 1시간"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约 1 小时"
+          }
+        }
+      }
+    },
+    "about 1 minute" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "un minuto aproximadamente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約 1 分"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 1분"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约 1 分钟"
           }
         }
       }
