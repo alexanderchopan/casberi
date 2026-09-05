@@ -204,9 +204,37 @@ grep -q 'let visible = roomScoped(allVisible)' "$FEED" \
   || { echo "✗ shapedSections no longer narrows by lane"; exit 1; }
 # The head must narrow the same way the rows do. Where the head is computed is
 # this pass's business; that it sees the SAME rows is this guard's.
-grep -q 'roomScoped(visible.live)' "$FEED" \
-  || grep -q 'sourceHead(visible)' "$FEED" \
-  || { echo "✗ the head no longer sees the lane-scoped rows"; exit 1; }
+#
+# **AMENDED AGAIN, AND THE SECOND TIME IS THE LESSON (prd §600, 2026-09-04).**
+# The note above says this was already re-pinned once "to the invariant, not to
+# one call site" — and it was still spelled as two literal bindings,
+# `roomScoped(visible.live)` and `sourceHead(visible)`. §600 bounded the room's
+# LIST while leaving its HEAD reading the whole room, which renamed the binding
+# to `rows` over a `base` the fetch limit does not cut, and this went red over a
+# change that STRENGTHENS what it protects for the second consecutive pass. A
+# guard that fails on every rename of a local is a guard that gets deleted.
+#
+# So it reads the argument NAME out of the head's own call and demands that
+# name be bound from `roomScoped(…)`. Rename the local and it follows; hand the
+# head an unscoped array and it fails, which is the whole of the invariant.
+python3 - "$FEED" <<'PYX' || exit 1
+import re, sys
+src = open(sys.argv[1], encoding="utf-8").read()
+src = re.sub(r'//.*', '', src)
+# The head COMPUTATION's own call — the one inside `RoomHeads(`, not the
+# `sourceHeadIsAbsent` helper, which asks a different question (does this room
+# draw a head at all) and predates this guard.
+m = re.search(r'sourceHead:\s*sourceHead\(([A-Za-z_][A-Za-z0-9_.]*)\)', src)
+if not m:
+    print("  ✗ the head computation no longer calls sourceHead with a named array")
+    sys.exit(1)
+arg = m.group(1).split(".")[0]
+if not re.search(r'let\s+' + re.escape(arg) + r'\s*=\s*roomScoped\(', src):
+    print(f"  ✗ the head is handed `{arg}`, which is not bound from roomScoped(…)")
+    print("    — the head would describe a marketplace the person just filtered away")
+    sys.exit(1)
+print(f"  ✓ the head sees the lane-scoped rows (`{arg}` ← roomScoped)")
+PYX
 # Reused verbatim from the prediction strip; a second visual language for the
 # same job is the drift the design system exists to prevent.
 grep -q 'Capsule().fill(isOn ? DS.tint : DS.fillFaint)' "$FEED" \

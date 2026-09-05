@@ -363,6 +363,15 @@ enum BridgeGlyph {
         // rank it above the others, which is a claim a fallback that only
         // appears when an asset FAILED TO LOAD has no business making.
         case "frames devnet": return "character"
+        // Ethrex Privacy bundles its own mark (`brand-ethrex-privacy`), so
+        // this is the third instance of the same defensive fallback and the
+        // same ANSWER: a neutral letterform. A key or a shield glyph would
+        // name one of the chain's readings — and on THIS seat it would do
+        // worse than rank them, because a shield says the chain hides who
+        // transacted, which it does not (§593): every transaction here names
+        // its sender in the open. A fallback that only appears when an asset
+        // failed to load has no business making that claim.
+        case "ethrex privacy": return "character"
         default:          return "app"
         }
     }
