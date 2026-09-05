@@ -653,7 +653,7 @@ enum FilesIngest {
                 postered += 1
                 thumbed += 1
             } else if thing.previewImageData == nil, !isVideo, thumbed < 40,
-                      let data = await thumbnail(url: fileURL) {
+                      let data = await thumbnail(url: fileURL, folder: folder) {
                 thing.previewImageData = data
                 thumbed += 1
             }
@@ -665,7 +665,7 @@ enum FilesIngest {
             // OCR is heavier than a thumbnail — a tighter bound; `ocrAt`
             // marks the attempt so a text-less image is never re-read.
             if thing.ocrAt == nil, ocred < 12 {
-                let result = await ocrRead(url: fileURL)
+                let result = await ocrRead(url: fileURL, folder: folder)
                 // `attempted == false` means the pixels couldn't be loaded at
                 // all this pass (an iCloud file not yet downloaded, most
                 // likely) — NOT the same as "read fine, found no words".
@@ -723,9 +723,47 @@ enum FilesIngest {
     /// second of a video is its cover. Every decision that was written up here
     /// (the preferred track transform, the second-in seek, opening the scope
     /// for `AVURLAsset`) travelled with it.
+    ///
+    /// AND IT TAKES THE FOLDER SO IT CAN OPEN THE SECURITY SCOPE ITSELF
+    /// (2026-09-04, prd §604). A file in a picked folder is readable ONLY inside an
+    /// active `startAccessingSecurityScopedResource` window on that folder;
+    /// outside one the read is refused, and refused looks exactly like "no
+    /// bytes yet" — `CGImageSourceCreateWithURL` returns nil either way.
+    ///
+    /// The scope used to be opened at the top of `heal`, covering the whole
+    /// read loop. On 2026-07-29 the walk moved into a detached task and the
+    /// scope went WITH it, so from that commit on it closed the moment the
+    /// walk returned and every read below it ran unscoped. Four days later
+    /// the §283 grid shipped on top of that, which means a connected folder's
+    /// images have arguably never healed on a real device: no thumbnail (so
+    /// no tile — the grid's membership needs pixels), no OCR (`attempted ==
+    /// false`, so `ocrAt` stays nil and the same file is re-read and re-fails
+    /// on every foreground pass forever), and therefore no retitle, which is
+    /// why every row still reads as its raw filename. Reported twice, and the
+    /// first fix (2026-09-03) misread it as iCloud eviction — that request is
+    /// still made and still right for a genuinely evicted file, but it was
+    /// never the cause.
+    ///
+    /// THREE THINGS HID IT. The asymmetry is the tell and it points the wrong
+    /// way: a VIDEO poster keeps working, because `ImportMedia.posterFrame`
+    /// opens the scope itself, and a text file's preview keeps working,
+    /// because `preview(of:)` is called from inside `refresh`'s own scoped
+    /// task — so the one thing that broke was the one thing with no scope of
+    /// its own. Nothing here could see it either: on the simulator a picked
+    /// folder is usually in-sandbox, `startAccessingSecurityScopedResource`
+    /// returns false, and the reads succeed anyway.
+    ///
+    /// So the scope now belongs to the READ rather than to whichever caller
+    /// happens to enclose it — `posterFrame`'s own contract, which is exactly
+    /// why that one survived the refactor that broke these two. Nested starts
+    /// are refcounted, so a reader is safe alongside any window a caller has
+    /// already opened.
 
-    private static func thumbnail(url: URL) async -> Data? {
+    private static func thumbnail(url: URL, folder: URL) async -> Data? {
         await Task.detached(priority: .utility) { () -> Data? in
+            // IT OPENS THE SCOPE ITSELF — see this function's doc above.
+            let scoped = folder.startAccessingSecurityScopedResource()
+            defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
             guard let src = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
             let opts: [CFString: Any] = [
                 kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -744,8 +782,11 @@ enum FilesIngest {
     /// `thumbnail`'s doc on why there's no readiness pre-check) — the caller
     /// must not treat that as "read, no text", or it can never retry once
     /// the bytes really are available.
-    private static func ocrRead(url: URL) async -> (attempted: Bool, text: String?) {
+    private static func ocrRead(url: URL, folder: URL) async -> (attempted: Bool, text: String?) {
         let cg: CGImage? = await Task.detached(priority: .utility) { () -> CGImage? in
+            // IT OPENS THE SCOPE ITSELF — see `thumbnail`'s doc above.
+            let scoped = folder.startAccessingSecurityScopedResource()
+            defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
             guard let src = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
             let opts: [CFString: Any] = [
                 kCGImageSourceCreateThumbnailFromImageAlways: true,

@@ -1376,6 +1376,18 @@ harness "Obsidian pure-logic self-test" "obsidian self-test" "scripts/obsidian-s
 # quietly take the pasteboard on the way out.
 harness "Files-location pure-logic self-test" "files-location self-test" "scripts/files-location-selftest.sh" "the Files-location self-test failed — run scripts/files-location-selftest.sh"
 
+# The connected folder's byte reads must open the security scope THEMSELVES
+# (2026-09-04). A picked folder's file is readable only inside an active
+# `startAccessingSecurityScopedResource` window, and outside one the refusal is
+# indistinguishable from "the bytes aren't here yet" — nil pixels, `attempted ==
+# false`, `ocrAt` left nil, the same file re-read and re-failed on every
+# foreground pass forever. From outside: a folder of screenshots drawn as a wall
+# of filenames. It happened, for five weeks — a refactor moved the walk into a
+# detached task and the scope went with it, leaving every read below unscoped —
+# and nothing here could see it, because on the simulator a picked folder is
+# usually in-sandbox and needs no scope at all.
+harness "Files security-scope self-test" "files-scope self-test" "scripts/files-scope-selftest.sh" "the Files security-scope self-test failed — run scripts/files-scope-selftest.sh"
+
 # The reading rooms, past §312 (prd §455, 2026-08-23). Every failure it catches
 # renders as a perfectly ordinary room and none is visible to a build: a health
 # line that names one feed and prints ANOTHER feed's reason; a line drawn for a
