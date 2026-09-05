@@ -479,6 +479,31 @@ if [[ -r "$NIGHTLY_LOG" ]] && [[ -s "$NIGHTLY_LOG" ]]; then
   fi
 fi
 
+# ── Context budget: CLAUDE.md stays a rule sheet ─────────────────────
+# CLAUDE.md is loaded into EVERY session before the user types a word, so its
+# size is a tax on every piece of work done in this repo. On 2026-09-05 it had
+# reached 489KB (~135k tokens) because it had become a second ledger: each
+# DEBUG hook carried the full design narrative of its feature, duplicating the
+# `docs/prd.md` entry it already cites. It was split — rules and a one-line
+# hook index here, the verbatim long-form record in `docs/verify.md` and
+# `docs/hooks/*.md` — and this gate is what stops it regrowing.
+#
+# A GATE rather than a written reminder, for this repo's standing reason: the
+# file's own history is that written rules get forgotten and re-broken (115
+# edits in five weeks took it from a rule sheet to half a megabyte, one
+# reasonable-looking entry at a time). Nothing is lost by the limit — a long
+# entry goes to `docs/`, where it is greppable and reachable by the index line.
+#
+# 100KB, not the 81KB it landed at: a limit that fails on the next honest entry
+# is one somebody raises rather than obeys, so the headroom is deliberate.
+CLAUDE_MD_MAX=102400
+step "CLAUDE.md context budget"
+_cmsize=$(wc -c < "$ROOT/CLAUDE.md" | tr -d ' ')
+if (( _cmsize > CLAUDE_MD_MAX )); then
+  fail "CLAUDE.md is ${_cmsize}b, over the ${CLAUDE_MD_MAX}b budget — it is loaded into every session. Move the long-form entry to docs/hooks/<area>.md or docs/verify.md and leave a one-line index line pointing there (see the top of CLAUDE.md)."
+fi
+print -P "%F{green}✓ CLAUDE.md ${_cmsize}b / ${CLAUDE_MD_MAX}b%f"
+
 step "Catalog sync"
 "$ROOT/scripts/catalog-sync.sh" || fail "catalog surfaces drifted — run scripts/catalog-sync.sh"
 print -P "%F{green}✓ catalog sync%f"
@@ -655,6 +680,23 @@ step "Connect shape audit"
   || fail "the connect shape audit's own self-test failed — the check is broken, not the code"
 "$ROOT/scripts/connect-shape-audit.py" || fail "a connect page's arrangement drifted — see the output above"
 print -P "%F{green}✓ connect shape audit%f"
+
+# The VERB half of the same family (prd §613). §190 gave a manage page one
+# shape and the audits above made its words and its arrangement mechanical;
+# the one control every connect screen is FOR stayed hand-rollable, and four
+# of them were hand-rolled — a tint-filled Capsule on the token sheet and
+# three glass pills on the bridge detail screen, each a different height,
+# radius and material from the slab beside it. Renders perfectly, every time,
+# which is why a doc comment could not hold it. Full-width is what keeps this
+# from crying wolf and it is MEASURED: without that clause the count on a
+# clean tree goes 0 → 14, every one a chip ("Max", "Watch", "Approve") that is
+# correctly not a slab.
+step "Primary verb audit"
+python3 "$ROOT/scripts/primary-verb-audit.py" --self-test >/dev/null \
+  || fail "the primary verb audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/primary-verb-audit.py" \
+  || fail "a screen's filled verb is hand-rolled — use DSSlabButton / DSActVerb (prd §613)"
+print -P "%F{green}✓ primary verb audit%f"
 
 # Keeps every Keychain write device-only and non-syncing (prd §277). Static,
 # no build. The failure it catches is invisible at runtime — a key stored with
