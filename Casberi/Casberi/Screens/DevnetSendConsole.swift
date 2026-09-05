@@ -948,6 +948,16 @@ struct DevnetSendSheet: View {
     /// they were asked.
     var advancedSupported: Bool = false
 
+    /// **DESTINATIONLESS MODE (prd §593e).** Non-nil turns this into a
+    /// one-recipient act with NO picker: the destination is fixed (the shielded
+    /// pool) and the who-screen is skipped, because Shield has no recipient to
+    /// choose — the money goes into the pool, not to an address. Nil leaves
+    /// every existing venue with its recipient picker exactly as it was.
+    var fixedDestination: String? = nil
+    /// The verb the amount screen and the commit button say — already localized
+    /// by the caller. Nil is "Send".
+    var verb: String? = nil
+
 
     @Environment(\.dismiss) private var dismiss
     @Environment(ShellChrome.self) private var chrome
@@ -991,6 +1001,8 @@ struct DevnetSendSheet: View {
     /// **ONE PLACE DECIDES WHICH SCREEN IS UP**, so a builder and a one-act
     /// send cannot drift into two different navigation rules.
     private var screen: Screen {
+        // Shield has no recipient to pick, so it opens straight on the amount.
+        if fixedDestination != nil { return .amount }
         guard stitch != nil else { return picked ? .amount : .who }
         guard addingLeg else { return .legs }
         return picked ? .amount : .who
@@ -1012,7 +1024,12 @@ struct DevnetSendSheet: View {
         .animation(DS.Motion.standard, value: addingLeg)
         // Seeded once, here rather than in the `@State` initialiser, which
         // cannot read another stored property.
-        .onAppear { if let choice { choiceOn = choice.defaultOn } }
+        .onAppear {
+            if let choice { choiceOn = choice.defaultOn }
+            // Shield's destination is fixed, so seed it and let `screen` open
+            // on the amount rather than a picker that would offer one choice.
+            if let fixedDestination { destination = fixedDestination }
+        }
     }
 
     // MARK: Who
@@ -1148,27 +1165,35 @@ struct DevnetSendSheet: View {
     /// stay there.
     private var amountScreen: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Button {
-                DSHaptic.selection()
-                destination = ""
-                amount = ""
-                errorText = nil
-            } label: {
-                Image(systemName: "chevron.left")
-                    .accessibilityHidden(true)
-                    .dsGlyph(18, weight: .semibold)
-                    .foregroundStyle(DS.textPrimary)
-                    .frame(width: DS.Hit.min, height: DS.Hit.min, alignment: .leading)
-                    .contentShape(Rectangle())
+            // **SHIELD HAS NO RECIPIENT.** In destinationless mode there is no
+            // "back to the picker" and no face to draw — the destination is the
+            // pool, and drawing its address as a recipient would be the §83
+            // fake status (it reads as "sending to this address", which is not
+            // what shielding is). The verb stands where the recipient's name
+            // would be.
+            if fixedDestination == nil {
+                Button {
+                    DSHaptic.selection()
+                    destination = ""
+                    amount = ""
+                    errorText = nil
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .accessibilityHidden(true)
+                        .dsGlyph(18, weight: .semibold)
+                        .foregroundStyle(DS.textPrimary)
+                        .frame(width: DS.Hit.min, height: DS.Hit.min, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel(Text(String(localized: "Choose someone else")))
+                .dsHover()
+
+                WalletFace(address: destination, size: DevnetConsole.sheetFace, circular: true)
+                    .padding(.top, DS.Space.s2)
             }
-            .buttonStyle(PressSpring())
-            .accessibilityLabel(Text(String(localized: "Choose someone else")))
-            .dsHover()
 
-            WalletFace(address: destination, size: DevnetConsole.sheetFace, circular: true)
-                .padding(.top, DS.Space.s2)
-
-            Text(recipientName)
+            Text(fixedDestination == nil ? recipientName : (verb ?? venue))
                 .dsText(.stat24)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
@@ -1307,8 +1332,8 @@ struct DevnetSendSheet: View {
                 // §83 fake status in the one place it would cost money: you
                 // would tap it believing the transaction had gone.
                 Text(stitch == nil
-                     ? (armed ? String(localized: "Send \(amount) \(unit)")
-                              : String(localized: "Send"))
+                     ? (armed ? "\(verb ?? String(localized: "Send")) \(amount) \(unit)"
+                              : (verb ?? String(localized: "Send")))
                      : (armed ? String(localized: "Add \(amount) \(unit)")
                               : String(localized: "Add")))
                 if busy { ProgressView().controlSize(.mini).tint(.white) }

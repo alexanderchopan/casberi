@@ -1758,6 +1758,13 @@ harness "Hegota scopes and coins" "hegota" "scripts/hegota-selftest.sh" "the heg
 # thousands on one that has (frames runs 5,223 slots ahead of its own height).
 harness "Privacy scopes and the 8272 window" "privacy" "scripts/privacy-selftest.sh" "the privacy self-test failed — run scripts/privacy-selftest.sh"
 
+# The shielded-pool Poseidon and note math (prd §593e). BN254 field + Poseidon
+# + the note/commitment/nullifier chain, compiled WHOLE and checked against
+# circomlibjs's vectors AND the exact values that landed a real shield on chain
+# 8141. A wrong hash here is invisible to every other check and renders as a
+# deposit nobody can spend, so this is the only proof these numbers are right.
+harness "Ethrex Privacy shielded-note math" "poseidon, note chain, shield calldata vs a real on-chain shield" "scripts/privacy-poseidon-selftest.sh" "the privacy Poseidon/note self-test failed — run scripts/privacy-poseidon-selftest.sh"
+
 # The ethrex Privacy type-0x6 envelope (prd §593a). Its own harness rather than
 # a block in the one above, because the failure class is different in kind: a
 # wrong field order, a flattened fee triple or a mis-applied elision rule

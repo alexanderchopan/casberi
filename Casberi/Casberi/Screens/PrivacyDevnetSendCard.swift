@@ -25,6 +25,11 @@ struct PrivacyDevnetSendCard: View {
     @Environment(BridgeStore.self) private var store
 
     let onSend: () -> Void
+    /// **SHIELD, THIS CHAIN'S REASON TO EXIST (prd §593e).** Send moves ETH to
+    /// an address; Shield puts it into the pool. It is an act, not a mode of
+    /// Send, so it is a peer tile — which takes the panel to three acts and, by
+    /// §559's own rule, into the two-column menu with no hero.
+    let onShield: () -> Void
 
     @State private var keyAddress: String? = PrivacyDevnetKey.address()
     @State private var creating = false
@@ -40,12 +45,44 @@ struct PrivacyDevnetSendCard: View {
         if keyAddress == nil {
             create
         } else {
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+            shieldedLine
             DevnetSendPanel(
                 tint: Self.mark,
                 // `POST /api/claim`, byte-identical to Hegotá's — so the tile
                 // acts in place rather than opening a page.
                 topUp: .init(busy: topUpBusy, note: topUpNote, action: topUp),
-                onSend: onSend)
+                onSend: onSend,
+                extras: [
+                    DevnetSendPanel.Act(id: "shield",
+                                        title: String(localized: "Shield"),
+                                        glyph: "arrow.down.circle",
+                                        act: onShield),
+                ])
+            }
+        }
+    }
+
+    /// **VIEW — what this device holds in the pool (prd §593e).**
+    ///
+    /// Drawn only when there is a confirmed note to draw: a shielded balance of
+    /// zero is the ordinary state before the first deposit and does not earn a
+    /// line, and a `nil` `unspentWei` means the read could not reach the chain,
+    /// which must not read as "nothing shielded" (§83). The figures are the sum
+    /// of unspent notes; the sentence never calls it money, the room's own
+    /// rule for a chain whose ETH has no market.
+    @ViewBuilder private var shieldedLine: some View {
+        let balance = PrivacyDevnetLiveState.shared.shielded
+        if balance.confirmedCount > 0, let wei = balance.unspentWei, wei > 0 {
+            HStack(spacing: DS.Space.s2) {
+                Image(systemName: "shield.lefthalf.filled")
+                    .accessibilityHidden(true)
+                    .dsGlyph(13, weight: .semibold)
+                    .foregroundStyle(Self.mark)
+                Text(String(localized: "\(PrivacyDevnetMoney.line(wei: wei)) shielded"))
+                    .dsText(.label12).fontWeight(.semibold)
+                    .foregroundStyle(DS.textSecondary)
+            }
         }
     }
 

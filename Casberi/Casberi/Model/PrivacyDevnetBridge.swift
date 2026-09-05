@@ -161,6 +161,12 @@ final class PrivacyDevnetLiveState {
     /// something this project has (§593).
     private(set) var poolSightReady = false
 
+    /// This device's shielded balance — the sum of its unspent notes, read
+    /// back off the pool (prd §593e, "View"). Starts at a definite zero; a
+    /// `nil` `unspentWei` after a read means the chain could not be reached,
+    /// which the room keeps distinct from an honest zero (§83).
+    private(set) var shielded = PrivacyDevnetShielded.Balance(unspentWei: 0, confirmedCount: 0, spentCount: 0)
+
     /// This phone's own account address, HANDED IN rather than looked up.
     ///
     /// **`privacy-selftest.sh` fails the build if this file so much as names
@@ -645,6 +651,12 @@ extension PrivacyDevnetLiveState {
             poolSightReady = true
         }
         PrivacyDevnetMoments.markRead()
+
+        // The shielded balance (View). Read only when this phone actually has
+        // notes — an empty book is a free, definite zero and needs no request.
+        if !PrivacyDevnetNoteBook.notes().isEmpty {
+            shielded = await PrivacyDevnetShielded.balance()
+        }
 
         readAt = Date()
     }

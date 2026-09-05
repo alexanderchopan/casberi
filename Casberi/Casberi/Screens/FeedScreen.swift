@@ -526,6 +526,9 @@ struct FeedScreen: View {
         /// Ethrex Privacy's send, here for the same reason as its three
         /// siblings: a `.sheet` inside a List row half-opens and closes.
         case privacyDevnetSend
+        /// Ethrex Privacy's shield — a deposit into the pool (prd §593e). The
+        /// same amount console as send, in its destinationless mode.
+        case privacyDevnetShield
         /// ONE PRIVACY TRANSACTION (prd §596) — `framesMove`'s two reasons at
         /// once: the seat lands no `Thing` so nothing can ride `.thing`, and
         /// the rows that open it live inside this List. Carries the OWNING
@@ -595,6 +598,7 @@ struct FeedScreen: View {
             case .hegotaSend: "hegotaSend"
             case .framesSend: "framesSend"
             case .privacyDevnetSend: "privacyDevnetSend"
+            case .privacyDevnetShield: "privacyDevnetShield"
             case .privacyDevnetMove(let m, _): "privacyDevnetMove:\(m.id)"
             case .privacyDevnetAccount(let a): "privacyDevnetAccount:\(a.address)"
             case .framesMove(let m, _): "framesMove:\(m.id)"
@@ -946,6 +950,43 @@ struct FeedScreen: View {
             }
         } catch {
             return String(localized: "Couldn't send.")
+        }
+    }
+
+    /// Shield onto Ethrex Privacy's pool (prd §593e).
+    ///
+    /// Mirrors `sendPrivacyDevnet`: it converts the typed amount to wei, makes
+    /// a fresh note secret on this phone — dropped rather than shielded weak if
+    /// the generator refuses, the `freshNonceKey` rule — and hands both to
+    /// `PrivacyDevnetSend.shield`, which builds the frame transaction this
+    /// project proved on chain. On success the shielded balance refreshes.
+    private func shieldPrivacyDevnet(amount: String) async -> String? {
+        guard !DemoMode.isActive else {
+            return String(localized: "Nothing is shielded in the demo — this is where your own key would sign it.")
+        }
+        guard let wei = DevnetSendParse.weiData(from: amount),
+              PrivacyDevnetKey.address() != nil else {
+            return String(localized: "Couldn't shield.")
+        }
+        let rho = PrivacyDevnetSend.freshNonceKey()
+        guard !rho.isEmpty else {
+            return String(localized: "Couldn't make a note on this phone — nothing was shielded.")
+        }
+        do {
+            _ = try await PrivacyDevnetSend.shield(
+                weiHex: "0x" + (wei.isEmpty ? "0" : RLP.hex(wei)), rho: rho)
+            await PrivacyDevnetLiveState.shared.refresh()
+            return nil
+        } catch let failure as PrivacyDevnetSend.Failure {
+            switch failure {
+            case .noKey:            return String(localized: "There's no account on this phone yet.")
+            case .signingRefused:   return String(localized: "The signature was refused.")
+            case .chainUnreachable: return String(localized: "Couldn't reach the chain — nothing was shielded.")
+            case .refused(let why): return String(localized: "The network refused it: \(why)")
+            case .faucet(let verdict): return verdict.sentence
+            }
+        } catch {
+            return String(localized: "Couldn't shield.")
         }
     }
 
@@ -4574,6 +4615,23 @@ struct FeedScreen: View {
                 // Two frames, and the first one is what makes the second legal
                 // — see `PrivacyDevnetSendPlanSteps`.
                 plan: PrivacyDevnetSendPlanSteps.steps)
+        case .privacyDevnetShield:
+            // The SAME amount console as send, in its destinationless mode: no
+            // recipient to pick (the money goes into the pool), and the verb
+            // says "Shield". `perform` ignores the fixed destination it is
+            // handed and shields the amount.
+            DevnetSendSheet(
+                venue: String(localized: "Ethrex Privacy"),
+                tint: DS.brandHue(for: PrivacyDevnetIdentity.source) ?? DS.tint,
+                unit: String(localized: "test ETH"),
+                candidates: [],
+                heldLine: privacyDevnetHeldLine,
+                maxAmount: nil,
+                isValidAddress: DevnetSendParse.isValidAddress,
+                isValidAmount: { DevnetSendParse.weiData(from: $0) != nil },
+                perform: { _, amount, _, _ in await shieldPrivacyDevnet(amount: amount) },
+                fixedDestination: PrivacyDevnetPool.address,
+                verb: String(localized: "Shield"))
         case .vibenetSend(let account):
             DevnetSendSheet(
                 venue: String(localized: "vibenet"),
@@ -4969,6 +5027,7 @@ struct FeedScreen: View {
                     headSlot: PrivacyDevnetLiveState.shared.headSlot,
                     walkCut: PrivacyDevnetLiveState.shared.walkCut,
                     onSend: { feedSheet = .privacyDevnetSend },
+                    onShield: { feedSheet = .privacyDevnetShield },
                     onWatchExample: watchPrivacyDevnetExample,
                     // **THESE ROWS WERE TERMINAL BY CONSTRUCTION** (prd §596,
                     // user: "none of the lists open thing sheets") — the seat

@@ -972,6 +972,10 @@ struct PrivacyDevnetRoomList: View {
     var walkCut = PrivacyDevnetLiveState.WalkCut()
     /// Raise the send form. Nil for a preview and for the demo's own card.
     var onSend: (() -> Void)?
+    /// Shield onto the pool (prd §593e). Threaded beside `onSend`; the panel is
+    /// only drawn when both are present, since a send card missing one of its
+    /// acts is worse than none.
+    var onShield: (() -> Void)?
     /// Watch one of the measured example addresses from the quiet state.
     var onWatchExample: ((String) -> Void)?
     /// Open one transaction's sheet (prd §596).
@@ -1000,10 +1004,10 @@ struct PrivacyDevnetRoomList: View {
             // On HOME only. A send panel repeated under every scope is the same
             // control four times, and §594's own line is that an act belongs
             // where you land rather than everywhere you look.
-            if section == .home, let onSend {
+            if section == .home, let onSend, let onShield {
                 // **SIZED BY THE PANEL, NOT BY THIS SECTION** — the shape
                 // `FramesRoomList` already has.
-                PrivacyDevnetSendCard(onSend: onSend)
+                PrivacyDevnetSendCard(onSend: onSend, onShield: onShield)
             }
 
             // **THE QUIET STATE HAD NO DOOR.** Somebody who pasted their own
