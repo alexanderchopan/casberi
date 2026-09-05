@@ -312,11 +312,34 @@ strip() { sed -E 's://.*::' "$1" | sed -E '/^[[:space:]]*\/\/\//d'; }
 grep -q 'case .permissions: walletPermissionsSection' "$FEED" \
   || fail "the Permissions scope no longer leads with this card"
 
-# The publication flag must be the section's OWN gate, spelled the same way —
-# §483's rule, whose failure was a chip that opened a blank page.
-grep -q 'permissions: !WalletPermissionsSource.holders(exposure: walletLive.exposure,' "$FEED" \
-  || fail "the Permissions presence flag has drifted from the section's render gate"
-grep -q 'if !holders.isEmpty {' "$FEED" \
+# The scope's EMPTY flag must be the section's OWN gate, computed from the same
+# source with the same arguments — §483's rule, whose failure was a chip that
+# opened a blank page.
+#
+# AMENDED 2026-09-05. This grepped for `permissions: !WalletPermissionsSource…`,
+# the inline publication flag as §483 spelled it, and §611 (`15188dc4`, "every
+# scope is a chip on every room, and an empty scope says what it would hold")
+# moved that flag into `walletScopeIsEmpty(_:)` — where the sense is inverted
+# because the function now answers "is this scope empty" rather than "does this
+# scope publish". The guard went red on a refactor that kept its invariant
+# exactly: `walletScopeIsEmpty(.permissions)` is `holders(…).isEmpty` and
+# `walletPermissionsSection` draws on `!holders.isEmpty` over the same call, so
+# the two still cannot disagree. Amended to the new spelling rather than
+# deleted, because the invariant is what matters and it is still worth holding.
+#
+# READ FROM A COMMENT-STRIPPED COPY, unlike the version this replaces: the
+# region it greps carries a doc comment that names `permissions`,
+# `exposure.isEmpty` and the §490 reasoning in prose, so a raw-source grep here
+# can be satisfied by the explanation instead of the code (the Obsidian/Cursor
+# lesson).
+FEED_BARE="$(mktemp -t wallet-perm-feed)"
+strip "$FEED" > "$FEED_BARE"
+
+grep -q 'case .permissions: return WalletPermissionsSource.holders(exposure: walletLive.exposure,' "$FEED_BARE" \
+  || fail "the Permissions empty flag has drifted from the section's render gate"
+grep -q 'acting: walletLive.acting).isEmpty' "$FEED_BARE" \
+  || fail "the Permissions empty flag no longer reads the section's own acting list"
+grep -q 'if !holders.isEmpty {' "$FEED_BARE" \
   || fail "the section's render gate is no longer !holders.isEmpty"
 
 # The acting-parties read must stay IN the live state, not on the card: a chain
