@@ -1165,7 +1165,15 @@ grep -qF 'nonisolated static func observedRelaunch()'   "Casberi/Casberi/Model/P
 # in that direction is that restoring the caption would look like an ordinary
 # improvement — "the rail could say what each address holds" is exactly the
 # sentence the removed doc comment used to make.
-grep -qE 'PrivacyDevnetMoney|balanceWei' "Casberi/Casberi/Shell/FaceScopeRail.swift"   && fail "the Privacy face rail is stating balances again — a strip of faces says WHO, and this chain's accounts range from 0.44 to a million test ETH, so the captions compared quantities with no market against each other"
+# Scoped to THIS seat's enum — the file holds six rails and Frames' still
+# captions with its balance by its own ruling; a file-wide grep fired on that
+# and the first cut of this guard was committed red (the tail-exit trap).
+# …and read from a COMMENT-STRIPPED copy, because the rail's own doc comment
+# names `PrivacyDevnetMoney` while explaining that it no longer calls it (the
+# Obsidian/Cursor lesson, which this guard tripped on its second run).
+sed -n '/^enum PrivacyDevnetScopeRail/,/^enum /p' "Casberi/Casberi/Shell/FaceScopeRail.swift" > "$work/privacyrail.raw"
+strip_comments "$work/privacyrail.raw" > "$work/privacyrail.swift"
+grep -qE 'PrivacyDevnetMoney|balanceWei' "$work/privacyrail.swift"   && fail "the Privacy face rail is stating balances again — a strip of faces says WHO, and this chain's accounts range from 0.44 to a million test ETH, so the captions compared quantities with no market against each other"
 grep -qF 'caption: PrivacyDevnetName.of(account.address)' "Casberi/Casberi/Shell/FaceScopeRail.swift"   || fail "the Privacy rail stopped naming its faces through the seat's one naming, so this phone's own account reads as a stranger's hex"
 
 # **THE WALK SAYS WHAT IT DID NOT READ (§307, §309).** A truncated room and a
