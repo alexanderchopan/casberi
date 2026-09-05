@@ -41,6 +41,16 @@ import Foundation
 /// §8 asks for Bob's words) or "Recent" — which is wrong by construction, since
 /// the scope leads with forward-dated rows that are not recent.
 ///
+/// **EVERY SCOPE IS PRESENT, ALWAYS (prd §611, generalising §610).** Until
+/// 2026-09-05 `present(…)` dropped a scope the wallet had nothing for, so a
+/// wallet with no leverage never saw a Risk chip and one with no approvals
+/// never learned that Permissions existed — the strip taught the room's
+/// vocabulary only to the wallets that already spoke it. Now the strip is the
+/// same seven chips on every wallet, and a scope with nothing in it says what
+/// it would hold (`emptyHeadline`/`emptyBody`). That is the obligation which
+/// keeps this on the right side of §83: a chip onto nothing is a dead control,
+/// a chip onto a sentence teaching the scope is the room explaining itself.
+///
 /// Foundation-only by design: `scripts/wallet-section-selftest.sh` compiles it
 /// WHOLE and unmodified. Every failure this catches renders as a perfectly
 /// ordinary room — a scope that never appears, a remembered scope that silently
@@ -64,9 +74,13 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         .home, .activity, .holdings, .positions, .nfts, .risk, .permissions,
     ]
 
-    /// Everything past `.nfts` is conditional on the wallet actually having
-    /// one. Stated as data rather than left implicit in `present(…)`, because
-    /// it is the whole reason the order ends the way it does.
+    /// Which scopes can be EMPTY.
+    ///
+    /// **It no longer gates `present()` (prd §611)** — every scope is drawn
+    /// always — and it is kept, with its family name, for the two jobs it
+    /// still does: it fixes the ORDER (the scopes that can be empty sit at the
+    /// tail, so the strip's head is the same chips on every wallet), and it is
+    /// what obliges a scope to carry an `emptyBody`.
     var isConditional: Bool {
         switch self {
         case .home, .activity, .holdings: return false
@@ -106,28 +120,48 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Which scopes have anything to show.
-    ///
-    /// Deliberately takes plain Bools rather than the live wallet state: this
-    /// file is Foundation-only so its rules can be compiled and mutation-tested
-    /// without a `ModelContext`, a `WalletLiveState` or a `GenStream` — none of
-    /// which any harness here can build. The call site does the reading; this
-    /// does the deciding.
-    static func present(holdings: Bool,
-                        positions: Bool,
-                        nfts: Bool,
-                        risk: Bool,
-                        permissions: Bool) -> [WalletSection] {
-        order.filter { section in
-            switch section {
-            case .home:        return true
-            case .activity:    return true
-            case .holdings:    return holdings
-            case .positions:   return positions
-            case .nfts:        return nfts
-            case .risk:        return risk
-            case .permissions: return permissions
-            }
+    /// Which scopes the strip offers: **every one, on every wallet (prd
+    /// §611).** The five Bools this used to take are gone rather than ignored —
+    /// an unused `risk:` at the call site is an invitation to re-gate on it by
+    /// accident — and the same five readings now decide whether a scope draws
+    /// its figure or its empty state (`FeedScreen.walletScopeIsEmpty`).
+    static func present() -> [WalletSection] { order }
+
+    /// **THE SHORT STATE, drawn where the scope's headline would go (prd
+    /// §611).** Nil for `home`, which is never empty: the crown is its content.
+    var emptyHeadline: String? {
+        switch self {
+        case .home:        return nil
+        case .activity:    return String(localized: "Nothing yet")
+        case .holdings:    return String(localized: "Nothing held")
+        case .positions:   return String(localized: "Nothing deployed")
+        case .nfts:        return String(localized: "No collectibles")
+        case .risk:        return String(localized: "Nothing at risk")
+        case .permissions: return String(localized: "No grants")
+        }
+    }
+
+    /// **WHAT THE SCOPE WOULD HOLD, and why this wallet has none.** The return
+    /// on making an empty chip reachable: each sentence teaches the reading the
+    /// scope is about. No subject (the face rail above already says which
+    /// wallets are scoped), no door (every verb lives on the card that draws
+    /// it), and nothing that states a chain-wide fact and can go stale.
+    var emptyBody: String? {
+        switch self {
+        case .home:
+            return nil
+        case .activity:
+            return String(localized: "Transfers, approvals and what's ahead, as the chain reports them. Nothing from these wallets has been read yet.")
+        case .holdings:
+            return String(localized: "The tokens a wallet holds, sized by what each is worth. Nothing priced was found here — dust below the floor is left out.")
+        case .positions:
+            return String(localized: "Money at work in a protocol: lent, pooled, or held as a perp. Nothing here is deployed anywhere this app reads.")
+        case .nfts:
+            return String(localized: "The collections a wallet holds, as pictures. Nothing here holds one that survived the spam filter.")
+        case .risk:
+            return String(localized: "A position a price move could liquidate, and how close it stands. Nothing here carries leverage.")
+        case .permissions:
+            return String(localized: "What has been allowed to reach these wallets: a token approval, a Safe module, a delegate. Nothing here has granted any.")
         }
     }
 
@@ -149,8 +183,8 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     ///
     /// One scope is not a control, it is a label — the §83 dead-control ban, in
     /// the room where the control's whole job is to say there is more than one
-    /// place to be. A wallet with no positions, no NFTs, no leverage and no
-    /// approvals is just a list of transactions and a treemap, and it should
-    /// look like one.
+    /// place to be. Since §611 `present()` is the full order whenever there is
+    /// a room at all, so this is true for every wallet and stays as the rule
+    /// the shell gates on rather than a case it expects to meet.
     static func shows(present: [WalletSection]) -> Bool { present.count > 1 }
 }

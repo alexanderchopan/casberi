@@ -176,11 +176,11 @@ enum PrivacyPoolsRoomSource {
         // that is otherwise invisible from outside: one scope is not a
         // control, and a room of two untagged deposits is meant to look like a
         // short list.
-        let scopes = PrivacyPoolsSection.present(
-            shielded: !room.holdings.isEmpty,
-            review: !room.segments.isEmpty || room.untagged > 0)
+        let scopes = PrivacyPoolsSection.present()
         out.append("privacyPoolsScopes| "
                    + scopes.map(\.rawValue).joined(separator: ",")
+                   + " · shieldedEmpty=\(room.holdings.isEmpty ? "YES" : "no")"
+                   + " · reviewEmpty=\(room.segments.isEmpty && room.untagged == 0 ? "YES" : "no")"
                    + " · strip=\(PrivacyPoolsSection.shows(present: scopes) ? "YES" : "no")"
                    + " · dot=\(PrivacyPoolsSection.attention(needsProof: room.needsYou != nil, declined: room.needsReclaim != nil, present: scopes).map(\.rawValue).sorted().joined(separator: ",").isEmpty ? "none" : "review")")
         out.append("totals| deposits=\(room.deposits) inPools=\(room.inPools)"

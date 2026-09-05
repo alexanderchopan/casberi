@@ -51,6 +51,15 @@ import Foundation
 /// the permission, not decoration — and a Permissions scope here would be a
 /// page listing grants that cannot exist, the empty chip §83 bans.
 ///
+/// **EVERY SCOPE IS PRESENT, ALWAYS (prd §611, generalising §610; user,
+/// 2026-09-05: "it doesn't show all the scopes in the rail. I think it should
+/// even if they are not present").** The gate used to drop `frames` and
+/// `sponsors` for an address that had none, so the seat named for frame
+/// transactions hid the Frames chip from anyone who had not already sent one.
+/// Now the strip is the same four chips on every address, and a scope with
+/// nothing in it says what it would hold (`emptyHeadline`/`emptyBody`). That
+/// obligation is what keeps this on the right side of §83.
+///
 /// Foundation-only by design: `scripts/frames-tx-selftest.sh` compiles it
 /// WHOLE and unmodified. Every failure it catches renders as a perfectly
 /// ordinary room — a scope that never appears, a remembered scope resolving to
@@ -78,11 +87,13 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
     /// this says what the transactions DID — so the two sit adjacent.
     static let order: [FramesSection] = [.home, .activity, .frames, .sponsors]
 
-    /// Everything past `activity` is conditional on the address actually
-    /// having the thing. Stated as data rather than left implicit in
-    /// `present(…)`, because it is the whole reason the order ends this way:
-    /// no UNCONDITIONAL scope may sit after a conditional one, so the strip's
-    /// stable head never reflows.
+    /// Which scopes can be EMPTY.
+    ///
+    /// **It no longer gates `present()` (prd §611)** — every scope is drawn
+    /// always — and it is kept, with its family name, for the two jobs it
+    /// still does: it fixes the ORDER (the scopes that can be empty sit at the
+    /// tail, so the strip's head is the same two chips on every address), and
+    /// it is what obliges a scope to carry an `emptyBody`.
     var isConditional: Bool {
         switch self {
         case .home, .activity: return false
@@ -120,25 +131,38 @@ enum FramesSection: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Which scopes have anything to show.
-    ///
-    /// Deliberately takes plain Bools rather than the live chain state, for
-    /// `WalletSection.present`'s reason: this file is Foundation-only so its
-    /// rules can be compiled and mutation-tested with no `ModelContext` and no
-    /// network. The call site does the reading; this does the deciding.
-    ///
-    /// **`sponsors` is expected to be false on every address today** — every
-    /// transaction measured on this chain is self-paid — and that is the
-    /// correct output rather than a gap. The scope declines silently and
-    /// appears the first time somebody sponsors one.
-    static func present(frames: Bool, sponsors: Bool) -> [FramesSection] {
-        order.filter { section in
-            switch section {
-            case .home:     return true
-            case .activity: return true
-            case .frames:   return frames
-            case .sponsors: return sponsors
-            }
+    /// Which scopes the strip offers: **every one, on every address (prd
+    /// §611).** The two Bools this used to take are gone rather than ignored —
+    /// an unused `sponsors:` at the call site is an invitation to re-gate on
+    /// it by accident.
+    static func present() -> [FramesSection] { order }
+
+    /// **THE SHORT STATE, drawn in the chassis' reserved headline row (prd
+    /// §611).** Nil for `home`, which is never empty: the crown is its content.
+    var emptyHeadline: String? {
+        switch self {
+        case .home:     return nil
+        case .activity: return String(localized: "None yet")
+        case .frames:   return String(localized: "No steps")
+        case .sponsors: return String(localized: "None sponsored")
+        }
+    }
+
+    /// **WHAT THE SCOPE WOULD HOLD, and why this address has none.** No
+    /// subject (the face rail above says which is scoped), no door (Top up and
+    /// Send are Home's tiles, §553), and nothing that states a chain-wide fact
+    /// — every transaction measured on this chain is self-paid, and a sentence
+    /// saying so becomes a lie the first time one is not.
+    var emptyBody: String? {
+        switch self {
+        case .home:
+            return nil
+        case .activity:
+            return String(localized: "What moved, newest first, and whether the chain accepted it. Nothing from what you watch has landed on the stretch of chain this read covered.")
+        case .frames:
+            return String(localized: "A framed transaction runs its work in numbered steps, each with a budget of its own. Nothing here has run any — a plain transfer runs none.")
+        case .sponsors:
+            return String(localized: "A sponsored transaction is one somebody else paid the gas for. Every transaction here paid its own.")
         }
     }
 

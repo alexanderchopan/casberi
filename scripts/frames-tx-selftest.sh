@@ -898,17 +898,32 @@ check("home and activity are the constants",
       FramesSection.order.filter { !$0.isConditional } == [.home, .activity])
 check("frames leads the conditional tail", FramesSection.order[firstConditional] == .frames)
 
-// PRESENT: the two constants always, the two readings only when they exist.
-check("a bare address is home and activity alone",
-      FramesSection.present(frames: false, sponsors: false) == [.home, .activity])
-check("a frame transaction opens the frames scope",
-      FramesSection.present(frames: true, sponsors: false) == [.home, .activity, .frames])
-// SPONSORS IS FALSE ON EVERY ADDRESS MEASURED SO FAR — every transaction on
-// this chain is self-paid — and that is the correct output rather than a gap.
-check("a sponsored transaction opens the sponsors scope",
-      FramesSection.present(frames: true, sponsors: true) == [.home, .activity, .frames, .sponsors])
-check("sponsors can appear without frames",
-      FramesSection.present(frames: false, sponsors: true) == [.home, .activity, .sponsors])
+// PRESENT: EVERY scope, on every address (prd §611; user: "it should [show all
+// the scopes] even if they are not present"). The gate is gone — a bare address
+// still reaches all four chips, each with an empty state of its own.
+let full = FramesSection.present()
+check("every scope is present, in order", full == FramesSection.order)
+check("no scope is hidden from anybody", full.count == FramesSection.allCases.count)
+// THE OBLIGATION THAT MAKES THAT HONEST. A chip onto nothing is the dead control
+// §83 bans; the two scopes that can be empty are allowed only because each says
+// what it would hold.
+for s in FramesSection.allCases where s != .home {
+    check("\(s.rawValue) names its own empty state", !(s.emptyHeadline ?? "").isEmpty)
+    check("\(s.rawValue) says what it would hold", !(s.emptyBody ?? "").isEmpty)
+    check("\(s.rawValue)'s empty state is not its summary restated", s.emptyBody != s.summary)
+    check("\(s.rawValue)'s empty state teaches rather than labels", (s.emptyBody ?? "").count > 24)
+}
+let emptyBodies = FramesSection.allCases.compactMap(\.emptyBody)
+check("no two scopes explain themselves the same way", Set(emptyBodies).count == emptyBodies.count)
+let emptyHeads = FramesSection.allCases.compactMap(\.emptyHeadline)
+check("no two scopes name the same empty state", Set(emptyHeads).count == emptyHeads.count)
+check("home carries no empty copy, because it can never be empty",
+      FramesSection.home.emptyHeadline == nil && FramesSection.home.emptyBody == nil)
+for words in emptyBodies {
+    let lower = words.lowercased()
+    check("an empty scope states a fact and offers no door",
+          !lower.contains("tap ") && !lower.contains("top up") && !lower.contains("send "))
+}
 
 // RESOLVE falls back to `.home`, never to "the first present scope" — an
 // unreachable branch that quietly picks `frames` is how a room starts opening
@@ -1500,7 +1515,11 @@ mutate "the remembered scope falling back to the first present one" $F3 \
   'guard let wanted, present.contains(wanted) else { return .home }' \
   'guard let wanted, present.contains(wanted) else { return present.first ?? .home }'
 mutate "a strip drawn over a single chip" $F3 'present.count > 1' 'present.count > 0'
-mutate "sponsors shown on every address" $F3 'case .sponsors: return sponsors' 'case .sponsors: return true'
+mutate "every scope gated again, so two chips vanish on the address that most needs them" $F3 \
+  'static func present() -> [FramesSection] { order }' \
+  'static func present() -> [FramesSection] { order.filter { !$0.isConditional } }'
+mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" $F3 \
+  'A framed transaction runs its work in numbered steps, each with a budget of its own. Nothing here has run any — a plain transfer runs none.' ' '
 mutate "frames marked unconditional" $F3 \
   'case .frames, .sponsors: return true' 'case .frames, .sponsors: return false'
 mutate "a chip growing a dot that can never honestly light" $F3 \

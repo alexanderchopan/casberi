@@ -170,14 +170,4 @@ enum FramesRoom {
         }
     }
 
-    /// Which scopes this room actually has, so the switcher never offers a
-    /// chip that opens nothing — derived from the composed room rather than
-    /// from the watch list.
-    static func sections(_ accounts: [FramesAccount]) -> [FramesSection] {
-        let reached = accounts.filter(\.reached)
-        let moves = reached.flatMap(\.moves)
-        return FramesSection.present(
-            frames: moves.contains { $0.rows.count > 1 },
-            sponsors: moves.contains { $0.sponsored })
-    }
 }

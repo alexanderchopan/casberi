@@ -94,22 +94,20 @@ enum FramesRoomSource {
         return "frames:\(live.accounts.count):\(live.readAt?.timeIntervalSince1970 ?? 0):\(live.reached ? 1 : 0)"
     }
 
-    /// Which scopes the room offers.
+    /// Which scopes the room offers: **every one, always (prd §611).**
     ///
-    /// **Computed over EVERY account, never the scoped ones**, and that is a
-    /// ruling rather than an oversight. Scoping this would make the strip
-    /// reflow on a face tap — pick an address that has never been sponsored
-    /// and the Sponsors chip vanishes, taking you back to Home because
-    /// `resolve` falls through. A control that rearranges the control beside
-    /// it is one nobody can aim at.
+    /// Until §611 this was computed over every account so that a face tap
+    /// could not reflow the strip — pick an address that had never been
+    /// sponsored and the Sponsors chip vanished, taking you back to Home. The
+    /// strip no longer depends on any account at all, which closes that class
+    /// outright: the strip describes the ROOM and the face scopes its
+    /// CONTENTS, and a scoped scope with nothing in it says so in the slot
+    /// (`FramesSection.emptyBody`).
     ///
-    /// So the strip describes the ROOM and the face scopes its CONTENTS. The
-    /// cost is that a scoped Sponsors page can be empty, which it says in
-    /// words ("Every transaction here paid its own gas") — a true statement
-    /// about the address you picked, and a better answer than a chip that
-    /// moves under your finger.
+    /// Threads through `FramesSection.present` so the decision lives in the
+    /// Foundation-only file the harness compiles rather than here.
     @MainActor
     static func sections() -> [FramesSection] {
-        FramesRoom.sections(FramesLiveState.shared.accounts)
+        FramesSection.present()
     }
 }

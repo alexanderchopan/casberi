@@ -1159,6 +1159,27 @@ grep -q 'static let figureSlot: CGFloat = visualSlot - headlineRow - DS.Space.s3
        echo "  figure really has (the slot less the reserved headline row), and every"
        echo "  multi-row figure divides it rather than measuring against it."; exit 1; }
 grep -q 'DSRoomChassis.figureSlot' "$TMP/card.nc.swift" \
+# EVERY SCOPE, ALWAYS (prd §611). `present` takes the room and nothing else: an
+# empty room offers no strip, any other room offers all five chips, and a scope
+# with nothing in it says what it would hold. The `hasEvents` argument is gone
+# rather than ignored — an unused argument at the call site is an invitation to
+# re-gate on it by accident.
+grep -q 'VibenetSection.present(room)' "$TMP/feed.nc.swift" \
+  || { echo "✗ the strip is deriving its scopes from evidence again — chips vanish on"
+       echo "  exactly the account that most needs to learn what they are (§611)."; exit 1; }
+grep -q 'hasEvents' "$TMP/section.nc.swift" \
+  && { echo "✗ present() is being handed evidence again — the gate §611 removed."; exit 1; }
+grep -q 'room.items.isEmpty ? \[\] : order' "$TMP/section.nc.swift" \
+  || { echo "✗ present() no longer offers every scope for a non-empty room (§611)."; exit 1; }
+# The obligation is checked by SENTENCE, not by case label — `label` and
+# `summary` also switch on every case, so a per-case grep passes vacuously.
+for words in "None has happened on these accounts" "None of these accounts holds any yet" \
+             "None is watched here" "Nothing can act for these accounts yet"; do
+  grep -qF "$words" "$TMP/section.nc.swift" \
+    || { echo "✗ a scope lost its empty copy ('$words') — a chip onto nothing is the dead control §83 bans (§611)."; exit 1; }
+done
+grep -q 'scopeEmptyFigure(.permissions)' "$TMP/card.nc.swift" \
+  || { echo "✗ an account nothing can act for opens Permissions onto 'No keys' over an empty grid again (§611)."; exit 1; }
   || { echo "✗ the vibenet census cell no longer derives its height from the slot — a"
        echo "  hand-written height is what let two rows of cells want ~193pt of 166, and"
        echo "  DSRoomSlot clips rather than scrolls, so the bottom row went silently."

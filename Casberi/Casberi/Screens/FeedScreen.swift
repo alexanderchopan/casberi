@@ -3632,6 +3632,13 @@ struct FeedScreen: View {
         // Home's drawing is the sparkline, which the crown draws itself — so
         // this slot is already filled there rather than empty.
         case .home:        EmptyView()
+        // **THE EMPTY STATE IS IN THE SLOT (prd §611, §610's ruling carried
+        // here).** Activity keeps `WalletFlowEmptyFigure`, which says which
+        // of three things is true of the window; the five standing scopes
+        // had nothing at all, so a chip onto Positions on a wallet with no
+        // positions opened 258 blank points.
+        case _ where walletScopeIsEmpty(section):
+            WalletScopeEmptyFigure(section: section)
         case .activity:    walletFlowSection
         case .holdings:    holdingsBlockSection
         case .positions:   walletCompositionSection
@@ -3971,50 +3978,47 @@ struct FeedScreen: View {
     /// already stopped listing.
     private var walletSectionPublication: WalletSectionPublication {
         guard shape == .wallet else { return .init(sections: [], attention: []) }
-        // **EVERY FLAG IS THE SECTION'S OWN RENDER GATE, SPELLED THE SAME WAY.**
-        // Reported from the device as "we can't do this", with a screenshot of
-        // the Risk chip selected over an empty page. `risk` was flagged on
-        // `walletRiskEntries != nil` while `walletRiskSection` draws on
-        // `if let entries` AND needs them to be non-empty to draw anything —
-        // so a non-nil empty strip offered a chip that opened nothing.
+        // **EVERY SCOPE, ALWAYS (prd §611).** The five flags this used to
+        // pass are now `walletScopeIsEmpty`, which decides between a scope's
+        // figure and its empty state — the same expressions, one question,
+        // so a chip can never lead somewhere blank (§483's Risk report).
         //
-        // The class matters more than the instance: presence and rendering are
-        // two expressions of one question, in two files, and when they drift
-        // the result is a control that leads somewhere blank — §83's dead
-        // control wearing a scope's clothes. `positions` had the same shape
-        // (it duplicated `hasLendingCard`'s two terms rather than reading it),
-        // so it now reads the gates themselves. If a section's gate changes,
-        // this must change with it — `wallet-section-selftest.sh` guards that
-        // both spellings stay identical.
-        let sections = WalletSection.present(
-            holdings: !blockStream.els.isEmpty,
-            positions: hasLendingCard
-                || !walletLive.uniswap.isEmpty
-                || !walletLive.hyperliquid.positions.isEmpty,
-            nfts: nftShelfEntry != nil,
-            risk: !(walletRiskEntries ?? []).isEmpty,
-            // NOT `!exposure.isEmpty` any more (prd §490): the scope now draws
-            // for a wallet with no token grant at all but a Safe module or a
-            // 7702 delegate acting on it. Spelled as the section's OWN gate so
-            // the two cannot drift — the failure that gave §483 its rule was a
-            // chip that opened a blank page.
-            permissions: !WalletPermissionsSource.holders(exposure: walletLive.exposure,
-                                                          acting: walletLive.acting).isEmpty)
         // **`warnings`, not "does Risk exist".** A wallet with a 3.0 health
         // factor HAS a risk reading and is in no trouble at all, so lighting
-        // the dot on presence would be the §83 overclaim that got "Needs
-        // attention" retired on 2026-07-23 — "we don't know if it needs
-        // attention, do we?". `walletLive.warnings` is the set the room already
-        // computes for the Worth-a-look strip: something really is wrong.
-        //
-        // `.permissions` deliberately takes NO dot yet. The honest test is an
-        // UNLIMITED allowance against a token you actually hold, which
-        // `WalletApprovalExposure` can answer — but choosing the threshold is a
-        // ruling, not a chassis change, and a dot that fires on every approval
-        // ever granted would train you to ignore the one that matters.
+        // the dot on the reading's presence would light it on every levered
+        // wallet forever; it lights only on a position past its protocol's
+        // own alert threshold, and never on a scope drawing its empty state.
+        let sections = WalletSection.present()
         let attention: Set<WalletSection> =
-            walletLive.warnings.isEmpty || !sections.contains(.risk) ? [] : [.risk]
+            walletLive.warnings.isEmpty || walletScopeIsEmpty(.risk) ? [] : [.risk]
         return .init(sections: sections, attention: attention)
+    }
+
+    /// **THE SCOPE'S RENDER GATE, SPELLED ONCE.** Before §611 these five
+    /// expressions were the strip's presence flags, and `wallet-section-selftest`
+    /// guarded that each matched its section's own `if` — reported from a
+    /// device as a Risk chip selected over an empty page, because `risk` was
+    /// flagged on `!= nil` while the section drew on non-empty. They are the
+    /// empty-state gate now and the guard is unchanged in spirit: a section
+    /// that draws on a different condition than this names a scope that shows
+    /// its figure AND its empty state, or neither.
+    ///
+    /// `permissions` is NOT `exposure.isEmpty` (prd §490): the scope draws for
+    /// a wallet with no token grant at all but a Safe module or a 7702 delegate
+    /// acting on it, so it reads the section's own holders.
+    private func walletScopeIsEmpty(_ section: WalletSection) -> Bool {
+        switch section {
+        case .home:        return false
+        case .activity:    return false
+        case .holdings:    return blockStream.els.isEmpty
+        case .positions:   return !(hasLendingCard
+                                    || !walletLive.uniswap.isEmpty
+                                    || !walletLive.hyperliquid.positions.isEmpty)
+        case .nfts:        return nftShelfEntry == nil
+        case .risk:        return (walletRiskEntries ?? []).isEmpty
+        case .permissions: return WalletPermissionsSource.holders(exposure: walletLive.exposure,
+                                                                  acting: walletLive.acting).isEmpty
+        }
     }
 
     struct WalletSectionPublication: Equatable {
@@ -4036,7 +4040,7 @@ struct FeedScreen: View {
         // "Recent" is the only scope whose content is not the card's: an
         // account watched today has a full roster and no events at all, and a
         // chip opening an empty day list is the dead control §83 bans.
-        let sections = VibenetSection.present(room, hasEvents: !visible.live.isEmpty)
+        let sections = VibenetSection.present(room)
         // The dots are `VibenetAttention`'s ranking, one layer down — the same
         // set that used to draw the strip. **Not presence**: a room HAS keys
         // and HAS accounts at all times, so lighting on presence would be the
@@ -4107,8 +4111,9 @@ struct FeedScreen: View {
     /// Vibenet's, because the CARD draws this strip: there is no shell-mounted
     /// control to feed, so a published list would be state nothing reads.
     private func privacyPoolsSections(_ room: PrivacyPoolsRoom) -> [PrivacyPoolsSection] {
-        PrivacyPoolsSection.present(shielded: !room.holdings.isEmpty,
-                                    review: !room.segments.isEmpty || room.untagged > 0)
+        // Every scope, always (prd §611): the card decides figure-or-empty
+        // from `shieldedHasContent`/`reviewHasContent` itself.
+        PrivacyPoolsSection.present()
     }
 
     /// Whether the Privacy Pools room's rows draw — `vibenetShowsRows`'s shape,

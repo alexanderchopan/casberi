@@ -124,8 +124,15 @@ struct PrivacyPoolsRoomCard: View {
             // put in one draws none rather than an empty box — Activity's
             // content is the rows below it, so on most rooms this head is a
             // sentence and a control and nothing else. That is the point.
+            // **A SCOPED-TO EMPTY SCOPE SAYS WHAT IT WOULD HOLD (prd §611).**
+            // The chip is always offered now; a scope somebody actually picked
+            // and that has nothing gets one card of words. Unscoped (`section`
+            // nil) an empty reading still draws nothing, as before — there the
+            // room is a stack, and a card explaining an absence in it is noise.
             if shows(.shielded), shieldedHasContent { card { shieldedBody } }
+            else if section == .shielded { card { emptyBody(.shielded) } }
             if shows(.review), reviewHasContent { card { reviewBody } }
+            else if section == .review { card { emptyBody(.review) } }
             if shows(.activity), let note = PrivacyPoolsRoom.activityNote(room) {
                 Text(note)
                     .dsText(.label12)
@@ -196,6 +203,24 @@ struct PrivacyPoolsRoomCard: View {
     /// from a Risk chip that opened an empty page): this is exactly the test
     /// `PrivacyPoolsSection.present(shielded:)` is passed at the call site.
     private var shieldedHasContent: Bool { !room.holdings.isEmpty }
+
+    /// Two tiers and no more: the short state and one paragraph, in the
+    /// card's own type. No door (prd §611).
+    @ViewBuilder private func emptyBody(_ scope: PrivacyPoolsSection) -> some View {
+        if let headline = scope.emptyHeadline {
+            Text(headline)
+                .dsText(.body17)
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        if let words = scope.emptyBody {
+            Text(words)
+                .dsText(.subhead13)
+                .foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, DS.Space.s2)
+        }
+    }
 
     @ViewBuilder
     private var shieldedBody: some View {

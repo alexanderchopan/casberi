@@ -38,6 +38,15 @@ import Foundation
 /// layer down: it no longer produces a view, it decides **which chip wears a
 /// dot** (`attention(_:now:)`). The work it did is kept; the surface that could
 /// not be named is gone.
+///
+/// **EVERY SCOPE IS PRESENT, ALWAYS (prd §611, generalising §610).** The gate
+/// used to drop Activity on a fresh watch, Holdings for an ETH-only account and
+/// Permissions for one with no actors — so the scope that explains what a
+/// keystore account IS was hidden from exactly the account that had nothing
+/// acting for it yet. Now the strip is the same five chips whenever there is a
+/// room at all, and a scope with nothing in it says what it would hold
+/// (`emptyHeadline`/`emptyBody`). That obligation is what keeps this on the
+/// right side of §83.
 enum VibenetSection: String, CaseIterable, Identifiable, Sendable {
     case home
     case activity
@@ -103,32 +112,50 @@ enum VibenetSection: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// The scopes this room can actually fill.
+    /// The scopes the strip offers: **every one, whenever there is a room at
+    /// all (prd §611).**
     ///
     /// **Derived from the room, never from the watch list**, for the reason the
     /// face rail's own gate gives: the two legitimately disagree — in the demo
     /// the card is a fixed fixture while the watch list holds whatever this
-    /// device really watches — and a chip that opens an empty scope is the dead
-    /// control §83 bans.
-    ///
-    /// `holdings` and `accounts` are unconditional once there is a room at all:
-    /// a watched account always has a balance reading (even "couldn't be read",
-    /// which is itself the answer) and always has a roster row. `keys` needs a
-    /// key somewhere, and `recent` needs an event — both are genuinely absent
-    /// on a fresh watch, and both appear the moment they are not.
-    static func present(_ room: VibenetRoom, hasEvents: Bool) -> [VibenetSection] {
-        guard !room.items.isEmpty else { return [] }
-        // `home` is unconditional, the way Wallet's is: it is the front door
-        // and its drawing is the crown's own line, which a watched account
-        // always has (even "couldn't be read", which is itself the answer).
-        var out: [VibenetSection] = [.home]
-        if hasEvents { out.append(.activity) }
-        // Holdings needs a token reading — the crown's native total is on Home
-        // already, so a Holdings scope with nothing but ETH restates it.
-        if room.items.contains(where: { !$0.tokenBalances.isEmpty }) { out.append(.holdings) }
-        out.append(.accounts)
-        if room.items.contains(where: { !$0.actors.isEmpty }) { out.append(.permissions) }
-        return order.filter(out.contains)
+    /// device really watches. An empty room offers no strip, because there is
+    /// nothing below it for a chip to scope. The `hasEvents` this used to take
+    /// is gone rather than ignored — an unused argument at the call site is an
+    /// invitation to re-gate on it by accident.
+    static func present(_ room: VibenetRoom) -> [VibenetSection] {
+        room.items.isEmpty ? [] : order
+    }
+
+    /// **THE SHORT STATE, drawn in the chassis' reserved headline row (prd
+    /// §611).** Nil for `home`, which is never empty: the crown is its content.
+    /// Activity and Holdings keep their own richer, per-account lines in the
+    /// card (unreached / not yet deployed / holds nothing are three different
+    /// facts); these are the words the card falls back to.
+    var emptyHeadline: String? {
+        switch self {
+        case .home:        return nil
+        case .activity:    return String(localized: "Nothing has changed")
+        case .holdings:    return String(localized: "Holds nothing")
+        case .accounts:    return String(localized: "No accounts")
+        case .permissions: return String(localized: "No keys")
+        }
+    }
+
+    /// **WHAT THE SCOPE WOULD HOLD, and why these accounts have none.** No
+    /// subject, no door, nothing chain-wide.
+    var emptyBody: String? {
+        switch self {
+        case .home:
+            return nil
+        case .activity:
+            return String(localized: "A key granted or revoked, a lock, an unlock — each lands here as the chain reports it. None has happened on these accounts.")
+        case .holdings:
+            return String(localized: "The tokens each account holds, sized by balance. None of these accounts holds any yet.")
+        case .accounts:
+            return String(localized: "The keystore accounts you watch, and who can act for each. None is watched here.")
+        case .permissions:
+            return String(localized: "A key, a passkey or a delegate that can act for an account, and when each lapses. Nothing can act for these accounts yet.")
+        }
     }
 
     /// Which chips wear a dot — `VibenetAttention`'s ranking, one layer down.

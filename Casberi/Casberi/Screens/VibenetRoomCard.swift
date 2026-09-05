@@ -2089,6 +2089,11 @@ struct VibenetRoomCard: View {
             // find out who can spend their money (§83). An unread account
             // keeps a glyph and a sentence.
             permissionsEmptyFigure
+        } else if counts.isEmpty, (keys?.total ?? 0) == 0 {
+            // **THE SCOPE IS A CHIP ON EVERY ROOM NOW (prd §611)**, so an
+            // account nothing can act for opens onto a sentence saying what
+            // this scope lists, not onto "No keys" over an empty grid.
+            scopeEmptyFigure(.permissions)
         } else {
             // **THE WHOLE CENSUS, ALWAYS — granted and not** (prd §551, user:
             // *"i like how it looks with four rungs, but not how it looks with
@@ -2296,6 +2301,22 @@ struct VibenetRoomCard: View {
     /// accounts is exactly the failure §468 named. One `let`, two readers.
     private var policyRows: [VibenetPolicyCount] {
         VibenetPolicyAggregation.compose(room.items)
+    }
+
+    /// **A SCOPE WITH NOTHING IN IT TEACHES WHAT IT WOULD HOLD (prd §611).**
+    /// The generic form — Activity and Holdings keep their own richer figures,
+    /// which know whether the account was unreached, undeployed or merely
+    /// empty. Two tiers and no more; no door.
+    private func scopeEmptyFigure(_ section: VibenetSection) -> some View {
+        scopeFigure(headline: section.emptyHeadline) {
+            if let words = section.emptyBody {
+                Text(words)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            }
+        }
     }
 
     /// The census's own word for an unrestricted key, so the colour test above

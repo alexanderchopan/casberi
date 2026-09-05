@@ -92,21 +92,18 @@ enum HegotaRoom {
                     sponsoredCount: sponsored, laneCount: lanes, moveCount: moves)
     }
 
-    /// Which scopes the strip should offer, derived from the room rather than
-    /// from the watch list.
+    /// Which scopes the strip should offer: **every one, whenever there is a
+    /// room at all (prd §611).**
     ///
     /// **From the ROOM, never the watch list** — the face rail's own rule, and
     /// the two legitimately disagree: an address can be watched while its sweep
-    /// has not landed, and a chip that opens an empty scope is the dead control
-    /// §83 bans.
+    /// has not landed. An unreached watch list offers no strip, because nothing
+    /// below it would be current. Past that gate the four readings are no
+    /// longer consulted here: a scope with nothing in it draws its own empty
+    /// state in the slot (`HegotaSection.emptyBody`) rather than vanishing.
     static func sections(_ accounts: [HegotaAccount]) -> [HegotaSection] {
-        let reached = accounts.filter(\.reached)
-        guard !reached.isEmpty else { return [] }
-        return HegotaSection.present(
-            frames: reached.contains { $0.hasFrames },
-            coins: reached.contains { $0.hasCoins },
-            nonces: reached.contains { $0.hasLanes },
-            sponsors: reached.contains { $0.hasSponsors })
+        guard accounts.contains(where: \.reached) else { return [] }
+        return HegotaSection.present()
     }
 
     /// The split a spend performed: what went in, what came out, what the chain

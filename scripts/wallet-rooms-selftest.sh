@@ -201,10 +201,16 @@ grep -q 'private var shieldedHasContent: Bool { !room.holdings.isEmpty }' "$CARD
   || { echo "✗ the shielded scope's render gate moved — it must stay identical to the presence flag FeedScreen passes"; exit 1; }
 grep -q '!room.segments.isEmpty || room.untagged > 0' "$CARD_STRIPPED" \
   || { echo "✗ the review scope's render gate moved — a room of untagged deposits would offer a chip its card then declines to fill"; exit 1; }
-grep -q 'PrivacyPoolsSection.present(shielded: !room.holdings.isEmpty,' "$FEED" \
-  || { echo "✗ FeedScreen's shielded presence no longer matches the card's own gate"; exit 1; }
-grep -q 'review: !room.segments.isEmpty || room.untagged > 0)' "$FEED" \
-  || { echo "✗ FeedScreen's review presence no longer matches the card's own gate"; exit 1; }
+# EVERY SCOPE, ALWAYS (prd §611): the strip no longer takes evidence, and the
+# two gates above decide figure-or-empty-card inside the card alone.
+grep -q 'PrivacyPoolsSection.present()' "$FEED" \
+  || { echo "✗ the strip is deriving its scopes from evidence again — a chip vanishes on exactly the room that most needs to learn what it is (§611)"; exit 1; }
+grep -q 'PrivacyPoolsSection.present(shielded:' "$FEED" \
+  && { echo "✗ present() is being handed evidence again — the gate §611 removed"; exit 1; }
+grep -q 'else if section == .shielded { card { emptyBody(.shielded) } }' "$CARD_STRIPPED" \
+  || { echo "✗ a scoped-to empty Shielded scope draws nothing again — the chip is always offered now, so it must say what it would hold (§611)"; exit 1; }
+grep -q 'else if section == .review { card { emptyBody(.review) } }' "$CARD_STRIPPED" \
+  || { echo "✗ a scoped-to empty Review scope draws nothing again (§611)"; exit 1; }
 # THE HEADLINE BELONGS TO NO SCOPE. Scoped away, the room could be opened
 # without being told the one thing §349 exists to say.
 grep -q 'headline$' "$CARD_STRIPPED" \
@@ -1020,11 +1026,24 @@ print("Privacy Pools — the scopes (prd §486)")
 // The room's three readings behind one control. Every failure here renders as
 // an ordinary room: a chip that opens an empty page, a remembered scope
 // resolving somewhere nobody chose, or a strip that reshuffles between opens.
-let ppAll = PrivacyPoolsSection.present(shielded: true, review: true)
+let ppAll = PrivacyPoolsSection.present()
 check("the order is events → state → hazard, and it is total",
       ppAll == [.activity, .shielded, .review])
-check("activity is always there — the room always has a feed",
-      PrivacyPoolsSection.present(shielded: false, review: false) == [.activity])
+// EVERY scope, on every room (prd §611): the gate is gone, and each scope that
+// can be empty says what it would hold instead of vanishing.
+check("every scope is present, in order", ppAll == PrivacyPoolsSection.order)
+for s in PrivacyPoolsSection.allCases {
+    check("\(s.rawValue) names its own empty state", !(s.emptyHeadline ?? "").isEmpty)
+    check("\(s.rawValue) says what it would hold", !(s.emptyBody ?? "").isEmpty)
+    check("\(s.rawValue)'s empty state is not its summary restated", s.emptyBody != s.summary)
+    check("\(s.rawValue)'s empty state teaches rather than labels", (s.emptyBody ?? "").count > 24)
+}
+let ppBodies = PrivacyPoolsSection.allCases.compactMap(\.emptyBody)
+check("no two scopes explain themselves the same way", Set(ppBodies).count == ppBodies.count)
+for words in ppBodies {
+    check("an empty scope states a fact and offers no door",
+          !words.lowercased().contains("tap ") && !words.lowercased().contains("respond"))
+}
 check("both readings past activity are conditional",
       PrivacyPoolsSection.allCases.filter(\.isConditional).sorted { $0.rawValue < $1.rawValue }
         == [PrivacyPoolsSection.review, .shielded].sorted { $0.rawValue < $1.rawValue })
@@ -1890,10 +1909,6 @@ mutate "the dot fires on ordinary progress" section \
 mutate "a dot is drawn on a scope the strip does not offer" section \
   'guard present.contains(.review), needsProof || declined else { return [] }' \
   'guard needsProof || declined else { return [] }'
-mutate "the shielded scope is offered over an empty page" section \
-  'case .shielded: return shielded' \
-  'case .shielded: return true'
-
 # The cross-currency sum this file exists to refuse.
 mutate "every currency lands in one bucket" gnosis \
   'var bucket = buckets[code] ?? (total: 0, spends: 0, newest: sighting.at)' \
@@ -1953,6 +1968,11 @@ mutate "a token's shielded amount is shown even when one shield's amount is unkn
 # Reordering the rank so recency beats volume — the same class of bug
 # `PeerRoom.ordered` and `GnosisPayRoom.ordered` are both mutation-tested
 # against: a token with nine moves losing to one with a single, fresher move.
+mutate "every scope gated again, so a chip vanishes on the room that most needs it" section \
+  'static func present() -> [PrivacyPoolsSection] { order }' \
+  'static func present() -> [PrivacyPoolsSection] { order.filter { !$0.isConditional } }'
+mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" section \
+  'Where each deposit stands with the screener: pending, cleared, asked for proof, or declined. No deposit here has a standing on record.' ' '
 mutate "tokens are ranked by recency before move count" railgun \
   'if a.moves != b.moves { return a.moves > b.moves }
             if a.newest != b.newest { return a.newest > b.newest }' \

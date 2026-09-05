@@ -88,39 +88,39 @@ check(!HegotaSection.home.isConditional, "home is not conditional")
 check(!HegotaSection.activity.isConditional, "activity is not conditional")
 check(!HegotaSection.accounts.isConditional, "accounts is not conditional")
 
-// present(): a false flag must not produce a scope, and the two constants must
-// appear even when every flag is false — which is the state of MOST addresses
-// on this chain, so it is the common path rather than an edge one.
-check(HegotaSection.present(frames: false, coins: false, nonces: false, sponsors: false)
-        == [.home, .activity, .accounts],
-      "all flags false yields the three unconditional scopes alone")
-check(HegotaSection.present(frames: true, coins: true, nonces: true, sponsors: true) == HegotaSection.order,
-      "all flags true yields the full order")
+// present(): EVERY scope, on every address (prd §611). The gate is gone — an
+// address with none of the four still reaches all seven chips, each with an
+// empty state of its own. That is the state of MOST addresses on this chain,
+// so it is the common path rather than an edge one.
+let full = HegotaSection.present()
+check(full == HegotaSection.order, "every scope is present, in order")
+check(full.count == HegotaSection.allCases.count, "no scope is hidden from anybody")
 
-// Each flag governs its OWN scope and no other — the mapping a careless edit
-// gets wrong in a way nothing else can see.
-check(HegotaSection.present(frames: true, coins: false, nonces: false, sponsors: false)
-        == [.home, .activity, .accounts, .frames],
-      "frames' flag yields frames alone beside the constants")
-check(HegotaSection.present(frames: false, coins: true, nonces: false, sponsors: false)
-        == [.home, .activity, .accounts, .coins],
-      "coins' flag yields coins alone beside the constants")
-check(HegotaSection.present(frames: false, coins: false, nonces: true, sponsors: false)
-        == [.home, .activity, .accounts, .nonces],
-      "nonces' flag yields nonces alone beside the constants")
-check(HegotaSection.present(frames: false, coins: false, nonces: false, sponsors: true)
-        == [.home, .activity, .accounts, .sponsors],
-      "sponsors' flag yields sponsors alone beside the constants")
-
-// present() returns DECLARATION order, not argument order.
-let mixed = HegotaSection.present(frames: false, coins: true, nonces: false, sponsors: true)
-check(mixed == [.home, .activity, .accounts, .coins, .sponsors], "present() preserves declaration order")
-// **The tail's own order, proven by a mix rather than by the full list.** An
-// address with frames and a sponsor but no coins is the shape that would expose
-// a tail reordered by argument position rather than by declaration.
-let tailMix = HegotaSection.present(frames: true, coins: false, nonces: false, sponsors: true)
-check(tailMix == [.home, .activity, .accounts, .frames, .sponsors],
-      "frames precedes sponsors when both are present and coins is not")
+// THE OBLIGATION THAT MAKES THAT HONEST. A chip that opens onto nothing is the
+// dead control §83 bans; the scopes that can be empty are allowed only because
+// each says what it would hold. A scope that can be empty and has no words is
+// the failure.
+for s in HegotaSection.allCases where s != .home {
+    check(!(s.emptyHeadline ?? "").isEmpty, "\(s.rawValue) names its own empty state")
+    check(!(s.emptyBody ?? "").isEmpty, "\(s.rawValue) says what it would hold")
+    check(s.emptyBody != s.summary, "\(s.rawValue)'s empty state is not its summary restated")
+    check((s.emptyBody ?? "").count > 24, "\(s.rawValue)'s empty state teaches rather than labels")
+}
+// Chips sharing one sentence is the banned strip in new clothes.
+let emptyBodies = HegotaSection.allCases.compactMap(\.emptyBody)
+check(Set(emptyBodies).count == emptyBodies.count, "no two scopes explain themselves the same way")
+let emptyHeads = HegotaSection.allCases.compactMap(\.emptyHeadline)
+check(Set(emptyHeads).count == emptyHeads.count, "no two scopes name the same empty state")
+// Home is never empty — its crown IS its content — so it has no empty copy to
+// go stale in a branch nothing can reach.
+check(HegotaSection.home.emptyHeadline == nil && HegotaSection.home.emptyBody == nil,
+      "home carries no empty copy, because it can never be empty")
+// No door in any of them: every verb lives on the card that has something to act on.
+for words in emptyBodies {
+    let lower = words.lowercased()
+    check(!lower.contains("tap ") && !lower.contains("top up") && !lower.contains("send "),
+          "an empty scope states a fact and offers no door")
+}
 
 // resolve(): the fallback is home, NEVER "the first present scope". The two
 // differ only when home is absent, which cannot happen — and that is the point,
@@ -399,10 +399,10 @@ check(acct("0xa", coins: [coin(1, 5)], reconciled: false).coinsWei == nil,
 check(HegotaRoom.sections([]) == [], "no accounts offers no scopes")
 check(HegotaRoom.sections([acct("0xa", reached: false, wei: nil)]) == [],
       "an unreached account offers no scopes — a chip that opens nothing is a dead control")
-check(HegotaRoom.sections([acct("0xa")]) == [.home, .activity, .accounts],
-      "a reached but empty account offers the three constants")
-check(HegotaRoom.sections([acct("0xa", coins: [coin(1, 5)])]) == [.home, .activity, .accounts, .coins],
-      "coins earn their chip")
+check(HegotaRoom.sections([acct("0xa")]) == HegotaSection.order,
+      "a reached but empty account offers every scope — each says it is empty (prd §611)")
+check(HegotaRoom.sections([acct("0xa", coins: [coin(1, 5)])]) == HegotaSection.order,
+      "content changes what a scope draws, never whether its chip exists")
 
 // split(): derived, and refused when it cannot be derived.
 check(HegotaRoom.split(inputs: [Decimal(1000)], outputs: [coin(1, 400), coin(2, 500)])?.fee == Decimal(100),
@@ -953,8 +953,10 @@ mutate "resolve falls back to the first present scope instead of home" \
   HegotaSection.swift 's/guard let wanted, present\.contains\(wanted\) else \{ return \.home \}/guard let wanted, present.contains(wanted) else { return present.first ?? .home }/'
 mutate "shows() lets a single scope draw a control" \
   HegotaSection.swift 's/present\.count > 1/present.count > 0/'
-mutate "a flag governs the wrong scope (coins reads nonces')" \
-  HegotaSection.swift 's/case \.coins:    return coins/case .coins:    return nonces/'
+mutate "every scope gated again, so four chips vanish on the address that most needs them" \
+  HegotaSection.swift 's/static func present\(\) -> \[HegotaSection\] \{ order \}/static func present() -> [HegotaSection] { order.filter { !\$0.isConditional } }/'
+mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" \
+  HegotaSection.swift 's/This chain can hold a balance as unspent pieces, each spent whole and never in part\. None of these addresses holds one\./ /'
 mutate "coins is marked unconditional, so the head-reflow rule stops being enforced" \
   HegotaSection.swift 's/case \.frames, \.coins, \.nonces, \.sponsors: return true/case .frames, .nonces, .sponsors: return true\n        case .coins: return false/'
 mutate "the unspent-output scope goes back to the friendly gloss" \
@@ -997,8 +999,8 @@ mutate "coins from a set that never reconciled are counted anyway" \
   HegotaRoom.swift 's/\$0\.hasCoins \? \(\$0\.unspent \?\? \[\]\) : \[\]/(\$0.unspent ?? [])/'
 mutate "the head ranks sponsorship above coins" \
   HegotaRoom.swift 's/if !coins\.isEmpty \{ lead = \.coins \}\n        else if sponsored > 0 \{ lead = \.sponsored \}/if sponsored > 0 { lead = .sponsored }\n        else if !coins.isEmpty { lead = .coins }/'
-mutate "scopes are derived from every account rather than the reached ones" \
-  HegotaRoom.swift 's/let reached = accounts\.filter\(\\\.reached\)\n        guard !reached\.isEmpty else \{ return \[\] \}/let reached = accounts\n        guard !reached.isEmpty else { return [] }/'
+mutate "a strip offered for a watched address the chain never answered for (nothing below it would be current)" \
+  HegotaRoom.swift 's/guard accounts\.contains\(where: \\\.reached\) else \{ return \[\] \}/guard !accounts.isEmpty else { return [] }/'
 
 # ── §504: the frames scope, the census, the clock, the reset ─────────────────
 # Each of these renders as an ordinary room too. A mis-scoped census is a

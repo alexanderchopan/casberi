@@ -39,9 +39,13 @@ struct FramesRoomFigure: View {
     private var slotHeadline: String? {
         switch section {
         case .home, .sponsors:
+            // An empty scope takes its own short state (prd §611); Home is
+            // never empty, so only Sponsors can reach this branch.
+            if section == .sponsors, isEmpty(.sponsors) { return section.emptyHeadline }
             guard head.hasRead, !head.everythingUnreached else { return nil }
             return FramesMoney.balanceLine(weiHex: head.balanceWeiHex)
         case .activity:
+            guard head.moveCount > 0 else { return section.emptyHeadline }
             return head.moveCount == 1 ? String(localized: "1 transaction")
                                        : String(localized: "\(String(head.moveCount)) transactions")
         // **STEPS, not transactions** — Hegotá's ruling, and the same reason:
@@ -50,7 +54,7 @@ struct FramesRoomFigure: View {
         // What this scope adds is that those transactions have parts.
         case .frames:
             let steps = moves.reduce(0) { $0 + $1.rows.count }
-            guard steps > 0 else { return nil }
+            guard steps > 0 else { return section.emptyHeadline }
             return steps == 1 ? String(localized: "1 step")
                               : String(localized: "\(String(steps)) steps")
         }
@@ -97,6 +101,33 @@ struct FramesRoomFigure: View {
         }
     }
 
+    /// Whether a scope has nothing to draw, so the slot shows its empty state
+    /// instead (prd §611). Home is never empty — its sentence is its content.
+    /// `frames` counts transactions with more than one row, the same test the
+    /// Frames list uses, so the slot and the rows beneath it cannot disagree.
+    private func isEmpty(_ section: FramesSection) -> Bool {
+        switch section {
+        case .home:     return false
+        case .activity: return head.moveCount == 0
+        case .frames:   return !moves.contains { $0.rows.count > 1 }
+        case .sponsors: return !moves.contains(where: \.sponsored)
+        }
+    }
+
+    /// **A SCOPE WITH NOTHING IN IT TEACHES WHAT IT WOULD HOLD (prd §611).**
+    /// Two tiers and no more: the chassis' reserved row carries the short
+    /// state (`emptyHeadline`, via `slotHeadline`) and this carries the one
+    /// paragraph. No door — Top up and Send are Home's tiles (§553).
+    @ViewBuilder private var emptyState: some View {
+        if let words = section.emptyBody {
+            Text(words)
+                .dsText(.body17)
+                .foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        }
+    }
+
     /// **Never a chart of one point, and never a zero drawn over an unread
     /// chain** (§515a). Every branch here says what it knows or says nothing.
     @ViewBuilder private var reading: some View {
@@ -107,6 +138,11 @@ struct FramesRoomFigure: View {
             // empty account, and on a devnet that may have been reset it is
             // the likeliest reading of all.
             note(String(localized: "Couldn't reach the chain."))
+        } else if isEmpty(section) {
+            // **THE EMPTY STATE IS IN THE SLOT (prd §611)** — the chip is
+            // always there now, so what it opens onto has to say what the
+            // scope holds and why this address has none.
+            emptyState
         } else {
             switch section {
             case .home:     sponsorship
@@ -258,20 +294,12 @@ struct FramesRoomFigure: View {
     }
 
     @ViewBuilder private var activity: some View {
-        activityChart
         // **NO FRAME-COUNT SENTENCE (user ruling, 2026-09-01).** It read
         // "4 of them are frame transactions" under the chart, and on THIS
-        // chain that is a tally of very nearly everything: a frame transaction
-        // is what this devnet is for, so the count separates almost nothing
-        // and costs a line under a drawing that already says more than it did.
-        //
-        // What survives is the one branch a chart cannot draw: an account
-        // where nothing has moved. That is not a tally, it is the reason the
-        // slot is empty, and without it the scope reads as broken rather than
-        // as new.
-        if head.moveCount == 0 {
-            note(String(localized: "Nothing has moved here yet."))
-        }
+        // chain that is a tally of very nearly everything. The one branch a
+        // chart cannot draw — nothing has moved — is `emptyState`'s now
+        // (prd §611), so this only ever draws over at least one move.
+        activityChart
     }
 
     /// The MODE MIX — what the steps actually were. Counted rather than
@@ -413,13 +441,6 @@ struct FramesRoomFigure: View {
                     .dsText(.label12).foregroundStyle(DS.textTertiary).lineLimit(1)
                 }
                 Spacer(minLength: 0)
-            }
-            if theirs > 0 {
-                EmptyView()
-            } else {
-                // NOT "nobody has sponsored you" — that is a claim about other
-                // people. This says only what was observed.
-                note(String(localized: "Every transaction here paid its own gas."))
             }
         }
     }

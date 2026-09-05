@@ -65,37 +65,38 @@ for s in [WalletSection.positions, .nfts, .risk, .permissions] {
     check(s.isConditional, "\(s.rawValue) is conditional")
 }
 
-// present(): a flag that is false must not produce a scope, and activity must
-// appear even when every flag is false.
-let none = WalletSection.present(holdings: false, positions: false, nfts: false,
-                                 risk: false, permissions: false)
-check(none == [.home, .activity], "all flags false yields home and activity alone")
+// present(): EVERY scope, on every wallet (prd §611). The gate is gone — a
+// wallet with no positions, no NFTs, no leverage and no approvals still reaches
+// all seven chips, each with an empty state of its own.
+let all = WalletSection.present()
+check(all == WalletSection.order, "every scope is present, in order")
+check(all.count == WalletSection.allCases.count, "no scope is hidden from anybody")
 
-let all = WalletSection.present(holdings: true, positions: true, nfts: true,
-                                risk: true, permissions: true)
-check(all == WalletSection.order, "all flags true yields the full order")
-
-// Each flag governs its OWN scope and no other — the mapping that a careless
-// edit gets wrong in a way nothing else can see.
-let onlyRisk = WalletSection.present(holdings: false, positions: false, nfts: false,
-                                     risk: true, permissions: false)
-check(onlyRisk == [.home, .activity, .risk], "risk's flag yields risk alone beside the two constants")
-let onlyNFTs = WalletSection.present(holdings: false, positions: false, nfts: true,
-                                     risk: false, permissions: false)
-check(onlyNFTs == [.home, .activity, .nfts], "nfts' flag yields nfts alone beside the two constants")
-let onlyPerms = WalletSection.present(holdings: false, positions: false, nfts: false,
-                                      risk: false, permissions: true)
-check(onlyPerms == [.home, .activity, .permissions], "permissions' flag yields permissions alone")
-let onlyHoldings = WalletSection.present(holdings: true, positions: false, nfts: false,
-                                         risk: false, permissions: false)
-check(onlyHoldings == [.home, .activity, .holdings], "holdings' flag yields holdings alone")
-let onlyPositions = WalletSection.present(holdings: false, positions: true, nfts: false,
-                                          risk: false, permissions: false)
-check(onlyPositions == [.home, .activity, .positions], "positions' flag yields positions alone")
-
-// present() preserves ORDER rather than flag argument order.
-check(all.firstIndex(of: .risk)! > all.firstIndex(of: .holdings)!,
-      "present() returns declaration order, not argument order")
+// THE OBLIGATION THAT MAKES THAT HONEST. A chip that opens onto nothing is the
+// dead control §83 bans; the scopes that can be empty are allowed only because
+// each says what it would hold. A scope that can be empty and has no words is
+// the failure.
+for s in WalletSection.allCases where s != .home {
+    check(!(s.emptyHeadline ?? "").isEmpty, "\(s.rawValue) names its own empty state")
+    check(!(s.emptyBody ?? "").isEmpty, "\(s.rawValue) says what it would hold")
+    check(s.emptyBody != s.summary, "\(s.rawValue)'s empty state is not its summary restated")
+    check((s.emptyBody ?? "").count > 24, "\(s.rawValue)'s empty state teaches rather than labels")
+}
+// Chips sharing one sentence is the banned strip in new clothes.
+let emptyBodies = WalletSection.allCases.compactMap(\.emptyBody)
+check(Set(emptyBodies).count == emptyBodies.count, "no two scopes explain themselves the same way")
+let emptyHeads = WalletSection.allCases.compactMap(\.emptyHeadline)
+check(Set(emptyHeads).count == emptyHeads.count, "no two scopes name the same empty state")
+// Home is never empty — its crown IS its content — so it has no empty copy to
+// go stale in a branch nothing can reach.
+check(WalletSection.home.emptyHeadline == nil && WalletSection.home.emptyBody == nil,
+      "home carries no empty copy, because it can never be empty")
+// No door in any of them: every verb lives on the card that has something to act on.
+for words in emptyBodies {
+    let lower = words.lowercased()
+    check(!lower.contains("tap ") && !lower.contains("top up") && !lower.contains("send "),
+          "an empty scope states a fact and offers no door")
+}
 
 // resolve(): the fallback is activity, NEVER "the first present scope". The
 // two differ only when activity is absent, which cannot happen — and that is
@@ -170,14 +171,14 @@ mutate "home no longer leads" \
   's/\.home, \.activity, \.holdings/.holdings, .home, .activity/'
 mutate "resolve falls back to the first present scope instead of activity" \
   's/guard let wanted, present\.contains\(wanted\) else \{ return \.home \}/guard let wanted, present.contains(wanted) else { return present.first ?? .home }/'
-mutate "home stops being unconditionally present" \
-  's/case \.home:        return true/case .home:        return holdings/'
 mutate "shows() lets a single scope draw a control" \
   's/present\.count > 1/present.count > 0/'
 mutate "risk is marked unconditional, so the tail rule stops being enforced" \
   's/case \.positions, \.nfts, \.risk, \.permissions: return true/case .positions, .nfts, .permissions: return true\n        case .risk: return false/'
-mutate "a flag governs the wrong scope (nfts reads permissions')" \
-  's/case \.nfts:        return nfts/case .nfts:        return permissions/'
+mutate "every scope gated again, so five chips vanish on the wallet that most needs them" \
+  's/static func present\(\) -> \[WalletSection\] \{ order \}/static func present() -> [WalletSection] { order.filter { !\$0.isConditional } }/'
+mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" \
+  's/A position a price move could liquidate, and how close it stands\. Nothing here carries leverage\./ /'
 mutate "the ruled short noun becomes a question again" \
   's/String\(localized: "Permissions"\)/String(localized: "Who can reach it")/'
 
@@ -255,13 +256,24 @@ switch_at=$(grep -n "walletScopeRailSection(section)" "$work/FeedScreen.swift.ba
 [[ -n "$crown_at" && -n "$switch_at" ]] || fail "drift: cannot locate the crown or the switcher in the wallet block"
 (( crown_at < switch_at )) || fail "drift: the switcher is drawn ABOVE the crown — it must sit below the sparkline"
 
-# EVERY presence flag must be the section's OWN render gate, spelled the same
-# way. Reported from the device as "we can't do this" — the Risk chip opening an
-# empty page, because presence read `!= nil` while the section needs non-empty.
-guard FeedScreen.swift "positions: hasLendingCard" \
-  "positions no longer reads hasLendingCard — presence and rendering drift, and the chip opens nothing"
-guard FeedScreen.swift "risk: !(walletRiskEntries ?? \[\]).isEmpty" \
-  "risk is flagged on nil-ness again — a non-nil EMPTY strip offers a chip that opens an empty page"
+# EVERY empty-state gate must be the section's OWN render gate, spelled the same
+# way (prd §611 moved these from presence flags to `walletScopeIsEmpty`; the
+# rule is unchanged). Reported from the device as "we can't do this" — the Risk
+# chip opening an empty page, because presence read `!= nil` while the section
+# needs non-empty. Now the failure would be a scope drawing its figure AND its
+# empty state, or neither.
+guard FeedScreen.swift "WalletSection.present()" \
+  "the strip is deriving its scopes from evidence again — five chips vanish on the wallet that most needs to learn what they are (§611)"
+deny  FeedScreen.swift "WalletSection.present(holdings:" \
+  "present() is being handed evidence again — the gate §611 removed"
+guard FeedScreen.swift "case .positions:   return !(hasLendingCard" \
+  "positions' empty gate no longer reads hasLendingCard — figure and empty state drift, and the slot shows both or neither"
+guard FeedScreen.swift "case .risk:        return (walletRiskEntries ?? \[\]).isEmpty" \
+  "risk's empty gate is on nil-ness again — a non-nil EMPTY strip would draw neither the figure nor the words"
+guard FeedScreen.swift "case _ where walletScopeIsEmpty(section):" \
+  "the slot no longer draws a scope's empty state — a chip onto an empty scope opens 258 blank points (§611)"
+guard FeedScreen.swift "WalletScopeEmptyFigure(section: section)" \
+  "the empty state stopped reading the scope's own words, so every empty scope says the same thing"
 
 guard FeedScreen.swift "chrome.walletSections = " \
   "the room no longer publishes its present scopes"

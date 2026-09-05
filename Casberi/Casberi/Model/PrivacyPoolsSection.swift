@@ -94,13 +94,36 @@ enum PrivacyPoolsSection: String, CaseIterable, Identifiable, Sendable {
     /// Deliberately takes plain Bools rather than the room: the caller does
     /// the reading, this does the deciding, so the rule stays testable without
     /// building a `PrivacyPoolsRoom` at every call site.
-    static func present(shielded: Bool, review: Bool) -> [PrivacyPoolsSection] {
-        order.filter { section in
-            switch section {
-            case .activity: return true
-            case .shielded: return shielded
-            case .review:   return review
-            }
+    /// Which scopes the strip offers: **every one, on every room (prd §611,
+    /// generalising §610).** The two Bools this used to take are gone rather
+    /// than ignored — an unused `review:` at the call site is an invitation to
+    /// re-gate on it by accident. The card still reads the same two facts
+    /// (`shieldedHasContent`/`reviewHasContent`) to decide between a scope's
+    /// figure and its empty state.
+    static func present() -> [PrivacyPoolsSection] { order }
+
+    /// **THE SHORT STATE** of a scope with nothing in it (prd §611). This room
+    /// has no Home; Activity is the room's own feed and is empty only when the
+    /// head could not compose at all, which is why it carries copy too.
+    var emptyHeadline: String? {
+        switch self {
+        case .activity: return String(localized: "No deposits")
+        case .shielded: return String(localized: "Nothing in the pools")
+        case .review:   return String(localized: "Nothing in review")
+        }
+    }
+
+    /// **WHAT THE SCOPE WOULD HOLD, and why this room has none.** No subject,
+    /// no door (the respond row lives on the review card that has something to
+    /// respond to), nothing chain-wide.
+    var emptyBody: String? {
+        switch self {
+        case .activity:
+            return String(localized: "Each deposit into a pool and each reclaim out of one, in order. None from these wallets has landed.")
+        case .shielded:
+            return String(localized: "What each pool holds for you, per asset, and how much larger the set it hides among has grown. Nothing here carries an amount this app can state.")
+        case .review:
+            return String(localized: "Where each deposit stands with the screener: pending, cleared, asked for proof, or declined. No deposit here has a standing on record.")
         }
     }
 

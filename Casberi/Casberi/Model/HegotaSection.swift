@@ -37,6 +37,14 @@ import Foundation
 /// the running: `TokenWatchOrder`, the exchange screens and `MoneyReceiptCard`
 /// all spend that word on trades, in a room one chip away from Markets.
 ///
+/// **EVERY SCOPE IS PRESENT, ALWAYS (prd §611, generalising §610).** The gate
+/// used to drop `frames`, `coins`, `nonces` and `sponsors` for an address that
+/// had none — most addresses — so the four readings this chain exists for
+/// were invisible to anyone who had not already made one. Now the strip is
+/// the same seven chips on every address, and a scope with nothing in it says
+/// what it would hold (`emptyHeadline`/`emptyBody`). That obligation is what
+/// keeps this on the right side of §83.
+///
 /// Foundation-only by design: `scripts/hegota-selftest.sh` compiles it WHOLE
 /// and unmodified. Every failure it catches renders as a perfectly ordinary
 /// room — a scope that never appears, a remembered scope resolving to one
@@ -77,9 +85,13 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
     /// sit adjacent rather than with the vault between them.
     static let order: [HegotaSection] = [.home, .activity, .accounts, .frames, .coins, .nonces, .sponsors]
 
-    /// Everything past `activity` is conditional on the address actually having
-    /// the thing. Stated as data rather than left implicit in `present(…)`,
-    /// because it is the whole reason the order ends the way it does.
+    /// Which scopes can be EMPTY.
+    ///
+    /// **It no longer gates `present()` (prd §611)** — every scope is drawn
+    /// always — and it is kept, with its family name, for the two jobs it
+    /// still does: it fixes the ORDER (the scopes that can be empty sit at the
+    /// tail, so the strip's head is the same three chips on every address),
+    /// and it is what obliges a scope to carry an `emptyBody`.
     var isConditional: Bool {
         switch self {
         // `accounts` is unconditional once there is a room at all — a watched
@@ -142,29 +154,49 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Which scopes have anything to show.
-    ///
-    /// Deliberately takes plain Bools rather than the live chain state, for
-    /// `WalletSection.present`'s reason: this file is Foundation-only so its
-    /// rules can be compiled and mutation-tested with no `ModelContext` and no
-    /// network. The call site does the reading; this does the deciding.
-    ///
-    /// **`sponsors` is expected to be false on every address today** — every
-    /// frame transaction on this chain so far is self-paid — and that is the
-    /// correct output rather than a gap. The scope declines silently and
-    /// appears the first time somebody sponsors a transaction.
-    static func present(frames: Bool, coins: Bool, nonces: Bool,
-                        sponsors: Bool) -> [HegotaSection] {
-        order.filter { section in
-            switch section {
-            case .home:     return true
-            case .activity: return true
-            case .accounts: return true
-            case .frames:   return frames
-            case .coins:    return coins
-            case .nonces:   return nonces
-            case .sponsors: return sponsors
-            }
+    /// Which scopes the strip offers: **every one, on every address (prd
+    /// §611).** The four Bools this used to take are gone rather than ignored —
+    /// an unused `frames:` at the call site is an invitation to re-gate on it
+    /// by accident. Whether there is a ROOM at all is still `HegotaRoom.sections`'
+    /// call: an unreached watch list offers no strip, since nothing below it
+    /// would be current.
+    static func present() -> [HegotaSection] { order }
+
+    /// **THE SHORT STATE, drawn in the chassis' reserved headline row (prd
+    /// §611).** Nil for `home`, which is never empty: the crown is its content.
+    var emptyHeadline: String? {
+        switch self {
+        case .home:     return nil
+        case .activity: return String(localized: "None yet")
+        case .accounts: return String(localized: "No addresses")
+        case .frames:   return String(localized: "No steps")
+        case .coins:    return String(localized: "No UTXOs")
+        case .nonces:   return String(localized: "No keyed nonces")
+        case .sponsors: return String(localized: "None sponsored")
+        }
+    }
+
+    /// **WHAT THE SCOPE WOULD HOLD, and why this address has none.** No
+    /// subject (the face rail above says which is scoped), no door (Top up and
+    /// Send are Home's, §594), and nothing that states a chain-wide fact —
+    /// "no transaction on this chain has ever been sponsored" was true when
+    /// measured and becomes a lie the first time one is.
+    var emptyBody: String? {
+        switch self {
+        case .home:
+            return nil
+        case .activity:
+            return String(localized: "Every move of ETH on this chain is a log, so this list is exact. Nothing has moved to or from what you watch.")
+        case .accounts:
+            return String(localized: "Each address you watch, with its balance and how much it has sent. None is watched here.")
+        case .frames:
+            return String(localized: "A frame transaction runs in numbered steps, each carrying its own budget. Nothing here has run one — a plain transfer runs none.")
+        case .coins:
+            return String(localized: "This chain can hold a balance as unspent pieces, each spent whole and never in part. None of these addresses holds one.")
+        case .nonces:
+            return String(localized: "A transfer on a named key does not wait for the ordinary counter, so two can go out at once. Everything here went on the ordinary nonce.")
+        case .sponsors:
+            return String(localized: "A sponsored transaction is one somebody else covered the gas for. Nothing here was.")
         }
     }
 
@@ -197,8 +229,8 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
 
     /// Whether the strip is worth drawing at all. One scope is not a control,
     /// it is a label — §83's dead-control ban, in the room where the control's
-    /// whole job is to say there is more than one place to be. An address with
-    /// no coins, no keyed nonces and no sponsor is a balance and a list of
-    /// moves, and it should look like one.
+    /// whole job is to say there is more than one place to be. Since §611
+    /// `present()` is the full order whenever there is a room, so this is the
+    /// rule the shell gates on rather than a case it expects to meet.
     static func shows(present: [HegotaSection]) -> Bool { present.count > 1 }
 }

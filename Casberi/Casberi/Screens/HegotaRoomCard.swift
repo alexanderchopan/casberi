@@ -62,8 +62,44 @@ struct HegotaRoomFigure: View {
     private static let frameRows = 5
 
     var body: some View {
-        DSRoomSlot(headline: slotHeadline) { slotFigure }
-            .task { await HegotaLiveState.shared.refreshIfStale() }
+        DSRoomSlot(headline: slotHeadline) {
+            // **THE EMPTY STATE IS IN THE SLOT (prd §611)** — every scope is a
+            // chip on every address now, so a scope with nothing in it says
+            // what it would hold here rather than drawing a figure of zeros
+            // or nothing at all.
+            if isEmpty(section) { emptyState } else { slotFigure }
+        }
+        .task { await HegotaLiveState.shared.refreshIfStale() }
+    }
+
+    /// Whether a scope has nothing to draw (prd §611). Each test is the same
+    /// one the scope's list beneath the rail uses, so the two cannot disagree.
+    /// Home is never empty — its sentence is its content.
+    private func isEmpty(_ section: HegotaSection) -> Bool {
+        switch section {
+        case .home:     return false
+        case .activity: return moves.isEmpty
+        case .accounts: return shown.isEmpty
+        case .frames:   return framedMoves.isEmpty
+        case .coins:    return coins.isEmpty
+        case .nonces:   return lanes.isEmpty
+        case .sponsors: return !moves.contains(where: \.isSponsored)
+        }
+    }
+
+    /// **A SCOPE WITH NOTHING IN IT TEACHES WHAT IT WOULD HOLD (prd §611).**
+    /// Two tiers and no more: the reserved row carries `emptyHeadline` (via
+    /// `slotHeadline`) and this carries the one paragraph. No door — Top up
+    /// and Send are Home's (§594).
+    @ViewBuilder private var emptyState: some View {
+        if let words = section.emptyBody {
+            Text(words)
+                .dsText(.body17)
+                .foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                .padding(.trailing, DSRoomChassis.gearColumn)
+        }
     }
 
     // MARK: Shared reads
@@ -114,6 +150,9 @@ struct HegotaRoomFigure: View {
     /// The one line every scope puts in the slot's reserved row, so the drawing
     /// below it always starts at the same y.
     private var slotHeadline: String? {
+        // An empty scope's short state, before any figure's own headline
+        // (prd §611).
+        if isEmpty(section) { return section.emptyHeadline }
         switch section {
         case .home, .sponsors:
             guard head.hasRead, !head.everythingUnreached,
@@ -1814,9 +1853,7 @@ struct HegotaRoomList: View {
     // MARK: Moves
 
     @ViewBuilder private func movesList(_ list: [(move: HegotaMove, owner: String)]) -> some View {
-        if list.isEmpty {
-            empty(String(localized: "Nothing has moved yet."))
-        } else {
+        if !list.isEmpty {
             ForEach(list, id: \.move.id) { pair in
                 HegotaMoveRow(move: pair.move,
                               watched: watched,
@@ -1854,12 +1891,7 @@ struct HegotaRoomList: View {
     /// several moves and is ONE transaction.
     @ViewBuilder private var framesList: some View {
         let list = framedPairs
-        if list.isEmpty {
-            // Reachable: `HegotaRoom.sections` gates this scope on frames
-            // existing, but the scope is remembered across sweeps and a later
-            // one can land before its receipts do.
-            empty(String(localized: "No steps have been read yet."))
-        } else {
+        if !list.isEmpty {
             ForEach(list, id: \.move.id) { pair in
                 HegotaMoveRow(move: pair.move,
                               watched: watched,
@@ -1995,9 +2027,9 @@ struct HegotaRoomList: View {
             // somebody who had never held one and to somebody who had held four
             // and spent them all — completely different facts about an account,
             // and the second is a history the room was hiding.
-            if everyCoin.isEmpty {
-                empty(String(localized: "This address has never held a UTXO."))
-            } else {
+            // Spent-out is a fact the slot cannot state — the coins EXISTED.
+            // "Never held" moved to the slot with the rest (prd §611).
+            if !everyCoin.isEmpty {
                 empty(everyCoin.count == 1
                       ? String(localized: "Its 1 UTXO has been spent.")
                       : String(localized: "All \(String(everyCoin.count)) of its UTXOs have been spent."))
@@ -2061,9 +2093,7 @@ struct HegotaRoomList: View {
     // MARK: Nonces
 
     @ViewBuilder private var noncesList: some View {
-        if lanes.isEmpty {
-            empty(String(localized: "Everything sent on the ordinary nonce."))
-        } else {
+        if !lanes.isEmpty {
             ForEach(lanes) { lane in
                 WalletRow(mark: lane.looksLikeAddress
                               ? .face(lane.key)
@@ -2122,9 +2152,7 @@ struct HegotaRoomList: View {
     /// list cannot tell them apart.
     @ViewBuilder private var sponsorsList: some View {
         let sponsors = HegotaSponsor.group(moves.map(\.move))
-        if sponsors.isEmpty {
-            empty(String(localized: "You've paid for everything yourself."))
-        } else {
+        if !sponsors.isEmpty {
             ForEach(sponsors) { sponsor in
                 VStack(spacing: DS.Space.s2) {
                     WalletRow(mark: .face(sponsor.payer),
