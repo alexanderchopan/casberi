@@ -445,35 +445,126 @@ enum PrivacyDevnetFigure {
         return min(1, Double(gasUsed) / Double(allowed))
     }
 
-    // MARK: - The tally
+    // MARK: - What this room's transactions ARE (prd §606)
 
-    /// What one address has done, as three counts.
+    /// The three things a transaction on this chain can be.
     ///
-    /// **Counts, never magnitudes.** The address's BALANCE stays text: test ETH
-    /// has no price, so a proportional bar across addresses would rank them by
-    /// faucet luck and invite a comparison that means nothing.
-    struct Tally: Equatable, Sendable {
-        var frames: Int
-        var keys: Int
-        var roots: Int
+    /// **THIS IS THE AXIS THE ACTIVITY FIGURE ALWAYS NEEDED.** It drew a column
+    /// per transaction whose HEIGHT was the frame count — and nearly every
+    /// transaction here runs exactly two frames, so the height axis was
+    /// constant and the figure was a row of identical bars at nudged
+    /// positions. Reported as "wtf does it even mean", and the answer is that
+    /// it meant nothing: it encoded the one number that does not vary.
+    ///
+    /// What DOES vary, on the demo and on the live chain, is what a
+    /// transaction is FOR. Derived from fields the walk already has, so it
+    /// costs no request and no new `Thing` field.
+    enum Kind: String, Equatable, Sendable, CaseIterable {
+        /// It spent one-time keys: a pool spend, the thing this chain is for.
+        case poolSpend
+        /// It ran steps but spent no key — an ordinary framed call.
+        case framed
+        /// No frames at all. The faucet pays out this way.
+        case transfer
     }
 
-    /// How many pips a row draws before it counts instead.
-    static let pipCap = 8
-
-    /// A count, as pips plus whatever would not fit.
+    /// What one transaction is.
     ///
-    /// Zero returns ONE empty pip rather than nothing, so every drawn row has
-    /// the same height and the column reads as a comparison. An address the
-    /// chain did not answer for must not reach here at all — the caller draws
-    /// its sentence and no tally, because a row of empty pips is a claim that
-    /// the address has done nothing (§515a).
-    static func pips(_ count: Int) -> (filled: Int, empty: Int, overflow: Int) {
-        let n = max(0, count)
-        if n == 0 { return (0, 1, 0) }
-        if n <= pipCap { return (n, 0, 0) }
-        return (pipCap, 0, n - pipCap)
+    /// **Keys first, and the order is the ruling.** A pool spend runs frames
+    /// too, so testing frames first would file every spend as a framed call
+    /// and the pool — the room's entire subject — would never appear in its
+    /// own figure.
+    static func kind(frames: Int, keys: Int) -> Kind {
+        if keys > 0 { return .poolSpend }
+        return frames > 0 ? .framed : .transfer
     }
+
+    /// The room's transactions by kind, biggest first, zeroes dropped.
+    ///
+    /// **A share is only drawn when there is something to share BETWEEN.** One
+    /// kind is not a breakdown, it is a sentence with a bar behind it — and on
+    /// a young room every transaction is the same kind, so this returns a
+    /// single entry and the view states it in words rather than drawing a
+    /// full-width bar that says "100%".
+    ///
+    /// Ties break on the case's own order so the figure cannot reshuffle
+    /// between opens over identical data.
+    static func kindMix(_ kinds: [Kind]) -> [(kind: Kind, count: Int)] {
+        var counts: [Kind: Int] = [:]
+        for k in kinds { counts[k, default: 0] += 1 }
+        return Kind.allCases.compactMap { k in
+            guard let n = counts[k], n > 0 else { return nil }
+            return (kind: k, count: n)
+        }
+        .sorted { a, b in
+            if a.count != b.count { return a.count > b.count }
+            return (Kind.allCases.firstIndex(of: a.kind) ?? 0)
+                 < (Kind.allCases.firstIndex(of: b.kind) ?? 0)
+        }
+    }
+
+    // MARK: - What the room asked the chain for (prd §606)
+
+    /// The two budgets a frame transaction carries, summed across the room.
+    ///
+    /// **EIP-8141 gives a frame TWO allowances and the room drew neither.** The
+    /// Frames scope drew one strip per transaction, weighted by execution
+    /// budget — six identical bar-pairs, because most frames here carry the
+    /// same 320,000. Reported as "it says twelve steps who cares".
+    ///
+    /// The reading that is not in the headline is the SPLIT: execution gas is
+    /// what a step is allowed to compute, state gas is what it is allowed to
+    /// GROW — and on this chain state is the one that varies (measured: most
+    /// frames carry 0, a pool spend's second frame carries 550,000). That
+    /// split is what a frame transaction IS, and it is one bar rather than N.
+    ///
+    /// **All-or-nothing per column** (`allowance`'s rule): a sum over the
+    /// frames that happened to carry a figure, presented as the room's total,
+    /// is a number invented by the drawing. Either side may be nil
+    /// independently — a room whose state budgets are all unread still has a
+    /// real execution total.
+    struct Budgets: Equatable, Sendable {
+        var execution: UInt64?
+        var state: UInt64?
+        /// What the chain actually charged, where the receipts were read.
+        /// Nil unless EVERY transaction reported one — a partial sum drawn
+        /// against a complete allowance understates the spend and reads as
+        /// headroom nobody has.
+        var used: UInt64?
+
+        /// Whether there is a bar to draw at all — a room whose every budget
+        /// read came back nil, or came back zero, has no proportion to show.
+        var hasAnything: Bool { (execution ?? 0) > 0 || (state ?? 0) > 0 }
+    }
+
+    static func budgets(frames: [Frame], gasUsed: [UInt64?]) -> Budgets {
+        func total(_ values: [UInt64?]) -> UInt64? {
+            guard !values.isEmpty else { return nil }
+            var sum: UInt64 = 0
+            for value in values {
+                guard let value else { return nil }
+                let (next, overflow) = sum.addingReportingOverflow(value)
+                if overflow { return nil }
+                sum = next
+            }
+            // **ZERO IS A READING, NIL IS AN ABSENCE, and conflating them
+            // here would be the §515a error on the field that shows it most.**
+            // Most frames on this chain carry `stateLimit` 0 — they asked to
+            // grow no state, which is a fact — while an unread budget is us
+            // not knowing. Both draw no segment; only one of them can be said
+            // out loud.
+            return sum
+        }
+        return Budgets(execution: total(frames.map(\.gasLimit)),
+                       state: total(frames.map(\.stateLimit)),
+                       used: total(gasUsed))
+    }
+
+    // **THE TALLY IS GONE (prd §606).** `Tally`, `pipCap` and `pips` fed one
+    // figure — three pip columns per address — and a count drawn as N
+    // identical shapes is the number restated, not a reading. The Accounts
+    // scope draws no figure now; its headline states the count and its rows
+    // carry the detail.
 
     // MARK: - What fits
 

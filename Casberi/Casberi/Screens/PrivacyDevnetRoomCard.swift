@@ -56,13 +56,13 @@ struct PrivacyDevnetRoomCard: View {
     /// only ones whose ring seals (prd §598). Empty on an install's first read
     /// by construction, so arriving somewhere does not look like forty things
     /// happening.
-    @State private var fresh: Set<String> = []
 
     var body: some View {
         // Home's sentence IS the crown — a figure that occupies exactly the
         // role a headline plays — so the row is reserved only where the
         // chassis draws one (`DSRoomSlot.reservesHeadline`'s own rule).
-        DSRoomSlot(headline: slotHeadline, reservesHeadline: section != .home) { content }
+        DSRoomSlot(headline: slotHeadline,
+                   reservesHeadline: section != .home || !marks.isEmpty) { content }
     }
 
     /// One `stat24` line per scope, drawn by the CHASSIS (prd §495/§596) —
@@ -72,8 +72,29 @@ struct PrivacyDevnetRoomCard: View {
     /// reading twice.
     private var slotHeadline: String? {
         switch section {
+        // **HOME TAKES A HEADLINE WHEN A FIGURE DRAWS (prd §606, user: "isn't
+        // it weird to have those sentences at the top of the charts?").**
+        //
+        // §596 removed the summary sentence from every other scope for exactly
+        // this reason — prose standing on a drawing — and exempted Home on the
+        // grounds that its sentence IS the crown. Seen on a device, that
+        // exemption fails in the one state the room is usually in: three lines
+        // of `heading22` saying "Proofs here name 2 snapshots the chain still
+        // remembers" directly above a ring drawing two numbered sets and their
+        // remaining life. The sentence was the drawing, in words, on top of it.
+        //
+        // **Only where a figure draws.** Five of the eight ledes have no ring
+        // at all — relaunched, unwatched, reading, quiet, spends — and there
+        // the sentence is the room's entire content and must stay. This is the
+        // conditional, not a deletion: a count when the ring is there, nil
+        // when the sentence is all there is. `Frames` leads its Home with a
+        // figure through the chassis for the same reason.
         case .home:
-            return nil
+            guard !marks.isEmpty else { return nil }
+            let n = accounts.reduce(0) { $0 + $1.roots.count }
+            guard n > 0 else { return nil }
+            return n == 1 ? String(localized: "1 snapshot")
+                          : String(localized: "\(String(n)) snapshots")
         case .activity:
             let n = pairs.count
             guard n > 0 else { return nil }
@@ -146,9 +167,14 @@ struct PrivacyDevnetRoomCard: View {
 
     @ViewBuilder private var home: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text(PrivacyDevnetRoom.sentence(head))
-                .dsText(.heading22)
-                .fixedSize(horizontal: false, vertical: true)
+            // The sentence stands only where there is no figure under it
+            // (prd §606) — see `slotHeadline`. Where the ring draws, it was
+            // the drawing restated in three lines of heading type above it.
+            if marks.isEmpty {
+                Text(PrivacyDevnetRoom.sentence(head))
+                    .dsText(.heading22)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             // **THE RING, AND ITS CAPTION IS GONE WITH THE BAR (prd §598).**
             // The straight track needed eight words at its ends to say which
@@ -198,7 +224,13 @@ struct PrivacyDevnetRoomCard: View {
     /// sentence takes the top of the slot and whatever is left is the ring's
     /// alone — measured on a device at 128, where it read as a small object in
     /// a large empty card.
-    static var homeRingDiameter: CGFloat { 156 }
+    /// **Derived from the slot, never a constant** (`PrivacyDevnetFigure
+    /// .rowCap`'s reason). Home reserves a headline row now, so what is left
+    /// is `figureSlot` and the ring should own it — measured on a device at
+    /// 156, where it still sat in noticeable air.
+    static var homeRingDiameter: CGFloat {
+        min(max(DSRoomChassis.figureSlot - 56, 120), 200)
+    }
 
     /// Every snapshot this address has proved against, placed on the ring.
     ///
@@ -689,210 +721,50 @@ extension PrivacyDevnetRoomCard {
 
     @ViewBuilder func figure(for section: PrivacyDevnetSection) -> some View {
         switch section {
-        case .activity:   activityChart(moves)
-        case .frames:     budgets(moves.filter { $0.frameCount > 0 })
-        case .accounts:   tallies
-        case .nullifiers: spentKeys
+        case .activity:   kindMix(moves)
+        case .frames:     budgetBar(moves.filter { $0.frameCount > 0 })
+        // **NO FIGURE (prd §606).** These two drew a count as N identical
+        // shapes — eight rings for eight keys, a row of pips per address —
+        // over data with nothing to compare. "We can count; what does that
+        // do." The chassis headline states the number and the rows below the
+        // rail carry the detail, which is strictly more than the shapes said.
+        case .accounts:   EmptyView()
+        case .nullifiers: EmptyView()
         case .roots:      windows
-        case .sponsors:   budgets(moves.filter(\.sponsored))
+        case .sponsors:   budgetBar(moves.filter(\.sponsored))
         case .home:       EmptyView()
         }
     }
 
-    /// WHEN each transaction landed and what it was — anatomy columns on the
-    /// spaced block axis (prd §596).
+    /// WHAT THESE TRANSACTIONS WERE — the kind mix (prd §606).
     ///
-    /// This replaces a row of 9pt dots on a 3pt line: the dots said "this
-    /// many, roughly then" and nothing else, while the columns carry the frame
-    /// count (this chain's own size measure) and the shape vocabulary the rest
-    /// of the room already teaches. `PrivacyDevnetFigure.spaced` still places
-    /// them — order and span exact, crowding relieved — and the block range is
-    /// stated at the ends, which is where the precision the nudge costs lives.
-    @ViewBuilder private func activityChart(_ moves: [PrivacyDevnetLiveState.Move]) -> some View {
-        let cols = moves.compactMap { m -> PrivacyDevnetActivityChart.Column? in
-            guard let block = m.block else { return nil }
-            return .init(block: block, frames: m.frameCount,
-                         keys: m.nullifierCount, roots: m.rootCount)
-        }
-        .sorted { $0.block < $1.block }
-        if cols.isEmpty {
+    /// Replaces a column per transaction whose height was the frame count, on
+    /// a chain where nearly every transaction runs exactly two frames. The
+    /// height axis was constant, so the figure was a row of identical bars.
+    @ViewBuilder private func kindMix(_ moves: [PrivacyDevnetLiveState.Move]) -> some View {
+        let mix = PrivacyDevnetFigure.kindMix(moves.map {
+            PrivacyDevnetFigure.kind(frames: $0.frameCount, keys: $0.nullifierCount)
+        })
+        if mix.isEmpty {
             EmptyView()
         } else {
-            PrivacyDevnetActivityChart(columns: cols, reduceMotion: reduceMotion)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            PrivacyDevnetKindMix(mix: mix, reduceMotion: reduceMotion)
         }
     }
 
-    /// What each transaction's steps were ALLOWED — the reading this chain
-    /// exists for.
-    ///
-    /// **Weighted only when EVERY frame carries a budget**
-    /// (`PrivacyDevnetFigure.shares`); a partial read draws equal widths rather
-    /// than presenting the unread frame's leftover as its budget.
-    ///
-    /// **`gasUsed` and `succeeded` are nil on this chain — measured, not
-    /// assumed**: `eth_getTransactionReceipt` on 8141 carries no per-frame
-    /// breakdown (§593a). So no segment is ever drawn as failed, and the strip
-    /// is the budget rather than the spend.
-    @ViewBuilder private func budgets(_ moves: [PrivacyDevnetLiveState.Move]) -> some View {
-        if moves.isEmpty {
-            EmptyView()
+    /// WHAT THESE STEPS WERE ALLOWED, and what they cost — one bar for the
+    /// room rather than one strip per transaction (prd §606).
+    @ViewBuilder private func budgetBar(_ moves: [PrivacyDevnetLiveState.Move]) -> some View {
+        let frames = moves.flatMap(\.frames).map {
+            PrivacyDevnetFigure.Frame(gasLimit: $0.gasLimit, stateLimit: $0.stateLimit,
+                                      succeeded: $0.succeeded)
+        }
+        let b = PrivacyDevnetFigure.budgets(frames: frames, gasUsed: moves.map(\.gasUsed))
+        if b.hasAnything {
+            PrivacyDevnetBudgetBar(budgets: b, reduceMotion: reduceMotion)
         } else {
-            let shown = Array(moves.prefix(Self.budgetRows))
-            GeometryReader { geo in
-                VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    ForEach(shown) { move in
-                        // The strip takes the width it is given, capped so a
-                        // two-frame transaction on a 900pt window does not
-                        // read as a progress bar (prd §593d).
-                        PrivacyDevnetAnatomy(
-                            items: PrivacyDevnetFigure.anatomy(
-                                frames: move.frames.map {
-                                    PrivacyDevnetFigure.Frame(gasLimit: $0.gasLimit,
-                                                              stateLimit: $0.stateLimit,
-                                                              succeeded: $0.succeeded)
-                                },
-                                keys: 0, roots: 0, sponsored: false),
-                            stripWidth: min(max(geo.size.width - 24, 120), 420),
-                            barHeight: 14,
-                            // What it actually SPENT of that budget (prd
-                            // §602). The receipt was already fetched for the
-                            // payer and its total was being thrown away, so
-                            // this scope drew every transaction's allowance
-                            // and no transaction's cost.
-                            usedShare: PrivacyDevnetFigure.usedShare(
-                                gasUsed: move.gasUsed,
-                                frames: move.frames.map {
-                                    PrivacyDevnetFigure.Frame(gasLimit: $0.gasLimit,
-                                                              stateLimit: $0.stateLimit,
-                                                              succeeded: $0.succeeded)
-                                }),
-                            reduceMotion: reduceMotion)
-                    }
-                    PrivacyDevnetMore(count: moves.count - shown.count,
-                                      noun: String(localized: "more below"))
-                    Spacer(minLength: 0)
-                }
-                .frame(width: geo.size.width, height: geo.size.height,
-                       alignment: .topLeading)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .accessibilityElement()
-            .accessibilityLabel(String(localized: "What each transaction's steps were allowed"))
-        }
-    }
-
-    /// How many strips fit in the slot. Derived from the figure's own box,
-    /// never a constant (`PrivacyDevnetFigure.rowCap`'s reason).
-    static var budgetRows: Int {
-        PrivacyDevnetFigure.rowCap(box: Double(DSRoomChassis.figureSlot), rowHeight: 20,
-                                   spacing: Double(DS.Space.s3), chrome: 26)
-    }
-
-    /// WHAT EACH ADDRESS HAS DONE — its face, then frames, spend keys,
-    /// snapshots as countable pips (prd §593b's correctness argument against a
-    /// share-of-balance bar stands: on a faucet chain a share bar ranks
-    /// addresses by who pulled the tap hardest).
-    ///
-    /// **An address the chain did not answer for draws NO tally**, not a row of
-    /// empty pips — empty pips are a claim that the address has done nothing,
-    /// made from a read that failed (§515a).
-    @ViewBuilder private var tallies: some View {
-        let rows = accounts.filter(\.reached)
-        if rows.isEmpty {
             EmptyView()
-        } else {
-            let shown = Array(rows.prefix(Self.tallyRows))
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                ForEach(shown) { account in
-                    HStack(spacing: DS.Space.s3) {
-                        // The FACE, so the figure and the rail beneath it
-                        // speak the same silhouette language (prd §596).
-                        WalletFace(address: account.address, size: DS.Face.row, circular: true)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(PrivacyDevnetName.of(account.address))
-                                .dsText(.subhead13)
-                                .foregroundStyle(DS.textSecondary)
-                                .lineLimit(1)
-                            PrivacyDevnetTally(
-                                tally: .init(frames: account.frameCount,
-                                             keys: account.nullifiers.count,
-                                             roots: account.roots.count),
-                                reduceMotion: reduceMotion)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                }
-                PrivacyDevnetMore(count: rows.count - shown.count,
-                                  noun: String(localized: "more addresses"))
-                Spacer(minLength: 0)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-    }
-
-    /// How many face rows fit. Derived, never a constant.
-    static var tallyRows: Int {
-        PrivacyDevnetFigure.rowCap(box: Double(DSRoomChassis.figureSlot), rowHeight: 48,
-                                   spacing: Double(DS.Space.s3), chrome: 26)
-    }
-
-    /// One mark per spent key, drawn as SPENT.
-    ///
-    /// **A ring with a hole, not a filled block.** The hole is the whole claim
-    /// — this key was used once and can never be used again — where a solid
-    /// bar is a quantity and says only "there are this many". At slot scale
-    /// the rings wrap into a grid rather than running off the right edge.
-    @ViewBuilder private var spentKeys: some View {
-        let keys = accounts.flatMap(\.nullifiers)
-        if keys.isEmpty {
-            EmptyView()
-        } else {
-            // A cap, so an address with hundreds does not draw hundreds — the
-            // rest is COUNTED rather than dropped, since a grid cut at the
-            // slot's edge and a complete one look identical (§307).
-            let shown = Array(keys.prefix(Self.keyCap))
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 32), spacing: 10)],
-                          alignment: .leading, spacing: 12) {
-                    ForEach(Array(shown.enumerated()), id: \.offset) { index, key in
-                        // **A KEY THIS DEVICE HAS NEVER SEEN SEALS ITSELF**
-                        // (prd §598) — the ring's hole is its claim, and the
-                        // room drew that claim already finished for every key
-                        // it had ever shown. Silent on the first read of an
-                        // install (`PrivacyDevnetMoments.unseen` seeds), so
-                        // nobody's first open seals forty rings at once.
-                        PrivacyDevnetSpentKey(size: 22,
-                                              seals: fresh.contains(PrivacyDevnetMoments.hex(key)),
-                                              reduceMotion: reduceMotion)
-                            .chartArrival(index: index, reduceMotion: reduceMotion)
-                    }
-                }
-                PrivacyDevnetMore(count: keys.count - shown.count)
-                Spacer(minLength: 0)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .accessibilityElement()
-            .accessibilityLabel(String(localized: "Spend keys used"))
-            .accessibilityValue("\(keys.count)")
-            // Marked seen AFTER the grid has been handed the set, so the
-            // animation this pass earned still runs — and once, because the
-            // task is keyed on the keys themselves.
-            .task(id: keys.map(PrivacyDevnetMoments.hex)) {
-                fresh = PrivacyDevnetMoments.hasSeenAnyKey()
-                    ? PrivacyDevnetMoments.unseen(keys) : []
-                PrivacyDevnetMoments.markSeen(keys)
-            }
-        }
-    }
-
-    /// Enough rings to fill the slot's rows without ever overflowing it —
-    /// derived from the grid's own cell arithmetic at the narrowest width the
-    /// card draws at, erring LOW because an overflowing grid is clipped
-    /// silently and an under-full one only leaves air.
-    static var keyCap: Int {
-        PrivacyDevnetFigure.rowCap(box: Double(DSRoomChassis.figureSlot), rowHeight: 34,
-                                   spacing: 12, chrome: 26) * 7
     }
 
     /// Every referenced snapshot on the ring, one lane per source.

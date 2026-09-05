@@ -80,25 +80,35 @@ struct PrivacyDevnetRing: View {
     @ViewBuilder private func ring(now: Date) -> some View {
         let placed = PrivacyDevnetFigure.ringPlacements(drifted(now: now))
         ZStack {
+            // **THE TRACK IS THICK AND THE WINDOW IS FILLED (prd §606).**
+            //
+            // Reported, on the first device look: the ring "just looks like a
+            // toy". It was a 5pt outline with saturated rotated squares
+            // scattered on it, each stamped with a numeral — badge vocabulary
+            // on an empty circle. Nothing was FILLED, so it held no quantity:
+            // a gauge shows an amount by how much of it is covered, and this
+            // showed position alone.
+            //
+            // Now the arc carries the freshest proof's remaining life as a
+            // fill, so the ring reads as the depleting resource it describes,
+            // and the marks are TICKS THAT CUT THE TRACK rather than objects
+            // floating near it — a measurement on the instrument.
             RingArc(sweep: PrivacyDevnetFigure.ringSweep)
                 .stroke(DS.fillFaint, style: StrokeStyle(lineWidth: Self.rim, lineCap: .round))
 
-            // Quarter ticks, so the ring has a scale without an axis — the
-            // same faint fill as the rim, never a hairline (the design law's
-            // no-lines ban) and never labelled.
-            ForEach([0.25, 0.5, 0.75], id: \.self) { q in
-                tick(at: PrivacyDevnetFigure.ringSweep * q, length: 7,
-                     colour: DS.fillFaint, width: 2)
+            if let filled = fillSweep {
+                RingArc(sweep: filled)
+                    .stroke(DS.tint, style: StrokeStyle(lineWidth: Self.rim, lineCap: .round))
             }
 
             // NOW. In ink rather than tint: it is the axis, not a reading, and
             // tinting it would make the present look like another snapshot.
-            tick(at: 0, length: 13, colour: DS.textPrimary.opacity(0.55), width: 2.5)
+            tick(at: 0, length: Self.rim + 8, colour: DS.textPrimary.opacity(0.75), width: 2.5)
 
             reading
 
             ForEach(Array(placed.enumerated()), id: \.element.id) { index, p in
-                diamond(p, index: index)
+                proofTick(p, index: index)
             }
         }
         // The ring fills the way it drains.
@@ -136,20 +146,21 @@ struct PrivacyDevnetRing: View {
             // ring and read as a second headline under the first. It is the
             // ring's caption, not its lede: one line, scaled down before it
             // wraps, over a slot the sentence above already owns.
-            VStack(spacing: 1) {
+            VStack(spacing: 2) {
                 Text(PrivacyDevnetRoots.approximate(slots: remaining))
-                    .dsText(.callout15)
+                    .dsText(.stat24)
                     .foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                Text(String(localized: "\(String(remaining)) slots left"))
+                    .minimumScaleFactor(0.6)
+                Text(String(localized: "\(String(remaining)) of \(String(PrivacyDevnetRoots.windowSlots)) slots"))
                     .dsText(.label12)
                     .monospacedDigit()
                     .foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
-            .frame(width: diameter - 34)
+            .frame(width: diameter - 40)
             .accessibilityHidden(true)
         }
     }
@@ -163,49 +174,92 @@ struct PrivacyDevnetRing: View {
             .rotationEffect(.degrees(angle))
     }
 
-    /// One snapshot on the rim.
+    /// How much of the arc is filled — the freshest live proof's remaining
+    /// share of the window.
     ///
-    /// **The offset-then-rotate idiom, and the counter-rotation is not
-    /// decoration.** `.offset` is a render-time transform that leaves the
-    /// layout frame at the ring's centre, so the following `.rotationEffect`
-    /// swings the mark around that centre — which is what places it on the
-    /// arc. It also spins the mark's own content, so a set ordinal at 200°
-    /// would be printed upside down; the inner counter-rotation cancels
-    /// exactly that and nothing else.
-    @ViewBuilder private func diamond(_ p: PrivacyDevnetFigure.Placement,
-                                      index: Int) -> some View {
+    /// **The freshest, because it is the one with time left to care about**
+    /// (`PrivacyDevnetRoom.head`'s own ranking, so the fill and the sentence
+    /// above can never describe two different snapshots). Nil when nothing is
+    /// live: an empty track and a track with nothing to measure are different
+    /// claims, and only the second is true then.
+    private var fillSweep: Double? {
+        guard let remaining else { return nil }
+        let share = min(1, Double(remaining) / Double(PrivacyDevnetRoots.windowSlots))
+        guard share > 0 else { return nil }
+        return PrivacyDevnetFigure.ringSweep * share
+    }
+
+    /// One snapshot, as a tick across the track.
+    ///
+    /// **A tick that CUTS the track is a measurement on it; a gem sitting
+    /// beside it is an ornament** (prd §606). It runs the rim's full width
+    /// plus a little either side so it reads over both the filled and the
+    /// empty part, in ink rather than tint — the fill is the quantity, the
+    /// ticks are the readings on it, and tinting both would merge them.
+    ///
+    /// An aged proof is a DASHED tick in the exit gap: out of the window,
+    /// visibly a thing rather than an absence, and dashed rather than red
+    /// because a proof whose snapshot has left was valid when it landed.
+    ///
+    /// **The offset-then-rotate idiom**: `.offset` is a render-time transform
+    /// that leaves the layout frame at the ring's centre, so the following
+    /// `.rotationEffect` swings the tick around that centre. The inner
+    /// counter-rotation exists only to keep a set ordinal upright.
+    @ViewBuilder private func proofTick(_ p: PrivacyDevnetFigure.Placement,
+                                        index: Int) -> some View {
         let aged = p.mark.position == nil
         ZStack {
-            Rectangle()
-                .fill(aged ? Color.clear : DS.tint)
+            Capsule()
+                .fill(aged ? Color.clear : DS.textPrimary.opacity(0.92))
                 .overlay {
                     if aged {
-                        Rectangle().strokeBorder(DS.tint.opacity(0.45), lineWidth: 2)
+                        Capsule().strokeBorder(DS.tint.opacity(0.55), lineWidth: 1.5)
                     }
                 }
-                .frame(width: Self.markSize, height: Self.markSize)
-                .rotationEffect(.degrees(45))
-            // **THE ORDINAL, NOT THE BYTES** (§598). A 32-byte source id names
-            // nothing a reader can hold across a figure, a row and a sheet; a
-            // small number does, and it is the same number the list below
-            // wears. Absent entirely when there is one set, because an ordinal
-            // implies a second.
+                .frame(width: 2.5, height: Self.rim + 6)
+                .offset(y: -(diameter - Self.rim) / 2)
+                .rotationEffect(.degrees(p.angle))
+
+            // **THE ORDINAL SITS INSIDE THE RIM, in the quietest ink.** It was
+            // stamped INSIDE the mark in `DS.page`, which is what made the
+            // marks read as numbered badges; then it sat OUTSIDE, and at the
+            // bottom of the ring it was clipped by the figure's own frame —
+            // seen on a device. Inward cannot clip, because the ring's own
+            // radius bounds it. Absent entirely when there is one set, since
+            // an ordinal implies a second.
             if sets > 1 {
+                // **PLACED WITH TRIG, NOT WITH A COUNTER-ROTATION.** Rotating
+                // the label into place and then rotating it back needs a pivot
+                // expressed in the label's own unit space, which is a ratio of
+                // two things neither of which the view knows — and on a device
+                // every numeral landed at the wrong angle from its tick. The
+                // position is one sine and one cosine; it is upright by
+                // construction because nothing rotates it at all.
+                let point = Self.labelOffset(p.angle, diameter: diameter)
                 Text(String(p.mark.set + 1))
                     .dsText(.label12)
                     .monospacedDigit()
-                    .foregroundStyle(aged ? DS.tint.opacity(0.8) : DS.page)
+                    .foregroundStyle(DS.textTertiary)
+                    .offset(x: point.x, y: point.y)
             }
         }
-        .rotationEffect(.degrees(-p.angle))
-        .offset(y: -(diameter - Self.rim) / 2)
-        .rotationEffect(.degrees(p.angle))
         .chartArrival(index: index, reduceMotion: reduceMotion)
         // **THE MOVE IS ANIMATED, so a snapshot visibly leaves.** A mark that
         // ages out between reads travels to the gap and hollows rather than
-        // teleporting there — the one place this room has to show a thing
-        // ending, and the reason the drift is worth drawing at all.
+        // teleporting there.
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.9), value: p.angle)
+    }
+
+    /// Where a set's numeral sits: inside the rim, on the same radius as its
+    /// tick, at the same angle. **Clockwise from the top**, which is the
+    /// ring's own sense — so `x` is a sine and `y` is a NEGATIVE cosine,
+    /// because the screen's y grows downward and the top of the ring is where
+    /// the angle starts.
+    static func labelOffset(_ angle: Double, diameter: CGFloat) -> CGPoint {
+        let r = (diameter - rim) / 2 - 15
+        let radians = angle * .pi / 180
+        return CGPoint(x: CGFloat(sin(radians)) * r,
+                       y: -CGFloat(cos(radians)) * r)
     }
 
     static func spoken(_ marks: [PrivacyDevnetFigure.Mark]) -> String {
@@ -384,49 +438,28 @@ struct PrivacyDevnetAnatomy: View {
 /// shape can afford to mean one thing.
 struct PrivacyDevnetSpentKey: View {
     var size: CGFloat = 14
-    /// **SEAL IT, ONCE, THE FIRST TIME THIS DEVICE SEES IT (prd §598).**
-    ///
-    /// The ring's hole IS its claim — used once, never again — and the room
-    /// drew that claim already finished, every time, for keys it had shown a
-    /// hundred times and keys that landed a second ago alike. A key this
-    /// device has never seen before closes: the stroke sweeps round and the
-    /// ring is sealed, which is the one animation in this room that says what
-    /// the shape means rather than decorating it.
-    ///
-    /// Off by default, so a grid of forty known keys is still forty static
-    /// rings; `PrivacyDevnetMoments.unseen` is what turns it on, and it
-    /// deliberately seeds silently on an install's first read — otherwise
-    /// somebody's first open seals forty rings at once, which is a room
-    /// celebrating its own contents.
-    var seals = false
-    var reduceMotion = false
 
-    @State private var closed = false
-
-    private var drawn: Bool { closed || !seals || reduceMotion }
-
+    // **THE SEAL IS GONE WITH THE GRID IT LIVED ON (prd §606).**
+    //
+    // §598 gave this ring a first-sight animation: a key this device had never
+    // seen closed itself once, because the hole IS the claim. It fired in the
+    // Spend keys scope's grid — and that grid was eight identical rings
+    // standing in for the number eight, which §606 deleted. An animation
+    // attached to a figure that should not exist does not survive the figure;
+    // moving it onto the sheet's key rows would put a 0.55s draw on a list
+    // item, which is the fidget the motion law bans.
+    //
+    // `PrivacyDevnetMoments`' seen-ledger goes with it. What remains here is
+    // the shape, in the anatomy strip and the legend, where it means what it
+    // always meant: used once, never again.
     var body: some View {
         Circle()
-            .trim(from: 0, to: drawn ? 1 : 0)
-            .stroke(DS.tint, style: StrokeStyle(lineWidth: max(2, size * 0.28),
-                                                lineCap: .round))
-            // Inset by half the stroke so a trimmed stroke sits exactly where
-            // `strokeBorder` used to — otherwise every key in the app grows by
-            // its own line width the day this gained an animation.
-            .padding(max(1, size * 0.14))
+            .strokeBorder(DS.tint, lineWidth: max(2, size * 0.28))
             .frame(width: size, height: size)
-            // Starts at 12 o'clock and closes clockwise, which is the ring
-            // above's own direction — one room, one sense of rotation.
-            .rotationEffect(.degrees(-90))
-            // The fact is stated beside it every time — the grid carries
-            // "Spend keys used" and its count, the sheet row carries the key's
-            // own hex and "used once" — so the shape is decoration to
-            // VoiceOver and announcing it would read the same fact twice.
+            // The fact is stated beside it every time — the sheet row carries
+            // the key's own hex and "used once" — so the shape is decoration
+            // to VoiceOver and announcing it would read the same fact twice.
             .accessibilityHidden(true)
-            .task {
-                guard seals, !reduceMotion, !closed else { return }
-                withAnimation(.easeInOut(duration: 0.55)) { closed = true }
-            }
     }
 }
 
@@ -475,164 +508,21 @@ struct PrivacyDevnetLegend: View {
 }
 
 
-// MARK: - What an address has done
-
-/// Three counts as pips: frames, spend keys, snapshots.
-///
-/// **A tally, not a weight.** The pips are countable up to
-/// `PrivacyDevnetFigure.pipCap` and then say how many more, which is the whole
-/// claim — no bar, no share, no comparison of one address's magnitude against
-/// another's, because the only magnitude here is test ETH and it has no price.
-struct PrivacyDevnetTally: View {
-    let tally: PrivacyDevnetFigure.Tally
-    let reduceMotion: Bool
-
-    var body: some View {
-        HStack(alignment: .top, spacing: DS.Space.s3) {
-            column(tally.frames, String(localized: "frames"), index: 0) { bar }
-            column(tally.keys, String(localized: "keys"), index: 1) { disc }
-            column(tally.roots, String(localized: "snapshots"), index: 2) { gem }
-        }
-    }
-
-    @ViewBuilder
-    private func column<M: View>(_ count: Int, _ label: String, index: Int,
-                                 @ViewBuilder mark: @escaping () -> M) -> some View {
-        let p = PrivacyDevnetFigure.pips(count)
-        VStack(spacing: 3) {
-            HStack(spacing: 2) {
-                ForEach(0..<p.filled, id: \.self) { _ in mark().opacity(1) }
-                ForEach(0..<p.empty, id: \.self) { _ in mark().opacity(0.16) }
-                if p.overflow > 0 {
-                    Text(String(localized: "+\(String(p.overflow))"))
-                        .dsText(.subhead13)
-                        .monospacedDigit()
-                        .foregroundStyle(DS.textTertiary)
-                }
-            }
-            .frame(height: 8)
-            .chartArrival(index: index, reduceMotion: reduceMotion)
-            Text(label)
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textTertiary)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("\(String(count)) \(label)"))
-    }
-
-    private var bar: some View {
-        RoundedRectangle(cornerRadius: 1).fill(DS.tint).frame(width: 8, height: 6)
-    }
-    private var disc: some View {
-        Circle().fill(DS.tint).frame(width: 6, height: 6)
-    }
-    private var gem: some View {
-        Rectangle().fill(DS.tint).frame(width: 6, height: 6)
-            .rotationEffect(.degrees(45))
-    }
-}
-
-// MARK: - When, and how big (prd §596)
-
-/// One column per transaction on the spaced block axis — the Activity scope's
-/// chart, replacing a row of 9pt dots on a 3pt line.
-///
-/// **The column's height is its FRAME COUNT, this chain's own size measure** —
-/// a two-frame pool spend and a five-frame batch are different objects and the
-/// dots said only "two things happened". The ornaments above are the room's
-/// standing vocabulary at chart scale: a ring when the transaction spent
-/// one-time keys, a diamond when it named a snapshot — so the figure reads
-/// with no legend beyond the one the scopes already teach.
-///
-/// **Positions come from `PrivacyDevnetFigure.spaced`** — order and span
-/// exact, crowding relieved (the pool's pairs sit five blocks apart across
-/// ~10,500, prd §593d) — and the block range is stated at the ends, which is
-/// where the precision the nudge costs actually lives.
-///
-/// No colour carries state; height is the only magnitude and it is a COUNT,
-/// never money.
-struct PrivacyDevnetActivityChart: View {
-    struct Column: Equatable {
-        let block: UInt64
-        let frames: Int
-        let keys: Int
-        let roots: Int
-    }
-    /// Oldest first — the axis runs left to right the way every time axis in
-    /// this app does.
-    let columns: [Column]
-    let reduceMotion: Bool
-
-    private static let markWidth: CGFloat = 14
-
-    var body: some View {
-        let lo = columns.map(\.block).min() ?? 0
-        let hi = columns.map(\.block).max() ?? 0
-        GeometryReader { geo in
-            let labelRow: CGFloat = 22
-            let ornaments: CGFloat = 24
-            let plot = max(24, geo.size.height - labelRow - ornaments)
-            let maxFrames = max(1, columns.map(\.frames).max() ?? 1)
-            let xs = PrivacyDevnetFigure.spaced(columns.map(\.block),
-                                                width: Double(geo.size.width),
-                                                mark: Double(Self.markWidth + 4))
-            ZStack(alignment: .bottomLeading) {
-                // The floor the columns stand on — the same faint bed every
-                // track here uses, never a hairline.
-                Capsule()
-                    .fill(DS.fillFaint)
-                    .frame(height: 4)
-                    .offset(y: -labelRow + 8)
-
-                ForEach(Array(zip(columns.indices, xs)), id: \.0) { index, x in
-                    let col = columns[index]
-                    // **A TRANSFER IS A STUB, NOT A ZERO** — a plain transfer
-                    // has no frames and still happened, so it draws the
-                    // minimum bar rather than vanishing from its own chart.
-                    let height = max(10, plot * CGFloat(col.frames) / CGFloat(maxFrames))
-                    VStack(spacing: 5) {
-                        HStack(spacing: 3) {
-                            if col.keys > 0 { PrivacyDevnetSpentKey(size: 11) }
-                            if col.roots > 0 {
-                                Rectangle()
-                                    .fill(DS.tint)
-                                    .frame(width: 9, height: 9)
-                                    .rotationEffect(.degrees(45))
-                            }
-                        }
-                        .frame(height: 14)
-                        RoundedRectangle(cornerRadius: 3, style: .continuous)
-                            .fill(col.frames > 0 ? DS.tint : DS.textTertiary.opacity(0.45))
-                            .frame(width: Self.markWidth, height: height)
-                    }
-                    .chartArrival(index: index, reduceMotion: reduceMotion)
-                    .offset(x: CGFloat(x), y: -labelRow + 2)
-                }
-
-                // The axis's own words, at the ends. One block collapses to
-                // one label — "block 69 to block 69" is a range pretending.
-                HStack {
-                    Text(String(localized: "block \(String(lo))"))
-                    Spacer(minLength: DS.Space.s3)
-                    if hi > lo {
-                        Text(String(localized: "block \(String(hi))"))
-                    }
-                }
-                .dsText(.subhead13)
-                .monospacedDigit()
-                .foregroundStyle(DS.textTertiary)
-                .frame(maxWidth: .infinity)
-            }
-            .frame(width: geo.size.width, height: geo.size.height,
-                   alignment: .bottomLeading)
-        }
-        .accessibilityElement()
-        .accessibilityLabel(String(localized: "When these landed, and how many steps each ran"))
-        .accessibilityValue(hi == lo
-            ? String(localized: "All in block \(String(hi))")
-            : String(localized: "Blocks \(String(lo)) to \(String(hi))"))
-    }
-}
+// **TWO FIGURES DELETED HERE (prd §606).**
+//
+// `PrivacyDevnetTally` drew three pip columns per address and
+// `PrivacyDevnetActivityChart` a column per transaction whose height was the
+// frame count. Both drew a COUNT as N identical shapes over data with nothing
+// to compare — every transaction on this chain runs two frames, so the
+// Activity chart's one axis was constant, and an address's pips are the number
+// the chassis headline already states. Reported as "wtf does it even mean" and
+// "we can count, what does that do".
+//
+// What replaced them is above: `PrivacyDevnetKindMix` answers what these
+// transactions ARE, and `PrivacyDevnetBudgetBar` what their steps were allowed
+// and what they cost. The Accounts and Spend keys scopes draw NO figure at
+// all — their headline is the number and their rows are the detail, which is
+// strictly more than the shapes were saying.
 
 // MARK: - The overflow line
 
@@ -653,5 +543,216 @@ struct PrivacyDevnetMore: View {
                 .dsText(.subhead13)
                 .foregroundStyle(DS.textTertiary)
         }
+    }
+}
+
+// MARK: - What this room's transactions are (prd §606)
+
+/// The kind mix, as one labelled bar.
+///
+/// **THIS REPLACES A COLUMN PER TRANSACTION whose height was the frame count**
+/// — and nearly every transaction on this chain runs exactly two frames, so
+/// that height axis was constant and the figure was a row of identical bars at
+/// nudged positions. Reported as "wtf does it even mean".
+///
+/// What varies is what a transaction is FOR, and the answer to "what does this
+/// address do on this chain" is a proportion, not a scatter. One bar, segments
+/// in the room's own words, counts stated rather than inferred from width.
+///
+/// **ONE KIND DRAWS NO BAR.** A single full-width segment is a sentence with a
+/// rectangle behind it saying 100%, and on a young room every transaction is
+/// the same kind — so the words stand alone and the figure declines. That is
+/// the rule the whole §606 pass turns on: a scope with nothing to compare
+/// states its number instead of drawing one.
+struct PrivacyDevnetKindMix: View {
+    let mix: [(kind: PrivacyDevnetFigure.Kind, count: Int)]
+    let reduceMotion: Bool
+
+    private var total: Int { mix.reduce(0) { $0 + $1.count } }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            if mix.count > 1, total > 0 {
+                GeometryReader { geo in
+                    HStack(spacing: 2) {
+                        ForEach(Array(mix.enumerated()), id: \.offset) { index, part in
+                            Capsule()
+                                .fill(DS.tint.opacity(Self.weight(index)))
+                                .frame(width: max(6, (geo.size.width - CGFloat(mix.count - 1) * 2)
+                                                  * CGFloat(part.count) / CGFloat(total)))
+                                .chartArrival(index: index, reduceMotion: reduceMotion)
+                        }
+                    }
+                }
+                .frame(height: 22)
+            }
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                ForEach(Array(mix.enumerated()), id: \.offset) { index, part in
+                    HStack(spacing: DS.Space.s2) {
+                        Capsule()
+                            .fill(DS.tint.opacity(Self.weight(index)))
+                            .frame(width: 14, height: 8)
+                        Text(Self.words(part.kind, count: part.count))
+                            .dsText(.callout15)
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                    }
+                }
+            }
+        }
+        // **CENTRED, not pinned to the top.** A short figure with a trailing
+        // `Spacer` leaves every leftover point in one block underneath it,
+        // which is the dead-air shape §602 fixed for the ring and this
+        // repeated the day it was written.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(String(localized: "What these transactions were")))
+    }
+
+    /// **ONE HUE, THREE WEIGHTS — never three colours.** This room spends no
+    /// colour on state (§593b), and three saturated fills would read as three
+    /// unrelated things rather than three parts of one total. The order is the
+    /// mix's own, so the biggest share is always the strongest.
+    static func weight(_ index: Int) -> Double {
+        switch index {
+        case 0:  return 1
+        case 1:  return 0.55
+        default: return 0.3
+        }
+    }
+
+    static func words(_ kind: PrivacyDevnetFigure.Kind, count: Int) -> String {
+        switch kind {
+        case .poolSpend:
+            return count == 1 ? String(localized: "1 pool spend")
+                              : String(localized: "\(String(count)) pool spends")
+        case .framed:
+            return count == 1 ? String(localized: "1 framed call")
+                              : String(localized: "\(String(count)) framed calls")
+        case .transfer:
+            return count == 1 ? String(localized: "1 plain transfer")
+                              : String(localized: "\(String(count)) plain transfers")
+        }
+    }
+}
+
+// MARK: - What the room asked the chain for (prd §606)
+
+/// The two budgets a frame transaction carries, summed across the room.
+///
+/// **THIS REPLACES SIX IDENTICAL STRIPS.** The Frames scope drew one anatomy
+/// per transaction weighted by execution budget, and most frames here carry the
+/// same 320,000 — so it was six identical bar-pairs under a headline reading
+/// "12 steps", which is the "who cares, what does that even tell anyone" the
+/// pass was reported for.
+///
+/// The reading that is NOT already in the headline is the split. EIP-8141 gives
+/// a frame two allowances: what it may compute, and what it may GROW. On this
+/// chain state is the one that varies — most frames ask for none, a pool
+/// spend's second frame asks for 550,000 — so the proportion between them is
+/// what these transactions actually are.
+///
+/// **The spend rides on top where every receipt was read**, as a fill inside
+/// the execution segment on that segment's own axis, so the figure says both
+/// what was asked for and what it cost.
+struct PrivacyDevnetBudgetBar: View {
+    let budgets: PrivacyDevnetFigure.Budgets
+    let reduceMotion: Bool
+
+    private var execution: Double { Double(budgets.execution ?? 0) }
+    private var state: Double { Double(budgets.state ?? 0) }
+    private var total: Double { execution + state }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            GeometryReader { geo in
+                HStack(spacing: 3) {
+                    if execution > 0 {
+                        ZStack(alignment: .leading) {
+                            // **THE TRACK IS ONLY DIM WHEN SOMETHING FILLS
+                            // IT.** Drawn at 0.35 unconditionally, the LARGER
+                            // share read weaker than the smaller one beside
+                            // it — seen on a device, 4.9M of compute looking
+                            // fainter than 1.5M of state. Dim means "awaiting
+                            // a fill"; with no receipt read there is no fill
+                            // coming, so it carries its own weight.
+                            Capsule().fill(DS.tint.opacity(budgets.used == nil ? 0.9 : 0.3))
+                            if let used = budgets.used, execution > 0 {
+                                // What the chain actually charged, on the
+                                // execution segment's own axis. Clamped: the
+                                // receipt covers the whole transaction while
+                                // this sums the frames, so an intrinsic cost
+                                // outside any frame can exceed it.
+                                Capsule()
+                                    .fill(DS.tint)
+                                    .frame(width: segment(geo, execution)
+                                           * CGFloat(min(1, Double(used) / execution)))
+                            }
+                        }
+                        .frame(width: segment(geo, execution))
+                        .chartArrival(index: 0, reduceMotion: reduceMotion)
+                    }
+                    if state > 0 {
+                        Capsule()
+                            .fill(DS.tint.opacity(0.5))
+                            .frame(width: segment(geo, state))
+                            .chartArrival(index: 1, reduceMotion: reduceMotion)
+                    }
+                }
+            }
+            .frame(height: 26)
+
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                if let gas = budgets.execution, gas > 0 {
+                    row(fill: budgets.used == nil ? 0.9 : 0.3,
+                        text: usedLine ?? String(localized: "\(PrivacyDevnetFigures.grouped(gas)) to compute"))
+                }
+                if let growth = budgets.state, growth > 0 {
+                    row(fill: 0.5, text: String(localized: "\(PrivacyDevnetFigures.grouped(growth)) to grow state"))
+                } else if budgets.state == 0 {
+                    // **A ZERO IS A READING** — these steps asked to grow no
+                    // state, which is a fact about them, not a gap in the read.
+                    Text(String(localized: "None of these steps asked to grow state"))
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textTertiary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(String(localized: "What these steps were allowed")))
+    }
+
+    private var usedLine: String? {
+        guard let gas = budgets.execution, gas > 0, let used = budgets.used else { return nil }
+        return String(localized: "\(PrivacyDevnetFigures.grouped(used)) of \(PrivacyDevnetFigures.grouped(gas)) computed")
+    }
+
+    private func segment(_ geo: GeometryProxy, _ value: Double) -> CGFloat {
+        guard total > 0 else { return 0 }
+        let gaps: CGFloat = (execution > 0 && state > 0) ? 3 : 0
+        return max(8, (geo.size.width - gaps) * CGFloat(value / total))
+    }
+
+    @ViewBuilder private func row(fill: Double, text: String) -> some View {
+        HStack(spacing: DS.Space.s2) {
+            Capsule().fill(DS.tint.opacity(fill)).frame(width: 14, height: 8)
+            Text(text)
+                .dsText(.callout15)
+                .foregroundStyle(DS.textSecondary)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Spacer(minLength: 0)
+        }
+    }
+}
+
+/// One spelling of a count somebody reads, shared by this room's figures.
+enum PrivacyDevnetFigures {
+    static func grouped(_ value: UInt64) -> String {
+        let f = NumberFormatter(); f.numberStyle = .decimal
+        return f.string(from: NSNumber(value: value)) ?? String(value)
     }
 }

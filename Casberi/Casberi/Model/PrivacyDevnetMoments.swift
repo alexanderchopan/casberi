@@ -56,15 +56,6 @@ enum PrivacyDevnetMoments {
 
     private static let firstSettleKey = "privacydevnet.firstSettle.celebrated.v1"
     private static let poolSightKey = "privacydevnet.poolSight.celebrated.v1"
-    private static let seenKeysKey = "privacydevnet.seenNullifiers.v1"
-
-    /// How many spent keys the seen-ledger remembers.
-    ///
-    /// A bound rather than a limit: 18 transactions exist chain-wide today. It
-    /// exists so a chain that grows cannot turn a UserDefaults read into a
-    /// page fault, and it drops the OLDEST, so the keys most likely to be
-    /// on screen are the ones kept.
-    static let seenCap = 400
 
     /// Whether the first-settle moment is still owed.
     static func firstSettleOwed(_ defaults: UserDefaults = .standard) -> Bool {
@@ -137,49 +128,17 @@ enum PrivacyDevnetMoments {
         defaults.set(true, forKey: poolSightKey)
     }
 
-    // MARK: - Keys this device has already seen
-
-    /// Which of these keys are new to this device.
-    ///
-    /// Drives the ring that SEALS on first sight — the shape's own claim
-    /// (used once, never again) played once, then remembered. Deliberately in
-    /// `UserDefaults` rather than a `Thing`: "have you looked at this" is a
-    /// fact about THIS DEVICE'S SCREEN, which is `AddressConnectionsSeen`'s
-    /// own ruling and needs no CloudKit deploy.
-    static func unseen(_ keys: [Data], _ defaults: UserDefaults = .standard) -> Set<String> {
-        let known = Set(defaults.stringArray(forKey: seenKeysKey) ?? [])
-        return Set(keys.map(hex).filter { !known.contains($0) })
-    }
-
-    /// Take a set as seen. **First sight SEEDS SILENTLY** — the caller decides
-    /// whether to animate before calling this, and on the very first read of an
-    /// install every key is new, so animating all of them would be a room that
-    /// seals forty rings at once on the day somebody arrives.
-    static func markSeen(_ keys: [Data], _ defaults: UserDefaults = .standard) {
-        var known = defaults.stringArray(forKey: seenKeysKey) ?? []
-        let have = Set(known)
-        for key in keys.map(hex) where !have.contains(key) { known.append(key) }
-        if known.count > seenCap { known.removeFirst(known.count - seenCap) }
-        defaults.set(known, forKey: seenKeysKey)
-    }
-
-    /// Whether this device has ever recorded a key at all — which is what
-    /// separates "everything is new because you just arrived" from "one new
-    /// key landed".
-    static func hasSeenAnyKey(_ defaults: UserDefaults = .standard) -> Bool {
-        !(defaults.stringArray(forKey: seenKeysKey) ?? []).isEmpty
-    }
+    // **THE SEEN-KEY LEDGER IS GONE (prd §606).** It drove one thing: a ring
+    // that sealed itself the first time this device saw a spend key, drawn in
+    // a grid of N identical rings that §606 deleted for standing in for the
+    // number N. A ledger outliving its only reader is state kept for nothing.
 
     /// Undone BY NAME, never a blanket wipe — the demo's teardown door, and a
     /// dev install may hold real moments under a neighbouring key.
     static func forgetAll(_ defaults: UserDefaults = .standard) {
         defaults.removeObject(forKey: firstSettleKey)
         defaults.removeObject(forKey: poolSightKey)
-        defaults.removeObject(forKey: seenKeysKey)
         defaults.removeObject(forKey: readOnceKey)
     }
 
-    static func hex(_ d: Data) -> String {
-        d.map { String(format: "%02x", $0) }.joined()
-    }
 }

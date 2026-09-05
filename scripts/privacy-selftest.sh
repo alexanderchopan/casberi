@@ -446,8 +446,6 @@ let an = PF.anatomy(frames: [PF.Frame(), PF.Frame()], keys: 2, roots: 1, sponsor
 check(an.count == 6, "frames, keys, roots, payer — nothing dropped")
 if case .frame = an[0] {} else { check(false, "frames lead: what it DID before what it proved") }
 if case .sponsor = an[5] {} else { check(false, "who paid is last") }
-check(PF.pips(0).empty == 1, "zero draws one empty pip so the column still reads as a comparison")
-check(PF.pips(12).overflow == 4, "over the cap the rest is COUNTED, never silently dropped")
 // FOUND: Home's budget was computed against a one-line sentence; the relaunch notice runs to three.
 // **WITH A TRACK, HOME DRAWS NO MOVES.** Two estimates in a row (154, then
 // 232) left one row that fitted the arithmetic and was CLIPPED mid-line on a
@@ -587,6 +585,48 @@ check(tight.count == 5, "a narrow track still draws every mark")
 check(tight == tight.sorted(), "and still in order")
 check(Set(tight).count == 5, "and does not stack them all on one point")
 
+// ── prd §606: what these transactions ARE, and what they asked for ──
+// Every failure here renders as an ordinary bar: the pool — this room's whole
+// subject — filed as an ordinary framed call, a single kind drawn as a
+// full-width bar saying 100%, or a partial sum presented as the room's total.
+
+// **KEYS FIRST.** A pool spend runs frames too, so testing frames first files
+// every spend as a framed call and the pool never appears in its own figure.
+check(PF.kind(frames: 2, keys: 2) == .poolSpend, "a transaction that spent one-time keys IS a pool spend")
+check(PF.kind(frames: 2, keys: 0) == .framed, "frames with no keys is an ordinary framed call")
+check(PF.kind(frames: 0, keys: 0) == .transfer, "no frames at all is a plain transfer — the faucet pays out this way")
+check(PF.kind(frames: 0, keys: 1) == .poolSpend, "keys decide it even with no frames read")
+
+check(PF.kindMix([]).isEmpty, "nothing in, nothing out")
+let oneKind = PF.kindMix([.poolSpend, .poolSpend])
+check(oneKind.count == 1 && oneKind[0].count == 2,
+      "one kind is ONE entry — the view states it in words rather than drawing a bar that says 100%")
+let mixed = PF.kindMix([.transfer, .poolSpend, .poolSpend, .framed])
+check(mixed.count == 3, "three kinds, three entries")
+check(mixed[0].kind == .poolSpend && mixed[0].count == 2, "biggest share leads")
+check(PF.kindMix([.framed, .transfer]).map(\.kind) == PF.kindMix([.transfer, .framed]).map(\.kind),
+      "a tie breaks on the case order, so the figure cannot reshuffle between opens")
+
+// **ZERO IS A READING, NIL IS AN ABSENCE.** Most frames here ask to grow no
+// state, which is a fact about them; an unread budget is us not knowing.
+let bAll = PF.budgets(frames: [PF.Frame(gasLimit: 320_000, stateLimit: 0),
+                               PF.Frame(gasLimit: 1_400_000, stateLimit: 550_000)],
+                      gasUsed: [21_000])
+check(bAll.execution == 1_720_000, "execution budgets sum across every frame in the room")
+check(bAll.state == 550_000, "and so do the state budgets")
+check(bAll.used == 21_000, "the spend is the receipts' own total")
+check(bAll.hasAnything, "and there is a bar to draw")
+let bNoState = PF.budgets(frames: [PF.Frame(gasLimit: 100, stateLimit: 0)], gasUsed: [])
+check(bNoState.state == 0, "all-zero state is ZERO, not nil — these steps asked to grow nothing")
+check(bNoState.used == nil, "no receipts read is nil, never a zero spend")
+let bPartial = PF.budgets(frames: [PF.Frame(gasLimit: 100), PF.Frame()], gasUsed: [1, nil])
+check(bPartial.execution == nil, "ONE unread budget and there is no room total — a partial sum is invented")
+check(bPartial.used == nil, "and one unread receipt leaves the spend unknown rather than understated")
+check(!PF.budgets(frames: [], gasUsed: []).hasAnything, "no frames, no bar")
+check(PF.budgets(frames: [PF.Frame(gasLimit: .max), PF.Frame(gasLimit: .max)],
+                 gasUsed: []).execution == nil,
+      "a sum wide enough to overflow is refused, never wrapped into a small honest-looking number")
+
 // ── prd §602: what it was allowed, and what it spent ──
 // The room could state every transaction's BUDGET and no transaction's COST,
 // over a receipt the walk had already fetched. Every failure here renders as
@@ -654,26 +694,6 @@ let box4 = UserDefaults(suiteName: "privacy-selftest-\(UUID().uuidString)")!
 check(PM.notePoolSight(hasKeys: true, seeding: false, box4), "a pool key appearing while watching IS the moment")
 PM.spendPoolSight(box4)
 check(!PM.notePoolSight(hasKeys: true, seeding: false, box4), "once ever")
-
-// **THE SEEN LEDGER.** First sight seeds silently; only a genuinely new key
-// seals. `hasSeenAnyKey` is what separates "you just arrived" from "one
-// landed", and the room reads it before `unseen`.
-let box5 = UserDefaults(suiteName: "privacy-selftest-\(UUID().uuidString)")!
-let k1 = d("0cca26d3"), k2 = d("aa11bb22"), k3 = d("cc33dd44")
-check(!PM.hasSeenAnyKey(box5), "a device that has seen nothing says so")
-check(PM.unseen([k1, k2], box5).count == 2, "before anything is recorded every key is unseen")
-PM.markSeen([k1, k2], box5)
-check(PM.hasSeenAnyKey(box5), "and after the first read it has")
-check(PM.unseen([k1, k2], box5).isEmpty, "a key already seen never seals again")
-check(PM.unseen([k1, k3], box5) == [PM.hex(k3)], "only the new one seals")
-PM.markSeen([k1, k3], box5)
-check(PM.unseen([k3], box5).isEmpty, "and then it too is remembered")
-// The cap drops the OLDEST, so the keys most likely to be on screen survive.
-let many = (0..<(PM.seenCap + 20)).map { Data([UInt8($0 % 251), UInt8($0 / 251), 0xab]) }
-let box6 = UserDefaults(suiteName: "privacy-selftest-\(UUID().uuidString)")!
-PM.markSeen(many, box6)
-check(PM.unseen([many[many.count - 1]], box6).isEmpty, "the NEWEST key is kept")
-check(!PM.unseen([many[0]], box6).isEmpty, "and the oldest is the one dropped by the cap")
 
 if failures == 0 { print("  ok   \(0) failures") } else { exit(1) }
 SWIFT
@@ -753,10 +773,6 @@ mutate "two labels allowed to overlap (the commonest arrangement there is)" \
   "if false { continue }"
 mutate "the label cap removed — the track becomes text" \
   "$FIG" "guard spent < labelCap else { break }" "guard true else { break }"
-mutate "pips dropping their overflow instead of counting it (§307 again)" \
-  "$FIG" "return (pipCap, 0, n - pipCap)" "return (pipCap, 0, 0)"
-mutate "zero drawing no pip at all, so the column stops reading as a comparison" \
-  "$FIG" "if n == 0 { return (0, 1, 0) }" "if n == 0 { return (0, 0, 0) }"
 mutate "an unobserved genesis claiming a relaunch (not knowing read as knowing)" \
   "$ROOM" "if wasReset == true { return finish(.relaunched) }" \
   "if wasReset != false { return finish(.relaunched) }"
@@ -862,9 +878,16 @@ mutate "the pool sighting seeding without recording it, so it fires tomorrow ins
 mutate "an UNREAD nonce read as a landing" \
   "$MOMENTS" "guard let nonce, firstSettleOwed(defaults) else { return false }" \
   "let nonce = nonce ?? 1; guard firstSettleOwed(defaults) else { return false }"
-mutate "a key that has already sealed sealing again on every open" \
-  "$MOMENTS" "return Set(keys.map(hex).filter { !known.contains(\$0) })" \
-  "return Set(keys.map(hex))"
+mutate "the pool filed as an ordinary framed call, so this room's subject never appears in its own figure" \
+  "$FIG" "if keys > 0 { return .poolSpend }" "if false { return .poolSpend }"
+mutate "a single kind drawn as a breakdown — a bar saying 100%" \
+  "$FIG" "guard let n = counts[k], n > 0 else { return nil }" \
+  "let n = counts[k] ?? 0"
+mutate "the kind mix ordered smallest-first, so the strongest weight lands on the rarest kind" \
+  "$FIG" "if a.count != b.count { return a.count > b.count }" \
+  "if a.count != b.count { return a.count < b.count }"
+mutate "a partial room budget summed anyway and stated as the total" \
+  "$FIG" "guard let value else { return nil }" "let value = value ?? 0"
 mutate "a partial budget sum stated as the transaction's whole allowance" \
   "$FIG" "guard let gas = frame.gasLimit else { return nil }" \
   "let gas = frame.gasLimit ?? 0"
@@ -884,9 +907,6 @@ mutate "an unread receipt read as nothing spent" \
   "let gasUsed = gasUsed ?? 0; guard let allowed = allowance(frames), allowed > 0 else { return nil }"
 mutate "Home promising a few moves and listing none again" \
   "$FIG" "static let homeMoveCap = 3" "static let homeMoveCap = 0"
-mutate "the seen cap dropping the NEWEST keys instead of the oldest" \
-  "$MOMENTS" "if known.count > seenCap { known.removeFirst(known.count - seenCap) }" \
-  "if known.count > seenCap { known.removeLast(known.count - seenCap) }"
 
 # ── drift guards ───────────────────────────────────────────────────────
 # The rules that live in ANOTHER file, which the compiled sources cannot prove.
@@ -1267,10 +1287,11 @@ grep -qF 'PrivacyDevnetFigure.drifted' "$work/figv.bare" \
 # **THE SEAL IS ONCE, AND ONLY FOR A KEY THIS DEVICE HAS NEVER SEEN.** Sealing
 # every ring on every open is a room celebrating its own contents, and on an
 # install'"'"'s first read it would seal forty at once.
-grep -qF 'PrivacyDevnetMoments.unseen' "$work/card.bare" \
-  || fail "the spend keys stopped asking which are new — every ring would seal on every open"
-grep -qF 'PrivacyDevnetMoments.hasSeenAnyKey' "$work/card.bare" \
-  || fail "the first-read seed is gone — somebody arriving would watch forty rings seal at once"
+# **THE SEAL AND ITS LEDGER ARE DELETED (prd §606)**, with the grid of N
+# identical rings they lived on. Guarded in the negative so neither returns
+# without the figure that justified it.
+grep -qE 'PrivacyDevnetMoments\.(unseen|markSeen|hasSeenAnyKey)' "$work/card.bare" \
+  && fail "the seen-key ledger is back without a figure to drive — it existed for a grid that stood in for the number eight"
 
 # **THE SWEEP IS TOLD THIS PHONE'"'"'S ADDRESS, NEVER LOOKS IT UP.** The guard
 # above bans `PrivacyDevnetKey` from the bridge outright; this is the other
@@ -1353,8 +1374,13 @@ grep -qF 'This phone' "$work/sheets.bare" \
   || fail "this phone's own account lost its name — it is watched now, so without it the room shows the account it created as a stranger's hex"
 
 # **THE SPEND IS DRAWN AND STATED, off a receipt already fetched.**
-grep -qF 'usedShare: PrivacyDevnetFigure.usedShare' "$work/card.bare" \
-  || fail "the Frames scope stopped drawing what was spent — it would state every transaction's budget and no transaction's cost"
+# The spend is drawn by the ROOM's budget bar now rather than per strip (§606),
+# so the guard follows it there: the Frames scope must still hand the figure
+# what the receipts reported, or it states every budget and no cost.
+grep -qF 'gasUsed: moves.map(\.gasUsed)' "$work/card.bare" \
+  || fail "the Frames scope stopped handing the receipts' totals to its figure — it would state every transaction's budget and no transaction's cost"
+grep -qF 'PrivacyDevnetFigure.budgets(' "$work/card.bare" \
+  || fail "the Frames scope stopped summing the room's budgets — it drew one identical strip per transaction before, which is what §606 replaced"
 grep -qF 'gasUsed: moveGasUsed' "$work/bridge.bare" \
   || fail "the walk stopped keeping the receipt's own total — a number already in memory, thrown away"
 # It must stay TRANSACTION level: no per-frame breakdown exists on this chain,
