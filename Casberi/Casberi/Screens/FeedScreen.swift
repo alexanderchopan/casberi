@@ -498,6 +498,14 @@ struct FeedScreen: View {
         /// Ethrex Privacy's send, here for the same reason as its three
         /// siblings: a `.sheet` inside a List row half-opens and closes.
         case privacyDevnetSend
+        /// ONE PRIVACY TRANSACTION (prd §596) — `framesMove`'s two reasons at
+        /// once: the seat lands no `Thing` so nothing can ride `.thing`, and
+        /// the rows that open it live inside this List. Carries the OWNING
+        /// address beside the move (Hegotá's rule: in an unscoped room nothing
+        /// else can say whose transaction it is).
+        case privacyDevnetMove(PrivacyDevnetLiveState.Move, String)
+        /// One watched Ethrex Privacy address.
+        case privacyDevnetAccount(PrivacyDevnetAccount)
         /// ONE FRAMES TRANSACTION, and the three routes below it — all four
         /// here for `hegotaMove`'s two reasons at once: the seat lands no
         /// `Thing` so nothing can ride `.thing`, and every card that opens one
@@ -559,6 +567,8 @@ struct FeedScreen: View {
             case .hegotaSend: "hegotaSend"
             case .framesSend: "framesSend"
             case .privacyDevnetSend: "privacyDevnetSend"
+            case .privacyDevnetMove(let m, _): "privacyDevnetMove:\(m.id)"
+            case .privacyDevnetAccount(let a): "privacyDevnetAccount:\(a.address)"
             case .framesMove(let m, _): "framesMove:\(m.id)"
             case .framesFrame(let m, let i): "framesFrame:\(m.id)#\(i)"
             case .framesPayer(let p, _): "framesPayer:\(p.id)"
@@ -700,6 +710,24 @@ struct FeedScreen: View {
                                         localSequence: seq?.localSequence ?? 0,
                                         editing: nil)
                                 })
+                // **THE ROW CHROME EVERY OTHER DEVNET'S CONTENT ALREADY WEARS
+                // (2026-09-04, reported: the tiles touched the rail and drew a
+                // hairline).** This card mounts as its own List section under
+                // the room head, and a bare Section in a `.plain` List gets the
+                // default row separator — a hairline, which nothing in this app
+                // may draw — and no gap from the slab above. Hegotá, Frames and
+                // the Privacy devnet all wrap their scope content in exactly
+                // this set; the top inset is `contentGap` because that is the
+                // chassis's own switcher→content distance, which the vibenet
+                // card pays internally for every scope but this one (the head's
+                // `insightSection` mounts at `EdgeInsets()`, so nothing above
+                // pays it here).
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: DSRoomChassis.contentGap,
+                                          leading: DSRoomChassis.inset,
+                                          bottom: DS.Space.s4,
+                                          trailing: DSRoomChassis.inset))
             }
         } else {
             // **A SCOPE NEVER DRAWS NOTHING (prd §552d), NOW IN THE ROOM'S OWN
@@ -721,6 +749,14 @@ struct FeedScreen: View {
                                         ?? Color.fixed("#0052ff"),
                                   title: String(localized: "Create\naccount"),
                                   onCreate: { feedSheet = .vibenetCreate })
+                // Same row chrome as the signable branch above — this state is
+                // the same section wearing one tile instead of four.
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: DSRoomChassis.contentGap,
+                                          leading: DSRoomChassis.inset,
+                                          bottom: DS.Space.s4,
+                                          trailing: DSRoomChassis.inset))
             }
         }
     }
@@ -1297,6 +1333,13 @@ struct FeedScreen: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, DS.Space.s6)
+            // The send panel's row chrome (see `vibenetSendRow`): a bare
+            // Section in this `.plain` List draws the default hairline
+            // separator, which nothing in this app may draw.
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                      bottom: 0, trailing: DSRoomChassis.inset))
         }
     }
 
@@ -4170,6 +4213,16 @@ struct FeedScreen: View {
                 chrome.framesSection = section
                 feedSheet = nil
             }
+        case .privacyDevnetMove(let move, let owner):
+            PrivacyDevnetMoveSheet(move: move, owner: owner)
+        case .privacyDevnetAccount(let account):
+            PrivacyDevnetAccountSheet(account: account) { section in
+                // The sheet's facts are doors — Frames' own dispatch: scope
+                // the room to this account and open the list the fact names.
+                chrome.privacyDevnetScope = account.address
+                chrome.privacyDevnetSection = section
+                feedSheet = nil
+            }
         case .hegotaKeySheet:
             HegotaKeySheet()
         case .hegotaCoin(let coin, let all, let unspent):
@@ -4729,7 +4782,13 @@ struct FeedScreen: View {
                     section: privacyScope,
                     accounts: PrivacyDevnetRoomSource.accounts(scope: chrome.privacyDevnetScope),
                     headSlot: PrivacyDevnetLiveState.shared.headSlot,
-                    walkCut: PrivacyDevnetLiveState.shared.walkCut)
+                    walkCut: PrivacyDevnetLiveState.shared.walkCut,
+                    // Home's own newest moves are rows too, and rows open
+                    // sheets (prd §596) — the closure the card's list half
+                    // gets below, on the one scope whose rows draw in the slot.
+                    onOpenMove: { move, owner in
+                        feedSheet = .privacyDevnetMove(move, owner)
+                    })
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
@@ -4785,7 +4844,18 @@ struct FeedScreen: View {
                     headSlot: PrivacyDevnetLiveState.shared.headSlot,
                     walkCut: PrivacyDevnetLiveState.shared.walkCut,
                     onSend: { feedSheet = .privacyDevnetSend },
-                    onWatchExample: watchPrivacyDevnetExample)
+                    onWatchExample: watchPrivacyDevnetExample,
+                    // **THESE ROWS WERE TERMINAL BY CONSTRUCTION** (prd §596,
+                    // user: "none of the lists open thing sheets") — the seat
+                    // lands no `Thing`, so its sheets had to be built the way
+                    // Frames and Hegotá built theirs, and every row is a door
+                    // through the screen's ONE `.sheet`.
+                    onOpenMove: { move, owner in
+                        feedSheet = .privacyDevnetMove(move, owner)
+                    },
+                    onOpenAccount: { account in
+                        feedSheet = .privacyDevnetAccount(account)
+                    })
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
