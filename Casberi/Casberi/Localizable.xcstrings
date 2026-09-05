@@ -80356,30 +80356,30 @@
         }
       }
     },
-    "Nothing noticed today — the glint only lights for something real." : {
+    "Nothing noticed today — a notice only lands for something real." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Nada advertido hoy: el destello solo se enciende por algo real."
+            "value" : "Nada advertido hoy: solo aparece un aviso cuando hay algo real."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "今日は気づいたことはありません。きらめきは本物のときだけ光ります。"
+            "value" : "今日は気づいたことはありません。本当に何かあったときだけ届きます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "오늘은 발견한 것이 없습니다. 반짝임은 진짜일 때만 켜집니다."
+            "value" : "오늘은 발견한 것이 없습니다. 정말 무언가 있을 때만 알려 드립니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "今天没有发现什么——只有真正值得注意的事才会亮起。"
+            "value" : "今天没有发现什么——只有真正值得注意的事才会出现。"
           }
         }
       }

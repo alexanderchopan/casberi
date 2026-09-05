@@ -3977,8 +3977,7 @@ enum ProbeHooks {
             AgentNoticed.shared.refresh(context: context)
             if let n = AgentNoticed.shared.notice {
                 NSLog("[Casberi] agentNotice| line=%@", n.line)
-                NSLog("[Casberi] agentNotice| key=%@ evidence=%d glint=%@",
-                      n.key, n.ids.count, AgentNoticed.shared.glint ? "YES" : "NO")
+                NSLog("[Casberi] agentNotice| key=%@ evidence=%d", n.key, n.ids.count)
             } else {
                 NSLog("[Casberi] agentNotice| none (no anniversary, no cross-source tag today, no record day — or all already shown once)")
             }

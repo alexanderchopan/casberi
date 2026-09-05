@@ -3,7 +3,12 @@ import SwiftData
 import Observation
 
 /// The agent NOTICES — at most one deterministic, checkable observation a day,
-/// behind a glint on the agent bar (2026-08-14, prd §384).
+/// reached by the composer's "Noticed today" chip (2026-08-14, prd §384).
+///
+/// **The agent bar's blue glint is GONE (2026-09-05, user: "get rid of it").**
+/// It was a 6pt tint dot on the mark's shoulder, and with it went the `seen`
+/// state that existed only to clear it — the notice is now something you FIND
+/// when you open the agent, never something that taps you on the shoulder.
 ///
 /// This is the deterministic sibling of `HomeInsightStore`'s model-written
 /// "Noticed" line, and the split is the design: the model's line is a
@@ -24,7 +29,7 @@ import Observation
 /// RARITY IS THE DESIGN: one notice per calendar day at most, each distinct
 /// notice shown once ever (a capped ledger), and the whole thing stands down
 /// silently on most days. A companion that taps you on the shoulder hourly is
-/// a slot machine; the glint only means something if it is rare.
+/// a slot machine, and the chip only means something if it is rare.
 ///
 /// COST: its own bounded fetches (the §382 widget-deadline-scan precedent —
 /// the foreground pass's newest-600 window structurally cannot hold a
@@ -46,19 +51,12 @@ final class AgentNoticed {
         let key: String
     }
 
-    /// Today's notice, or nil — most days. Persisted so a relaunch keeps the
-    /// glint it hadn't shown yet.
+    /// Today's notice, or nil — most days. Persisted so a relaunch keeps it.
     private(set) var notice: Notice?
-    /// Whether the person has RISEN to it — the glint clears on the first
-    /// agent open after the notice lands; the chip stays for the day.
-    private(set) var seen = false
-
-    var glint: Bool { notice != nil && !seen }
 
     private static let lineKey = "agent.noticed.line"
     private static let idsKey = "agent.noticed.ids"
     private static let keyKey = "agent.noticed.key"
-    private static let seenKey = "agent.noticed.seen"
     private static let dayKey = "agent.noticed.day"
     private static let ledgerKey = "agent.noticed.ledger"
     private static let highKey = "agent.noticed.dayHigh"
@@ -71,7 +69,6 @@ final class AgentNoticed {
             notice = Notice(line: line,
                             ids: d.stringArray(forKey: Self.idsKey) ?? [],
                             key: key)
-            seen = d.bool(forKey: Self.seenKey)
         }
     }
 
@@ -101,7 +98,6 @@ final class AgentNoticed {
         // the corpus on every foreground to keep re-learning it is waste.
         d.set(today, forKey: Self.dayKey)
         notice = found
-        seen = false
         if let found {
             ledger.insert(found.key)
             // Capped — the ledger is a dedupe record, not an archive.
@@ -110,20 +106,11 @@ final class AgentNoticed {
             d.set(found.line, forKey: Self.lineKey)
             d.set(found.ids, forKey: Self.idsKey)
             d.set(found.key, forKey: Self.keyKey)
-            d.set(false, forKey: Self.seenKey)
         } else {
             d.removeObject(forKey: Self.lineKey)
             d.removeObject(forKey: Self.idsKey)
             d.removeObject(forKey: Self.keyKey)
         }
-    }
-
-    /// The first agent open after a notice lands clears the glint — the tap
-    /// on the shoulder was felt; the chip stays for the day.
-    func markSeen() {
-        guard notice != nil, !seen else { return }
-        seen = true
-        UserDefaults.standard.set(true, forKey: Self.seenKey)
     }
 
     // MARK: - The observations

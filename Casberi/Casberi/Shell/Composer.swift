@@ -1293,8 +1293,9 @@ struct Composer: View {
             out.append(AskOption(kind: "noticed", title: "Noticed",
                                  glyph: "sparkle"))
         }
-        // The deterministic notice behind the bar's glint (prd §384,
-        // `AgentNoticed`) — LEADS while today's observation stands, because it
+        // The agent's deterministic notice (prd §384, `AgentNoticed`) — the
+        // ONLY surface it has since the bar's glint was removed (2026-09-05).
+        // LEADS while today's observation stands, because it
         // is the one chip that exists only on a day something real happened.
         // Its query routes to `RootShell.answerDocument`'s `AgentNoticed`
         // branch: the line plus its evidence rows, checkable, no model.
@@ -1329,7 +1330,7 @@ struct Composer: View {
         // feeds the decay counters and the recognizers — but the only chip
         // that RENDERS is the observation one, because it is the opposite of
         // a chip-for-chips'-sake: it exists only on a day something real
-        // happened, and it is the glint's landing. Everything evergreen
+        // happened. Everything evergreen
         // ("What's this week?", the recaps, the wallet ask) is a typed ask
         // away, and the kept pills remain the person's own standing set.
         suggestions = selectSuggestions(from: ranked, slots: 7)

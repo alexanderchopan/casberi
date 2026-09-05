@@ -2185,10 +2185,6 @@ struct RootShell: View {
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
                     AgentBar(hasUnseenSignal: KeptAskStore.shared.anyChanged && !agentEverOpened,
-                             // The notice glint (prd §384): a small tint dot,
-                             // static on purpose — "something unread behind
-                             // this", not an animation begging for a tap.
-                             noticeGlint: AgentNoticed.shared.glint,
                              // Compact at rest (user ruling 2026-07-31, see
                              // `AgentBar`'s own note). The words survive only
                              // as a first-run grace — and `chrome.minimized`,
@@ -2253,10 +2249,6 @@ struct RootShell: View {
                         // §386d: the panel draws inside the brief's own
                         // landing, reached by tapping Day, not by this bare
                         // rise.
-                        //
-                        // Rising is SEEING — the glint's whole claim is "rise
-                        // and you'll find it", so the rise itself clears it.
-                        AgentNoticed.shared.markSeen()
                         composerOpen = true
                     }
                 }
@@ -3087,15 +3079,15 @@ struct RootShell: View {
                 return result.doc
             }
         }
-        // The agent's own deterministic notice (prd §384) — the glint's chip
-        // sends exactly this query. The line plus its EVIDENCE rows, so the
+        // The agent's own deterministic notice (prd §384) — the composer's
+        // "Noticed today" chip sends exactly this query. The line plus its EVIDENCE rows, so the
         // claim is checked rather than believed; a day with no notice says so
         // honestly instead of falling through to retrieval on the word
         // "notice".
         if AgentNoticed.matches(query) {
             lastAnswerHits = []
             guard let notice = AgentNoticed.shared.notice else {
-                return proseDoc(String(localized: "Nothing noticed today — the glint only lights for something real."))
+                return proseDoc(String(localized: "Nothing noticed today — a notice only lands for something real."))
             }
             let ids = Set(notice.ids)
             let evidence = allThings().filter { ids.contains($0.id.uuidString) }

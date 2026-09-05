@@ -204,6 +204,7 @@ or by description rather than by `§N`.
 | §473 (a key's card) | a key is a CARD on the account page, and the whole card is a toggle that expands it in place | §478 deleted the expansion (a key's depth is `VibenetKeySheet`); §480 then deleted the card, which existed only to be the expander's ground — the tray's row is the one row grammar |
 | §470 (a tray row's tap) | a key row in the tray SCOPES the room to that key's account | §479 — the row opens the KEY (§478 gave it a sheet) and the scope is a door inside that sheet, so one key has one tap outcome on every surface; the follow-up moved rather than being deleted |
 | §471 / §463 (row separators) | rows divided by `Rectangle().fill(DS.fillFaint).frame(height: 1)`, described in-source as "a FILL at the faintest rung… nothing strokes a line" | §478 — user: *"do NOT USE HAIRLINES"*. §8 has zero exceptions and a one-point fill is a line; rows are separated by air, and `vibenet-selftest.sh` fails the build on the shape |
+| §384 (the notice glint) | the agent's deterministic notice is announced by a 6pt tint dot on the agent bar's mark — "something unread behind this" | amended by §609 — user: *"get rid of it"*. The NOTICE stands whole (the observation, the once-a-day rarity, the once-ever ledger, the evidence rows, the "Noticed today" chip); only the announcement goes, and the `seen`/`markSeen` state that existed solely to clear it goes with it. A notice is now something you find when you open the agent |
 
 ### Renumbered entries
 
@@ -49160,3 +49161,19 @@ Ten credential screens showed their key form forever: Venice, Grok, OpenRouter, 
 **Seven checks, twelve fixtures, all six mutation-proven against the real tree** — a raw `List` chassis, a room door above the header, a re-added `resultIsError`, a hand-rolled Disconnect, a returning `BridgeFieldRow`, a returning `flipTrigger`. Its comment stripper is a character walk over comments AND string bodies, with a fixture for each: this audit's own docstring names every symbol it forbids, and a string holding `//` would otherwise blank the rest of a file and report it clean (the 2026-09-02 hero-tint defect, same shape).
 
 **UNSEEN on a device.** iOS and Mac Catalyst both compile, all static audits pass and the anatomy audit is green over all sixty screens, but not one of these screens has been screenshotted since the change. The connected state on the ten credential screens is the first thing to look at.
+
+## §609 — The octopus's blue dot is gone (user: "why does the octopus icon sometimes have a blue indicator?", then "get rid of it", 2026-09-05)
+
+A 6pt `DS.tint` circle rode the agent bar's mark whenever `AgentNoticed` held an unseen observation (§384). Asked what it was and told to remove it.
+
+**What went:** the overlay in `AgentBar`, its `noticeGlint` parameter, `RootShell`'s argument, and — because it existed for nothing else — the `seen`/`glint`/`markSeen` state in `AgentNoticed` plus its `agent.noticed.seen` key and the `markSeen()` call the agent's rise made. `-agentNoticeProbe` no longer prints `glint=`.
+
+**What stands, and it is the whole feature:** the observation itself, the two kinds (cross-source echo, fullest day), the ≤1-a-day rarity, the once-ever ledger, the evidence ids, and the composer's **"Noticed today"** chip, which leads the launcher while today's notice stands and routes to `RootShell`'s answer branch. So the notice was never orphaned by this — it kept the surface that carries its words and its evidence, and lost only the one that carried neither.
+
+**The distinction worth keeping.** Two other states share that 20pt mark and are untouched: `hasUnseenSignal` makes it BREATHE (a kept ask changed), and `roomTint` colours the bar inside a scoped wallet. §384's own note argued the dot had to be static because "two live motions on one 20pt mark is a strobe" — which is the tell that the mark was already carrying one signal too many. What is left is one motion for "something changed" and one hue for "where you are", and the third fact is where it can be read rather than merely noticed.
+
+**A door you find beats a dot that taps you.** The dot's claim was "rise and you'll find it", so the rise cleared it — a shoulder-tap for something that was, by design, silent on most days. Deleting the announcement leaves the notice exactly where somebody who wants it will look, and takes nothing away from a day that had something real to say.
+
+The answer's own copy said so and had to change with it: "the glint only lights for something real" is now "a notice only lands for something real", re-keyed in `Localizable.xcstrings` with its four translations rewritten rather than left describing a dot that no longer exists.
+
+**Checked, not assumed:** no harness, audit or selftest guarded the glint (`grep glint scripts/` is empty), so nothing here was protected by a check that would have to be amended. The liveness, ramp and motion audits pass; every edited file parses.

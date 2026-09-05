@@ -59,11 +59,6 @@ import SwiftUI
 /// VoiceOver action and Mac right-click state it in words.
 struct AgentBar: View {
     var hasUnseenSignal: Bool
-    /// The agent noticed something today and it hasn't been seen (prd §384,
-    /// `AgentNoticed`). A small STATIC tint dot — "something unread behind
-    /// this" — deliberately not an animation: the breathing beside it already
-    /// means "changed", and two live motions on one 20pt mark is a strobe.
-    var noticeGlint: Bool = false
     /// The words. FALSE at rest (see the type's own note) — `RootShell` grants
     /// it only as a teaching grace, until the tray has been opened once on this
     /// device, and `ShellChrome.minimized` folds it away early if that
@@ -150,18 +145,6 @@ struct AgentBar: View {
                             CasberiMark(size: 20).breathing()
                         } else {
                             CasberiMark(size: 20)
-                        }
-                    }
-                    // The notice glint (prd §384): a 6pt tint dot riding the
-                    // berry's shoulder while today's observation is unseen.
-                    // Cleared by the rise itself (`AgentNoticed.markSeen`).
-                    .overlay(alignment: .topTrailing) {
-                        if noticeGlint {
-                            Circle()
-                                .fill(DS.tint)
-                                .frame(width: 6, height: 6)
-                                .offset(x: 2, y: -2)
-                                .transition(.scale.combined(with: .opacity))
                         }
                     }
                 }
