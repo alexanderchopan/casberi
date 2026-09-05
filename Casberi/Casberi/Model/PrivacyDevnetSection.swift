@@ -69,9 +69,13 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
     static let order: [PrivacyDevnetSection] = [.home, .activity, .accounts, .frames,
                                           .nullifiers, .roots, .sponsors]
 
-    /// Everything past `accounts` is conditional on the address actually having
-    /// the thing. Stated as data rather than left implicit in `present(…)`,
-    /// because it is the whole reason the order ends the way it does.
+    /// Which scopes can be EMPTY.
+    ///
+    /// **It no longer gates `present(…)` (prd §610)** — every scope is drawn
+    /// always — and it is kept, with its family name, for the two jobs it
+    /// still does: it fixes the ORDER (the scopes that can be empty sit at the
+    /// tail, so the strip's head is the same three chips on every address),
+    /// and it is what obliges a scope to carry an `emptyBody`.
     var isConditional: Bool {
         switch self {
         // A watched address always has a roster row — even one saying the chain
@@ -150,18 +154,84 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
     /// **There is deliberately no `coins:` parameter.** Not "always false": the
     /// case does not exist, so a future caller cannot pass true and light a
     /// chip over a vault that has no code.
-    static func present(frames: Bool, nullifiers: Bool, roots: Bool,
-                        sponsors: Bool) -> [PrivacyDevnetSection] {
-        order.filter { section in
-            switch section {
-            case .home:       return true
-            case .activity:   return true
-            case .accounts:   return true
-            case .frames:     return frames
-            case .nullifiers: return nullifiers
-            case .roots:      return roots
-            case .sponsors:   return sponsors
-            }
+    ///
+    /// **EVERY SCOPE IS PRESENT, ALWAYS (prd §610, user ruling: "even if they
+    /// have no data for the account, they should still be present w/ an empty
+    /// state").** The gate used to drop `frames`, `nullifiers`, `roots` and
+    /// `sponsors` for an address that had none — which on this chain is nearly
+    /// every address, so the strip read *Home · Activity · Accounts* and the
+    /// four readings the room exists for were invisible to anyone who had not
+    /// already made one.
+    ///
+    /// **This is not the dead control §83 bans, and the distinction is the
+    /// EMPTY STATE.** A chip that opens onto nothing is a dead control; a chip
+    /// that opens onto a sentence saying what the scope holds and why this
+    /// address has none is the room teaching its own subject — which is the
+    /// whole point of a room about a mechanism most people have never used.
+    /// So the ruling comes with an obligation, and `emptyHeadline`/`emptyBody`
+    /// are it: **a scope that cannot say something specific about its own
+    /// absence has no business being present.** Four chips sharing one generic
+    /// "nothing here yet" would be the banned strip wearing new clothes.
+    ///
+    /// The parameters are gone rather than ignored: an unused `frames:` at
+    /// every call site is an invitation to re-gate on it by accident.
+    ///
+    /// `coins` stays absent for its own reason above — that vault has no code
+    /// on this chain, so its scope would be empty for everyone forever and
+    /// could never write an honest `emptyBody`.
+    static func present() -> [PrivacyDevnetSection] { order }
+
+    /// **THE SHORT STATE, drawn in the chassis' reserved headline row (prd
+    /// §610).** Nil for `home`, which is never empty: its sentence IS its
+    /// content, so there is no state to name and no dead copy to write for a
+    /// branch nothing can reach.
+    var emptyHeadline: String? {
+        switch self {
+        case .home:       return nil
+        case .activity:   return String(localized: "None yet")
+        case .accounts:   return String(localized: "No addresses")
+        case .frames:     return String(localized: "No steps")
+        case .nullifiers: return String(localized: "No spend keys")
+        case .roots:      return String(localized: "No proofs")
+        case .sponsors:   return String(localized: "None sponsored")
+        }
+    }
+
+    /// **WHAT THE SCOPE WOULD HOLD, and why this one has none.**
+    ///
+    /// The return on making an empty chip reachable, and the reason the ruling
+    /// above is not a dead control: each sentence teaches the mechanism the
+    /// scope is about, which is worth more than the chip was hiding.
+    ///
+    /// **NO SUBJECT, and that is deliberate.** Not "this address" or "the 2
+    /// addresses you watch" — the face rail directly above already says which
+    /// is scoped, and a sentence agreeing with the watch count is four
+    /// sentences for no reader.
+    ///
+    /// **NO DOOR ANYWHERE HERE** (user ruling, §610): Top up and Send live on
+    /// Home and nowhere else, so these say what is true and stop.
+    ///
+    /// **Nothing here states a chain-wide fact.** `sponsors` was written first
+    /// as "no transaction measured on this chain has had a payer other than
+    /// its own sender" — true when measured, and a sentence that silently
+    /// becomes a lie the first time one does. It says what is true of THIS
+    /// room instead, which cannot go stale.
+    var emptyBody: String? {
+        switch self {
+        case .home:
+            return nil
+        case .activity:
+            return String(localized: "No transaction from what you watch has landed on the stretch of chain this read covered.")
+        case .accounts:
+            return String(localized: "Watch an address to see what it holds here.")
+        case .frames:
+            return String(localized: "A framed transaction runs its work in numbered steps, each with a budget of its own. Nothing here ran any — a plain transfer runs none.")
+        case .nullifiers:
+            return String(localized: "A pool spend burns a key that can never be used again, so the same note cannot be spent twice. Nothing here has spent one.")
+        case .roots:
+            return String(localized: "A proof names a moment the chain still remembers, and proves it belongs to that set without saying which member it is. Nothing here names one — a plain transfer proves nothing.")
+        case .sponsors:
+            return String(localized: "A sponsored transaction is one somebody else covered the gas for. Nothing here was.")
         }
     }
 

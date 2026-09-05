@@ -128,9 +128,9 @@ enum PrivacyDevnetMoments {
         defaults.set(true, forKey: poolSightKey)
     }
 
-    // **THE SEEN-KEY LEDGER IS GONE (prd §608).** It drove one thing: a ring
+    // **THE SEEN-KEY LEDGER IS GONE (prd §606).** It drove one thing: a ring
     // that sealed itself the first time this device saw a spend key, drawn in
-    // a grid of N identical rings that §608 deleted for standing in for the
+    // a grid of N identical rings that §606 deleted for standing in for the
     // number N. A ledger outliving its only reader is state kept for nothing.
 
     /// Undone BY NAME, never a blanket wipe — the demo's teardown door, and a

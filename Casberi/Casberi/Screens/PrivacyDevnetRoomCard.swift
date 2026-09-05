@@ -72,7 +72,7 @@ struct PrivacyDevnetRoomCard: View {
     /// reading twice.
     private var slotHeadline: String? {
         switch section {
-        // **HOME TAKES A HEADLINE WHEN A FIGURE DRAWS (prd §608, user: "isn't
+        // **HOME TAKES A HEADLINE WHEN A FIGURE DRAWS (prd §606, user: "isn't
         // it weird to have those sentences at the top of the charts?").**
         //
         // §596 removed the summary sentence from every other scope for exactly
@@ -97,32 +97,32 @@ struct PrivacyDevnetRoomCard: View {
                           : String(localized: "\(String(n)) snapshots")
         case .activity:
             let n = pairs.count
-            guard n > 0 else { return nil }
+            guard n > 0 else { return section.emptyHeadline }
             return n == 1 ? String(localized: "1 transaction")
                           : String(localized: "\(String(n)) transactions")
         case .accounts:
             let n = accounts.count
-            guard n > 0 else { return nil }
+            guard n > 0 else { return section.emptyHeadline }
             return n == 1 ? String(localized: "1 address")
                           : String(localized: "\(String(n)) addresses")
         case .frames:
             let steps = moves.reduce(0) { $0 + $1.frameCount }
-            guard steps > 0 else { return nil }
+            guard steps > 0 else { return section.emptyHeadline }
             return steps == 1 ? String(localized: "1 step")
                               : String(localized: "\(String(steps)) steps")
         case .nullifiers:
             let n = accounts.reduce(0) { $0 + $1.nullifiers.count }
-            guard n > 0 else { return nil }
+            guard n > 0 else { return section.emptyHeadline }
             return n == 1 ? String(localized: "1 spend key")
                           : String(localized: "\(String(n)) spend keys")
         case .roots:
             let n = accounts.reduce(0) { $0 + $1.roots.count }
-            guard n > 0 else { return nil }
+            guard n > 0 else { return section.emptyHeadline }
             return n == 1 ? String(localized: "1 proof")
                           : String(localized: "\(String(n)) proofs")
         case .sponsors:
             let n = moves.filter(\.sponsored).count
-            guard n > 0 else { return nil }
+            guard n > 0 else { return section.emptyHeadline }
             return String(localized: "\(String(n)) sponsored")
         }
     }
@@ -142,6 +142,14 @@ struct PrivacyDevnetRoomCard: View {
             switch section {
             case .home:
                 home
+            // **THE EMPTY STATE IS IN THE SLOT, NOT UNDER THE RAIL (prd
+            // §610).** It used to be drawn by `scopeList`, so a scoped room
+            // with nothing in it was 300 blank points of card with the one
+            // sentence that explained them pushed below the switcher — and on
+            // a phone, below the fold. Reported from a device as "nothing from
+            // this address on the chain is below the fold".
+            case _ where isEmpty(section):
+                emptyState
             default:
                 figure(for: section)
                     .frame(maxWidth: .infinity, maxHeight: .infinity,
@@ -168,7 +176,7 @@ struct PrivacyDevnetRoomCard: View {
     @ViewBuilder private var home: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             // The sentence stands only where there is no figure under it
-            // (prd §608) — see `slotHeadline`. Where the ring draws, it was
+            // (prd §606) — see `slotHeadline`. Where the ring draws, it was
             // the drawing restated in three lines of heading type above it.
             if marks.isEmpty {
                 Text(PrivacyDevnetRoom.sentence(head))
@@ -276,15 +284,47 @@ struct PrivacyDevnetRoomCard: View {
 
 extension PrivacyDevnetRoomCard {
 
-    /// A scope with nothing in it says so, rather than drawing an empty column.
-    /// **`present()` should have kept you out of here** — a scope with no
-    /// content has no chip — so this is the honest floor rather than the
-    /// expected path.
-    @ViewBuilder func empty(_ what: String) -> some View {
-        Text(what)
-            .dsText(.body17)
-            .foregroundStyle(DS.textTertiary)
-            .frame(maxWidth: .infinity, alignment: .leading)
+    /// Whether the scope on screen has anything to draw.
+    ///
+    /// **The gate `present()` used to be (prd §610).** Every chip is reachable
+    /// now, so this decides what the slot shows rather than which chips exist
+    /// — and it is spelled from the same evidence the old gate read, so a scope
+    /// that would have been hidden is exactly a scope that now says why.
+    ///
+    /// Home is never empty: its sentence is its content, which is the rule the
+    /// whole file is built on.
+    func isEmpty(_ section: PrivacyDevnetSection) -> Bool {
+        switch section {
+        case .home:       return false
+        case .activity:   return pairs.isEmpty
+        case .accounts:   return accounts.isEmpty
+        case .frames:     return moves.allSatisfy { $0.frameCount == 0 }
+        case .nullifiers: return keyRows.isEmpty
+        case .roots:      return accounts.allSatisfy { $0.roots.isEmpty }
+        case .sponsors:   return !moves.contains(where: \.sponsored)
+        }
+    }
+
+    /// **A SCOPE WITH NOTHING IN IT TEACHES WHAT IT WOULD HOLD (prd §610).**
+    ///
+    /// Two tiers and no more: the chassis' reserved row carries the short
+    /// state (`emptyHeadline`) and this carries one paragraph saying what the
+    /// scope is about and why this room has none. A lead line between them
+    /// would be a third register of text in a box with no drawing in it.
+    ///
+    /// **No door.** Top up and Send are Home's, by ruling — a scope's empty
+    /// state states a fact and stops.
+    ///
+    /// Centred rather than pinned to the top: a paragraph hugging the top of a
+    /// 258pt box is the dead-air shape §602 and §596 each fixed once already.
+    @ViewBuilder var emptyState: some View {
+        if let words = section.emptyBody {
+            Text(words)
+                .dsText(.body17)
+                .foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        }
     }
 
     /// The seat's own hue for a leading symbol mark — the console is chrome
@@ -319,8 +359,11 @@ extension PrivacyDevnetRoomCard {
     @ViewBuilder func list(_ shown: [(move: PrivacyDevnetLiveState.Move, owner: String)],
                            showsSponsorship: Bool = true,
                            showsCeiling: Bool = true) -> some View {
+        // **NOTHING HERE WHEN THERE IS NOTHING (prd §610)** — the slot above
+        // the rail carries the empty state now, and a second copy under the
+        // switcher is one sentence in two places at two sizes.
         if shown.isEmpty {
-            empty(String(localized: "Nothing from this address on the chain yet."))
+            EmptyView()
         } else {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 ForEach(shown, id: \.move.id) { pair in
@@ -532,7 +575,7 @@ extension PrivacyDevnetRoomCard {
     @ViewBuilder var nullifierScope: some View {
         let rows = keyRows
         if rows.isEmpty {
-            empty(String(localized: "No one-time spend keys from this address."))
+            EmptyView()
         } else {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 ForEach(Array(rows.enumerated()), id: \.offset) { i, row in
@@ -583,7 +626,7 @@ extension PrivacyDevnetRoomCard {
     @ViewBuilder var rootScope: some View {
         let refs = accounts.flatMap(\.roots)
         if refs.isEmpty {
-            empty(String(localized: "This address hasn't proved against a snapshot."))
+            EmptyView()
         } else {
             let groups = PrivacyDevnetRoots.bySource(refs)
             VStack(alignment: .leading, spacing: DS.Space.s2) {
@@ -721,9 +764,9 @@ extension PrivacyDevnetRoomCard {
 
     @ViewBuilder func figure(for section: PrivacyDevnetSection) -> some View {
         switch section {
-        case .activity:   kindMix(moves)
+        case .activity:   activityFigure
         case .frames:     budgetBar(moves.filter { $0.frameCount > 0 })
-        // **NO FIGURE (prd §608).** These two drew a count as N identical
+        // **NO FIGURE (prd §606).** These two drew a count as N identical
         // shapes — eight rings for eight keys, a row of pips per address —
         // over data with nothing to compare. "We can count; what does that
         // do." The chassis headline states the number and the rows below the
@@ -736,24 +779,71 @@ extension PrivacyDevnetRoomCard {
         }
     }
 
-    /// WHAT THESE TRANSACTIONS WERE — the kind mix (prd §608).
+    /// **WHEN EACH TRANSACTION LANDED, and what they were only when that
+    /// differs (prd §610).**
     ///
-    /// Replaces a column per transaction whose height was the frame count, on
-    /// a chain where nearly every transaction runs exactly two frames. The
-    /// height axis was constant, so the figure was a row of identical bars.
-    @ViewBuilder private func kindMix(_ moves: [PrivacyDevnetLiveState.Move]) -> some View {
+    /// The scope drew `kindMix` alone, which on the reported device was one
+    /// legend line — *60 plain transfers* — under a chassis headline already
+    /// reading *60 transactions*: the slot restated its own headline and left
+    /// the rest empty. The mix is not wrong, it is the right figure for a room
+    /// whose transactions differ in kind, and here they almost never do.
+    ///
+    /// So the spine leads and the mix becomes its caption, drawn **only when
+    /// there is more than one kind** — which is exactly when it stops being the
+    /// headline said twice.
+    @ViewBuilder private var activityFigure: some View {
+        // ONE definition of what is dated, shared with the drawing: the axis
+        // ends and the spine's own bins come from the same function, so the
+        // labels can never name a range the marks are not inside.
+        let marks = pairs.map { (block: $0.move.block, sponsored: $0.move.sponsored,
+                                 id: $0.move.id) }
+        let axis = PrivacyDevnetFigure.spine(marks, columns: 1)
         let mix = PrivacyDevnetFigure.kindMix(moves.map {
             PrivacyDevnetFigure.kind(frames: $0.frameCount, keys: $0.nullifierCount)
         })
-        if mix.isEmpty {
-            EmptyView()
-        } else {
-            PrivacyDevnetKindMix(mix: mix, reduceMotion: reduceMotion)
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            PrivacyDevnetMoveSpine(marks: marks,
+                                   open: onOpenMove == nil ? nil : { id in
+                                       guard let pair = pairs.first(where: { $0.move.id == id })
+                                       else { return }
+                                       onOpenMove?(pair.move, pair.owner)
+                                   },
+                                   reduceMotion: reduceMotion)
+            if let axis {
+                HStack {
+                    Text(String(localized: "block \(String(axis.fromBlock))"))
+                    Spacer(minLength: DS.Space.s2)
+                    Text(String(axis.toBlock))
+                }
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+                // Every mark in one block is a real reading and a range of one
+                // is not: an axis printing the same number at both ends reads
+                // as a broken chart rather than as a busy minute.
+                .opacity(axis.fromBlock == axis.toBlock ? 0 : 1)
+            }
+            if mix.count > 1 {
+                Text(mix.map { PrivacyDevnetKindMix.words($0.kind, count: $0.count) }
+                        .joined(separator: " · "))
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+            }
+            // **COUNTED, NEVER PLACED.** A transaction whose read carried no
+            // block has no position on this axis; saying so is the difference
+            // between a figure that is incomplete and one that is wrong.
+            if let axis, axis.undated > 0 {
+                Text(axis.undated == 1
+                     ? String(localized: "1 more, with no block on it.")
+                     : String(localized: "\(String(axis.undated)) more, with no block on them."))
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+            }
         }
     }
 
     /// WHAT THESE STEPS WERE ALLOWED, and what they cost — one bar for the
-    /// room rather than one strip per transaction (prd §608).
+    /// room rather than one strip per transaction (prd §606).
     @ViewBuilder private func budgetBar(_ moves: [PrivacyDevnetLiveState.Move]) -> some View {
         let frames = moves.flatMap(\.frames).map {
             PrivacyDevnetFigure.Frame(gasLimit: $0.gasLimit, stateLimit: $0.stateLimit,
@@ -946,7 +1036,11 @@ struct PrivacyDevnetRoomList: View {
     private var showsExamples: Bool {
         switch head.lede {
         case .quiet, .unwatched: return true
-        case .reading, .relaunched, .rootLive, .rootsAged, .spends: return false
+        // **`moved` is on the FALSE side (prd §610).** The doors exist for a
+        // room with nothing to read; an address with transactions has rows
+        // under the rail, and offering somebody else's example address over
+        // them is an answer to a question this room is no longer asking.
+        case .reading, .relaunched, .rootLive, .rootsAged, .spends, .moved: return false
         }
     }
 }

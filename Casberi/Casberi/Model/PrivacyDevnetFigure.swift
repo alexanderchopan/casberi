@@ -445,7 +445,7 @@ enum PrivacyDevnetFigure {
         return min(1, Double(gasUsed) / Double(allowed))
     }
 
-    // MARK: - What this room's transactions ARE (prd §608)
+    // MARK: - What this room's transactions ARE (prd §606)
 
     /// The three things a transaction on this chain can be.
     ///
@@ -503,7 +503,87 @@ enum PrivacyDevnetFigure {
         }
     }
 
-    // MARK: - What the room asked the chain for (prd §608)
+    // MARK: - When each transaction landed (prd §610)
+
+    /// **ONE MARK PER TRANSACTION, PLACED ON THE BLOCK AXIS.**
+    ///
+    /// The Activity scope drew `kindMix`, which is the right figure for a room
+    /// whose transactions differ in kind and says nothing at all in a room
+    /// where they do not: on the reported device all 60 were plain transfers,
+    /// so the mix correctly suppressed its bar and left one legend line —
+    /// *60 plain transfers* — under a chassis headline already reading *60
+    /// transactions*. The slot restated the headline and left 230pt empty.
+    ///
+    /// WHEN is the question the room can always answer and no headline states.
+    /// This bins the walked block range into equal columns and reports what
+    /// landed in each, so the view can draw a mark per transaction (each one
+    /// its own door) or, when a column holds more marks than there is height
+    /// for, fall back to a bar per column from the same numbers. **One
+    /// reading, two renderings** — the fallback can never disagree with the
+    /// figure it replaces, because it is computed from the same columns.
+    struct Spine: Equatable, Sendable {
+        /// One transaction. Ids rather than moves so this file stays
+        /// Foundation-only and the harness can build a spine with no
+        /// `ModelContext` and no chain.
+        struct Mark: Equatable, Sendable {
+            var id: String
+            /// Whether somebody else paid — the room's `sponsors` reading,
+            /// carried per mark rather than as a per-column tally, so the view
+            /// knows WHICH one to draw hollow rather than only how many.
+            var sponsored: Bool
+        }
+        struct Column: Equatable, Sendable {
+            /// Oldest first, so a column reads the same way the axis does.
+            var marks: [Mark] = []
+            var count: Int { marks.count }
+            var sponsored: Int { marks.filter(\.sponsored).count }
+        }
+        var columns: [Column]
+        var fromBlock: UInt64
+        var toBlock: UInt64
+        /// **COUNTED, NEVER PLACED.** A move whose read carried no block has no
+        /// position on this axis, and giving it one puts a real transaction at
+        /// the beginning of time — `Move.block` is Optional for exactly that
+        /// reason. The view says how many are missing rather than drawing them
+        /// somewhere convenient.
+        var undated: Int
+        var tallest: Int { columns.map(\.count).max() ?? 0 }
+        var placed: Int { columns.reduce(0) { $0 + $1.count } }
+        var total: Int { placed + undated }
+        var sponsored: Int { columns.reduce(0) { $0 + $1.sponsored } }
+    }
+
+    /// One mark per transaction, binned into `columns` equal stretches of the
+    /// walked block range.
+    ///
+    /// Nil when nothing is dated — there is no axis to draw, and an axis with
+    /// invented ends is worse than no figure.
+    static func spine(_ marks: [(block: UInt64?, sponsored: Bool, id: String)],
+                      columns: Int) -> Spine? {
+        let n = max(1, columns)
+        let dated = marks.compactMap { m -> (UInt64, Bool, String)? in
+            guard let b = m.block else { return nil }
+            return (b, m.sponsored, m.id)
+        }
+        let undated = marks.count - dated.count
+        guard let from = dated.map(\.0).min(), let to = dated.map(\.0).max() else { return nil }
+        var cols = [Spine.Column](repeating: Spine.Column(), count: n)
+        // **SORTED FIRST, so a column's contents cannot reshuffle between opens
+        // over identical data** — the ranking rule every figure in this room
+        // keeps. Block, then id, so the order is total.
+        for (block, sponsored, id) in dated.sorted(by: { $0.0 == $1.0 ? $0.2 < $1.2 : $0.0 < $1.0 }) {
+            // **THE SPAN CAN BE ZERO**, and it is on any room whose walk saw a
+            // single block — the common case on a young address. A naive
+            // division there is a crash, and a naive index for the NEWEST block
+            // is `n`, one past the end, which drops the newest transaction.
+            let span = to - from
+            let idx = span == 0 ? 0 : min(n - 1, Int((block - from) * UInt64(n) / span))
+            cols[idx].marks.append(Spine.Mark(id: id, sponsored: sponsored))
+        }
+        return Spine(columns: cols, fromBlock: from, toBlock: to, undated: undated)
+    }
+
+    // MARK: - What the room asked the chain for (prd §606)
 
     /// The two budgets a frame transaction carries, summed across the room.
     ///
@@ -560,7 +640,7 @@ enum PrivacyDevnetFigure {
                        used: total(gasUsed))
     }
 
-    // **THE TALLY IS GONE (prd §608).** `Tally`, `pipCap` and `pips` fed one
+    // **THE TALLY IS GONE (prd §606).** `Tally`, `pipCap` and `pips` fed one
     // figure — three pip columns per address — and a count drawn as N
     // identical shapes is the number restated, not a reading. The Accounts
     // scope draws no figure now; its headline states the count and its rows

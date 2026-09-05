@@ -32,6 +32,17 @@ enum PrivacyDevnetRoom {
         /// The chain answered and this address has done nothing on it. The
         /// honest common case: 14 type-`0x6` transactions exist chain-wide.
         case quiet(watching: Int)
+        /// The address has transacted, and none of it was a pool spend.
+        ///
+        /// **THIS CASE EXISTS BECAUSE ITS ABSENCE WAS A SENTENCE THAT
+        /// CONTRADICTED THE ROWS UNDER IT (prd §610).** `head` ranked spends
+        /// and roots and never looked at `moves`, so an address with sixty
+        /// plain transfers on this chain read as `quiet` and the room printed
+        /// "Nothing on this chain from the 2 addresses you watch" directly
+        /// above a list of their transfers. Reported from a device; nothing
+        /// here could have caught it, because every count the head reads was
+        /// correct and the room rendered perfectly.
+        case moved(count: Int)
         /// A root reference is live, with this many slots left in its window.
         /// The reading this seat exists for.
         case rootLive(remaining: UInt64, sources: Int)
@@ -116,6 +127,12 @@ enum PrivacyDevnetRoom {
             return finish(.rootsAged(count: refs.count))
         }
         if nullifiers > 0 { return finish(.spends(nullifiers: nullifiers)) }
+        // **A TRANSACTION IS EVIDENCE, AND IT OUTRANKS QUIET (prd §610).**
+        // Below spends, because a spend is what this room is for and says
+        // strictly more; above quiet, because quiet is a claim that nothing
+        // happened and the rows below the rail are proof that something did.
+        let moves = accounts.reduce(0) { $0 + $1.moveCount }
+        if moves > 0 { return finish(.moved(count: moves)) }
         return finish(.quiet(watching: max(watching, 1)))
     }
 
@@ -126,13 +143,21 @@ enum PrivacyDevnetRoom {
         var frameCount: Int
         var sponsoredCount: Int
         var roots: [PrivacyDevnetRoots.Reference]
+        /// How many transactions the walk saw for this address (prd §610).
+        ///
+        /// **Defaulted, so every existing caller keeps its meaning**, and read
+        /// only to separate "did nothing" from "did something that was not a
+        /// pool spend" — never to rank, since a transfer is not evidence about
+        /// the pool either way.
+        var moveCount: Int
 
         init(nullifierCount: Int = 0, frameCount: Int = 0, sponsoredCount: Int = 0,
-             roots: [PrivacyDevnetRoots.Reference] = []) {
+             roots: [PrivacyDevnetRoots.Reference] = [], moveCount: Int = 0) {
             self.nullifierCount = nullifierCount
             self.frameCount = frameCount
             self.sponsoredCount = sponsoredCount
             self.roots = roots
+            self.moveCount = moveCount
         }
     }
 
@@ -153,6 +178,14 @@ enum PrivacyDevnetRoom {
             return watching == 1
                 ? String(localized: "Nothing on this chain from the address you watch, yet.")
                 : String(localized: "Nothing on this chain from the \(watching) addresses you watch, yet.")
+        case .moved(let n):
+            // **NO ADDRESS CLAUSE.** `quiet` names the addresses because its
+            // whole point is that nothing of theirs exists; here the subject
+            // is what happened, and a plural that has to agree with the watch
+            // count buys four sentences for no reader.
+            return n == 1
+                ? String(localized: "One transaction, and it has not spent from the pool.")
+                : String(localized: "\(n) transactions, and none has spent from the pool yet.")
         case .spends(let n):
             return n == 1
                 ? String(localized: "One spend, on a key that can't be used again.")

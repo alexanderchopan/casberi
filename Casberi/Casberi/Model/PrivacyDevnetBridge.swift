@@ -200,15 +200,12 @@ final class PrivacyDevnetLiveState {
 
     /// Which scopes the room draws for `address`.
     ///
-    /// Threads through `PrivacyDevnetSection.present`, so the decision lives in the
-    /// Foundation-only file the harness compiles rather than here.
+    /// Threads through `PrivacyDevnetSection.present`, so the decision lives in
+    /// the Foundation-only file the harness compiles rather than here — which
+    /// is why §610's ruling that every scope is always present needed no
+    /// change on this side beyond dropping the arguments.
     func sections(for address: String) -> [PrivacyDevnetSection] {
-        guard let a = account(address) else {
-            return PrivacyDevnetSection.present(frames: false, nullifiers: false,
-                                          roots: false, sponsors: false)
-        }
-        return PrivacyDevnetSection.present(frames: a.hasFrames, nullifiers: a.hasNullifiers,
-                                      roots: a.hasRoots, sponsors: a.hasSponsors)
+        PrivacyDevnetSection.present()
     }
 
     func replace(_ accounts: [PrivacyDevnetAccount]) { self.accounts = accounts }

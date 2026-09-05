@@ -102,24 +102,47 @@ check(PrivacyDevnetSection.home.isAlwaysPresent && PrivacyDevnetSection.activity
       "the three unconditional scopes are always present")
 check(!PrivacyDevnetSection.frames.isAlwaysPresent, "frames is conditional")
 
-// present(): the three constants survive an address with nothing else at all.
-let bare = PrivacyDevnetSection.present(frames: false, nullifiers: false, roots: false, sponsors: false)
-check(bare == [.home, .activity, .accounts], "a bare address keeps exactly the three constants")
-let full = PrivacyDevnetSection.present(frames: true, nullifiers: true, roots: true, sponsors: true)
-check(full == PrivacyDevnetSection.order, "an address with everything shows every scope, in order")
-let some = PrivacyDevnetSection.present(frames: true, nullifiers: false, roots: true, sponsors: false)
-check(some == [.home, .activity, .accounts, .frames, .roots],
-      "present() drops exactly the absent scopes and keeps order")
+// present(): EVERY scope, on every address (prd §610). The gate is gone — an
+// address with none of the four still reaches all seven chips, each with an
+// empty state of its own.
+let full = PrivacyDevnetSection.present()
+check(full == PrivacyDevnetSection.order, "every scope is present, in order")
+check(full.count == PrivacyDevnetSection.allCases.count, "no scope is hidden from anybody")
 
-// resolve(): a remembered scope whose content has gone falls back to home,
-// never to "the first present scope".
+// THE OBLIGATION THAT MAKES THAT HONEST. A chip that opens onto nothing is the
+// dead control §83 bans; these four are allowed only because each says what it
+// would hold. A scope that can be empty and has no words is the failure.
+for s in PrivacyDevnetSection.allCases where s != .home {
+    check(!(s.emptyHeadline ?? "").isEmpty, "\(s.rawValue) names its own empty state")
+    check(!(s.emptyBody ?? "").isEmpty, "\(s.rawValue) says what it would hold")
+    check(s.emptyBody != s.summary, "\(s.rawValue)'s empty state is not its summary restated")
+    check((s.emptyBody ?? "").count > 24, "\(s.rawValue)'s empty state teaches rather than labels")
+}
+// Four chips sharing one sentence is the banned strip in new clothes.
+let bodies = PrivacyDevnetSection.allCases.compactMap(\.emptyBody)
+check(Set(bodies).count == bodies.count, "no two scopes explain themselves the same way")
+let heads = PrivacyDevnetSection.allCases.compactMap(\.emptyHeadline)
+check(Set(heads).count == heads.count, "no two scopes name the same empty state")
+// Home is never empty — its sentence IS its content — so it has no empty copy
+// to go stale in a branch nothing can reach.
+check(PrivacyDevnetSection.home.emptyHeadline == nil && PrivacyDevnetSection.home.emptyBody == nil,
+      "home carries no empty copy, because it can never be empty")
+// No door in any of them: Top up and Send are Home's alone (§610 ruling).
+for words in bodies {
+    let lower = words.lowercased()
+    check(!lower.contains("top up") && !lower.contains("tap ") && !lower.contains("send "),
+          "an empty scope states a fact and offers no door")
+}
+
+// resolve(): a remembered scope resolves to itself now that all are present,
+// and an unknown one still falls back to home rather than to "the first".
 check(PrivacyDevnetSection.resolve(.roots, present: full) == .roots, "a present scope resolves to itself")
-check(PrivacyDevnetSection.resolve(.roots, present: bare) == .home, "an absent scope falls back to home")
+check(PrivacyDevnetSection.resolve(.roots, present: [.home]) == .home, "an absent scope falls back to home")
 check(PrivacyDevnetSection.resolve(nil, present: full) == .home, "no memory opens on home")
 
 // shows(): one chip is a label, not a control.
 check(!PrivacyDevnetSection.shows(present: [.home]), "one scope draws no strip")
-check(PrivacyDevnetSection.shows(present: bare), "three scopes draw a strip")
+check(PrivacyDevnetSection.shows(present: full), "every scope present draws a strip")
 
 // No dot can ever light — including on roots, which has a real clock.
 check(PrivacyDevnetSection.attention().isEmpty, "no scope ever wears a dot")
@@ -285,6 +308,40 @@ if case .spends(let n) = PrivacyDevnetRoom.head(accounts: spent, watching: 1, ha
 if case .quiet = PrivacyDevnetRoom.head(accounts: [PrivacyDevnetRoom.Account()], watching: 2,
                                         hasRead: true, headSlot: base, wasReset: false).lede {} else {
     check(false, "an address that has done nothing reads as quiet")
+}
+
+// A TRANSACTION IS EVIDENCE (prd §610). The reported defect: an address with
+// sixty plain transfers read as `quiet`, so the room printed "Nothing on this
+// chain from the 2 addresses you watch" in its largest type directly above a
+// list of their transfers. Every count the head read was correct, which is why
+// no other check here could have seen it.
+let moved = [PrivacyDevnetRoom.Account(moveCount: 40), PrivacyDevnetRoom.Account(moveCount: 20)]
+if case .moved(let n) = PrivacyDevnetRoom.head(accounts: moved, watching: 2, hasRead: true,
+                                               headSlot: base, wasReset: false).lede {
+    check(n == 60, "moved counts every transaction across the shown accounts")
+} else { check(false, "an address that has transacted no longer reads as quiet") }
+check(!PrivacyDevnetRoom.sentence(PrivacyDevnetRoom.head(accounts: moved, watching: 2, hasRead: true,
+                                                         headSlot: base, wasReset: false))
+        .lowercased().contains("nothing"),
+      "the sentence over a room full of transfers does not say nothing happened")
+// One transaction is a sentence of its own — a plural over a single row is the
+// same class of wrongness one order of magnitude smaller.
+if case .moved(1) = PrivacyDevnetRoom.head(accounts: [PrivacyDevnetRoom.Account(moveCount: 1)],
+                                           watching: 1, hasRead: true, headSlot: base,
+                                           wasReset: false).lede {} else {
+    check(false, "a single transaction still reads as moved")
+}
+// RANKED BELOW SPENDS, and that ordering is the ruling: a pool spend is what
+// this room is for and says strictly more than "it transacted".
+if case .spends = PrivacyDevnetRoom.head(accounts: [PrivacyDevnetRoom.Account(nullifierCount: 2, moveCount: 9)],
+                                         watching: 1, hasRead: true, headSlot: base,
+                                         wasReset: false).lede {} else {
+    check(false, "a spend still leads over the transactions that carried it")
+}
+// And below a relaunch, which invalidates everything under it.
+if case .relaunched = PrivacyDevnetRoom.head(accounts: moved, watching: 2, hasRead: true,
+                                             headSlot: base, wasReset: true).lede {} else {
+    check(false, "a wiped chain still outranks the transactions it no longer holds")
 }
 
 // THE NULLIFIER RULE. `0x0` is the default nonce channel every ordinary
@@ -585,7 +642,7 @@ check(tight.count == 5, "a narrow track still draws every mark")
 check(tight == tight.sorted(), "and still in order")
 check(Set(tight).count == 5, "and does not stack them all on one point")
 
-// ── prd §608: what these transactions ARE, and what they asked for ──
+// ── prd §606: what these transactions ARE, and what they asked for ──
 // Every failure here renders as an ordinary bar: the pool — this room's whole
 // subject — filed as an ordinary framed call, a single kind drawn as a
 // full-width bar saying 100%, or a partial sum presented as the room's total.
@@ -606,6 +663,77 @@ check(mixed.count == 3, "three kinds, three entries")
 check(mixed[0].kind == .poolSpend && mixed[0].count == 2, "biggest share leads")
 check(PF.kindMix([.framed, .transfer]).map(\.kind) == PF.kindMix([.transfer, .framed]).map(\.kind),
       "a tie breaks on the case order, so the figure cannot reshuffle between opens")
+
+// ── prd §610: WHEN each transaction landed ──
+//
+// The Activity scope's figure. Every failure below draws a perfectly ordinary
+// chart: the newest transaction missing, a column of marks in the wrong bin, a
+// figure that reshuffles between opens, or an axis whose ends do not contain
+// the marks on it.
+func sm(_ b: UInt64?, _ sp: Bool = false, _ id: String = "") -> (block: UInt64?, sponsored: Bool, id: String) {
+    (block: b, sponsored: sp, id: id.isEmpty ? "tx\(b.map(String.init) ?? "x")\(sp ? "s" : "")" : id)
+}
+check(PF.spine([], columns: 12) == nil, "nothing dated means no axis — invented ends are worse than no figure")
+check(PF.spine([sm(nil), sm(nil)], columns: 12) == nil,
+      "an undated-only room draws no axis either, rather than putting them all at block zero")
+
+// THE NEWEST TRANSACTION MUST BE IN THE LAST COLUMN. The naive index for the
+// maximum block is `columns`, one past the end — so it is dropped or it traps,
+// and a room's most recent transaction is the one most worth seeing.
+if let sp = PF.spine([sm(100), sm(150), sm(200)], columns: 4) {
+    check(sp.columns.count == 4, "the column count is honoured exactly")
+    check(sp.fromBlock == 100 && sp.toBlock == 200, "the axis is the data's own range")
+    check(sp.placed == 3, "every dated transaction is placed")
+    check(sp.columns.last?.count == 1, "the newest lands in the LAST column, not one past the end")
+    check(sp.columns.first?.count == 1, "and the oldest in the first")
+    check(sp.tallest == 1, "tallest is the busiest column, which the view budgets its rows against")
+} else { check(false, "three dated transactions make a spine") }
+
+// A SPAN OF ZERO. Every transaction in one block is the common case on a young
+// address, and dividing by the span there is a crash rather than a wrong
+// answer — the one failure in this file that is not silent.
+if let sp = PF.spine([sm(77, false, "a"), sm(77, false, "b")], columns: 6) {
+    check(sp.fromBlock == 77 && sp.toBlock == 77, "one block is a range of one")
+    check(sp.columns[0].count == 2, "and both marks sit in it")
+    check(sp.placed == 2, "nothing is lost to the zero span")
+} else { check(false, "a single-block room still draws") }
+
+// UNDATED IS COUNTED, NEVER PLACED. `Move.block` is Optional because the read
+// can carry none, and placing one at zero puts a real transaction at the
+// beginning of time.
+if let sp = PF.spine([sm(10), sm(20), sm(nil)], columns: 5) {
+    check(sp.undated == 1, "a blockless transaction is counted")
+    check(sp.placed == 2, "and is not on the axis")
+    check(sp.total == 3, "so the figure can still say how many there really are")
+    check(sp.fromBlock == 10, "and it does not drag the axis to zero")
+} else { check(false, "a partly dated room still draws") }
+
+// SPONSORSHIP RIDES THE MARK, not a per-column tally: the view has to know
+// WHICH one to draw hollow, and a count alone lets it pick the wrong dot.
+if let sp = PF.spine([sm(10, true, "paid"), sm(10, false, "self")], columns: 3) {
+    check(sp.sponsored == 1, "one of the two was paid for by somebody else")
+    check(sp.columns[0].marks.contains { $0.id == "paid" && $0.sponsored },
+          "and the mark that carries it is the one that was")
+    check(sp.columns[0].marks.contains { $0.id == "self" && !$0.sponsored },
+          "while its neighbour is not")
+} else { check(false, "a sponsored transaction still draws") }
+
+// A TOTAL ORDER. Two transactions in one block, handed over in either order,
+// must bin identically — a figure that reshuffles between opens over identical
+// data reads as broken.
+let a1 = PF.spine([sm(5, false, "b"), sm(5, false, "a"), sm(9, false, "c")], columns: 3)
+let a2 = PF.spine([sm(9, false, "c"), sm(5, false, "a"), sm(5, false, "b")], columns: 3)
+check(a1 == a2, "the same transactions in any order produce the same spine")
+check(a1?.columns[0].marks.map(\.id) == ["a", "b"], "and a tie breaks on the id, never on arrival")
+
+// EVERY MARK IS INSIDE THE AXIS IT IS DRAWN UNDER. The labels name fromBlock
+// and toBlock, so a bin outside them is a chart lying about its own range.
+if let sp = PF.spine((0..<60).map { sm(UInt64(27_700 + $0 * 2)) }, columns: 12) {
+    check(sp.placed == 60, "sixty transactions, sixty marks — the reported room")
+    check(sp.columns.allSatisfy { $0.count > 0 }, "an even spread fills every column")
+    check(sp.tallest == 5, "and the busiest holds its real share")
+    check(sp.fromBlock == 27_700 && sp.toBlock == 27_818, "the ends are the real first and last")
+} else { check(false, "the reported room draws") }
 
 // **ZERO IS A READING, NIL IS AN ABSENCE.** Most frames here ask to grow no
 // state, which is a fact about them; an unread budget is us not knowing.
@@ -785,6 +913,28 @@ mutate "the head leading with the root that has LEAST window left" \
 mutate "an aged root drawing a window meter anyway" \
   "$ROOM" "return finish(.rootsAged(count: refs.count))" \
   "return finish(.rootsAged(count: refs.count), fraction: 0)"
+# prd §610 — the reported defect and the figure that replaced the redundant one.
+#
+# NOTE the single quotes on every pattern holding a `$`: in a zsh double-quoted
+# string `$0` is the script's own name, so a closure body pasted in double
+# quotes mutates to something that does not compile and the mutation passes for
+# the wrong reason.
+mutate "a room full of transfers reading as quiet again (the sentence over its own rows)" \
+  "$ROOM" "if moves > 0 { return finish(.moved(count: moves)) }" "if false { return finish(.moved(count: moves)) }"
+mutate "moved promoted ABOVE spends, so a pool spend reads as an ordinary transaction" \
+  "$ROOM" "if nullifiers > 0 { return finish(.spends(nullifiers: nullifiers)) }" "if false { return finish(.spends(nullifiers: nullifiers)) }"
+mutate "the newest transaction binned one past the end of the axis" \
+  "$FIG" "min(n - 1, Int((block - from) * UInt64(n) / span))" "Int((block - from) * UInt64(n) / span)"
+mutate "an undated transaction placed at the beginning of time rather than counted" \
+  "$FIG" "guard let b = m.block else { return nil }" "let b = m.block ?? 0"
+mutate "a column ordered by arrival, so the figure reshuffles between opens" \
+  "$FIG" 'dated.sorted(by: { $0.0 == $1.0 ? $0.2 < $1.2 : $0.0 < $1.0 })' 'dated'
+mutate "sponsorship dropped from the mark, so the view cannot tell which dot was paid for" \
+  "$FIG" "Spine.Mark(id: id, sponsored: sponsored)" "Spine.Mark(id: id, sponsored: false)"
+mutate "every scope gated again, so four chips vanish on the address that most needs them" \
+  "$SECTION" 'static func present() -> [PrivacyDevnetSection] { order }' 'static func present() -> [PrivacyDevnetSection] { order.filter { !$0.isConditional } }'
+mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" \
+  "$SECTION" 'A framed transaction runs its work in numbered steps, each with a budget of its own. Nothing here ran any — a plain transfer runs none.' ''
 mutate "spends swallowed into quiet" \
   "$ROOM" "if nullifiers > 0 { return finish(.spends(nullifiers: nullifiers)) }" \
   "if false { return finish(.spends(nullifiers: nullifiers)) }"
@@ -1287,7 +1437,7 @@ grep -qF 'PrivacyDevnetFigure.drifted' "$work/figv.bare" \
 # **THE SEAL IS ONCE, AND ONLY FOR A KEY THIS DEVICE HAS NEVER SEEN.** Sealing
 # every ring on every open is a room celebrating its own contents, and on an
 # install'"'"'s first read it would seal forty at once.
-# **THE SEAL AND ITS LEDGER ARE DELETED (prd §608)**, with the grid of N
+# **THE SEAL AND ITS LEDGER ARE DELETED (prd §606)**, with the grid of N
 # identical rings they lived on. Guarded in the negative so neither returns
 # without the figure that justified it.
 grep -qE 'PrivacyDevnetMoments\.(unseen|markSeen|hasSeenAnyKey)' "$work/card.bare" \
@@ -1374,19 +1524,73 @@ grep -qF 'This phone' "$work/sheets.bare" \
   || fail "this phone's own account lost its name — it is watched now, so without it the room shows the account it created as a stranger's hex"
 
 # **THE SPEND IS DRAWN AND STATED, off a receipt already fetched.**
-# The spend is drawn by the ROOM's budget bar now rather than per strip (§608),
+# The spend is drawn by the ROOM's budget bar now rather than per strip (§606),
 # so the guard follows it there: the Frames scope must still hand the figure
 # what the receipts reported, or it states every budget and no cost.
 grep -qF 'gasUsed: moves.map(\.gasUsed)' "$work/card.bare" \
   || fail "the Frames scope stopped handing the receipts' totals to its figure — it would state every transaction's budget and no transaction's cost"
 grep -qF 'PrivacyDevnetFigure.budgets(' "$work/card.bare" \
-  || fail "the Frames scope stopped summing the room's budgets — it drew one identical strip per transaction before, which is what §608 replaced"
+  || fail "the Frames scope stopped summing the room's budgets — it drew one identical strip per transaction before, which is what §606 replaced"
 grep -qF 'gasUsed: moveGasUsed' "$work/bridge.bare" \
   || fail "the walk stopped keeping the receipt's own total — a number already in memory, thrown away"
 # It must stay TRANSACTION level: no per-frame breakdown exists on this chain,
 # so a weighted or failed segment off a usage figure would be invented.
 grep -qE 'gasUsed: PrivacyDevnetRPC|gasUsed: PF?\.?hexInt\(f\[' "$work/bridge.bare" \
   && fail "a per-frame gasUsed is being read — this chain serves none (§593a), so any figure built on it is invented"
+
+# ── prd §610 drift guards ──
+#
+# **THE ACTIVITY SCOPE DRAWS WHEN, NOT WHAT.** `kindMix` back as the figure is
+# the reported defect restored: on this chain every transaction is one kind, so
+# the mix suppresses its own bar and leaves a legend line restating the chassis
+# headline, in a 258pt box.
+grep -qF 'case .activity:   activityFigure' "$work/card.bare" \
+  || fail "the Activity scope's figure changed — if it is kindMix again it draws one legend line under a headline that already said the number (§610)"
+grep -qF 'PrivacyDevnetMoveSpine(marks: marks' "$work/card.bare" \
+  || fail "the Activity figure stopped drawing the spine, so the scope has no reading of its own again"
+# The axis ends and the marks must come from ONE call, or the labels can name a
+# range the marks are not inside.
+grep -qF 'PrivacyDevnetFigure.spine(marks, columns: 1)' "$work/card.bare" \
+  || fail "the Activity axis stopped deriving from the same function as its marks — two readings of one range eventually disagree"
+# The mix survives as the CAPTION, and only when it is more than the headline
+# said twice.
+grep -qF 'if mix.count > 1 {' "$work/card.bare" \
+  || fail "the kind mix is drawn unconditionally again — with one kind that is the chassis headline restated, which is what §610 removed"
+
+# **THE EMPTY STATE IS IN THE SLOT.** It was drawn by `scopeList`, below the
+# rail, so a scoped room with nothing in it was 300 blank points of card with
+# its one explaining sentence under the switcher — below the fold on a phone.
+grep -qF 'case _ where isEmpty(section):' "$work/card.bare" \
+  || fail "the empty state left the slot — below the rail it sits under 300 blank points, which is the reported defect"
+grep -qF 'section.emptyBody' "$work/card.bare" \
+  || fail "the empty state stopped reading the scope's own words, so every empty scope says the same thing (§610's own tripwire)"
+# And it must not say it twice.
+grep -qE 'empty\(String\(localized' "$work/card.bare" \
+  && fail "a scope is drawing its empty sentence below the rail again — with the slot's copy above it that is one sentence in two places at two sizes"
+# **NO DOOR IN A SCOPE'S EMPTY STATE** (user ruling): Top up and Send are
+# Home's, which §594's own guard above already pins — this is the other half,
+# that the empty state itself never grows one.
+python3 - "$work/card.bare" <<'PY608' || fail "a scope's empty state grew a door — Top up and Send are Home's alone (§610)"
+import re, sys
+s = open(sys.argv[1]).read()
+i = s.find("var emptyState: some View {")
+if i < 0:
+    print("  ✗ emptyState is gone — the slot has nothing to draw for an empty scope"); sys.exit(1)
+body = s[i:i + 900]
+for bad in ("Button", "onSend", "PrivacyDevnetSendCard", "onWatchExample"):
+    if bad in body:
+        print(f"  ✗ emptyState reaches {bad} — an empty scope states a fact and stops"); sys.exit(1)
+PY608
+
+# **EVERY SCOPE IS REACHABLE.** The room's own dispatch must not re-introduce a
+# gate; `present()` takes no arguments, so a caller cannot pass one by accident.
+SOURCE="Casberi/Casberi/Model/PrivacyDevnetRoomSource.swift"
+[[ -f "$SOURCE" ]] || fail "$SOURCE not found"
+strip_comments "$SOURCE" > "$work/source.bare"
+grep -qF 'PrivacyDevnetSection.present()' "$work/source.bare" \
+  || fail "the strip is deriving its scopes from evidence again — four chips vanish on exactly the address that most needs to learn what they are (§610)"
+grep -qE 'present\(frames:' "$work/source.bare" "$work/bridge.bare" \
+  && fail "present() is being handed evidence again — the gate §610 removed"
 
 print "  ok   drift guards: no price, no notification, slots not blocks, no coins scope, the ring, the components, the moments"
 # **COUNTED, NOT CLAIMED (prd §602).** This line carried "38 mutations, 25

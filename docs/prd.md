@@ -49177,3 +49177,74 @@ A 6pt `DS.tint` circle rode the agent bar's mark whenever `AgentNoticed` held an
 The answer's own copy said so and had to change with it: "the glint only lights for something real" is now "a notice only lands for something real", re-keyed in `Localizable.xcstrings` with its four translations rewritten rather than left describing a dot that no longer exists.
 
 **Checked, not assumed:** no harness, audit or selftest guarded the glint (`grep glint scripts/` is empty), so nothing here was protected by a check that would have to be amended. The liveness, ramp and motion audits pass; every edited file parses.
+
+## 610. The Activity figure restated its own headline, the empty state was below the fold, and four scopes were invisible (user: "60 transactiosn repeats 60 plain transfers… i'm not even sure what it is supposed to demonstrate", "the empty state is weird, nothing from this address on the chain is below the fold", "even if they have no data for the account, they should still be present w/ an empty state", 2026-09-05)
+
+Four findings on the Ethrex Privacy room, three of them reported from a device and one found while reading for the others. Every one renders as a perfectly ordinary room, which is why none of the 67 mutations or 84 drift guards this seat already carries could see any of them.
+
+### 1 · The Activity figure said the headline again, in smaller type
+
+`kindMix` (§606) splits a room's transactions by what they ARE, and draws its segmented bar only when there is more than one kind — correctly, since one kind is not a breakdown, it is a bar saying 100%. On the reported device all sixty transactions were plain transfers, so the bar was suppressed exactly as designed and what survived was its legend row: *60 plain transfers*, under a chassis headline already reading *60 transactions*. **The slot restated its own headline and left 230 of its 258 points empty.**
+
+The figure is not wrong. It is the right reading for a room whose transactions differ in kind, and on this chain they almost never do — 14 type-`0x6` transactions exist chain-wide. What it lacks is a second question to fall back to.
+
+**WHEN is the question this room can always answer and no headline states.** `PrivacyDevnetFigure.spine` bins the walked block range into equal columns and reports what landed in each; `PrivacyDevnetMoveSpine` draws one mark per transaction, stacked into its column. Three properties earn it over the bucketed bar chart the user first proposed:
+
+- **A dot is the row's own door.** The list below the rail already opens a move sheet; the figure is now the same control at a glance, which no aggregate can offer.
+- **Nothing is rounded away.** A single transaction in a quiet stretch is still a mark, where a bar chart of counts renders it as a sliver or not at all.
+- **Sponsorship comes free.** A hollow mark is a transaction somebody else paid for — the `sponsors` scope's own reading, on a figure that had to be drawn anyway, as a SHAPE rather than a second colour, because this room spends no colour on state (§593b).
+
+**And it falls back to the bar chart from the same numbers.** Past the height available a column of dots is a smear, so a spine whose tallest column will not fit draws a bar per column instead — computed from the same `Spine`, so the two renderings can never disagree about what landed where. The doors go with the dots; the rows below the rail keep them.
+
+**An empty column draws a 2pt floor mark, never nothing.** A gap rendered as blank is indistinguishable from the end of the axis, and the quiet stretches are half of what this figure says.
+
+**The mix survives as the caption**, drawn only when there is more than one kind — which is exactly when it stops being the headline said twice. `PrivacyDevnetKindMix` is dormant rather than deleted (`PredictionVenueSwitcher`'s precedent): the drawing is right the day a pool spend lands, and re-deriving it later is worse than keeping it with a stated reason.
+
+Two things the model gets right that a first cut would not. **The span can be zero** — every transaction in one block is the common case on a young address, and dividing by the span there is a crash rather than a wrong answer, the only non-silent failure in this pass. And **the newest transaction must land in the LAST column**: the naive index for the maximum block is `columns`, one past the end, so a room's most recent transaction is dropped or traps. Both are pinned by mutation.
+
+**Undated is COUNTED, never placed.** `Move.block` is Optional because the read can carry none, and giving such a transaction a position puts a real one at the beginning of time. The figure says how many are missing instead.
+
+### 2 · The empty state was under the fold, and it was the wrong place for it
+
+`PrivacyDevnetRoomCard.empty(_:)` drew in `scopeList`, which is below the switcher by §593d's own ruling — so a scoped room with nothing in it was **300 blank points of card with the one sentence explaining them pushed under the rail**, and on a phone, off the screen. Its own doc said `present()` should have kept you out of here, which was true and is what item 3 overturns.
+
+The empty state is in the slot now, and it is **two tiers and no more**: the chassis' reserved headline row carries the short state (`emptyHeadline`) and the figure box carries one paragraph (`emptyBody`). A lead line between them would be a third register of text in a box with no drawing in it.
+
+**No door, by ruling.** Top up and Send are Home's — they already were, §594's own "an act belongs where you land rather than everywhere you look" — and the mockup that offered them inside a scope's empty state was refused. A scope's empty state states a fact and stops. Guarded, since the temptation is obvious and recurring.
+
+### 3 · Four scopes were invisible on exactly the address that needed them
+
+`present()` dropped `frames`, `nullifiers`, `roots` and `sponsors` for an address that had none — which on this chain is nearly every address, so the strip read *Home · Activity · Accounts* and the four readings the room exists for were unreachable by anyone who had not already made one. **A room about a mechanism most people have never used hid the mechanism from everyone who has not used it.**
+
+Every scope is present now, always.
+
+**This is not the dead control §83 bans, and the distinction is the empty state.** A chip that opens onto nothing is a dead control; a chip that opens onto a sentence saying what the scope holds and why this address has none is the room teaching its own subject. So the ruling comes with an obligation, and it is mechanical: **a scope that cannot say something specific about its own absence has no business being present.** The harness demands a distinct, non-trivial `emptyBody` from every scope that can be empty, and rejects any two that explain themselves the same way — four chips sharing one generic *nothing here yet* is the banned strip in new clothes.
+
+Three rules the copy keeps:
+
+- **No subject.** Not "this address" and not "the 2 addresses you watch" — the face rail directly above already says which is scoped, and a sentence that has to agree with the watch count is four sentences for no reader.
+- **No chain-wide fact.** `sponsors` was written first as *no transaction measured on this chain has had a payer other than its own sender* — true when measured, and a sentence that becomes a lie the first time one does. It says what is true of THIS room instead, which cannot go stale.
+- **No number that lives somewhere else.** `roots` was drafted naming the 8,192-slot window; that constant is `PrivacyDevnetRoots.windowSlots`, and copy holding a second copy of it is copy that will disagree with the ring above it.
+
+`present()` takes no arguments now rather than ignoring them: an unused `frames:` at every call site is an invitation to re-gate on it by accident. `isConditional` keeps its family name and changes meaning — it no longer gates anything, and it still fixes the ORDER (scopes that can be empty sit at the tail, so the strip's head is the same three chips on every address) and still marks which scopes owe an `emptyBody`.
+
+`coins` stays absent for its own §593 reason: that vault has no code on this chain, so its scope would be empty for everyone forever and could never write an honest `emptyBody`. **That is the line between the two rulings** — a scope empty because THIS address has none of it teaches; a scope empty because the chain cannot produce it is furniture.
+
+### 4 · The head said nothing had happened, above a list of what had
+
+Found while reading for the others, and the sharpest of the four. `PrivacyDevnetRoom.head` ranked spends and roots and **never looked at `moves`**, so an address with sixty plain transfers read as `.quiet` — and the room printed *"Nothing on this chain from the 2 addresses you watch, yet."* in its largest type, directly above three of their transfers.
+
+Nothing here could have caught it. Every count the head read was correct, the sentence was right for the state it was given, and the room rendered perfectly.
+
+`.moved(count:)` ranks **below spends** (a pool spend is what this room is for and says strictly more) and **above quiet** (quiet is a claim that nothing happened, and the rows below the rail are proof that something did). Its sentence carries no address clause for item 3's reason. `Account.moveCount` is defaulted, so every existing caller keeps its meaning, and it is read only to separate *did nothing* from *did something that was not a pool spend* — never to rank, since a transfer is not evidence about the pool either way.
+
+The example-address doors stand down for `.moved`: they exist for a room with nothing to read, and offering somebody else's address over your own transactions answers a question the room is no longer asking.
+
+### What holds it
+
+`scripts/privacy-selftest.sh` gains ~40 assertions, 8 mutations and 9 drift guards. The mutations are the four silent wrong answers this pass created the opportunity for — a room full of transfers reading as quiet again, `moved` promoted above spends, the newest transaction binned one past the end, an undated transaction placed at block zero, a column ordered by arrival, sponsorship dropped from the mark, the scope gate restored, and an empty scope left with nothing to say.
+
+**A zsh trap paid for on the way, worth remembering for any mutation in this repo:** in a double-quoted zsh string `$0` is the script's own name, so a Swift closure body pasted in double quotes mutates to something that does not compile — and a mutation that fails to build is reported as CAUGHT. Single-quote any pattern holding a `$`.
+
+**UNSEEN on a device.** The spine has never been drawn, no empty scope has been opened, and no room has been watched saying "60 transactions" over sixty marks.
+

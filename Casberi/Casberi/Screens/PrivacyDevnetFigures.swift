@@ -80,7 +80,7 @@ struct PrivacyDevnetRing: View {
     @ViewBuilder private func ring(now: Date) -> some View {
         let placed = PrivacyDevnetFigure.ringPlacements(drifted(now: now))
         ZStack {
-            // **THE TRACK IS THICK AND THE WINDOW IS FILLED (prd §608).**
+            // **THE TRACK IS THICK AND THE WINDOW IS FILLED (prd §606).**
             //
             // Reported, on the first device look: the ring "just looks like a
             // toy". It was a 5pt outline with saturated rotated squares
@@ -192,7 +192,7 @@ struct PrivacyDevnetRing: View {
     /// One snapshot, as a tick across the track.
     ///
     /// **A tick that CUTS the track is a measurement on it; a gem sitting
-    /// beside it is an ornament** (prd §608). It runs the rim's full width
+    /// beside it is an ornament** (prd §606). It runs the rim's full width
     /// plus a little either side so it reads over both the filled and the
     /// empty part, in ink rather than tint — the fill is the quantity, the
     /// ticks are the readings on it, and tinting both would merge them.
@@ -439,12 +439,12 @@ struct PrivacyDevnetAnatomy: View {
 struct PrivacyDevnetSpentKey: View {
     var size: CGFloat = 14
 
-    // **THE SEAL IS GONE WITH THE GRID IT LIVED ON (prd §608).**
+    // **THE SEAL IS GONE WITH THE GRID IT LIVED ON (prd §606).**
     //
     // §598 gave this ring a first-sight animation: a key this device had never
     // seen closed itself once, because the hole IS the claim. It fired in the
     // Spend keys scope's grid — and that grid was eight identical rings
-    // standing in for the number eight, which §608 deleted. An animation
+    // standing in for the number eight, which §606 deleted. An animation
     // attached to a figure that should not exist does not survive the figure;
     // moving it onto the sheet's key rows would put a 0.55s draw on a list
     // item, which is the fidget the motion law bans.
@@ -508,7 +508,7 @@ struct PrivacyDevnetLegend: View {
 }
 
 
-// **TWO FIGURES DELETED HERE (prd §608).**
+// **TWO FIGURES DELETED HERE (prd §606).**
 //
 // `PrivacyDevnetTally` drew three pip columns per address and
 // `PrivacyDevnetActivityChart` a column per transaction whose height was the
@@ -546,7 +546,7 @@ struct PrivacyDevnetMore: View {
     }
 }
 
-// MARK: - What this room's transactions are (prd §608)
+// MARK: - What this room's transactions are (prd §606)
 
 /// The kind mix, as one labelled bar.
 ///
@@ -562,8 +562,140 @@ struct PrivacyDevnetMore: View {
 /// **ONE KIND DRAWS NO BAR.** A single full-width segment is a sentence with a
 /// rectangle behind it saying 100%, and on a young room every transaction is
 /// the same kind — so the words stand alone and the figure declines. That is
-/// the rule the whole §608 pass turns on: a scope with nothing to compare
+/// the rule the whole §606 pass turns on: a scope with nothing to compare
 /// states its number instead of drawing one.
+/// **WHEN EACH TRANSACTION LANDED (prd §610).**
+///
+/// One mark per transaction on the walked block range. Replaces `kindMix` as
+/// the Activity scope's figure for the reason `PrivacyDevnetFigure.spine`
+/// states: the mix is the right reading for a room whose transactions differ
+/// in kind, and on this chain they almost never do, so it drew a legend line
+/// restating the chassis headline and left the slot empty.
+///
+/// **A DOT IS THE ROW'S OWN DOOR.** The list below the rail already opens a
+/// move sheet; here the figure is the same control at a glance, which is the
+/// one thing a bucketed bar chart cannot offer.
+///
+/// **AND IT FALLS BACK TO ONE.** Past the height available a column of dots is
+/// a smear, so a spine whose tallest column will not fit draws a bar per
+/// column instead — from the SAME `Spine`, so the two renderings can never
+/// disagree about what landed where. The doors go with the dots and the rows
+/// below the rail keep them.
+///
+/// **AN EMPTY COLUMN DRAWS A FLOOR MARK, never nothing.** A gap rendered as
+/// blank is indistinguishable from the end of the axis, and the quiet
+/// stretches are half of what this figure says.
+struct PrivacyDevnetMoveSpine: View {
+    let marks: [(block: UInt64?, sponsored: Bool, id: String)]
+    /// Opens one transaction. Nil in a preview — and then a dot is not a
+    /// button, because a mark that looks tappable and does nothing is §83's
+    /// dead control at 7pt.
+    var open: ((String) -> Void)?
+    let reduceMotion: Bool
+
+    /// A mark and the gap under it. The step the row budget is computed from,
+    /// so the figure cannot ask for more rows than it can draw.
+    private static let dot: CGFloat = 7
+    private static let gap: CGFloat = 3
+    private static var step: CGFloat { dot + gap }
+    /// The narrowest a column may be. Wider than the dot so two neighbouring
+    /// columns read as two.
+    private static let columnWidth: CGFloat = 11
+    private static let floorMark: CGFloat = 2
+
+    var body: some View {
+        GeometryReader { geo in
+            // **THE COLUMN COUNT IS DERIVED FROM THE REAL WIDTH**, never a
+            // constant: a fixed count either crowds a narrow card or draws fat
+            // empty columns on a wide one, and this room already pays 44pt of
+            // gear column out of the same width.
+            let n = max(4, min(30, Int(geo.size.width / Self.columnWidth)))
+            if let spine = PrivacyDevnetFigure.spine(marks, columns: n) {
+                let rows = max(1, Int(geo.size.height / Self.step))
+                let fits = spine.tallest <= rows
+                HStack(alignment: .bottom, spacing: 3) {
+                    ForEach(Array(spine.columns.enumerated()), id: \.offset) { index, column in
+                        columnView(column, index: index, fits: fits,
+                                   tallest: spine.tallest, height: geo.size.height)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text(String(localized: "When each transaction landed")))
+    }
+
+    @ViewBuilder private func columnView(_ column: PrivacyDevnetFigure.Spine.Column,
+                                         index: Int, fits: Bool, tallest: Int,
+                                         height: CGFloat) -> some View {
+        VStack(spacing: Self.gap) {
+            Spacer(minLength: 0)
+            if column.count == 0 {
+                // **A FLOOR MARK, NEVER NOTHING.** A gap rendered as blank is
+                // indistinguishable from the end of the axis, and the quiet
+                // stretches are half of what this figure says.
+                Capsule().fill(DS.fillFaint).frame(height: Self.floorMark)
+            } else if fits {
+                // Newest at the top of the column, so the stack reads the way
+                // the axis under it does.
+                ForEach(column.marks.reversed(), id: \.id) { mark in
+                    dot(mark)
+                }
+            } else {
+                Capsule()
+                    .fill(DS.tint)
+                    .frame(height: max(Self.floorMark,
+                                       height * CGFloat(column.count) / CGFloat(max(1, tallest))))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .chartArrival(index: index, reduceMotion: reduceMotion)
+    }
+
+    @ViewBuilder private func dot(_ mark: PrivacyDevnetFigure.Spine.Mark) -> some View {
+        if let open {
+            Button {
+                DSHaptic.selection()
+                open(mark.id)
+            } label: {
+                shape(mark.sponsored)
+                    // A 7pt target is unreachable; the column's own step is
+                    // what a finger actually gets.
+                    .contentShape(Rectangle().inset(by: -3))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(mark.sponsored
+                ? String(localized: "A transaction somebody else paid for. Opens it.")
+                : String(localized: "A transaction. Opens it.")))
+        } else {
+            shape(mark.sponsored)
+        }
+    }
+
+    /// **HOLLOW MEANS SOMEBODY ELSE PAID.** A shape rather than a second
+    /// colour, because this room spends no colour on state (§593b) — and the
+    /// room's `sponsors` reading comes free on a figure it had to draw anyway.
+    @ViewBuilder private func shape(_ sponsored: Bool) -> some View {
+        if sponsored {
+            Circle().strokeBorder(DS.tint.opacity(0.6), lineWidth: 1.5)
+                .frame(width: Self.dot, height: Self.dot)
+        } else {
+            Circle().fill(DS.tint)
+                .frame(width: Self.dot, height: Self.dot)
+        }
+    }
+}
+
+/// **DORMANT SINCE §610, and kept rather than deleted.**
+///
+/// It was the Activity scope's figure and is now that scope's one-line caption
+/// (`PrivacyDevnetRoomCard.activityFigure` draws `words` alone), because on
+/// this chain the mix is a single kind and the figure restated the chassis
+/// headline. The drawing itself is right for a room holding more than one kind
+/// of transaction, and this chain will hold one the day a pool spend lands —
+/// `PredictionVenueSwitcher`'s precedent: dormant with a stated reason beats
+/// deleted and re-derived. `words` is live and is what the caption reads.
 struct PrivacyDevnetKindMix: View {
     let mix: [(kind: PrivacyDevnetFigure.Kind, count: Int)]
     let reduceMotion: Bool
@@ -637,7 +769,7 @@ struct PrivacyDevnetKindMix: View {
     }
 }
 
-// MARK: - What the room asked the chain for (prd §608)
+// MARK: - What the room asked the chain for (prd §606)
 
 /// The two budgets a frame transaction carries, summed across the room.
 ///

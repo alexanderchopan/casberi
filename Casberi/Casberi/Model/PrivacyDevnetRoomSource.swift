@@ -47,7 +47,8 @@ enum PrivacyDevnetRoomSource {
                 PrivacyDevnetRoom.Account(nullifierCount: $0.nullifiers.count,
                                           frameCount: $0.frameCount,
                                           sponsoredCount: $0.sponsoredCount,
-                                          roots: $0.roots)
+                                          roots: $0.roots,
+                                          moveCount: $0.moves.count)
             },
             // **THE LARGER OF THREE, and the demo floor closes a
             // chicken-and-egg** (Frames' own lesson): the demo installs
@@ -79,13 +80,14 @@ enum PrivacyDevnetRoomSource {
     }
 
     /// Which scopes the strip draws, for the room's switcher.
+    ///
+    /// **All of them, on every address (prd §610).** The scope no longer
+    /// decides — each chip carries its own empty state — so this is a
+    /// forwarding function rather than a reading. Kept as one because the
+    /// switcher and the deep link both ask through it, and because the day a
+    /// scope earns a gate again this is where it goes.
     @MainActor
     static func sections(scope: String?) -> [PrivacyDevnetSection] {
-        let shown = accounts(scope: scope)
-        return PrivacyDevnetSection.present(
-            frames: shown.contains(where: \.hasFrames),
-            nullifiers: shown.contains(where: \.hasNullifiers),
-            roots: shown.contains(where: \.hasRoots),
-            sponsors: shown.contains(where: \.hasSponsors))
+        PrivacyDevnetSection.present()
     }
 }

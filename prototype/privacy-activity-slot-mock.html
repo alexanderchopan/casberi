@@ -1,0 +1,281 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacy devnet — Activity slot</title><style>
+:root{--bg:#e9e9ef}
+body{margin:0;background:var(--bg);color:#111;font:14px -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,sans-serif;padding:36px 24px}
+h1{font-size:19px;font-weight:600;margin:0 0 6px}
+h2{font-size:15px;font-weight:600;margin:36px 0 14px}
+p.lede{margin:0 0 8px;color:#555;max-width:940px;line-height:1.5}
+.state{display:grid;grid-template-columns:300px 393px 393px;gap:26px;align-items:start;margin-bottom:34px}
+.why{font-size:13px;color:#444;line-height:1.45}
+.why b{display:block;color:#111;font-weight:600;margin-bottom:4px;font-size:14px}
+.why .now{display:block;margin-top:8px;padding:8px 10px;border-radius:10px;background:#dcdce3;color:#333;font-size:12px;line-height:1.45}
+.why .cost{display:block;margin-top:8px;font-size:12px;color:#666;line-height:1.45}
+.card{width:393px;box-sizing:border-box;padding:16px;border-radius:26px;background:var(--card);color:var(--tp);position:relative;overflow:hidden}
+.light{--card:#fff;--tp:#000;--ts:#3c3c4399;--tt:#3c3c4366;--tint:#0a84ff;--faint:rgba(0,0,0,.03);--fill:rgba(0,0,0,.06);--pour:linear-gradient(rgba(0,0,0,.078),transparent 150px)}
+.dark{--card:#141416;--tp:#fff;--ts:rgba(235,235,245,.6);--tt:rgba(235,235,245,.3);--tint:#0a84ff;--faint:rgba(255,255,255,.04);--fill:rgba(255,255,255,.1);--pour:linear-gradient(rgba(0,0,0,.078),transparent 150px)}
+.card::before{content:"";position:absolute;inset:0;background:var(--pour);pointer-events:none}
+.card>*{position:relative}
+.gear{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;background:var(--fill);z-index:3}
+.gear::after{content:"";position:absolute;inset:9px;border-radius:50%;border:2px solid var(--ts);box-sizing:border-box}
+.slot{height:300px;display:flex;flex-direction:column;padding-right:44px;box-sizing:border-box}
+.h30{height:30px;font-size:22px;font-weight:600;line-height:30px;margin-bottom:12px;font-variant-numeric:tabular-nums;flex:none}
+.fig{height:258px;display:flex;flex-direction:column}
+.head{font-size:22px;font-weight:600;line-height:1.2}
+.sub{font-size:12px;color:var(--tt);line-height:1.35}
+.sub2{font-size:13px;color:var(--ts);line-height:1.4}
+.mono{font-family:ui-monospace,SF Mono,Menlo,monospace}
+.legend{display:flex;align-items:center;gap:8px;margin-top:12px}
+.legend .sw{width:14px;height:8px;border-radius:4px;background:var(--tint)}
+.legend .sw.w2{opacity:.4}
+.legend span{font-size:15px;color:var(--ts)}
+/* bars */
+.bars{flex:1;display:flex;align-items:flex-end;gap:4px}
+.bars .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;height:100%}
+.bars .b{background:var(--tint);border-radius:3px}
+.bars .b.w2{background:var(--tint);opacity:.38}
+.bars .b.zero{background:var(--fill);height:2px;border-radius:1px}
+.axis{display:flex;justify-content:space-between;margin-top:8px}
+.axis span{font-size:11px;color:var(--tt);font-variant-numeric:tabular-nums}
+/* dot spine */
+.spine{flex:1;display:flex;align-items:flex-end;gap:3px}
+.spine .col{flex:1;display:flex;flex-direction:column-reverse;gap:3px;align-items:center}
+.spine i{width:7px;height:7px;border-radius:50%;background:var(--tint);display:block}
+.spine i.hollow{background:transparent;border:1.5px solid var(--tint);box-sizing:border-box;opacity:.6}
+.spine .none{width:7px;height:2px;border-radius:1px;background:var(--fill)}
+/* lanes */
+.lane{display:grid;grid-template-columns:60px 1fr auto;gap:10px;align-items:end;margin-bottom:14px}
+.lane .nm{font-size:12px;color:var(--ts);padding-bottom:2px}
+.lane .n{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;padding-bottom:0}
+.lane .bars{height:74px}
+.lane.flat .bars{height:74px;align-items:flex-end}
+.flatnote{font-size:12px;color:var(--tt);line-height:74px}
+/* empty states */
+.center{flex:1;display:flex;flex-direction:column;justify-content:center;gap:6px}
+.big{font-size:22px;font-weight:600;line-height:1.25}
+.facts{display:flex;gap:22px;margin-top:14px}
+.fact .v{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.15}
+.fact .l{font-size:12px;color:var(--tt);margin-top:2px}
+.doors{display:flex;gap:10px;margin-top:auto}
+.door{flex:1;border-radius:18px;background:var(--faint);padding:12px;box-sizing:border-box}
+.door .g{width:30px;height:30px;border-radius:50%;background:var(--fill);margin-bottom:20px}
+.door .g.hero{background:var(--tint)}
+.door .t{font-size:15px;font-weight:600}
+.door .s{font-size:12px;color:var(--tt);margin-top:2px;line-height:1.3}
+.switch{display:flex;align-items:center;gap:10px;border-radius:18px;background:var(--faint);padding:12px;margin-top:auto}
+.switch .d{width:34px;height:34px;border-radius:50%;background:var(--fill);flex:none}
+.switch .t{font-size:15px;font-weight:600}
+.switch .s{font-size:12px;color:var(--tt);margin-top:1px}
+.switch .ch{margin-left:auto;color:var(--tt);font-size:17px}
+.note{font-size:13px;color:#444;line-height:1.55;max-width:1140px;margin-top:12px}
+.note b{color:#111;font-weight:600}
+.note ul{margin:8px 0 0 18px;padding:0}
+.note li{margin-bottom:8px}
+.ch2{font-size:13px;font-weight:600;padding:5px 10px;border-radius:9999px;color:var(--ts);background:var(--faint);white-space:nowrap}
+.ch2.on{background:var(--fill);color:var(--tp)}
+
+</style>
+
+<div style="max-width:1140px;margin:0 0 22px;padding:12px 14px;border-radius:14px;background:#dcdce3;font-size:13px;line-height:1.5">
+<b>Shipped (prd §608, 2026-09-05):</b> chart <b>B</b> (the mark-per-transaction spine, falling back to A's bars when a column will not fit) and empty state <b>G</b> (every scope present, each with its own written empty state). <b>No doors in any scope's empty state</b> — Top up and Send stay on Home by ruling, so D's and F's tiles below are the version that was refused. Also fixed: the head now reads <span style="font-family:ui-monospace,Menlo,monospace">moves</span>, so the first screen no longer says nothing happened above a list of transfers.
+</div>
+<h1>The Privacy devnet room — the Activity slot, and the same slot with nothing in it</h1>
+<p class="lede">Fixture is the reported device state. <b>Activity, All:</b> 60 transactions, every one a plain transfer, blocks 27,700–27,801, none sponsored, none carrying a frame or a spend key. <b>Activity, scoped to <span class="mono">…f980</span>:</b> nothing — all 60 belong to <span class="mono">…cc60</span>. Every card is drawn at the real slot: 300pt, with the chassis' 30pt headline row and 12pt gap reserved, so the figure gets 258pt. Nothing below needs a new request or a new field.</p>
+
+<h2>Today</h2>
+<div class="state">
+  <div class="why"><b>What ships now, and why it says nothing</b>
+    The figure is <span class="mono">kindMix</span>. It draws a segmented bar only when there is more than one kind — and here there is one, so the bar is correctly suppressed and all that is left is its legend row: <i>60 plain transfers</i>, under a chassis headline that already said <i>60 transactions</i>.
+    <span class="now"><b>So the slot restates the headline and leaves 230pt empty.</b> The mix is the right figure for a chain where transactions differ in kind; on this one they do not, and it has no second question to fall back to. That is what the three options below give it.</span>
+    <span class="cost">The empty screen is worse: <span class="mono">kindMix</span> returns <span class="mono">EmptyView</span>, the headline is nil, and the sentence lives in <span class="mono">scopeList</span> — <b>below</b> the rail, under 300pt of blank card.</span>
+  </div>
+  <div class="card light"><div class="gear"></div><div class="slot"><div class="h30">60 transactions</div><div class="fig"><div class="legend"><span class="sw"></span><span>60 plain transfers</span></div></div></div></div>
+  <div class="card dark"><div class="gear"></div><div class="slot"><div class="h30">60 transactions</div><div class="fig"><div class="legend"><span class="sw"></span><span>60 plain transfers</span></div></div></div></div>
+</div>
+
+<h2>Chart · A — When, as columns</h2>
+<div class="state">
+  <div class="why"><b>Transactions per stretch of chain</b>
+    Your suggestion, drawn: the block range the walk saw, cut into equal buckets, one column per bucket. The reading is the SHAPE — this address moves in bursts, not steadily — which no headline states and no list of 60 identical rows shows.
+    <span class="cost">Reads <span class="mono">move.block</span> only. Buckets derive from the walked range, so the axis is always the data's own.</span>
+    <span class="now"><b>The one thing to get right:</b> an empty bucket draws a 2pt floor mark, not nothing. A gap that renders as blank is indistinguishable from the end of the axis, and the quiet stretches are half of what this figure says.</span>
+  </div>
+  <div class="card light"><div class="gear"></div><div class="slot"><div class="h30">60 transactions</div><div class="fig">
+    <div class="bars"><div class="col"><div class="b zero"></div></div><div class="col"><div class="b" style="height:12%"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b" style="height:30%"></div></div><div class="col"><div class="b" style="height:56%"></div></div><div class="col"><div class="b" style="height:88%"></div></div><div class="col"><div class="b" style="height:44%"></div></div><div class="col"><div class="b" style="height:19%"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b" style="height:69%"></div></div><div class="col"><div class="b" style="height:38%"></div></div><div class="col"><div class="b" style="height:19%"></div></div></div>
+    <div class="axis"><span>block 27,700</span><span>27,801</span></div>
+    <div class="sub" style="margin-top:6px">Busiest stretch: 14 in eight blocks.</div>
+  </div></div></div>
+  <div class="card dark"><div class="gear"></div><div class="slot"><div class="h30">60 transactions</div><div class="fig">
+    <div class="bars"><div class="col"><div class="b zero"></div></div><div class="col"><div class="b" style="height:12%"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b" style="height:30%"></div></div><div class="col"><div class="b" style="height:56%"></div></div><div class="col"><div class="b" style="height:88%"></div></div><div class="col"><div class="b" style="height:44%"></div></div><div class="col"><div class="b" style="height:19%"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b" style="height:69%"></div></div><div class="col"><div class="b" style="height:38%"></div></div><div class="col"><div class="b" style="height:19%"></div></div></div>
+    <div class="axis"><span>block 27,700</span><span>27,801</span></div>
+    <div class="sub" style="margin-top:6px">Busiest stretch: 14 in eight blocks.</div>
+  </div></div></div>
+</div>
+
+<h2>Chart · B — Every transaction, one mark</h2>
+<div class="state">
+  <div class="why"><b>The same axis, no bucketing</b>
+    One dot per transaction, stacked in the block it landed in. Nothing is aggregated, so there is no bucket width to defend and a single transaction is still visible where a bar chart would round it away.
+    <span class="cost">Same input as A. A hollow dot is a sponsored transaction — the room's <span class="mono">sponsors</span> reading, free, on a figure that already exists.</span>
+    <span class="now"><b>Each dot is the row's own door.</b> The list below the rail already opens a move sheet; this makes the figure the same control at a glance. It is also the figure that scales worst: past ~150 transactions the columns are a smear, so it needs a stated ceiling and A as the fallback above it.</span>
+  </div>
+  <div class="card light"><div class="gear"></div><div class="slot"><div class="h30">60 transactions</div><div class="fig">
+    <div class="spine" id="sp1"></div>
+    <div class="axis"><span>block 27,700</span><span>27,801</span></div>
+    <div class="legend" style="margin-top:8px"><span class="sw" style="width:9px;height:9px;border-radius:50%"></span><span style="font-size:13px">one transaction</span><span class="sw" style="width:9px;height:9px;border-radius:50%;background:transparent;border:1.5px solid var(--tint);box-sizing:border-box;opacity:.6"></span><span style="font-size:13px">somebody else paid</span></div>
+  </div></div></div>
+  <div class="card dark"><div class="gear"></div><div class="slot"><div class="h30">60 transactions</div><div class="fig">
+    <div class="spine" id="sp2"></div>
+    <div class="axis"><span>block 27,700</span><span>27,801</span></div>
+    <div class="legend" style="margin-top:8px"><span class="sw" style="width:9px;height:9px;border-radius:50%"></span><span style="font-size:13px">one transaction</span><span class="sw" style="width:9px;height:9px;border-radius:50%;background:transparent;border:1.5px solid var(--tint);box-sizing:border-box;opacity:.6"></span><span style="font-size:13px">somebody else paid</span></div>
+  </div></div></div>
+</div>
+
+<h2>Chart · C — Whose, over the same stretch</h2>
+<div class="state">
+  <div class="why"><b>One lane per watched address</b>
+    A's columns split into a lane per address. On this fixture it answers the question the unscoped room otherwise cannot: <b>all 60 are <span class="mono">…cc60</span>, and <span class="mono">…f980</span> has done nothing</b> — which is also the explanation for the empty screen below, delivered before you go looking for it.
+    <span class="cost">Reads <span class="mono">pairs</span>, which the card already builds so a move sheet can say whose it is.</span>
+    <span class="now"><b>A silent lane is drawn, never dropped.</b> A missing lane reads as an address you are not watching; a flat lane with its own zero reads as an address that did nothing, which is the fact. With one watched address there is nothing to compare and the figure falls back to A.</span>
+  </div>
+  <div class="card light"><div class="gear"></div><div class="slot"><div class="h30">60 transactions</div><div class="fig">
+    <div class="lane"><div class="nm mono">…cc60</div><div class="bars"><div class="col"><div class="b zero"></div></div><div class="col"><div class="b" style="height:12%"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b" style="height:30%"></div></div><div class="col"><div class="b" style="height:56%"></div></div><div class="col"><div class="b" style="height:88%"></div></div><div class="col"><div class="b" style="height:44%"></div></div><div class="col"><div class="b" style="height:19%"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b" style="height:69%"></div></div><div class="col"><div class="b" style="height:38%"></div></div><div class="col"><div class="b" style="height:19%"></div></div></div><div class="n">60</div></div>
+    <div class="lane"><div class="nm mono">…f980</div><div class="bars"><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div></div><div class="n">0</div></div>
+    <div class="axis"><span>block 27,700</span><span>27,801</span></div>
+  </div></div></div>
+  <div class="card dark"><div class="gear"></div><div class="slot"><div class="h30">60 transactions</div><div class="fig">
+    <div class="lane"><div class="nm mono">…cc60</div><div class="bars"><div class="col"><div class="b zero"></div></div><div class="col"><div class="b" style="height:12%"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b" style="height:30%"></div></div><div class="col"><div class="b" style="height:56%"></div></div><div class="col"><div class="b" style="height:88%"></div></div><div class="col"><div class="b" style="height:44%"></div></div><div class="col"><div class="b" style="height:19%"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b" style="height:69%"></div></div><div class="col"><div class="b" style="height:38%"></div></div><div class="col"><div class="b" style="height:19%"></div></div></div><div class="n">60</div></div>
+    <div class="lane"><div class="nm mono">…f980</div><div class="bars"><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div></div><div class="n">0</div></div>
+    <div class="axis"><span>block 27,700</span><span>27,801</span></div>
+  </div></div></div>
+</div>
+
+<h2>Empty · D — Say it in the slot, with what the address does have</h2>
+<div class="state">
+  <div class="why"><b>The sentence moves above the rail, and stops being alone</b>
+    The message belongs where you are looking. It names the address rather than saying "this address", states the two facts the walk holds for it anyway — balance and nonce — and offers the two doors that would change the answer.
+    <span class="cost">Reads <span class="mono">balanceWei</span>, <span class="mono">nonce</span>, <span class="mono">reached</span>. Both doors exist and both work, so neither is a dead control.</span>
+    <span class="now"><b>Cheapest and never wrong.</b> The same shape serves every scope's empty state — Frames, Spend keys, Snapshots, Sponsors — so the room stops having four different kinds of nothing.</span>
+  </div>
+  <div class="card light"><div class="gear"></div><div class="slot"><div class="h30" style="color:var(--ts);font-size:15px;font-weight:600">Nothing yet</div><div class="fig">
+    <div class="center"><div class="big"><span class="mono">…f980</span> has not moved on this chain yet.</div>
+      <div class="facts"><div class="fact"><div class="v">0.0000</div><div class="l">ETH held</div></div><div class="fact"><div class="v">0</div><div class="l">sent</div></div><div class="fact"><div class="v">2 min</div><div class="l">since read</div></div></div></div>
+    <div class="doors"><div class="door"><div class="g hero"></div><div class="t">Top up</div><div class="s">Test ETH, no key</div></div><div class="door"><div class="g"></div><div class="t">Send</div><div class="s">First transaction</div></div></div>
+  </div></div></div>
+  <div class="card dark"><div class="gear"></div><div class="slot"><div class="h30" style="color:var(--ts);font-size:15px;font-weight:600">Nothing yet</div><div class="fig">
+    <div class="center"><div class="big"><span class="mono">…f980</span> has not moved on this chain yet.</div>
+      <div class="facts"><div class="fact"><div class="v">0.0000</div><div class="l">ETH held</div></div><div class="fact"><div class="v">0</div><div class="l">sent</div></div><div class="fact"><div class="v">2 min</div><div class="l">since read</div></div></div></div>
+    <div class="doors"><div class="door"><div class="g hero"></div><div class="t">Top up</div><div class="s">Test ETH, no key</div></div><div class="door"><div class="g"></div><div class="t">Send</div><div class="s">First transaction</div></div></div>
+  </div></div></div>
+</div>
+
+<h2>Empty · E — The chart, with a real zero in it</h2>
+<div class="state">
+  <div class="why"><b>The same columns, all at the floor</b>
+    The scope keeps its figure and the figure keeps its axis. Every bucket draws its 2pt floor mark, so the picture says what is true: across the blocks this walk covered, this address did nothing. The shape you will see when it does is already on screen.
+    <span class="cost">No new reading at all — it is option A over an empty set, which is the same code path.</span>
+    <span class="now"><b>This is honest only because zero is a measurement here.</b> A flat chart means "none in this range", which is a fact the walk established. It would NOT be honest for the memory-window ring, where nothing to measure and a measurement of zero are different claims — keep the two apart.</span>
+  </div>
+  <div class="card light"><div class="gear"></div><div class="slot"><div class="h30" style="color:var(--ts);font-size:15px;font-weight:600">None in this range</div><div class="fig">
+    <div class="bars"><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div></div>
+    <div class="axis"><span>block 27,700</span><span>27,801</span></div>
+    <div class="sub2" style="margin-top:12px"><span class="mono">…f980</span> did nothing across the 101 blocks this read covered.</div>
+  </div></div></div>
+  <div class="card dark"><div class="gear"></div><div class="slot"><div class="h30" style="color:var(--ts);font-size:15px;font-weight:600">None in this range</div><div class="fig">
+    <div class="bars"><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div><div class="col"><div class="b zero"></div></div></div>
+    <div class="axis"><span>block 27,700</span><span>27,801</span></div>
+    <div class="sub2" style="margin-top:12px"><span class="mono">…f980</span> did nothing across the 101 blocks this read covered.</div>
+  </div></div></div>
+</div>
+
+<h2>Empty · F — Point at where the activity is</h2>
+<div class="state">
+  <div class="why"><b>Nothing here, and here is what there is</b>
+    A scoped empty state knows something an unscoped one does not: the room is not empty, this face is. So it says which of your addresses has the activity and hands you the chip — the only option that makes the dead end a route.
+    <span class="cost">Reads the other accounts' <span class="mono">moves.count</span>, already in hand.</span>
+    <span class="now"><b>It needs a fallback and the fallback is D.</b> When no watched address has anything there is nowhere to point, and a row saying "0 elsewhere" would be the dead control §83 bans. So: F when another face has moves, D when none does.</span>
+  </div>
+  <div class="card light"><div class="gear"></div><div class="slot"><div class="h30" style="color:var(--ts);font-size:15px;font-weight:600">Nothing yet</div><div class="fig">
+    <div class="center"><div class="big"><span class="mono">…f980</span> has not moved on this chain yet.</div><div class="sub2" style="margin-top:8px">It holds 0.0000 ETH and has sent nothing.</div></div>
+    <div class="switch"><div class="d"></div><div><div class="t mono">…cc60</div><div class="s">60 transactions, up to block 27,801</div></div><div class="ch">›</div></div>
+  </div></div></div>
+  <div class="card dark"><div class="gear"></div><div class="slot"><div class="h30" style="color:var(--ts);font-size:15px;font-weight:600">Nothing yet</div><div class="fig">
+    <div class="center"><div class="big"><span class="mono">…f980</span> has not moved on this chain yet.</div><div class="sub2" style="margin-top:8px">It holds 0.0000 ETH and has sent nothing.</div></div>
+    <div class="switch"><div class="d"></div><div><div class="t mono">…cc60</div><div class="s">60 transactions, up to block 27,801</div></div><div class="ch">›</div></div>
+  </div></div></div>
+</div>
+
+
+<h2>G — Every scope present, each with its own nothing</h2>
+<p class="lede" style="margin-bottom:14px"><b>Ruling (user, this session):</b> the strip shows Home · Activity · Accounts only, because <span class="mono">PrivacyDevnetSection.present</span> gates Frames, Spend keys, Snapshots and Sponsors on the address having produced some. All seven should be there always, each with an empty state. That turns <span class="mono">empty()</span> from an honest floor into the expected path, so its sentence has to do real work: <b>name what the scope would hold, and say why this address has none</b> — a scope you can open and learn from is not a dead control, but a scope you can open and read nothing from is.</p>
+<div class="state">
+  <div class="why"><b>The strip, and three of the four new empties</b>
+    Same shape as D, one line of subject each. Every sentence teaches the scope rather than restating its name — that is the whole return on making the chip reachable.
+    <span class="cost">One-line change to <span class="mono">present()</span> (return true), plus a sentence per scope. The figures are already <span class="mono">EmptyView</span> for these, so nothing new is drawn.</span>
+    <span class="now"><b>Sponsors is the one to watch.</b> No measured transaction on this chain has ever had a payer differing from its sender, so that chip is empty for everyone, always, today — its sentence must say the chain has not done it, not that you have not.</span>
+  </div>
+  <div class="card light"><div class="gear"></div>
+    <div style="display:flex;gap:5px;overflow:hidden;margin-bottom:12px">
+      <span class="ch2">Home</span><span class="ch2">Activity</span><span class="ch2">Accounts</span><span class="ch2 on">Frames</span><span class="ch2">Spend keys</span><span class="ch2">Snapshots</span><span class="ch2">Sponsors</span>
+    </div>
+    <div class="slot" style="height:246px"><div class="h30" style="color:var(--ts);font-size:15px;font-weight:600">No steps yet</div><div class="fig" style="height:204px">
+      <div class="center"><div class="big">Nothing <span class="mono">…f980</span> sent ran in steps.</div><div class="sub2" style="margin-top:8px">A framed transaction runs its work in numbered steps, each with its own budget. Plain transfers run none.</div></div>
+      <div class="doors"><div class="door"><div class="g hero" style="margin-bottom:12px"></div><div class="t">Send</div><div class="s">A framed transaction</div></div><div class="door"><div class="g" style="margin-bottom:12px"></div><div class="t">Activity</div><div class="s">What it did send</div></div></div>
+    </div></div>
+  </div>
+  <div class="card dark"><div class="gear"></div>
+    <div style="display:flex;gap:5px;overflow:hidden;margin-bottom:12px">
+      <span class="ch2">Home</span><span class="ch2">Activity</span><span class="ch2">Accounts</span><span class="ch2">Frames</span><span class="ch2 on">Spend keys</span><span class="ch2">Snapshots</span><span class="ch2">Sponsors</span>
+    </div>
+    <div class="slot" style="height:246px"><div class="h30" style="color:var(--ts);font-size:15px;font-weight:600">No spend keys yet</div><div class="fig" style="height:204px">
+      <div class="center"><div class="big"><span class="mono">…f980</span> has not spent from the pool.</div><div class="sub2" style="margin-top:8px">A pool spend burns a key that can never be used again, so the same note cannot be spent twice. Its 60 neighbours on this chain have not either.</div></div>
+      <div class="switch" style="margin-top:auto"><div class="d"></div><div><div class="t">Snapshots</div><div class="s">What a spend proves against</div></div><div class="ch">›</div></div>
+    </div></div>
+  </div>
+</div>
+<div class="state">
+  <div class="why"><b>And the two that must not overclaim</b>
+    Snapshots and Sponsors are the scopes whose sentences are easiest to get wrong. Snapshots must not imply your transfers were private; Sponsors must not imply you could have had one.
+    <span class="now">Both sentences here say what the CHAIN has done as well as what the address has, because on a devnet with 14 private transactions in total, "you have none" and "there are almost none" are different facts and only the pair is honest.</span>
+  </div>
+  <div class="card light"><div class="gear"></div>
+    <div style="display:flex;gap:5px;overflow:hidden;margin-bottom:12px">
+      <span class="ch2">Home</span><span class="ch2">Activity</span><span class="ch2">Accounts</span><span class="ch2">Frames</span><span class="ch2">Spend keys</span><span class="ch2 on">Snapshots</span><span class="ch2">Sponsors</span>
+    </div>
+    <div class="slot" style="height:246px"><div class="h30" style="color:var(--ts);font-size:15px;font-weight:600">No proofs yet</div><div class="fig" style="height:204px">
+      <div class="center"><div class="big">Nothing here names a snapshot.</div><div class="sub2" style="margin-top:8px">A proof points at a moment the chain still remembers — 8,192 slots wide, about 27 hours. Plain transfers prove nothing, and are not private.</div>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:10px"><svg width="52" height="52" viewBox="0 0 52 52"><circle cx="26" cy="26" r="21" fill="none" stroke="rgba(0,0,0,.06)" stroke-width="5" stroke-linecap="round" stroke-dasharray="118 14" transform="rotate(115 26 26)"/></svg><div class="sub">The window, empty. A proof would sit on it and slide to the gap.</div></div></div>
+    </div></div>
+  </div>
+  <div class="card dark"><div class="gear"></div>
+    <div style="display:flex;gap:5px;overflow:hidden;margin-bottom:12px">
+      <span class="ch2">Home</span><span class="ch2">Activity</span><span class="ch2">Accounts</span><span class="ch2">Frames</span><span class="ch2">Spend keys</span><span class="ch2">Snapshots</span><span class="ch2 on">Sponsors</span>
+    </div>
+    <div class="slot" style="height:246px"><div class="h30" style="color:var(--ts);font-size:15px;font-weight:600">Nobody has paid for you</div><div class="fig" style="height:204px">
+      <div class="center"><div class="big">You paid for all 60.</div><div class="sub2" style="margin-top:8px">A sponsored transaction is one somebody else covered the gas for. No transaction measured on this chain has had a payer other than its own sender — yours included.</div></div>
+      <div class="sub" style="margin-top:auto">Read 2 minutes ago, up to block 27,801.</div>
+    </div></div>
+  </div>
+</div>
+
+<div class="note"><b>Reading them together.</b>
+<ul>
+<li><b>A is the floor and C is the ceiling.</b> C is A plus the one reading the unscoped room cannot otherwise give, and it degrades to A on its own when only one address is watched — so building A first costs nothing if C follows. B is the prettiest and the most fragile: it is the only one where each mark is a door, and the only one that dies on a busy address.</li>
+<li><b>All three replace a reading that is not wrong, only redundant.</b> Keep <span class="mono">kindMix</span> — the day a pool spend lands it is the better figure. The fix is that it should not be the ONLY one: when the mix is a single kind, draw the time figure instead, and the legend line becomes the caption under it.</li>
+<li><b>The empty state's real bug is placement, not wording.</b> <span class="mono">empty()</span> draws inside <span class="mono">scopeList</span>, below the rail, so the card above it is 300 blank points and the sentence is pushed under the fold. Whatever else is chosen, the empty case belongs in the slot — that alone fixes the screenshot.</li>
+<li><b>D is the one that generalises.</b> Frames, Spend keys, Snapshots and Sponsors all have the same nothing to say, and today each says it in its own sentence below the rail. One shape for all of them, naming the subject and offering the door, is fewer words and more answer.</li>
+<li><b>On making every scope present:</b> the cost is that four chips are empty for most people most of the time, and an empty chip that teaches is worth more than a hidden one — but only if the sentence is written per scope. Falling back to one shared "nothing here yet" for all four would be four chips saying the same thing, which is the strip §83 warns about wearing new clothes.</li>
+<li><b>Independent of any of this:</b> on the first screen <span class="mono">head()</span> reads <span class="mono">quiet</span> from spend keys and snapshots alone and never looks at <span class="mono">moves</span> — so "Nothing on this chain from the 2 addresses you watch" prints directly above three of their transfers. Worth fixing in the model before any drawing lands.</li>
+</ul></div>
+
+<script>
+// One dot per transaction, stacked into the block it landed in.
+const counts=[0,2,0,5,9,14,7,3,0,11,6,3], sponsored={5:2,9:1};
+for(const id of ["sp1","sp2"]){
+  const el=document.getElementById(id); el.innerHTML="";
+  counts.forEach((n,i)=>{
+    const col=document.createElement("div"); col.className="col";
+    if(n===0){const z=document.createElement("div");z.className="none";col.appendChild(z);}
+    for(let k=0;k<n;k++){const d=document.createElement("i");if(k<(sponsored[i]||0))d.className="hollow";col.appendChild(d);}
+    el.appendChild(col);
+  });
+}
+</script>
