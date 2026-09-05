@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// THE FACE IS MADE OF THE ADDRESS (2026-08-22, prd §444).
 ///
@@ -246,6 +247,103 @@ private struct AddressCopySweep: ViewModifier {
                 withAnimation(.easeInOut(duration: 0.55)) { phase = 1 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { sweeping = false }
             }
+    }
+}
+
+/// THE ADDRESS INTRODUCING ITSELF (2026-09-04, prd §599).
+///
+/// §597 taught this card to stand an auto name (`…44b1`, nobody's word) under
+/// the name the ADDRESS claims — its verified primary on ENS, Wei or Gwei —
+/// and drew the swap as a cross-fade. A cross-fade is what this app uses for a
+/// value that CHANGED; nothing changed here. The app went and asked three
+/// registries who this is, one of them answered, and the answer arrived while
+/// you were looking at the screen.
+///
+/// So it is written in. A typewriter is the one motion that says a name was
+/// received rather than recomputed, and it is honest in a way a flourish is
+/// not: the characters appear in the order the string has them, and the string
+/// is the whole of what arrived.
+///
+/// **It runs ONLY on an arrival, never on a rename.** The card's `.task` reads
+/// what is already known before it asks, so a second visit draws the name on
+/// the first frame and types nothing — which is right, because on that visit
+/// nothing was learned. The caller passes `typeOn` for the one specific string
+/// that landed, so a later rename to something else takes the ordinary swap;
+/// a name you typed yourself being typed back at you is the app performing
+/// your own act (§83's shape, in motion).
+///
+/// **The caret is what stops it reading as a glitch.** From the first frame
+/// there is a mark on the line, so the name grows out of something rather than
+/// out of a blank; it retires when the last character lands. It does NOT
+/// blink — a repeating animation is a loading state, and nothing here is
+/// loading (`AddressCopySweep`'s rule, one modifier up).
+///
+/// Reduce Motion draws the whole name immediately. VoiceOver always reads the
+/// whole name: a prefix is a different name, and on this screen that matters
+/// more than anywhere else in the app.
+struct AddressArrivingName: View {
+    let name: String
+    let style: DSTextStyle
+    /// True for the one string that just arrived from a resolve.
+    let typeOn: Bool
+    /// How long the whole name takes, however long it is. A per-character
+    /// delay is right for `vitalik.eth` and a crawl for a long subdomain, so
+    /// the STEP grows instead and the clock stays put.
+    private static let span: Double = 0.42
+    private static let tick: Double = 0.028
+    @State private var typed: Int?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var caretHeight: CGFloat {
+        UIFontMetrics(forTextStyle: style.relative)
+            .scaledValue(for: style.size * 0.86)
+    }
+
+    private var shown: String {
+        guard let typed else { return name }
+        return String(name.prefix(typed))
+    }
+
+    var body: some View {
+        HStack(spacing: 2) {
+            Text(shown)
+                .dsText(style)
+                .foregroundStyle(DS.textPrimary)
+                .multilineTextAlignment(.center)
+            if typed != nil {
+                // Sized off the type ramp rather than a literal, and scaled
+                // the way the ramp scales — so the caret is the height of the
+                // name it is writing at either rung and at any Dynamic Type
+                // setting. `DSTextStyle.scaledFont` does this arithmetic for
+                // the glyphs; there is no way to ask it for a height, so the
+                // same two lines are spelled here rather than a constant that
+                // would be right at one text size only.
+                Capsule()
+                    .fill(DS.textTertiary)
+                    .frame(width: 2, height: caretHeight)
+                    .transition(.opacity)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(name))
+        .task(id: name) {
+            guard typeOn, !reduceMotion else { typed = nil; return }
+            let count = name.count
+            guard count > 1 else { typed = nil; return }
+            // Ticks are fixed and the step absorbs the length, so a
+            // forty-character subdomain lands on the same clock as `a.wei`.
+            let ticks = max(1, Int(Self.span / Self.tick))
+            let step = max(1, Int(ceil(Double(count) / Double(ticks))))
+            typed = 0
+            var landed = 0
+            while landed < count {
+                try? await Task.sleep(for: .milliseconds(Int(Self.tick * 1000)))
+                guard !Task.isCancelled else { break }
+                landed = min(count, landed + step)
+                typed = landed
+            }
+            withAnimation(DS.Motion.standard) { typed = nil }
+        }
     }
 }
 
