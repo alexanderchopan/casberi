@@ -840,7 +840,7 @@ struct SourceChips: View {
         // Through the catalog, not against the label: see `SourcesTray.cell`.
         // The strip and the tray it opens must agree about which seats are in
         // trouble, so this line and that one stay identical.
-        let seat = BridgeCatalog.offer(forSource: label)?.name ?? label
+        let seat = BridgeCatalog.seatName(forSource: label)
         let isCategory = CategoryFold.isCategory(label)
         /// The chips that are WORDS rather than marks — the categories and
         /// "All". `wordChipFill` and the flip both key off this, so the two can

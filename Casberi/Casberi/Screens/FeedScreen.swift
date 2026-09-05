@@ -2679,7 +2679,7 @@ struct FeedScreen: View {
         // always its seat's name ("Privacy Pools" against the "0xBow Privacy
         // Pools" seat), and a bare `==` meant that room silently owned no
         // seat — so it got no header and no door to its own control panel.
-        let seat = BridgeCatalog.offer(forSource: source)?.name ?? source
+        let seat = BridgeCatalog.seatName(forSource: source)
         return bridges.bridges.first { $0.name == seat && $0.status != .paused }
     }
 
@@ -11217,7 +11217,7 @@ struct FeedScreen: View {
         // the wallet-riding rooms to no seat at all, so `.none` won the switch
         // below and they fell back to the generic "connect an app" invitation:
         // §299's own failure, in the rooms it was written for.
-        let seatName = BridgeCatalog.offer(forSource: source)?.name ?? source
+        let seatName = BridgeCatalog.seatName(forSource: source)
         let seat = bridges.bridges.first { $0.name == seatName }
         let mapped: RoomQuiet.Seat = switch seat?.status {
         case .connected: .connected

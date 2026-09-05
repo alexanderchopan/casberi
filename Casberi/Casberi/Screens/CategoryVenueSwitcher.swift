@@ -165,7 +165,7 @@ struct CategoryVenueSwitcher: View {
     /// and the alias family (Privacy Pools against 0xBow Privacy Pools) is
     /// precisely where a raw name comparison silently answers no.
     private func needsAttention(_ venue: String) -> Bool {
-        let seat = BridgeCatalog.offer(forSource: venue)?.name ?? venue
+        let seat = BridgeCatalog.seatName(forSource: venue)
         return bridges.bridges.contains { $0.name == seat && $0.status == .attention }
     }
 

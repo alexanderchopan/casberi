@@ -278,7 +278,13 @@ grep -q 'activeSource' "$TMP/chips.nc" \
 grep -q 'DS.attention' "$TMP/switcher.nc" \
   || { echo "✗ the venue switcher no longer marks a broken seat — the folded chip's dashed"; \
        echo "  ring would name nothing, and only VoiceOver could say which seat it meant."; exit 1; }
-grep -q 'BridgeCatalog.offer(forSource: venue)' "$TMP/switcher.nc" \
+# Either catalog route counts (2026-09-05): `seatName(forSource:)` is
+# `offer(forSource:)`'s exact-then-suffix resolution returning just the name,
+# added so the chip strip stops deep-copying a nine-field `Offer` per chip per
+# graph update — the frame build 522's process-exit watchdog was sampled in.
+# What this guard is about is that the switcher resolves THROUGH THE CATALOG
+# rather than against a raw label, and both spellings do.
+grep -qE 'BridgeCatalog\.(offer|seatName)\(forSource: venue\)' "$TMP/switcher.nc" \
   || { echo "✗ the switcher resolves attention by raw name — the alias family (Privacy Pools"; \
        echo "  against 0xBow Privacy Pools) would silently never light, which is the whole"; \
        echo "  reason the strip and the tray both resolve through the catalog."; exit 1; }
@@ -931,6 +937,15 @@ enum BridgeCatalog {
     static func offer(forSource source: String) -> Offer? {
         if let exact = allOffers.first(where: { $0.name == source }) { return exact }
         return allOffers.first(where: { $0.name.hasSuffix(" " + source) })
+    }
+    /// Deliberately the LINEAR reference, not the app's indexed map — this stub
+    /// is the ORACLE for `CategoryFold`, so it must state the semantics the
+    /// real `seatName(forSource:)` is required to match rather than re-import
+    /// its optimisation. (The app indexed both in 2026-09-05 to stop the chip
+    /// strip deep-copying an `Offer` per chip per graph update; equivalence
+    /// over the whole catalog is proven separately.)
+    static func seatName(forSource source: String) -> String {
+        offer(forSource: source)?.name ?? source
     }
 }
 SWIFT

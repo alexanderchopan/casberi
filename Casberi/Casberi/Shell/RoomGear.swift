@@ -78,7 +78,10 @@ struct RoomGear: View {
     /// (and `reconcileWalletSeats`) calls the seat "0xBow Privacy Pools". The
     /// same split is why `BridgeCatalog.offer(forSource:)` exists at all.
     private var seat: BridgeApp? {
-        let offerName = BridgeCatalog.offer(forSource: source)?.name
+        // `seatName` falls back to `source`, which collapses the two branches
+        // below when there is no seat — the same set the old `?.name` optional
+        // selected, since `$0.name == nil` was never true either.
+        let offerName = BridgeCatalog.seatName(forSource: source)
         return store.bridges.first { $0.name == source || $0.name == offerName }
     }
 

@@ -49437,3 +49437,27 @@ The answer was one line, and it had been there since goal 6: `RootShell`'s `.red
 **The cover is keyed PER SCENE, and the first cut of it was not.** The app declares `UIApplicationSupportsMultipleScenes`, so a process-wide cover placed on "whichever scene has a key window" — the accessor `SceneState` recorded a ruling against on 2026-08-02 — fails both ways on iPad: backgrounding one window covers the OTHER, still-visible one, with no way back because that window's `handleActivation` never fires while it stays active; and two windows leaving together cover one twice and the other never. `RootShell` already reads its own scene off its own `UIWindow` (`WindowSceneReader`), so the cover is keyed on it. A caller with no scene yet resolved covers EVERY connected scene rather than guessing one — over-covering is self-correcting, since each window's own `RootShell` lowers its own cover on its own activation, and guessing is the bug.
 
 **Two things this entry does NOT claim.** 511's flush came from the ordinary update sequence rather than the snapshot context, so the redaction flip is the best-evidenced trigger for it rather than a proven one; anything else that mutates root-level state while backgrounded (`WalletBackgroundRefresh`'s `BGAppRefreshTask` runs `topHoldingsByWallet` and `runNotifySweep` on the MAIN actor against the live `mainContext`) can produce the same watchdog by the same throttled-render mechanism, and is the next place to look if it recurs. And **no harness here can see any of this**: the compiler is happy, every static audit passed on the crashing build, and no simulator run backgrounds an app under a real CPU quota. The reports are the instrument.
+
+### 615. The chip strip deep-copied the catalog on every graph update (build 522's process-exit watchdog, 2026-09-05)
+
+§614 fixed the scene-update watchdog and it stayed fixed — build 522 died of a **different** one. `0x8BADF00D`, but `WatchdogEvent: process-exit`, `WatchdogVisibility: Foreground`, "Failed to terminate gracefully after 5.0s": the OS asked the app to exit and the main thread was mid SwiftUI graph update. Unlike §614's two reports this one carries **Casberi frames**, and against 522's own dSYM they symbolicate to one line:
+
+```
+swift_bridgeObjectRetain
+  ← initializeWithCopy for BridgeCatalog.Offer
+  ← outlined init with copy of BridgeCatalog.Offer
+  ← static BridgeCatalog.offer(forSource:)        BridgeCatalog.swift:1248
+  ← SourceChips.chip(_:pinned:)                   SourceChips.swift:843
+  ← closure #1 ×6 in SourceChips.horizontalStrip  SourceChips.swift:477
+  ← ForEachChild.updateValue() ← _withObservation ← _UIHostingView.beginTransaction()
+```
+
+`offer(forSource:)` was two `allOffers.first(where:)` scans over **103 offers**, returning an `Offer` **by value** — nine stored properties including four `String`s and two `[String]`s, so the winner was deep-copied and a bridge object retained per field. `chip(_:pinned:)` called it **once per chip, inside a `ForEach` content closure**, so every observation-driven update paid it for every chip. Every hot caller then threw the struct away and kept `?.name ?? source`: the strip, the venue switcher, the room gear's seat match, the feed's two reads, `CategoryFold`'s rank. **A nine-field copy to read one `String`.**
+
+Indexed now — `offerByName` and `seatNameBySource`, both built once — plus `seatName(forSource:)`, which returns the `String` without touching an `Offer`. Semantics are byte-for-byte the old ones (exact name, else the first offer in `allOffers` order whose name ends in `" " + source`, first-wins tie-break), and that is **proven rather than asserted**: the linear and indexed forms were run over the real catalog across every offer name, every space-boundary suffix and a set of misses — 103 offers, 129 probes, **zero mismatches**.
+
+**This was already on the record and nobody had acted on it.** `scripts/output/profile-new-12k.txt` and `profile-panel2.txt` — main-thread profiles kept in-tree — both name `static BridgeCatalog.offer(forSource:)` with sample counts against the two `first(where:)` lines, and the standing note about app latency lists "the source rail resolving chips 4-5× per body pass" as a measured cause. A crash report is an expensive way to re-learn something a profile said first.
+
+**What this does NOT claim.** The sampled frame is where the main thread happened to be, not proof that this frame is the whole five seconds — and `process-exit` means the OS was *already* terminating the app. That report also carries a 192MB WebKit heap and a live `JavaScriptCore libpas scavenger` thread, so a web sheet was open and memory pressure is a plausible reason iOS wanted the process gone at all. This removes the cost that was in the way of exiting; it does not establish why the exit was demanded.
+
+`category-fold-selftest.sh` went red on the rename and was amended, not deleted: its switcher guard accepts either catalog route (both resolve the alias family, which is what it is actually about), and its Foundation-only `BridgeCatalog` stub gained `seatName` **as the LINEAR reference** — the stub is `CategoryFold`'s oracle, so it must state the semantics the real one has to match rather than re-import its optimisation.

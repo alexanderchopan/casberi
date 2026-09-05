@@ -302,7 +302,7 @@ enum CategoryFold {
             BridgeCatalog.category(forSource: $0) == category
         }
         func rank(_ source: String) -> Int {
-            let name = BridgeCatalog.offer(forSource: source)?.name ?? source
+            let name = BridgeCatalog.seatName(forSource: source)
             return order.firstIndex(of: name) ?? Int.max
         }
         return filtered.sorted {

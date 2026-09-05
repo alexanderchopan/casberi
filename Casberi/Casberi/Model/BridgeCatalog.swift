@@ -1244,10 +1244,77 @@ enum BridgeCatalog {
     ///
     /// See `category(forSource:)` above for why the match is exact-then-suffix
     /// on a SPACE boundary rather than `contains`, and why it reads `allOffers`.
+    ///
+    /// **INDEXED, and that is a crash fix rather than a tidy-up (2026-09-05).**
+    /// This was two `allOffers.first(where:)` scans returning an `Offer` BY
+    /// VALUE, and `Offer` is nine stored properties including four `String`s
+    /// and two `[String]`s — so every call walked up to ~90 offers twice and
+    /// then deep-copied the winner, retaining a bridge object per field.
+    /// `SourceChips.chip(_:pinned:)` calls it once PER CHIP, inside a
+    /// `ForEach` content closure, so the whole thing re-ran for every chip on
+    /// every observation-driven graph update. Build 522 died there: a
+    /// `process-exit` watchdog ("Failed to terminate gracefully after 5.0s")
+    /// whose main thread was `swift_bridgeObjectRetain` ←
+    /// `initializeWithCopy for BridgeCatalog.Offer` ← `offer(forSource:)` ←
+    /// `SourceChips.chip(_:pinned:)` ← `ForEachChild.updateValue()`. The same
+    /// rail was already on record as a measured latency cause (the source rail
+    /// resolving chips 4-5x per body pass); this is that finding as a fix.
+    ///
+    /// Semantics are UNCHANGED and that is the point — exact name first, then
+    /// the first offer in `allOffers` order whose name ends in
+    /// `" " + source`. The maps below are built to preserve both, including
+    /// the first-wins tie-break, so no caller has to think about it.
     static func offer(forSource source: String) -> Offer? {
-        if let exact = allOffers.first(where: { $0.name == source }) { return exact }
-        return allOffers.first(where: { $0.name.hasSuffix(" " + source) })
+        guard let name = seatNameBySource[source] else { return nil }
+        return offerByName[name]
     }
+
+    /// The seat NAME for a source, without copying an `Offer` (2026-09-05).
+    ///
+    /// Every hot caller of `offer(forSource:)` wanted exactly `?.name ?? source`
+    /// — the strip, the venue switcher, the room gear's label, the feed's two
+    /// reads — and paying a nine-field struct copy to read one `String` is
+    /// what put the chip strip on a crash report. One dictionary lookup and one
+    /// retain now. Callers that genuinely need the whole offer still take it.
+    static func seatName(forSource source: String) -> String {
+        seatNameBySource[source] ?? source
+    }
+
+    /// `allOffers` by name, first occurrence winning — `first(where:)`'s own
+    /// tie-break, kept so a duplicated name cannot quietly change which offer
+    /// resolves.
+    private static let offerByName: [String: Offer] = {
+        var map: [String: Offer] = [:]
+        for offer in allOffers where map[offer.name] == nil { map[offer.name] = offer }
+        return map
+    }()
+
+    /// Source → seat name, covering BOTH routes `offer(forSource:)` answers.
+    ///
+    /// Built suffixes-first and exact names second, so an exact match always
+    /// overwrites a suffix route — the order the linear version tried them in.
+    /// Within each pass `allOffers` is walked in REVERSE and writes are
+    /// unconditional, so the EARLIEST offer ends up as the stored value, which
+    /// is `first(where:)`'s tie-break again.
+    ///
+    /// Suffixes are taken at real space boundaries by walking the string rather
+    /// than by `split`, because `split` collapses runs of spaces and
+    /// `hasSuffix(" " + source)` does not — no offer name has a double space
+    /// today, and this way none ever has to.
+    private static let seatNameBySource: [String: String] = {
+        var map: [String: String] = [:]
+        for offer in allOffers.reversed() {
+            let name = offer.name
+            var i = name.startIndex
+            while let space = name[i...].firstIndex(of: " ") {
+                let after = name.index(after: space)
+                map[String(name[after...])] = name
+                i = after
+            }
+        }
+        for offer in allOffers.reversed() { map[offer.name] = offer.name }
+        return map
+    }()
 
     /// Offers not yet among the person's bridges — what the Apps page lists
     /// under Available and the tile counts as "to add". A–Z: the flat list is
