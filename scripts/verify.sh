@@ -681,6 +681,23 @@ step "Connect shape audit"
 "$ROOT/scripts/connect-shape-audit.py" || fail "a connect page's arrangement drifted — see the output above"
 print -P "%F{green}✓ connect shape audit%f"
 
+# The VERB half of the same family (prd §613). §190 gave a manage page one
+# shape and the audits above made its words and its arrangement mechanical;
+# the one control every connect screen is FOR stayed hand-rollable, and four
+# of them were hand-rolled — a tint-filled Capsule on the token sheet and
+# three glass pills on the bridge detail screen, each a different height,
+# radius and material from the slab beside it. Renders perfectly, every time,
+# which is why a doc comment could not hold it. Full-width is what keeps this
+# from crying wolf and it is MEASURED: without that clause the count on a
+# clean tree goes 0 → 14, every one a chip ("Max", "Watch", "Approve") that is
+# correctly not a slab.
+step "Primary verb audit"
+python3 "$ROOT/scripts/primary-verb-audit.py" --self-test >/dev/null \
+  || fail "the primary verb audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/primary-verb-audit.py" \
+  || fail "a screen's filled verb is hand-rolled — use DSSlabButton / DSActVerb (prd §613)"
+print -P "%F{green}✓ primary verb audit%f"
+
 # Keeps every Keychain write device-only and non-syncing (prd §277). Static,
 # no build. The failure it catches is invisible at runtime — a key stored with
 # the wrong accessibility works perfectly and also rides an encrypted backup

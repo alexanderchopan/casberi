@@ -2022,9 +2022,16 @@ private struct TokenChartContent: View {
             .padding(.vertical, 14)
             .background(DS.fillFaint, in: Capsule(style: .continuous))
         } else if let resolved {
-            // The one verb, at full Cash-App weight (Big money, 2026-07-17):
-            // a tint-filled capsule spanning the sheet.
-            Button {
+            // **THE COMPONENT, NOT A HAND-ROLLED CAPSULE (prd §613, 2026-09-05;
+            // supersedes the 2026-07-17 "Big money" capsule this drew.)** It
+            // was the last full-width tint fill in the app spelled by hand —
+            // centered bold text in a `Capsule`, which is a shape the slab law
+            // (§190) does not have and a treatment nothing else here wears. Its
+            // own comment called it "the one verb", which is exactly what
+            // `DSSlabButton` IS, so it says the same thing in the app's words:
+            // the glyph disc, the left-anchored verb, one radius.
+            DSSlabButton(title: String(localized: "Watch this token"),
+                         systemImage: "eye") {
                 DSHaptic.tap()
                 if let watched = TokenWatch.add(resolved, context: modelContext) {
                     DSHaptic.success()
@@ -2035,17 +2042,7 @@ private struct TokenChartContent: View {
                 } else {
                     watchedTitle = "\(resolved.name) · $\(resolved.symbol)"
                 }
-            } label: {
-                Text("Watch this token")
-                    .dsText(.body17).fontWeight(.bold)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(DS.tint, in: Capsule(style: .continuous))
-                    .contentShape(Capsule(style: .continuous))
             }
-            .buttonStyle(PressSpring())
-            .dsHover()
         }
     }
 

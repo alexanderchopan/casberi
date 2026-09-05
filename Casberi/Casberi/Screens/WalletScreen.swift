@@ -124,7 +124,8 @@ struct WalletScreen: View {
     private var footSection: some View {
         Section {
             VStack(spacing: DS.Space.s4) {
-                DSSlabDoor(title: "Connection", detail: chainsSummary) {
+                DSSlabDoor(title: "Connection", detail: chainsSummary,
+                           systemImage: "network") {
                     route.pushBridge(.walletConnection)
                 }
                 Text("Read-only — watching can never move funds.")

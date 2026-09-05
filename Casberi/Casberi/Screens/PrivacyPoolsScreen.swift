@@ -66,11 +66,12 @@ struct PrivacyPoolsScreen: View {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if hasWallets {
                     DSSlabDoor(title: String(localized: "Watching \(walletCount) wallet"),
-                               detail: String(localized: "Manage")) {
+                               detail: String(localized: "Manage"),
+                               systemImage: "eye") {
                         route.pushBridge(.wallet)
                     }
                 } else {
-                    DSSlabDoor(title: "Watch a wallet") {
+                    DSSlabDoor(title: "Watch a wallet", systemImage: "eye") {
                         route.pushBridge(.wallet)
                     }
                 }

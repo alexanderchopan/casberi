@@ -66,6 +66,101 @@ enum DSSlab {
         /// Off the mark ramp's own reasoning: the glyph tracks the box.
         var glyphSize: CGFloat { self == .slab ? 15 : 14 }
     }
+
+    /// **THE GLYPH DISC — the devnet verb's identity, at slab scale (prd §613,
+    /// 2026-09-05).**
+    ///
+    /// Reported as: the connect pages *"look like a form"*, next to the devnet
+    /// rooms' Send/Top up, which do not. The fat 140pt tile was mocked up and
+    /// REFUSED on arithmetic the user made himself — three of them plus the
+    /// header pushes the commit past the fold, *"which is worse than having
+    /// more appealing buttons"*, which is §552's own failure shape arriving on
+    /// a different screen. So nothing here grows: the height, the radius, the
+    /// fills and §190's slab law are all untouched, and what moves is what was
+    /// inside the box.
+    ///
+    /// Two changes carry it, and the FIRST is the one that does the work:
+    ///
+    /// 1. **The verb goes LEFT.** A centered label in a filled full-width
+    ///    capsule is the form-submit button every app has; nothing else in
+    ///    Casberi centers a verb, and `DSActVerb`/`DevnetSendPanel` both set
+    ///    theirs hard against the leading edge.
+    /// 2. **A glyph gets a disc.** A bare 15pt symbol floating beside text is
+    ///    the other half of the form read — the devnet tiles put theirs in a
+    ///    filled circle, which is what makes a verb look like an object rather
+    ///    than a row.
+    ///
+    /// **THIS AMENDS §190 IN ONE SENTENCE, deliberately and narrowly.** That
+    /// ruling says *"the only round things on a manage page are people and
+    /// assets"*, so that a circle MEANS an identity — and four connect screens
+    /// (Peer, Privacy Pools, Railgun, Safe) really do carry a roster of round
+    /// faces above these slabs. The disc is allowed to be round anyway because
+    /// it is separable from a mark by every property that rule cares about: it
+    /// is **28pt**, under every identity rung on the ramp that draws a circle
+    /// (`Face.list` 36 and up; `Face.rowCircle`'s 28 is a feed row's optical
+    /// compensation, not a manage page), it carries an SF SYMBOL and never art
+    /// or initials, and it sits INSIDE a control rather than leading a row. A
+    /// mark identifies a subject; this contains a verb's glyph. Widen it past
+    /// 28, or let it carry a brand mark, and the amendment stops holding.
+    ///
+    /// It SCALES with text (`@ScaledMetric`), which the devnet tiles do not —
+    /// they can afford a frozen 36 inside 140pt of tile, and a 56pt slab
+    /// cannot. A fixed disc beside a growing label is check 1 of
+    /// `design-ramp-audit.py` wearing a different shape.
+    static let disc: CGFloat = 28
+}
+
+/// A slab's leading glyph disc — one definition, both slabs.
+///
+/// Shared rather than spelled twice because the two differ ONLY in colour and
+/// that difference is the whole grammar (`DevnetSendPanel`'s rule: the tinted
+/// half is the commit, the ink half is the door, and colour is the only thing
+/// saying which is which). Two copies drift, and then a page's commit and its
+/// door disagree about what a disc is.
+struct DSSlabDisc: View {
+    let systemImage: String
+    /// True on the filled primary: a white wash and a white glyph. False on an
+    /// ink slab, where the tint moves from the fill to the glyph — the one
+    /// place a door carries the app's colour, so the page reads as one family
+    /// without a second block competing with the commit.
+    var onFill = false
+    var busy = false
+    /// The commit's disabled state. The fill has already swapped to gray by
+    /// then (§83), so the disc drops its wash with it rather than staying a
+    /// bright circle on a dead control.
+    var inert = false
+
+    @ScaledMetric(relativeTo: .body) private var size: CGFloat = DSSlab.disc
+
+    var body: some View {
+        ZStack {
+            Circle().fill(wash).frame(width: size, height: size)
+            if busy {
+                ProgressView().controlSize(.small)
+                    .tint(onFill ? .white : DS.tint)
+            } else {
+                Image(systemName: systemImage)
+                    .accessibilityHidden(true)
+                    .dsGlyph(DSSlab.Size.slab.glyphSize)
+                    .foregroundStyle(glyph)
+            }
+        }
+    }
+
+    private var wash: AnyShapeStyle {
+        if inert { return AnyShapeStyle(Color.white.opacity(0.10)) }
+        // On the fill, a white wash — the only value that reads on every brand
+        // hue a tinted slab can take. Off it, `tintDim`: `fillFaint` is a 4%
+        // white and disappears entirely against `gray100`, which is the door's
+        // own background.
+        return onFill ? AnyShapeStyle(Color.white.opacity(0.22))
+                      : AnyShapeStyle(DS.tintDim)
+    }
+
+    private var glyph: AnyShapeStyle {
+        if inert { return AnyShapeStyle(DS.textTertiary) }
+        return onFill ? AnyShapeStyle(Color.white) : AnyShapeStyle(DS.tint)
+    }
 }
 
 /// The field slab — one shape holding both the input and its verb. Replaces
@@ -320,18 +415,19 @@ struct DSSlabButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: DS.Space.s2) {
-                if busy {
+            HStack(spacing: DS.Space.s3) {
+                if let systemImage {
+                    DSSlabDisc(systemImage: systemImage, onFill: true,
+                               busy: busy, inert: !enabled)
+                } else if busy {
+                    // No glyph to put a spinner inside. Every shipped call
+                    // site passes one; this is the honest fallback rather
+                    // than a disc drawn around a guessed symbol.
                     ProgressView().controlSize(.small).tint(.white)
-                } else if let systemImage {
-                    Image(systemName: systemImage)
-                        .dsGlyph(15)
                 }
-                if detail.isEmpty {
+                VStack(alignment: .leading, spacing: 0) {
                     verb
-                } else {
-                    VStack(spacing: 1) {
-                        verb
+                    if !detail.isEmpty {
                         Text(detail)
                             .dsText(.label12)
                             .lineLimit(1)
@@ -342,6 +438,11 @@ struct DSSlabButton: View {
                             .opacity(enabled && !busy ? 0.75 : 1)
                     }
                 }
+                // The verb is left-anchored (§613) and the slab keeps its full
+                // width, so the trailing air is deliberate — it is what makes
+                // the block read as an object with a verb on it rather than as
+                // a centered form submit.
+                Spacer(minLength: 0)
             }
             .padding(.horizontal, DS.Space.s4)
             // A hand-rolled fill must swap the FILL when inert, not just dim
@@ -369,7 +470,10 @@ struct DSSlabButton: View {
     /// in `detail`.
     private var verb: some View {
         Text(LocalizedStringKey(title))
-            .dsText(.body17).fontWeight(.semibold)
+            // `heading17` IS 17-semibold, which is what this spelled by hand as
+            // `body17` + an override. Same pixels, and now the rung the ramp
+            // names for "says tappable by WEIGHT" carries it (§613).
+            .dsText(.heading17)
             .lineLimit(1)
             .minimumScaleFactor(0.8)
     }
@@ -378,6 +482,14 @@ struct DSSlabButton: View {
 /// A door slab — a title and the fact it stands in front of. The fact is the
 /// point: a door reading "Address book · 4 names" hides nothing, where a
 /// headed section holding the same four rows was just furniture.
+///
+/// **Its `detail` TRAILS where the commit's sits under the verb, and that is
+/// semantics rather than an inconsistency (§613).** `DSSlabButton.detail` is
+/// the ADDRESS the verb opens — it belongs to the verb, so it sits with it.
+/// This one is a fact about what is BEHIND the door ("4 names", "3 chains"),
+/// which is the end of the sentence the title starts. Stacking it under the
+/// title would read as a subtitle explaining the door, which is the footer
+/// prose §190 spent a pass deleting.
 struct DSSlabDoor: View {
     let title: String
     var detail: String = ""
@@ -391,13 +503,17 @@ struct DSSlabDoor: View {
         } label: {
             HStack(spacing: DS.Space.s3) {
                 if let systemImage {
-                    Image(systemName: systemImage)
-                        .dsGlyph(15, weight: .medium)
-                        .foregroundStyle(DS.textSecondary)
+                    DSSlabDisc(systemImage: systemImage)
                 }
                 Text(LocalizedStringKey(title))
-                    .dsText(.body17).fontWeight(.medium)
+                    // Semibold, matching the commit's verb (§613). §190 already
+                    // asked for "one font at one weight" and these two shipped
+                    // a rung apart — medium here, semibold there — so the fill
+                    // was never the only thing separating them. Now it is.
+                    .dsText(.heading17)
                     .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
                 if !detail.isEmpty {
                     Text(detail)

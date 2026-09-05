@@ -58,16 +58,15 @@ struct BridgeDetailScreen: View {
                         if bridge.id == "pho", ScreenshotIngest.accessIsLimited {
                             photosLimitedRemedy
                         } else {
-                            Button {
+                            // The component, not a glass pill (prd §613). This
+                            // is a manage page's one verb, which is what §190
+                            // made the slab FOR — and glass is the floating
+                            // layer's material by §8, never content's.
+                            DSSlabButton(title: String(localized: "Reconnect"),
+                                         systemImage: "arrow.triangle.2.circlepath") {
                                 store.reconnect(bridge.id)
                                 DSHaptic.success()
-                            } label: {
-                                Text("Reconnect")
-                                    .dsText(.body17).foregroundStyle(.white)
-                                    .frame(maxWidth: .infinity).frame(minHeight: 44)
-                                    .dsGlassProminent(tint: DS.tint, cornerRadius: DS.Radius.pill)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
 
@@ -174,24 +173,18 @@ struct BridgeDetailScreen: View {
             Text("Only the photos you picked are visible, so new screenshots don't arrive on their own.")
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Button {
+            // The remedy is one verb and one door, so it is one slab and one
+            // door slab (prd §613) — the pair the rest of this screen already
+            // wears, where before it was two hand-rolled capsules in two
+            // different materials.
+            DSSlabButton(title: String(localized: "Choose more photos"),
+                         systemImage: "photo") {
                 DSHaptic.tap()
                 presentLimitedPicker()
-            } label: {
-                Text("Choose more photos")
-                    .dsText(.body17).foregroundStyle(.white)
-                    .frame(maxWidth: .infinity).frame(minHeight: 44)
-                    .dsGlassProminent(tint: DS.tint, cornerRadius: DS.Radius.pill)
             }
-            .buttonStyle(.plain)
-            Button {
-                DSHaptic.tap()
+            DSSlabDoor(title: String(localized: "Allow all photos in Settings"),
+                       systemImage: "gearshape") {
                 if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
-            } label: {
-                Text("Allow all photos in Settings")
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .frame(maxWidth: .infinity).frame(minHeight: 44)
-                    .background(DS.gray100, in: Capsule(style: .continuous))
             }
             .buttonStyle(.plain)
         }

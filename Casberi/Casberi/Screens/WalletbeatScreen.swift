@@ -129,7 +129,8 @@ struct WalletbeatScreen: View {
 				// whole registry, so there is nothing to name before they can arrive. Before §421
 				// they were gated behind watching a wallet — not a decision anyone took, just the
 				// watch list doubling as the connect act.
-				DSSlabButton(title: String(localized: "Follow the security news"), action: follow)
+				DSSlabButton(title: String(localized: "Follow the security news"),
+							 systemImage: "eye", action: follow)
 			}
 		}
 		.dsSlabSection()
@@ -182,6 +183,7 @@ struct WalletbeatScreen: View {
 				DSSlabDoor(
 					title: String(localized: "Browse every wallet"),
 					detail: "\(WalletbeatDirectory.wallets.count)",
+					systemImage: "square.grid.2x2",
 					action: { browsing = true })
 
 				// LAST in the block, not between the field and the door: this reports on the READ,

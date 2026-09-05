@@ -126,7 +126,8 @@ struct L2beatScreen: View {
 					"Following L2BEAT — their incidents arrive for every chain they cover."
 				])
 			} else {
-				DSSlabButton(title: String(localized: "Follow the incidents"), action: follow)
+				DSSlabButton(title: String(localized: "Follow the incidents"),
+							 systemImage: "eye", action: follow)
 			}
 		}
 		.dsSlabSection()
@@ -172,6 +173,7 @@ struct L2beatScreen: View {
 				DSSlabDoor(
 					title: String(localized: "Browse every chain"),
 					detail: "\(L2beatDirectory.projects.count)",
+					systemImage: "square.grid.2x2",
 					action: { browsing = true })
 
 				// LAST in the block, not between the field and the door: this reports on the
