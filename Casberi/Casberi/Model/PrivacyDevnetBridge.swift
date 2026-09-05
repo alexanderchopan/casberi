@@ -499,7 +499,21 @@ enum PrivacyDevnetBridge {
             proof: proof,
             can: [
                 String(localized: "Reads a watched address's balance, the steps each transaction ran, the one-time spend keys it used and which recent snapshot a proof named, on a public devnet testing Ethereum's privacy proposals."),
-                String(localized: "Reading needs no key. This seat only ever reads \u{2014} it makes no key, signs nothing and sends nothing."),
+                // **THIS LINE WAS FALSE FROM §593d TO §602, AND THE COMMENT
+                // ABOVE IT SAID SO.** It promised the seat "makes no key,
+                // signs nothing and sends nothing" — and §593d gave the room
+                // Create, Top up and Send. That comment's own rule is that
+                // this line and the catalog's retire TOGETHER, never one
+                // without the other; the catalog half was retired and guarded
+                // that day, and this half was left standing for eight builds
+                // on the ONE surface whose job is saying what a seat can do.
+                //
+                // Worded as its two siblings word it, because they are the
+                // same fact about the same kind of key on the same fork —
+                // and the plain-scalar clause matters more here than anywhere,
+                // since this is the seat somebody reads while deciding whether
+                // a privacy devnet is safe to try.
+                String(localized: "Reading needs no key. Sending signs with a key held on this device \u{2014} a plain scalar, not the Secure Enclave, because the test ETH here has no value and the network may be reset without notice."),
                 String(localized: "It does not hide who you are. Every transaction on this chain names its sender in the open; what a proof hides is which earlier deposit it is spending."),
             ])
     }
@@ -711,6 +725,17 @@ extension PrivacyDevnetLiveState {
         /// instead of saying "somebody" (prd §596). Nil when self-paid or
         /// when the receipt was not read.
         var payer: String? = nil
+        /// What the transaction ACTUALLY spent, off the receipt this walk
+        /// already fetched for the payer (prd §602) — **zero extra requests**.
+        ///
+        /// **Transaction level, and only transaction level.** No per-frame
+        /// breakdown is served on this chain (measured, §593a), which is why
+        /// `Frame.gasUsed` stays permanently nil and no strip segment is ever
+        /// weighted or failed by usage. The receipt's own total is a real
+        /// number the chain reported, and it was being thrown away — so the
+        /// room could say what every transaction was ALLOWED and never what
+        /// any of them cost.
+        var gasUsed: UInt64? = nil
         var id: String { hash }
 
         var frameCount: Int { frames.count }
@@ -865,12 +890,19 @@ extension PrivacyDevnetLiveState {
             // yours, which is what keeps the walk's cost proportional to what
             // you watch rather than to the chain.
             var movePayer: String?
+            // **ONE RECEIPT, TWO FACTS.** The payer read used to bind `rc`
+            // inside its own chained `if`, so the total gas the chain reported
+            // was unreachable to everything downstream — a number already in
+            // memory, dropped on the floor. Bound once now; the payer test is
+            // unchanged and still the only thing that sets `sponsored`.
+            var moveGasUsed: UInt64?
             if let rc = await PrivacyDevnetRPC.call(method: "eth_getTransactionReceipt",
-                                                    params: [hash]) as? [String: Any],
-               let payer = (rc["payer"] as? String)?.lowercased(),
-               payer != sender {
-                w.sponsored += 1
-                movePayer = payer
+                                                    params: [hash]) as? [String: Any] {
+                moveGasUsed = PrivacyDevnetRPC.hexInt(rc["gasUsed"])
+                if let payer = (rc["payer"] as? String)?.lowercased(), payer != sender {
+                    w.sponsored += 1
+                    movePayer = payer
+                }
             }
             let moveFrames = (tx["frames"] as? [[String: Any]] ?? []).map { f in
                 Frame(gasLimit: PrivacyDevnetRPC.hexInt(f["gasLimit"]),
@@ -891,7 +923,8 @@ extension PrivacyDevnetLiveState {
                                 nullifiers: Array(w.nullifiers.dropFirst(before.nullifiers)),
                                 roots: Array(w.roots.dropFirst(before.roots)),
                                 sponsored: w.sponsored > before.sponsored,
-                                payer: movePayer))
+                                payer: movePayer,
+                                gasUsed: moveGasUsed))
             out[sender] = w
         }
         return (out, cut)

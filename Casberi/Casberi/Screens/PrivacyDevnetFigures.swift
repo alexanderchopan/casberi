@@ -56,7 +56,11 @@ struct PrivacyDevnetRing: View {
 
     /// The rim's own weight — the same 4pt bed every track in this room used,
     /// bent into a circle, so the ring is recognisably the same object.
-    private static let rim: CGFloat = 4
+    // **5, not 4 — measured on a device.** The straight track this replaced
+    // was 4pt across the full card width and read clearly; bent into a circle
+    // the same weight all but disappeared on a dark ground, so the ring's own
+    // shape was the thing hardest to see on the card it leads.
+    private static let rim: CGFloat = 5
     private static let markSize: CGFloat = 11
 
     var body: some View {
@@ -127,17 +131,25 @@ struct PrivacyDevnetRing: View {
     /// nothing measured is replaced by anything assumed.
     @ViewBuilder private var reading: some View {
         if let remaining {
+            // **ONE LINE, AND IT MUST NOT COMPETE WITH THE HEADLINE.** Seen
+            // on a device, "about 14 hours" wrapped to two lines inside a 128pt
+            // ring and read as a second headline under the first. It is the
+            // ring's caption, not its lede: one line, scaled down before it
+            // wraps, over a slot the sentence above already owns.
             VStack(spacing: 1) {
                 Text(PrivacyDevnetRoots.approximate(slots: remaining))
                     .dsText(.callout15)
                     .foregroundStyle(DS.textPrimary)
-                    .multilineTextAlignment(.center)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 Text(String(localized: "\(String(remaining)) slots left"))
                     .dsText(.label12)
                     .monospacedDigit()
                     .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
-            .frame(width: diameter - 46)
+            .frame(width: diameter - 34)
             .accessibilityHidden(true)
         }
     }
@@ -243,17 +255,58 @@ struct PrivacyDevnetAnatomy: View {
     /// 300pt slot, the "tiny and top justified" defect §588 fixed on Frames).
     /// Every other shape derives from it so the strip scales as one drawing.
     var barHeight: CGFloat = 8
+    /// How much of the whole budget the transaction actually spent, 0…1
+    /// (`PrivacyDevnetFigure.usedShare`). Nil draws NOTHING — this room could
+    /// say what every transaction was ALLOWED and never what any of them cost,
+    /// and the honest fix is a second reading, not a re-labelled first one
+    /// (prd §602).
+    var usedShare: Double? = nil
     let reduceMotion: Bool
 
     var body: some View {
-        HStack(spacing: 3) {
-            ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-                shape(item, index: index)
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 3) {
+                ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                    shape(item, index: index)
+                }
             }
+            used
         }
-        .frame(height: barHeight + 6)
+        .frame(minHeight: barHeight + 6, alignment: .top)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(Self.spoken(items)))
+        .accessibilityValue(Text(Self.spokenUsed(usedShare) ?? ""))
+    }
+
+    /// **THE SPEND, ON THE BUDGET'S OWN AXIS.** The strip's full width IS the
+    /// transaction's whole allowance — that is what `shares` divides — so a
+    /// track beneath it filled to `usedShare` is measured against exactly the
+    /// thing above it rather than against a scale of its own.
+    ///
+    /// **Under the bars, never inside them.** A fill drawn behind the frame
+    /// segments would read as a per-frame breakdown, which this chain does not
+    /// serve (§593a) and which nothing here may imply. Two objects, one axis,
+    /// one meaning each.
+    ///
+    /// Thin and quiet: it is the second reading on the row, not a rival to the
+    /// anatomy it sits under.
+    @ViewBuilder private var used: some View {
+        if let usedShare {
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(DS.fillFaint)
+                    Capsule()
+                        .fill(DS.tint.opacity(0.45))
+                        .frame(width: max(2, geo.size.width * CGFloat(usedShare)))
+                }
+            }
+            .frame(width: stripWidth, height: 3)
+        }
+    }
+
+    static func spokenUsed(_ share: Double?) -> String? {
+        guard let share else { return nil }
+        return String(localized: "\(String(Int((share * 100).rounded())))% of its gas budget spent")
     }
 
     @ViewBuilder

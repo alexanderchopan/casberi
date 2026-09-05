@@ -22,6 +22,7 @@ import SwiftUI
 /// are LOOKING AT stays with the view.
 struct PrivacyDevnetSendCard: View {
     @Environment(ShellChrome.self) private var chrome
+    @Environment(BridgeStore.self) private var store
 
     let onSend: () -> Void
 
@@ -75,8 +76,28 @@ struct PrivacyDevnetSendCard: View {
         creating = true
         defer { creating = false }
         do {
-            keyAddress = try PrivacyDevnetKey.create()
+            let made = try PrivacyDevnetKey.create()
+            keyAddress = made
             createError = nil
+            // **THE KEY'S OWN ACCOUNT IS WATCHED (prd §602).** Creating a key
+            // did not watch its address, so after Create and Top up the
+            // balance you had just claimed appeared NOWHERE in the room unless
+            // you thought to paste your own address into the field on the
+            // connect screen — on the one seat where the app itself made the
+            // account. Every other reading this room has is per watched
+            // address, so an unwatched key has no face, no row, no rail seat
+            // and no tally.
+            //
+            // Watching is a READ (§593's own word for it), so this adds no
+            // capability the tap did not already grant; it makes the account
+            // the tap just created visible to the room that made it. It also
+            // makes the first-settle nonce read free, since the sweep is now
+            // reading this address anyway.
+            if PrivacyDevnetWatch.shared.add(made) {
+                PrivacyDevnetBridge.registerBridge(store: store)
+            }
+            PrivacyDevnetLiveState.shared.setMine(made)
+            Task { await PrivacyDevnetLiveState.shared.refresh() }
             chrome.refreshPulse &+= 1
         } catch {
             // The keychain's own answer, never a bare "it failed" (§531): a

@@ -156,14 +156,22 @@ struct PrivacyDevnetRoomCard: View {
             // every lane in the Snapshots scope. An arc needs none: the gap at
             // the bottom is the exit, so a snapshot that leaves the window
             // falls into it.
+            // **THE RING OWNS THE REST OF THE SLOT (prd §602).** Seen on a
+            // device for the first time, it sat against the leading edge with
+            // the whole right half of the card empty and ~200pt of dead air
+            // between it and the rail — the "tiny and top justified" defect
+            // §588 fixed for Frames and §596 for this room's other figures,
+            // arriving a third time in a new shape because a `VStack` hugs its
+            // top and a trailing `Spacer` pins its content left.
+            //
+            // Centred, and given the leftover height so the air is distributed
+            // rather than dumped underneath.
             if !marks.isEmpty {
-                HStack(alignment: .center, spacing: DS.Space.s4) {
-                    PrivacyDevnetRing(marks: marks, sets: setCount,
-                                      remaining: freshestRemaining,
-                                      readAt: readAt, diameter: 128,
-                                      reduceMotion: reduceMotion)
-                    Spacer(minLength: 0)
-                }
+                PrivacyDevnetRing(marks: marks, sets: setCount,
+                                  remaining: freshestRemaining,
+                                  readAt: readAt, diameter: Self.homeRingDiameter,
+                                  reduceMotion: reduceMotion)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
 
             // **THE TALLIES ARE GONE (prd §596).** Home carried a row of
@@ -173,21 +181,24 @@ struct PrivacyDevnetRoomCard: View {
             // leads with, repeated here in smaller type, makes two scopes
             // look like one reading twice.
 
-            // The moves this scope's own summary promises ("the line, and the
-            // last few moves"). The count comes off the BOX rather than a
-            // constant, so when content above grows the rows stop fitting and
-            // disappear on their own — no list quietly clipped by the slot's
-            // edge.
-            if homeMoveCount > 0 {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    ForEach(pairs.prefix(homeMoveCount), id: \.move.id) { pair in
-                        moveRow(pair.move, owner: pair.owner)
-                    }
-                }
-            }
+            // **THE MOVES ARE BELOW THE RAIL NOW (prd §602)**, with every
+            // other scope's rows. They were drawn in here, budgeted against a
+            // 300pt box that CLIPS — and after two estimates each cut a row
+            // mid-line on a device, the ruling became "with a figure, draw
+            // none", which is every time a proof is live. So this scope's own
+            // summary promised "the last few moves" and showed none for as
+            // long as the room has had anything to say.
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
+
+    /// How big Home's ring is.
+    ///
+    /// **Bigger than the Snapshots scope's, not smaller**, because Home's
+    /// sentence takes the top of the slot and whatever is left is the ring's
+    /// alone — measured on a device at 128, where it read as a small object in
+    /// a large empty card.
+    static var homeRingDiameter: CGFloat { 156 }
 
     /// Every snapshot this address has proved against, placed on the ring.
     ///
@@ -222,10 +233,10 @@ struct PrivacyDevnetRoomCard: View {
     /// nothing behind it.
     var readAt: Date? { DemoMode.isActive ? nil : PrivacyDevnetLiveState.shared.readAt }
 
-    private var homeMoveCount: Int {
-        guard !pairs.isEmpty else { return 0 }
-        return PrivacyDevnetFigure.homeMoves(hasTrack: !marks.isEmpty,
-                                             box: Double(DSRoomChassis.visualSlot))
+    /// The few moves Home lists below the rail. Nothing clips there, so this
+    /// is a stated cap rather than a budget against a box (prd §602).
+    var homeMoveCount: Int {
+        min(pairs.count, PrivacyDevnetFigure.homeMoveCap)
     }
 }
 
@@ -255,10 +266,12 @@ extension PrivacyDevnetRoomCard {
     /// cannot disagree about which scope is showing.
     @ViewBuilder var scopeList: some View {
         switch section {
-        // HOME already draws its own newest moves inside the slot, budgeted to
-        // what fits (`homeMoveCount`). Repeating them here would print the same
-        // three transactions twice on one screen.
-        case .home:       EmptyView()
+        // **HOME'S OWN FEW MOVES, at last (prd §602).** They used to be drawn
+        // inside the clipped slot and then, after two clipping reports, not at
+        // all — so the scope's summary promised them and the scope had none.
+        // Here they cannot clip, and they cannot double up either: the slot
+        // above draws the sentence and the ring, and nothing else.
+        case .home:       list(Array(pairs.prefix(homeMoveCount)), showsCeiling: false)
         case .activity:   list(pairs)
         case .accounts:   roster
         case .frames:     list(pairs.filter { $0.move.frameCount > 0 })
@@ -272,7 +285,8 @@ extension PrivacyDevnetRoomCard {
     }
 
     @ViewBuilder func list(_ shown: [(move: PrivacyDevnetLiveState.Move, owner: String)],
-                           showsSponsorship: Bool = true) -> some View {
+                           showsSponsorship: Bool = true,
+                           showsCeiling: Bool = true) -> some View {
         if shown.isEmpty {
             empty(String(localized: "Nothing from this address on the chain yet."))
         } else {
@@ -281,7 +295,7 @@ extension PrivacyDevnetRoomCard {
                     moveRow(pair.move, owner: pair.owner,
                             showsSponsorship: showsSponsorship)
                 }
-                walkCeiling
+                if showsCeiling { walkCeiling }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -300,22 +314,48 @@ extension PrivacyDevnetRoomCard {
     /// this pass. Neither cut is ever attributed to an address — the cap drops
     /// the oldest candidates chain-wide, and which of them were whose is
     /// exactly what reading them would have told us.
+    /// **SPLIT BY WHAT KIND OF FACT IT IS (prd §602).** All three sentences
+    /// printed under every list that drew rows — Activity, Frames and Sponsors
+    /// — so the room's own explanation of itself appeared three times on one
+    /// screen in the quietest ink it has, which is the §315 fine-print failure
+    /// in a room head's clothing.
+    ///
+    /// They were never the same kind of fact, which is what decides where each
+    /// goes. The standing ceiling is HOW THIS ROOM WORKS and is true forever,
+    /// so it is said once, on Home, where the room introduces itself. The two
+    /// CUTS are what happened on THIS PASS, so they stay with the rows they
+    /// truncated — and they are already drawn only when they really bit, which
+    /// on every measured pass so far is never.
     @ViewBuilder var walkCeiling: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            if let stopped = walkCut.scannedTo {
-                Text(String(localized: "This chain is long enough that the search stopped at block \(String(stopped)) — anything before that wasn't looked at."))
+        if walkCut.scannedTo != nil || walkCut.unread > 0 {
+            VStack(alignment: .leading, spacing: 2) {
+                if let stopped = walkCut.scannedTo {
+                    Text(String(localized: "This chain is long enough that the search stopped at block \(String(stopped)) — anything before that wasn't looked at."))
+                }
+                if walkCut.unread > 0 {
+                    Text(walkCut.unread == 1
+                         ? String(localized: "One older transaction on this chain wasn't read.")
+                         : String(localized: "\(walkCut.unread) older transactions on this chain weren't read."))
+                }
             }
-            if walkCut.unread > 0 {
-                Text(walkCut.unread == 1
-                     ? String(localized: "One older transaction on this chain wasn't read.")
-                     : String(localized: "\(walkCut.unread) older transactions on this chain weren't read."))
-            }
-            Text(String(localized: "Found by following the chain's logs, so a transaction that emitted none isn't here."))
+            .dsText(.subhead13)
+            .foregroundStyle(DS.textTertiary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .dsText(.subhead13)
-        .foregroundStyle(DS.textTertiary)
-        .fixedSize(horizontal: false, vertical: true)
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// How this room finds anything at all — said ONCE, on Home.
+    ///
+    /// It is the walk's real floor and it never stops being true: a
+    /// transaction that emitted no log is invisible to this seat, so every
+    /// count in every scope is a floor rather than a total.
+    @ViewBuilder var walkFloor: some View {
+        Text(String(localized: "Found by following the chain's logs, so a transaction that emitted none isn't here."))
+            .dsText(.subhead13)
+            .foregroundStyle(DS.textTertiary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// One transaction, on the app's ONE row shape (`WalletRow`, prd
@@ -422,8 +462,11 @@ extension PrivacyDevnetRoomCard {
                 // watched address leads with its own, title its name, subtitle
                 // its balance — the per-address row every wallet room draws.
                 // **Nil is not zero** (§515a): a failed read says so.
-                let title = PrivacyDevnetWatch.shared.name(for: account.address)
-                    ?? WalletStore.shortAddress(account.address)
+                // One naming for the whole seat (`PrivacyDevnetName.of`), so
+                // this phone's own account reads as "This phone" here, on the
+                // rail and in every sheet rather than as a stranger's hex in
+                // the room that created it (prd §602).
+                let title = PrivacyDevnetName.of(account.address)
                 let line = account.reached
                     ? (Self.eth(account.balanceWei) ?? String(localized: "Balance unread"))
                     : String(localized: "The chain didn't answer")
@@ -712,6 +755,18 @@ extension PrivacyDevnetRoomCard {
                                 keys: 0, roots: 0, sponsored: false),
                             stripWidth: min(max(geo.size.width - 24, 120), 420),
                             barHeight: 14,
+                            // What it actually SPENT of that budget (prd
+                            // §602). The receipt was already fetched for the
+                            // payer and its total was being thrown away, so
+                            // this scope drew every transaction's allowance
+                            // and no transaction's cost.
+                            usedShare: PrivacyDevnetFigure.usedShare(
+                                gasUsed: move.gasUsed,
+                                frames: move.frames.map {
+                                    PrivacyDevnetFigure.Frame(gasLimit: $0.gasLimit,
+                                                              stateLimit: $0.stateLimit,
+                                                              succeeded: $0.succeeded)
+                                }),
                             reduceMotion: reduceMotion)
                     }
                     PrivacyDevnetMore(count: moves.count - shown.count,
@@ -755,8 +810,7 @@ extension PrivacyDevnetRoomCard {
                         // speak the same silhouette language (prd §596).
                         WalletFace(address: account.address, size: DS.Face.row, circular: true)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(PrivacyDevnetWatch.shared.name(for: account.address)
-                                 ?? WalletStore.shortAddress(account.address))
+                            Text(PrivacyDevnetName.of(account.address))
                                 .dsText(.subhead13)
                                 .foregroundStyle(DS.textSecondary)
                                 .lineLimit(1)
@@ -1001,6 +1055,11 @@ struct PrivacyDevnetRoomList: View {
             if section == .home, let onWatchExample, showsExamples {
                 PrivacyDevnetExampleDoors(onWatch: onWatchExample)
             }
+
+            // The room's standing ceiling, once (prd §602) — under the acts,
+            // where fine print belongs, rather than three times in three
+            // scopes above the fold.
+            if section == .home, head.watching > 0 { card.walkFloor }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .modifier(PrivacyDevnetMomentsTask())

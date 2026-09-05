@@ -23,7 +23,25 @@ enum PrivacyDevnetName {
     static func of(_ address: String) -> String {
         let short = WalletStore.shortAddress(address)
         guard !address.isEmpty else { return String(localized: "unknown") }
+        if isMine(address) { return String(localized: "This phone") }
         return PrivacyDevnetWatch.shared.name(for: address) ?? short
+    }
+
+    /// Whether this is the account this phone's own key controls.
+    ///
+    /// **The key's address is watched from §602, so without this it appears in
+    /// the roster, the rail and every sheet as an anonymous `0x1f…3c91`** —
+    /// a stranger's address, in the room that made it. "This phone" is
+    /// vibenet's own word for the same fact, and it beats a book name for the
+    /// same reason a face beats a hex string: it says whose.
+    ///
+    /// Compared case-insensitively, because a stored address and a derived one
+    /// disagree on EIP-55 checksum case and a raw `==` would silently never
+    /// match (the wallet family's standing trap).
+    @MainActor
+    static func isMine(_ address: String) -> Bool {
+        guard let mine = PrivacyDevnetKey.address(), !address.isEmpty else { return false }
+        return mine.caseInsensitiveCompare(address) == .orderedSame
     }
 
     /// **ONE SHORTENER FOR THIS SEAT (prd §598).** It was written twice —
@@ -154,6 +172,15 @@ struct PrivacyDevnetMoveSheet: View {
                 }
                 DSSpecRow(label: Text(String(localized: "Transaction")),
                           value: Text(PrivacyDevnetName.shortHex(move.hash)))
+                // **WHAT IT COST, beside what it was allowed (prd §602).** The
+                // room could state every transaction's budget and no
+                // transaction's spend, over a receipt the walk had already
+                // fetched. Stated only when BOTH halves are real: an unread
+                // total says nothing, and an allowance summed over frames that
+                // did not all carry one would be a denominator invented here.
+                if let gas = gasLine {
+                    DSSpecRow(label: Text(String(localized: "Gas")), value: Text(gas))
+                }
             }
             if let sponsorship {
                 Text(sponsorship)
@@ -242,12 +269,25 @@ struct PrivacyDevnetMoveSheet: View {
     private func budgetLine(_ frame: PrivacyDevnetLiveState.Frame) -> String? {
         var parts: [String] = []
         if let gas = frame.gasLimit {
-            parts.append(String(localized: "\(String(gas)) gas"))
+            parts.append(String(localized: "\(Self.grouped(gas)) gas"))
         }
         if let state = frame.stateLimit, state > 0 {
-            parts.append(String(localized: "\(String(state)) state"))
+            parts.append(String(localized: "\(Self.grouped(state)) state"))
         }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// A count somebody reads, grouped for their locale.
+    ///
+    /// **Seen on a device (prd §602): the step budgets printed `320000` while
+    /// the Gas row two blocks down printed `21,000`** — two spellings of the
+    /// same kind of number on one sheet, which is the drift a shared helper
+    /// exists to prevent and which arrived the moment a second one was
+    /// written. These are quantities, never the hex the chain speaks, so they
+    /// group.
+    static func grouped(_ value: UInt64) -> String {
+        let f = NumberFormatter(); f.numberStyle = .decimal
+        return f.string(from: NSNumber(value: value)) ?? String(value)
     }
 
     // MARK: The keys
@@ -306,6 +346,26 @@ struct PrivacyDevnetMoveSheet: View {
                 }
             }
         }
+    }
+
+    /// Used of allowed, or just used, or nothing.
+    ///
+    /// **Three states and no fourth.** A transfer has no frames and therefore
+    /// no allowance, so it states its spend alone rather than inventing a
+    /// denominator; a receipt the walk could not read states nothing rather
+    /// than a zero. Grouped by locale, because these are counts somebody reads
+    /// rather than hex the chain speaks.
+    private var gasLine: String? {
+        guard let used = move.gasUsed else { return nil }
+        let usedText = Self.grouped(used)
+        let figureFrames = move.frames.map {
+            PrivacyDevnetFigure.Frame(gasLimit: $0.gasLimit, stateLimit: $0.stateLimit,
+                                      succeeded: $0.succeeded)
+        }
+        guard let allowed = PrivacyDevnetFigure.allowance(figureFrames) else {
+            return String(localized: "\(usedText) used")
+        }
+        return String(localized: "\(usedText) of \(Self.grouped(allowed))")
     }
 
     /// How many sets this transaction proved against.

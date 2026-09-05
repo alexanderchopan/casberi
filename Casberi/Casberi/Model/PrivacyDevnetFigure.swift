@@ -397,6 +397,54 @@ enum PrivacyDevnetFigure {
         return out
     }
 
+    // MARK: - What it was allowed, and what it spent (prd §602)
+
+    /// The whole budget a transaction's steps were given, or nil.
+    ///
+    /// **ALL-OR-NOTHING, `shares`' own rule.** A sum over the frames that
+    /// happened to carry a budget, presented as the transaction's total, is a
+    /// denominator invented by the drawing — and it is the WORST kind of
+    /// invented number, because "used 21,000 of 30,000" reads as measured on
+    /// both sides. One unread budget and there is no total to state.
+    ///
+    /// A transfer has no frames and therefore no allowance: nil, never zero,
+    /// or every plain transfer reads as having spent infinitely more than it
+    /// was allowed.
+    static func allowance(_ frames: [Frame]) -> UInt64? {
+        // No empty-list guard: an empty list runs the loop zero times and
+        // leaves `total` at 0, which the zero test below already answers with
+        // nil. The guard was written anyway and a mutation SURVIVED against
+        // it — two guards for one case means neither can be shown to matter,
+        // so the second one goes rather than the test being made cleverer.
+        var total: UInt64 = 0
+        for frame in frames {
+            guard let gas = frame.gasLimit else { return nil }
+            let (sum, overflow) = total.addingReportingOverflow(gas)
+            // A budget wide enough to overflow 64 bits is not a budget this
+            // room can state, and wrapping would print a small honest-looking
+            // number for an enormous one.
+            if overflow { return nil }
+            total = sum
+        }
+        return total > 0 ? total : nil
+    }
+
+    /// How much of the allowance was actually spent, 0…1, or nil when either
+    /// half is unknown.
+    ///
+    /// **CLAMPED AT 1, and the clamp is a real case rather than defensive
+    /// habit.** The receipt's total covers the whole transaction while the
+    /// allowance is the sum of the FRAME budgets, and nothing guarantees the
+    /// first sits inside the second — an intrinsic cost the envelope charges
+    /// outside any frame would push the ratio past 1, and a bar drawn past its
+    /// own track reads as a broken bar rather than as a big number. The exact
+    /// figures are stated in words beside it, which is where an overrun can be
+    /// read honestly.
+    static func usedShare(gasUsed: UInt64?, frames: [Frame]) -> Double? {
+        guard let gasUsed, let allowed = allowance(frames), allowed > 0 else { return nil }
+        return min(1, Double(gasUsed) / Double(allowed))
+    }
+
     // MARK: - The tally
 
     /// What one address has done, as three counts.
@@ -447,59 +495,28 @@ enum PrivacyDevnetFigure {
         return max(minimum, n)
     }
 
-    /// How many moves Home shows under the track.
+    /// How many moves Home lists.
     ///
-    /// The Home scope's own summary promises "the line, and the last few moves"
-    /// and the room drew none of them, which is the copy-vs-drawing gap §83
-    /// bans in its mildest form: nothing is dead, but the room says it will
-    /// show you something and does not.
+    /// **A FEW, AND NO LONGER AN ARITHMETIC ANSWER TO A LAYOUT QUESTION (prd
+    /// §602).** This used to budget rows against `DSRoomSlot`'s fixed 300pt
+    /// box, because Home drew its moves INSIDE the slot — and that box clips.
+    /// Two estimates in a row (154, then 232) each left one row that fitted
+    /// the arithmetic and was cut mid-line on a device, reported twice with a
+    /// screenshot, and the answer taken was to draw NO moves at all whenever
+    /// the window figure was present. Which is every time a proof is live —
+    /// so the scope's own summary promised "the last few moves" and the scope
+    /// showed none, for as long as the room has had anything to say.
     ///
-    /// Two with a track and four without, because the track and its end
-    /// captions are the taller object and the sentence above them is the head.
-    /// `DSRoomChassis.visualSlot`, spelled here because this file is
-    /// Foundation-only and cannot import the design layer. Guarded against
-    /// drift in `privacy-selftest.sh`.
-    static let DSRoomChassisSlot = 300
+    /// The moves are below the rail now, where `PrivacyDevnetRoomList` draws
+    /// every other scope's rows and where nothing clips — the §593d split,
+    /// finally applied to the one scope that was exempt from it. So there is
+    /// no box to budget against and no third estimate to get wrong.
+    ///
+    /// **"A few" is three**, unchanged and for its own reason: past three this
+    /// stops being a lede and becomes the Activity scope one chip away, which
+    /// is two readings of one list.
+    static let homeMoveCap = 3
 
-    static func homeMoves(hasTrack: Bool, box: Double) -> Int {
-        // **FOUR lines, not three — measured on a device, where three clipped.**
-        // The estimate was written against the relaunch notice as the worst
-        // case, and the ORDINARY rootLive sentence is longer: "A proof here
-        // still names a snapshot the chain remembers, for another 4,096 slots."
-        // wraps to four lines at `heading22` on an iPhone 17 Pro, which is the
-        // commonest state this scope has. Three lines' worth of chrome left one
-        // row too many and the last one was cut mid-line by the slab below.
-        //
-        // A fixed estimate is a FLOOR, not a guarantee: a longer wording, a
-        // narrower device or a larger Dynamic Type size can each overrun it
-        // again. It is kept because `DSRoomSlot` reserves a fixed visual slot by
-        // design, so the alternative is measuring at draw time — and the cost of
-        // being wrong here is one row hidden, never one row clipped, as long as
-        // the estimate errs HIGH.
-        // **WITH A TRACK, HOME DRAWS NO MOVES AT ALL**, and that is a ruling
-        // rather than a bigger estimate. Two successive estimates (154, then
-        // 232) both left one row that fitted the arithmetic and was CLIPPED
-        // mid-line on a device — the third guess would have been another
-        // arithmetic answer to a layout question. The track plus a four-line
-        // sentence plus the facts row is what the slot holds, and the moves are
-        // one chip away in Activity, which is the scope for them.
-        //
-        // The no-track case keeps its budget: 112 (4 × 28) + s3 + facts 45 + s3
-        // is 186, and there the rows are the only content the scope has.
-        // **`minimum: 0` — Home is the ONE list allowed to vanish**, and it is
-        // what makes this future-proof rather than a number to revisit: when
-        // the send panel lands on this scope the caller passes the box it has
-        // left, the rows stop fitting, and they disappear on their own. Every
-        // other scope draws at least one row, because a scope whose whole
-        // content is a list must not render empty.
-        let fits = rowCap(box: box, rowHeight: 34, spacing: 6,
-                          chrome: hasTrack ? Double(DSRoomChassisSlot) : 186, minimum: 0)
-        // **"A few" is three.** The scope's own summary says "the last few
-        // moves", and past three this stops being a lede and becomes the
-        // Activity scope one chip away — two readings of one list, which is the
-        // duplication §555 removed from the Accounts scope next door.
-        return min(fits, 3)
-    }
     // MARK: - Keeping marks countable (prd §593d)
 
     /// Where to draw one mark per value along a track, in points from the left.

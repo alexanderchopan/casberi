@@ -453,14 +453,21 @@ check(PF.pips(12).overflow == 4, "over the cap the rest is COUNTED, never silent
 // 232) left one row that fitted the arithmetic and was CLIPPED mid-line on a
 // device — reported twice with a screenshot. A third estimate would have been
 // another arithmetic answer to a layout question.
-check(PF.homeMoves(hasTrack: true, box: 300) == 0,
-      "a track leaves no room for moves — they are one chip away in Activity")
-check(PF.homeMoves(hasTrack: false, box: 300) >= 1,
-      "without a track the moves ARE the content, so at least one draws")
-check(PF.homeMoves(hasTrack: false, box: 300) <= 3, "\"a few\" is three")
-// The slot constant is spelled here because this file is Foundation-only; if
-// the chassis moves, this silently starts budgeting against the wrong box.
-check(PF.DSRoomChassisSlot == 300, "the slot constant still matches DSRoomChassis.visualSlot")
+// **HOME'S MOVES ARE A STATED CAP, NOT A BOX BUDGET (prd §602).** They used
+// to be budgeted against `DSRoomSlot`'s 300pt box because they were drawn
+// INSIDE it, and that box clips: two estimates each cut a row mid-line on a
+// device, and the ruling became "with a figure, draw none" — which is every
+// time a proof is live, so the scope promised "the last few moves" and had
+// none. Below the rail nothing clips, so there is no third estimate to get
+// wrong.
+check(PF.homeMoveCap == 3, "\"a few\" is three — past that it is the Activity scope one chip away")
+check(PF.homeMoveCap > 0, "Home lists its moves again rather than promising them and showing none")
+// **THE MIRRORED SLOT CONSTANT IS GONE WITH THE BUDGET THAT NEEDED IT (§602).**
+// This file spelled `DSRoomChassis.visualSlot` itself because it is
+// Foundation-only and could not import the design layer — a mirror that had to
+// be kept level by hand. Home's rows moved below the rail, so nothing here
+// budgets against that box any more and the mirror is deleted rather than
+// left to drift.
 check(PF.rowCap(box: 10, rowHeight: 14, spacing: 6, chrome: 40, minimum: 0) == 0,
       "Home is the ONE list allowed to vanish, so the send panel needs no second decision")
 check(PF.rowCap(box: 10, rowHeight: 14, spacing: 6, chrome: 40) == 1,
@@ -579,6 +586,33 @@ let tight = PrivacyDevnetFigure.spaced([1, 2, 3, 4, 5], width: 20, mark: 9)
 check(tight.count == 5, "a narrow track still draws every mark")
 check(tight == tight.sorted(), "and still in order")
 check(Set(tight).count == 5, "and does not stack them all on one point")
+
+// ── prd §602: what it was allowed, and what it spent ──
+// The room could state every transaction's BUDGET and no transaction's COST,
+// over a receipt the walk had already fetched. Every failure here renders as
+// an ordinary bar: a denominator summed over frames that did not all carry
+// one, a transfer claiming to have overspent a budget it never had, or a fill
+// drawn past its own track.
+check(PF.allowance([]) == nil,
+      "a plain transfer has NO allowance — nil, never zero, or it reads as having overspent nothing")
+check(PF.allowance([PF.Frame(gasLimit: 21_000), PF.Frame(gasLimit: 9_000)]) == 30_000,
+      "the allowance is the sum of the frame budgets")
+check(PF.allowance([PF.Frame(gasLimit: 21_000), PF.Frame()]) == nil,
+      "ONE unread budget and there is no total — a partial sum stated as the whole is a number invented here")
+check(PF.allowance([PF.Frame(gasLimit: 0)]) == nil, "a zero total is no denominator at all")
+check(PF.allowance([PF.Frame(gasLimit: .max), PF.Frame(gasLimit: .max)]) == nil,
+      "a budget wide enough to overflow 64 bits is refused, never wrapped into a small honest-looking number")
+check(PF.usedShare(gasUsed: nil, frames: [PF.Frame(gasLimit: 100)]) == nil,
+      "an unread receipt says nothing — not zero spent")
+check(PF.usedShare(gasUsed: 50, frames: []) == nil,
+      "a spend with no allowance draws no bar; the sheet states the figure alone")
+check(PF.usedShare(gasUsed: 50, frames: [PF.Frame(gasLimit: 100)]) == 0.5,
+      "half the budget spent is half the track")
+// The clamp is a REAL case: the receipt's total covers the whole transaction
+// while the allowance sums the FRAME budgets, and nothing makes the first sit
+// inside the second.
+check(PF.usedShare(gasUsed: 400, frames: [PF.Frame(gasLimit: 100)]) == 1,
+      "an overrun fills the track and never runs past it — the exact figures are in words beside it")
 
 // ── prd §598: the moments, and everything they refuse to claim ──
 // Every failure here is a wrong CLAIM rather than a wrong drawing: a "your
@@ -831,6 +865,25 @@ mutate "an UNREAD nonce read as a landing" \
 mutate "a key that has already sealed sealing again on every open" \
   "$MOMENTS" "return Set(keys.map(hex).filter { !known.contains(\$0) })" \
   "return Set(keys.map(hex))"
+mutate "a partial budget sum stated as the transaction's whole allowance" \
+  "$FIG" "guard let gas = frame.gasLimit else { return nil }" \
+  "let gas = frame.gasLimit ?? 0"
+# **THE ZERO TEST IS WHAT ANSWERS THE TRANSFER CASE**, and it is the only
+# thing that does — an empty frame list runs the loop zero times and leaves the
+# total at 0, so this one line stands between a plain transfer and a
+# denominator of zero. The first cut of this block wrote a separate
+# empty-list guard as well and the mutation against it SURVIVED, because two
+# guards for one case means neither can be shown to matter.
+mutate "a transfer given a zero allowance, so it reads as overspending nothing" \
+  "$FIG" "return total > 0 ? total : nil" "return total"
+mutate "the used bar allowed to run past its own track" \
+  "$FIG" "return min(1, Double(gasUsed) / Double(allowed))" \
+  "return Double(gasUsed) / Double(allowed)"
+mutate "an unread receipt read as nothing spent" \
+  "$FIG" "guard let gasUsed, let allowed = allowance(frames), allowed > 0 else { return nil }" \
+  "let gasUsed = gasUsed ?? 0; guard let allowed = allowance(frames), allowed > 0 else { return nil }"
+mutate "Home promising a few moves and listing none again" \
+  "$FIG" "static let homeMoveCap = 3" "static let homeMoveCap = 0"
 mutate "the seen cap dropping the NEWEST keys instead of the oldest" \
   "$MOMENTS" "if known.count > seenCap { known.removeFirst(known.count - seenCap) }" \
   "if known.count > seenCap { known.removeLast(known.count - seenCap) }"
@@ -917,6 +970,17 @@ for verb in 'eth_sendRawTransaction' 'eth_sendTransaction' 'eth_sign' 'personal_
   grep -qF -- "$verb" "$work/bridge.bare" \
     && fail "PrivacyDevnetBridge names $verb — the sweep runs on a timer with no tap behind it, so signing must stay in PrivacyDevnetSend"
 done
+# **AND NEITHER MAY THE SEAT'S OWN CARD (prd §602).** The guard below has
+# checked the CATALOG's promise since §593d and the connected card's `can:`
+# line was never checked at all — so the app went on telling anybody who opened
+# the seat that it "makes no key, signs nothing and sends nothing" for eight
+# builds after it started doing all three. Both halves are guarded now, which
+# is what `registerBridge`'s own comment always said the rule was.
+grep -qF 'it makes no key, signs nothing and sends nothing' "$BRIDGE" \
+  && fail "the seat's connected card still promises it never signs, and it has signed and sent since §593d — the promise and the acts retire together, never one without the other"
+grep -qF 'Sending signs with a key held on this device' "$BRIDGE" \
+  || fail "the seat's card stopped saying where the signing key lives — that clause is what somebody reads while deciding whether a privacy devnet is safe to try"
+
 # And the catalog must no longer make the promise the seat has outgrown.
 grep -qF 'Watching only — nothing is signed and nothing is sent' \
   "Casberi/Casberi/Model/BridgeCatalog.swift" \
@@ -1226,5 +1290,61 @@ strip_comments "$ROOM" > "$work/room.bare"
 grep -qF 'for another' "$work/room.bare" \
   && fail "the head sentence is counting slots again — the ring carries the clock, in words, with the measured count beneath it"
 
+# ── prd §602: the ceiling once, the moves back, the key's own account ──
+
+# **THE STANDING CEILING IS SAID ONCE.** All three sentences printed under
+# every list that drew rows — Activity, Frames and Sponsors — so the room's own
+# explanation of itself appeared three times on one screen in its quietest ink.
+# The two CUTS stay with the rows they truncated (they are what happened on
+# this pass); the FLOOR moved to Home (it is how the room works, forever).
+grep -qF 'walkFloor' "$work/card.bare" \
+  || fail "the walk's standing ceiling is gone entirely — every count in this room is a floor and nothing says so"
+python3 - "$CARD" <<'PYX' || exit 1
+import re, sys
+src = re.sub(r'//.*', '', open(sys.argv[1], encoding="utf-8").read())
+# The sentence must appear in exactly ONE view, and that view must be the one
+# Home draws — not in `list(...)`, which three scopes reach.
+body = src[src.index('var walkCeiling'):src.index('var walkFloor')]
+if "logs, so a transaction that emitted none" in body:
+    print("  ✗ the standing floor is back inside walkCeiling, which three scopes draw")
+    sys.exit(1)
+print("  ✓ the standing ceiling is said once, on Home")
+PYX
+
+# **HOME LISTS ITS MOVES AGAIN.** The scope's summary promises "the last few
+# moves" and it showed none whenever a proof was live, which is whenever the
+# room has anything to say.
+grep -qF 'case .home:       list(Array(pairs.prefix(homeMoveCount))' "$work/card.bare" \
+  || fail "Home stopped listing its moves — its own summary promises them, and drawing none is the §83 gap that ruling created"
+# And they must NOT come back inside the clipped slot, which is what cut a row
+# mid-line on a device twice.
+grep -qF 'ForEach(pairs.prefix(homeMoveCount)' "$work/card.bare" \
+  && fail "Home's moves are back inside DSRoomSlot's 300pt box — that box clips, and it cut a row mid-line twice"
+
+# **THE KEY'S OWN ACCOUNT IS WATCHED AND NAMED.** Creating a key did not watch
+# its address, so the balance you had just claimed appeared nowhere in the room
+# that made the account.
+SEND="Casberi/Casberi/Screens/PrivacyDevnetSendCard.swift"
+[[ -f "$SEND" ]] || fail "$SEND not found"
+strip_comments "$SEND" > "$work/send.bare"
+grep -qF 'PrivacyDevnetWatch.shared.add(made)' "$work/send.bare" \
+  || fail "making a key no longer watches its address — every reading in this room is per watched address, so the account the app just made would have no face, no row and no balance"
+grep -qF 'This phone' "$work/sheets.bare" \
+  || fail "this phone's own account lost its name — it is watched now, so without it the room shows the account it created as a stranger's hex"
+
+# **THE SPEND IS DRAWN AND STATED, off a receipt already fetched.**
+grep -qF 'usedShare: PrivacyDevnetFigure.usedShare' "$work/card.bare" \
+  || fail "the Frames scope stopped drawing what was spent — it would state every transaction's budget and no transaction's cost"
+grep -qF 'gasUsed: moveGasUsed' "$work/bridge.bare" \
+  || fail "the walk stopped keeping the receipt's own total — a number already in memory, thrown away"
+# It must stay TRANSACTION level: no per-frame breakdown exists on this chain,
+# so a weighted or failed segment off a usage figure would be invented.
+grep -qE 'gasUsed: PrivacyDevnetRPC|gasUsed: PF?\.?hexInt\(f\[' "$work/bridge.bare" \
+  && fail "a per-frame gasUsed is being read — this chain serves none (§593a), so any figure built on it is invented"
+
 print "  ok   drift guards: no price, no notification, slots not blocks, no coins scope, the ring, the components, the moments"
-print "✓ privacy: 7 scopes, the 8272 window, the room head, the figures, the roots' own storage, the §596 sheets and headlines, 38 mutations, 25 drift guards"
+# **COUNTED, NOT CLAIMED (prd §602).** This line carried "38 mutations, 25
+# drift guards" while the file held 59 and 83 — a hardcoded tally that nobody
+# updates and that therefore understates the suite by more every pass, which is
+# a summary saying something false about the very thing it summarises.
+print "✓ privacy: 7 scopes, the 8272 window, the room head, the figures, the roots' own storage, the §596 sheets and §602's readings, $(grep -c '^mutate ' "$0") mutations, $(grep -c 'fail \"' "$0") drift guards"
