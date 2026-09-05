@@ -252,6 +252,33 @@ struct RootShell: View {
         // person turned it on. `startIfEnabled` is a no-op otherwise, so the
         // default build opens no port at all.
         .task { MCPServer.shared.startIfEnabled() }
+        // THE MAC'S OWN SWEEP CLOCK (prd §607). Everywhere else, alarms ride
+        // two doors: `WalletBackgroundRefresh`'s `BGAppRefreshTask`, and the
+        // activation pass. Neither reaches a Mac that is simply LEFT OPEN.
+        // BGTaskScheduler is nominally available under Catalyst and does not
+        // run on a desk the way it does on a phone in a pocket; the activation
+        // pass fires on focus-in, so it fires when you come BACK — and a Mac
+        // app is characteristically never left. Somebody working in Casberi
+        // all afternoon got exactly one sweep, at the moment they arrived,
+        // which is the moment they least needed telling. A dispute deadline
+        // that fell due at 2pm waited for tomorrow's cmd-tab.
+        //
+        // Re-running is safe by construction rather than by hope: `NotifySweep`
+        // spends each plan against its own ledger, so a plan already announced
+        // is dropped on every later pass — that is the same property the
+        // activation door already relies on, since it and the background task
+        // deliberately share one body.
+        //
+        // An hour matches `WalletBackgroundRefresh.schedule`'s own
+        // `earliestBeginDate`, so the two platforms ask for the same cadence
+        // and only the delivery differs.
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(60 * 60))
+                guard !Task.isCancelled else { return }
+                await WalletBackgroundRefresh.runNotifySweep()
+            }
+        }
         #endif
         // A surface requested an ask (the weekend cover) — open the composer;
         // it consumes the query once it mounts (prd 54).

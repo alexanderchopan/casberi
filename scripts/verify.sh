@@ -1835,6 +1835,15 @@ harness "Ask destination self-test" "16 mutations, 47 drift guards — incl. the
 # sentence end puts "Swapped 0." at 40pt across the top of the screen. Both
 # failures render as a perfectly ordinary answer.
 harness "Agent reply self-test" "32 assertions, 10 mutations, 7 drift guards — the prose split behind the terminal" "scripts/agent-reply-selftest.sh" "the agent reply self-test failed — run scripts/agent-reply-selftest.sh"
+# The Data tray's iCloud sentence, the guard that can switch sync off on the
+# person's behalf, and the Mac's own relaunch wording (prd §607). The strongest
+# harness reason in this block: NOTHING that exists can see this code run.
+# `verify-mac.sh` launches every run with `-storeScratch YES`, so it has never
+# opened the mirror; the simulator has no second device to receive from; and
+# every failure renders as an ordinary settings row a screenshot certifies as
+# correct — which is how the Catalyst group-container bug ran for weeks with
+# every Mac save landing in an in-memory store and every gate green.
+harness "Cloud-sync self-test" "20 assertions, 6 mutations, 14 drift guards — the tray's sentence, the trap guard, and ⌘Q" "scripts/cloud-sync-selftest.sh" "the cloud-sync self-test failed — run scripts/cloud-sync-selftest.sh"
 
 # The design system's first mechanical check (prd §299). Every other rule in
 # this file is enforced by a script; the design system was enforced by memory,

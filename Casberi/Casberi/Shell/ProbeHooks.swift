@@ -167,6 +167,73 @@ enum ProbeHooks {
                   ? "every item device-only and non-syncing"
                   : "STILL LOOSE — see the counts above")
         },
+        // `-syncProbe YES` — WHAT ICLOUD SYNC IS ACTUALLY DOING (prd §607).
+        //
+        // Until this landed, nothing anywhere could see the sync path: no
+        // probe, no log line, and `verify-mac.sh` launches every run with
+        // `-storeScratch YES`, which bypasses the group container and the
+        // mirror entirely. So the one subsystem people report as broken was
+        // the one subsystem with no instrument at all — which is how the
+        // Catalyst group-container prefix bug ran for weeks with every Mac
+        // save landing in an in-memory store.
+        //
+        // It exists because **"sync isn't working" has seven causes that all
+        // render as the same quiet tray**, and only two are bugs: the toggle
+        // is off; the toggle is on but this PROCESS never engaged (the
+        // container binds once at launch, so a flip is not live until a
+        // relaunch — and on a Mac, closing the window is not one); the guard
+        // turned it off after two unproven launches; the store fell back off
+        // the group container; the mirror is erroring; the mirror is fine and
+        // this device has only ever SENT; or it is genuinely up to date. The
+        // `engaged=` / `wants=` pair separates the first three, `group=`
+        // catches the fourth, and the three per-direction dates separate the
+        // last three — which one date could never do.
+        //
+        // One NSLog per fact (the `-todayProbe` truncation lesson). Reads
+        // only: it never flips the toggle, never forces a mirror pass, and
+        // spends nothing.
+        Hook(key: "syncProbe") { _, _ in
+            let wants = SharedStore.syncEnabled
+            let engaged = SharedStore.cloudSyncActive
+            NSLog("syncProbe| wants=%@ engaged=%@ cloudKitReady=%@ disabledByGuard=%@",
+                  wants ? "YES" : "NO", engaged ? "YES" : "NO",
+                  SharedStore.cloudKitReady ? "YES" : "NO",
+                  SharedStore.syncDisabledByGuard ? "YES" : "NO")
+            // The store's own footing. A nil group URL is the Catalyst
+            // prefix failure and reads from outside exactly like a quiet
+            // mirror — nothing syncs, nothing errors.
+            let groupURL = FileManager.default
+                .containerURL(forSecurityApplicationGroupIdentifier: SharedStore.containerGroupID)
+            NSLog("syncProbe| group=%@ resolved=%@ degraded=%@",
+                  SharedStore.containerGroupID,
+                  groupURL == nil ? "NO" : "YES",
+                  SharedStore.degradeReason ?? "no")
+            // The trap bookkeeping, which decides whether a future launch
+            // switches sync off on the person's behalf.
+            let defaults = UserDefaults.standard
+            NSLog("syncProbe| trapMarker=%@ trapStreak=%d",
+                  defaults.bool(forKey: SharedStore.cloudAttemptMarkerKey) ? "SET" : "clear",
+                  defaults.integer(forKey: SharedStore.cloudTrapStreakKey))
+            // The three directions, apart. `setup` proves the account and the
+            // container are reachable and NOTHING about a row ever moving.
+            func stamp(_ date: Date?) -> String {
+                date.map { ISO8601DateFormatter().string(from: $0) } ?? "never"
+            }
+            NSLog("syncProbe| setup=%@ received=%@ sent=%@",
+                  stamp(CloudSyncStatus.lastSetupDate),
+                  stamp(CloudSyncStatus.lastImportDate),
+                  stamp(CloudSyncStatus.lastExportDate))
+            NSLog("syncProbe| liveError=%@ lastError=%@",
+                  CloudSyncStatus.hasLiveError ? "YES" : "no",
+                  CloudSyncStatus.lastError ?? "none")
+            // The sentence the Data tray would draw, from the same function it
+            // draws it with — so a wrong sentence is visible here rather than
+            // only to somebody with the sheet open on the right platform.
+            NSLog("syncProbe| trayLine=%@",
+                  CloudSyncStatus.line(engaged: engaged, wantsSync: wants,
+                                       deviceName: DS.device,
+                                       macIdiom: ProcessInfo.processInfo.isMacCatalystApp))
+        },
         // `-sweepTimerProbe YES` — where a FOREGROUND SWEEP's time goes
         // (2026-08-06). Turns `SweepClock` on (the flag itself does that, so
         // the instrument is live before the sweep it measures), waits for the

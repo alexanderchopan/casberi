@@ -338,6 +338,11 @@ struct AccountDetailSheet: View {
         var height: CGFloat = icloudSync ? (syncHasLiveError ? 760 : 720) : 645
         // The secret-scan sentence — always present, two lines.
         height += 60
+        // The guard's notice (prd §607) — three wrapped lines, and it appears
+        // only in the sync-OFF case, i.e. over the 645 above. Added here
+        // rather than as a fifth ternary arm, which is what this property's
+        // own doc says goes wrong.
+        if !icloudSync, SharedStore.syncDisabledByGuard { height += 76 }
         // The keyed line, which the librarian's fork wraps one line further.
         if keyedAgent != nil { height += librarianOn ? 76 : 54 }
         return height
@@ -352,18 +357,17 @@ struct AccountDetailSheet: View {
 
     private var syncHasLiveError: Bool { CloudSyncStatus.hasLiveError }
 
+    /// One call into `CloudSyncReading` (prd §607). The sentence used to be
+    /// assembled here off `lastSuccessDate`, which is stamped by ANY succeeded
+    /// mirror event — `.setup` included — so this read "Synced just now" over
+    /// a mirror that had connected and exchanged nothing. It also told a Mac
+    /// user to wait for their "next launch", which on a Mac is a thing they
+    /// believe closing the window already did.
     private var syncStatusLine: String {
-        guard icloudSync else {
-            return SharedStore.cloudSyncActive ? "Stops syncing from your next launch" : "Stays on \(DS.device)"
-        }
-        guard SharedStore.cloudSyncActive else { return "Syncs from your next launch" }
-        if syncHasLiveError { return "Couldn't sync — will keep retrying" }
-        if let success = CloudSyncStatus.lastSuccessDate {
-            return "Synced \(success.formatted(.relative(presentation: .named)))"
-        }
-        // Sync is on and engaged, but no event has landed yet this launch
-        // (e.g. the very first launch after flipping it on).
-        return "Synced to your iCloud"
+        CloudSyncStatus.line(engaged: SharedStore.cloudSyncActive,
+                             wantsSync: icloudSync,
+                             deviceName: DS.device,
+                             macIdiom: ProcessInfo.processInfo.isMacCatalystApp)
     }
 
     // MARK: - Pieces
@@ -448,6 +452,9 @@ struct AccountDetailSheet: View {
                           // container, so nothing else starts it). Flipping the
                           // toggle on exchanges immediately rather than waiting
                           // for the next edit to trigger a push.
+                          // Turning it back on retires the guard's notice: it
+                          // can only ever describe a live situation (prd §607).
+                          if $0 { SharedStore.syncDisabledByGuard = false }
                           if $0 {
                               AddressBookSync.shared.syncNow()
                               // The WATCH list rides it too (prd §372) — before
@@ -456,6 +463,14 @@ struct AccountDetailSheet: View {
                               WalletStoreSync.shared.syncNow()
                           }
                       }))
+            // The guard turned it off; say so where the toggle is, until they
+            // act on it (prd §607). Above the error line because it explains
+            // the toggle's own POSITION, which is the first thing read here.
+            if !icloudSync, SharedStore.syncDisabledByGuard {
+                Text(CloudSyncReading.guardNotice(deviceName: DS.device))
+                    .dsText(.subhead13).foregroundStyle(DS.destructive)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if icloudSync, syncHasLiveError, let detail = CloudSyncStatus.lastError {
                 Text(detail)
                     .dsText(.subhead13).foregroundStyle(DS.destructive)

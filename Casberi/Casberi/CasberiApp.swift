@@ -475,6 +475,21 @@ struct CasberiApp: App {
                 // is left behind the octopus is everything else.
                 Button("Everything Else") { focusedChrome?.openSources() }
                     .keyboardShortcut("0", modifiers: .command)
+                // THE AGENT GETS A KEY (prd §607). Everything else the dock
+                // does has had one since §256 — the sources tray on ⌘0, the
+                // nine chips, the walk, the pane — and the surface the whole
+                // app is arranged around had none. §390 made the agent a HOLD
+                // on the bar, a gesture a pointer does not have; the Mac's
+                // only door has been `BarSecondaryMenu`'s right-click, which
+                // is discoverable by accident and by nothing else.
+                //
+                // ⌘⇧A, not ⌘A (select-all) and not ⌘K (the Mac has no such
+                // convention and ⌘K is a link in every editor). It goes in
+                // this same group because raising the agent is the same class
+                // of act as opening the tray: a door onto a surface, not an
+                // edit.
+                Button("Talk to Your Agents") { focusedChrome?.openComposer() }
+                    .keyboardShortcut("a", modifiers: [.command, .shift])
             }
             // Help → the real docs, Mac convention (2026-07-28) — replaces
             // the system's default "Casberi Help" item, which without this

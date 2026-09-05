@@ -11469,7 +11469,12 @@ struct FeedScreen: View {
         // the verb is rather than that the room is empty, because unlike every
         // other room nothing will ever arrive here on its own.
         if Pinboard.isPinnedRoom(source) {
-            return String(localized: "Nothing pinned. Press and hold anything to pin it.")
+            // `DS.secondaryGesture`, not a literal (prd §607): pinning lives in
+            // a `contextMenu`, which is a right-click under a pointer, so the
+            // Mac was told to perform a gesture it does not have — on the one
+            // line standing between a person and a room that never fills on
+            // its own.
+            return String(localized: "Nothing pinned. \(DS.secondaryGesture) anything to pin it.")
         }
         switch (source != "All", filter.tag != "All") {
         case (true, true):   return "Nothing from \(source) under \(tagLabel) yet."

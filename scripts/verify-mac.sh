@@ -546,6 +546,49 @@ grep -q "demoProbe| active=YES" "$DEMO_LOG" \
   || fail "demo rows landed but the mode is not active on Mac — see $DEMO_LOG"
 ok "demo furnished ($DEMO_ROWS things, $DEMO_SEATS seats, mode active)"
 
+# ── 3c. The store's own footing on THIS platform (prd §607) ────────────────
+# The one thing about iCloud sync a Mac pass can prove deterministically, and
+# it is the thing that broke: **does the app-group container actually
+# resolve?**
+#
+# iOS grants `group.com.casberi.app` unprefixed and macOS grants it
+# TEAM-PREFIXED, and `containerURL(forSecurityApplicationGroupIdentifier:)`
+# does not resolve one spelling to the other — handed the wrong one it returns
+# a perfectly real-looking URL to a directory the sandbox never granted. Both
+# rungs of `containerWithFallback`'s ladder then throw and the Mac app runs on
+# the EPHEMERAL in-memory store: nothing a Mac user saves survives a relaunch,
+# with no symptom at launch and nothing in any log. That shipped, and ran for
+# weeks. Every gate in this file was green throughout, including this script's
+# five screenshots, because a screen paints identically over an in-memory
+# store.
+#
+# **The group read is independent of which store was opened**, which is what
+# makes this safe: `-syncProbe` asks `FileManager` directly, so the run keeps
+# `-storeScratch YES` and never touches the person's real corpus. That
+# mandatory flag is exactly why no earlier gate could see this — every launch
+# here bypasses the group container by design.
+#
+# STATED CEILING, because a gate that implies more than it proves is worse
+# than none: this proves the container RESOLVES. It does not prove the mirror
+# engages, that a row ever crossed, or that the CloudKit schema is deployed —
+# all three need a real iCloud account and a real container, which an
+# unattended run cannot have deterministically. The remaining facts are
+# REPORTED here, never gated, so a person reading a night's log can see them.
+step "Store footing"
+SYNC_LOG="$OUT/sync.log"
+launch "$SYNC_LOG" -syncProbe YES
+if ! wait_for "$SYNC_LOG" "syncProbe\| trayLine=" 30; then
+  quit_app
+  fail "sync probe never reported on Mac in 30s (see $SYNC_LOG)"
+fi
+quit_app
+grep -q "syncProbe| group=.* resolved=YES" "$SYNC_LOG" \
+  || fail "the app-group container did NOT resolve on this Mac — the app is running on an ephemeral store and nothing a Mac user saves survives a relaunch (see $SYNC_LOG)"
+# Reported, never gated — see the ceiling above.
+grep -Eo "syncProbe\| (wants|trapMarker|setup|liveError|trayLine)=.*" "$SYNC_LOG" \
+  | sed 's/^/    /' || true
+ok "app-group container resolves (mirror engagement NOT proven — needs a real account)"
+
 # ── 4. On-device end-to-end (deterministic — these gate the run) ───────────
 # Everything here is local: no network, no keys, no credits. A failure is a
 # real regression, so these hard-fail. `-seedThing` lands a real Thing through

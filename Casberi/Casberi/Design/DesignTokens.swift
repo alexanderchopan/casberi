@@ -493,6 +493,29 @@ enum DS {
     /// instruction on Mac (the honesty rule).
     static var settingsAppName: String { isMac ? "System Settings" : "iOS Settings" }
 
+    /// How you open a row's SECOND menu, in the reader's own words (prd §607).
+    ///
+    /// `contextMenu` is a press-and-hold under a finger and a RIGHT-CLICK under
+    /// a pointer — the same modifier, two gestures — so any copy that teaches
+    /// it has to say which. Two shipped strings named the touch gesture
+    /// unconditionally, and both are the ONE place their feature is ever
+    /// explained: the agent hint capsule, which appears once ever and teaches
+    /// the surface the whole app is arranged around, and the pinboard's empty
+    /// state, which is the only thing standing between a person and a room
+    /// that will never fill on its own. On a Mac both told the reader to
+    /// perform a gesture that does not exist.
+    ///
+    /// Nothing could have caught it: the strings compile, the views render,
+    /// and a screenshot looks correct on whichever platform took it. One token
+    /// rather than a `#if` at each site, so a third caller cannot get it
+    /// wrong — and `mac-parity-audit.py` fails the build on any user-facing
+    /// string that names a touch gesture without coming through here.
+    /// ONE LINE on purpose: `mac-parity-audit.py` exempts the declaration by
+    /// name on the literal's own line, so the definition and the words it
+    /// defines have to sit together. A second literal anywhere else in this
+    /// file is still a finding.
+    static var secondaryGesture: String { isMac ? String(localized: "Right-click") : String(localized: "Press and hold") }
+
     // MARK: - Layout (iPad content width — see `dsAdaptiveContentWidth()`)
 
     enum Layout {

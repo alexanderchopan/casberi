@@ -75,6 +75,28 @@ enum SharedStore {
     /// in `containerWithFallback`.
     static let cloudTrapStreakKey = "icloud.cloudTrapStreak"
 
+    /// Set when THIS app turned sync off on the person's behalf (prd §607).
+    ///
+    /// The auto-disable below is the right call — a crash-looping mirror has
+    /// to be broken out of — but its only notice was a four-second flash at
+    /// first appearance, and after that the Data tray read "Stays on <device>",
+    /// **the same sentence it shows for a choice the person actually made**.
+    /// So the app stopped doing what they asked and then described it as their
+    /// preference, with the toggle sitting there off and nothing to say why.
+    /// On a Mac the flash is easiest of all to miss: it lands in a window that
+    /// may not be focused, or not on screen at all.
+    ///
+    /// Cleared the moment they turn sync back on, so it can only ever describe
+    /// a live situation.
+    static let cloudGuardDisabledKey = "icloud.sync.disabledByGuard"
+
+    /// Whether sync is off because the guard turned it off, rather than
+    /// because anybody chose that. Read by the Data tray.
+    static var syncDisabledByGuard: Bool {
+        get { UserDefaults.standard.bool(forKey: cloudGuardDisabledKey) }
+        set { UserDefaults.standard.set(newValue, forKey: cloudGuardDisabledKey) }
+    }
+
     /// The build's CloudKit readiness — the ship gate. CloudKit mirroring sets
     /// up on a background queue and *traps* (doesn't throw) when the iCloud
     /// container entitlement is absent, so `try?` can't guard it, and iOS has no
@@ -229,6 +251,8 @@ enum SharedStore {
             if streak >= 2, defaults.bool(forKey: "icloud.sync") {
                 NSLog("[Casberi] two consecutive trapped launches — turning sync off")
                 defaults.set(false, forKey: "icloud.sync")
+                // Durable, not just a flash — see `cloudGuardDisabledKey`.
+                defaults.set(true, forKey: cloudGuardDisabledKey)
                 degradeReason = "iCloud sync failed and was turned off — your things are safe here. Turn it back on in Data."
             }
         } else {

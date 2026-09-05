@@ -49065,3 +49065,59 @@ The figures, the rooms, the rows, the demo — nothing outside the sheets. The F
 **Guarded**: the harness compiles the new arithmetic whole, and its assertions are the failures that render as ordinary bars — the pool filed as an ordinary framed call, a single kind drawn as a breakdown, the mix ordered smallest-first so the strongest weight lands on the rarest kind, a partial sum stated as the room's total, an overflow wrapped into a small honest-looking number. The §602 spend guard **followed the reading to its new figure** rather than being deleted when its old call site went.
 
 **Seen on a device, all of it** — which is the whole reason this entry exists, and the correction to six passes that each ended "unseen".
+
+## 607. The Mac's iCloud sync could switch itself off in silence, and two instructions named a gesture it does not have (user: "how can we improve the mac experience? it doesn't icloud sync well, the UX or UI maybe could be improved, it needs parity with ios. what else?", then "do all", 2026-09-04)
+
+**THE FIRST FINDING IS THAT FIVE OF SIX PROPOSED UI ITEMS WERE ALREADY BUILT, and that is the entry's most reusable part.** Asked to improve the Mac, a first read of the tree produced a list: no multi-window, an icon-only rail, no text selection, no ⌘F, no keyboard walk. Every one of those was wrong. Multi-window landed 2026-08-02 with `SceneState` and a New Window item; §273 gave the rail word chips with labels; ⌘F, ⌘R, ⌘N, ⌘0, ⌘1–9, the arrow walk and Escape have all been menu commands since §256; text selection is enabled at fourteen sites. **This is §418's lesson for the third recorded time: before proposing a change to a mature surface, read that surface's most recent ledger entry, because the code will not tell you which of its gaps were deliberate.** The Mac has had four dedicated passes (§256, §273, §360, §371) plus a pointer audit and a sheet audit, and its UI is not where its problems are.
+
+What survived the check was one subsystem, and the user had already named it.
+
+### 1 · Sync could turn ITSELF off, and then describe that as the person's preference
+
+`SharedStore.containerWithFallback` disables sync after two consecutive launches that never proved they survived CloudKit setup. The rule is right — a mirror that traps inside `PFCloudKitSetupAssistant` crash-loops the app, and something has to break out of it. The clearing signals were wrong for a Mac.
+
+There were two, and **both are events**. One is CoreData's own mirror event, which only ever fires while sync is already switched on and answering — the case that needs no guard. The other is `didEnterBackground`, and **a Catalyst window left open never posts it**; a person can run the app for days without one. So on a Mac the marker was cleared by essentially nothing, and any unrelated crash — a force-quit during a beachball, one of the SwiftData `ForEach` traps this file has a six-corollary chain about — counted as a CloudKit trap. Two of those and sync went off.
+
+The third signal is **time**, and it is honest because of what the marker actually guards: setup begins with the container and resolves in seconds, so a process still alive twenty seconds later did not trap in setup. Whatever happens to it afterwards is some other bug, and counting that as CloudKit's is exactly why the two-strike rule needed to exist as a workaround. It is platform-neutral and it makes the existing rule mean what it says.
+
+**The second half is that the verdict was invisible.** Its only notice was a four-second flash at first appearance, after which the Data tray read "Stays on this Mac" — **the same sentence it shows for a choice the person actually made**. The app stopped doing what they asked and then described it as their preference, with the toggle sitting there off and nothing to say why. On a Mac the flash is easiest of all to miss, landing in a window that may not be focused. `SharedStore.syncDisabledByGuard` is durable, stated where the toggle is, and retired the moment they turn sync back on so it can only ever describe a live situation.
+
+### 2 · The tray said "Synced" over a mirror that had never carried a row
+
+`CloudSyncStatus` stamped one `lastSuccessDate` from any succeeded event — **and `.setup` is a succeeded event**. So a launch that connected to CloudKit and exchanged nothing at all stamped a fresh success, and the tray read "Synced just now". An `.export` did the same one direction over: it says this device SENT, which is not the question anybody opens that tray to ask.
+
+The three types are kept apart now, and the ruling is **never report a direction that has not happened**. Only an `.import` earns "Received". A mirror that has only ever sent says so, and says nothing has arrived — that state is working perfectly for somebody with one device, and calling it "Synced" teaches them to expect an arrival that has not occurred and then to read its absence as a bug. Setup alone says "Connected — nothing exchanged yet". An error outranks every timestamp below it, because a mirror that received an hour ago and is failing now is failing, and leading with the hour reads as health.
+
+Kept as three keys rather than one because they fail independently and for different reasons: export works and import does not when the other device never pushed; import works and export does not when this device's schema is ahead of Production, which is the CloudKit deploy class this repo already has a rule for. One date cannot distinguish those.
+
+### 3 · "From your next launch" is a phrase a Mac user believes they have already satisfied
+
+The container binds once, so flipping the toggle is not live until a relaunch. That sentence is true on a phone. **On a Mac, closing the window is not quitting** — somebody who flips this, closes the window and reopens it has done nothing at all, and the setting that is merely waiting reads as broken. The Mac is told to quit and reopen, and named the key. Naming it is the whole difference, and it is why `macIdiom` is threaded down to the sentence.
+
+### 4 · Two instructions taught a gesture the Mac does not have
+
+`contextMenu` is a press-and-hold under a finger and a **right-click** under a pointer — one modifier, two gestures. Two shipped strings named the touch one unconditionally, and they are the two worst places in the app to get this wrong, because each is the ONLY time its feature is ever explained: the agent hint capsule, which appears **once ever** and teaches the surface the whole product is arranged around, and the pinboard's empty state, the one line standing between a person and a room that will never fill on its own.
+
+`DS.secondaryGesture` is the one word, beside `DS.device` and `DS.settingsAppName` for the same reason. **The check was MEASURED before it was written** — over the whole tree the pattern matches two strings, and on the day it was added both were defects, which is the opposite of the lint that cries wolf. It is check 4 of `mac-parity-audit.py`, scoped to literals that TEACH rather than to the words anywhere, so a comment explaining the rule and a `.swipeActions` call site are both invisible to it. The token's own definition is exempted **by declaration on the literal's own line, not by file**, so a second literal in `DesignTokens.swift` is still caught — which is why that property is deliberately written on one line.
+
+### 5 · A Mac left open all afternoon swept for alarms exactly once
+
+Alarms ride two doors: `WalletBackgroundRefresh`'s `BGAppRefreshTask`, and the activation pass. **Neither reaches a Mac that is simply left open.** The background task does not run on a desk the way it does on a phone in a pocket, and the activation pass fires on focus-in — so it fires when you come BACK, and a Mac app is characteristically never left. Somebody working in Casberi all afternoon got one sweep, at the moment they arrived, which is the moment they least needed telling; a deadline falling due at 2pm waited for tomorrow's cmd-tab. A Catalyst-only hourly clock matches `schedule`'s own `earliestBeginDate`, so both platforms ask for the same cadence and only the delivery differs. Re-running is safe by construction rather than by hope: `NotifySweep` spends each plan against its own ledger, which is the same property the activation door already relies on.
+
+### 6 · The agent had no key, on the platform where its gesture does not exist
+
+Everything else the dock does has had a shortcut since §256. §390 made the agent a HOLD on the bar; the Mac's only door has been a right-click, discoverable by accident and by nothing else. ⌘⇧A — not ⌘A, which is select-all, and not ⌘K, which is a link in every editor.
+
+### What was UNPROVEN before this, and what still is
+
+**No check anywhere could see any of this run.** `verify-mac.sh` launches every run with `-storeScratch YES`, which bypasses the group container and the mirror entirely; the simulator has no second device to receive from; every failure renders as an ordinary settings row a screenshot certifies as correct; and a Catalyst compile is silent by construction. That combination is precisely how the Catalyst group-container prefix bug ran for weeks with every Mac save landing in an in-memory store and every gate green.
+
+Three instruments close it. `-syncProbe YES` is the first instrument this subsystem has ever had, and it exists because **"sync isn't working" has seven causes that render as the same quiet tray** and only two are bugs. `scripts/cloud-sync-selftest.sh` compiles the pure reading WHOLE — 20 assertions, 6 mutations, 14 drift guards. And `verify-mac.sh` gains a **store-footing gate**: the group container must RESOLVE, hard-failed, which catches the ephemeral-store class without the hazard of opening the real container, because the group read is independent of which store was opened.
+
+**STATED CEILING, because a gate that implies more than it proves is worse than none:** that gate proves the container resolves. It does not prove the mirror engages, that a row ever crossed, or that the CloudKit schema is deployed — all three need a real iCloud account and a real container, which an unattended run cannot have deterministically. Those facts are REPORTED in the night's log, never gated.
+
+**UNSEEN on a device.** Every change here is reasoned from the source and held by the harness; no Mac has been watched receiving a row, no hint capsule has been read on a Mac, and the hourly clock has not been observed firing.
+
+### A note on the nightly, which is why any of this is checkable
+
+`nightly-mac.log` was red on **eleven of the last twelve nights**, so the Mac has had no runtime verdict since 08-28. Every one of those reds resolves green on today's tree, including `sweep-clock-selftest.sh`, which failed three separate nights and passes 3/3 now. That is not flakiness — it is the ledger's own recorded pattern, that `main` was genuinely broken at push and fixed during the following day, with nothing saying so for up to twelve hours. The reds were real; the process gap is that nobody reads a log that is always red.

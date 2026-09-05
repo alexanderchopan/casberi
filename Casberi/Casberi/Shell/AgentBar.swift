@@ -349,6 +349,16 @@ struct AgentHintCapsule: View {
     var roomTint: Color? = nil
     var action: () -> Void
 
+    /// Through `DS.secondaryGesture`, never a literal: the Mac's door here is
+    /// `BarSecondaryMenu`'s RIGHT-CLICK, not a press and hold — a pointer has
+    /// no hold — and this capsule shows ONCE EVER, so a wrong word spends the
+    /// app's single chance to teach its primary surface on an instruction that
+    /// cannot be followed. `mac-parity-audit.py` fails the build on a literal
+    /// here.
+    static var gestureLine: String {
+        String(localized: "\(DS.secondaryGesture) the button below.")
+    }
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: DS.Space.s3) {
@@ -363,7 +373,16 @@ struct AgentHintCapsule: View {
                     // name for the mark, because no user-facing copy in this
                     // app has ever called it the berry, and naming it here
                     // would teach a word that appears nowhere else.
-                    Text("Press and hold the button below.")
+                    //
+                    // THE MAC IS TOLD ITS OWN GESTURE (prd §607). The Mac's
+                    // door is `BarSecondaryMenu`'s right-click, not a press
+                    // and hold — a pointer has no hold, and this capsule shows
+                    // ONCE EVER, so getting it wrong spends the app's single
+                    // chance to teach its primary surface on an instruction
+                    // that cannot be followed. Nothing could have caught it:
+                    // the string compiles, the capsule renders, and a
+                    // screenshot of it looks perfect on either platform.
+                    Text(Self.gestureLine)
                         .dsText(.subhead13)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)

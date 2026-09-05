@@ -47,6 +47,9 @@ ROOT = Path(__file__).resolve().parent.parent
 
 ROUTER = ROOT / "Casberi/Casberi/Shell/RootShell.swift"
 COMMANDS = ROOT / "Casberi/Casberi/CasberiApp.swift"
+# Check 4's scope. The APP target only: the widget extension draws no
+# instructional copy and never runs under Catalyst at all.
+APP_SOURCES = ROOT / "Casberi/Casberi"
 SWEEPERS = [ROOT / "scripts/verify.sh", ROOT / "scripts/verify-mac.sh"]
 
 # Entitlement pairs: (iOS file, Catalyst file). Discovered rather than listed —
@@ -234,10 +237,73 @@ def check_digit_shortcuts(findings):
             "worked.")
 
 
+# ── 4. Copy that teaches a TOUCH gesture (prd §607) ────────────────────────
+# `contextMenu` is a press-and-hold under a finger and a RIGHT-CLICK under a
+# pointer — one modifier, two gestures. So any user-facing string that teaches
+# it has to say which, and the only safe way to say it is `DS.secondaryGesture`.
+#
+# MEASURED BEFORE IT WAS WRITTEN, because a lint that cries wolf gets turned
+# off within a week: over the whole tree this pattern matches TWO strings, and
+# on the day it was added both were defects. They are also the two worst places
+# in the app to have one, because each is the ONLY time its feature is ever
+# explained — the agent hint capsule, which appears once ever and teaches the
+# surface the whole product is arranged around, and the pinboard's empty state,
+# the one line standing between a person and a room that will never fill on its
+# own. On a Mac both named a gesture that does not exist.
+#
+# Nothing else here can see it: the string compiles, the view renders, and a
+# screenshot certifies whichever platform took it. A Catalyst compile is
+# silent by construction.
+#
+# Scoped to strings that TEACH — an imperative naming a gesture — rather than
+# to the words anywhere, so a comment explaining this rule (this repo's
+# recurring self-inflicted false positive) and a `.swipeActions` call site are
+# both invisible to it.
+TOUCH_VERBS = ("Press and hold", "Long-press", "Long press", "Tap and hold",
+               "Double-tap", "Force-touch")
+
+TEACHING_STRING = re.compile(r'"([^"\n\\]*)"')
+
+# The ONE line in the tree allowed to spell both words: the token's own
+# definition, which is what every other site is required to come through.
+# Anchored on the declaration name and on the same line as the literal, so it
+# exempts the definition rather than the file — a second string added anywhere
+# else in `DesignTokens.swift` is still a finding.
+TOKEN_DEFINITION = "secondaryGesture"
+
+
+def touch_findings(text):
+    """Literals that TEACH a touch gesture. Comments stripped first — this
+    repo's recurring self-inflicted false positive is a file documenting the
+    rule by naming the gesture it governs."""
+    found = []
+    for line in strip_comments(text).splitlines():
+        if TOKEN_DEFINITION in line:
+            continue
+        for match in TEACHING_STRING.finditer(line):
+            literal = match.group(1)
+            if any(verb in literal for verb in TOUCH_VERBS):
+                found.append(literal)
+    return found
+
+
+def check_touch_copy(findings):
+    for path in sorted(APP_SOURCES.rglob("*.swift")):
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        for literal in touch_findings(text):
+            findings.append(
+                "%s teaches a TOUCH gesture in a literal (%r) — under a "
+                "pointer that gesture does not exist, so the Mac is told "
+                "to do something it cannot. Say it with "
+                "`DS.secondaryGesture`, which reads \"Right-click\" there."
+                % (path.name, literal[:60]))
+
+
 CHECKS = [
     ("swept screens", check_swept),
     ("entitlement decisions", check_entitlements),
     ("digit shortcuts", check_digit_shortcuts),
+    ("touch-gesture copy", check_touch_copy),
 ]
 
 
@@ -289,6 +355,34 @@ def selftest():
         print("  %-4s %s" % ("ok" if good else "FAIL", desc))
         if not good:
             print("       expected %s, got %s" % (want, got))
+
+    # 0. Touch-gesture copy (prd §607). Calls the SHIPPED function, never a
+    # re-implementation — a self-test that mirrors the logic proves only that
+    # the mirror agrees with itself.
+    case("flags a literal that teaches a press-and-hold",
+         touch_findings('Text("Press and hold the button below.")'),
+         ["Press and hold the button below."])
+    case("passes the same sentence written through DS.secondaryGesture",
+         touch_findings('Text("\\(DS.secondaryGesture) the button below.")'),
+         [])
+    # The recurring self-inflicted false positive in this repo: a file that
+    # DOCUMENTS the rule by naming the gesture it governs.
+    case("a COMMENT explaining the rule is not a finding",
+         touch_findings('// Press and hold is the touch half of contextMenu.\nlet x = 1'),
+         [])
+    # A gesture MODIFIER is not copy — nobody reads it.
+    case("a .swipeActions call site is not copy",
+         touch_findings('.swipeActions(edge: .trailing) { }'),
+         [])
+    # The token's own definition is the one place both words may be spelled.
+    case("the DS.secondaryGesture definition itself is not a finding",
+         touch_findings('static var secondaryGesture: String { isMac ? "Right-click" : "Press and hold" }'),
+         [])
+    # …exempted by DECLARATION, not by file: a second literal elsewhere in the
+    # same file is still caught.
+    case("a second literal beside the definition is still caught",
+         touch_findings('static var secondaryGesture: String { isMac ? "Right-click" : "Press and hold" }\nlet hint = "Press and hold to pin."'),
+         ["Press and hold to pin."])
 
     # 1. Route parsing: multi-case lines split, comments ignored.
     hosts = route_hosts(FIXTURE_ROUTER)
