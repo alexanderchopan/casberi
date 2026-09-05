@@ -69,36 +69,36 @@ deliberately does not check are in `docs/verify.md`.
 - **The pure-logic harnesses run at once, and an unchanged one is not re-run (PERF, 2026-08-19). Measured on full green passes: 32.8min → 15.2min → 3.6min** → docs/verify.md
 - **The pass ran every harness TWICE for eleven days (PERF, 2026-09-01). Measured on the 08-31 runs: 38–57min for a green pass, 154 and 161min for two overlapping sessions, against the 3.6min recorded above** → docs/verify.md
 
-- **The pass was mostly IDLE CORES, and the instrument came first (PERF, prd §612, 2026-09-05). Measured before touching anything: a cached harness phase ran ~6min of which the last ~4 were ONE harness on ONE core while seven sat idle; the room-head step spent ~90s on 28 COLD APP LAUNCHES; the Catalyst target was compiled TWICE per pass; and NO STEP IN THE PASS WAS TIMED** → docs/verify.md · prd §612
+- **The pass was mostly IDLE CORES, and the instrument came first (PERF). Measured before touching anything: a cached harness phase ran ~6min of which the last ~4 were ONE harness on ONE core while seven sat idle; the room-head step spent ~90s on 28 COLD APP LAUNCHES; the Catalyst target was compiled TWICE per pass; and NO STEP IN THE PASS WAS TIMED** → docs/verify.md · prd §612
 
 - **The address book's delight pass** → docs/hooks/wallet.md · prd §441
-- **Address-book shape self-test (scripts/address-book-selftest.sh, 2026-08-22, prd §440)** → docs/verify.md · prd §440
+- **Address-book shape self-test (scripts/address-book-selftest.sh, 2026-08-22)** → docs/verify.md · prd §440
 - **SwiftData liveness audit (scripts/swiftdata-liveness-audit.py, 2026-07-25)** → docs/verify.md
 - **Info.plist strings audit (scripts/infoplist-strings-audit.py, 2026-08-04, ITMS-90738)** → docs/verify.md
-- **Keychain policy audit (scripts/keychain-audit.py, 2026-08-02, prd §277)** → docs/verify.md · prd §277
-- **Receipts coverage audit (scripts/receipts-coverage-audit.py, 2026-08-02, prd §277)** → docs/verify.md · prd §277
+- **Keychain policy audit (scripts/keychain-audit.py, 2026-08-02)** → docs/verify.md · prd §277
+- **Receipts coverage audit (scripts/receipts-coverage-audit.py, 2026-08-02)** → docs/verify.md · prd §277
 - **CloudKit schema audit (scripts/cloudkit-schema-audit.py, 2026-08-02)** → docs/verify.md
-- **Redaction coverage audit (scripts/redaction-coverage-audit.py, 2026-08-19, prd §277)** → docs/verify.md · prd §277
+- **Redaction coverage audit (scripts/redaction-coverage-audit.py, 2026-08-19)** → docs/verify.md · prd §277
 - **Ref-shape audit (scripts/ref-shape-audit.py, 2026-08-19)** → docs/verify.md
 - **Delete-guard audit (scripts/delete-guard-audit.py, 2026-08-19)** → docs/verify.md
-- **Secret-scan self-test (scripts/secret-scan-selftest.py, 2026-08-02, prd §277)** → docs/verify.md · prd §277
-- **On-device self-test (scripts/ondevice-selftest.sh, 2026-08-02, prd §282)** → docs/verify.md · prd §282
+- **Secret-scan self-test (scripts/secret-scan-selftest.py, 2026-08-02)** → docs/verify.md · prd §277
+- **On-device self-test (scripts/ondevice-selftest.sh, 2026-08-02)** → docs/verify.md · prd §282
 - **CI, at last (.github/workflows/static-checks.yml, 2026-08-19)** → docs/verify.md
 - **verify.sh's audit list is provably complete now** → docs/verify.md
 - **Live-integrations heartbeat (scripts/live-integrations.sh, 2026-07-17)** → docs/verify.md
 
 - **live-integrations.sh covers YouTube since 2026-08-06** → docs/verify.md · prd §312
-- **Hero-tint audit (scripts/hero-tint-audit.py, 2026-09-02, prd §563)** → docs/verify.md · prd §563
-- **Design-motion audit (scripts/design-motion-audit.py, 2026-08-04, prd §299)** → docs/verify.md · prd §299
-- **App Store Connect self-test (scripts/appstoreconnect-selftest.sh, 2026-08-06, prd §323)** → docs/verify.md · prd §323
+- **Hero-tint audit (scripts/hero-tint-audit.py, 2026-09-02)** → docs/verify.md · prd §563
+- **Design-motion audit (scripts/design-motion-audit.py, 2026-08-04)** → docs/verify.md · prd §299
+- **App Store Connect self-test (scripts/appstoreconnect-selftest.sh, 2026-08-06)** → docs/verify.md · prd §323
 - **PRD index audit (scripts/prd-index-audit.py, 2026-08-11)** → docs/verify.md
-- **Setup-copy audit (scripts/setup-copy-audit.py, 2026-08-06, prd §315)** → docs/verify.md · prd §315
-- **Figure self-test (scripts/agent-panel-selftest.sh, 2026-08-07, prd §334; the PANEL it was written for was deleted 2026-08-15, prd §386p — the harness and the figure grammar both survive, for the chip peek and the cluster map)** → docs/verify.md · prd §334
-- **Room-head self-test (scripts/room-heads-selftest.sh, 2026-08-04, prd §298/§299)** → docs/verify.md · prd §298
-- **The social rooms became ONE room (Model/SocialRoom.swift + SocialRoomSource.swift, scripts/social-room-selftest.sh, 2026-08-26, prd §489)** → docs/hooks/social.md · prd §489
-- **Retriever self-test (scripts/retriever-selftest.sh, 2026-08-06, prd §318)** → docs/verify.md · prd §318
-- **Ranking sweep (-rankSweep "q1|q2|…", 2026-08-06, prd §318 amendment)** (`-rankSweep` `-semanticFloor` `-expandDistance`) → docs/verify.md · prd §318
-- **Perf pass (scripts/perf.sh, prd §257)** (`-Onone` `-launchTimer`) → docs/verify.md · prd §257
+- **Setup-copy audit (scripts/setup-copy-audit.py, 2026-08-06)** → docs/verify.md · prd §315
+- **Figure self-test (scripts/agent-panel-selftest.sh, 2026-08-07; the PANEL it was written for was deleted 2026-08-15, prd §386p — the harness and the figure grammar both survive, for the chip peek and the cluster map)** → docs/verify.md · prd §334
+- **Room-head self-test (scripts/room-heads-selftest.sh, 2026-08-04)** → docs/verify.md · prd §298
+- **The social rooms became ONE room (Model/SocialRoom.swift + SocialRoomSource.swift, scripts/social-room-selftest.sh, 2026-08-26)** → docs/hooks/social.md · prd §489
+- **Retriever self-test (scripts/retriever-selftest.sh, 2026-08-06)** → docs/verify.md · prd §318
+- **Ranking sweep (-rankSweep "q1|q2|…", 2026-08-06 amendment)** (`-rankSweep` `-semanticFloor` `-expandDistance`) → docs/verify.md · prd §318
+- **Perf pass (scripts/perf.sh)** (`-Onone`) → docs/verify.md · prd §257
 - **Mac verify (scripts/verify-mac.sh, 2026-08-01)** → docs/verify.md
 - **The Mac verify's cleanup is BOUNDED, and that bound is a fix not a precaution** → docs/verify.md
 - **iCloud sync on the Mac, and the four things no check could see** → docs/verify.md · prd §607
@@ -190,7 +190,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **Screenshot OCR reads STRUCTURE on iOS 26** → docs/hooks/system.md · prd §282
 - `-photoHealProbe` `-reingestPhotos` — run the Photos HEAL directly (the pass that OCRs, thumbnails, RETITLES and prunes) and NSLog photoHeal → docs/hooks/system.md
 - `-photoVerbProbe` — what a screenshot's thing sheet OFFERS, and whether each offer can LAND (prd §275, 2026-08-02) → docs/hooks/system.md · prd §275
-- **On-device intelligence, the librarian half** (`-embeddingProbe` `-todayProbe`) → docs/hooks/system.md · prd §282
+- **On-device intelligence, the librarian half** (`-embeddingProbe`) → docs/hooks/system.md · prd §282
 - `-relatedProbe` — what the thing sheet shows UNDER a thing: relatedKept| (the earlier copy) then relatedNear| per neighbour → docs/hooks/system.md
 - `-topicMapProbe` — the text treemap (prd §230, 2026-07-30; §247 widened it past Photos; §283 added Files), headless → docs/hooks/rooms.md · prd §230
 - `-roomInsightProbe` — what a source's room LEADS with (prd §247, 2026-07-31) → docs/hooks/rooms.md · prd §247
@@ -203,10 +203,10 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-tiktokImport` `-tiktokFaces` — import a TikTok export (the user_data_tiktok.json file itself, or a folder holding it), -tiktokFaces <limit|YES> → docs/hooks/imports.md · prd §279
 - `-xArchiveImport` — import an UNZIPPED X archive folder (prd §280, 2026-08-02, Model/XArchiveImport.swift; screen → docs/hooks/imports.md · prd §280
 - **X joined OEmbed.endpoints the same day, and it is the inverse of the Instagram entry removed alongside it** → docs/hooks/imports.md · prd §280
-- **Feeds (RSS + the four feed-follow bridges), prd §312, 2026-08-06** (`-feedFollow` `-feedHealthProbe`) → docs/hooks/bridges.md · prd §312
+- **Feeds (RSS + the four feed-follow bridges)** (`-feedFollow` `-feedHealthProbe`) → docs/hooks/bridges.md · prd §312
 - **The reading rooms, past §312** → docs/hooks/rooms.md · prd §455
-- **The vault (Obsidian), prd §320, 2026-08-06** (`-obsidianVault` `-obsidianProbe` `-todayProbe`) → docs/hooks/imports.md · prd §320
-- **The folder a file is saved in, prd §408, 2026-08-19 (user feedback: "would be great to be able to press here and it takes you to folder where the file is saved")** (`-filesRevealProbe` `-todayProbe`) → docs/hooks/imports.md · prd §408
+- **The vault (Obsidian)** (`-obsidianVault` `-obsidianProbe`) → docs/hooks/imports.md · prd §320
+- **The folder a file is saved in (user feedback: "would be great to be able to press here and it takes you to folder where the file is saved")** (`-filesRevealProbe`) → docs/hooks/imports.md · prd §408
 - **A connected folder's images could not be read at all, and iCloud was never why** (`-filesHealProbe`) → docs/hooks/imports.md · prd §604
 - **Telegram, through the two doors §57 never weighed** → docs/hooks/bridges.md · prd §456
 - `-rssFeed` `-chatgptImport` `-claudeImport` — follow a feed and sync headlessly; -chatgptImport <path> → docs/hooks/imports.md
