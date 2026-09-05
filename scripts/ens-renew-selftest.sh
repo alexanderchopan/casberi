@@ -220,7 +220,13 @@ if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
 print("All assertions passed.")
 SWIFT
 
-swiftc -O -o "$TMP/run" "$RENEW" "$KECCAK" "$TMP/main.swift" 2>&1 | head -30
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 1.6x faster).
+# Re-probe before trusting it again after adding mutations.
+swiftc -Onone -o "$TMP/run" "$RENEW" "$KECCAK" "$TMP/main.swift" 2>&1 | head -30
 "$TMP/run"
 
 # --- mutations ---------------------------------------------------------------
@@ -239,7 +245,7 @@ if a not in s:
     print(f"MUTATION TARGET NOT FOUND: {a[:70]}"); sys.exit(2)
 open(dst, "w").write(s.replace(a, b, 1))
 PY
-  if swiftc -O -o "$TMP/m/run" "$TMP/m/ENSRenew.swift" "$KECCAK" "$TMP/main.swift" 2>/dev/null; then
+  if swiftc -Onone -o "$TMP/m/run" "$TMP/m/ENSRenew.swift" "$KECCAK" "$TMP/main.swift" 2>/dev/null; then
     if "$TMP/m/run" >/dev/null 2>&1; then
       echo "  ✗ NOT CAUGHT: $label"; exit 1
     fi

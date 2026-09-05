@@ -504,7 +504,13 @@ if failures > 0 { print("chatimport-selftest: ✗ \(failures) assertion(s) faile
 print("chatimport-selftest: OK — every assertion passed against the shipped source.")
 SWIFT
 
-if ! swiftc -O -o "$TMP/run" "$TMP/extracted.swift" "$TMP/main.swift" 2>"$TMP/build.log"; then
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.8x faster).
+# Re-probe before trusting it again after adding mutations.
+if ! swiftc -Onone -o "$TMP/run" "$TMP/extracted.swift" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ the harness failed to compile against the shipped source"
   grep -E 'error:' "$TMP/build.log" | head -20
   exit 1
@@ -540,7 +546,7 @@ PY
   python3 "$TMP/extract.py" "$WORK/ChatGPTImport.swift" "$WORK/ClaudeImport.swift" \
     "$WORK/GeminiImport.swift" "$TMP/mutated.swift" >/dev/null 2>&1 \
     || { echo "  ✓ $name (rejected at extraction)"; return }
-  if ! swiftc -O -o "$TMP/mut" "$TMP/mutated.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$TMP/mutated.swift" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

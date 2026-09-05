@@ -648,7 +648,13 @@ print("all \(checks) assertions passed")
 SWIFT
 
 echo "telegram-export-selftest: compiling the parser WHOLE and unmodified…"
-swiftc -O -o "$TMP/run" "$EXPORT" "$TMP/main.swift" \
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 7.8x faster).
+# Re-probe before trusting it again after adding mutations.
+swiftc -Onone -o "$TMP/run" "$EXPORT" "$TMP/main.swift" \
   || { echo "✗ TelegramExport does not compile Foundation-only — something reached Thing/SwiftUI/IngestSupport"; exit 1; }
 "$TMP/run" || exit 1
 
@@ -684,7 +690,7 @@ PY
   if (( applied != 0 )) || ! grep -qF -- "$to" "$TMP/TelegramExport.swift"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved, or the pattern is no longer unique)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$TMP/TelegramExport.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$TMP/TelegramExport.swift" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

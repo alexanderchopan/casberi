@@ -699,7 +699,13 @@ check("a voice note still is", recorded.provenance == "Recorded here, on this de
 if failures > 0 { print("note-sheet-selftest: ✗ \(failures) assertion(s) failed"); exit(1) }
 SWIFT
 
-if ! swiftc -O -o "$TMP/ns-selftest" "$SHEET" "$TMP/main.swift" 2>"$TMP/build.log"; then
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 4.7x faster).
+# Re-probe before trusting it again after adding mutations.
+if ! swiftc -Onone -o "$TMP/ns-selftest" "$SHEET" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ harness failed to compile against the shipped source"
   grep -E 'error:' "$TMP/build.log" | head -20
   exit 1
@@ -730,7 +736,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$a"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$a" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$a" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

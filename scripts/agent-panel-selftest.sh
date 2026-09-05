@@ -250,7 +250,13 @@ print("agent-panel self-test passed")
 SWIFT
 
 print "AgentPanel self-test — the shipped file, compiled whole"
-xcrun swiftc -O -o "$WORK/run" "$SRC" "$MONEY" "$WORK/main.swift" 2>&1 | grep -v "^$" || true
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.3x faster).
+# Re-probe before trusting it again after adding mutations.
+xcrun swiftc -Onone -o "$WORK/run" "$SRC" "$MONEY" "$WORK/main.swift" 2>&1 | grep -v "^$" || true
 [[ -x "$WORK/run" ]] || { print -u2 "✗ compile failed"; exit 1; }
 "$WORK/run" || exit 1
 
@@ -268,7 +274,7 @@ if a not in s:
 open(dst, "w").write(s.replace(a, b, 1))
 PY
   if [[ $? -eq 3 ]]; then print "  ✗ $name — anchor missing (harness is stale)"; return 1; fi
-  if xcrun swiftc -O -o "$dir/run" "$dir/AgentPanel.swift" "$MONEY" "$WORK/main.swift" >/dev/null 2>&1 \
+  if xcrun swiftc -Onone -o "$dir/run" "$dir/AgentPanel.swift" "$MONEY" "$WORK/main.swift" >/dev/null 2>&1 \
        && "$dir/run" >/dev/null 2>&1; then
     print "  ✗ $name — SURVIVED"; return 1
   fi

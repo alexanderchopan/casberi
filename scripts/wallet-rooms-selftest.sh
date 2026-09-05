@@ -43,7 +43,42 @@
 # Pure, local, deterministic — no network, no simulator. Exit non-zero on
 # failure.
 set -euo pipefail
+# Absolute, captured BEFORE the cd: the mutation fan-out re-invokes this script
+# and `$0` is relative to the caller's cwd.
+SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 cd "$(dirname "$0")/.."
+
+# ── the mutation child (PERF, 2026-09-05) ────────────────────────────────────
+# One mutation, in its own scratch directory so a concurrent sibling cannot see
+# it. Sits at the VERY TOP, above every line of setup, because the child must
+# not re-run the parent's assertion build: 68 mutations x a compile of EIGHT
+# files is exactly the cost this block removes, and paying it again per child
+# would make the fan-out slower than the loop it replaces.
+#
+# It prints ONE line the parent classifies and never exits the whole run — a
+# second broken mutation must not cost another full pass to discover
+# (`verify.sh`'s 2026-08-19 lesson: report ALL failures, not the first).
+if [[ "${1:-}" == "--mutate" ]]; then
+  SPOOL="$2"; MID="$3"
+  MLABEL="$(cat "$SPOOL/mut/$MID.label")"
+  MFILE="$(cat "$SPOOL/mut/$MID.file")"
+  MW="$(mktemp -d)"
+  trap 'rm -rf "$MW"' EXIT
+  cp "$SPOOL"/base/*.swift "$MW/"
+  if ! FRM="$(cat "$SPOOL/mut/$MID.from")" TO="$(cat "$SPOOL/mut/$MID.to")" \
+       python3 "$SPOOL/mutapply.py" "$MW/$MFILE" 2>/dev/null; then
+    # A mutation that matches NOTHING is stale and has silently been testing
+    # the shipped code — the failure this whole file exists to prevent.
+    print "STALE|$MID|$MLABEL"; exit 0
+  fi
+  if ! zsh "$SPOOL/build.zsh" "$MW"; then
+    print "COMPILE|$MID|$MLABEL"; exit 0
+  fi
+  if "$MW/run" >/dev/null 2>&1; then
+    print "SURVIVED|$MID|$MLABEL"; exit 0
+  fi
+  print "CAUGHT|$MID|$MLABEL"; exit 0
+fi
 
 PEER="Casberi/Casberi/Model/PeerRoom.swift"
 LEDE="Casberi/Casberi/Model/RoomLede.swift"   # prd §585 — the shared lede type these rooms now return
@@ -1650,35 +1685,21 @@ echo "wallet-rooms-selftest: compiling the five heads and the scope enum WHOLE a
 # behaviour (a trapping one prints NOTHING under `-O`), so this file was
 # proven equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
 # Re-probe before trusting it again after adding mutations.
-swiftc -Onone -o "$TMP/run" "$PEER" "$POOLS" "$GNOSIS" "$RAILGUN" "$SAFE" "$SECTION" "$LEDE" "$TMP/main.swift" \
-  || { echo "✗ the shipped room heads do not compile Foundation-only — something reached Thing/SwiftUI"; exit 1; }
-"$TMP/run" || exit 1
+# ONE compile line, written once and run by both the assertion build and every
+# mutation child. Two copies of an eight-file compile drift, and the drift is
+# invisible: the mutants would be measured against a different file set than the
+# assertions (vibenet's §468 bug, which scored thirty-four type errors as
+# thirty-four catches).
+cat > "$TMP/build.zsh" <<'BUILDSH'
+MW="$1"
+swiftc -Onone -o "$MW/run" \
+  "$MW/PeerRoom.swift" "$MW/PrivacyPoolsRoom.swift" "$MW/GnosisPayRoom.swift" \
+  "$MW/RailgunRoom.swift" "$MW/SafeRoom.swift" "$MW/PrivacyPoolsSection.swift" \
+  "$MW/RoomLede.swift" "$MW/main.swift" 2>/dev/null
+BUILDSH
 
-# --- mutation pass ----------------------------------------------------------
-# Every mutation below is a silent wrong answer that renders perfectly. A
-# mutation that survives means nothing here was testing that line.
-echo ""
-echo "mutations (each must be caught):"
-
-mutate() {
-  local name="$1" which="$2" frm="$3" to="$4"
-  cp "$PEER" "$TMP/PeerRoom.swift"
-  cp "$POOLS" "$TMP/PrivacyPoolsRoom.swift"
-  cp "$GNOSIS" "$TMP/GnosisPayRoom.swift"
-  cp "$RAILGUN" "$TMP/RailgunRoom.swift"
-  cp "$SAFE" "$TMP/SafeRoom.swift"
-  cp "$SECTION" "$TMP/PrivacyPoolsSection.swift"
-  local a="$TMP/PeerRoom.swift" b="$TMP/PrivacyPoolsRoom.swift" c="$TMP/GnosisPayRoom.swift" d="$TMP/RailgunRoom.swift" e="$TMP/SafeRoom.swift" g="$TMP/PrivacyPoolsSection.swift"
-  local target
-  case "$which" in
-    peer)    target="$a" ;;
-    pools)   target="$b" ;;
-    gnosis)  target="$c" ;;
-    railgun) target="$d" ;;
-    safe)    target="$e" ;;
-    section) target="$g" ;;
-  esac
-  FRM="$frm" TO="$to" python3 - "$target" <<'PY'
+# The applier, written to a file so the child needs no heredoc of its own.
+cat > "$TMP/mutapply.py" <<'MUTAPPLY'
 import os, sys
 path = sys.argv[1]
 src = open(path).read()
@@ -1686,23 +1707,71 @@ frm, to = os.environ["FRM"], os.environ["TO"]
 if frm not in src:
     sys.exit(1)
 open(path, "w").write(src.replace(frm, to, 1))
-PY
-  if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$target"; then
-    echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
-  fi
-  # `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer,
-  # and it bought nothing an assertion can see — measured 9.2x faster here
-  # (2026-09-02). NOT a blanket rule: `-O` can change a harness's OBSERVABLE
-  # behaviour (a trapping one prints NOTHING under `-O`), so this file was
-  # proven equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
-  # Re-probe before trusting it again after adding mutations.
-  if ! swiftc -Onone -o "$TMP/mut" "$a" "$b" "$c" "$d" "$e" "$g" "$LEDE" "$TMP/main.swift" 2>/dev/null; then
-    echo "  ✓ $name (rejected at compile)"; return
-  fi
-  if "$TMP/mut" > /dev/null 2>&1; then
-    echo "  ✗ $name — the harness still passed, so nothing was testing this"; exit 1
-  fi
-  echo "  ✓ $name"
+MUTAPPLY
+
+# The pristine tree every mutation is cut from. Staged ONCE; a child copies it
+# rather than re-reading the repo, so an edit landing in the working tree
+# mid-run cannot make two mutations disagree about what "the shipped source" is.
+mkdir -p "$TMP/base"
+cp "$PEER"    "$TMP/base/PeerRoom.swift"
+cp "$POOLS"   "$TMP/base/PrivacyPoolsRoom.swift"
+cp "$GNOSIS"  "$TMP/base/GnosisPayRoom.swift"
+cp "$RAILGUN" "$TMP/base/RailgunRoom.swift"
+cp "$SAFE"    "$TMP/base/SafeRoom.swift"
+cp "$SECTION" "$TMP/base/PrivacyPoolsSection.swift"
+cp "$LEDE"    "$TMP/base/RoomLede.swift"
+cp "$TMP/main.swift" "$TMP/base/main.swift"
+
+zsh "$TMP/build.zsh" "$TMP/base" \
+  || { echo "✗ the shipped room heads do not compile Foundation-only — something reached Thing/SwiftUI"; exit 1; }
+"$TMP/base/run" || exit 1
+
+# --- mutation pass ----------------------------------------------------------
+# Every mutation below is a silent wrong answer that renders perfectly. A
+# mutation that survives means nothing here was testing that line.
+echo ""
+echo "mutations (each must be caught):"
+
+# RECORD a mutation; the fan-out below runs them.
+#
+# **They run CONCURRENTLY (PERF, 2026-09-05).** Every mutation is PURE — it
+# edits its own scratch copy and reads nothing the others write — so running
+# them one at a time on one core of eight was the whole of this harness's cost:
+# 68 mutations x an eight-file compile measured 320s in the 2026-09-05 nightly.
+#
+# `xargs -P`, never a `jobs -r` slot loop: job control is OFF in a
+# non-interactive zsh, so `jobs -r` reports NOTHING and the loop degrades
+# silently to "launch all 68 at once", which on 8 cores thrashes to slower than
+# serial while every check still passes (`verify.sh`'s own paid-for trap,
+# 2026-08-19).
+#
+# The `which` keyword and the call sites are UNCHANGED: 68 lines that each name
+# their subject are the readable part of this file, and a port that rewrote them
+# would be a port nobody could review against the old one.
+MUTN=0
+mutate() {
+  local name="$1" which="$2" frm="$3" to="$4"
+  local file
+  case "$which" in
+    peer)    file=PeerRoom.swift ;;
+    pools)   file=PrivacyPoolsRoom.swift ;;
+    gnosis)  file=GnosisPayRoom.swift ;;
+    railgun) file=RailgunRoom.swift ;;
+    safe)    file=SafeRoom.swift ;;
+    section) file=PrivacyPoolsSection.swift ;;
+    *)       echo "✗ mutation '$name' names no known file: $which"; exit 1 ;;
+  esac
+  MUTN=$((MUTN + 1))
+  local id
+  id="$(printf '%03d' "$MUTN")"
+  mkdir -p "$TMP/mut"
+  # `printf '%s'`, never `echo`: a trailing newline appended to `frm` makes the
+  # pattern match nothing, which this harness reports as a STALE mutation — a
+  # confusing failure for a mutation that is perfectly correct.
+  printf '%s' "$name" > "$TMP/mut/$id.label"
+  printf '%s' "$file" > "$TMP/mut/$id.file"
+  printf '%s' "$frm"  > "$TMP/mut/$id.from"
+  printf '%s' "$to"   > "$TMP/mut/$id.to"
 }
 
 # THE Peer bug: every ref begins `peer:`, so testing the bare prefix first folds
@@ -1903,6 +1972,11 @@ mutate "the strip draws over a single scope" section \
 mutate "a conditional scope leads the strip" section \
   'static let order: [PrivacyPoolsSection] = [.activity, .shielded, .review]' \
   'static let order: [PrivacyPoolsSection] = [.review, .shielded, .activity]'
+mutate "every scope gated again, so a chip vanishes on the room that most needs it" section \
+  'static func present() -> [PrivacyPoolsSection] { order }' \
+  'static func present() -> [PrivacyPoolsSection] { order.filter { !$0.isConditional } }'
+mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" section \
+  'Where each deposit stands with the screener: pending, cleared, asked for proof, or declined. No deposit here has a standing on record.' ' '
 mutate "the dot fires on ordinary progress" section \
   'guard present.contains(.review), needsProof || declined else { return [] }' \
   'guard present.contains(.review) else { return [] }'
@@ -1968,11 +2042,6 @@ mutate "a token's shielded amount is shown even when one shield's amount is unkn
 # Reordering the rank so recency beats volume — the same class of bug
 # `PeerRoom.ordered` and `GnosisPayRoom.ordered` are both mutation-tested
 # against: a token with nine moves losing to one with a single, fresher move.
-mutate "every scope gated again, so a chip vanishes on the room that most needs it" section \
-  'static func present() -> [PrivacyPoolsSection] { order }' \
-  'static func present() -> [PrivacyPoolsSection] { order.filter { !$0.isConditional } }'
-mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" section \
-  'Where each deposit stands with the screener: pending, cleared, asked for proof, or declined. No deposit here has a standing on record.' ' '
 mutate "tokens are ranked by recency before move count" railgun \
   'if a.moves != b.moves { return a.moves > b.moves }
             if a.newest != b.newest { return a.newest > b.newest }' \
@@ -2110,5 +2179,60 @@ mutate "a signature asked for this morning is already 'stuck'" safe \
 mutate "a fully-signed transaction is reported as a stuck signature" safe \
   'let dates = room.entries.filter(\.awaitsYou).compactMap(\.submittedAt)' \
   'let dates = room.entries.filter(\.yourTurn).compactMap(\.submittedAt)'
+# ── the last mutation must precede the fan-out ───────────────────────────────
+# A `mutate` call BELOW the fan-out is silently never run and the pass still
+# goes green. It is a file-ORDER bug, so no care inside the block can catch it —
+# only the file can. This reads itself.
+MUT_LAST="$(grep -n '^mutate ' "$SELF" | tail -1 | cut -d: -f1)"
+FANOUT_AT="$(grep -n '^# --- run every recorded mutation, concurrently' "$SELF" | head -1 | cut -d: -f1)"
+if [[ -n "$MUT_LAST" && -n "$FANOUT_AT" ]] && (( MUT_LAST > FANOUT_AT )); then
+  echo "✗ a mutation is declared at line $MUT_LAST, BELOW the fan-out at line $FANOUT_AT — it would never run and the pass would still go green. Move it above."
+  exit 1
+fi
+
+# HOW MANY AT ONCE, and why it is not simply `ncpu`. This harness may be run
+# TWO ways: on its own, where it should take the whole machine, and inside
+# `verify.sh` / `verify-mac.sh`, which already run the harnesses themselves
+# under `xargs -P ncpu`. Nested at full width that is ncpu x ncpu — 64 `swiftc`
+# processes on 8 cores here — and the cost is not merely scheduling: each is
+# hundreds of MB against 16 GB, so the failure mode is memory pressure and swap,
+# which looks like the machine hanging rather than like a test being slow. The
+# outer runners export `HARNESS_INNER_JOBS`; standalone there is no outer swarm
+# and the default is the whole machine.
+MUT_JOBS="${HARNESS_INNER_JOBS:-$(sysctl -n hw.ncpu 2>/dev/null || print 4)}"
+
+# --- run every recorded mutation, concurrently -------------------------------
+# One core per mutation up to the machine's count. Output is KEPT and sorted by
+# id so the report reads in declaration order regardless of which finished
+# first — `xargs` interleaves, and a mutation list that reshuffles between runs
+# is one nobody can diff.
+: > "$TMP/mut-results"
+ls "$TMP"/mut/*.label | sed 's#.*/##; s#\.label$##' \
+  | xargs -P "$MUT_JOBS" -I{} zsh "$SELF" --mutate "$TMP" {} \
+  >> "$TMP/mut-results" 2>&1
+
+MUT_FAILS=0
+MUT_OK=0
+while IFS='|' read -r verdict mid label; do
+  case "$verdict" in
+    CAUGHT)   printf '  ✓ %s\n' "$label"; MUT_OK=$((MUT_OK + 1)) ;;
+    COMPILE)  printf '  ✓ %s (rejected at compile)\n' "$label"; MUT_OK=$((MUT_OK + 1)) ;;
+    SURVIVED) printf '  ✗ %s — the harness still passed, so nothing was testing this\n' "$label"
+              MUT_FAILS=$((MUT_FAILS + 1)) ;;
+    STALE)    printf '  ✗ %s — the mutation did not apply (the shipped source moved)\n' "$label"
+              MUT_FAILS=$((MUT_FAILS + 1)) ;;
+    *)        [[ -n "$verdict" ]] && printf '  %s\n' "$verdict" ;;
+  esac
+done < <(sort "$TMP/mut-results")
+
+# Every mutation must have reported. A child that died without a line is a
+# mutation nobody ran, and a silently skipped mutation is exactly the false
+# green this whole file exists to prevent.
+if (( MUT_OK + MUT_FAILS != MUTN )); then
+  echo "✗ $((MUTN - MUT_OK - MUT_FAILS)) of $MUTN mutation(s) never reported — they did not run"
+  exit 1
+fi
+(( MUT_FAILS == 0 )) || { echo "✗ $MUT_FAILS mutation(s) failed"; exit 1; }
+
 echo ""
 echo "wallet-rooms-selftest: OK — assertions pass and every mutation is caught."

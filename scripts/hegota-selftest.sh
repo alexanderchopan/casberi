@@ -20,7 +20,45 @@
 #
 # None of that fails a build, a screen sweep or a probe.
 set -euo pipefail
+# Absolute, captured BEFORE the cd: the mutation fan-out re-invokes this script
+# and `$0` is relative to the caller's cwd.
+SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 cd "$(dirname "$0")/.."
+
+# ── the mutation child (PERF, 2026-09-05) ────────────────────────────────────
+# One mutation, in its own scratch directory so a concurrent sibling cannot see
+# it. Sits at the VERY TOP, above every line of setup, because the child must
+# not re-run the parent's assertion build — 60 mutations x a full compile of the
+# shipped sources is what this block exists to stop, and paying it again per
+# child would make the fan-out slower than the serial loop it replaces.
+#
+# It prints ONE line the parent classifies and never exits the whole run: a
+# second broken mutation must not cost another full pass to discover
+# (`verify.sh`'s 2026-08-19 lesson — report ALL failures, not the first).
+#
+# The compile line is NOT duplicated here. The parent writes `build.zsh` into
+# the spool and both halves run it, so the flag this file argues for at length
+# (`-Onone`) can never hold for the assertion build and silently not for the
+# mutants — which would leave every mutation measured under a compiler the
+# shipped check does not use.
+if [[ "${1:-}" == "--mutate" ]]; then
+  SPOOL="$2"; MID="$3"
+  MLABEL="$(cat "$SPOOL/mut/$MID.label")"
+  MFILE="$(cat "$SPOOL/mut/$MID.file")"
+  MW="$(mktemp -d)"
+  trap 'rm -rf "$MW"' EXIT
+  cp "$SPOOL"/base/*.swift "$MW/"
+  perl -0pi -e "$(cat "$SPOOL/mut/$MID.expr")" "$MW/$MFILE"
+  # A mutation that matches NOTHING is stale and has silently been testing the
+  # shipped code — the failure this whole file exists to prevent, in itself.
+  if cmp -s "$SPOOL/base/$MFILE" "$MW/$MFILE"; then
+    print "STALE|$MID|$MLABEL"; exit 0
+  fi
+  if zsh "$SPOOL/build.zsh" "$MW" && "$MW/run" >/dev/null 2>&1; then
+    print "SURVIVED|$MID|$MLABEL"; exit 0
+  fi
+  print "CAUGHT|$MID|$MLABEL"; exit 0
+fi
 
 SECTION="Casberi/Casberi/Model/HegotaSection.swift"
 COINS="Casberi/Casberi/Model/HegotaCoins.swift"
@@ -897,42 +935,67 @@ if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
 print("  ok   \(HegotaSection.allCases.count) scopes, words, the spent bitmap, coins, reconciliation, fees")
 SWIFT
 
-build() {
-  # `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer,
-  # and it bought nothing an assertion can see — measured 6.0x faster here
-  # (2026-09-02). NOT a blanket rule: `-O` can change a harness's OBSERVABLE
-  # behaviour (a trapping one prints NOTHING under `-O`), so this file was
-  # proven equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
-  # Re-probe before trusting it again after adding mutations.
-  swiftc -Onone -o "$work/run" "$1" "$2" "$3" "$4" "$work/Keccak256.swift" "$work/main.swift" 2>"$work/err" || return 1
-}
+# ONE compile line, written once and run by both the assertion build and every
+# mutation child. Two copies would drift, and the drift is invisible: the
+# mutants would be measured under a compiler the shipped check does not use.
+#
+# `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer, and it
+# bought nothing an assertion can see — measured 6.0x faster here (2026-09-02).
+# NOT a blanket rule: `-O` can change a harness's OBSERVABLE behaviour (a
+# trapping one prints NOTHING under `-O`), so this file was proven equivalent
+# run-for-run by `scripts/support/harness-opt-probe.sh`. Re-probe after adding
+# mutations.
+cat > "$work/build.zsh" <<'BUILDSH'
+MW="$1"
+swiftc -Onone -o "$MW/run" \
+  "$MW/HegotaSection.swift" "$MW/HegotaCoins.swift" "$MW/HegotaAccount.swift" \
+  "$MW/HegotaRoom.swift" "$MW/Keccak256.swift" "$MW/main.swift" 2>"$MW/err"
+BUILDSH
 
-cp "$SECTION" "$work/HegotaSection.swift"
-cp "$COINS" "$work/HegotaCoins.swift"
-cp "$ACCOUNT" "$work/HegotaAccount.swift"
-cp "$ROOM" "$work/HegotaRoom.swift"
-cp "$KECCAK" "$work/Keccak256.swift"
-build "$work/HegotaSection.swift" "$work/HegotaCoins.swift" "$work/HegotaAccount.swift" "$work/HegotaRoom.swift" \
-  || { cat "$work/err"; fail "the shipped source does not compile"; }
-"$work/run" || fail "assertions failed against the shipped source"
+# The pristine tree every mutation is cut from. Staged ONCE; a child copies it
+# rather than re-reading the repo, so a concurrent edit to the working tree
+# cannot make two mutations disagree about what "the shipped source" is.
+mkdir -p "$work/base"
+cp "$SECTION" "$work/base/HegotaSection.swift"
+cp "$COINS"   "$work/base/HegotaCoins.swift"
+cp "$ACCOUNT" "$work/base/HegotaAccount.swift"
+cp "$ROOM"    "$work/base/HegotaRoom.swift"
+cp "$KECCAK"  "$work/base/Keccak256.swift"
+cp "$work/main.swift" "$work/base/main.swift"
+
+zsh "$work/build.zsh" "$work/base" \
+  || { cat "$work/base/err"; fail "the shipped source does not compile"; }
+"$work/base/run" || fail "assertions failed against the shipped source"
 
 # ── mutations ────────────────────────────────────────────────────────────────
 # A check that cannot fail proves nothing. Each of these is a silent wrong
 # answer that renders as an ordinary room.
+# RECORD a mutation; the fan-out below runs them.
+#
+# **They run CONCURRENTLY (PERF, 2026-09-05).** Every mutation is PURE — it
+# edits its own scratch copy and reads nothing the others write — so running
+# them one at a time on one core of eight was the whole of this harness's cost:
+# 60 mutations x a five-file compile measured 472s in the 2026-09-05 nightly,
+# the second-slowest check in the suite, and it grows with every mutation added.
+#
+# `xargs -P`, never a `jobs -r` slot loop: job control is OFF in a
+# non-interactive zsh, so `jobs -r` reports NOTHING and the loop degrades
+# silently to "launch all 60 at once", which on 8 cores thrashes to slower than
+# serial while every check still passes (`verify.sh`'s own paid-for trap,
+# 2026-08-19).
+MUTN=0
 mutate() {
-  local why="$1" file="$2" expr="$3"
-  cp "$SECTION" "$work/HegotaSection.swift"
-  cp "$COINS" "$work/HegotaCoins.swift"
-  cp "$ACCOUNT" "$work/HegotaAccount.swift"
-  cp "$ROOM" "$work/HegotaRoom.swift"
-  cp "$KECCAK" "$work/Keccak256.swift"
-  perl -0pi -e "$expr" "$work/$file"
-  local src="Casberi/Casberi/Model/$file"
-  cmp -s "$src" "$work/$file" && fail "mutation matched nothing: $why"
-  if build "$work/HegotaSection.swift" "$work/HegotaCoins.swift" "$work/HegotaAccount.swift" "$work/HegotaRoom.swift" && "$work/run" >/dev/null 2>&1; then
-    fail "mutation SURVIVED — $why"
-  fi
-  echo "  ok   catches  $why"
+  MUTN=$((MUTN + 1))
+  local id
+  id="$(printf '%03d' "$MUTN")"
+  mkdir -p "$work/mut"
+  # `printf '%s'`, never `echo`: a trailing newline on the perl expression is
+  # harmless, but on the FILE name it addresses a path that does not exist,
+  # which this harness would report as a stale mutation — a confusing failure
+  # for a mutation that is perfectly correct.
+  printf '%s' "$1" > "$work/mut/$id.label"
+  printf '%s' "$2" > "$work/mut/$id.file"
+  printf '%s' "$3" > "$work/mut/$id.expr"
 }
 
 # THE TIE, three ways. Each renders as a perfectly ordinary caption asserting a
@@ -1094,6 +1157,57 @@ mutate "the balance line adds back gas somebody ELSE paid (a sponsored move bend
   HegotaRoom.swift 's/if !move\.incoming, !move\.isSponsored, let fee = move\.feeWei \{/if !move.incoming, let fee = move.feeWei {/'
 mutate "the balance line stops undoing the fee at all (it drifts by the gas this address spent)" \
   HegotaRoom.swift 's/if !move\.incoming, !move\.isSponsored, let fee = move\.feeWei \{\n                running \+= fee\n            \}//'
+
+# ── the last mutation must precede the fan-out ───────────────────────────────
+# A `mutate` call BELOW the fan-out is silently never run and the pass still
+# goes green. It is a file-ORDER bug, so no care inside the block can catch it —
+# only the file can. This reads itself.
+MUT_LAST="$(grep -n '^mutate ' "$SELF" | tail -1 | cut -d: -f1)"
+FANOUT_AT="$(grep -n '^# --- run every recorded mutation, concurrently' "$SELF" | head -1 | cut -d: -f1)"
+if [[ -n "$MUT_LAST" && -n "$FANOUT_AT" ]] && (( MUT_LAST > FANOUT_AT )); then
+  fail "a mutation is declared at line $MUT_LAST, BELOW the fan-out at line $FANOUT_AT — it would never run and the pass would still go green. Move it above."
+fi
+
+# HOW MANY AT ONCE, and why it is not simply `ncpu`. This harness may be run
+# TWO ways: on its own, where it should take the whole machine, and inside
+# `verify.sh` / `verify-mac.sh`, which already run the harnesses themselves
+# under `xargs -P ncpu`. Nested at full width that is ncpu x ncpu — 64 `swiftc`
+# processes on 8 cores here — and the cost is not merely scheduling: each is
+# hundreds of MB against 16 GB, so the failure mode is memory pressure and swap,
+# which looks like the machine hanging rather than like a test being slow. The
+# outer runners export `HARNESS_INNER_JOBS`; standalone there is no outer swarm
+# and the default is the whole machine.
+MUT_JOBS="${HARNESS_INNER_JOBS:-$(sysctl -n hw.ncpu 2>/dev/null || print 4)}"
+
+# --- run every recorded mutation, concurrently -------------------------------
+# One core per mutation up to the machine's count. Output is KEPT and sorted by
+# id so the report reads in declaration order regardless of which finished
+# first — `xargs` interleaves, and a mutation list that reshuffles between runs
+# is one nobody can diff.
+: > "$work/mut-results"
+ls "$work"/mut/*.label | sed 's#.*/##; s#\.label$##' \
+  | xargs -P "$MUT_JOBS" -I{} zsh "$SELF" --mutate "$work" {} \
+  >> "$work/mut-results" 2>&1
+
+MUT_FAILS=0
+MUT_OK=0
+while IFS='|' read -r verdict mid label; do
+  case "$verdict" in
+    CAUGHT)   printf '  ok   catches  %s\n' "$label"; MUT_OK=$((MUT_OK + 1)) ;;
+    SURVIVED) printf '✗ mutation SURVIVED — %s\n' "$label"; MUT_FAILS=$((MUT_FAILS + 1)) ;;
+    STALE)    printf "✗ mutation matched nothing: %s — it is stale and has been testing the shipped code\n" "$label"
+              MUT_FAILS=$((MUT_FAILS + 1)) ;;
+    *)        [[ -n "$verdict" ]] && printf '  %s\n' "$verdict" ;;
+  esac
+done < <(sort "$work/mut-results")
+
+# Every mutation must have reported. A child that died without a line is a
+# mutation nobody ran, and a silently skipped mutation is exactly the false
+# green this whole file exists to prevent.
+if (( MUT_OK + MUT_FAILS != MUTN )); then
+  fail "$((MUTN - MUT_OK - MUT_FAILS)) of $MUTN mutation(s) never reported — they did not run"
+fi
+(( MUT_FAILS == 0 )) || fail "$MUT_FAILS mutation(s) failed"
 
 # ── drift guards ─────────────────────────────────────────────────────────────
 # Read from a COMMENT-STRIPPED copy: both files DOCUMENT their rules by naming

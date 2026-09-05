@@ -569,7 +569,13 @@ if failures == 0 {
 }
 SWIFT
 
-swiftc -O -o "$TMP/run" "$TMP/stubs.swift" "$TMP/extracted.swift" "$TMP/main.swift" 2>&1 \
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 4.2x faster).
+# Re-probe before trusting it again after adding mutations.
+swiftc -Onone -o "$TMP/run" "$TMP/stubs.swift" "$TMP/extracted.swift" "$TMP/main.swift" 2>&1 \
   | grep -v "^$" || true
 [[ -x "$TMP/run" ]] || { echo "✗ the extracted retriever engine did not compile against the stubs"; exit 1; }
 "$TMP/run"
@@ -589,7 +595,7 @@ if find not in src:
 open(out, "w").write(src.replace(find, replace, 1))
 PY
   rm -f "$TMP/mutrun"
-  swiftc -O -o "$TMP/mutrun" "$TMP/stubs.swift" "$TMP/mutated.swift" "$TMP/main.swift" \
+  swiftc -Onone -o "$TMP/mutrun" "$TMP/stubs.swift" "$TMP/mutated.swift" "$TMP/main.swift" \
     >/dev/null 2>&1 || true
   if [[ -x "$TMP/mutrun" ]] && "$TMP/mutrun" >/dev/null 2>&1; then
     echo "✗ mutation SURVIVED: $label — the assertions don't pin this behaviour"

@@ -4974,269 +4974,36 @@ enum ProbeHooks {
         // unread rather than silently assumed absent.
         Hook(key: "roomInsightProbe") { spec, context in
             let source = spec == "YES" || spec.isEmpty ? "All" : spec
+            Task { @MainActor in ProbeHooks.roomInsightReport(source: source, context: context) }
+        },
+        // `-roomInsightSweep "A|B|C"` — every room's head in ONE launch
+        // (PERF, 2026-09-05). The same report as `-roomInsightProbe`, run
+        // once per named source, sharing one process.
+        //
+        // WHY. `verify.sh`'s room-head coverage asks about ~28 rooms and
+        // `-roomInsightProbe` answers about one, so that step was 28 cold
+        // launches at ~3.4s each — a minute and a half of `simctl` and
+        // `sleep` spent to run a report that costs milliseconds. Nothing
+        // about WHAT is asked changes: it is the same function called in a
+        // loop, so a room that composes here composes there.
+        //
+        // The separator is `|` rather than `,` because a source name may
+        // legitimately contain a comma and none contains a pipe. An empty
+        // spec is REPORTED, never silently read as nothing: a sweep naming
+        // no room and a sweep whose rooms all declined otherwise print the
+        // same absence of leaders, and only one of them is a bug.
+        Hook(key: "roomInsightSweep") { spec, context in
+            let sources = spec.split(separator: "|")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
             Task { @MainActor in
-                let things = ((try? context.fetch(FetchDescriptor<Thing>(
-                    predicate: #Predicate { $0.source == source },
-                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []).live
-                NSLog("[Casberi] roomInsight: source=%@ things=%d (live stream / social roster not read here)",
-                      source, things.count)
-
-                var leader: String?
-                func note(_ name: String, _ line: String?) {
-                    NSLog("[Casberi] roomInsight| %@: %@", name, line ?? "nil")
-                    if line != nil, leader == nil { leader = name }
+                guard !sources.isEmpty else {
+                    NSLog("[Casberi] roomInsightSweep: no sources — pass -roomInsightSweep \"Stripe|PostHog|…\"")
+                    return
                 }
-
-                // 1. the PER-SOURCE heads — each claims exactly one room, and
-                // together they outrank everything below (`FeedScreen`'s own
-                // `sourceHead`, 2026-08-04 prd §298; the runway 2026-08-03 prd
-                // §296). Mirrored here the day each landed: this probe's whole
-                // job is naming what really leads a room, and a card added to
-                // `shapedSections` without a line here would make the probe
-                // confidently report "leads with NOTHING" about a room that
-                // leads with a card — the §219 failure inverted, which is the
-                // one this probe exists to stop.
-                //
-                // They share rank 1 because they cannot compete: a room is
-                // Cloudflare or Stripe or PostHog, never two. Reported as
-                // separate lines anyway, so a room drawing the wrong one is
-                // visible rather than folded into a single "sourceHead: yes".
-                //
-                // EACH IS GATED ON `source`, exactly as `FeedScreen.sourceHead`
-                // is — and that gate is the whole correctness of these lines,
-                // not a tidiness. These three compose from BRIDGE STATE, not
-                // from `things`: a Stripe balance or a cached Cloudflare estate
-                // is global, so an ungated `compose` answers for EVERY room.
-                // Without the gate, `-roomInsightProbe Photos` on a device with
-                // Stripe connected reported the Photos room as leading with
-                // `stripeHead` — the §219 failure this probe exists to catch,
-                // committed by the probe itself. (The runway line shipped with
-                // that hole on 2026-08-03 and is fixed here too.)
-                note("runway", source == "Cloudflare"
-                     ? CloudflareRunwaySource.compose(things: things).map {
-                        $0.items.isEmpty
-                            ? "quiet · \($0.next.map { n in CloudflareRunway.quietHeadline(days: n.days) } ?? "—")"
-                            : "\(CloudflareRunway.headline(items: $0.items, span: $0.span)) · \($0.items.count) rows"
-                     } : nil)
-                note("stripeHead", source == "Stripe"
-                     ? StripeRoomSource.compose(things: things).map {
-                        "\(StripeRoom.headline($0)) · \($0.total) deadlines"
-                     } : nil)
-                // The two other Merchants of Record. `polarHead` shipped
-                // 2026-08-30 with NO line here at all and `dodoHead` is new
-                // 2026-09-01 — exactly the drift this hook's own header warns
-                // against, found by adding the second one: this probe would
-                // have reported "leads with NOTHING" about a Polar room that
-                // leads with a card, which is the §219 failure inverted and
-                // the one thing this probe exists to stop. Both read `things`
-                // the way `cursorHead` does — the deadlines and the payments
-                // ARE the subject — so each `compose` would already answer nil
-                // for another room's rows; gated anyway, so every line in this
-                // block reads the same way.
-                note("polarHead", source == "Polar"
-                     ? PolarRoomSource.compose(things: things).map {
-                        "\(PolarRoom.headline($0)) · \($0.total) deadlines"
-                     } : nil)
-                note("dodoHead", source == DodoPaymentsRoomSource.source
-                     ? DodoPaymentsRoomSource.compose(things: things).map {
-                        "\(DodoPaymentsRoom.headline($0)) · \($0.currencies.count) currencies"
-                        + " · \($0.disputes.count) disputes · \($0.retryTotal) retries"
-                     } : nil)
-                note("posthogHead", source == "PostHog"
-                     ? PostHogRoomSource.compose(things: things).map {
-                        "\(PostHogRoom.headline($0)) · \($0.metrics.count) metrics"
-                     } : nil)
-                note("walletbeatHead", source == WalletbeatRoomSource.source
-                     ? WalletbeatRoomSource.compose(things: things).map {
-                        "\(WalletbeatRoom.headline($0)) · \($0.items.count) wallets"
-                     } : nil)
-                note("l2beatHead", source == L2beatRoomSource.source
-                     ? L2beatRoomSource.compose(things: things).map {
-                        "\(L2beatRoom.headline($0)) · \($0.items.count) chains"
-                     } : nil)
-                note("cardPointersHead", source == CardPointersRoomSource.source
-                     ? CardPointersRoomSource.compose(things: things).map {
-                        "\($0.headline) · \($0.deadlines.count) deadlines"
-                     } : nil)
-                // Unlike the three above this one DOES read `things` (the
-                // runs ARE the subject — see `CursorRoomSource`'s own note),
-                // so the gate here is belt-and-braces rather than the whole
-                // correctness: `compose` already filters to `source ==
-                // CursorRoomSource.source` internally, and would return nil
-                // for any other room's `things` on its own. Gated anyway, so
-                // this line reads the same way as its three neighbours.
-                note("cursorHead", source == CursorRoomSource.source
-                     ? CursorRoomSource.compose(things: things).map {
-                        "\(CursorRoom.headline($0)) · \($0.repos.count) repos"
-                     } : nil)
-                // The two CODE heads (prd §401). `githubHead` reads `things`
-                // like `cursorHead` above — the notifications ARE the subject.
-                // `radicleHead` reads NONE and is the only line in this block
-                // that doesn't: its subject is bridge state, since no landed
-                // row can say a patch is still unresolved (`ASCRoomSource`'s
-                // situation, and the `appStoreConnect` line's).
-                note("githubHead", source == GitHubRoomSource.source
-                     ? GitHubRoomSource.compose(things: things).map {
-                        "\($0.headline) · \($0.items.count) waiting"
-                     } : nil)
-                note("radicleHead", source == RadicleRoomSource.source
-                     ? RadicleRoomSource.compose(things: things).map {
-                        "\($0.items.count) open · \($0.repos) repos · \($0.drafts) drafts"
-                     } : nil)
-                // The three wallet-riding heads (2026-08-10, prd §349). Like
-                // `cursorHead` these read `things` — the fills, the deposits
-                // and the spends ARE the subject — so each `compose` would
-                // already answer nil for another room's rows on its own. Gated
-                // anyway, so every line in this block reads the same way.
-                note("peerHead", source == PeerRoomSource.source
-                     ? PeerRoomSource.compose(things: things).map {
-                        "\(PeerRoom.headline($0)) · \($0.rails.count) rails"
-                     } : nil)
-                note("privacyPoolsHead", source == PrivacyPoolsRoomSource.source
-                     ? PrivacyPoolsRoomSource.compose(things: things).map {
-                        "\(PrivacyPoolsRoom.headline($0)) · \($0.deposits) deposits"
-                     } : nil)
-                note("gnosisPayHead", source == GnosisPayRoomSource.source
-                     ? GnosisPayRoomSource.compose(things: things).map {
-                        "\(GnosisPayRoom.headline($0)) · \($0.currencies.count) currencies"
-                     } : nil)
-                // The fourth wallet-riding head (2026-08-11).
-                note("railgunHead", source == RailgunRoomSource.source
-                     ? RailgunRoomSource.compose(things: things).map {
-                        "\(RailgunRoom.headline($0)) · \($0.tokens.count) tokens"
-                     } : nil)
-                // The fifth (2026-08-11). The three counts are printed apart
-                // because they are three different states that render as one
-                // number in `pendingCount` alone: a fully-signed transaction
-                // needs an execution, not a signature, and a contested pair
-                // needs neither from whoever loses.
-                note("safeHead", source == SafeRoomSource.source
-                     ? SafeRoomSource.compose(things: things).map {
-                        "\(SafeRoom.headline($0)) · \($0.pendingCount) pending"
-                        + " · \($0.awaitsYouCount) awaiting you · \($0.readyCount) ready"
-                        + " · \($0.contestedCount) contested"
-                     } : nil)
-                // Three more per-source heads that shipped without a line
-                // here — exactly the drift this probe's own header warns
-                // against, and exactly how it was found (2026-08-10): a
-                // `-roomInsightProbe` sweep across every `SourceHead` case
-                // reported "leads with NOTHING" for all three, which read as
-                // three demo gaps until this probe's own card list turned
-                // out to be the thing that had drifted, not the demo.
-                note("appleWallet", source == AppleWalletBridge.sourceName
-                     ? AppleWalletRoomSource.compose(things: things).map {
-                        "\($0.headline) · \($0.merchants.count) merchants"
-                     } : nil)
-                note("x402", source == X402Ingest.source
-                     ? X402RoomSource.compose(things: things).map {
-                        "\(X402Room.headline($0)) · \($0.sellers) sellers"
-                     } : nil)
-                note("appStoreConnect", source == ASCShape.source
-                     ? ASCRoomSource.compose(things: things).map {
-                        "\(ASCRoom.headline($0)) · \($0.apps.count) apps"
-                     } : nil)
-                // The thirteenth (2026-08-13, prd §375) — and the first over an
-                // IMPORT rather than a bridge, which is also the first that can
-                // DISPLACE a card below it: when this composes it takes the
-                // slot `topicMap` held for this room. Both lines print either
-                // way, so the trade is visible here rather than inferred.
-                note("xHead", source == XRoomSource.source
-                     ? XRoomSource.compose(things: things).map {
-                        "\(XRoom.note($0)) · \($0.span) years · \($0.silent) silent"
-                     } : nil)
-                // The fourteenth (2026-08-18, prd §395) — the second over an
-                // import, and the second that displaces a card below it: when
-                // this composes it takes the slot `leaderboard` held for this
-                // room. Both lines print either way, so the trade is visible
-                // here rather than inferred.
-                note("instagramHead", source == InstagramRoomSource.source
-                     ? InstagramRoomSource.compose(things: things).map {
-                        "\(InstagramRoom.headline($0)) · \($0.accounts.count) rows · \($0.gone) gone"
-                     } : nil)
-                // The journal rooms (2026-08-17, prd §398) — one composer
-                // serving TWO rooms, and the only line in this list with two
-                // names.
-                //
-                // That is deliberate, not drift: `verify.sh`'s room-head
-                // coverage is a zsh associative array keyed by the name printed
-                // here, so a single shared label could only ever assert that ONE
-                // of the two journals composes. They have separate corpora and
-                // separate demo seeds, which is exactly the gap that check
-                // exists to catch — the §349 finding, where three rooms' heads
-                // were each broken in a different way and every one of them
-                // rendered as the same silent nothing.
-                let journalLabel = source == "Apple Journal" ? "appleJournalHead" : "dayOneHead"
-                note(journalLabel, JournalRoomSource.sources.contains(source)
-                     ? JournalRoomSource.compose(things: things).map {
-                        "\(JournalRoom.headline($0) ?? JournalRoom.note($0))"
-                        + " · \($0.span) years · \($0.silent) silent"
-                        + " · \($0.days) days · streak \($0.streak)"
-                     } : nil)
-                // The four AGENT rooms (2026-08-23, prd §457) — one composer
-                // serving FOUR rooms, and so the second entry here with more
-                // than one name, for `journalLabel`'s reason exactly: the
-                // coverage check is keyed by the name printed here, so one
-                // shared label would assert that ONE of the four composes
-                // while three sat broken behind it. They have four separate
-                // corpora and four separate demo seats.
-                let agentLabel = ["ChatGPT": "chatgptHead", "Claude": "claudeHead",
-                                  "Gemini": "geminiHead",
-                                  ClaudeCodeImport.source: "claudeCodeHead"][source]
-                note(agentLabel ?? "agentHead", agentLabel == nil ? nil
-                     : AgentRoomSource.compose(
-                        source: source, things: things,
-                        rivals: AgentRoomSource.rivals(besides: source, context: context)).map {
-                        "\(AgentRoom.headline($0) ?? AgentRoom.note($0))"
-                        + " · \($0.span) months · \($0.silent) silent"
-                        + " · \($0.total) conversations · \($0.turns) turns"
-                        + " · rivals \($0.rivals.count)"
-                     })
-                // 2. the anniversary — the memories room's pictures, and (since
-                // §398) the two journals' entries. It OUTRANKS every head above
-                // in `shapedSections`, so it is printed after them and the
-                // `leader` below still names the right winner only because
-                // every head above answers nil for these three rooms.
-                let echo = source == "Snapchat"
-                    ? OnThisDay.find(in: things.filter {
-                        $0.kind == .file && $0.previewImageData != nil })
-                    : JournalRoomSource.sources.contains(source)
-                        ? OnThisDay.find(in: things.filter {
-                            $0.kind == .note && !Corpus.isImportReceipt($0) })
-                        : nil
-                note("anniversary", echo.map { "\($0.label) → \($0.thing.title)" })
-                // 3. the treemap
-                let map = FeedInsight.topicMap(source: source, things: things)
-                note("topicMap", map.map { "\($0.title) · \($0.subtitle) · \($0.cells.count) cells" })
-                for cell in map?.cells ?? [] {
-                    NSLog("[Casberi] roomInsightCell| %@ = %d", cell.label, cell.count)
-                }
-                // 4. the bars
-                let board = FeedInsight.leaderboard(source: source, things: things)
-                note("leaderboard", board.map { "\($0.title) · \($0.subtitle) · \($0.rows.count) rows" })
-                for row in board?.rows ?? [] {
-                    NSLog("[Casberi] roomInsightRow| %@ = %@", row.label, row.detail)
-                }
-                // 5. the split bar, 6. the wall
-                note("distribution", FeedInsight.distribution(source: source, things: things)?.title)
-                note("mosaic", FeedInsight.mosaic(source: source, things: things)
-                        .map { "\($0.title) · \($0.tiles.count) tiles" })
-                // 7. the grid — last, and reported with what it actually counts
-                if let label = FeedHeatmap.label(for: source) {
-                    let counted = FeedHeatmap.counted(things, label: label)
-                    let year = ContributionYear.from(dates: counted.map(\.capturedAt),
-                                                     columns: label.columns)
-                    // `activeDays >= 4` is the screen's own render gate.
-                    note("heatmap", year.activeDays >= 4
-                         ? "\(label.title) · counted=\(counted.count) · activeDays=\(year.activeDays)"
-                         : nil)
-                    if year.activeDays < 4 {
-                        NSLog("[Casberi] roomInsight| heatmap registered but too sparse (counted=%d activeDays=%d)",
-                              counted.count, year.activeDays)
-                    }
-                } else {
-                    note("heatmap", nil)
-                }
-                NSLog("[Casberi] roomInsight: leads with %@", leader ?? "NOTHING (rows only)")
+                NSLog("[Casberi] roomInsightSweep: %d sources", sources.count)
+                for s in sources { ProbeHooks.roomInsightReport(source: s, context: context) }
+                NSLog("[Casberi] roomInsightSweep: done (%d sources)", sources.count)
             }
         },
         // `-photoBackfill YES|reset` walks one batch BACKWARDS through the
@@ -7506,6 +7273,282 @@ enum ProbeHooks {
             }
         },
     ]
+
+    /// The `-roomInsightProbe` / `-roomInsightSweep` report for ONE room.
+    ///
+    /// Extracted from the probe's own closure (2026-09-05) so the sweep and
+    /// the single-room probe are the SAME code and not two readings of one
+    /// ranking — the drift this hook's own header warns about, and the whole
+    /// reason the sweep can be trusted to answer what the probe answers.
+    ///
+    /// The ORDER below mirrors `FeedScreen.shapedSections`; a card added
+    /// there needs a `note(...)` here, or this reports "leads with NOTHING"
+    /// about a room that leads with a card (the §219 failure inverted).
+    @MainActor
+    static func roomInsightReport(source: String, context: ModelContext) {
+        let things = ((try? context.fetch(FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == source },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []).live
+        NSLog("[Casberi] roomInsight: source=%@ things=%d (live stream / social roster not read here)",
+              source, things.count)
+
+        var leader: String?
+        func note(_ name: String, _ line: String?) {
+            NSLog("[Casberi] roomInsight| %@: %@", name, line ?? "nil")
+            if line != nil, leader == nil { leader = name }
+        }
+
+        // 1. the PER-SOURCE heads — each claims exactly one room, and
+        // together they outrank everything below (`FeedScreen`'s own
+        // `sourceHead`, 2026-08-04 prd §298; the runway 2026-08-03 prd
+        // §296). Mirrored here the day each landed: this probe's whole
+        // job is naming what really leads a room, and a card added to
+        // `shapedSections` without a line here would make the probe
+        // confidently report "leads with NOTHING" about a room that
+        // leads with a card — the §219 failure inverted, which is the
+        // one this probe exists to stop.
+        //
+        // They share rank 1 because they cannot compete: a room is
+        // Cloudflare or Stripe or PostHog, never two. Reported as
+        // separate lines anyway, so a room drawing the wrong one is
+        // visible rather than folded into a single "sourceHead: yes".
+        //
+        // EACH IS GATED ON `source`, exactly as `FeedScreen.sourceHead`
+        // is — and that gate is the whole correctness of these lines,
+        // not a tidiness. These three compose from BRIDGE STATE, not
+        // from `things`: a Stripe balance or a cached Cloudflare estate
+        // is global, so an ungated `compose` answers for EVERY room.
+        // Without the gate, `-roomInsightProbe Photos` on a device with
+        // Stripe connected reported the Photos room as leading with
+        // `stripeHead` — the §219 failure this probe exists to catch,
+        // committed by the probe itself. (The runway line shipped with
+        // that hole on 2026-08-03 and is fixed here too.)
+        note("runway", source == "Cloudflare"
+             ? CloudflareRunwaySource.compose(things: things).map {
+                $0.items.isEmpty
+                    ? "quiet · \($0.next.map { n in CloudflareRunway.quietHeadline(days: n.days) } ?? "—")"
+                    : "\(CloudflareRunway.headline(items: $0.items, span: $0.span)) · \($0.items.count) rows"
+             } : nil)
+        note("stripeHead", source == "Stripe"
+             ? StripeRoomSource.compose(things: things).map {
+                "\(StripeRoom.headline($0)) · \($0.total) deadlines"
+             } : nil)
+        // The two other Merchants of Record. `polarHead` shipped
+        // 2026-08-30 with NO line here at all and `dodoHead` is new
+        // 2026-09-01 — exactly the drift this hook's own header warns
+        // against, found by adding the second one: this probe would
+        // have reported "leads with NOTHING" about a Polar room that
+        // leads with a card, which is the §219 failure inverted and
+        // the one thing this probe exists to stop. Both read `things`
+        // the way `cursorHead` does — the deadlines and the payments
+        // ARE the subject — so each `compose` would already answer nil
+        // for another room's rows; gated anyway, so every line in this
+        // block reads the same way.
+        note("polarHead", source == "Polar"
+             ? PolarRoomSource.compose(things: things).map {
+                "\(PolarRoom.headline($0)) · \($0.total) deadlines"
+             } : nil)
+        note("dodoHead", source == DodoPaymentsRoomSource.source
+             ? DodoPaymentsRoomSource.compose(things: things).map {
+                "\(DodoPaymentsRoom.headline($0)) · \($0.currencies.count) currencies"
+                + " · \($0.disputes.count) disputes · \($0.retryTotal) retries"
+             } : nil)
+        note("posthogHead", source == "PostHog"
+             ? PostHogRoomSource.compose(things: things).map {
+                "\(PostHogRoom.headline($0)) · \($0.metrics.count) metrics"
+             } : nil)
+        note("walletbeatHead", source == WalletbeatRoomSource.source
+             ? WalletbeatRoomSource.compose(things: things).map {
+                "\(WalletbeatRoom.headline($0)) · \($0.items.count) wallets"
+             } : nil)
+        note("l2beatHead", source == L2beatRoomSource.source
+             ? L2beatRoomSource.compose(things: things).map {
+                "\(L2beatRoom.headline($0)) · \($0.items.count) chains"
+             } : nil)
+        note("cardPointersHead", source == CardPointersRoomSource.source
+             ? CardPointersRoomSource.compose(things: things).map {
+                "\($0.headline) · \($0.deadlines.count) deadlines"
+             } : nil)
+        // Unlike the three above this one DOES read `things` (the
+        // runs ARE the subject — see `CursorRoomSource`'s own note),
+        // so the gate here is belt-and-braces rather than the whole
+        // correctness: `compose` already filters to `source ==
+        // CursorRoomSource.source` internally, and would return nil
+        // for any other room's `things` on its own. Gated anyway, so
+        // this line reads the same way as its three neighbours.
+        note("cursorHead", source == CursorRoomSource.source
+             ? CursorRoomSource.compose(things: things).map {
+                "\(CursorRoom.headline($0)) · \($0.repos.count) repos"
+             } : nil)
+        // The two CODE heads (prd §401). `githubHead` reads `things`
+        // like `cursorHead` above — the notifications ARE the subject.
+        // `radicleHead` reads NONE and is the only line in this block
+        // that doesn't: its subject is bridge state, since no landed
+        // row can say a patch is still unresolved (`ASCRoomSource`'s
+        // situation, and the `appStoreConnect` line's).
+        note("githubHead", source == GitHubRoomSource.source
+             ? GitHubRoomSource.compose(things: things).map {
+                "\($0.headline) · \($0.items.count) waiting"
+             } : nil)
+        note("radicleHead", source == RadicleRoomSource.source
+             ? RadicleRoomSource.compose(things: things).map {
+                "\($0.items.count) open · \($0.repos) repos · \($0.drafts) drafts"
+             } : nil)
+        // The three wallet-riding heads (2026-08-10, prd §349). Like
+        // `cursorHead` these read `things` — the fills, the deposits
+        // and the spends ARE the subject — so each `compose` would
+        // already answer nil for another room's rows on its own. Gated
+        // anyway, so every line in this block reads the same way.
+        note("peerHead", source == PeerRoomSource.source
+             ? PeerRoomSource.compose(things: things).map {
+                "\(PeerRoom.headline($0)) · \($0.rails.count) rails"
+             } : nil)
+        note("privacyPoolsHead", source == PrivacyPoolsRoomSource.source
+             ? PrivacyPoolsRoomSource.compose(things: things).map {
+                "\(PrivacyPoolsRoom.headline($0)) · \($0.deposits) deposits"
+             } : nil)
+        note("gnosisPayHead", source == GnosisPayRoomSource.source
+             ? GnosisPayRoomSource.compose(things: things).map {
+                "\(GnosisPayRoom.headline($0)) · \($0.currencies.count) currencies"
+             } : nil)
+        // The fourth wallet-riding head (2026-08-11).
+        note("railgunHead", source == RailgunRoomSource.source
+             ? RailgunRoomSource.compose(things: things).map {
+                "\(RailgunRoom.headline($0)) · \($0.tokens.count) tokens"
+             } : nil)
+        // The fifth (2026-08-11). The three counts are printed apart
+        // because they are three different states that render as one
+        // number in `pendingCount` alone: a fully-signed transaction
+        // needs an execution, not a signature, and a contested pair
+        // needs neither from whoever loses.
+        note("safeHead", source == SafeRoomSource.source
+             ? SafeRoomSource.compose(things: things).map {
+                "\(SafeRoom.headline($0)) · \($0.pendingCount) pending"
+                + " · \($0.awaitsYouCount) awaiting you · \($0.readyCount) ready"
+                + " · \($0.contestedCount) contested"
+             } : nil)
+        // Three more per-source heads that shipped without a line
+        // here — exactly the drift this probe's own header warns
+        // against, and exactly how it was found (2026-08-10): a
+        // `-roomInsightProbe` sweep across every `SourceHead` case
+        // reported "leads with NOTHING" for all three, which read as
+        // three demo gaps until this probe's own card list turned
+        // out to be the thing that had drifted, not the demo.
+        note("appleWallet", source == AppleWalletBridge.sourceName
+             ? AppleWalletRoomSource.compose(things: things).map {
+                "\($0.headline) · \($0.merchants.count) merchants"
+             } : nil)
+        note("x402", source == X402Ingest.source
+             ? X402RoomSource.compose(things: things).map {
+                "\(X402Room.headline($0)) · \($0.sellers) sellers"
+             } : nil)
+        note("appStoreConnect", source == ASCShape.source
+             ? ASCRoomSource.compose(things: things).map {
+                "\(ASCRoom.headline($0)) · \($0.apps.count) apps"
+             } : nil)
+        // The thirteenth (2026-08-13, prd §375) — and the first over an
+        // IMPORT rather than a bridge, which is also the first that can
+        // DISPLACE a card below it: when this composes it takes the
+        // slot `topicMap` held for this room. Both lines print either
+        // way, so the trade is visible here rather than inferred.
+        note("xHead", source == XRoomSource.source
+             ? XRoomSource.compose(things: things).map {
+                "\(XRoom.note($0)) · \($0.span) years · \($0.silent) silent"
+             } : nil)
+        // The fourteenth (2026-08-18, prd §395) — the second over an
+        // import, and the second that displaces a card below it: when
+        // this composes it takes the slot `leaderboard` held for this
+        // room. Both lines print either way, so the trade is visible
+        // here rather than inferred.
+        note("instagramHead", source == InstagramRoomSource.source
+             ? InstagramRoomSource.compose(things: things).map {
+                "\(InstagramRoom.headline($0)) · \($0.accounts.count) rows · \($0.gone) gone"
+             } : nil)
+        // The journal rooms (2026-08-17, prd §398) — one composer
+        // serving TWO rooms, and the only line in this list with two
+        // names.
+        //
+        // That is deliberate, not drift: `verify.sh`'s room-head
+        // coverage is a zsh associative array keyed by the name printed
+        // here, so a single shared label could only ever assert that ONE
+        // of the two journals composes. They have separate corpora and
+        // separate demo seeds, which is exactly the gap that check
+        // exists to catch — the §349 finding, where three rooms' heads
+        // were each broken in a different way and every one of them
+        // rendered as the same silent nothing.
+        let journalLabel = source == "Apple Journal" ? "appleJournalHead" : "dayOneHead"
+        note(journalLabel, JournalRoomSource.sources.contains(source)
+             ? JournalRoomSource.compose(things: things).map {
+                "\(JournalRoom.headline($0) ?? JournalRoom.note($0))"
+                + " · \($0.span) years · \($0.silent) silent"
+                + " · \($0.days) days · streak \($0.streak)"
+             } : nil)
+        // The four AGENT rooms (2026-08-23, prd §457) — one composer
+        // serving FOUR rooms, and so the second entry here with more
+        // than one name, for `journalLabel`'s reason exactly: the
+        // coverage check is keyed by the name printed here, so one
+        // shared label would assert that ONE of the four composes
+        // while three sat broken behind it. They have four separate
+        // corpora and four separate demo seats.
+        let agentLabel = ["ChatGPT": "chatgptHead", "Claude": "claudeHead",
+                          "Gemini": "geminiHead",
+                          ClaudeCodeImport.source: "claudeCodeHead"][source]
+        note(agentLabel ?? "agentHead", agentLabel == nil ? nil
+             : AgentRoomSource.compose(
+                source: source, things: things,
+                rivals: AgentRoomSource.rivals(besides: source, context: context)).map {
+                "\(AgentRoom.headline($0) ?? AgentRoom.note($0))"
+                + " · \($0.span) months · \($0.silent) silent"
+                + " · \($0.total) conversations · \($0.turns) turns"
+                + " · rivals \($0.rivals.count)"
+             })
+        // 2. the anniversary — the memories room's pictures, and (since
+        // §398) the two journals' entries. It OUTRANKS every head above
+        // in `shapedSections`, so it is printed after them and the
+        // `leader` below still names the right winner only because
+        // every head above answers nil for these three rooms.
+        let echo = source == "Snapchat"
+            ? OnThisDay.find(in: things.filter {
+                $0.kind == .file && $0.previewImageData != nil })
+            : JournalRoomSource.sources.contains(source)
+                ? OnThisDay.find(in: things.filter {
+                    $0.kind == .note && !Corpus.isImportReceipt($0) })
+                : nil
+        note("anniversary", echo.map { "\($0.label) → \($0.thing.title)" })
+        // 3. the treemap
+        let map = FeedInsight.topicMap(source: source, things: things)
+        note("topicMap", map.map { "\($0.title) · \($0.subtitle) · \($0.cells.count) cells" })
+        for cell in map?.cells ?? [] {
+            NSLog("[Casberi] roomInsightCell| %@ = %d", cell.label, cell.count)
+        }
+        // 4. the bars
+        let board = FeedInsight.leaderboard(source: source, things: things)
+        note("leaderboard", board.map { "\($0.title) · \($0.subtitle) · \($0.rows.count) rows" })
+        for row in board?.rows ?? [] {
+            NSLog("[Casberi] roomInsightRow| %@ = %@", row.label, row.detail)
+        }
+        // 5. the split bar, 6. the wall
+        note("distribution", FeedInsight.distribution(source: source, things: things)?.title)
+        note("mosaic", FeedInsight.mosaic(source: source, things: things)
+                .map { "\($0.title) · \($0.tiles.count) tiles" })
+        // 7. the grid — last, and reported with what it actually counts
+        if let label = FeedHeatmap.label(for: source) {
+            let counted = FeedHeatmap.counted(things, label: label)
+            let year = ContributionYear.from(dates: counted.map(\.capturedAt),
+                                             columns: label.columns)
+            // `activeDays >= 4` is the screen's own render gate.
+            note("heatmap", year.activeDays >= 4
+                 ? "\(label.title) · counted=\(counted.count) · activeDays=\(year.activeDays)"
+                 : nil)
+            if year.activeDays < 4 {
+                NSLog("[Casberi] roomInsight| heatmap registered but too sparse (counted=%d activeDays=%d)",
+                      counted.count, year.activeDays)
+            }
+        } else {
+            note("heatmap", nil)
+        }
+        NSLog("[Casberi] roomInsight: leads with %@", leader ?? "NOTHING (rows only)")
+    }
 }
 
 /// Tunables for `-wcConnectProbe`.

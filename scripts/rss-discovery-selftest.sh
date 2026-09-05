@@ -273,7 +273,13 @@ SWIFT
 # which pipefail hands to `set -e` — so a clean build is what would kill the
 # run. Cost one confused minute here; it is the same trap CLAUDE.md records
 # between verify.sh and verify-mac.sh.
-{ swiftc -O -enable-bare-slash-regex \
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.1x faster).
+# Re-probe before trusting it again after adding mutations.
+{ swiftc -Onone -enable-bare-slash-regex \
     "$WORK/stubs.swift" "$WORK/parser.swift" "$WORK/store.swift" "$WORK/main.swift" \
     -o "$WORK/rsstest" 2>&1 | grep -v "^$" | head -20 ; } || true
 [[ -x "$WORK/rsstest" ]] || { echo "✗ harness did not compile — an extraction has drifted"; exit 1; }

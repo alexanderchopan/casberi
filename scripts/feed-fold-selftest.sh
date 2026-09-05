@@ -221,7 +221,13 @@ print(failures == 0 ? "feed-fold-selftest: OK" : "feed-fold-selftest: \(failures
 exit(failures == 0 ? 0 : 1)
 SWIFT
 
-swiftc -O -o "$WORK/run" "$WORK/Stubs.swift" "$FOLD" "$WORK/main.swift" 2>&1 \
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.1x faster).
+# Re-probe before trusting it again after adding mutations.
+swiftc -Onone -o "$WORK/run" "$WORK/Stubs.swift" "$FOLD" "$WORK/main.swift" 2>&1 \
   || { print -u2 "feed-fold-selftest: FeedFold.swift no longer compiles against the inert stubs"; exit 1; }
 "$WORK/run"
 
@@ -240,7 +246,7 @@ if s.count(a) != 1:
     sys.exit(2)
 open(dst, "w").write(s.replace(a, b))
 PY
-  if ! swiftc -O -o "$dir/run" "$WORK/Stubs.swift" "$dir/FeedFold.swift" "$WORK/main.swift" >/dev/null 2>&1; then
+  if ! swiftc -Onone -o "$dir/run" "$WORK/Stubs.swift" "$dir/FeedFold.swift" "$WORK/main.swift" >/dev/null 2>&1; then
     print -u2 "  MUTATION DID NOT COMPILE: $name"; return 1
   fi
   if "$dir/run" >/dev/null 2>&1; then

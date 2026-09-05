@@ -318,7 +318,13 @@ print("all assertions passed")
 SWIFT
 
 cp "$OBJ" "$TMP/PriceObject.swift"
-swiftc -O -o "$TMP/run" "$TMP/Style.swift" "$TMP/PriceObject.swift" "$TMP/main.swift" 2>&1 | grep -E "error:" && exit 1
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 1.7x faster).
+# Re-probe before trusting it again after adding mutations.
+swiftc -Onone -o "$TMP/run" "$TMP/Style.swift" "$TMP/PriceObject.swift" "$TMP/main.swift" 2>&1 | grep -E "error:" && exit 1
 "$TMP/run" || exit 1
 
 # --- mutations (each must be caught) ----------------------------------------
@@ -338,7 +344,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$TMP/Mut.swift"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$TMP/Mut.swift" "$TMP/PriceObject.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$TMP/Mut.swift" "$TMP/PriceObject.swift" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -389,7 +395,7 @@ PY2
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$TMP/ObjMut.swift"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/omut" "$TMP/Style.swift" "$TMP/ObjMut.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/omut" "$TMP/Style.swift" "$TMP/ObjMut.swift" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/omut" > /dev/null 2>&1; then

@@ -21,7 +21,39 @@
 # silently correct on a chain that has never missed a slot and wrong by
 # thousands on one that has.
 set -uo pipefail
+# Absolute, captured BEFORE the cd: the mutation fan-out re-invokes this script
+# and `$0` is relative to the caller's cwd.
+SELF="${0:A}"
 cd "${0:A:h}/.."
+
+# ── the mutation child (PERF, 2026-09-05) ────────────────────────────────────
+# One mutation, in its own scratch directory so a concurrent sibling cannot see
+# it. Sits at the VERY TOP, above every line of setup, because the child must
+# not re-run the parent's assertion build: 67 mutations x a seven-file compile
+# is exactly the cost this block removes, and paying it again per child would
+# make the fan-out slower than the loop it replaces.
+#
+# It prints ONE line the parent classifies and never exits the whole run — a
+# second broken mutation must not cost another full pass to discover
+# (`verify.sh`'s 2026-08-19 lesson: report ALL failures, not the first).
+if [[ "${1:-}" == "--mutate" ]]; then
+  SPOOL="$2"; MID="$3"
+  MLABEL="$(cat "$SPOOL/mut/$MID.label")"
+  MFILE="$(cat "$SPOOL/mut/$MID.file")"
+  MW="$(mktemp -d)"
+  trap 'rm -rf "$MW"' EXIT
+  cp "$SPOOL"/base/*.swift "$MW/"
+  if ! FRM="$(cat "$SPOOL/mut/$MID.from")" TO="$(cat "$SPOOL/mut/$MID.to")" \
+       python3 "$SPOOL/mutapply.py" "$MW/$MFILE" 2>/dev/null; then
+    # A mutation that matches NOTHING is stale and has silently been testing
+    # the shipped code — the failure this whole file exists to prevent.
+    print "STALE|$MID|$MLABEL"; exit 0
+  fi
+  if zsh "$SPOOL/build.zsh" "$MW" && "$MW/pv" >/dev/null 2>&1; then
+    print "SURVIVED|$MID|$MLABEL"; exit 0
+  fi
+  print "CAUGHT|$MID|$MLABEL"; exit 0
+fi
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -826,35 +858,80 @@ check(!PM.notePoolSight(hasKeys: true, seeding: false, box4), "once ever")
 if failures == 0 { print("  ok   \(0) failures") } else { exit(1) }
 SWIFT
 
+# ONE compile line, written once and run by both the assertion build and every
+# mutation child. Two copies of a seven-file compile drift, and the drift is
+# invisible: the mutants would be measured against a different file set than the
+# assertions (vibenet's §468 bug, which scored thirty-four type errors as
+# thirty-four catches).
+cat > "$work/build.zsh" <<'BUILDSH'
+MW="$1"
+xcrun swiftc -Onone -o "$MW/pv" \
+  "$MW/PrivacyDevnetSection.swift" "$MW/PrivacyDevnetRoots.swift" \
+  "$MW/PrivacyDevnetRoom.swift" "$MW/PrivacyDevnetFigure.swift" \
+  "$MW/PrivacyDevnetMoments.swift" "$MW/Keccak256.swift" "$MW/main.swift" 2>"$MW/build.log"
+BUILDSH
+
+# The applier, written to a file so the child needs no heredoc of its own.
+cat > "$work/mutapply.py" <<'MUTAPPLY'
+import os, sys, io
+path = sys.argv[1]
+src = io.open(path, encoding="utf-8").read()
+frm, to = os.environ["FRM"], os.environ["TO"]
+if frm not in src:
+    sys.exit(1)
+io.open(path, "w", encoding="utf-8").write(src.replace(frm, to, 1))
+MUTAPPLY
+
+# The pristine tree every mutation is cut from. Staged ONCE; a child copies it
+# rather than re-reading the repo, so an edit landing in the working tree
+# mid-run cannot make two mutations disagree about what "the shipped source" is.
+mkdir -p "$work/base"
+cp "$SECTION" "$work/base/PrivacyDevnetSection.swift"
+cp "$ROOTS"   "$work/base/PrivacyDevnetRoots.swift"
+cp "$ROOM"    "$work/base/PrivacyDevnetRoom.swift"
+cp "$FIG"     "$work/base/PrivacyDevnetFigure.swift"
+cp "$MOMENTS" "$work/base/PrivacyDevnetMoments.swift"
+cp "$KECCAK"  "$work/base/Keccak256.swift"
+cp "$work/main.swift" "$work/base/main.swift"
+
 print "  building…"
-xcrun swiftc -Onone -o "$work/pv" "$SECTION" "$ROOTS" "$ROOM" "$FIG" "$MOMENTS" "$KECCAK" "$work/main.swift" 2>"$work/build.log" \
-  || { cat "$work/build.log"; fail "the sources did not compile — they must stay Foundation-only" }
-"$work/pv" || fail "assertions failed"
+zsh "$work/build.zsh" "$work/base" \
+  || { cat "$work/base/build.log"; fail "the sources did not compile — they must stay Foundation-only" }
+"$work/base/pv" || fail "assertions failed"
 print "  ok   assertions"
 
 # ── mutations ──────────────────────────────────────────────────────────
 # Each is a silent wrong answer that renders as an ordinary room. A mutation
 # that SURVIVES means the assertions above are not testing what they claim.
+# RECORD a mutation; the fan-out below runs them.
+#
+# **They run CONCURRENTLY (PERF, 2026-09-05).** Every mutation is PURE — it
+# edits its own scratch copy and reads nothing the others write — so running
+# them one at a time on one core of eight was the whole of this harness's cost:
+# 67 mutations x a seven-file compile measured 250s in the 2026-09-05 nightly.
+#
+# `xargs -P`, never a `jobs -r` slot loop: job control is OFF in a
+# non-interactive zsh, so `jobs -r` reports NOTHING and the loop degrades
+# silently to "launch all 67 at once", which on 8 cores thrashes to slower than
+# serial while every check still passes (`verify.sh`'s own paid-for trap,
+# 2026-08-19).
+#
+# The call sites are UNCHANGED — they still name a path, and only the basename
+# is kept, because the child copies a flat pristine tree.
+MUTN=0
 mutate() {
   local name="$1" file="$2" from="$3" to="$4"
-  local dir="$work/m"; rm -rf "$dir"; mkdir -p "$dir"
-  cp "$SECTION" "$dir/PrivacyDevnetSection.swift"; cp "$ROOTS" "$dir/PrivacyDevnetRoots.swift"
-  cp "$ROOM" "$dir/PrivacyDevnetRoom.swift"; cp "$FIG" "$dir/PrivacyDevnetFigure.swift"
-  cp "$MOMENTS" "$dir/PrivacyDevnetMoments.swift"; cp "$KECCAK" "$dir/Keccak256.swift"
-  local target="$dir/$(basename $file)"
-  grep -qF -- "$from" "$target" || fail "mutation '$name' matches nothing — it is stale and tests the shipped code"
-  python3 - "$target" "$from" "$to" <<'PY'
-import sys, io
-p, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
-s = io.open(p, encoding="utf-8").read()
-io.open(p, "w", encoding="utf-8").write(s.replace(a, b, 1))
-PY
-  if xcrun swiftc -Onone -o "$dir/pv" "$dir/PrivacyDevnetSection.swift" "$dir/PrivacyDevnetRoots.swift" \
-        "$dir/PrivacyDevnetRoom.swift" "$dir/PrivacyDevnetFigure.swift" \
-        "$dir/PrivacyDevnetMoments.swift" "$dir/Keccak256.swift" "$work/main.swift" 2>/dev/null && "$dir/pv" >/dev/null 2>&1; then
-    fail "mutation SURVIVED: $name"
-  fi
-  print "  ok   caught: $name"
+  MUTN=$((MUTN + 1))
+  local id
+  id="$(printf '%03d' "$MUTN")"
+  mkdir -p "$work/mut"
+  # `printf '%s'`, never `print`: a trailing newline appended to `from` makes the
+  # pattern match nothing, which this harness reports as a STALE mutation — a
+  # confusing failure for a mutation that is perfectly correct.
+  printf '%s' "$name" > "$work/mut/$id.label"
+  printf '%s' "${file:t}" > "$work/mut/$id.file"
+  printf '%s' "$from" > "$work/mut/$id.from"
+  printf '%s' "$to"   > "$work/mut/$id.to"
 }
 
 mutate "the window off by one (a root expires a slot early)" \
@@ -1057,6 +1134,57 @@ mutate "an unread receipt read as nothing spent" \
   "let gasUsed = gasUsed ?? 0; guard let allowed = allowance(frames), allowed > 0 else { return nil }"
 mutate "Home promising a few moves and listing none again" \
   "$FIG" "static let homeMoveCap = 3" "static let homeMoveCap = 0"
+
+# ── the last mutation must precede the fan-out ───────────────────────────────
+# A `mutate` call BELOW the fan-out is silently never run and the pass still
+# goes green. It is a file-ORDER bug, so no care inside the block can catch it —
+# only the file can. This reads itself.
+MUT_LAST="$(grep -n '^mutate ' "$SELF" | tail -1 | cut -d: -f1)"
+FANOUT_AT="$(grep -n '^# --- run every recorded mutation, concurrently' "$SELF" | head -1 | cut -d: -f1)"
+if [[ -n "$MUT_LAST" && -n "$FANOUT_AT" ]] && (( MUT_LAST > FANOUT_AT )); then
+  fail "a mutation is declared at line $MUT_LAST, BELOW the fan-out at line $FANOUT_AT — it would never run and the pass would still go green. Move it above."
+fi
+
+# HOW MANY AT ONCE, and why it is not simply `ncpu`. This harness may be run
+# TWO ways: on its own, where it should take the whole machine, and inside
+# `verify.sh` / `verify-mac.sh`, which already run the harnesses themselves
+# under `xargs -P ncpu`. Nested at full width that is ncpu x ncpu — 64 `swiftc`
+# processes on 8 cores here — and the cost is not merely scheduling: each is
+# hundreds of MB against 16 GB, so the failure mode is memory pressure and swap,
+# which looks like the machine hanging rather than like a test being slow. The
+# outer runners export `HARNESS_INNER_JOBS`; standalone there is no outer swarm
+# and the default is the whole machine.
+MUT_JOBS="${HARNESS_INNER_JOBS:-$(sysctl -n hw.ncpu 2>/dev/null || print 4)}"
+
+# --- run every recorded mutation, concurrently -------------------------------
+# One core per mutation up to the machine's count. Output is KEPT and sorted by
+# id so the report reads in declaration order regardless of which finished
+# first — `xargs` interleaves, and a mutation list that reshuffles between runs
+# is one nobody can diff.
+: > "$work/mut-results"
+ls "$work"/mut/*.label | sed 's#.*/##; s#\.label$##' \
+  | xargs -P "$MUT_JOBS" -I{} zsh "$SELF" --mutate "$work" {} \
+  >> "$work/mut-results" 2>&1
+
+MUT_FAILS=0
+MUT_OK=0
+while IFS='|' read -r verdict mid label; do
+  case "$verdict" in
+    CAUGHT)   printf '  ok   caught: %s\n' "$label"; MUT_OK=$((MUT_OK + 1)) ;;
+    SURVIVED) printf '✗ mutation SURVIVED: %s\n' "$label"; MUT_FAILS=$((MUT_FAILS + 1)) ;;
+    STALE)    printf "✗ mutation '%s' matches nothing — it is stale and tests the shipped code\n" "$label"
+              MUT_FAILS=$((MUT_FAILS + 1)) ;;
+    *)        [[ -n "$verdict" ]] && printf '  %s\n' "$verdict" ;;
+  esac
+done < <(sort "$work/mut-results")
+
+# Every mutation must have reported. A child that died without a line is a
+# mutation nobody ran, and a silently skipped mutation is exactly the false
+# green this whole file exists to prevent.
+if (( MUT_OK + MUT_FAILS != MUTN )); then
+  fail "$((MUTN - MUT_OK - MUT_FAILS)) of $MUTN mutation(s) never reported — they did not run"
+fi
+(( MUT_FAILS == 0 )) || fail "$MUT_FAILS mutation(s) failed"
 
 # ── drift guards ───────────────────────────────────────────────────────
 # The rules that live in ANOTHER file, which the compiled sources cannot prove.

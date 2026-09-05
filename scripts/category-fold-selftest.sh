@@ -1155,7 +1155,13 @@ exit(failures == 0 ? 0 : 1)
 SWIFT
 
 echo "category-fold-selftest: compiling CategoryFold.swift as shipped…"
-swiftc -O -o "$TMP/run" "$FOLD" "$TMP/stub.swift" "$TMP/main.swift" 2>&1 | grep -v '^ *$' || true
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.7x faster).
+# Re-probe before trusting it again after adding mutations.
+swiftc -Onone -o "$TMP/run" "$FOLD" "$TMP/stub.swift" "$TMP/main.swift" 2>&1 | grep -v '^ *$' || true
 [[ -x "$TMP/run" ]] || { echo "✗ compile failed — CategoryFold.swift no longer builds Foundation-only"; exit 1; }
 "$TMP/run" || exit 1
 
@@ -1172,7 +1178,7 @@ if old not in src:
     sys.exit(f"✗ mutation anchor not found: {old!r} — this harness is testing stale code")
 open(sys.argv[2], "w").write(src.replace(old, new, 1))
 PY
-  if swiftc -O -o "$TMP/mrun" "$TMP/mutated.swift" "$TMP/stub.swift" "$TMP/main.swift" 2>/dev/null \
+  if swiftc -Onone -o "$TMP/mrun" "$TMP/mutated.swift" "$TMP/stub.swift" "$TMP/main.swift" 2>/dev/null \
      && "$TMP/mrun" >/dev/null 2>&1; then
     echo "  ✗ mutation SURVIVED: $label"
     return 1

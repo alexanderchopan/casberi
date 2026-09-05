@@ -730,7 +730,13 @@ if failures == 0 {
 }
 SWIFT
 
-swiftc -O -o "$TMP/run" "$TMP/extracted.swift" "$FIGURE" "$TMP/main.swift" 2>&1 | grep -v "^$" || true
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.4x faster).
+# Re-probe before trusting it again after adding mutations.
+swiftc -Onone -o "$TMP/run" "$TMP/extracted.swift" "$FIGURE" "$TMP/main.swift" 2>&1 | grep -v "^$" || true
 [[ -x "$TMP/run" ]] || { print "✗ AnswerFigure + the extracted emitters did not compile"; exit 1; }
 "$TMP/run"
 
@@ -750,7 +756,7 @@ mutate() {  # name, sed-expression over AnswerFigure.swift
   sed "$expr" "$FIGURE" > "$TMP/mutant.swift"
   cmp -s "$FIGURE" "$TMP/mutant.swift" \
     && { print "  ✗ mutation '$name' changed nothing — it is testing the shipped code"; MUT=$((MUT + 1)); return; }
-  if swiftc -O -o "$TMP/mutrun" "$TMP/extracted.swift" "$TMP/mutant.swift" "$TMP/main.swift" >/dev/null 2>&1 \
+  if swiftc -Onone -o "$TMP/mutrun" "$TMP/extracted.swift" "$TMP/mutant.swift" "$TMP/main.swift" >/dev/null 2>&1 \
      && "$TMP/mutrun" >/dev/null 2>&1; then
     print "  ✗ mutation '$name' SURVIVED — the assertions do not cover it"
     MUT=$((MUT + 1))

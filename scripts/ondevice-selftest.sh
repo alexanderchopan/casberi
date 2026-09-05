@@ -392,7 +392,13 @@ if failures == 0 {
 }
 SWIFT
 
-swiftc -O -enable-bare-slash-regex -o "$TMP/harness" "$TMP/extracted.swift" "$TMP/main.swift" 2>&1 \
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.2x faster).
+# Re-probe before trusting it again after adding mutations.
+swiftc -Onone -enable-bare-slash-regex -o "$TMP/harness" "$TMP/extracted.swift" "$TMP/main.swift" 2>&1 \
   | grep -v "^$" || true
 [[ -x "$TMP/harness" ]] || { echo "✗ harness failed to compile — an extraction stopped matching the shipped source"; exit 1; }
 "$TMP/harness"

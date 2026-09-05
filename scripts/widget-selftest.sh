@@ -498,7 +498,13 @@ print("widget-selftest: the compiled suite passed")
 SWIFT
 
 print "widget-selftest: the shipped files, compiled whole…"
-xcrun swiftc -O -o "$TMP/run" "$PAYLOAD" "$MONEY" "$LEDE" "$TMP/stub.swift" "$TMP/main.swift" 2>&1 \
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 1.8x faster).
+# Re-probe before trusting it again after adding mutations.
+xcrun swiftc -Onone -o "$TMP/run" "$PAYLOAD" "$MONEY" "$LEDE" "$TMP/stub.swift" "$TMP/main.swift" 2>&1 \
   | grep -v "^$" || true
 [[ -x "$TMP/run" ]] || { print -u2 "✗ compile failed"; exit 1; }
 "$TMP/run" || exit 1
@@ -520,7 +526,7 @@ if old not in src:
     sys.exit("MUTATION ANCHOR MISSING: %r — this harness is testing stale code" % old)
 open(path, "w").write(src.replace(old, new, 1))
 PY
-  if xcrun swiftc -O -o "$dir/run" "$dir/WidgetPayload.swift" "$dir/MoneyFormat.swift" \
+  if xcrun swiftc -Onone -o "$dir/run" "$dir/WidgetPayload.swift" "$dir/MoneyFormat.swift" \
        "$dir/WidgetLede.swift" "$TMP/stub.swift" "$TMP/main.swift" >/dev/null 2>&1 \
      && "$dir/run" >/dev/null 2>&1; then
     print "  ✗ mutation SURVIVED: $label"

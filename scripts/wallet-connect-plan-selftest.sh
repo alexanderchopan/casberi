@@ -384,7 +384,13 @@ if failures > 0 { print("\n\(failures) failure(s)"); exit(1) }
 SWIFT
 
 echo "wallet-connect-plan self-test"
-swiftc -O -o "$TMP/run" "$PLAN" "$TMP/main.swift" 2>&1 | grep -E "error" && exit 1
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.0x faster).
+# Re-probe before trusting it again after adding mutations.
+swiftc -Onone -o "$TMP/run" "$PLAN" "$TMP/main.swift" 2>&1 | grep -E "error" && exit 1
 "$TMP/run" || exit 1
 
 # --- mutations --------------------------------------------------------------
@@ -406,7 +412,7 @@ if frm not in src:
 open(path, "w").write(src.replace(frm, to, 1))
 PY
   if [[ $? -eq 2 ]]; then exit 1; fi
-  if ! swiftc -O -o "$TMP/mut" "$WORK/WalletConnectPlan.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$WORK/WalletConnectPlan.swift" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

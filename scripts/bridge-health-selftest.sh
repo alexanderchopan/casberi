@@ -187,7 +187,13 @@ if failures > 0 { print("✗ bridge-health self-test: \(failures) failure(s)"); 
 print("✓ bridge-health self-test: state machine verified")
 SWIFT
 
-swiftc -O -o "$TMP/run" "$TMP/extracted.swift" "$TMP/main.swift" 2>&1 \
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 1.2x faster).
+# Re-probe before trusting it again after adding mutations.
+swiftc -Onone -o "$TMP/run" "$TMP/extracted.swift" "$TMP/main.swift" 2>&1 \
   | grep -E "error:" && { echo "✗ harness failed to compile"; exit 1; }
 "$TMP/run"
 
@@ -206,7 +212,7 @@ if a not in text:
 open(dst, "w").write(text.replace(a, b, 1))
 PY
   cp "$TMP/main.swift" "$dir/main.swift"
-  if swiftc -O -o "$dir/run" "$dir/extracted.swift" "$dir/main.swift" 2>/dev/null \
+  if swiftc -Onone -o "$dir/run" "$dir/extracted.swift" "$dir/main.swift" 2>/dev/null \
      && "$dir/run" >/dev/null 2>&1; then
     echo "  ✗ SURVIVED: $label"; return 1
   fi

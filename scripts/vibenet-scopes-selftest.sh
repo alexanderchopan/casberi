@@ -184,7 +184,13 @@ enum VibenetTransaction {
 }
 SWIFT
 
-run() { swiftc -O -o "$work/t" "$1" "$2" "$ROOM" "$LEDGER" "$FACTS" "$work/stubs.swift" "$work/main.swift" 2>"$work/err" || { cat "$work/err" >&2; return 2; }; "$work/t"; }
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 4.5x faster).
+# Re-probe before trusting it again after adding mutations.
+run() { swiftc -Onone -o "$work/t" "$1" "$2" "$ROOM" "$LEDGER" "$FACTS" "$work/stubs.swift" "$work/main.swift" 2>"$work/err" || { cat "$work/err" >&2; return 2; }; "$work/t"; }
 
 cp "$WEB" "$work/web.swift"; cp "$FLOW" "$work/flow.swift"
 echo "Assertions"

@@ -1478,5 +1478,11 @@ SWIFT
 # `swiftc` to a binary, NOT `swift file1 file2 …` — that form runs the FIRST
 # file as a script and passes the rest as command-line ARGUMENTS to it, so the
 # sources were never compiled and the run exited 0 having tested nothing.
-swiftc -O -o "$TMP/selftest" "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$CONNECTIONS" "$ALTANA" "$STUBS" "$PORTFOLIO" "$DRIVER"
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 3.5x faster).
+# Re-probe before trusting it again after adding mutations.
+swiftc -Onone -o "$TMP/selftest" "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$CONNECTIONS" "$ALTANA" "$STUBS" "$PORTFOLIO" "$DRIVER"
 "$TMP/selftest"

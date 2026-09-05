@@ -509,7 +509,13 @@ enum AgentProvider: String, CaseIterable {
 }
 SWIFT
 
-swiftc -O -o "$TMP/run" "$FETCH" "$ROUTER" "$TMP/stub.swift" "$TMP/extracted.swift" "$TMP/main.swift" \
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 1.9x faster).
+# Re-probe before trusting it again after adding mutations.
+swiftc -Onone -o "$TMP/run" "$FETCH" "$ROUTER" "$TMP/stub.swift" "$TMP/extracted.swift" "$TMP/main.swift" \
   2>&1 | grep -v "^$" || true
 [[ -x "$TMP/run" ]] || { echo "✗ the keyed-agent logic did not compile"; exit 1; }
 "$TMP/run"
@@ -569,7 +575,7 @@ PY
   then
     echo "  ✓ $name (rejected at extraction)"; return
   fi
-  if ! swiftc -O -o "$WORK/mut" "$WORK/AgentWebFetch.swift" "$WORK/AgentOpenRouter.swift" \
+  if ! swiftc -Onone -o "$WORK/mut" "$WORK/AgentWebFetch.swift" "$WORK/AgentOpenRouter.swift" \
         "$TMP/stub.swift" "$WORK/extracted.swift" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi

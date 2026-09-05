@@ -220,7 +220,13 @@ print("  \(34) assertions pass")
 SWIFT
 
 echo "Compiling the shipped source WHOLE and unmodified…"
-swiftc -O -o "$TMP/run" "$ROW" "$TMP/main.swift" 2>&1 | sed 's/^/  /'
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 1.4x faster).
+# Re-probe before trusting it again after adding mutations.
+swiftc -Onone -o "$TMP/run" "$ROW" "$TMP/main.swift" 2>&1 | sed 's/^/  /'
 "$TMP/run"
 
 # --- mutations --------------------------------------------------------------
@@ -242,7 +248,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$target"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$target" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$target" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

@@ -282,7 +282,13 @@ check("wrong chain names the chain", VibenetSigner.sentence(.wrongChain(8453)).c
 if failures == 0 { print("  ok") } else { exit(1) }
 SWIFT
 
-swiftc -O -o "$WORK/run" "$WORK/VibenetSigner.swift" "$WORK/main.swift" 2>"$WORK/build.log" || {
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 3.8x faster).
+# Re-probe before trusting it again after adding mutations.
+swiftc -Onone -o "$WORK/run" "$WORK/VibenetSigner.swift" "$WORK/main.swift" 2>"$WORK/build.log" || {
   echo "✗ VibenetSigner.swift did not compile standalone (it must stay Foundation-only)"
   head -30 "$WORK/build.log"
   exit 1
@@ -308,7 +314,7 @@ p, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
 s = io.open(p, encoding="utf-8").read()
 io.open(p, "w", encoding="utf-8").write(s.replace(a, b, 1))
 PY
-  if swiftc -O -o "$WORK/mrun" "$WORK/VibenetSigner.swift" "$WORK/main.swift" 2>/dev/null \
+  if swiftc -Onone -o "$WORK/mrun" "$WORK/VibenetSigner.swift" "$WORK/main.swift" 2>/dev/null \
      && "$WORK/mrun" >/dev/null 2>&1; then
     echo "  ✗ MUTATION SURVIVED: $label"
     return 1
@@ -743,7 +749,7 @@ check("the metadata changes what gets signed",
 print("PREIMAGE=" + pre.map { String(format: "%02x", $0) }.joined())
 if fails == 0 { print("  ok") } else { exit(1) }
 SWIFT
-swiftc -O -o "$WORK/txrun" "$WORK/VibenetTransaction.swift" "$WORK/Keccak256.swift" "$WORK/VibenetCreate.swift" "$WORK/VibenetSigner.swift" "$WORK/RLP.swift" "$WORK/txmain/main.swift" 2>"$WORK/tx.log" || {
+swiftc -Onone -o "$WORK/txrun" "$WORK/VibenetTransaction.swift" "$WORK/Keccak256.swift" "$WORK/VibenetCreate.swift" "$WORK/VibenetSigner.swift" "$WORK/RLP.swift" "$WORK/txmain/main.swift" 2>"$WORK/tx.log" || {
   echo "✗ VibenetTransaction.swift did not compile standalone (it must stay Foundation-only)"
   head -20 "$WORK/tx.log"; exit 1; }
 echo "vibenet transaction:"
@@ -810,7 +816,7 @@ p, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
 s = io.open(p, encoding="utf-8").read()
 io.open(p, "w", encoding="utf-8").write(s.replace(a, b, 1))
 PYC
-  if swiftc -O -o "$WORK/cm" "$WORK/VibenetTransaction.swift" "$WORK/Keccak256.swift" \
+  if swiftc -Onone -o "$WORK/cm" "$WORK/VibenetTransaction.swift" "$WORK/Keccak256.swift" \
        "$WORK/VibenetCreate.swift" "$WORK/VibenetSigner.swift" "$WORK/RLP.swift" "$WORK/txmain/main.swift" 2>/dev/null \
      && "$WORK/cm" >/dev/null 2>&1; then
     echo "  ✗ MUTATION SURVIVED: $label"; return 1
@@ -838,7 +844,7 @@ p, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
 s = io.open(p, encoding="utf-8").read()
 io.open(p, "w", encoding="utf-8").write(s.replace(a, b, 1))
 PYR
-  if swiftc -O -o "$WORK/rm" "$WORK/VibenetTransaction.swift" "$WORK/Keccak256.swift" \
+  if swiftc -Onone -o "$WORK/rm" "$WORK/VibenetTransaction.swift" "$WORK/Keccak256.swift" \
        "$WORK/VibenetCreate.swift" "$WORK/VibenetSigner.swift" "$WORK/RLP.swift" \
        "$WORK/txmain/main.swift" 2>/dev/null \
      && "$WORK/rm" >/dev/null 2>&1; then
@@ -860,7 +866,7 @@ p, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
 s = io.open(p, encoding="utf-8").read()
 io.open(p, "w", encoding="utf-8").write(s.replace(a, b, 1))
 PY2
-  if swiftc -O -o "$WORK/txm" "$WORK/VibenetTransaction.swift" "$WORK/Keccak256.swift" "$WORK/VibenetCreate.swift" "$WORK/VibenetSigner.swift" "$WORK/RLP.swift" "$WORK/txmain/main.swift" 2>/dev/null \
+  if swiftc -Onone -o "$WORK/txm" "$WORK/VibenetTransaction.swift" "$WORK/Keccak256.swift" "$WORK/VibenetCreate.swift" "$WORK/VibenetSigner.swift" "$WORK/RLP.swift" "$WORK/txmain/main.swift" 2>/dev/null \
      && "$WORK/txm" > "$WORK/m.out" 2>/dev/null \
      && python3 - "$WORK/m.out" <<'H2' >/dev/null 2>&1
 import sys, sha3

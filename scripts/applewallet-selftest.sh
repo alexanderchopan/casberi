@@ -43,7 +43,41 @@
 # Pure, local, deterministic — no network, no simulator. Exit non-zero on
 # failure.
 set -euo pipefail
+# Absolute, captured BEFORE the cd: the mutation fan-out re-invokes this script
+# and `$0` is relative to the caller's cwd.
+SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 cd "$(dirname "$0")/.."
+
+# ── the mutation child (PERF, 2026-09-05) ────────────────────────────────────
+# One mutation, in its own scratch directory so a concurrent sibling cannot see
+# it. Sits at the VERY TOP, above every line of setup, because the child must
+# not re-run the parent's assertion build — that is the cost this block exists
+# to remove, and paying it again per child would make the fan-out slower than
+# the loop it replaces.
+#
+# It prints ONE line the parent classifies and never exits the whole run — a
+# second broken mutation must not cost another full pass to discover
+# (`verify.sh`'s 2026-08-19 lesson: report ALL failures, not the first).
+if [[ "${1:-}" == "--mutate" ]]; then
+  SPOOL="$2"; MID="$3"
+  MLABEL="$(cat "$SPOOL/mut/$MID.label")"
+  MW="$(mktemp -d)"
+  trap 'rm -rf "$MW"' EXIT
+  cp "$SPOOL"/base/*.swift "$MW/"
+  if ! MUT_FROM="$(cat "$SPOOL/mut/$MID.from")" MUT_TO="$(cat "$SPOOL/mut/$MID.to")" \
+       python3 "$SPOOL/mutapply.py" "$MW/AppleWalletRoom.swift" 2>/dev/null; then
+    # A mutation that matches NOTHING is stale and has silently been testing
+    # the shipped code — the failure this whole file exists to prevent.
+    print "STALE|$MID|$MLABEL"; exit 0
+  fi
+  if ! zsh "$SPOOL/build.zsh" "$MW"; then
+    print "COMPILE|$MID|$MLABEL"; exit 0
+  fi
+  if "$MW/aw-selftest" >/dev/null 2>&1; then
+    print "SURVIVED|$MID|$MLABEL"; exit 0
+  fi
+  print "CAUGHT|$MID|$MLABEL"; exit 0
+fi
 
 ROOM="Casberi/Casberi/Model/AppleWalletRoom.swift"
 LEDE="Casberi/Casberi/Model/RoomLede.swift"   # prd §585 — the shared lede type these rooms now return
@@ -726,14 +760,47 @@ print(failures == 0 ? "\nAll assertions passed." : "\n\(failures) FAILED")
 exit(failures == 0 ? 0 : 1)
 SWIFT
 
-build() { swiftc -O -o "$TMP/aw-selftest" "$1" "$LEDE" "$TMP/main.swift" 2>"$TMP/build.log"; }
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 6.9x faster).
+# Re-probe before trusting it again after adding mutations.
+# ONE compile line, written once and run by both the assertion build and every
+# mutation child. Two copies drift, and the drift is invisible in the direction
+# that prints a tick — vibenet's §468 bug, where a mutation variant quietly
+# compiled a different file set and scored thirty-four type errors as catches.
+cat > "$TMP/build.zsh" <<'BUILDSH'
+MW="$1"
+swiftc -Onone -o "$MW/aw-selftest" \
+  "$MW/AppleWalletRoom.swift" "$MW/RoomLede.swift" "$MW/main.swift" 2>"$MW/build.log"
+BUILDSH
 
-if ! build "$ROOM"; then
+# The applier, written to a file so the child needs no heredoc of its own.
+cat > "$TMP/mutapply.py" <<'MUTAPPLY'
+import os, sys, io
+path = sys.argv[1]
+src = io.open(path, encoding="utf-8").read()
+frm, to = os.environ["MUT_FROM"], os.environ["MUT_TO"]
+if frm not in src:
+    sys.exit(1)
+io.open(path, "w", encoding="utf-8").write(src.replace(frm, to, 1))
+MUTAPPLY
+
+# The pristine tree every mutation is cut from. Staged ONCE; a child copies it
+# rather than re-reading the repo, so an edit landing in the working tree
+# mid-run cannot make two mutations disagree about what "the shipped source" is.
+mkdir -p "$TMP/base"
+cp "$ROOM" "$TMP/base/AppleWalletRoom.swift"
+cp "$LEDE" "$TMP/base/RoomLede.swift"
+cp "$TMP/main.swift" "$TMP/base/main.swift"
+
+if ! zsh "$TMP/build.zsh" "$TMP/base"; then
   echo "✗ harness failed to compile against the shipped source"
-  grep -E 'error:' "$TMP/build.log" | head -20
+  grep -E 'error:' "$TMP/base/build.log" | head -20
   exit 1
 fi
-"$TMP/aw-selftest"
+"$TMP/base/aw-selftest"
 
 # --- mutations --------------------------------------------------------------
 # A check that cannot fail proves nothing. Each mutation below is a plausible
@@ -741,30 +808,30 @@ fi
 echo
 echo "mutations (each must be caught)"
 
-WORK="$TMP/work"
+# RECORD a mutation; the fan-out below runs them.
+#
+# **They run CONCURRENTLY (PERF, 2026-09-05).** Every mutation is PURE — it
+# edits its own scratch copy and reads nothing the others write — so running
+# them one at a time on one core of eight was the whole of this harness's cost.
+#
+# `xargs -P`, never a `jobs -r` slot loop: job control is OFF in a
+# non-interactive zsh, so `jobs -r` reports NOTHING and the loop degrades
+# silently to "launch them all at once", which on 8 cores thrashes to slower
+# than serial while every check still passes (`verify.sh`'s own paid-for trap,
+# 2026-08-19).
+MUTN=0
 mutate() {
   local name="$1" from="$2" to="$3"
-  rm -rf "$WORK"; mkdir -p "$WORK"
-  cp "$ROOM" "$WORK/AppleWalletRoom.swift"
-  MUT_FROM="$from" MUT_TO="$to" python3 - "$WORK/AppleWalletRoom.swift" <<'PY'
-import os, sys
-path = sys.argv[1]
-src = open(path).read()
-frm, to = os.environ["MUT_FROM"], os.environ["MUT_TO"]
-if frm not in src:
-    sys.stderr.write("ANCHOR-MISSING\n"); sys.exit(2)
-open(path, "w").write(src.replace(frm, to, 1))
-PY
-  if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$WORK/AppleWalletRoom.swift"; then
-    echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
-  fi
-  if ! swiftc -O -o "$TMP/mut" "$WORK/AppleWalletRoom.swift" "$LEDE" "$TMP/main.swift" 2>/dev/null; then
-    echo "  ✓ $name (rejected at compile)"; return
-  fi
-  if "$TMP/mut" > /dev/null 2>&1; then
-    echo "  ✗ $name — the harness still passed, so nothing was testing this"; exit 1
-  fi
-  echo "  ✓ $name"
+  MUTN=$((MUTN + 1))
+  local id
+  id="$(printf '%03d' "$MUTN")"
+  mkdir -p "$TMP/mut"
+  # `printf '%s'`, never `echo`: a trailing newline appended to `from` makes the
+  # pattern match nothing, which this harness reports as a STALE mutation — a
+  # confusing failure for a mutation that is perfectly correct.
+  printf '%s' "$name" > "$TMP/mut/$id.label"
+  printf '%s' "$from" > "$TMP/mut/$id.from"
+  printf '%s' "$to"   > "$TMP/mut/$id.to"
 }
 
 # 1. Pending counted as spent — the statement-vs-feed confusion.
@@ -950,6 +1017,58 @@ mutate "silence ref no longer carries a readable date" \
 mutate "silenceLastSeen accepts any ref" \
   'guard ref.hasPrefix("applewallet:silence:"),' \
   'guard true,'
+
+# ── the last mutation must precede the fan-out ───────────────────────────────
+# A `mutate` call BELOW the fan-out is silently never run and the pass still
+# goes green. It is a file-ORDER bug, so no care inside the block can catch it —
+# only the file can. This reads itself.
+MUT_LAST="$(grep -n '^mutate ' "$SELF" | tail -1 | cut -d: -f1)"
+FANOUT_AT="$(grep -n '^# --- run every recorded mutation, concurrently' "$SELF" | head -1 | cut -d: -f1)"
+if [[ -n "$MUT_LAST" && -n "$FANOUT_AT" ]] && (( MUT_LAST > FANOUT_AT )); then
+  echo "✗ a mutation is declared at line $MUT_LAST, BELOW the fan-out at line $FANOUT_AT — it would never run and the pass would still go green. Move it above."
+  exit 1
+fi
+
+# HOW MANY AT ONCE, and why it is not simply `ncpu`. This harness may be run
+# TWO ways: on its own, where it should take the whole machine, and inside
+# `verify.sh` / `verify-mac.sh`, which already run the harnesses themselves
+# under `xargs -P ncpu`. Nested at full width that is ncpu x ncpu — 64 `swiftc`
+# processes on 8 cores against 16 GB — and the failure mode is memory pressure
+# and swap, which reads as the machine hanging rather than as a slow test.
+MUT_JOBS="${HARNESS_INNER_JOBS:-$(sysctl -n hw.ncpu 2>/dev/null || print 4)}"
+
+# --- run every recorded mutation, concurrently -------------------------------
+# One core per mutation up to the bound above. Output is KEPT and sorted by id
+# so the report reads in declaration order regardless of which finished first —
+# `xargs` interleaves, and a mutation list that reshuffles between runs is one
+# nobody can diff.
+: > "$TMP/mut-results"
+ls "$TMP"/mut/*.label | sed 's#.*/##; s#\.label$##' \
+  | xargs -P "$MUT_JOBS" -I{} zsh "$SELF" --mutate "$TMP" {} \
+  >> "$TMP/mut-results" 2>&1
+
+MUT_FAILS=0
+MUT_OK=0
+while IFS='|' read -r verdict mid label; do
+  case "$verdict" in
+    CAUGHT)   printf '  ✓ %s\n' "$label"; MUT_OK=$((MUT_OK + 1)) ;;
+    COMPILE)  printf '  ✓ %s (rejected at compile)\n' "$label"; MUT_OK=$((MUT_OK + 1)) ;;
+    SURVIVED) printf '  ✗ %s — the harness still passed, so nothing was testing this\n' "$label"
+              MUT_FAILS=$((MUT_FAILS + 1)) ;;
+    STALE)    printf '  ✗ %s — the mutation did not apply (the shipped source moved)\n' "$label"
+              MUT_FAILS=$((MUT_FAILS + 1)) ;;
+    *)        [[ -n "$verdict" ]] && printf '  %s\n' "$verdict" ;;
+  esac
+done < <(sort "$TMP/mut-results")
+
+# Every mutation must have reported. A child that died without a line is a
+# mutation nobody ran, and a silently skipped mutation is exactly the false
+# green this whole file exists to prevent.
+if (( MUT_OK + MUT_FAILS != MUTN )); then
+  echo "✗ $((MUTN - MUT_OK - MUT_FAILS)) of $MUTN mutation(s) never reported — they did not run"
+  exit 1
+fi
+(( MUT_FAILS == 0 )) || { echo "✗ $MUT_FAILS mutation(s) failed"; exit 1; }
 
 echo
 echo "applewallet-selftest: OK — assertions pass and every mutation is caught."

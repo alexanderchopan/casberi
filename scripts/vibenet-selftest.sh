@@ -42,7 +42,49 @@
 # Pure, local, deterministic — no network, no simulator. Exit non-zero on
 # failure.
 set -euo pipefail
+# Absolute, captured BEFORE the cd: the mutation fan-out re-invokes this script
+# and `$0` is relative to the caller's cwd.
+SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 cd "$(dirname "$0")/.."
+
+# ── the mutation child (PERF, 2026-09-05) ────────────────────────────────────
+# One mutation, in its own scratch directory so a concurrent sibling cannot see
+# it. Sits at the VERY TOP, above every line of setup, because the child must
+# not re-run the parent's ~4,000-line assertion build: 114 mutations x a full
+# four-file compile is exactly the cost this block exists to remove, and paying
+# it again per child would make the fan-out slower than the loop it replaces.
+#
+# It prints ONE line the parent classifies and never exits the whole run — a
+# second broken mutation must not cost another full pass to discover
+# (`verify.sh`'s 2026-08-19 lesson: report ALL failures, not the first).
+#
+# The three variants collapse to ONE child. `mutate`, `mutateFacts` and
+# `mutateLedger` differed only in WHICH of the three sources the mutated copy
+# replaced — all three compiled the same four files — and that duplication is
+# what let the §468 bug exist: for weeks one variant compiled without `$FACTS`
+# and every mutation it ran was rejected by the type system and scored as
+# caught. One compile line cannot drift from itself.
+if [[ "${1:-}" == "--mutate" ]]; then
+  SPOOL="$2"; MID="$3"
+  MLABEL="$(cat "$SPOOL/mut/$MID.label")"
+  MFILE="$(cat "$SPOOL/mut/$MID.file")"
+  MW="$(mktemp -d)"
+  trap 'rm -rf "$MW"' EXIT
+  cp "$SPOOL"/base/*.swift "$MW/"
+  if ! MUT_FROM="$(cat "$SPOOL/mut/$MID.from")" MUT_TO="$(cat "$SPOOL/mut/$MID.to")" \
+       python3 "$SPOOL/mutapply.py" "$MW/$MFILE" 2>/dev/null; then
+    # A mutation that matches NOTHING is stale and has silently been testing
+    # the shipped code — the failure this whole file exists to prevent.
+    print "STALE|$MID|$MLABEL"; exit 0
+  fi
+  if ! zsh "$SPOOL/build.zsh" "$MW"; then
+    print "COMPILE|$MID|$MLABEL"; exit 0
+  fi
+  if "$MW/run" >/dev/null 2>&1; then
+    print "SURVIVED|$MID|$MLABEL"; exit 0
+  fi
+  print "CAUGHT|$MID|$MLABEL"; exit 0
+fi
 
 ROOM="Casberi/Casberi/Model/VibenetRoom.swift"
 # `VibenetEventFacts.swift` is Foundation-only for the same reason and is
@@ -1117,6 +1159,27 @@ grep -q 'func attention' "Casberi/Casberi/Model/VibenetSection.swift" \
 # and the user's instruction for this room is that it match Wallet, which opens
 # on Home. `resolve` has fallen back to `.home` since the scope existed; only
 # this guard and the type's own doc still said otherwise.
+# EVERY SCOPE, ALWAYS (prd §611). `present` takes the room and nothing else: an
+# empty room offers no strip, any other room offers all five chips, and a scope
+# with nothing in it says what it would hold. The `hasEvents` argument is gone
+# rather than ignored — an unused argument at the call site is an invitation to
+# re-gate on it by accident.
+grep -q 'VibenetSection.present(room)' "$TMP/feed.nc.swift" \
+  || { echo "✗ the strip is deriving its scopes from evidence again — chips vanish on"
+       echo "  exactly the account that most needs to learn what they are (§611)."; exit 1; }
+grep -q 'hasEvents' "$TMP/section.nc.swift" \
+  && { echo "✗ present() is being handed evidence again — the gate §611 removed."; exit 1; }
+grep -q 'room.items.isEmpty ? \[\] : order' "$TMP/section.nc.swift" \
+  || { echo "✗ present() no longer offers every scope for a non-empty room (§611)."; exit 1; }
+# The obligation is checked by SENTENCE, not by case label — `label` and
+# `summary` also switch on every case, so a per-case grep passes vacuously.
+for words in "None has happened on these accounts" "None of these accounts holds any yet" \
+             "None is watched here" "Nothing can act for these accounts yet"; do
+  grep -qF "$words" "$TMP/section.nc.swift" \
+    || { echo "✗ a scope lost its empty copy ('$words') — a chip onto nothing is the dead control §83 bans (§611)."; exit 1; }
+done
+grep -q 'scopeEmptyFigure(.permissions)' "$TMP/card.nc.swift" \
+  || { echo "✗ an account nothing can act for opens Permissions onto 'No keys' over an empty grid again (§611)."; exit 1; }
 grep -q 'return .home' "Casberi/Casberi/Model/VibenetSection.swift" \
   || { echo "✗ the room no longer opens on Home — prd §491: Wallet's room opens on its"
        echo "  crown and this one matches it."; exit 1; }
@@ -1159,27 +1222,6 @@ grep -q 'static let figureSlot: CGFloat = visualSlot - headlineRow - DS.Space.s3
        echo "  figure really has (the slot less the reserved headline row), and every"
        echo "  multi-row figure divides it rather than measuring against it."; exit 1; }
 grep -q 'DSRoomChassis.figureSlot' "$TMP/card.nc.swift" \
-# EVERY SCOPE, ALWAYS (prd §611). `present` takes the room and nothing else: an
-# empty room offers no strip, any other room offers all five chips, and a scope
-# with nothing in it says what it would hold. The `hasEvents` argument is gone
-# rather than ignored — an unused argument at the call site is an invitation to
-# re-gate on it by accident.
-grep -q 'VibenetSection.present(room)' "$TMP/feed.nc.swift" \
-  || { echo "✗ the strip is deriving its scopes from evidence again — chips vanish on"
-       echo "  exactly the account that most needs to learn what they are (§611)."; exit 1; }
-grep -q 'hasEvents' "$TMP/section.nc.swift" \
-  && { echo "✗ present() is being handed evidence again — the gate §611 removed."; exit 1; }
-grep -q 'room.items.isEmpty ? \[\] : order' "$TMP/section.nc.swift" \
-  || { echo "✗ present() no longer offers every scope for a non-empty room (§611)."; exit 1; }
-# The obligation is checked by SENTENCE, not by case label — `label` and
-# `summary` also switch on every case, so a per-case grep passes vacuously.
-for words in "None has happened on these accounts" "None of these accounts holds any yet" \
-             "None is watched here" "Nothing can act for these accounts yet"; do
-  grep -qF "$words" "$TMP/section.nc.swift" \
-    || { echo "✗ a scope lost its empty copy ('$words') — a chip onto nothing is the dead control §83 bans (§611)."; exit 1; }
-done
-grep -q 'scopeEmptyFigure(.permissions)' "$TMP/card.nc.swift" \
-  || { echo "✗ an account nothing can act for opens Permissions onto 'No keys' over an empty grid again (§611)."; exit 1; }
   || { echo "✗ the vibenet census cell no longer derives its height from the slot — a"
        echo "  hand-written height is what let two rows of cells want ~193pt of 166, and"
        echo "  DSRoomSlot clips rather than scrolls, so the bottom row went silently."
@@ -4367,57 +4409,72 @@ echo "Assertions"
 # behaviour (a trapping one prints NOTHING under `-O`), so this file was proven
 # equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
 # Re-probe before trusting it again after adding mutations.
-if ! swiftc -Onone -o "$TMP/run" "$ROOM" "$LEDGER" "$FACTS" "$TMP/main.swift" 2>"$TMP/build.log"; then
+# ONE compile line, written once and run by both the assertion build and every
+# mutation child. Two copies drift, and the drift is invisible — that is the
+# §468 bug exactly, where a mutation variant quietly compiled a different file
+# set and reported thirty-four type errors as thirty-four catches.
+cat > "$TMP/build.zsh" <<'BUILDSH'
+MW="$1"
+swiftc -Onone -o "$MW/run" \
+  "$MW/VibenetRoom.swift" "$MW/VibenetLedger.swift" "$MW/VibenetEventFacts.swift" \
+  "$MW/main.swift" 2>"$MW/build.log"
+BUILDSH
+
+# The pristine tree every mutation is cut from. Staged ONCE; a child copies it
+# rather than re-reading the repo, so an edit landing in the working tree
+# mid-run cannot make two mutations disagree about what "the shipped source" is.
+mkdir -p "$TMP/base"
+cp "$ROOM"   "$TMP/base/VibenetRoom.swift"
+cp "$LEDGER" "$TMP/base/VibenetLedger.swift"
+cp "$FACTS"  "$TMP/base/VibenetEventFacts.swift"
+cp "$TMP/main.swift" "$TMP/base/main.swift"
+
+if ! zsh "$TMP/build.zsh" "$TMP/base"; then
   echo "✗ VibenetRoom.swift did not compile with the harness"
-  tail -25 "$TMP/build.log"
+  tail -25 "$TMP/base/build.log"
   exit 1
 fi
-"$TMP/run"
+"$TMP/base/run"
 
 # --- mutations — a check that cannot fail proves nothing ---------------------
 
 echo ""
 echo "Mutations (each must be caught)"
 
-mutate() { # mutate <name> <from> <to>
-  local name="$1" from="$2" to="$3"
-  local target="$TMP/m-room.swift"
-  cp "$ROOM" "$target"
-  if ! MUT_FROM="$from" MUT_TO="$to" python3 - "$target" <<'PY'
-import os, sys
-path = sys.argv[1]
-src = open(path).read()
-frm, to = os.environ["MUT_FROM"], os.environ["MUT_TO"]
-if frm not in src:
-    sys.stderr.write("ANCHOR-MISSING\n"); sys.exit(2)
-open(path, "w").write(src.replace(frm, to, 1))
-PY
-  then
-    echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
-  fi
-  # `$FACTS` IS NOT OPTIONAL HERE, and leaving it out made every mutation
-  # below pass for the wrong reason (found 2026-08-25, prd §468). The
-  # assertion build compiles ROOM + FACTS + main; this one compiled ROOM +
-  # main, so from the day `VibenetEventFacts` assertions entered `main.swift`
-  # every single mutated build failed with "cannot find 'VibenetEventFacts' in
-  # scope" and was reported as "(rejected at compile)" — the harness's own
-  # word for a mutation the TYPE SYSTEM caught. Thirty-four checks, all green,
-  # none of them testing anything. A check that cannot fail proves nothing;
-  # this one could not even run.
-  # `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer, and it
-  # bought nothing an assertion can see — measured 2818s -> 458s, 6.2x faster
-  # here (2026-09-02). NOT a blanket rule: `-O` can change a harness's OBSERVABLE
-  # behaviour (a trapping one prints NOTHING under `-O`), so this file was proven
-  # equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
-  # Re-probe before trusting it again after adding mutations.
-  if ! swiftc -Onone -o "$TMP/mut" "$target" "$LEDGER" "$FACTS" "$TMP/main.swift" 2>/dev/null; then
-    echo "  ✓ $name (rejected at compile)"; return
-  fi
-  if "$TMP/mut" > /dev/null 2>&1; then
-    echo "  ✗ $name — the harness still passed, so nothing was testing this"; exit 1
-  fi
-  echo "  ✓ $name"
+# RECORD a mutation; the fan-out below runs them all.
+#
+# **They run CONCURRENTLY (PERF, 2026-09-05).** Every mutation is PURE — it
+# edits its own scratch copy and reads nothing the others write — so running
+# them one at a time on one core of eight was the whole of this harness's cost:
+# 114 mutations x a four-file compile measured 652s in the 2026-09-05 nightly,
+# the slowest check in the suite by a wide margin.
+#
+# `xargs -P`, never a `jobs -r` slot loop: job control is OFF in a
+# non-interactive zsh, so `jobs -r` reports NOTHING and the loop degrades
+# silently to "launch all 114 at once", which on 8 cores thrashes to slower than
+# serial while every check still passes (`verify.sh`'s own paid-for trap,
+# 2026-08-19).
+#
+# The three names are kept — 114 call sites read better naming their subject —
+# but they now differ ONLY in the file recorded, and the single compile line
+# above is what every one of them is measured under.
+MUTN=0
+_mut_record() { # _mut_record <file> <name> <from> <to>
+  MUTN=$((MUTN + 1))
+  local id
+  id="$(printf '%03d' "$MUTN")"
+  mkdir -p "$TMP/mut"
+  # `printf '%s'`, never `echo`: a trailing newline appended to `from` makes the
+  # pattern match nothing, which this harness reports as a STALE mutation — a
+  # confusing failure for a mutation that is perfectly correct.
+  printf '%s' "$2" > "$TMP/mut/$id.label"
+  printf '%s' "$1" > "$TMP/mut/$id.file"
+  printf '%s' "$3" > "$TMP/mut/$id.from"
+  printf '%s' "$4" > "$TMP/mut/$id.to"
 }
+mutate()       { _mut_record VibenetRoom.swift       "$1" "$2" "$3" }
+mutateFacts()  { _mut_record VibenetEventFacts.swift "$1" "$2" "$3" }
+mutateLedger() { _mut_record VibenetLedger.swift     "$1" "$2" "$3" }
 
 # The same, against `$FACTS` instead of `$ROOM` (prd §495).
 #
@@ -4428,55 +4485,11 @@ PY
 # shipped source moved" when the source was exactly where the harness left it
 # — a check failing for a reason unrelated to the code it guards. Naming the
 # file in the function name makes the mistake unmakeable.
-mutateFacts() { # mutateFacts <name> <from> <to>
-  local name="$1" from="$2" to="$3"
-  local target="$TMP/m-facts.swift"
-  cp "$FACTS" "$target"
-  if ! MUT_FROM="$from" MUT_TO="$to" python3 "$TMP/mutapply.py" "$target"
-  then
-    echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
-  fi
-  # `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer, and it
-  # bought nothing an assertion can see — measured 2818s -> 458s, 6.2x faster
-  # here (2026-09-02). NOT a blanket rule: `-O` can change a harness's OBSERVABLE
-  # behaviour (a trapping one prints NOTHING under `-O`), so this file was proven
-  # equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
-  # Re-probe before trusting it again after adding mutations.
-  if ! swiftc -Onone -o "$TMP/mutf" "$ROOM" "$LEDGER" "$target" "$TMP/main.swift" 2>/dev/null; then
-    echo "  ✓ $name (rejected at compile)"; return
-  fi
-  if "$TMP/mutf" > /dev/null 2>&1; then
-    echo "  ✗ $name — the harness still passed, so nothing was testing this"; exit 1
-  fi
-  echo "  ✓ $name"
-}
 
 # The same, against `$LEDGER` (prd §507). A THIRD function rather than a
 # parameter, for the reason `mutateFacts` states: naming the file in the
 # function name makes it unmakeable to mutate a file the copy never touched,
 # which reports ANCHOR-MISSING against source that never moved.
-mutateLedger() { # mutateLedger <name> <from> <to>
-  local name="$1" from="$2" to="$3"
-  local target="$TMP/m-ledger.swift"
-  cp "$LEDGER" "$target"
-  if ! MUT_FROM="$from" MUT_TO="$to" python3 "$TMP/mutapply.py" "$target"
-  then
-    echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
-  fi
-  # `-Onone`, not `-O`: 97% of this harness's wall time was the optimizer, and it
-  # bought nothing an assertion can see — measured 2818s -> 458s, 6.2x faster
-  # here (2026-09-02). NOT a blanket rule: `-O` can change a harness's OBSERVABLE
-  # behaviour (a trapping one prints NOTHING under `-O`), so this file was proven
-  # equivalent run-for-run by `scripts/support/harness-opt-probe.sh`.
-  # Re-probe before trusting it again after adding mutations.
-  if ! swiftc -Onone -o "$TMP/mutl" "$ROOM" "$target" "$FACTS" "$TMP/main.swift" 2>/dev/null; then
-    echo "  ✓ $name (rejected at compile)"; return
-  fi
-  if "$TMP/mutl" > /dev/null 2>&1; then
-    echo "  ✗ $name — the harness still passed, so nothing was testing this"; exit 1
-  fi
-  echo "  ✓ $name"
-}
 
 # The applier, written to a file so `mutateFacts` needs no heredoc inside its
 # own body — nesting one inside an edit of this script cost a whole pass.
@@ -5437,6 +5450,61 @@ mutateLedger "a new chain and a rewind must never collide on one key" \
   'case let .newChain(from, to):   return "id-\(from)-\(to)"' \
   'case let .newChain(from, to):   return "tip-\(from)-\(to)"'
 
+
+# ── the last mutation must precede the fan-out ───────────────────────────────
+# A `mutate` call BELOW the fan-out is silently never run and the pass still
+# goes green. It is a file-ORDER bug, so no care inside the block can catch it —
+# only the file can. This reads itself.
+MUT_LAST="$(grep -nE '^(mutate|mutateFacts|mutateLedger) ' "$SELF" | tail -1 | cut -d: -f1)"
+FANOUT_AT="$(grep -n '^# --- run every recorded mutation, concurrently' "$SELF" | head -1 | cut -d: -f1)"
+if [[ -n "$MUT_LAST" && -n "$FANOUT_AT" ]] && (( MUT_LAST > FANOUT_AT )); then
+  echo "✗ a mutation is declared at line $MUT_LAST, BELOW the fan-out at line $FANOUT_AT — it would never run and the pass would still go green. Move it above."
+  exit 1
+fi
+
+# HOW MANY AT ONCE, and why it is not simply `ncpu`. This harness may be run
+# TWO ways: on its own, where it should take the whole machine, and inside
+# `verify.sh` / `verify-mac.sh`, which already run the harnesses themselves
+# under `xargs -P ncpu`. Nested at full width that is ncpu x ncpu — 64 `swiftc`
+# processes on 8 cores here — and the cost is not merely scheduling: each is
+# hundreds of MB against 16 GB, so the failure mode is memory pressure and swap,
+# which looks like the machine hanging rather than like a test being slow. The
+# outer runners export `HARNESS_INNER_JOBS`; standalone there is no outer swarm
+# and the default is the whole machine.
+MUT_JOBS="${HARNESS_INNER_JOBS:-$(sysctl -n hw.ncpu 2>/dev/null || print 4)}"
+
+# --- run every recorded mutation, concurrently -------------------------------
+# One core per mutation up to the machine's count. Output is KEPT and sorted by
+# id so the report reads in declaration order regardless of which finished
+# first — `xargs` interleaves, and a mutation list that reshuffles between runs
+# is one nobody can diff.
+: > "$TMP/mut-results"
+ls "$TMP"/mut/*.label | sed 's#.*/##; s#\.label$##' \
+  | xargs -P "$MUT_JOBS" -I{} zsh "$SELF" --mutate "$TMP" {} \
+  >> "$TMP/mut-results" 2>&1
+
+MUT_FAILS=0
+MUT_OK=0
+while IFS='|' read -r verdict mid label; do
+  case "$verdict" in
+    CAUGHT)   printf '  ✓ %s\n' "$label"; MUT_OK=$((MUT_OK + 1)) ;;
+    COMPILE)  printf '  ✓ %s (rejected at compile)\n' "$label"; MUT_OK=$((MUT_OK + 1)) ;;
+    SURVIVED) printf '  ✗ %s — the harness still passed, so nothing was testing this\n' "$label"
+              MUT_FAILS=$((MUT_FAILS + 1)) ;;
+    STALE)    printf '  ✗ %s — the mutation did not apply (the shipped source moved)\n' "$label"
+              MUT_FAILS=$((MUT_FAILS + 1)) ;;
+    *)        [[ -n "$verdict" ]] && printf '  %s\n' "$verdict" ;;
+  esac
+done < <(sort "$TMP/mut-results")
+
+# Every mutation must have reported. A child that died without a line is a
+# mutation nobody ran, and a silently skipped mutation is exactly the false
+# green this whole file exists to prevent.
+if (( MUT_OK + MUT_FAILS != MUTN )); then
+  echo "✗ $((MUTN - MUT_OK - MUT_FAILS)) of $MUTN mutation(s) never reported — they did not run"
+  exit 1
+fi
+(( MUT_FAILS == 0 )) || { echo "✗ $MUT_FAILS mutation(s) failed"; exit 1; }
 
 # --- prd §517: the lookup is a sheet, and §545 moved the surface it opens from -
 #

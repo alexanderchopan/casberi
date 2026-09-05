@@ -17,7 +17,47 @@ OUT="$ROOT/scripts/output/$(date +%Y%m%d-%H%M%S)"
 # make diagnosable.
 mkdir -p "$OUT"
 
-step() { print -P "%F{cyan}▶ $1%f"; }
+# ── Per-step wall clock (PERF, 2026-09-05) ─────────────────────────
+# WHY. For a year the only number this pass produced was its TOTAL, so "verify
+# takes forever" could not be answered without instrumenting it by hand — which
+# is prd §257 exactly ("a metric with no breakdown tells you to panic, not what
+# to do"), applied to the test suite itself. The harness phase already timed its
+# own children (`.sec` files, 2026-09-01); every OTHER phase — the build, the
+# unit tests, the Catalyst compile, the launch cycles, the demo probes — was
+# untimed, and between them they are most of the pass.
+#
+# `step` closes the PREVIOUS step before announcing the next one, so a step's
+# cost is the span until its successor starts and no step needs to remember to
+# stop its own clock. The closing report is printed by the EXIT trap rather than
+# at the bottom of the file, because a FAILED pass is exactly when you want to
+# know what the fifteen minutes before the failure went on.
+zmodload zsh/datetime 2>/dev/null || true
+STEP_TSV="$OUT/step-times.tsv"
+: > "$STEP_TSV"
+_STEP_NAME=""
+_STEP_T0=""
+_step_close() {
+  [[ -z "$_STEP_NAME" ]] && return 0
+  printf '%.1f\t%s\n' $(( EPOCHREALTIME - _STEP_T0 )) "$_STEP_NAME" >> "$STEP_TSV"
+  _STEP_NAME=""
+}
+step() {
+  _step_close
+  _STEP_NAME="$1"
+  _STEP_T0=$EPOCHREALTIME
+  print -P "%F{cyan}▶ $1%f"
+}
+# The report is INFORMATION, never a gate: a slow step is not a wrong one, and a
+# threshold here would be a flaky gate over a number that legitimately doubles
+# on a machine doing something else (the perf pass's own warn-only reasoning).
+_step_report() {
+  _step_close
+  [[ -s "$STEP_TSV" ]] || return 0
+  local total
+  total=$(awk -F'\t' '{s+=$1} END {printf "%.0f", s}' "$STEP_TSV")
+  print -P "%F{cyan}▶ Where the time went (${total}s over $(wc -l < "$STEP_TSV" | tr -d " ") steps, slowest 10 → $STEP_TSV)%f"
+  sort -rn "$STEP_TSV" | head -10 | awk -F'\t' '{printf "  %6.1fs  %s\n", $1, $2}'
+}
 fail() { print -P "%F{red}✗ $1%f"; exit 1; }
 
 # ── Stale DerivedData sweep (2026-09-02) ───────────────────────────
@@ -146,16 +186,45 @@ else
   MACPID=$!
   step "Mac verify launched in parallel (pid $MACPID, logic self-tests left to this pass) → $MACLOG"
 fi
+# ── The iOS build runs ALONGSIDE the static head and the harnesses ─────────
+# (PERF, 2026-09-05.) `xcodebuild` needs nothing the audits or the pure-logic
+# harnesses produce — it reads the same source tree they read and writes only
+# into `$DD` — so it was pure sequencing that made a whole build wait behind
+# them. It matters most at the END of the harness swarm: those run under
+# `xargs -P ncpu`, and the last minutes of that phase are ONE long harness on
+# ONE core while seven sit idle. That is the window this build now occupies.
+#
+# THE FAILURE LATENCY IS UNCHANGED, and that is the point of waiting where the
+# build step already stood rather than at the first use of the bundle. A broken
+# build is still reported at exactly the same place in the pass — after the
+# audits and the harnesses, before the simulator work — so nothing about the
+# order in which failures are learned has moved. Only the CPU idled less.
+#
+# Reaped with the Mac leg below, or an audit failing at second 30 leaves an
+# orphan xcodebuild churning behind a finished pass (which reads as a hang —
+# `verify-mac.sh`'s own 2026-08-02 lesson about a run that looks silent).
+BUILDPID=""
+BUILDLOG="$OUT/ios-build.log"
+xcodebuild -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
+  -destination "platform=iOS Simulator,name=$DEVICE" \
+  -derivedDataPath "$DD" build -quiet >"$BUILDLOG" 2>&1 &
+BUILDPID=$!
+
 # On an iOS failure the parallel Mac run is stopped rather than orphaned: its
 # verdict would be about a tree that is about to change, and a leftover
 # xcodebuild + GUI launch cycle churning behind a red pass reads as a hang.
 # The kill is pid-scoped (this run's own child), never a bare pkill.
 _mac_reap() {
   local rc=$?
+  _step_report
   if [[ -n "$MACPID" ]] && kill -0 "$MACPID" 2>/dev/null && (( rc != 0 )); then
     pkill -P "$MACPID" 2>/dev/null || true
     kill "$MACPID" 2>/dev/null || true
     print -P "%F{yellow}⚠ iOS pass failed — the parallel Mac verify was stopped (partial log: $MACLOG)%f"
+  fi
+  if [[ -n "${BUILDPID:-}" ]] && kill -0 "$BUILDPID" 2>/dev/null && (( rc != 0 )); then
+    pkill -P "$BUILDPID" 2>/dev/null || true
+    kill "$BUILDPID" 2>/dev/null || true
   fi
 }
 trap _mac_reap EXIT
@@ -231,6 +300,15 @@ run_harnesses() {
                ${_H_SCRIPT[@]/#/$ROOT/} 2>/dev/null || true)
   fi
 
+  # A harness may fan its OWN mutations out concurrently (hegota, vibenet,
+  # wallet-rooms, privacy, frames-tx). Nested at full width that is ncpu x ncpu —
+  # 64 `swiftc` on 8 cores against 16 GB — and the failure mode is memory pressure
+  # and swap, which reads as the machine hanging rather than as a slow test. Three
+  # keeps the tail of this swarm (one long harness alone on one core, which is
+  # what those ports exist to fix) genuinely parallel without letting the head of
+  # it oversubscribe by eight. Unset when a harness is run on its own, where it
+  # should take the whole machine.
+  export HARNESS_INNER_JOBS=3
   typeset -a _TODO
   for (( i = 1; i <= n; i++ )); do
     local b="${_H_SCRIPT[i]:t:r}" nm="${_H_SCRIPT[i]:t}"
@@ -241,6 +319,36 @@ run_harnesses() {
       _TODO+=("${_H_SCRIPT[i]}"); ran=$((ran+1))
     fi
   done
+
+  # ── LONGEST FIRST (PERF, 2026-09-05) ──────────────────────────────────
+  # `xargs -P` starts jobs in the order it is fed them, and the list was fed in
+  # REGISTRATION order — so a harness whose name sorts late started late, and
+  # the phase ended with it running alone while every other core sat idle.
+  # Measured on the full uncached suite the day the mutation ports landed:
+  # 739s wall, of which the last 127s was `vibenet-selftest` on its own, having
+  # started near the end. Starting the long ones first is the classic fix and
+  # costs nothing: the short ones fill the gaps around them.
+  #
+  # The cost model is each harness's OWN last recorded wall time, written to
+  # the cache directory beside the skip stamps and refreshed every run — no
+  # hand list to drift, and a harness that is not there yet simply sorts last
+  # (it has no evidence of being slow, and being wrong about a fast one costs
+  # a few seconds of ordering). REPORTING is untouched: the summary below still
+  # walks registration order, because a pass whose lines reshuffle between runs
+  # cannot be diffed against the last one.
+  local _dur="${VERIFY_CACHE_DIR:-$HOME/Library/Caches/casberi-verify/harness}/durations"
+  mkdir -p "$_dur" 2>/dev/null || true
+  if (( ran > 1 )); then
+    typeset -a _ORDERED
+    _ORDERED=(${(f)"$(
+      for i in "${_TODO[@]}"; do
+        local b="${i:t:r}" sec=0
+        [[ -f "$_dur/$b" ]] && sec="$(<"$_dur/$b")"
+        printf '%s\t%s\n' "$sec" "$i"
+      done | sort -rn -k1,1 | cut -f2-
+    )"})
+    (( ${#_ORDERED} == ${#_TODO} )) && _TODO=("${_ORDERED[@]}")
+  fi
 
   # The cache's STATE is always legible in the log. "51 to run" reads the same
   # whether the cache was cold or switched off, and on an unattended run that
@@ -254,6 +362,7 @@ run_harnesses() {
   fi
 
   if (( ran )); then
+    export H_DUR="$_dur"
     { for i in "${_TODO[@]}"; do print -r -- "$i"; done } \
       | xargs -P "$jobs" -I{} zsh -c '
           s="$1"; b="${s:t:r}"
@@ -268,6 +377,10 @@ run_harnesses() {
           "$H_ROOT/$s" > "$H_OUT/$b.log" 2>&1
           rc=$?
           printf "%.1f\n" $(( EPOCHREALTIME - t0 )) > "$H_OUT/$b.sec"
+          # …and beside the skip stamps, so the NEXT run can start the long
+          # ones first. Written whatever the verdict: a harness that failed
+          # slowly is still a harness that should start early.
+          [[ -n "${H_DUR:-}" ]] && printf "%.1f\n" $(( EPOCHREALTIME - t0 )) > "$H_DUR/$b" 2>/dev/null
           print $rc > "$H_OUT/$b.rc"
           exit 0
         ' _ {}
@@ -2097,10 +2210,14 @@ python3 "$ROOT/scripts/demo-selftest.py" >/dev/null \
 print -P "%F{green}✓ demo guard rails%f"
 
 # ── 1. Build ────────────────────────────────────────────────────────
-step "Building Casberi (derivedData: $DD)"
-xcodebuild -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
-  -destination "platform=iOS Simulator,name=$DEVICE" \
-  -derivedDataPath "$DD" build -quiet || fail "build failed"
+step "Building Casberi (derivedData: $DD — started at the top, waiting)"
+# Launched beside the static head; see the note where `$BUILDPID` is set. The
+# log is kept and printed only on failure, because `-quiet` still emits enough
+# on a green build to bury the harness output this pass was reading.
+if ! wait "$BUILDPID"; then
+  tail -40 "$BUILDLOG"
+  fail "build failed (full log: $BUILDLOG)"
+fi
 print -P "%F{green}✓ build%f"
 
 # ── 1a. The unit-test target ────────────────────────────────────────
@@ -2154,7 +2271,32 @@ print -P "%F{green}✓ unit tests%f"
 # from an EMPTY dir, all SPM dependencies included — that is the worst case,
 # not the per-run cost). `SKIP_CATALYST=1` skips it, the LAUNCH_CYCLES=0
 # escape hatch for a run that is only chasing an iOS-side answer.
-if [[ -z "${SKIP_CATALYST:-}" ]]; then
+# SKIPPED WHEN THE PARALLEL MAC LEG IS RUNNING (PERF, 2026-09-05), and that is
+# a subtraction of duplicated work rather than of coverage. This gate landed
+# 2026-08-12, when the Mac was verified only by a closed-lid nightly; the
+# 2026-08-21 rule then made `verify.sh` LAUNCH `verify-mac.sh` and GATE on it,
+# and that pass builds the very same Mac Catalyst target — and then runs it.
+# So whenever `$MACPID` is live this step re-compiles Catalyst a second time,
+# in a second derivedData dir, to prove something a stricter check downstream
+# already proves: a Catalyst compile error fails the Mac leg, which fails this
+# pass. Measured 2026-08-12: 72s warm, 101s cold, every run.
+#
+# It is KEPT — unconditionally — for every path where no Mac leg will answer:
+# `--build-only` (which never launches one and for which this IS the Mac half
+# of the compile gate), `SKIP_MAC=1`, and the case where another verify-mac.sh
+# was already running so ours was not launched. `$MACPID` is empty in all
+# three, which is why the condition is that variable and not a new flag: the
+# one thing that must never happen is a pass that certifies neither.
+#
+# WHAT IT COSTS, said rather than left to be discovered: a Catalyst compile
+# error is now reported at the END of the pass (where the Mac leg is waited on)
+# instead of before the simulator work. The Mac leg compiles it just as early —
+# only the WAIT is late — so nothing is missed, but a Mac-only break costs a
+# full iOS pass to hear about. `SKIP_MAC=1` restores the early gate for a
+# session that is deliberately chasing Catalyst.
+if [[ -z "${SKIP_CATALYST:-}" && -n "$MACPID" ]]; then
+  print -P "%F{green}✓ mac parity (deferred to the parallel Mac verify, which builds and RUNS Catalyst)%f"
+elif [[ -z "${SKIP_CATALYST:-}" ]]; then
   CATDD="$HOME/Library/Developer/CasberiCatalystDD"
   step "Mac parity (Catalyst compile, derivedData: $CATDD)"
   CATLOG="$(mktemp -t casberi-catalyst)"
@@ -2488,27 +2630,71 @@ else
 
     l2beatHead        "L2BEAT"
   )
+  # ONE LAUNCH, not one per room (PERF, 2026-09-05). This asked about ~28 rooms
+  # with a terminate + launch + poll each, ~3.4s apiece — a minute and a half of
+  # `simctl` and `sleep` around a report that costs milliseconds. `-roomInsightSweep`
+  # is the same `roomInsightReport` function in a loop inside one process, so what
+  # is ASSERTED is unchanged; only the number of launches is.
+  #
+  # The assertion stays per-room and stays a HARD FAIL for step 6's own reason.
+  # Two things this shape has to get right, both of which a single shared log
+  # makes possible to get wrong:
+  #   * the sweep is fed in a FIXED order and the verdict for each room is the
+  #     `leads with` line that follows ITS OWN `source=` line, so one room's
+  #     leader can never be read as another's;
+  #   * the wait is on the sweep's own closing line, never on a fixed sleep — a
+  #     sweep still running when the log is read reports every unreached room as
+  #     a gap, which is the false failure this step must not invent.
   MISSING_HEADS=()
-  for name in "${(k)ROOM_HEADS[@]}"; do
-    src="${ROOM_HEADS[$name]}"
-    xcrun simctl spawn "$DEVICE" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "roomInsight"' \
-      --style compact > "$ROOMHEAD_LOG.$name" 2>/dev/null &
-    RHPID=$!
-    sleep 1
-    xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
-    xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -roomInsightProbe "$src" >/dev/null 2>&1 || true
-    for i in {1..10}; do
-      sleep 1
-      grep -q "roomInsight: leads with" "$ROOMHEAD_LOG.$name" 2>/dev/null && break
-    done
-    kill $RHPID 2>/dev/null || true
-    grep -q "roomInsight: leads with $name\$" "$ROOMHEAD_LOG.$name" 2>/dev/null || MISSING_HEADS+=("$name ($src)")
+  SWEEP_ORDER=("${(@k)ROOM_HEADS}")
+  SWEEP_SPEC=""
+  for name in $SWEEP_ORDER; do
+    [[ -n "$SWEEP_SPEC" ]] && SWEEP_SPEC="$SWEEP_SPEC|"
+    SWEEP_SPEC="$SWEEP_SPEC${ROOM_HEADS[$name]}"
   done
+  xcrun simctl spawn "$DEVICE" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "roomInsight"' \
+    --style compact > "$ROOMHEAD_LOG" 2>/dev/null &
+  RHPID=$!
+  sleep 1
+  xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -roomInsightSweep "$SWEEP_SPEC" >/dev/null 2>&1 || true
+  SWEEP_DONE=""
+  for i in {1..90}; do
+    sleep 1
+    if grep -q "roomInsightSweep: done" "$ROOMHEAD_LOG" 2>/dev/null; then SWEEP_DONE=1; break; fi
+  done
+  kill $RHPID 2>/dev/null || true
   xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  if [[ -z "$SWEEP_DONE" ]]; then
+    fail "the room-head sweep never finished — see $ROOMHEAD_LOG (a partial log would report every unreached room as a gap)"
+  fi
+  # Per room, the leader is the `leads with` line following that room's own
+  # `source=` line. `awk` walks the log once and prints `<source>\t<leader>`.
+  typeset -A SWEEP_LED
+  while IFS=$'\t' read -r src led; do SWEEP_LED[$src]="$led"; done < <(
+    awk '
+      /roomInsight: source=/ {
+        line = $0
+        sub(/.*roomInsight: source=/, "", line)
+        sub(/ things=.*/, "", line)
+        cur = line
+        next
+      }
+      /roomInsight: leads with / && cur != "" {
+        line = $0
+        sub(/.*roomInsight: leads with /, "", line)
+        printf "%s\t%s\n", cur, line
+        cur = ""
+      }
+    ' "$ROOMHEAD_LOG"
+  )
+  for name in $SWEEP_ORDER; do
+    src="${ROOM_HEADS[$name]}"
+    [[ "${SWEEP_LED[$src]:-}" == "$name" ]] || MISSING_HEADS+=("$name ($src → ${SWEEP_LED[$src]:-no report})")
+  done
   if (( ${#MISSING_HEADS[@]} == 0 )); then
     print -P "%F{green}✓ demo room-head coverage (${#ROOM_HEADS[@]}/${#ROOM_HEADS[@]})%f"
   else
-    fail "demo room head(s) never compose: ${MISSING_HEADS[*]} — see $ROOMHEAD_LOG.<name>"
+    fail "demo room head(s) never compose: ${MISSING_HEADS[*]} — see $ROOMHEAD_LOG"
   fi
 fi
 

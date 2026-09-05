@@ -308,7 +308,13 @@ MainActor.assumeIsolated { runAll() }
 SWIFT
 
 echo "category-order-selftest: compiling CategoryOrder.swift as shipped…"
-swiftc -O -o "$TMP/run" "$ORDER" "$TMP/main.swift" 2>&1 | grep -v '^ *$' || true
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.1x faster).
+# Re-probe before trusting it again after adding mutations.
+swiftc -Onone -o "$TMP/run" "$ORDER" "$TMP/main.swift" 2>&1 | grep -v '^ *$' || true
 [[ -x "$TMP/run" ]] || { echo "✗ compile failed — CategoryOrder.swift no longer builds Foundation-only"; exit 1; }
 "$TMP/run" || exit 1
 
@@ -325,7 +331,7 @@ if old not in src:
     sys.exit(f"✗ mutation anchor not found: {old!r} — this harness is testing stale code")
 open(sys.argv[2], "w").write(src.replace(old, new, 1))
 PY
-  if swiftc -O -o "$TMP/mrun" "$TMP/mutated.swift" "$TMP/main.swift" 2>/dev/null \
+  if swiftc -Onone -o "$TMP/mrun" "$TMP/mutated.swift" "$TMP/main.swift" 2>/dev/null \
      && "$TMP/mrun" >/dev/null 2>&1; then
     echo "  ✗ mutation SURVIVED: $label"
     return 1

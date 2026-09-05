@@ -227,7 +227,13 @@ exit(failures == 0 ? 0 : 1)
 SWIFT
 
 build_and_run () { # $1 = source file
-  swiftc -O "$1" "$2" "$WORK/main.swift" -o "$WORK/run" 2>"$WORK/err" || { echo "COMPILE-FAIL"; return 2; }
+  # `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+  # and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+  # a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+  # so this file was proven equivalent run-for-run by
+  # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.3x faster).
+  # Re-probe before trusting it again after adding mutations.
+  swiftc -Onone "$1" "$2" "$WORK/main.swift" -o "$WORK/run" 2>"$WORK/err" || { echo "COMPILE-FAIL"; return 2; }
   "$WORK/run" >"$WORK/out" 2>&1 && return 0 || return 1
 }
 
@@ -267,7 +273,7 @@ mutate_offer () { # $1 name, $2 perl script
   if cmp -s "$OFFER" "$WORK/mutoffer.swift"; then
     echo "  ✗ MUTATION STALE (matched nothing): $1"; return 1
   fi
-  if swiftc -O "$SRC" "$WORK/mutoffer.swift" "$WORK/main.swift" -o "$WORK/run" 2>/dev/null && "$WORK/run" >/dev/null 2>&1; then
+  if swiftc -Onone "$SRC" "$WORK/mutoffer.swift" "$WORK/main.swift" -o "$WORK/run" 2>/dev/null && "$WORK/run" >/dev/null 2>&1; then
     echo "  ✗ MUTATION SURVIVED: $1"; return 1
   fi
   echo "  ✓ caught: $1"; return 0

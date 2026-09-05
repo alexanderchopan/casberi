@@ -28,7 +28,13 @@ trap 'rm -rf "$WORK"' EXIT
 
 run_case() {
   local file="$1" label="$2"
-  if ! swiftc -O "$file" "$WORK/main.swift" -o "$WORK/bin" 2>"$WORK/err"; then
+  # `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+  # and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+  # a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+  # so this file was proven equivalent run-for-run by
+  # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.1x faster).
+  # Re-probe before trusting it again after adding mutations.
+  if ! swiftc -Onone "$file" "$WORK/main.swift" -o "$WORK/bin" 2>"$WORK/err"; then
     print -u2 "✗ $label — did not compile"; sed -n '1,12p' "$WORK/err" >&2; return 1
   fi
   "$WORK/bin"

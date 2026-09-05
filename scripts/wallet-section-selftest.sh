@@ -144,7 +144,13 @@ print("  ok   \(WalletSection.allCases.count) scopes, order, presence, resolve, 
 SWIFT
 
 build() {
-  swiftc -O -o "$work/run" "$1" "$work/main.swift" 2>"$work/err" || return 1
+  # `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+  # and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+  # a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+  # so this file was proven equivalent run-for-run by
+  # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 1.4x faster).
+  # Re-probe before trusting it again after adding mutations.
+  swiftc -Onone -o "$work/run" "$1" "$work/main.swift" 2>"$work/err" || return 1
 }
 
 cp "$SRC" "$work/WalletSection.swift"

@@ -142,7 +142,13 @@ print("PRE=" + RLP.hex(HegotaTransaction.signingPreimage(v1)))
 if fails == 0 { print("  ok") } else { exit(1) }
 SWIFT
 
-swiftc -O -o "$WORK/run" "$WORK/HegotaTransaction.swift" "$WORK/RLP.swift" \
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 1.4x faster).
+# Re-probe before trusting it again after adding mutations.
+swiftc -Onone -o "$WORK/run" "$WORK/HegotaTransaction.swift" "$WORK/RLP.swift" \
   "$WORK/Keccak256.swift" "$WORK/m/main.swift" 2>"$WORK/build.log" || {
   echo "✗ HegotaTransaction.swift did not compile standalone (it must stay Foundation-only)"
   head -20 "$WORK/build.log"; exit 1; }
@@ -183,7 +189,7 @@ p, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
 s = io.open(p, encoding="utf-8").read()
 io.open(p, "w", encoding="utf-8").write(s.replace(a, b, 1))
 PY
-  if swiftc -O -o "$WORK/mut" "$WORK/HegotaTransaction.swift" "$WORK/RLP.swift" \
+  if swiftc -Onone -o "$WORK/mut" "$WORK/HegotaTransaction.swift" "$WORK/RLP.swift" \
        "$WORK/Keccak256.swift" "$WORK/m/main.swift" 2>/dev/null \
      && "$WORK/mut" >/dev/null 2>&1; then
     echo "  ✗ MUTATION SURVIVED: $label"; return 1
@@ -333,7 +339,7 @@ print("OUTCOMES=ok")
 if fails == 0 { print("  ok") } else { exit(1) }
 SWIFT
 
-swiftc -O -o "$WORK/wrun" "$WORK/HegotaWriteOutcome.swift" \
+swiftc -Onone -o "$WORK/wrun" "$WORK/HegotaWriteOutcome.swift" \
   "$WORK/w/main.swift" 2>"$WORK/wbuild.log" || {
   echo "✗ HegotaWriteOutcome.swift did not compile standalone (it must stay Foundation-only)"
   head -20 "$WORK/wbuild.log"; exit 1; }
@@ -355,7 +361,7 @@ p, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
 s = io.open(p, encoding="utf-8").read()
 io.open(p, "w", encoding="utf-8").write(s.replace(a, b, 1))
 PYMUT
-  if swiftc -O -o "$WORK/wmut" "$WORK/HegotaWriteOutcome.swift" \
+  if swiftc -Onone -o "$WORK/wmut" "$WORK/HegotaWriteOutcome.swift" \
        "$WORK/w/main.swift" 2>/dev/null && "$WORK/wmut" >/dev/null 2>&1; then
     echo "  ✗ MUTATION SURVIVED: $label"; return 1
   fi

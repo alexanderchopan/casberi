@@ -63,7 +63,13 @@ PYM
   # A mutation that matches NOTHING is stale and has silently been testing the
   # shipped code — the failure mode this check exists to prevent in itself.
   if (( applied == 2 )); then echo "STALE|$MID|$MLABEL"; exit 0; fi
-  if ( cd "$MW" && swiftc -O -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift FramesReading.swift m/main.swift 2>/dev/null ) \
+  # `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+  # and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+  # a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+  # so this file was proven equivalent run-for-run by
+  # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.9x faster).
+  # Re-probe before trusting it again after adding mutations.
+  if ( cd "$MW" && swiftc -Onone -o m/run2 FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift FramesReading.swift m/main.swift 2>/dev/null ) \
      && "$MW/m/run2" >/dev/null 2>&1; then
     echo "SURVIVED|$MID|$MLABEL"; exit 0
   fi
@@ -1407,7 +1413,7 @@ print("  ok   encoder: 2 real vectors byte-exact, keccak == the chain's own hash
 SWIFT
 
 build_run() {
-  ( cd "$WORK" && swiftc -O -o m/run FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift FramesReading.swift m/main.swift 2>&1 )
+  ( cd "$WORK" && swiftc -Onone -o m/run FramesTransaction.swift RLP.swift Keccak256.swift FramesMoney.swift FramesSection.swift FramesReading.swift m/main.swift 2>&1 )
 }
 if ! out="$(build_run)"; then echo "✗ harness did not compile"; echo "$out"; exit 1; fi
 "$WORK/m/run" || exit 1
@@ -1699,6 +1705,17 @@ if [[ -n "$MUT_LAST" && -n "$FANOUT_AT" ]] && (( MUT_LAST > FANOUT_AT )); then
   exit 1
 fi
 
+# HOW MANY AT ONCE, and why it is not simply `ncpu`. This harness may be run
+# TWO ways: on its own, where it should take the whole machine, and inside
+# `verify.sh` / `verify-mac.sh`, which already run the harnesses themselves
+# under `xargs -P ncpu`. Nested at full width that is ncpu x ncpu — 64 `swiftc`
+# processes on 8 cores here — and the cost is not merely scheduling: each is
+# hundreds of MB against 16 GB, so the failure mode is memory pressure and swap,
+# which looks like the machine hanging rather than like a test being slow. The
+# outer runners export `HARNESS_INNER_JOBS`; standalone there is no outer swarm
+# and the default is the whole machine.
+MUT_JOBS="${HARNESS_INNER_JOBS:-$(sysctl -n hw.ncpu 2>/dev/null || print 4)}"
+
 # --- run every recorded mutation, concurrently -------------------------------
 # One core per mutation up to the machine's count. Output is KEPT and sorted by
 # id so the report reads in declaration order regardless of which finished
@@ -1706,7 +1723,7 @@ fi
 # is one nobody can diff.
 : > "$WORK/mut-results"
 ls "$WORK"/mut/*.label | sed 's#.*/##; s#\.label$##' \
-  | xargs -P "$(sysctl -n hw.ncpu)" -I{} zsh "$SELF" --mutate "$WORK" {} \
+  | xargs -P "$MUT_JOBS" -I{} zsh "$SELF" --mutate "$WORK" {} \
   >> "$WORK/mut-results" 2>&1
 
 MUT_FAILS=0

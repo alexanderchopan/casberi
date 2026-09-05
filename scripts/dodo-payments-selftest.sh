@@ -456,7 +456,13 @@ if failures == 0 {
 }
 SWIFT
 
-if ! swiftc -O -o "$TMP/run" "$ROOM" "$SHARED_RUNWAY" "$TMP/main.swift" 2>"$TMP/build.log"; then
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 9.5x faster).
+# Re-probe before trusting it again after adding mutations.
+if ! swiftc -Onone -o "$TMP/run" "$ROOM" "$SHARED_RUNWAY" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ DodoPaymentsRoom.swift did not compile"
   grep -E 'error:' "$TMP/build.log" | head -20
   exit 1
@@ -484,7 +490,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$WORK/DodoPaymentsRoom.swift"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$WORK/DodoPaymentsRoom.swift" "$SHARED_RUNWAY" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$WORK/DodoPaymentsRoom.swift" "$SHARED_RUNWAY" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

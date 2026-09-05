@@ -925,5 +925,11 @@ if failures == 0 {
 }
 SWIFT
 
-swiftc -O -o "$TMP/selftest" "$MODEL" "$ROOM" "$SHEET" "$DISC" "$DRIVER"
+# `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+# and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+# a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+# so this file was proven equivalent run-for-run by
+# `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.8x faster).
+# Re-probe before trusting it again after adding mutations.
+swiftc -Onone -o "$TMP/selftest" "$MODEL" "$ROOM" "$SHEET" "$DISC" "$DRIVER"
 "$TMP/selftest"

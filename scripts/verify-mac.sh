@@ -252,7 +252,31 @@ else
 step "Logic self-tests (all $(ls "$ROOT"/scripts/*-selftest.sh | wc -l | tr -d ' ') discovered, up to $(sysctl -n hw.ncpu 2>/dev/null || print 4) at once)"
 typeset -a SELFTEST_FAILS
 export MST_OUT="$OUT"
-{ for _st in "$ROOT"/scripts/*-selftest.sh; do print -r -- "$_st"; done } \
+# A harness may fan its OWN mutations out concurrently (hegota, vibenet,
+# wallet-rooms, privacy, frames-tx). Nested at full width that is ncpu x ncpu —
+# 64 `swiftc` on 8 cores against 16 GB — and the failure mode is memory pressure
+# and swap, which reads as the machine hanging rather than as a slow test. Three
+# keeps the tail of this swarm (one long harness alone on one core, which is
+# what those ports exist to fix) genuinely parallel without letting the head of
+# it oversubscribe by eight. Unset when a harness is run on its own, where it
+# should take the whole machine.
+export HARNESS_INNER_JOBS=3
+# LONGEST FIRST (PERF, 2026-09-05). `xargs -P` starts jobs in the order it is
+# fed them, and a GLOB feeds them alphabetically — so `vibenet-selftest.sh`,
+# the longest in the suite, started near the end and ran alone for the last two
+# minutes while seven cores idled (measured: 739s wall, the last 127s of it one
+# harness). The cost model is each harness's own last recorded wall time, kept
+# beside `verify.sh`'s skip stamps and refreshed by whichever pass ran it; a
+# harness with no record yet sorts last, which costs at most a little ordering.
+# This loop stays a GLOB — a harness added today must still run tonight.
+_MST_DUR="${VERIFY_CACHE_DIR:-$HOME/Library/Caches/casberi-verify/harness}/durations"
+mkdir -p "$_MST_DUR" 2>/dev/null || true
+export MST_DUR="$_MST_DUR"
+{ for _st in "$ROOT"/scripts/*-selftest.sh; do
+    _b="${_st:t:r}"; _sec=0
+    [[ -f "$_MST_DUR/$_b" ]] && _sec="$(<"$_MST_DUR/$_b")"
+    printf '%s\t%s\n' "$_sec" "$_st"
+  done | sort -rn -k1,1 | cut -f2- } \
   | xargs -P "$(sysctl -n hw.ncpu 2>/dev/null || print 4)" -I{} zsh -c '
       s="$1"; b="${s:t:r}"
       # Wall time per harness, so growth is visible the week it lands rather
@@ -263,6 +287,10 @@ export MST_OUT="$OUT"
       "$s" > "$MST_OUT/selftest-$b.log" 2>&1
       rc=$?
       printf "%.1f\n" $(( EPOCHREALTIME - t0 )) > "$MST_OUT/selftest-$b.sec"
+      # …and beside the skip stamps, so the NEXT pass on this machine — either
+      # pass — can start the long ones first. Written whatever the verdict: a
+      # harness that failed slowly should still start early.
+      [[ -n "${MST_DUR:-}" ]] && printf "%.1f\n" $(( EPOCHREALTIME - t0 )) > "$MST_DUR/$b" 2>/dev/null
       print $rc > "$MST_OUT/selftest-$b.rc"
       exit 0
     ' _ {}

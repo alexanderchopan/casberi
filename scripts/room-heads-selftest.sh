@@ -338,7 +338,13 @@ print("room-heads-selftest: OK — every assertion passed against the shipped so
 SWIFT
 
 build() {
-  swiftc -O -o "$TMP/rh-selftest" "$1" "$2" "$3" "$SHARED_RUNWAY" "$TMP/main.swift" 2>"$TMP/build.log"
+  # `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+  # and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+  # a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+  # so this file was proven equivalent run-for-run by
+  # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 1.5x faster).
+  # Re-probe before trusting it again after adding mutations.
+  swiftc -Onone -o "$TMP/rh-selftest" "$1" "$2" "$3" "$SHARED_RUNWAY" "$TMP/main.swift" 2>"$TMP/build.log"
 }
 
 if ! build "$STRIPE" "$POSTHOG" "$QUIET"; then
@@ -378,7 +384,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$target"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$a" "$b" "$c" "$SHARED_RUNWAY" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$a" "$b" "$c" "$SHARED_RUNWAY" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then

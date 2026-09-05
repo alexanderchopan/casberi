@@ -570,7 +570,13 @@ print("  \(bad) of \(checks) FAILED")
 exit(1)
 SWIFT
   rm -f "$work/harness"
-  ( cd "$work" && swiftc -O -o harness NotifyPlan.swift main.swift 2>&1 | grep -E 'error:' || true )
+  # `-Onone`, not `-O`: 97% of a pure-logic harness's wall time is the optimizer,
+  # and it buys nothing an assertion can see. NOT a blanket rule — `-O` can change
+  # a harness's OBSERVABLE behaviour (a trapping one prints NOTHING under `-O`) —
+  # so this file was proven equivalent run-for-run by
+  # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 2.6x faster).
+  # Re-probe before trusting it again after adding mutations.
+  ( cd "$work" && swiftc -Onone -o harness NotifyPlan.swift main.swift 2>&1 | grep -E 'error:' || true )
   [[ -x "$work/harness" ]] || { echo "  ✗ $label: did not compile"; return 2; }
   "$work/harness"
 }
@@ -913,7 +919,7 @@ SWIFT
 cp "$PLAN" "$sweepwork/NotifyPlan.swift"
 cp "$SWEEP" "$sweepwork/NotifySweep.swift"
 rm -f "$sweepwork/harness"
-( cd "$sweepwork" && swiftc -O -o harness Stubs.swift NotifyPlan.swift NotifySweep.swift main.swift 2>&1 | grep -E 'error:' || true )
+( cd "$sweepwork" && swiftc -Onone -o harness Stubs.swift NotifyPlan.swift NotifySweep.swift main.swift 2>&1 | grep -E 'error:' || true )
 if [[ -x "$sweepwork/harness" ]]; then
   "$sweepwork/harness" || fail=1
 else
