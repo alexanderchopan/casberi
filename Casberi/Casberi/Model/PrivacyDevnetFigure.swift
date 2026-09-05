@@ -50,15 +50,22 @@ enum PrivacyDevnetFigure {
         var slot: UInt64
         var position: Double?
         var agedBy: UInt64?
-        /// How many references collapsed onto this slot. Two proofs against the
-        /// same snapshot are one mark, because they are one point on the ring
-        /// and drawing them twice paints a diamond nobody can count.
+        /// How many references collapsed onto this point. Two proofs against
+        /// the same snapshot are one mark, because they are one point on the
+        /// ring and drawing them twice paints a diamond nobody can count.
         var count: Int
         /// Whether the view should print this mark's own reading beside it.
         /// Decided HERE rather than in the view, because it is a spacing rule
         /// with a number in it and therefore something a harness can pin.
         var labelled: Bool
-        var id: UInt64 { slot }
+        /// Which source's set this snapshot belongs to, 0-based, in
+        /// `PrivacyDevnetRoots.bySource`'s own total order. **The collapse is
+        /// by (set, slot) and not by slot alone (prd §598)**: two sources may
+        /// register a root in the same slot, and folding those into one mark
+        /// draws two different anonymity sets as one point — which is the
+        /// error the ring exists to make visible, committed by the ring.
+        var set: Int
+        var id: String { "\(set):\(slot)" }
     }
 
     /// The closest two labels may sit, as a fraction of the track's width.
@@ -82,28 +89,40 @@ enum PrivacyDevnetFigure {
     /// the future.
     static func marks(_ references: [PrivacyDevnetRoots.Reference],
                       headSlot: UInt64) -> [Mark] {
-        var bySlot: [UInt64: Int] = [:]
-        for r in references { bySlot[r.slot, default: 0] += 1 }
+        // The ordinal every mark wears, off `bySource`'s own total order — so
+        // the number a set has on the ring is the number it has in the list
+        // below it and in the sheet behind it, which is the whole of what
+        // makes an ordinal an identity rather than a decoration.
+        let order = PrivacyDevnetRoots.bySource(references)
+        var setOf: [Data: Int] = [:]
+        for (i, g) in order.enumerated() { setOf[g.source] = i }
 
-        var out: [Mark] = bySlot.keys.map { slot in
-            let ref = PrivacyDevnetRoots.Reference(sourceID: Data(), slot: slot, root: Data())
+        struct Key: Hashable { var set: Int; var slot: UInt64 }
+        var counts: [Key: Int] = [:]
+        for r in references {
+            counts[Key(set: setOf[r.sourceID] ?? 0, slot: r.slot), default: 0] += 1
+        }
+
+        var out: [Mark] = counts.keys.map { key in
+            let ref = PrivacyDevnetRoots.Reference(sourceID: Data(), slot: key.slot, root: Data())
+            let n = counts[key] ?? 1
             switch PrivacyDevnetRoots.standing(of: ref, headSlot: headSlot) {
             case .live(let remaining):
-                return Mark(slot: slot,
+                return Mark(slot: key.slot,
                             position: Double(remaining) / Double(PrivacyDevnetRoots.windowSlots),
-                            agedBy: nil, count: bySlot[slot] ?? 1, labelled: false)
+                            agedBy: nil, count: n, labelled: false, set: key.set)
             case .aged(let by):
-                return Mark(slot: slot, position: nil, agedBy: by,
-                            count: bySlot[slot] ?? 1, labelled: false)
+                return Mark(slot: key.slot, position: nil, agedBy: by,
+                            count: n, labelled: false, set: key.set)
             case .ahead:
-                return Mark(slot: slot, position: 1, agedBy: nil,
-                            count: bySlot[slot] ?? 1, labelled: false)
+                return Mark(slot: key.slot, position: 1, agedBy: nil,
+                            count: n, labelled: false, set: key.set)
             }
         }
-        // Newest first, and TOTAL — the slot is unique after the collapse, so
-        // there is nothing left to tie on and the track cannot reshuffle
-        // between opens.
-        out.sort { $0.slot > $1.slot }
+        // Newest first, and TOTAL — the set ordinal breaks a slot tie, so
+        // nothing is left to tie on and the ring cannot reshuffle between
+        // opens over identical data.
+        out.sort { $0.slot == $1.slot ? $0.set < $1.set : $0.slot > $1.slot }
 
         // Labels are spent newest-first, which is the order somebody reads the
         // ring in, and an aged mark always gets one: it is the only mark whose
@@ -130,27 +149,128 @@ enum PrivacyDevnetFigure {
         return out
     }
 
-    /// The lanes the Roots scope draws — one per source, each its own ring.
+    // MARK: - The ring (prd §598)
+
+    /// **THE CHAIN'S MEMORY IS A RING, SO IT IS DRAWN AS ONE.**
     ///
-    /// Sources are ordered by `PrivacyDevnetRoots.bySource`, which is already
-    /// total, so this adds placement and nothing else.
-    struct Lane: Equatable, Sendable, Identifiable {
-        var source: Data
-        var marks: [Mark]
-        var id: String { source.map { String(format: "%02x", $0) }.joined() }
+    /// EIP-8272's predeploy masks a slot with `0x1fff` — the window is a ring
+    /// buffer, literally, and `PrivacyDevnetRoots.ringIndex` already computes
+    /// the wrap. It was drawn as a straight bar with a caption at each end
+    /// saying which way time ran ("leaves the chain's memory" … "now"), a
+    /// caption repeated on Home AND once per lane in the Roots scope. An arc
+    /// needs neither: **the gap at the bottom IS the exit**, so a snapshot that
+    /// leaves the window falls into it, and the shape says "memory that wraps"
+    /// with nothing to read.
+    ///
+    /// **NOW is at the top and age runs CLOCKWISE**, which is the direction a
+    /// clock face already teaches. A mark at `position` 1 sits at NOW; one
+    /// about to leave sits at `sweep`, just before the gap.
+    ///
+    /// The sweep leaves 60° open at the bottom. Wide enough that the two ends
+    /// read as two ends rather than a closed circle with a nick in it, narrow
+    /// enough that the ring is still a ring.
+    static let ringSweep: Double = 300
+
+    /// Where an aged mark sits: inside the gap, past the exit — out of the
+    /// ring, which is exactly where it is. Never inside the arc, which would
+    /// place it among the live ones at an age it no longer has.
+    static let ringAgedAngle: Double = 316
+
+    /// The closest two marks may sit on the arc, in degrees.
+    ///
+    /// **Measured against the drawing rather than chosen**: an 11pt diamond on
+    /// a 120pt-diameter ring subtends ~10.5°, so two marks inside 12° of each
+    /// other touch. This is the arc's form of `spaced`'s nudge and it exists
+    /// for the same measured reason — the pool address's proofs sit five blocks
+    /// apart across ~10,500, so at their true angles they render as one
+    /// diamond, which is the figure whose whole job is how many there were.
+    static let ringGap: Double = 12
+
+    /// One mark, placed on the arc.
+    struct Placement: Equatable, Sendable, Identifiable {
+        var mark: Mark
+        /// Degrees clockwise from NOW at the top.
+        var angle: Double
+        var id: String { mark.id }
     }
 
-    static func lanes(_ references: [PrivacyDevnetRoots.Reference],
-                      headSlot: UInt64, cap: Int) -> (lanes: [Lane], overflow: Int) {
-        var bySource: [Data: [PrivacyDevnetRoots.Reference]] = [:]
-        for r in references { bySource[r.sourceID, default: []].append(r) }
-        let ordered = PrivacyDevnetRoots.bySource(references)
-        let all = ordered.map { group in
-            Lane(source: group.source,
-                 marks: marks(bySource[group.source] ?? [], headSlot: headSlot))
+    /// The angle a position sits at. Aged (nil) goes to the gap.
+    static func ringAngle(position: Double?) -> Double {
+        guard let position else { return ringAgedAngle }
+        let clamped = min(max(position, 0), 1)
+        return (1 - clamped) * ringSweep
+    }
+
+    /// Place marks on the arc, nudging any that would overlap.
+    ///
+    /// **ORDER AND AGE ARE EXACT; ONLY CROWDING IS RELIEVED** — `spaced`'s own
+    /// contract, on an arc. Marks are swept newest-first pushing any that
+    /// would touch its predecessor to exactly `ringGap` away, then swept back
+    /// from the exit so nothing is pushed past it into the gap and mistaken
+    /// for a snapshot that has left the ring. **Aged marks are never nudged**:
+    /// they are all at one place by definition, and spreading them along the
+    /// gap would draw a scale where there is none.
+    static func ringPlacements(_ marks: [Mark], gap: Double = ringGap) -> [Placement] {
+        let live = marks.filter { $0.position != nil }
+        let aged = marks.filter { $0.position == nil }
+        var angles = live.map { ringAngle(position: $0.position) }
+        if angles.count > 1 {
+            for i in 1..<angles.count where angles[i] - angles[i - 1] < gap {
+                angles[i] = angles[i - 1] + gap
+            }
+            // The exit sweep: the forward pass can push the oldest mark past
+            // the end of the arc, and a live snapshot drawn in the gap reads
+            // as one that has already left.
+            if let last = angles.last, last > ringSweep {
+                angles[angles.count - 1] = ringSweep
+                for i in stride(from: angles.count - 2, through: 0, by: -1)
+                where angles[i + 1] - angles[i] < gap {
+                    angles[i] = angles[i + 1] - gap
+                }
+            }
         }
-        guard all.count > cap else { return (all, 0) }
-        return (Array(all.prefix(cap)), all.count - cap)
+        var out = zip(live, angles).map { Placement(mark: $0, angle: min(max($1, 0), ringSweep)) }
+        out.append(contentsOf: aged.map { Placement(mark: $0, angle: ringAgedAngle) })
+        return out
+    }
+
+    // MARK: - The ring is alive (prd §598)
+
+    /// How far a position drifts while nobody is reading the chain.
+    ///
+    /// **THIS IS AN ESTIMATE AND IT MAY NEVER CROSS THE RIM.** The head slot is
+    /// measured once per sweep and the ring drains continuously, so a ring that
+    /// only moves when a sweep lands is a clock that ticks every two minutes.
+    /// Drifting it between sweeps costs nothing and is the difference between a
+    /// diagram and an instrument.
+    ///
+    /// What makes it honest is the CLAMP, and it is the whole of the safety
+    /// argument: the drift may take a mark arbitrarily close to the exit and
+    /// **never to it**. Only a real read may say a snapshot has aged out —
+    /// which is right twice over, because the seconds-per-slot figure is this
+    /// devnet's assumed cadence rather than a measured one, and because the
+    /// aged state is the only one on this ring that changes what a row SAYS.
+    ///
+    /// **The drift also stops.** Past `driftCap` the app is looking at a
+    /// reading it can no longer stand behind, and extrapolating an hour of
+    /// unobserved chain is inventing an hour of chain. It freezes rather than
+    /// running on, which is the same "we stopped being able to say" the pending
+    /// rows one seat over already draw.
+    static let driftFloor: Double = 0.006
+    static let driftCap: TimeInterval = 240
+
+    static func drifted(position: Double, secondsSinceRead: TimeInterval,
+                        secondsPerSlot: UInt64 = PrivacyDevnetRoots.secondsPerSlot,
+                        windowSlots: UInt64 = PrivacyDevnetRoots.windowSlots) -> Double {
+        guard position > 0, secondsSinceRead > 0, secondsPerSlot > 0, windowSlots > 0 else {
+            return max(position, 0)
+        }
+        let elapsed = min(secondsSinceRead, driftCap)
+        let slots = elapsed / Double(secondsPerSlot)
+        let moved = position - slots / Double(windowSlots)
+        // Never to the rim, and never past it: an estimate must not age a
+        // snapshot out.
+        return max(moved, min(position, driftFloor))
     }
 
     // MARK: - The anatomy

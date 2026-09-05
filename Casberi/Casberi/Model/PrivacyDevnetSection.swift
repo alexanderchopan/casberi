@@ -83,14 +83,35 @@ enum PrivacyDevnetSection: String, CaseIterable, Identifiable, Sendable {
 
     var isAlwaysPresent: Bool { !isConditional }
 
+    /// What the chip SAYS.
+    ///
+    /// **THE CHIP WEARS THE PLAIN WORDS; THE MECHANISM IS NAMED IN THE SHEET
+    /// (prd §598).** Two chips read "Nullifiers" and "Roots" while the lede,
+    /// every scope headline, every row's meta line, the sheets and both
+    /// accessibility labels said "spend keys" and "snapshots" — so the room
+    /// taught one vocabulary everywhere except in the one place a person meets
+    /// it FIRST. A strip is the room's table of contents, and a table of
+    /// contents in a private dialect sends somebody looking for the thing they
+    /// already understand.
+    ///
+    /// **The case names do NOT move**, and neither do the raw values: they are
+    /// the persisted pick (`chrome.privacyDevnetSection`) and the deep link's
+    /// own word, so renaming them would silently reset every stored scope and
+    /// break a link somebody saved. The rename is display only, which is also
+    /// why `summary` keeps naming the mechanism — a chip's label is what it is
+    /// called and the summary is what it holds.
+    ///
+    /// The jargon is not deleted anywhere it earns its place: `PrivacyDevnetMoveSheet`
+    /// still says nullifier beside the keys it explains, which is where a reader
+    /// has the object in front of them and the word is worth learning.
     var label: String {
         switch self {
         case .home:       return String(localized: "Home")
         case .activity:   return String(localized: "Activity")
         case .accounts:   return String(localized: "Accounts")
         case .frames:     return String(localized: "Frames")
-        case .nullifiers: return String(localized: "Nullifiers")
-        case .roots:      return String(localized: "Roots")
+        case .nullifiers: return String(localized: "Spend keys")
+        case .roots:      return String(localized: "Snapshots")
         case .sponsors:   return String(localized: "Sponsors")
         }
     }

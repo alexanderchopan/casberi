@@ -26,6 +26,26 @@ enum PrivacyDevnetName {
         return PrivacyDevnetWatch.shared.name(for: address) ?? short
     }
 
+    /// **ONE SHORTENER FOR THIS SEAT (prd §598).** It was written twice —
+    /// `PrivacyDevnetRoomCard.shortHex` over `Data` for keys and roots, and a
+    /// private `shortHash` over `String` for a transaction hash — with
+    /// different head and tail lengths, so a key and the transaction that
+    /// spent it were elided differently on the same sheet. Two spellings of
+    /// one operation is how `DSSpecRow`'s three column widths happened.
+    ///
+    /// `WalletStore.shortAddress` is deliberately NOT reused: an address is
+    /// checksummed and is shortened for recognition, and these are opaque
+    /// hashes shortened for width.
+    static func shortHex(_ hex: String) -> String {
+        let body = hex.hasPrefix("0x") ? String(hex.dropFirst(2)) : hex
+        guard body.count > 16 else { return "0x" + body }
+        return "0x" + body.prefix(8) + "…" + body.suffix(6)
+    }
+
+    static func shortHex(_ d: Data) -> String {
+        shortHex(d.map { String(format: "%02x", $0) }.joined())
+    }
+
     /// A frame's mode, in a word. **Mode 2 is SENDER — measured, not read
     /// from a sibling** (§593c: "non-zero value only allowed in SENDER mode",
     /// in the node's own words); 1 and 0 carry the fork's shared vocabulary.
@@ -116,17 +136,25 @@ struct PrivacyDevnetMoveSheet: View {
                 .dsText(.reading20)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
-            // The tail: whose, which one, where. One line each, quiet.
-            VStack(alignment: .leading, spacing: 2) {
-                Text(String(localized: "From \(PrivacyDevnetName.of(owner))"))
+            // **THE TAIL IS A SPEC TABLE, NOT THREE STACKED LINES (prd
+            // §598).** `DSSpecTable`/`DSSpecRow` is the app's own run of
+            // label/value facts under a thing — the Frames sheets a person
+            // reaches from the chip beside this one use it ten times over,
+            // and this seat's sheets used it nowhere, hand-rolling a `VStack`
+            // of tertiary sentences that carried their labels inside the
+            // value ("From 0x1f…", "Block 13347"). The component exists
+            // BECAUSE that shape was written three times at three column
+            // widths; writing it a fourth is how the fourth width happens.
+            DSSpecTable {
+                DSSpecRow(label: Text(String(localized: "From")),
+                          value: Text(PrivacyDevnetName.of(owner)))
                 if let block = move.block {
-                    Text(String(localized: "Block \(String(block))"))
+                    DSSpecRow(label: Text(String(localized: "Block")),
+                              value: Text(String(block)))
                 }
-                Text(shortHash)
-                    .dsText(.mono12)
+                DSSpecRow(label: Text(String(localized: "Transaction")),
+                          value: Text(PrivacyDevnetName.shortHex(move.hash)))
             }
-            .dsText(.subhead13)
-            .foregroundStyle(DS.textTertiary)
             if let sponsorship {
                 Text(sponsorship)
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
@@ -134,11 +162,6 @@ struct PrivacyDevnetMoveSheet: View {
             }
         }
         .dsSheetHeadBlock()
-    }
-
-    private var shortHash: String {
-        move.hash.count > 18
-            ? "\(move.hash.prefix(10))…\(move.hash.suffix(6))" : move.hash
     }
 
     /// Who paid, NAMED — the walk keeps the receipt's own `payer` beside the
@@ -239,14 +262,19 @@ struct PrivacyDevnetMoveSheet: View {
                 Text(move.nullifiers.count == 1 ? String(localized: "1 spend key")
                                                 : String(localized: "\(String(move.nullifiers.count)) spend keys"))
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
+                // **THE APP'S OWN ROW, AND THE APP'S OWN STAMP (prd §598).**
+                // These were an `HStack` with a hand-placed trailing word,
+                // which is `WalletRow`'s terminal form plus `DSStamp` spelled
+                // out — and `DSStamp` exists precisely because that word was
+                // drawn twice at two weights before anyone noticed.
+                //
+                // `.quiet` is not a shrug: this room spends NO colour on
+                // state (§593b), and a spent key is neither good nor bad.
                 ForEach(Array(move.nullifiers.enumerated()), id: \.offset) { _, key in
-                    HStack(spacing: DS.Space.s3) {
-                        PrivacyDevnetSpentKey(size: 16)
-                        Text(PrivacyDevnetRoomCard.shortHex(key))
-                            .dsText(.mono12).foregroundStyle(DS.textSecondary)
-                        Spacer(minLength: 0)
-                        Text(String(localized: "used once"))
-                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    WalletRow(mark: .symbol("key.fill", tint: DS.tint),
+                              title: PrivacyDevnetName.shortHex(key),
+                              subtitle: String(localized: "One-time spend key")) {
+                        DSStamp(word: String(localized: "used once"))
                     }
                 }
                 Text(String(localized: "Each key was used once and can never be used again — that is what stops this spend being repeated. It does not hide who sent it."))
@@ -264,23 +292,33 @@ struct PrivacyDevnetMoveSheet: View {
                 Text(move.roots.count == 1 ? String(localized: "The snapshot it proved against")
                                            : String(localized: "The snapshots it proved against"))
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
+                // The room's own row again, wearing the SET'S ORDINAL — the
+                // same number the ring draws and the Snapshots rows carry, so
+                // one identity survives from a figure to a list to this sheet
+                // (prd §598). The bytes stay as the subtitle, which is where
+                // an identifier belongs.
                 ForEach(Array(move.roots.enumerated()), id: \.offset) { _, root in
-                    HStack(spacing: DS.Space.s3) {
-                        Rectangle()
-                            .fill(DS.tint)
-                            .frame(width: 10, height: 10)
-                            .rotationEffect(.degrees(45))
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(PrivacyDevnetRoomCard.shortHex(root.root))
-                                .dsText(.mono12).foregroundStyle(DS.textSecondary)
-                            Text(String(localized: "registered at slot \(String(root.slot))"))
-                                .dsText(.label12).foregroundStyle(DS.textTertiary)
-                        }
-                        Spacer(minLength: 0)
-                    }
+                    WalletRow(terminal: PrivacyDevnetRoomCard.setMark(setIndex(of: root),
+                                                                      of: setCount),
+                              title: PrivacyDevnetRoots.setLabel(setIndex(of: root),
+                                                                 of: setCount),
+                              subtitle: PrivacyDevnetName.shortHex(root.root))
                 }
             }
         }
+    }
+
+    /// How many sets this transaction proved against.
+    ///
+    /// **Scoped to the MOVE, not the room** — a sheet is about one
+    /// transaction, and numbering its references against every set the whole
+    /// room has seen would print "Set 3" on a sheet showing one row.
+    private var setCount: Int {
+        PrivacyDevnetRoots.bySource(move.roots).count
+    }
+
+    private func setIndex(of reference: PrivacyDevnetRoots.Reference) -> Int {
+        PrivacyDevnetRoots.setIndex(of: reference.sourceID, in: move.roots) ?? 0
     }
 
     // MARK: The doors

@@ -52,6 +52,11 @@ struct PrivacyDevnetRoomCard: View {
     /// §299: a drawing sized from data gets an entrance, and the entrance
     /// honours Reduce Motion.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The spend keys this device had never seen when the scope opened — the
+    /// only ones whose ring seals (prd §598). Empty on an install's first read
+    /// by construction, so arriving somewhere does not look like forty things
+    /// happening.
+    @State private var fresh: Set<String> = []
 
     var body: some View {
         // Home's sentence IS the crown — a figure that occupies exactly the
@@ -145,16 +150,19 @@ struct PrivacyDevnetRoomCard: View {
                 .dsText(.heading22)
                 .fixedSize(horizontal: false, vertical: true)
 
+            // **THE RING, AND ITS CAPTION IS GONE WITH THE BAR (prd §598).**
+            // The straight track needed eight words at its ends to say which
+            // way time ran, and the same eight words were printed again under
+            // every lane in the Snapshots scope. An arc needs none: the gap at
+            // the bottom is the exit, so a snapshot that leaves the window
+            // falls into it.
             if !marks.isEmpty {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    PrivacyDevnetTrack(marks: marks, reduceMotion: reduceMotion)
-                    HStack {
-                        Text(String(localized: "leaves the chain's memory"))
-                        Spacer(minLength: DS.Space.s3)
-                        Text(String(localized: "now"))
-                    }
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textTertiary)
+                HStack(alignment: .center, spacing: DS.Space.s4) {
+                    PrivacyDevnetRing(marks: marks, sets: setCount,
+                                      remaining: freshestRemaining,
+                                      readAt: readAt, diameter: 128,
+                                      reduceMotion: reduceMotion)
+                    Spacer(minLength: 0)
                 }
             }
 
@@ -191,6 +199,28 @@ struct PrivacyDevnetRoomCard: View {
     private var marks: [PrivacyDevnetFigure.Mark] {
         PrivacyDevnetFigure.marks(accounts.flatMap(\.roots), headSlot: headSlot)
     }
+
+    /// How many distinct sets are on the ring. One wears no ordinals — a
+    /// number implies a second (`PrivacyDevnetRoots.setLabel`'s rule).
+    var setCount: Int {
+        PrivacyDevnetRoots.bySource(accounts.flatMap(\.roots)).count
+    }
+
+    /// The freshest live reference's remaining slots — the ring's own reading,
+    /// and the same reference `PrivacyDevnetRoom.head` ranked, so the sentence
+    /// above and the number inside the ring can never describe two different
+    /// snapshots.
+    var freshestRemaining: UInt64? {
+        accounts.flatMap(\.roots)
+            .compactMap { PrivacyDevnetRoots.remaining($0, headSlot: headSlot) }
+            .max()
+    }
+
+    /// When the chain was last really read. The ring drifts from here and
+    /// freezes at `PrivacyDevnetFigure.driftCap`; nil in a preview and in the
+    /// demo, where a moving estimate over a fixture would be motion with
+    /// nothing behind it.
+    var readAt: Date? { DemoMode.isActive ? nil : PrivacyDevnetLiveState.shared.readAt }
 
     private var homeMoveCount: Int {
         guard !pairs.isEmpty else { return 0 }
@@ -464,33 +494,57 @@ extension PrivacyDevnetRoomCard {
         }
     }
 
+    /// **THE ROW IS THE SET, AND IT WEARS THE SET'S OWN NUMBER (prd §598).**
+    ///
+    /// The row led with a clock glyph and a title reading "4,096 slots left in
+    /// the chain's memory · 2 proofs" over a subtitle of root bytes — a unit
+    /// nobody can size, a count and an identifier, in three registers. It is
+    /// the app's own row now: the MARK carries the same ordinal the ring above
+    /// draws (`WalletRowMark.monogram`, so figure and list are one identity),
+    /// the title names the set, and the reading runs as one concatenated meta
+    /// line — the estimate first because it is what a person can act on, the
+    /// measured slot count beside it because nothing observed may be replaced
+    /// by something assumed.
     @ViewBuilder var rootScope: some View {
         let refs = accounts.flatMap(\.roots)
         if refs.isEmpty {
             empty(String(localized: "This address hasn't proved against a snapshot."))
         } else {
+            let groups = PrivacyDevnetRoots.bySource(refs)
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                ForEach(PrivacyDevnetRoots.bySource(refs), id: \.source) { group in
+                ForEach(Array(groups.enumerated()), id: \.element.source) { index, group in
                     // The row opens the newest transaction that proved
                     // against this source — the object the group is ABOUT.
                     let pair = pairs.first { p in
                         p.move.roots.contains { $0.sourceID == group.source }
                     }
+                    let title = PrivacyDevnetRoots.setLabel(index, of: groups.count)
+                    let mark = Self.setMark(index, of: groups.count)
                     if let pair, let onOpenMove {
                         Button {
                             DSHaptic.selection()
                             onOpenMove(pair.move, pair.owner)
                         } label: {
-                            WalletRow(mark: .symbol("clock.fill", tint: Self.tint),
-                                      title: Self.standingLine(group.newest, headSlot: headSlot, count: group.count),
-                                      subtitle: Self.shortHex(group.newest.root))
-                                .contentShape(Rectangle())
+                            // The memberwise form, because the meta line is a
+                            // `Text` run rather than a String: `subtitleText`
+                            // exists so one clause can carry its own ink, and
+                            // the convenience inits take a plain subtitle.
+                            WalletRow(mark: mark, title: title,
+                                      subtitleText: Self.standingMeta(group.newest,
+                                                                      headSlot: headSlot,
+                                                                      count: group.count)) {
+                                WalletRowChevron()
+                            }
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     } else {
-                        WalletRow(terminal: .symbol("clock.fill", tint: Self.tint),
-                                  title: Self.standingLine(group.newest, headSlot: headSlot, count: group.count),
-                                  subtitle: Self.shortHex(group.newest.root))
+                        WalletRow(mark: mark, title: title,
+                                  subtitleText: Self.standingMeta(group.newest,
+                                                                  headSlot: headSlot,
+                                                                  count: group.count)) {
+                            EmptyView()
+                        }
                     }
                 }
                 Text(Self.windowNote)
@@ -503,45 +557,63 @@ extension PrivacyDevnetRoomCard {
         }
     }
 
+    /// A set's mark: its own number where there are several, the standing
+    /// clock where there is only one. **A monogram reading "1" beside no other
+    /// number is a label for a series that does not exist** — the same reason
+    /// `setLabel` says "The set" rather than "Set 1".
+    static func setMark(_ index: Int, of total: Int) -> WalletRowMark {
+        total > 1 ? .monogram(String(index + 1), tint: tint)
+                  : .symbol("clock.fill", tint: tint)
+    }
+
     /// **HOW BIG THE WINDOW IS, ONCE, HEDGED (prd §593d).**
     ///
-    /// Every line above counts in SLOTS and that ruling stands: the slot count
-    /// is measured and the seconds are an assumption about this devnet's slot
-    /// time. But a reader who has never met a slot has no way to size "8,192
-    /// slots" at all, and `PrivacyDevnetRoots.duration(slots:)` existed to
-    /// answer exactly that and was called by nothing.
-    ///
-    /// So the conversion is stated ONCE, at the bottom, about the WINDOW rather
-    /// than about anybody's proof — and it says "about" and names the
-    /// assumption, which is the difference between a hedge and a claim (§83).
-    /// A per-row countdown in minutes would be the same assumption repeated as
-    /// a fact, on the one number somebody might act on.
+    /// Every line above counts in SLOTS and that ruling stands where it was
+    /// made: the slot count is measured and the seconds are an assumption
+    /// about this devnet's slot time, so the measured number is never dropped.
+    /// §598 amends only WHERE the conversion may lead — beside the clock, in
+    /// the ring's own reading and in a row's meta line — and this sentence is
+    /// still what names the assumption out loud, once, at the bottom.
     static var windowNote: String {
         let hours = Int((PrivacyDevnetRoots.duration(slots: PrivacyDevnetRoots.windowSlots) / 3600)
                         .rounded())
         return String(localized: "The chain remembers \(String(PrivacyDevnetRoots.windowSlots)) slots — about \(hours) hours, if this devnet keeps to \(String(PrivacyDevnetRoots.secondsPerSlot)) seconds a slot.")
     }
 
-    /// Where one reference stands, in slots — never in minutes, because the
-    /// slot count is measured and this devnet's slot time is an assumption.
-    static func standingLine(_ r: PrivacyDevnetRoots.Reference,
-                             headSlot: UInt64, count: Int) -> String {
+    /// Where one reference stands, as the row's one meta line.
+    ///
+    /// **The estimate and the measurement travel together** (§598's rule): the
+    /// phrase a person can act on leads, the slot count that was actually
+    /// observed sits right beside it, and the word "about" carries the hedge
+    /// every time. An aged reference states the slots alone — there is no
+    /// clock left to convert, and "about 3 hours ago" would dress a settled
+    /// fact as a countdown.
+    static func standingMeta(_ r: PrivacyDevnetRoots.Reference,
+                             headSlot: UInt64, count: Int) -> Text {
+        let proofs = count == 1 ? String(localized: "1 proof")
+                                : String(localized: "\(String(count)) proofs")
+        let sep = Text(verbatim: " · ")
         switch PrivacyDevnetRoots.standing(of: r, headSlot: headSlot) {
         case .live(let left):
-            return String(localized: "\(left) slots left in the chain's memory · \(count) proofs")
+            return Text(String(localized: "\(PrivacyDevnetRoots.approximate(slots: left)) left"))
+                + sep + Text(String(localized: "\(String(left)) slots"))
+                + sep + Text(proofs)
         case .aged(let by):
-            return String(localized: "Left the chain's memory \(by) slots ago · \(count) proofs")
+            return Text(String(localized: "Left the chain's memory \(String(by)) slots ago"))
+                + sep + Text(proofs)
         case .ahead:
             // The head is behind the reference — a lagging node, not freshness.
-            return String(localized: "Waiting for the chain to catch up · \(count) proofs")
+            return Text(String(localized: "Waiting for the chain to catch up"))
+                + sep + Text(proofs)
         }
     }
 
-    static func shortHex(_ d: Data) -> String {
-        let hex = d.map { String(format: "%02x", $0) }.joined()
-        guard hex.count > 16 else { return "0x" + hex }
-        return "0x" + hex.prefix(8) + "…" + hex.suffix(6)
-    }
+    /// One spelling, and it lives with the seat's other naming
+    /// (`PrivacyDevnetName.shortHex`, prd §598) — this was the second of two
+    /// hex shorteners in one seat, eliding at a different length from the
+    /// sheet's, so a key and the transaction that spent it were cut
+    /// differently on the same screen.
+    static func shortHex(_ d: Data) -> String { PrivacyDevnetName.shortHex(d) }
 }
 
 // MARK: - The figures
@@ -729,8 +801,16 @@ extension PrivacyDevnetRoomCard {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 32), spacing: 10)],
                           alignment: .leading, spacing: 12) {
-                    ForEach(Array(shown.enumerated()), id: \.offset) { index, _ in
-                        PrivacyDevnetSpentKey(size: 22)
+                    ForEach(Array(shown.enumerated()), id: \.offset) { index, key in
+                        // **A KEY THIS DEVICE HAS NEVER SEEN SEALS ITSELF**
+                        // (prd §598) — the ring's hole is its claim, and the
+                        // room drew that claim already finished for every key
+                        // it had ever shown. Silent on the first read of an
+                        // install (`PrivacyDevnetMoments.unseen` seeds), so
+                        // nobody's first open seals forty rings at once.
+                        PrivacyDevnetSpentKey(size: 22,
+                                              seals: fresh.contains(PrivacyDevnetMoments.hex(key)),
+                                              reduceMotion: reduceMotion)
                             .chartArrival(index: index, reduceMotion: reduceMotion)
                     }
                 }
@@ -741,6 +821,14 @@ extension PrivacyDevnetRoomCard {
             .accessibilityElement()
             .accessibilityLabel(String(localized: "Spend keys used"))
             .accessibilityValue("\(keys.count)")
+            // Marked seen AFTER the grid has been handed the set, so the
+            // animation this pass earned still runs — and once, because the
+            // task is keyed on the keys themselves.
+            .task(id: keys.map(PrivacyDevnetMoments.hex)) {
+                fresh = PrivacyDevnetMoments.hasSeenAnyKey()
+                    ? PrivacyDevnetMoments.unseen(keys) : []
+                PrivacyDevnetMoments.markSeen(keys)
+            }
         }
     }
 
@@ -762,48 +850,42 @@ extension PrivacyDevnetRoomCard {
     /// **No colour separates the lanes.** They are the same reading over
     /// different sources, and a hue per source would say the sources differ in
     /// kind, which they do not — the label says which is which.
+    /// **ONE RING, EVERY SNAPSHOT ON IT (prd §598).**
+    ///
+    /// This was a STACK of lanes, one per source, each a straight track with
+    /// an 84pt column of `0x1f4a…3c91` beside it and the same eight-word axis
+    /// caption underneath — bytes that name nothing, a scale repeated per row,
+    /// and a drawing that got shorter as the reading got richer.
+    ///
+    /// The ring carries every reference at its own age, each wearing its set's
+    /// ORDINAL, which is the same number the rows below and the sheet behind
+    /// them wear. **No colour separates the sets**, unchanged: they are the
+    /// same reading over different sources, and a hue per source would say the
+    /// sources differ in kind, which they do not.
     @ViewBuilder private var windows: some View {
         let refs = accounts.flatMap(\.roots)
         if refs.isEmpty {
             EmptyView()
         } else {
-            let placed = PrivacyDevnetFigure.lanes(refs, headSlot: headSlot,
-                                                   cap: Self.laneCap)
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                ForEach(placed.lanes) { lane in
-                    HStack(spacing: DS.Space.s2) {
-                        Text(Self.shortHex(lane.source))
-                            .dsText(.mono12)
-                            .foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                            .frame(width: 84, alignment: .leading)
-                        // Labels off in the stack: at lane height there is no
-                        // room for a reading beside each mark, and the list
-                        // below states every one of them in words.
-                        PrivacyDevnetTrack(marks: lane.marks, labelled: false,
-                                           reduceMotion: reduceMotion)
-                    }
-                }
-                PrivacyDevnetMore(count: placed.overflow,
-                                  noun: String(localized: "more sources"))
-                HStack {
-                    Text(String(localized: "leaves the chain's memory"))
-                    Spacer(minLength: DS.Space.s3)
-                    Text(String(localized: "now"))
-                }
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textTertiary)
-                .padding(.leading, 84 + DS.Space.s2)
+            HStack(alignment: .center, spacing: DS.Space.s4) {
+                Spacer(minLength: 0)
+                PrivacyDevnetRing(marks: marks, sets: setCount,
+                                  remaining: freshestRemaining,
+                                  readAt: readAt,
+                                  diameter: Self.ringDiameter,
+                                  reduceMotion: reduceMotion)
                 Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
-    /// How many source lanes fit. Derived, never a constant.
-    static var laneCap: Int {
-        PrivacyDevnetFigure.rowCap(box: Double(DSRoomChassis.figureSlot), rowHeight: 26,
-                                   spacing: Double(DS.Space.s3), chrome: 48)
+    /// How big the ring may be. **Derived from the figure's own box, never a
+    /// constant** (`PrivacyDevnetFigure.rowCap`'s reason): the slot was 166
+    /// before §588 and is 256 today, and a hand-tuned diameter is one release
+    /// from being clipped or lost in air.
+    static var ringDiameter: CGFloat {
+        min(max(DSRoomChassis.figureSlot - 24, 96), 240)
     }
 }
 
@@ -882,6 +964,7 @@ struct PrivacyDevnetRoomList: View {
     var onOpenAccount: ((PrivacyDevnetAccount) -> Void)?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(ShellChrome.self) private var chrome
 
     private var card: PrivacyDevnetRoomCard {
         PrivacyDevnetRoomCard(head: head, section: section, accounts: accounts,
@@ -920,6 +1003,13 @@ struct PrivacyDevnetRoomList: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .modifier(PrivacyDevnetMomentsTask())
+        // **THE SWEEP IS TOLD THIS PHONE'S ADDRESS; IT NEVER LOOKS IT UP.**
+        // `PrivacyDevnetBridge` is driven on a timer with no tap behind it, and
+        // the harness fails the build if that file names `PrivacyDevnetKey` at
+        // all — so the view that mounts with the room publishes it, the way
+        // the send card and the feed already read it here (prd §598).
+        .task { PrivacyDevnetLiveState.shared.setMine(PrivacyDevnetKey.address()) }
     }
 
     private var showsExamples: Bool {
@@ -927,5 +1017,56 @@ struct PrivacyDevnetRoomList: View {
         case .quiet, .unwatched: return true
         case .reading, .relaunched, .rootLive, .rootsAged, .spends: return false
         }
+    }
+}
+
+
+// MARK: - The two moments (prd §598)
+
+/// **THIS ROOM MARKED NOTHING, EVER.**
+///
+/// Frames says "Your first transaction landed" the first time a send this
+/// phone signed turns out to be real; Hegotá and vibenet flash their own
+/// writes. This seat had not one `chrome.flash` and not one first-sight
+/// animation — in the room whose subject is the rarest thing on any of the
+/// four chains. It read as a very careful instrument that never once said
+/// "look at this".
+///
+/// **A SENTENCE, NEVER A SHOWER.** `BerryRain`'s one-gesture-one-shower ruling
+/// forbids a second pour over the send sheet's own, and neither of these
+/// follows a gesture at all — they follow a sweep. A toast carrying the seat's
+/// mark is the register this app already uses for "your first X", and
+/// `chrome.flash(tone:)` is what fires the single haptic, so nothing here
+/// buzzes on its own.
+///
+/// **The two are worded apart on purpose.** The settle is YOURS and is
+/// congratulated; the pool sighting is a stranger's transaction that your
+/// watching revealed, so it states what appeared and claims no authorship —
+/// this phone cannot spend a one-time key on this chain and never will,
+/// because the pool's ABI is not something this project has (§593).
+///
+/// A modifier rather than two `.task`s inline, so the room's body stays the
+/// room and this stays testable as one object.
+private struct PrivacyDevnetMomentsTask: ViewModifier {
+    @Environment(ShellChrome.self) private var chrome
+
+    func body(content: Content) -> some View {
+        content
+            .task(id: PrivacyDevnetLiveState.shared.firstSettleReady) {
+                guard PrivacyDevnetLiveState.shared.firstSettleReady else { return }
+                PrivacyDevnetLiveState.shared.spendFirstSettle()
+                chrome.flash(String(localized: "Your first transaction landed"),
+                             tone: .success,
+                             mark: PrivacyDevnetIdentity.source,
+                             seconds: 3)
+            }
+            .task(id: PrivacyDevnetLiveState.shared.poolSightReady) {
+                guard PrivacyDevnetLiveState.shared.poolSightReady else { return }
+                PrivacyDevnetLiveState.shared.spendPoolSight()
+                // What it IS, not well done: somebody else spent the key.
+                chrome.flash(String(localized: "An address you watch used the pool — its spend keys are below"),
+                             mark: PrivacyDevnetIdentity.source,
+                             seconds: 4)
+            }
     }
 }

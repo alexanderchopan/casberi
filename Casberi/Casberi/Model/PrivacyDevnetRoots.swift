@@ -126,6 +126,89 @@ enum PrivacyDevnetRoots {
         return Double(left) / Double(windowSlots)
     }
 
+    // MARK: - Words a reader can feel (prd §598)
+
+    /// A slot count as a phrase, hedged.
+    ///
+    /// **THE RULING THIS AMENDS, and the narrow place it amends it.** §593d
+    /// put the seconds conversion at the BOTTOM of the roots list, once, about
+    /// the window rather than about anybody's proof — on the reasoning that a
+    /// per-row countdown in minutes is one assumption repeated as a fact. That
+    /// reasoning held for a row in a list and does NOT hold for the crown: the
+    /// room's headline read "for another 4,096 slots", which is a measurement
+    /// nobody outside this devnet can size at all, in the largest type on the
+    /// card. A number a reader cannot feel is not a more honest number, it is
+    /// an unread one.
+    ///
+    /// So the phrase leads WHERE THE CLOCK IS DRAWN — the ring's own reading
+    /// and the roots rows' titles — and three things keep it inside §83:
+    ///
+    ///   1. It always says **"about"**. Never a bare figure.
+    ///   2. The **measured slot count travels with it**, in the line beneath,
+    ///      so nothing that was observed is replaced by something that was
+    ///      assumed.
+    ///   3. The assumption is **named once per surface**
+    ///      (`PrivacyDevnetRoomCard.windowNote`), unchanged.
+    ///
+    /// Deliberately coarse. Ladder rungs, never a decimal: "about 11 hours" is
+    /// a claim of the right size, "about 11.4 hours" is a precision this app
+    /// does not have and the extra digit is the part somebody would act on.
+    static func approximate(slots: UInt64) -> String {
+        let seconds = duration(slots: slots)
+        if seconds < 60 { return String(localized: "under a minute") }
+        // The rungs are coarse on purpose. An hour is an hour rather than
+        // "about 60 minutes" — the unit somebody would say out loud.
+        if seconds < 3600 {
+            let m = Int((seconds / 60).rounded())
+            return m == 1 ? String(localized: "about 1 minute")
+                          : String(localized: "about \(String(m)) minutes")
+        }
+        if seconds < 48 * 3600 {
+            let h = Int((seconds / 3600).rounded())
+            return h == 1 ? String(localized: "about 1 hour")
+                          : String(localized: "about \(String(h)) hours")
+        }
+        let d = Int((seconds / 86_400).rounded())
+        return d == 1 ? String(localized: "about 1 day")
+                      : String(localized: "about \(String(d)) days")
+    }
+
+    /// The same reading at mark scale, where a sentence does not fit.
+    ///
+    /// **The `~` carries the hedge that "about" carries in the long form** —
+    /// it is the one place the word will not fit, and dropping the hedge
+    /// rather than the word would turn an estimate into a reading at exactly
+    /// the size nobody checks.
+    static func approximateShort(slots: UInt64) -> String {
+        let seconds = duration(slots: slots)
+        if seconds < 60 { return String(localized: "<1m") }
+        if seconds < 3600 { return "~\(Int((seconds / 60).rounded()))m" }
+        if seconds < 48 * 3600 { return "~\(Int((seconds / 3600).rounded()))h" }
+        return "~\(Int((seconds / 86_400).rounded()))d"
+    }
+
+    /// What a source is CALLED on screen.
+    ///
+    /// **A 32-byte source id names nothing** (prd §598). The Roots scope
+    /// labelled each lane with `0x1f4a20b8…3c91` in an 84pt mono column, which
+    /// is not an identity a reader can hold across a figure, a row and a sheet
+    /// — it is the bytes, printed. The bytes are still shown as the row's
+    /// SUBTITLE, where an identifier belongs; this is the handle.
+    ///
+    /// **One set is not "Set 1"** — an ordinal implies a second, so a room with
+    /// a single source says "The set" and stops claiming a series that does not
+    /// exist. Ordering is `bySource`'s, which is already total, so the number a
+    /// source wears cannot change between opens over identical data.
+    static func setLabel(_ index: Int, of total: Int) -> String {
+        guard total > 1 else { return String(localized: "The set") }
+        return String(localized: "Set \(String(index + 1))")
+    }
+
+    /// The ordinal a source wears, or nil for one this list does not carry.
+    static func setIndex(of source: Data, in references: [Reference]) -> Int? {
+        bySource(references).firstIndex { $0.source == source }
+    }
+
     /// The distinct sources referenced across a set of transactions, newest
     /// slot first.
     ///

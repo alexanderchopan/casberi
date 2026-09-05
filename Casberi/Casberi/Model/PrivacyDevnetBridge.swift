@@ -145,6 +145,53 @@ final class PrivacyDevnetLiveState {
     /// What the last walk could not read (prd §593d). Empty on every pass today.
     private(set) var walkCut = WalkCut()
 
+    // MARK: - The moments this room owes (prd §598)
+
+    /// Set when a sweep has just watched a transaction THIS PHONE signed turn
+    /// out to be real, and cleared by the room once it has said so.
+    ///
+    /// **A flag rather than a direct `chrome.flash`**, and for Frames' own
+    /// reason: a celebration nobody was present for is not a celebration, and
+    /// this seat is one chip away from three others, so the moment is claimed
+    /// by whoever is actually looking.
+    private(set) var firstSettleReady = false
+    /// Set when a watched address turns out to have used the pool, for the
+    /// first time on this device. A DISCOVERY, never an achievement — this
+    /// phone can never spend a one-time key here, since the pool's ABI is not
+    /// something this project has (§593).
+    private(set) var poolSightReady = false
+
+    /// This phone's own account address, HANDED IN rather than looked up.
+    ///
+    /// **`privacy-selftest.sh` fails the build if this file so much as names
+    /// `PrivacyDevnetKey`, and that guard is right** — this is what every room
+    /// open drives, on a timer, with no tap behind it, so the read file stays a
+    /// read file and the signing surface stays where a button calls it. The
+    /// address is a public string and reading it signs nothing, but the guard
+    /// is deliberately coarse and weakening it to let one convenience through
+    /// is how a coarse guard becomes no guard.
+    ///
+    /// So the view that already knows publishes it (`PrivacyDevnetRoomList`),
+    /// and a sweep that runs before anything mounted simply has no address —
+    /// which costs nothing, because the moment it feeds needs somebody looking
+    /// at the room anyway.
+    private(set) var mine: String?
+
+    func setMine(_ address: String?) {
+        guard mine != address else { return }
+        mine = address
+    }
+
+    func spendFirstSettle() {
+        firstSettleReady = false
+        PrivacyDevnetMoments.spendFirstSettle()
+    }
+
+    func spendPoolSight() {
+        poolSightReady = false
+        PrivacyDevnetMoments.spendPoolSight()
+    }
+
     private init() {}
 
     func account(_ address: String) -> PrivacyDevnetAccount? {
@@ -226,6 +273,11 @@ final class PrivacyDevnetLiveState {
         observedGenesis = nil
         readAt = nil
         walkCut = WalkCut()
+        // The PENDING moments go; the once-ever ledger does NOT. Disconnecting
+        // does not un-happen your first transaction, and re-watching an
+        // address later must not re-fire a moment already spent.
+        firstSettleReady = false
+        poolSightReady = false
     }
 }
 
@@ -564,7 +616,50 @@ extension PrivacyDevnetLiveState {
             }
         }
         replace(out)
+
+        // **THE MOMENTS, OBSERVED HERE AND SAID BY THE ROOM (prd §598).**
+        //
+        // `seeding` is this install's first completed sweep, and it is what
+        // keeps both moments off history: an account that had already sent
+        // before this build existed, or an address watched last week that
+        // always had spend keys, is recorded in silence rather than announced.
+        let seeding = PrivacyDevnetMoments.isFirstRead()
+        if PrivacyDevnetMoments.noteNonce(await myNonce(watched: watched),
+                                          seeding: seeding) {
+            firstSettleReady = true
+        }
+        if PrivacyDevnetMoments.notePoolSight(
+            hasKeys: out.contains(where: { !$0.nullifiers.isEmpty }),
+            seeding: seeding) {
+            poolSightReady = true
+        }
+        PrivacyDevnetMoments.markRead()
+
         readAt = Date()
+    }
+
+    /// This phone's own account's nonce — **the only signal this seat has for
+    /// "a send of mine landed", and it costs at most one request, once ever.**
+    ///
+    /// The nonce IS the count of transactions an account signed, incremented
+    /// by the chain on INCLUSION, so 0 → non-zero is exactly the transition
+    /// Frames watches a pending row make. Building a pending list here to
+    /// carry one toast would be a machine larger than the moment.
+    ///
+    /// Free when the key's address is already watched (the sweep just read
+    /// it), one extra `eth_getTransactionCount` when it is not — and asked at
+    /// all only while the moment is still owed, so it stops happening the day
+    /// it fires.
+    private func myNonce(watched: [String]) async -> UInt64? {
+        guard PrivacyDevnetMoments.firstSettleOwed(), let mine else { return nil }
+        if let known = accounts.first(where: {
+            $0.address.caseInsensitiveCompare(mine) == .orderedSame
+        })?.nonce { return known }
+        guard !watched.contains(where: { $0.caseInsensitiveCompare(mine) == .orderedSame })
+        else { return nil }
+        let raw = await PrivacyDevnetRPC.call(method: "eth_getTransactionCount",
+                                              params: [mine, "latest"])
+        return PrivacyDevnetRPC.hexInt(raw)
     }
 
     /// One frame of a transaction, as the walk saw it.

@@ -157,15 +157,21 @@ enum PrivacyDevnetRoom {
             return n == 1
                 ? String(localized: "One spend, on a key that can't be used again.")
                 : String(localized: "\(n) spends, each on a key that can't be used again.")
-        case .rootLive(let remaining, let sources):
-            // SLOTS, not minutes: the slot count is measured and the seconds
-            // are an assumption about this devnet's slot time.
-            let slots = remaining == 1
-                ? String(localized: "1 slot")
-                : String(localized: "\(remaining) slots")
+        case .rootLive(_, let sources):
+            // **THE SENTENCE SAYS THE STATE; THE RING SAYS THE CLOCK (prd
+            // §598).** This carried both — "…for another 4,096 slots" — which
+            // is two facts in the largest type on the card, and the second of
+            // them in a unit nobody outside this devnet can size. The ring
+            // beneath it draws every snapshot at its own age and prints the
+            // freshest one's remaining life in words, which is where a clock
+            // belongs; the measured slot count travels with it in the caption.
+            //
+            // `remaining` stays on the case rather than being dropped: it is
+            // what RANKS the leading reference in `head`, and the value the
+            // head chose is the value the ring's own reading is taken from.
             return sources == 1
-                ? String(localized: "A proof here still names a snapshot the chain remembers, for another \(slots).")
-                : String(localized: "Proofs here name \(sources) snapshots, the freshest good for another \(slots).")
+                ? String(localized: "A proof here still names a snapshot the chain remembers.")
+                : String(localized: "Proofs here name \(sources) snapshots the chain still remembers.")
         case .rootsAged(let count):
             return count == 1
                 ? String(localized: "The snapshot this address proved against has left the chain's memory. The transaction stands.")

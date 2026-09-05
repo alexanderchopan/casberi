@@ -31,11 +31,17 @@ SECTION="Casberi/Casberi/Model/PrivacyDevnetSection.swift"
 ROOTS="Casberi/Casberi/Model/PrivacyDevnetRoots.swift"
 ROOM="Casberi/Casberi/Model/PrivacyDevnetRoom.swift"
 FIG="Casberi/Casberi/Model/PrivacyDevnetFigure.swift"
+# The moments ledger (prd §598). Foundation-only and every store injectable,
+# because a once-ever flag whose only proof is "it did not fire again on my
+# phone" is not proven at all — and because the failure this catches is the
+# retroactive claim: a "your first transaction landed" fired over an account
+# that sent last week.
+MOMENTS="Casberi/Casberi/Model/PrivacyDevnetMoments.swift"
 # Foundation-only, and compiled here so the root derivation can be pinned
 # against a hash the chain really produced rather than against a stub.
 KECCAK="Casberi/Casberi/Model/Keccak256.swift"
 VERIFY="scripts/verify.sh"
-for f in "$SECTION" "$ROOTS" "$ROOM" "$FIG" "$KECCAK"; do [[ -f "$f" ]] || fail "$f not found"; done
+for f in "$SECTION" "$ROOTS" "$ROOM" "$FIG" "$MOMENTS" "$KECCAK"; do [[ -f "$f" ]] || fail "$f not found"; done
 
 # `swiftc` needs a main file; the sources are compiled WHOLE and unmodified.
 cat > "$work/main.swift" <<'SWIFT'
@@ -335,6 +341,92 @@ check(PF.marks([fref(14400), fref(14399)], headSlot: 14450).filter(\.labelled).c
       "two marks a slot apart never both label — the collision this rule exists for")
 check(PF.marks([fref(14999)], headSlot: 14450)[0].position == 1,
       "a reference AHEAD of the head pins at now, never past it — a lagging RPC, not the future")
+
+// ── prd §598: the ring, the ordinal, and the estimate that may not age ──
+// Every failure below renders as an ordinary ring: two sets folded into one
+// diamond, a live snapshot drawn in the exit gap, an ordinal that changes
+// between opens, or an estimate quietly deciding a proof has expired.
+
+// **THE COLLAPSE IS BY (SET, SLOT), NOT BY SLOT.** Two sources may register in
+// the same slot, and folding those into one mark draws two anonymity sets as
+// one point — the exact error the ring exists to make visible.
+func fref2(_ slot: UInt64) -> PrivacyDevnetRoots.Reference {
+    PrivacyDevnetRoots.Reference(sourceID: d("bb"), slot: slot, root: d("cc"))
+}
+let shared = PF.marks([fref(13347), fref2(13347)], headSlot: 14450)
+check(shared.count == 2, "two SOURCES registering in one slot are two marks, not one")
+check(Set(shared.map(\.id)).count == 2, "and their ids differ, or a ForEach draws one of them")
+check(Set(shared.map(\.set)).count == 2, "each carries its own set's ordinal")
+// The ordinal is `bySource`'s own total order, so it cannot reshuffle.
+let orderA = PF.marks([fref(13347), fref2(13347)], headSlot: 14450).map { "\($0.set):\($0.slot)" }
+let orderB = PF.marks([fref2(13347), fref(13347)], headSlot: 14450).map { "\($0.set):\($0.slot)" }
+check(orderA == orderB, "the ordinal a set wears is total — a ring that renumbers between opens reads as broken")
+check(PF.marks([fref(13347)], headSlot: 14450)[0].set == 0, "a lone source is set 0")
+
+// **NOW IS AT THE TOP AND AGE RUNS CLOCKWISE.**
+check(PF.ringAngle(position: 1) == 0, "a snapshot registered this slot sits at NOW")
+check(abs(PF.ringAngle(position: 0) - PF.ringSweep) < 1e-9,
+      "one about to leave sits at the end of the arc, just before the gap")
+check(PF.ringAngle(position: nil) == PF.ringAgedAngle,
+      "an aged snapshot sits INSIDE the gap — out of the ring, which is where it is")
+check(PF.ringAgedAngle > PF.ringSweep,
+      "and the gap really is past the arc's end, or an aged mark lands among the live ones")
+check(PF.ringSweep < 360, "the ring is OPEN — the gap is the exit, and it is what replaced the caption")
+
+// **THE NUDGE: crowding relieved, order and age exact.**
+let ringCrowded = PF.ringPlacements(PF.marks([fref(14449), fref(14448), fref(14447)], headSlot: 14450))
+check(ringCrowded.count == 3, "three snapshots minutes apart stay three marks")
+let angles = ringCrowded.filter { $0.mark.position != nil }.map(\.angle).sorted()
+check(zip(angles, angles.dropFirst()).allSatisfy { $1 - $0 >= PF.ringGap - 1e-9 },
+      "and none is closer than one mark-width to its neighbour")
+// **A DISCRIMINATING FIXTURE FOR THE EXIT SWEEP, and the first one was not.**
+// Three marks crowded at NOW nudge to 0/12/24 and never approach the arc's
+// end, so deleting the exit sweep left the suite green — the mutation SURVIVED
+// on this block's first run. The case that can actually fail is three marks
+// crowded at the OLD end, where the forward push runs them past the exit and
+// into the gap, i.e. draws three live snapshots as three that have left.
+let ancient = PF.marks([fref(100), fref(101), fref(102)], headSlot: 100 + 8190)
+check(ancient.allSatisfy { $0.position != nil }, "the fixture's marks really are still live")
+let atExit = PF.ringPlacements(ancient)
+check(atExit.allSatisfy { $0.angle <= PF.ringSweep + 1e-9 },
+      "no LIVE mark is ever pushed into the gap — that reads as one that has already left")
+let exitAngles = atExit.map(\.angle).sorted()
+check(zip(exitAngles, exitAngles.dropFirst()).allSatisfy { $1 - $0 >= PF.ringGap - 1e-9 },
+      "and pulling them back off the exit keeps them a mark-width apart")
+check(ringCrowded.allSatisfy { $0.mark.position == nil || $0.angle <= PF.ringSweep + 1e-9 },
+      "the crowded-at-NOW set stays on the arc too")
+// Aged marks are not spread: they are all in one place by definition.
+let mixedAged = PF.ringPlacements(PF.marks([fref(1), fref(2)], headSlot: 20000))
+check(Set(mixedAged.map(\.angle)) == [PF.ringAgedAngle],
+      "aged marks are never nudged apart — the gap carries no scale to spread them along")
+
+// **THE DRIFT IS AN ESTIMATE AND MAY NEVER CROSS THE RIM.** This is the whole
+// safety argument for a moving ring: only a real read may say a snapshot has
+// aged out, because the seconds-per-slot figure is this devnet's ASSUMED
+// cadence and the aged state is the only one here that changes what a row says.
+check(PF.drifted(position: 1, secondsSinceRead: 0) == 1, "no time, no drift")
+check(PF.drifted(position: 0.5, secondsSinceRead: 120) < 0.5, "the ring drains while nobody reads it")
+check(PF.drifted(position: 0.0001, secondsSinceRead: 100_000) > 0,
+      "an estimate NEVER reaches the rim — aging a proof out is a read's job alone")
+check(PF.drifted(position: 0.5, secondsSinceRead: 100_000)
+      == PF.drifted(position: 0.5, secondsSinceRead: PF.driftCap),
+      "and it FREEZES at the cap — extrapolating an unobserved hour is inventing an hour of chain")
+check(PF.drifted(position: 0.5, secondsSinceRead: -5) == 0.5, "a clock that ran backwards moves nothing")
+
+// ── prd §598: words a reader can feel, hedged every time ──
+check(PrivacyDevnetRoots.approximate(slots: 8192).contains("about"),
+      "the conversion ALWAYS says about — the slot time is an assumption, not a measurement")
+check(PrivacyDevnetRoots.approximate(slots: 1) == "under a minute", "12 seconds is under a minute")
+check(PrivacyDevnetRoots.approximate(slots: 300) == "about 1 hour",
+      "300 slots at 12s IS an hour — and reads as one, not as sixty minutes")
+check(PrivacyDevnetRoots.approximate(slots: 50).contains("minute"), "ten minutes of slots reads in minutes")
+check(PrivacyDevnetRoots.approximateShort(slots: 8192).hasPrefix("~"),
+      "the short form carries the hedge as a tilde — the one place the word does not fit")
+// A single set is not "Set 1": an ordinal implies a second.
+check(PrivacyDevnetRoots.setLabel(0, of: 1) == "The set", "one source wears no number")
+check(PrivacyDevnetRoots.setLabel(0, of: 2) == "Set 1", "two sources are numbered from one")
+check(PrivacyDevnetRoots.setIndex(of: src, in: refs) != nil, "a known source has an ordinal")
+check(PrivacyDevnetRoots.setIndex(of: d("ff"), in: refs) == nil, "an unknown one has none — never 0")
 // FOUND while writing: clamp-then-renormalise pushed a floored frame BACK BELOW its floor.
 let w = PF.shares([PF.Frame(gasLimit: 900), PF.Frame(gasLimit: 1)])
 check(abs(w.reduce(0,+) - 1) < 1e-9, "weighted shares fill the strip exactly")
@@ -488,11 +580,72 @@ check(tight.count == 5, "a narrow track still draws every mark")
 check(tight == tight.sorted(), "and still in order")
 check(Set(tight).count == 5, "and does not stack them all on one point")
 
+// ── prd §598: the moments, and everything they refuse to claim ──
+// Every failure here is a wrong CLAIM rather than a wrong drawing: a "your
+// first transaction landed" over an account that sent last week, a moment
+// that fires twice, or a room that seals forty rings the day somebody
+// arrives. A scratch suite, so the harness never touches a real install's
+// ledger and every assertion starts from a known state.
+typealias PM = PrivacyDevnetMoments
+let box = UserDefaults(suiteName: "privacy-selftest-\(UUID().uuidString)")!
+
+// **RULE 1: NEVER RETROACTIVE.** A non-zero nonce on the install's first read
+// means the send happened before anything was watching.
+check(PM.isFirstRead(box), "a fresh install has not read yet")
+check(!PM.noteNonce(3, seeding: true, box),
+      "an account that had ALREADY sent is seeded in silence — never congratulated for history")
+check(!PM.firstSettleOwed(box), "and the moment is spent, so it can never fire later")
+
+let box2 = UserDefaults(suiteName: "privacy-selftest-\(UUID().uuidString)")!
+check(!PM.noteNonce(0, seeding: true, box2), "an account that has never sent earns nothing")
+check(PM.firstSettleOwed(box2), "and the moment is still owed")
+check(!PM.noteNonce(nil, seeding: false, box2), "an UNREAD nonce is not a zero and not a landing")
+check(PM.firstSettleOwed(box2), "a failed read leaves the moment owed")
+check(PM.noteNonce(1, seeding: false, box2),
+      "0 → 1 watched by this device IS the first transaction landing")
+check(PM.firstSettleOwed(box2), "and it stays owed until the ROOM says so — nobody was necessarily looking")
+PM.spendFirstSettle(box2)
+check(!PM.firstSettleOwed(box2), "spent once the room has drawn it")
+check(!PM.noteNonce(9, seeding: false, box2), "and never again")
+
+// **RULE 2: a discovery, not an achievement** — and seeded the same way.
+let box3 = UserDefaults(suiteName: "privacy-selftest-\(UUID().uuidString)")!
+check(!PM.notePoolSight(hasKeys: false, seeding: false, box3), "no keys, no moment")
+check(PM.poolSightOwed(box3), "and nothing is spent by looking")
+check(!PM.notePoolSight(hasKeys: true, seeding: true, box3),
+      "an address watched before this build brings its keys with it — silence")
+check(!PM.poolSightOwed(box3), "seeded, so it cannot fire tomorrow over the same keys")
+
+let box4 = UserDefaults(suiteName: "privacy-selftest-\(UUID().uuidString)")!
+check(PM.notePoolSight(hasKeys: true, seeding: false, box4), "a pool key appearing while watching IS the moment")
+PM.spendPoolSight(box4)
+check(!PM.notePoolSight(hasKeys: true, seeding: false, box4), "once ever")
+
+// **THE SEEN LEDGER.** First sight seeds silently; only a genuinely new key
+// seals. `hasSeenAnyKey` is what separates "you just arrived" from "one
+// landed", and the room reads it before `unseen`.
+let box5 = UserDefaults(suiteName: "privacy-selftest-\(UUID().uuidString)")!
+let k1 = d("0cca26d3"), k2 = d("aa11bb22"), k3 = d("cc33dd44")
+check(!PM.hasSeenAnyKey(box5), "a device that has seen nothing says so")
+check(PM.unseen([k1, k2], box5).count == 2, "before anything is recorded every key is unseen")
+PM.markSeen([k1, k2], box5)
+check(PM.hasSeenAnyKey(box5), "and after the first read it has")
+check(PM.unseen([k1, k2], box5).isEmpty, "a key already seen never seals again")
+check(PM.unseen([k1, k3], box5) == [PM.hex(k3)], "only the new one seals")
+PM.markSeen([k1, k3], box5)
+check(PM.unseen([k3], box5).isEmpty, "and then it too is remembered")
+// The cap drops the OLDEST, so the keys most likely to be on screen survive.
+let many = (0..<(PM.seenCap + 20)).map { Data([UInt8($0 % 251), UInt8($0 / 251), 0xab]) }
+let box6 = UserDefaults(suiteName: "privacy-selftest-\(UUID().uuidString)")!
+PM.markSeen(many, box6)
+check(PM.unseen([many[many.count - 1]], box6).isEmpty, "the NEWEST key is kept")
+check(!PM.unseen([many[0]], box6).isEmpty, "and the oldest is the one dropped by the cap")
+
 if failures == 0 { print("  ok   \(0) failures") } else { exit(1) }
 SWIFT
 
 print "  building…"
-xcrun swiftc -Onone -o "$work/pv" "$SECTION" "$ROOTS" "$ROOM" "$FIG" "$KECCAK" "$work/main.swift" 2>"$work/build.log" \
+xcrun swiftc -Onone -o "$work/pv" "$SECTION" "$ROOTS" "$ROOM" "$FIG" "$MOMENTS" "$KECCAK" "$work/main.swift" 2>"$work/build.log" \
   || { cat "$work/build.log"; fail "the sources did not compile — they must stay Foundation-only" }
 "$work/pv" || fail "assertions failed"
 print "  ok   assertions"
@@ -505,7 +658,7 @@ mutate() {
   local dir="$work/m"; rm -rf "$dir"; mkdir -p "$dir"
   cp "$SECTION" "$dir/PrivacyDevnetSection.swift"; cp "$ROOTS" "$dir/PrivacyDevnetRoots.swift"
   cp "$ROOM" "$dir/PrivacyDevnetRoom.swift"; cp "$FIG" "$dir/PrivacyDevnetFigure.swift"
-  cp "$KECCAK" "$dir/Keccak256.swift"
+  cp "$MOMENTS" "$dir/PrivacyDevnetMoments.swift"; cp "$KECCAK" "$dir/Keccak256.swift"
   local target="$dir/$(basename $file)"
   grep -qF -- "$from" "$target" || fail "mutation '$name' matches nothing — it is stale and tests the shipped code"
   python3 - "$target" "$from" "$to" <<'PY'
@@ -515,7 +668,8 @@ s = io.open(p, encoding="utf-8").read()
 io.open(p, "w", encoding="utf-8").write(s.replace(a, b, 1))
 PY
   if xcrun swiftc -Onone -o "$dir/pv" "$dir/PrivacyDevnetSection.swift" "$dir/PrivacyDevnetRoots.swift" \
-        "$dir/PrivacyDevnetRoom.swift" "$dir/PrivacyDevnetFigure.swift" "$dir/Keccak256.swift" "$work/main.swift" 2>/dev/null && "$dir/pv" >/dev/null 2>&1; then
+        "$dir/PrivacyDevnetRoom.swift" "$dir/PrivacyDevnetFigure.swift" \
+        "$dir/PrivacyDevnetMoments.swift" "$dir/Keccak256.swift" "$work/main.swift" 2>/dev/null && "$dir/pv" >/dev/null 2>&1; then
     fail "mutation SURVIVED: $name"
   fi
   print "  ok   caught: $name"
@@ -558,8 +712,8 @@ mutate "the nullifier floor measured on RAW bytes (a stripped leading zero drops
 # silent wrong drawing: an ordinary-looking ring, strip or tally that says
 # something the chain does not.
 mutate "an aged root placed at the far edge rather than nowhere" \
-  "$FIG" "return Mark(slot: slot, position: nil, agedBy: by," \
-  "return Mark(slot: slot, position: 0, agedBy: by,"
+  "$FIG" "return Mark(slot: key.slot, position: nil, agedBy: by," \
+  "return Mark(slot: key.slot, position: 0, agedBy: by,"
 mutate "two labels allowed to overlap (the commonest arrangement there is)" \
   "$FIG" "if let last = lastLabelled, abs(last - p) < labelGap { continue }" \
   "if false { continue }"
@@ -631,6 +785,55 @@ mutate "the right-hand sweep dropped, so the last mark is pushed off the track" 
   "$FIG" "if out[out.count - 1] > usable {" "if false {"
 mutate "a track too narrow stacking every mark on one point" \
   "$FIG" "guard usable >= mark * Double(out.count - 1) else {" "guard true else {"
+
+# ── prd §598: the ring, the estimate, the moments ─────────────────────
+mutate "two SOURCES folded onto one slot, drawing two anonymity sets as one point" \
+  "$FIG" "counts[Key(set: setOf[r.sourceID] ?? 0, slot: r.slot), default: 0] += 1" \
+  "counts[Key(set: 0, slot: r.slot), default: 0] += 1"
+mutate "the ring closed, so the exit gap that replaced the axis caption is gone" \
+  "$FIG" "static let ringSweep: Double = 300" "static let ringSweep: Double = 360"
+mutate "an aged mark placed on the arc among the live ones rather than in the gap" \
+  "$FIG" "static let ringAgedAngle: Double = 316" "static let ringAgedAngle: Double = 150"
+mutate "the arc's crowding nudge dropped — proofs minutes apart draw as one diamond" \
+  "$FIG" "for i in 1..<angles.count where angles[i] - angles[i - 1] < gap {" \
+  "for i in 1..<angles.count where false {"
+mutate "a LIVE mark pushed into the exit gap, reading as one that already left" \
+  "$FIG" "if let last = angles.last, last > ringSweep {" "if false {"
+mutate "aged marks spread along the gap, inventing a scale where there is none" \
+  "$FIG" "out.append(contentsOf: aged.map { Placement(mark: \$0, angle: ringAgedAngle) })" \
+  "out.append(contentsOf: aged.enumerated().map { Placement(mark: \$0.1, angle: ringAgedAngle + Double(\$0.0) * 6) })"
+# THE SHARPEST ONE. The drift is an ESTIMATE; letting it reach the rim means
+# the app decides a proof expired on an assumed slot cadence, and the row it
+# feeds says so in words.
+mutate "the drift allowed to age a snapshot out — an estimate deciding a proof expired" \
+  "$FIG" "return max(moved, min(position, driftFloor))" "return max(moved, 0)"
+mutate "the drift running forever instead of freezing — inventing unobserved chain" \
+  "$FIG" "let elapsed = min(secondsSinceRead, driftCap)" "let elapsed = secondsSinceRead"
+mutate "one source numbered as if it were the first of several" \
+  "$ROOTS" "guard total > 1 else { return String(localized: \"The set\") }" \
+  "guard total > 0 else { return String(localized: \"The set\") }"
+mutate "the conversion dropping its hedge — an assumed cadence stated as a reading" \
+  "$ROOTS" "return h == 1 ? String(localized: \"about 1 hour\")" \
+  "return h == 1 ? String(localized: \"1 hour\")"
+mutate "an unknown source given ordinal 0 rather than none" \
+  "$ROOTS" "bySource(references).firstIndex { \$0.source == source }" \
+  "bySource(references).firstIndex { \$0.source == source } ?? 0"
+# `mutate` replaces the FIRST match, so these anchor on lines whose first
+# occurrence is the branch under test — `noteNonce`'s seed and
+# `notePoolSight`'s — rather than on the spend functions further down.
+mutate "the first moment fired over history — congratulating somebody for last week" \
+  "$MOMENTS" "if seeding {" "if false {"
+mutate "the pool sighting seeding without recording it, so it fires tomorrow instead" \
+  "$MOMENTS" "defaults.set(true, forKey: poolSightKey)" "_ = poolSightKey"
+mutate "an UNREAD nonce read as a landing" \
+  "$MOMENTS" "guard let nonce, firstSettleOwed(defaults) else { return false }" \
+  "let nonce = nonce ?? 1; guard firstSettleOwed(defaults) else { return false }"
+mutate "a key that has already sealed sealing again on every open" \
+  "$MOMENTS" "return Set(keys.map(hex).filter { !known.contains(\$0) })" \
+  "return Set(keys.map(hex))"
+mutate "the seen cap dropping the NEWEST keys instead of the oldest" \
+  "$MOMENTS" "if known.count > seenCap { known.removeFirst(known.count - seenCap) }" \
+  "if known.count > seenCap { known.removeLast(known.count - seenCap) }"
 
 # ── drift guards ───────────────────────────────────────────────────────
 # The rules that live in ANOTHER file, which the compiled sources cannot prove.
@@ -934,5 +1137,94 @@ grep -qF 'target: f["to"] as? String' "$work/bridge.bare" \
 grep -q "privacy-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
-print "  ok   drift guards: no price, no notification, slots not blocks, no coins scope"
+# ── prd §598: the chips, the ring, the components, the moments ────────
+CARD="Casberi/Casberi/Screens/PrivacyDevnetRoomCard.swift"
+FIGV="Casberi/Casberi/Screens/PrivacyDevnetFigures.swift"
+SHEETS="Casberi/Casberi/Screens/PrivacyDevnetSheets.swift"
+for f in "$CARD" "$FIGV" "$SHEETS"; do [[ -f "$f" ]] || fail "$f not found"; done
+strip_comments "$CARD" > "$work/card.bare"
+strip_comments "$FIGV" > "$work/figv.bare"
+strip_comments "$SHEETS" > "$work/sheets.bare"
+
+# **THE CHIPS WEAR THE PLAIN WORDS.** The room taught "spend keys" and
+# "snapshots" in the lede, every headline, every meta line, both sheets and
+# both accessibility labels — and said "Nullifiers" and "Roots" in the one
+# place a person meets the strip FIRST. Renaming them back would look like a
+# tidy-up toward the mechanism's real name.
+grep -qF 'case .nullifiers: return String(localized: "Spend keys")' "$SECTION"   || fail "the Nullifiers chip lost its plain words — the strip is the room's table of contents, not its glossary"
+grep -qF 'case .roots:      return String(localized: "Snapshots")' "$SECTION"   || fail "the Roots chip lost its plain words"
+# The RAW VALUES must not move with the labels: they are the persisted pick and
+# the deep link's own word, so renaming a case silently resets every stored
+# scope and breaks a saved link.
+grep -qE '^\s+case nullifiers$' "$SECTION"   || fail "the nullifiers CASE was renamed — the raw value is the persisted scope and a deep link's word"
+grep -qE '^\s+case roots$' "$SECTION"   || fail "the roots CASE was renamed — same reason"
+
+# **THE TRACK IS GONE AND MUST NOT COME BACK.** The straight bar needed a
+# caption at each end to say which way time ran, printed once on Home and again
+# under every lane in the Snapshots scope; the arc's gap says it with nothing to
+# read. Restoring either would look like an ordinary revert.
+grep -qF 'PrivacyDevnetTrack' "$work/card.bare" \
+  && fail "the straight track is back in the room — the ring replaced it, and its duplicated axis caption with it"
+grep -qF 'struct PrivacyDevnetTrack' "$work/figv.bare" \
+  && fail "the straight track view is back — one drawing of the window, and it is a ring"
+grep -qF 'leaves the chain'"'"'s memory' "$work/card.bare" \
+  && fail "the axis caption is back — the exit gap is what carries it now, and it was printed twice"
+grep -qF 'PrivacyDevnetRing' "$work/card.bare" \
+  || fail "the room stopped drawing the ring at all"
+
+# **THE RING IS ALIVE, AND ITS DRIFT IS THE MODEL'S.** A view that recomputed
+# a position itself would put the clamp — the whole safety argument — outside
+# anything a harness can prove.
+grep -qF 'TimelineView' "$work/figv.bare" \
+  || fail "the ring stopped ticking — a window that only moves on a sweep is a clock that ticks twice an hour"
+grep -qF 'PrivacyDevnetFigure.drifted' "$work/figv.bare" \
+  || fail "the ring drifts by its own arithmetic — the clamp that stops an estimate aging a proof out lives in the model"
+
+# **THE SEAL IS ONCE, AND ONLY FOR A KEY THIS DEVICE HAS NEVER SEEN.** Sealing
+# every ring on every open is a room celebrating its own contents, and on an
+# install'"'"'s first read it would seal forty at once.
+grep -qF 'PrivacyDevnetMoments.unseen' "$work/card.bare" \
+  || fail "the spend keys stopped asking which are new — every ring would seal on every open"
+grep -qF 'PrivacyDevnetMoments.hasSeenAnyKey' "$work/card.bare" \
+  || fail "the first-read seed is gone — somebody arriving would watch forty rings seal at once"
+
+# **THE SWEEP IS TOLD THIS PHONE'"'"'S ADDRESS, NEVER LOOKS IT UP.** The guard
+# above bans `PrivacyDevnetKey` from the bridge outright; this is the other
+# half, so the moment cannot be restored by weakening that ban.
+grep -qF 'PrivacyDevnetLiveState.shared.setMine' "$work/card.bare" \
+  || fail "nothing publishes this phone'"'"'s address, so the first-transaction moment can never fire"
+
+# **THE SHEETS USE THE APP'"'"'S OWN COMPONENTS.** Frames'"'"' sheets, one chip
+# away, use `DSSpecRow` ten times and `DSStamp` six; this seat used neither and
+# hand-rolled both — which is exactly how `DSSpecRow` came to be written three
+# times at three column widths in the first place.
+grep -qF 'DSSpecTable' "$work/sheets.bare" \
+  || fail "the move sheet hand-rolls its facts again — DSSpecRow exists because that shape was written three times at three widths"
+grep -qF 'DSStamp' "$work/sheets.bare" \
+  || fail "the sheet hand-places its state word again — DSStamp exists because that word was drawn twice at two weights"
+grep -qF 'WalletRow(' "$work/sheets.bare" \
+  || fail "the sheet's key and snapshot rows left the app's one row shape"
+# ONE hex shortener for the seat. It was written twice at two elision lengths,
+# so a key and the transaction that spent it were cut differently on one sheet.
+[[ "$(grep -c 'prefix(8) + "…"' "$work/sheets.bare" "$work/card.bare" | awk -F: '{t+=$2} END {print t}')" == "1" ]] \
+  || fail "the seat has more than one hex shortener again — a key and its transaction were once elided differently on the same sheet"
+
+# **THE SET WEARS AN ORDINAL, NOT ITS BYTES.** A 32-byte source id in an 84pt
+# mono column names nothing a reader can hold across a figure, a row and a sheet.
+grep -qF 'PrivacyDevnetRoots.setLabel' "$work/card.bare" \
+  || fail "the snapshot rows stopped naming their set — the ring'"'"'s ordinals then point at nothing"
+grep -qF 'PrivacyDevnetRoots.setLabel' "$work/sheets.bare" \
+  || fail "the move sheet stopped naming the set, so the identity dies between the room and the sheet"
+
+# **THE LEDE STATES THE STATE; THE RING STATES THE CLOCK.** The sentence carried
+# both, and the second in a unit nobody outside this devnet can size.
+# Read from a COMMENT-STRIPPED copy — the source documents this rule by
+# QUOTING the sentence it replaced, so a guard over raw text fires on the prose
+# explaining it. That is the Obsidian/Cursor lesson, and it caught this guard on
+# its own first run.
+strip_comments "$ROOM" > "$work/room.bare"
+grep -qF 'for another' "$work/room.bare" \
+  && fail "the head sentence is counting slots again — the ring carries the clock, in words, with the measured count beneath it"
+
+print "  ok   drift guards: no price, no notification, slots not blocks, no coins scope, the ring, the components, the moments"
 print "✓ privacy: 7 scopes, the 8272 window, the room head, the figures, the roots' own storage, the §596 sheets and headlines, 38 mutations, 25 drift guards"

@@ -1,0 +1,140 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Privacy devnet — §598</title>
+<style>
+:root{--page:#0b0b0d;--card:#141417;--ink:#f2f2f5;--sec:#a8a8b0;--ter:#71717a;--faint:#26262b;--tint:#7c6cf0;}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui;padding:28px;}
+h1{font:600 20px/1.2 system-ui;margin:0 0 4px}
+.sub{color:var(--ter);margin:0 0 24px;font-size:13px}
+.row{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+.card{background:var(--card);border-radius:22px;padding:18px;width:360px;position:relative;overflow:hidden}
+.pour{position:absolute;inset:0 0 auto 0;height:150px;background:linear-gradient(180deg,rgba(124,108,240,.078),transparent);pointer-events:none}
+.lede{font:600 22px/1.28 system-ui;margin:2px 0 14px;position:relative}
+.stat{font:600 24px/1.2 system-ui;margin:2px 0 12px;position:relative}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin:16px 0 0}
+.chip{font-size:13px;padding:6px 11px;border-radius:999px;background:var(--faint);color:var(--sec)}
+.chip.on{background:var(--tint);color:#fff}
+.cap{color:var(--ter);font-size:13px}
+.rowitem{display:flex;gap:12px;align-items:center;padding:9px 0}
+.mono{font:12px/1.3 ui-monospace,SFMono-Regular,Menlo;color:var(--ter)}
+.mark{width:34px;height:34px;border-radius:999px;background:rgba(124,108,240,.16);color:var(--tint);
+  display:flex;align-items:center;justify-content:center;font:600 14px system-ui;flex:0 0 auto}
+.t{font:600 17px/1.25 system-ui}
+.m{color:var(--ter);font-size:13px}
+.stamp{color:var(--ter);font-size:12px;margin-left:auto}
+.grid{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+.key{width:22px;height:22px;border-radius:999px;border:6px solid var(--tint);box-sizing:border-box}
+.old{color:#5b5b63;font-size:12px}
+svg{display:block}
+.note{color:var(--ter);font-size:13px;margin-top:12px;line-height:1.45}
+.h{font:600 15px system-ui;margin:26px 0 10px;color:var(--sec)}
+.before{opacity:.55}
+</style>
+<h1>Ethrex Privacy — §598</h1>
+<p class="sub">The window drawn as the ring it is; the chips in the room's own words; the clock in words a reader can feel.</p>
+
+<div class="h">Home</div>
+<div class="row">
+  <div class="card">
+    <div class="pour"></div>
+    <div class="lede">A proof here still names a snapshot the chain remembers.</div>
+    <svg width="128" height="128" viewBox="0 0 128 128">
+      <path d="M64 4 A60 60 0 1 1 33.98 112.03" fill="none" stroke="#26262b" stroke-width="4" stroke-linecap="round"/>
+      <!-- quarter ticks at 75,150,225 deg -->
+      <g stroke="#26262b" stroke-width="2" stroke-linecap="round">
+        <line x1="64" y1="7" x2="64" y2="14" transform="rotate(75 64 64)"/>
+        <line x1="64" y1="7" x2="64" y2="14" transform="rotate(150 64 64)"/>
+        <line x1="64" y1="7" x2="64" y2="14" transform="rotate(225 64 64)"/>
+      </g>
+      <!-- NOW -->
+      <line x1="64" y1="1" x2="64" y2="14" stroke="#f2f2f5" stroke-opacity=".55" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- live marks -->
+      <g transform="rotate(26 64 64)"><rect x="58.5" y="-1.5" width="11" height="11" fill="#7c6cf0" transform="rotate(45 64 4)"/></g>
+      <g transform="rotate(58 64 64)"><rect x="58.5" y="-1.5" width="11" height="11" fill="#7c6cf0" transform="rotate(45 64 4)"/></g>
+      <!-- aged, in the gap -->
+      <g transform="rotate(316 64 64)"><rect x="58.5" y="-1.5" width="11" height="11" fill="none" stroke="#7c6cf0" stroke-opacity=".45" stroke-width="2" transform="rotate(45 64 4)"/></g>
+      <text x="64" y="61" text-anchor="middle" fill="#f2f2f5" font-size="15" font-family="system-ui" font-weight="500">about 11 hours</text>
+      <text x="64" y="76" text-anchor="middle" fill="#71717a" font-size="12" font-family="system-ui">3,412 slots left</text>
+    </svg>
+    <div class="chips">
+      <span class="chip on">Home</span><span class="chip">Activity</span><span class="chip">Accounts</span>
+      <span class="chip">Frames</span><span class="chip">Spend keys</span><span class="chip">Snapshots</span>
+    </div>
+  </div>
+
+  <div class="card before">
+    <div class="lede">A proof here still names a snapshot the chain remembers, for another 3,412 slots.</div>
+    <div style="height:4px;background:#26262b;border-radius:99px;margin:18px 0 6px;position:relative">
+      <div style="position:absolute;left:74%;top:-4px;width:11px;height:11px;background:#7c6cf0;transform:rotate(45deg)"></div>
+      <div style="position:absolute;left:52%;top:-4px;width:11px;height:11px;background:#7c6cf0;transform:rotate(45deg)"></div>
+      <div style="position:absolute;left:-6px;top:-4px;width:11px;height:11px;border:2px solid rgba(124,108,240,.45);box-sizing:border-box;transform:rotate(45deg)"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between" class="cap"><span>leaves the chain's memory</span><span>now</span></div>
+    <div class="chips">
+      <span class="chip on">Home</span><span class="chip">Activity</span><span class="chip">Accounts</span>
+      <span class="chip">Frames</span><span class="chip">Nullifiers</span><span class="chip">Roots</span>
+    </div>
+    <div class="note">Before — two facts in the crown, a unit nobody can size, and an axis caption printed again under every lane in Roots.</div>
+  </div>
+</div>
+
+<div class="h">Snapshots</div>
+<div class="row">
+  <div class="card">
+    <div class="pour"></div>
+    <div class="stat">4 proofs</div>
+    <div style="display:flex;justify-content:center">
+    <svg width="200" height="200" viewBox="0 0 200 200">
+      <path d="M100 8 A92 92 0 1 1 54 180" fill="none" stroke="#26262b" stroke-width="4" stroke-linecap="round"/>
+      <g stroke="#26262b" stroke-width="2" stroke-linecap="round">
+        <line x1="100" y1="11" x2="100" y2="19" transform="rotate(75 100 100)"/>
+        <line x1="100" y1="11" x2="100" y2="19" transform="rotate(150 100 100)"/>
+        <line x1="100" y1="11" x2="100" y2="19" transform="rotate(225 100 100)"/>
+      </g>
+      <line x1="100" y1="4" x2="100" y2="20" stroke="#f2f2f5" stroke-opacity=".55" stroke-width="2.5" stroke-linecap="round"/>
+      <g transform="rotate(18 100 100)"><rect x="94.5" y="2.5" width="11" height="11" fill="#7c6cf0" transform="rotate(45 100 8)"/>
+        <text x="100" y="12" text-anchor="middle" fill="#141417" font-size="11" font-weight="700" font-family="system-ui" transform="rotate(-18 100 8)">1</text></g>
+      <g transform="rotate(30 100 100)"><rect x="94.5" y="2.5" width="11" height="11" fill="#7c6cf0" transform="rotate(45 100 8)"/>
+        <text x="100" y="12" text-anchor="middle" fill="#141417" font-size="11" font-weight="700" font-family="system-ui" transform="rotate(-30 100 8)">1</text></g>
+      <g transform="rotate(122 100 100)"><rect x="94.5" y="2.5" width="11" height="11" fill="#7c6cf0" transform="rotate(45 100 8)"/>
+        <text x="100" y="12" text-anchor="middle" fill="#141417" font-size="11" font-weight="700" font-family="system-ui" transform="rotate(-122 100 8)">2</text></g>
+      <g transform="rotate(316 100 100)"><rect x="94.5" y="2.5" width="11" height="11" fill="none" stroke="#7c6cf0" stroke-opacity=".45" stroke-width="2" transform="rotate(45 100 8)"/>
+        <text x="100" y="12" text-anchor="middle" fill="#7c6cf0" fill-opacity=".8" font-size="11" font-weight="700" font-family="system-ui" transform="rotate(-316 100 8)">2</text></g>
+      <text x="100" y="97" text-anchor="middle" fill="#f2f2f5" font-size="15" font-family="system-ui" font-weight="500">about 11 hours</text>
+      <text x="100" y="112" text-anchor="middle" fill="#71717a" font-size="12" font-family="system-ui">3,412 slots left</text>
+    </svg>
+    </div>
+  </div>
+  <div class="card">
+    <div class="cap" style="margin-bottom:6px">the rows below the rail</div>
+    <div class="rowitem"><div class="mark">1</div><div><div class="t">Set 1</div><div class="m">about 11 hours left · 3,412 slots · 2 proofs</div></div></div>
+    <div class="rowitem"><div class="mark">2</div><div><div class="t">Set 2</div><div class="m">Left the chain's memory 1,059 slots ago · 2 proofs</div></div></div>
+    <div class="note">The chain remembers 8192 slots — about 27 hours, if this devnet keeps to 12 seconds a slot.</div>
+    <div class="note before" style="margin-top:18px">Before: <span class="mono">0x1f4a20b8…3c91</span> in an 84pt column, titled “3,412 slots left in the chain's memory · 2 proofs”.</div>
+  </div>
+</div>
+
+<div class="h">Spend keys — the seal, once, for a key this device has never seen</div>
+<div class="row">
+  <div class="card">
+    <div class="pour"></div>
+    <div class="stat">4 spend keys</div>
+    <div class="grid">
+      <div class="key"></div><div class="key"></div>
+      <svg class="key" style="border:none" width="22" height="22" viewBox="0 0 22 22">
+        <circle cx="11" cy="11" r="8" fill="none" stroke="#7c6cf0" stroke-width="6" stroke-linecap="round"
+                stroke-dasharray="50.3" stroke-dashoffset="50.3" transform="rotate(-90 11 11)">
+          <animate attributeName="stroke-dashoffset" from="50.3" to="0" dur="0.55s" fill="freeze" begin="0.3s"/>
+        </circle>
+      </svg>
+      <div class="key"></div>
+    </div>
+    <div class="note">The third has never been seen on this device, so its ring closes once. The others were drawn already sealed.</div>
+  </div>
+  <div class="card">
+    <div class="cap" style="margin-bottom:6px">the move sheet's rows, on the app's own components</div>
+    <div class="rowitem"><div class="mark">🔑</div><div><div class="t" style="font-size:15px">0x0cca26d3…ca390c</div><div class="m">One-time spend key</div></div><div class="stamp">used once</div></div>
+    <div class="rowitem"><div class="mark">1</div><div><div class="t">Set 1</div><div class="m">0x1871055c…b381e1</div></div></div>
+    <div class="note">DSSpecTable / DSSpecRow / DSStamp / WalletRow — the components Frames' sheets one chip away already use, and this seat used none of.</div>
+  </div>
+</div>
