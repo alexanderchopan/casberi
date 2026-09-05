@@ -894,10 +894,45 @@ grep -qF 'PrivacyDevnetMoney.line' "Casberi/Casberi/Shell/FaceScopeRail.swift"  
 grep -qF 'cut.unread = max(0, ranked.count - Self.walkCap)' "$work/bridge.bare"   || fail "the walk no longer counts what the cap dropped — a truncated room reads as a quiet one"
 grep -qF 'walkCeiling' "$work/card.bare"   || fail "the Activity list stopped stating the walk's ceiling — a room found by following logs must say so"
 
+# ── prd §596: rows are doors, headlines are counts, figures fill the slot ──
+
+# **EVERY MOVE ROW OPENS ITS SHEET.** The rows shipped as `WalletRow`'s
+# deliberately-terminal form (reported: "none of the lists open thing sheets")
+# — and the moment they became Buttons, an empty closure would be Frames' own
+# 2026-09-02 defect ("rows wired to nothing"), a dead control per transaction.
+grep -qF 'onOpenMove(move, owner)' "$work/card.bare" \
+  || fail "the move rows no longer open their sheet — a row that highlights and does nothing is §83's dead control per transaction (prd §596)"
+grep -qF 'case .privacyDevnetMove(let move, let owner):' "Casberi/Casberi/Screens/FeedScreen.swift" \
+  || fail "FeedScreen no longer dispatches .privacyDevnetMove — every row's tap goes nowhere (prd §596)"
+grep -qF 'struct PrivacyDevnetMoveSheet' "Casberi/Casberi/Screens/PrivacyDevnetSheets.swift" \
+  || fail "PrivacyDevnetMoveSheet is gone — the rows' route opens nothing (prd §596)"
+
+# **THE SCOPE HEADLINE IS A COUNT DRAWN BY THE CHASSIS, NEVER THE SUMMARY
+# SENTENCE OVER THE CHART** (reported: "Charts have sentences over them").
+grep -qF 'DSRoomSlot(headline: slotHeadline' "$work/card.bare" \
+  || fail "the card stopped handing its headline to the chassis — the scope line drifts back into the slot, over the figure (prd §596)"
+grep -qF 'section.summary' "$work/card.bare" \
+  && fail "the summary sentence is back on the card — a sentence standing on a chart is the jam §596 removed; the chassis headline carries a COUNT"
+
+# **THE 84pt FIGURE CEILING MUST NOT RETURN.** Every figure was pinned to an
+# 84pt band centred in the 300pt slot — the "tiny and top justified" defect
+# §588 fixed on Frames — and restoring a shared height constant would look
+# like an ordinary tidy-up.
+grep -qF 'figureHeight' "$work/card.bare" \
+  && fail "a shared figure height constant is back — the figures must fill DSRoomChassis.figureSlot, not centre an 84pt band in it (prd §596)"
+grep -qF '.padding(.trailing, DSRoomChassis.gearColumn)' "$work/card.bare" \
+  || fail "the drawings no longer end at the gear's x — Frames' rule, or every chart runs under the settings cog (prd §596)"
+
+# **THE WALK READS THE FRAME'S OWN FIELDS OFF THE PAYLOAD IT ALREADY HAS.**
+# Mode/target/value cost zero requests; dropping the reads makes every step in
+# the move sheet a budget with no verb, silently.
+grep -qF 'target: f["to"] as? String' "$work/bridge.bare" \
+  || fail "the walk stopped reading a frame's target — the move sheet's steps lose their addresses with no error anywhere (prd §596)"
+
 # This harness must stay in verify.sh's hand list (that guard fails the build
 # until it is named WITH its reason, which is the part that gets skipped).
 grep -q "privacy-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
 print "  ok   drift guards: no price, no notification, slots not blocks, no coins scope"
-print "✓ privacy: 7 scopes, the 8272 window, the room head, the figures, the roots' own storage, 38 mutations, 18 drift guards"
+print "✓ privacy: 7 scopes, the 8272 window, the room head, the figures, the roots' own storage, the §596 sheets and headlines, 38 mutations, 25 drift guards"

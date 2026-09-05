@@ -154,6 +154,11 @@ struct PrivacyDevnetAnatomy: View {
     /// How wide the frame strip may run. The keys, roots and pill take their
     /// own intrinsic width after it.
     var stripWidth: CGFloat = 92
+    /// The bar's height — 8 at row scale, larger where the anatomy IS the
+    /// figure (prd §596: the Frames-scope strips were 8pt marks centred in a
+    /// 300pt slot, the "tiny and top justified" defect §588 fixed on Frames).
+    /// Every other shape derives from it so the strip scales as one drawing.
+    var barHeight: CGFloat = 8
     let reduceMotion: Bool
 
     var body: some View {
@@ -162,7 +167,7 @@ struct PrivacyDevnetAnatomy: View {
                 shape(item, index: index)
             }
         }
-        .frame(height: 14)
+        .frame(height: barHeight + 6)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(Self.spoken(items)))
     }
@@ -185,16 +190,16 @@ struct PrivacyDevnetAnatomy: View {
                             .strokeBorder(DS.destructive, lineWidth: 2)
                     }
                 }
-                .frame(width: max(4, stripWidth * share - 3), height: 8)
+                .frame(width: max(4, stripWidth * share - 3), height: barHeight)
                 .chartArrival(index: index, reduceMotion: reduceMotion)
         case .key:
-            PrivacyDevnetSpentKey(size: 9)
+            PrivacyDevnetSpentKey(size: barHeight + 1)
                 .padding(.leading, index == 0 ? 0 : 3)
                 .chartArrival(index: index, reduceMotion: reduceMotion)
         case .root:
             Rectangle()
                 .fill(DS.tint)
-                .frame(width: 8, height: 8)
+                .frame(width: barHeight, height: barHeight)
                 .rotationEffect(.degrees(45))
                 .padding(.leading, 3)
                 .chartArrival(index: index, reduceMotion: reduceMotion)
@@ -349,6 +354,108 @@ struct PrivacyDevnetTally: View {
     private var gem: some View {
         Rectangle().fill(DS.tint).frame(width: 6, height: 6)
             .rotationEffect(.degrees(45))
+    }
+}
+
+// MARK: - When, and how big (prd §596)
+
+/// One column per transaction on the spaced block axis — the Activity scope's
+/// chart, replacing a row of 9pt dots on a 3pt line.
+///
+/// **The column's height is its FRAME COUNT, this chain's own size measure** —
+/// a two-frame pool spend and a five-frame batch are different objects and the
+/// dots said only "two things happened". The ornaments above are the room's
+/// standing vocabulary at chart scale: a ring when the transaction spent
+/// one-time keys, a diamond when it named a snapshot — so the figure reads
+/// with no legend beyond the one the scopes already teach.
+///
+/// **Positions come from `PrivacyDevnetFigure.spaced`** — order and span
+/// exact, crowding relieved (the pool's pairs sit five blocks apart across
+/// ~10,500, prd §593d) — and the block range is stated at the ends, which is
+/// where the precision the nudge costs actually lives.
+///
+/// No colour carries state; height is the only magnitude and it is a COUNT,
+/// never money.
+struct PrivacyDevnetActivityChart: View {
+    struct Column: Equatable {
+        let block: UInt64
+        let frames: Int
+        let keys: Int
+        let roots: Int
+    }
+    /// Oldest first — the axis runs left to right the way every time axis in
+    /// this app does.
+    let columns: [Column]
+    let reduceMotion: Bool
+
+    private static let markWidth: CGFloat = 14
+
+    var body: some View {
+        let lo = columns.map(\.block).min() ?? 0
+        let hi = columns.map(\.block).max() ?? 0
+        GeometryReader { geo in
+            let labelRow: CGFloat = 22
+            let ornaments: CGFloat = 24
+            let plot = max(24, geo.size.height - labelRow - ornaments)
+            let maxFrames = max(1, columns.map(\.frames).max() ?? 1)
+            let xs = PrivacyDevnetFigure.spaced(columns.map(\.block),
+                                                width: Double(geo.size.width),
+                                                mark: Double(Self.markWidth + 4))
+            ZStack(alignment: .bottomLeading) {
+                // The floor the columns stand on — the same faint bed every
+                // track here uses, never a hairline.
+                Capsule()
+                    .fill(DS.fillFaint)
+                    .frame(height: 4)
+                    .offset(y: -labelRow + 8)
+
+                ForEach(Array(zip(columns.indices, xs)), id: \.0) { index, x in
+                    let col = columns[index]
+                    // **A TRANSFER IS A STUB, NOT A ZERO** — a plain transfer
+                    // has no frames and still happened, so it draws the
+                    // minimum bar rather than vanishing from its own chart.
+                    let height = max(10, plot * CGFloat(col.frames) / CGFloat(maxFrames))
+                    VStack(spacing: 5) {
+                        HStack(spacing: 3) {
+                            if col.keys > 0 { PrivacyDevnetSpentKey(size: 11) }
+                            if col.roots > 0 {
+                                Rectangle()
+                                    .fill(DS.tint)
+                                    .frame(width: 9, height: 9)
+                                    .rotationEffect(.degrees(45))
+                            }
+                        }
+                        .frame(height: 14)
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(col.frames > 0 ? DS.tint : DS.textTertiary.opacity(0.45))
+                            .frame(width: Self.markWidth, height: height)
+                    }
+                    .chartArrival(index: index, reduceMotion: reduceMotion)
+                    .offset(x: CGFloat(x), y: -labelRow + 2)
+                }
+
+                // The axis's own words, at the ends. One block collapses to
+                // one label — "block 69 to block 69" is a range pretending.
+                HStack {
+                    Text(String(localized: "block \(String(lo))"))
+                    Spacer(minLength: DS.Space.s3)
+                    if hi > lo {
+                        Text(String(localized: "block \(String(hi))"))
+                    }
+                }
+                .dsText(.subhead13)
+                .monospacedDigit()
+                .foregroundStyle(DS.textTertiary)
+                .frame(maxWidth: .infinity)
+            }
+            .frame(width: geo.size.width, height: geo.size.height,
+                   alignment: .bottomLeading)
+        }
+        .accessibilityElement()
+        .accessibilityLabel(String(localized: "When these landed, and how many steps each ran"))
+        .accessibilityValue(hi == lo
+            ? String(localized: "All in block \(String(hi))")
+            : String(localized: "Blocks \(String(lo)) to \(String(hi))"))
     }
 }
 

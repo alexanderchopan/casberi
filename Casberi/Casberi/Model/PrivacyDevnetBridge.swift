@@ -584,6 +584,16 @@ extension PrivacyDevnetLiveState {
         var gasUsed: UInt64?
         /// Same: no per-frame status is served. Nil, always, for now.
         var succeeded: Bool?
+        /// The frame's own wire fields, read off the SAME `eth_getTransaction
+        /// ByHash` payload the budgets come from — zero extra requests
+        /// (prd §596). All Optional and nil never claims: the move sheet draws
+        /// a step's target, value and mode only where the wire carried them.
+        /// Mode 2 is SENDER on this chain (measured, §593c: "non-zero value
+        /// only allowed in SENDER mode"); an unknown mode is named by number
+        /// rather than given a word it may not mean.
+        var mode: UInt64? = nil
+        var target: String? = nil
+        var valueWeiHex: String? = nil
     }
 
     /// One transaction, as the walk saw it.
@@ -601,6 +611,11 @@ extension PrivacyDevnetLiveState {
         var nullifiers: [Data] = []
         var roots: [PrivacyDevnetRoots.Reference] = []
         var sponsored = false
+        /// WHO paid, when somebody else did — the receipt's own `payer`
+        /// field, kept beside the Bool so the sheet can name the sponsor
+        /// instead of saying "somebody" (prd §596). Nil when self-paid or
+        /// when the receipt was not read.
+        var payer: String? = nil
         var id: String { hash }
 
         var frameCount: Int { frames.count }
@@ -754,11 +769,13 @@ extension PrivacyDevnetLiveState {
             // The receipt is read ONLY for a transaction already known to be
             // yours, which is what keeps the walk's cost proportional to what
             // you watch rather than to the chain.
+            var movePayer: String?
             if let rc = await PrivacyDevnetRPC.call(method: "eth_getTransactionReceipt",
                                                     params: [hash]) as? [String: Any],
                let payer = (rc["payer"] as? String)?.lowercased(),
                payer != sender {
                 w.sponsored += 1
+                movePayer = payer
             }
             let moveFrames = (tx["frames"] as? [[String: Any]] ?? []).map { f in
                 Frame(gasLimit: PrivacyDevnetRPC.hexInt(f["gasLimit"]),
@@ -766,14 +783,20 @@ extension PrivacyDevnetLiveState {
                       // Both nil, deliberately: no per-frame breakdown is
                       // served on this chain (measured), and a figure must not
                       // weight or fail a frame off a value nobody reported.
-                      gasUsed: nil, succeeded: nil)
+                      gasUsed: nil, succeeded: nil,
+                      // The frame's own wire fields, off the same payload —
+                      // zero extra requests (prd §596). Nil-safe throughout.
+                      mode: PrivacyDevnetRPC.hexInt(f["mode"]),
+                      target: f["to"] as? String,
+                      valueWeiHex: f["value"] as? String)
             }
             w.moves.append(Move(hash: hash,
                                 block: PrivacyDevnetRPC.hexInt(tx["blockNumber"]),
                                 frames: moveFrames,
                                 nullifiers: Array(w.nullifiers.dropFirst(before.nullifiers)),
                                 roots: Array(w.roots.dropFirst(before.roots)),
-                                sponsored: w.sponsored > before.sponsored))
+                                sponsored: w.sponsored > before.sponsored,
+                                payer: movePayer))
             out[sender] = w
         }
         return (out, cut)

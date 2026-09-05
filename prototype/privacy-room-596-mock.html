@@ -1,0 +1,221 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privacy room §596 — sheets, headlines, charts</title>
+<style>
+  :root{ --bg:#000; --card:#0d0d0f; --well:#17171a; --ink:#f2f2f4; --sec:#9a9aa2; --ter:#6b6b73;
+         --tint:#3d7bff; --faint:rgba(255,255,255,.08); }
+  body{ margin:0; background:var(--bg); color:var(--ink);
+        font:14px -apple-system,system-ui,sans-serif; display:flex; flex-wrap:wrap;
+        gap:28px; padding:36px; justify-content:center;}
+  .phone{ width:360px; }
+  h4{ margin:0 0 10px; font-size:12px; font-weight:600; color:var(--ter);
+      text-transform:none; letter-spacing:0;}
+  .slot{ background:var(--card); border-radius:22px; padding:18px 16px; height:300px;
+         box-sizing:border-box; position:relative; margin-bottom:10px; overflow:hidden;}
+  .gear{ position:absolute; top:14px; right:14px; width:28px;height:28px;border-radius:50%;
+         background:var(--well); color:var(--ter); display:grid; place-items:center; font-size:13px;}
+  .stat{ font-size:24px; font-weight:700; font-variant-numeric:tabular-nums; margin-bottom:14px;}
+  .mono{ font-family:ui-monospace,Menlo,monospace; }
+  .ter{ color:var(--ter); font-size:13px;}
+  .sec{ color:var(--sec); font-size:13px;}
+  /* rail */
+  .rail{ background:var(--well); border-radius:16px; padding:8px 10px; display:flex; gap:8px;
+         align-items:center; margin-bottom:10px; overflow:hidden;}
+  .chip{ padding:7px 13px; border-radius:999px; font-size:13px; color:var(--sec); white-space:nowrap;}
+  .chip.on{ background:var(--tint); color:#fff; font-weight:600;}
+  /* rows */
+  .row{ display:flex; align-items:center; gap:12px; padding:9px 2px;}
+  .mark{ width:34px;height:34px;border-radius:50%; background:rgba(61,123,255,.16);
+         display:grid;place-items:center; color:var(--tint); font-size:14px; flex:none;}
+  .mark.dim{ background:rgba(255,255,255,.09); color:var(--sec);}
+  .rt{ flex:1; min-width:0;}
+  .rt b{ display:block; font-size:17px; font-weight:600;}
+  .rt span{ display:block; font-size:13px; color:var(--ter); white-space:nowrap;
+            overflow:hidden; text-overflow:ellipsis;}
+  .chev{ color:var(--ter); font-size:13px;}
+  .face{ width:34px;height:34px;border-radius:50%; flex:none;}
+  /* activity chart */
+  .axisbed{ position:absolute; left:16px; right:60px; bottom:44px; height:4px;
+            border-radius:2px; background:var(--faint);}
+  .col{ position:absolute; bottom:48px; width:14px; display:flex; flex-direction:column;
+        align-items:center; gap:5px;}
+  .bar{ width:14px; border-radius:3px; background:var(--tint);}
+  .ring{ width:11px;height:11px;border-radius:50%; border:3px solid var(--tint); box-sizing:border-box;}
+  .gem{ width:9px;height:9px; background:var(--tint); transform:rotate(45deg);}
+  .axis{ position:absolute; left:16px; right:60px; bottom:16px; display:flex;
+         justify-content:space-between; font-size:13px; color:var(--ter);
+         font-variant-numeric:tabular-nums;}
+  /* frames strips */
+  .strip{ display:flex; gap:3px; margin:10px 0; height:14px; max-width:290px;}
+  .seg{ border-radius:3px; background:var(--tint); height:14px;}
+  /* key grid */
+  .keys{ display:flex; flex-wrap:wrap; gap:12px; padding-top:6px; max-width:250px;}
+  .keys .ring{ width:22px;height:22px; border-width:6px;}
+  /* pips */
+  .pips{ display:flex; gap:14px; margin-top:4px;}
+  .pipcol{ display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--ter);}
+  .piprow{ display:flex; gap:2px; align-items:center; height:8px;}
+  .pip{ width:8px;height:6px;border-radius:1px;background:var(--tint);}
+  .pipd{ width:6px;height:6px;border-radius:50%;background:var(--tint);}
+  .pipg{ width:6px;height:6px;background:var(--tint);transform:rotate(45deg);}
+  .off{ opacity:.16;}
+  /* lanes */
+  .lane{ display:flex; align-items:center; gap:8px; margin:12px 0;}
+  .lane .src{ width:84px; font-size:12px; color:var(--ter); flex:none;}
+  .track{ position:relative; flex:1; height:22px;}
+  .bed{ position:absolute; left:0; right:0; top:9px; height:4px; border-radius:2px; background:var(--faint);}
+  .now{ position:absolute; right:0; top:2px; width:2px; height:18px; background:rgba(255,255,255,.55); border-radius:1px;}
+  .dia{ position:absolute; top:5px; width:11px;height:11px;background:var(--tint);transform:rotate(45deg);}
+  .dia.aged{ background:transparent; border:2px solid rgba(61,123,255,.45); left:-8px;}
+  /* sheet */
+  .sheet{ background:#0a0a0c; border-radius:26px 26px 0 0; padding:20px 18px 26px;
+          border-top:1px solid rgba(255,255,255,.06);}
+  .sheet h3{ margin:0 0 14px; font-size:17px; text-align:center;}
+  .anat{ display:flex; gap:4px; align-items:center; margin-bottom:12px;}
+  .anat .seg{ height:12px; width:70px;}
+  .anat .ring{ width:13px;height:13px;border-width:4px;}
+  .lead{ font-size:20px; font-weight:600; margin-bottom:8px;}
+  .tail{ font-size:13px; color:var(--ter); line-height:1.5; margin-bottom:16px;}
+  .lbl{ font-size:12px; color:var(--ter); margin:16px 0 8px;}
+  .step{ display:flex; gap:10px; padding:7px 0; align-items:flex-start;}
+  .dot{ width:7px;height:7px;border-radius:50%;background:var(--tint); margin-top:6px; flex:none;}
+  .step .rt b{ font-size:15px; font-weight:500;}
+  .step .amt{ text-align:right; font-size:13px; color:var(--sec);
+              font-variant-numeric:tabular-nums;}
+  .step .amt i{ display:block; font-style:normal; font-size:12px; color:var(--ter);}
+  .keyrow{ display:flex; align-items:center; gap:10px; padding:6px 0;}
+  .keyrow .ring{ width:16px;height:16px;border-width:5px;}
+  .door{ color:var(--tint); font-size:15px; margin-top:14px;}
+  .note{ font-size:13px; color:var(--ter); line-height:1.45; margin-top:10px;}
+</style>
+
+<div class="phone">
+  <h4>Activity — headline is a count (chassis stat24), chart = anatomy columns on the block axis</h4>
+  <div class="slot">
+    <div class="gear">⚙</div>
+    <div class="stat">6 transactions</div>
+    <div class="axisbed"></div>
+    <div class="col" style="left:20px"><div class="bar" style="height:64px"></div></div>
+    <div class="col" style="left:44px"><div class="bar" style="height:64px"></div></div>
+    <div class="col" style="left:118px"><div class="ring"></div><div class="gem"></div><div class="bar" style="height:64px"></div></div>
+    <div class="col" style="left:142px"><div class="ring"></div><div class="gem"></div><div class="bar" style="height:64px"></div></div>
+    <div class="col" style="left:236px"><div class="ring"></div><div class="gem"></div><div class="bar" style="height:64px"></div></div>
+    <div class="col" style="left:260px"><div class="ring"></div><div class="gem"></div><div class="bar" style="height:64px"></div></div>
+    <div class="axis"><span>block 66</span><span>block 13,352</span></div>
+  </div>
+  <div class="rail"><span class="chip">Home</span><span class="chip on">Activity</span><span class="chip">Accounts</span><span class="chip">Frames</span><span class="chip">Nullifiers</span></div>
+  <h4>Rows below the rail — noun title, clauses in the meta line, hash moved to the sheet, chevron = it opens</h4>
+  <div class="row"><div class="mark">🔑</div><div class="rt"><b>2 frames</b><span>2 spend keys · named a snapshot · block 13,352</span></div><div class="chev">›</div></div>
+  <div class="row"><div class="mark">🔑</div><div class="rt"><b>2 frames</b><span>2 spend keys · named a snapshot · block 13,347</span></div><div class="chev">›</div></div>
+  <div class="row"><div class="mark" style="background:rgba(61,123,255,.16)">▤</div><div class="rt"><b>2 frames</b><span>block 69</span></div><div class="chev">›</div></div>
+  <div class="row"><div class="mark dim">⇄</div><div class="rt"><b>Transfer</b><span>block 42</span></div><div class="chev">›</div></div>
+  <div class="note">Found by following the chain's logs, so a transaction that emitted none isn't here.</div>
+</div>
+
+<div class="phone">
+  <h4>Frames — budget strips at figure scale (width ∝ gasLimit share)</h4>
+  <div class="slot" style="height:240px">
+    <div class="gear">⚙</div>
+    <div class="stat">8 steps</div>
+    <div class="strip"><div class="seg" style="flex:1"></div><div class="seg" style="flex:1"></div></div>
+    <div class="strip"><div class="seg" style="flex:1"></div><div class="seg" style="flex:4.4"></div></div>
+    <div class="strip"><div class="seg" style="flex:1"></div><div class="seg" style="flex:4.4"></div></div>
+    <div class="strip"><div class="seg" style="flex:2.6"></div><div class="seg" style="flex:1"></div></div>
+  </div>
+
+  <h4>Nullifiers — spent keys as rings, grid at 22pt</h4>
+  <div class="slot" style="height:210px">
+    <div class="gear">⚙</div>
+    <div class="stat">8 spend keys</div>
+    <div class="keys">
+      <div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="ring"></div>
+      <div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="ring"></div>
+    </div>
+  </div>
+
+  <h4>Accounts — faces join the tallies</h4>
+  <div class="slot" style="height:250px">
+    <div class="gear">⚙</div>
+    <div class="stat">3 addresses</div>
+    <div class="row" style="padding:6px 0">
+      <div class="face" style="background:linear-gradient(135deg,#7b5cff,#38bdf8)"></div>
+      <div class="rt"><span style="color:var(--sec);font-size:13px">0x0629…f980</span>
+        <div class="pips">
+          <div class="pipcol"><div class="piprow"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>frames</div>
+          <div class="pipcol"><div class="piprow"><div class="pipd"></div><div class="pipd"></div><div class="pipd"></div><div class="pipd"></div></div>keys</div>
+          <div class="pipcol"><div class="piprow"><div class="pipg"></div><div class="pipg"></div></div>snapshots</div>
+        </div></div>
+    </div>
+    <div class="row" style="padding:6px 0">
+      <div class="face" style="background:linear-gradient(135deg,#f59e0b,#ef4444)"></div>
+      <div class="rt"><span style="color:var(--sec);font-size:13px">0x753d…4522</span>
+        <div class="pips">
+          <div class="pipcol"><div class="piprow"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>frames</div>
+          <div class="pipcol"><div class="piprow"><div class="pipd"></div><div class="pipd"></div><div class="pipd"></div><div class="pipd"></div></div>keys</div>
+          <div class="pipcol"><div class="piprow"><div class="pipg"></div><div class="pipg"></div></div>snapshots</div>
+        </div></div>
+    </div>
+    <div class="row" style="padding:6px 0">
+      <div class="face" style="background:linear-gradient(135deg,#22c55e,#0ea5e9)"></div>
+      <div class="rt"><span style="color:var(--sec);font-size:13px">0x248a…cc60</span>
+        <div class="pips">
+          <div class="pipcol"><div class="piprow"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>frames</div>
+          <div class="pipcol"><div class="piprow"><div class="pipd off"></div></div>keys</div>
+          <div class="pipcol"><div class="piprow"><div class="pipg off"></div></div>snapshots</div>
+        </div></div>
+    </div>
+  </div>
+
+  <h4>Roots — lanes on the ring, aged marks hollow past the edge</h4>
+  <div class="slot" style="height:190px">
+    <div class="gear">⚙</div>
+    <div class="stat">4 proofs</div>
+    <div class="lane"><span class="src mono">0xa0dfea37…</span>
+      <div class="track"><div class="bed"></div><div class="now"></div>
+        <div class="dia" style="left:52%"></div><div class="dia" style="left:57%"></div></div></div>
+    <div class="lane"><span class="src mono">0xb08f1575…</span>
+      <div class="track"><div class="bed"></div><div class="now"></div>
+        <div class="dia aged"></div></div></div>
+    <div class="lane" style="margin-top:2px"><span class="src"></span>
+      <div style="flex:1;display:flex;justify-content:space-between" class="ter"><span>leaves the chain's memory</span><span>now</span></div></div>
+  </div>
+</div>
+
+<div class="phone">
+  <h4>The move sheet — every row opens this (new)</h4>
+  <div class="sheet">
+    <h3>2 frames</h3>
+    <div class="anat"><div class="seg"></div><div class="seg"></div><div class="ring"></div><div class="ring"></div><div class="gem" style="width:12px;height:12px"></div></div>
+    <div class="lead">2 frames · 2 spend keys · named a snapshot</div>
+    <div class="tail">From 0x0629…f980<br>Block 13,352<br><span class="mono">0xeda9b1c823…2999a</span></div>
+
+    <div class="lbl">2 steps</div>
+    <div class="step"><div class="dot"></div><div class="rt"><b>1. Verify</b><span>the pool</span></div><div class="amt"><i>320,000 gas</i></div></div>
+    <div class="step"><div class="dot"></div><div class="rt"><b>2. Send</b><span>0x9c41…88aa</span></div><div class="amt">0.0010 ETH<i>320,000 gas</i></div></div>
+
+    <div class="lbl">2 spend keys</div>
+    <div class="keyrow"><div class="ring"></div><span class="mono sec">0x1871055c…b381e1</span><span class="ter" style="margin-left:auto">used once</span></div>
+    <div class="keyrow"><div class="ring"></div><span class="mono sec">0x1a3f0e61…645ffe</span><span class="ter" style="margin-left:auto">used once</span></div>
+    <div class="note">Each key was used once and can never be used again — that is what stops this spend being repeated. It does not hide who sent it.</div>
+
+    <div class="lbl">The snapshot it proved against</div>
+    <div class="keyrow"><div class="gem" style="width:10px;height:10px"></div><div class="rt"><span class="mono sec" style="font-size:13px">0x1ea261e9…df422</span><span class="ter">registered at slot 13,366</span></div></div>
+
+    <div class="door">Watch 0x9c41…88aa</div>
+    <div class="door">Open in the explorer</div>
+  </div>
+  <h4 style="margin-top:18px">The account sheet — facts are doors (tap → scopes the room)</h4>
+  <div class="sheet" style="padding-bottom:18px">
+    <h3>0x0629…f980</h3>
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:6px">
+      <div class="face" style="background:linear-gradient(135deg,#7b5cff,#38bdf8)"></div>
+      <div><div style="font-size:26px;font-weight:700">0.4481 ETH</div><div class="ter">1 sent from here</div></div>
+    </div>
+    <div class="mono ter" style="font-size:12px;margin-bottom:10px">0x062901d23f7e2d3bf9949c8a8cfd2c7a5ae3f980</div>
+    <div class="row"><div class="mark">⇄</div><div class="rt"><b style="font-size:15px">2 transactions</b></div><div class="chev">›</div></div>
+    <div class="row"><div class="mark">▤</div><div class="rt"><b style="font-size:15px">4 steps run</b></div><div class="chev">›</div></div>
+    <div class="row"><div class="mark">🔑</div><div class="rt"><b style="font-size:15px">4 one-time spend keys</b></div><div class="chev">›</div></div>
+    <div class="row"><div class="mark">◆</div><div class="rt"><b style="font-size:15px">2 proofs against snapshots</b></div><div class="chev">›</div></div>
+  </div>
+</div>
