@@ -30,6 +30,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 STRIPE="Casberi/Casberi/Model/StripeRoom.swift"
+# The runway arithmetic StripeRoom now forwards to.
+SHARED_RUNWAY="Casberi/Casberi/Model/RoomRunway.swift"
 POSTHOG="Casberi/Casberi/Model/PostHogRoom.swift"
 QUIET="Casberi/Casberi/Model/RoomQuiet.swift"
 for f in "$STRIPE" "$POSTHOG" "$QUIET"; do
@@ -336,7 +338,7 @@ print("room-heads-selftest: OK — every assertion passed against the shipped so
 SWIFT
 
 build() {
-  swiftc -O -o "$TMP/rh-selftest" "$1" "$2" "$3" "$TMP/main.swift" 2>"$TMP/build.log"
+  swiftc -O -o "$TMP/rh-selftest" "$1" "$2" "$3" "$SHARED_RUNWAY" "$TMP/main.swift" 2>"$TMP/build.log"
 }
 
 if ! build "$STRIPE" "$POSTHOG" "$QUIET"; then
@@ -376,7 +378,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$target"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$a" "$b" "$c" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -O -o "$TMP/mut" "$a" "$b" "$c" "$SHARED_RUNWAY" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -385,12 +387,9 @@ PY
   echo "  ✓ $name"
 }
 
-# The bug this whole file exists to prevent: an overdue deadline sliding off
-# the left edge of the rail, so the one you already missed is the one you
-# cannot see.
-mutate "overdue no longer pins to the rail's start" stripe \
-  'return min(max(Double(days) / Double(span), 0), 1)' \
-  'return min(Double(days) / Double(span), 1)'
+# Moved to `scripts/room-runway-selftest.sh` with the code it tests: the
+# runway arithmetic is now shared, and this file's drift guard proves this room
+# FORWARDS to it rather than carrying a second copy.
 # Calendar days vs interval arithmetic — an 11pm read the night before a
 # deadline reading as "today".
 mutate "days measured by interval instead of calendar" stripe \
@@ -404,10 +403,9 @@ mutate "an overdue window no longer outranks a stopped account" stripe \
 mutate "staleness never stated" stripe \
   'guard elapsed >= 3600 else { return nil }' \
   'guard elapsed >= 3600 * 24 * 365 else { return nil }'
-# A span that can't floor puts a "3 days" mark off the end of its own axis.
-mutate "the span no longer floors at a week" stripe \
-  'for bound in [7, 14, 30, 60, 90] where furthest <= bound { return bound }' \
-  'for bound in [1, 14, 30, 60, 90] where furthest <= bound { return bound }'
+# Moved to `scripts/room-runway-selftest.sh` with the code it tests: the
+# runway arithmetic is now shared, and this file's drift guard proves this room
+# FORWARDS to it rather than carrying a second copy.
 # Caught in review: the headline counted `items`, which is capped, so a nine-
 # deadline account read "4 deadlines ahead" directly above "5 more further out".
 mutate "the headline counts drawn rows instead of the window" stripe \

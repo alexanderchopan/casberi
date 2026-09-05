@@ -76,20 +76,15 @@ struct PolarRoom: Equatable {
     // MARK: - The rail
 
     static func span(days: [Int]) -> Int {
-        let furthest = days.max() ?? 0
-        for bound in [7, 14, 30, 60, 90] where furthest <= bound { return bound }
-        return furthest
+        RoomRunway.span(days: days)
     }
 
     static func position(days: Int, span: Int) -> Double {
-        guard span > 0 else { return 0 }
-        return min(max(Double(days) / Double(span), 0), 1)
+        RoomRunway.position(days: days, span: span)
     }
 
     static func spanLabel(span: Int) -> String {
-        span % 30 == 0 && span >= 30
-            ? String(localized: "\(span / 30) mo")
-            : String(localized: "\(span) days")
+        RoomRunway.spanLabel(span: span)
     }
 
     // MARK: - Words

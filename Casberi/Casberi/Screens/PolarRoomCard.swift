@@ -24,9 +24,6 @@ struct PolarRoomCard: View {
     /// monochrome system, reserved for moments that need to carry energy
     /// (polar.sh/brand). The exact role Stripe's indigo plays on its card.
     private static let mark = DS.brandHue(for: "Polar") ?? Color.fixed("#3619CC")
-    private static let dot: CGFloat = 11
-    private static let leadDot: CGFloat = 15
-    private static let tickRoom: CGFloat = 18
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -63,48 +60,25 @@ struct PolarRoomCard: View {
 
     // MARK: - The rail
 
+    /// The card's time axis, drawn by the shared component.
+    ///
+    /// The placement stays here on purpose: the marks go through this
+    /// room's own `position`, so the room's selftest keeps asserting the
+    /// arithmetic it ships with.
     private var rail: some View {
+        // Hoisted out of the view builder: these change only when the
+        // deadlines do, and a closure would re-run on every layout pass.
         let span = PolarRoom.span(days: room.items.map(\.days))
         let items = room.items
-        return GeometryReader { geo in
-            let travel = max(geo.size.width - Self.leadDot, 1)
-            ZStack(alignment: .topLeading) {
-                mark(Capsule(), width: geo.size.width, height: 2,
-                     fill: DS.fillLine, at: 0, travel: 0)
-
-                ForEach(items) { item in
-                    let lead = item.id == items.first?.id
-                    let size = lead ? Self.leadDot : Self.dot
-                    mark(Circle(), width: size, height: size,
-                         fill: lead ? Self.mark : DS.fillStrong,
-                         at: PolarRoom.position(days: item.days, span: span),
-                         travel: travel)
-                }
-            }
-            .frame(height: Self.leadDot)
-            .overlay(alignment: .bottomLeading) { tick(String(localized: "Today")) }
-            .overlay(alignment: .bottomTrailing) { tick(PolarRoom.spanLabel(span: span)) }
-        }
-        .frame(height: Self.leadDot + Self.tickRoom)
-        .chartWipe(reduceMotion: reduceMotion)
-        .accessibilityHidden(true)
-    }
-
-    private func mark<S: Shape>(_ shape: S, width: CGFloat, height: CGFloat,
-                                fill: Color, at position: Double, travel: CGFloat) -> some View {
-        shape
-            .fill(fill)
-            .frame(width: width, height: height)
-            .frame(width: max(width, Self.leadDot), height: Self.leadDot)
-            .offset(x: position * travel)
-    }
-
-    private func tick(_ text: String) -> some View {
-        Text(text)
-            .dsText(.label11)
-            .foregroundStyle(DS.textTertiary)
-            .monospacedDigit()
-            .offset(y: Self.tickRoom)
+        return DSRunwayRail(
+            marks: items.map { item in
+                DSRunwayRail.Mark(id: item.id,
+                                  position: PolarRoom.position(days: item.days, span: span),
+                                  lead: item.id == items.first?.id)
+            },
+            spanLabel: PolarRoom.spanLabel(span: span),
+            leadFill: Self.mark,
+            reduceMotion: reduceMotion)
     }
 
     // MARK: - Rows

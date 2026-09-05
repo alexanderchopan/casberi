@@ -30,6 +30,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 ROOM="Casberi/Casberi/Model/PolarRoom.swift"
+# The runway arithmetic the room now forwards to. Compiled alongside, so every
+# `position`/`span`/`spanLabel` assertion below lands on the SHIPPED
+# implementation rather than on a copy of it.
+SHARED_RUNWAY="Casberi/Casberi/Model/RoomRunway.swift"
 SOURCE="Casberi/Casberi/Model/PolarRoomSource.swift"
 BRIDGE="Casberi/Casberi/Model/PolarBridge.swift"
 CARD="Casberi/Casberi/Screens/PolarRoomCard.swift"
@@ -259,7 +263,7 @@ if failures == 0 {
 }
 SWIFT
 
-if ! swiftc -O -o "$TMP/run" "$ROOM" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -O -o "$TMP/run" "$ROOM" "$SHARED_RUNWAY" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ PolarRoom.swift did not compile"
   grep -E 'error:' "$TMP/build.log" | head -20
   exit 1
@@ -287,7 +291,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$WORK/PolarRoom.swift"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$WORK/PolarRoom.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -O -o "$TMP/mut" "$WORK/PolarRoom.swift" "$SHARED_RUNWAY" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -302,17 +306,9 @@ mutate "overdue no longer outranks an upcoming deadline in the headline" \
   'if let overdue = room.overdue {' \
   'if let overdue = room.overdue, false {'
 
-# 2. Items sorted the wrong way — the rail and the row order would disagree
-#    about which deadline is the lead.
-mutate "span no longer takes the FURTHEST day (days.max)" \
-  'let furthest = days.max() ?? 0' \
-  'let furthest = days.min() ?? 0'
-
-# 3. Overdue no longer pins to zero on the rail — it would run off the left
-#    edge and vanish, hiding the one deadline you most need to see.
-mutate "overdue no longer clamps to the start of the rail" \
-  'return min(max(Double(days) / Double(span), 0), 1)' \
-  'return Double(days) / Double(span)'
+# Moved to `scripts/room-runway-selftest.sh` with the code it tests: the
+# runway arithmetic is now shared, and this file's drift guard proves this room
+# FORWARDS to it rather than carrying a second copy.
 
 # 4. readingRead collapses into mrr != nil — a genuinely zero MRR would then
 #    read as "never read yet" rather than as the real, honest zero it is.

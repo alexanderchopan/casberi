@@ -37,6 +37,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 ROOM="Casberi/Casberi/Model/DodoPaymentsRoom.swift"
+# The runway arithmetic the room now forwards to (see PolarRoom for the reason).
+SHARED_RUNWAY="Casberi/Casberi/Model/RoomRunway.swift"
 SOURCE="Casberi/Casberi/Model/DodoPaymentsRoomSource.swift"
 BRIDGE="Casberi/Casberi/Model/DodoPaymentsBridge.swift"
 CARD="Casberi/Casberi/Screens/DodoPaymentsRoomCard.swift"
@@ -454,7 +456,7 @@ if failures == 0 {
 }
 SWIFT
 
-if ! swiftc -O -o "$TMP/run" "$ROOM" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -O -o "$TMP/run" "$ROOM" "$SHARED_RUNWAY" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ DodoPaymentsRoom.swift did not compile"
   grep -E 'error:' "$TMP/build.log" | head -20
   exit 1
@@ -482,7 +484,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$WORK/DodoPaymentsRoom.swift"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$WORK/DodoPaymentsRoom.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -O -o "$TMP/mut" "$WORK/DodoPaymentsRoom.swift" "$SHARED_RUNWAY" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -540,16 +542,9 @@ mutate "the note repeats the headline instead of carrying the other fact" \
   'if room.leadsWithTrouble {' \
   'if room.leadsWithTrouble, false {'
 
-# 9. The rail's clamp removed — a passed retry runs off the left edge and
-#    vanishes, hiding the row that most needs seeing.
-mutate "a passed retry no longer clamps to the start of the rail" \
-  'return min(max(Double(days) / Double(span), 0), 1)' \
-  'return Double(days) / Double(span)'
-
-# 10. The span takes the nearest rather than the furthest day.
-mutate "span no longer takes the FURTHEST day" \
-  'let furthest = days.max() ?? 0' \
-  'let furthest = days.min() ?? 0'
+# Moved to `scripts/room-runway-selftest.sh` with the code it tests: the
+# runway arithmetic is now shared, and this file's drift guard proves this room
+# FORWARDS to it rather than carrying a second copy.
 
 # 11. A passed billing date called Missed — an outcome this bridge cannot know.
 mutate "a passed retry is called Missed, stating an outcome nobody measured" \

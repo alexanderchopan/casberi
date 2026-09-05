@@ -44,6 +44,8 @@ CF="Casberi/Casberi/Model/CloudflareBridge.swift"
 # certificate at the wrong point, or whose quiet headline claims four months on
 # an account expiring tomorrow, renders perfectly either way.
 RUNWAY="Casberi/Casberi/Model/CloudflareRunway.swift"
+# The runway arithmetic `position` now forwards to.
+SHARED_RUNWAY="Casberi/Casberi/Model/RoomRunway.swift"
 [[ -f "$RUNWAY" ]] || { echo "✗ $RUNWAY not found"; exit 1; }
 
 # --- drift guards -----------------------------------------------------------
@@ -381,7 +383,7 @@ print("cloudflare-selftest: OK — every assertion passed against the shipped so
 SWIFT
 
 build() {
-  swiftc -O -o "$TMP/cf-selftest" "$1" "$2" "$TMP/main.swift" 2>"$TMP/build.log"
+  swiftc -O -o "$TMP/cf-selftest" "$1" "$2" "$SHARED_RUNWAY" "$TMP/main.swift" 2>"$TMP/build.log"
 }
 
 if ! build "$TMP/extracted.swift" "$RUNWAY"; then
@@ -448,10 +450,9 @@ mutate "losing the previous value is caught" \
 # where a site that is DOWN RIGHT NOW sorts behind a renewal two months out.
 mutate_runway "burying an already-true row is caught" \
   's/case (nil, _): return true/case (nil, _): return false/'
-# Let the rail run negative — an overdue certificate placed off the left edge
-# disappears from the card entirely.
-mutate_runway "an unclamped rail position is caught" \
-  's|return min(max(Double(days) / Double(span), 0), 1)|return Double(days) / Double(span)|'
+# Moved to `scripts/room-runway-selftest.sh` with the code it tests: the
+# runway arithmetic is now shared, and this file's drift guard proves this room
+# FORWARDS to it rather than carrying a second copy.
 # Never widen the rail — every distant row piles up on the last pixel.
 mutate_runway "a rail that cannot widen is caught" \
   's/guard furthest > 60 else { return 60 }/guard false else { return 60 }/'

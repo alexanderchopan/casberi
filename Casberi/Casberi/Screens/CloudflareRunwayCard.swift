@@ -63,10 +63,6 @@ struct CloudflareRunwayCard: View {
     /// card that says everything is fine.
     private static let mark = DS.brandHue(for: "Cloudflare") ?? Color.fixed("#f6821f")
 
-    private static let dot: CGFloat = 11
-    private static let leadDot: CGFloat = 15
-    /// Room under the axis for its two end labels.
-    private static let tickRoom: CGFloat = 18
 
     var body: some View {
         let words = words
@@ -136,84 +132,36 @@ struct CloudflareRunwayCard: View {
 
     // MARK: - The rail
 
-    /// One axis for the whole card. Marks are placed against the axis width
-    /// MINUS one mark, so the furthest sits inside the rail instead of hanging
-    /// off its end; each is centred by nesting it in a full-size frame rather
-    /// than by a half-difference computed per shape.
+    /// The card's time axis, drawn by the shared component.
+    ///
+    /// The placement stays here on purpose: the marks go through this
+    /// room's own `position`, so the room's selftest keeps asserting the
+    /// arithmetic it ships with.
     private var rail: some View {
-        // Hoisted out of the GeometryReader: these change only when the span
-        // does (i.e. on a sync), and the closure below re-runs on every layout
-        // pass as well as every body evaluation.
+        // Hoisted out of the view builder: these change only when the span does
+        // (i.e. on a sync), and a closure would re-run on every layout pass.
         let span = runway.span
-        let grid = CloudflareRunway.gridDays(span: span)
         let items = runway.items
-        return GeometryReader { geo in
-            let travel = max(geo.size.width - Self.leadDot, 1)
-            ZStack(alignment: .topLeading) {
-                mark(Capsule(), width: geo.size.width, height: 2,
-                     fill: DS.fillLine, at: 0, travel: 0)
-
-                ForEach(grid, id: \.self) { day in
-                    mark(Capsule(), width: 2, height: 8, fill: DS.fillStrong,
-                         at: CloudflareRunway.position(days: day, span: span), travel: travel)
-                }
-
-                ForEach(items) { item in
-                    let lead = item.id == items.first?.id
-                    let size = lead ? Self.leadDot : Self.dot
-                    mark(Circle(), width: size, height: size,
-                         fill: lead ? Self.mark : DS.fillStrong,
-                         at: CloudflareRunway.position(days: item.days, span: span),
-                         travel: travel)
-                }
-            }
-            .frame(height: Self.leadDot)
-            .overlay(alignment: .bottomLeading) { tick(String(localized: "Today")) }
-            .overlay(alignment: .bottomTrailing) { tick(CloudflareRunway.spanLabel(span: span)) }
-            // The dot press (prd §384): nearest mark within a finger's reach
-            // wins — `nearestMark`'s 22pt rule, widened a touch because these
-            // dots sit sparser than chart marks. A miss does nothing.
-            .contentShape(Rectangle())
-            .gesture(SpatialTapGesture().onEnded { value in
-                let hit = items.min(by: { a, b in
-                    abs(CloudflareRunway.position(days: a.days, span: span) * travel
-                        + Self.leadDot / 2 - value.location.x)
-                        < abs(CloudflareRunway.position(days: b.days, span: span) * travel
-                              + Self.leadDot / 2 - value.location.x)
-                })
-                guard let hit,
-                      abs(CloudflareRunway.position(days: hit.days, span: span) * travel
-                          + Self.leadDot / 2 - value.location.x) <= 30 else { return }
-                DSHaptic.selection()
-                railPicked = hit.id
+        return DSRunwayRail(
+            marks: items.map { item in
+                DSRunwayRail.Mark(id: item.id,
+                                  position: CloudflareRunway.position(days: item.days, span: span),
+                                  lead: item.id == items.first?.id)
+            },
+            spanLabel: CloudflareRunway.spanLabel(span: span),
+            leadFill: Self.mark,
+            reduceMotion: reduceMotion,
+            // The 30-day gridlines strictly INSIDE the rail — the one runway in
+            // the app that draws them, which is why the shared component takes
+            // them rather than assuming them.
+            gridlines: CloudflareRunway.gridDays(span: span)
+                .map { CloudflareRunway.position(days: $0, span: span) },
+            // The dot press (prd §384). The rows below carry the same facts, so
+            // this is a shortcut rather than the only door.
+            onPick: { id in
+                railPicked = id
                 railPickTick += 1
             })
-        }
-        .frame(height: Self.leadDot + Self.tickRoom)
-        .chartWipe(reduceMotion: reduceMotion)
-        // Hidden from VoiceOver: each mark is a row below, and the rows speak.
-        // On the QUIET card there are no rows — but the headline and note
-        // already say the whole finding ("nothing needs attention"), so a
-        // spoken empty axis would add nothing but confusion.
-        .accessibilityHidden(true)
-    }
-
-    /// One thing on the axis, centred on the track at `position`.
-    private func mark<S: Shape>(_ shape: S, width: CGFloat, height: CGFloat,
-                                fill: Color, at position: Double, travel: CGFloat) -> some View {
-        shape
-            .fill(fill)
-            .frame(width: width, height: height)
-            .frame(width: max(width, Self.leadDot), height: Self.leadDot)
-            .offset(x: position * travel)
-    }
-
-    private func tick(_ text: String) -> some View {
-        Text(text)
-            .dsText(.label11)
-            .foregroundStyle(DS.textTertiary)
-            .monospacedDigit()
-            .offset(y: Self.tickRoom)
     }
 
     // MARK: - Rows

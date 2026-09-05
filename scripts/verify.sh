@@ -1605,6 +1605,15 @@ harness "Privacy transaction envelope" "privacy-tx" "scripts/privacy-tx-selftest
 # below a busy one.
 harness "Room-head pure-logic self-test" "room-head self-test" "scripts/room-heads-selftest.sh" "the room-head logic self-test failed — run scripts/room-heads-selftest.sh"
 
+# The deadline runway's arithmetic, shared by FOUR rooms (Stripe, Polar, Dodo
+# Payments, Cloudflare). Each carried a byte-identical copy of `position` until
+# 2026-09-04, and each of their four harnesses asserted the same six properties
+# of its own copy — so the rule was proven four times and could still drift.
+# Every failure is a wrong reading that draws beautifully: an unclamped position
+# puts the deadline you have already missed off the left edge, where it does not
+# look wrong, it looks absent.
+harness "Room-runway pure-logic self-test" "room-runway self-test" "scripts/room-runway-selftest.sh" "the room-runway logic self-test failed — run scripts/room-runway-selftest.sh"
+
 # Pure-logic self-test for the three WALLET-RIDING room heads — Peer, Privacy
 # Pools, Gnosis Pay (prd §349). These seats ride the watched wallets, so there
 # is no key to mint and nothing on this host can make a fill settle, a screener

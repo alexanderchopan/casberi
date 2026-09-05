@@ -130,9 +130,7 @@ struct StripeRoom: Equatable {
     /// deadline happens to be — and floored at a week, because a rail spanning
     /// two days puts a "3 days" mark off its own end.
     static func span(days: [Int]) -> Int {
-        let furthest = days.max() ?? 0
-        for bound in [7, 14, 30, 60, 90] where furthest <= bound { return bound }
-        return furthest
+        RoomRunway.span(days: days)
     }
 
     /// Where a deadline sits on the axis, 0…1.
@@ -141,14 +139,11 @@ struct StripeRoom: Equatable {
     /// would simply vanish — the one deadline you most need to see is the one
     /// you have already missed.
     static func position(days: Int, span: Int) -> Double {
-        guard span > 0 else { return 0 }
-        return min(max(Double(days) / Double(span), 0), 1)
+        RoomRunway.position(days: days, span: span)
     }
 
     static func spanLabel(span: Int) -> String {
-        span % 30 == 0 && span >= 30
-            ? String(localized: "\(span / 30) mo")
-            : String(localized: "\(span) days")
+        RoomRunway.spanLabel(span: span)
     }
 
     // MARK: - Words

@@ -166,9 +166,7 @@ struct CloudflareRunway: Equatable, Sendable {
     /// edge: there is no negative room on a runway, and a row that has already
     /// happened belongs at "now", not off the axis.
     static func position(days: Int?, span: Int) -> Double {
-        guard span > 0 else { return 0 }
-        guard let days else { return 0 }
-        return min(max(Double(days) / Double(span), 0), 1)
+        RoomRunway.position(days: days, span: span)
     }
 
     // MARK: - Words
