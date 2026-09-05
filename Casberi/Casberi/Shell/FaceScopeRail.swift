@@ -731,47 +731,37 @@ enum PrivacyDevnetScopeRail {
         source == PrivacyDevnetIdentity.source && watched > 0
     }
 
-    /// **The caption is what the address HOLDS**, which is this rail's stated
-    /// job — one row saying both whose room this is and what is in it.
+    /// **THE CAPTION IS WHO, NEVER WHAT THEY HOLD (user ruling, 2026-09-04:
+    /// "the silhouette rail shouldn't have balances only addresses").**
     ///
-    /// **Nil is not zero**: an address that did not answer gets its short form
-    /// back rather than "0", which would be a claim about somebody's balance
-    /// made from a failed read (§515a, on the line most likely to be believed).
+    /// This rail captioned each face with its balance, and it was the odd one
+    /// out: `VibenetScopeRail` and `HegotaScopeRail` both caption `name ??
+    /// shortAddress` and neither has ever shown a figure. It is the same
+    /// ruling the address book already carries — a rail of faces is a PEOPLE
+    /// strip, and money belongs where the room states it once rather than
+    /// under every silhouette.
+    ///
+    /// It also read badly for a reason particular to this chain: the accounts
+    /// worth watching here include genesis fixtures holding ~1,000,000 test
+    /// ETH beside real ones holding 0.44, so three captions in a row were a
+    /// truncated seven-figure number next to two four-decimal ones, comparing
+    /// quantities that have no market and no meaning against each other.
+    ///
+    /// `PrivacyDevnetMoney` still spells the balance everywhere it IS stated —
+    /// the account sheet, the send form, the roster row — so nothing is lost
+    /// and there is still exactly one spelling of it.
+    @MainActor
     static func items(_ accounts: [PrivacyDevnetAccount]) -> [FaceScopeRail.Item] {
         accounts.map { account in
             FaceScopeRail.Item(
                 id: account.address,
-                // **A REAL name wins; the AUTO one does not.** `add()` seeds the
-                // book with `shortAddress` when there is no entry, so a plain
-                // `name(for:) ?? balance` chain never reaches the balance —
-                // the caption was `…f980` six points under a face already
-                // saying `…f980`, which is the exact "rail costing a row and
-                // carrying nothing" that `FramesScopeRail` warns about. Seen
-                // on a simulator against a live watch.
-                caption: Self.chosenName(account.address)
-                    ?? Self.eth(account)
-                    ?? WalletStore.shortAddress(account.address),
+                // A chosen name wins; the AUTO one is the short address, which
+                // is what this falls back to anyway, so the two rungs collapse
+                // into `PrivacyDevnetName.of` — the seat's one naming, which
+                // also answers "This phone" for the account this app made.
+                caption: PrivacyDevnetName.of(account.address),
                 face: .wallet(address: account.address))
         }
-    }
-
-    /// The name only if somebody CHOSE it — `add()` seeds the auto short form,
-    /// and echoing that under a face showing the same thing says nothing.
-    private static func chosenName(_ address: String) -> String? {
-        guard let name = PrivacyDevnetWatch.shared.name(for: address),
-              name != WalletStore.shortAddress(address) else { return nil }
-        return name
-    }
-
-    /// A balance as test ETH, to four places, and NEVER as money — this chain's
-    /// asset has no market, so no currency symbol and no conversion may appear.
-    private static func eth(_ account: PrivacyDevnetAccount) -> String? {
-        guard account.reached, let wei = account.balanceWei else { return nil }
-        // `PrivacyDevnetMoney` rather than the arithmetic inline (prd §593d):
-        // the send sheet states the same balance, and two spellings of one
-        // number is how a rail and a form come to disagree about what an
-        // account holds.
-        return PrivacyDevnetMoney.line(wei: wei)
     }
 
     static func matches(_ scope: String?, _ id: String) -> Bool {

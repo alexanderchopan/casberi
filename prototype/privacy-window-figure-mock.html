@@ -1,0 +1,82 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Privacy — the window figure</title>
+<style>
+:root{--page:#000;--card:#0e0e11;--ink:#f2f2f5;--sec:#a8a8b0;--ter:#6f6f78;--faint:#232329;--tint:#0a84ff;}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui;padding:30px 26px 60px}
+h1{font:600 21px/1.2 system-ui;margin:0 0 4px}
+.sub{color:var(--ter);margin:0 0 30px;font-size:13px;max-width:760px}
+.h{font:600 15px system-ui;margin:34px 0 4px;color:var(--ink)}
+.why{color:var(--ter);font-size:13px;margin:0 0 14px;max-width:620px}
+.row{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
+.card{background:var(--card);border-radius:22px;padding:18px;width:340px;position:relative;overflow:hidden}
+.pour{position:absolute;inset:0 0 auto 0;height:140px;background:linear-gradient(180deg,rgba(10,132,255,.07),transparent)}
+.lede{font:600 22px/1.28 system-ui;margin:2px 0 10px;position:relative}
+.stat{font:600 24px/1.2 system-ui;margin:2px 0 10px;position:relative}
+.cap{color:var(--ter);font-size:12px}
+svg{display:block;margin:0 auto}
+.tag{position:absolute;top:14px;right:16px;font-size:11px;color:var(--ter);letter-spacing:.02em}
+.bad{color:#ff8a80}
+</style>
+<h1>The window figure — three treatments</h1>
+<p class="sub">The 8,192-slot recency window. Two snapshot sets: one live with 4,096 slots left, one that has already left the window. Reported: the shipped ring “just looks like a toy”.</p>
+
+<div class="h">A · what ships now</div>
+<p class="why">Why it reads as a toy: nothing is <em>filled</em>, so it holds no quantity — it is an empty outline with saturated blue gems scattered on it, each stamped with a numeral, which is badge vocabulary rather than instrument vocabulary. Three marks on a 156pt circle is almost no ink, and the reading floats unanchored in the middle.</p>
+<div class="row">
+  <div class="card"><span class="tag">A · now</span><div class="pour"></div>
+    <div class="lede">Proofs here name 2 snapshots the chain still remembers.</div>
+    <svg width="156" height="156" viewBox="0 0 156 156">
+      <path d="M78 5 A73 73 0 1 1 41.5 137.2" fill="none" stroke="#232329" stroke-width="5" stroke-linecap="round"/>
+      <line x1="78" y1="1" x2="78" y2="14" stroke="#f2f2f5" stroke-opacity=".55" stroke-width="2.5" stroke-linecap="round"/>
+      <g transform="rotate(150 78 78)"><rect x="72.5" y="-.5" width="11" height="11" fill="#0a84ff" transform="rotate(45 78 5)"/><text x="78" y="9" text-anchor="middle" font-size="10" font-weight="700" fill="#0e0e11" font-family="system-ui" transform="rotate(-150 78 5)">1</text></g>
+      <g transform="rotate(163 78 78)"><rect x="72.5" y="-.5" width="11" height="11" fill="#0a84ff" transform="rotate(45 78 5)"/><text x="78" y="9" text-anchor="middle" font-size="10" font-weight="700" fill="#0e0e11" font-family="system-ui" transform="rotate(-163 78 5)">1</text></g>
+      <g transform="rotate(316 78 78)"><rect x="72.5" y="-.5" width="11" height="11" fill="none" stroke="#0a84ff" stroke-opacity=".45" stroke-width="2" transform="rotate(45 78 5)"/><text x="78" y="9" text-anchor="middle" font-size="10" font-weight="700" fill="#0a84ff" fill-opacity=".8" font-family="system-ui" transform="rotate(-316 78 5)">2</text></g>
+      <text x="78" y="75" text-anchor="middle" fill="#f2f2f5" font-size="15" font-family="system-ui">about 14 hours</text>
+      <text x="78" y="90" text-anchor="middle" fill="#6f6f78" font-size="11" font-family="system-ui">4096 slots left</text>
+    </svg>
+  </div>
+</div>
+
+<div class="h">B · the same ring, as a gauge</div>
+<p class="why">The window is a depleting resource, so the arc <strong>fills</strong>: tint runs from now back through the freshest proof’s remaining life, and the empty remainder is what has already drained. A proof is a <strong>tick that cuts the track</strong>, in ink — a measurement <em>on</em> the instrument rather than an object floating near it. Set numbers sit outside the rim in the quietest type, and only when there is more than one set. Same geometry, same gap-is-the-exit, same arithmetic; only the ink changes.</p>
+<div class="row">
+  <div class="card"><span class="tag">B · gauge</span><div class="pour"></div>
+    <div class="stat">2 snapshots</div>
+    <svg width="168" height="168" viewBox="0 0 168 168">
+      <path d="M84 6 A78 78 0 1 1 45 145.1" fill="none" stroke="#232329" stroke-width="11" stroke-linecap="round"/>
+      <path d="M84 6 A78 78 0 0 1 161.4 73.6" fill="none" stroke="#0a84ff" stroke-width="11" stroke-linecap="round"/>
+      <g stroke="#f2f2f5" stroke-opacity=".92" stroke-width="2.5">
+        <line x1="84" y1="0" x2="84" y2="12" transform="rotate(150 84 84)"/>
+        <line x1="84" y1="0" x2="84" y2="12" transform="rotate(163 84 84)"/>
+      </g>
+      <line x1="84" y1="0" x2="84" y2="12" stroke="#0a84ff" stroke-opacity=".5" stroke-width="2.5" stroke-dasharray="3 2" transform="rotate(316 84 84)"/>
+      <text x="84" y="80" text-anchor="middle" fill="#f2f2f5" font-size="20" font-weight="600" font-family="system-ui">14h</text>
+      <text x="84" y="97" text-anchor="middle" fill="#6f6f78" font-size="11" font-family="system-ui">4,096 slots left</text>
+      <text x="84" y="112" text-anchor="middle" fill="#6f6f78" font-size="11" font-family="system-ui">of 8,192</text>
+    </svg>
+    <p class="cap" style="text-align:center;margin-top:10px">now at the top · older clockwise · the gap is the exit</p>
+  </div>
+</div>
+
+<div class="h">C · no ring — a depleting track</div>
+<p class="why">If the circle is the problem rather than the ink: the same gauge unrolled. It fills the card’s width instead of a third of it, the fill is the window remaining, ticks are the proofs, and what has left the window sits past the end. Loses the “memory that wraps” shape; gains density and a lot more room for the reading.</p>
+<div class="row">
+  <div class="card"><span class="tag">C · track</span><div class="pour"></div>
+    <div class="stat">2 snapshots</div>
+    <div style="margin:18px 0 8px">
+      <div style="font:600 30px/1 system-ui">about 14 hours<span style="font:400 13px system-ui;color:var(--ter)"> left</span></div>
+      <div class="cap" style="margin-top:4px">4,096 of 8,192 slots</div>
+    </div>
+    <svg width="300" height="34" viewBox="0 0 300 34">
+      <rect x="0" y="12" width="300" height="11" rx="5.5" fill="#232329"/>
+      <rect x="0" y="12" width="150" height="11" rx="5.5" fill="#0a84ff"/>
+      <g stroke="#f2f2f5" stroke-opacity=".92" stroke-width="2.5">
+        <line x1="96" y1="9" x2="96" y2="26"/><line x1="82" y1="9" x2="82" y2="26"/>
+      </g>
+      <line x1="292" y1="9" x2="292" y2="26" stroke="#0a84ff" stroke-opacity=".5" stroke-width="2.5" stroke-dasharray="3 2"/>
+      <text x="0" y="8" fill="#6f6f78" font-size="10" font-family="system-ui">now</text>
+      <text x="300" y="8" text-anchor="end" fill="#6f6f78" font-size="10" font-family="system-ui">leaves memory</text>
+    </svg>
+  </div>
+</div>

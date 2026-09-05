@@ -1152,9 +1152,21 @@ grep -qF 'case vibenet, hegota, privacy' "Casberi/Casberi/Model/NotifyPlan.swift
 grep -qF 'out.append(.init(seat: .privacy, key: seen.key, observedAt: seen.at,' "Casberi/Casberi/Model/DevnetNotify.swift"   || fail "nothing gathers the Privacy relaunch into resets(), so its NotifyDevnet seat can never fire"
 grep -qF 'nonisolated static func observedRelaunch()'   "Casberi/Casberi/Model/PrivacyDevnetBridge.swift"   || fail "the relaunch is no longer recorded across launches — an in-memory genesis cannot be read by a notify sweep"
 
-# **ONE SPELLING OF A BALANCE.** The rail carried a private copy of this
-# arithmetic and the send sheet needed the same sentence.
-grep -qF 'PrivacyDevnetMoney.line' "Casberi/Casberi/Shell/FaceScopeRail.swift"   || fail "the face rail formats a Privacy balance itself again — two formatters of one number is how a rail and a form disagree about what an account holds"
+# **THE RAIL SHOWS NO BALANCE AT ALL, so the one-spelling guard INVERTS.**
+#
+# It used to demand the rail call `PrivacyDevnetMoney.line`, because the rail
+# had carried a private copy of that arithmetic and two formatters of one
+# number is how a rail and a form come to disagree. That premise is void: the
+# rail states no balance now (user, 2026-09-04 — "the silhouette rail shouldn't
+# have balances only addresses"), which is also what `VibenetScopeRail` and
+# `HegotaScopeRail` have always done. A strip of faces is a PEOPLE strip.
+#
+# The guard therefore asserts the ABSENCE, and the reason it is worth keeping
+# in that direction is that restoring the caption would look like an ordinary
+# improvement — "the rail could say what each address holds" is exactly the
+# sentence the removed doc comment used to make.
+grep -qE 'PrivacyDevnetMoney|balanceWei' "Casberi/Casberi/Shell/FaceScopeRail.swift"   && fail "the Privacy face rail is stating balances again — a strip of faces says WHO, and this chain's accounts range from 0.44 to a million test ETH, so the captions compared quantities with no market against each other"
+grep -qF 'caption: PrivacyDevnetName.of(account.address)' "Casberi/Casberi/Shell/FaceScopeRail.swift"   || fail "the Privacy rail stopped naming its faces through the seat's one naming, so this phone's own account reads as a stranger's hex"
 
 # **THE WALK SAYS WHAT IT DID NOT READ (§307, §309).** A truncated room and a
 # complete one look identical from outside.
