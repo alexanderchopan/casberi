@@ -261,12 +261,24 @@ KNOWN_UNBOUNDED: dict[tuple[str, str], str] = {
         "count taken from the feed's own unlimited query — a fetchLimit would "
         "let 'See all · 700' open a page showing 500 with nothing saying so. "
         "The five-row preview is what keeps the common case cheap.",
-    ("Screens/FeedScreen.swift", "init"):
-        "A SOURCE room. A PERMANENT bound is refused by ruling: the room's head "
-        "is composed over its rows, so a head over a truncated slice states a "
-        "reading about a room it did not see — §83 fake status, in the largest "
-        "type on the screen. The transient `rowBudget` bound is the swipe's and "
-        "only the swipe's, and the head declines while it is set.",
+    # The source room's `init` USED to sit here, on the reasoning that a
+    # permanent bound would make its head describe a room it never saw. prd
+    # §600 (2026-09-04) took the bound by splitting the two readers instead —
+    # the list is bounded at `sourceRoomFetchLimit`, and the head reads the
+    # whole room through `fullRoomRows` below — so that exemption became
+    # unreachable and this audit correctly refused to keep it. Removed rather
+    # than left: an exemption nothing can reach is a check satisfied for the
+    # wrong reason, which is this file's own rule.
+    ("Screens/FeedScreen.swift", "fullRoomRows"):
+        "THE HEAD'S OWN READ, and the reason the room's `@Query` above is "
+        "allowed to carry a `fetchLimit` at all (prd §600). A source room's "
+        "head — 'your loudest year', the topic treemap, every leaderboard — "
+        "states a reading about the WHOLE room, so composing it over a "
+        "truncated slice is §83 fake status in the largest type on the screen. "
+        "It is affordable because it is not a `@Query`: it runs inside "
+        "`.task(id: headKey)` and is memoised in `headMemo`, i.e. once per "
+        "(room, corpus revision) rather than on every body pass, which is "
+        "strictly less total work than the unbounded query it replaced.",
 }
 
 

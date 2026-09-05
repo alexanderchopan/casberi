@@ -1150,8 +1150,19 @@ struct MainSurface: View {
         // size. It stays off the body path for the reason it always did — the
         // callers are `freezeChips`/`refreshLiveChips`, driven by mount,
         // foreground and arrival.
+        // TIMED, AND IN RELEASE (prd §600, 2026-09-04). The 2026-08-11 pass
+        // measured this walk at ~640 of 4,300 main-thread samples on a cold
+        // launch and `#Index` landed on 2026-09-01 to make it cheaper — and
+        // nothing has ever re-read the number, on either build configuration.
+        // `LaunchPerf.time` cannot answer it (that whole file is `#if DEBUG`),
+        // so this uses the clock that reports on a phone under `-swipeTimer`.
+        // It is the measurement that decides whether the strip needs to paint
+        // from a persisted order at all; do not add that persistence before
+        // reading this line.
         var ordered: [String] = []
-        for (name, _) in newestPerSource() { ordered.append(name) }
+        for (name, _) in SwipeClock.span("newestPerSource", { newestPerSource() }) {
+            ordered.append(name)
+        }
         var seen = Set(ordered)
         // A LIVE-room source earns its chip by being CONNECTED, not by having
         // landed anything (prd §234, `LiveRoomSources`): Kalshi and Polymarket
@@ -1383,9 +1394,9 @@ struct MainSurface: View {
     private func sourceStrip(axis: Axis) -> some View {
         // One walk for all three, not three (2026-08-11) — see `chipSnapshot`.
         let chips = chipSnapshot()
-        #if DEBUG
+        // Outside `#if DEBUG` since prd §600 — `SwipeClock` gates itself at
+        // runtime so a phone in Release can print this trace.
         SwipeClock.mark("chips")
-        #endif
         return SourceChips(labels: chips.labels, active: chips.active,
                     standing: chips.standing,
                     axis: axis,

@@ -154,14 +154,17 @@ struct FeedScreen: View {
     init(source: String, isActive: Bool, nearActive: Bool = true, rowBudget: Int? = nil) {
         self.source = source
         self.rowBudget = rowBudget
-        #if DEBUG
         // The mark the trace was missing (PERF 2026-09-01). `mount` fires from
         // a `.task`, i.e. after the first body AND after SwiftUI has installed
         // the view — so with only `step`/`mount` the whole of "did the shell
         // even get to building the new room yet" was one opaque number. It is
         // what showed the outgoing room being re-initialised on every swipe.
+        //
+        // No `#if DEBUG` since 2026-09-04 (prd §600): `SwipeClock` gates itself
+        // at runtime now so the trace can be read on a phone in Release, which
+        // is the one configuration this symptom has never been measured in.
+        // Off, this is a nil check on a static.
         SwipeClock.mark("init", detail: "src=\(source)")
-        #endif
         self.isActive = isActive
         self.nearActive = nearActive
         if source == "All" {
@@ -312,9 +315,34 @@ struct FeedScreen: View {
             // and a room that is fast and empty is not a trade worth making.
             // If the cost has to come back, it must come back as something
             // that cannot silently drop rows.
+            // **BOUNDED SINCE 2026-09-04 (prd §600) — AND THE 2026-08-14
+            // REFUSAL ABOVE IS UNTOUCHED, BECAUSE THE HEAD NO LONGER READS
+            // THIS QUERY.**
+            //
+            // That refusal is entirely about the HEAD: `sourceHead` composed
+            // from `visible`, so a bound made "your loudest year" describe the
+            // newest N posts — §83 fake status in the room whose promise is
+            // that it holds your history. It was never an argument that the
+            // LIST must be unbounded; nothing on screen shows more than
+            // `windowRowBudget` rows anyway.
+            //
+            // So the two are separated: this query serves the list and is
+            // bounded, and `recomputeHeads` makes its own unbounded fetch of
+            // the whole room (see `fullRoomRows`). The head still sees every
+            // row it ever saw. What changes is that the per-body-pass read —
+            // and there are several per swipe, plus one per bridge save during
+            // a foreground burst — materialises 600 rows instead of a
+            // bulk-import room's thousands, WITH the heavy inline text this
+            // branch is obliged to carry (see the `propertiesToFetch` note
+            // above). The head's full read happens ONCE per `headKey`, inside
+            // a task, memoised in `headMemo` — not on every body evaluation.
+            //
+            // §83 is kept by `reachedFetchCeiling`, which now covers this room
+            // too: at the edge the footer says "Showing your most recent N",
+            // never "That's everything from <source>".
             var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == source },
                                            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-            if let rowBudget { d.fetchLimit = rowBudget }
+            d.fetchLimit = min(Self.sourceRoomFetchLimit, rowBudget ?? .max)
             _things = Query(d)
         }
     }
@@ -1960,6 +1988,24 @@ struct FeedScreen: View {
     private var shape: Shape { Shape(source: source) }
 
 
+    /// Every feed row's entrance, from ONE place (prd §600, 2026-09-04).
+    ///
+    /// Twenty call sites spelled `RowEntrance(index:wave:style:)` by hand, so
+    /// adding the swipe suppression below would have meant twenty identical
+    /// edits and twenty places for the next one to drift. The index is the only
+    /// thing that ever differed.
+    ///
+    /// `rowBudget != nil` IS "a swipe is landing in this room": `MainSurface`
+    /// sets it in the same transaction as `filter.source` and releases it once
+    /// the slide has settled, so the rows that mount during the transition
+    /// arrive at rest and every later row keeps its entrance. Nothing
+    /// re-animates when the budget lifts — `reveal()` runs on appear and on a
+    /// `wave` change, and this is neither.
+    private func rowEntrance(_ index: Int) -> RowEntrance {
+        RowEntrance(index: index, wave: shapeWave, style: entranceStyle,
+                    instant: rowBudget != nil)
+    }
+
     /// How this shape's rows arrive: the agenda slides in from the leading
     /// edge like a day filling, photos scale in like the grid, transactions
     /// rise like entries posting, everything else lifts gently.
@@ -2380,9 +2426,26 @@ struct FeedScreen: View {
     /// value flips at most twice in a room's life. A room that is HONESTLY
     /// empty re-runs one bounded fetch and returns without writing anything —
     /// the net's own `guard !scoped.isEmpty` is what makes that free.
+    /// **THE EMPTINESS TERM SHORT-CIRCUITS ON WHAT IS ALREADY DRAWN (PERF
+    /// 2026-09-04, prd §600).** This key is evaluated on EVERY body pass — that
+    /// is what a `.task(id:)` key is — and `things.isEmpty` is the `@Query`
+    /// getter, so asking it materialised the room every time, twice per pass
+    /// (both nets share this key). It was added on 2026-09-03 with §592's
+    /// emptiness fix and is the newest per-body-pass materialisation on this
+    /// screen.
+    ///
+    /// ONE-DIRECTIONAL, exactly like `roomBody`'s own `roomHasContent` test and
+    /// for the same reason: a NON-EMPTY snapshot proves the room has rows, so
+    /// the answer is `|rows` with no read at all; an empty or absent snapshot
+    /// still asks the query, because a snapshot narrowed by a tag or a scope
+    /// can be empty over a room that is not. Same answer in every case; the
+    /// expensive read just stops happening whenever there is anything on
+    /// screen, which is the case a person is in while they scroll.
     private var safetyNetKey: String {
-        "\(scenePhase)" + (rowBudget == nil ? "|full" : "|bounded")
-            + (things.isEmpty ? "|empty" : "|rows")
+        let drawn = (debouncedAllSnapshot.map { !$0.isEmpty } ?? false)
+            || (sourceRoomFallbackSnapshot.map { !$0.isEmpty } ?? false)
+        return "\(scenePhase)" + (rowBudget == nil ? "|full" : "|bounded")
+            + (drawn || !things.isEmpty ? "|rows" : "|empty")
     }
 
     /// The room's own narrowing, as ONE rule — the lane strip scopes everything
@@ -2410,6 +2473,55 @@ struct FeedScreen: View {
         return out
     }
 
+    /// The room's ENTIRE contents, for the head alone (prd §600, 2026-09-04).
+    ///
+    /// **This is the other half of `sourceRoomFetchLimit`, and neither half is
+    /// correct without it.** The 2026-08-14 ruling refused a permanent bound on
+    /// a source room's query because `sourceHead` composed from `visible`, so a
+    /// bound would make `XRoom`'s "your loudest year" describe the newest N
+    /// posts — §83 fake status, in the room whose whole promise is that it
+    /// holds your history. That objection is answered by separating the two
+    /// readers rather than by refusing the bound: the LIST is bounded (nothing
+    /// draws more than `windowRowBudget` rows anyway) and the HEAD reads
+    /// everything, here.
+    ///
+    /// It is affordable for one reason and only that reason: the head is
+    /// computed in `.task(id: headKey)` and memoised in `headMemo`, so this
+    /// runs ONCE per (room, corpus revision) — not on every body pass, which is
+    /// what the `@Query` it replaces was doing several times per swipe and once
+    /// per bridge save during a foreground burst. The total work over a room's
+    /// life goes DOWN; what changes is when it happens.
+    ///
+    /// Shape: predicated, sorted, unbounded, and **deliberately without
+    /// `propertiesToFetch`** — that combination is the iOS 18.6 defect the
+    /// query's own `init` documents at length, and this is the same known-good
+    /// configuration a source room's `@Query` itself carried from 2026-08-31.
+    /// The rows go through `liveVisible(rawOverride:)`, so the tag, wallet,
+    /// person and vibenet scopes apply exactly as they do to the list — a head
+    /// must describe the rows the room is showing, only more of them.
+    ///
+    /// **NEVER FEWER ROWS THAN THE LIST ALREADY HAS.** If this predicate is the
+    /// one that is broken on a given device (§592's report: `$0.source ==
+    /// source` disagreeing with a plain fetch on the same store), the fetch can
+    /// come back short or empty. Then the caller keeps what it already had, so
+    /// the worst case here is exactly the pre-§600 behaviour — a head over the
+    /// bounded list — rather than a head over nothing, which would silently
+    /// delete every reading in the room.
+    ///
+    /// All and Pinboard return the fallback untouched: All is bounded by its
+    /// own ruling (2026-08-06, the user accepted recency-scoped derivations
+    /// there) and Pinboard is unbounded already.
+    @MainActor
+    private func fullRoomRows(fallback: [Thing]) -> [Thing] {
+        guard source != "All", !Pinboard.isPinnedRoom(source) else { return fallback }
+        let d = FetchDescriptor<Thing>(
+            predicate: #Predicate<Thing> { $0.source == source },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        guard let raw = try? modelContext.fetch(d) else { return fallback }
+        let full = liveVisible(rawOverride: raw).live
+        return full.count >= fallback.count ? full : fallback
+    }
+
     /// Compute this room's head, off the body.
     ///
     /// ALL FIVE UNCONDITIONALLY, where the body short-circuits — and that costs
@@ -2429,7 +2541,13 @@ struct FeedScreen: View {
         // (liveness corollary 6 — the one the audit's check 6 exists for, and
         // the reason a PERF change that moves a fetch is always also a liveness
         // change).
-        let rows = roomScoped(visible.live)
+        // THE WHOLE ROOM, never the bounded list (prd §600) — see
+        // `fullRoomRows`. This is what lets the query above carry a
+        // `fetchLimit` without the head describing a truncated room, which is
+        // the entire objection the 2026-08-14 ruling raised.
+        let onScreen = visible.live
+        let base = fullRoomRows(fallback: onScreen)
+        let rows = roomScoped(base)
         // THE BOARD ALONE IS COMPUTED OVER THE WHOLE ROOM (2026-08-23), when
         // the room has been narrowed FROM that board — see `roomScoped`. A
         // board recomputed over one publisher's rows is a single bar naming
@@ -2438,7 +2556,7 @@ struct FeedScreen: View {
         // every other room and most of this one's life.
         let boardRows = readingScope == nil
             ? rows
-            : roomScoped(visible.live, narrowingToPublisher: false)
+            : roomScoped(base, narrowingToPublisher: false)
         let computed = RoomHeads(
             sourceHead: sourceHead(rows),
             topicMap: FeedInsight.topicMap(source: source, things: rows),
@@ -3338,11 +3456,13 @@ struct FeedScreen: View {
     private var builtBody: some View {
         #if DEBUG
         let _ = LaunchPerf.buildTick(source)
+        #endif
         // Names WHICH room's body built, which `HEAVYBUILD` also does — this
         // one is on the swipe's own clock, so a build belonging to the room
-        // being left is visible as such.
+        // being left is visible as such. Outside `#if DEBUG` since prd §600 —
+        // see `SwipeClock.isOn`; `LaunchPerf.buildTick` above stays DEBUG
+        // because it accumulates unconditionally and has no gate of its own.
         let _ = SwipeClock.mark("body", detail: "src=\(source)")
-        #endif
         return perfAccum("feedList[\(source)]") { feedList }
             // Re-tapping the active chip pops this surface's own pushed
             // screens and sheets back to root (the old per-tab pop habit).
@@ -5361,12 +5481,30 @@ struct FeedScreen: View {
                 sourceRoomFallbackSnapshot = scoped
                 return
             }
+            // CAPPED AT THE ROOM'S OWN BOUND (prd §600, 2026-09-04) — the
+            // correction the All room's half of this net already carries, now
+            // owed here too because this room's query gained a `fetchLimit`.
+            //
+            // Without the cap, every source room holding more than
+            // `sourceRoomFetchLimit` rows reads as a PERMANENT mismatch: the
+            // raw count says ten thousand, `things.count` says six hundred by
+            // our own instruction, and the unbounded recovery fetch below then
+            // runs on every foreground of every bulk-import room — on the main
+            // actor, carrying the heavy inline text. That is the exact
+            // regression the bound was added to remove, arriving through the
+            // safety net instead of through the list. It is also invisible:
+            // the room renders correctly the whole time.
             let probe = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == source })
-            guard let rawCount = try? modelContext.fetchCount(probe), rawCount != things.count
+            guard let rawCount = try? modelContext.fetchCount(probe),
+                  min(rawCount, Self.sourceRoomFetchLimit) != things.count
             else { return }
-            let fetch = FetchDescriptor<Thing>(
+            var fetch = FetchDescriptor<Thing>(
                 predicate: #Predicate<Thing> { $0.source == source },
                 sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+            // Bounded for the same reason the comparison above is: this array
+            // stands in for `things`, so it must reproduce what a healthy
+            // `@Query` would have handed over — not a larger set.
+            fetch.fetchLimit = Self.sourceRoomFetchLimit
             sourceRoomFallbackSnapshot = try? modelContext.fetch(fetch)
         }
         // THE HEAD IS COMPUTED HERE, NOT IN THE BODY (PERF 2026-08-21).
@@ -7472,7 +7610,7 @@ struct FeedScreen: View {
             FeedLedeCard(thing: thing,
                          selected: DS.isMac
                             && chrome.walkSelected == thing.id.uuidString)
-                .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
+                .modifier(rowEntrance(0))
                 .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -7498,7 +7636,7 @@ struct FeedScreen: View {
         let skin = rowSkin(forSource: source)
         return BundleRow(source: source, count: count, word: word, newest: newest, art: art)
             .environment(\.colorScheme, skin?.ink ?? colorScheme)
-            .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
+            .modifier(rowEntrance(index))
             .contentShape(Rectangle())
             .onTapGesture {
                 DSHaptic.selection()
@@ -7539,7 +7677,7 @@ struct FeedScreen: View {
         let skin = rowSkin(forSource: source)
         return StripRow(source: source, count: count, word: word, newest: newest, tiles: tiles)
             .environment(\.colorScheme, skin?.ink ?? colorScheme)
-            .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
+            .modifier(rowEntrance(index))
             .contentShape(Rectangle())
             .onTapGesture {
                 DSHaptic.selection()
@@ -8671,7 +8809,7 @@ struct FeedScreen: View {
                 // entrance now that the three ride inside it; the pieces still
                 // appear as they land, they just no longer each stage a
                 // separate surface into the room.
-                .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
+                .modifier(rowEntrance(0))
         }
     }
 
@@ -8835,7 +8973,7 @@ struct FeedScreen: View {
                 // popping in ahead of it — every other row in this room wears
                 // this entrance, and a header that didn't would be the one
                 // thing on screen that arrives without the wave.
-                .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
+                .modifier(rowEntrance(0))
                 .padding(.leading, DS.Space.s4)
                 // s8 above, s1 below (2026-08-22). At s6/s1 the header sat
                 // 24 from the card it left and 14 from the card it names —
@@ -9001,11 +9139,11 @@ struct FeedScreen: View {
         if let band = verdict.band {
                             WalletFlowBand(band: band, windowLabel: balanceRange.flowLabel,
                                spineAddress: spineWalletAddress)
-                    .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
+                    .modifier(rowEntrance(1))
         } else if let decline = verdict.decline {
             WalletFlowEmptyFigure(decline: decline, windowLabel: balanceRange.flowLabel,
                                   spineAddress: spineWalletAddress)
-                .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
+                .modifier(rowEntrance(1))
         }
     }
 
@@ -9106,7 +9244,7 @@ struct FeedScreen: View {
                     label: entry.label.isEmpty ? entry.short : entry.label,
                     onEdit: { feedSheet = .nftPicks(address: entry.address,
                                                     label: entry.label.isEmpty ? entry.short : entry.label) })
-                    .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
+                    .modifier(rowEntrance(2))
         }
     }
 
@@ -9128,7 +9266,7 @@ struct FeedScreen: View {
                     // doesn't scroll, rather than scrolling somewhere wrong.
                     cardScrollTarget = Self.riskCardAnchor(for: entry.id)
                 })
-                    .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
+                    .modifier(rowEntrance(2))
         }
     }
 
@@ -9162,7 +9300,7 @@ struct FeedScreen: View {
                                                       acting: walletLive.acting)
         if !holders.isEmpty {
                             WalletPermissionsCard(holders: holders)
-                    .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
+                    .modifier(rowEntrance(1))
                     .padding(.bottom, DS.Space.s3)
         }
     }
@@ -9183,7 +9321,7 @@ struct FeedScreen: View {
             || walletLive.acting.contains(where: { $0.modulesUnreadable || $0.keystorePartial }) {
             Section {
                 WalletActingPartiesRows(holders: holders, acting: walletLive.acting)
-                    .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
+                    .modifier(rowEntrance(2))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(WalletCardStyle.rowInsets)
@@ -9211,7 +9349,7 @@ struct FeedScreen: View {
                     feedSheet = .thing(thing)
                 }
                 .id(Self.approvalsAnchor)
-                .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
+                .modifier(rowEntrance(2))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
                 .listRowInsets(WalletCardStyle.rowInsets)
@@ -9242,7 +9380,7 @@ struct FeedScreen: View {
                     // Same reveal the balance card and holdings treemap wear —
                     // lending is usually the last of the live reads to land, so
                     // it gets the deepest stagger.
-                    .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
+                    .modifier(rowEntrance(2))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(WalletCardStyle.rowInsets)
@@ -9260,7 +9398,7 @@ struct FeedScreen: View {
         if !walletLive.uniswap.isEmpty {
             Section {
                 WalletLiquidityCard(book: walletLive.uniswap)
-                    .modifier(RowEntrance(index: 3, wave: shapeWave, style: entranceStyle))
+                    .modifier(rowEntrance(3))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(WalletCardStyle.rowInsets)
@@ -9280,7 +9418,7 @@ struct FeedScreen: View {
                 WalletPerpsCard(book: walletLive.hyperliquid)
                     // The risk strip's perp dots land here (§417).
                     .id(Self.perpsAnchor)
-                    .modifier(RowEntrance(index: 4, wave: shapeWave, style: entranceStyle))
+                    .modifier(rowEntrance(4))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(WalletCardStyle.rowInsets)
@@ -9367,7 +9505,7 @@ struct FeedScreen: View {
                 }
                 .padding(WalletCardStyle.pad)
                 .dsWidgetSurface(fillOpacity: Self.walletCardFill)
-                .modifier(RowEntrance(index: 5, wave: shapeWave, style: entranceStyle))
+                .modifier(rowEntrance(5))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
                 .listRowInsets(WalletCardStyle.rowInsets)
@@ -9636,7 +9774,7 @@ struct FeedScreen: View {
                                       subtitle: Self.foldSubline(newest))
                         }
                         .buttonStyle(.plain)
-                        .modifier(RowEntrance(index: i, wave: shapeWave, style: entranceStyle))
+                        .modifier(rowEntrance(i))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .listRowInsets(.init(top: DS.Space.s2,
@@ -9661,7 +9799,7 @@ struct FeedScreen: View {
                                       subtitle: Self.foldSubline(newest))
                         }
                         .buttonStyle(.plain)
-                        .modifier(RowEntrance(index: i, wave: shapeWave, style: entranceStyle))
+                        .modifier(rowEntrance(i))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .listRowInsets(.init(top: DS.Space.s2,
@@ -9807,7 +9945,7 @@ struct FeedScreen: View {
                 // already stages its cells once mounted; this is what
                 // stops the whole treemap from hard-popping in the moment
                 // the holdings read lands (2026-07-20, wallet streaming fix).
-                .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
+                .modifier(rowEntrance(1))
                 // The card needs the page gutter the bare map didn't (it used
                 // to bleed to the screen edge and self-pad its cells).
         }
@@ -10562,7 +10700,7 @@ struct FeedScreen: View {
             AnyView(shapedRow(thing, nextEventID: nextEventID, index: index,
                               imageOnly: imageOnly, wideArt: wideArt,
                               replies: replies))
-                .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
+                .modifier(rowEntrance(index))
                 .contentShape(Rectangle())
                 // THE INK FOLLOWS ITS CARD. Every text token in this app is a
                 // `Color.adaptive` resolved against the trait, so overriding
@@ -11545,10 +11683,31 @@ struct FeedScreen: View {
     /// actor. ~40 "Show older" taps of headroom, and constant thereafter no
     /// matter how large the corpus grows.
     ///
-    /// Still the ALL room's alone: source rooms took the light columns on
-    /// 2026-08-14 and deliberately not this bound, and the pinned room takes
-    /// neither. See `init` for both reasons.
+    /// The pinned room still takes neither bound — see `init` for why that one
+    /// room must never have a ceiling. Source rooms took the light columns on
+    /// 2026-08-14, this bound on 2026-09-04; see `sourceRoomFetchLimit`.
     static let allRoomFetchLimit = 1200
+
+    /// The same bound for a SOURCE room (prd §600, 2026-09-04) — and it is
+    /// half a fix, never a whole one. The other half is `fullRoomRows`.
+    ///
+    /// A source room is the one place a single query can be enormous: §307
+    /// raised the X caps to 10,000 posts and 5,000 likes, and §309 did the same
+    /// for Instagram, TikTok and Snapchat, so a bulk import lands thousands of
+    /// rows under ONE source in an afternoon. Since 2026-08-31 that query also
+    /// carries the heavy inline text again (the iOS 18.6 `propertiesToFetch`
+    /// defect — see `init`), so an unbounded read is the single largest
+    /// main-actor cost this screen has.
+    ///
+    /// LOWER than the All room's 1,200 on purpose, and the arithmetic is the
+    /// reason rather than taste: the window opens `windowRowTarget` (30) rows
+    /// per "Show older" tap, so 600 is twenty taps — far past anyone's
+    /// scrolling in one visit — while a source room's rows are individually
+    /// heavier than All's, because this branch cannot use `lightColumns`. The
+    /// All room's 1,200 is the light-column read and stays where it is.
+    ///
+    /// The ceiling is reachable, so the footer says so (`reachedFetchCeiling`).
+    static let sourceRoomFetchLimit = 600
 
     /// True when the window has opened as far as the FETCH will go — the
     /// person has reached the bound above, not the end of their corpus.
@@ -11560,11 +11719,19 @@ struct FeedScreen: View {
     /// reason it does when a room really is exhausted, so nothing downstream
     /// can tell the two apart — which is why this is asked separately.
     ///
-    /// Still All-room only: it is the only bounded room. Source rooms got the
-    /// light columns on 2026-08-14 but deliberately no row bound — see `init`.
+    /// SOURCE ROOMS TOO SINCE 2026-09-04 (prd §600) — they gained a bound, so
+    /// they gained the sentence that keeps the bound from lying. Leaving this
+    /// All-room-only while bounding those rooms is exactly the §83 failure the
+    /// property exists to prevent, and it would have been a silent one: the
+    /// footer would have read "That's everything from X" over a room holding
+    /// ten thousand posts.
+    ///
+    /// The pinned room is unbounded by design and correctly never matches.
     private var reachedFetchCeiling: Bool {
-        source == "All" && filter.tag == "All"
-            && windowRowBudget >= Self.allRoomFetchLimit
+        guard filter.tag == "All" else { return false }
+        if source == "All" { return windowRowBudget >= Self.allRoomFetchLimit }
+        guard !Pinboard.isPinnedRoom(source) else { return false }
+        return windowRowBudget >= Self.sourceRoomFetchLimit
     }
 
     /// Each step opens another target's worth. Monotonic for the life of the
@@ -11916,6 +12083,23 @@ struct RowEntrance: ViewModifier {
     let index: Int
     let wave: Int
     let style: Style
+    /// Skip the stagger and appear at rest (PERF 2026-09-04, prd §600).
+    ///
+    /// A room change is a REMOUNT (§265's `.id(filter.source)`), so every swipe
+    /// played this cascade on the first thirteen rows — thirteen animation
+    /// transactions, each with its own delay — *inside* the frames the page's
+    /// own move transition needed. Two motions on one row, competing for the
+    /// same main actor.
+    ///
+    /// It is also a design point, not only a cost: the row is already arriving,
+    /// carried by the page it sits on. Lifting it again on top of that is the
+    /// second animation on one moment that this file's own rule ("one animation
+    /// per moment — this IS the shape's moment") exists to forbid.
+    ///
+    /// Scoped to the swipe alone. A scroll into a new row and a room entered
+    /// from a chip tap while standing still both keep the entrance, because
+    /// there is no page move underneath them to carry the row in.
+    var instant: Bool = false
     @State private var shown = false
     /// Added 2026-08-04 (prd §299). This is the entrance EVERY feed row in the
     /// app wears, and it ignored Reduce Motion from the day it shipped —
@@ -11937,7 +12121,10 @@ struct RowEntrance: ViewModifier {
     }
 
     private func reveal() {
-        guard !reduceMotion else { shown = true; return }
+        // `instant` is checked beside `reduceMotion` rather than replacing it:
+        // both mean "arrive at rest", and the Reduce Motion path must keep
+        // working whether or not a swipe is in flight.
+        guard !reduceMotion, !instant else { shown = true; return }
         withAnimation(DS.Motion.standard.delay(Double(min(index, 12)) * style.step)) {
             shown = true
         }

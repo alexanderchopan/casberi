@@ -41,39 +41,91 @@ import Foundation
 /// reported section, read from the log.
 @MainActor
 enum SwipeClock {
-    #if DEBUG
+    // MARK: - Gate
+
+    /// **THIS CLOCK REPORTS IN RELEASE NOW (PERF 2026-09-04, prd §600).**
+    ///
+    /// It was `#if DEBUG` from the day it shipped, which made the one
+    /// instrument built for the one reported symptom — "lag swiping between
+    /// screens" — structurally unable to say anything about the configuration
+    /// people actually run. Every number in this project's perf record is
+    /// Debug on a simulator, and the 2026-08-21 pass that built this clock
+    /// closed by saying a device trace is the reading that would settle it.
+    /// A DEBUG-only trace cannot be that reading.
+    ///
+    /// `LaunchClock.reports` (`CasberiApp.swift`) and `SweepClock.isOn` are
+    /// both already shaped this way and are the precedent followed exactly:
+    /// DEBUG always reports, Release reports only on an explicit
+    /// `-swipeTimer YES`, which lands in `NSArgumentDomain` before any of this
+    /// runs. A shipped build passes the flag to nobody and stays silent.
+    ///
+    /// CACHED for `SweepClock`'s stated reason: this is consulted on every
+    /// instrumented call, and a `UserDefaults` hit per call is an instrument
+    /// that costs what it measures.
+    private static var cachedOn: Bool?
+    static var isOn: Bool {
+        if let cachedOn { return cachedOn }
+        #if DEBUG
+        let on = true
+        #else
+        let on = UserDefaults.standard.bool(forKey: "swipeTimer")
+        #endif
+        cachedOn = on
+        return on
+    }
+
+    // MARK: - The trace
+
+    /// Nil unless a swipe is in flight — so the storage is also the guard, and
+    /// nothing here allocates or formats while the clock is off.
     private static var t0: Date?
     private static var room: String = ""
-    #endif
 
     /// The gesture landed. Starts the clock and names where it is going.
     static func step(to source: String) {
-        #if DEBUG
+        guard isOn else { return }
         t0 = .now
         room = source
         NSLog("[Casberi] swipePerf| step to=%@", source)
-        #endif
     }
 
     /// One mark on the current swipe. Silent when no swipe is in flight, so a
     /// deep link or a launch never prints a half-trace with no `step` above it.
     static func mark(_ event: String, detail: String = "") {
-        #if DEBUG
         guard let t0 else { return }
         NSLog("[Casberi] swipePerf| %@ at=%dms room=%@%@",
               event, Int(Date.now.timeIntervalSince(t0) * 1000), room,
               detail.isEmpty ? "" : " " + detail)
-        #endif
     }
 
     /// The swipe is over — the next `step` starts a fresh trace. Called when
     /// the new room's list appears, so a room that never draws one leaves its
     /// trace open and visibly unfinished rather than silently tidy.
     static func finish() {
-        #if DEBUG
         guard t0 != nil else { return }
         mark("rows")
         t0 = nil
-        #endif
+    }
+
+    /// Time one synchronous block on the shell's own path, swipe or not
+    /// (prd §600, 2026-09-04).
+    ///
+    /// Deliberately NOT `mark`: that one is silent unless a swipe is in flight,
+    /// which is correct for a swipe trace and useless for a LAUNCH, where the
+    /// shell's most expensive walk happens. `LaunchPerf.time` already does this
+    /// job and its whole file is `#if DEBUG`, so it cannot answer the question
+    /// that matters here — whether a cost measured in Debug on a simulator is
+    /// still a cost in Release on a phone.
+    ///
+    /// Same gate as everything else in this file, so a shipped build that was
+    /// not asked to report prints nothing.
+    @discardableResult
+    static func span<T>(_ label: String, _ work: () -> T) -> T {
+        guard isOn else { return work() }
+        let t0 = ContinuousClock.now
+        let value = work()
+        let ms = Double((ContinuousClock.now - t0).components.attoseconds) / 1e15
+        NSLog("[Casberi] swipePerf| span=%@ took=%.1fms", label, ms)
+        return value
     }
 }

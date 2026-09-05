@@ -176,16 +176,25 @@ check "shapedSections no longer calls sourceHead(visible) inline" \
 #     `.live`-filtered — liveness corollary 6, and the reason the audit's own
 #     check 6 exists. A perf change that moves a fetch is always also a
 #     liveness change.
+#     AMENDED 2026-09-04 (prd §600): the read moved to `fullRoomRows`, so the
+#     `.live` filter moved with it — onto the fallback it is handed and onto its
+#     own return. The invariant is unchanged and now has two sites, both pinned;
+#     a guarded function that moves takes its guard with it.
 check "recomputeHeads filters .live at the read" \
-      "$FEED" 'roomScoped\(visible\.live\)' yes
+      "$FEED" 'let onScreen = visible\.live' yes
+check "fullRoomRows filters .live before it hands rows back" \
+      "$FEED" 'let full = liveVisible\(rawOverride: raw\)\.live' yes
 
 # A6. ONE narrowing rule. The lane strip scopes the head as well as the rows
 #     (2026-08-06); two spellings of that scope is how a head ends up
 #     describing a marketplace the reader just filtered away.
 check "shapedSections narrows through roomScoped" \
       "$FEED" 'let visible = roomScoped\(allVisible\)' yes
+#     Amended with A5 (prd §600): the argument is now the whole room rather than
+#     the bounded list, and the rule this pins — that both readers narrow through
+#     ONE function — is untouched.
 check "recomputeHeads narrows through the same roomScoped" \
-      "$FEED" 'roomScoped\(visible\.live\)' yes
+      "$FEED" 'let rows = roomScoped\(base\)' yes
 check "x402Scoped is not applied a second way in shapedSections" \
       "$FEED" 'shape == \.x402 \? x402Scoped\(allVisible\)' no
 
@@ -311,8 +320,13 @@ fi
 
 # B5. The bound applies to the rooms that can be enormous, and the All room's
 #     own ceiling still wins when both are present.
+# AMENDED 2026-09-04 (prd §600), not loosened: the source room took a PERMANENT
+# ceiling that day, so the transient budget is now the lower of the two rather
+# than the only bound. The invariant is unchanged — the budget must still reach
+# the descriptor — and the new spelling proves strictly more, since `min` also
+# pins that the permanent ceiling cannot be lost by arming a swipe.
 check "the source room honours rowBudget" \
-      "$FEED" 'if let rowBudget \{ d\.fetchLimit = rowBudget \}' yes
+      "$FEED" 'min\(Self\.sourceRoomFetchLimit, rowBudget \?\? \.max\)' yes
 check "the All room takes the lower of its ceiling and the budget" \
       "$FEED" 'min\(Self\.allRoomFetchLimit, rowBudget \?\? \.max\)' yes
 
@@ -328,17 +342,134 @@ fi
 
 # ------------------------------------------------------------ the instrument
 
-# The clock must cost nothing in a shipped build. An instrument that survives
-# into release is a log line on every swipe, forever.
+# The clock must cost nothing in a shipped build that was not asked to report.
+#
+# INVERTED 2026-09-04 (prd §600), the way C5's fade assertion was: this used to
+# demand that every `NSLog` sit under `#if DEBUG`, and that compile-time gate is
+# exactly what made the one instrument built for the one reported symptom unable
+# to say anything about Release on a phone — the configuration this project has
+# never measured. The rule it was protecting ("a shipped build is silent") is
+# unchanged; what changed is that the gate is now a runtime flag nobody passes,
+# which is `LaunchClock.reports`' and `SweepClock.isOn`'s own shape.
+#
+# So the check is now that the gate EXISTS and is a flag, not that the logs are
+# compiled out — and it still refuses a clock that prints unconditionally.
 if [[ -f "$CLOCK" ]]; then
-  if grep -q 'NSLog' "$(strip_comments "$CLOCK")" \
-     && [[ "$(grep -c 'NSLog' "$(strip_comments "$CLOCK")")" -le "$(grep -c '#if DEBUG' "$(strip_comments "$CLOCK")")" ]]; then
-    ok "SwipeClock logs only under #if DEBUG"
+  CLOCK_STRIPPED="$(strip_comments "$CLOCK")"
+  if grep -Eq 'UserDefaults\.standard\.bool\(forKey: "swipeTimer"\)' "$CLOCK_STRIPPED"; then
+    ok "SwipeClock reports in Release only under -swipeTimer"
   else
-    fail "SwipeClock has an NSLog outside #if DEBUG"
+    fail "SwipeClock has no release gate (it either cannot report on a phone, or always does)"
+  fi
+  # `step` is the only entry point that starts a trace, so gating it gates every
+  # `mark` below it — which is why `mark` may guard on `t0` alone. Without this
+  # the flag exists and governs nothing.
+  step_body="$(perl -0777 -ne 'print $1 if /static func step\(to source: String\) \{(.*?)\n    \}/s' "$CLOCK_STRIPPED")"
+  if print -r -- "$step_body" | grep -Eq 'guard isOn else \{ return \}'; then
+    ok "SwipeClock.step is gated on isOn"
+  else
+    fail "SwipeClock.step does not consult its own gate"
   fi
 else
   fail "SwipeClock.swift is missing"
+fi
+
+# ------------------------------------- D: the permanent bound (prd §600)
+#
+# The 2026-08-14 ruling refused a `fetchLimit` on a source room because
+# `sourceHead` composed from `visible` — so a bound made "your loudest year"
+# describe the newest N posts, the §83 fake status. §600 takes the bound and
+# keeps the ruling by SEPARATING THE TWO READERS: the list is bounded, and the
+# head reads the whole room through `fullRoomRows`.
+#
+# Every check below pins one half of that separation. Break any of them and the
+# build is green, the room renders, and a reading about years of history is
+# quietly computed over six hundred rows.
+
+# D1. The list is bounded.
+check "the source room's query carries the permanent ceiling" \
+      "$FEED" 'd\.fetchLimit = min\(Self\.sourceRoomFetchLimit, rowBudget \?\? \.max\)' yes
+
+# D2. The head does NOT read that bounded list. This is the §83 condition, and
+#     it is the whole reason the bound is allowed to exist.
+heads_body="$(perl -0777 -ne 'print $1 if /private func recomputeHeads\(\) \{(.*?)\n    \}/s' "$FEED_STRIPPED")"
+if print -r -- "$heads_body" | grep -Eq 'fullRoomRows\(fallback:'; then
+  ok "recomputeHeads reads the whole room, not the bounded list"
+else
+  fail "recomputeHeads composes from the bounded query (§83: a head over a truncated room)"
+fi
+# …and nothing in it may take `visible` as the head's base any more. Negative,
+# so read from the stripped copy — this file documents the change by naming the
+# expression it no longer uses.
+if print -r -- "$heads_body" | grep -Eq 'roomScoped\(visible'; then
+  fail "recomputeHeads still scopes `visible` directly (the bound would truncate the head)"
+else
+  ok "recomputeHeads takes its base from fullRoomRows alone"
+fi
+
+# D3. The full read is genuinely full. A `fetchLimit` here re-introduces §83
+#     through the back door; `propertiesToFetch` re-introduces the iOS 18.6
+#     empty-room defect on a PREDICATED fetch, which is the worst bug this app
+#     has shipped recently.
+full_body="$(perl -0777 -ne 'print $1 if /private func fullRoomRows\(fallback: \[Thing\]\) -> \[Thing\] \{(.*?)\n    \}/s' "$FEED_STRIPPED")"
+if [[ -z "$full_body" ]]; then
+  fail "fullRoomRows is missing (the head has nothing to read the whole room from)"
+else
+  if print -r -- "$full_body" | grep -Eq 'fetchLimit'; then
+    fail "fullRoomRows bounds its own fetch (§83: the head sees a truncated room again)"
+  else
+    ok "fullRoomRows fetches unbounded"
+  fi
+  if print -r -- "$full_body" | grep -Eq 'propertiesToFetch'; then
+    fail "fullRoomRows projects columns on a predicated fetch (the iOS 18.6 empty-room defect)"
+  else
+    ok "fullRoomRows carries no propertiesToFetch"
+  fi
+  # D4. It can never make the head WORSE than before §600. If this device is one
+  #     where `$0.source == source` disagrees with a plain fetch, the read comes
+  #     back short — and without this the room's every reading is deleted.
+  if print -r -- "$full_body" | grep -Eq 'full\.count >= fallback\.count \? full : fallback'; then
+    ok "fullRoomRows never returns fewer rows than the list already has"
+  else
+    fail "fullRoomRows can return fewer rows than the list (a broken predicate would erase every reading)"
+  fi
+fi
+
+# D5. A reachable bound must never render as the end of the corpus.
+check "reachedFetchCeiling covers source rooms" \
+      "$FEED" 'windowRowBudget >= Self\.sourceRoomFetchLimit' yes
+
+# D6. The per-source staleness net compares against the SAME ceiling the query
+#     carries. Uncapped, every bulk-import room is a permanent mismatch and runs
+#     the recovery fetch on every foreground — the exact cost §600 removed,
+#     arriving through the safety net instead of through the list, invisibly.
+check "the per-source staleness net caps its comparison at the room's ceiling" \
+      "$FEED" 'min\(rawCount, Self\.sourceRoomFetchLimit\) != things\.count' yes
+
+# D7. The swipe suppression must not swallow Reduce Motion. `instant` and
+#     `reduceMotion` both mean "arrive at rest", and replacing one with the
+#     other would restore the §299 accessibility gap this modifier already had
+#     once.
+entrance_body="$(perl -0777 -ne 'print $1 if /private func reveal\(\) \{(.*?)\n    \}/s' "$FEED_STRIPPED")"
+if print -r -- "$entrance_body" | grep -Eq 'guard !reduceMotion, !instant else'; then
+  ok "RowEntrance honours Reduce Motion and the swipe suppression independently"
+else
+  fail "RowEntrance's entrance guard no longer names both reduceMotion and instant"
+fi
+# One construction site, so the flag cannot drift across twenty call sites.
+check "every row entrance is built through one helper" \
+      "$FEED" 'private func rowEntrance\(_ index: Int\) -> RowEntrance' yes
+check "the helper suppresses the entrance during a swipe" \
+      "$FEED" 'instant: rowBudget != nil' yes
+
+# D8. Arithmetic, not taste: the ceiling must be many windows past anything a
+#     person opens in one visit, or the footer people meet is the bound.
+src_limit="$(grep -Eo 'sourceRoomFetchLimit = [0-9]+' "$FEED" | grep -Eo '[0-9]+')"
+win="$(grep -Eo 'windowRowTarget = [0-9]+' "$FEED" | grep -Eo '[0-9]+')"
+if [[ -n "$src_limit" && -n "$win" ]] && (( src_limit >= win * 10 )); then
+  ok "sourceRoomFetchLimit ($src_limit) is ≥ 10 windows of $win"
+else
+  fail "sourceRoomFetchLimit ($src_limit) is too small against windowRowTarget ($win)"
 fi
 
 # ---------------------------------------------------------------- mutations
@@ -360,6 +491,7 @@ mutate() {  # mutate <description> <which: feed|main> <perl-expression>
     main)     perl -0777 -i -pe "$expr" "$dir/MainSurface.swift" ;;
     composer) perl -0777 -i -pe "$expr" "$dir/Composer.swift" ;;
     root)     perl -0777 -i -pe "$expr" "$dir/RootShell.swift" ;;
+    clock)    perl -0777 -i -pe "$expr" "$dir/SwipeClock.swift" ;;
     *)    print -r -- "  ✗ unknown mutation target: $which"; rm -rf "$dir"; return 1 ;;
   esac
   local survived=0
@@ -468,7 +600,12 @@ mutate "the memo is keyed by source alone (a scope change flashes the wrong head
   's/headMemo\[headIdentity\]/headMemo[source]/g' || mfails=$((mfails + 1))
 mutate "the head is recomputed inline again"  feed 's/\? heads\?\.topicMap : nil/? FeedInsight.topicMap(source: source, things: visible) : nil/' \
   || mfails=$((mfails + 1))
-mutate "recomputeHeads drops its .live filter"  feed 's/roomScoped\(visible\.live\)/roomScoped(visible)/' || mfails=$((mfails + 1))
+# RETARGETED 2026-09-04 (prd §600): the head's base is `fullRoomRows(...)` now,
+# and the `.live` filter it must keep moved with it — onto `let onScreen =
+# visible.live` and onto `fullRoomRows`' own return. Left pointing at the old
+# expression this matched nothing, which is a mutation that cannot fail and
+# therefore proves nothing (the same no-op-survivor shape C5 announced).
+mutate "recomputeHeads drops its .live filter"  feed 's/let onScreen = visible\.live/let onScreen = visible/' || mfails=$((mfails + 1))
 mutate "headIdentity stops covering the wallet scope"  feed 's/selectedWallet \?\? "", //' || mfails=$((mfails + 1))
 # The bug this pass wrote and caught by re-reading its own diff: without the
 # budget in the key, the task never re-fires when the budget lifts and the head
@@ -477,8 +614,37 @@ mutate "headKey stops covering the row budget (deferred becomes dropped)"  feed 
   's/\+ \(rowBudget == nil \? "\|full" : "\|bounded"\)//' || mfails=$((mfails + 1))
 mutate "headIdentity counts through the @Query getter"  feed 's/String\(revision\.count\)/String(things.count)/' || mfails=$((mfails + 1))
 mutate "rowBudget leaves FeedScreen: Equatable"  feed 's/\n            && a\.rowBudget == b\.rowBudget//' || mfails=$((mfails + 1))
-mutate "the source room stops honouring rowBudget"  feed 's/if let rowBudget \{ d\.fetchLimit = rowBudget \}//' || mfails=$((mfails + 1))
+mutate "the source room stops honouring rowBudget"  feed \
+  's/d\.fetchLimit = min\(Self\.sourceRoomFetchLimit, rowBudget \?\? \.max\)/d.fetchLimit = Self.sourceRoomFetchLimit/' \
+  || mfails=$((mfails + 1))
 mutate "the budget is never released"  main 's/        swipeRowBudget = nil\n//' || mfails=$((mfails + 1))
+
+# Section D (prd §600). Each of these builds green and renders a room that
+# looks entirely correct while making a false claim about it, or pays back the
+# cost the bound was added to remove.
+mutate "the head reads the bounded list again (§83)"  feed \
+  's/let base = fullRoomRows\(fallback: onScreen\)/let base = onScreen/' || mfails=$((mfails + 1))
+mutate "the whole-room read is itself bounded (§83 through the back door)"  feed \
+  's/        let d = FetchDescriptor<Thing>\(\n            predicate/        var d = FetchDescriptor<Thing>(\n            predicate/; s/(\n        guard let raw = try\? modelContext\.fetch\(d\) else \{ return fallback \})/\n        d.fetchLimit = Self.sourceRoomFetchLimit$1/' \
+  || mfails=$((mfails + 1))
+mutate "the whole-room read loses its never-fewer-rows guard"  feed \
+  's/return full\.count >= fallback\.count \? full : fallback/return full/' || mfails=$((mfails + 1))
+mutate "the source room's permanent ceiling is dropped"  feed \
+  's/d\.fetchLimit = min\(Self\.sourceRoomFetchLimit, rowBudget \?\? \.max\)/if let rowBudget { d.fetchLimit = rowBudget }/' \
+  || mfails=$((mfails + 1))
+mutate "the ceiling footer goes back to All-only (the bound reads as the end)"  feed \
+  's/return windowRowBudget >= Self\.sourceRoomFetchLimit/return false/' || mfails=$((mfails + 1))
+mutate "the per-source net compares against an uncapped count"  feed \
+  's/min\(rawCount, Self\.sourceRoomFetchLimit\) != things\.count/rawCount != things.count/' \
+  || mfails=$((mfails + 1))
+mutate "the swipe suppression swallows Reduce Motion (§299)"  feed \
+  's/guard !reduceMotion, !instant else/guard !instant else/' || mfails=$((mfails + 1))
+mutate "the row entrance stops being suppressed during a swipe"  feed \
+  's/instant: rowBudget != nil/instant: false/' || mfails=$((mfails + 1))
+mutate "SwipeClock loses its release gate (the phone can never be measured)"  clock \
+  's/UserDefaults\.standard\.bool\(forKey: "swipeTimer"\)/true/' || mfails=$((mfails + 1))
+mutate "SwipeClock.step stops consulting its gate"  clock \
+  's/        guard isOn else \{ return \}\n        t0 = \.now/        t0 = .now/' || mfails=$((mfails + 1))
 
 # Section C. Each of these builds green, renders correctly, and re-introduces
 # a defect a person feels rather than sees.
