@@ -14,116 +14,74 @@ struct FilesScreen: View {
     @State private var result: BridgeProof?
 
     /// The connection door, open (prd §186).
-    @State private var showConnection = false
+
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
     var body: some View {
-        BridgeSetupPage(name: "Files") {
-            if files.connected {
-                BridgeConnectedState(
-                    bridgeID: "files",
-                    name: "Files",
-                    identity: files.folderName.isEmpty
-                        ? String(localized: "Folder") : files.folderName,
-                    // How it connected, and only that (audit, 2026-07-31): the
-                    // note ended "· read-only, never modified" two lines above
-                    // the checklist's "Read-only — never edits a file."
-                    connectionNote: String(localized: "A folder on \(DS.device)"),
-                    capabilitiesFallback: ["Reads the folder you picked.",
-                                           "Read-only — never edits a file."],
-                    openConnection: { showConnection = true }
-                )
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                // The way back to your things (§460).
-                RoomDoor(name: "Files", source: "Files")
-                    .listRowSeparator(.hidden)
-            } else {
-                BridgeSetupHeader(
-                    name: "Files",
-                    mode: .onThisDevice,
-                    intro: "Documents searchable by their text, images by what they say. Nothing leaves this \(DS.device).")
-                folderSection.listRowSeparator(.hidden)
-            }
-        }
-        .sheet(isPresented: $showConnection) {
-            BridgeConnectionSheet(title: "Files") {
-                folderSection.listRowSeparator(.hidden)
-                removeSection.listRowSeparator(.hidden)
-            }
-            // A SECOND `.fileImporter`, not a stray duplicate (bug report,
-            // 2026-07-29: "the button to choose a folder isn't interacting").
-            // "Change" lives inside this sheet's own content, and a system
-            // document picker presents from whichever view controller is
-            // FRONTMOST — with the sheet up, that's this one, not the base
-            // List underneath it. The importer attached down there (below)
-            // still owns the FIRST connect, before any sheet exists to cover
-            // it; this one owns every reconnect afterward. Same binding, same
-            // handler — only the presenting context differs.
-            .fileImporter(isPresented: $picking, allowedContentTypes: [.folder],
-                          onCompletion: handlePick)
-        }
+        AccountPage(
+            name: "Files", seatID: "files", source: "Files",
+            state: AccountPageState.of(name: "Files", seatID: "files",
+                                       connected: files.connected, store: store),
+            intro: "Documents searchable by their text, images by what they say. Nothing leaves this \(DS.device).",
+            mode: .onThisDevice,
+            teardown: { files.disconnect() },
+            sheet: $sheet,
+            act: { folderBlock },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
+        // ONE `.fileImporter` now, and that is the §639 dividend. It used to
+        // need two — one on the base List and a second inside the Connection
+        // sheet — because a system document picker presents from whichever
+        // view controller is FRONTMOST, and "Change" lived inside that sheet
+        // (bug report, 2026-07-29: "the button to choose a folder isn't
+        // interacting"). The sheet is gone: the picker is the act slot in both
+        // states, so there is only ever one presenting context.
         .fileImporter(isPresented: $picking, allowedContentTypes: [.folder], onCompletion: handlePick)
         .onAppear {
             if files.connected { Task { await sync() } }
         }
     }
 
-    private func handlePick(_ outcome: Result<URL, Error>) {
-        guard case .success(let url) = outcome else { return }
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        if files.setFolder(url: url) {
-            DSHaptic.tap()
-            Task { await sync(justConnected: true) }
-        } else {
-            result = .failed(String(localized: "Couldn't keep access to that folder — try picking it again."))
-        }
-    }
 
-    private var folderSection: some View {
-        Section {
-            if files.connected {
-                HStack(spacing: DS.Space.s3) {
-                    Image(systemName: "icloud")
-                        .dsGlyph(17, weight: .medium)
-                        .foregroundStyle(DS.tint)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(files.folderName.isEmpty ? "Folder" : files.folderName)
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        Text("Connected — files sync when you visit or open the app.")
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    }
-                    Spacer()
-                    Button("Change") { picking = true }
-                        .dsText(.callout15).fontWeight(.semibold)
-                        .foregroundStyle(DS.tint)
-                        .buttonStyle(.plain)
+    @ViewBuilder private var folderBlock: some View {
+        if files.connected {
+            HStack(spacing: DS.Space.s3) {
+                Image(systemName: "icloud")
+                    .dsGlyph(17, weight: .medium)
+                    .foregroundStyle(DS.tint)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(files.folderName.isEmpty ? "Folder" : files.folderName)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    // NOT "Connected —": the state line under the name says
+                    // that once, in the page's own voice (§639).
+                    Text("Files sync when you visit or open the app.")
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 }
-                .padding(.vertical, DS.Space.s1)
-                .dsListCardRow()
-            } else {
-                DSSlabButton(title: "Choose a folder",
-                             systemImage: "folder.badge.plus") { picking = true }
+                Spacer()
+                Button("Change") { picking = true }
+                    .dsText(.callout15).fontWeight(.semibold)
+                    .foregroundStyle(DS.tint)
+                    .buttonStyle(.plain)
             }
-            BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your files…"),
-                                 proof: result)
-            // Says what LANDS before what's safe — see `SteamScreen` (audit,
-            // 2026-07-31). "findable by name" left the same day: the header
-            // three rows up is already the offer's "Any folder, findable".
-            // Names no app: there is no Files on Mac (it's Finder), and this
-            // bridge is one screen whose whole subject is a folder picker,
-            // so the sentence says what you can choose rather than which
-            // app would show it to you.
-            DSSlabNote(text: "Any folder you can choose — often iCloud Drive. The folder is never changed.")
+            .padding(.vertical, DS.Space.s1)
+        } else {
+            DSSlabButton(title: "Choose a folder",
+                         systemImage: "folder.badge.plus") { picking = true }
         }
-        .dsSlabSection()
+        BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your files…"),
+                             proof: result)
+        // Says what LANDS before what's safe — see `SteamScreen` (audit,
+        // 2026-07-31). "findable by name" left the same day: the header
+        // three rows up is already the offer's "Any folder, findable".
+        // Names no app: there is no Files on Mac (it's Finder), and this
+        // bridge is one screen whose whole subject is a folder picker,
+        // so the sentence says what you can choose rather than which
+        // app would show it to you.
+        DSSlabNote(text: "Any folder you can choose — often iCloud Drive. The folder is never changed.", plain: true)
     }
 
-    private var removeSection: some View {
-        BridgeDisconnectSection(bridgeID: "files", name: "Files") {
-            files.disconnect()
-        }
-    }
 
     private func sync(justConnected: Bool = false) async {
         guard !syncing else { return }
