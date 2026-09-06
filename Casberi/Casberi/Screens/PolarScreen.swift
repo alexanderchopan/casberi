@@ -94,6 +94,41 @@ struct PolarScreen: View {
         }
     }
 
+    // MARK: - The key
+
+    /// The connect form — steps whole, furniture gone (prd §218). It is the
+    /// act field with no key, and the "Your key" sheet once there is one, so a
+    /// key is replaced by exactly the path it was pasted.
+    @ViewBuilder private var tokenBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if let url = TokenBridge.polar.setupURL {
+                DSSlabButton(title: TokenBridge.polar.doorTitle,
+                             detail: TokenBridge.polar.doorHost,
+                             systemImage: "arrow.up.right") {
+                    DSHaptic.tap()
+                    openURL(url)
+                }
+            }
+            BridgeStepLines(steps: [TokenBridge.polar.steps[0]], numbered: false)
+            // The four scopes ARE the read-only promise (Stripe's own
+            // reasoning) — a token minted with only these physically
+            // cannot refund, cancel, or create anything. Orders joined
+            // them in §537; a token minted before that has three, which
+            // costs the sales half and nothing else (see `PolarFetch.orders`).
+            DSCheckList(lines: ["Orders — read",
+                                "Refunds — read",
+                                "Subscriptions — read",
+                                "Organizations — read"])
+            BridgeStepLines(steps: [TokenBridge.polar.steps[1]], numbered: false)
+            DSSlabField(placeholder: TokenBridge.polar.placeholder,
+                        text: $tokenField, actionLabel: "Save", secure: true,
+                        action: saveToken)
+            BridgeSyncStatusRows(syncing: connecting,
+                                 syncingLine: String(localized: "Checking the token…"),
+                                 proof: result)
+        }
+    }
+
     // MARK: - Actions
 
     private func load() {

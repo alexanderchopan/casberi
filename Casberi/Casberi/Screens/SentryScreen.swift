@@ -87,6 +87,59 @@ struct SentryScreen: View {
     }
 
 
+    // MARK: - Step one: the token
+
+    /// The connect form — steps whole, furniture gone (prd §218). It is the
+    /// act field with no key, and the "Your key" sheet once there is one, so a
+    /// key is replaced by exactly the path it was pasted.
+    @ViewBuilder private var tokenBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if let url = TokenBridge.sentry.setupURL {
+                // Step one, doing itself (prd §218) — verb over address,
+                // the 2026-08-14 anatomy.
+                DSSlabButton(title: TokenBridge.sentry.doorTitle,
+                             detail: TokenBridge.sentry.doorHost,
+                             systemImage: "arrow.up.right") {
+                    DSHaptic.tap()
+                    doorTapped = true
+                    openURL(url)
+                }
+            }
+            // Unnumbered since 2026-08-14 (the door did step one; a "2"
+            // under it read as a missing-1 riddle); `acknowledges` keeps
+            // the confirm-green check when a step provably lands.
+            BridgeStepLines(steps: [TokenBridge.sentry.steps[0]], startingAt: 2,
+                            numbered: false, acknowledges: true,
+                            doneThrough: stepsDone)
+            // The scopes are the honest ask, and they are why this
+            // bridge's read-only promise is STRUCTURAL rather than kept by
+            // conduct: a token minted with these three physically cannot
+            // resolve an issue or change a project, whatever this app
+            // does. The list IS the promise, so no gray note restates it.
+            DSCheckList(lines: ["org:read", "project:read", "event:read"])
+            BridgeStepLines(steps: [TokenBridge.sentry.steps[1]], startingAt: 3,
+                            numbered: false, acknowledges: true,
+                            doneThrough: stepsDone)
+            // The host has no verb of its own — SAVE below commits both.
+            // An empty-verb field still paints its capsule, so a pre-filled
+            // host would read as a live, tinted, inert button (§83's
+            // disabled-control corollary) if it carried a label.
+            DSSlabField(placeholder: SentryAccount.defaultHost, text: $hostField,
+                        actionLabel: "", keyboard: .URL, action: { })
+            DSSlabField(placeholder: TokenBridge.sentry.placeholder,
+                        text: $tokenField, actionLabel: "Save", secure: true,
+                        action: saveToken)
+            BridgeSyncStatusRows(syncing: resolving,
+                                 syncingLine: String(localized: "Checking the token…"),
+                                 proof: result)
+            // Named because the failure is otherwise a bare 401 that reads
+            // exactly like a bad token — the one setup mistake here that
+            // has nothing to do with what you pasted.
+            DSSlabNote(text: "EU region? Use de.sentry.io. Self-hosted? Use your own domain.",
+                       plain: true)
+        }
+    }
+
     /// Only OBSERVABLE facts count (the delight pass's rule): the door really
     /// being tapped, and text really arriving in the field. Nothing here infers
     /// that someone finished a step on Sentry's website.
