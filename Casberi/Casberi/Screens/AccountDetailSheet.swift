@@ -116,6 +116,7 @@ struct AccountDetailSheet: View {
             }
         }
         .onAppear {
+            thingCount = (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
             guard detail == .data else { return }
             exportURL = buildExport()
             addressExportURL = buildAddressBookExport()
@@ -958,9 +959,11 @@ struct AccountDetailSheet: View {
 
     // MARK: - Live facts
 
-    private var thingCount: Int {
-        (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
-    }
+    /// Snapshotted at `onAppear` with the other live facts above (prd §628)
+    /// — this was the one computed property in this sheet still running a
+    /// whole-store `COUNT` per body evaluation, the exact shape build 525's
+    /// CPU report caught one screen up in Settings.
+    @State private var thingCount = 0
 
     /// The real on-disk total: the SwiftData store (group container's
     /// default.store + its -wal/-shm sidecars) PLUS the sidecars the store

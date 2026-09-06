@@ -586,7 +586,7 @@ swiftc -Onone -o "$TMP/run" "$TMP/stubs.swift" "$TMP/extracted.swift" "$TMP/main
 # the run must FAIL.
 mutate() {
   local label="$1" find="$2" replace="$3"
-  python3 - "$TMP/extracted.swift" "$TMP/mutated.swift" "$find" "$replace" <<'PY'
+  python3 - "$TMP/extracted.swift" "$TMP/mutated.swift" "$find" "$replace" <<'PY' || { echo "  ✗ STALE MUTATION: the applier exited non-zero (anchor not found — nothing was tested)"; exit 1; }
 import sys
 src_path, out, find, replace = sys.argv[1:5]
 src = open(src_path).read()

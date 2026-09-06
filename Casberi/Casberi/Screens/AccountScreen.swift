@@ -14,6 +14,7 @@ struct SettingsScreen: View {
     @Environment(\.openURL) private var openURL
     @Environment(BridgeStore.self) private var bridgeStore
     @Environment(HomeRoute.self) private var route
+    @Environment(\.scenePhase) private var scenePhase
     /// Drives the Data tile's badge: a green lock on device, a blue cloud once
     /// the person turns iCloud sync on.
     @AppStorage("icloud.sync") private var icloudSync = false
@@ -63,7 +64,11 @@ struct SettingsScreen: View {
             .dsAdaptiveContentWidth()
             .dsPageBackground()
             .dsScreenTitle("Settings")
-            .onAppear { markMilestone() }
+            .onAppear { readCounts(); markMilestone() }
+            // The count is re-read when the app comes back to this screen —
+            // a sweep may have landed things while it was away — and never
+            // in between: one COUNT per return, not one per bridge landing.
+            .onChange(of: scenePhase) { _, phase in if phase == .active { readCounts() } }
             // `dsNavSheet` rather than `dsPageSheet` (prd §560) — the nav-sheet
             // family's own chassis, which adds the presented corner these
             // three were missing along with the sizing they already had.
@@ -167,9 +172,29 @@ struct SettingsScreen: View {
         var action: () -> Void = {}
     }
 
-    /// Live count for the Data row — the number that leads its story.
-    private var thingCount: Int {
-        (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
+    /// The Data row's count — read ONCE per appearance, never per body
+    /// evaluation (prd §628, 2026-09-06).
+    ///
+    /// This was a computed property running `fetchCount` — a SQL `COUNT` over
+    /// the whole store — and it was reached from `primaryRows`, i.e. from the
+    /// body. Build 525's CPU-resource report on a real phone put this exact
+    /// chain (`SettingsScreen.body` → `allRows` → `primaryRows` → SwiftData →
+    /// CoreData) at 21 of the main thread's 31 samples while the app burned
+    /// 90 seconds of CPU in 131: the person was sitting on the Diagnostics
+    /// sheet, a foreground sweep was landing bridges underneath, every landing
+    /// invalidated this body through the stores it observes, and every
+    /// evaluation counted the corpus again. Two watchdog kills sat on top of
+    /// the same evenings' sweeps. A settings row does not need a live count;
+    /// it needs the count when the screen opens, and again when the app comes
+    /// back to it.
+    @State private var thingCount = 0
+    /// Same rule for the Keychain: `AgentKey.active` is a `SecItemCopyMatching`
+    /// round trip to securityd, and `secondaryRows` read it per evaluation.
+    @State private var keyedAgent: AgentProvider?
+
+    private func readCounts() {
+        thingCount = (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
+        keyedAgent = AgentKey.active
     }
 
     /// A corpus passing a round number is a real crossing, and this is the one
@@ -232,8 +257,8 @@ struct SettingsScreen: View {
 
     /// Group two — the app itself: housekeeping, rarely visited. A–Z.
     private var secondaryRows: [RowSpec] {
-        // One Keychain read per render, not two (the row needs it twice).
-        let keyedAgent = AgentKey.active
+        // Read once per appearance into `keyedAgent` (see `readCounts`) —
+        // this used to be a Keychain round trip per body evaluation.
         let keyed = keyedAgent != nil
         return [
             // The category chips' order (prd §533) — the ONE thing about the

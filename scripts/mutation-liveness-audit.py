@@ -53,12 +53,60 @@ def strip_comments(text):
     return "\n".join(re.sub(r"^\s*#.*$", "", line) for line in text.split("\n"))
 
 
+# The third shape (prd §628): a python applier that DOES detect a missing
+# anchor and exits non-zero — and a caller that never looks. Inside a function
+# invoked as `mutate … || fail=1`, `set -e` is off, so the exit is dropped on
+# the floor, no mutant is written, the compile fails on the missing file, and
+# the mutation is counted as caught. The applier line must carry its own `||`
+# or `&&`, open an `if`, or be followed by a `$?` check.
+APPLIES_PYTHON = re.compile(r"^[^\n#]*\bpython3 - [^\n]*<<'?PY", re.M)
+
+
+# Only the MUTATION helpers: a harness's other python heredocs (extractors,
+# comment strippers) return through the function they end, and their status is
+# the caller's business. A helper is one whose name says so.
+MUTATE_FN = re.compile(r"^(?:[a-z_]*mutate[a-z_]*|probe)\(\)\s*\{.*?^\}", re.M | re.S)
+
+
+def python_unchecked(code):
+    """An applier whose result nobody reads: the apply line itself carries no
+    `||`/`&&`/`if`, and the line after its heredoc terminator reads no `$?`."""
+    bodies = "\n".join(m.group(0) for m in MUTATE_FN.finditer(code))
+    for m in APPLIES_PYTHON.finditer(bodies):
+        code = bodies
+        # The WHOLE line: the `|| { … }` sits after the heredoc opener, which
+        # is where the match ends. Reading only the match flagged 40 harnesses
+        # that were all checking their status on the very same line.
+        line = code[code.rfind("\n", 0, m.start()) + 1:code.find("\n", m.end())]
+        if "||" in line or "&&" in line or line.lstrip().startswith("if "):
+            continue
+        end = code.find("\nPY", m.end())
+        if end < 0:
+            continue
+        after = code[end + 3:].lstrip("\n").split("\n", 2)
+        nxt = "\n".join(after[:2])
+        if "$?" in nxt or "applied" in nxt:
+            continue
+        return True
+    return False
+
+
 def audit():
     findings = []
     checked = 0
     for path in sorted(SCRIPTS.glob("*-selftest.sh")) + sorted(SCRIPTS.glob("*-audit.sh")):
         raw = path.read_text()
         code = strip_comments(raw)
+        if any(APPLIES_PYTHON.search(m.group(0)) for m in MUTATE_FN.finditer(code)):
+            checked += 1
+            if python_unchecked(code):
+                findings.append(
+                    f"scripts/{path.name}: applies a mutation with `python3 -` and never reads its\n"
+                    "    exit status. Inside a function called as `mutate … || fail=1`, `set -e` is\n"
+                    "    off, so an applier that exits on a missing anchor is ignored: no mutant is\n"
+                    "    written, the compile fails on the missing file, and the mutation is counted\n"
+                    "    as CAUGHT. Put `|| { echo STALE; return 1; }` on the python line."
+                )
         if not APPLIES_PERL.search(code):
             continue
         checked += 1
@@ -105,11 +153,26 @@ mutate() {
   python3 -c 'pass'
 }
 """
+    # The third shape: a python applier that exits on a missing anchor, and a
+    # caller that never looks (metrics-selftest, 2026-09-06).
+    py_unchecked = """#!/bin/zsh
+mutate() {
+  python3 - "$SRC" "$dir/x.swift" "$from" "$to" <<'PY'
+import sys
+if sys.argv[3] not in open(sys.argv[1]).read(): sys.exit(1)
+PY
+  cp main.swift "$dir/"
+  if swiftc -o "$dir/run" "$dir/x.swift" && "$dir/run"; then echo SURVIVED; return 1; fi
+}
+"""
+    py_checked = py_unchecked.replace("<<'PY'", "<<'PY' || { echo STALE; return 1; }")
     tmp = pathlib.Path(tempfile.mkdtemp())
     try:
         cases = [("zz-vulnerable-selftest.sh", vulnerable, True),
                  ("zz-guarded-selftest.sh", guarded, False),
-                 ("zz-mentions-selftest.sh", mentions_only, False)]
+                 ("zz-mentions-selftest.sh", mentions_only, False),
+                 ("zz-pyunchecked-selftest.sh", py_unchecked, True),
+                 ("zz-pychecked-selftest.sh", py_checked, False)]
         for name, body, should_fire in cases:
             target = SCRIPTS / name
             target.write_text(body)
@@ -132,7 +195,7 @@ mutate() {
         failures += 1
     if failures:
         return 1
-    print(f"✓ mutation-liveness self-test: 3 fixtures, {checked} perl-mutating harnesses all detect a no-op")
+    print(f"✓ mutation-liveness self-test: 5 fixtures, {checked} mutating harnesses all detect a no-op and read their applier's status")
     return 0
 
 
@@ -145,7 +208,7 @@ def main():
         for f in findings:
             print("  ✗ " + f)
         return 1
-    print(f"mutation-liveness audit: ok ({checked} perl-mutating harnesses, each detects a mutation that changed nothing)")
+    print(f"mutation-liveness audit: ok ({checked} mutating harnesses — each detects a mutation that changed nothing, and reads its applier's status)")
     return 0
 
 

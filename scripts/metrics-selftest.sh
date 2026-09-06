@@ -318,14 +318,14 @@ let twoThreads = #"""
     {
       "threadAttributed": true,
       "callStackRootFrames": [
-        { "binaryName": "Casberi", "offsetIntoBinaryTextSegment": 100, "sampleCount": 1,
-          "address": 1,
+        { "binaryName": "Casberi", "offsetIntoBinaryTextSegment": 2592912, "sampleCount": 1,
+          "address": 3,
           "subFrames": [
             { "binaryName": "SwiftUI", "offsetIntoBinaryTextSegment": 200, "sampleCount": 1,
               "address": 2,
               "subFrames": [
-                { "binaryName": "Casberi", "offsetIntoBinaryTextSegment": 2592912,
-                  "sampleCount": 1, "address": 3 }
+                { "binaryName": "Casberi", "offsetIntoBinaryTextSegment": 100,
+                  "sampleCount": 1, "address": 1 }
               ]
             }
           ]
@@ -370,9 +370,34 @@ let forked = #"""
 }
 """#.data(using: .utf8)!
 let hot = D.frames(callStackTreeJSON: forked)
+check("the root frame is the LEAF and comes first", hot.first?.offset == 1)
 check("a fork follows the HEAVIEST branch, not the first written",
-      hot.first?.offset == 3)
+      hot.contains { $0.offset == 3 })
 check("the light branch is not reported", !hot.contains { $0.offset == 2 })
+
+// THE POLARITY, from a real report (prd §628). Build 525's watchdog kill, as
+// MetricKit handed it over: the root frame is the CRASH POINT and every
+// subFrames step is the caller, down to dyld's `start`. Fourteen deep, so a
+// twelve-frame cap has to choose an end — and the old `reversed().prefix()`
+// chose `start`'s end, printing the run loop's scaffolding and cutting off the
+// only frame that said where ten seconds went. This fixture is that stack.
+func caller(_ binary: String, _ offset: Int, _ sub: String) -> String {
+    #"{ "binaryName": "\#(binary)", "offsetIntoBinaryTextSegment": \#(offset), "sampleCount": 1, "subFrames": [ \#(sub) ] }"#
+}
+var real525 = #"{ "binaryName": "dyld", "offsetIntoBinaryTextSegment": 19484, "sampleCount": 1 }"#
+for (b, o) in [("Casberi", 22494064), ("SwiftUI", 183368), ("SwiftUI", 184564), ("SwiftUI", 198000),
+               ("UIKitCore", 573784), ("UIKitCore", 1185392), ("GraphicsServices", 5272),
+               ("CoreFoundation", 189772), ("CoreFoundation", 192928), ("CoreFoundation", 415192),
+               ("CoreFoundation", 656132), ("Casberi", 4242), ("libsystem_kernel.dylib", 8)] {
+    real525 = caller(b, o, real525)
+}
+let realTree = #"{ "callStacks": [ { "threadAttributed": true, "callStackRootFrames": [ \#(real525) ] } ] }"#
+    .data(using: .utf8)!
+let realFrames = D.frames(callStackTreeJSON: realTree)
+check("the real report's LEAF is on top", realFrames.first == D.Frame(binary: "libsystem_kernel.dylib", offset: 8, sampleCount: 1))
+check("the cap drops `start`, not the leaf", !realFrames.contains { $0.binary == "dyld" })
+check("our own deepest frame is the one nearest the crash, not `main`",
+      D.ownFrame(realFrames, binary: "Casberi") == "Casberi +4242")
 
 // Multiple ROOT frames fork the same way.
 let twoRoots = #"""
@@ -419,7 +444,11 @@ check("a frame with no offset still reports its binary",
         #"{"callStacks":[{"threadAttributed":true,"callStackRootFrames":[{"binaryName":"Casberi"}]}]}"#
           .data(using: .utf8)!).first == D.Frame(binary: "Casberi", offset: 0, sampleCount: 0))
 
-// The limit caps from the LEAF end — the deep frames are the diagnostic ones.
+// The limit caps from the LEAF end — and the leaf is the ROOT frame (prd §628):
+// offset 0 here is the crash point, 40 is `start`. This check used to assert
+// the opposite, because it was written from the same wrong guess as the code
+// it tested, and it passed for the whole time the screen was cutting off the
+// leaf. A fixture built on the reader's assumption proves the assumption.
 var deep = #"{ "binaryName": "Casberi", "offsetIntoBinaryTextSegment": 40, "sampleCount": 1 }"#
 for i in stride(from: 39, through: 0, by: -1) {
     deep = "{ \"binaryName\": \"Casberi\", \"offsetIntoBinaryTextSegment\": \(i), \"sampleCount\": 1, \"subFrames\": [\(deep)] }"
@@ -428,7 +457,7 @@ let deepData = "{ \"callStacks\": [ { \"threadAttributed\": true, \"callStackRoo
     .data(using: .utf8)!
 let capped = D.frames(callStackTreeJSON: deepData, limit: 5)
 check("the limit is honoured", capped.count == 5)
-check("the limit keeps the LEAF end", capped.first?.offset == 40 && capped.last?.offset == 36)
+check("the limit keeps the LEAF end, which is the ROOT frame", capped.first?.offset == 0 && capped.last?.offset == 4)
 
 if failures > 0 { print("✗ metrics self-test: \(failures) failure(s)"); exit(1) }
 print("✓ metrics self-test: histogram + call-stack reading verified")
@@ -446,7 +475,15 @@ swiftc -Onone -o "$TMP/run" "$DIGEST" "$TMP/main.swift" 2>&1 \
 mutate() {
   local label="$1" from="$2" to="$3"
   local dir="$TMP/mut"; rm -rf "$dir"; mkdir -p "$dir"
-  python3 - "$DIGEST" "$dir/digest.swift" "$from" "$to" <<'PY'
+  # THE STATUS IS CHECKED, and it was not (prd §628). This function is called
+  # as `mutate … || mut_fail=1`, and `set -e` is OFF inside a function on the
+  # left of `||` — so when the python below found no anchor it printed its
+  # complaint, wrote no mutant, swiftc failed on the missing file, the
+  # SURVIVED branch was skipped, and the function returned 0: a mutation that
+  # never ran, counted as CAUGHT. Two mutations sat in exactly that state
+  # after the polarity fix, and the run still printed "11 mutations caught".
+  # The third shape of the §627 class: the detector fired and nobody listened.
+  python3 - "$DIGEST" "$dir/digest.swift" "$from" "$to" <<'PY' || { echo "  ✗ STALE MUTATION (anchor not found, nothing tested): $label"; return 1; }
 import sys
 src, dst, a, b = sys.argv[1:5]
 text = open(src).read()
@@ -467,14 +504,16 @@ mut_fail=0
 mutate "the attributed thread is ignored" \
   'let stack = stacks.first { ($0["threadAttributed"] as? Bool) == true } ?? stacks[0]' \
   'let stack = stacks[0]' || mut_fail=1
-# Root first — the reader diagnoses `main`.
-mutate "the stack is rendered root-first" \
-  'return Array(chain.reversed().prefix(limit))' \
-  'return Array(chain.prefix(limit))' || mut_fail=1
+# Root first — the reader diagnoses `main`. This IS the shipped bug of build
+# 525 (prd §628): reversing a walk that is already leaf-first and then capping
+# it kept `start`'s end and cut the crash point off.
+mutate "the stack is rendered root-first (build 525's own bug)" \
+  'return Array(chain.prefix(limit))' \
+  'return Array(chain.reversed().prefix(limit))' || mut_fail=1
 # The limit cuts the leaf end off instead of the root end.
 mutate "the limit keeps the root end" \
-  'return Array(chain.reversed().prefix(limit))' \
-  'return Array(chain.prefix(limit).reversed())' || mut_fail=1
+  'return Array(chain.prefix(limit))' \
+  'return Array(chain.suffix(limit))' || mut_fail=1
 # A fork followed by write order — the same hang reads differently each run.
 mutate "a fork follows the first child" \
   'return nodes.max { count(of: $0) < count(of: $1) } ?? nodes[0]' \

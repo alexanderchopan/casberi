@@ -707,6 +707,36 @@ private struct FilePictureContent: View {
 /// read as hollow. Loads the same PHAsset ScreenshotContent already shows and
 /// shares the real photo instead. One implementation, used by both the thing
 /// sheet's Share row and the Feed row's swipe-to-share.
+/// The URL a row's share menu offers, found ONCE per row (prd §628).
+///
+/// `ThingShareLink` lives inside every feed row's `.contextMenu`, whose
+/// builder is non-escaping — so its body ran per row per body evaluation,
+/// and its body faulted `thing.content` (not in the All room's light columns)
+/// and ran `NSDataDetector` over it. The §260 amendment two lines above the
+/// menu says all three detector scans moved out of the row path; this one
+/// had come back in, one call deeper.
+///
+/// Positives AND negatives are remembered, unlike `StoredPixels`: a row's
+/// `content` is set when the row is made and changed only by heals inside a
+/// foreground sweep (OCR, enrichment) — the one write outside a sweep is on a
+/// Thing being created — so the sweep-end `flush()` beside `StoredPixels`'
+/// covers every change, and "no URL in this text" is as stable an answer as a
+/// URL. Keyed on the id alone on purpose: keying on `content.count` would
+/// fault the very column this exists to stop faulting.
+@MainActor
+enum ShareTargetMemo {
+    private static var urls: [UUID: URL?] = [:]
+    static func url(for thing: Thing) -> URL? {
+        guard thing.isLive else { return nil }
+        if let hit = urls[thing.id] { return hit }
+        let text = thing.content.isEmpty ? thing.title : thing.content
+        let found = Capture.detectURL(in: text)
+        urls[thing.id] = found
+        return found
+    }
+    static func flush() { urls.removeAll() }
+}
+
 struct ThingShareLink<Label: View>: View {
     let thing: Thing
     @ViewBuilder let label: () -> Label
@@ -733,7 +763,7 @@ struct ThingShareLink<Label: View>: View {
                           preview: SharePreview(thing.title, image: Image(uiImage: screenshotImage))) {
                     label()
                 }
-            } else if let url = Capture.detectURL(in: shareText) {
+            } else if let url = ShareTargetMemo.url(for: thing) {   // found once — prd §628
                 ShareLink(item: url) { label() }
             } else {
                 ShareLink(item: shareText, subject: Text(thing.title)) { label() }

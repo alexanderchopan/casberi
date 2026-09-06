@@ -1914,7 +1914,7 @@ struct RootShell: View {
             // the sweep's own late slots land is harmless: `StoredPixels`
             // remembers only pictures that exist, so an early drop costs one
             // re-decode and can never show a stale or missing one.
-            defer { StoredPixels.flush() }
+            defer { StoredPixels.flush(); ShareTargetMemo.flush() }
             runForegroundWork()
         }
         // Resnapshot hand-off state so the thing sheet's "Add to <app>"

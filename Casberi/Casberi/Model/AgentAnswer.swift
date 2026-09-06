@@ -284,14 +284,28 @@ enum AgentProvider: String, CaseIterable, Identifiable {
 enum AgentKey {
     private static let activeDefaultsKey = "byok.provider"
 
+    /// One Keychain census per vault generation (prd §628). `configured`
+    /// made one `SecItemCopyMatching` per provider — an IPC round trip each —
+    /// and `isConfigured`/`active` are read from view BODIES (`ThingSheetView`,
+    /// `Composer`, Settings), which the sweep re-evaluates on every landing.
+    /// `TokenVault.generation` is bumped by every writer, so this can never
+    /// serve a key that was just pasted or just removed.
+    private static let memoLock = NSLock()
+    nonisolated(unsafe) private static var configuredMemo: (generation: Int, value: [AgentProvider])?
+
     static var configured: [AgentProvider] {
-        AgentProvider.allCases.filter { TokenVault.get($0.vaultKey) != nil }
+        memoLock.lock(); defer { memoLock.unlock() }
+        let generation = TokenVault.generation
+        if let memo = configuredMemo, memo.generation == generation { return memo.value }
+        let value = AgentProvider.allCases.filter { TokenVault.get($0.vaultKey) != nil }
+        configuredMemo = (generation, value)
+        return value
     }
 
     static var isConfigured: Bool { !configured.isEmpty }
 
     static func isConfigured(_ provider: AgentProvider) -> Bool {
-        TokenVault.get(provider.vaultKey) != nil
+        configured.contains(provider)
     }
 
     /// The provider a keyed answer runs on — the last one saved, falling

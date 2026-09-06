@@ -140,3 +140,9 @@ Every entry below is **verbatim** as it was written — nothing was summarised, 
 **Self-tested with three fixtures** — the vulnerable shape must fire, the guarded shape must not, and a harness that only mentions perl in a comment must not be demanded of.
 
 **What it deliberately does not check.** Whether a mutation is meaningful. It refuses only a mutant identical to its source; whether the change actually breaks what the harness cares about is beyond any static check.
+
+## MetricKit self-test, amended (2026-09-06) → prd §628
+
+**The polarity fixture was wrong, and the code it tested was wrong the same way.** `AppMetricsDigest.frames` reversed MetricKit's walk and capped from the wrong end, so build 525's crash reports rendered as twelve run-loop frames with the crash point cut off. The tree already begins at the crash point; the fixtures now carry the real shape, including that report's own stack, and a mutation restores the shipped bug and must be caught.
+
+**Its applier's status is read now.** Two mutations went stale in the same fix, the python applier said so, and the `|| mut_fail=1` caller never looked — the third shape of §627, pinned for every harness by `mutation-liveness-audit.py`.

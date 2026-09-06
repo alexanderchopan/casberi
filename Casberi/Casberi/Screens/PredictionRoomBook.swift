@@ -59,9 +59,24 @@ struct PredictionRoomBook: View {
     /// How many of this room's markets are actually followed — a count, only
     /// ever used to decide whether the "Following" divider has anything to
     /// divide. Never rendered as a number (the module doctrine's tally ban).
-    private var followingCount: Int {
-        (try? modelContext.fetchCount(FetchDescriptor<Thing>(
+    /// Read on appearance, on foreground, and on a pull — never per body
+    /// evaluation (prd §628). Both of these were computed properties running
+    /// a fetch from inside the body: the same shape build 525's CPU report
+    /// caught in Settings, in a card that sits in the feed, whose body the
+    /// sweep re-evaluates on every landing.
+    @State private var followingCount = 0
+    @State private var resolved: [Thing] = []
+    @Environment(\.scenePhase) private var scenePhase
+
+    private func readBook() {
+        followingCount = (try? modelContext.fetchCount(FetchDescriptor<Thing>(
             predicate: #Predicate<Thing> { $0.source == source }))) ?? 0
+        let s = source
+        var d = FetchDescriptor<Thing>(
+            predicate: #Predicate<Thing> { $0.source == s && $0.marketResolvedYes != nil },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        d.fetchLimit = 3
+        resolved = ((try? modelContext.fetch(d)) ?? []).live
     }
 
     /// Settled markets, newest first (prd §235). A resolution is the payoff
@@ -75,14 +90,6 @@ struct PredictionRoomBook: View {
     /// which is a property of this view, and filtered to `.live` at the
     /// boundary (build 177 corollary 4) so nothing downstream reads a
     /// tombstoned model.
-    private var resolved: [Thing] {
-        let s = source
-        var d = FetchDescriptor<Thing>(
-            predicate: #Predicate<Thing> { $0.source == s && $0.marketResolvedYes != nil },
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-        d.fetchLimit = 3
-        return ((try? modelContext.fetch(d)) ?? []).live
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
@@ -107,7 +114,8 @@ struct PredictionRoomBook: View {
                 onPreview: onPreview)
             // The payoff, given a home (prd §235) — questions you followed
             // that have become facts.
-            let settled = resolved
+            // `.live` at the read: `resolved` is HELD state now (corollary 5).
+            let settled = resolved.live
             if !settled.isEmpty {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     Text("How they turned out")
@@ -132,6 +140,9 @@ struct PredictionRoomBook: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
+        .task(id: source) { readBook() }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { readBook() } }
+        .onChange(of: chrome.refreshPulse) { _, _ in readBook() }
         .onAppear {
             // Default to this room's OWN venue, not All — you tapped the
             // Kalshi chip. Widening is the switcher's job, and only once

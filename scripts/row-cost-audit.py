@@ -77,6 +77,14 @@ CHECKS = [
         "evaluation, in the rooms that carry pictures",
     ),
     (
+        "Casberi/Casberi/Screens/ThingContent.swift",
+        "ShareTargetMemo.url(for: thing)",
+        r"Capture\.detectURL\(in: shareText\)",
+        "ThingShareLink running NSDataDetector in its body",
+        "inside every row's non-escaping context menu: a content fault plus a "
+        "detector pass per row per body evaluation — the scan a §260 amendment says was removed",
+    ),
+    (
         "Casberi/Casberi/Design/AppIconTile.swift",
         "if let hit = inkMemo[key] { return hit }",
         # The key must name the PAGE BACKGROUND, which is what `DS.themedPage`
@@ -101,7 +109,7 @@ DECODE_ALLOWED = {
 
 # The flush that makes the cache safe. Without it a replaced thumbnail is stale
 # for the session; see StoredPixels' header for why ONE call covers every writer.
-FLUSH = ("Casberi/Casberi/Shell/RootShell.swift", "defer { StoredPixels.flush() }")
+FLUSH = ("Casberi/Casberi/Shell/RootShell.swift", "defer { StoredPixels.flush(); ShareTargetMemo.flush() }")
 
 
 def strip_comments(text):
@@ -205,7 +213,10 @@ def self_test():
          lambda t: t.replace("theme.background.name", "theme.bleed.name")),
         ("the sweep-end flush is dropped",
          "Casberi/Casberi/Shell/RootShell.swift",
-         lambda t: t.replace("defer { StoredPixels.flush() }", "")),
+         lambda t: t.replace("defer { StoredPixels.flush(); ShareTargetMemo.flush() }", "")),
+        ("the share menu detects per row again",
+         "Casberi/Casberi/Screens/ThingContent.swift",
+         lambda t: t.replace("ShareTargetMemo.url(for: thing)", "Capture.detectURL(in: shareText)")),
     ]
 
     failures = 0

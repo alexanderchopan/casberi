@@ -203,7 +203,7 @@ swiftc -Onone -o "$TMP/run" "$TMP/extracted.swift" "$TMP/main.swift" 2>&1 \
 mutate() {
   local label="$1" from="$2" to="$3"
   local dir="$TMP/mut"; rm -rf "$dir"; mkdir -p "$dir"
-  python3 - "$TMP/extracted.swift" "$dir/extracted.swift" "$from" "$to" <<'PY'
+  python3 - "$TMP/extracted.swift" "$dir/extracted.swift" "$from" "$to" <<'PY' || { echo "  ✗ STALE MUTATION: the applier exited non-zero (anchor not found — nothing was tested)"; exit 1; }
 import sys
 src, dst, a, b = sys.argv[1:5]
 text = open(src).read()

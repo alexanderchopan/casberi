@@ -237,7 +237,7 @@ swiftc -Onone -o "$WORK/run" "$WORK/Stubs.swift" "$FOLD" "$WORK/main.swift" 2>&1
 mutate() {
   local name="$1" from="$2" to="$3"
   local dir="$WORK/mut"; rm -rf "$dir"; mkdir -p "$dir"
-  python3 - "$FOLD" "$dir/FeedFold.swift" "$from" "$to" <<'PY'
+  python3 - "$FOLD" "$dir/FeedFold.swift" "$from" "$to" <<'PY' || { echo "  ✗ STALE MUTATION: the applier exited non-zero (anchor not found — nothing was tested)"; exit 1; }
 import sys
 src, dst, a, b = sys.argv[1:5]
 s = open(src).read()

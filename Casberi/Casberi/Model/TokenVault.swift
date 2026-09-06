@@ -57,7 +57,14 @@ enum TokenVault {
         return String(data: data, encoding: .utf8)
     }
 
+    /// Bumped by EVERY write below (prd §628), so a reader that memoises a
+    /// Keychain answer — `AgentKey.configured` — can key on it and never miss
+    /// a writer. A `SecItemCopyMatching` is an IPC round trip to securityd,
+    /// and three sheet bodies were making one (or eight) per body evaluation.
+    nonisolated(unsafe) static var generation = 0
+
     static func set(_ token: String, for key: String) {
+        generation += 1
         delete(key)
         var add: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -72,6 +79,7 @@ enum TokenVault {
     }
 
     static func delete(_ key: String) {
+        generation += 1
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -86,6 +94,7 @@ enum TokenVault {
     /// One service-wide delete, so every current and future token, key, and
     /// mail password is covered without an enumeration to forget.
     static func deleteAll() {
+        generation += 1
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -122,6 +131,7 @@ enum TokenVault {
     @discardableResult
     static func migrateToDeviceOnly(force: Bool = false)
     -> (hardened: Int, alreadyRight: Int, failed: Int) {
+        generation += 1
         if !force && UserDefaults.standard.bool(forKey: migratedKey) { return (0, 0, 0) }
 
         let query: [String: Any] = [

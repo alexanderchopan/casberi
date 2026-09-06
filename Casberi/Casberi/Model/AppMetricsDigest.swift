@@ -140,9 +140,21 @@ enum AppMetricsDigest {
     ///    a plausible-looking stack of the wrong thread, which is worse than
     ///    no stack. Falls back to the first only when nothing is marked.
     ///
-    /// 2. **Leaf first.** The tree runs root (`main`) → `subFrames` → leaf, and
-    ///    the leaf is the line that failed. A crash report puts it at the top
-    ///    and so does this.
+    /// 2. **Leaf first — and the tree ALREADY IS (prd §628, 2026-09-06).**
+    ///    `callStackRootFrames` is the crash point, and each `subFrames` step
+    ///    is the CALLER: the walk runs leaf → … → `main` → `start`. The first
+    ///    cut of this assumed the opposite (root = `main`), reversed the walk,
+    ///    and THEN capped it — so on a real report the cap kept the twelve
+    ///    frames nearest `start` and discarded the leaf. Build 525's two
+    ///    watchdog reports each rendered as `dyld, main, SwiftUI ×3, UIKit ×2,
+    ///    GraphicsServices, CoreFoundation ×4` and nothing else: the main
+    ///    thread's run-loop scaffolding, identical in both, with the one
+    ///    frame that mattered cut off the end. That order is coherent ONLY as
+    ///    a root-first list — under the old assumption it would have meant
+    ///    SwiftUI called `main` — which is how the polarity was settled: by
+    ///    the device's own output, not by a fixture built on the same guess.
+    ///    The cap keeps the leaf end now; the harness's fixtures carry the
+    ///    real shape, including that report.
     ///
     /// 3. **The heaviest branch at a fork.** A crash stack is one chain, but a
     ///    HANG stack is SAMPLED and forks wherever the samples disagreed;
@@ -168,7 +180,9 @@ enum AppMetricsDigest {
             if let frame = frame(from: node) { chain.append(frame) }
             here = heaviest(node["subFrames"] as? [[String: Any]] ?? [])
         }
-        return Array(chain.reversed().prefix(limit))
+        // The walk is already leaf-first; the cap must keep THAT end. (See
+        // rule 2 — `reversed().prefix()` here is precisely the bug.)
+        return Array(chain.prefix(limit))
     }
 
     /// `sampleCount` decides; ties go to the first, so the walk is

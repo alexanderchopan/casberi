@@ -230,7 +230,7 @@ mutate() {
   # the mutant is identical to the shipped file, and the mutation "survives"
   # for a reason that has nothing to do with the code. Paid for on this
   # harness's first run — the dedupe guard was the one that could never fire.
-  MUT_FROM="$from" MUT_TO="$to" python3 - "$WORK/mutant.swift" <<'PYEOF'
+  MUT_FROM="$from" MUT_TO="$to" python3 - "$WORK/mutant.swift" <<'PYEOF' || { echo "  ✗ STALE MUTATION: the applier exited non-zero (anchor not found — nothing was tested)"; exit 1; }
 import os, sys
 path = sys.argv[1]
 src = open(path).read()

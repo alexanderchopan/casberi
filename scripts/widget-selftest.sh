@@ -517,7 +517,7 @@ mutate() {
   cp "$PAYLOAD" "$dir/WidgetPayload.swift"
   cp "$MONEY" "$dir/MoneyFormat.swift"
   cp "$LEDE" "$dir/WidgetLede.swift"
-  python3 - "$dir/$file" "$expr" <<'PY'
+  python3 - "$dir/$file" "$expr" <<'PY' || { echo "  ✗ STALE MUTATION: the applier exited non-zero (anchor not found — nothing was tested)"; exit 1; }
 import sys
 path, expr = sys.argv[1], sys.argv[2]
 old, new = expr.split("|||")

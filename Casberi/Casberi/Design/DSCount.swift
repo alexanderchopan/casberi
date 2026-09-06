@@ -14,8 +14,15 @@ import Foundation
 /// Privacy figures' copy is left in place for the session mid-work on those
 /// files; fold it here when that lands.
 enum DSCount {
+    /// ONE formatter (prd §628): constructing a `NumberFormatter` is one of
+    /// the most expensive things Foundation does per call, and the devnet
+    /// sheets call this four times in a line, per render. Formatters are
+    /// thread-safe for formatting since iOS 7; the shared one is never mutated
+    /// after this.
+    private static let decimal: NumberFormatter = {
+        let f = NumberFormatter(); f.numberStyle = .decimal; return f
+    }()
     static func grouped(_ value: UInt64) -> String {
-        let f = NumberFormatter(); f.numberStyle = .decimal
-        return f.string(from: NSNumber(value: value)) ?? String(value)
+        decimal.string(from: NSNumber(value: value)) ?? String(value)
     }
 }

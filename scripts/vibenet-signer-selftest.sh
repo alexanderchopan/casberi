@@ -308,7 +308,7 @@ mutate() {
     echo "  ✗ STALE MUTATION '$label' — pattern not found, so it tests nothing"
     return 1
   fi
-  python3 - "$WORK/VibenetSigner.swift" "$from" "$to" <<'PY'
+  python3 - "$WORK/VibenetSigner.swift" "$from" "$to" <<'PY' || { echo "  ✗ STALE MUTATION: the applier exited non-zero (anchor not found — nothing was tested)"; exit 1; }
 import sys, io
 p, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
 s = io.open(p, encoding="utf-8").read()
@@ -810,7 +810,7 @@ cp Casberi/Casberi/Model/RLP.swift "$WORK/RLP.swift"
     echo "  ✗ STALE MUTATION '$label' — pattern not found in VibenetCreate.swift"
     return 1
   fi
-  python3 - "$WORK/VibenetCreate.swift" "$from" "$to" <<'PYC'
+  python3 - "$WORK/VibenetCreate.swift" "$from" "$to" <<'PYC' || { echo "  ✗ STALE MUTATION: the applier exited non-zero (anchor not found — nothing was tested)"; exit 1; }
 import sys, io
 p, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
 s = io.open(p, encoding="utf-8").read()
@@ -838,7 +838,7 @@ rlpmutate() {
     echo "  ✗ STALE MUTATION '$label' — pattern not found in RLP.swift"
     return 1
   fi
-  python3 - "$WORK/RLP.swift" "$from" "$to" <<'PYR'
+  python3 - "$WORK/RLP.swift" "$from" "$to" <<'PYR' || { echo "  ✗ STALE MUTATION: the applier exited non-zero (anchor not found — nothing was tested)"; exit 1; }
 import sys, io
 p, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
 s = io.open(p, encoding="utf-8").read()
@@ -860,7 +860,7 @@ txmutate() {
   cp "$TXFILE" "$WORK/VibenetTransaction.swift"
   grep -qF -- "$from" "$WORK/VibenetTransaction.swift" \
     || { echo "  ✗ STALE MUTATION '$label' — pattern not found"; return 1; }
-  python3 - "$WORK/VibenetTransaction.swift" "$from" "$to" <<'PY2'
+  python3 - "$WORK/VibenetTransaction.swift" "$from" "$to" <<'PY2' || { echo "  ✗ STALE MUTATION: the applier exited non-zero (anchor not found — nothing was tested)"; exit 1; }
 import sys, io
 p, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
 s = io.open(p, encoding="utf-8").read()

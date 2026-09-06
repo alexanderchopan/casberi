@@ -237,7 +237,7 @@ echo "mutations (each must be caught)"
 mutate() {
   local label="$1" from="$2" to="$3"
   mkdir -p "$TMP/m"
-  python3 - "$RENEW" "$TMP/m/ENSRenew.swift" "$from" "$to" <<'PY'
+  python3 - "$RENEW" "$TMP/m/ENSRenew.swift" "$from" "$to" <<'PY' || { echo "  ✗ STALE MUTATION: the applier exited non-zero (anchor not found — nothing was tested)"; exit 1; }
 import sys
 src, dst, a, b = sys.argv[1:5]
 s = open(src).read()

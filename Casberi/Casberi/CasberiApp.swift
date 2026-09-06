@@ -121,11 +121,17 @@ struct CasberiApp: App {
         // rather than crash-looping if the on-disk store can't open — S0:
         // the app must always launch. `SharedStore.degradeReason` is non-nil
         // when that happened; RootShell flashes it once at first appearance.
+        // Timed in RELEASE too (prd §628): the first phone reading put open →
+        // first screen at 1.3s median, and nothing on the device could say how
+        // much of that is the store opening. One `Date` around the call and
+        // one bounded defaults write, once per process.
+        let storeT0 = Date()
         #if DEBUG
         container = LaunchPerf.time("containerWithFallback") { SharedStore.containerWithFallback() }
         #else
         container = SharedStore.containerWithFallback()
         #endif
+        PerfReadings.record("LaunchStore", ms: Date().timeIntervalSince(storeT0) * 1000)
         // Clear the CloudKit "attempt in flight" marker on the first proof
         // this launch survived setup — either CoreData's mirror event or a
         // clean background handoff. See `CloudSyncGuard`.

@@ -108,7 +108,7 @@ mutate() {
   local dir="$work/m"; rm -rf "$dir"; mkdir -p "$dir"
   cp "$TX" "$dir/tx.swift"
   grep -qF -- "$from" "$dir/tx.swift" || fail "mutation '$name' matches nothing — it is stale and tests the shipped code"
-  python3 - "$dir/tx.swift" "$from" "$to" <<'PY'
+  python3 - "$dir/tx.swift" "$from" "$to" <<'PY' || { echo "  ✗ STALE MUTATION: the applier exited non-zero (anchor not found — nothing was tested)"; exit 1; }
 import sys, io
 p,a,b = sys.argv[1], sys.argv[2], sys.argv[3]
 s = io.open(p, encoding="utf-8").read()

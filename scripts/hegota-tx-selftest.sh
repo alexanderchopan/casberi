@@ -183,7 +183,7 @@ mutate() {
   if ! grep -qF -- "$from" "$target"; then
     echo "  ✗ STALE MUTATION '$label' — pattern not found in $(basename "$file")"; return 1
   fi
-  python3 - "$target" "$from" "$to" <<'PY'
+  python3 - "$target" "$from" "$to" <<'PY' || { echo "  ✗ STALE MUTATION: the applier exited non-zero (anchor not found — nothing was tested)"; exit 1; }
 import sys, io
 p, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
 s = io.open(p, encoding="utf-8").read()
@@ -355,7 +355,7 @@ wmutate() {
   if ! grep -qF -- "$from" "$target"; then
     echo "  ✗ STALE MUTATION '$label' — pattern not found in $(basename "$file")"; return 1
   fi
-  python3 - "$target" "$from" "$to" <<'PYMUT'
+  python3 - "$target" "$from" "$to" <<'PYMUT' || { echo "  ✗ STALE MUTATION: the applier exited non-zero (anchor not found — nothing was tested)"; exit 1; }
 import sys, io
 p, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
 s = io.open(p, encoding="utf-8").read()

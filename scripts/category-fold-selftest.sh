@@ -1221,7 +1221,7 @@ swiftc -Onone -o "$TMP/run" "$FOLD" "$TMP/stub.swift" "$TMP/main.swift" 2>&1 | g
 # fail proves nothing (the `--self-test` doctrine used by every audit here).
 mutate() {
   local label="$1" expr="$2"
-  python3 - "$FOLD" "$TMP/mutated.swift" "$expr" <<'PY'
+  python3 - "$FOLD" "$TMP/mutated.swift" "$expr" <<'PY' || { echo "  ✗ STALE MUTATION: the applier exited non-zero (anchor not found — nothing was tested)"; exit 1; }
 import sys
 src = open(sys.argv[1]).read()
 old, new = sys.argv[3].split("|||")
