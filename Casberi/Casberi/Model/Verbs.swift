@@ -934,22 +934,39 @@ enum PlaceWords {
         if thing.kind == .event, thing.source == VibenetIdentity.source {
             return "on vibenet"
         }
+        // **THE RULE THE `default` BELOW ALREADY STATED, APPLIED TO THE WHOLE
+        // TABLE (2026-09-06, prd §634).** "A kind with no place of its own
+        // says NOTHING rather than 'in your things', which is true of every
+        // row in the corpus and therefore tells you nothing about this one" —
+        // and four of the cases above it were exactly that sentence with a
+        // different verb. `saved by you`, `written by you`, `recorded by you`
+        // and `banked by you` are true of every row a person ever put in this
+        // app; they spent a labelled row, inside its own card, to say "this is
+        // yours", under a title that is already theirs.
+        //
+        // §363 had already made this ruling for ONE kind: `SocialReceptionCard`
+        // replaced the spec table on a social post because "the spec table's
+        // whole contribution was one row reading `From — saved by you`, in its
+        // own card, behind an 80pt label column". It never reached the others.
+        //
+        // What SURVIVES names a real place — an app you could go to, a folder,
+        // a card, a chain. That is a fact about THIS thing; "you saved it" is
+        // a fact about the app.
         switch thing.kind {
         case .mail, .file: return "in your inbox"
         case .event:       return "on your calendar"
         case .chat:        return "from your session"
         case .screenshot:  return "in your photos"
-        case .link:        return "saved by you"
-        case .voice:       return "recorded by you"
         case .reminder:    return "on your list"
-        case .note:        return "written by you"
         case .approval:    return "awaiting your call"
         case .job, .run, .output: return "from your machines"
-        case .skill:       return "banked by you"
         case .transaction: return walletPlace(for: thing)
         case .contact:     return "in your contacts"
         case .product:     return "from a store you follow"
         case .accessory:   return "in your home"
+        // `.link`, `.note`, `.voice`, `.skill` — see the note above: a link is
+        // saved by you, a note written by you, a voice note recorded by you
+        // and a skill banked by you, every one of them, always.
         // A kind with no place of its own says NOTHING rather than "in your
         // things", which is true of every row in the corpus and therefore
         // tells you nothing about this one — a label column spent on a fact

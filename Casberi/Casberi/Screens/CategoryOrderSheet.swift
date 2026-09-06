@@ -83,7 +83,7 @@ struct CategoryOrderSheet: View {
         // is the FULL-SCREEN title — large on iPhone — and this is a sheet.
         // Two of the twelve nav sheets wore it, so the family had two title
         // sizes as well as two close placements.
-        .navigationTitle(Text("Chip order"))
+        .navigationTitle(Text("Dock order"))
         .navigationBarTitleDisplayMode(.inline)
         .dsSheetDismiss { dismiss() }
     }

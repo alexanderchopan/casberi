@@ -1093,12 +1093,12 @@ struct MainSurface: View {
         return out.sorted { $0.1 > $1.1 }
     }
 
-    /// Chip order: All, then every source — most-recent-first is still the
-    /// baseline (`things` is newest-first, so first appearance IS the newest
-    /// thing per source), but a source you actually VISIT often (`ChipMemory`,
-    /// amends §131, 2026-07-21) sorts ahead of it. `sorted` is stable, so a
-    /// zero-weight tie keeps the recency order untouched — this only ever
-    /// promotes a chip you use, never reorders the rest.
+    /// Chip order: All, then every source, MOST RECENT FIRST (`things` is
+    /// newest-first, so a source's first appearance IS its newest thing).
+    ///
+    /// The tap-learned promotion that sat on top of this from 2026-07-21 is
+    /// gone (user, 2026-09-06, prd §634) — see `computedChips`. One order, and
+    /// it is one a person can state after a single look at the strip.
     private var computedChipLabels: [String] { computedChips().labels }
 
     /// The strip's labels AND the market seats behind its folded chip, from ONE
@@ -1168,11 +1168,21 @@ struct MainSurface: View {
             && LiveRoomSources.has(bridge.name) && seen.insert(bridge.name).inserted {
             ordered.append(bridge.name)
         }
-        let (counts, lastVisit) = ChipMemory.snapshot()
-        let learned = ordered.sorted {
-            ChipMemory.weight(for: $0, counts: counts, lastVisit: lastVisit)
-                > ChipMemory.weight(for: $1, counts: counts, lastVisit: lastVisit)
-        }
+        // **THE STRIP DOES NOT LEARN ANY MORE (user, 2026-09-06: "get rid of
+        // chip memory ... b/c user wanting to reorder is more important").**
+        // `ChipMemory`'s decaying visit weight used to re-sort the seats, so
+        // the dock quietly rearranged itself between opens — against a person
+        // who had just been given a screen for saying what order they want
+        // (§533). Two orders competing for one strip is one too many, and the
+        // one a person typed beats the one we inferred.
+        //
+        // What decides a seat's place now is `ordered` above: the corpus, most
+        // recently landed first. That is a rule a person can state after one
+        // look at the strip, which the weight never was.
+        //
+        // `ChipMemory` still RECORDS visits — the daily brief and the agent
+        // panel rank by them — but nothing about the dock reads it.
+        let learned = ordered
         // Pinned sits second, right after All, and does NOT enter the learned
         // sort above (2026-08-10). Two reasons it is placed rather than ranked:
         // it is not a source, so `ChipMemory`'s recency-and-visits weighting has

@@ -263,12 +263,19 @@ struct SettingsScreen: View {
         return [
             // The category chips' order (prd §533) — the ONE thing about the
             // source strip that was never earned by anything the person did.
-            // Source chips are ranked by `ChipMemory`'s tap-learning and need
-            // no setting; the categories sat in a hand-authored constant, so
-            // this hands that constant over. The trailing fact previews the
-            // setting the way Theme's and Color's do — the first three chips,
-            // in the order they will actually appear.
-            RowSpec(title: "Chip order",
+            // The categories sat in a hand-authored constant, so this hands
+            // that constant over. The trailing fact previews the setting the
+            // way Theme's and Color's do — the first three chips, in the order
+            // they will actually appear.
+            //
+            // "DOCK ORDER", not "chip order" (user, 2026-09-06): the strip is
+            // the dock, it is the app's signature object and it has a name.
+            // Naming the setting after the part rather than the thing made a
+            // person map "chip" onto "dock" before they could act on it. And
+            // the seats no longer learn (prd §634), so this screen is the ONLY
+            // thing deciding order — which is the other half of why it should
+            // be named after what it governs.
+            RowSpec(title: "Dock order",
                     value: CategoryOrder.current.prefix(3).joined(separator: ", "),
                     badge: ("arrow.up.arrow.down", DS.textSecondary),
                     action: { chipOrderOpen = true }),

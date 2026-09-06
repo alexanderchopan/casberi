@@ -45734,34 +45734,6 @@
         }
       }
     },
-    "Chip order" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Orden de las fichas"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "チップの並び"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "칩 순서"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "标签顺序"
-          }
-        }
-      }
-    },
     "Choose JSON as the format, then export" : {
       "localizations" : {
         "es" : {
@@ -54850,6 +54822,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "距离清算的距离，由近到远：%@。"
+          }
+        }
+      }
+    },
+    "Dock order" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Orden del dock"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ドックの並び"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "독 순서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "程序坞顺序"
           }
         }
       }
