@@ -1,0 +1,129 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Tile drop — old spring vs new gravity</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #0b0b0d; color: #e8e8ea; font: 14px -apple-system, system-ui, sans-serif; display: flex; gap: 32px; justify-content: center; padding: 24px; }
+  .phone { position: relative; width: 393px; height: 852px; border-radius: 44px; background: #000; overflow: hidden; box-shadow: 0 0 0 6px #1c1c1e; }
+  .copy { position: absolute; left: 24px; right: 24px; top: 200px; }
+  .mark { width: 120px; height: 120px; border-radius: 27px; background: linear-gradient(#3f9fff, #0a84ff); margin-bottom: 20px; }
+  .h { font: 800 34px/1.1 -apple-system, system-ui, sans-serif; letter-spacing: 0; }
+  .doors { position: absolute; left: 24px; right: 24px; bottom: 34px; height: 54px; border-radius: 16px; background: #0a84ff; display: grid; place-items: center; font-weight: 600; }
+  .tile { position: absolute; will-change: transform; }
+  .face { transform-origin: 50% 100%; display: grid; place-items: center; font: 700 15px -apple-system, system-ui, sans-serif; color: #fff; }
+  .label { position: absolute; top: 12px; left: 0; right: 0; text-align: center; color: #8e8e93; font-size: 13px; }
+  button { position: fixed; top: 16px; left: 16px; font: inherit; padding: 8px 14px; border-radius: 10px; border: 0; background: #2c2c2e; color: #fff; }
+</style>
+<button onclick="run()">Replay</button>
+<div class="phone" id="old"><div class="label">Old — SwiftUI spring, 2× shrink, diagonal</div><div class="copy"><div class="mark"></div><div class="h">Everything you need, in one place.</div></div><div class="doors">Try a demo</div></div>
+<div class="phone" id="new"><div class="label">New — gravity, upward bounce, squash</div><div class="copy"><div class="mark"></div><div class="h">Everything you need, in one place.</div></div><div class="doors">Try a demo</div></div>
+<script>
+// Same layout as HowItWorksSheet.pileLayout / pileSlots, same constants as TileDropView.
+const W = 393, H = 852, COUNT = 103, TILE = 44, OVERLAP = 6/44, OVERHANG = 0.85;
+const bandTop = 200 + 120 + 20 + 34*2.2 + 12, bandBottom = H - 34 - 54 - 8;
+const jitter = [-4, 3, -2, 5, -5, 2, -3, 4];
+const hues = ['#0a84ff','#ff375f','#30d158','#ff9f0a','#bf5af2','#64d2ff','#ff453a','#ffd60a','#5e5ce6','#ac8e68'];
+const landers = 6;
+function layout() {
+  let scale = 1;
+  for (let k = 0; k < 64; k++) {
+    const tile = TILE*scale, colStride = tile*(1-OVERLAP);
+    const cols = Math.max(1, Math.ceil((W + tile*OVERHANG*2)/colStride));
+    const rows = Math.max(1, Math.ceil(COUNT/cols));
+    const height = (rows-1)*colStride + tile;
+    if (height <= bandBottom-bandTop || scale <= 0.5) {
+      const room = Math.max(0, bandBottom-bandTop-tile);
+      return {tile, cols, rows, colStride, rowStride: rows>1 ? Math.min(colStride, room/(rows-1)) : colStride};
+    }
+    scale -= 0.02;
+  }
+}
+function gcd(a,b){while(b){[a,b]=[b,a%b]}return a}
+function slots(cols, rows) {
+  const topFirst=(rows-1)*cols, topCount=COUNT-topFirst;
+  const landStart = topFirst + Math.max(0, Math.floor((topCount-landers)/2));
+  const reserved = new Set(); for (let s=landStart; s<Math.min(COUNT,landStart+landers); s++) reserved.add(s);
+  const free = []; for (let s=0;s<COUNT;s++) if(!reserved.has(s)) free.push(s);
+  const n = free.length; let stride = Math.min(37, n-1); while (stride>1 && gcd(stride,n)!==1) stride--;
+  const out = new Array(COUNT).fill(0); let k=0;
+  for (let i=0;i<n;i++){ out[i]=free[k]; k=(k+stride)%n; }
+  [...reserved].sort((a,b)=>a-b).forEach((s,o)=>{ out[n+o]=s; });
+  return out;
+}
+function specs() {
+  const p = layout(), sl = slots(p.cols, p.rows);
+  const originX = W/2 - (p.cols-1)*p.colStride/2, originY = (bandTop+bandBottom)/2 - (p.rows-1)*p.rowStride/2;
+  const topRowFirst=(p.rows-1)*p.cols, topRowCount=COUNT-topRowFirst;
+  return Array.from({length: COUNT}, (_, i) => {
+    const slot = sl[i], row = p.rows-1-Math.floor(slot/p.cols), col = slot%p.cols;
+    const brick = row%2===0 ? 0 : p.colStride/2;
+    const centring = slot>=topRowFirst ? (p.cols-topRowCount)*p.colStride/2 : 0;
+    const restX = originX + col*p.colStride + brick + centring + jitter[(i+5)%8]*0.5;
+    const restY = originY + row*p.rowStride + jitter[(i+2)%8]*0.4;
+    const spread = ((i*37)%17/16 - 0.5) * 0.18;
+    const isLander = i >= COUNT-landers;
+    return { i, row, rows: p.rows, size: p.tile, restX, restY, restTilt: jitter[i%8]*1.4,
+             drift: jitter[(i+3)%8]*0.6, release: 0.7 + row*0.10 + spread + (isLander?0.25:0),
+             // the OLD schedule, for the left phone
+             oldDelay: 0.7 + i*0.019 + jitter[(i+1)%8]*0.012, oldDur: 0.58 + jitter[(i+6)%8]*0.012,
+             oldX: 16 + ((i*0.381966)%1)*(W-32) + jitter[(i+3)%8], isLander };
+  });
+}
+function mk(host, s) {
+  const el = document.createElement('div'); el.className = 'tile';
+  el.style.width = el.style.height = s.size+'px';
+  const face = document.createElement('div'); face.className = 'face';
+  face.style.width = face.style.height = s.size+'px'; face.style.borderRadius = (s.size*0.2237)+'px';
+  face.style.background = hues[s.i % hues.length];
+  face.textContent = s.isLander ? ['P','C','G','H','N','W'][s.i-(COUNT-landers)] : '';
+  el.style.zIndex = s.rows - s.row; el.appendChild(face); host.appendChild(el); return el;
+}
+const accelerate = 'cubic-bezier(0.333,0,0.667,0.333)', decelerate = 'cubic-bezier(0.333,0.667,0.667,1)';
+function newFall(el, s) {
+  // TileDropView: g from the longest drop = 0.55s; rebounds 12% and 3%; squash 1.06×0.92 (90ms), 1.03×0.96 (70ms).
+  const startBottom = -4, restBottom = s.restY + s.size/2, h = restBottom - startBottom;
+  const longest = Math.max(...S.map(t => t.restY + t.size/2 + 4));
+  const g = 2*longest/(0.55*0.55), fall = Math.sqrt(2*h/g);
+  const air = [0.12, 0.03].map(r => 2*Math.sqrt(r)*fall), hts = [0.12*h, 0.03*h];
+  const D = fall + air[0] + air[1], t1 = fall, t2 = t1+air[0], t3 = t2+air[1];
+  const x0 = s.restX + s.drift - s.size/2, x = s.restX - s.size/2;
+  const y = b => b - s.size;  // top edge from bottom edge
+  const P = (px, b) => `translate(${px}px,${y(b)}px)`;
+  const opts = { duration: D*1000, delay: s.release*1000, fill: 'both' };
+  el.animate([
+    { offset: 0,               transform: P(x0, startBottom), easing: accelerate },
+    { offset: t1/D,            transform: P(x, restBottom), easing: decelerate },
+    { offset: (t1+air[0]/2)/D, transform: P(x, restBottom - hts[0]), easing: accelerate },
+    { offset: t2/D,            transform: P(x, restBottom), easing: decelerate },
+    { offset: (t2+air[1]/2)/D, transform: P(x, restBottom - hts[1]), easing: accelerate },
+    { offset: 1,               transform: P(x, restBottom) },
+  ], opts);
+  const T = (deg, sx=1, sy=1) => `rotate(${deg}deg) scale(${sx},${sy})`;
+  el.firstChild.animate([
+    { offset: 0,                        transform: T(s.restTilt*1.6) },
+    { offset: t1/D,                     transform: T(s.restTilt*1.2, 1.06, 0.92) },
+    { offset: Math.min(t1+0.09, t2)/D,  transform: T(s.restTilt*1.2) },
+    { offset: t2/D,                     transform: T(s.restTilt, 1.03, 0.96) },
+    { offset: Math.min(t2+0.07, t3)/D,  transform: T(s.restTilt) },
+    { offset: 1,                        transform: T(s.restTilt) },
+  ], opts);
+}
+function oldFall(el, s) {
+  // The shipped spring: 0.58s regardless of distance, hero/tile shrink, tilt grows, diagonal into slot, overshoot past rest.
+  const big = 60/s.size, x = s.restX - s.size/2, y = s.restY - s.size/2;
+  el.animate([
+    { offset: 0,    transform: `translate(${s.oldX - s.size/2}px,${-120 - s.size/2}px) rotate(${s.restTilt/1.4*0.5}deg) scale(${big})`, easing: 'cubic-bezier(0.34,0.03,0.16,1.30)' },
+    { offset: 1,    transform: `translate(${x}px,${y}px) rotate(${s.restTilt}deg) scale(1)` },
+  ], { duration: s.oldDur*1000, delay: s.oldDelay*1000, fill: 'both' });
+}
+let S;
+function run() {
+  S = specs();
+  for (const id of ['old','new']) {
+    const host = document.getElementById(id);
+    host.querySelectorAll('.tile').forEach(t => t.remove());
+    S.forEach(s => { const el = mk(host, s); (id==='old' ? oldFall : newFall)(el, s); });
+  }
+}
+run();
+</script>

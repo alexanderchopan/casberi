@@ -17,7 +17,7 @@ struct BridgeIcon: View {
     /// floating in a circle (report 2026-07-10).
     var circular: Bool = false
 
-    private var assetName: String {
+    var assetName: String {
         // DIACRITICS ARE FOLDED (2026-08-27, "Ethrex Hegotá"). An asset
         // catalog name is a FILENAME, and macOS normalizes those to NFD while
         // a Swift literal is NFC — so `brand-ethrex-hegotá` is a lookup that
