@@ -44467,34 +44467,6 @@
         }
       }
     },
-    "Casberi can't reach that folder" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Casberi no puede acceder a esa carpeta"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "そのフォルダにアクセスできません"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "해당 폴더에 접근할 수 없습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Casberi 无法访问该文件夹"
-          }
-        }
-      }
-    },
     "Casberi can't read what this does. It calls %@ on %@. Hash %@." : {
       "localizations" : {
         "es" : {
@@ -48323,34 +48295,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "复制"
-          }
-        }
-      }
-    },
-    "Copy Item" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Copiar elemento"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "項目をコピー"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "항목 복사"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "拷贝项目"
           }
         }
       }
@@ -55992,6 +55936,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "持续上升"
+          }
+        }
+      }
+    },
+    "Ethrex Hegotá was relaunched from genesis, so everything it held is gone. The addresses you watch are still yours." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethrex Hegotá se relanzó desde el génesis, así que todo lo que contenía ha desaparecido. Las direcciones que vigilas siguen siendo tuyas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethrex Hegotá はジェネシスから再起動されたため、保持していた内容はすべて失われました。監視しているアドレスは引き続きあなたのものです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethrex Hegotá가 제네시스부터 다시 시작되어 보관되어 있던 내용은 모두 사라졌습니다. 지켜보는 주소는 그대로 당신의 것입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethrex Hegotá 已从创世区块重新启动，其中的内容都已消失。你关注的地址仍然属于你。"
+          }
+        }
+      }
+    },
+    "Ethrex Privacy" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethrex Privacy"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethrex Privacy"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethrex Privacy"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethrex Privacy"
           }
         }
       }
@@ -82736,34 +82736,6 @@
         }
       }
     },
-    "Nothing to copy yet" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Todavía no hay nada que copiar"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "まだコピーできるものがありません"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "아직 복사할 내용이 없습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "暂时没有可拷贝的内容"
-          }
-        }
-      }
-    },
     "Nothing to do" : {
       "localizations" : {
         "es" : {
@@ -92631,34 +92603,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "问题"
-          }
-        }
-      }
-    },
-    "Quick Look" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Vista rápida"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "クイックルック"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "훑어보기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "快速查看"
           }
         }
       }
@@ -107990,34 +107934,6 @@
         }
       }
     },
-    "Still downloading — try again in a moment" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Aún se está descargando: inténtalo de nuevo en un momento"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ダウンロード中です。少ししてからもう一度お試しください"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "아직 다운로드 중입니다. 잠시 후 다시 시도하세요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "仍在下载中，请稍后再试"
-          }
-        }
-      }
-    },
     "Still running on Bankr after 90 seconds — check Bankr for the outcome." : {
       "localizations" : {
         "es" : {
@@ -109950,34 +109866,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "这看起来不像地址。"
-          }
-        }
-      }
-    },
-    "That file has moved or been deleted" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Ese archivo se ha movido o se ha eliminado"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "そのファイルは移動または削除されています"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "해당 파일이 이동되었거나 삭제되었습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "该文件已被移动或删除"
           }
         }
       }
