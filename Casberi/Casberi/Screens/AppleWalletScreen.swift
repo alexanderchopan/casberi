@@ -27,7 +27,6 @@ struct AppleWalletScreen: View {
     @State private var syncing = false
     @State private var result: String?
     @State private var resultIsError = false
-    @State private var recent: [Thing] = []
     @State private var balances: [String: String] = [:]
     @State private var stateVersion = 0
 
@@ -36,101 +35,88 @@ struct AppleWalletScreen: View {
         return AppleWalletBridge.connected
     }
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+
     var body: some View {
-        // Apple Card's mark is near-black graphite, so `DS.washHue` returns
-        // nil and this paints nothing — called anyway so the family has no
-        // exception to remember (the `GrokSetupScreen`/`OpenRouterSetupScreen`
-        // pattern; found missing here auditing the pour rules, 2026-08-24).
-        BridgeSetupPage(name: "Apple Wallet") {
-            BridgeSetupHeader(
-                name: "Apple Wallet",
-                mode: .onThisDevice,
-                intro: "Apple Card, Apple Cash and Savings, with the merchant's real name. United States only, iOS 17.4 or later.",
-                connected: isConnected)
-            // The way back to your things (§460).
-            if isConnected {
-                RoomDoor(name: "Apple Wallet", source: AppleWalletBridge.sourceName)
-                    .listRowSeparator(.hidden)
-            }
-
-            if !AppleWalletBridge.isSupported && !isConnected {
-                unavailableSection
-            } else if isConnected {
-                if !balances.isEmpty { balanceSection }
-                if !recent.isEmpty {
-                    RecentThingsSection(header: "Landed", things: recent.live)
+        AccountPage(
+            name: "Apple Wallet", seatID: AppleWalletBridge.seatID,
+            source: AppleWalletBridge.sourceName,
+            state: AccountPageState.of(name: "Apple Wallet", seatID: AppleWalletBridge.seatID,
+                                       connected: isConnected, store: store),
+            intro: "Apple Card, Apple Cash and Savings, with the merchant's real name. United States only, iOS 17.4 or later.",
+            mode: .onThisDevice,
+            teardown: {
+                AppleWalletBridge.disconnect(context: modelContext)
+                stateVersion += 1
+                load()
+            },
+            sheet: $sheet,
+            act: {
+                if !AppleWalletBridge.isSupported && !isConnected {
+                    unavailableBlock
+                } else if isConnected {
+                    if !balances.isEmpty { balanceBlock }
+                } else {
+                    promiseBlock
+                    connectBlock
                 }
-                promiseSection
-                BridgeDisconnectSection(bridgeID: AppleWalletBridge.seatID,
-                                        name: AppleWalletBridge.sourceName,
-                                        teardown: {
-                                            AppleWalletBridge.disconnect(context: modelContext)
-                                            stateVersion += 1
-                                            load()
-                                        })
-            } else {
-                promiseSection
-                connectSection
-            }
-
-            if let result {
-                Section {
+                if let result {
                     Text(result)
                         .dsText(.subhead13)
                         .foregroundStyle(resultIsError ? DS.textPrimary : DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-            }
-
-        }
-        .navigationBarTitleDisplayMode(.inline)
+            },
+            more: {
+                // The entitlement's own terms stay on the page once connected
+                // too — they are what this seat promised, and a promise that
+                // disappears the moment it is kept is one nobody can check.
+                if isConnected { promiseBlock }
+            },
+            keySheet: { EmptyView() }
+        )
         .task { load() }
     }
 
+
     // MARK: - The promise (the entitlement's own terms, in plain words)
 
-    private var promiseSection: some View {
-        Section {
-            // Not numbered: these are four FACTS, not an ordered procedure —
-            // §220's rule, and numerals here would send the eye hunting for a
-            // step 1 that doesn't exist.
-            BridgeStepLines(steps: [
-                String(localized: "Read on this \(DS.device). There is no server, so nothing is uploaded or sold."),
-                String(localized: "It can't spend or move money."),
-                String(localized: "Disconnect and everything it brought in is deleted."),
-            ], numbered: false)
-        } header: {
-            Text("Before you connect")
-        }
-    }
+    @ViewBuilder private var promiseBlock: some View {
+        // Not numbered: these are three FACTS, not an ordered procedure —
+        // §220's rule, and numerals here would send the eye hunting for a
+        // step 1 that doesn't exist.
+        BridgeStepLines(steps: [
+            String(localized: "Read on this \(DS.device). There is no server, so nothing is uploaded or sold."),
+            String(localized: "It can't spend or move money."),
+            String(localized: "Disconnect and everything it brought in is deleted."),
+        ], numbered: false)
 
     // MARK: - Connect
 
-    private var connectSection: some View {
-        Section {
-            Button {
-                Task { await connect() }
-            } label: {
-                HStack {
-                    Text(connecting ? "Connecting…" : "Connect Apple Wallet")
-                        .dsText(.body17).fontWeight(.semibold)
-                    Spacer()
-                    if connecting { ProgressView() }
-                }
-            }
-            .disabled(connecting)
+    @ViewBuilder private var connectBlock: some View {
+        // The screen's one verb as the screen's one filled block (prd §218) —
+        // it was a plain list row, which on a page with no rows around it read
+        // as a label rather than the act itself.
+        DSSlabButton(title: connecting ? "Connecting…" : "Connect Apple Wallet",
+                     systemImage: "creditcard",
+                     busy: connecting,
+                     enabled: !connecting) {
+            DSHaptic.tap()
+            Task { await connect() }
         }
     }
 
     /// The honest dead-end. An unsupported device gets a real explanation
     /// rather than a Connect button that can only fail — the no-dead-controls
     /// rule (§83).
-    private var unavailableSection: some View {
-        Section {
-            Text("This \(DS.device) can't share financial data. It's US-only, and needs iOS 17.4.")
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textSecondary)
-        }
-    }
+    @ViewBuilder private var unavailableBlock: some View {
+        Text("This \(DS.device) can't share financial data. It's US-only, and needs iOS 17.4.")
+            .dsText(.subhead13)
+            .foregroundStyle(DS.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
     // MARK: - Balances
 
@@ -138,27 +124,23 @@ struct AppleWalletScreen: View {
     /// three facts; one total across a credit line, a cash balance and savings
     /// is an accounting choice nobody agreed on — the wallet composition
     /// ruling (§240), and `StripeScreen`'s standing rule about currencies.
-    private var balanceSection: some View {
-        Section {
-            ForEach(balances.keys.sorted(), id: \.self) { name in
-                HStack {
-                    Text(name)
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textPrimary)
-                    Spacer()
-                    Text(balances[name] ?? "")
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textSecondary)
-                        .monospacedDigit()
-                }
+    @ViewBuilder private var balanceBlock: some View {
+        ForEach(balances.keys.sorted(), id: \.self) { name in
+            HStack {
+                Text(name)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                Spacer()
+                Text(balances[name] ?? "")
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textSecondary)
+                    .monospacedDigit()
             }
-        } header: {
-            Text("Balances")
-        } footer: {
-            Text("Never added together.")
-                .dsText(.label11)
-                .foregroundStyle(DS.textTertiary)
+            .frame(minHeight: AccountFactRow.height)
         }
+        Text("Never added together.")
+            .dsText(.subhead13)
+            .foregroundStyle(DS.textTertiary)
     }
 
     // MARK: - Actions
@@ -183,11 +165,5 @@ struct AppleWalletScreen: View {
     @MainActor
     private func load() {
         balances = AppleWalletBridge.balances
-        let name = AppleWalletBridge.sourceName
-        var fetch = FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.source == name },
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-        fetch.fetchLimit = 5
-        recent = (try? modelContext.fetch(fetch)) ?? []
     }
 }
