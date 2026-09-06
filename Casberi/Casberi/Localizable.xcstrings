@@ -10355,34 +10355,6 @@
         }
       }
     },
-    "%@ washes the top of All and your Wallet" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ tiñe la parte superior de Todo y de tu Cartera"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ が「すべて」とウォレットの上部を染めます"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@이(가) 전체와 지갑 상단을 물들입니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ 会为“全部”和钱包的顶部着色"
-          }
-        }
-      }
-    },
     "%@ washes the top of every screen" : {
       "localizations" : {
         "es" : {

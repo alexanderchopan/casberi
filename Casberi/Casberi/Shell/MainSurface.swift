@@ -433,9 +433,10 @@ struct MainSurface: View {
     /// unchanged, and this is that stack's inset. What changed is only which
     /// edge it takes, which is now free.
     ///
-    /// No scrim of its own: `crownPour` already darkens this exact region, and
-    /// a second wash under a capsule that carries its own fill would read as a
-    /// header band the page stops at.
+    /// No scrim of its own: a wash under a capsule that carries its own fill
+    /// would read as a header band the page stops at. (This used to lean on
+    /// `crownPour` darkening the same region; that is gone, prd §635, and the
+    /// banner's own capsule was always what made it legible.)
     @ViewBuilder
     private var demoBannerInset: some View {
         if demoActive {
@@ -1291,12 +1292,12 @@ struct MainSurface: View {
     // that wallet's face color through `chrome.pourHue` — identity as
     // information, the switcher capsule's own grammar at room scale.
     //
-    // AMENDED prd §204 (2026-07-24, user: "let user choose their tint bleed
-    // color"): the fallback is the PERSON's color now, not just ours —
-    // `DS.bleed`, one of six curated options. The trade is stated on purpose in
-    // §204: the pour stops being only Casberi's and becomes theirs. The
-    // wallet-face carve-out (`pourHue`) is unchanged and still wins first;
-    // `DS.tint`, the pressable signal at 157 other sites, does not move.
+    // AMENDED prd §204 (2026-07-24), then RETIRED (prd §635, 2026-09-06): the
+    // pour became the person's colour, one of six curated options — and by
+    // default that option was Ink, which pours nothing. So the shipped state
+    // of this whole idea was a settings screen whose only job was to switch on
+    // a wash §524 later ruled against outright ("EVERY POUR IS INK"). The
+    // gradient, the six swatches and the Color tray all went together.
     //
     // It lives HERE, not on the feed pages, because the first cut lived on the
     // page and taught why that can't work (user screenshot, 2026-07-21): the
@@ -1346,51 +1347,14 @@ struct MainSurface: View {
     /// own height, which quietly painted over this field's densest stop for
     /// the whole time the chips are on screen — the crown was only ever
     /// visible in the gaps BETWEEN rows, never behind the chrome itself.
-    private var crownPourRecipe: (stops: [Gradient.Stop], dose: Double) {
-        let hue = DS.bleed
-        // Photo themes force the dark treatment (DS.themedPage's own rule);
-        // only a true light page halves the dose — the same field that reads
-        // as atmosphere on ink reads as a stain on white.
-        let light = ThemeStore.shared.isLight && ThemeStore.shared.backgroundPhoto == nil
-        // The scoped-wallet exemption goes with the carve-out above: a wallet
-        // room no longer forces a pour through an Ink theme, so "Ink does not
-        // pour" is now true everywhere without exception.
-        let dose = ThemeStore.shared.bleed.pours ? chrome.pourDose : 0
-        return ([
-            .init(color: hue.opacity(light ? 0.16 : 0.30), location: 0),
-            .init(color: hue.opacity(light ? 0.05 : 0.10), location: 0.5),
-            .init(color: hue.opacity(0), location: 1),
-        ], dose)
-    }
-
-    private var crownPour: some View {
-        let recipe = crownPourRecipe
-        // Folded into the dose rather than gating the view, so picking Ink
-        // fades the field out on the same beat a colour swap re-tints it —
-        // and so `crownPour` keeps ONE view identity through the pager's own
-        // `.transition(.opacity)`.
-        return LinearGradient(stops: recipe.stops, startPoint: .top, endPoint: .bottom)
-            .frame(height: 500)
-            .frame(maxHeight: .infinity, alignment: .top)
-            // How much of it this room gets (§297) — full on All and inside a
-            // wallet, drained on a source room, which owns its own identity.
-            //
-            // As a view opacity, NOT baked into the stops. Scaling all three
-            // stop alphas by the dose is arithmetically identical (the third is
-            // already zero, and gradient interpolation is linear in alpha), but
-            // animating it that way makes SwiftUI re-resolve and re-rasterize a
-            // full-width 500pt gradient every frame on the main thread — during
-            // a page transition that is already remounting a room. A layer
-            // opacity is one property the render server drives out of process.
-            .opacity(recipe.dose)
-            // A room switch drains or refills the dose as one move with the
-            // switcher capsule's slide — not a hard cut. The COLOUR itself no
-            // longer moves (the wallet-face carve-out this once described was
-            // reversed 2026-08-15 — `chrome.pourHue` is read by `AgentBar`'s
-            // bottom chrome now, not by this field), so only `dose` needs a
-            // tracked animation here.
-            .animation(DS.Motion.standard, value: recipe.dose)
-    }
+    // THE CROWN POUR IS GONE (2026-09-06, prd §635), with the picker that
+    // was the only thing that could turn it on. It was a coloured wash down
+    // the top of the feed, defaulting to Ink — i.e. OFF — so the feature was
+    // six swatches in Settings whose whole job was to switch on a decoration
+    // §524 had already ruled against ("EVERY POUR IS INK — one token, no
+    // exceptions"). `chrome.pourHue`, the per-wallet re-tint this recipe used
+    // to honour, was itself killed on 2026-08-15 for arguing with the wallet
+    // hero's fixed blue, so nothing was left feeding it but a preference.
 
     /// The chip strip in whichever orientation this device wears it. One
     /// call site for the taps so the strip and the rail can never drift on
@@ -2307,7 +2271,6 @@ struct MainSurface: View {
             .background {
                 ZStack(alignment: .top) {
                     DS.themedPage
-                    crownPour
                 }
                 .ignoresSafeArea()
             }

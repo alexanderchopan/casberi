@@ -49861,3 +49861,15 @@ Both platforms build, every static audit passes, and **not one pixel of the Mac 
 **(3) "Chip order" is "Dock order".** The strip is the dock, the app's signature object, and it has a name; naming the setting after the part made a person map "chip" onto "dock" before they could act on it. Its four translations were carried across at `needs_review` rather than orphaned — a rename that drops them pays for them twice (the standing String Catalog tax).
 
 **Still open, deliberately.** Kept asks were named for removal in the same breath and are NOT in this pass: 23 files, 153 references, ~1,900 lines across two models, and they currently feed the widgets and the daily brief. Cutting them is a decision about those two features, not a tidy-up, so it is being scoped rather than assumed.
+
+## §635 — The crown pour and its colour picker are gone (user: "get rid of ... the color picker", 2026-09-06)
+
+**What it was.** A Settings row "Color" opening a tray of six swatches — Ink, Blue, Teal, Violet, Magenta, Slate — that chose the hue of a permanent gradient down the top of the feed (§159, §204). Ink was the DEFAULT and pours nothing, so the shipped state of the whole feature was **a settings screen whose only job was to switch on a decoration**.
+
+**Why it goes, beyond "superfluous".** §524 later ruled the opposite of what this offers: *"EVERY POUR IS INK — `DS.pourInk`, one token, no exceptions."* A picker that pours magenta down the feed is that ruling's own counterexample, kept alive in Settings. And the argument for the colour half was already spent: the per-wallet re-tint (`chrome.pourHue`) this recipe was built to honour was killed on 2026-08-15 for arguing with the wallet hero's fixed blue, so by this pass nothing fed the pour but a preference. **The app has one accent and it means "you selected this"** — the dock's active chip, a wallet's ring, a link. A second identity colour, chosen per person, is one signal competing with the one that carries weight.
+
+**What went with it.** `ThemeStore.Bleed` and its six options, `theme.bleed`, `DS.bleed`/`bleedMark`, `MainSurface.crownPourRecipe`/`crownPour` and its mount, the `.color` detail case, the Settings row and the one localized string it owned (dropped from the catalog rather than orphaned).
+
+**What stays.** Theme (light/dark) — one knob, no solid page colours, no photos, unchanged. `DS.washHue` for sheet, detail and setup surfaces, which still wear a source's identity. `DS.pourInk`, which is what a card, a sheet head and a page have taken since §524.
+
+**The demo banner lost a neighbour, not a scrim.** Its inset note claimed the crown pour darkened that region for it; the banner has always carried its own capsule fill, which is what makes it legible.

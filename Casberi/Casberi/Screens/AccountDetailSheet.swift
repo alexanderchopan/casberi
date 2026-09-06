@@ -11,7 +11,6 @@ import CloudKit
 enum AccountDetail: String, Identifiable {
     case data
     case key
-    case color
     case notifications
     var id: String { rawValue }
 }
@@ -109,8 +108,6 @@ struct AccountDetailSheet: View {
                 controls
             case .key:
                 keyCard
-            case .color:
-                bleedCard
             case .notifications:
                 notifyCard
             }
@@ -184,7 +181,6 @@ struct AccountDetailSheet: View {
         // this is the sheet it opens, so the two must never disagree.
         case .data: "Data"
         case .key: "Your key"
-        case .color: "Color"
         case .notifications: "Notifications"
         }
     }
@@ -319,7 +315,6 @@ struct AccountDetailSheet: View {
         // badge indent so it wraps one line fewer.
         case .data: privacyHeight
         case .key: 500   // +40 for the per-agent capability line (2026-07-21)
-        case .color: 400   // aliveRow + one swatch row + a footnote (prd §204)
         // Status row + three class toggles + the whisper's time + quiet hours
         // + the ceiling footnote (prd §306).
         case .notifications: notifyAuthorized ? 660 : 600
@@ -727,79 +722,6 @@ struct AccountDetailSheet: View {
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-    }
-
-    /// The crown pour's color (prd §204) — the permanent gradient behind the
-    /// chip strip. Six curated swatches, not a color well (user ruling
-    /// 2026-07-24): every colour option sits in `WalletFace.tint`'s exact
-    /// register, so a personal pour and a scoped wallet's pour read as one
-    /// family. Tapping a swatch is the whole interaction — no separate
-    /// Save; `ThemeStore.shared.bleed` is the live setting, same as Theme's
-    /// direct toggle. Ink leads the row because it is the DEFAULT (2026-08-04):
-    /// it pours nothing. (A chosen swatch used to answer with a berry shower
-    /// in its own colour — retired 2026-08-11, user ruling: the rain is
-    /// pull-to-refresh's payoff alone.)
-    private var bleedCard: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
-            aliveRow("paintbrush.pointed.fill", DS.bleedMark, "Crown pour", bleedSubline)
-            HStack(spacing: DS.Space.s3) {
-                ForEach(ThemeStore.bleeds) { option in
-                    let selected = ThemeStore.shared.bleed.id == option.id
-                    Button {
-                        DSHaptic.tap()
-                        withAnimation(DS.Motion.standard) { ThemeStore.shared.bleed = option }
-                    } label: {
-                        // Every colour swatch wears exactly what it applies.
-                        // Ink can't — what it applies is an ABSENCE, and its
-                        // own `#000000` on this tray's `#111113` is a swatch
-                        // nobody can find (a control invisible by sight is a
-                        // dead control, honesty rule). It wears the neutral
-                        // chip instead, the standard "none" affordance, and
-                        // the row above says so in words.
-                        Circle()
-                            .fill(option.pours ? Color(hex: option.hex) : DS.gray100)
-                            .frame(width: 44, height: 44)
-                            .overlay(
-                                // The selection ring is always tint (matches
-                                // SourceChips' own "active ring is always
-                                // tint" convention) — never the swatch's own
-                                // color, so picking Blue doesn't hide its ring.
-                                Circle().strokeBorder(DS.tint, lineWidth: selected ? 3 : 0)
-                                    .padding(-4)
-                            )
-                            .overlay {
-                                if selected {
-                                    Image(systemName: "checkmark")
-                                        .dsGlyph(15, weight: .bold)
-                                        // White reads on the five saturated
-                                        // fills; on the neutral chip it would
-                                        // vanish in the light theme.
-                                        .foregroundStyle(option.pours ? Color.white : DS.textPrimary)
-                                }
-                            }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(option.name)
-                    .accessibilityAddTraits(selected ? [.isSelected] : [])
-                }
-                Spacer(minLength: 0)
-            }
-        }
-    }
-
-    /// What the pour is doing right now, in words. Scoped to WHERE it
-    /// actually pours (`ShellChrome.pourDose` — All and Wallet only, drained
-    /// on a source room by §297) rather than "every screen", which stopped
-    /// being true the day that dose split off. Ink gets its own sentence
-    /// too: the wallet-face carve-out this used to describe was reversed
-    /// 2026-08-15 (`MainSurface.crownPour` no longer reads `chrome.pourHue`
-    /// at all), so Ink now means no pour anywhere, with no exception left to
-    /// name.
-    private var bleedSubline: String {
-        let bleed = ThemeStore.shared.bleed
-        return bleed.pours
-            ? String(localized: "\(bleed.name) washes the top of All and your Wallet")
-            : String(localized: "No wash — the crown stays flat everywhere")
     }
 
     /// Saves the key only after its provider accepts it — no dead key sitting

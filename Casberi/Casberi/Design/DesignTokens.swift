@@ -247,16 +247,6 @@ enum DS {
     /// Tint at rest-chip opacity.
     static var tintDim: Color { themedTintDim }
 
-    /// The crown pour's color (prd §204) — the person's choice of six, and
-    /// OFF by default since 2026-08-04 (`Ink`, which pours nothing rather than
-    /// pouring black; see `ThemeStore.bleeds`). `MainSurface.crownPour`'s ONLY consumer;
-    /// never route a chip, glyph, or state fill through this — those stay on
-    /// `DS.tint`, which alone carries the Increase Contrast guarantee.
-    static var bleed: Color { themedBleed }
-    /// The bleed as a settings PREVIEW (see `themedBleedMark`) — never the
-    /// pour itself, which is `bleed` and may legitimately be invisible.
-    static var bleedMark: Color { themedBleedMark }
-
     /// Magnitude fill — tint at opacity scaled by a normalized count `t ∈ [0,1]`.
     /// Treemaps and project fills only (color rule: magnitude, not decoration).
     static func tint(magnitude t: Double) -> Color { wash(tint, magnitude: t) }
@@ -756,7 +746,7 @@ enum DS {
     /// reading as text on a page (§495's "a jumble of text"). Light falls from
     /// above, so on a dark paper that is white arriving and on a white paper
     /// it is shadow; pouring black onto `#1a1a1c` would have drawn the top of
-    /// the card as a hole, which is `ThemeStore.bleeds`' own reason for
+    /// the card as a hole, which is the retired crown pour's own reason for
     /// refusing to pour black in the light theme (§204's `Ink` case) read in
     /// the mirror.
     ///
