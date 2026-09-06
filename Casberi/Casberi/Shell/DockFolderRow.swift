@@ -124,6 +124,8 @@ struct DockFolderRow: View {
     private static let stagger: Double = 0.035
 
     var body: some View {
+        // The container the lit venue's lens morphs within — see `folderVenue`.
+        DSGlassContainer(spacing: 2) {
         HStack(spacing: 2) {
             ForEach(Array(venues.enumerated()), id: \.element) { i, venue in
                 // THE FLOW (user, 2026-09-05: "they should flow out of the
@@ -141,6 +143,7 @@ struct DockFolderRow: View {
                                : DS.Motion.folder.delay(Double(i) * Self.stagger),
                                value: settled)
             }
+        }
         }
         .padding(2)
         // GLASS, not a faint fill (measured 2026-09-05): the row rises above
@@ -165,18 +168,26 @@ struct DockFolderRow: View {
             onPick(venue)
         } label: {
             BridgeIcon(name: venue, size: markSize, circular: true)
-                .padding(2.5)
+                // 6pt, was 2.5 (measured 2026-09-06): at 2.5 the lens was a
+                // rim a hair wider than the mark and did not read as a
+                // selection against the row; a lens needs glass on either side
+                // of what it frames, the way the rail's slot has.
+                .padding(6)
+                // **THE LIT VENUE SITS IN A GLASS LENS (prd §637, user: "that
+                // makes it more cohesive right?").** It wore the same 2.5pt
+                // stroked ring the wallet rail did — the last selection in the
+                // app drawn as an outline. Same treatment as the rail now: the
+                // mark INSIDE an untinted glass circle, applied to the content
+                // rather than behind it (iOS 26 hoists glass above content, so
+                // a background lens hides what it is meant to frame), morphing
+                // between venues through the row's `DSGlassContainer` by
+                // `glassEffectID`. The mark keeps its own colour — §359's
+                // reason a fill could never speak on a brand mark still holds,
+                // and a lens says "this one" without painting it.
+                .modifier(VenueGlass(on: lit, reduceMotion: reduceMotion, ns: selectionNS,
+                                     radius: (markSize + 12) / 2))
                 .overlay {
-                    if lit {
-                        let ring = Capsule(style: .circular)
-                            .strokeBorder(DS.tint, lineWidth: 2.5)
-                        if reduceMotion {
-                            ring
-                        } else {
-                            // The one ring travels between venues (§412b).
-                            ring.matchedGeometryEffect(id: "venueSelection", in: selectionNS)
-                        }
-                    } else if broken {
+                    if !lit, broken {
                         Capsule(style: .circular)
                             .strokeBorder(DS.attention,
                                           style: StrokeStyle(lineWidth: 2.5, dash: [3, 3]))
@@ -191,5 +202,27 @@ struct DockFolderRow: View {
         .dsTooltip(broken ? String(localized: "\(venue), needs reconnecting") : venue)
         .accessibilityLabel(broken ? String(localized: "\(venue), needs reconnecting") : venue)
         .accessibilityAddTraits(lit ? .isSelected : [])
+    }
+}
+
+/// The lit venue's lens — `FaceScopeRail.PickGlass`'s twin (prd §637): glass
+/// applied to the mark's own content, never behind it, morphing between
+/// venues by id inside the row's container. Reduce Motion drops the id so the
+/// lens appears rather than slides; Reduce Transparency plates it via the
+/// token.
+private struct VenueGlass: ViewModifier {
+    let on: Bool
+    let reduceMotion: Bool
+    let ns: Namespace.ID
+    let radius: CGFloat
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if on {
+            content.dsGlass(cornerRadius: radius,
+                            glassID: reduceMotion ? nil : "venueSelection",
+                            in: reduceMotion ? nil : ns)
+        } else {
+            content
+        }
     }
 }

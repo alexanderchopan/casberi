@@ -49895,3 +49895,11 @@ Both platforms build, every static audit passes, and **not one pixel of the Mac 
 **The first cut was wrong the way the dock's own August cut was wrong.** A `dsGlass` BACKGROUND under the slot drew OVER it: iOS 26 hoists glass above app content, so the picked face vanished into an empty pill (the fault `SourceChips` recorded for its word fill on 2026-08-15). The glass is applied to the slot's own content now, face and name inside the lens, which is how the octopus doors have always been built. Measured on the simulator: All at rest inside the pill; a pick moves the pill to Savings with the face and name intact.
 
 **Not done, awaiting a ruling.** The dock's folder venues (`DockFolderRow`) wear the same stroked ring the rail did. One selection grammar everywhere argues for the pill there too; not changed here.
+
+## §637 amendment — the folder's lit venue takes the same lens (user: "oh, yes please do … that makes it more cohesive right?", 2026-09-06)
+
+**Yes, and here is the count.** Before today the app said "selected" four ways: a blue fill on a word chip, a blue outline on a folder venue, a blue outline on a wallet face, and a card on a swipe. After §637 and this: a FILL for words, a LENS for marks and faces, a CARD for rooms — and the lens is one object that moves, in both places, through the same `glassEffectID` morph the dock's doors use.
+
+**Built the way the rail was, second time round.** `DockFolderRow.VenueGlass` is `FaceScopeRail.PickGlass`'s twin — glass on the mark's own content, never behind it (iOS 26 hoists glass above content and a background lens hides what it frames), inside the row's `DSGlassContainer`. The broken-connection dashed ring stays for a venue that is not lit; §359's reason a fill can never speak on a brand mark still holds, and the lens says "this one" without painting it.
+
+**Measured on the way.** At the ring's old 2.5pt inset the lens was a rim a hair wider than the mark and did not read against the dark row. 6pt gives it glass on either side of what it frames, the way the rail's slot has, and the row grows by 7pt to hold it.

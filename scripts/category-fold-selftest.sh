@@ -405,9 +405,22 @@ awk '/func folderVenue/,/^    }$/' "$TMP/folder.nc" | grep -q 'let lit = venue =
 # ITS OWN GROUP (§621 amendment, 2026-09-05): the chip's fill stays lit while
 # the folder is open, so the venue ring cannot share the fill's matched id —
 # two sources for one id is undefined — and travels between VENUES instead.
-awk '/func folderVenue/,/^    }$/' "$TMP/folder.nc" | grep -q 'matchedGeometryEffect(id: "venueSelection", in: selectionNS)' \
-  || { echo "✗ the lit venue's ring is not in the row's own matched group — it would blink"; \
-       echo "  between venues instead of travelling (§412b)."; exit 1; }
+# THE LENS, NOT A RING (prd §637 amendment, 2026-09-06): the lit venue is a
+# glass lens on the mark's own content, and it travels by `glassEffectID`
+# inside the row's `DSGlassContainer` — the morph the dock's doors use. The
+# ruling is the same one: one object, moving, never two states blinking.
+# Three parts, each load-bearing: `folderVenue` hands `lit` and `selectionNS`
+# to `VenueGlass`; `VenueGlass` carries the id; the row is inside a container
+# (an id with no container is inert — `Glass.swift`'s own note).
+awk '/func folderVenue/,/^    }$/' "$TMP/folder.nc" | grep -q 'VenueGlass(on: lit' \
+  || { echo "✗ the lit venue no longer takes the lens — with the chip's fill down while"; \
+       echo "  the folder is open, nothing would say where you are (§637)."; exit 1; }
+awk '/struct VenueGlass/,/^}$/' "$TMP/folder.nc" | grep -q 'glassID: reduceMotion ? nil : "venueSelection"' \
+  || { echo "✗ the venue lens lost its glassEffectID — it would blink between venues"; \
+       echo "  instead of travelling (§412b, §637)."; exit 1; }
+grep -q 'DSGlassContainer(spacing: 2)' "$TMP/folder.nc" \
+  || { echo "✗ the venue row is not inside a DSGlassContainer — a glassEffectID with no"; \
+       echo "  container is inert, so the lens would swap rather than morph."; exit 1; }
 # The scope must live on the shell, or it dies with the room. `MainSurface`
 # gives FeedScreen `.id(filter.source)`, so `@State` here is destroyed on every
 # room change — which is the bug §356 exists to fix.
