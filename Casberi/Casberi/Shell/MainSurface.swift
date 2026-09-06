@@ -507,6 +507,7 @@ struct MainSurface: View {
                     DockFolderRow(
                         venues: CategoryFold.scopes(category: category, present: Set(venues)),
                         standing: filter.source,
+                        category: category,
                         compact: chrome.minimized && !showsRail,
                         anchorLocalX: anchorLocalX) { venue in
                         chrome.sourceRequest = venue
@@ -1983,7 +1984,13 @@ struct MainSurface: View {
         if chrome.openFolder != nil {
             withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
         }
+        swipeCommit = true
         go(to: target)
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            swipeCommit = false
+            chrome.pageDragTarget = nil
+        }
         ChipMemory.visited(filter.source)
     }
 
@@ -2019,9 +2026,11 @@ struct MainSurface: View {
     /// swipe reads as broken rather than as the last room — and the ring
     /// stays put, since there is no chip for it to lean toward.
     private func dragMove(_ t: CGFloat) {
-        let free = neighbour(t < 0 ? 1 : -1) != nil
+        let target = neighbour(t < 0 ? 1 : -1)
+        let free = target != nil
         chrome.pageDragX = free ? t : t * 0.3
         chrome.pageDragProgress = free ? min(1, max(-1, -t / Self.dragPitch)) : 0
+        if chrome.pageDragTarget != target { chrome.pageDragTarget = target }
     }
 
     private func dragCancel() {
@@ -2029,7 +2038,18 @@ struct MainSurface: View {
             chrome.pageDragX = 0
             chrome.pageDragProgress = 0
         }
+        // The card underneath leaves once the room has settled back over it.
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(320))
+            if chrome.pageDragX == 0 { chrome.pageDragTarget = nil }
+        }
     }
+
+    /// True for the body pass that commits a SWIPE (2026-09-06): the card
+    /// underneath is already showing the next room's cover, so the incoming
+    /// room fades in over it rather than sliding in from the edge, and the
+    /// outgoing room FLIES off as a card (`CardFly`) rather than sliding.
+    @State private var swipeCommit = false
 
 
     private var surface: some View {
@@ -2079,6 +2099,15 @@ struct MainSurface: View {
             // List's own scroll view, mounted by FeedScreen), which hands its
             // one-step decision up through `chrome.pageStep` below.
             ZStack {
+                // THE CARD UNDERNEATH (2026-09-06, the carousel): while a swipe
+                // is in progress the next room's cover — its mark and word on
+                // the page, scaled up as the finger commits — sits beneath the
+                // room being dragged, so the turn reads as a card lifted off a
+                // stack rather than a page pushed aside. A COVER, not the room:
+                // §258 measured that pre-building the neighbour is what made
+                // swipes stall, so the full room mounts on commit and fades in
+                // over its own cover.
+                PagerCover()
                 // THE ROOM FOLLOWS THE FINGER (2026-09-05). `PagerDrag` offsets
                 // the room by `chrome.pageDragX` while a swipe is in progress,
                 // in a body of its own so this surface is not re-evaluated on
@@ -2102,8 +2131,11 @@ struct MainSurface: View {
                 }
                     .id(filter.source)
                     .transition(.asymmetric(
-                        insertion: .move(edge: slideEdge),
-                        removal: .move(edge: slideEdge == .trailing ? .leading : .trailing)))
+                        insertion: swipeCommit ? .opacity : .move(edge: slideEdge),
+                        removal: swipeCommit
+                            ? .modifier(active: CardFly(progress: 1, direction: slideEdge == .trailing ? -1 : 1),
+                                        identity: CardFly(progress: 0, direction: slideEdge == .trailing ? -1 : 1))
+                            : .move(edge: slideEdge == .trailing ? .leading : .trailing)))
             }
             // The swipe input, mounted ONCE at the shell — never inside the
             // transitioning subtree (see PageSwipeCatcher for the two designs
@@ -2435,10 +2467,70 @@ struct MainSurface: View {
 /// not depend on a value written sixty times a second.
 private struct PagerDrag<Content: View>: View {
     @Environment(ShellChrome.self) private var chrome
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ViewBuilder let content: Content
 
     var body: some View {
-        content.offset(x: chrome.pageDragX)
+        let x = chrome.pageDragX
+        let share = min(1, abs(x) / 402)
+        let lifted = x != 0 && !reduceMotion
+        content
+            // THE CARD (2026-09-06): the dragged room tilts a few degrees
+            // about its bottom edge in the direction of travel, shrinks a
+            // hair and casts a shadow — a card lifted off a stack. Under
+            // Reduce Motion it slides flat, as before.
+            .scaleEffect(lifted ? 1 - 0.04 * share : 1)
+            .rotationEffect(.degrees(lifted ? Double(x / 402) * 5 : 0), anchor: .bottom)
+            .shadow(color: .black.opacity(lifted ? 0.35 * share : 0), radius: 24, y: 8)
+            .offset(x: x)
+    }
+}
+
+/// The outgoing room's exit after a swipe commits — it keeps going the way
+/// the finger sent it, tilting further and fading, off the edge.
+private struct CardFly: ViewModifier {
+    let progress: CGFloat
+    let direction: CGFloat
+    func body(content: Content) -> some View {
+        content
+            .offset(x: direction * 460 * progress)
+            .rotationEffect(.degrees(Double(direction) * 10 * progress), anchor: .bottom)
+            .scaleEffect(1 - 0.08 * progress)
+            .opacity(1 - 0.4 * progress)
+    }
+}
+
+/// The next room's cover, under the card being dragged (2026-09-06). Its
+/// mark and word on the page, growing from 0.92 to 1 as the drag commits,
+/// so the destination is seen before the finger lets go. Reads only the
+/// drag's own values, in a body of its own.
+private struct PagerCover: View {
+    @Environment(ShellChrome.self) private var chrome
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        if let label = chrome.pageDragTarget {
+            let p = min(1, abs(chrome.pageDragProgress))
+            let venues = chrome.categoryVenues[label] ?? []
+            let landing = CategoryFold.isCategory(label)
+                ? (CategoryFold.landing(category: label, present: venues) ?? label)
+                : label
+            VStack(spacing: DS.Space.s3) {
+                if label == "All" {
+                    Text("All").dsText(.heading34).foregroundStyle(DS.textPrimary)
+                } else {
+                    BridgeIcon(name: landing, size: DS.Mark.hero, circular: true)
+                    Text(label)
+                        .dsText(.heading22)
+                        .foregroundStyle(DS.textPrimary)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .dsPageBackground()
+            .scaleEffect(reduceMotion ? 1 : 0.92 + 0.08 * p)
+            .opacity(0.6 + 0.4 * p)
+            .transition(.opacity)
+        }
     }
 }
 

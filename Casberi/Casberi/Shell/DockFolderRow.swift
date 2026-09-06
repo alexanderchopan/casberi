@@ -105,6 +105,8 @@ struct DockFolderRow: View {
     let venues: [String]
     /// The room you are standing in — the lit venue.
     let standing: String
+    /// The folder's name, for VoiceOver's group label.
+    var category: String = ""
     var compact: Bool = false
     /// The chip's x in this row's space — where the venues flow out from.
     var anchorLocalX: CGFloat = 0
@@ -148,6 +150,8 @@ struct DockFolderRow: View {
         // layer wears.
         .dsGlass(cornerRadius: DS.Radius.pill)
         .clipShape(Capsule(style: .continuous))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text("\(category) sources"))
         .onAppear { flowed = true }
     }
 

@@ -1315,6 +1315,11 @@ struct SourceChips: View {
                                  reduceMotion: reduceMotion))
         .id(label)
         .accessibilityLabel(chipAccessibilityLabel(label, broken: broken, isActive: isActive))
+        // The folder for VoiceOver (2026-09-06): the scrub and the wave are
+        // pointer moves with no spoken form, so the spoken form is the tap's
+        // — this says what it does, and the row that springs up is its own
+        // labelled group (`DockFolderRow`).
+        .accessibilityHint(isCategory ? Text("Shows its sources above the dock") : Text(""))
         .accessibilityAddTraits(isActive ? .isSelected : [])
     }
 

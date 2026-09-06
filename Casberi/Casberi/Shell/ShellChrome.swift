@@ -104,6 +104,12 @@ final class ShellChrome {
     /// that commits the turn; a swipe that stops short springs them home.
     var pageDragX: CGFloat = 0
     var pageDragProgress: CGFloat = 0
+    /// The chip the swipe is heading for, while a drag is in progress — the
+    /// CARD underneath (`MainSurface.PagerCover`) wears its mark and word, so
+    /// the next room is seen before the finger lets go (2026-09-06, the
+    /// carousel: user "if you swiped on the screen the rooms change like
+    /// swiping tinder cards … so the feed feels more like a carousel").
+    var pageDragTarget: String? = nil
 
     /// The chip under a scrubbing finger (2026-09-05) — the dock's press-and-
     /// slide, see `SourceChips`. `windowX` is the chip's centre in window

@@ -403,6 +403,10 @@ struct RootShell: View {
                 //
                 // Every launch: Spotlight reconciles and CloudKit-merge
                 // duplicates collapse (covers extension writes + sync merges).
+                // BEHIND THE FIRST PAINT (2026-09-06, `FirstPaint`): nothing
+                // here is visible, and on the main actor it queued the first
+                // commit behind itself.
+                await FirstPaint.painted()
                 #if DEBUG
                 // `[wall]` because these now yield: the figure is elapsed
                 // time across the suspensions, not main-actor time held, and
@@ -1790,6 +1794,7 @@ struct RootShell: View {
             // screenshot's name are worth having, never worth delaying the
             // index everything else reads.
             Task { @MainActor in
+                await FirstPaint.painted()
                 await ThreadDigest.sweep(context: modelContext)
                 await ScreenshotNaming.sweep(context: modelContext)
             }
@@ -1802,6 +1807,9 @@ struct RootShell: View {
               // bridge slot does — a 600-row materialization plus three
               // composes — so a report that showed only the sweep would send
               // whoever reads it to optimize the smaller half.
+              // Behind the first paint (2026-09-06): this fetch's transformable
+              // decoding was 61% of the main thread in the pre-paint window.
+              await FirstPaint.painted()
               await SweepClock.measure("insight.recompute") {
                 // Bounded (2026-07-24): insight/kept-ask/whisper read
                 // only recent activity, so this needn't materialize the
@@ -2000,6 +2008,11 @@ struct RootShell: View {
 
     private var shellBase: some View {
         ZStack(alignment: .bottom) {
+            // The first-paint signal (`FirstPaint`), one pixel, never hit.
+            FirstPaintMarker()
+                .frame(width: 1, height: 1)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
             // The themed page — the same field each screen paints for itself
             // (NavigationStack's backing is opaque, so photo rendering lives
             // inside the screens via dsPageBackground; this is the base coat).
