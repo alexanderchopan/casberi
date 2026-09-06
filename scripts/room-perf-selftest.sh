@@ -275,8 +275,15 @@ if print -r -- "$net_all" | grep -Eq 'guard rowBudget == nil else \{ return \}';
 else
   fail "the All-room staleness net does NOT decline while rowBudget is set"
 fi
+# The two anchors may now have LINES BETWEEN THEM (§623, 2026-09-06 — a
+# `#if DEBUG` roomNet| log sits in the gap). What this guard is actually
+# asserting is that the decline comes FIRST, before the net does any work, so
+# the gap is allowed but must contain no fetch: `[^\n]*\n` repeated, with a
+# negative lookahead that keeps a `fetch(`/`FetchDescriptor` out of it. Pinning
+# strict adjacency instead would make any future logging line look like a
+# regression, which is how this guard went red without the behaviour moving.
 if grep -Eq 'guard rowBudget == nil else \{ return \}\s*$' "$FEED_STRIPPED" \
-   && perl -0777 -ne 'exit(/guard rowBudget == nil else \{ return \}\n            if things\.isEmpty/s ? 0 : 1)' "$FEED_STRIPPED"; then
+   && perl -0777 -ne 'exit(/guard rowBudget == nil else \{ return \}\n(?:(?![^\n]*(?:\bfetch\(|FetchDescriptor))[^\n]*\n){0,12}            if things\.isEmpty/s ? 0 : 1)' "$FEED_STRIPPED"; then
   ok "the per-source staleness net declines while rowBudget is set"
 else
   fail "the per-source staleness net does NOT decline while rowBudget is set"
@@ -593,8 +600,15 @@ mutate "the head task stops declining on a bound room (§83)"  feed \
 # each is one line that reads as redundant.
 mutate "the All-room staleness net stops declining on a bound room"  feed \
   's/guard rowBudget == nil else \{ return \}\n            let cappedRaw/let cappedRaw/' || mfails=$((mfails + 1))
+# The gap between the guard and `if things.isEmpty` is no longer empty (§623
+# put a `#if DEBUG` roomNet| log in it), so this mutation has to delete the
+# guard line ACROSS that gap rather than assume adjacency. It stopped being a
+# mutation at all when the gap appeared — it matched nothing, changed nothing,
+# and was reported as "survived", which is the correct reading of a mutation
+# that never ran. Non-greedy, so it takes the nearest anchor and cannot reach
+# past the per-source net into another block.
 mutate "the per-source staleness net stops declining on a bound room"  feed \
-  's/guard rowBudget == nil else \{ return \}\n            if things\.isEmpty/if things.isEmpty/' || mfails=$((mfails + 1))
+  's/guard rowBudget == nil else \{ return \}\n((?:[^\n]*\n){0,14}?            if things\.isEmpty)/$1/s' || mfails=$((mfails + 1))
 mutate "RoomHeads gains a Thing"  feed 's/(private struct RoomHeads \{)/$1\n        let row: Thing?/' || mfails=$((mfails + 1))
 mutate "the memo is keyed by source alone (a scope change flashes the wrong head)"  feed \
   's/headMemo\[headIdentity\]/headMemo[source]/g' || mfails=$((mfails + 1))
