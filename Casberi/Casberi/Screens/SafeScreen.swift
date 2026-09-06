@@ -40,25 +40,37 @@ struct SafeScreen: View {
     private var walletCount: Int { WalletStore.shared.addresses.count }
     private var safeCount: Int { SafeBridge.detectedCount() }
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+
     var body: some View {
-        BridgeSetupPage(name: "Safe") {
-            BridgeSetupHeader(
-                name: "Safe",
-                mode: .watchedWallets,
-                intro: "A transaction waiting on your signature, the moment it's proposed. This phone can be an owner too, so nothing spends without its yes.",
-                connected: safeCount > 0)
-            // Ahead of the signer sections, which are the longest on any
-            // wallet-riding page — see `RoomDoor`. Safe earned its own
-            // source in §349's amendment (it used to land under "Wallet"), so
-            // there is a real room to open.
-            if hasWallets {
-                RoomDoor(name: "Safe", source: SafeBridge.sourceName)
-                    .listRowSeparator(.hidden)
-            }
-            connectSection.listRowSeparator(.hidden)
-            signerSection.listRowSeparator(.hidden)
-            coSignersSection.listRowSeparator(.hidden)
-        }
+        AccountPage(
+            name: "Safe", seatID: "safe", source: SafeBridge.sourceName,
+            state: AccountPageState.of(name: "Safe", seatID: "safe",
+                                       connected: safeCount > 0, store: store),
+            intro: "A transaction waiting on your signature, the moment it's proposed. This phone can be an owner too, so nothing spends without its yes.",
+            mode: .watchedWallets,
+            // WHO YOU SIGN WITH is the roster. Safe earned its own source in
+            // §349's amendment (it used to land under "Wallet"), so there is a
+            // real room and a real list. READ rows, so no Remove: a co-owner
+            // is a fact about the Safe, and a swipe offering to drop one would
+            // be a control that cannot do what it says. The "You" pill lands
+            // on this phone's own signing address where it is an owner.
+            rows: rows,
+            // NOTHING TO TEAR DOWN (prd §207): this seat reads whatever
+            // wallets are watched and holds no store of its own. The signing
+            // key is NOT torn down here — it is deleted by its own dialog,
+            // which says why, because that undo is somebody ELSE's on-chain
+            // transaction.
+            teardown: {},
+            sheet: $sheet,
+            act: {
+                connectBlock
+                signerBlock
+            },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
         .onAppear {
             // Watching is consent (prd §207): keep the catalog seat honest on
             // appear, and refresh the queue if a wallet's watched.
@@ -85,6 +97,7 @@ struct SafeScreen: View {
         }
     }
 
+
     // MARK: - Connect (automatic — no switch, prd §207)
 
     /// No toggle: a Safe has no account to sign into, so watching a wallet —
@@ -92,33 +105,31 @@ struct SafeScreen: View {
     /// read its queue. With wallets watched, the row states the fact and
     /// doors to the wallet manager; with none, it's the invitation to watch
     /// one.
-    private var connectSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if hasWallets {
-                    DSSlabDoor(title: String(localized: "Watching \(walletCount) wallet"),
-                               detail: String(localized: "Manage"),
-                               systemImage: "eye") {
-                        route.pushBridge(.wallet)
-                    }
-                } else {
-                    DSSlabDoor(title: "Watch a wallet", systemImage: "eye") {
-                        route.pushBridge(.wallet)
-                    }
+    @ViewBuilder private var connectBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if hasWallets {
+                DSSlabDoor(title: String(localized: "Watching \(walletCount) wallet"),
+                           detail: String(localized: "Manage"),
+                           systemImage: "eye") {
+                    route.pushBridge(.wallet)
                 }
-                BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: String(localized: "Reading your Safe's queue…"),
-                                     proof: lastResult)
-                // The bare "Read-only." left this note (duplication audit,
-                // 2026-07-31): it was in one branch only, and the footer's
-                // lede says the same thing with the part that matters — where
-                // signing actually happens — in both states.
-                DSSlabNote(text: safeCount > 0
-                    ? String(localized: "Watching \(safeCount) Safe — a pending signature lands in your feed the moment it's proposed.")
-                    : String(localized: "Watch a Safe, or a wallet that signs for one."))
+            } else {
+                DSSlabDoor(title: "Watch a wallet", systemImage: "eye") {
+                    route.pushBridge(.wallet)
+                }
             }
+            BridgeSyncStatusRows(syncing: syncing,
+                                 syncingLine: String(localized: "Reading your Safe's queue…"),
+                                 proof: lastResult)
+            // The bare "Read-only." left this note (duplication audit,
+            // 2026-07-31): it was in one branch only, and the footer's
+            // lede says the same thing with the part that matters — where
+            // signing actually happens — in both states.
+            DSSlabNote(text: safeCount > 0
+                ? String(localized: "Watching \(safeCount) Safe — a pending signature lands in your feed the moment it's proposed.")
+                : String(localized: "Watch a Safe, or a wallet that signs for one."),
+                       plain: true)
         }
-        .dsSlabSection()
     }
 
 
@@ -138,93 +149,90 @@ struct SafeScreen: View {
     /// the key. Both are the security model rather than omissions — a phrase
     /// in a drawer is a second phone, and a key that survives a new face is a
     /// key that stopped meaning "this phone's yes".
-    @ViewBuilder private var signerSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if signerPresence == .destroyed {
-                    // The key is GONE, not locked. Saying so is the whole
-                    // point: the previous behaviour was a Sign button that
-                    // failed with the same words a cancelled prompt gives.
-                    Text("This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Have another owner swap the old address out of the Safe.")
-                        .dsText(.subhead13).foregroundStyle(DS.destructive)
-                        .fixedSize(horizontal: false, vertical: true)
-                    DSSlabDoor(title: String(localized: "Make a new key"),
-                               systemImage: "signature") {
-                        SignerKey.delete()
-                        signerAddress = nil
-                        signerPresence = .none
-                        makeSigner()
+    @ViewBuilder private var signerBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if signerPresence == .destroyed {
+                // The key is GONE, not locked. Saying so is the whole
+                // point: the previous behaviour was a Sign button that
+                // failed with the same words a cancelled prompt gives.
+                Text("This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Have another owner swap the old address out of the Safe.")
+                    .dsText(.subhead13).foregroundStyle(DS.destructive)
+                    .fixedSize(horizontal: false, vertical: true)
+                DSSlabDoor(title: String(localized: "Make a new key"),
+                           systemImage: "signature") {
+                    SignerKey.delete()
+                    signerAddress = nil
+                    signerPresence = .none
+                    makeSigner()
+                }
+            } else if let address = signerAddress {
+                HStack(spacing: DS.Space.s3) {
+                    WalletFace(address: address, size: DS.Face.row, circular: true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("This phone")
+                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        Text(verbatim: WalletStore.shortAddress(address))
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     }
-                } else if let address = signerAddress {
-                    HStack(spacing: DS.Space.s3) {
-                        WalletFace(address: address, size: DS.Face.row, circular: true)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("This phone")
-                                .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                            Text(verbatim: WalletStore.shortAddress(address))
-                                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                    DSSlabDoor(title: String(localized: "Copy address"),
-                               systemImage: "doc.on.doc") {
-                        DSPasteboard.copy(address)
-                        chrome.flash(String(localized: "Address copied"))
-                    }
-                    // The NEXT STEP, not fine print — §315's rule is that a
-                    // gray sentence has to change what somebody would do, and
-                    // this one is the only thing left to do. It reads as an
-                    // instruction because it is one.
-                    //
-                    // It has TWO versions, because the next step genuinely
-                    // differs: somebody who already runs a Safe has an owner
-                    // to add, and somebody who does not has a Safe to make
-                    // first. The old single sentence assumed the first, which
-                    // left the second person holding an address with nowhere
-                    // to put it — the whole feature stalled one step in.
-                    Text(needsASafe
-                         ? "You'll need a Safe to add it to. Make one with your other wallet as the first owner, then add this address as the second."
-                         : "Add this address as an owner from your other wallet and set the threshold to 2. Casberi will notice when you have.")
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if needsASafe {
-                        DSSlabDoor(title: String(localized: "Set up a Safe"),
-                                   systemImage: "arrow.up.right") {
-                            if let url = URL(string: "https://app.safe.global/new-safe/create") {
-                                openURL(url)
-                            }
+                    Spacer(minLength: 0)
+                }
+                DSSlabDoor(title: String(localized: "Copy address"),
+                           systemImage: "doc.on.doc") {
+                    DSPasteboard.copy(address)
+                    chrome.flash(String(localized: "Address copied"))
+                }
+                // The NEXT STEP, not fine print — §315's rule is that a
+                // gray sentence has to change what somebody would do, and
+                // this one is the only thing left to do. It reads as an
+                // instruction because it is one.
+                //
+                // It has TWO versions, because the next step genuinely
+                // differs: somebody who already runs a Safe has an owner
+                // to add, and somebody who does not has a Safe to make
+                // first. The old single sentence assumed the first, which
+                // left the second person holding an address with nowhere
+                // to put it — the whole feature stalled one step in.
+                Text(needsASafe
+                     ? "You'll need a Safe to add it to. Make one with your other wallet as the first owner, then add this address as the second."
+                     : "Add this address as an owner from your other wallet and set the threshold to 2. Casberi will notice when you have.")
+                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if needsASafe {
+                    DSSlabDoor(title: String(localized: "Set up a Safe"),
+                               systemImage: "arrow.up.right") {
+                        if let url = URL(string: "https://app.safe.global/new-safe/create") {
+                            openURL(url)
                         }
                     }
-                    standingLines
-                    Button { confirmDeleteSigner = true } label: {
-                        Text("Delete this phone's key")
-                            .dsText(.callout15).fontWeight(.semibold)
-                            .foregroundStyle(DS.destructive)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    DSSlabDoor(title: String(localized: "Make this phone a signer"),
-                               systemImage: "signature") {
-                        makeSigner()
-                    }
-                    // The one gray sentence this section gets, and it is spent
-                    // on the cost rather than the pitch — before the tap is the
-                    // only moment where "there is no recovery phrase" changes
-                    // what somebody does (it is the argument for 2-of-3 rather
-                    // than 2-of-2).
-                    DSSlabNote(text: "The key stays on this phone behind Face ID. There is no recovery phrase, and re-enrolling Face ID erases it — so give the Safe a third owner you keep somewhere else.")
                 }
-                if let signerError {
-                    Text(verbatim: signerError)
-                        .dsText(.subhead13).foregroundStyle(DS.destructive)
-                        .frame(maxWidth: .infinity)
-                        .settleIn()
+                standingLines
+                Button { confirmDeleteSigner = true } label: {
+                    Text("Delete this phone's key")
+                        .dsText(.callout15).fontWeight(.semibold)
+                        .foregroundStyle(DS.destructive)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+            } else {
+                DSSlabDoor(title: String(localized: "Make this phone a signer"),
+                           systemImage: "signature") {
+                    makeSigner()
+                }
+                // The one gray sentence this section gets, and it is spent
+                // on the cost rather than the pitch — before the tap is the
+                // only moment where "there is no recovery phrase" changes
+                // what somebody does (it is the argument for 2-of-3 rather
+                // than 2-of-2).
+                DSSlabNote(text: "The key stays on this phone behind Face ID. There is no recovery phrase, and re-enrolling Face ID erases it — so give the Safe a third owner you keep somewhere else.", plain: true)
+            }
+            if let signerError {
+                Text(verbatim: signerError)
+                    .dsText(.subhead13).foregroundStyle(DS.destructive)
+                    .frame(maxWidth: .infinity)
+                    .settleIn()
             }
         }
-        .dsSlabSection()
     }
 
     /// True only when we KNOW there is nowhere to put this address: the
@@ -300,32 +308,21 @@ struct SafeScreen: View {
 
     // MARK: - Who you sign with
 
-    /// The people, not the addresses (2026-07-30). A Safe is the one place in
-    /// this app where others act on your behalf, and the co-signers are the
-    /// part of it worth recognising at a glance — so the screen shows their
-    /// faces the same way the wallet manager shows a roster of wallets. Named
-    /// from the address book / Farcaster where possible; short hex otherwise,
-    /// never a guessed identity. Absent entirely when no Safe is detected, so
-    /// nothing claims a roster that isn't there.
-    @ViewBuilder private var coSignersSection: some View {
-        if !coSigners.isEmpty {
-            Section {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    Text("Who you sign with")
-                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                    ForEach(coSigners, id: \.self) { address in
-                        HStack(spacing: DS.Space.s2) {
-                            WalletFace(address: address, size: DS.Face.row, circular: true)
-                            Text(verbatim: WalletIngest.knownLabel(for: address)
-                                 ?? WalletStore.shortAddress(address))
-                                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                                .lineLimit(1)
-                            Spacer(minLength: 0)
-                        }
-                    }
-                }
-            }
-            .dsSlabSection()
+    /// WHO YOU SIGN WITH — the page's roster since §639. A Safe is the one
+    /// place in this app where others act on your behalf, and the co-signers
+    /// are the part of it worth recognising at a glance. Named from the
+    /// address book / Farcaster where possible; short hex otherwise, never a
+    /// guessed identity. Empty when no Safe is detected, so nothing claims a
+    /// roster that isn't there.
+    private var rows: [AccountPageShape.Row] {
+        coSigners.map { address in
+            AccountPageShape.Row(
+                id: address,
+                title: WalletIngest.knownLabel(for: address) ?? WalletStore.shortAddress(address),
+                subline: String(localized: "signs with you"),
+                weekCount: 0, hasNew: false,
+                isYou: address.caseInsensitiveCompare(signerAddress ?? "") == .orderedSame,
+                avatarURL: nil)
         }
     }
 
