@@ -166,6 +166,9 @@ private struct WalkRowVerbs: ViewModifier {
                     case .ready(let url, let handle):
                         peekHandle = handle
                         peekURL = url
+                    case .noPreview:
+                        chrome.flash(String(localized: "No preview stored for this yet"),
+                                     tone: .failure)
                     case .notDownloaded:
                         chrome.flash(String(localized: "Still downloading — try again in a moment"),
                                      tone: .failure)

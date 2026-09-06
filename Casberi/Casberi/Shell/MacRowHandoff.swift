@@ -105,8 +105,16 @@ enum MacRowHandoff {
     static func isPeekable(_ thing: Thing) -> Bool {
         guard thing.isLive else { return false }
         switch thing.kind {
-        case .screenshot, .file: return thing.sourceRef != nil
-        default:                 return false
+        // A screenshot's pixels live in the store, so what makes it peekable
+        // is having a ref at all.
+        case .screenshot: return thing.sourceRef != nil
+        // A file is peekable only when it is a CONNECTED FOLDER's file, which
+        // is the `files:` ref. `.file` is not one source's kind — Dropbox,
+        // the Snapchat import and the demo corpus all mint them — and for
+        // those there is no document on this disk to open. Enabling Space
+        // over them would trade the scroll key for a message.
+        case .file: return thing.sourceRef?.hasPrefix("files:") == true
+        default: return false
         }
     }
 
@@ -116,6 +124,12 @@ enum MacRowHandoff {
     /// one silence over a file still coming down from iCloud, a file that has
     /// moved, and a folder we can no longer reach.
     enum Peek {
+        /// The row is the right KIND but has no pixels stored yet — a
+        /// screenshot the photo heal has not reached. Distinct from
+        /// `notDownloaded`, which is iCloud's answer about a real file: saying
+        /// "still downloading" about a thing that is not downloading is the
+        /// dishonest-message class this app's own rules forbid.
+        case noPreview
         /// The URL to preview, and the scoped-access window it needs kept
         /// open. A connected folder's file is previewed WHERE IT LIVES —
         /// copying it into a temp directory first would mean reading a
@@ -155,7 +169,7 @@ enum MacRowHandoff {
             }
         }
         guard let image = StoredPixels.image(for: thing),
-              let data = image.pngData() else { return .notDownloaded }
+              let data = image.pngData() else { return .noPreview }
         let name = safeName(thing.title.isEmpty ? "Screenshot" : thing.title) + ".png"
         guard let url = stage(data: data, named: name) else { return .unreachable }
         return .ready(url, nil)
