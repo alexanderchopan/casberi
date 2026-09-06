@@ -6199,6 +6199,9 @@
         }
       }
     },
+    "%@ may read this account." : {
+
+    },
     "%@ mentioned you" : {
       "localizations" : {
         "es" : {
@@ -10857,6 +10860,16 @@
         }
       }
     },
+    "%@ · %lld hosts" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$lld hosts"
+          }
+        }
+      }
+    },
     "%@ · %lld months" : {
       "localizations" : {
         "en" : {
@@ -10887,6 +10900,16 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ · %lld 个月"
+          }
+        }
+      }
+    },
+    "%@ · %lld this week" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$lld this week"
           }
         }
       }
@@ -11498,6 +11521,9 @@
           }
         }
       }
+    },
+    "%@ · quiet this week" : {
+
     },
     "%@ · with your key%@" : {
       "localizations" : {
@@ -14657,6 +14683,16 @@
         }
       }
     },
+    "%lld calls · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld calls · %2$@"
+          }
+        }
+      }
+    },
     "%lld card purchases" : {
       "localizations" : {
         "es" : {
@@ -15432,6 +15468,9 @@
           }
         }
       }
+    },
+    "%lld days of activity missing" : {
+
     },
     "%lld deadlines ahead" : {
       "localizations" : {
@@ -23917,6 +23956,16 @@
         }
       }
     },
+    "%lld today · %lld this week" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld today · %2$lld this week"
+          }
+        }
+      }
+    },
     "%lld together" : {
       "localizations" : {
         "es" : {
@@ -27177,6 +27226,9 @@
           }
         }
       }
+    },
+    "1 day of activity missing" : {
+
     },
     "1 deposit" : {
       "localizations" : {
@@ -34535,6 +34587,9 @@
         }
       }
     },
+    "Accounts, needs attention" : {
+
+    },
     "Across %lld accounts" : {
       "localizations" : {
         "es" : {
@@ -35106,6 +35161,9 @@
           }
         }
       }
+    },
+    "Add a note" : {
+
     },
     "Add a note…" : {
       "localizations" : {
@@ -47235,6 +47293,9 @@
         }
       }
     },
+    "Connected %@" : {
+
+    },
     "Connected to %@" : {
       "localizations" : {
         "es" : {
@@ -53474,6 +53535,9 @@
         }
       }
     },
+    "Default — every agent you've added may read it. Tap one to stop it." : {
+
+    },
     "Delegate" : {
       "localizations" : {
         "es" : {
@@ -56278,6 +56342,9 @@
         }
       }
     },
+    "Every account, A to Z" : {
+
+    },
     "Every activity, one record" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -57977,6 +58044,9 @@
         }
       }
     },
+    "Expires %@ · Replace" : {
+
+    },
     "Expires %@." : {
       "localizations" : {
         "es" : {
@@ -59096,6 +59166,9 @@
           }
         }
       }
+    },
+    "Find %@, or search yours" : {
+
     },
     "Find a team, player, or question" : {
       "localizations" : {
@@ -68037,6 +68110,9 @@
         }
       }
     },
+    "Keychain, %@ · Replace" : {
+
+    },
     "Keys" : {
       "localizations" : {
         "es" : {
@@ -69265,6 +69341,9 @@
           }
         }
       }
+    },
+    "Last read %@" : {
+
     },
     "Last revised" : {
       "localizations" : {
@@ -71817,6 +71896,12 @@
           }
         }
       }
+    },
+    "May not read" : {
+
+    },
+    "May read" : {
+
     },
     "Maybe" : {
       "localizations" : {
@@ -74596,6 +74681,9 @@
         }
       }
     },
+    "Needs reconnecting · %@" : {
+
+    },
     "Needs reconnecting — it stopped letting us in" : {
       "localizations" : {
         "es" : {
@@ -75456,6 +75544,9 @@
           }
         }
       }
+    },
+    "New since you last looked" : {
+
     },
     "New site stored — paste a token minted for it below to finish." : {
       "localizations" : {
@@ -78824,6 +78915,9 @@
         }
       }
     },
+    "Nobody may read this account." : {
+
+    },
     "Nobody's built a pack matching “%@” yet." : {
       "localizations" : {
         "es" : {
@@ -80477,6 +80571,9 @@
           }
         }
       }
+    },
+    "Nothing connected yet. All has everything you can add." : {
+
     },
     "Nothing connects to %@ yet." : {
       "localizations" : {
@@ -82960,6 +83057,9 @@
         }
       }
     },
+    "Nothing to read yet." : {
+
+    },
     "Nothing to report" : {
       "localizations" : {
         "es" : {
@@ -84309,6 +84409,9 @@
           }
         }
       }
+    },
+    "On-device" : {
+
     },
     "Once an hour. Try again a little later." : {
       "localizations" : {
@@ -88725,6 +88828,9 @@
         }
       }
     },
+    "Paired agents" : {
+
+    },
     "Partly" : {
       "localizations" : {
         "es" : {
@@ -88948,6 +89054,9 @@
           }
         }
       }
+    },
+    "Paste a new token" : {
+
     },
     "Paste a read-only key and every payment you receive keeps arriving, along with refunds, disputes, and subscriptions that need attention. Nothing here charges, refunds, or cancels anything." : {
       "localizations" : {
@@ -89845,6 +89954,9 @@
           }
         }
       }
+    },
+    "Pause reading · keeps everything" : {
+
     },
     "Paused" : {
       "localizations" : {
@@ -92719,6 +92831,9 @@
         }
       }
     },
+    "Quiet · %lld" : {
+
+    },
     "Quiet — it hasn't moved more than a percent across this %@ window." : {
       "localizations" : {
         "es" : {
@@ -95415,6 +95530,9 @@
           }
         }
       }
+    },
+    "Reading · %@" : {
+
     },
     "Reading · the odd one out" : {
       "localizations" : {
@@ -99333,6 +99451,9 @@
         }
       }
     },
+    "Resume reading" : {
+
+    },
     "Retrying" : {
       "localizations" : {
         "es" : {
@@ -101606,6 +101727,9 @@
           }
         }
       }
+    },
+    "Search accounts" : {
+
     },
     "Search apps" : {
       "localizations" : {
@@ -124449,6 +124573,9 @@
         }
       }
     },
+    "Watching · %lld" : {
+
+    },
     "Watching — tap to stop" : {
       "localizations" : {
         "es" : {
@@ -124644,6 +124771,9 @@
           }
         }
       }
+    },
+    "What %@ reaches" : {
+
     },
     "What L2BEAT checks" : {
       "localizations" : {
@@ -125176,6 +125306,9 @@
           }
         }
       }
+    },
+    "What it reaches" : {
+
     },
     "What it's about" : {
       "localizations" : {
@@ -127169,6 +127302,9 @@
         }
       }
     },
+    "Which accounts" : {
+
+    },
     "Which organization should I read?" : {
       "localizations" : {
         "es" : {
@@ -127560,6 +127696,9 @@
           }
         }
       }
+    },
+    "Who may read it" : {
+
     },
     "Who sells the most" : {
       "localizations" : {
@@ -130428,6 +130567,9 @@
         }
       }
     },
+    "Your %@ key" : {
+
+    },
     "Your %@ key answers when you tap — that question and its matched things go to %@, per answer." : {
       "localizations" : {
         "en" : {
@@ -132258,6 +132400,9 @@
         }
       }
     },
+    "Your key" : {
+
+    },
     "Your key was turned down — check it in Settings." : {
       "localizations" : {
         "es" : {
@@ -133815,6 +133960,9 @@
         }
       }
     },
+    "Yours" : {
+
+    },
     "Yours is the last signature needed" : {
       "localizations" : {
         "es" : {
@@ -133870,6 +134018,9 @@
           }
         }
       }
+    },
+    "Yours · %lld" : {
+
     },
     "^[%lld address](inflect: true) picked" : {
       "localizations" : {
@@ -134101,6 +134252,9 @@
         }
       }
     },
+    "a board" : {
+
+    },
     "a certificate that should have renewed itself by now" : {
       "localizations" : {
         "es" : {
@@ -134128,6 +134282,9 @@
           }
         }
       }
+    },
+    "a channel" : {
+
     },
     "a contract signs for this account" : {
       "localizations" : {
@@ -134297,6 +134454,9 @@
         }
       }
     },
+    "a publication" : {
+
+    },
     "a registration set to renew automatically, which still fails on an expired card" : {
       "localizations" : {
         "es" : {
@@ -134381,6 +134541,12 @@
         }
       }
     },
+    "a repo or person" : {
+
+    },
+    "a show" : {
+
+    },
     "a store you follow" : {
       "localizations" : {
         "es" : {
@@ -134408,6 +134574,9 @@
           }
         }
       }
+    },
+    "a subreddit" : {
+
     },
     "a token" : {
       "localizations" : {
@@ -136429,6 +136598,9 @@
         }
       }
     },
+    "channel" : {
+
+    },
     "channel %llu" : {
       "localizations" : {
         "es" : {
@@ -137213,6 +137385,9 @@
         }
       }
     },
+    "feed" : {
+
+    },
     "five" : {
       "localizations" : {
         "es" : {
@@ -137718,6 +137893,9 @@
           }
         }
       }
+    },
+    "hashtag" : {
+
     },
     "held %lld days" : {
       "localizations" : {
@@ -138703,6 +138881,15 @@
           }
         }
       }
+    },
+    "key expires in %lld days" : {
+
+    },
+    "key expires today" : {
+
+    },
+    "key refused" : {
+
     },
     "keys" : {
       "localizations" : {
@@ -140124,6 +140311,9 @@
           }
         }
       }
+    },
+    "no calls this week" : {
+
     },
     "no expiry" : {
       "localizations" : {
@@ -142044,6 +142234,9 @@
         }
       }
     },
+    "paused" : {
+
+    },
     "pending, waiting on others" : {
       "localizations" : {
         "es" : {
@@ -142099,6 +142292,9 @@
           }
         }
       }
+    },
+    "person" : {
+
     },
     "plus " : {
       "localizations" : {
@@ -143136,6 +143332,9 @@
           }
         }
       }
+    },
+    "repo" : {
+
     },
     "reposted by an account you watch" : {
       "localizations" : {
@@ -144565,6 +144764,12 @@
           }
         }
       }
+    },
+    "someone or a channel" : {
+
+    },
+    "someone or a feed" : {
+
     },
     "spam transfer" : {
       "localizations" : {
