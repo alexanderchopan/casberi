@@ -715,7 +715,16 @@ SHAPE_NO_SOURCE = {"all"}
 # not a silent skip — the `KNOWN_EXEMPT` pattern this codebase uses
 # everywhere else. Don't add an entry to make a red check green without
 # checking, the same way, that the shape's bridge really doesn't exist.
-KNOWN_UNBACKED_SHAPE = set()
+KNOWN_UNBACKED_SHAPE = {
+    # The seats behind these two shapes left the catalog on 2026-09-06 (prd
+    # §638 — the Markets category is deleted, 1Claw and Circle x402 with it).
+    # Their bridge files, and so their `Shape` cases, stay in the tree for one
+    # release so a connected seat is not stranded; the demo must NOT seed rows
+    # for a source nobody can connect (check D's own rule, from the other
+    # side). When the bridge code is deleted, the cases go and so do these.
+    "oneclaw",
+    "x402",
+}
 
 
 def extract_shape_sources(feed_src, media_src, x402_src, asc_src):
@@ -1365,11 +1374,15 @@ def self_test():
         # `sweepEscapedRows` walks `retiredPrefixes` unconditionally, so a
         # shape listed there while still being seeded means the migration
         # deletes rows out from under a live demo.
-        # `1claw:policy:demo` is already in `refPrefixes` and is still written
-        # by `infra()`, so listing it as retired changes exactly one thing —
-        # which is what makes this fixture test the rule it names.
+        # `privacy:txn:demo` is already in `refPrefixes` and is still written
+        # by `cards()`, so listing it as retired changes exactly one thing —
+        # which is what makes this fixture test the rule it names. (It was
+        # `1claw:policy:demo` until prd §638 retired the 1Claw seat and the
+        # seeder stopped writing that ref — a fixture anchored on a ref nobody
+        # writes any more mutates nothing and reports a pass, the dead-mutation
+        # class mutation-liveness-audit exists for.)
         lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
-            '        "bankr:ask-01",', '        "bankr:ask-01", "1claw:policy:demo",', 1)),
+            '        "bankr:ask-01",', '        "bankr:ask-01", "privacy:txn:demo",', 1)),
         check_k_seeded_refs_are_cleared, True)
 
     ok &= verify_fixture(

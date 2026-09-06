@@ -31,14 +31,10 @@ struct PredictionRoomBook: View {
     @Environment(BridgeStore.self) private var store
     @Environment(ShellChrome.self) private var chrome
 
-    /// Is the strip showing the folded Markets chip WITH a real switcher
-    /// behind it (≥2 present venues, `MarketsRoom.switcherFloor`)? Then the
-    /// room already wears one and this one must not (see `body`). The chip
-    /// itself now folds unconditionally (prd §351) — this checks the
-    /// SWITCHER's own floor, a different question.
-    private var foldedIntoMarkets: Bool {
-        (chrome.categoryVenues[MarketsRoom.room]?.count ?? 0) >= MarketsRoom.switcherFloor
-    }
+    // `foldedIntoMarkets` — the check that stood this book's own switcher
+    // down under the Markets fold — went with the category (2026-09-06, prd
+    // §638). Neither venue belongs to a catalog category now, so no folder
+    // ever draws a switcher above this book; `bothConnected` alone decides.
 
     @State private var scope: PredictionVenueScope = .all
     @State private var didSetScope = false
@@ -104,11 +100,11 @@ struct PredictionRoomBook: View {
             // price, which `PredictionBrowseSection` now draws in EVERY scope
             // (see `bothConnected` there), so the comparison survives on the
             // cards while the confusing double control does not.
-            if bothConnected && !foldedIntoMarkets {
+            if bothConnected {
                 PredictionVenueSwitcher(scope: $scope)
             }
             PredictionBrowseSection(
-                scope: bothConnected && !foldedIntoMarkets ? scope : ownScope,
+                scope: bothConnected ? scope : ownScope,
                 onWatchedKalshi: { _ in registerIfNeeded(name: "Kalshi", id: "kalshi") },
                 onWatchedPolymarket: { _ in registerIfNeeded(name: "Polymarket", id: "polymarket") },
                 onPreview: onPreview)

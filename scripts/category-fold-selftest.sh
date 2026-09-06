@@ -3,7 +3,13 @@
 # EVERY folded chip in the source strip (prd §351, 2026-08-11), superseding
 # markets-fold-selftest.sh, which tested the same mechanism when it lived
 # solely in `MarketsRoom` and applied only to the Markets category above a
-# floor of 2 present seats:
+# floor of 2 present seats. **The Markets category itself is DELETED (prd
+# §638, 2026-09-06)** and `MarketsRoom.swift` with it: this harness used to
+# hard-fail on a catalog without Markets and fixture that category for the
+# two-group fold; it now fixtures Wallet (which spans the `Wallet` and `NFTs`
+# groups — the same property) and Work (which has no landing anchor — the
+# property the reopen-where-you-left-off tests need), and asserts the ruling
+# itself against the real catalog below.
 #
 #   Casberi/Casberi/Model/CategoryFold.swift
 #     — members/isMember/isCategory  (derived from the catalog's own categories)
@@ -45,7 +51,7 @@
 # `CategoryFold.chipLabel`/`remember` reach `category(forSource:)`, which
 # `MarketsRoom`'s old mechanism never called. So every ordering this file
 # asserts is the shipped code's own, not a copy that can drift from it. The
-# stub spans TWO categories on purpose (Wallet, Markets) — the old harness only
+# stub spans TWO categories on purpose (Wallet, Work) — the old harness only
 # ever needed one, and the property that makes `foldAll` safe (disjoint
 # membership composes) has no way to fail with only one category to fold.
 #
@@ -55,7 +61,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 FOLD="Casberi/Casberi/Model/CategoryFold.swift"
-ROOM="Casberi/Casberi/Model/MarketsRoom.swift"
+# `MarketsRoom.swift` was the ROOM here until prd §638 deleted it with the
+# category. The guard below that it must stay gone reads the shell's own file.
 MAIN="Casberi/Casberi/Shell/MainSurface.swift"
 CHIPS="Casberi/Casberi/Shell/SourceChips.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
@@ -68,8 +75,10 @@ FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 BROWSE="Casberi/Casberi/Screens/PredictionBrowseSection.swift"
 ROOT="Casberi/Casberi/Shell/RootShell.swift"
 APP="Casberi/Casberi/CasberiApp.swift"
-BOOK="Casberi/Casberi/Screens/PredictionRoomBook.swift"
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
+# `Corpus.retiredSources` lives here — the seven seats §638 retired, which the
+# real-catalog check below proves are offered nowhere.
+CORPUS="Casberi/Shared/Thing.swift"
 RAIL="Casberi/Casberi/Shell/FaceScopeRail.swift"
 CHROME="Casberi/Casberi/Shell/ShellChrome.swift"
 # `SourcesOverlay` was DELETED in the §591 amendment along with the tray it
@@ -79,7 +88,7 @@ CHROME="Casberi/Casberi/Shell/ShellChrome.swift"
 # be fed the folded one) went with the grid they defended — see the block
 # further down that records why.
 TILES="Casberi/Casberi/Screens/WalletFeedTiles.swift"
-for f in "$FOLD" "$ROOM" "$MAIN" "$CHIPS" "$FEED" "$BROWSE" "$BOOK" "$CATALOG" "$ROOT" "$APP" "$RAIL" "$CHROME" "$TILES"; do
+for f in "$FOLD" "$MAIN" "$CHIPS" "$FEED" "$BROWSE" "$CATALOG" "$CORPUS" "$ROOT" "$APP" "$RAIL" "$CHROME" "$TILES"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -103,7 +112,6 @@ PY
 }
 strip_comments "$MAIN"     > "$TMP/main.nc"
 strip_comments "$BROWSE"   > "$TMP/browse.nc"
-strip_comments "$BOOK"     > "$TMP/book.nc"
 strip_comments "$ROOT"     > "$TMP/root.nc"
 strip_comments "$APP"      > "$TMP/app.nc"
 strip_comments "$CHIPS"    > "$TMP/chips.nc"
@@ -815,13 +823,9 @@ grep -q 'PadLayout.readingMaxWidth' "$TMP/topinset.nc" \
        echo "  the column it sits above, so the demo banner and the room controls overhang"; \
        echo "  every card beneath them on Mac and iPad (§361)."; exit 1; }
 # EVERY category, not Markets alone — the whole point of this follow-up
-# (user: "each category should have a switcher"). A gate re-narrowed to
-# `MarketsRoom.isMember(source)` would silently take the switcher away from
-# every other category while this exact grep still finds `CategoryVenueSwitcher(`.
-# EVERY category, not Markets alone — the whole point of this follow-up
-# (user: "each category should have a switcher"). A gate re-narrowed to
-# `MarketsRoom.isMember(source)` would silently take the switcher away from
-# every other category while this exact grep still finds `CategoryVenueSwitcher(`.
+# (user: "each category should have a switcher"). A gate re-narrowed to one
+# category's membership would silently take the switcher away from every other
+# category while this exact grep still finds the folder row.
 #
 # **The expression MOVED in the §591 amendment and this guard moved with it**
 # (the `roomFigure` lesson). It used to read
@@ -841,17 +845,16 @@ grep -qE 'if case \.category\(let category\) = chrome\.openFolder' "$MAIN" \
 grep -qE 'chrome\.openFolder = BridgeCatalog\.category\(forSource: source\)' "$TMP/main.nc" \
   && { echo "✗ arriving in a room opens its folder again — every folded room would wear its"; \
        echo "  venues row permanently, and the social rooms a third row (the faces rail)."; exit 1; }
-grep -q 'MarketsRoom.isMember' "$TMP/main.nc" \
-  && { echo "✗ the switcher is gated on Markets membership again — every category has one."; exit 1; }
-
-# The switcher and the prediction book must not BOTH offer a venue control —
-# two capsules over one book, each able to change which venue you're reading,
-# with no way to tell from either which one won.
-grep -q 'foldedIntoMarkets' "$TMP/book.nc" \
-  || { echo "✗ PredictionRoomBook's own switcher no longer stands down under the Markets fold"; exit 1; }
-grep -q 'MarketsRoom.switcherFloor' "$TMP/book.nc" \
-  || { echo "✗ PredictionRoomBook no longer gates on the switcher's own floor — a single"; \
-       echo "  connected market seat would grow a one-scope switcher (\"not a control\")."; exit 1; }
+# `MarketsRoom` is DELETED (prd §638). Its `isMember`/`switcherFloor`/`room`
+# were the one place a category was spelled as a type rather than read from the
+# catalog; a shell that reaches for it again has re-grown the exception every
+# folder now runs without. (The guard that `PredictionRoomBook`'s own switcher
+# stood down under the Markets fold went with the fold — neither venue belongs
+# to a category any more, so no folder can draw a switcher above that book.)
+[[ -f "Casberi/Casberi/Model/MarketsRoom.swift" ]] \
+  && { echo "✗ MarketsRoom.swift is back — the Markets category was deleted (prd §638)"; exit 1; }
+grep -q 'MarketsRoom' "$TMP/main.nc" \
+  && { echo "✗ MainSurface reaches for MarketsRoom again — the type was deleted with the category (prd §638)."; exit 1; }
 
 # The twin price must NOT be gated on the merged scope again. §298's comparison
 # was reachable only from `.all`, which the fold retires — re-gating it would
@@ -887,7 +890,7 @@ PY2
 # least one real offer — a stub proves the DERIVATION; only this proves the
 # derivation still finds anything against the file that actually ships. A
 # renamed/emptied category folds nothing and breaks nothing loudly.
-python3 - "$CATALOG" <<'PY'
+python3 - "$CATALOG" "$CORPUS" <<'PY'
 import re, sys
 src = open(sys.argv[1]).read()
 cat_block = re.search(r'static let categories:.*?=\s*\[(.*?)\n    \]', src, re.S)
@@ -908,10 +911,39 @@ for name, groups_raw in entries:
                          " of its members (if the group is later reused) folds into a chip nobody sees")
 if failures:
     sys.exit("✗ " + "\n✗ ".join(failures))
-markets = next((g for n, g in entries if n == "Markets"), None)
-if markets is None:
-    sys.exit('✗ BridgeCatalog.categories no longer has a "Markets" category — MarketsVenueSwitcher targets it by name')
-print(f"  ✓ real catalog: {len(entries)} categories, every one names ≥1 real offer")
+# THE RULING ITSELF (prd §638, 2026-09-06): no Markets band, and Wallet is the
+# band that took its survivors — its groups span `NFTs` so OpenSea folds there
+# rather than into a chip nobody sees. A "Markets" row creeping back is the
+# reversal the user made in one sentence; a Wallet row that drops `NFTs` orphans
+# a real offer silently (it folds nowhere and draws its own bare circle).
+if any(n == "Markets" for n, _ in entries):
+    sys.exit('✗ BridgeCatalog.categories has a "Markets" category again — it was deleted (prd §638)')
+wallet_groups = next((re.findall(r'"([^"]+)"', g) for n, g in entries if n == "Wallet"), None)
+if wallet_groups is None:
+    sys.exit("✗ BridgeCatalog.categories has no Wallet category")
+if "NFTs" not in wallet_groups:
+    sys.exit('✗ Wallet no longer spans the "NFTs" group — OpenSea would fold into no category (prd §638)')
+for name in ("Tokens", "L2BEAT"):
+    if not re.search(r'name:\s*"%s".*?group:\s*"Wallet"' % name, src, re.S):
+        sys.exit(f'✗ "{name}" is no longer a Wallet-group offer (prd §638 moved it there)')
+# The seven retired seats are RETIRED: named in `Corpus.retiredSources` and
+# offered nowhere. A name in both is a seat you can connect and never open —
+# the one state `earnsRoom` and the catalog must never disagree about.
+corpus = open(sys.argv[2]).read()
+retired_block = re.search(r'static let retiredSources: Set<String> = \[(.*?)\n    \]', corpus, re.S)
+if not retired_block:
+    sys.exit("✗ Corpus.retiredSources not found in Thing.swift — the retired seats have no gate")
+retired = re.findall(r'"([^"]+)"', retired_block.group(1))
+if not retired:
+    sys.exit("✗ Corpus.retiredSources parsed to zero entries")
+offered = set(re.findall(r'Offer\(name:\s*"([^"]+)"', src))
+back = sorted(set(retired) & offered)
+if back:
+    sys.exit(f"✗ retired source(s) offered in the catalog again: {back} — a seat you can connect and never open (prd §638)")
+for name in ("Kalshi", "Polymarket", "Stocktwits", "GeckoTerminal", "Circle x402", "1Claw", "Open Food Facts"):
+    if name not in retired:
+        sys.exit(f'✗ "{name}" is no longer in Corpus.retiredSources — its rows would earn a chip and a room for a seat the catalog does not offer')
+print(f"  ✓ real catalog: {len(entries)} categories, every one names ≥1 real offer; no Markets; {len(retired)} retired seats offered nowhere")
 
 # Every SEATLESS source (a device capability the catalog has nothing to
 # connect — "Voice") must name a category that really exists. Its whole job is
@@ -947,15 +979,19 @@ PY
 # single category to fold, since there is nothing for a second pass to
 # interfere with. "Wallet" also covers the identity-fold edge case: its own
 # category name equals its sole always-present member's name, which must fold
-# to a no-op rather than something surprising.
+# to a no-op rather than something surprising — and it spans TWO groups
+# (`Wallet`, `NFTs`), which is what the real Wallet does since prd §638 and
+# what the "members reads only the first group" mutation needs a fixture for.
+# "Work" is the category with NO landing anchor, so the reopen-where-you-
+# left-off tests run against it (they ran against Markets until §638).
 cat > "$TMP/stub.swift" <<'SWIFT'
 import Foundation
 
 enum BridgeCatalog {
     struct Offer { let name: String; let group: String }
     static let categories: [(name: String, exemplar: String, groups: Set<String>)] = [
-        ("Wallet",  "Wallet", ["Wallet"]),
-        ("Markets", "Kalshi", ["Markets", "NFTs"]),
+        ("Wallet",  "Wallet", ["Wallet", "NFTs"]),
+        ("Work",    "GitHub", ["Work"]),
     ]
     static let allOffers: [Offer] = [
         Offer(name: "Wallet",     group: "Wallet"),
@@ -969,10 +1005,11 @@ enum BridgeCatalog {
         Offer(name: "0xBow Vault", group: "Wallet"),
         Offer(name: "Walletbeat",  group: "Wallet"),
         Offer(name: "CardPointers", group: "Wallet"),
-        Offer(name: "Tokens",     group: "Markets"),
-        Offer(name: "Kalshi",     group: "Markets"),
-        Offer(name: "Polymarket", group: "Markets"),
+        Offer(name: "Tokens",     group: "Wallet"),
         Offer(name: "OpenSea",    group: "NFTs"),
+        Offer(name: "GitHub",     group: "Work"),
+        Offer(name: "Linear",     group: "Work"),
+        Offer(name: "Notion",     group: "Work"),
         Offer(name: "Photos",     group: "Photos"),
     ]
     static var offers: [Offer] { allOffers }
@@ -1009,15 +1046,18 @@ func check(_ label: String, _ ok: Bool) {
     else { print("  ✗ \(label)"); failures += 1 }
 }
 
-let markets = CategoryFold.memberSet(of: "Markets")
 let wallet = CategoryFold.memberSet(of: "Wallet")
+let work = CategoryFold.memberSet(of: "Work")
 
 // --- members / isCategory: the derivation -----------------------------------
-check("Markets spans both category groups",
-      CategoryFold.members(of: "Markets") == ["Tokens", "Kalshi", "Polymarket", "OpenSea"])
-check("Wallet has its own members",
-      CategoryFold.members(of: "Wallet") == ["Wallet", "Peer", "0xBow Vault", "Walletbeat", "CardPointers"])
-check("a non-member is not a member", !CategoryFold.isMember("Photos", of: "Markets"))
+// Wallet spans TWO groups since prd §638 (`Wallet` + `NFTs`), so OpenSea is a
+// member alongside the seats in the Wallet group proper — in CATALOG order.
+check("Wallet spans both category groups",
+      CategoryFold.members(of: "Wallet")
+        == ["Wallet", "Peer", "0xBow Vault", "Walletbeat", "CardPointers", "Tokens", "OpenSea"])
+check("Work has its own members",
+      CategoryFold.members(of: "Work") == ["GitHub", "Linear", "Notion"])
+check("a non-member is not a member", !CategoryFold.isMember("Photos", of: "Wallet"))
 // isMember resolves through the catalog alias, exactly like fold — the
 // second place the shipped bug lived (found live, 2026-08-11: this function
 // feeds `MainSurface`'s `categoryVenues[category]`, so a false-negative here
@@ -1026,10 +1066,11 @@ check("a non-member is not a member", !CategoryFold.isMember("Photos", of: "Mark
 check("isMember resolves an aliased source (short name vs. catalog display name)",
       CategoryFold.isMember("Vault", of: "Wallet"))
 check("isMember rejects a source aliased into a DIFFERENT category",
-      !CategoryFold.isMember("Vault", of: "Markets"))
-check("a category name is recognized", CategoryFold.isCategory("Markets"))
+      !CategoryFold.isMember("Vault", of: "Work"))
+check("a category name is recognized", CategoryFold.isCategory("Work"))
 check("a category name is recognized (Wallet)", CategoryFold.isCategory("Wallet"))
-check("a plain source is not a category", !CategoryFold.isCategory("Kalshi"))
+check("a plain source is not a category", !CategoryFold.isCategory("GitHub"))
+check("the deleted category is not a category (prd §638)", !CategoryFold.isCategory("Markets"))
 
 // CARDPOINTERS FOLDS (user ruling 2026-08-24, overturning the 2026-08-20/prd §423
 // exemption after four days). It sits in the Wallet GROUP in the catalog — "it is cards
@@ -1060,32 +1101,42 @@ check("Walletbeat's chip reads as its category",
       CategoryFold.chipLabel(for: "Walletbeat", folded: ["Wallet"]) == "Wallet")
 check("Walletbeat IS a Wallet switcher venue",
       CategoryFold.scopes(category: "Wallet", present: ["Walletbeat", "Peer"]).contains("Walletbeat"))
+// THE §638 SURVIVORS fold into Wallet the same way — OpenSea through the second
+// group, Tokens through the first — and both are venues in Wallet's folder.
+check("OpenSea (the NFTs group) folds into Wallet",
+      CategoryFold.fold(["All", "OpenSea", "Photos"], category: "Wallet", members: wallet)
+        == ["All", "Wallet", "Photos"])
+check("Tokens folds into Wallet",
+      CategoryFold.chipLabel(for: "Tokens", folded: ["Wallet"]) == "Wallet")
+check("Tokens and OpenSea are Wallet switcher venues, in catalog order",
+      CategoryFold.scopes(category: "Wallet", present: ["OpenSea", "Tokens", "Peer"])
+        == ["Peer", "Tokens", "OpenSea"])
 check("an unknown label is not a category", !CategoryFold.isCategory("Nonsense"))
 
 // --- fold: UNCONDITIONAL now — the whole point of §351 ----------------------
 check("no fold with zero members present",
-      CategoryFold.fold(["All", "Photos", "Wallet"], category: "Markets", members: markets)
+      CategoryFold.fold(["All", "Photos", "Wallet"], category: "Work", members: work)
         == ["All", "Photos", "Wallet"])
 // THE KEY BEHAVIOR CHANGE FROM MarketsRoom: a SINGLE present member now
 // folds too — the old harness pinned the opposite ("no fold with one member")
 // because MarketsRoom.foldFloor was 2. Pinning this the other way is the
 // whole reason this file replaces that one.
 check("ONE present member still folds (no floor)",
-      CategoryFold.fold(["All", "Kalshi", "Photos"], category: "Markets", members: markets)
-        == ["All", "Markets", "Photos"])
+      CategoryFold.fold(["All", "GitHub", "Photos"], category: "Work", members: work)
+        == ["All", "Work", "Photos"])
 check("folds into the first member's slot",
-      CategoryFold.fold(["All", "Photos", "Kalshi", "Tokens"], category: "Markets", members: markets)
-        == ["All", "Photos", "Markets"])
+      CategoryFold.fold(["All", "Photos", "GitHub", "Linear"], category: "Work", members: work)
+        == ["All", "Photos", "Work"])
 check("the category is inserted exactly ONCE for three members",
-      CategoryFold.fold(["All", "Tokens", "Kalshi", "Polymarket", "OpenSea"], category: "Markets", members: markets)
-        == ["All", "Markets"])
+      CategoryFold.fold(["All", "GitHub", "Linear", "Notion"], category: "Work", members: work)
+        == ["All", "Work"])
 check("every member is removed",
-      CategoryFold.fold(["All", "Tokens", "Photos", "OpenSea"], category: "Markets", members: markets)
-        .allSatisfy { !markets.contains($0) })
+      CategoryFold.fold(["All", "GitHub", "Photos", "Notion"], category: "Work", members: work)
+        .allSatisfy { !work.contains($0) })
 check("folding is idempotent",
-      CategoryFold.fold(CategoryFold.fold(["All", "Tokens", "Kalshi"], category: "Markets", members: markets),
-                         category: "Markets", members: markets)
-        == ["All", "Markets"])
+      CategoryFold.fold(CategoryFold.fold(["All", "GitHub", "Linear"], category: "Work", members: work),
+                         category: "Work", members: work)
+        == ["All", "Work"])
 // The identity edge case: Wallet's own category name equals its sole
 // always-present member's name — folding must be a no-op, not double up or
 // vanish the chip.
@@ -1107,42 +1158,42 @@ check("an ALIASED source (short name vs. the catalog's longer display name) stil
       CategoryFold.fold(["All", "Vault", "Photos"], category: "Wallet", members: wallet)
         == ["All", "Wallet", "Photos"])
 check("foldAll resolves the same alias",
-      CategoryFold.foldAll(["All", "Vault", "Kalshi"]) == ["All", "Wallet", "Markets"])
+      CategoryFold.foldAll(["All", "Vault", "GitHub"]) == ["All", "Wallet", "Work"])
 
 // --- foldAll: disjoint composability across every category ------------------
 // The property a single-category harness cannot test: category A's fold
 // leaves category B's members untouched, and both fold in one pass.
 check("foldAll folds two independent categories in one pass",
-      CategoryFold.foldAll(["All", "Peer", "Kalshi", "Photos"]) == ["All", "Wallet", "Markets", "Photos"])
+      CategoryFold.foldAll(["All", "Peer", "GitHub", "Photos"]) == ["All", "Wallet", "Work", "Photos"])
 check("foldAll folds a lone member from EITHER category",
-      CategoryFold.foldAll(["All", "Peer", "Photos"]) == ["All", "Wallet", "Photos"])
+      CategoryFold.foldAll(["All", "Linear", "Photos"]) == ["All", "Work", "Photos"])
 check("foldAll leaves a corpus with no category members untouched",
       CategoryFold.foldAll(["All", "Photos"]) == ["All", "Photos"])
 check("foldAll is order-independent for the categories it walks",
-      CategoryFold.foldAll(["All", "Kalshi", "Peer", "Tokens"])
-        == CategoryFold.foldAll(["All", "Kalshi", "Peer", "Tokens"]))
+      CategoryFold.foldAll(["All", "GitHub", "Peer", "OpenSea"])
+        == CategoryFold.foldAll(["All", "GitHub", "Peer", "OpenSea"]))
 
 // --- chipLabel: which chip lights -------------------------------------------
-let folded = CategoryFold.foldAll(["All", "Tokens", "Kalshi", "Photos"])
+let folded = CategoryFold.foldAll(["All", "Tokens", "GitHub", "Photos"])
 check("a folded member lights its category chip",
-      CategoryFold.chipLabel(for: "Kalshi", folded: folded) == "Markets")
+      CategoryFold.chipLabel(for: "GitHub", folded: folded) == "Work")
 check("a non-catalog source lights itself",
       CategoryFold.chipLabel(for: "Photos", folded: folded) == "Photos")
 // UNFOLDED, a member must light ITSELF — returning the category label here
 // would point at a chip that isn't in the strip, which reads as no filter.
 check("an unfolded member lights itself",
-      CategoryFold.chipLabel(for: "Kalshi", folded: ["All", "Kalshi", "Photos"]) == "Kalshi")
+      CategoryFold.chipLabel(for: "GitHub", folded: ["All", "GitHub", "Photos"]) == "GitHub")
 check("a category name passed as a 'source' is inert (never a real source)",
-      CategoryFold.chipLabel(for: "Markets", folded: folded) == "Markets")
+      CategoryFold.chipLabel(for: "Work", folded: folded) == "Work")
 
 // --- scopes: a switcher's own display order ---------------------------------
 check("scopes follow catalog order, not the caller's",
-      CategoryFold.scopes(category: "Markets", present: ["OpenSea", "Kalshi", "Tokens"])
-        == ["Tokens", "Kalshi", "OpenSea"])
+      CategoryFold.scopes(category: "Work", present: ["Notion", "GitHub", "Linear"])
+        == ["GitHub", "Linear", "Notion"])
 check("scopes exclude absent members",
-      !CategoryFold.scopes(category: "Markets", present: ["Tokens", "Kalshi"]).contains("OpenSea"))
+      !CategoryFold.scopes(category: "Work", present: ["GitHub", "Linear"]).contains("Notion"))
 check("scopes exclude non-members",
-      CategoryFold.scopes(category: "Markets", present: ["Tokens", "Photos"]) == ["Tokens"])
+      CategoryFold.scopes(category: "Work", present: ["GitHub", "Photos"]) == ["GitHub"])
 // The third place the alias bug lived (found live, 2026-08-11): scopes used
 // to filter catalog NAMES by whether the caller's present SET (source
 // strings) contained them — so "Vault" (present) could never match "0xBow
@@ -1156,36 +1207,39 @@ check("scopes places an aliased source at its OWN catalog offer's position",
         == ["Wallet", "Peer", "Vault"])
 
 // --- landing / remember: per-category isolation -----------------------------
-let mKey = "categoryFold.lastVenue.Markets"
+let wkKey = "categoryFold.lastVenue.Work"
 let wKey = "categoryFold.lastVenue.Wallet"
 let lifeKey = "categoryFold.lastVenue.Life"
 // This is a REAL UserDefaults.standard, keyed by this compiled binary's own
 // identity, not a sandboxed fixture — a leftover value from a PRIOR run of
 // this very script (or an earlier draft of it) persists on disk across runs.
 // Clear every key this test can possibly touch before asserting any of them.
-[mKey, wKey, lifeKey].forEach { UserDefaults.standard.removeObject(forKey: $0) }
+// (`categoryFold.lastVenue.Markets` is cleared too: a run from before §638
+// may have left it, and a stale key on disk is exactly the kind of state a
+// later assertion could pass by accident against.)
+[wkKey, wKey, lifeKey, "categoryFold.lastVenue.Markets"].forEach { UserDefaults.standard.removeObject(forKey: $0) }
 check("with no memory, lands on the first present venue",
-      CategoryFold.landing(category: "Markets", present: ["Kalshi", "Tokens"]) == "Kalshi")
+      CategoryFold.landing(category: "Work", present: ["Linear", "GitHub"]) == "Linear")
 check("with nothing present, lands nowhere",
-      CategoryFold.landing(category: "Markets", present: []) == nil)
-CategoryFold.remember("Polymarket")
+      CategoryFold.landing(category: "Work", present: []) == nil)
+CategoryFold.remember("Notion")
 check("remembers a member under ITS OWN category's key",
-      UserDefaults.standard.string(forKey: mKey) == "Polymarket")
+      UserDefaults.standard.string(forKey: wkKey) == "Notion")
 check("reopens where you left off",
-      CategoryFold.landing(category: "Markets", present: ["Tokens", "Polymarket"]) == "Polymarket")
+      CategoryFold.landing(category: "Work", present: ["GitHub", "Notion"]) == "Notion")
 // A remembered venue that has since disappeared (disconnected, last row
 // deleted) must NOT be handed back — that is a room with no door.
 check("a remembered venue that vanished falls back",
-      CategoryFold.landing(category: "Markets", present: ["Tokens", "Kalshi"]) == "Tokens")
+      CategoryFold.landing(category: "Work", present: ["GitHub", "Linear"]) == "GitHub")
 // The other category's memory must be UNTOUCHED by any of the above — the
 // whole reason the key is namespaced per category rather than the single
 // `markets.lastVenue` MarketsRoom used to own.
-check("remembering a Markets venue never touches Wallet's own memory",
+check("remembering a Work venue never touches Wallet's own memory",
       UserDefaults.standard.string(forKey: wKey) == nil)
 CategoryFold.remember("Peer")
 check("Wallet's own memory is independent",
       UserDefaults.standard.string(forKey: wKey) == "Peer"
-        && UserDefaults.standard.string(forKey: mKey) == "Polymarket")
+        && UserDefaults.standard.string(forKey: wkKey) == "Notion")
 // "Photos" is NOT a fit test here: it IS a real stub offer whose group maps
 // to no category, so `category(of:)`'s own `?? "Life"` fallback resolves it
 // to "Life" rather than nil — a source the catalog has genuinely never heard
@@ -1194,7 +1248,7 @@ check("Wallet's own memory is independent",
 // guard actually depends on.
 CategoryFold.remember("TotallyUnknownThing")
 check("refuses to remember a source the catalog has never heard of",
-      UserDefaults.standard.string(forKey: mKey) == "Polymarket"
+      UserDefaults.standard.string(forKey: wkKey) == "Notion"
         && UserDefaults.standard.string(forKey: wKey) == "Peer"
         && UserDefaults.standard.string(forKey: lifeKey) == nil)
 
@@ -1208,11 +1262,11 @@ check("Wallet lands on the balance room despite a remembered rider",
 // a room with no door, the same rule as a vanished remembered venue.
 check("an absent anchor falls back to the memory",
       CategoryFold.landing(category: "Wallet", present: ["Peer", "Vault"]) == "Peer")
-// Markets has no anchor: reopening where you left off is the point there —
+// Work has no anchor: reopening where you left off is the point there —
 // no venue is home, so §354's ruling is Wallet's alone.
-check("Markets still reopens where you left off (no anchor)",
-      CategoryFold.landing(category: "Markets", present: ["Tokens", "Polymarket"]) == "Polymarket")
-[mKey, wKey, lifeKey].forEach { UserDefaults.standard.removeObject(forKey: $0) }
+check("Work still reopens where you left off (no anchor)",
+      CategoryFold.landing(category: "Work", present: ["GitHub", "Notion"]) == "Notion")
+[wkKey, wKey, lifeKey].forEach { UserDefaults.standard.removeObject(forKey: $0) }
 
 print(failures == 0 ? "category-fold-selftest: OK" : "category-fold-selftest: \(failures) FAILURE(S)")
 exit(failures == 0 ? 0 : 1)

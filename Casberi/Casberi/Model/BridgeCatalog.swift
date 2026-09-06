@@ -125,9 +125,8 @@ enum BridgeCatalog {
             if connectable && !needsSetup { return "One tap" }
             let keyless: Set<String> = ["Wallet", "Tokens", "Peer", "0xBow Privacy Pools", "Railgun", "Safe", "Reddit", "YouTube",
                 "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster",
-                "Bluesky", "Nostr", "OpenSea", "Kalshi", "Shopify", "GeckoTerminal", "Deals",
-                "Circle x402",
-                "Open Food Facts", "Stocktwits", "Hugging Face", "Radicle", "npm", "PyPI", "Altana",
+                "Bluesky", "Nostr", "OpenSea", "Shopify", "Deals",
+                "Hugging Face", "Radicle", "npm", "PyPI", "Altana",
                 "Walletbeat", "L2BEAT", "ENS"]
             if keyless.contains(name) { return "No account" }
             // Instagram and Snapchat were missed here when they landed
@@ -303,8 +302,9 @@ enum BridgeCatalog {
               needsSetup: true, added: day(2026, 8, 6), unavailableOnMac: true),
         // Wallet group by ruling (user, 2026-07-21): the balances MERGE into
         // the combined portfolio, so an exchange belongs beside the wallets
-        // whose total it joins — not in Markets, which is where things you
-        // watch rather than own live.
+        // whose total it joins — not in Markets, which was where things you
+        // watched rather than owned lived until that category was deleted
+        // (2026-09-06, prd §638).
         Offer(name: "Coinbase",    tagline: "Your exchange balance, in your total",  group: "Wallet",    connectable: true,
               summary: "Your Coinbase balances join your watched wallets in one combined total and one map.\n\nTakes a view-only key — what it can do is checked before it's stored, and anything that can trade or move money is refused.",
               needsSetup: true, added: day(2026, 7, 21)),
@@ -354,25 +354,17 @@ enum BridgeCatalog {
         Offer(name: "Gemini",      tagline: "Import your chats, keep them findable", group: "Agent",     connectable: true,
               summary: "Gemini lets your history out through Google Takeout and no other way — a download, not a connection.\n\nBring that file here and every prompt becomes searchable alongside everything else you keep. Re-import any time for what's new.",
               needsSetup: true),
-        Offer(name: "Tokens",      tagline: "Track any token",                       group: "Markets",   connectable: true,
+        // MARKETS IS DELETED (user ruling 2026-09-06, prd §638: "i want to get
+        // away from crypto bullshit but wallets and the other stuff in them
+        // are important"). Seven seats went with the category — Kalshi,
+        // Polymarket, Stocktwits, GeckoTerminal, Circle x402, 1Claw and Open
+        // Food Facts — and the three that read as a lens on money you hold
+        // (Tokens, L2BEAT, OpenSea) moved to Wallet. Their bridge files stay
+        // in the tree for one release so a connected seat is not stranded,
+        // but nothing here offers them, and nothing in the strip draws them
+        // (`Corpus.retiredSources`).
+        Offer(name: "Tokens",      tagline: "Track any token",                       group: "Wallet",    connectable: true,
               summary: "Paste an address or a link and the live price chart lands in your feed, drawn on \(DS.device). Public price data only; nothing about you leaves the device.",
-              needsSetup: true),
-        Offer(name: "Kalshi",      tagline: "Watch real-event odds",                 group: "Markets",   connectable: true,
-              summary: "Every open market on Kalshi, the CFTC-regulated event exchange. Browse the whole book, follow what you want. Public odds, read-only — nothing here places a trade.",
-              features: ["Browse every open market — by category, or by what closes soonest",
-                         "Follow a question and its odds land in your feed",
-                         "See where Polymarket's crowd prices the same question differently"],
-              needsSetup: true),
-        Offer(name: "Polymarket", tagline: "Watch any prediction market",           group: "Markets",   connectable: true,
-              summary: "Every open market on Polymarket, the onchain prediction-market exchange. Browse the whole book, follow what you want. Public odds, read-only — nothing here places a trade.",
-              features: ["Browse every open market — by category, or by what closes soonest",
-                         "Follow a question and its odds land in your feed, with a real price curve",
-                         "See where Kalshi's crowd prices the same question differently"],
-              needsSetup: true, added: day(2026, 7, 28)),
-        Offer(name: "Stocktwits",  tagline: "Watch any stock",                      group: "Markets",   connectable: true,
-              summary: "Search a ticker and the takes traders post about it land in your feed, each wearing its author's own bullish or bearish call.\n\nNo account, no key, read-only: nothing here trades, and a watched ticker can never see your portfolio.",
-              features: ["The stock's live price chart draws on \(DS.device)",
-                         "From public market data — no brokerage, no holdings"],
               needsSetup: true),
         // Wallet, not Markets (2026-07-25, prd §210 — amending the 2026-07-17
         // ruling below, kept for the record). A Peer fill is the person's OWN
@@ -449,30 +441,22 @@ enum BridgeCatalog {
                          "Amounts and timing only — the merchant never reaches the chain"
               ],
               needsSetup: true, added: day(2026, 7, 31)),
-        Offer(name: "GeckoTerminal", tagline: "Trending tokens, per chain",          group: "Markets",   connectable: true,
-              summary: "Pick the chains you care about and the tokens trending on each land in your feed as links.\n\nNo account, no key. Read-only public price data — nothing here buys, sells, or trades.",
-              features: ["GeckoTerminal's own ranking, by 24-hour volume and price move",
-                         "Each row opens to its live on-device chart",
-                         "Fetched straight from the public API by \(DS.device)"],
-              needsSetup: true),
-        // MARKETS, by user ruling (2026-08-21, prd §428). Not an obvious call and
-        // the alternative was named before it was made: L2BEAT reviews CHAINS, so
-        // Wallet — where Walletbeat sits reviewing wallet apps — is the other
-        // defensible home. Markets wins because this is a venue you go to in order
-        // to compare things before committing, which is what every other seat in
-        // this group is, while Wallet's seats are all lenses on money you already
-        // hold. It therefore has NO standalone chip: `CategoryFold` folds Markets
-        // at a floor of one, so it is a venue in that cluster's switcher (§423's
-        // ruling, which retired Walletbeat's own chip for the same reason).
-        Offer(name: "L2BEAT", tagline: "How safe the chains you use really are", group: "Markets", connectable: true,
+        // WALLET since 2026-09-06 (prd §638), and the alternative §428 named
+        // on 2026-08-21 is now the home: L2BEAT reviews CHAINS, and Wallet —
+        // where Walletbeat sits reviewing wallet apps — was always the other
+        // defensible seat. Markets won then because it was a venue you go to
+        // in order to compare things before committing; with that category
+        // deleted, the chains your money sits on are a lens on money you hold.
+        // Still no standalone chip: it is a venue in the Wallet folder.
+        Offer(name: "L2BEAT", tagline: "How safe the chains you use really are", group: "Wallet", connectable: true,
               summary: "L2BEAT assesses every Ethereum layer 2 on five questions — whether you can force a transaction in, what proves the chain's balances are real, and how long you'd have to get out if the rules changed.\n\nFollow them and the incidents they record arrive in your feed, for every chain they cover. Name the chains you use and each one's full assessment comes too, with their own stage rating.\n\nNo account, no key. Their judgments, never ours.",
               features: ["L2BEAT's own reading of each risk, in their own words",
                          "Their Stage 0/1/2 rating — cited, never computed here",
                          "Incidents and upgrades arrive as they're recorded"],
               needsSetup: true, added: day(2026, 8, 21)),
-        Offer(name: "Circle x402", tagline: "The APIs that sell to agents",          group: "Markets",   connectable: true,
-              summary: "The companies selling APIs to AI agents land in your feed — each with what it sells and what a call costs.\n\nFetched straight from Circle's public directory: no account, no key. Read-only — nothing here pays for a call.",
-              needsSetup: true, added: day(2026, 8, 6)),
+        // The NFTs group files under WALLET since 2026-09-06 (prd §638) — a
+        // drop is something you might hold, and the category that held it
+        // apart is gone.
         Offer(name: "OpenSea",     tagline: "New NFT drops in your feed",            group: "NFTs",      connectable: true,
               summary: "Watch the chains you care about and their newest NFT collections land in your feed as links — the ones with real artwork, not the empty test contracts. Fetched straight from OpenSea's public API, read-only: nothing here buys, sells, or bids.",
               needsSetup: true),
@@ -502,9 +486,6 @@ enum BridgeCatalog {
         Offer(name: "Deals",       tagline: "The best prices, as they drop",          group: "Shopping",  connectable: true,
               summary: "Follow the deal aggregators — Slickdeals, DealNews — and their newest deals land in your feed as products, each already priced in the headline. Fetched straight from each source's public feed by \(DS.device): no account, read-only — nothing here buys anything.",
               needsSetup: true),
-        Offer(name: "Open Food Facts", tagline: "Scan a grocery barcode",           group: "Shopping",  connectable: true,
-              summary: "The product lands in your feed with its name, picture and Nutri-Score.\n\nKeyless and free. Nothing about you leaves \(DS.device) but the barcode.",
-              needsSetup: true),
         Offer(name: "Venice",      tagline: "Private answers with your key",         group: "Agent",     connectable: true,
               summary: "Venice keeps chats on your own device by design, so there's nothing to read in — instead, your Venice key powers \"Try with your key\": any answer re-runs on Venice's private API, straight from \(DS.device), only when you tap.",
               needsSetup: true),
@@ -520,15 +501,8 @@ enum BridgeCatalog {
                          "Every prompt says answer only — never execute",
                          "Straight from \(DS.device), only when you tap"],
               needsSetup: true),
-        // 1Claw is the agents' vault (2026-07-17, prd 111): grants, not
-        // secrets — the feed answers "what can this key reach", never what
-        // a secret's value is.
-        Offer(name: "1Claw",       tagline: "What your agent's key can reach",       group: "Agent",     connectable: true,
-              summary: "1Claw is a vault that holds your AI agents' secrets behind human-granted permissions.\n\nPaste an agent's key and its actual reach lands in your feed. Names and permissions only: nothing here ever reads a secret's value, signs, or spends.",
-              features: ["Every vault the key can see",
-                         "Each grant's secret paths and permissions",
-                         "Read straight from \(DS.device), from 1Claw's own records"],
-              needsSetup: true, added: day(2026, 7, 17)),
+        // 1Claw (the agents' vault, 2026-07-17, prd 111) left the catalog on
+        // 2026-09-06 with the Markets seats (prd §638).
         // OpenRouter (2026-07-24): a sixth agent key, one API routed across
         // 400+ models. It never pins one model — it rides OpenRouter's own
         // `openrouter/auto` router, so the answer's capabilities stay
@@ -1082,7 +1056,9 @@ enum BridgeCatalog {
         // prd §322): "wallet, work, life, agents, media, social, mail,
         // shopping and whatever else if there is another category" — the three
         // they didn't name (Markets, Notes, Reading) keep their relative order
-        // and settle after Shopping.
+        // and settle after Shopping. (Markets itself is DELETED as of
+        // 2026-09-06, prd §638 — the notes below that place it are the
+        // record of an order that no longer has that band in it.)
         //
         // It keeps every property the earlier rulings were protecting and
         // states them plainly, so a later pass doesn't "restore" one of them:
@@ -1106,10 +1082,12 @@ enum BridgeCatalog {
         // reasoning that already pulled Home, People and Storage in: a band of
         // the things that are yours rather than a dedicated content type.
         //
-        // MARKETS SITS AHEAD OF SHOPPING AND NOTES (same ruling). It stays well
-        // clear of Wallet — seventh, not second — so the 2026-07-23 property
-        // this order exists to protect (no two crypto bands up top) still
-        // holds.
+        // MARKETS SAT AHEAD OF SHOPPING AND NOTES (same ruling), well clear of
+        // Wallet — seventh, not second — so the 2026-07-23 property this
+        // order exists to protect (no two crypto bands up top) held. The
+        // band is gone entirely since 2026-09-06 (prd §638): Tokens, L2BEAT
+        // and OpenSea fold into Wallet, the other seven seats are retired,
+        // and the "two crypto bands" problem is closed by there being one.
         //
         // **Unlike §322, a seat DOES change category here.** Every Mail-group
         // offer now answers "Life" from `category(of:)`, so a kept ask of the
@@ -1117,7 +1095,10 @@ enum BridgeCatalog {
         // Nothing migrates it: the ask simply finds no category and composes
         // nothing, which is the same outcome as a category being renamed and
         // is why the recap is written to tolerate an unknown name.
-        ("Wallet",  "Wallet",      ["Wallet"]),
+        // "NFTs" joined Wallet's groups when Markets was deleted (2026-09-06,
+        // prd §638) — OpenSea keeps its own group so a drop is still filed
+        // as what it is, and Wallet is the band that holds it.
+        ("Wallet",  "Wallet",      ["Wallet", "NFTs"]),
         ("Work",    "GitHub",      ["Work"]),
         // "Home" is GONE from this list, not merely empty (2026-09-04). Life
         // absorbed it on 2026-07-23 because HomeKit was the lone app in its
@@ -1138,10 +1119,10 @@ enum BridgeCatalog {
         // one of them is a live connect that fills the feed with something to
         // READ (RSS, Substack, Reddit, Readwise, Raindrop, Kindle, Bookmarks)
         // — the app's own core loop. Shopping is the narrowest band in the
-        // catalog: Privacy needs a paid plan, Open Food Facts is a barcode
-        // scanner rather than a feed, Bitrefill is crypto gift cards.
+        // catalog: Privacy needs a paid plan, Bitrefill is crypto gift cards
+        // (Open Food Facts, a barcode scanner rather than a feed, was retired
+        // 2026-09-06 with the Markets seats, prd §638).
         ("Reading", "Readwise",    ["Reading", "Saves"]),
-        ("Markets", "Kalshi",      ["Markets", "NFTs"]),
         ("Shopping", "Shopify",    ["Shopping"]),
         ("Notes",   "Apple Notes", ["Notes"]),
     ]

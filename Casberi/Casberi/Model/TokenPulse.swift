@@ -106,14 +106,6 @@ final class TokenPulse {
              change24h: [0.023, -0.011, 0.084][i % 3], marketCap: t.marketCap,
              phase: Double(i) * 2.1)
         }
-        // The trending rows carry the same shape and the refs
-        // `DemoSeedAll` stamps on them, so their sheets draw a curve too
-        // rather than a title over a logo (2026-09-06).
-        + DemoSeedAll.trendingSeeds.enumerated().map { i, t in
-            (ref: "demo:gecko:\(t.symbol.lowercased())", price: t.price,
-             change24h: [0.041, -0.027, 0.063][i % 3], marketCap: nil,
-             phase: Double(i) * 1.7 + 0.6)
-        }
     }
 
     func seedDemo() { seedDemo(Self.demoTokens()) }

@@ -1272,15 +1272,10 @@ harness "Cursor pure-logic self-test" "cursor self-test" "scripts/cursor-selftes
 # proof that runs on every build.
 harness "Bankr pure-logic self-test" "bankr self-test" "scripts/bankr-selftest.sh" "the Bankr logic self-test failed — run scripts/bankr-selftest.sh"
 
-# Circle x402 (2026-08-06). Unlike the harnesses above this bridge IS
-# measurable — the directory is keyless — and that is exactly why it needs one:
-# a live curl proves the wire shape and proves nothing about the arithmetic
-# downstream of it. Every failure it catches renders perfectly. It also carries
-# two guards worth more than the assertions: the read must never go back to the
-# API's own `category` filter (which accepts six of the seven values its own
-# data carries, so a server-side filter silently drops 19% of the marketplace),
-# and the file must never gain a write verb or read a `payTo` — this is a
-# PAYMENT protocol, and "Casberi never pays for a call" is kept by conduct.
+# (Circle x402's harness, `x402-selftest.sh`, ran between here and the App
+# Store Connect one from 2026-08-06 until 2026-09-06 — deleted with the seat's
+# catalog entry, prd §638. The bridge file stays one release; nothing offers
+# it, so nothing proves it.)
 # App Store Connect (2026-08-06, prd §323). Its conduct guard is the strongest
 # reason any harness here exists: an App Store Connect key carries a ROLE, not
 # scopes, and no role is read-only for what this bridge reads — the narrowest
@@ -1321,8 +1316,6 @@ harness "Polar pure-logic self-test" "polar self-test" "scripts/polar-selftest.s
 # constants equal across two files — drift there states a 30-day total over a
 # fortnight of rows and looks correct doing it.
 harness "Dodo Payments pure-logic self-test" "dodo self-test" "scripts/dodo-payments-selftest.sh" "the Dodo Payments logic self-test failed — run scripts/dodo-payments-selftest.sh"
-
-harness "Circle x402 pure-logic self-test" "x402 self-test" "scripts/x402-selftest.sh" "the x402 logic self-test failed — run scripts/x402-selftest.sh"
 
 # The contract between the app and its Home Screen (prd §382, 2026-08-14).
 # Mechanical because the widget extension is the ONE surface nothing else in
@@ -2714,7 +2707,6 @@ else
     dodoHead          "Dodo Payments"
     posthogHead       "PostHog"
     appleWallet       "Apple Wallet"
-    x402              "Circle x402"
     appStoreConnect   "App Store Connect"
     cursorHead        "Cursor"
     peerHead          "Peer"
@@ -2888,11 +2880,12 @@ else
   xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -receiptsForget YES >/dev/null 2>&1 || true
   sleep 2
   xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
-  # Walk the rooms most likely to reach: both prediction books (the per-view
-  # fetch that started this), the token room, and a thing sheet (the page
-  # scrape). Each is a separate launch, because the reach we are hunting is
-  # one a ROOM makes when it opens.
-  for room in Kalshi Polymarket Tokens GeckoTerminal; do
+  # Walk the rooms most likely to reach: the token room and the drops room
+  # (the prediction books, whose per-view fetch started this, left the catalog
+  # on 2026-09-06 — prd §638 — and a retired seat earns no room to walk), and
+  # a thing sheet (the page scrape). Each is a separate launch, because the
+  # reach we are hunting is one a ROOM makes when it opens.
+  for room in Tokens OpenSea; do
     xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES \
       -deeplink "casberi://feed/source/$room" >/dev/null 2>&1 || true
     sleep 4

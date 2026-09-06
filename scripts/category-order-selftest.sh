@@ -3,7 +3,8 @@
 # the person's and not a constant (prd §533, 2026-08-29):
 #
 #   Casberi/Casberi/Model/CategoryOrder.swift
-#     — defaultOrder  (the 2026-08-11 ruling, kept as the default)
+#     — defaultOrder  (the 2026-08-11 ruling, kept as the default — minus the
+#                      Markets slot since prd §638 deleted that category)
 #     — reconcile     (a stored order made safe to sort by)
 #     — rank          (where a label sorts; Int.max for one we've never heard of)
 #     — set / reset / isCustom
@@ -199,7 +200,15 @@ let d = CategoryOrder.defaultOrder
 func rawStored() -> [String]? { UserDefaults.standard.stringArray(forKey: "chips.categoryOrder") }
 
 // --- the default itself -----------------------------------------------------
-check("the default order is the 2026-08-11 ruling, unchanged", d.count == 11)
+// TEN since prd §638 (2026-09-06): the 2026-08-11 ruling named eleven slots
+// and "Markets" was one of them; the category is deleted, so the ruling's
+// order stands minus that slot. Pinned as a count AND as the absence, so a
+// Markets slot creeping back fails here rather than drawing a folder for a
+// band the catalog no longer has.
+check("the default order is the 2026-08-11 ruling minus Markets (§638)", d.count == 10)
+check("Markets is not a slot (the category is deleted, §638)", !d.contains("Markets"))
+check("a stored order from before §638 sheds its Markets slot",
+      !CategoryOrder.reconcile(["Wallet", "Markets", "Work"]).contains("Markets"))
 check("no duplicate slot", Set(d).count == d.count)
 check("Wallet leads (user: 'more important to users')", d.first == "Wallet")
 check("Social sits after Life and before Media (user ruling)",

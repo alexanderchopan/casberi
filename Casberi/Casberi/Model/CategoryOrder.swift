@@ -68,8 +68,11 @@ enum CategoryOrder {
     /// positions a person actually sees in the strip. Every catalog category
     /// IS here, and the harness proves it against `BridgeCatalog` rather than
     /// trusting this list to have been updated.
+    /// "Markets" left this list on 2026-09-06 (prd §638) with the category
+    /// itself; `reconcile` drops it from any stored order the same way it
+    /// drops every name the catalog has stopped answering to.
     static let defaultOrder: [String] = [
-        "Wallet", "Markets", "Work", "Agents", "Life", "Social",
+        "Wallet", "Work", "Agents", "Life", "Social",
         "Media", "Reading", "Notes", "Voice", "Shopping",
     ]
 

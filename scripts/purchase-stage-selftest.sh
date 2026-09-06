@@ -478,21 +478,31 @@ grep -qE '"Shopify", "Deals", "Open Food Facts"' "$ROOT/Casberi/Casberi/Screens/
 # failure, which cost a whole pass to find. These are the exact prefixes
 # `purchaseRefs` tests.
 DEMO="$ROOT/Casberi/Casberi/Model/DemoSeedAll.swift"
-for ref in 'privacy:txn:' 'bitrefill:order:' 'bitrefill:invoice:' 'off:'; do
+# `off:` (Open Food Facts) left this loop and the Nutri-Score guard went with
+# it on 2026-09-06 (prd §638): the seat is retired from the catalog and the
+# demo seeds no scan on purpose — a demo row for a seat nobody can connect is
+# the fake status demo-selftest's check D exists to catch. The bridge, the
+# `off:` ref shape and the archetype it forks on stay one release, so the
+# pure-logic assertions above still run against them.
+for ref in 'privacy:txn:' 'bitrefill:order:' 'bitrefill:invoice:'; do
   grep -qF "\"$ref" "$DEMO" \
     || { print -u2 "purchase-stage-selftest: drift — the demo stopped seeding a real $ref ref"; exit 1; }
 done
 grep -qE 'PriceHistory\.compose' "$DEMO" \
   || { print -u2 "purchase-stage-selftest: drift — the demo stopped seeding a price drop"; exit 1; }
-grep -qE 'Nutri-Score \\\(' "$DEMO" \
-  || { print -u2 "purchase-stage-selftest: drift — the demo stopped seeding a Nutri-Score tag"; exit 1; }
 # …and every one of those real-shaped refs must be in `refPrefixes`, or the row
 # OUTLIVES the demo — indistinguishable from a real synced purchase, on a corpus
 # the person never chose to keep. The exact trap `DemoSeedAll` documents for
 # Peer / Privacy Pools / Railgun / Stocktwits, hit again by this pass.
-for ref in 'privacy:txn:demo' 'bitrefill:order:demo' 'bitrefill:invoice:demo' \
-           'off:5060403320102'; do
-  awk '/static let refPrefixes/,/\]$/' "$DEMO" | grep -qF "$ref" \
+# (`off:5060403320102` stays in `refPrefixes` for teardown of an older pour,
+# and is deliberately not demanded here — it is no longer seeded.)
+for ref in 'privacy:txn:demo' 'bitrefill:order:demo' 'bitrefill:invoice:demo'; do
+  # `grep … >/dev/null`, never `grep -q` at the tail of this pipe: under
+  # `pipefail`, `-q` exits on the first match, awk takes SIGPIPE (141) on the
+  # lines it is still writing, and a FOUND ref fails the check. It fired here
+  # deterministically on 2026-09-06 once the list grew a comment block past
+  # the match (the same trap category-fold-selftest records against itself).
+  awk '/static let refPrefixes/,/\]$/' "$DEMO" | grep -F "$ref" >/dev/null \
     || { print -u2 "purchase-stage-selftest: drift — demo exit no longer removes $ref rows"; exit 1; }
 done
 
