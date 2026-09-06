@@ -54,6 +54,10 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// The rows under "Watching". The caller composes them from its own
     /// store; the chassis sorts and labels them.
     var rows: [AccountPageShape.Row] = []
+    /// What is typed in the act field, so the roster below can answer the
+    /// same keystrokes (§639 amendment — one bar, two jobs). The adopter owns
+    /// the text because the field is its own; the chassis only reads it.
+    var query: String = ""
     var onRemoveRow: (String) -> Void = { _ in }
     /// Tap on a row — the person or repo profile where one exists. Rows
     /// with no destination are reads, not controls.
@@ -285,9 +289,14 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     // MARK: - 5. Watching
 
     @ViewBuilder private var roster: some View {
-        let (active, quiet) = AccountPageShape.split(rows)
-        if !rows.isEmpty {
-            Text(AccountPageShape.watchingLabel(rows.count))
+        // Filtered FIRST, then split: under a query the halves are the
+        // matches' own, so "Quiet" never counts rows the person cannot see.
+        let shown = AccountPageShape.matches(rows, query: query)
+        let (active, quiet) = AccountPageShape.split(shown)
+        let searching = !query.trimmingCharacters(in: .whitespaces).isEmpty
+        if !shown.isEmpty {
+            Text(searching ? AccountPageShape.yoursLabel(shown.count)
+                           : AccountPageShape.watchingLabel(rows.count))
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .padding(.top, DS.Space.s3)
                 .plainAccountRow()

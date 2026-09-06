@@ -242,6 +242,23 @@ enum HandleBridge: String {
         }
     }
 
+    /// The article-carrying noun the act field's placeholder takes — "Find
+    /// someone, or search yours" (§639 amendment). Never a bare plural: a
+    /// placeholder reading "Find people" is a category, not a thing you are
+    /// about to type.
+    var findNoun: String {
+        switch self {
+        case .youtube:   String(localized: "a channel")
+        case .substack:  String(localized: "a publication")
+        case .reddit:    String(localized: "a subreddit")
+        case .podcasts:  String(localized: "a show")
+        case .pinterest: String(localized: "a board")
+        case .farcaster: String(localized: "someone or a channel")
+        case .bluesky:   String(localized: "someone or a feed")
+        default:         String(localized: "someone")
+        }
+    }
+
     var fieldFooter: String {
         switch self {
         case .bluesky:
@@ -494,6 +511,7 @@ struct HandleSetupScreen: View {
                                        connected: bridge.isConnected, store: store),
             intro: bridge.setupIntro,
             rows: rows,
+            query: query,
             onRemoveRow: removeRow,
             onOpenRow: bridge.isRichSocial ? openRow : nil,
             teardown: {
@@ -725,6 +743,11 @@ struct HandleSetupScreen: View {
         // readers row say it as facts.
         DSSlabField(placeholder: fieldPlaceholder, text: $query,
                     actionLabel: omniButtonLabel, action: omniSubmit)
+        if !omniHits.isEmpty {
+            Text(AccountPageShape.onLabel(bridge.rawValue))
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .padding(.top, DS.Space.s2)
+        }
         ForEach(omniHits) { hit in
             BridgeSearchResultRow(
                 imageURL: hit.imageURL, fallbackIcon: bridge.rawValue,
@@ -841,9 +864,7 @@ struct HandleSetupScreen: View {
         // Connected, the field is the ADD field (prd §639): it says what it
         // watches, not how to spell the first one.
         if bridge.isConnected, bridge.supportsSearch {
-            return bridge == .farcaster
-                ? String(localized: "Watch or find an account, or /channel")
-                : String(localized: "Watch or find an account")
+            return AccountPageShape.findPlaceholder(bridge.findNoun)
         }
         if bridge == .farcaster { return String(localized: "@name, or /channel") }
         if bridge == .bluesky { return String(localized: "Handle, or search a feed") }

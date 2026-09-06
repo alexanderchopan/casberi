@@ -150,6 +150,47 @@ enum AccountPageShape {
         (rows.filter { $0.weekCount > 0 }, rows.filter { $0.weekCount <= 0 })
     }
 
+    /// **ONE bar, and the bar says which job it is doing** (user ruling
+    /// 2026-09-06). The field is first because adding is first, but a person
+    /// with forty repos or a hundred and forty accounts also wants to FIND one
+    /// they already watch — and a second search field under the roster was
+    /// tried and withdrawn as two controls for one line of thinking. So the
+    /// placeholder names both jobs in the order they happen, and the RESULTS
+    /// are what tell them apart: matches from the roster under "Yours", new
+    /// ones under the account's own name.
+    ///
+    /// `what` is the bridge's own noun with its article ("a repo", "someone",
+    /// "a feed") — never a bare plural, which reads as a category header
+    /// rather than as the thing you are about to type.
+    static func findPlaceholder(_ what: String) -> String {
+        String(localized: "Find \(what), or search yours")
+    }
+
+    /// The label over roster rows matching what is typed. It replaces
+    /// "Watching · N" while a query stands, because the count under it is the
+    /// match count and a label saying 140 over three rows is a lie.
+    static func yoursLabel(_ count: Int) -> String {
+        String(localized: "Yours · \(count)")
+    }
+
+    /// The label over the network's own hits — "On GitHub", "On Farcaster".
+    /// Named for the service rather than "New", which a first read takes as a
+    /// state (unread) rather than as a place.
+    static func onLabel(_ name: String) -> String {
+        String(localized: "On \(name)")
+    }
+
+    /// Roster rows whose title matches a typed query, case- and
+    /// diacritic-insensitively. Empty query returns every row — the caller
+    /// draws the whole list, unfiltered, which is the page at rest.
+    static func matches(_ rows: [Row], query: String) -> [Row] {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return rows }
+        return rows.filter {
+            $0.title.range(of: q, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+        }
+    }
+
     static func watchingLabel(_ count: Int) -> String {
         String(localized: "Watching · \(count)")
     }

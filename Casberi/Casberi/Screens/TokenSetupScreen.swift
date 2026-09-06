@@ -114,6 +114,7 @@ struct TokenSetupScreen: View {
             intro: bridge.setupIntro,
             keyed: true,
             rows: rows,
+            query: bridge == .github ? watchQuery : "",
             onRemoveRow: removeWatch,
             onOpenRow: bridge == .github ? openWatch : nil,
             teardown: {
@@ -147,7 +148,8 @@ struct TokenSetupScreen: View {
         if !bridge.connected || BridgeHealth.needsReconnect(bridge.rawValue) != nil {
             connectForm
         } else if bridge == .github {
-            DSSlabField(placeholder: String(localized: "Watch a repo or person"),
+            DSSlabField(placeholder: AccountPageShape.findPlaceholder(
+                            String(localized: "a repo or person")),
                         text: $watchQuery, actionLabel: String(localized: "Watch"),
                         busy: watching || watchingPerson, action: watchEither)
             BridgeSyncStatusRows(syncing: watching || watchingPerson,

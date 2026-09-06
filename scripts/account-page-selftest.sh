@@ -279,6 +279,32 @@ check("active first, in the caller's order", split.active.map(\.id) == ["b", "d"
 check("quiet after, in the caller's order", split.quiet.map(\.id) == ["a", "c"])
 check("equal counts never swap (stable)", S.split(rows).active.map(\.id) == split.active.map(\.id))
 check("labels", S.watchingLabel(5) == "Watching · 5" && S.quietLabel(2) == "Quiet · 2")
+
+// ── ONE BAR, TWO JOBS (§639 amendment) ───────────────────────────────────
+// The field is the add verb AND the roster's filter, and the words have to
+// say so: a second search field under the roster was tried and withdrawn
+// ("i don't think someone would see that as a search"), and labelling the
+// halves "Yours | New" was rejected before that. What is left has to hold:
+// the placeholder names both jobs, the roster's label becomes the MATCH
+// count under a query (a label saying 140 over three rows is a lie), and
+// matching ignores case and accents so a typed name finds the row it names.
+check("the placeholder names both jobs, in the order they happen",
+      S.findPlaceholder("a repo") == "Find a repo, or search yours")
+check("the roster's own labels swap under a query",
+      S.yoursLabel(3) == "Yours · 3" && S.onLabel("GitHub") == "On GitHub")
+let mRows = [
+    S.Row(id: "a", title: "Casberi", subline: "", weekCount: 4, hasNew: false, isYou: false, avatarURL: nil),
+    S.Row(id: "b", title: "cásberi-web", subline: "", weekCount: 0, hasNew: false, isYou: false, avatarURL: nil),
+    S.Row(id: "c", title: "vitalik", subline: "", weekCount: 1, hasNew: false, isYou: false, avatarURL: nil),
+]
+check("an empty query is the page at rest", S.matches(mRows, query: "").count == 3)
+check("a query matches case- and accent-blind",
+      S.matches(mRows, query: "casberi").map(\.id) == ["a", "b"])
+check("whitespace alone is not a query", S.matches(mRows, query: "   ").count == 3)
+check("a query that names nothing yours leaves the roster empty",
+      S.matches(mRows, query: "zzz").isEmpty)
+check("the split runs over the MATCHES, not the whole roster",
+      S.split(S.matches(mRows, query: "casberi")).quiet.map(\.id) == ["b"])
 check("subline, active", S.subline(nouns: "casts", weekCount: 27) == "casts · 27 this week")
 check("subline, quiet", S.subline(nouns: "posts", weekCount: 0) == "posts · quiet this week")
 check("paused subline", S.pausedSubline == "paused")
@@ -399,5 +425,13 @@ mutate "$NOTES" 'if trimmed.isEmpty { book.removeValue(forKey: seat) } else { bo
        "a blank note is stored as a note"
 mutate "$SHAPE" 'guard clean.count > 1 else { return first }' 'let _ = first' \
        "one host reads as a count"
+# The one-bar filter (§639 amendment). Its two failure modes are opposite and
+# both silent: a query that filters nothing leaves the person scrolling 140
+# rows they just searched, and a filter that ignores the trim turns a stray
+# space into an empty roster.
+mutate "$SHAPE" 'guard !q.isEmpty else { return rows }' 'let _ = q' \
+       "a query no longer filters the roster"
+mutate "$SHAPE" 'let q = query.trimmingCharacters(in: .whitespaces)' 'let q = query' \
+       "whitespace alone reads as a query"
 
 echo "✓ account-page-selftest passed"

@@ -49949,3 +49949,32 @@ Both platforms build, every static audit passes, and **not one pixel of the Mac 
 **Three choices that differ from the mockup, each with its reason.** A connected keyed bridge with nothing to add (every token seat but GitHub) draws "Paste a new token · Replace" as its act field rather than an empty slot — the act field is always first, and replacing the key is the one act such an account has. GitHub's two watch fields (repo, person — §519) became ONE field: the shape of what was pasted decides the verb (`TokenSetupScreen.looksLikeRepo`), because a page whose first slot is "the one thing you can add" cannot open with two. A topic (a Farcaster channel, a Bluesky feed, a Nostr hashtag) is a row of the same roster as a person, told apart by its subline's noun, rather than §184's second ledger — one list, one verb.
 
 **Partially reverses §184** (the face shelf and the square-marked topic ledger on the handle screens are gone; the profile card a face opened is now what a row opens) and **supersedes §608's slot-order audit for the migrated screens** (the order is the chassis's, so it cannot be got wrong by a screen). §186's ruling that the connect form stays whole is kept: the door, the steps and the field are the not-connected act field verbatim, and the same block is the Your key sheet.
+
+## §639 amendment — One bar, two jobs: the act field is also the roster's filter (user: "i don't think someone would see that as a search" / "search would be for the things you have", 2026-09-06)
+
+The act field is the ADD verb and the roster's own filter, and the words have
+to say which. Three shapes were tried against mockups and two withdrawn: a
+SECOND search field under "Watching · N" (two controls for one line of
+thinking), and a "Yours | New" segment inside the bar (a mode you must set
+before you know which you want). What stands is the placeholder naming both
+jobs in the order they happen — `AccountPageShape.findPlaceholder`, "Find a
+repo, or search yours", the noun carrying its own article per bridge
+(`HandleBridge.findNoun`: "someone", "a channel", "a subreddit", "someone or
+a feed") — with the RESULTS telling them apart: roster matches under
+`yoursLabel` ("Yours · 3", the MATCH count, never the roster's), the
+network's own hits under `onLabel` ("On GitHub"), named for the service
+because "New" reads as a state rather than as a place.
+
+Why the first version failed is worth keeping: "Watch or find an account" put
+the add verb first, so it read as a form and a person with a hundred and
+forty accounts had no way to see it as the way to find one of them. The rule
+underneath — search is over what you already have, adding is for what you do
+not — is what makes one bar legitimate rather than a compromise.
+
+`matches` trims and ignores case and accents, and the roster splits
+active/quiet over the MATCHES rather than the whole list, so "Quiet · N"
+never counts rows the query has hidden. Two mutations in
+`account-page-selftest.sh` pin the pair of silent failures this shape has: a
+query that filters nothing (140 rows still on screen after you typed), and a
+filter that skips the trim (a stray space emptying the roster).
+
