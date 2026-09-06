@@ -129,6 +129,8 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                 AccountKeySheet(name: name) { keySheet() }
             case .profile(let profile):
                 SocialProfileCard(profile: profile)
+            case .thing(let id):
+                AccountThingSheet(id: id)
             }
         }
         .task(id: source) { await readCounts() }
@@ -390,15 +392,44 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
 }
 
 /// The screen's one presentation.
+///
+/// **`.thing` carries an ID, never a `Thing`** (the liveness class, corollary
+/// 4): a roster row on a watch-list seat IS a thing — a watched ticker, a
+/// followed package — and holding the model across a presentation is how a
+/// sheet opens onto a row a foreground heal deleted underneath it. The sheet
+/// re-reads it, and draws nothing if it has gone.
 enum AccountPageSheet: Identifiable {
     case reach
     case key
     case profile(SocialProfile)
+    case thing(id: UUID)
     var id: String {
         switch self {
         case .reach: "reach"
         case .key: "key"
         case .profile(let p): "profile:\(p.id)"
+        case .thing(let id): "thing:\(id.uuidString)"
+        }
+    }
+}
+
+/// A roster row's own thing sheet, resolved from its id at present time.
+/// Nothing is drawn for a thing that has gone — see `AccountPageSheet`.
+private struct AccountThingSheet: View {
+    let id: UUID
+    @Environment(\.modelContext) private var modelContext
+    @State private var thing: Thing?
+
+    var body: some View {
+        Group {
+            if let thing, thing.isLive {
+                ThingSheetView(thing: thing)
+            }
+        }
+        .task {
+            var descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.id == id })
+            descriptor.fetchLimit = 1
+            thing = (try? modelContext.fetch(descriptor))?.first
         }
     }
 }
