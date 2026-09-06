@@ -311,6 +311,13 @@ enum DemoMode {
     /// against a ~360-row corpus, the duplicate-`sourceRef` class this
     /// codebase has no unique constraint to catch for free.
     private static var pouring = false
+    /// True while rows are still owed — pending or mid-pour. `IntroCover`
+    /// holds its lift on this (2026-09-05), because `pourIfNeeded` returns at
+    /// once when another caller already holds the pour, and "returned" is not
+    /// "landed".
+    static var pourOutstanding: Bool {
+        pouring || ScratchDefaults.standard.bool(forKey: pendingKey)
+    }
 
     /// Idempotent and self-clearing; cheap to call on every launch.
     @MainActor

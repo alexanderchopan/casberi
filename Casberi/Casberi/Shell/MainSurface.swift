@@ -1942,6 +1942,13 @@ struct MainSurface: View {
             return
         }
         DSHaptic.selection()
+        // A swipe closes an open folder (spec 2026-09-05): you have left the
+        // room it was about. A venue PICK does not — that goes through
+        // `go(to:)` directly and keeps the folder open so the ring is seen
+        // arriving.
+        if chrome.openFolder != nil {
+            withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
+        }
         go(to: target)
         ChipMemory.visited(filter.source)
     }
@@ -2077,6 +2084,14 @@ struct MainSurface: View {
                     step: { delta in step(delta) },
                     cancel: { dragCancel() })
             }
+            // A tap on the feed closes an open folder (spec 2026-09-05) —
+            // the Mac dock's own rule. SIMULTANEOUS, so a row's own tap still
+            // lands; reading `openFolder` inside the closure rather than the
+            // body keeps this surface off its dependency list.
+            .simultaneousGesture(TapGesture().onEnded {
+                guard chrome.openFolder != nil else { return }
+                withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
+            })
             // Hands the room back its whole query once the slide is over.
             .task(id: filter.source) { await releaseSwipeBudget() }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

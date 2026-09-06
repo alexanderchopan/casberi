@@ -33,45 +33,47 @@ struct DemoBanner: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// One slow breath on arrival, then still for the rest of the session.
-    ///
-    /// Noticed ONCE is the requirement — the banner has to be seen, or it
-    /// isn't marking anything. Noticed continuously is a nag, and a nag on a
-    /// bar that cannot be dismissed is the worst of both. So this is a single
-    /// entrance, not a `repeatForever` breathe: the design-motion audit would
-    /// flag the latter, and it would be right to.
+    /// Noticed ONCE is the requirement — a nag on a bar that cannot be
+    /// dismissed is the worst of both — so this is a single entrance.
     @State private var settled = false
+    @State private var explaining = false
 
+    /// **A STATUS, NOT A BAR (2026-09-05, user: "we could improve the banner
+    /// … user can tap it and figure it out").** The full-width glass pill —
+    /// sparkle, a nine-word sentence, Exit — was the heaviest chrome on the
+    /// screen, sitting above the room's own hero on every demo screen. What
+    /// the honesty rule (§83) needs is that the marking is CONTINUOUS and
+    /// carries its way out; it does not need the whole sentence in every
+    /// frame. So: one tinted capsule with the mark and the word, leading, at
+    /// the size of a recording indicator. A tap opens the sentence and the
+    /// two verbs. Still never dismissible, still on the shell.
     var body: some View {
-        HStack(spacing: DS.Space.s3) {
-            Image(systemName: "sparkles")
-                .dsGlyph(15)
-                .foregroundStyle(.orange)
-
-            Text("Demo — none of this is yours")
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-
-            Spacer(minLength: DS.Space.s2)
-
-            Button {
-                DSHaptic.tap()
-                leave()
-            } label: {
-                Text("Exit")
-                    .dsText(.subhead13).fontWeight(.semibold)
-                    .foregroundStyle(DS.textPrimary)
-                    .padding(.horizontal, DS.Space.s3)
-                    .frame(minHeight: 30)
-                    .contentShape(Rectangle())
+        Button {
+            DSHaptic.tap()
+            explaining = true
+        } label: {
+            HStack(spacing: DS.Space.s1) {
+                Image(systemName: "sparkles")
+                    .dsGlyph(12)
+                Text("Demo")
+                    .dsText(.label12)
+                    .fontWeight(.semibold)
             }
-            .buttonStyle(PressSpring())
+            .foregroundStyle(DS.attention)
+            .padding(.horizontal, DS.Space.s3)
+            .frame(minHeight: 30)
+            // A step past the rest-chip wash (user, 2026-09-05: "is it
+            // visible enough?") — this is the one status on the screen that
+            // must be read before any number is believed, so it wears the
+            // attention hue at a quarter rather than a sixth.
+            .background { Capsule(style: .continuous).fill(DS.attention.opacity(0.24)) }
+            .contentShape(Capsule(style: .continuous))
+            .frame(minHeight: DS.Hit.min)
         }
-        .padding(.leading, DS.Space.s4)
-        .padding(.trailing, DS.Space.s1)
-        .padding(.vertical, DS.Space.s1)
-        .dsGlass(cornerRadius: DS.Radius.pill)
+        .buttonStyle(PressSpring())
+        .dsHover()
+        .accessibilityLabel(Text("Demo — none of this is yours"))
+        .accessibilityHint(Text("Opens the way out"))
         .padding(.horizontal, DS.Space.s4)
         .scaleEffect(settled ? 1 : 0.92)
         .opacity(settled ? 1 : 0)
@@ -80,17 +82,14 @@ struct DemoBanner: View {
             if reduceMotion { settled = true }
             else { withAnimation(DS.Motion.standard.delay(0.35)) { settled = true } }
         }
+        .sheet(isPresented: $explaining) {
+            DemoExplainSheet(leave: { explaining = false; leave() })
+                .dsNavSheet()
+        }
     }
 
-    /// Land on the FORK, not on the empty feed and not in the catalog.
-    ///
-    /// This is the whole reason the demo is worth having. Someone who has just
-    /// watched a furnished app fill up now has the question "so which of MY
-    /// things?" — which is precisely what the fork asks, and it is the same
-    /// screen that read as premature when it ran before any evidence existed.
-    /// The catalog was the other candidate and is one tap away on that screen;
-    /// it is not the landing, because §217 already ruled that sixty-odd tiles
-    /// is a wall to survey and three verbs is a fork you answer in a second.
+    /// Land on the FEED, not a question (2026-08-31): the catalogue answers
+    /// "which of MY things?" better and is one tap away.
     ///
     /// Resetting the stack first is not tidiness — a pushed room whose rows
     /// have just been deleted is a screen about nothing, and on this codebase
@@ -107,13 +106,53 @@ struct DemoBanner: View {
             DemoMode.exit(context: modelContext, store: store)
             filter.source = "All"
             filter.tag = "All"
-            // Lands on the FEED, not a question (2026-08-31). Leaving the
-            // demo used to push a fork asking what to start with; the
-            // catalogue answers that better and is one tap away, and
-            // somebody who has just watched the app fill should see their
-            // own empty feed rather than a form.
             route.path = []
             chrome.demoLeaving = false
         }
+    }
+}
+
+/// The sentence the capsule stands for, and the two verbs — the way out, and
+/// the way back to looking. The verb is EXIT, never "delete" — nobody chose
+/// to keep any of this, so asking them to delete it would be asking them to
+/// take responsibility for rows the app poured in.
+private struct DemoExplainSheet: View {
+    let leave: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                Text("This is a demo.")
+                    .dsText(.heading22)
+                    .foregroundStyle(DS.textPrimary)
+                // ONE LINE (user, 2026-09-05: "this wording is long"). What
+                // happens on exit is said by the verb below it.
+                Text("None of it is yours. Exit whenever you're ready.")
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: DS.Space.s4)
+                DSActVerb(title: "Exit the demo") { leave() }
+                Button {
+                    DSHaptic.tap()
+                    dismiss()
+                } label: {
+                    Text("Keep looking")
+                        .dsText(.callout15)
+                        .foregroundStyle(DS.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: DS.Hit.min)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(DS.Space.s4)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .dsPageBackground()
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .presentationDetents([.medium])
+        .dsPageSheet()
     }
 }

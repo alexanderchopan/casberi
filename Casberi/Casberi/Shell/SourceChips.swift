@@ -210,6 +210,43 @@ struct SourceChips: View {
     /// The catcher's content→window converter, held for the scrub's length.
     @State private var scrubWindowConverter = ScrubConverter()
 
+    // MARK: - The open folder's width (spec 2026-09-05)
+
+    /// The strip's viewport, tracked off the scroll: offset and width in
+    /// content space. A plain box, not `@State`, so a scroll frame does not
+    /// re-render the strip — only `stickyWord` below is state, and it is
+    /// written only when it changes.
+    @State private var viewport = ScrollViewportBox()
+    /// The strip's exact scroll position, for the reveal — `scrollTo(id,
+    /// anchor:)` aligns a POINT of the chip with the same point of the
+    /// viewport, which for a capsule wider than the viewport can only put its
+    /// word under the octopus; an offset says where the word goes, exactly.
+    @State private var scrollPosition = ScrollPosition()
+    /// Where the strip's first chip may sit without being under the bar's
+    /// melt — the octopus seat plus one gap, in viewport space.
+    private var seatLead: CGFloat {
+        // One chip gap past the seat, plus the capsule's own end radius, so
+        // the parked word's curve clears the octopus disc (measured: without
+        // the radius the capsule's leading end tucked under the bar).
+        DSDock.agentSeat(fold: fold) - DSDock.slabInset + Self.chipGap + iconSize / 2
+    }
+
+    /// A folder just opened: its WORD parks beside the octopus and its venues
+    /// take the rest of the row (user, 2026-09-05: "the opened chip name
+    /// should be by the octopus"). One fixed seat for the close target, every
+    /// time, whatever the folder's width — the venues run off the trailing
+    /// edge when there are more than fit, a flick away. Scrolled by exact
+    /// offset, since `scrollTo(id, anchor:)` can only align a point of the
+    /// chip with the same point of the viewport, which for a capsule wider
+    /// than the viewport puts the word under the bar's melt.
+    private func revealOpenFolder(_ label: String) {
+        guard let frame = chipFrames[label], viewport.width > 0 else { return }
+        let target = max(0, frame.minX - seatLead)
+        withAnimation(DS.Motion.standard) {
+            scrollPosition.scrollTo(x: target)
+        }
+    }
+
     /// How far the selection leans toward the neighbour a swipe is heading
     /// for (2026-09-05, `ShellChrome.pageDragProgress`): one chip's pitch per
     /// whole page, so the ring is seen leaving for the chip the turn will
@@ -602,12 +639,28 @@ struct SourceChips: View {
                 // wherever it was, with the lit chip off screen.
                 withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
             }
-            // A folder opening in place grows its chip to the trailing side,
-            // so the chip is brought to the leading edge and its venues get
-            // the run's whole width to open into.
+            // **THE WORD NEVER MOVES; THE VENUES ARE REVEALED** (user,
+            // 2026-09-05: "when i tap a chip and it expands, the chip name
+            // should stay present in view so a user can retap it to close
+            // it"). The first cut scrolled the opened chip to the run's
+            // leading edge — under the melt, where the word that closes the
+            // folder was the one thing that vanished. Now the strip scrolls
+            // only as far as it takes to show the venues, and never past the
+            // word: see `revealOpenFolder`. A beat after the change, since the
+            // capsule has to grow before its frame can be measured.
             .onChange(of: chrome.openFolder) { _, folder in
                 guard case .category(let label) = folder else { return }
-                withAnimation(DS.Motion.standard) { proxy.scrollTo(label, anchor: .leading) }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(60))
+                    revealOpenFolder(label)
+                }
+            }
+            .scrollPosition($scrollPosition)
+            .onScrollGeometryChange(for: ScrollViewportSample.self) { geo in
+                ScrollViewportSample(offset: geo.contentOffset.x, width: geo.containerSize.width)
+            } action: { _, new in
+                viewport.offset = new.offset
+                viewport.width = new.width
             }
         }
     }
@@ -656,8 +709,13 @@ struct SourceChips: View {
         guard commit, let chosen else { return }
         scrubCommittedAt = Date.timeIntervalSinceReferenceDate
         DSHaptic.selection()
-        tapped = chosen
-        withAnimation(DS.Motion.standard) { onTap(chosen) }
+        if labels.contains(chosen) {
+            tapped = chosen
+            withAnimation(DS.Motion.standard) { onTap(chosen) }
+        } else {
+            // A venue inside an open folder — the same hop its tap takes.
+            chrome.sourceRequest = chosen
+        }
     }
     // `head` was DELETED in §591 along with the `Section` that pinned it. It
     // drew "All" in the strip's fixed head; "All" scrolls now, and the fixed
@@ -899,7 +957,12 @@ struct SourceChips: View {
     @ViewBuilder
     private func categoryCapsule(_ label: String) -> some View {
         let open = chrome.openFolder == .category(label)
-        let isOn = label == active && !open
+        // THE FILL STAYS WHILE OPEN (spec 2026-09-05). The first cut stood it
+        // down when the folder opened, which blinked on close and lost the
+        // "you are here" on the word; the lit venue's ring is nested inside
+        // it now — "this folder, this venue" — and the two never contend
+        // for one geometry because the ring has its own matched group.
+        let isOn = label == active
         let venues = open
             ? CategoryFold.scopes(category: label, present: Set(categoryVenues[label] ?? []))
             : []
@@ -967,8 +1030,7 @@ struct SourceChips: View {
                             // (§412b): opening a folder hands the one blue
                             // object from the chip's fill to this ring, and
                             // picking a neighbour slides it along the row.
-                            ring.offset(x: slide)
-                                .matchedGeometryEffect(id: ChipSelection.id, in: selectionNS)
+                            ring.matchedGeometryEffect(id: ChipSelection.venueID, in: selectionNS)
                         }
                     } else if broken {
                         Capsule(style: .circular)
@@ -983,6 +1045,12 @@ struct SourceChips: View {
         }
         .buttonStyle(.plain)
         .frame(height: iconSize)
+        // The scrub names venues too (spec 2026-09-05) — see `chipFrames`.
+        .onGeometryChange(for: CGRect.self) { proxy in
+            proxy.frame(in: .named(Self.contentSpace))
+        } action: { frame in
+            chipFrames[venue] = frame
+        }
         .dsTooltip(broken ? String(localized: "\(venue), needs reconnecting") : venue)
         .accessibilityLabel(broken ? String(localized: "\(venue), needs reconnecting") : venue)
         .accessibilityAddTraits(lit ? .isSelected : [])
@@ -1574,6 +1642,9 @@ private struct WordChipFill: ViewModifier {
 /// fade this fixes, which is the failure mode nobody re-checks for.
 private enum ChipSelection {
     static let id = "chipSelection"
+    /// The ring that travels BETWEEN VENUES inside an open folder — a group of
+    /// its own, since the chip's fill stays lit around it.
+    static let venueID = "venueSelection"
 }
 
 extension View {
@@ -1591,4 +1662,15 @@ extension View {
 /// no equality, and a `@State` closure re-renders on every assignment).
 final class ScrubConverter {
     var value: ((CGFloat) -> CGFloat)?
+}
+
+/// The strip's viewport as a plain box — see `SourceChips.viewport`.
+final class ScrollViewportBox {
+    var offset: CGFloat = 0
+    var width: CGFloat = 0
+}
+
+struct ScrollViewportSample: Equatable {
+    var offset: CGFloat
+    var width: CGFloat
 }

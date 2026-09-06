@@ -68,11 +68,35 @@ struct TileDropLayer: UIViewRepresentable {
     /// first release.
     let armed: Bool
     let reduceMotion: Bool
+    /// Called ONCE, on the first deal — i.e. the first time this layer has a
+    /// size, which is the first frame the host has committed (2026-09-05,
+    /// `IntroCover`). The cover uses it as the "first frame is on screen"
+    /// signal before starting main-thread work that would otherwise land
+    /// ahead of the first paint. A dealt fall rides CoreAnimation and is
+    /// untouched by whatever the main actor does after this fires.
+    var onFirstDeal: (() -> Void)? = nil
+    /// Called once, when the LAST tile of the deal has come to rest — the
+    /// fall's ending. The heap wobbles a degree on the same beat (see
+    /// `deal`), and the cover fires one haptic from this.
+    var onSettled: (() -> Void)? = nil
+    /// Flip to true and the whole heap falls OFF THE BOTTOM EDGE under the
+    /// same gravity it arrived by (`dropOut`) — the cover's lift, reversed
+    /// rain rather than a fade. `onDroppedOut` fires when the last tile has
+    /// left the screen. One way: it never re-deals after this.
+    var leaving: Bool = false
+    var onDroppedOut: (() -> Void)? = nil
 
     func makeUIView(context: Context) -> TileDropView { TileDropView() }
 
     func updateUIView(_ view: TileDropView, context: Context) {
-        view.apply(tiles, armed: armed, reduceMotion: reduceMotion)
+        view.onFirstDeal = onFirstDeal
+        view.onSettled = onSettled
+        view.onDroppedOut = onDroppedOut
+        if leaving {
+            view.dropOut(animated: !reduceMotion)
+        } else {
+            view.apply(tiles, armed: armed, reduceMotion: reduceMotion)
+        }
     }
 }
 
@@ -89,6 +113,18 @@ final class TileDropView: UIView {
     /// How far above the screen a tile starts, measured at its bottom edge.
     static let startAbove: CGFloat = 4
 
+    var onFirstDeal: (() -> Void)?
+    var onSettled: (() -> Void)?
+    var onDroppedOut: (() -> Void)?
+    private var firedFirstDeal = false
+    private var settleWork: DispatchWorkItem?
+    private var leaving = false
+    /// How far the heap leans on the last landing, degrees. The whole layer
+    /// rotates about the screen's centre, so a fraction of a degree is a few
+    /// points of lateral travel at the heap — a settle, not a shake.
+    static let wobbleDegrees: Double = 0.6
+    /// The lift: the longest drop off the bottom edge takes this long.
+    static let longestExit: Double = 0.45
     private var dealt: [TileDrop] = []
     private var dealtAt: CFTimeInterval?
     private var firstRelease: Double = 0
@@ -112,7 +148,7 @@ final class TileDropView: UIView {
     // MARK: - Deal-once
 
     func apply(_ tiles: [TileDrop], armed: Bool, reduceMotion: Bool) {
-        guard armed, !tiles.isEmpty else { return }
+        guard armed, !tiles.isEmpty, !leaving else { return }
         let animated = !reduceMotion
         guard bounds.width > 0, bounds.height > 0 else {
             waiting = (tiles, animated)
@@ -180,23 +216,108 @@ final class TileDropView: UIView {
             tileLayer.transform = restTransform
 
             if animated {
-                add(fallOf: tile, to: tileLayer, restBottom: restBottom,
-                    restTransform: restTransform, g: g, start: start)
+                let settle = add(fallOf: tile, to: tileLayer, restBottom: restBottom,
+                                 restTransform: restTransform, g: g, start: start)
+                lastImpact = max(lastImpact, settle.impact)
+                lastSettle = max(lastSettle, settle.rest)
             }
             layer.addSublayer(tileLayer)
             tileLayers.append(tileLayer)
         }
+        if animated {
+            // THE HEAP LEANS ON THE LAST LANDING (2026-09-05): a fraction of a
+            // degree, out and back, on the beat the final tile hits — the
+            // one thing that says the pile is one body and the fall has an
+            // ending. Same render-server track as the tiles.
+            let wobble = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+            let d = Self.wobbleDegrees * .pi / 180
+            wobble.values = [0, d, -d * 0.6, d * 0.25, 0]
+            wobble.keyTimes = [0, 0.22, 0.55, 0.8, 1]
+            wobble.duration = 0.55
+            wobble.beginTime = lastImpact
+            wobble.fillMode = .backwards
+            layer.add(wobble, forKey: "wobble")
+        }
         CATransaction.commit()
+        if !firedFirstDeal {
+            firedFirstDeal = true
+            onFirstDeal?()
+        }
+        settleWork?.cancel()
+        if animated {
+            let work = DispatchWorkItem { [weak self] in self?.onSettled?() }
+            settleWork = work
+            let delay = max(0, lastSettle - CACurrentMediaTime())
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
+        } else {
+            onSettled?()
+        }
+    }
+
+    private var lastImpact: CFTimeInterval = 0
+    private var lastSettle: CFTimeInterval = 0
+
+    /// The lift: every tile falls off the bottom edge under one gravity, the
+    /// heap's front rows first (they are lowest and so nearest the edge),
+    /// each leg the same `t²` curve the arrival used. Model values are set to
+    /// the departed state, so nothing snaps back when the animations end.
+    func dropOut(animated: Bool) {
+        guard !leaving else { return }
+        leaving = true
+        settleWork?.cancel()
+        guard animated, !tileLayers.isEmpty else {
+            tileLayers.forEach { $0.removeFromSuperlayer() }
+            tileLayers.removeAll()
+            onDroppedOut?()
+            return
+        }
+        let floor = bounds.height
+        let start = CACurrentMediaTime()
+        // The furthest any tile has to travel decides g, as on arrival.
+        let longest = tileLayers.map { floor + $0.bounds.height + Self.startAbove - $0.position.y }.max() ?? 1
+        let g = 2 * Double(max(longest, 1)) / (Self.longestExit * Self.longestExit)
+        var latest: CFTimeInterval = start
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for (i, tileLayer) in tileLayers.enumerated() {
+            let from = tileLayer.position
+            let to = CGPoint(x: from.x, y: floor + tileLayer.bounds.height + Self.startAbove)
+            let h = Double(to.y - from.y)
+            let fall = (2 * max(h, 1) / g).squareRoot()
+            // A stagger by dealing order, so the edge is crossed as a
+            // pour rather than as one slab.
+            let release = Double(i % 17) * 0.012
+            let anim = CABasicAnimation(keyPath: "position")
+            anim.fromValue = NSValue(cgPoint: from)
+            anim.toValue = NSValue(cgPoint: to)
+            anim.duration = fall
+            anim.beginTime = start + release
+            anim.timingFunction = Self.accelerate
+            anim.fillMode = .backwards
+            tileLayer.removeAnimation(forKey: "drop")
+            tileLayer.position = to
+            tileLayer.add(anim, forKey: "exit")
+            latest = max(latest, start + release + fall)
+        }
+        CATransaction.commit()
+        let work = DispatchWorkItem { [weak self] in
+            self?.tileLayers.forEach { $0.removeFromSuperlayer() }
+            self?.tileLayers.removeAll()
+            self?.onDroppedOut?()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + (latest - start), execute: work)
     }
 
     // MARK: - The physics
 
+    /// Returns the absolute times of this tile's first impact and its rest.
+    @discardableResult
     private func add(fallOf tile: TileDrop, to tileLayer: CALayer,
                      restBottom: CGPoint, restTransform: CATransform3D,
-                     g: Double, start: CFTimeInterval) {
+                     g: Double, start: CFTimeInterval) -> (impact: CFTimeInterval, rest: CFTimeInterval) {
         let startBottom = CGPoint(x: tile.rest.x + tile.drift, y: -Self.startAbove)
         let h = Double(restBottom.y - startBottom.y)
-        guard h > 0 else { return }
+        guard h > 0 else { return (start, start) }
         let fall = (2 * h / g).squareRoot()
         // A rebound to share s of the height is airborne for 2·√s of the fall.
         let air = Self.rebounds.map { 2 * $0.squareRoot() * fall }
@@ -249,6 +370,7 @@ final class TileDropView: UIView {
         group.beginTime = start + tile.release
         group.fillMode = .backwards
         tileLayer.add(group, forKey: "drop")
+        return (start + tile.release + t1, start + tile.release + duration)
     }
 
     /// `t²` as a cubic bezier — a falling body, exactly.

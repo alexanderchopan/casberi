@@ -16,13 +16,15 @@ import SwiftData
 /// fills — the mark, one sentence, the rain of everything that can land, and
 /// no control at all.
 ///
-/// **It leaves on the person's own gesture, never on a timer.** A cover that
-/// lifts itself is a splash screen: it either leaves before a slow reader has
-/// finished the sentence or holds a fast one on a screen they are done with.
-/// Any tap or any drag dismisses it — a drag because the first thing most
-/// people do to a feed is scroll it, and the scroll that would have moved the
-/// rows moves this out of the way instead. VoiceOver gets the whole cover as
-/// one button whose label is the sentence.
+/// **It leads into the demo by itself** (user, 2026-09-05: "why not make it
+/// lead directly to the demo"). The first cut held for a tap on the argument
+/// that a self-lifting cover cuts off a slow reader or holds a fast one; with
+/// one sentence and a two-and-a-half-second fall that argument was thin, and
+/// a caption teaching a tap nobody has to make was a control that only talks.
+/// It lifts a beat after the last tile lands (`autoLift`); any tap or drag
+/// skips ahead — a drag because the first thing most people do to a feed is
+/// scroll it. VoiceOver gets the whole cover as one button whose label is the
+/// sentence, for whoever wants it gone now.
 ///
 /// **The buttons are gone, and where their jobs went.** "Try a demo" is what
 /// happens by itself now. "Connect my apps" was the door for someone who
@@ -31,11 +33,30 @@ import SwiftData
 /// own empty feed with the catalogue a chip away; someone who came knowing is
 /// the one reader who can afford a tap.
 ///
-/// **The scrim is translucent on purpose.** `DemoMode.pourIfNeeded`'s whole
-/// argument is that a feed WATCHED filling reads as an app and a feed found
-/// full reads as a screenshot. The pour starts under this cover, so it must
-/// be visible through it — the page colour at less than full strength, the
-/// rows ghosting through behind the copy.
+/// **It is OPAQUE, and the pour starts when it LIFTS — both measured on a
+/// simulator, 2026-09-05, after the first cut got both wrong.** That cut made
+/// the scrim translucent so the demo could be seen pouring through it, and
+/// began the pour under the cover on the argument that "the pour is the show".
+/// On a device that is two defects:
+///
+///   • **The pour starves this screen.** Pouring the demo corpus is ~15s of
+///     main-thread work at launch (measured: `launchPerf HEAVYBUILD` ×52,
+///     `MainSurface.feedThings` 1.3s cumulative), and SwiftUI cannot complete
+///     a layout pass while it runs — so the mark, the sentence and the tiles'
+///     own `GeometryReader` never got a frame. The first screen of the app was
+///     PURE BLACK for fifteen seconds, then everything arrived at once with
+///     the fall already over. The tiles ride CoreAnimation and would have been
+///     smooth; they never got laid out to be armed.
+///   • **A live feed behind the copy is not a backdrop, it is a collision.**
+///     The demo banner, the room card and the dock all read straight through
+///     0.88 and fought the sentence for the same pixels.
+///
+/// So: this paints the page in full, and `DemoMode.begin` only MARKS the mode
+/// here — `RootShell` pours once the cover is gone, which is where the pour
+/// lived before and why it always looked right. `pourIfNeeded`'s own argument
+/// (a feed watched filling reads as an app; found full, as a screenshot) is
+/// unharmed: the rows still land in view, a moment later, on an idle main
+/// thread.
 struct IntroCover: View {
     /// Called once, on the gesture that lifts the cover. The caller owns what
     /// "started" means (`onboarded`, the filter reset).
@@ -52,6 +73,11 @@ struct IntroCover: View {
     @State private var markLanded = false
     /// One gesture, one exit — a tap and a drag can both land in one frame.
     @State private var leaving = false
+    /// The tiles' layer has dealt: the first frame of this cover is on screen
+    /// (`TileDropLayer.onFirstDeal`). The pour waits for this, not a timer —
+    /// measured: a 0.6s timer started the pour 0.9s BEFORE the first paint,
+    /// and the page stayed black until the pour let the main actor go.
+    @State private var dealt = false
 
     // MARK: - The rain
 
@@ -105,6 +131,12 @@ struct IntroCover: View {
     private static let rowWave: Double = 0.10
     private static let releaseSpread: Double = 0.18
     private static let landerHold: Double = 0.25
+    /// The floor's reserved height — the two-button block's own footprint, kept
+    /// so the pile's band is the one the fall was tuned against. See its use.
+    private static let floorHeight: CGFloat = 96
+    /// Seconds from appear to the cover lifting on its own — the fall's last
+    /// landing (≈2.5s) plus a beat at rest.
+    private static let autoLift: Double = 3.4
 
     /// How the heap is packed for a given screen and a given band.
     ///
@@ -251,7 +283,25 @@ struct IntroCover: View {
             // Reduce Motion: no fall. The tiles are simply already in the
             // pile — the pile is the thing being said and the fall was only
             // ever how it got there.
-            TileDropLayer(tiles: tiles, armed: rainFell, reduceMotion: reduceMotion)
+            TileDropLayer(tiles: tiles, armed: rainFell, reduceMotion: reduceMotion,
+                          onFirstDeal: { dealt = true },
+                          // The fall's ending, felt once.
+                          onSettled: { DSHaptic.lift() },
+                          leaving: leaving,
+                          onDroppedOut: { onStart() })
+                // THE OUTER COLUMNS FADE (spec 2026-09-05): the run overhangs
+                // both edges on purpose (`pileOverhangShare`), and a hard crop
+                // there read as a layout cut off; a short ramp at each edge
+                // makes the overflow read as the heap continuing past the
+                // glass rather than stopping at it.
+                .mask {
+                    LinearGradient(stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: .black, location: 0.07),
+                        .init(color: .black, location: 0.93),
+                        .init(color: .clear, location: 1),
+                    ], startPoint: .leading, endPoint: .trailing)
+                }
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
@@ -264,10 +314,9 @@ struct IntroCover: View {
 
     var body: some View {
         ZStack {
-            // The page's own colour, short of full strength: the demo pours
-            // under this and has to be seen doing it.
-            DS.page.opacity(0.88)
-                .ignoresSafeArea()
+            // OPAQUE. See the type's own note: a live feed behind this is a
+            // collision, not a backdrop.
+            DS.page.ignoresSafeArea()
 
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
@@ -276,14 +325,22 @@ struct IntroCover: View {
                     // and fills the middle, this fills the top. It arrives at
                     // 2.4s, while the heap's top row is still settling under
                     // it — deliberately not after the last tile.
-                    CasberiMark(size: 120)
-                        .scaleEffect(markLanded ? 1 : 0.7)
-                        .opacity(markLanded ? 1 : 0)
-                        .animation(reduceMotion ? nil
-                                                : .spring(duration: 0.55, bounce: 0.3)
-                                                    .delay(2.4),
-                                   value: markLanded)
-                        .padding(.bottom, DS.Space.s4)
+                    // PRESENT FROM THE FIRST FRAME (2026-09-05, measured on
+                    // a simulator). The mark used to land at 2.4s on a spring
+                    // and the copy faded up at 0.1s — both SwiftUI animations,
+                    // interpolated on the main actor, and a first launch is
+                    // exactly when that actor is busiest: the sentence stayed
+                    // at opacity zero for as long as the launch work ran, so
+                    // the first screen of the app was a black page with tiles
+                    // falling onto nothing. The tiles survived because they
+                    // ride CoreAnimation (`TileDrop`). The words are static
+                    // now; the rain is the entrance.
+                    // 56, not 120 (spec 2026-09-05): at 120 the mark was
+                    // orphaned in the top-left corner with the sentence a
+                    // long way beneath it; the tiles are the brand moment
+                    // here, and the mark is a signature on the copy.
+                    CasberiMark(size: 56)
+                        .padding(.bottom, DS.Space.s3)
                         .accessibilityHidden(true)
                     Text("Everything you need, in one place.")
                         .dsText(.heading34)
@@ -295,8 +352,11 @@ struct IntroCover: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, DS.Space.s2)
                 }
-                .padding(.top, DS.Space.s6)
-                .arrive(arrived, delay: 0.1)
+                // A fixed seat, not "whatever is above the heap" (spec
+                // 2026-09-05): the copy block starts a tenth of the way
+                // down, so the mark, the sentence and the heap share one
+                // vertical rhythm on every phone.
+                .padding(.top, DS.Space.s8)
                 // The pile's ceiling. Published rather than guessed: this
                 // block is a 120pt mark plus two paragraphs that wrap
                 // differently on every phone and every type size.
@@ -305,27 +365,45 @@ struct IntroCover: View {
                 }
 
                 Spacer(minLength: 0)
-
-                // NOT a button — the whole cover is the control, and this
-                // line only says so. It is the honesty rule's price for an
-                // invisible gesture (§83): a screen that leaves on a tap has
-                // to say it leaves on a tap.
-                // Adaptive for the pointer: a Mac is not told to tap
-                // (`mac-parity-audit.py`'s class of miss).
-                Text(DS.isMac ? "Click anywhere to start" : "Tap anywhere to start")
-                    .dsText(.callout15)
-                    .foregroundStyle(DS.textTertiary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.bottom, DS.Space.s3)
-                    .arrive(arrived, delay: 0.5)
-                    // The pile's floor.
-                    .anchorPreference(key: PileBoundsKey.self, value: .bounds) {
-                        PileBounds(floor: $0)
-                    }
             }
             .padding(.horizontal, DS.Space.s4)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .dsAdaptiveContentWidth()
+        }
+        // THE FLOOR IS A SAFE-AREA INSET, not the last row of the copy stack
+        // (2026-09-05, measured). Inside the stack its anchor resolved against
+        // a `Spacer`-stretched frame and the heap was measured to a band that
+        // ran past it — tiles landed over the caption and off the bottom edge.
+        // An inset is the shape the pile's floor has always been, and it is
+        // the device's business as much as ours.
+        .safeAreaInset(edge: .bottom) {
+            // **THE FLOOR: NO WORDS, THE DOORS' OWN FOOTPRINT, AND IT NEVER
+            // MOVES** (2026-09-05, measured on a simulator against the mock).
+            //
+            // No words, because the cover lifts BY ITSELF once the fall has
+            // settled (user: "why even make the loading screen be 'tap
+            // anywhere to start'? … why not make it lead directly to the
+            // demo") — a caption teaching a tap the person never has to make
+            // would be a control that only talks (§83). A tap or a drag still
+            // skips ahead for whoever is done early.
+            //
+            // The footprint is kept, because `TileDrop` chooses one gravity
+            // per deal so the LONGEST drop takes `longestFall` — the fall's
+            // whole character is a function of the band this floor closes,
+            // and that band was tuned against the two-button block this seat
+            // replaces (≈96pt). A 36pt caption made the band taller, the heap
+            // lower, every drop longer, and `g` different, which read as the
+            // wrong fall rather than as a moved caption.
+            //
+            // And it never animates: the engine REPLAYS the deal if the layout
+            // moves before the first release (0.7s), and the first cut's
+            // caption faded up with a 10pt offset from 0.5s — across that
+            // release, restarting the fall in mid-air ("fast and jittery").
+            Color.clear
+                .frame(height: Self.floorHeight)
+                .anchorPreference(key: PileBoundsKey.self, value: .bounds) {
+                    PileBounds(floor: $0)
+                }
         }
         // The rain is never torn down while the cover stands: the tiles ARE
         // the pile filling the middle of the screen.
@@ -340,22 +418,63 @@ struct IntroCover: View {
         .accessibilityLabel(Text("Everything you need, in one place. Read it all together, or one app at a time. Ask your agents about any of it. This is a demo."))
         // What activating DOES, not how — VoiceOver already says how on each
         // platform, and "double-tap" would be wrong under a pointer.
-        .accessibilityHint(Text("Starts the demo"))
+        .accessibilityHint(Text("Starts the demo now"))
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { start() }
         .onAppear {
-            if reduceMotion { arrived = true }
-            else { withAnimation(DS.Motion.standard) { arrived = true } }
+            arrived = true
             rainFell = true
             markLanded = true
         }
-        // THE DEMO BEGINS HERE. `begin` only marks the mode and the seats;
-        // `pourIfNeeded` lands the rows, and it lands them NOW — under the
-        // cover — because the pour is the show. Guarded on `isActive` so a
-        // kill and relaunch mid-intro does not re-mark a demo already running.
+        // THE DEMO IS CLAIMED, POURED UNDER THIS COVER, AND THE COVER LIFTS
+        // WHEN BOTH THE FALL AND THE POUR ARE DONE (2026-09-05, third cut,
+        // each step measured on a simulator):
+        //   • `begin` only marks the mode and the seats — cheap, no fetching.
+        //   • The pour is ~10s of main-thread work. Started at mount it
+        //     starved the cover's first layout (a black page); started at the
+        //     lift it revealed an EMPTY feed saying "Nothing here yet" that
+        //     then filled for ten seconds, which is worse than either
+        //     reading. So it starts one beat after mount — after the tiles'
+        //     layer has had its first layout pass and dealt, since a dealt
+        //     fall rides CoreAnimation and is untouched by anything the main
+        //     actor does afterwards — and runs under an opaque, static page.
+        //   • The cover lifts when the pour has returned AND at least
+        //     `autoLift` has passed since mount, so the heap is seen at rest
+        //     and the feed behind it is full when it appears. A tap or drag
+        //     still skips ahead (the pour continues under the feed).
+        //     `pourIfNeeded`'s "watched filling" argument is spent knowingly:
+        //     ten seconds of an empty room is not a feed filling.
+        // Guarded on `isActive` so a kill and relaunch mid-intro does not
+        // re-mark a demo already running; `pourIfNeeded` is its own no-op when
+        // nothing is pending.
         .task {
             if !DemoMode.isActive { DemoMode.begin(store: store) }
+            let mounted = Date.timeIntervalSinceReferenceDate
+            // Wait for the first painted frame (the tiles' first deal), then
+            // one more beat so the commit that carried it is on screen; a
+            // ceiling so a layer that never deals (Reduce Motion places the
+            // tiles at rest and still deals — but belt and braces) cannot
+            // hold the demo forever.
+            var waited = 0
+            while !dealt && waited < 40 {
+                try? await Task.sleep(for: .milliseconds(50))
+                waited += 1
+            }
+            try? await Task.sleep(for: .milliseconds(250))
             await DemoMode.pourIfNeeded(context: modelContext)
+            // "Returned" is not "landed": another caller may hold the pour
+            // (`pourIfNeeded` yields at once to it), and the feed's own
+            // query takes a beat to show the rows after the last insert.
+            var settling = 0
+            while DemoMode.pourOutstanding && settling < 600 {
+                try? await Task.sleep(for: .milliseconds(50))
+                settling += 1
+            }
+            try? await Task.sleep(for: .milliseconds(400))
+            let hold = reduceMotion ? 2.0 : Self.autoLift
+            let remaining = hold - (Date.timeIntervalSinceReferenceDate - mounted)
+            if remaining > 0 { try? await Task.sleep(for: .seconds(remaining)) }
+            start()
         }
         #if DEBUG
         // `-howItWorksCTA <s>` lifts the cover after a delay — the same hook
@@ -373,11 +492,14 @@ struct IntroCover: View {
         #endif
     }
 
+    /// The lift is the rain REVERSED (spec 2026-09-05): the heap falls off
+    /// the bottom edge under the gravity it arrived by, and the page lifts
+    /// once the last tile has left (`onDroppedOut` → `onStart`). Under Reduce
+    /// Motion the tiles are simply removed and the page lifts at once.
     private func start() {
         guard !leaving else { return }
-        leaving = true
         DSHaptic.tap()
-        onStart()
+        leaving = true
     }
 }
 

@@ -1703,6 +1703,13 @@ struct RootShell: View {
         // one Task avoids two independent writers touching it in the same
         // window.
         Task { @MainActor in
+            // NOT while the first-run cover is up (2026-09-05): the cover
+            // owns the pour then — it starts it after its own first painted
+            // frame and lifts when the rows have landed. Started from here at
+            // activation (~1.2s, before anything has painted) it took the
+            // pour away from the cover, whose await then returned at once on
+            // the "already pouring" guard and lifted onto an empty feed.
+            guard onboarded else { return }
             await DemoMode.pourIfNeeded(context: modelContext)
             await DemoMode.restampIfStale(context: modelContext)
         }
@@ -2182,7 +2189,16 @@ struct RootShell: View {
                              // which still folds the chip strip, folds them
                              // early if that first-time reader scrolls before
                              // ever opening the tray.
-                             expanded: !sourcesEverOpened && !chrome.minimized,
+                             // NEVER EXPANDED since 2026-09-05 (measured on a
+                             // fresh install): the first-run grace grew the
+                             // bar to "Everything else", and since §591 the
+                             // bar is the dock's first seat with a FIXED
+                             // width reserved beside it (`DSDock.agentSeat`),
+                             // so the grown bar sat over the All chip on the
+                             // one launch that matters most. The bar rests
+                             // compact by ruling (2026-07-31); its folder's
+                             // labelled doors are what teach it now.
+                             expanded: false,
                              morphNS: agentMorph,
                              onSources: { toggleDoors() },
                              // NIL since 2026-08-15, the crown-pour ruling's
@@ -2288,6 +2304,17 @@ struct RootShell: View {
                     withAnimation(DS.Motion.standard) { onboarded = true }
                     sceneState.filter.source = "All"
                     sceneState.filter.tag = "All"
+                    // The pour lands HERE, with the cover out of the way, so
+                    // the feed is watched filling rather than revealed already
+                    // full — and so the ~15s of main-thread work it costs
+                    // cannot starve the cover's own first frame (2026-09-05,
+                    // measured; see `IntroCover`). Safe to fire
+                    // unconditionally — it returns immediately unless a pour
+                    // is actually pending.
+                    // Belt and braces: the cover pours under itself now (see
+                    // `IntroCover`), and this returns at once unless a pour
+                    // is still pending — a skip-ahead tap mid-pour, say.
+                    Task { @MainActor in await DemoMode.pourIfNeeded(context: modelContext) }
                 })
                 .zIndex(10)
                 .transition(.opacity.combined(with: .move(edge: .top)))

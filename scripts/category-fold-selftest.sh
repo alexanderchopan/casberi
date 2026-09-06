@@ -399,9 +399,12 @@ awk '/func folderVenue/,/^    }$/' "$TMP/chips.nc" | grep -q 'frame(width: DS.Hi
 awk '/func folderVenue/,/^    }$/' "$TMP/chips.nc" | grep -q 'let lit = venue == standing' \
   || { echo "✗ the venue row no longer lights the venue you are STANDING in — with the"; \
        echo "  chip's fill down while the folder is open, nothing would say where you are."; exit 1; }
-awk '/func folderVenue/,/^    }$/' "$TMP/chips.nc" | grep -q 'matchedGeometryEffect(id: ChipSelection.id, in: selectionNS)' \
-  || { echo "✗ the lit venue's ring left the strip's selection group — the one blue object"; \
-       echo "  would blink from the chip to the venue instead of travelling (§412b)."; exit 1; }
+# ITS OWN GROUP (§621 amendment, 2026-09-05): the chip's fill stays lit while
+# the folder is open, so the venue ring cannot share the fill's matched id —
+# two sources for one id is undefined — and travels between VENUES instead.
+awk '/func folderVenue/,/^    }$/' "$TMP/chips.nc" | grep -q 'matchedGeometryEffect(id: ChipSelection.venueID, in: selectionNS)' \
+  || { echo "✗ the lit venue's ring is not in the venue group — it would either blink"; \
+       echo "  between venues or contend with the chip's fill for one geometry."; exit 1; }
 # The scope must live on the shell, or it dies with the room. `MainSurface`
 # gives FeedScreen `.id(filter.source)`, so `@State` here is destroyed on every
 # room change — which is the bug §356 exists to fix.
