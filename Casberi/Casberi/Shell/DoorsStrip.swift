@@ -41,7 +41,6 @@ struct DoorsStrip: View {
     var compact: Bool
     let onAgent: () -> Void
     let onApps: () -> Void
-    let onAddressBook: () -> Void
     let onSettings: () -> Void
 
     private var markSize: CGFloat { compact ? DS.Face.row : DS.Face.list }
@@ -50,13 +49,6 @@ struct DoorsStrip: View {
         HStack(spacing: 2) {
             door("Settings", act: onSettings) { AvatarDoor() }
             door("Accounts", act: onApps) { AppsDoor() }
-            door("Address book", act: onAddressBook) {
-                // The same glyph both wallet rails draw (§461), so the three
-                // doors onto one screen cannot read as three destinations.
-                Image(systemName: "person.text.rectangle")
-                    .dsGlyph(markSize * 0.5, weight: .medium)
-                    .foregroundStyle(DS.textPrimary)
-            }
             door("Ask your things", act: onAgent) {
                 // **NOT the berry (§591b, user: "the octopus logo opens a
                 // second octopus logo for the chat, i think that should be a

@@ -144,8 +144,6 @@ struct FaceScopeRail: View {
     /// ring belongs to the picked wallet whatever is open, and a door that can
     /// look "selected" would claim to be filtering the room behind it. Drawn
     /// after the add slot, so the rail reads: you · add · everyone else.
-    var bookTitle: String?
-    var onOpenBook: (() -> Void)?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The picked slot's fill travels between slots exactly as the switcher's
@@ -266,9 +264,6 @@ struct FaceScopeRail: View {
                 // It is also the only slot here that LEAVES the room, so the
                 // strip now reads outward-in: the door, then everything, then
                 // each one.
-                if let bookTitle, onOpenBook != nil {
-                    bookSlot(title: bookTitle)
-                }
                 allSlot
                 ForEach(items) { item in
                     slot(item)
@@ -532,55 +527,6 @@ struct FaceScopeRail: View {
                     .foregroundStyle(DS.tint)
                     .frame(width: faceSize, height: faceSize)
                     .background(Circle().fill(DS.tintDim))
-                if !namesInRoom { Spacer(minLength: 0) }
-            }
-            .frame(width: slotWidth, height: slotHeight,
-                   alignment: namesInRoom ? .center : .top)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .dsHover()
-        .accessibilityLabel(Text(title))
-        // Captionless, so on Mac the tooltip is the only thing that says what
-        // this circle does before you click it.
-        .dsTooltip(title)
-    }
-
-    /// The address-book door (prd §461) — the add slot's anatomy, in the quieter
-    /// ink.
-    ///
-    /// Same circle, same ramp, same fold, so the two trailing slots read as one
-    /// object with two jobs. The ONE thing that differs is the fill: `+` is a
-    /// verb on this rail's own subject and wears `DS.tintDim` like every other
-    /// call to action; this is a door out, and a second tinted disc beside it
-    /// would read as a second primary action rather than as a way through.
-    ///
-    /// **A GLYPH, not a deck of the book's faces** (user ruling, 2026-08-24: "i
-    /// would use an address book icon not those little faces"). A deck was drawn
-    /// first and is wrong twice: it would be the fourth pile of identicons in
-    /// this room, and it changes as you deal — a door that never looks the same
-    /// twice is one you have to find again every time. The rail's other two
-    /// non-face slots are already a word ("All") and a symbol ("+"), so a symbol
-    /// here makes three discs of one kind and leaves the faces meaning only
-    /// "a wallet you watch".
-    ///
-    /// `person.text.rectangle` is the system's own address-book reading — a card
-    /// with a person and their lines on it — rather than `book.closed`, which is
-    /// a book about anything.
-    private func bookSlot(title: String) -> some View {
-        Button {
-            DSHaptic.selection()
-            onOpenBook?()
-        } label: {
-            VStack(spacing: DS.Space.s1) {
-                // `dsGlyph` for `addSlot`'s stated reason: a frozen glyph size
-                // beside Dynamic-Type text is what `design-ramp-audit.py` exists
-                // to catch, and a ternary slips past its literal match.
-                Image(systemName: "person.text.rectangle")
-                    .dsGlyph(compact ? 12 : 14)
-                    .foregroundStyle(DS.textSecondary)
-                    .frame(width: faceSize, height: faceSize)
-                    .background(Circle().fill(DS.fillFaint))
                 if !namesInRoom { Spacer(minLength: 0) }
             }
             .frame(width: slotWidth, height: slotHeight,

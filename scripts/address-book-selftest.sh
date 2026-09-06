@@ -510,66 +510,38 @@ grep -q 'if !groups.isEmpty {' "$TMP/book-bare.swift" \
 grep -q 'AddressBookShape.lastPhrase(activity.lastAt)' "$TMP/views-bare.swift" \
   || { echo "✗ the row no longer states WHEN you last dealt (§440/§462)"; exit 1; }
 
-# ── §461: THE DOORS ─────────────────────────────────────────────────────────
+# ── §461 → 2026-09-06: THE DOORS, REVERSED ──────────────────────────────────
 #
-# A room nobody can reach is worse than no room. There are TWO doors and each
-# covers the other's blind spot: the rail's slot is gated on the rail drawing at
-# all (`WalletScopeRail.shows` wants more than one wallet watched), so with
-# nothing watched — the state a new person is in — it does not exist; the
-# roster's row is always there. The minimum corpus is the common one here, which
-# is the correction §436–§438 kept paying for.
-# **THE DOOR MOVED, IT DID NOT GO** (2026-08-27). §483's rail rewrite left the
-# rail's book slot in `FeedScreen` (`onOpenBook:`) while this guard kept
-# reading `MainSurface`, where §357 had moved the room CONTROLS. §461's ruling
-# is intact — the rail still carries the book glyph — so the fix is to ask
-# both files rather than to name one. Asking both is also the stronger check:
-# it survives the next move.
-grep -qs 'route.push(.addressBook)' "$SHELL_MAIN" "Casberi/Casberi/Screens/FeedScreen.swift" \
-  || { echo "✗ the wallet rail's address-book slot is gone — the room would be reachable only from the roster (§461)"; exit 1; }
-grep -qs 'bookTitle: String(localized: "Address book")' "$SHELL_MAIN" "Casberi/Casberi/Screens/FeedScreen.swift" \
-  || { echo "✗ the rail's book door lost its name — the slot is captionless, so the label IS its only naming (VoiceOver and the Mac tooltip)"; exit 1; }
-# **THE UNCONDITIONAL DOOR IS THE TRAY'S, NOT THE SETUP SCREEN'S (prd §570,
-# user: "why do the set up screens even need to have a link to the address
-# book? isn't that kind of confusing").**
+# §461 put a book door on the wallet rail, §498/§591 put an unconditional one
+# on the doors strip, and §545 gave the devnet rails the same slot. All of
+# them are GONE by user ruling (2026-09-06, the Accounts direction — prd
+# ruling to follow with the address book's own dissolution): "wallets do not
+# need an address book icon b/c the addresses live in the catalogue entries",
+# and a room's one trailing door leads to that room's catalog entry, wearing
+# the catalog's own mark (`RoomGear` draws `square.grid.2x2`, not a gear).
+# The people list itself still exists for now, reached from the Wallet
+# entry (`WalletScreen.footSection`'s "Address book" slab door) — the one
+# place a wallet address is managed from, which is the whole point. When the
+# book's rows move INTO that entry (the direction's step 4), this section
+# retires with the screen.
 #
-# This guard used to read the SETUP screen, on the stated reason that "with
-# nothing watched the rail does not draw, so this is the only way in". That was
-# true when it was written and is not any more: §498 (2026-08-27) put a book
-# door in the sources tray beside the avatar, the apps and the all-feed
-# buttons, and it is drawn with NO gate at all — no `if`, no count, no watched
-# list. The book is reachable from a fresh install with nothing watched.
-#
-# So the invariant that actually holds is asserted instead: there is at least
-# one door that no state can hide. That is the stronger check, and it is what
-# lets the setup screens drop theirs — where the door was doing the roster's
-# job anyway, which Wallet's own intro said out loud ("Add, rename or stop
-# watching in the address book below").
-# **THE DOOR MOVED FILE IN §591 AND ITS GUARD MOVED WITH IT** — the standing
-# lesson this tree already wrote down for `roomFigure`: a guarded call that
-# changes files takes its guard with it, or the guard goes red against a
-# perfectly correct app and then gets deleted by whoever is in a hurry.
-#
-# The panel behind the agent bar stopped being a grid of sources and became the
-# four doors that are NOT a feed (`DoorsPanel`), so the book's door is a named
-# row there rather than an unlabelled glyph in `SourcesOverlay`'s header. The
-# invariant is unchanged and if anything stronger: it is still the one door no
-# state can hide, and it now says its own name.
-grep -q 'onAddressBook'  "Casberi/Casberi/Shell/DoorsStrip.swift" \
-  || { echo "✗ the doors strip lost its address-book door — that is the ONE door no state can hide, and every other way in (the rails) needs something already watched (§498/§570/§591)"; exit 1; }
-python3 - <<'GATE' || exit 1
-import re, sys
-src = open("Casberi/Casberi/Shell/DoorsStrip.swift", encoding="utf-8").read()
-i = src.find("act: onOpenAddressBook")
-if i < 0:
-    sys.exit(0)
-# The eight lines above the door must not open a conditional around it: the
-# whole point is that this door is drawn unconditionally.
-above = src[:i].split("\n")[-8:]
-if any(re.match(r"\s*(if|guard)\b", line) for line in above):
-    print("✗ the doors strip's address-book door grew a condition — it is the")
-    print("  unconditional way in, and gating it re-creates the dead end §570 removed")
-    sys.exit(1)
-GATE
+# So the guards invert: the door in the Wallet entry must survive, and no
+# rail, room card or strip may grow a book door back.
+grep -q 'route.push(.addressBook)' "$SCREEN" \
+  || { echo "✗ the Wallet catalog entry lost its address-book door — with the rails' and strip's doors gone by ruling (2026-09-06) this is the one way in"; exit 1; }
+for f in Casberi/Casberi/Shell/FaceScopeRail.swift Casberi/Casberi/Shell/MainSurface.swift \
+         Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/VibenetRoomCard.swift; do
+  # Comment-stripped: VibenetRoomCard's history NAMES the callback it lost
+  # (the Obsidian/Cursor lesson — a guard on raw source fires on the prose).
+  sed 's|//.*$||' "$f" | grep -q 'onOpenBook' \
+    && { echo "✗ $f grew a rail/room book door back — the rails lost theirs by ruling (2026-09-06): addresses live in the catalog entry"; exit 1; }
+done
+grep -q 'onAddressBook' "Casberi/Casberi/Shell/DoorsStrip.swift" \
+  && { echo "✗ the doors strip grew its address-book door back — two doors to the same set is the tray/catalog confusion (2026-09-06)"; exit 1; }
+grep -q 'Image(systemName: "gearshape")' "Casberi/Casberi/Shell/RoomGear.swift" \
+  && { echo "✗ the room door is a gear again — it opens the room's catalog entry and wears the catalog's mark (2026-09-06)"; exit 1; }
+grep -q 'Image(systemName: "square.grid.2x2")' "Casberi/Casberi/Shell/RoomGear.swift" \
+  || { echo "✗ the room door no longer wears the Accounts glyph (2026-09-06)"; exit 1; }
 grep -q 'case addressBook' "$ROUTE" \
   || { echo "✗ the address book has no route node"; exit 1; }
 grep -q 'AddressBookScreen()' "$SHELL_MAIN" \

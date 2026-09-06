@@ -3906,19 +3906,11 @@ struct FeedScreen: View {
                         },
                         onReTap: nil,
                         addTitle: nil,
-                        onAdd: nil,
-                        // **THE BOOK IS IN EVERY ADDRESS RAIL (prd §570, user:
-                        // "one thing to make sure is that all the devnets have
-                        // the book in their rails").** Only the Wallet rail
-                        // carried this door; the three devnets drew the same
-                        // faces with no way through to the ledger that names
-                        // them. It is the same book — §498 made it the app's
-                        // ONE people surface, and a devnet address is a row in
-                        // it like any other — so a rail of faces that cannot
-                        // reach it is the dead end the setup screens were
-                        // quietly standing in for.
-                        bookTitle: String(localized: "Address book"),
-                        onOpenBook: { route.push(.addressBook) })
+                        onAdd: nil)
+                        // The book door §570 put in every address rail is GONE
+                        // (user ruling 2026-09-06): addresses live in the
+                        // catalog entry now, and a room's one trailing door
+                        // (`RoomGear`) leads there wearing the catalog's mark.
                 }
                 .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                           bottom: DSRoomChassis.contentGap,
@@ -3998,9 +3990,7 @@ struct FeedScreen: View {
                         // and seeing the roster are the same screen, so an ADD slot
                         // would point at the book door beside it.
                         addTitle: nil,
-                        onAdd: nil,
-                        bookTitle: String(localized: "Address book"),
-                        onOpenBook: { route.push(.addressBook) })
+                        onAdd: nil)
                 }
                 // ONE inset for the whole slab, where the rail used to run
                 // full bleed (`leading: 0`) under a switcher at
@@ -5002,9 +4992,7 @@ struct FeedScreen: View {
                             },
                             onReTap: nil,
                             addTitle: nil,
-                            onAdd: nil,
-                            bookTitle: String(localized: "Address book"),
-                            onOpenBook: { route.push(.addressBook) })
+                            onAdd: nil)
                     }
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                               bottom: DSRoomChassis.contentGap,
@@ -6244,7 +6232,6 @@ struct FeedScreen: View {
                                         feedSheet = .vibenetKey(actor, item, shared)
                                     },
                                     onScope: vibenetScoper,
-                                    onOpenBook: { route.push(.addressBook) },
                                     // WHICH READING IS ON SCREEN (prd §482).
                                     // Resolved rather than read raw: a scope
                                     // remembered from a room whose last key has

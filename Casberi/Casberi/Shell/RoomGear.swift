@@ -120,11 +120,13 @@ struct RoomGear: View {
                 DSHaptic.selection()
                 route.path.append(.bridge(destination))
             } label: {
-                Image(systemName: "gearshape")
-                    // OUTLINE, not `gearshape.fill`: a filled glyph at this size
-                    // beside a strip full of saturated brand marks reads as a
-                    // sixth chip. The thin stroke reads as chrome, which is what
-                    // this is.
+                // The ACCOUNTS door's own glyph (user ruling 2026-09-06): this
+                // control leads to the room's catalog entry, so it wears the
+                // catalog's mark — a gear said "settings" about a door that
+                // opens an account. Same outline `AppsDoor` draws, for the same
+                // reason it stays an outline: a filled glyph at this size beside
+                // a strip full of saturated brand marks reads as a sixth chip.
+                Image(systemName: "square.grid.2x2")
                     .dsGlyph(20)
                     .foregroundStyle(needsYou ? DS.destructive : DS.textSecondary)
                     .frame(width: 42, height: 42)

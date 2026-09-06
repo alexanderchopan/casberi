@@ -531,10 +531,6 @@ struct MainSurface: View {
                                chrome.openFolder = nil
                                route.present(.apps)
                            },
-                           onAddressBook: {
-                               chrome.openFolder = nil
-                               route.push(.addressBook)
-                           },
                            onSettings: {
                                chrome.openFolder = nil
                                route.present(.settings)
@@ -631,8 +627,7 @@ struct MainSurface: View {
                 // slot pointing at the identical destination is chrome, not a
                 // choice. `addTitle`/`onAdd` deliberately left nil.
                 addTitle: nil,
-                onAdd: nil,
-                bookTitle: nil)
+                onAdd: nil)
             .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
         }
     }

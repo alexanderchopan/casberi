@@ -232,18 +232,6 @@ struct VibenetRoomCard: View {
     /// the shortcut; this is the list.
     var onScope: ((String) -> Void)? = nil
 
-    /// **THE BOOK, BACK IN THE RAIL (prd §570, user: "one thing to make sure
-    /// is that all the devnets have the book in their rails").**
-    ///
-    /// §545 deleted an `onOpenBook` from here and said so in a comment two
-    /// hundred lines up — correctly, because the screen it opened was going
-    /// away with it. This is a different destination: the SHARED address book
-    /// §498 made the app's one people surface, which a vibenet address is a
-    /// row in like any other. Passed from the feed rather than read from an
-    /// environment, because this card takes every other destination the same
-    /// way and one route here would be the only one.
-    var onOpenBook: (() -> Void)? = nil
-
     /// WHICH READING IS ON SCREEN (prd §482, 2026-08-26), or nil for the
     /// whole room in one scroll.
     ///
@@ -2454,9 +2442,7 @@ struct VibenetRoomCard: View {
                 // the whole list are the same screen here, so a "+" beside the
                 // book would point at the same place twice.
                 addTitle: nil,
-                onAdd: nil,
-                bookTitle: onOpenBook == nil ? nil : String(localized: "Address book"),
-                onOpenBook: onOpenBook)
+                onAdd: nil)
         }
     }
 
