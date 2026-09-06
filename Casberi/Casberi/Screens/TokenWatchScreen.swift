@@ -35,7 +35,6 @@ struct TokenWatchScreen: View {
     /// The token whose chart sheet is open — a tapped coin on the roster
     /// (prd §185). The shelf replaced a list row that wasn't tappable at all,
     /// so the chart is newly reachable from here.
-    @State private var openThing: Thing?
 
     /// The watchlist's shared order (2026-07-15) — read as a computed
     /// property, not cached, so a mode switch or a fresh pulse repaints it
@@ -51,48 +50,38 @@ struct TokenWatchScreen: View {
         watched = recentBridgeThings(source: "Tokens", context: modelContext)
     }
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+
     var body: some View {
-        BridgeSetupPage(name: "Tokens") {
-            // A short header, not the old "no header" §185 treatment — see
-            // the family-wide pass that put every "type something to watch
-            // it" screen (Wallet, Stocktwits, RSS, Vibenet, …) on one shape:
-            // identity + mode chip + one action sentence, THEN the omnibox.
-            // §185's actual point (no section furniture, no product re-pitch,
-            // the omnibox leads) survives — only the identity row came back.
-            BridgeSetupHeader(
-                name: "Tokens",
-                mode: .noAccount,
-                intro: "Watch a token below by name, symbol, address, or link.",
-                connected: !watched.isEmpty)
-            // The way back to your things (§460) — the same door every other
-            // screen in the family carries.
-            if !watched.isEmpty {
-                RoomDoor(name: "Tokens", source: "Tokens")
-                    .listRowSeparator(.hidden)
-            }
-            addSection.listRowSeparator(.hidden)
-            if !watched.isEmpty {
-                rosterSection
-            }
-            if !watched.isEmpty {
-                // A watched token IS its thing, so there's no separate store to
-                // clear — "Remove its things too" is what drops the watchlist.
-                BridgeDisconnectSection(bridgeID: "tokens", name: "Tokens",
-                                        teardown: {})
-                    .listRowSeparator(.hidden)
-            }
-        }
+        AccountPage(
+            name: "Tokens", seatID: "tokens", source: "Tokens",
+            state: AccountPageState.of(name: "Tokens", seatID: "tokens",
+                                       connected: !watched.isEmpty, store: store),
+            intro: "Watch a token below by name, symbol, address, or link.",
+            mode: .noAccount,
+            rows: rows,
+            query: queryField,
+            onRemoveRow: unwatch,
+            onOpenRow: openToken,
+            // The one verb only this seat has: in "My order", a row can be
+            // pulled to the front. It rode the shelf's hold menu before §639;
+            // it rides the roster's now rather than being lost with the shelf.
+            rowMenu: moveToFrontItem,
+            // A watched token IS its thing, so there's no separate store to
+            // clear — "Remove its things too" is what drops the watchlist.
+            teardown: {},
+            sheet: $sheet,
+            act: { addBlock },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
         .toolbar {
-            // The sort choice lived in the old watchlist section's header;
-            // the shelf has no header, so it rides the toolbar (prd §185).
-            // Edit-mode drag handles are gone with the vertical list — a
-            // shelf reorders by "Move to front" in the hold menu instead.
+            // The sort choice lived in the old watchlist section's header.
+            // The roster has no header of its own, so it rides the toolbar.
             if watched.count > 1 {
                 ToolbarItem(placement: .topBarTrailing) { sortMenu }
             }
-        }
-        .sheet(item: $openThing) { thing in
-            ThingSheetView(thing: thing)
         }
         .onAppear {
             loadWatched()
@@ -110,103 +99,79 @@ struct TokenWatchScreen: View {
         }
     }
 
-    private var addSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-            DSSlabField(placeholder: String(localized: "Name, symbol, address, or link"),
-                        text: $queryField, actionLabel: String(localized: "Watch"),
-                        focus: $fieldFocused, action: watch)
-            ForEach(displayHits) { token in
-                BridgeSearchResultRow(
-                    imageURL: token.imageURL, fallbackIcon: "Tokens",
-                    title: "\(token.name) · $\(token.symbol)",
-                    subtitle: token.priceUsd.map { "\(token.chain.capitalized) · $\($0)" }
-                        ?? token.chain.capitalized,
-                    action: { watchHit(token) })
-            }
-            BridgeSyncStatusRows(syncing: working,
-                                 syncingLine: String(localized: "Finding the token…"),
-                                 proof: result)
-            // Commas still build a watchlist in one go — that trick moved to
-            // the placeholder's own example rather than a paragraph (§190).
-            DSSlabNote(text: "Public price data only — no wallet, no trading.")
-            }
-        }
-        .dsSlabSection()
-    }
+    // MARK: - The roster
 
-    /// The watchlist manages itself the way Wallet's addresses do — swipe a
-    /// row to unwatch (native delete on a management screen, the WalletScreen
-    /// precedent; the Feed's reads-only swipe rule governs feed rows). A
-    /// watched token could already be pinned from Feed (it's a normal thing,
-    /// same swipe everywhere) but not from here, where you're most likely to
-    /// reach for it right after watching one — the pin swipe closes that
-    /// gap on the TRAILING edge, Feed's edge (2026-07-10: it briefly lived
-    /// on leading here, so one verb had two directions).
-    /// Unwatching deletes the thing: the thing IS the watch, not landed
-    /// history — and its sourceRef leaving the store lets a re-add resolve.
+    /// One row per watched token, in the shared `TokenWatchOrder` (movers
+    /// first by default). The shelf of logo discs under a caption coaching its
+    /// own gestures ("Watching 5 · hold to unwatch") is the chassis's roster
+    /// now, with one removal verb and its Mac mirror.
     ///
-    /// Rows wear the same live price + 24h sparkline the feed's rows do
-    /// (2026-07-15) — the SAME cached TokenPulse, so the management screen
-    /// can never disagree with the feed about which tokens moved. Row order
-    /// follows the shared TokenWatchOrder (movers first by default).
-    /// The watchlist as a roster of coins (prd §185) — the same shelf of
-    /// circles the wallet's addresses and the social screens' people wear,
-    /// since a watched token is an identity too. Tap opens its chart; hold
-    /// unwatches, and in "My order" also moves it to the front.
-    private var rosterSection: some View {
+    /// The subline is the live pulse the feed's rows read from the SAME
+    /// cache, so the two can never disagree. A token whose pulse hasn't
+    /// landed shows no figure rather than a placeholder that reads like one.
+    private var rows: [AccountPageShape.Row] {
+        orderedWatched.filter(\.isLive).map { thing in
+            let pulse = TokenPulse.shared.pulse(for: thing)
+            let price = pulse?.closes.last.map { TokenChartStyle.priceText($0) }
+            let change = pulse?.change24h.map { TokenChartStyle.changeText($0) }
+            let line = [price, change].compactMap { $0 }.joined(separator: " · ")
+            return AccountPageShape.Row(
+                id: thing.id.uuidString,
+                title: symbolLabel(thing),
+                subline: line.isEmpty ? String(localized: "watching") : line,
+                weekCount: 0, hasNew: false, isYou: false,
+                avatarURL: thing.previewImageURL)
+        }
+    }
+
+    private func openToken(_ id: String) {
+        guard let uuid = UUID(uuidString: id) else { return }
+        sheet = .thing(id: uuid)
+    }
+
+    private func unwatch(_ id: String) {
+        guard let i = watched.firstIndex(where: { $0.id.uuidString == id }) else { return }
+        unwatch(at: IndexSet(integer: i))
+    }
+
+    /// "Move to front", offered only where it does something: the manual
+    /// order, with more than one row. A menu item that cannot reorder anything
+    /// is the §83 dead control.
+    private func moveToFrontItem(_ id: String) -> AnyView {
         let items = orderedWatched
-        return AssetRosterShelf(note: rosterNote, count: watched.count) {
-            ForEach(items.keyed) { row in
-                // Corollary 3 (build 176) — see `ThingRowKeying`.
-                if let thing = row.live { rosterSlot(thing, in: items) }
-            }
-            AssetRosterAddSlot { fieldFocused = true }
+        guard TokenWatchOrder.shared.mode == .manual, items.count > 1,
+              let thing = items.first(where: { $0.id.uuidString == id }) else {
+            return AnyView(EmptyView())
         }
-        .listRowInsets(EdgeInsets())
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
-    }
-
-    private var rosterNote: String {
-        let n = watched.count
-        return n == 1
-            ? String(localized: "Watching 1 · hold to unwatch")
-            : String(localized: "Watching \(n) · hold to unwatch")
-    }
-
-    /// One coin on the shelf — its own logo (the same one the search row wore
-    /// when it was watched, 2026-07-17), its symbol, and the live pulse the
-    /// feed's rows read from the SAME cache, so the two can never disagree.
-    /// A token whose pulse hasn't landed shows no figure rather than a
-    /// placeholder that reads like one.
-    private func rosterSlot(_ thing: Thing, in items: [Thing]) -> some View {
-        let pulse = TokenPulse.shared.pulse(for: thing)
-        return AssetRosterSlot(label: symbolLabel(thing),
-                               price: pulse?.closes.last,
-                               change: pulse?.change24h) {
-            BridgeLogo(imageURL: thing.previewImageURL, fallbackIcon: "Tokens",
-                       size: 56)
-        }
-        .onTapGesture {
-            DSHaptic.tap()
-            openThing = thing
-        }
-        .contextMenu {
-            if TokenWatchOrder.shared.mode == .manual, items.count > 1 {
-                Button {
-                    moveToFront(thing, in: items)
-                } label: {
-                    Label("Move to front", systemImage: "arrow.left.to.line")
-                }
-            }
-            Button(role: .destructive) {
-                if let i = watched.firstIndex(where: { $0.id == thing.id }) {
-                    unwatch(at: IndexSet(integer: i))
-                }
+        return AnyView(
+            Button {
+                moveToFront(thing, in: items)
             } label: {
-                Label("Unwatch", systemImage: "trash")
+                Label("Move to front", systemImage: "arrow.left.to.line")
             }
+        )
+    }
+
+
+    @ViewBuilder private var addBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        DSSlabField(placeholder: String(localized: "Name, symbol, address, or link"),
+                    text: $queryField, actionLabel: String(localized: "Watch"),
+                    focus: $fieldFocused, action: watch)
+        ForEach(displayHits) { token in
+            BridgeSearchResultRow(
+                imageURL: token.imageURL, fallbackIcon: "Tokens",
+                title: "\(token.name) · $\(token.symbol)",
+                subtitle: token.priceUsd.map { "\(token.chain.capitalized) · $\($0)" }
+                    ?? token.chain.capitalized,
+                action: { watchHit(token) })
+        }
+        BridgeSyncStatusRows(syncing: working,
+                             syncingLine: String(localized: "Finding the token…"),
+                             proof: result)
+        // Commas still build a watchlist in one go — that trick moved to
+        // the placeholder's own example rather than a paragraph (§190).
+        DSSlabNote(text: "Public price data only — no wallet, no trading.", plain: true)
         }
     }
 

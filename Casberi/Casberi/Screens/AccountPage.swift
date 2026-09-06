@@ -81,6 +81,12 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// repositories has a roster to READ, and a swipe offering to remove one
     /// would be the §83 dead control with a destructive tint on it.
     var onRemoveRow: ((String) -> Void)? = nil
+    /// An EXTRA menu item on a roster row, above Remove — for a verb only one
+    /// seat has (Tokens' "Move to front", in the manual sort). `AnyView`
+    /// rather than a fourth generic parameter, because a generic with no
+    /// inferable default would force every one of the ~40 call sites to spell
+    /// out a type they do not use.
+    var rowMenu: ((String) -> AnyView)? = nil
     /// Tap on a row — the person or repo profile where one exists. Rows
     /// with no destination are reads, not controls.
     var onOpenRow: ((String) -> Void)? = nil
@@ -362,20 +368,30 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             row: row, fallbackIcon: name,
             subline: state.needsReconnecting ? AccountPageShape.pausedSubline : row.subline,
             open: onOpenRow.map { open in { open(row.id) } })
-        if let remove = onRemoveRow {
+        // ONE swipe and ONE menu, with conditional CONTENTS rather than two
+        // shapes of row: a swipe has no Mac-mouse equivalent, so the harness
+        // counts the two and demands they match, and a second pair of
+        // modifiers on a second branch reads to that count as a swipe with no
+        // mirror. A row with nothing to remove simply offers no swipe action.
+        if onRemoveRow != nil || rowMenu != nil {
             line
                 .swipeActions(edge: .trailing) {
-                    Button(role: .destructive) {
-                        remove(row.id)
-                        DSHaptic.tap()
-                    } label: { Label("Remove", systemImage: "minus.circle") }
+                    if let remove = onRemoveRow {
+                        Button(role: .destructive) {
+                            remove(row.id)
+                            DSHaptic.tap()
+                        } label: { Label("Remove", systemImage: "minus.circle") }
+                    }
                 }
                 // A swipe has no Mac-mouse equivalent — right-click mirrors it.
                 .contextMenu {
-                    Button(role: .destructive) {
-                        remove(row.id)
-                        DSHaptic.tap()
-                    } label: { Label("Remove", systemImage: "minus.circle") }
+                    rowMenu?(row.id)
+                    if let remove = onRemoveRow {
+                        Button(role: .destructive) {
+                            remove(row.id)
+                            DSHaptic.tap()
+                        } label: { Label("Remove", systemImage: "minus.circle") }
+                    }
                 }
                 .plainAccountRow()
         } else {
