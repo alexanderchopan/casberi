@@ -27,7 +27,6 @@ struct ENSScreen: View {
     /// The readings behind each row's standing line. Read from `ENSState`
     /// rather than parsed back out of a row's title (prd §363's rule).
     @State private var readings: [String: ENSState.Reading] = [:]
-    @State private var openThing: Thing?
     @FocusState private var fieldFocused: Bool
 
     /// What the typed text would actually follow — nil while it isn't a name
@@ -37,126 +36,113 @@ struct ENSScreen: View {
     /// before you commit (§511's own reason for the address preview).
     private var candidate: String? { ENSName.normalized(field) }
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+
     var body: some View {
-        BridgeSetupPage(name: "ENS") {
-            BridgeSetupHeader(
-                name: "ENS",
-                mode: .noAccount,
-                intro: "Including the ninety days after expiry, when it can still be renewed before anyone else takes it.",
-                connected: !followed.isEmpty)
-            if !followed.isEmpty {
-                RoomDoor(name: "ENS", source: ENSWatch.source)
-                    .listRowSeparator(.hidden)
-            }
-            addSection.listRowSeparator(.hidden)
-            if !suggestions.isEmpty { suggestionsSection }
-            if !followed.isEmpty { followedSection }
-            if !followed.isEmpty {
-                BridgeDisconnectSection(bridgeID: ENSWatch.seatID, name: ENSWatch.source,
-                                        teardown: {
-                                            ENSWatch.unfollowAll(context: modelContext)
-                                            load()
-                                        })
-                    .listRowSeparator(.hidden)
-            }
-        }
-        .sheet(item: $openThing) { thing in
-            ThingSheetView(thing: thing)
-        }
+        AccountPage(
+            name: "ENS", seatID: ENSWatch.seatID, source: ENSWatch.source,
+            state: AccountPageState.of(name: "ENS", seatID: ENSWatch.seatID,
+                                       connected: !followed.isEmpty, store: store),
+            intro: "Including the ninety days after expiry, when it can still be renewed before anyone else takes it.",
+            mode: .noAccount,
+            rows: rows,
+            query: field,
+            onRemoveRow: unfollow,
+            onOpenRow: openName,
+            teardown: {
+                ENSWatch.unfollowAll(context: modelContext)
+                load()
+            },
+            sheet: $sheet,
+            act: {
+                addBlock
+                if !suggestions.isEmpty { suggestionsBlock }
+            },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
         .onAppear {
             load()
-            // Opening the screen doesn't connect — following a name does.
+            // Opening the page doesn't connect — following a name does.
             if !followed.isEmpty { Task { await sync() } }
         }
     }
 
+    // MARK: - The roster
+
+    /// One row per followed name, and its subline is WHERE THE NAME STANDS —
+    /// silent until the first read answers, because "expires —" with nothing
+    /// after it is a fact we don't have dressed as one we do.
+    ///
+    /// Keyed on the thing's id captured while the model is valid, and every
+    /// stored read happens HERE rather than inside a row body SwiftUI may
+    /// re-run against a deleted model (`ThingRowKeying`, corollary 3).
+    private var rows: [AccountPageShape.Row] {
+        followed.filter(\.isLive).map { thing in
+            let name = rowName(thing)
+            return AccountPageShape.Row(
+                id: thing.id.uuidString, title: name,
+                subline: standing(for: name) ?? String(localized: "Reading the registrar…"),
+                weekCount: 0, hasNew: false, isYou: false, avatarURL: nil)
+        }
+    }
+
+    private func openName(_ id: String) {
+        guard let uuid = UUID(uuidString: id) else { return }
+        sheet = .thing(id: uuid)
+    }
+
+    /// ONE verb, "Remove" (§639) — this screen said "Unfollow".
+    private func unfollow(_ id: String) {
+        guard let thing = followed.first(where: { $0.id.uuidString == id }) else { return }
+        unfollow(rowName(thing))
+    }
+
+
     // MARK: - Sections
 
-    private var addSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabField(placeholder: String(localized: "A name, or one you're waiting on"),
-                            text: $field,
-                            actionLabel: String(localized: "Follow"),
-                            focus: $fieldFocused,
-                            isArmed: candidate != nil,
-                            action: followTyped)
-                if let candidate, candidate != field.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
-                    // Only when the two differ: echoing back exactly what was
-                    // typed is a line that says nothing, and this exists to
-                    // show the ONE thing the person can't see — that `vitalik`
-                    // and a pasted link both resolve to the same name.
-                    Text(candidate)
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                }
-                BridgeSyncStatusRows(syncing: working || syncing,
-                                     syncingLine: working
-                                        ? String(localized: "Following…")
-                                        : String(localized: "Reading the registrar…"),
-                                     proof: result)
-                // The screen's one note, and it carries the honesty fact rather
-                // than the pitch: `.eth` is the only thing with a registrar
-                // expiry to read, so a `.com` or a subname is refused at the
-                // field instead of following into a row that can never speak.
-                DSSlabNote(text: "Second-level .eth names only — a subname's lifetime belongs to its parent, and an imported .com expires in DNS where no ENS read can see it.")
+    @ViewBuilder private var addBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            DSSlabField(placeholder: String(localized: "A name, or one you're waiting on"),
+                        text: $field,
+                        actionLabel: String(localized: "Follow"),
+                        focus: $fieldFocused,
+                        isArmed: candidate != nil,
+                        action: followTyped)
+            if let candidate, candidate != field.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+                // Only when the two differ: echoing back exactly what was
+                // typed is a line that says nothing, and this exists to
+                // show the ONE thing the person can't see — that `vitalik`
+                // and a pasted link both resolve to the same name.
+                Text(candidate)
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
             }
+            BridgeSyncStatusRows(syncing: working || syncing,
+                                 syncingLine: working
+                                    ? String(localized: "Following…")
+                                    : String(localized: "Reading the registrar…"),
+                                 proof: result)
+            // The screen's one note, and it carries the honesty fact rather
+            // than the pitch: `.eth` is the only thing with a registrar
+            // expiry to read, so a `.com` or a subname is refused at the
+            // field instead of following into a row that can never speak.
+            DSSlabNote(text: "Second-level .eth names only — a subname's lifetime belongs to its parent, and an imported .com expires in DNS where no ENS read can see it.", plain: true)
         }
-        .dsSlabSection()
     }
 
     /// Names the wallet already found. One tap each — never followed on our
     /// own (§515a: a seat must not light up for work nobody asked for).
-    private var suggestionsSection: some View {
-        Section {
-            ForEach(suggestions, id: \.self) { name in
-                BridgeSearchResultRow(
-                    imageURL: nil, fallbackIcon: "ENS",
-                    title: name,
-                    subtitle: String(localized: "Found on a wallet you watch"),
-                    action: { follow(name) })
-            }
-        } header: {
-            Text("From your wallets").dsText(.callout15).foregroundStyle(DS.textSecondary)
-        }
-    }
-
-    private var followedSection: some View {
-        Section {
-            ForEach(followed.keyed) { row in
-                // Corollary 3 (build 176) — see `ThingRowKeying`.
-                if let thing = row.live { followRow(thing) }
-            }
-        } header: {
-            Text(followed.count == 1
-                 ? String(localized: "1 name")
-                 : String(localized: "\(followed.count) names"))
-                .dsText(.callout15).foregroundStyle(DS.textSecondary)
-        }
-    }
-
-    private func followRow(_ thing: Thing) -> some View {
-        let name = rowName(thing)
-        return Button {
-            DSHaptic.tap()
-            openThing = thing
-        } label: {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(name).dsText(.body17).foregroundStyle(DS.textPrimary)
-                if let line = standing(for: name) {
-                    Text(line).dsText(.callout15).foregroundStyle(DS.textSecondary)
-                }
-            }
-        }
-        .buttonStyle(.plain)
-        .swipeActions(edge: .trailing) {
-            Button(role: .destructive) { unfollow(name) } label: {
-                Label("Unfollow", systemImage: "trash")
-            }
-        }
-        .contextMenu {
-            Button(role: .destructive) { unfollow(name) } label: {
-                Label("Unfollow", systemImage: "trash")
-            }
+    @ViewBuilder private var suggestionsBlock: some View {
+        Text("From your wallets")
+            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            .padding(.top, DS.Space.s2)
+        ForEach(suggestions, id: \.self) { name in
+            BridgeSearchResultRow(
+                imageURL: nil, fallbackIcon: "ENS",
+                title: name,
+                subtitle: String(localized: "Found on a wallet you watch"),
+                action: { follow(name) })
         }
     }
 
