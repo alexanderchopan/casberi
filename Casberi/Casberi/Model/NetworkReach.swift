@@ -292,8 +292,8 @@ enum NetworkReach {
         // no config document to fetch and no second host. Three RPC nodes are
         // listed because the read walks them in order: one being down is a
         // retry, not an outage.
-        Endpoint(service: "Ethrex Hegot\u{00e1}",
-                 reach: .whenConnected(bridge: "Ethrex Hegot\u{00e1}"),
+        Endpoint(service: "Hegota Devnet",
+                 reach: .whenConnected(bridge: "Hegota Devnet"),
                  purpose: "Reads a watched address's balance, its transfers, the unspent coins it holds in the chain's UTXO vault and who paid for its transactions, from Hegot\u{00e1} — a public devnet testing frame transactions. A read carries only the address you watch. Sending also sends one signed transaction: what leaves is a signature, never the key that made it — that key is a plain scalar held on this device, not the Secure Enclave, because Hegot\u{00e1}'s money has no value to protect. Asking the faucet for test ETH sends the address you are asking for, and nothing else; it needs no key and no signature.",
                  hosts: ["rpc1.hegota.ethrex.xyz", "rpc2.hegota.ethrex.xyz",
                          "rpc3.hegota.ethrex.xyz",
@@ -324,8 +324,8 @@ enum NetworkReach {
         // day it belongs there and not before (§531's lesson, one seat over,
         // where a faucet the app really posted to sat in the reach audit's
         // denylist for a day and the privacy screen omitted it).
-        Endpoint(service: "Ethrex Privacy",
-                 reach: .whenConnected(bridge: "Ethrex Privacy"),
+        Endpoint(service: "Privacy Devnet",
+                 reach: .whenConnected(bridge: "Privacy Devnet"),
                  purpose: "Reads a watched address's balance, its transfers, the steps each transaction ran, the one-time spend keys it used and which recent snapshot a proof named, from a public devnet testing Ethereum's privacy proposals. A read carries only the address you watch. If you make an account here, asking the faucet for test ETH sends its address, and a send you make carries the transaction you signed on this device — both to the same devnet, and only when you tap.",
                  hosts: ["rpc1.privacy.ethrex.xyz", "rpc2.privacy.ethrex.xyz",
                          "rpc3.privacy.ethrex.xyz",

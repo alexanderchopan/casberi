@@ -643,7 +643,7 @@ enum BridgeCatalog {
         // own ruling that a devnet with worthless money does not need
         // hardware-backed non-export. `hegota-selftest.sh` ties this bullet to
         // the code both ways.
-        Offer(name: "Ethrex Hegotá", tagline: "Explore UTXOs — coins as objects, not a balance", group: "Wallet", connectable: true,
+        Offer(name: "Hegota Devnet", tagline: "Explore UTXOs — coins as objects, not a balance", group: "Wallet", connectable: true,
               summary: "A public devnet trying out a new way for Ethereum to hold money: as coins you can count, each an object with its own history, rather than one balance that goes up and down. No real funds, and the chain may be reset without notice. Watch any address, or make a key of your own to sign and send here directly.",
               features: ["The coins an address holds, one by one, not just a balance",
                          "Where each coin came from, and which are still unspent",
@@ -711,7 +711,7 @@ enum BridgeCatalog {
         // recovers to a real address, and authorises something other than what
         // the screen said. The last bullet is the honest version of that and
         // must be removed in the same commit that lands sending, never before.
-        Offer(name: "Ethrex Privacy", tagline: "Try Ethereum's new privacy proposals", group: "Wallet", connectable: true,
+        Offer(name: "Privacy Devnet", tagline: "Try Ethereum's new privacy proposals", group: "Wallet", connectable: true,
               summary: "A public devnet testing the pieces a private Ethereum transaction would be built from — one-time spend keys, and proofs made against a recent snapshot of the chain. No real funds, and the chain may be reset without notice. Watch any address to see what it does, and what it doesn't yet hide.",
               features: ["The one-time keys a spend used, so it can't be repeated",
                          "Which snapshot a proof named, and how long it stays valid",

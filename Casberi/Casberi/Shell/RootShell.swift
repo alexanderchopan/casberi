@@ -428,7 +428,7 @@ struct RootShell: View {
                 // One-time migrations run once per install (bump the version
                 // when adding one) — steady-state launches skip the scans.
                 let migrationsKey = "migrations.version"
-                let migrationsCurrent = 8
+                let migrationsCurrent = 9
                 let migrationsStored = UserDefaults.standard.integer(forKey: migrationsKey)
                 if migrationsStored < migrationsCurrent {
                     if migrationsStored < 1 {
@@ -617,6 +617,27 @@ struct RootShell: View {
                         // connected row for an offer the catalog no longer
                         // lists — a dead control that opens nothing.
                         bridges.remove("homekit")
+                    }
+                    if migrationsStored < 9 {
+                        // One-time rename (2026-09-06, prd §629): the two
+                        // ethrex seats are "Hegota Devnet" and "Privacy
+                        // Devnet" now, and an offer's name is also its rows'
+                        // `source` and its bridge record's name. Rows keep
+                        // their source string forever, so without this every
+                        // row landed before the rename resolves to no seat —
+                        // no chip, no category, no mark — and the seat itself
+                        // reads as disconnected on the Apps screen. Same
+                        // predicate shape as v1's "You" → "Voice".
+                        let renames = [("Ethrex Hegot\u{00e1}", HegotaIdentity.source),
+                                       ("Ethrex Privacy", PrivacyDevnetIdentity.source)]
+                        for (old, new) in renames {
+                            let rows = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                                predicate: #Predicate { $0.source == old }
+                            ))) ?? []
+                            for thing in rows where thing.isLive { thing.source = new }
+                        }
+                        bridges.rename(HegotaIdentity.seatID, to: HegotaIdentity.source)
+                        bridges.rename(PrivacyDevnetIdentity.seatID, to: PrivacyDevnetIdentity.source)
                     }
                     modelContext.saveHonestly()
                     UserDefaults.standard.set(migrationsCurrent, forKey: migrationsKey)

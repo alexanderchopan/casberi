@@ -525,7 +525,7 @@ KNOWN_ROWLESS_SEAT = {
     # a devnet test address has no news. So its whole furnishing is the fixture
     # account `HegotaLiveState.seedDemo` installs, which is what check M holds
     # it to.
-    "Ethrex Hegotá",
+    "Hegota Devnet",
     # Frames Devnet (prd §548) — rowless for exactly Hegotá's reason, and it
     # is the same ruling rather than a second one: the seat lands NO `Thing`
     # at all, because its readings are live chain state and a devnet test
@@ -537,7 +537,7 @@ KNOWN_ROWLESS_SEAT = {
     # state and a devnet test address has no news, so it lands no `Thing` at
     # all. Its whole furnishing is the fixture `PrivacyDevnetLiveState.seedDemo`
     # installs, which check M holds it to.
-    "Ethrex Privacy",
+    "Privacy Devnet",
 }
 
 # What proves each rowless seat is really furnished: (file key, regex). Each
@@ -569,11 +569,11 @@ ROWLESS_SEAT_FIXTURE = {
     # half-wired state is exactly what a seat table would still claim as
     # connected. `installDemo` is the only door that writes accounts without a
     # read, so naming it pins the whole chain.
-    "Ethrex Hegotá": ("HegotaBridge", r'HegotaLiveState\.shared\.installDemo\('),
+    "Hegota Devnet": ("HegotaBridge", r'HegotaLiveState\.shared\.installDemo\('),
     # Same rule, same reason. Matched in `PrivacyDevnetBridge` rather than in
     # `DemoSeedAll`, because the call there is only the trigger and would keep
     # passing over a `seedDemo` that had been emptied.
-    "Ethrex Privacy": ("PrivacyDevnetBridge", r'PrivacyDevnetLiveState\.shared\.installDemo\('),
+    "Privacy Devnet": ("PrivacyDevnetBridge", r'PrivacyDevnetLiveState\.shared\.installDemo\('),
     # Same rule, same reason: a fixture nothing installs furnishes nothing.
     # `installDemo` is the only door that writes accounts without a read, so
     # naming it pins the whole chain — and it is matched in `FramesBridge`

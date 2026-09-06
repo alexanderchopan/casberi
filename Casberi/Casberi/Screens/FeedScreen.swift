@@ -4675,7 +4675,7 @@ struct FeedScreen: View {
         // and then nothing in the app ever called it.
         case .privacyDevnetSend:
             DevnetSendSheet(
-                venue: String(localized: "Ethrex Privacy"),
+                venue: String(localized: "Privacy Devnet"),
                 tint: DS.brandHue(for: PrivacyDevnetIdentity.source) ?? DS.tint,
                 unit: String(localized: "test ETH"),
                 candidates: privacyDevnetSendCandidates,
@@ -4712,7 +4712,7 @@ struct FeedScreen: View {
             // says "Shield". `perform` ignores the fixed destination it is
             // handed and shields the amount.
             DevnetSendSheet(
-                venue: String(localized: "Ethrex Privacy"),
+                venue: String(localized: "Privacy Devnet"),
                 tint: DS.brandHue(for: PrivacyDevnetIdentity.source) ?? DS.tint,
                 unit: String(localized: "test ETH"),
                 candidates: [],

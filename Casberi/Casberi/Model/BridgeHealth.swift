@@ -179,6 +179,18 @@ enum BridgeHealth {
         save(book)
     }
 
+    /// Moves a seat's record to a new name (2026-09-06, prd §629) — the
+    /// ledger is keyed by the bridge's NAME, so a catalog rename that left
+    /// this behind would drop the seat's last-checked time and any standing
+    /// refusal on the floor. A no-op when nothing is filed under the old name.
+    static func rename(_ old: String, to new: String) {
+        guard old != new else { return }
+        var book = load()
+        guard let record = book.removeValue(forKey: old) else { return }
+        book[new] = record
+        save(book)
+    }
+
     // MARK: - Storage
 
     // UserDefaults, the `FeedFreshness`/`X402State` shape — NOT a field on the

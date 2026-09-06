@@ -1415,7 +1415,7 @@ done
 python3 - "$work/BridgeCatalog.swift.bare" <<'PYCAT' > "$work/hegota-catalog-promise.txt" || true
 import sys
 src = open(sys.argv[1]).read()
-start = src.find('Offer(name: "Ethrex Hegot')
+start = src.find('Offer(name: "Hegota Devnet')
 if start < 0:
     print("NONE"); sys.exit(0)
 nxt = src.find('Offer(name:', start + 10)
@@ -1427,7 +1427,7 @@ CATALOG_PROMISE="$(cat "$work/hegota-catalog-promise.txt" 2>/dev/null || echo NO
 python3 - "$work/NetworkReach.swift.bare" <<'PYREACH' > "$work/hegota-reach-promise.txt" || true
 import sys
 src = open(sys.argv[1]).read()
-start = src.find('service: "Ethrex Hegot')
+start = src.find('service: "Hegota Devnet')
 if start < 0:
     print("NONE"); sys.exit(0)
 nxt = src.find('Endpoint(service:', start + 10)
@@ -1484,7 +1484,7 @@ python3 - "$work/BridgeCatalog.swift.bare" <<'PYWALLET' > "$work/devnet-wallet-c
 import re, sys
 src = open(sys.argv[1]).read()
 bad = []
-for seat in ('Ethrex Hegot', 'Frames Devnet', 'Privacy Devnet', 'vibenet'):
+for seat in ('Hegota Devnet', 'Frames Devnet', 'Privacy Devnet', 'vibenet'):
     start = src.find('Offer(name: "%s' % seat)
     if start < 0:
         continue

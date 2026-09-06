@@ -1795,7 +1795,7 @@ harness "Privacy scopes and the 8272 window" "privacy" "scripts/privacy-selftest
 # circomlibjs's vectors AND the exact values that landed a real shield on chain
 # 8141. A wrong hash here is invisible to every other check and renders as a
 # deposit nobody can spend, so this is the only proof these numbers are right.
-harness "Ethrex Privacy shielded-note math" "poseidon, note chain, shield calldata vs a real on-chain shield" "scripts/privacy-poseidon-selftest.sh" "the privacy Poseidon/note self-test failed — run scripts/privacy-poseidon-selftest.sh"
+harness "Privacy Devnet shielded-note math" "poseidon, note chain, shield calldata vs a real on-chain shield" "scripts/privacy-poseidon-selftest.sh" "the privacy Poseidon/note self-test failed — run scripts/privacy-poseidon-selftest.sh"
 
 # The ethrex Privacy type-0x6 envelope (prd §593a). Its own harness rather than
 # a block in the one above, because the failure class is different in kind: a

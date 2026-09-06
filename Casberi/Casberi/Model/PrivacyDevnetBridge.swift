@@ -27,7 +27,7 @@ import Foundation
 enum PrivacyDevnetIdentity {
     /// The catalog and `Thing.source` name. Family grammar, operator then
     /// chain, matching Base Vibenet and Ethrex Hegotá.
-    static let source = "Ethrex Privacy"
+    static let source = "Privacy Devnet"
     static let seatID = "privacy"
     static let explorer = "https://dora.privacy.ethrex.xyz"
     /// Reachable and deliberately UNUSED: the app posts nothing to it while the

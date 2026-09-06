@@ -86,6 +86,23 @@ final class BridgeStore {
         bridges[i].statusLine = statusLine
     }
 
+    /// Renames a seat's record in place (2026-09-06, prd §629). A bridge is
+    /// found by NAME on every catalog read (`registerConnected`, the Apps rows,
+    /// `RoomGear`), so a catalog rename without this leaves the seat looking
+    /// disconnected while its credentials and rows are all still here. Also
+    /// moves the health ledger, which is keyed by the same name. A no-op when
+    /// the seat is absent or already carries the new name.
+    func rename(_ id: String, to name: String) {
+        guard let i = bridges.firstIndex(where: { $0.id == id }),
+              bridges[i].name != name else { return }
+        let old = bridges[i]
+        var renamed = BridgeApp(id: old.id, name: name, status: old.status,
+                                statusLine: old.statusLine, can: old.can)
+        renamed.askBeforeActing = old.askBeforeActing
+        bridges[i] = renamed
+        BridgeHealth.rename(old.name, to: name)
+    }
+
     func remove(_ id: String) {
         // `bridges` persists and notifies observers on every mutating access,
         // so removing what isn't there costs a full JSON encode and an

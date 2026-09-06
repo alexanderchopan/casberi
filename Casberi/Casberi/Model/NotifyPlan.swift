@@ -555,8 +555,8 @@ enum NotifyDevnet {
         var source: String {
             switch self {
             case .vibenet: return "Base Vibenet"
-            case .hegota:  return "Ethrex Hegotá"
-            case .privacy: return "Ethrex Privacy"
+            case .hegota:  return "Hegota Devnet"
+            case .privacy: return "Privacy Devnet"
             }
         }
 
@@ -616,7 +616,7 @@ enum NotifyDevnet {
             // counterfactual, so it comes back the moment it transacts.
             body = String(localized: "vibenet was reset since you last looked, so its history starts again from here. Your accounts keep their addresses.")
         case .hegota:
-            body = String(localized: "Ethrex Hegotá was relaunched from genesis, so everything it held is gone. The addresses you watch are still yours.")
+            body = String(localized: "Hegota Devnet was relaunched from genesis, so everything it held is gone. The addresses you watch are still yours.")
         case .privacy:
             // **THE ROOM'S OWN SENTENCE, WORD FOR WORD.** `PrivacyDevnetRoom
             // .sentence(.relaunched)` says exactly this, and a notification

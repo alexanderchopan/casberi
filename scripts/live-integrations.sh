@@ -659,7 +659,7 @@ hr
 # it is the seat's own self-proof — every unspent coin on the chain, summed,
 # against the vault's balance — run nightly, so a drifted parse or a relaunched
 # devnet is caught by the same arithmetic the app gates its Coins card on.
-print -P "%F{45}Ethrex Hegotá%f (keyless devnet)"
+print -P "%F{45}Hegota Devnet%f (keyless devnet)"
 HEG="https://rpc1.hegota.ethrex.xyz"
 HEG_VAULT="0x0000000000000000000000000000000000008312"
 HEG_NONCE="0x0000000000000000000000000000000000008250"

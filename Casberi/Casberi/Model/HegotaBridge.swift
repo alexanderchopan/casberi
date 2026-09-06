@@ -37,7 +37,7 @@ import Observation
 /// worth more than the memory of having made it — the `CursorFetch` rule, in a
 /// file one method call away from moving money on a chain.
 enum HegotaIdentity {
-    static let source = "Ethrex Hegotá"
+    static let source = "Hegota Devnet"
     static let seatID = "hegota"
 
     /// The block explorer and the faucet — opened in the person's OWN browser

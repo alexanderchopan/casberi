@@ -35,7 +35,7 @@ THE CATALOG — 100+ APPS, BY CATEGORY
 
 • Work — GitHub, GitLab, Jira, Stripe, Sentry, Vercel, PagerDuty, Cloudflare, AWS, PostHog, Slack, Linear, Notion, Trello, Polar, Radicle, App Store Connect, npm, PyPI, Hugging Face
 • Wallet — Apple Wallet, Coinbase, Kraken, Binance, Gemini, Safe, ENS, ether.fi, Gnosis Pay, Peer, Railgun, 0xBow Privacy Pools, ETH Validators, Walletbeat, Altana, Dodo Payments, CardPointers
-• Developer networks — Base Vibenet, Ethrex Hegotá, Frames Devnet
+• Developer networks — Base Vibenet, Hegota Devnet, Frames Devnet
 • Network — X, Instagram, TikTok, Snapchat, Telegram, Farcaster, Bluesky, Nostr
 • Agent — ChatGPT, Claude, Claude Code, Gemini, Grok, Cursor, Venice, Bankr, OpenRouter, 1Claw
 • Markets — Tokens, Kalshi, Polymarket, Stocktwits, GeckoTerminal, L2BEAT, Circle x402
@@ -63,7 +63,7 @@ WATCH ANY WALLET
 Paste an address or a name (ENS, .sol), or connect read-only through WalletConnect — watching can never trade or move funds. Holdings as a treemap with Aave, Morpho, Uniswap, Hyperliquid and Aerodrome positions; approvals ranked by dollars at stake, with a path to revoke.
 
 DEVELOPER NETWORKS
-Base Vibenet, Ethrex Hegotá and Frames are test networks. Make an account, claim from the faucet, send test transactions and explore each one. Nothing on them has a price or a market: no real cryptocurrency or value is transferred, and none of it can reach a live network.
+Base Vibenet, Hegota Devnet and Frames are test networks. Make an account, claim from the faucet, send test transactions and explore each one. Nothing on them has a price or a market: no real cryptocurrency or value is transferred, and none of it can reach a live network.
 
 BRING YOUR ARCHIVES
 Import your X, Instagram, TikTok, Snapchat and Telegram exports, plus ChatGPT, Claude and Gemini conversations — then search them like memory: "my posts from 2019".
@@ -81,7 +81,7 @@ Casberi isn't another chatbot. It's your own things, in one feed, with an agent 
 
 ### iOS What's New — append these two bullets
 
-• Developer networks — Base Vibenet, Ethrex Hegotá and Frames are test networks: make an account, claim from the faucet and send test transactions. Nothing on them has a price or a market; no real cryptocurrency or value is transferred, and none of it can reach a live network.
+• Developer networks — Base Vibenet, Hegota Devnet and Frames are test networks: make an account, claim from the faucet and send test transactions. Nothing on them has a price or a market; no real cryptocurrency or value is transferred, and none of it can reach a live network.
 
 • Bankr — answers about your onchain holdings and only answers. It never moves funds or makes transactions on your behalf.
 ## Live — macOS 1.0.11
@@ -106,7 +106,7 @@ THE CATALOG — 99 APPS, BY CATEGORY
 
 • Work — GitHub, GitLab, Jira, Stripe, Sentry, Vercel, PagerDuty, Cloudflare, AWS, PostHog, Slack, Linear, Notion, Trello, Polar, Radicle, App Store Connect, npm, PyPI, Hugging Face
 • Wallet — Coinbase, Kraken, Binance, Gemini, Safe, ENS, ether.fi, Gnosis Pay, Peer, Railgun, 0xBow Privacy Pools, ETH Validators, Walletbeat, Altana, Dodo Payments, CardPointers
-• Developer networks — Base Vibenet, Ethrex Hegotá, Frames Devnet
+• Developer networks — Base Vibenet, Hegota Devnet, Frames Devnet
 • Network — X, Instagram, TikTok, Snapchat, Telegram, Farcaster, Bluesky, Nostr
 • Agent — ChatGPT, Claude, Claude Code, Gemini, Grok, Cursor, Venice, Bankr, OpenRouter, 1Claw
 • Markets — Tokens, Kalshi, Polymarket, Stocktwits, GeckoTerminal, L2BEAT, Circle x402
@@ -130,7 +130,7 @@ WATCH ANY WALLET
 Paste an address or a name (ENS, .sol), or connect read-only through WalletConnect — watching can never trade or move funds. Holdings as a treemap, with Aave, Morpho, Uniswap, Hyperliquid and Aerodrome positions alongside; approvals ranked by the dollars at stake, with a path to revoke.
 
 DEVELOPER NETWORKS
-Base Vibenet, Ethrex Hegotá and Frames are public test networks. Make an account, claim from the faucet, send test transactions and read back what the chain did — frames, lanes, gas, queue. Nothing on them has a price or a market: no real cryptocurrency or value is transferred, and none of it can reach a live network.
+Base Vibenet, Hegota Devnet and Frames are public test networks. Make an account, claim from the faucet, send test transactions and read back what the chain did — frames, lanes, gas, queue. Nothing on them has a price or a market: no real cryptocurrency or value is transferred, and none of it can reach a live network.
 
 BRING YOUR ARCHIVES
 Import your X, Instagram, TikTok, Snapchat and Telegram exports, plus ChatGPT, Claude and Gemini conversations — then search them like memory: "my posts from 2019".
@@ -151,7 +151,7 @@ Casberi isn't another chatbot. It's your own things, in one feed, with an agent 
 The wallet rebuilt, three developer networks, and the biggest type on a screen now belongs to whatever that screen is for.
 
 • Wallet — watched addresses get their own roster, everyone else lives in the address book, and one swipe opens exactly one Remove on the row you swiped. An ENS avatar now loads for an address added while the app is open.
-• Developer networks — Base Vibenet, Ethrex Hegotá and Frames are public test networks: make an account, claim from the faucet, send test transactions and read back what the chain did. Nothing on them has a price or a market; no real cryptocurrency or value is transferred, and none of it can reach a live network.
+• Developer networks — Base Vibenet, Hegota Devnet and Frames are public test networks: make an account, claim from the faucet, send test transactions and read back what the chain did. Nothing on them has a price or a market; no real cryptocurrency or value is transferred, and none of it can reach a live network.
 • Frames Devnet — a new connector for the EIP-8141 frame-transaction chain: budgets, per-frame status and the payer, decoded move by move.
 • Vibenet — token movement lands in Activity in both directions, per token, with ranked counterparties and a balance curve read back from the chain. Policy runs get their own rows with the caller named, and the chain's own pulse tells a quiet account apart from a stopped devnet.
 • Hegotá — a whole sweep now reads a single block, so a spend landing mid-read can't break its proof. Lane counts read the on-chain counter, fees are undone in the balance line where this address paid them, and the block producer is named.

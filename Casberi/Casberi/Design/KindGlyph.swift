@@ -348,14 +348,14 @@ enum BridgeGlyph {
         // precedent) rather than an invented theme icon, in case the asset
         // ever fails to load.
         case "base vibenet": return "character"
-        // Hegotá bundles its own mark too (`brand-ethrex-hegota`), so this is
+        // Hegotá bundles its own mark too (`brand-hegota-devnet`), so this is
         // the same defensive fallback for the same reason — and the same
         // ANSWER: a neutral letterform rather than an invented theme icon.
         // A frame or a vault glyph would name one of the chain's readings and
         // silently rank it above the others, which is a claim a fallback has
         // no business making. The literal carries the accent in the catalog's
         // own normalization: Swift compares canonically, the harness does not.
-        case "ethrex hegotá": return "character"
+        case "hegota devnet": return "character"
         // The Frames devnet bundles its own mark (`brand-frames-devnet`), so
         // this is the same defensive fallback for the same reason — and the
         // same ANSWER: a neutral letterform, never an invented theme icon. A
@@ -363,7 +363,7 @@ enum BridgeGlyph {
         // rank it above the others, which is a claim a fallback that only
         // appears when an asset FAILED TO LOAD has no business making.
         case "frames devnet": return "character"
-        // Ethrex Privacy bundles its own mark (`brand-ethrex-privacy`), so
+        // Privacy Devnet bundles its own mark (`brand-privacy-devnet`), so
         // this is the third instance of the same defensive fallback and the
         // same ANSWER: a neutral letterform. A key or a shield glyph would
         // name one of the chain's readings — and on THIS seat it would do
@@ -371,7 +371,7 @@ enum BridgeGlyph {
         // transacted, which it does not (§593): every transaction here names
         // its sender in the open. A fallback that only appears when an asset
         // failed to load has no business making that claim.
-        case "ethrex privacy": return "character"
+        case "privacy devnet": return "character"
         default:          return "app"
         }
     }
