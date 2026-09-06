@@ -1,4 +1,5 @@
 import SwiftUI
+import QuickLook
 
 /// The feed's half of the Mac keyboard walk (2026-07-31) — the list in
 /// list+detail, arrow-walkable.
@@ -34,6 +35,19 @@ struct KeyboardWalk: ViewModifier {
     /// Resolve and open — the feed page owns `openThing`, so the pane-or-sheet
     /// split stays in the one place that already decides it.
     let open: (String) -> Void
+    /// A row id back to its model, resolved against the LIVE corpus at the
+    /// moment of the keypress (prd §631). The shell holds ids and never models
+    /// — a `[Thing]` parked on `chrome` is the 2026-07-24 crash class — so the
+    /// three row verbs that need a `Thing` ask the page that has the query.
+    /// Returns nil for a row the corpus no longer has, which is an ordinary
+    /// outcome between a keypress and a heal, not an error.
+    let resolve: (String) -> Thing?
+    /// This window's pane selection is read below; the row VERBS live in
+    /// `WalkRowVerbs`, applied here. Two modifiers rather than one chain
+    /// because one chain is what the Swift type checker gave up on — and the
+    /// split is the honest one anyway: this modifier is the RING (what there
+    /// is to walk, where it is, what Return opens), and that one is what you
+    /// can do to the row the ring is on.
     /// This window's pane selection (per-window since `SceneState`), read to
     /// tell "the pane is already open" from "the ring is only moving".
     @Environment(PadDetailSelection.self) private var detail
@@ -90,6 +104,87 @@ struct KeyboardWalk: ViewModifier {
             .onChange(of: chrome.walkOpenPulse) { _, _ in
                 guard isActive, let selected = chrome.walkSelected else { return }
                 open(selected)
+            }
+            .modifier(WalkRowVerbs(isActive: isActive, chrome: chrome, resolve: resolve))
+    }
+}
+
+/// What you can do to the row the ring is on (prd §631): ⌘C, Space, and the
+/// preview Space raises. Split from `KeyboardWalk` because the two are
+/// different questions — and because one chain of nine observers is more than
+/// the Swift type checker will solve in reasonable time, which is a real
+/// constraint and worth recording rather than rediscovering.
+private struct WalkRowVerbs: ViewModifier {
+    let isActive: Bool
+    let chrome: ShellChrome
+    let resolve: (String) -> Thing?
+
+    /// The row Quick Look is showing, and the folder window it needs held open
+    /// (`MacRowHandoff.Peek`). Both cleared together when the preview closes:
+    /// dropping the handle is what gives the connected folder's scoped access
+    /// back.
+    @State private var peekURL: URL?
+    @State private var peekHandle: FilesMediaHandle?
+
+    func body(content: Content) -> some View {
+        content
+            // ⌘C (prd §631). The clipboard write is `DSPasteboard.copy`, so a
+            // row expires like everything else this app copies (§277), and the
+            // outcome is FLASHED — a copy that silently did nothing is the
+            // failure this repo's honesty rule exists for, and a row with
+            // neither a link nor words is a real case (an untitled capture
+            // still being enriched).
+            .onChange(of: chrome.walkCopyPulse) { _, _ in
+                guard isActive, let selected = chrome.walkSelected,
+                      let thing = resolve(selected) else { return }
+                guard let text = MacRowHandoff.copyText(for: thing) else {
+                    chrome.flash(String(localized: "Nothing to copy yet"), tone: .failure)
+                    return
+                }
+                DSPasteboard.copy(text)
+                chrome.flash(String(localized: "Copied"))
+            }
+            // Whether Space is live for the row the ring is on. Cheap by
+            // construction — `isPeekable` reads `kind` and `sourceRef`, both
+            // light columns — because this runs on every arrow press.
+            .onChange(of: chrome.walkSelected, initial: true) { _, selected in
+                guard isActive else { return }
+                guard let selected, let thing = resolve(selected) else {
+                    chrome.walkPeekable = false
+                    return
+                }
+                chrome.walkPeekable = MacRowHandoff.isPeekable(thing)
+            }
+            // Space. The resolve is asynchronous (a connected folder is walked
+            // inside its own scoped window), so the three not-ready outcomes
+            // each say their own thing rather than sharing one silence.
+            .onChange(of: chrome.walkPeekPulse) { _, _ in
+                guard isActive, let selected = chrome.walkSelected,
+                      let thing = resolve(selected) else { return }
+                Task {
+                    switch await MacRowHandoff.peek(thing) {
+                    case .ready(let url, let handle):
+                        peekHandle = handle
+                        peekURL = url
+                    case .notDownloaded:
+                        chrome.flash(String(localized: "Still downloading — try again in a moment"),
+                                     tone: .failure)
+                    case .missing:
+                        chrome.flash(String(localized: "That file has moved or been deleted"),
+                                     tone: .failure)
+                    case .unreachable:
+                        chrome.flash(String(localized: "Casberi can't reach that folder"),
+                                     tone: .failure)
+                    }
+                }
+            }
+            .quickLookPreview($peekURL)
+            // The preview closing is `peekURL` going nil, which is where the
+            // folder's scoped-access window is handed back.
+            .onChange(of: peekURL) { _, url in
+                guard url == nil, let handle = peekHandle else { return }
+                handle.release()
+                peekHandle = nil
             }
     }
 }

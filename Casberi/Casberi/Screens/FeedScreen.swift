@@ -3501,7 +3501,7 @@ struct FeedScreen: View {
             page
                 .modifier(KeyboardWalk(isActive: isActive, chrome: chrome,
                                        proxy: proxy, ids: walkRowIDs,
-                                       open: openRowID))
+                                       open: openRowID, resolve: resolveRowID))
         }
         .onChange(of: isActive || nearActive, initial: true) { _, want in
             if want && !everBuilt { everBuilt = true }
@@ -3573,11 +3573,18 @@ struct FeedScreen: View {
         return visible.map { $0.id.uuidString }
     }
 
-    /// Open a walked row. Resolves against the live corpus at the moment of the
-    /// keypress rather than holding a model — see `walkRowIDs`.
+    /// A walked row id back to its model, against the live corpus at the moment
+    /// of the keypress rather than holding one — see `walkRowIDs`. The one
+    /// resolution behind all four walk verbs (open, copy, peek, and the
+    /// peekable read that gates Space), so none of them can disagree about
+    /// which row the ring is on.
+    private func resolveRowID(_ rowID: String) -> Thing? {
+        visible.live.first(where: { $0.id.uuidString == rowID })
+    }
+
+    /// Open a walked row.
     private func openRowID(_ rowID: String) {
-        guard let thing = visible.live.first(where: { $0.id.uuidString == rowID })
-        else { return }
+        guard let thing = resolveRowID(rowID) else { return }
         openThing(thing)
     }
 
@@ -10914,6 +10921,11 @@ struct FeedScreen: View {
                                  bottom: DS.Space.s2,
                                  trailing: DS.Space.s4 + DS.Space.s3))
             .listRowSeparator(.hidden)
+            // A row is draggable OUT of the window on Mac (prd §631) — its
+            // link where it has one, its words otherwise. `macRowDrag` is
+            // `self` everywhere else, and its doc records why touch is a
+            // deliberate omission rather than an oversight.
+            .macRowDrag(thing)
             // One gesture, one meaning: TAP opens the sheet — tags and verbs
             // live there. The row's OTHER verbs ride a long-press (ruling
             // 2026-07-16, supersedes the both-edge swipe of 2026-07-15): the

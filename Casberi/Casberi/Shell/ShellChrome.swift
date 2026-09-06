@@ -796,6 +796,39 @@ final class ShellChrome {
         walkOpenPulse += 1
     }
 
+    /// Bumped by ⌘C; the active feed page copies `walkSelected` (prd §631).
+    /// A pulse for `walkOpenPulse`'s reason — copying the same row twice is
+    /// two events, and a `String?` written twice with the same value is one.
+    var walkCopyPulse = 0
+
+    /// Bumped by Space — Quick Look on the walked row (prd §631).
+    var walkPeekPulse = 0
+
+    /// Whether the selected row is the KIND Quick Look previews, published by
+    /// the active feed page on every selection change
+    /// (`MacRowHandoff.isPeekable`).
+    ///
+    /// It gates the Space command's enabled state, and that gate is doing real
+    /// work rather than tidying: a DISABLED menu item hands its key equivalent
+    /// straight back to the responder chain (§256), so on a link row Space
+    /// stays the scroll key it is everywhere else on this platform. Enabling
+    /// it everywhere would take Space away from the list to open nothing.
+    var walkPeekable = false
+
+    /// ⌘C on the walked row. Guards on a selection for `walkOpen`'s reason —
+    /// the command disables itself when there is none, which is what returns
+    /// ⌘C to the system in exactly that state.
+    func walkCopy() {
+        guard canWalk, walkSelected != nil else { return }
+        walkCopyPulse += 1
+    }
+
+    /// Space on the walked row.
+    func walkPeek() {
+        guard canWalk, walkPeekable, walkSelected != nil else { return }
+        walkPeekPulse += 1
+    }
+
     /// A thing ARRIVED while the person watched (a bridge sync, a pull, a
     /// share landing) — the source's chip does one catch bob: the capture
     /// flight's landing beat, generalized to everything that lands (delight

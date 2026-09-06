@@ -473,6 +473,30 @@ struct CasberiApp: App {
                     .keyboardShortcut(.return, modifiers: [])
                     .disabled(!(focusedChrome?.canWalk ?? false)
                               || focusedChrome?.walkSelected == nil)
+                // QUICK LOOK, on Space (prd §631) — the key Finder and Mail
+                // both spend on exactly this. Enabled only for the kinds that
+                // HAVE a document behind them (`MacRowHandoff.isPeekable`:
+                // screenshots and files), which is what leaves Space as the
+                // scroll key on a link or a note. A Space that opened the
+                // thing sheet would be a second Return.
+                Button("Quick Look") { focusedChrome?.walkPeek() }
+                    .keyboardShortcut(.space, modifiers: [])
+                    .disabled(!(focusedChrome?.canWalk ?? false)
+                              || focusedChrome?.walkSelected == nil
+                              || !(focusedChrome?.walkPeekable ?? false))
+                // ⌘C takes the walked row — its link when it has one, its
+                // words when it doesn't (prd §631). The list selection owning
+                // ⌘C is the Mac idiom (Mail copies the message, Finder the
+                // file), and the hazard it has to clear is swallowing ⌘C from
+                // a text selection. MEASURED rather than assumed: every one of
+                // the app's `textSelection(.enabled)` sites is in a sheet, a
+                // pushed room or the composer, and each of those already sets
+                // `canWalk` false — so the feed list, the one surface this can
+                // be enabled over, has no selectable text to take it from.
+                Button("Copy Item") { focusedChrome?.walkCopy() }
+                    .keyboardShortcut("c", modifiers: .command)
+                    .disabled(!(focusedChrome?.canWalk ?? false)
+                              || focusedChrome?.walkSelected == nil)
                 // Escape closes what the pane is showing, and is enabled ONLY
                 // when the pane is actually showing something. That condition
                 // is the whole design: Escape is the key UIKit uses to dismiss

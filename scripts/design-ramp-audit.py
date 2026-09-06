@@ -153,6 +153,37 @@ def ramp_weights(path=TYPOGRAPHY):
     return {m.group(1): m.group(2) for m in RAMP_RUNG.finditer(text)}
 
 
+def widget_rung_findings(path=TYPOGRAPHY):
+    """CHECK 5 — every `widget*` rung opts out of the Mac point scale.
+
+    The ramp takes a global 0.88 on Catalyst (prd §631) so the app stops
+    rendering a phone's point sizes on a machine whose own list text is 13pt.
+    A WidgetKit tile is the one surface that must not take it: a widget's
+    point dimensions are identical on both platforms, so scaling its text
+    shrinks the words inside a tile that did not get smaller.
+
+    Mechanical because the failure is invisible in every way this repo cares
+    about — it compiles, it renders, the iOS build is unaffected by
+    construction, and no screenshot sweep here photographs a Mac widget at
+    all. The rung is one line, and the person adding the twelfth widget style
+    a year from now will copy the eleventh, which is exactly why the eleventh
+    must be right and the check must say so.
+    """
+    try:
+        text = path.read_text(errors="replace")
+    except OSError:
+        return ["the type ramp could not be read at all"]
+    findings = []
+    for m in re.finditer(r"static let (widget\w+)\s*=\s*DSTextStyle\(([^)]*)\)", text):
+        if "macScales: false" not in m.group(2):
+            findings.append(
+                f"Shared/Typography.swift: `{m.group(1)}` is a widget rung and "
+                f"does not declare `macScales: false` — a WidgetKit tile is the "
+                f"same size on Mac and iOS, so its text must not take the Mac "
+                f"point scale (prd §631)")
+    return findings
+
+
 # Each entry is a ruling: "this size is not the ramp's to decide."
 KNOWN_EXEMPT = {
     # Sized by the 17pt well it overlays, not by anything beside it — the same
@@ -491,6 +522,26 @@ def _self_test():
               f"whole ramp")
     else:
         print(f"  ✓ the ramp parse found all {len(w)} rungs")
+
+    # Check 5, mutation-proven against the real ramp: the live file must be
+    # clean, and a widget rung with the opt-out removed must be a finding.
+    live = widget_rung_findings()
+    mark = "✓" if not live else "✗"
+    if live:
+        ok = False
+    print(f"  {mark} the shipped ramp's widget rungs all opt out of the Mac "
+          f"scale (expected 0, got {len(live)})")
+    with tempfile.TemporaryDirectory() as tmp:
+        broken = pathlib.Path(tmp) / "Typography.swift"
+        broken.write_text(
+            TYPOGRAPHY.read_text(errors="replace")
+            .replace(", macScales: false)", ")", 1))
+        got = len(widget_rung_findings(broken))
+        mark = "✓" if got == 1 else "✗"
+        if got != 1:
+            ok = False
+        print(f"  {mark} caught: a widget rung that forgot `macScales: false` "
+              f"(expected 1, got {got})")
     return ok
 
 
@@ -503,7 +554,7 @@ def main():
         print("  clean")
         return 0
 
-    findings = audit(SOURCES)
+    findings = audit(SOURCES) + widget_rung_findings()
     if findings:
         print(f"design-ramp-audit: {len(findings)} finding(s)\n")
         for f in findings:

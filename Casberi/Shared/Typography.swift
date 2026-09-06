@@ -84,9 +84,64 @@ struct DSTextStyle {
     /// place character grouping matters more than the brand does.
     var monospaced = false
 
+    /// Does this rung take the Mac's point scale? True for everything the APP
+    /// draws; false for the `widget*` rungs, which draw into WidgetKit tiles
+    /// whose point dimensions are identical on both platforms — shrinking text
+    /// inside a fixed tile is not density, it is a smaller tile's worth of
+    /// words in a tile that did not get smaller. Enforced by
+    /// `scripts/design-ramp-audit.py`, so a new widget rung cannot forget it.
+    var macScales = true
+
+    /// The Mac's own point scale (prd §631).
+    ///
+    /// `TARGETED_DEVICE_FAMILY` includes family 6 (Optimized for Mac), so a
+    /// point here is an AppKit point at 1:1 — the app's 17pt reading band
+    /// renders at a true 17 beside a system whose own list text is 13. That
+    /// gap is the single largest remaining "stretched iPad app" tell, and it
+    /// is the same lever `DS.Space` already pulled once for the AIR between
+    /// things (2026-07-28, 15–20% tighter): one global multiplier, so every
+    /// proportion in the ramp survives intact rather than rungs being
+    /// re-judged one at a time.
+    ///
+    /// **0.88, not 0.76.** Matching macOS's 13pt body exactly would undo prd
+    /// §211, which raised this app's reading band deliberately and for
+    /// reasons that do not change with the platform. 0.88 takes 17→15,
+    /// 24→21, 40→35, 64→56 and 12→11 — denser than a phone, still larger
+    /// than the system, which is where a reading app belongs.
+    ///
+    /// **It cannot clip, and that is why it is safe unseen.** Several
+    /// components in this app pin literal frame heights; text getting SMALLER
+    /// inside a fixed frame leaves air, where text getting bigger would cut.
+    /// The direction of this change is the forgiving one.
+    ///
+    /// `dsGlyph` takes the same factor (see below) — a glyph that held its
+    /// size while its label shrank would break the icon↔label pairing §359's
+    /// ramp exists to hold.
+    static let macScale: CGFloat = 0.88
+
+    /// This rung's point size on THIS platform, before Dynamic Type. Rounded
+    /// to a whole point: fractional sizes render, but the ramp's own rungs are
+    /// integers everywhere else and a half point buys nothing.
+    var platformSize: CGFloat {
+        #if targetEnvironment(macCatalyst)
+        macScales ? (size * DSTextStyle.macScale).rounded() : size
+        #else
+        size
+        #endif
+    }
+
+    /// The line box, scaled with the size so leading stays proportional.
+    var platformLineHeight: CGFloat {
+        #if targetEnvironment(macCatalyst)
+        macScales ? (lineHeight * DSTextStyle.macScale).rounded() : lineHeight
+        #else
+        lineHeight
+        #endif
+    }
+
     /// SwiftUI `lineSpacing` is additive over the font's intrinsic leading; this
     /// approximates the CSS line-height without measuring UIFont metrics.
-    var lineSpacing: CGFloat { max(0, lineHeight - size * 1.18) }
+    var lineSpacing: CGFloat { max(0, platformLineHeight - platformSize * 1.18) }
 
     /// The Dynamic-Type-scaled `Font` alone, for call sites that can't use the
     /// `dsText` view modifier — e.g. a segment inside a concatenated `Text`
@@ -98,7 +153,7 @@ struct DSTextStyle {
     /// segment therefore keeps its ramp weight under Accessibility Bold Text —
     /// stated here rather than discovered later.
     var scaledFont: Font {
-        let scaled = UIFontMetrics(forTextStyle: relative).scaledValue(for: size)
+        let scaled = UIFontMetrics(forTextStyle: relative).scaledValue(for: platformSize)
         return DSFont.font(size: scaled, weight: weight, monospaced: monospaced)
     }
 }
@@ -244,29 +299,29 @@ extension DSTextStyle {
     // Figtree like everything else, so a tile and the app it opens are the same
     // product. Sizes and weights are unchanged from what shipped.
     /// The Live Activity's "Recording" chrome label and its lock-screen timer.
-    static let widgetChrome15  = DSTextStyle(size: 15, weight: .semibold, tracking: 0, lineHeight: 20, relative: .subheadline)
+    static let widgetChrome15  = DSTextStyle(size: 15, weight: .semibold, tracking: 0, lineHeight: 20, relative: .subheadline, macScales: false)
     /// Dynamic Island's compact-trailing timer.
-    static let widgetTimer13   = DSTextStyle(size: 13, weight: .semibold, tracking: 0, lineHeight: 18, relative: .footnote)
+    static let widgetTimer13   = DSTextStyle(size: 13, weight: .semibold, tracking: 0, lineHeight: 18, relative: .footnote, macScales: false)
     /// The accessory-rectangular widget's eyebrow, and the hero widget's new-count ring badge.
-    static let widgetEyebrow11 = DSTextStyle(size: 11, weight: .semibold, tracking: 0, lineHeight: 15, relative: .caption2)
+    static let widgetEyebrow11 = DSTextStyle(size: 11, weight: .semibold, tracking: 0, lineHeight: 15, relative: .caption2, macScales: false)
     /// The accessory-rectangular widget's title line.
-    static let widgetTitle14   = DSTextStyle(size: 14, weight: .bold, tracking: 0, lineHeight: 19, relative: .footnote)
+    static let widgetTitle14   = DSTextStyle(size: 14, weight: .bold, tracking: 0, lineHeight: 19, relative: .footnote, macScales: false)
     /// The accessory-rectangular widget's subline.
-    static let widgetSubline11 = DSTextStyle(size: 11, weight: .regular, tracking: 0, lineHeight: 15, relative: .caption2)
+    static let widgetSubline11 = DSTextStyle(size: 11, weight: .regular, tracking: 0, lineHeight: 15, relative: .caption2, macScales: false)
     /// The default-family hero widget's title line.
-    static let widgetTitle17   = DSTextStyle(size: 17, weight: .bold, tracking: 0, lineHeight: 22, relative: .callout)
+    static let widgetTitle17   = DSTextStyle(size: 17, weight: .bold, tracking: 0, lineHeight: 22, relative: .callout, macScales: false)
     /// The default-family hero widget's subline.
-    static let widgetSubline12 = DSTextStyle(size: 12, weight: .regular, tracking: 0, lineHeight: 16, relative: .caption1)
+    static let widgetSubline12 = DSTextStyle(size: 12, weight: .regular, tracking: 0, lineHeight: 16, relative: .caption1, macScales: false)
     /// The medium widget's treemap cell terms — semibold so a one-word theme
     /// reads against its own cell's fill at a glance.
-    static let widgetTreemapTerm12 = DSTextStyle(size: 12, weight: .semibold, tracking: 0, lineHeight: 15, relative: .caption1)
+    static let widgetTreemapTerm12 = DSTextStyle(size: 12, weight: .semibold, tracking: 0, lineHeight: 15, relative: .caption1, macScales: false)
     /// The medium widget's recent-item row title, under the treemap.
-    static let widgetRecentTitle12 = DSTextStyle(size: 12, weight: .semibold, tracking: 0, lineHeight: 16, relative: .caption1)
+    static let widgetRecentTitle12 = DSTextStyle(size: 12, weight: .semibold, tracking: 0, lineHeight: 16, relative: .caption1, macScales: false)
     /// The LARGE family's headline — the brief's sentence gets the room the
     /// medium tile never had.
-    static let widgetHeadline20 = DSTextStyle(size: 20, weight: .bold, tracking: 0, lineHeight: 25, relative: .title3)
+    static let widgetHeadline20 = DSTextStyle(size: 20, weight: .bold, tracking: 0, lineHeight: 25, relative: .title3, macScales: false)
     /// A widget's own figure — the wallet tile's total.
-    static let widgetFigure24  = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2)
+    static let widgetFigure24  = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2, macScales: false)
 }
 
 private struct DSTextModifier: ViewModifier {
@@ -278,7 +333,7 @@ private struct DSTextModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         let scaled = UIFontMetrics(forTextStyle: style.relative)
-            .scaledValue(for: style.size)
+            .scaledValue(for: style.platformSize)
         let weight = legibilityWeight == .bold ? DSFont.bolder(style.weight) : style.weight
         content
             .font(DSFont.font(size: scaled, weight: weight, monospaced: style.monospaced))
@@ -334,8 +389,20 @@ private struct DSGlyphModifier: ViewModifier {
         }
     }
 
+    /// The Mac takes the ramp's own point scale (prd §631). A glyph that held
+    /// its size while every label beside it shrank would break the icon↔label
+    /// pairing this modifier exists to hold — the same failure in the other
+    /// direction from the one that created it.
+    private var platformSize: CGFloat {
+        #if targetEnvironment(macCatalyst)
+        (size * DSTextStyle.macScale).rounded()
+        #else
+        size
+        #endif
+    }
+
     func body(content: Content) -> some View {
-        content.font(.system(size: UIFontMetrics(forTextStyle: anchor).scaledValue(for: size),
+        content.font(.system(size: UIFontMetrics(forTextStyle: anchor).scaledValue(for: platformSize),
                              weight: weight))
     }
 }
