@@ -82,30 +82,58 @@ No account, no tracking, no ads. No Casberi server holds your things — there i
 
 Casberi isn't another chatbot. It's your own things, in one feed, with an agent that knows them.
 
-### iOS What's New — 1.0.12
+### iOS What's New — 1.0.12 (1,246 chars)
 
 The live public build is **1.0.11 / build 515**, READY_FOR_SALE, and its What's
 New is frozen: a released version's notes cannot be edited in App Store Connect
 without opening a new version. **1.0.12 (build 524) is the editable one**, and
-these are its notes. They cover everything after build 515, and they carry the
-two bullets 1.0.11 refused with a 409 (developer networks, Bankr) — those
-describe features iOS users already have and have never been told about.
+these are its notes.
+
+Shape rule, and it is the one the description already follows: **CAPS section
+head, then feature bullets** — a fragment per feature, never a paragraph broken
+into bullets. Nobody reads release notes in prose. The two places that stay
+whole sentences are the ones App Review reads rather than a customer: the
+test-network disclaimer under DEVELOPER NETWORKS (Guideline 3.1.5) and Bankr's
+"only answers" line.
+
+Covers everything after build 515, and carries the two bullets 1.0.11 refused
+with a 409 (developer networks, Bankr) — those describe features iOS users
+already have and have never been told about.
 
 ```
-Two ways iOS could shut Casberi down on its own are fixed, and the room pass reached every scope.
+FIXED
 
-• Fixed — Casberi could be killed while it sat in the background or in the app switcher, which read as the app quitting for no reason. The cover that hides your things when you leave now draws itself instead of redrawing the whole app, so there is nothing left to time out.
-• Fixed — that cover is also a better hide. It covers images and an open sheet, which the old placeholder bars did not.
-• Fixed — the source strip re-read the whole app catalog on every screen update. It doesn't now, so chips and rooms settle faster on a full corpus.
-• Fixed — images in a connected folder no longer stay blank when the files live in iCloud.
+• Background shutdowns — Casberi could be killed by iOS while in the background or the app switcher
+• App-switcher cover — now hides images and open sheets, not only text
+• Source strip — no longer re-reads the whole app catalog on every screen update
+• Connected folders — images no longer stay blank when the files live in iCloud
 
-• Developer networks — Base Vibenet, Ethrex Hegotá and Frames are test networks: make an account, claim from the faucet and send test transactions. Nothing on them has a price or a market; no real cryptocurrency or value is transferred, and none of it can reach a live network.
-• Ethrex Privacy — shield test funds into a private balance and view what's there, with the same ring, moments and plain words the other test networks read in.
+DEVELOPER NETWORKS
 
-• Rooms — Wallet, Vibenet, Hegotá, Frames and Privacy all offer every scope, always, and a scope holding nothing says what it would hold instead of showing an empty page.
-• Rooms — a source room's list is bounded, a figure draws what it counts rather than repeating a shape, and a test-network sheet states one fact in one place instead of four sentences.
-• Setup — connecting an app reads the same everywhere: one vocabulary, one shape, and one connect button across all of them.
-• Names — .wei and .gwei resolve alongside ENS and .sol, through one ordering rule rather than six copies of it.
+• Ethrex Privacy — shield test funds into a private balance
+• Ethrex Privacy — view what the private balance holds
+• Base Vibenet, Ethrex Hegotá, Frames — make an account, claim from the faucet, send test transactions
+
+These are test networks. Nothing on them has a price or a market: no real cryptocurrency or value is transferred, and none of it can reach a live network.
+
+ROOMS
+
+• Every scope on every room — Wallet, Vibenet, Hegotá, Frames, Privacy
+• Empty scopes name what they would hold
+• Bounded lists in source rooms
+• Figures draw what they count
+• Test-network sheets — one fact, one place
+
+SETUP
+
+• One vocabulary and one shape across every connect screen
+• One connect button throughout
+
+NAMES
+
+• .wei and .gwei resolve alongside ENS and .sol
+
+AGENT
 
 • Bankr — answers about your onchain holdings and only answers. It never moves funds or makes transactions on your behalf.
 ```
