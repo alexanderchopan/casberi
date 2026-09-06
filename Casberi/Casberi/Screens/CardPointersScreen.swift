@@ -24,114 +24,105 @@ struct CardPointersScreen: View {
 
     private var connected: Bool { CardPointersAuth.isConnected && CardPointersAuth.isPro }
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+
     var body: some View {
-        BridgeSetupPage(name: "CardPointers") {
-            if connected {
-                BridgeConnectedState(
-                    bridgeID: CardPointersAuth.seatKey,
-                    name: "CardPointers",
-                    identity: String(localized: "CardPointers+"),
-                    connectionNote: String(localized: "Signed in on \(DS.device)"),
-                    capabilitiesFallback: ["Reads your cards and their offers.",
-                                           "Read-only — every tool they publish is a read."],
-                    openConnection: { disconnect() }
-                )
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            } else {
-                BridgeSetupHeader(
-                    name: "CardPointers",
-                    mode: .signIn,
-                    intro: "The offers sitting unused on your cards, each with the day it expires.")
-                // The way back to your things (§460).
-                if connected {
-                    RoomDoor(name: "CardPointers", source: CardPointersIngest.source)
-                        .listRowSeparator(.hidden)
-                }
-                connectSection.listRowSeparator(.hidden)
-            }
-        }
+        AccountPage(
+            name: "CardPointers", seatID: CardPointersAuth.seatKey,
+            source: CardPointersIngest.source,
+            state: AccountPageState.of(name: "CardPointers", seatID: CardPointersAuth.seatKey,
+                                       connected: connected, store: store),
+            intro: "The offers sitting unused on your cards, each with the day it expires.",
+            mode: .signIn,
+            teardown: { CardPointersAuth.disconnect() },
+            sheet: $sheet,
+            act: { connectBlock },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
         .onDisappear { flow?.cancel() }
     }
 
-    @ViewBuilder
-    private var connectSection: some View {
-        Section {
-            if let pending {
-                // The code is shown even though `verification_uri_complete`
-                // already carries it: a browser that opens to a signed-out
-                // session sends them through a sign-in first, and the code has
-                // to survive that trip.
-                VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    Text("Your code")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    // `monoCode34` is the ramp's own device-flow rung, and the
-                    // explicit Copy button is a lesson already paid for twice:
-                    // GitHub's identical step shipped as bare tap-to-copy and
-                    // went unnoticed (user, 2026-07-15), and Twitch's screen
-                    // repeated it until the 2026-07-31 audit. Third time, on
-                    // purpose, rather than a fourth report.
-                    HStack(spacing: DS.Space.s3) {
-                        Text(pending.userCode)
-                            .dsText(.monoCode34)
-                            .foregroundStyle(DS.textPrimary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .minimumScaleFactor(0.6)
-                            .lineLimit(1)
-                        Button(action: { copyCode(pending.userCode) }) {
-                            HStack(spacing: DS.Space.s1) {
-                                Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
-                                    .dsSymbolSwap(codeCopied)
-                                    .dsGlyph(13)
-                                Text(codeCopied ? "Copied" : "Copy")
-                                    .dsText(.subhead13).fontWeight(.semibold)
-                            }
-                            .foregroundStyle(codeCopied ? DS.confirm : DS.tint)
-                            .padding(.horizontal, DS.Space.s3)
-                            .frame(minHeight: 34)
-                            .background(DS.gray100, in: Capsule(style: .continuous))
-                            .contentShape(Capsule(style: .continuous))
-                        }
-                        .buttonStyle(PressSpring())
-                    }
-                    HStack(spacing: DS.Space.s2) {
-                        ProgressView().controlSize(.small)
-                        Text("Waiting for you to approve…")
-                            .dsText(.callout15).foregroundStyle(DS.textTertiary)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .dsListCardRow()
-                DSSlabButton(title: "Open the approval page",
-                             systemImage: "safari",
-                             action: { open(pending.verificationURLComplete) })
-            } else if needsPlus {
-                // A real answer with a real door, not a failure. This account
-                // signed in fine; it simply cannot read anything.
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    Text("This account doesn't have CardPointers+")
-                        .dsText(.callout15)
-                    Text("Their offer tools need the subscription. Nothing was connected.")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .dsListCardRow()
-                if let upgradeURL {
-                    DSSlabButton(title: "See CardPointers+",
-                                 systemImage: "arrow.up.forward",
-                                 action: { open(upgradeURL) })
-                }
-            } else {
-                DSSlabButton(title: "Connect CardPointers",
-                             systemImage: "person.badge.key",
-                             action: connect)
-            }
 
-            BridgeSyncStatusRows(syncing: false, syncingLine: "",
-                                 proof: result)
-            DSSlabNote(text: "Requires CardPointers+ — a free account can't read its offers.")
+    @ViewBuilder private var connectBlock: some View {
+        if connected {
+            // NOTHING TO ADD, and no second "Connected" row: the state line
+            // under the name says it once, in the page's own voice. What is
+            // left for this state is the status row below, which every state
+            // shares.
+            EmptyView()
+        } else if let pending {
+            // The code is shown even though `verification_uri_complete`
+            // already carries it: a browser that opens to a signed-out
+            // session sends them through a sign-in first, and the code has
+            // to survive that trip.
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                Text("Your code")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                // `monoCode34` is the ramp's own device-flow rung, and the
+                // explicit Copy button is a lesson already paid for twice:
+                // GitHub's identical step shipped as bare tap-to-copy and
+                // went unnoticed (user, 2026-07-15), and Twitch's screen
+                // repeated it until the 2026-07-31 audit. Third time, on
+                // purpose, rather than a fourth report.
+                HStack(spacing: DS.Space.s3) {
+                    Text(pending.userCode)
+                        .dsText(.monoCode34)
+                        .foregroundStyle(DS.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .minimumScaleFactor(0.6)
+                        .lineLimit(1)
+                    Button(action: { copyCode(pending.userCode) }) {
+                        HStack(spacing: DS.Space.s1) {
+                            Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
+                                .dsSymbolSwap(codeCopied)
+                                .dsGlyph(13)
+                            Text(codeCopied ? "Copied" : "Copy")
+                                .dsText(.subhead13).fontWeight(.semibold)
+                        }
+                        .foregroundStyle(codeCopied ? DS.confirm : DS.tint)
+                        .padding(.horizontal, DS.Space.s3)
+                        .frame(minHeight: 34)
+                        .background(DS.gray100, in: Capsule(style: .continuous))
+                        .contentShape(Capsule(style: .continuous))
+                    }
+                    .buttonStyle(PressSpring())
+                }
+                HStack(spacing: DS.Space.s2) {
+                    ProgressView().controlSize(.small)
+                    Text("Waiting for you to approve…")
+                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            DSSlabButton(title: "Open the approval page",
+                         systemImage: "safari",
+                         action: { open(pending.verificationURLComplete) })
+        } else if needsPlus {
+            // A real answer with a real door, not a failure. This account
+            // signed in fine; it simply cannot read anything.
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text("This account doesn't have CardPointers+")
+                    .dsText(.callout15)
+                Text("Their offer tools need the subscription. Nothing was connected.")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if let upgradeURL {
+                DSSlabButton(title: "See CardPointers+",
+                             systemImage: "arrow.up.forward",
+                             action: { open(upgradeURL) })
+            }
+        } else {
+            DSSlabButton(title: "Connect CardPointers",
+                         systemImage: "person.badge.key",
+                         action: connect)
         }
-        .dsSlabSection()
+
+        BridgeSyncStatusRows(syncing: false, syncingLine: "",
+                             proof: result)
+        DSSlabNote(text: "Requires CardPointers+ — a free account can't read its offers.", plain: true)
     }
 
     // MARK: - Flow

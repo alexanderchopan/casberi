@@ -15,7 +15,6 @@ struct AWSScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.openURL) private var openURL
 
-    @State private var showConnection = false
     @State private var accessKeyIDField = ""
     @State private var secretKeyField = ""
     @State private var regionField = AWSAuth.defaultRegion
@@ -26,7 +25,6 @@ struct AWSScreen: View {
     @State private var result: BridgeProof?
     @State private var doorTapped = false
 
-    @State private var recent: [Thing] = []
     @State private var standing: AWSStanding?
 
     private var hasKey: Bool {
@@ -41,53 +39,43 @@ struct AWSScreen: View {
             && !secretKeyField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+
     var body: some View {
-        BridgeSetupPage(name: "AWS") {
-            if hasKey {
-                // Connected (prd §186): the credential form retires behind one
-                // door, and identity, live proof and what this can do take the
-                // screen. This bridge stores only the secret — in the Keychain
-                // — so it leads with its own name over a truthful note about
-                // HOW it is connected, never an account name we would guess.
-                BridgeConnectedState(
-                    bridgeID: bridge.bridgeID,
-                    name: "AWS",
-                    connectionNote: String(localized: "Your \(bridge.credentialNoun) · stored in \(DS.device)'s Keychain"),
-                    capabilitiesFallback: [bridge.canLine],
-                    openConnection: { showConnection = true })
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            } else {
-                BridgeSetupHeader(
-                    name: "AWS",
-                    mode: .pasteKey,
-                    intro: "What needs you lands as it happens — a firing alarm, a failed deploy, a spend anomaly.",
-                    connected: hasKey)
-            }
-            if hasKey {
-                RoomDoor(name: "AWS", source: AWSShape.source)
-                    .listRowSeparator(.hidden)
-            }
-            if hasKey {
-                standingSection.listRowSeparator(.hidden)
-                if !recent.isEmpty {
-                    RecentThingsSection(header: "Landed", things: recent.live)
+        AccountPage(
+            name: "AWS", seatID: bridge.bridgeID, source: AWSShape.source,
+            state: AccountPageState.of(name: "AWS", seatID: bridge.bridgeID,
+                                       connected: hasKey, store: store),
+            intro: "What needs you lands as it happens — a firing alarm, a failed deploy, a spend anomaly.",
+            mode: .pasteKey,
+            keyed: true,
+            teardown: {
+                TokenVault.delete(AWSAuth.secretVaultKey)
+                AWSAuth.clear()
+                credentialVersion += 1
+                load()
+            },
+            sheet: $sheet,
+            act: {
+                if hasKey {
+                    // What the key reaches and what the read is doing. The
+                    // three fields are the "Your key" sheet now — one block,
+                    // reached from the row that says where the key lives.
+                    standingBlock
+                } else {
+                    keyBlock
                 }
-            } else {
-                keySection.listRowSeparator(.hidden)
-            }
-        }
-        .sheet(isPresented: $showConnection) {
-            BridgeConnectionSheet(title: "AWS") {
-                keySection
-                removeSection
-            }
-        }
+            },
+            more: { EmptyView() },
+            keySheet: { keyBlock }
+        )
         .onAppear {
             load()
             if hasKey { Task { await sync() } }
         }
     }
+
 
     private func openDoor(_ url: URL) {
         doorTapped = true
@@ -96,80 +84,73 @@ struct AWSScreen: View {
 
     // MARK: - Not connected: the three fields
 
-    private var keySection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if let url = bridge.setupURL {
-                    if doorTapped {
-                        DSSlabDoor(title: bridge.doorTitle,
-                                   detail: bridge.doorHost,
-                                   systemImage: "arrow.up.right") { openDoor(url) }
-                    } else {
-                        DSSlabButton(title: bridge.doorTitle,
-                                     detail: bridge.doorHost,
-                                     systemImage: "arrow.up.right") {
-                            DSHaptic.tap()
-                            openDoor(url)
-                        }
+    @ViewBuilder private var keyBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if let url = bridge.setupURL {
+                if doorTapped {
+                    DSSlabDoor(title: bridge.doorTitle,
+                               detail: bridge.doorHost,
+                               systemImage: "arrow.up.right") { openDoor(url) }
+                } else {
+                    DSSlabButton(title: bridge.doorTitle,
+                                 detail: bridge.doorHost,
+                                 systemImage: "arrow.up.right") {
+                        DSHaptic.tap()
+                        openDoor(url)
                     }
                 }
-                BridgeStepLines(steps: bridge.steps, startingAt: 2,
-                                numbered: false, acknowledges: true,
-                                doneThrough: hasBothRequired ? 4 : 0)
-                DSCheckList(lines: ["Reads alarms, deploys, cost, and a resource count",
-                                    "Never creates, changes, or deletes anything"])
-                DSSlabField(placeholder: "Access Key ID (AKIA…)",
-                            text: $accessKeyIDField, actionLabel: "",
-                            action: {})
-                DSSlabField(placeholder: bridge.placeholder,
-                            text: $secretKeyField, actionLabel: "", secure: true,
-                            action: {})
-                // Region is armed by the other two, not by its own value — a
-                // typed default is already a real answer.
-                DSSlabField(placeholder: "Region (e.g. us-east-1)",
-                            text: $regionField, actionLabel: "Save",
-                            isArmed: hasBothRequired,
-                            action: save)
-                DSSlabNote(text: "Cost Explorer always reads from us-east-1 — AWS's own rule, not a mistake here. Every other read uses the region above.")
-                BridgeSyncStatusRows(syncing: connecting,
-                                     syncingLine: String(localized: "Checking the key pair…"),
-                                     proof: result)
             }
+            BridgeStepLines(steps: bridge.steps, startingAt: 2,
+                            numbered: false, acknowledges: true,
+                            doneThrough: hasBothRequired ? 4 : 0)
+            DSCheckList(lines: ["Reads alarms, deploys, cost, and a resource count",
+                                "Never creates, changes, or deletes anything"])
+            DSSlabField(placeholder: "Access Key ID (AKIA…)",
+                        text: $accessKeyIDField, actionLabel: "",
+                        action: {})
+            DSSlabField(placeholder: bridge.placeholder,
+                        text: $secretKeyField, actionLabel: "", secure: true,
+                        action: {})
+            // Region is armed by the other two, not by its own value — a
+            // typed default is already a real answer.
+            DSSlabField(placeholder: "Region (e.g. us-east-1)",
+                        text: $regionField, actionLabel: "Save",
+                        isArmed: hasBothRequired,
+                        action: save)
+            DSSlabNote(text: "Cost Explorer always reads from us-east-1 — AWS's own rule, not a mistake here. Every other read uses the region above.", plain: true)
+            BridgeSyncStatusRows(syncing: connecting,
+                                 syncingLine: String(localized: "Checking the key pair…"),
+                                 proof: result)
         }
-        .dsSlabSection()
     }
 
     // MARK: - Connected: what's standing
 
-    private var standingSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if let standing {
-                    Text(AWSRoom.headline(standing))
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    if let resources = AWSRoom.resourceLine(standing) {
-                        Text(resources)
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    }
-                    Text(standing.region)
-                        .dsText(.label12).foregroundStyle(DS.textTertiary)
-                } else {
-                    Text("Reading your account…")
-                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+    @ViewBuilder private var standingBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if let standing {
+                Text(AWSRoom.headline(standing))
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                if let resources = AWSRoom.resourceLine(standing) {
+                    Text(resources)
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 }
-                BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: String(localized: "Reading AWS…"),
-                                     proof: result)
-                DSSlabNote(text: "Alarms, deploys and a spend anomaly land on their own.")
+                Text(standing.region)
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+            } else {
+                Text("Reading your account…")
+                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
             }
+            BridgeSyncStatusRows(syncing: syncing,
+                                 syncingLine: String(localized: "Reading AWS…"),
+                                 proof: result)
+            DSSlabNote(text: "Alarms, deploys and a spend anomaly land on their own.", plain: true)
         }
-        .dsSlabSection()
     }
 
     // MARK: - Actions
 
     private func load() {
-        recent = recentBridgeThings(source: AWSShape.source, context: modelContext)
         standing = AWSRoomSource.compose()
     }
 
@@ -252,16 +233,5 @@ struct AWSScreen: View {
         }
     }
 
-    /// The way out — the shared row, behind the Connection door with the form
-    /// it belongs to (prd §186/§608).
-    private var removeSection: some View {
-        BridgeDisconnectSection(bridgeID: bridge.bridgeID,
-                                name: "AWS",
-                                teardown: {
-                                    AWSAuth.clear()
-                                    credentialVersion += 1
-                                    load()
-                                })
-    }
 
 }
