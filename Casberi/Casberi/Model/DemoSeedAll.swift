@@ -57,7 +57,7 @@ enum DemoSeedAll {
     /// double-seeds a dev install rather than failing loudly. The honest
     /// version of "make it mechanical" here is a check that the stamp moved
     /// when the table did, not a stamp that moves itself.
-    static let version = 3
+    static let version = 5
     private static let versionKey = "demo.fullSeed.version"
 
     /// The three demo-watched tokens — (symbol, name, price, ref index),
@@ -68,15 +68,6 @@ enum DemoSeedAll {
     /// `marketCap` is what fills `TokenRow`'s vitals line ("SOL · $83.1B
     /// cap"); a real Dexscreener read always carries one, so seeding nil left
     /// every demo row's second line blank (2026-08-12).
-    /// The demo's GeckoTerminal trending rows. A STATIC, so `TokenPulse` can
-    /// seed a curve for the same three refs rather than a second list drifting
-    /// beside this one (2026-09-06) — `tokenSeeds` below already works that way.
-    static let trendingSeeds: [(name: String, symbol: String, days: Double, price: Double)] = [
-        ("Aerodrome", "AERO", 0.2, 0.82),
-        ("Curve DAO", "CRV", 0.3, 0.61),
-        ("Jupiter", "JUP", 0.45, 0.47),
-    ]
-
     static let tokenSeeds: [(symbol: String, name: String, price: Double,
                              marketCap: Double, dayOffset: Double)] = [
         ("ETH", "Ethereum", 3_180, 383_000_000_000, 1),
@@ -212,6 +203,17 @@ enum DemoSeedAll {
                               // for the same ref-shape-matching reason as
                               // Peer/Privacy Pools above.
                               "railgun:shield:demo", "railgun:unshield:demo",
+                              // KEPT PAST prd §638 (2026-09-06), when the
+                              // Open Food Facts and 1Claw seats left the
+                              // catalog and this seeder stopped writing their
+                              // rows: a demo poured by an OLDER build still
+                              // carries them, and exit() walks this list, so
+                              // dropping the entries here would orphan those
+                              // rows on every install that updated mid-demo
+                              // — the §510a class exactly. (Stocktwits left
+                              // with them for one commit and came back under
+                              // Wallet the same day; its rows are seeded
+                              // again below.)
                               // Stocktwits watches join the REAL namespace —
                               // `StocktwitsScreen` builds its watchlist by
                               // filtering on that exact prefix, so a "demo:"
@@ -500,7 +502,7 @@ enum DemoSeedAll {
     static let demoVisits: [String: Int] = [
         "Photos": 9, "X": 8, "Stocktwits": 7, "Obsidian": 6, "Linear": 6,
         "Snapchat": 5, "YouTube": 5, "Instagram": 4, "Privacy Pools": 4,
-        "Farcaster": 4, "Apple Wallet": 3, "Circle x402": 3, "TikTok": 3,
+        "Farcaster": 4, "Apple Wallet": 3, "TikTok": 3,
         "Gmail": 2, "Files": 2, "Pinterest": 5, "OpenSea": 3,
         // Base Vibenet (2026-08-23) — a landless seat like Cloudflare and
         // Apple Wallet, so its chip needs its OWN visit weight rather than
@@ -1316,7 +1318,7 @@ enum DemoSeedAll {
         out += mail()
         out += saves()
         out += social()
-        out += markets()
+        out += watchesAndShops()
         out += walletRoom()
         out += walletbeat()
         out += ens()
@@ -1330,7 +1332,6 @@ enum DemoSeedAll {
         out += writing()
         out += fitness()
         out += schedule()
-        out += odds()
         return out
     }
 
@@ -2710,9 +2711,15 @@ enum DemoSeedAll {
         return out
     }
 
-    // MARK: Markets — the mood rail, the watchlists, the browse rooms
+    // MARK: Watches and shops — the stock and token watchlists, the drops, the stores
 
-    private static func markets() -> [Thing] {
+    /// Was `markets()` until 2026-09-06 (prd §638): the GeckoTerminal
+    /// trending rows, the Open Food Facts scans and the Circle x402 sellers
+    /// were seeded here and are gone with their seats. What stays is what
+    /// still has a seat — Stocktwits, Tokens and OpenSea (Wallet now),
+    /// Shopify and Deals (Shopping). The Stocktwits rows left for one commit
+    /// and came back the same day with the seat (§638's amendment).
+    private static func watchesAndShops() -> [Thing] {
         var out: [Thing] = []
         let mood: [(String, String, String, Double)] = [
             ("NVDA looks extended here", "NVDA", "Bearish", 1),
@@ -2790,40 +2797,6 @@ enum DemoSeedAll {
                 days: t.dayOffset, hour: 12) { thing in
                 thing.watchPriceUsd = t.price
                 thing.previewImageURL = "sample:token-\(t.symbol.lowercased())"
-            }
-        }
-        // GeckoTerminal lands TRENDING TOKENS, not chain summaries (2026-08-12).
-        // The old rows were titled "Trending on Base" / "Trending on Solana",
-        // which is not a shape this bridge has ever produced: `GeckoTrending`
-        // lands one row per token, titled `"\(name) · $\(symbol)"`, tagged
-        // "Trending", carrying the token's logo — so the demo room read as a
-        // list of three chains where the real one is a list of coins. Same
-        // title format as `TokenWatch` (see `tokenSeeds`), so `TokensAsk`'s
-        // one parser splits these too.
-        // Clustered, not one per day: `GeckoTrending` stamps `capturedAt:
-        // .now` on every token in a pass, so a real room shows them together
-        // under one heading. Spread across three days they drew three
-        // one-row day sections separated by empty space.
-        // SYMBOLS THIS APP ALREADY SHIPS A MARK FOR (2026-08-26). The third
-        // row was Brett, whose logo is bundled nowhere, so it drew a generated
-        // monogram beside two more — the room read as three coloured letters
-        // where a real trending list is three logos. Curve is on Ethereum, so
-        // the three still span the seat's three demo chains (Base, Solana,
-        // Ethereum) and no two share one.
-        out += Self.trendingSeeds.map { t in
-            row(.link, "\(t.name) · $\(t.symbol)", source: "GeckoTerminal",
-                ref: "demo:gecko:\(t.symbol.lowercased())", days: t.days, hour: 14,
-                tags: ["Trending"]) { thing in
-                thing.previewImageURL = "sample:coin-\(t.symbol.lowercased())"
-                // THE PRICE AS DATA, not as words (2026-08-17) — the same
-                // ruling the Shopify drops already carry. `GeckoTrending`
-                // stamps `priceValue`/`priceCurrency`, which is what
-                // `ThingContent.productPrice` reads to draw the figure as the
-                // sheet's own heading; carried only in the title, that branch
-                // takes its nil path and the sheet falls through to the small
-                // grey fallback line.
-                thing.priceValue = t.price
-                thing.priceCurrency = "USD"
             }
         }
         let drops: [(String, Double)] = [
@@ -2908,43 +2881,6 @@ enum DemoSeedAll {
                 // here and the row draws it in its trailing slot, so a deal
                 // without one reads as coming from nowhere.
                 t.authorHandle = d.3
-            }
-        }
-        out += (0..<3).map { i in
-            // A REAL `off:<barcode>` ref and REAL tags (2026-08-12, prd §368).
-            // The grade lived only in `content` prose while the bridge lands it
-            // as a tag, and the ref was `demo:off:<n>` while the bridge keys on
-            // the barcode — so the scanned card's Nutri-Score scale and its
-            // barcode rung, the two things a scan has that nothing else does,
-            // could not draw in the demo. The same shape as the Peer/Privacy
-            // Pools room-head gap: a demo ref that doesn't match the real one
-            // is a feature that silently never renders.
-            row(.product, ["Oat drink, barista", "Dark chocolate 70%", "Rye sourdough"][i],
-                source: "Open Food Facts", ref: "off:\(["5060403320102", "8717677332304", "5391520941016"][i])",
-                days: Double(2 + i * 6), hour: 18,
-                content: "Nutri-Score \(["B", "D", "A"][i]) · scanned",
-                tags: ["Food", "Nutri-Score \(["B", "D", "A"][i])"]) { t in
-                // `OpenFoodFactsBridge` stamps the product photo and the
-                // BRAND (2026-08-12) — a `.product` sheet leads with that
-                // image, so a scanned item with neither rendered as a bare
-                // line of text where the real room shows a picture.
-                t.previewImageURL = productArt(i + 1)
-                t.authorHandle = ["Oatly", "Tony's Chocolonely", "Bread Ahead"][i]
-            }
-        }
-        // The x402 room's rows; its treemap head reads `X402State` (seeded in
-        // `seedBridgeState`), not these.
-        let sellers: [(String, String, Double)] = [
-            ("Orthogonal", "310 services · from $0.0010", 1),
-            ("QuickNode", "88 services · from $0.0001", 2),
-            ("Chainbase", "41 services · from $0.0025", 4),
-            ("AIsa API", "18 services · from $0.0004", 8),
-        ]
-        out += sellers.enumerated().map { i, s in
-            row(.link, s.0, source: "Circle x402", ref: "demo:x402:\(i)", days: s.2, hour: 11,
-                content: s.1) { t in
-                t.authorHandle = s.0
-                t.summary = "Sells API calls settled per request in USDC."
             }
         }
         return out
@@ -4063,35 +3999,8 @@ enum DemoSeedAll {
                 ref: "dropbox:demo/\(f.name.lowercased())",
                 days: Double(3 + i * 8), hour: 15, content: f.note)
         }
-        // 1Claw grants, wearing what `OneClawFetch.policyThing` really stamps
-        // (2026-08-12, prd §367): the joined title, the parts as fields, and the
-        // ref shape the grant anatomy keys off. The old rows were `.approval`
-        // things titled "Grant expires in 14 days" under `demo:1claw:<i>` —
-        // sentences the bridge has never written, under a ref
-        // `OneClawFetch.isGrantRef` answers false for, so the demo could not
-        // show the grant sheet at all. The §349 lesson (a demo ref that does not
-        // match the bridge's own shape is invisible to every reader keyed off
-        // it), in a fourth place.
-        //
-        // ONE of the two has an expiry, deliberately: most grants have no clock,
-        // and a demo where every grant is expiring teaches the reader that the
-        // clock is the normal state rather than the exception it draws for.
-        let grants: [(vault: String, path: String, perms: [String], expiring: Bool)] = [
-            ("personal", "openai/*", ["read", "list"], true),
-            ("work", "stripe/live/*", ["read"], false),
-        ]
-        out += grants.enumerated().map { i, g in
-            let title = ([g.vault, g.path] + [g.perms.joined(separator: ", ")])
-                .joined(separator: " · ")
-            return row(.link, title, source: "1Claw", ref: "1claw:policy:demo\(i)",
-                       days: Double(2 + i * 9), hour: 11,
-                       content: OneClawFetch.dashboard,
-                       tags: [OneClawFetch.grantTag] + g.perms) { t in
-                t.summary = g.path
-                t.authorHandle = g.vault
-                if g.expiring { t.dueAt = at(-6, 12) }
-            }
-        }
+        // (1Claw's two demo grants were seeded here until 2026-09-06, prd
+        // §638 — the seat left the catalog with the Markets ones.)
 
         // AWS (prd §484's check G, furnished 2026-08-31). Three shapes, one
         // each, because the room head ranks them in exactly this order and a
@@ -4696,60 +4605,6 @@ enum DemoSeedAll {
         return out
     }
 
-    /// The two prediction rooms are LIVE rooms — they browse a book rather than
-    /// sync rows — so a couple of watched markets is all a demo can honestly
-    /// carry here.
-    /// `watchPriceUsd` is the odds THE DAY YOU FOLLOWED — the anchor
-    /// `PredictionRow` turns into "You followed at 42%" once a market
-    /// settles (prd §235), and the only number in this room no market site
-    /// can show you. Without it a settled row loses its receipt entirely.
-    /// `marketResolvedYes` is what makes `demo:kalshi:1` a settled market;
-    /// the matching odds live in `PredictionPulse.seedDemo`, which is what
-    /// mounts these rows as `PredictionRow` at all.
-    private static func odds() -> [Thing] {
-        var out: [Thing] = []
-        let kalshi: [(title: String, watchedAt: Double, settled: Bool)] = [
-            ("Will the Fed cut rates in December?", 0.66, false),
-            ("Will CPI come in under 3% in July?", 0.42, true),
-        ]
-        out += kalshi.enumerated().map { i, k in
-            row(.link, k.title, source: "Kalshi", ref: "demo:kalshi:\(i)",
-                days: Double(1 + i * 3), hour: 16) { t in
-                t.watchPriceUsd = k.watchedAt
-                if k.settled { t.marketResolvedYes = true }
-                // WHEN THE MARKET CLOSES (2026-08-17). Both prediction bridges
-                // stamp `dueAt = market.closeTime` — "a market's close IS a
-                // real deadline", in `KalshiWatch`'s own words — and the demo
-                // set it on neither, so its markets reached no runway, no
-                // countdown and no "Needs you" tile. A watched market with no
-                // close is the one fact about it that decides whether you still
-                // have time to act.
-                //
-                // A SETTLED market's close is in the PAST, and getting that
-                // backwards is worse than leaving it empty: a resolved market
-                // wearing a future deadline reads as still open, on the row
-                // whose whole point is that it isn't.
-                t.dueAt = k.settled ? at(1, 16) : at(-21, 16)
-            }
-        }
-        let poly: [(title: String, watchedAt: Double)] = [
-            ("Champions League winner", 0.19),
-            ("Will SpaceX launch Starship again in 2026?", 0.61),
-        ]
-        out += poly.enumerated().map { i, p in
-            row(.link, p.title, source: "Polymarket", ref: "demo:polymarket:\(i)",
-                days: Double(2 + i * 4), hour: 20) { t in
-                t.watchPriceUsd = p.watchedAt
-                // `PolymarketBridge` stamps the same field for the same reason
-                // (see the Kalshi rows above). Both open, so both future — and
-                // far enough out that they sort behind the week's real work
-                // rather than crowding the top of a runway built for it.
-                t.dueAt = at(Double(-45 - i * 15), 20)
-            }
-        }
-        return out
-    }
-
     // MARK: - Bridge state (the room heads that read UserDefaults, not rows)
 
     /// The demo wallet — one address, so `combinedValueSamples` has a complete
@@ -4988,22 +4843,9 @@ enum DemoSeedAll {
         // 3 · A visit history, so the panel ranks on something.
         ChipMemory.seedDemo(demoVisits)
 
-        // 4 · Circle x402 — the sellers behind the room's treemap. Service
-        // counts are the measured shape of the real directory (Orthogonal
-        // alone lists 310 of ~955 listings), so the map has one dominant cell
-        // and a real tail rather than four equal blocks.
-        X402State.save(sellers: [
-            .init(slug: "orthogonal", name: "Orthogonal", services: 310, minPrice: 1_000,
-                  maxPrice: 50_000, hasFree: false, lanes: ["Financial analysis", "Data enrichment"]),
-            .init(slug: "quicknode", name: "QuickNode", services: 88, minPrice: 100,
-                  maxPrice: 100, hasFree: true, lanes: ["Blockchain data"]),
-            .init(slug: "chainbase", name: "Chainbase", services: 41, minPrice: 2_500,
-                  maxPrice: 12_000, hasFree: false, lanes: ["Blockchain data"]),
-            .init(slug: "aisa", name: "AIsa API", services: 18, minPrice: 400,
-                  maxPrice: 9_000, hasFree: false, lanes: ["Prediction markets"]),
-            .init(slug: "tollbit", name: "TollBit", services: 12, minPrice: 300,
-                  maxPrice: 3_000, hasFree: true, lanes: ["Content"]),
-        ], listings: 955, medianPrice: 1_000)
+        // (4 was Circle x402's seller treemap, retired with the seat on
+        // 2026-09-06, prd §638. `teardown` still calls `X402State.forget()`
+        // so an older pour's reading does not outlive the demo.)
 
         // 5 · Cloudflare's estate snapshot — see `seedCloudflareEstate`'s own
         // doc for why the two cert rows alone don't reach the runway figure.
@@ -5253,15 +5095,17 @@ enum DemoSeedAll {
         ("Farcaster", "2 accounts", "Follows accounts, no sign-in."),
         ("Bluesky", "1 account", "Follows accounts, no sign-in."),
         ("Nostr", "1 relay", "Reads the relays you name."),
+        // A Wallet seat since 2026-09-06 (§638's amendment) — retired with
+        // the Markets seats for one commit, back the same day because a
+        // stock is not the crypto that ruling was about.
         ("Stocktwits", "3 tickers", "Watches tickers you add."),
-        ("GeckoTerminal", "3 chains", "Reads what's trending, keyless."),
+        // GeckoTerminal, Open Food Facts, Circle x402, Kalshi, Polymarket
+        // and 1Claw were seats here until 2026-09-06 (prd §638) — the
+        // Markets category is deleted, and a demo that claims a seat the
+        // catalog does not offer is the fake status check D exists to catch.
         ("OpenSea", "2 chains", "Reads new drops, keyless."),
         ("Shopify", "1 store", "Watches a store's new arrivals."),
         ("Deals", "4 sources", "Reads public deal feeds."),
-        ("Open Food Facts", "3 scans", "Reads the public food database."),
-        ("Circle x402", "5 lanes", "Reads Circle's public directory."),
-        ("Kalshi", "Browsing", "Reads the public order book."),
-        ("Polymarket", "Browsing", "Reads the public order book."),
         ("Peer", "Rides your wallet", "Lands settled fills, never trades."),
         ("Privacy Pools", "Rides your wallet", "Reads your deposits' review status."),
         ("Altana", "Rides your wallet", "Reads which keys can sign for you."),
@@ -5336,7 +5180,6 @@ enum DemoSeedAll {
         ("App Store Connect", "In review", "Reads where your build stands."),
         ("Hugging Face", "3 watched", "Reads new models and papers."),
         ("Twitch", "1 channel", "Reads who's live."),
-        ("1Claw", "1 vault", "Reads which agents were granted what."),
         ("Day One", "Imported 34 entries", "Holds the journal you exported."),
         ("Apple Journal", "Imported 20 entries", "Holds the journal you exported."),
         ("Apple Health", "Synced 1h ago", "Reads your workouts."),

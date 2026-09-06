@@ -3964,7 +3964,6 @@ enum ProbeHooks {
             // for the probe's own timing. Both reseeds are idempotent and
             // demo-gated.
             TokenPulse.shared.reseedDemoIfNeeded()
-            PredictionPulse.shared.reseedDemoIfNeeded()
             let closes = TokenPulse.shared.pulses.values.map(\.closes.count).max() ?? 0
             rows.append(("token.closes", "the token sparkline", closes, 2, true))
             let series = PostHogState.all().values.map(\.series.count).max() ?? 0

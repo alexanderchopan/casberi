@@ -10,9 +10,9 @@ import Foundation
 /// icon. This engine drops the floor entirely: a category with exactly one
 /// connected member still folds to its category chip, word-labeled, the
 /// moment the user answered "i want the category chips always" rather than
-/// "fold when crowded." `MarketsRoom` itself now shims onto this file for its
-/// callers that still need Markets specifically (its dedicated venue
-/// switcher screen, which no other category has yet).
+/// "fold when crowded." `MarketsRoom` shimmed onto this file for a month for
+/// the callers that still needed Markets specifically, and was deleted with
+/// the category itself on 2026-09-06 (prd §638).
 ///
 /// **THE CENTRAL INVARIANT survives unchanged.** A category name is a chip
 /// LABEL, never a source: `FeedFilter.source` stays a real seat at all times,
@@ -58,14 +58,12 @@ enum CategoryFold {
     /// same reading `MainSurface.roomControls` already gave it by mounting it
     /// on the shell rather than the screen (§357).
     ///
-    /// `MarketsRoom.switcherFloor` aliases this, so Markets moves with it: a
-    /// single connected exchange now gets the generic switcher and
-    /// `PredictionRoomBook` stands its own down, which is exactly the
-    /// no-switcher-inside-a-switcher rule it already followed at two.
+    /// (`MarketsRoom.switcherFloor` aliased this until the Markets category was
+    /// deleted, 2026-09-06, prd §638.)
     static let switcherFloor = 1
 
     /// Every catalog category's members, resolved once — `static let`, not a
-    /// computed property, for the same perf reason `MarketsRoom.members` was:
+    /// computed property, for the same perf reason the old `MarketsRoom.members` was:
     /// this is read on every strip body evaluation (through `isCategory`,
     /// `chipLabel`), and the catalog is a compile-time constant so there is
     /// nothing to gain by re-deriving it per read.
@@ -230,8 +228,8 @@ enum CategoryFold {
     /// room is the SUBJECT — Peer, Privacy Pools, Gnosis Pay and Railgun are
     /// ledgers riding the same watched addresses — so the chip reopening on
     /// whichever rider you last glanced at reads as landing somewhere
-    /// strange, where Markets reopening on the venue you live in is the whole
-    /// point of remembering (no venue there is home). The riders stay
+    /// strange, where a folder like Work reopening on the venue you live in
+    /// is the whole point of remembering (no venue there is home). The riders stay
     /// reachable through the category switcher, and `remember` still records
     /// them: the memory is the fallback for the day the anchor is somehow
     /// absent, and the switcher's own centering reads the active seat
@@ -278,7 +276,7 @@ enum CategoryFold {
     }
 
     /// A category's present members, in CATALOG order — for a switcher's own
-    /// display (Markets' own reasoning, unchanged: a capsule this short has
+    /// display (the Markets fold's own reasoning, unchanged: a capsule this short has
     /// not earned learned order, and one that reshuffles between opens reads
     /// as broken).
     ///

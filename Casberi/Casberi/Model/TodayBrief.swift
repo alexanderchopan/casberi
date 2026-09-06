@@ -3681,7 +3681,7 @@ enum TodayBrief {
     /// reading — including sources with no catalog offer at all.
     private static let nonReadingSources: Set<String> = Set(
         BridgeCatalog.offers
-            .filter { ["Markets", "Wallet", "Media", "Shopping"]
+            .filter { ["Wallet", "Media", "Shopping"]
                 .contains(BridgeCatalog.category(of: $0)) }
             .map(\.name)
     )

@@ -251,7 +251,7 @@ final class ShellChrome {
     /// because they answer different questions — `walletScope` is WHOSE money,
     /// this is WHICH reading of it — and either can change without the other.
     ///
-    /// **It is NOT persisted across launches, unlike `MarketsRoom.landing`.**
+    /// **It is NOT persisted across launches, unlike `CategoryFold.landing`.**
     /// That room remembers because its venues are separate watchlists and
     /// reopening on Tokens for somebody who lives in Kalshi costs a tap on the
     /// very first tap. These are facets of ONE subject and `activity` is the
@@ -648,14 +648,14 @@ final class ShellChrome {
     ///
     /// A category missing from this dictionary means it isn't folded (no
     /// members present) — which cannot happen for a real member, since the fold
-    /// is now unconditional the moment ≥1 member is present. `categoryVenues["Markets"]`
-    /// is what `MarketsRoom`'s own switcher screens still read: they are the one
-    /// category with a dedicated switcher UI, so their ≥2-member gate
-    /// (`MarketsRoom.switcherFloor`) reads this exactly as before.
+    /// is now unconditional the moment ≥1 member is present. (`MarketsRoom`,
+    /// which once read `categoryVenues["Markets"]` for its own switcher gate,
+    /// was deleted with the Markets category on 2026-09-06, prd §638; every
+    /// reader now goes through `CategoryFold.switcherFloor`.)
     var categoryVenues: [String: [String]] = [:]
 
-    /// A room switch asked for from INSIDE a room — today only the folded
-    /// Markets room's venue switcher (2026-08-10).
+    /// A room switch asked for from INSIDE a room — first the folded Markets
+    /// room's venue switcher (2026-08-10), now any open folder's venue row.
     ///
     /// Routed through `MainSurface.go(to:)` rather than letting the switcher
     /// write `FeedFilter.source` itself, because `go` is the one door every

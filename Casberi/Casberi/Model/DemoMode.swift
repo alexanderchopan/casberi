@@ -272,11 +272,8 @@ enum DemoMode {
         // in-memory only, so every later relaunch reseeds from
         // `BridgeRefresh`'s own gate instead (`TokenPulse.reseedDemoIfNeeded`).
         TokenPulse.shared.seedDemo()
-        // The two prediction rooms' watched-market odds — same reasoning,
-        // same lifecycle (2026-08-12). `PredictionRow` mounts only when a
-        // pulse exists, so without this the demo's four markets drew as
-        // bare title-and-timestamp rows.
-        PredictionPulse.shared.seedDemo()
+        // (`PredictionPulse.seedDemo` sat here from 2026-08-12 until the
+        // Kalshi and Polymarket seats left the catalog, 2026-09-06, prd §638.)
 
         NSLog("[Casberi] demoMode: began")
     }
@@ -522,8 +519,6 @@ enum DemoMode {
         AppVisit.forgetDemo()
         TwitchIngest.forgetDemo()
         TokenPulse.shared.teardownDemo(DemoSeedAll.tokenSeeds.indices.map { "demo:token:\($0)" })
-        PredictionPulse.shared.teardownDemo(
-            (0..<2).map { "demo:kalshi:\($0)" } + (0..<2).map { "demo:polymarket:\($0)" })
 
         NSLog("[Casberi] demoMode: exited, %d rows removed", rows)
     }

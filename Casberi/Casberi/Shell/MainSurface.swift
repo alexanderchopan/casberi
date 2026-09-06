@@ -1165,8 +1165,13 @@ struct MainSurface: View {
         // no chip — and therefore no room to browse the book from, which is
         // the entire point of connecting one. Appended after the corpus
         // sources so the learned sort below still decides real order.
+        // …and through the SAME `earnsRoom` gate the corpus walk uses: a
+        // retired seat (`Corpus.retiredSources`, prd §638) that is still
+        // connected on an older install must not earn a chip by this door
+        // after losing it by the other.
         for bridge in store.bridges where bridge.status == .connected
-            && LiveRoomSources.has(bridge.name) && seen.insert(bridge.name).inserted {
+            && LiveRoomSources.has(bridge.name) && Corpus.earnsRoom(bridge.name)
+            && seen.insert(bridge.name).inserted {
             ordered.append(bridge.name)
         }
         // **THE STRIP DOES NOT LEARN ANY MORE (user, 2026-09-06: "get rid of
@@ -1242,18 +1247,19 @@ struct MainSurface: View {
         // Venues for every category that actually folded, keyed by category
         // name. Unconditional now — there is no floor below which a category
         // keeps its members' own chips (that floor lived on the OLD Markets-
-        // only fold; see `MarketsRoom.switcherFloor` for the different
-        // question of when a SWITCHER control is worth drawing).
+        // only fold, deleted with the category on 2026-09-06, prd §638; see
+        // `CategoryFold.switcherFloor` for the different question of when a
+        // SWITCHER control is worth drawing).
         //
         // LEARNED order, not catalog order, and the distinction is
         // load-bearing in one place: `CategoryFold.landing` takes the first
         // entry as its fallback, so catalog order would open a folded chip on
         // the catalog's first member for somebody who lives in a different
         // one — "the fold does not cost a tap" failing on the very first tap.
-        // Markets' own switcher re-sorts its scope into catalog order for
-        // DISPLAY (`FeedScreen.marketsSwitcher`), because a four-word capsule
-        // has not earned learned order and one that reshuffles between opens
-        // reads as broken. Two orders, each where it belongs.
+        // A folder's venue row re-sorts its scope into catalog order for
+        // DISPLAY (`CategoryFold.scopes`), because a row this short has not
+        // earned learned order and one that reshuffles between opens reads
+        // as broken. Two orders, each where it belongs.
         var venues: [String: [String]] = [:]
         for category in BridgeCatalog.categories where labels.contains(category.name) {
             venues[category.name] = learned.filter { CategoryFold.isMember($0, of: category.name) }

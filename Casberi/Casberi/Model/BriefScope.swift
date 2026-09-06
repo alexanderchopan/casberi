@@ -52,7 +52,7 @@ enum BriefScope {
     /// the one asked to carry named-people richness (avatars) that a thin
     /// account still has via Calendar/Contacts alone.
     nonisolated private static let catalogToScope: [String: String] = [
-        "Wallet": "Money", "Markets": "Money",
+        "Wallet": "Money",
         "Work": "Work", "Agents": "Work",
         "Life": "Life", "Shopping": "Life", "Notes": "Life",
         "Media": "Life", "Social": "Life", "Reading": "Life",
