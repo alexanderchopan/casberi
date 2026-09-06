@@ -11,8 +11,11 @@ promotional text 170, subtitle 30.
 ## Pending — iOS, apply to 1.0.12
 
 iOS 1.0.11 was In Review on 2026-09-03, so its description and What's New could
-not be changed. Both below are finished and measured; paste them into the next
-version. The Mac equivalents are already live on 1.0.11.
+not be changed, and it has since gone READY_FOR_SALE on build 515 — which
+freezes them for good. Everything here belongs to **1.0.12 (build 524)**, the
+open version: the description below, the keywords below, and the What's New
+written for 1.0.12 further down. The Mac description and What's New are already
+live on 1.0.11.
 
 Also pending on iOS, both refused with 409 and both already applied on Mac:
 
@@ -79,11 +82,37 @@ No account, no tracking, no ads. No Casberi server holds your things — there i
 
 Casberi isn't another chatbot. It's your own things, in one feed, with an agent that knows them.
 
-### iOS What's New — append these two bullets
+### iOS What's New — 1.0.12
+
+The live public build is **1.0.11 / build 515**, READY_FOR_SALE, and its What's
+New is frozen: a released version's notes cannot be edited in App Store Connect
+without opening a new version. **1.0.12 (build 524) is the editable one**, and
+these are its notes. They cover everything after build 515, and they carry the
+two bullets 1.0.11 refused with a 409 (developer networks, Bankr) — those
+describe features iOS users already have and have never been told about.
+
+```
+Two ways iOS could shut Casberi down on its own are fixed, and the room pass reached every scope.
+
+• Fixed — Casberi could be killed while it sat in the background or in the app switcher, which read as the app quitting for no reason. The cover that hides your things when you leave now draws itself instead of redrawing the whole app, so there is nothing left to time out.
+• Fixed — that cover is also a better hide. It covers images and an open sheet, which the old placeholder bars did not.
+• Fixed — the source strip re-read the whole app catalog on every screen update. It doesn't now, so chips and rooms settle faster on a full corpus.
+• Fixed — images in a connected folder no longer stay blank when the files live in iCloud.
 
 • Developer networks — Base Vibenet, Ethrex Hegotá and Frames are test networks: make an account, claim from the faucet and send test transactions. Nothing on them has a price or a market; no real cryptocurrency or value is transferred, and none of it can reach a live network.
+• Ethrex Privacy — shield test funds into a private balance and view what's there, with the same ring, moments and plain words the other test networks read in.
+
+• Rooms — Wallet, Vibenet, Hegotá, Frames and Privacy all offer every scope, always, and a scope holding nothing says what it would hold instead of showing an empty page.
+• Rooms — a source room's list is bounded, a figure draws what it counts rather than repeating a shape, and a test-network sheet states one fact in one place instead of four sentences.
+• Setup — connecting an app reads the same everywhere: one vocabulary, one shape, and one connect button across all of them.
+• Names — .wei and .gwei resolve alongside ENS and .sol, through one ordering rule rather than six copies of it.
 
 • Bankr — answers about your onchain holdings and only answers. It never moves funds or makes transactions on your behalf.
+```
+
+Also apply to 1.0.12 while it is open: the iOS description above, and the
+keywords string above. Both answered 409 on 1.0.11 and are still pending.
+
 ## Live — macOS 1.0.11
 
 The Mac description is NOT the iOS one. `BridgeCatalog.Offer.unavailableOnMac`
