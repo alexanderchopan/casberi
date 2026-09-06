@@ -250,6 +250,10 @@ struct FaceScopeRail: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
+            // The one container the picked slot's glass morphs within — see
+            // `pickFill`. Spacing matches the row so the container never
+            // fuses two slots' glass (only one slot carries glass at a time).
+            DSGlassContainer(spacing: 2) {
             HStack(spacing: 2) {
                 // THE BOOK LEADS (user ruling, prd §483, 2026-08-26: *"address
                 // book can be first before All"*). It trailed the faces until
@@ -273,6 +277,7 @@ struct FaceScopeRail: View {
                     addSlot(title: addTitle)
                 }
             }
+            }
             // Embedded, the SLAB carries the inset and the packing — see
             // `embedded`. Applying either here again doubles it.
             .padding(.horizontal, embedded ? 0 : DS.Space.s4)
@@ -290,7 +295,6 @@ struct FaceScopeRail: View {
 
     /// The picked slot's fill — nothing at all unless this rail is a deck of the
     /// slab, where it is the same mark the switcher's picked chip wears.
-    @ViewBuilder
     /// **THE SCOPED FACE WEARS A RING, NOT A DISC (prd §572).**
     ///
     /// A `tintDim` slab behind the picked face was the fourth way this app's
@@ -311,15 +315,29 @@ struct FaceScopeRail: View {
     /// The travel is unchanged: the ring rides the same
     /// `matchedGeometryEffect` id the fill did, so the selection is still an
     /// object moving between faces (2026-07-14).
-    private func pickFill(_ isOn: Bool) -> some View {
-        if embedded, isOn {
-            let ring = RoundedRectangle(cornerRadius: DSRoomChassis.slabInnerRadius,
-                                        style: .continuous)
-                .strokeBorder(DS.tint, lineWidth: 2.5)
-            if reduceMotion {
-                ring
+    private func pickGlass(_ isOn: Bool) -> some ViewModifier {
+        PickGlass(on: embedded && isOn, reduceMotion: reduceMotion, ns: pickNS)
+    }
+
+    /// The picked slot IS the glass — the face and its name sit inside the
+    /// lens — rather than a glass shape behind them. Measured on the first
+    /// cut: iOS 26 hoists glass above app content, so a `dsGlass` background
+    /// drew OVER the slot and the picked face vanished into an empty pill
+    /// (the same fault `SourceChips` recorded for its word fill in August).
+    /// The dock's doors have always put the mark inside the glass view for
+    /// this reason; this is that pattern.
+    private struct PickGlass: ViewModifier {
+        let on: Bool
+        let reduceMotion: Bool
+        let ns: Namespace.ID
+        @ViewBuilder
+        func body(content: Content) -> some View {
+            if on {
+                content.dsGlass(cornerRadius: DSRoomChassis.slabInnerRadius,
+                                glassID: reduceMotion ? nil : "dsRailActiveFill",
+                                in: reduceMotion ? nil : ns)
             } else {
-                ring.matchedGeometryEffect(id: "dsRailActiveFill", in: pickNS)
+                content
             }
         }
     }
@@ -384,7 +402,7 @@ struct FaceScopeRail: View {
                    alignment: namesInRoom ? .center : .top)
             .opacity(isOn ? 1 : restOpacity)
             .padding(.vertical, DS.Space.s1)
-            .background { pickFill(isOn) }
+            .modifier(pickGlass(isOn))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -446,7 +464,7 @@ struct FaceScopeRail: View {
             .frame(width: slotWidth)
             .opacity(isOn ? 1 : restOpacity)
             .padding(.vertical, DS.Space.s1)
-            .background { pickFill(isOn) }
+            .modifier(pickGlass(isOn))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
