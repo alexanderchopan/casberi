@@ -54,7 +54,7 @@ SCREENS = os.path.join(ROOT, "Casberi", "Casberi", "Screens")
 # Files that name `BridgeSetupHeader` without being a setup screen: the
 # component that declares it, the chassis that documents it, and the audit
 # fixtures. Each is a conscious "this is not a screen", not a snooze.
-NOT_A_SCREEN = {"BridgeSetupComponents.swift", "BridgeSetupPage.swift"}
+NOT_A_SCREEN = {"BridgeSetupComponents.swift", "AccountPage.swift"}
 
 # The old chassis's own vocabulary, kept as a DENYLIST rather than as an order
 # (see check A). Nothing may draw these again: they are the slab-and-section

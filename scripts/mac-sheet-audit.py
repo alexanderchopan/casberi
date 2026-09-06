@@ -78,7 +78,6 @@ NO_DETENT_SHEETS = {
     "WalletbeatCardScreen.swift": "WalletbeatCardScreen — presented from the Walletbeat room and from its directory; a report you read, so it takes the page size.",
     "AccountScreen.swift": "Diagnostics and How-it-works, both plain sheets with no sizing of their own; sized at the call site because neither view is presented anywhere else.",
     "BridgeRouting.swift": "ConnectFormSheet — the sheet that got REPORTED (2026-08-20, \"way too small, user has to scroll to read them in a tiny box\"). It had no detents and no sizing at all, so on iPad it was the default ~540x620 box holding a whole setup screen. The first cut of this audit missed it precisely because Mac pushes it rather than raising it, so it is not a sheet there — which is the reason this file checks the IDIOM-gated helpers rather than anything Mac-specific.",
-    "BridgeConnectedState.swift": "BridgeConnectionSheet — the credentials door raised from inside a setup screen, i.e. the second modal in a connect flow.",
 }
 
 # Full-window by nature on every platform — nothing to decide.

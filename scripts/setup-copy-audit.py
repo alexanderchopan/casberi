@@ -473,33 +473,40 @@ def audit_door_presence(name: str, body: str):
 # reported as exactly that ("several of the 'view feed' buttons seem dead").
 # The three writes must appear in order: close, pop, ask.
 #
+# READ OFF `AccountPage.openRoom` SINCE §639 (2026-09-06). It was `RoomDoor`'s
+# body; that type is deleted, because the Activity row is the door now and a
+# second way to build one is a second way to get it wrong. The mechanics did
+# not change — the same three writes, in the same order, for the same reason —
+# so the check followed them to their new address rather than being deleted
+# with the type, which would have left the whole class unguarded.
+#
 # Read from a COMMENT-STRIPPED copy, because the source documents this rule by
 # quoting the broken version of it (the Obsidian/Cursor lesson) — a guard over
 # raw source is satisfied by the paragraph explaining the bug.
-def audit_door_mechanics(components_src: str):
-    """Check 7d — `RoomDoor`'s action closes the raised form before it navigates."""
-    at = components_src.find("struct RoomDoor: View {")
+def audit_door_mechanics(page_src: str):
+    """Check 7d — the Activity row closes the raised form before it navigates."""
+    at = page_src.find("private func openRoom() {")
     if at < 0:
-        return ["BridgeSetupComponents.swift: RoomDoor is gone — every connect "
-                "screen's way back to its things went with it, and checks 7a/7b "
-                "now certify a control that does not exist"]
-    body = balanced(components_src, components_src.index("{", at))
+        return ["AccountPage.swift: openRoom is gone — every account page's way "
+                "back to its things went with it, and checks 7a/7b now certify "
+                "a control that does not exist"]
+    body = balanced(page_src, page_src.index("{", at))
     close = body.find("closeConnectForm()")
     pop = body.find("path = []")
     ask = body.find("sourceRequest =")
     if pop < 0 or ask < 0:
-        return ["BridgeSetupComponents.swift: RoomDoor no longer pops the stack "
-                "and asks for a source — the door navigates by some other means "
-                "this check cannot see (§460)"]
+        return ["AccountPage.swift: openRoom no longer pops the stack and asks "
+                "for a source — the door navigates by some other means this "
+                "check cannot see (§460)"]
     if close < 0:
-        return ["BridgeSetupComponents.swift: RoomDoor never calls "
-                "closeConnectForm() — raised as the connect sheet it pops and "
-                "switches rooms BEHIND itself, so the tap does nothing from the "
-                "front (§83, reported 2026-08-28)"]
+        return ["AccountPage.swift: openRoom never calls closeConnectForm() — "
+                "raised as the connect sheet it pops and switches rooms BEHIND "
+                "itself, so the tap does nothing from the front (§83, reported "
+                "2026-08-28)"]
     if not close < pop < ask:
-        return ["BridgeSetupComponents.swift: RoomDoor's door writes are out of "
-                "order — close the form, then pop, then ask; asking first "
-                "changes a room nobody is looking at"]
+        return ["AccountPage.swift: openRoom's door writes are out of order — "
+                "close the form, then pop, then ask; asking first changes a "
+                "room nobody is looking at"]
     return []
 
 
@@ -1190,12 +1197,12 @@ def self_test() -> bool:
 
     # Check 7d — the door's mechanics. The shipped shape passes; each of the
     # three ways it can go wrong is a finding.
-    good = ('struct RoomDoor: View {\n'
-            '  var body: some View { Button {\n'
+    good = ('private func openRoom() {\n'
+            '    DSHaptic.tap()\n'
             '    route.closeConnectForm()\n'
             '    route.path = []\n'
             '    chrome.sourceRequest = source\n'
-            '  } label: { Text("View feed") } }\n}\n')
+            '}\n')
     if audit_door_mechanics(good):
         print(f"  SELF-TEST FAIL: the correct door was flagged — "
               f"{audit_door_mechanics(good)}")
@@ -1215,10 +1222,10 @@ def self_test() -> bool:
         print("  ✗ missed a door whose writes are out of order"); ok = False
     else:
         print("  ✓ catches close/pop written the wrong way round")
-    if not any("RoomDoor is gone" in x for x in audit_door_mechanics("enum X {}")):
-        print("  ✗ a missing RoomDoor passed silently"); ok = False
+    if not any("openRoom is gone" in x for x in audit_door_mechanics("enum X {}")):
+        print("  ✗ a missing openRoom passed silently"); ok = False
     else:
-        print("  ✓ catches RoomDoor disappearing")
+        print("  ✓ catches the Activity row's door disappearing")
 
     # And the table form, which serves many screens from one entry.
     f = audit_door_table("fixture.swift",
@@ -1265,7 +1272,7 @@ def main() -> int:
 
     # Check 7d — the door's own mechanics, which serve every caller at once.
     findings += audit_door_mechanics(
-        strip_comments(open(os.path.join(SCREENS, "BridgeSetupComponents.swift")).read()))
+        strip_comments(open(os.path.join(SCREENS, "AccountPage.swift")).read()))
 
     # Check 7c — the door reached from the catalog side.
     findings += audit_seat_rooms(
