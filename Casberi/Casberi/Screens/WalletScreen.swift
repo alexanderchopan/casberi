@@ -14,6 +14,22 @@ import SwiftData
 /// book is where names are filed, so it is also where the roster feeding
 /// those names belongs.
 ///
+/// **ON `AccountPage` SINCE §639 (2026-09-06)**, with every other seat. Two
+/// things follow, and both are deliberate:
+///
+/// * **The roster stays EMPTY here.** §466's split is not reversed by the
+///   chassis having a "Watching · N": those rows are the book's, and drawing
+///   them here too would put one list on two pages with one Remove between
+///   them. The act slot is the first address while there is none, and the
+///   book's own door once there is — which is where the second through fifth
+///   are added.
+/// * **This seat gains a Disconnect it never had.** Every other seat could be
+///   stopped from its own page and this one could not, so the only way to
+///   stop watching was to remove five addresses one at a time in the book.
+///   The chassis's exit clears the watch list, which is this seat's whole
+///   store; the address BOOK is untouched, because a name you filed is not a
+///   wallet you watch (§461's boundary, in the one place it is destructive).
+///
 /// **Watching the first address lands you in the room.** There is nothing
 /// left to configure here once it exists — leaving somebody on a setup page
 /// after they connected is what made this screen grow a roster in the
@@ -25,87 +41,86 @@ import SwiftData
 struct WalletScreen: View {
     @Bindable private var wallet = WalletStore.shared
     @Bindable private var book = AddressBook.shared
+    @Environment(BridgeStore.self) private var store
     @Environment(HomeRoute.self) private var route
     @Environment(ShellChrome.self) private var chrome
-    /// This screen's ONE presentation (`FeedScreen`'s single-presentation
-    /// rule) — only `.connectPicker` is reachable here now; the other three
-    /// `AddressBookSheetRoute` cases are the book's.
-    @State private var sheetRoute: AddressBookSheetRoute?
+    /// The page's one presentation (`AccountPage.sheet`) — the connect
+    /// picker rides `.card`, which is what that case exists for.
+    @State private var sheet: AccountPageSheet?
+    /// The accounts a connected wallet app shared, held for the picker the
+    /// `.card` sheet raises. Not part of the id: the id is a stable string
+    /// the sheet is keyed on, and this is the payload it draws.
+    @State private var sharedAccounts: [WalletConnectBridge.ConnectedAccount] = []
 
     var body: some View {
-        // Titled by its own name like every other seat's setup screen (prd
-        // §618) — "Addresses" named the book's content on the one screen that
-        // no longer holds it (§466).
-        BridgeSetupPage(name: "Wallet") {
-            // A short header — the family-wide pass that put every "type
-            // something to watch it" screen (Vibenet, Hegota, RSS, Tokens,
-            // Stocktwits, …) on one shape: identity + mode chip + one action
-            // sentence, THEN the acts. Wallet had none at all (prd §185/§466's
-            // "the omnibox is the screen's first act"); the identity row
-            // comes back here too, ahead of the door and the field it used to
-            // open directly on.
-            BridgeSetupHeader(
-                name: "Wallet",
-                mode: .noAccount,
-                // **THE INTRO FOLLOWS THE FIELD (2026-08-31).** It said
-                // "paste an address or ENS name below" unconditionally, while
-                // `WalletWatchField` draws only while nothing is watched — so
-                // for everybody past their first address the sentence named a
-                // control that is not on the screen. §83's dead control in
-                // words rather than in pixels, and worse than a dead button:
-                // a button that does nothing is at least visible, and this
-                // sent people hunting for a field that had moved (§466 — the
-                // roster, and watching a second through fifth, is the address
-                // book's job now).
-                //
-                // The second branch points at the address-book door in the
-                // foot, so "below" resolves in both states — it named a door
-                // this screen did not have until prd §618.
-                intro: wallet.addresses.isEmpty
-                    ? String(localized: "Paste an address or ENS name below, or connect a wallet app. Watch up to five.")
-                    : String(localized: "Watching \(wallet.addresses.count) of \(WalletStore.watchLimit). Add, rename or stop watching in the address book below."),
-                connected: !wallet.addresses.isEmpty)
-
-            // A DOOR, not a signpost (R4.5) — only once there is a room to
-            // open. Matches Vibenet: a "View feed" button over an empty room
-            // is a control that opens nothing worth seeing (§83).
-            if !wallet.addresses.isEmpty {
-                RoomDoor(name: "Wallet", source: "Wallet")
-                    .listRowSeparator(.hidden)
-            }
-
-            // THE FIRST ADDRESS, and only while there is none. Once watched,
-            // watching a second through fifth is the book's own roster
-            // section's job.
-            if wallet.addresses.isEmpty {
-                Section {
-                    WalletWatchField(
-                        onWatched: openRoom,
-                        showsPeekChip: true,
-                        onConnectFound: { sheetRoute = .connectPicker($0) })
-                }
-                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                          bottom: 0, trailing: DS.Space.s4))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            }
-
-            footSection
-
-            Color.clear.frame(height: ShellMetrics.bottomInset - 40)
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-        }
-        .sheet(item: $sheetRoute) { route in
-            switch route {
-            case .connectPicker(let accounts):
-                WalletConnectPickerSheet(shared: accounts) { added in
+        AccountPage(
+            name: "Wallet", seatID: "wallet", source: "Wallet",
+            state: AccountPageState.of(name: "Wallet", seatID: "wallet",
+                                       connected: !wallet.addresses.isEmpty, store: store),
+            // **THE INTRO FOLLOWS THE FIELD (2026-08-31).** It said "paste an
+            // address or ENS name below" unconditionally, while
+            // `WalletWatchField` draws only while nothing is watched — so for
+            // everybody past their first address the sentence named a control
+            // that is not on the screen. §83's dead control in words rather
+            // than in pixels, and worse than a dead button: a button that does
+            // nothing is at least visible, and this sent people hunting for a
+            // field that had moved (§466 — the roster, and watching a second
+            // through fifth, is the address book's job now).
+            //
+            // Drawn only while NOT connected now (the chassis's rule), so the
+            // second branch is gone with the condition that produced it: the
+            // book's own door in the act slot says where to add a second, and
+            // the state line says whether anything is being read.
+            intro: "Paste an address or ENS name below, or connect a wallet app. Watch up to five.",
+            mode: .noAccount,
+            // The connect picker, through the page's ONE presentation.
+            cardSheet: { _ in
+                AnyView(WalletConnectPickerSheet(shared: sharedAccounts) { added in
                     if added > 0 { openRoom() }
-                }
-            case .entry, .move, .newGroup:
-                EmptyView()
+                })
+            },
+            // The watch list is this seat's whole store, so a disconnect
+            // clears it — see the type's own note on the exit this seat never
+            // had. The address BOOK is untouched.
+            teardown: {
+                wallet.remove(at: IndexSet(wallet.addresses.indices))
+            },
+            disconnectNote: String(localized: "The names you filed in the address book stay."),
+            sheet: $sheet,
+            act: { actBlock },
+            more: { moreBlock },
+            keySheet: { EmptyView() }
+        )
+    }
+
+    /// The act. The FIRST address while there is none; the book's door once
+    /// there is, because watching a second through fifth is its job (§466).
+    @ViewBuilder private var actBlock: some View {
+        if wallet.addresses.isEmpty {
+            WalletWatchField(
+                onWatched: openRoom,
+                showsPeekChip: true,
+                onConnectFound: { accounts in
+                    sharedAccounts = accounts
+                    sheet = .card(id: "connect")
+                })
+        } else {
+            DSSlabDoor(title: "Address book", detail: bookSummary,
+                       systemImage: "person.text.rectangle") {
+                route.push(.addressBook)
             }
         }
+    }
+
+    /// The connection plumbing and the promise. Chains and the read-only
+    /// sentence sit under the act, as they always have.
+    @ViewBuilder private var moreBlock: some View {
+        DSSlabDoor(title: "Connection", detail: chainsSummary,
+                   systemImage: "network") {
+            route.pushBridge(.walletConnection)
+        }
+        DSSlabNote(text: String(localized: "Read-only — watching can never move funds."),
+                   plain: true)
     }
 
     /// Land in the room the first address just made real (`RoomDoor`'s own
@@ -115,33 +130,6 @@ struct WalletScreen: View {
     private func openRoom() {
         route.path = []
         chrome.sourceRequest = "Wallet"
-    }
-
-    // MARK: - The foot
-
-    /// The door to the book, the connection plumbing and the promise. The
-    /// book leads because it is the one thing here somebody revisits (§466:
-    /// the roster, rename, remove, and the second through fifth address all
-    /// live there); chains and teardown sit last.
-    private var footSection: some View {
-        Section {
-            VStack(spacing: DS.Space.s4) {
-                DSSlabDoor(title: "Address book", detail: bookSummary,
-                           systemImage: "person.text.rectangle") {
-                    route.push(.addressBook)
-                }
-                DSSlabDoor(title: "Connection", detail: chainsSummary,
-                           systemImage: "network") {
-                    route.pushBridge(.walletConnection)
-                }
-                // The same note component every other seat's foot wears.
-                DSSlabNote(text: String(localized: "Read-only — watching can never move funds."))
-            }
-        }
-        .listRowInsets(EdgeInsets(top: DS.Space.s3, leading: DS.Space.s4,
-                                  bottom: 0, trailing: DS.Space.s4))
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
     }
 
     private var bookSummary: String {

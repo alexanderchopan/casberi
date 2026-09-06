@@ -81,6 +81,15 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// repositories has a roster to READ, and a swipe offering to remove one
     /// would be the §83 dead control with a destructive tint on it.
     var onRemoveRow: ((String) -> Void)? = nil
+    /// Tap on a row — the person or repo profile where one exists. Rows
+    /// with no destination are reads, not controls.
+    var onOpenRow: ((String) -> Void)? = nil
+    /// An EXTRA menu item on a roster row, above Remove — for a verb only one
+    /// seat has (Tokens' "Move to front", in the manual sort). `AnyView`
+    /// rather than a fourth generic parameter, because a generic with no
+    /// inferable default would force every one of the ~40 call sites to spell
+    /// out a type they do not use.
+    var rowMenu: ((String) -> AnyView)? = nil
     /// A SHEET only this seat can compose, raised through the page's ONE
     /// presentation (`.card`). L2BEAT's risk assessment and Walletbeat's
     /// review are screens of their own that no other seat has; a second
@@ -88,15 +97,6 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// first tap once, so they come through the same door. `AnyView` for
     /// `rowMenu`'s reason.
     var cardSheet: ((String) -> AnyView)? = nil
-    /// An EXTRA menu item on a roster row, above Remove — for a verb only one
-    /// seat has (Tokens' "Move to front", in the manual sort). `AnyView`
-    /// rather than a fourth generic parameter, because a generic with no
-    /// inferable default would force every one of the ~40 call sites to spell
-    /// out a type they do not use.
-    var rowMenu: ((String) -> AnyView)? = nil
-    /// Tap on a row — the person or repo profile where one exists. Rows
-    /// with no destination are reads, not controls.
-    var onOpenRow: ((String) -> Void)? = nil
     /// The disconnect's teardown — clears the bridge's own store, so the
     /// next foreground can't re-register the seat (`BridgeDisconnectSection`).
     var teardown: () -> Void
