@@ -498,7 +498,35 @@ extension DS {
     ///
     /// Increase Contrast raises the bar to 7.0:1, the figure `textTertiary`
     /// climbs to, so the tint can never be the one thing that ignores the ask.
+    /// Solved inks, by (source, theme, contrast) — prd §626 amendment.
+    ///
+    /// `solveInk` is an 8-step binary search whose predicate recomputes
+    /// `rgbComponents` and `wcagLuminance` at every step, and this is reached
+    /// PER ROW PER BODY EVALUATION for any row carrying a project label. The
+    /// answer is a pure function of the key below, so it is solved once per
+    /// (source, theme, contrast) and read thereafter.
+    ///
+    /// Caches nil too: "this source has no honest tint" is as stable an answer
+    /// as a colour, and it is the answer for every near-neutral mark (X's
+    /// black, ChatGPT's white), which would otherwise re-run the whole search
+    /// to say nothing.
+    ///
+    /// The key carries every environment read the function makes — the bleed,
+    /// light vs dark, Increase Contrast, and whether a background photo is set
+    /// — so a theme change cannot serve a stale ink. All four are cheap reads;
+    /// the search is not.
+    nonisolated(unsafe) private static var inkMemo: [String: Color?] = [:]
+
     static func legibleInk(for source: String) -> Color? {
+        let theme = ThemeStore.shared
+        let key = "\(source)|\(theme.bleed.name)|\(theme.isLight)|\(ContrastStore.shared.increased)|\(theme.backgroundPhoto != nil)"
+        if let hit = inkMemo[key] { return hit }
+        let solved = solveLegibleInk(for: source)
+        inkMemo[key] = solved
+        return solved
+    }
+
+    private static func solveLegibleInk(for source: String) -> Color? {
         // A photograph has no single luminance, so no ratio can be promised
         // against it — and its scrim is a gradient, so even a sampled one
         // would be true at one end of the screen only.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Casberi row-cost audit (prd §626, 2026-09-06).
 
-Five costs that ran PER ROW PER BODY EVALUATION, each fixed by removing the
+Six costs that ran PER ROW PER BODY EVALUATION, each fixed by removing the
 work rather than tuning it, each re-introducible by one plausible edit. This
 pins them.
 
@@ -75,6 +75,14 @@ CHECKS = [
         "PostCard.liveBody decoding previewImageData itself",
         "an external-storage file read plus a fresh, undecoded UIImage per body "
         "evaluation, in the rooms that carry pictures",
+    ),
+    (
+        "Casberi/Casberi/Design/AppIconTile.swift",
+        "if let hit = inkMemo[key] { return hit }",
+        None,
+        "legibleInk running solveInk on every call",
+        "an 8-step binary search recomputing luminance at each step, per row "
+        "carrying a project label",
     ),
 ]
 
@@ -184,6 +192,9 @@ def self_test():
          lambda t: t.replace(
              "} else if let stored = StoredPixels.image(for: thing) {",
              "} else if let data = thing.previewImageData, let stored = UIImage(data: data) {")),
+        ("legibleInk solves on every call again",
+         "Casberi/Casberi/Design/AppIconTile.swift",
+         lambda t: t.replace("if let hit = inkMemo[key] { return hit }", "")),
         ("the sweep-end flush is dropped",
          "Casberi/Casberi/Shell/RootShell.swift",
          lambda t: t.replace("defer { StoredPixels.flush() }", "")),
