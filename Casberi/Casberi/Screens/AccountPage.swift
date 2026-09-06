@@ -144,6 +144,12 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         .listStyle(.plain)
         .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
+        // THE PAGE'S OWN TOP (§524: every pour is ink). It is the same wash
+        // every setup screen had, and it is here for the reason it was written
+        // for — arriving from the product page's bold wash must not drop to a
+        // bare gray form. §639's first cut left it off, so the three screens
+        // migrated that day were the only pages in the app with no top at all.
+        .bridgeSetupWash(name: name)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
