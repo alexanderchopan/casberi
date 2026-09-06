@@ -159,6 +159,16 @@ KNOWN_EXEMPT = {
     # carve-out `DS.Face` already makes for `SourceChips.iconSize` and the
     # Sources Tray, whose marks are sized by their own grid.
     ("Casberi/Casberi/Screens/ShapedRows.swift", "sourceBadgeView"),
+    # A BITMAP RESOLUTION, not a layout size (prd §619, 2026-09-05). The pull's
+    # rain deals CALayer tiles, and `face(for:scale:)` renders each app's mark
+    # ONCE through `ImageRenderer` at a fixed 32pt to cache a CGImage. The
+    # layer decides how big the tile draws; this number decides only how many
+    # pixels are in the cache, so no rung beside it is the one to match — the
+    # file's own comment says as much ("Sized by the layer, not the bitmap, so
+    # a varying `diameter` never re-renders"). Putting it on the Mark ramp
+    # would tie a render resolution to a layout decision and re-render the
+    # cache whenever a rung moved.
+    ("Casberi/Casberi/Design/BerryRain.swift", "face"),
 }
 
 # Check 3's own rulings, keyed by (file, enclosing symbol, SIZE). The size is in

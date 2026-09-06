@@ -253,8 +253,12 @@ enum SweepClock {
         // as the note — so Diagnostics can show it with no console attached.
         // Once per pass, from the same lines the log gets.
         let worstSlot = order.max { (entries[$0]?.hitchMs ?? 0) < (entries[$1]?.hitchMs ?? 0) }
-        var note = String(format: "%d stall%@ totalling %.0fms, %d saves",
-                          hitches, hitches == 1 ? "" : "s", hitchTotalMs,
+        // Labelled counts rather than a hand-pluralised sentence: a diagnostic
+        // reading is scanned, not read, and "stalls: 1" costs a reader nothing
+        // that "1 stall" buys. It also keeps the line off the English-only
+        // plural ternary the localization audit rightly flags.
+        var note = String(format: "stalls: %d, totalling %.0fms, saves: %d",
+                          hitches, hitchTotalMs,
                           SaveCensus.count - savesAtStart)
         if hitches > 0, let worstSlot { note += ", most in \(worstSlot)" }
         PerfReadings.record("SweepStalls", ms: hitchMaxMs, note: note)

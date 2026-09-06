@@ -102,15 +102,33 @@ def resolves_to_tier(name: str, src: str, seen: frozenset = frozenset()) -> bool
     bare = name.split(".")[-1]
     if bare in seen or len(seen) > 3:
         return False
+    # `\b` AFTER THE NAME, and it is load-bearing (2026-09-06). Without it
+    # `let icon` matched `let iconGap: CGFloat = DS.Space.s2` — a DIFFERENT
+    # constant, 740 lines earlier in the same file — and the resolver then
+    # judged `icon` by that stranger's declaration and reported the real one
+    # unresolvable. Same class as the liveness audit's `.thing` matching
+    # `.thingID` as a substring. A prefix collision is the normal case in this
+    # tree, not a freak one: `icon`/`iconGap`/`iconSize` all live in
+    # SourceChips.swift, and the resolver reads the FIRST match in the file.
     decl = re.search(
-        r'(?:let|var)\s+%s\s*:?[^=\n]*=\s*([^\n]+)' % re.escape(bare), src)
+        r'(?:let|var)\s+%s\b\s*:?[^=\n]*=\s*([^\n]+)' % re.escape(bare), src)
     if not decl:
         decl = re.search(
-            r'(?:let|var)\s+%s\s*:[^{\n]+\{\s*([^}\n]+)\}' % re.escape(bare), src)
+            r'(?:let|var)\s+%s\b\s*:[^{\n]+\{\s*([^}\n]+)\}' % re.escape(bare), src)
     if not decl:
         return False
     expr = decl.group(1)
     if "DS.Face." in expr:
+        return True
+    # THE CHIP METRIC, MAGNIFIED (prd §621, 2026-09-05). The dock's chips are
+    # continuous now — a chip draws at `iconSize * m`, where `m` is the
+    # magnification under the finger — so the escape written for the BARE
+    # metric has to survive one arithmetic hop, the same way a tier does. It
+    # stays an escape and not a blanket pass: the metric must actually be
+    # REACHED, so `let icon = 46 * m` names nothing on either ramp and is
+    # still a finding (DIRTY_CHIP_MAGNIFIED pins exactly that).
+    if any(ident.split(".")[-1] in {c.split(".")[-1] for c in CHIP_METRICS}
+           for ident in IDENT.findall(expr)):
         return True
     return any(resolves_to_tier(ident, src, seen | {bare})
                for ident in IDENT.findall(expr)
@@ -160,6 +178,28 @@ CLEAN_CONST = ('private let rosterFaceSize: CGFloat = DS.Face.shelf\n'
                'WalletFace(address: a, size: rosterFaceSize, circular: true)')
 CLEAN_SQUARE = 'BridgeIcon(name: n, size: 46)'          # square mark, not a face
 CLEAN_CHIP = 'BridgeIcon(name: n, size: iconSize, circular: true)'
+# The SAME escape one hop away — the dock's magnified chip (prd §621). `m` is
+# the magnification under the finger, so the size the chip draws at is the chip
+# metric times a factor and names no tier itself.
+CLEAN_CHIP_MAGNIFIED = ('let icon = iconSize * m\n'
+                        'BridgeIcon(name: n, size: icon, circular: true)')
+# The same SHAPE with no chip metric in it — a raw number reaching a face
+# through a multiplication. Without this the hop above would be an
+# unconditional pass wearing an escape's clothes.
+DIRTY_CHIP_MAGNIFIED = ('let icon = 46 * m\n'
+                        'BridgeIcon(name: n, size: icon, circular: true)')
+# A PREFIX COLLISION — the shape that hid the two above for a whole pass. The
+# resolver reads the first declaration in the file that matches the name, and
+# `iconGap` starts with `icon`, so without a word boundary the clean call below
+# is judged by a constant it has nothing to do with and reported unresolvable.
+# The dirty twin keeps the boundary honest: adding `\b` must not make every
+# prefix-shadowed name pass, only stop it being read as the wrong constant.
+CLEAN_PREFIX_SHADOW = ('private static let iconGap: CGFloat = DS.Space.s2\n'
+                       'let icon = iconSize * m\n'
+                       'BridgeIcon(name: n, size: icon, circular: true)')
+DIRTY_PREFIX_SHADOW = ('private static let iconGap: CGFloat = DS.Face.row\n'
+                       'let icon = 46 * m\n'
+                       'BridgeIcon(name: n, size: icon, circular: true)')
 # A face INTERPOLATED between two ramp tiers — the travelling face of
 # `AddressFlightOverlay` (prd §441/§444). The ends are tiers; the local that
 # mixes them names neither, so this only passes with the extra hop above.
@@ -203,6 +243,10 @@ def self_test(tmp: pathlib.Path) -> None:
         ("a constant that resolves to a tier", CLEAN_CONST, False),
         ("a SQUARE brand mark (not a face)", CLEAN_SQUARE, False),
         ("the documented chip-metric escape", CLEAN_CHIP, False),
+        ("…the same escape MAGNIFIED, one hop away", CLEAN_CHIP_MAGNIFIED, False),
+        ("…the same shape with a raw number instead", DIRTY_CHIP_MAGNIFIED, True),
+        ("a name SHADOWED by a longer one declared earlier", CLEAN_PREFIX_SHADOW, False),
+        ("…the same shadowing over a raw number", DIRTY_PREFIX_SHADOW, True),
         ("a face interpolated between two tiers", CLEAN_INTERP, False),
         ("…the same interpolation between two raw numbers", DIRTY_INTERP, True),
         ("a comment that NAMES a dirty call", CLEAN_DOCUMENTED, False),
