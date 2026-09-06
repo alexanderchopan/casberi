@@ -49645,6 +49645,16 @@ Five screens that all ask for an address — Wallet, Base Vibenet, Ethrex Hegot�
 
 **The ruling.** `Shell/FirstPaint.swift`: a one-pixel `UIViewRepresentable` in the shell's root marks the first paint one run-loop turn after its first layout in a window (the turn after the commit that carried it), and the Spotlight reindex, the dedupe, the digest sweeps and the insight recompute `await FirstPaint.painted()` before they start. Nothing the first frame needs is touched. **Measured, recorded on a simulator:** `init→firstPaint` 1939ms cold / 1382ms warm, against ~2900ms before; launch-to-first-frame on video 2.5s cold / 1.9s warm, against 2.9–3.0s. The remaining cost is the launch itself — the store open, the first feed build — and belongs to the perf session.
 
+## §626 amendment — the ink memo keyed on the wrong theme property (2026-09-06, same day)
+
+`legibleInk`'s memo (the seventh row cost, `91eff8d0`) keyed on `ThemeStore.bleed`. **`legibleInk` never reads the bleed.** What it reads is `DS.themedPage`, which is `background.lightHex` or `background.darkHex` chosen by `isLight` and the photo — so changing the page BACKGROUND while keeping the same bleed served an ink solved against the previous page.
+
+**The consequence is the exact failure the function exists to prevent.** `solveInk` promises 4.5:1, or 7.0:1 under Increase Contrast; a stale ink is a ratio below that, and `solveInk`'s own doc-comment says why that would never have been noticed — *"a contrast failure renders perfectly, so a build and a screenshot both pass it, which is precisely how the ink this replaces shipped at ~3.4:1 and stayed there until somebody measured it."* No harness could see it either: `legible-ink-selftest.sh` tests the pure solver, which is correct and untouched, and the whole point of that split is that the environment reads live outside it — which is exactly where the bug was.
+
+**Not in build 525.** The commit landed after the ship froze at `68b9ee0f`, so no shipped binary ever carried it.
+
+**The generalisable rule: a memo key is a claim about what a function reads.** Derive it by reading the function, never by picking the theme property whose name sounds right — `bleed` and `background` are both `ThemeStore` colour properties with a `name`, so the wrong one type-checks, renders and reviews clean. Pinned in `scripts/row-cost-audit.py`, which now requires `background.name` in the key and forbids `bleed` (8 mutations).
+
 ## §626 — Six costs that ran per row, per render; and the first sweep of the row bodies (2026-09-06)
 
 **Why nothing had found these.** `docs/perf-spec.md` P3 is titled *"Per-row body costs (scroll, unmeasured)"* and says in its first line that no instrument covers scroll, so it named two candidates and optimised neither, under this project's own rule: sample before fixing. That rule is right about tuning and wrong as a reason not to LOOK. A read of the row bodies found six costs, and the top one is not a constant factor.

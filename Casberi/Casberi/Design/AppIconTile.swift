@@ -511,15 +511,30 @@ extension DS {
     /// black, ChatGPT's white), which would otherwise re-run the whole search
     /// to say nothing.
     ///
-    /// The key carries every environment read the function makes — the bleed,
-    /// light vs dark, Increase Contrast, and whether a background photo is set
-    /// — so a theme change cannot serve a stale ink. All four are cheap reads;
-    /// the search is not.
+    /// The key carries every environment read the function makes — the PAGE
+    /// BACKGROUND, light vs dark, Increase Contrast, and whether a background
+    /// photo is set — so a theme change cannot serve a stale ink. All four are
+    /// cheap reads; the search is not.
+    ///
+    /// **It is `background`, not `bleed`, and the first cut of this got that
+    /// wrong.** `legibleInk` never reads the bleed at all; what it reads is
+    /// `DS.themedPage`, which is `background.lightHex`/`darkHex` chosen by
+    /// `isLight` and the photo. Keyed on the bleed, changing the page
+    /// background while keeping the same bleed served the ink solved against
+    /// the OLD page — a ratio below the 4.5:1 (or 7.0:1) this function exists
+    /// to promise. And it would have been invisible: `solveInk`'s own
+    /// doc-comment says a contrast failure renders perfectly, so a build and a
+    /// screenshot both pass it, which is exactly how the ink this replaced
+    /// shipped at ~3.4:1. A memo key is a claim about what a function reads;
+    /// read the function, do not guess the property name.
+    ///
+    /// Pinned by `scripts/row-cost-audit.py`, which requires `background.name`
+    /// here and forbids `bleed`.
     nonisolated(unsafe) private static var inkMemo: [String: Color?] = [:]
 
     static func legibleInk(for source: String) -> Color? {
         let theme = ThemeStore.shared
-        let key = "\(source)|\(theme.bleed.name)|\(theme.isLight)|\(ContrastStore.shared.increased)|\(theme.backgroundPhoto != nil)"
+        let key = "\(source)|\(theme.background.name)|\(theme.isLight)|\(ContrastStore.shared.increased)|\(theme.backgroundPhoto != nil)"
         if let hit = inkMemo[key] { return hit }
         let solved = solveLegibleInk(for: source)
         inkMemo[key] = solved

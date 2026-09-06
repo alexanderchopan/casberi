@@ -79,7 +79,12 @@ CHECKS = [
     (
         "Casberi/Casberi/Design/AppIconTile.swift",
         "if let hit = inkMemo[key] { return hit }",
-        None,
+        # The key must name the PAGE BACKGROUND, which is what `DS.themedPage`
+        # reads. The first cut keyed on `bleed`, which `legibleInk` never reads
+        # — so changing the background while keeping the bleed served an ink
+        # solved against the old page, i.e. a contrast ratio below the one this
+        # function exists to promise, rendering perfectly.
+        r"theme\.bleed",
         "legibleInk running solveInk on every call",
         "an 8-step binary search recomputing luminance at each step, per row "
         "carrying a project label",
@@ -195,6 +200,9 @@ def self_test():
         ("legibleInk solves on every call again",
          "Casberi/Casberi/Design/AppIconTile.swift",
          lambda t: t.replace("if let hit = inkMemo[key] { return hit }", "")),
+        ("the ink memo keys on the bleed instead of the page background",
+         "Casberi/Casberi/Design/AppIconTile.swift",
+         lambda t: t.replace("theme.background.name", "theme.bleed.name")),
         ("the sweep-end flush is dropped",
          "Casberi/Casberi/Shell/RootShell.swift",
          lambda t: t.replace("defer { StoredPixels.flush() }", "")),
