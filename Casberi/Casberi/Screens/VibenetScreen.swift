@@ -74,6 +74,7 @@ struct VibenetScreen: View {
             // What is left for this sentence is the only thing the pitch could
             // not say: what to do here, and that it is not a one-shot.
             intro: "Paste an address, or start with one that already has something to show. Watch as many as you like.",
+            mode: .noAccount,
             rows: roster.rows,
             query: typed,
             onRemoveRow: unwatch,

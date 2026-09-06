@@ -254,6 +254,11 @@ struct NotesShareScreen: View {
             state: .notConnected,
             intro: "Apple offers no export and no read API, so there's nothing to connect — share a note instead.",
             mode: .onThisDevice,
+            // AND IT LANDS NOTHING UNDER ITS OWN NAME. A note shared out of
+            // Notes lands under source "You" (`Corpus.earnsRoom` refuses it),
+            // so an Activity row here would count rows that will never exist
+            // and open a room that does not.
+            lands: false,
             teardown: {},
             sheet: $sheet,
             act: {

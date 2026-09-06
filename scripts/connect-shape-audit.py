@@ -174,7 +174,7 @@ def check_controls_are_slabs(name, body):
     content-level disclosures ("Show all 12 turns", "Read the rest", "See all 40
     transactions") or a directory row's own verb — both of which §190 exempts by
     name ("a page's own content rows"). Scoped to files carrying a
-    `BridgeSetupHeader` — i.e. the connect family, which is the family with an
+    `AccountPage` — i.e. the connect family, which is the family with an
     identity area for controls to sit below — it reports ONE.
 
     That one shape is the "headed section with a blue text link" §190 lists among
@@ -190,7 +190,7 @@ def check_controls_are_slabs(name, body):
     it was really running file-wide. Caught by this file's own self-test.
     """
     out = []
-    if "BridgeSetupHeader(" not in body:
+    if "AccountPage(" not in body:
         return out
     for b in PLAIN_BUTTON.finditer(body):
         label = b.group(1)
@@ -300,7 +300,7 @@ CLEAN_STATUS = '''
 DIRTY_LINK = '''
 struct X: View {
     var body: some View {
-        BridgeSetupHeader(name: "X", mode: .noAccount, intro: "Short.")
+        AccountPage(name: "X", seatID: "x", source: "X", mode: .noAccount, intro: "Short.")
     }
 
     private var watchSection: some View {
@@ -340,7 +340,7 @@ struct X: View {
 COMMENTED = '''
 struct X: View {
     var body: some View {
-        BridgeSetupHeader(name: "X", mode: .noAccount, intro: "Short.")
+        AccountPage(name: "X", seatID: "x", source: "X", mode: .noAccount, intro: "Short.")
     }
 
     // It used to be: Text("Browse all 105").foregroundStyle(DS.tint) in a

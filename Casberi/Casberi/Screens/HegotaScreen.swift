@@ -63,6 +63,7 @@ struct HegotaScreen: View {
             // ACTION, not a re-pitch: you reach this from the product page,
             // which has just said what Hegotá is.
             intro: "Paste an address, or start with one that already has something to show. Watch as many as you like.",
+            mode: .noAccount,
             rows: roster.rows,
             query: typed,
             onRemoveRow: unwatch,

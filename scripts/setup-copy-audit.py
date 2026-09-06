@@ -110,9 +110,22 @@ NOTE_ALLOWANCE = {
     "PostHogScreen.swift": 3,
 }
 
-# Files that hold a `BridgeSetupHeader` call but are not connect screens, or
-# are shared components rather than a screen.
-SKIP = {"BridgeSetupComponents.swift", "ImportSetupComponents.swift"}
+# Files that hold an `AccountPage` call but are not connect screens, or are
+# shared components rather than a screen.
+SKIP = {"BridgeSetupComponents.swift", "ImportSetupComponents.swift",
+        "AccountPage.swift"}
+
+# Pages that legitimately declare NO mode (§315's check 1), each with its
+# reason. The mode answers "what am I in for" and is drawn only while NOT
+# connected — so a page that can only ever be reached ALREADY connected has no
+# state in which to show one, and requiring it would be requiring a string
+# nobody can read.
+MODELESS = {
+    # The fallback manage page for every seat without a screen of its own. It
+    # is reachable only from a connected seat's row (`BridgeDetailScreen`'s own
+    # doc), so its state is never `.notConnected`.
+    "BridgeDetailScreen.swift",
+}
 
 
 # ── parsing helpers ────────────────────────────────────────────────────────
@@ -348,7 +361,12 @@ NO_ROOM_SET_RE = re.compile(
     r'static let (?:chiplessSources|searchOnlySources): Set<String> = \[([^\]]*)\]')
 SOURCE_LITERAL_RE = re.compile(r'source:\s*"([^"]+)"')
 SOURCE_CONST_RE = re.compile(r'static let source(?:Name)?\s*=\s*"([^"]+)"')
-CHIP_SOURCE_RE = re.compile(r'RoomDoor\((?:[^()]|\([^()]*\))*?source:\s*"([^"]+)"',
+# The door is the account page's Activity row since §639, and its `source:` is
+# the page's own — so the same failure mode is read off `AccountPage(` instead
+# of `RoomDoor(`: hand it a string no bridge stamps and nothing errors, the pop
+# happens, the filter is written, and you land in a room that will never hold a
+# row. Same ceiling as before: only a LITERAL can be resolved from text.
+CHIP_SOURCE_RE = re.compile(r'AccountPage\((?:[^()]|\([^()]*\))*?source:\s*"([^"]+)"',
                             re.S)
 
 
@@ -370,52 +388,74 @@ def stamped_sources(model_dir: str) -> set:
     return found
 
 
-# Screens with a `BridgeSetupHeader` and deliberately NO room door. Each entry
-# is a conscious ruling, never a snooze — the door is missing because there is
-# no room to open, not because nobody got to it.
-KNOWN_NO_ROOM_DOOR = {
+# Screens whose seat LANDS NOTHING, so the account page draws no Activity row
+# at all (`AccountPage.lands`). Each entry is a conscious ruling, never a
+# snooze — the row is missing because there is no room to open, not because
+# nobody got to it.
+#
+# THE CHECK INVERTED WITH §639 (2026-09-06), and it got stronger. It used to
+# ask whether a connect screen had a `RoomDoor` at all, because §460 shipped
+# the door to seventeen call sites and called it done while thirty-four
+# screens had none — a per-door correctness check cannot see an ABSENT door.
+# The chassis draws the row for every page, so absence is no longer possible.
+# What IS possible is the opposite, and it is the same §83 defect wearing the
+# other face: a seat that will never land a row drawing "0 today · 0 this
+# week" forever, under a state line saying it is working. So the list is read
+# in BOTH directions now — a page here must say `lands: false`, and a page
+# saying `lands: false` must be here with its reason.
+KNOWN_LANDS_NOTHING = {
     # The four BYOK agent-key screens. These configure the AGENT, not a source:
     # they store a key and register a seat, and land no `Thing` at all — there
-    # is no source string, so there is nothing for a door to open. Verified: no
+    # is no source string, so there is nothing for a room to hold. Verified: no
     # `source: "Bankr"/"Grok"/"Venice"` literal exists anywhere in Model/.
     "BankrSetupScreen.swift": "agent key — lands no rows, so there is no room",
     "GrokSetupScreen.swift": "agent key — lands no rows, so there is no room",
     "VeniceSetupScreen.swift": "agent key — lands no rows, so there is no room",
     # OpenRouter is the near-miss and the reason this list carries reasons
     # rather than names: `AgentSpend.drainPending` DOES land one `.reminder`
-    # under source "OpenRouter" — the credits-running-low alert — so check 7a
-    # would happily pass a door here. But that is the only producer, so the
-    # room is empty for the life of the install and then holds exactly one
-    # row. A door onto that is the §83 dead control with a long fuse.
+    # under source "OpenRouter" — the credits-running-low alert. But that is
+    # the only producer, so the room is empty for the life of the install and
+    # then holds exactly one row. A count on that is a number about nothing.
     "OpenRouterSetupScreen.swift": "agent key — its only row is a credits alert",
+    # Apple Notes shares OUT of Notes and reads nothing back — a shared note
+    # lands under source "You" (`Corpus.earnsRoom` refuses it), so this seat
+    # has no room of its own and never will. Per-file, and the file's other
+    # three screens keep their Activity rows.
+    "NotesImportScreens.swift": "Apple Notes shares out; its notes land under You",
     # Two seats whose money is REAL and whose rows do not exist: both fold
     # holdings into `WalletPortfolio` (the Wallet room's balance card) without
     # ever constructing a `Thing`. `Model/ExchangeBridge.swift` and
-    # `Model/EthValidatorWatch.swift` contain zero `Thing(` between them. A
-    # door would have to point at Wallet, where not one row is theirs.
+    # `Model/EthValidatorWatch.swift` contain zero `Thing(` between them.
     "ExchangeSetupScreen.swift": "holdings fold into the Wallet balance; lands no rows",
     "EthValidatorScreen.swift": "balances fold into the Wallet balance; lands no rows",
 }
 
-# STATED CEILING: this is per FILE, so a file holding several screens is
-# satisfied by ONE door. `NotesImportScreens.swift` is the case in the tree —
-# three of its four screens have a door and `NotesShareScreen` correctly has
-# none (a note shared out of Apple Notes lands under source "You", which
-# `Corpus.earnsRoom` refuses). Splitting this per struct means parsing Swift;
-# the honest move is to say so rather than imply a guarantee it cannot make.
+# STATED CEILING: this is per FILE, so a file holding several screens is judged
+# on all of them at once. `NotesImportScreens.swift` is the case in the tree —
+# four screens, none of them rowless. Splitting this per struct means parsing
+# Swift; the honest move is to say so rather than imply a guarantee it cannot
+# make.
 
 
 def audit_door_presence(name: str, body: str):
-    """Check 7b — a connect screen offers the way back to its things."""
-    if "BridgeSetupHeader(" not in body:
-        return []                      # §185 screens; check 1 already rules here
-    if "RoomDoor(" in body:
+    """Check 7b — the Activity row exists exactly where there is a room."""
+    if "AccountPage(" not in body:
         return []
-    if name in KNOWN_NO_ROOM_DOOR:
-        return []
-    return [f"{name}: no RoomDoor — a connect screen states where your things "
-            f"went and gives no way there (§460). Add one, or name the screen "
-            f"in KNOWN_NO_ROOM_DOOR with the reason it has no room."]
+    rowless = any("lands: false" in balanced(body, m.end() - 1)
+                  for m in re.finditer(r"AccountPage\(", body))
+    listed = name in KNOWN_LANDS_NOTHING
+    if rowless and not listed:
+        return [f"{name}: passes `lands: false` and is not in "
+                f"KNOWN_LANDS_NOTHING — drawing no Activity row claims this "
+                f"seat will never land a row, which is a ruling. Name it "
+                f"there with the reason."]
+    if listed and not rowless:
+        return [f"{name}: KNOWN_LANDS_NOTHING says this seat lands no rows, "
+                f"but the page draws an Activity row — it will read "
+                f"\u201c0 today \u00b7 0 this week\u201d forever under a state "
+                f"line saying it is working (\u00a783). Pass `lands: false`, or "
+                f"remove the entry."]
+    return []
 
 
 # ── the door's own mechanics (check 7d, 2026-08-28) ────────────────────────
@@ -473,6 +513,15 @@ def roomless_sources(thing_swift: str) -> set:
 
 def audit_room_doors(name: str, body: str, stamped: set, roomless: set = frozenset()):
     findings = []
+    # A page that draws no Activity row (`lands: false`) opens no room, so its
+    # `source:` names nothing anybody can tap onto — checking it would report a
+    # broken door on a page that has none. Apple Notes is the case in the tree:
+    # a note shared out of it lands under source "You", never under its own
+    # name, which is exactly why that page is rowless.
+    body = "\n".join(
+        "AccountPage(" + call + ")" for call in
+        (balanced(body, m.end() - 1) for m in re.finditer(r"AccountPage\(", body))
+        if "lands: false" not in call)
     for src in CHIP_SOURCE_RE.findall(body):
         if src in roomless:
             findings.append(f"{name}: room door opens “{src}”, which Corpus."
@@ -674,11 +723,18 @@ def audit_source(name: str, src: str, stamped: set = None,
     findings = []
     body = strip_comments(src)
 
-    # 1 + 2: every header declares a mode, and its intro fits the budget.
-    for m in re.finditer(r"BridgeSetupHeader\(", body):
+    # 1 + 2: every page declares a mode, and its intro fits the budget.
+    #
+    # READ OFF `AccountPage(` SINCE §639 (2026-09-06). It was
+    # `BridgeSetupHeader(`, which no screen calls any more: every connect
+    # screen is an account page, and the mode and the intro are its
+    # parameters. Re-pointed rather than deleted — a check whose subject has
+    # moved and which therefore matches nothing is the worst outcome available
+    # here, because it goes on reporting green over copy nobody is governing.
+    for m in re.finditer(r"AccountPage\(", body):
         call = balanced(body, m.end() - 1)
-        if "mode:" not in call:
-            findings.append(f"{name}: BridgeSetupHeader with no `mode:` — "
+        if "mode:" not in call and name not in MODELESS:
+            findings.append(f"{name}: AccountPage with no `mode:` — "
                             f"every connect screen states how it connects")
             continue
         intro = re.search(r"intro:\s*(.*)", call, re.S)
@@ -749,27 +805,27 @@ def audit_source(name: str, src: str, stamped: set = None,
 
 DIRTY_NO_MODE = '''
 struct S: View { var body: some View { List {
-    BridgeSetupHeader(name: "X", connected: true)
+    AccountPage(name: "X", seatID: "x", source: "X", state: st)
 } } }
 '''
 
 DIRTY_LONG_INTRO = '''
 struct S: View { var body: some View { List {
-    BridgeSetupHeader(name: "X", mode: .noAccount,
+    AccountPage(name: "X", seatID: "x", source: "X", mode: .noAccount,
         intro: "One two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone twentytwo twentythree twentyfour twentyfive twentysix twentyseven twentyeight twentynine thirty thirtyone thirtytwo thirtythree thirtyfour thirtyfive thirtysix thirtyseven thirtyeight thirtynine forty fortyone fortytwo fortythree fortyfour fortyfive fortysix fortyseven fortyeight fortynine fifty fiftyone fiftytwo fiftythree fiftyfour fiftyfive fiftysix.")
 } } }
 '''
 
 DIRTY_MANY_SENTENCES = '''
 struct S: View { var body: some View { List {
-    BridgeSetupHeader(name: "X", mode: .noAccount,
+    AccountPage(name: "X", seatID: "x", source: "X", mode: .noAccount,
         intro: "One sentence here. Two sentences here. Three sentences here.")
 } } }
 '''
 
 DIRTY_LONG_STEP = '''
 struct S: View { var body: some View { List {
-    BridgeSetupHeader(name: "X", mode: .pasteKey, intro: "Short.")
+    AccountPage(name: "X", seatID: "x", source: "X", mode: .pasteKey, intro: "Short.")
     BridgeStepLines(steps: [
         "This step explains far too much about why the format matters and keeps going well past any reasonable budget.",
     ], startingAt: 2)
@@ -778,7 +834,7 @@ struct S: View { var body: some View { List {
 
 DIRTY_FOOTER = '''
 struct S: View { var body: some View { List {
-    BridgeSetupHeader(name: "X", mode: .noAccount, intro: "Short.")
+    AccountPage(name: "X", seatID: "x", source: "X", mode: .noAccount, intro: "Short.")
     Section { row } footer: {
         Text("Read-only: nothing here ever places a trade, and the odds are public.")
         Text("No account, no key — fetched directly by this device through each exchange's own public feed, with no ranking of ours applied anywhere.")
@@ -788,7 +844,7 @@ struct S: View { var body: some View { List {
 
 DIRTY_NOTES = '''
 struct S: View { var body: some View { List {
-    BridgeSetupHeader(name: "X", mode: .noAccount, intro: "Short.")
+    AccountPage(name: "X", seatID: "x", source: "X", mode: .noAccount, intro: "Short.")
     DSSlabNote(text: "One.")
     DSSlabNote(text: "Two.")
     DSSlabNote(text: "Three.")
@@ -801,8 +857,8 @@ struct S: View { var body: some View { List {
     // "One-time import — nothing arrives on its own afterwards, and
     // re-importing later adds only what's new, and your captions and comments
     // arrive as searchable text, and saves and likes arrive as links."
-    BridgeSetupHeader(
-        name: "X", mode: .oneTimeImport,
+    AccountPage(
+        name: "X", seatID: "x", source: "X", mode: .oneTimeImport,
         intro: "X has no live connection — download your export, bring it here, and search everything in it. Re-import any time for what's new.")
     BridgeStepLines(steps: [
         "Choose Download or transfer information, then Some of your information.",
@@ -916,8 +972,8 @@ def self_test() -> bool:
     # the one you already typed is the natural slip; and it renders perfectly,
     # so nothing but this can catch it.
     stamped = {"Privacy Pools", "Peer", "Deals"}
-    dirty_room = ('RoomDoor(name: "0xBow Privacy Pools",\n'
-                  '         source: "0xBow Privacy Pools")')
+    dirty_room = ('AccountPage(name: "0xBow Privacy Pools", seatID: "pp",\n'
+                  '            source: "0xBow Privacy Pools")')
     f = audit_room_doors("fixture.swift", dirty_room, stamped)
     if not any("no bridge" in x for x in f):
         print(f"  SELF-TEST FAIL: a room door onto a non-existent room was "
@@ -929,10 +985,10 @@ def self_test() -> bool:
     # Both shapes that must NOT fire: a correct literal, and a source handed
     # over as a constant (which is the drift-proof form and unresolvable from
     # text — flagging it would punish the better pattern).
-    clean_room = ('RoomDoor(name: "0xBow Privacy Pools",\n'
-                  '         source: "Privacy Pools")\n'
-                  'RoomDoor(name: "Peer", source: "Peer")\n'
-                  'RoomDoor(name: "Safe", source: SafeBridge.sourceName)\n')
+    clean_room = ('AccountPage(name: "0xBow Privacy Pools", seatID: "pp",\n'
+                  '            source: "Privacy Pools")\n'
+                  'AccountPage(name: "Peer", seatID: "peer", source: "Peer")\n'
+                  'AccountPage(name: "Safe", seatID: "safe", source: SafeBridge.sourceName)\n')
     f = audit_room_doors("fixture.swift", clean_room, stamped)
     if f:
         print(f"  SELF-TEST FAIL: an ordinary room door was flagged — {f}")
@@ -940,19 +996,20 @@ def self_test() -> bool:
     else:
         print("  ✓ passes ordinary room doors (a constant is not a literal)")
 
-    # The absent door — the half that was missing on check 7's first day, and
-    # the reason §460 shipped believing seventeen call sites was coverage.
+    # The rowless page that never declared itself — the half §460's own check
+    # could not see, inverted with §639 (see KNOWN_LANDS_NOTHING).
     f = audit_door_presence("Ghost.swift",
-                            'BridgeSetupHeader(name: "Ghost", mode: .noAccount, intro: "Short.")')
-    if not any("no RoomDoor" in x for x in f):
-        print(f"  SELF-TEST FAIL: a connect screen with no door was not caught — {f}")
+                            'AccountPage(name: "Ghost", seatID: "g", source: "Ghost", '
+                            'mode: .noAccount, lands: false, intro: "Short.")')
+    if not any("KNOWN_LANDS_NOTHING" in x for x in f):
+        print(f"  SELF-TEST FAIL: an undeclared rowless page was not caught — {f}")
         ok = False
     else:
-        print("  ✓ catches a connect screen with no room door at all")
+        print("  ✓ catches a page that draws no Activity row without saying why")
     if audit_door_presence("Ghost.swift",
-                           'BridgeSetupHeader(name: "Ghost", mode: .noAccount, intro: "S.")\n'
-                           'RoomDoor(name: "Ghost", source: "Ghost")'):
-        print("  SELF-TEST FAIL: a screen WITH a door was flagged")
+                           'AccountPage(name: "Ghost", seatID: "g", source: "Ghost", mode: .noAccount, intro: "S.")\n'
+                           'AccountPage(name: "Ghost", seatID: "g", source: "Ghost")'):
+        print("  SELF-TEST FAIL: a page with an Activity row was flagged")
         ok = False
     else:
         print("  ✓ passes a connect screen that has one")
@@ -1100,7 +1157,7 @@ def self_test() -> bool:
         print("  ✓ catches roomSource() disappearing (7e)")
 
     f = audit_room_doors("fixture.swift",
-                         'RoomDoor(name: "Contacts", source: "Contacts")',
+                         'AccountPage(name: "Contacts", seatID: "c", source: "Contacts")',
                          {"Contacts", "Peer"}, {"Contacts", "You"})
     if not any("earnsRoom refuses" in x for x in f):
         print(f"  SELF-TEST FAIL: a door onto a roomless source was not caught — {f}")
@@ -1198,7 +1255,7 @@ def main() -> int:
         if not fn.endswith(".swift") or fn in SKIP:
             continue
         src = open(os.path.join(SCREENS, fn)).read()
-        if "BridgeSetupHeader(" not in src and "BridgeStepLines(" not in src:
+        if "AccountPage(" not in src and "BridgeStepLines(" not in src:
             continue
         screens += 1
         findings += audit_source(fn, src, stamped, roomless)
