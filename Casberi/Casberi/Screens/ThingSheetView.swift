@@ -1150,29 +1150,57 @@ struct ThingSheetView: View {
     /// iPad and Catalyst the sheet is far wider, and a paragraph run full
     /// width makes the eye lose its place returning to each next line.
     @ViewBuilder private var titleBlock: some View {
-        if isSocialPost {
-            let words = postWords
-            if words.count > Self.readingLength {
+        let words = isSocialPost ? postWords : thing.title
+        let rung = Self.titleRung(for: words)
+        Group {
+            if isSocialPost {
                 Text(linkedWords(words))
-                    .dsText(.reading20)
-                    .foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: Self.readingMeasure, alignment: .leading)
-                    // A post's words are what people copy a phrase out of. The
-                    // framed-photo title already allowed it; this didn't.
-                    .textSelection(.enabled)
             } else {
-                Text(linkedWords(words))
-                    .dsText(words.count > 100 ? .heading22 : .heading34)
-                    .foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
+                Text(thing.title)
             }
-        } else {
-            Text(thing.title)
-                .dsText(.heading34).foregroundStyle(DS.textPrimary)
-                .textSelection(.enabled)
         }
+        .dsText(rung.style)
+        .foregroundStyle(DS.textPrimary)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: rung == .reading ? Self.readingMeasure : .infinity,
+               alignment: .leading)
+        // The words are what people copy a phrase out of — every rung.
+        .textSelection(.enabled)
+    }
+
+    /// THE HEAD RUNG IS FOR A NAME (2026-09-06, prd §630 amendment — the
+    /// head-consistency half of the type-ramp item).
+    ///
+    /// The ramp's own definition of `heading34`: "a head is one or two words
+    /// and tight leading is what makes two lines read as one object". Every
+    /// non-social thing was set at that rung regardless of length, so a
+    /// stream's title ("nova live — Software and Game Development") opened
+    /// as four lines of 40pt heavy that pushed its own picture under the
+    /// fold — a shout where a title was wanted — while a post of the same
+    /// length went through a length rule of its own and a vault note through
+    /// a third. One ladder now, by SHAPE rather than by kind: a name is a
+    /// head, a sentence is a title, a paragraph reads. The framed photo keeps
+    /// `heading22` outright because there the picture is the head.
+    ///
+    /// 32 characters is two lines at the head rung on a phone — the most a
+    /// head is allowed to be by its own definition. `readingLength` is the
+    /// existing paragraph threshold, shared so the detent and the rung agree.
+    enum TitleRung: Equatable {
+        case head, title, reading
+        var style: DSTextStyle {
+            switch self {
+            case .head: return .heading34
+            case .title: return .heading22
+            case .reading: return .reading20
+            }
+        }
+    }
+    static let headLength = 32
+    static func titleRung(for text: String) -> TitleRung {
+        let n = text.trimmingCharacters(in: .whitespacesAndNewlines).count
+        if n <= headLength { return .head }
+        if n <= readingLength { return .title }
+        return .reading
     }
 
     /// Past this many characters a post is a paragraph, not a statement, and
@@ -1180,7 +1208,7 @@ struct ThingSheetView: View {
     /// it's the same length `init` uses to decide the sheet opens full-height,
     /// so a post tall enough to need the whole sheet is exactly the post that
     /// gets read-type — one threshold, two consequences that agree.
-    private static let readingLength = 280
+    static let readingLength = 280
     /// The reading measure. Wide enough to keep the phone case unchanged
     /// (nothing on a phone reaches it), narrow enough that a paragraph on iPad
     /// or Catalyst stays inside the ~45–75 characters a line that running text
@@ -1494,7 +1522,9 @@ struct ThingSheetView: View {
                 // A vault note's title IS a name the person chose, so unlike
                 // an entry's it leads and is not a repetition of anything.
                 Text(thing.title)
-                    .dsText(.heading28)
+                    // The same ladder as every other title — a long note
+                    // name is a title, not a head (`titleRung`).
+                    .dsText(Self.titleRung(for: thing.title).style)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
