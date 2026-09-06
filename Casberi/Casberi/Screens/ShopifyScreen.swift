@@ -61,7 +61,7 @@ struct ShopifyScreen: View {
         shopify.shops.map { shop in
             let counted = weekly[shop.displayName.lowercased()] ?? (week: 0, new: false)
             return AccountPageShape.Row(
-                id: shop.id,
+                id: shop.id.uuidString,
                 title: shop.displayName,
                 subline: AccountPageShape.subline(nouns: String(localized: "products"),
                                                   weekCount: counted.week),
@@ -71,7 +71,7 @@ struct ShopifyScreen: View {
     }
 
     private func unfollow(_ id: String) {
-        guard let i = shopify.shops.firstIndex(where: { $0.id == id }) else { return }
+        guard let i = shopify.shops.firstIndex(where: { $0.id.uuidString == id }) else { return }
         shopify.remove(at: IndexSet(integer: i))
         countWeek()
     }
