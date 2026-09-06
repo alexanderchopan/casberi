@@ -21,114 +21,95 @@ struct HuggingFaceScreen: View {
     @State private var lastResult: BridgeProof?
     @FocusState private var fieldFocused: Bool
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+    /// This week's rows per watched author, for the roster's subline and its
+    /// active/quiet split.
+    @State private var weekly: [String: (week: Int, new: Bool)] = [:]
+
     var body: some View {
-        BridgeSetupPage(name: "Hugging Face") {
-            BridgeSetupHeader(
-                name: "Hugging Face",
-                mode: .noAccount,
-                intro: "New models, datasets and Spaces from the people you follow. Downloads and likes are counts, not news.",
-                connected: hf.connected)
-            // The door leads the connected page, never trails it — see
-            // `RoomDoor`. Below a watchlist that grows with every author
-            // you add, the one control saying "your things are through here"
-            // is the one you have to scroll to find.
-            if hf.connected {
-                RoomDoor(name: "Hugging Face", source: "Hugging Face")
-                    .listRowSeparator(.hidden)
-            }
-            addSection.listRowSeparator(.hidden)
-            papersSection.listRowSeparator(.hidden)
-            if !hf.authors.isEmpty {
-                watchlistSection
-            }
-            if hf.connected {
-                BridgeDisconnectSection(
-                    bridgeID: "huggingface", name: "Hugging Face",
-                    teardown: { HuggingFaceStore.shared.disconnect() }
-                ).listRowSeparator(.hidden)
-            }
-        }
+        AccountPage(
+            name: "Hugging Face", seatID: "huggingface", source: "Hugging Face",
+            state: AccountPageState.of(name: "Hugging Face", seatID: "huggingface",
+                                       connected: hf.connected, store: store),
+            intro: "New models, datasets and Spaces from the people you follow. Downloads and likes are counts, not news.",
+            mode: .noAccount,
+            rows: rows,
+            query: authorField,
+            onRemoveRow: unwatch,
+            teardown: { HuggingFaceStore.shared.disconnect() },
+            sheet: $sheet,
+            act: { addBlock },
+            more: { papersBlock },
+            keySheet: { EmptyView() }
+        )
         .onAppear {
-            // Opening the screen doesn't connect — watching an author or
+            countWeek()
+            // Opening the page doesn't connect — watching an author or
             // switching papers on does. Viewing is not consent.
             if hf.connected { Task { await sync() } }
         }
+        .onChange(of: hf.authors) { _, _ in countWeek() }
     }
+
+    // MARK: - The roster
+
+    /// One row per watched author. The square-marked "Watching N" list with
+    /// its own Remove is the chassis's now — the subline says what the author
+    /// published this week rather than repeating the URL the name already is.
+    private var rows: [AccountPageShape.Row] {
+        hf.authors.map { author in
+            let counted = weekly[author.lowercased()] ?? (week: 0, new: false)
+            return AccountPageShape.Row(
+                id: author, title: author,
+                subline: AccountPageShape.subline(nouns: String(localized: "models, datasets, Spaces"),
+                                                  weekCount: counted.week),
+                weekCount: counted.week, hasNew: counted.new,
+                isYou: false, avatarURL: nil)
+        }
+    }
+
+    /// This week's rows per author — `HuggingFaceIngest` stamps the owner as
+    /// the thing's `authorHandle`.
+    private func countWeek() {
+        weekly = AccountWeek.counts(source: "Hugging Face", seatID: "huggingface",
+                                    context: modelContext) { $0.authorHandle }
+    }
+
 
     // MARK: - Sections
 
-    private var addSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabField(placeholder: String(localized: "Org or username"),
-                            text: $authorField, actionLabel: String(localized: "Watch"),
-                            focus: $fieldFocused, action: watch)
-                BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: String(localized: "Reading the hub…"),
-                                     proof: lastResult)
-                // Names the accepted shapes, because pasting a model page is
-                // how most people will arrive (`normalize` takes the owner).
-                DSSlabNote(text: "A name like meta-llama, or any Hugging Face link.")
-            }
+    @ViewBuilder private var addBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            DSSlabField(placeholder: hf.connected
+                            ? AccountPageShape.findPlaceholder(String(localized: "an org or person"))
+                            : String(localized: "Org or username"),
+                        text: $authorField, actionLabel: String(localized: "Watch"),
+                        focus: $fieldFocused, action: watch)
+            BridgeSyncStatusRows(syncing: syncing,
+                                 syncingLine: String(localized: "Reading the hub…"),
+                                 proof: lastResult)
+            // Names the accepted shapes, because pasting a model page is
+            // how most people will arrive (`normalize` takes the owner).
+            DSSlabNote(text: "A name like meta-llama, or any Hugging Face link.", plain: true)
         }
-        .dsSlabSection()
     }
 
     /// Daily Papers is its own switch, not a watched author — it follows
     /// Hugging Face's curation rather than anyone's output, and we NAME whose
     /// ranking it is (the GeckoTerminal honesty rule).
-    private var papersSection: some View {
-        Section {
-            VStack(spacing: DS.Space.s2) {
-                DSSlabSwitch(title: String(localized: "Daily Papers"), isOn: Binding(
-                    get: { hf.dailyPapers },
-                    // Guard on the committed value: a same-value commit must
-                    // not invert the switch behind it.
-                    set: { on in
-                        guard on != hf.dailyPapers else { return }
-                        togglePapers(on)
-                    }
-                ))
-                DSSlabNote(text: "Hugging Face's own daily pick — each lands with its abstract.")
-            }
-        }
-        .dsSlabSection()
-    }
-
-    private var watchlistSection: some View {
-        Section {
-            ForEach(hf.authors, id: \.self) { author in
-                HStack(spacing: DS.Space.s3) {
-                    // Square, not round — an org publishing models is a topic,
-                    // not a person (the mark grammar ruling, prd §184).
-                    BridgeIcon(name: "Hugging Face", size: DS.Mark.list, circular: false)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(author)
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        Text("huggingface.co/\(author)")
-                            .dsText(.label12).foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: 0)
+    @ViewBuilder private var papersBlock: some View {
+        VStack(spacing: DS.Space.s2) {
+            DSSlabSwitch(title: String(localized: "Daily Papers"), isOn: Binding(
+                get: { hf.dailyPapers },
+                // Guard on the committed value: a same-value commit must
+                // not invert the switch behind it.
+                set: { on in
+                    guard on != hf.dailyPapers else { return }
+                    togglePapers(on)
                 }
-                .dsListCardRow()
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) { unwatch(author) } label: {
-                        Label("Remove", systemImage: "trash")
-                    }
-                }
-                // A swipe has no Mac-mouse equivalent — right-click mirrors it
-                // (Mac polish, 2026-07-28).
-                .contextMenu {
-                    Button(role: .destructive) { unwatch(author) } label: {
-                        Label("Remove", systemImage: "trash")
-                    }
-                }
-            }
-        } header: {
-            Text(hf.authors.count == 1 ? "Watching" : "Watching \(hf.authors.count)")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
+            ))
+            DSSlabNote(text: "Hugging Face's own daily pick — each lands with its abstract.", plain: true)
         }
     }
 
@@ -146,6 +127,7 @@ struct HuggingFaceScreen: View {
         authorField = ""
         fieldFocused = false
         DSHaptic.tap()
+        countWeek()
         Task { await sync() }
     }
 

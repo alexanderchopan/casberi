@@ -652,6 +652,51 @@ struct AccountRosterRow: View {
     }
 }
 
+// MARK: - The roster's week
+
+/// This week's rows per watched thing, and whether any of them arrived since
+/// the page was last looked at (prd §639).
+///
+/// Every seat with a roster wants the same two numbers and was writing the
+/// same fetch to get them — group the source's last seven days by whatever
+/// field the bridge stamps the watched identity into, and compare each row's
+/// clock to `AccountVisits`. Written eight times it drifts eight ways; here it
+/// is one function with the traps already paid for:
+///
+/// * a `#Predicate` never touches an array-typed attribute (`tags.contains`
+///   compiles and then crashes inside CoreData mid-fetch — CLAUDE.md's own
+///   rule), so `key` runs in Swift, after the fetch;
+/// * the fetch is BOUNDED, because a source with a year of rows is a scroll
+///   away from any account page;
+/// * `.filter(\.isLive)` at the boundary, since this hands values onward and
+///   a foreground heal deletes rows while the page is open (corollary 4).
+///
+/// Call it from `onAppear` or a `.task`, never from a body or a computed
+/// property a body reads (prd §628).
+@MainActor
+enum AccountWeek {
+    static func counts(source: String, seatID: String, context: ModelContext,
+                       limit: Int = 2000,
+                       key: (Thing) -> String?) -> [String: (week: Int, new: Bool)] {
+        let since = Date.now.addingTimeInterval(-7 * 86_400)
+        var descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == source && $0.capturedAt >= since })
+        descriptor.fetchLimit = limit
+        let things = ((try? context.fetch(descriptor)) ?? []).filter(\.isLive)
+        let lastLooked = AccountVisits.lastLooked(seatID)
+        var book: [String: (week: Int, new: Bool)] = [:]
+        for thing in things {
+            guard let raw = key(thing) else { continue }
+            let id = raw.lowercased()
+            guard !id.isEmpty else { continue }
+            let was = book[id] ?? (0, false)
+            book[id] = (was.week + 1,
+                        was.new || (lastLooked.map { thing.capturedAt > $0 } ?? false))
+        }
+        return book
+    }
+}
+
 // MARK: - The reach lookup
 
 /// What a seat reaches, read out of the ONE registry (`NetworkReach`) — the

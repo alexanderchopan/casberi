@@ -30,36 +30,68 @@ struct RadicleScreen: View {
     @State private var lastResult: BridgeProof?
     @FocusState private var fieldFocused: Bool
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+    /// This week's rows per watched repo.
+    @State private var weekly: [String: (week: Int, new: Bool)] = [:]
+
     var body: some View {
-        BridgeSetupPage(name: "Radicle") {
-            BridgeSetupHeader(
-                name: "Radicle",
-                mode: .noAccount,
-                intro: "Patches and issues as they happen. No central host: the seed you pick answers, and sees what you ask for.",
-                connected: radicle.connected)
-            if radicle.connected {
-                RoomDoor(name: "Radicle", source: "Radicle")
-                    .listRowSeparator(.hidden)
-            }
-            addSection.listRowSeparator(.hidden)
-            if !found.isEmpty { resultsSection }
-            seedSection.listRowSeparator(.hidden)
-            if !radicle.repos.isEmpty { watchlistSection }
-            if radicle.connected {
-                BridgeDisconnectSection(
-                    bridgeID: "radicle", name: "Radicle",
-                    teardown: { RadicleStore.shared.disconnect() }
-                ).listRowSeparator(.hidden)
-            }
-        }
+        AccountPage(
+            name: "Radicle", seatID: "radicle", source: "Radicle",
+            state: AccountPageState.of(name: "Radicle", seatID: "radicle",
+                                       connected: radicle.connected, store: store),
+            intro: "Patches and issues as they happen. No central host: the seed you pick answers, and sees what you ask for.",
+            mode: .noAccount,
+            rows: rows,
+            query: repoField,
+            onRemoveRow: unwatch,
+            teardown: { RadicleStore.shared.disconnect() },
+            sheet: $sheet,
+            act: {
+                addBlock
+                if !found.isEmpty { resultsBlock }
+            },
+            more: { seedBlock },
+            keySheet: { EmptyView() }
+        )
         .onAppear {
             seedField = radicle.seed
-            // Opening the screen doesn't connect — watching a repo does.
+            countWeek()
+            // Opening the page doesn't connect — watching a repo does.
             if radicle.connected { Task { await sync() } }
+        }
+        .onChange(of: radicle.repos) { _, _ in countWeek() }
+    }
+
+    // MARK: - The roster
+
+    /// One row per watched repo — its name where the seed gave one, its id
+    /// otherwise, and what landed from it this week.
+    private var rows: [AccountPageShape.Row] {
+        radicle.repos.map { rid in
+            let counted = weekly[rid.lowercased()] ?? (week: 0, new: false)
+            return AccountPageShape.Row(
+                id: rid, title: radicle.name(for: rid) ?? rid,
+                subline: AccountPageShape.subline(nouns: String(localized: "patches, issues"),
+                                                  weekCount: counted.week),
+                weekCount: counted.week, hasNew: counted.new,
+                isYou: false, avatarURL: nil)
         }
     }
 
-    // MARK: - Sections
+    /// This week's rows per repo. Nothing stamps the repo id in a field of
+    /// its own — every ref carries it as a component — so a row is matched
+    /// back to the repo it belongs to the same way `unwatch` prunes: on the
+    /// ref, which is exact where a display name two repos can share is not.
+    private func countWeek() {
+        let watched = radicle.repos
+        weekly = AccountWeek.counts(source: "Radicle", seatID: "radicle",
+                                    context: modelContext) { thing in
+            guard let ref = thing.sourceRef else { return nil }
+            return watched.first { ref.contains(":\($0):") }
+        }
+    }
+
 
     /// One field, two verbs. WATCH takes an id straight; FIND asks the seed to
     /// turn a name into one.
@@ -70,89 +102,55 @@ struct RadicleScreen: View {
     /// frozen for six seconds a keystroke. It also cannot be the only door: a
     /// seed serves only what it seeds, so a repo it doesn't hold is unfindable
     /// by name and reachable by id.
-    private var addSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabField(placeholder: String(localized: "Repo id, or a name to find"),
-                            text: $repoField,
-                            actionLabel: String(localized: "Watch"),
-                            focus: $fieldFocused,
-                            isArmed: RadicleWire.normalizeRID(repoField) != nil,
-                            secondaryLabel: String(localized: "Find"),
-                            secondaryArmed: !repoField.trimmingCharacters(in: .whitespaces).isEmpty
-                                && RadicleWire.normalizeRID(repoField) == nil,
-                            secondaryAction: find,
-                            action: watch)
-                BridgeSyncStatusRows(syncing: syncing || searching,
-                                     syncingLine: searching
-                                        ? String(localized: "Asking the seed…")
-                                        : String(localized: "Reading the seed…"),
-                                     proof: lastResult)
-                DSSlabNote(text: "An id like rad:z3gqcJ…, or any Radicle link.")
-            }
+    @ViewBuilder private var addBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            DSSlabField(placeholder: String(localized: "Repo id, or a name to find"),
+                        text: $repoField,
+                        actionLabel: String(localized: "Watch"),
+                        focus: $fieldFocused,
+                        isArmed: RadicleWire.normalizeRID(repoField) != nil,
+                        secondaryLabel: String(localized: "Find"),
+                        secondaryArmed: !repoField.trimmingCharacters(in: .whitespaces).isEmpty
+                            && RadicleWire.normalizeRID(repoField) == nil,
+                        secondaryAction: find,
+                        action: watch)
+            BridgeSyncStatusRows(syncing: syncing || searching,
+                                 syncingLine: searching
+                                    ? String(localized: "Asking the seed…")
+                                    : String(localized: "Reading the seed…"),
+                                 proof: lastResult)
+            DSSlabNote(text: "An id like rad:z3gqcJ…, or any Radicle link.", plain: true)
         }
-        .dsSlabSection()
     }
 
     /// What FIND came back with. Named repos with their delegates, so picking
     /// one is a decision about a real project rather than a hash.
-    private var resultsSection: some View {
-        Section {
-            ForEach(found, id: \.rid) { repo in
-                Button { watch(repo.rid) } label: {
-                    repoRow(rid: repo.rid, name: repo.name,
-                            detail: repo.description
-                                ?? repo.delegates.map(\.display).joined(separator: ", "))
-                }
-                .buttonStyle(.plain)
-                .dsListCardRow()
+    @ViewBuilder private var resultsBlock: some View {
+        Text(AccountPageShape.onLabel("Radicle"))
+            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            .padding(.top, DS.Space.s2)
+        ForEach(found, id: \.rid) { repo in
+            Button { watch(repo.rid) } label: {
+                repoRow(rid: repo.rid, name: repo.name,
+                        detail: repo.description
+                            ?? repo.delegates.map(\.display).joined(separator: ", "))
+                    .contentShape(Rectangle())
             }
-        } header: {
-            Text(found.count == 1 ? "1 result" : "\(found.count) results")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
+            .buttonStyle(.plain)
         }
     }
 
     /// The seed. Editable, defaulted, and never silently changed.
-    private var seedSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabField(placeholder: String(localized: "Seed host"),
-                            text: $seedField,
-                            actionLabel: String(localized: "Use"),
-                            keyboard: .URL,
-                            isArmed: RadicleWire.normalizeSeed(seedField) != nil
-                                && RadicleWire.normalizeSeed(seedField) != radicle.seed,
-                            action: useSeed)
-                DSSlabNote(text: "A seed answers only for the repos it seeds.")
-            }
-        }
-        .dsSlabSection()
-    }
-
-    private var watchlistSection: some View {
-        Section {
-            ForEach(radicle.repos, id: \.self) { rid in
-                repoRow(rid: rid,
-                        name: radicle.name(for: rid) ?? rid,
-                        detail: radicle.name(for: rid) == nil ? "" : rid)
-                    .dsListCardRow()
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) { unwatch(rid) } label: {
-                            Label("Remove", systemImage: "trash")
-                        }
-                    }
-                    // A swipe has no Mac-mouse equivalent — right-click mirrors
-                    // it (Mac polish, 2026-07-28).
-                    .contextMenu {
-                        Button(role: .destructive) { unwatch(rid) } label: {
-                            Label("Remove", systemImage: "trash")
-                        }
-                    }
-            }
-        } header: {
-            Text(radicle.repos.count == 1 ? "Watching" : "Watching \(radicle.repos.count)")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
+    @ViewBuilder private var seedBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            DSSlabField(placeholder: String(localized: "Seed host"),
+                        text: $seedField,
+                        actionLabel: String(localized: "Use"),
+                        keyboard: .URL,
+                        isArmed: RadicleWire.normalizeSeed(seedField) != nil
+                            && RadicleWire.normalizeSeed(seedField) != radicle.seed,
+                        action: useSeed)
+            DSSlabNote(text: "A seed answers only for the repos it seeds.", plain: true)
         }
     }
 
@@ -207,6 +205,7 @@ struct RadicleScreen: View {
         }
         lastResult = .says(String(localized: "Stopped watching \(name)."))
         DSHaptic.tap()
+        countWeek()
         Task { await sync() }
     }
 

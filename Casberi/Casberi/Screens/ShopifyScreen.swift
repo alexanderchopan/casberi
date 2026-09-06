@@ -76,23 +76,11 @@ struct ShopifyScreen: View {
         countWeek()
     }
 
-    /// This week's products per store. A `fetch` in `onAppear`, never in a
-    /// body or a computed property a body reads (prd §628).
+    /// This week's products per store, keyed on the shop's display name —
+    /// what `ShopifyIngest` stamps as a product's `authorHandle`.
     private func countWeek() {
-        let since = Date.now.addingTimeInterval(-7 * 86_400)
-        var descriptor = FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.source == "Shopify" && $0.capturedAt >= since })
-        descriptor.fetchLimit = 2000
-        let things = ((try? modelContext.fetch(descriptor)) ?? []).filter(\.isLive)
-        let lastLooked = AccountVisits.lastLooked("shopify")
-        var book: [String: (week: Int, new: Bool)] = [:]
-        for thing in things {
-            guard let handle = thing.authorHandle?.lowercased(), !handle.isEmpty else { continue }
-            let was = book[handle] ?? (0, false)
-            book[handle] = (was.week + 1,
-                            was.new || (lastLooked.map { thing.capturedAt > $0 } ?? false))
-        }
-        weekly = book
+        weekly = AccountWeek.counts(source: "Shopify", seatID: "shopify",
+                                    context: modelContext) { $0.authorHandle }
     }
 
 
