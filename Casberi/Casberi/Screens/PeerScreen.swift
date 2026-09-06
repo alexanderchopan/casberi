@@ -10,6 +10,13 @@ import SwiftData
 /// by design and by ruling: nothing here ever starts a trade, and Peer's
 /// zero-knowledge design keeps the Venmo/PayPal side private — the chain
 /// (and so this screen) never sees it.
+///
+/// **ON `AccountPage` SINCE §639 (2026-09-06).** It was a connect screen —
+/// header, room door, one slab — and stayed one after connecting, which is
+/// the complaint that opened §639: *"these others that are already connected
+/// still look like connect pages."* The page now opens on the mark, the name
+/// and what the seat is doing; the wallet door is the act slot, because
+/// watching another wallet is the only thing there is to add here.
 struct PeerScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
@@ -22,64 +29,65 @@ struct PeerScreen: View {
     private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
     private var walletCount: Int { WalletStore.shared.addresses.count }
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+
     var body: some View {
-        BridgeSetupPage(name: "Peer") {
-            BridgeSetupHeader(
-                name: "Peer",
-                mode: .watchedWallets,
-                intro: "Venmo and Cash App buys on a wallet you watch. The Venmo side never touches the chain, so it's never seen.",
-                connected: hasWallets)
-            if hasWallets {
-                RoomDoor(name: "Peer", source: "Peer")
-                    .listRowSeparator(.hidden)
-            }
-            connectSection.listRowSeparator(.hidden)
-        }
+        AccountPage(
+            name: "Peer", seatID: "peer", source: "Peer",
+            state: AccountPageState.of(name: "Peer", seatID: "peer",
+                                       connected: hasWallets, store: store),
+            intro: "Venmo and Cash App buys on a wallet you watch. The Venmo side never touches the chain, so it's never seen.",
+            // NOTHING TO TEAR DOWN, and that is the seat (prd §207). This
+            // bridge holds no store of its own — it reads whatever wallets are
+            // watched — so a disconnect drops the seat and leaves the wallets
+            // alone, which is what somebody disconnecting THIS and not their
+            // wallet means.
+            teardown: {},
+            sheet: $sheet,
+            act: { actBlock },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
         .onAppear {
-            // Watching is consent (prd §207): keep the catalog seat honest the
-            // moment this screen appears, and refresh fills if a wallet's watched.
+            // Watching is consent (prd §207): keep the catalog seat honest on
+            // appear, and refresh if a wallet's watched.
             store.reconcileWalletSeats()
             if hasWallets { Task { await sync() } }
         }
     }
 
-    // MARK: - Connect (automatic — no switch, prd §207)
+    // MARK: - The act (automatic — no switch, prd §207)
 
-    /// No toggle: Peer settles into your own wallet, so watching a wallet IS
-    /// the consent to read its fills. With wallets watched, the row states the
-    /// fact and doors to the wallet manager (where you add or remove them);
-    /// with none, it's the invitation to watch one — the add-a-wallet entry
-    /// this catalog tile exists to be.
-    private var connectSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if hasWallets {
-                    DSSlabDoor(title: String(localized: "Watching \(walletCount) wallet"),
-                               detail: String(localized: "Manage"),
-                               systemImage: "eye") {
-                        route.pushBridge(.wallet)
-                    }
-                } else {
-                    DSSlabDoor(title: "Watch a wallet", systemImage: "eye") {
-                        route.pushBridge(.wallet)
-                    }
-                }
-                // `syncing`/`lastResult` were computed and thrown away — this
-                // was the only screen in the family with a sync path and no
-                // status row, so both "3 new" and "Couldn't reach Base" were
-                // discarded silently (audit, 2026-07-31). Its three structural
-                // twins (Safe, 0xBow, Exchange) all have one.
-                BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: String(localized: "Reading your fills…"),
-                                     proof: lastResult)
-                DSSlabNote(text: hasWallets
-                    ? "On automatically. Read-only, never trades."
-                    : "Watching a wallet is all it takes.")
+    /// No toggle: this settles into your own wallet, so watching a wallet IS
+    /// the consent to read it. The act slot carries the one thing you can add
+    /// here — another wallet — and it is the wallet manager's own door rather
+    /// than a second list, because a seat that reads whatever is watched must
+    /// never grow a watch list of its own to disagree with (prd §207).
+    ///
+    /// **NO ROSTER, deliberately.** The chassis's "Watching · N" is for rows
+    /// this seat owns; these are the WALLET seat's, and drawing them here
+    /// would put the same list on two pages with one Remove between them.
+    @ViewBuilder private var actBlock: some View {
+        if hasWallets {
+            DSSlabDoor(title: String(localized: "Watching \(walletCount) wallet"),
+                       detail: String(localized: "Manage"),
+                       systemImage: "eye") {
+                route.pushBridge(.wallet)
+            }
+        } else {
+            DSSlabDoor(title: "Watch a wallet", systemImage: "eye") {
+                route.pushBridge(.wallet)
             }
         }
-        .dsSlabSection()
+        BridgeSyncStatusRows(syncing: syncing,
+                             syncingLine: String(localized: "Reading your fills…"),
+                             proof: lastResult)
+        DSSlabNote(text: hasWallets
+            ? String(localized: "On automatically. Read-only, never trades.")
+            : String(localized: "Watching a wallet is all it takes."),
+            plain: true)
     }
-
 
     // MARK: - Actions
 

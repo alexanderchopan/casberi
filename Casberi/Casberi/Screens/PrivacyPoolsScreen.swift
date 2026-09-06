@@ -10,6 +10,13 @@ import SwiftData
 /// too — the flip people otherwise poll a website for. Read-only by design
 /// and by ruling: nothing here deposits, withdraws, proves, or signs, and
 /// the withdrawal side is unlinkable by design, so Casberi never sees it.
+///
+/// **ON `AccountPage` SINCE §639 (2026-09-06).** It was a connect screen —
+/// header, room door, one slab — and stayed one after connecting, which is
+/// the complaint that opened §639: *"these others that are already connected
+/// still look like connect pages."* The page now opens on the mark, the name
+/// and what the seat is doing; the wallet door is the act slot, because
+/// watching another wallet is the only thing there is to add here.
 struct PrivacyPoolsScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
@@ -25,72 +32,65 @@ struct PrivacyPoolsScreen: View {
     private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
     private var walletCount: Int { WalletStore.shared.addresses.count }
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+
     var body: some View {
-        BridgeSetupPage(name: "0xBow Privacy Pools") {
-            BridgeSetupHeader(
-                name: "0xBow Privacy Pools",
-                mode: .watchedWallets,
-                intro: "Withdrawals are unlinkable by design, so only the deposit side ever appears.",
-                connected: hasWallets)
-            if hasWallets {
-                // "…and their screening status" left the verb (duplication
-                // audit, 2026-07-31): the slab note below already promises the
-                // screening flip, and the header's tagline says it a third
-                // time. This note's job is WHERE, not what.
-                //
-                // `source:` is "Privacy Pools", NOT the offer name beside it —
-                // the catalog brands this seat more fully than the bridge
-                // stamps it, and the offer name lands on a room that does not
-                // exist. See `RoomDoor`.
-                RoomDoor(name: "0xBow Privacy Pools", source: "Privacy Pools")
-                    .listRowSeparator(.hidden)
-            }
-            connectSection.listRowSeparator(.hidden)
-        }
+        AccountPage(
+            name: "0xBow Privacy Pools", seatID: "privacypools", source: "Privacy Pools",
+            state: AccountPageState.of(name: "0xBow Privacy Pools", seatID: "privacypools",
+                                       connected: hasWallets, store: store),
+            intro: "Withdrawals are unlinkable by design, so only the deposit side ever appears.",
+            // NOTHING TO TEAR DOWN, and that is the seat (prd §207). This
+            // bridge holds no store of its own — it reads whatever wallets are
+            // watched — so a disconnect drops the seat and leaves the wallets
+            // alone, which is what somebody disconnecting THIS and not their
+            // wallet means.
+            teardown: {},
+            sheet: $sheet,
+            act: { actBlock },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
         .onAppear {
             // Watching is consent (prd §207): keep the catalog seat honest on
-            // appear, and refresh deposits if a wallet's watched.
+            // appear, and refresh if a wallet's watched.
             store.reconcileWalletSeats()
             if hasWallets { Task { await sync() } }
         }
     }
 
-    // MARK: - Connect (automatic — no switch, prd §207)
+    // MARK: - The act (automatic — no switch, prd §207)
 
-    /// No toggle: deposits come from your own wallet, so watching a wallet IS
-    /// the consent to read them and poll their screening status. With wallets
-    /// watched, the row states the fact and doors to the wallet manager; with
-    /// none, it's the invitation to watch one.
-    private var connectSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if hasWallets {
-                    DSSlabDoor(title: String(localized: "Watching \(walletCount) wallet"),
-                               detail: String(localized: "Manage"),
-                               systemImage: "eye") {
-                        route.pushBridge(.wallet)
-                    }
-                } else {
-                    DSSlabDoor(title: "Watch a wallet", systemImage: "eye") {
-                        route.pushBridge(.wallet)
-                    }
-                }
-                BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: String(localized: "Reading your deposits…"),
-                                     proof: lastResult)
-                // The bare "Read-only." left this note (duplication audit,
-                // 2026-07-31). It was in one branch only, while the footer's
-                // lede states the same promise in full — what it never
-                // deposits, withdraws or moves — in BOTH states. The fuller,
-                // always-visible one is the one that survives.
-                DSSlabNote(text: hasWallets
-                    ? String(localized: "On automatically — tells you the moment screening clears a deposit.")
-                    : String(localized: "Deposits are read off the wallets you watch."))
+    /// No toggle: this settles into your own wallet, so watching a wallet IS
+    /// the consent to read it. The act slot carries the one thing you can add
+    /// here — another wallet — and it is the wallet manager's own door rather
+    /// than a second list, because a seat that reads whatever is watched must
+    /// never grow a watch list of its own to disagree with (prd §207).
+    ///
+    /// **NO ROSTER, deliberately.** The chassis's "Watching · N" is for rows
+    /// this seat owns; these are the WALLET seat's, and drawing them here
+    /// would put the same list on two pages with one Remove between them.
+    @ViewBuilder private var actBlock: some View {
+        if hasWallets {
+            DSSlabDoor(title: String(localized: "Watching \(walletCount) wallet"),
+                       detail: String(localized: "Manage"),
+                       systemImage: "eye") {
+                route.pushBridge(.wallet)
+            }
+        } else {
+            DSSlabDoor(title: "Watch a wallet", systemImage: "eye") {
+                route.pushBridge(.wallet)
             }
         }
-        .dsSlabSection()
+        BridgeSyncStatusRows(syncing: syncing,
+                             syncingLine: String(localized: "Reading your deposits…"),
+                             proof: lastResult)
+        DSSlabNote(text: hasWallets
+            ? String(localized: "On automatically — tells you the moment screening clears a deposit.")
+            : String(localized: "Deposits are read off the wallets you watch."),
+            plain: true)
     }
-
 
     // MARK: - Actions
 

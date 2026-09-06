@@ -11,6 +11,13 @@ import SwiftData
 /// the pool is read, an unshield never names its sender, and native ETH isn't
 /// attributable. Every one of those is the product working rather than a gap,
 /// and the footer says so in those words.
+///
+/// **ON `AccountPage` SINCE §639 (2026-09-06).** It was a connect screen —
+/// header, room door, one slab — and stayed one after connecting, which is
+/// the complaint that opened §639: *"these others that are already connected
+/// still look like connect pages."* The page now opens on the mark, the name
+/// and what the seat is doing; the wallet door is the act slot, because
+/// watching another wallet is the only thing there is to add here.
 struct RailgunScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
@@ -25,19 +32,26 @@ struct RailgunScreen: View {
     private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
     private var walletCount: Int { WalletStore.shared.addresses.count }
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+
     var body: some View {
-        BridgeSetupPage(name: "Railgun") {
-            BridgeSetupHeader(
-                name: "Railgun",
-                mode: .watchedWallets,
-                intro: "Shields and unshields on a wallet you watch. What happens inside the pool is never read — that's the point of Railgun.",
-                connected: hasWallets)
-            if hasWallets {
-                RoomDoor(name: "Railgun", source: "Railgun")
-                    .listRowSeparator(.hidden)
-            }
-            connectSection.listRowSeparator(.hidden)
-        }
+        AccountPage(
+            name: "Railgun", seatID: "railgun", source: "Railgun",
+            state: AccountPageState.of(name: "Railgun", seatID: "railgun",
+                                       connected: hasWallets, store: store),
+            intro: "Shields and unshields on a wallet you watch. What happens inside the pool is never read — that's the point of Railgun.",
+            // NOTHING TO TEAR DOWN, and that is the seat (prd §207). This
+            // bridge holds no store of its own — it reads whatever wallets are
+            // watched — so a disconnect drops the seat and leaves the wallets
+            // alone, which is what somebody disconnecting THIS and not their
+            // wallet means.
+            teardown: {},
+            sheet: $sheet,
+            act: { actBlock },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
         .onAppear {
             // Watching is consent (prd §207): keep the catalog seat honest on
             // appear, and refresh if a wallet's watched.
@@ -46,36 +60,37 @@ struct RailgunScreen: View {
         }
     }
 
-    // MARK: - Connect (automatic — no switch, prd §207)
+    // MARK: - The act (automatic — no switch, prd §207)
 
-    /// No toggle: shields come from your own wallet, so watching a wallet IS
-    /// the consent to read them. With wallets watched, the row states the fact
-    /// and doors to the wallet manager; with none, it's the invitation.
-    private var connectSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if hasWallets {
-                    DSSlabDoor(title: String(localized: "Watching \(walletCount) wallet"),
-                               detail: String(localized: "Manage"),
-                               systemImage: "eye") {
-                        route.pushBridge(.wallet)
-                    }
-                } else {
-                    DSSlabDoor(title: "Watch a wallet", systemImage: "eye") {
-                        route.pushBridge(.wallet)
-                    }
-                }
-                BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: String(localized: "Reading the pool's doors…"),
-                                     proof: lastResult)
-                DSSlabNote(text: hasWallets
-                    ? String(localized: "On automatically — both doors land as they happen.")
-                    : String(localized: "Read off the wallets you watch."))
+    /// No toggle: this settles into your own wallet, so watching a wallet IS
+    /// the consent to read it. The act slot carries the one thing you can add
+    /// here — another wallet — and it is the wallet manager's own door rather
+    /// than a second list, because a seat that reads whatever is watched must
+    /// never grow a watch list of its own to disagree with (prd §207).
+    ///
+    /// **NO ROSTER, deliberately.** The chassis's "Watching · N" is for rows
+    /// this seat owns; these are the WALLET seat's, and drawing them here
+    /// would put the same list on two pages with one Remove between them.
+    @ViewBuilder private var actBlock: some View {
+        if hasWallets {
+            DSSlabDoor(title: String(localized: "Watching \(walletCount) wallet"),
+                       detail: String(localized: "Manage"),
+                       systemImage: "eye") {
+                route.pushBridge(.wallet)
+            }
+        } else {
+            DSSlabDoor(title: "Watch a wallet", systemImage: "eye") {
+                route.pushBridge(.wallet)
             }
         }
-        .dsSlabSection()
+        BridgeSyncStatusRows(syncing: syncing,
+                             syncingLine: String(localized: "Reading the pool's doors…"),
+                             proof: lastResult)
+        DSSlabNote(text: hasWallets
+            ? String(localized: "On automatically — both doors land as they happen.")
+            : String(localized: "Read off the wallets you watch."),
+            plain: true)
     }
-
 
     // MARK: - Actions
 
