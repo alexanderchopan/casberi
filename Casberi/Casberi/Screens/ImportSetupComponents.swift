@@ -254,6 +254,12 @@ struct ImportUpkeepSection: View {
     /// Hands back how many really went, so the screen can put it in its own
     /// status line rather than this component growing one.
     let onRemoved: (Int) -> Void
+    /// PLAIN on the account page (prd §639), the way `BridgeDisconnectSection`
+    /// is: the same verb and the same dialog, left-aligned on the page's own
+    /// ground rather than centred in a card, and the footer as an ordinary
+    /// tertiary line rather than a `Section` footer the plain list draws at a
+    /// different margin from everything above it.
+    var plain = false
 
     @Environment(\.modelContext) private var modelContext
     @State private var removing = false
@@ -261,36 +267,52 @@ struct ImportUpkeepSection: View {
 
     var body: some View {
         if held > 0 || staleness != nil {
-            Section {
-                if held > 0 {
-                    Button(role: .destructive) { confirm = true } label: {
-                        HStack(spacing: DS.Space.s2) {
-                            if removing { ProgressView().controlSize(.small) }
-                            Text(removing
-                                 ? String(localized: "Removing…")
-                                 : String(localized: "Remove all \(held) imported things"))
-                                .dsText(.body17)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .center)
-                    }
-                    .disabled(removing)
-                    .dsListCardRow()
-                    .confirmationDialog("Remove all \(held) things from \(source)?",
-                                        isPresented: $confirm, titleVisibility: .visible) {
-                        Button("Remove \(held) things", role: .destructive) {
-                            Task { await run() }
-                        }
-                        Button("Keep them", role: .cancel) { }
-                    } message: {
-                        Text("They came from an export, so importing again brings them back.")
-                    }
-                }
-            } footer: {
-                // The staleness line leads when there is one — it is the fact
-                // worth reading — and the removal's own promise follows it.
+            if plain {
+                if held > 0 { removeLine }
                 Text(footerText)
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, DS.Space.s2)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            } else {
+                Section {
+                    if held > 0 { removeLine.dsListCardRow() }
+                } footer: {
+                    // The staleness line leads when there is one — it is the
+                    // fact worth reading — and the removal's own promise
+                    // follows it.
+                    Text(footerText)
+                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                }
             }
+        }
+    }
+
+    private var removeLine: some View {
+        Button(role: .destructive) { confirm = true } label: {
+            HStack(spacing: DS.Space.s2) {
+                if removing { ProgressView().controlSize(.small) }
+                Text(removing
+                     ? String(localized: "Removing…")
+                     : String(localized: "Remove all \(held) imported things"))
+                    .dsText(.body17)
+            }
+            .frame(maxWidth: .infinity, alignment: plain ? .leading : .center)
+            .frame(minHeight: plain ? 56 : nil)
+            .contentShape(Rectangle())
+        }
+        .disabled(removing)
+        .modifier(UpkeepGround(plain: plain))
+        .confirmationDialog("Remove all \(held) things from \(source)?",
+                            isPresented: $confirm, titleVisibility: .visible) {
+            Button("Remove \(held) things", role: .destructive) {
+                Task { await run() }
+            }
+            Button("Keep them", role: .cancel) { }
+        } message: {
+            Text("They came from an export, so importing again brings them back.")
         }
     }
 
@@ -309,5 +331,22 @@ struct ImportUpkeepSection: View {
         let gone = await ImportRemoval.removeAll(source: source, context: modelContext)
         DSHaptic.success()
         onRemoved(gone)
+    }
+}
+
+/// The plain ground for the account page's upkeep row — no card, no separator,
+/// the destructive tint the card used to supply.
+private struct UpkeepGround: ViewModifier {
+    let plain: Bool
+    @ViewBuilder func body(content: Content) -> some View {
+        if plain {
+            content
+                .buttonStyle(.plain)
+                .foregroundStyle(DS.destructive)
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+        } else {
+            content
+        }
     }
 }

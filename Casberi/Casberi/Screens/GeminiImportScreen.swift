@@ -2,18 +2,6 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
-/// The imported Gemini prompts already in the corpus — newest first. A @Query
-/// so the list updates live after an import and the fetch runs once per store
-/// change, not twice per body pass.
-private let geminiRecentDescriptor: FetchDescriptor<Thing> = {
-    var d = FetchDescriptor<Thing>(
-        predicate: #Predicate { $0.source == "Gemini" },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-    )
-    d.fetchLimit = 12
-    return d
-}()
-
 /// Gemini, connected — by import, the same grade as ChatGPT and Claude. The
 /// steps to get the export are stated plainly (they happen on Google's side;
 /// there is no live read to offer), then one button picks `MyActivity.json`
@@ -27,33 +15,30 @@ struct GeminiImportScreen: View {
     @State private var result: BridgeProof?
     @State private var staleness: String?
     @State private var held = 0
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
-    @Query(geminiRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        BridgeSetupPage(name: "Gemini") {
-            BridgeSetupHeader(
-                name: "Gemini",
-                mode: .oneTimeImport,
-                connected: held > 0)
-            // The way back to what just landed (§460). Gated on the corpus,
-            // not a connection flag: an import has no live connection, so
-            // "has anything arrived" is the only honest test of whether
-            // there is a room worth opening.
-            if !recent.isEmpty {
-                RoomDoor(name: "Gemini", source: "Gemini")
-                    .listRowSeparator(.hidden)
-            }
-            setupSection
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Imported", things: recent.live)
-                    .listRowSeparator(.hidden)
-            }
-            ImportUpkeepSection(source: "Gemini", held: held, staleness: staleness) { gone in
-                reread()
-                result = .says(String(localized: "\(gone) removed"))
-            }
-        }
+        AccountPage(
+            name: "Gemini", seatID: "gemini", source: "Gemini",
+            // An import has no live connection, so "is anything here" is the
+            // only honest test of whether this seat is connected at all.
+            state: AccountPageState.of(name: "Gemini", seatID: "gemini",
+                                       connected: held > 0, store: store),
+            mode: .oneTimeImport,
+            teardown: {},
+            sheet: $sheet,
+            act: { setupBlock },
+            more: {
+                ImportUpkeepSection(source: "Gemini", held: held,
+                                    staleness: staleness, plain: true) { gone in
+                    reread()
+                    result = .says(String(localized: "\(gone) removed"))
+                }
+            },
+            keySheet: { EmptyView() }
+        )
         .onAppear { reread() }
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.json]) { outcome in
@@ -70,23 +55,20 @@ struct GeminiImportScreen: View {
         held = ImportRemoval.count(source: "Gemini", context: modelContext)
     }
 
-    private var setupSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                ImportArchiveSection(
-                    source: "Gemini",
-                    doorTitle: "Get your export",
-                    doorURL: URL(string: "https://takeout.google.com"),
-                    steps: ["Tap Deselect all, then pick My Activity and set it to Gemini Apps only.",
-                            "Under Multiple formats, choose JSON for activity records, then Export.",
-                            "Google emails a link — unzip it in Files."],
-                    pickTitle: "Choose MyActivity.json",
-                    pickIcon: "square.and.arrow.down",
-                    alreadyImported: held > 0) { importing = true }
-                BridgeSyncStatusRows(proof: result)
-            }
+    @ViewBuilder private var setupBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            ImportArchiveSection(
+                source: "Gemini",
+                doorTitle: "Get your export",
+                doorURL: URL(string: "https://takeout.google.com"),
+                steps: ["Tap Deselect all, then pick My Activity and set it to Gemini Apps only.",
+                        "Under Multiple formats, choose JSON for activity records, then Export.",
+                        "Google emails a link — unzip it in Files."],
+                pickTitle: "Choose MyActivity.json",
+                pickIcon: "square.and.arrow.down",
+                alreadyImported: held > 0) { importing = true }
+            BridgeSyncStatusRows(proof: result)
         }
-        .dsSlabSection()
     }
 
 

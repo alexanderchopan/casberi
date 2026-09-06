@@ -2,18 +2,6 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
-/// The imported Claude chats already in the corpus — newest first. A @Query
-/// so the list updates live after an import and the fetch runs once per store
-/// change, not twice per body pass.
-private let claudeRecentDescriptor: FetchDescriptor<Thing> = {
-    var d = FetchDescriptor<Thing>(
-        predicate: #Predicate { $0.source == "Claude" },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-    )
-    d.fetchLimit = 12
-    return d
-}()
-
 /// Claude, connected — by import (PRD S9's "import" grade). The steps to get
 /// the export are stated plainly (they happen on Anthropic's side; there is no
 /// live read to offer), then one button picks `conversations.json` and the
@@ -26,33 +14,30 @@ struct ClaudeImportScreen: View {
     @State private var result: BridgeProof?
     @State private var staleness: String?
     @State private var held = 0
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
-    @Query(claudeRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        BridgeSetupPage(name: "Claude") {
-            BridgeSetupHeader(
-                name: "Claude",
-                mode: .oneTimeImport,
-                connected: held > 0)
-            // The way back to what just landed (§460). Gated on the corpus,
-            // not a connection flag: an import has no live connection, so
-            // "has anything arrived" is the only honest test of whether
-            // there is a room worth opening.
-            if !recent.isEmpty {
-                RoomDoor(name: "Claude", source: "Claude")
-                    .listRowSeparator(.hidden)
-            }
-            setupSection
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Imported", things: recent.live)
-                    .listRowSeparator(.hidden)
-            }
-            ImportUpkeepSection(source: "Claude", held: held, staleness: staleness) { gone in
-                reread()
-                result = .says(String(localized: "\(gone) removed"))
-            }
-        }
+        AccountPage(
+            name: "Claude", seatID: "claude", source: "Claude",
+            // An import has no live connection, so "is anything here" is the
+            // only honest test of whether this seat is connected at all.
+            state: AccountPageState.of(name: "Claude", seatID: "claude",
+                                       connected: held > 0, store: store),
+            mode: .oneTimeImport,
+            teardown: {},
+            sheet: $sheet,
+            act: { setupBlock },
+            more: {
+                ImportUpkeepSection(source: "Claude", held: held,
+                                    staleness: staleness, plain: true) { gone in
+                    reread()
+                    result = .says(String(localized: "\(gone) removed"))
+                }
+            },
+            keySheet: { EmptyView() }
+        )
         .onAppear { reread() }
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.json]) { outcome in
@@ -69,20 +54,17 @@ struct ClaudeImportScreen: View {
         held = ImportRemoval.count(source: "Claude", context: modelContext)
     }
 
-    private var setupSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                ImportArchiveSection(
-                    source: "Claude",
-                    steps: ["In Claude, open Settings → Privacy → Export data.",
-                            "Anthropic emails a link — unzip it in Files."],
-                    pickTitle: "Choose conversations.json",
-                    pickIcon: "square.and.arrow.down",
-                    alreadyImported: held > 0) { importing = true }
-                BridgeSyncStatusRows(proof: result)
-            }
+    @ViewBuilder private var setupBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            ImportArchiveSection(
+                source: "Claude",
+                steps: ["In Claude, open Settings → Privacy → Export data.",
+                        "Anthropic emails a link — unzip it in Files."],
+                pickTitle: "Choose conversations.json",
+                pickIcon: "square.and.arrow.down",
+                alreadyImported: held > 0) { importing = true }
+            BridgeSyncStatusRows(proof: result)
         }
-        .dsSlabSection()
     }
 
 

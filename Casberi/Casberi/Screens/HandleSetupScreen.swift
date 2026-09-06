@@ -510,6 +510,10 @@ struct HandleSetupScreen: View {
             state: AccountPageState.of(name: bridge.rawValue, seatID: bridge.bridgeID,
                                        connected: bridge.isConnected, store: store),
             intro: bridge.setupIntro,
+            // The §315 mode, back on the page it left with §639 — every seat
+            // here connects on a public name alone, which is the fact that
+            // decides whether somebody starts.
+            mode: .noAccount,
             rows: rows,
             query: query,
             onRemoveRow: removeRow,

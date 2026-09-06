@@ -47,6 +47,14 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// The one sentence a not-connected page says (§315's budget) — the
     /// mode's consequence and the payoff. Drawn only while not connected.
     var intro: String? = nil
+    /// HOW this seat connects — the §315 fact the chip on `BridgeSetupHeader`
+    /// carried, and the one thing the state line cannot say: "Not connected"
+    /// does not tell you whether you are about to paste a key, point at an
+    /// export, or type a name. Drawn only while not connected, because once it
+    /// is connected the answer is in the past and the state line is the news.
+    /// A plain glyph and a word rather than the chip, since the page has no
+    /// chips (the "You" pill is a fact about a person, not furniture).
+    var mode: BridgeSetupMode? = nil
     /// A provider-reported expiry, when one exists. None does today.
     var keyExpires: Date? = nil
     /// Whether a "Your key" row is drawn at all — keyed bridges only.
@@ -162,6 +170,14 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                 Text(meta)
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
                     .multilineTextAlignment(.center)
+            }
+            if !state.connected, let mode {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: mode.glyph).dsGlyph(12)
+                    Text(mode.label).dsText(.label12)
+                }
+                .foregroundStyle(DS.textTertiary)
+                .accessibilityElement(children: .combine)
             }
             if !state.connected, let intro {
                 Text(LocalizedStringKey(intro))

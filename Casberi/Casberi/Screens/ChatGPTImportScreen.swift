@@ -2,18 +2,6 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
-/// The imported ChatGPT chats already in the corpus — newest first. A @Query
-/// so the list updates live after an import and the fetch runs once per store
-/// change, not twice per body pass.
-private let chatgptRecentDescriptor: FetchDescriptor<Thing> = {
-    var d = FetchDescriptor<Thing>(
-        predicate: #Predicate { $0.source == "ChatGPT" },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-    )
-    d.fetchLimit = 12
-    return d
-}()
-
 /// ChatGPT, connected — by import. The steps to get the export are stated
 /// plainly (they happen on OpenAI's side; there is no live read to offer),
 /// then one button picks `conversations.json` and the history lands as chat
@@ -25,33 +13,30 @@ struct ChatGPTImportScreen: View {
     @State private var result: BridgeProof?
     @State private var staleness: String?
     @State private var held = 0
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
-    @Query(chatgptRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        BridgeSetupPage(name: "ChatGPT") {
-            BridgeSetupHeader(
-                name: "ChatGPT",
-                mode: .oneTimeImport,
-                connected: held > 0)
-            // The way back to what just landed (§460). Gated on the corpus,
-            // not a connection flag: an import has no live connection, so
-            // "has anything arrived" is the only honest test of whether
-            // there is a room worth opening.
-            if !recent.isEmpty {
-                RoomDoor(name: "ChatGPT", source: "ChatGPT")
-                    .listRowSeparator(.hidden)
-            }
-            setupSection
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Imported", things: recent.live)
-                    .listRowSeparator(.hidden)
-            }
-            ImportUpkeepSection(source: "ChatGPT", held: held, staleness: staleness) { gone in
-                reread()
-                result = .says(String(localized: "\(gone) removed"))
-            }
-        }
+        AccountPage(
+            name: "ChatGPT", seatID: "gpt", source: "ChatGPT",
+            // An import has no live connection, so "is anything here" is the
+            // only honest test of whether this seat is connected at all.
+            state: AccountPageState.of(name: "ChatGPT", seatID: "gpt",
+                                       connected: held > 0, store: store),
+            mode: .oneTimeImport,
+            teardown: {},
+            sheet: $sheet,
+            act: { setupBlock },
+            more: {
+                ImportUpkeepSection(source: "ChatGPT", held: held,
+                                    staleness: staleness, plain: true) { gone in
+                    reread()
+                    result = .says(String(localized: "\(gone) removed"))
+                }
+            },
+            keySheet: { EmptyView() }
+        )
         .onAppear { reread() }
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.json]) { outcome in
@@ -63,24 +48,21 @@ struct ChatGPTImportScreen: View {
     /// The connect form — steps whole, furniture gone (prd §218,
     /// 2026-07-25). The export happens on OpenAI's side; the pick is the one
     /// thing this screen actually does, so it wears the filled slab.
-    private var setupSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                ImportArchiveSection(
-                    source: "ChatGPT",
-                    steps: ["In ChatGPT, open Settings → Data controls → Export data.",
-                            "OpenAI emails a link — unzip it in Files."],
-                    pickTitle: "Choose conversations.json",
-                    pickIcon: "square.and.arrow.down",
-                    alreadyImported: held > 0) { importing = true }
-                BridgeSyncStatusRows(proof: result)
-                // "One-time import — re-importing later adds only what's new."
-                // moved out rather than being reworded: `ImportUpkeepSection`'s
-                // own footer already says an import can be run again and what
-                // that brings back, and §315 gives this screen one sentence.
-            }
+    @ViewBuilder private var setupBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            ImportArchiveSection(
+                source: "ChatGPT",
+                steps: ["In ChatGPT, open Settings → Data controls → Export data.",
+                        "OpenAI emails a link — unzip it in Files."],
+                pickTitle: "Choose conversations.json",
+                pickIcon: "square.and.arrow.down",
+                alreadyImported: held > 0) { importing = true }
+            BridgeSyncStatusRows(proof: result)
+            // "One-time import — re-importing later adds only what's new."
+            // moved out rather than being reworded: `ImportUpkeepSection`'s
+            // own footer already says an import can be run again and what
+            // that brings back, and §315 gives this screen one sentence.
         }
-        .dsSlabSection()
     }
 
     private func reread() {
