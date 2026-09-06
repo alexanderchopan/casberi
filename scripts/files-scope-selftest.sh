@@ -96,6 +96,14 @@ if [[ "${1:-}" == "--self-test" ]]; then
   probe() {  # name, sed program applied to the bridge
     cp "$BRIDGE" "$tmp/b.swift"; cp "$MEDIA" "$tmp/m.swift"
     perl -0pi -e "$2" "$tmp/b.swift"
+    # A perl substitution is silent about a miss, so a drifted anchor leaves
+    # the "mutant" byte-identical to the source: the checks then pass against
+    # the SHIPPED code and the run reports SURVIVED, which proves nothing while
+    # printing a line that claims coverage. Caught for real in
+    # room-perf-selftest (2026-09-06) and pinned by mutation-liveness-audit.py.
+    if cmp -s "$BRIDGE" "$tmp/b.swift"; then
+      echo "✗ self-test: mutation '$1' changed nothing — it is stale and has been testing the shipped code"; exit 1
+    fi
     if ( run_checks "$tmp/b.swift" "$tmp/m.swift" ) >/dev/null 2>&1; then
       echo "✗ self-test: mutation '$1' SURVIVED — this guard proves nothing"; exit 1
     fi

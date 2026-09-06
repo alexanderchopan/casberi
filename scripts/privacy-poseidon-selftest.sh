@@ -108,6 +108,13 @@ if [[ "${1:-}" == "--self-test" ]]; then
   cp "$work"/*.swift "$mut/"
   # Mutation A: break the S-box (x^5 → x^4) — every Poseidon output changes.
   perl -0pi -e 's/let x4 = Fp\.mul\(x2, x2\)\n            return Fp\.mul\(x4, self\)/let x4 = Fp.mul(x2, x2)\n            return x4/' "$mut/PrivacyDevnetPoseidon.swift"
+  # A perl substitution is silent about a miss, so a drifted anchor leaves the
+  # mutant identical to the source and the run reads as "caught nothing wrong"
+  # about code nobody changed (room-perf-selftest, 2026-09-06). Pinned by
+  # mutation-liveness-audit.py.
+  if cmp -s "$work/PrivacyDevnetPoseidon.swift" "$mut/PrivacyDevnetPoseidon.swift"; then
+    echo "✗ self-test: the S-box mutation changed nothing — it is stale"; exit 1
+  fi
   if run_program "$mut" >/dev/null 2>&1; then
     echo "✗ self-test: a broken S-box was NOT caught"; exit 1
   fi
@@ -115,6 +122,9 @@ if [[ "${1:-}" == "--self-test" ]]; then
   # Mutation B: break the shield selector — calldata assertion must fail.
   mut2="$(mktemp -d)"; cp "$work"/*.swift "$mut2/"
   perl -0pi -e 's/\[0x26, 0x12, 0x35, 0x48\]/[0x26, 0x12, 0x35, 0x49]/' "$mut2/PrivacyDevnetNote.swift"
+  if cmp -s "$work/PrivacyDevnetNote.swift" "$mut2/PrivacyDevnetNote.swift"; then
+    echo "✗ self-test: the selector mutation changed nothing — it is stale"; rm -rf "$mut2"; exit 1
+  fi
   if run_program "$mut2" >/dev/null 2>&1; then
     echo "✗ self-test: a wrong shield selector was NOT caught"; rm -rf "$mut2"; exit 1
   fi

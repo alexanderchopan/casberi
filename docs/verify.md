@@ -130,3 +130,13 @@ Every entry below is **verbatim** as it was written — nothing was summarised, 
 **Why an audit is the only thing that can hold these.** There is no scroll instrument in this project (`docs/perf-spec.md` P3 says so in its first line), the build is happy either way, every existing self-test passes either way, and the only symptom is "the feed feels slower on a big corpus" — the exact report this codebase has already chased four times down three wrong paths. These fixes were found by reading, and nothing that runs can tell you they are still in place.
 
 **What it deliberately does not check.** That the fixes are FAST — it is a shape check, not a budget, and none of these has a measured before/after. It also cannot see a NEW per-row cost of a shape nobody has met yet; the six still-open findings in P3 are carried as prose there, not as checks here, because a guard for a cost nobody has removed would fail on day one.
+
+## Mutation-liveness audit (`scripts/mutation-liveness-audit.py`, 2026-09-06) → prd §627
+
+**What it catches.** A harness that applies a mutation with a perl substitution and never compares the mutant against the original. A perl substitution is silent about a miss, so a drifted anchor leaves the mutant byte-identical to the shipped file: the checks pass against real code and the run reports `SURVIVED`. That is a dead mutation printing a line that claims coverage — worse than no mutation at all, which at least claims nothing.
+
+**It found two the greps did not.** `room-perf-selftest.sh` was the one that actually bit (under §623); `files-scope-selftest.sh` and `privacy-poseidon-selftest.sh` had the same gap and survived two rounds of hand-searching, because the detector's wording varies across this repo and only the *applier* is uniform. That is the case for pinning the shape rather than the phrasing.
+
+**Self-tested with three fixtures** — the vulnerable shape must fire, the guarded shape must not, and a harness that only mentions perl in a comment must not be demanded of.
+
+**What it deliberately does not check.** Whether a mutation is meaningful. It refuses only a mutant identical to its source; whether the change actually breaks what the harness cares about is beyond any static check.

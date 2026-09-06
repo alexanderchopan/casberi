@@ -493,14 +493,35 @@ mutate() {  # mutate <description> <which: feed|main> <perl-expression>
   cp "$CLOCK"  "$dir/SwipeClock.swift"
   cp "$COMPOSER" "$dir/Composer.swift"
   cp "$ROOT"     "$dir/RootShell.swift"
+  local src tgt
   case "$which" in
-    feed)     perl -0777 -i -pe "$expr" "$dir/FeedScreen.swift" ;;
-    main)     perl -0777 -i -pe "$expr" "$dir/MainSurface.swift" ;;
-    composer) perl -0777 -i -pe "$expr" "$dir/Composer.swift" ;;
-    root)     perl -0777 -i -pe "$expr" "$dir/RootShell.swift" ;;
-    clock)    perl -0777 -i -pe "$expr" "$dir/SwipeClock.swift" ;;
+    feed)     src="$FEED";     tgt="$dir/FeedScreen.swift"  ;;
+    main)     src="$MAIN";     tgt="$dir/MainSurface.swift" ;;
+    composer) src="$COMPOSER"; tgt="$dir/Composer.swift"    ;;
+    root)     src="$ROOT";     tgt="$dir/RootShell.swift"   ;;
+    clock)    src="$CLOCK";    tgt="$dir/SwipeClock.swift"  ;;
     *)    print -r -- "  ✗ unknown mutation target: $which"; rm -rf "$dir"; return 1 ;;
   esac
+  perl -0777 -i -pe "$expr" "$tgt"
+  # A MUTATION THAT CHANGED NOTHING IS NOT A PASSING MUTATION (2026-09-06).
+  #
+  # This is the one gap that let a real regression through here. §623 put a
+  # `#if DEBUG` log line between the two lines the per-source net's mutation
+  # anchored on, so its regex matched nothing, the mutant was byte-identical
+  # to the shipped file, the checks passed against it — and the run reported
+  # "MUTATION SURVIVED", which is the correct verdict about a file nobody
+  # mutated and a completely misleading one about the guard it names.
+  #
+  # A `perl -pe` substitution is silent about a miss by design, unlike the
+  # python string-replace every other harness in this repo uses (which fails
+  # on `if frm not in src`). So the comparison has to be made here. Every
+  # other mutation-testing harness in `scripts/` already detects this, by one
+  # wording or another; this was the last one that did not.
+  if cmp -s "$src" "$tgt"; then
+    print -r -- "  ✗ STALE MUTATION (changed nothing, so it tested the shipped code): $desc"
+    rm -rf "$dir"
+    return 1
+  fi
   local survived=0
   ROOM_PERF_FEED="$dir/FeedScreen.swift" \
   ROOM_PERF_MAIN="$dir/MainSurface.swift" \

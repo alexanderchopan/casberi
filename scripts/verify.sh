@@ -826,6 +826,20 @@ print -P "%F{green}✓ body-publish audit%f"
 # either way, every self-test passes either way, and the only symptom is "the
 # feed feels slower on a big corpus" — the report this repo has already chased
 # four times down three wrong paths.
+# A mutation that changed nothing is not a passing mutation — it is a mutation
+# that did not run, printing a line that claims coverage (prd §627). A perl
+# substitution is SILENT about a miss, unlike the python string-replace most
+# harnesses here use, so a drifted anchor leaves the mutant byte-identical to
+# the shipped file: every check passes against it and the run reports
+# SURVIVED. That is a correct verdict about a file nobody mutated and a
+# completely misleading one about the guard it names. It happened for real in
+# room-perf-selftest under §623.
+step "Mutation-liveness audit"
+python3 "$ROOT/scripts/mutation-liveness-audit.py" --self-test >/dev/null \
+  || fail "the mutation-liveness audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/mutation-liveness-audit.py" \
+  || fail "a mutation-testing harness cannot tell a dead mutation from a caught one — see above and prd §627"
+
 step "Row-cost audit"
 python3 "$ROOT/scripts/row-cost-audit.py" --self-test >/dev/null \
   || fail "the row-cost audit's own self-test failed — the check is broken, not the code"
