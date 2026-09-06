@@ -71,6 +71,11 @@ struct BridgeSetupPage<Content: View>: View {
             content()
         }
         .listStyle(.insetGrouped)
+        // The stock inset-grouped spacing put ~70pt between every slot, so
+        // the seven-slot descent above read as seven page breaks (prd §616,
+        // the after-screenshots). `WalletScreen` and `AddressBookScreen` had
+        // each fixed it locally; the chassis is where it belongs.
+        .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
         .bridgeSetupWash(name: name)
         .dsAdaptiveContentWidth()

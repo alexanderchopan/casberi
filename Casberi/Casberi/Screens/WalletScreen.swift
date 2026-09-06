@@ -92,7 +92,6 @@ struct WalletScreen: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
         }
-        .listSectionSpacing(.compact)
         .sheet(item: $sheetRoute) { route in
             switch route {
             case .connectPicker(let accounts):
