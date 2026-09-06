@@ -239,9 +239,10 @@ struct WalletbeatScreen: View {
 							.dsText(.label11).fontWeight(.bold)
 							.foregroundStyle(DS.tint)
 					}
+					.frame(minHeight: AccountFactRow.height)
+					.contentShape(Rectangle())
 				}
 				.buttonStyle(.plain)
-				.dsListCardRow()
 			}
 		}
 	}

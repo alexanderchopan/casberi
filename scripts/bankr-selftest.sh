@@ -147,7 +147,7 @@ grep -q 'answer only — never execute' "$REACH" \
 
 # 9. The door to the composer is only offered once a key exists — a "Ask
 #    Bankr" row with no credential behind it is a dead control.
-grep -q 'if configured { conversationSection }' "$SETUP" \
+grep -q 'if configured { conversationBlock }' "$SETUP" \
   || { echo "✗ BankrSetupScreen offers the chat door without a key"; exit 1; }
 
 # 10. THE SIMULATOR IS DEBUG-ONLY, and this is the sharpest guard in the file.
