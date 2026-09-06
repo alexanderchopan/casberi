@@ -59,6 +59,16 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     var keyExpires: Date? = nil
     /// Whether a "Your key" row is drawn at all — keyed bridges only.
     var keyed = false
+    /// Whether this seat lands `Thing`s at all.
+    ///
+    /// FALSE for the rowless seats (§484's nine, and every agent key): a
+    /// Venice key answers questions and stores nothing, an exchange reports a
+    /// balance and lands no row. For those the Activity row would read "0
+    /// today · 0 this week" about a seat that will never have a count — the
+    /// §83 number-about-nothing, one row under a state line saying it is
+    /// working — and "Who may read it" would offer to shut readers out of a
+    /// corpus with nothing in it. Both are simply absent instead.
+    var lands = true
     /// The rows under "Watching". The caller composes them from its own
     /// store; the chassis sorts and labels them.
     var rows: [AccountPageShape.Row] = []
@@ -226,13 +236,16 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
 
     @ViewBuilder private var factRows: some View {
         // Activity — the way to the room. Not connected: a fact of "—" and
-        // no door, because there is no room to open yet.
-        AccountFactRow(glyph: "clock",
-                       title: String(localized: "Activity"),
-                       fact: AccountPageShape.activityFact(today: today, week: week,
-                                                           connected: state.connected),
-                       opens: state.connected,
-                       action: state.connected ? openRoom : nil)
+        // no door, because there is no room to open yet. Absent entirely for
+        // a seat that lands nothing (see `lands`).
+        if lands {
+            AccountFactRow(glyph: "clock",
+                           title: String(localized: "Activity"),
+                           fact: AccountPageShape.activityFact(today: today, week: week,
+                                                               connected: state.connected),
+                           opens: state.connected,
+                           action: state.connected ? openRoom : nil)
+        }
         AccountFactRow(glyph: "network",
                        title: String(localized: "What it reaches"),
                        fact: AccountPageShape.reachFact(hosts: hosts),
@@ -280,7 +293,11 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
 
     // MARK: - 4. Who may read it
 
-    private var readers: some View {
+    @ViewBuilder private var readers: some View {
+        if lands { readersBlock }
+    }
+
+    private var readersBlock: some View {
         let available = AccountReaders.available()
         let denied = AccountReaders.denied(seat: seatID)
         return VStack(alignment: .leading, spacing: DS.Space.s2) {

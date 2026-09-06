@@ -33,6 +33,14 @@ import SwiftData
 /// screen names the key's scope as a boundary rather than as a choice: the
 /// step line asks for read-only, and the note under the field says what
 /// Casberi does with whatever you paste.
+///
+/// **ON `AccountPage` SINCE §639 (2026-09-06).** The connected state was
+/// `BridgeConnectedState`'s identity card with the form retired behind a
+/// Connection door; both are the chassis's now — the header IS the identity,
+/// and the form is the "Your key" sheet, reached from the row that says
+/// where the key lives. `lands: false`: a key that answers stores nothing,
+/// so there is no Activity count and nothing in the corpus to shut a reader
+/// out of.
 struct BankrSetupScreen: View {
     @Environment(BridgeStore.self) private var store
     @Environment(HomeRoute.self) private var route
@@ -41,110 +49,100 @@ struct BankrSetupScreen: View {
     @State private var checking = false
     @State private var result: BridgeProof?
     @State private var configured = AgentKey.isConfigured(.bankr)
-    @State private var showConnection = false
     @State private var web: URL?
 
-    var body: some View {
-        BridgeSetupPage(name: "Bankr") {
-            if configured {
-                // Connected (prd §186): the form retires behind one door and
-                // the live facts about this key take the screen. A BYOK key
-                // stores no account name of its own — only the secret, in the
-                // Keychain — so this leads with the provider's own name over a
-                // truthful note about HOW it is connected.
-                BridgeConnectedState(
-                    bridgeID: "bankr",
-                    name: "Bankr",
-                    connectionNote: String(localized: "Your key · stored in \(DS.device)'s Keychain"),
-                    capabilitiesFallback: ["Answers with your key — only when you tap.",
-                                       "Reads only Bankr's own account, never the wallets you watch."],
-                    openConnection: { showConnection = true })
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                // The CONNECTION's live facts, not the form's — which agent
-                // answers, on which model, at what spend.
-                agentRows
-            } else {
-                BridgeSetupHeader(
-                    name: "Bankr",
-                    mode: .pasteKey,
-                    intro: "Bankr answers from its own account, never from the wallets you watch here.")
-                setupSection
-            }
-            if configured { conversationSection }
-        }
-        .dsWebSheet($web)
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
-        .sheet(isPresented: $showConnection) {
-            BridgeConnectionSheet(title: "Bankr") {
-                setupSection
-                removeSection
-            }
-        }
+    var body: some View {
+        AccountPage(
+            name: "Bankr", seatID: "bankr", source: "Bankr",
+            state: AccountPageState.of(name: "Bankr", seatID: "bankr",
+                                       connected: configured, store: store),
+            intro: "Bankr answers from its own account, never from the wallets you watch here.",
+            mode: .pasteKey,
+            keyed: true,
+            // A KEY THAT ANSWERS LANDS NOTHING — see `AccountPage.lands`.
+            lands: false,
+            teardown: {
+                AgentKey.clear(.bankr)
+                configured = false
+            },
+            sheet: $sheet,
+            act: {
+                if configured {
+                    // The CONNECTION's live facts, not the form's — which
+                    // agent answers, on which model, at what spend. The form
+                    // itself is the "Your key" sheet now.
+                    agentRowsBlock
+                } else {
+                    setupBlock
+                }
+            },
+            more: {
+                if configured { conversationBlock }
+            },
+            keySheet: { setupBlock }
+        )
+        .dsWebSheet($web)
     }
 
     /// The connect form — steps whole, furniture gone (prd §218).
-    private var setupSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                // Verb over address, the 2026-08-14 anatomy. ONE door: the
-                // account. It used to be followed by a second straight to
-                // Bankr's key page, and that deep link is gone (2026-09-03) —
-                // an account is where somebody who has never heard of Bankr
-                // has to start anyway, and a key page is reached from inside
-                // it. The step line below says what to do once there.
-                DSSlabButton(title: configured ? "Open Bankr" : "Create an account or sign in",
-                             detail: "bankr.bot",
-                             systemImage: "person.crop.circle") {
-                    DSHaptic.tap()
-                    web = URL(string: "https://bankr.bot")
-                }
-                BridgeStepLines(steps: ["Sign in, then mint a read-only key and paste it below."],
-                                numbered: false)
-                DSSlabField(placeholder: AgentProvider.bankr.placeholder, text: $keyDraft,
-                            actionLabel: checking ? "Checking…" : (configured ? "Update" : "Connect"),
-                            secure: true,
-                            isArmed: !checking && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty,
-                            action: connect)
-                // The last step of the errand, made one tap. `PasteButton`
-                // reads the clipboard through the system rather than through
-                // us, so it raises no paste banner and Casberi never sees a
-                // clipboard it wasn't handed.
-                PasteButton(payloadType: String.self) { strings in
-                    guard let pasted = strings.first?.trimmingCharacters(in: .whitespacesAndNewlines),
-                          !pasted.isEmpty else { return }
-                    Task { @MainActor in keyDraft = pasted }
-                }
-                .labelStyle(.titleAndIcon)
-                .buttonBorderShape(.capsule)
-                BridgeSyncStatusRows(proof: result)
-                DSSlabNote(text: "Every prompt says answer only, never execute — and it's asked only when you tap.")
+    @ViewBuilder private var setupBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            // Verb over address, the 2026-08-14 anatomy. ONE door: the
+            // account. It used to be followed by a second straight to
+            // Bankr's key page, and that deep link is gone (2026-09-03) —
+            // an account is where somebody who has never heard of Bankr
+            // has to start anyway, and a key page is reached from inside
+            // it. The step line below says what to do once there.
+            DSSlabButton(title: configured ? "Open Bankr" : "Create an account or sign in",
+                         detail: "bankr.bot",
+                         systemImage: "person.crop.circle") {
+                DSHaptic.tap()
+                web = URL(string: "https://bankr.bot")
             }
+            BridgeStepLines(steps: ["Sign in, then mint a read-only key and paste it below."],
+                            numbered: false)
+            DSSlabField(placeholder: AgentProvider.bankr.placeholder, text: $keyDraft,
+                        actionLabel: checking ? "Checking…" : (configured ? "Update" : "Connect"),
+                        secure: true,
+                        isArmed: !checking && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty,
+                        action: connect)
+            // The last step of the errand, made one tap. `PasteButton`
+            // reads the clipboard through the system rather than through
+            // us, so it raises no paste banner and Casberi never sees a
+            // clipboard it wasn't handed.
+            PasteButton(payloadType: String.self) { strings in
+                guard let pasted = strings.first?.trimmingCharacters(in: .whitespacesAndNewlines),
+                      !pasted.isEmpty else { return }
+                Task { @MainActor in keyDraft = pasted }
+            }
+            .labelStyle(.titleAndIcon)
+            .buttonBorderShape(.capsule)
+            BridgeSyncStatusRows(proof: result)
+            DSSlabNote(text: "Every prompt says answer only, never execute — and it's asked only when you tap.", plain: true)
         }
-        .dsSlabSection()
     }
 
     /// The conversation. Only once a key exists: a door onto an agent nobody
     /// has a credential for is the dead control §83 bans.
-    private var conversationSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                // THE FAB IS THE ONLY CHAT (user, 2026-08-31: "the only place
-                // to chat with any agent is in the fab"). This used to push a
-                // SECOND conversation screen, which duplicated the composer's
-                // whole surface — its own turn renderer, its own history, its
-                // own field — so the two never knew what you had said in the
-                // other. It raises the one composer now, exactly as the berry
-                // does, and Bankr is a chip in it like every other key.
-                DSSlabButton(title: "Ask Bankr",
-                             detail: "Ask about your wallets and live markets",
-                             systemImage: "bubble.left.and.bubble.right") {
-                    DSHaptic.tap()
-                    chrome.composerRequest += 1
-                }
+    @ViewBuilder private var conversationBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            // THE FAB IS THE ONLY CHAT (user, 2026-08-31: "the only place
+            // to chat with any agent is in the fab"). This used to push a
+            // SECOND conversation screen, which duplicated the composer's
+            // whole surface — its own turn renderer, its own history, its
+            // own field — so the two never knew what you had said in the
+            // other. It raises the one composer now, exactly as the berry
+            // does, and Bankr is a chip in it like every other key.
+            DSSlabButton(title: "Ask Bankr",
+                         detail: "Ask about your wallets and live markets",
+                         systemImage: "bubble.left.and.bubble.right") {
+                DSHaptic.tap()
+                chrome.composerRequest += 1
             }
         }
-        .dsSlabSection()
     }
 
     /// Connects only after Bankr accepts the key — the seat registers with
@@ -187,25 +185,13 @@ struct BankrSetupScreen: View {
     /// Which agent answers, on which model, and what it has cost — the live
     /// facts about a key that is already working. Each renders nothing when
     /// this provider is not configured.
-    @ViewBuilder private var agentRows: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                AgentActiveStatusRow(provider: .bankr)
-                AgentModelRow(provider: .bankr)
-                AgentSpendRow(provider: .bankr)
-            }
+    @ViewBuilder private var agentRowsBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            AgentActiveStatusRow(provider: .bankr)
+            AgentModelRow(provider: .bankr)
+            AgentSpendRow(provider: .bankr)
         }
-        .dsSlabSection()
     }
 
-    /// The key's way out — the shared row, so this screen says "Disconnect"
-    /// the way every other setup screen does (prd §608). It lands no `Thing`,
-    /// so no purge is offered.
-    private var removeSection: some View {
-        BridgeDisconnectSection(bridgeID: "bankr", name: "Bankr") {
-            AgentKey.clear(.bankr)
-            configured = false
-        }
-    }
 
 }
