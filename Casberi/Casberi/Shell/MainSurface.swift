@@ -1148,9 +1148,15 @@ struct MainSurface: View {
         // from a persisted order at all; do not add that persistence before
         // reading this line.
         var ordered: [String] = []
+        // And handed to the Diagnostics screen as a reading (prd §628): the
+        // 2026-08-11 pass measured this walk at 0.5–0.9s cold on the SIM, and
+        // it sits on the launch path. `SwipeClock.span` reports under a flag;
+        // this reports always, once per activation, bounded.
+        let walkT0 = Date()
         for (name, _) in SwipeClock.span("newestPerSource", { newestPerSource() }) {
             ordered.append(name)
         }
+        PerfReadings.record("ChipsWalk", ms: Date().timeIntervalSince(walkT0) * 1000)
         var seen = Set(ordered)
         // A LIVE-room source earns its chip by being CONNECTED, not by having
         // landed anything (prd §234, `LiveRoomSources`): Kalshi and Polymarket
@@ -1842,6 +1848,16 @@ struct MainSurface: View {
             target = label
         }
         guard target != filter.source else { return }
+        // The room's last look, for the carousel's card (prd §624 amendment):
+        // read off the glass BEFORE the switch, while this room is still the
+        // one on screen — and only when it is at REST. A swipe's commit
+        // arrives with the room already dragged aside and the next room's
+        // cover on the glass, so a capture here would store a picture of
+        // the cover as this room (measured: All's "last look" was the Wallet
+        // cover). A swipe captures at its first move instead (`dragMove`).
+        if chrome.pageDragX == 0 {
+            RoomSnapshots.capture(source: filter.source, frame: chrome.pagerFrame)
+        }
         slideEdge = direction(from: filter.source, to: target)
         SwipeClock.step(to: target)
         // THE SLIDE GETS ITS FRAMES (PERF 2026-08-21, corrected 2026-09-01) —
@@ -1985,11 +2001,13 @@ struct MainSurface: View {
             withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
         }
         swipeCommit = true
+        chrome.pageDragCommitted = true
         go(to: target)
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(450))
             swipeCommit = false
             chrome.pageDragTarget = nil
+            chrome.pageDragCommitted = false
         }
         ChipMemory.visited(filter.source)
     }
@@ -2028,6 +2046,11 @@ struct MainSurface: View {
     private func dragMove(_ t: CGFloat) {
         let target = neighbour(t < 0 ? 1 : -1)
         let free = target != nil
+        // The first move of a swipe: the room is still (nearly) at rest, so
+        // this is where its last look is taken — see `go(to:)`.
+        if chrome.pageDragTarget == nil, chrome.pageDragX == 0 {
+            RoomSnapshots.capture(source: filter.source, frame: chrome.pagerFrame)
+        }
         chrome.pageDragX = free ? t : t * 0.3
         chrome.pageDragProgress = free ? min(1, max(-1, -t / Self.dragPitch)) : 0
         if chrome.pageDragTarget != target { chrome.pageDragTarget = target }
@@ -2158,6 +2181,15 @@ struct MainSurface: View {
                 guard chrome.openFolder != nil else { return }
                 withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
             })
+            // Where the pager is, in window space — `RoomSnapshots` crops the
+            // window to this.
+            .background {
+                GeometryReader { g in
+                    Color.clear
+                        .onAppear { chrome.pagerFrame = g.frame(in: .global) }
+                        .onChange(of: g.frame(in: .global)) { _, f in chrome.pagerFrame = f }
+                }
+            }
             // Hands the room back its whole query once the slide is over.
             .task(id: filter.source) { await releaseSwipeBudget() }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -2472,16 +2504,24 @@ private struct PagerDrag<Content: View>: View {
 
     var body: some View {
         let x = chrome.pageDragX
-        let share = min(1, abs(x) / 402)
+        let width = max(chrome.pagerFrame.width, 1)
+        let share = min(1, abs(x) / width)
         let lifted = x != 0 && !reduceMotion
         content
-            // THE CARD (2026-09-06): the dragged room tilts a few degrees
-            // about its bottom edge in the direction of travel, shrinks a
-            // hair and casts a shadow — a card lifted off a stack. Under
-            // Reduce Motion it slides flat, as before.
-            .scaleEffect(lifted ? 1 - 0.04 * share : 1)
-            .rotationEffect(.degrees(lifted ? Double(x / 402) * 5 : 0), anchor: .bottom)
-            .shadow(color: .black.opacity(lifted ? 0.35 * share : 0), radius: 24, y: 8)
+            // THE CARD (2026-09-06): the dragged room becomes a card as it
+            // lifts — corners round, a lit edge appears (a shadow alone is
+            // invisible on a black page), it tilts about its bottom edge in
+            // the direction of travel, shrinks a hair and casts a shadow.
+            // Under Reduce Motion it slides flat, as before.
+            .clipShape(RoundedRectangle(cornerRadius: lifted ? 28 * share : 0, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 28 * share, style: .continuous)
+                    .strokeBorder(.white.opacity(lifted ? 0.22 * share : 0), lineWidth: 1)
+                    .allowsHitTesting(false)
+            }
+            .scaleEffect(lifted ? 1 - 0.05 * share : 1)
+            .rotationEffect(.degrees(lifted ? Double(x / width) * 7 : 0), anchor: .bottom)
+            .shadow(color: .black.opacity(lifted ? 0.5 * share : 0), radius: 28, y: 10)
             .offset(x: x)
     }
 }
@@ -2511,24 +2551,51 @@ private struct PagerCover: View {
     var body: some View {
         if let label = chrome.pageDragTarget {
             let p = min(1, abs(chrome.pageDragProgress))
+            let width = max(chrome.pagerFrame.width, 1)
+            // The next card comes from the side the finger is pulling from:
+            // a leftward pull (progress > 0) brings it in from the right.
+            let side: CGFloat = chrome.pageDragProgress >= 0 ? 1 : -1
             let venues = chrome.categoryVenues[label] ?? []
             let landing = CategoryFold.isCategory(label)
                 ? (CategoryFold.landing(category: label, present: venues) ?? label)
                 : label
-            VStack(spacing: DS.Space.s3) {
-                if label == "All" {
-                    Text("All").dsText(.heading34).foregroundStyle(DS.textPrimary)
+            Group {
+                if let look = RoomSnapshots.image(for: landing) {
+                    // THE ROOM'S LAST LOOK (prd §624 amendment) — a card that
+                    // looks like the room, because it is what the room looked
+                    // like. Rooms never visited fall back to the cover below.
+                    Image(uiImage: look)
+                        .resizable()
+                        .scaledToFill()
                 } else {
-                    BridgeIcon(name: landing, size: DS.Mark.hero, circular: true)
-                    Text(label)
-                        .dsText(.heading22)
-                        .foregroundStyle(DS.textPrimary)
+                    VStack(spacing: DS.Space.s3) {
+                        if label == "All" {
+                            Text("All").dsText(.heading34).foregroundStyle(DS.textPrimary)
+                        } else {
+                            BridgeIcon(name: landing, size: DS.Mark.hero, circular: true)
+                            Text(label)
+                                .dsText(.heading22)
+                                .foregroundStyle(DS.textPrimary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .dsPageBackground()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .dsPageBackground()
-            .scaleEffect(reduceMotion ? 1 : 0.92 + 0.08 * p)
-            .opacity(0.6 + 0.4 * p)
+            .clipShape(RoundedRectangle(cornerRadius: reduceMotion ? 0 : 28 * (1 - p), style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 28 * (1 - p), style: .continuous)
+                    .strokeBorder(.white.opacity(reduceMotion ? 0 : 0.18 * (1 - p)), lineWidth: 1)
+                    .allowsHitTesting(false)
+            }
+            .scaleEffect(reduceMotion ? 1 : 0.94 + 0.06 * p)
+            // BOTH CARDS MOVE (2026-09-06): the next card slides in from its
+            // edge as the current one leaves, page beside page, and on commit
+            // it finishes the trip to rest while the real room fades in over
+            // it. Under Reduce Motion it stays put and only fades.
+            .offset(x: reduceMotion || chrome.pageDragCommitted
+                       ? 0 : chrome.pageDragX + side * width)
             .transition(.opacity)
         }
     }

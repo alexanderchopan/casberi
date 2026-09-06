@@ -110,6 +110,13 @@ final class ShellChrome {
     /// carousel: user "if you swiped on the screen the rooms change like
     /// swiping tinder cards … so the feed feels more like a carousel").
     var pageDragTarget: String? = nil
+    /// True for the beat that commits a swipe: the card underneath slides
+    /// the rest of the way to rest instead of tracking a finger that is gone.
+    var pageDragCommitted = false
+    /// The pager's frame in window space — where a room's last look is
+    /// captured from (`RoomSnapshots`). Layout, not state: written on
+    /// geometry change, never a reason to re-render.
+    @ObservationIgnored var pagerFrame: CGRect = .zero
 
     /// The chip under a scrubbing finger (2026-09-05) — the dock's press-and-
     /// slide, see `SourceChips`. `windowX` is the chip's centre in window

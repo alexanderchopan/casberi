@@ -83,10 +83,12 @@ struct DoorsStrip: View {
             }
         }
         .padding(2)
-        // The capsule is the switcher's — `fillFaint`, never glass: this row
-        // sits in the band's own scrim, which is chrome content scrolls under,
-        // and design law puts Liquid Glass on the floating layer alone.
-        .background { Capsule(style: .continuous).fill(DS.fillFaint) }
+        // GLASS since 2026-09-06 (user: "the octopus when you open it its
+        // icons are not on a glass rail"). This wore `fillFaint` while it was
+        // a row IN the band's scrim; it springs up out of the bar as a stack
+        // now (`DockSpringRow`), floating over the feed exactly as the venues
+        // row does, and the floating layer wears glass by §8.
+        .dsGlass(cornerRadius: DS.Radius.pill)
         .clipShape(Capsule(style: .continuous))
         // LEADING, like every other row in this band. An `HStack` inside the
         // band's `VStack` centres itself, which put this capsule in the middle

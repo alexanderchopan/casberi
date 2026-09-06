@@ -195,7 +195,14 @@ struct SourceChips: View {
     /// Content space, not the viewport's: these change when the strip folds
     /// or a folder opens, never when it scrolls, so recording them costs one
     /// write per chip per layout rather than one per scroll frame.
-    @State private var chipFrames: [String: CGRect] = [:]
+    /// A BOX, not state, and frozen while a finger is down (2026-09-06, user:
+    /// "the dock sometimes becomes unresponsive"). The magnification is a
+    /// layout change, so every wave step moved every chip's frame; each frame
+    /// write was a state write; each state write re-ran the wave — a layout
+    /// loop for as long as a finger was on the strip. Rest frames are the
+    /// right input anyway: the wave asks which chip is NEAR the finger, and
+    /// that is a question about the row at rest.
+    @State private var chipFrames = ChipFrameBox()
     private static let contentSpace = "dockStripContent"
     /// A tap fired by a scrub is one tap, not two: the chip's own `Button`
     /// cannot fire after a scrub (UIKit cancels its touch when the press
@@ -215,7 +222,7 @@ struct SourceChips: View {
     /// out of (`DockSpringRow`). Content-space frame, less the scroll, plus
     /// the strip's own window x.
     private func anchorX(for label: String) -> CGFloat? {
-        guard let frame = chipFrames[label] else { return nil }
+        guard let frame = chipFrames.frames[label] else { return nil }
         return viewport.globalMinX + frame.midX - viewport.offset
     }
 
@@ -241,7 +248,7 @@ struct SourceChips: View {
     private static let waveReach: CGFloat = 1.6
     private static let waveLift: CGFloat = 0.28
     private func wave(for label: String) -> CGFloat {
-        guard !reduceMotion, let frame = chipFrames[label] else { return 1 }
+        guard !reduceMotion, let frame = chipFrames.frames[label] else { return 1 }
         let x: CGFloat
         if let scrubX { x = scrubX }
         else if let waveViewportX { x = waveViewportX + viewport.offset }
@@ -260,7 +267,11 @@ struct SourceChips: View {
     /// Reduce Motion, where the travelling selection itself is off.
     private var slide: CGFloat {
         guard axis == .horizontal, !reduceMotion else { return 0 }
-        return chrome.pageDragProgress * (chipSize + Self.chipGap)
+        // A LEAN, not a move (2026-09-06, measured): at a full pitch the
+        // fill sat squarely over the neighbour and hid its word. Forty
+        // percent says where the swipe is going and leaves the word legible;
+        // the matched geometry travels the rest on commit.
+        return chrome.pageDragProgress * (chipSize + Self.chipGap) * 0.4
     }
 
     /// One value both doors key on, so the pair can't drift onto two different
@@ -531,7 +542,8 @@ struct SourceChips: View {
                                         .onGeometryChange(for: CGRect.self) { proxy in
                                             proxy.frame(in: .named(Self.contentSpace))
                                         } action: { frame in
-                                            chipFrames[label] = frame
+                                            guard scrubX == nil, waveViewportX == nil else { return }
+                                            chipFrames.frames[label] = frame
                                         }
                                         // THE MELT, PER CHIP. The old
                                         // `.mask(leadingFade)` hung on the whole
@@ -659,7 +671,14 @@ struct SourceChips: View {
             } action: { _, new in
                 viewport.offset = new.offset
                 viewport.width = new.width
-                if waveViewportX != nil, scrubX == nil { waveTick &+= 1 }
+                // The parked magnifier re-renders the strip per scroll frame;
+                // only every 4pt of travel, which is the finest step a chip's
+                // size visibly changes at (2026-09-06).
+                if waveViewportX != nil, scrubX == nil,
+                   abs(new.offset - chipFrames.lastWaveOffset) >= 4 {
+                    chipFrames.lastWaveOffset = new.offset
+                    waveTick &+= 1
+                }
             }
             .onScrollPhaseChange { _, phase in
                 guard phase == .idle, scrubX == nil else { return }
@@ -679,7 +698,7 @@ struct SourceChips: View {
     /// in the gap between two chips still names one.
     private func scrubTarget(x: CGFloat) -> (label: String, midX: CGFloat)? {
         var best: (label: String, midX: CGFloat, distance: CGFloat)?
-        for (label, frame) in chipFrames {
+        for (label, frame) in chipFrames.frames {
             let d = abs(frame.midX - x)
             if let b = best, d >= b.distance { continue }
             best = (label, frame.midX, d)
@@ -1616,4 +1635,10 @@ final class ScrollViewportBox {
 struct ScrollViewportSample: Equatable {
     var offset: CGFloat
     var width: CGFloat
+}
+
+/// Every chip's frame in the strip's content space — see `SourceChips.chipFrames`.
+final class ChipFrameBox {
+    var frames: [String: CGRect] = [:]
+    var lastWaveOffset: CGFloat = 0
 }

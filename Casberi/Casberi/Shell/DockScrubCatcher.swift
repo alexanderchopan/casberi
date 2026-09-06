@@ -151,7 +151,13 @@ struct DockScrubCatcher: UIViewRepresentable {
             while let cur = walk, !(cur is UIScrollView) { walk = cur.superview }
             guard let scroll = walk as? UIScrollView else { return }
             let g = Press()
-            g.minimumPressDuration = 0.22
+            // 0.4s, not 0.22 (2026-09-06, user: "the dock sometimes becomes
+            // unresponsive"): a finger that RESTS a quarter second before
+            // scrolling became a scrub, and the strip stopped moving under
+            // it. A scrub is a deliberate hold; a scroll that starts slowly
+            // is not. The 10pt allowance still fails the press the moment
+            // the finger moves before the hold is up.
+            g.minimumPressDuration = 0.4
             g.allowableMovement = 10
             g.delegate = self
             g.onBegan = { [weak self, weak scroll] p in

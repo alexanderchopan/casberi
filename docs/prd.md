@@ -49687,3 +49687,13 @@ Five screens that all ask for an address — Wallet, Base Vibenet, Ethrex Hegot�
 
 **The instance was fixed by the ship session in `0913ba1b`** (re-anchoring that one regex across the new gap, and proving it deletes exactly the per-source guard). This is the class behind it: the helper could not have told anyone, and nothing would have said so the next time an anchor drifted.
 
+
+## §624 amendment — the card underneath is the room's last look, and both cards move (user: "when you swipe it shows the app icon in the middle of the screen, like a cue", 2026-09-06)
+
+**The ruling.** The card under a swipe is a SNAPSHOT of the next room as it last was (`Shell/RoomSnapshots.swift`: the pager's region of the key window, read off the glass with `drawHierarchy(afterScreenUpdates: false)`, eight rooms, oldest out, emptied on a memory warning), and it slides in from its edge as the current card leaves — page beside page — finishing the trip to rest on commit while the real room fades in over it. A room never yet visited still shows the cover (its mark and word), since it has no last look. The dragged card rounds its corners, wears a lit edge (a shadow alone is invisible on a black page), tilts 7° and casts a shadow. **Captured at the swipe's FIRST MOVE, not its commit** — measured: a capture at commit stored a picture of the next room's cover as the room being left, because by then the room was dragged aside. Chip taps still capture in `go(to:)`, where the room is at rest.
+
+**A limit, recorded rather than fixed.** The pager declines a drag that starts inside a nested horizontal scroller, and a room head that scrubs (the Wallet crown's sparkline, the face rails) owns its axis — so in such rooms only the rows below the head page. A fast flick could reasonably win over a slow scrub; not done tonight.
+
+## §621 fourth amendment — the dock's unresponsiveness, two causes (user: "the dock sometimes becomes unresponsive", 2026-09-06)
+
+**(1) The scrub's hold is 0.4s, was 0.22s**: a finger that rested a quarter second before scrolling became a scrub and the strip stopped moving under it. **(2) Chip frames live in a plain box and are frozen while a finger is down**: the magnification is a layout change, every wave step moved every frame, every frame write was a state write, every state write re-ran the wave — a layout loop for the length of a touch. Rest frames are the right input anyway. Also: the parked magnifier re-renders the strip only every 4pt of travel; the fill's lean toward a swipe's target is 40% of a pitch (a full pitch hid the neighbour's word); and the octopus's doors row wears glass, since it springs up as a stack now rather than sitting in the band's scrim.
