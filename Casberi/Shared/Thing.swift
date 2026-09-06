@@ -107,7 +107,9 @@ enum Corpus {
     /// Sources whose SEAT left the catalog and whose rows are kept (prd §638,
     /// 2026-09-06 — the Markets category is deleted: "i want to get away from
     /// crypto bullshit but wallets and the other stuff in them are
-    /// important").
+    /// important"). Six, not seven: Stocktwits was listed here for one
+    /// commit and came back under Wallet the same day (§638's amendment) —
+    /// a stock is not the crypto the ruling was about.
     ///
     /// The bridge files stay in the tree for one release so a connected seat
     /// is not stranded — its rows still sync and still read in All — but the
@@ -118,7 +120,7 @@ enum Corpus {
     /// be a seat you can connect and never open, which `category-fold-selftest`
     /// refuses.
     static let retiredSources: Set<String> = [
-        "Kalshi", "Polymarket", "Stocktwits", "GeckoTerminal", "Circle x402",
+        "Kalshi", "Polymarket", "GeckoTerminal", "Circle x402",
         "1Claw", "Open Food Facts",
     ]
 

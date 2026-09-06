@@ -940,7 +940,8 @@ offered = set(re.findall(r'Offer\(name:\s*"([^"]+)"', src))
 back = sorted(set(retired) & offered)
 if back:
     sys.exit(f"✗ retired source(s) offered in the catalog again: {back} — a seat you can connect and never open (prd §638)")
-for name in ("Kalshi", "Polymarket", "Stocktwits", "GeckoTerminal", "Circle x402", "1Claw", "Open Food Facts"):
+# Six, not seven: Stocktwits came back under Wallet the same day (§638's amendment).
+for name in ("Kalshi", "Polymarket", "GeckoTerminal", "Circle x402", "1Claw", "Open Food Facts"):
     if name not in retired:
         sys.exit(f'✗ "{name}" is no longer in Corpus.retiredSources — its rows would earn a chip and a room for a seat the catalog does not offer')
 print(f"  ✓ real catalog: {len(entries)} categories, every one names ≥1 real offer; no Markets; {len(retired)} retired seats offered nowhere")

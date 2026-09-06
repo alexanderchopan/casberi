@@ -126,7 +126,7 @@ enum BridgeCatalog {
             let keyless: Set<String> = ["Wallet", "Tokens", "Peer", "0xBow Privacy Pools", "Railgun", "Safe", "Reddit", "YouTube",
                 "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster",
                 "Bluesky", "Nostr", "OpenSea", "Shopify", "Deals",
-                "Hugging Face", "Radicle", "npm", "PyPI", "Altana",
+                "Stocktwits", "Hugging Face", "Radicle", "npm", "PyPI", "Altana",
                 "Walletbeat", "L2BEAT", "ENS"]
             if keyless.contains(name) { return "No account" }
             // Instagram and Snapchat were missed here when they landed
@@ -356,15 +356,27 @@ enum BridgeCatalog {
               needsSetup: true),
         // MARKETS IS DELETED (user ruling 2026-09-06, prd §638: "i want to get
         // away from crypto bullshit but wallets and the other stuff in them
-        // are important"). Seven seats went with the category — Kalshi,
-        // Polymarket, Stocktwits, GeckoTerminal, Circle x402, 1Claw and Open
-        // Food Facts — and the three that read as a lens on money you hold
-        // (Tokens, L2BEAT, OpenSea) moved to Wallet. Their bridge files stay
-        // in the tree for one release so a connected seat is not stranded,
-        // but nothing here offers them, and nothing in the strip draws them
+        // are important"). Six seats went with the category — Kalshi,
+        // Polymarket, GeckoTerminal, Circle x402, 1Claw and Open Food Facts
+        // — and the three that read as a lens on money you hold (Tokens,
+        // L2BEAT, OpenSea) moved to Wallet. Their bridge files stay in the
+        // tree for one release so a connected seat is not stranded, but
+        // nothing here offers them, and nothing in the strip draws them
         // (`Corpus.retiredSources`).
         Offer(name: "Tokens",      tagline: "Track any token",                       group: "Wallet",    connectable: true,
               summary: "Paste an address or a link and the live price chart lands in your feed, drawn on \(DS.device). Public price data only; nothing about you leaves the device.",
+              needsSetup: true),
+        // STOCKTWITS CAME BACK THE SAME DAY, under WALLET (user ruling
+        // 2026-09-06, §638's amendment). It was retired with the Markets
+        // seats for one commit, and the ruling that deleted Markets is the
+        // reason it returns: the category went because of "crypto bullshit",
+        // and a stock is not crypto — it is the same kind of thing a Token
+        // watch is, money you hold or nearly do, read from public price
+        // data. Same seat, same copy, same keyless read; only the group moved.
+        Offer(name: "Stocktwits",  tagline: "Watch any stock",                      group: "Wallet",    connectable: true,
+              summary: "Search a ticker and the takes traders post about it land in your feed, each wearing its author's own bullish or bearish call.\n\nNo account, no key, read-only: nothing here trades, and a watched ticker can never see your portfolio.",
+              features: ["The stock's live price chart draws on \(DS.device)",
+                         "From public market data — no brokerage, no holdings"],
               needsSetup: true),
         // Wallet, not Markets (2026-07-25, prd §210 — amending the 2026-07-17
         // ruling below, kept for the record). A Peer fill is the person's OWN

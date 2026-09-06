@@ -57,7 +57,7 @@ enum DemoSeedAll {
     /// double-seeds a dev install rather than failing loudly. The honest
     /// version of "make it mechanical" here is a check that the stamp moved
     /// when the table did, not a stamp that moves itself.
-    static let version = 4
+    static let version = 5
     private static let versionKey = "demo.fullSeed.version"
 
     /// The three demo-watched tokens — (symbol, name, price, ref index),
@@ -204,13 +204,16 @@ enum DemoSeedAll {
                               // Peer/Privacy Pools above.
                               "railgun:shield:demo", "railgun:unshield:demo",
                               // KEPT PAST prd §638 (2026-09-06), when the
-                              // Stocktwits, Open Food Facts and 1Claw seats
-                              // left the catalog and this seeder stopped
-                              // writing their rows: a demo poured by an
-                              // OLDER build still carries them, and exit()
-                              // walks this list, so dropping the entries here
-                              // would orphan those rows on every install that
-                              // updated mid-demo — the §510a class exactly.
+                              // Open Food Facts and 1Claw seats left the
+                              // catalog and this seeder stopped writing their
+                              // rows: a demo poured by an OLDER build still
+                              // carries them, and exit() walks this list, so
+                              // dropping the entries here would orphan those
+                              // rows on every install that updated mid-demo
+                              // — the §510a class exactly. (Stocktwits left
+                              // with them for one commit and came back under
+                              // Wallet the same day; its rows are seeded
+                              // again below.)
                               // Stocktwits watches join the REAL namespace —
                               // `StocktwitsScreen` builds its watchlist by
                               // filtering on that exact prefix, so a "demo:"
@@ -497,7 +500,7 @@ enum DemoSeedAll {
     /// grades a year wall below everything, and a demo that fought that ruling
     /// would be showing a panel the app doesn't actually build.)
     static let demoVisits: [String: Int] = [
-        "Photos": 9, "X": 8, "Obsidian": 6, "Linear": 6,
+        "Photos": 9, "X": 8, "Stocktwits": 7, "Obsidian": 6, "Linear": 6,
         "Snapchat": 5, "YouTube": 5, "Instagram": 4, "Privacy Pools": 4,
         "Farcaster": 4, "Apple Wallet": 3, "TikTok": 3,
         "Gmail": 2, "Files": 2, "Pinterest": 5, "OpenSea": 3,
@@ -2708,15 +2711,63 @@ enum DemoSeedAll {
         return out
     }
 
-    // MARK: Watches and shops — the token watchlist, the drops, the stores
+    // MARK: Watches and shops — the stock and token watchlists, the drops, the stores
 
-    /// Was `markets()` until 2026-09-06 (prd §638): the Stocktwits mood rail
-    /// and watchlist, the GeckoTerminal trending rows, the Open Food Facts
-    /// scans and the Circle x402 sellers were seeded here and are gone with
-    /// their seats. What stays is what still has a seat — Tokens and OpenSea
-    /// (Wallet now), Shopify and Deals (Shopping).
+    /// Was `markets()` until 2026-09-06 (prd §638): the GeckoTerminal
+    /// trending rows, the Open Food Facts scans and the Circle x402 sellers
+    /// were seeded here and are gone with their seats. What stays is what
+    /// still has a seat — Stocktwits, Tokens and OpenSea (Wallet now),
+    /// Shopify and Deals (Shopping). The Stocktwits rows left for one commit
+    /// and came back the same day with the seat (§638's amendment).
     private static func watchesAndShops() -> [Thing] {
         var out: [Thing] = []
+        let mood: [(String, String, String, Double)] = [
+            ("NVDA looks extended here", "NVDA", "Bearish", 1),
+            ("Adding on any dip", "NVDA", "Bullish", 1.2),
+            ("Earnings setup is clean", "AAPL", "Bullish", 2),
+            ("Not touching this until it bases", "AAPL", "Bearish", 2.4),
+            ("Volume finally showing up", "AAPL", "Bullish", 4),
+            ("Sideways for weeks now", "TSLA", "", 5),
+            ("Watching the 200d", "TSLA", "", 7),
+            ("This is the long-term hold", "NVDA", "Bullish", 9),
+        ]
+        // The WATCHED TICKERS (2026-08-12). Stocktwits' primary rows are the
+        // watches themselves — `StockWatch.watch` lands one `.link`
+        // thing per symbol, titled `"\(company) · $\(TICKER)"`, and
+        // `StocktwitsScreen` builds its whole watchlist by filtering on that
+        // ref prefix. The demo seeded only the POSTS, so the room was a wall
+        // of chat with nothing being watched, and the setup screen's
+        // watchlist was empty on a "connected" bridge.
+        //
+        // Real refs, spelled through `StockWatch`s own builder — and listed in
+        // `refPrefixes` as EXACT refs rather than the bare
+        // "stocktwits:sym:" prefix, so demo exit can never delete a real
+        // watch (the `PostHogWatch.metricRef` reasoning, same hazard).
+        let tickers: [(company: String, symbol: String, watchedAt: Double, days: Double)] = [
+            ("Apple Inc", "AAPL", 214.60, 6),
+            ("NVIDIA Corp", "NVDA", 118.20, 8),
+            ("Tesla Inc", "TSLA", 246.90, 11),
+        ]
+        out += tickers.map { t in
+            row(.link, "\(t.company) · $\(t.symbol)", source: "Stocktwits",
+                ref: StockWatch.symbolRef(t.symbol), days: t.days, hour: 10,
+                tags: [t.symbol]) { thing in
+                thing.watchPriceUsd = t.watchedAt
+                // The company's own mark, which the bridge stamps
+                // (2026-08-17) — without it every watched stock wore the
+                // source glyph and the watchlist read as one repeated icon.
+                thing.previewImageURL = "sample:coin-\(t.symbol.lowercased())"
+            }
+        }
+        out += mood.enumerated().map { i, m in
+            row(.chat, m.0, source: "Stocktwits", ref: "demo:stocktwits:\(i)",
+                days: m.3, hour: 15, content: "$\(m.1) · \(m.0)",
+                tags: m.2.isEmpty ? [m.1] : [m.1, m.2]) { t in
+                t.authorHandle = "@trader\(i % 3)"
+                t.authorAvatarURL = avatarArt("trader\(i % 3)")
+                t.postText = m.0
+            }
+        }
         // No dexscreener content URL on any row here (P4, 2026-08-07) — this
         // is sharper than the usual dead-door case: `TokenChart.route(from:)`
         // does NO validation, it blindly reads `pathComponents[0]`/`[1]` off
@@ -5044,9 +5095,13 @@ enum DemoSeedAll {
         ("Farcaster", "2 accounts", "Follows accounts, no sign-in."),
         ("Bluesky", "1 account", "Follows accounts, no sign-in."),
         ("Nostr", "1 relay", "Reads the relays you name."),
-        // Stocktwits, GeckoTerminal, Open Food Facts, Circle x402, Kalshi,
-        // Polymarket and 1Claw were seats here until 2026-09-06 (prd §638) —
-        // the Markets category is deleted, and a demo that claims a seat the
+        // A Wallet seat since 2026-09-06 (§638's amendment) — retired with
+        // the Markets seats for one commit, back the same day because a
+        // stock is not the crypto that ruling was about.
+        ("Stocktwits", "3 tickers", "Watches tickers you add."),
+        // GeckoTerminal, Open Food Facts, Circle x402, Kalshi, Polymarket
+        // and 1Claw were seats here until 2026-09-06 (prd §638) — the
+        // Markets category is deleted, and a demo that claims a seat the
         // catalog does not offer is the fake status check D exists to catch.
         ("OpenSea", "2 chains", "Reads new drops, keyless."),
         ("Shopify", "1 store", "Watches a store's new arrivals."),
