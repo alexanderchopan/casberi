@@ -912,17 +912,24 @@ for name, groups_raw in entries:
 if failures:
     sys.exit("✗ " + "\n✗ ".join(failures))
 # THE RULING ITSELF (prd §638, 2026-09-06): no Markets band, and Wallet is the
-# band that took its survivors — its groups span `NFTs` so OpenSea folds there
-# rather than into a chip nobody sees. A "Markets" row creeping back is the
-# reversal the user made in one sentence; a Wallet row that drops `NFTs` orphans
-# a real offer silently (it folds nowhere and draws its own bare circle).
+# band that took its survivors. A "Markets" row creeping back is the reversal
+# the user made in one sentence.
+#
+# `NFTs` is the amendment, and it cuts the OPPOSITE way to the check that stood
+# here for a day. §638 gave Wallet a second group so the OpenSea seat still
+# folded somewhere; the user then retired that seat outright ("opensea should
+# not have its own category or exist"), and the group went with it. Wallet
+# spanning `NFTs` again means either the seat is back or the group is empty —
+# and an empty group is what the loop above already refuses for every other
+# category, so it is checked here by name rather than left to creep back as
+# the one exception.
 if any(n == "Markets" for n, _ in entries):
     sys.exit('✗ BridgeCatalog.categories has a "Markets" category again — it was deleted (prd §638)')
 wallet_groups = next((re.findall(r'"([^"]+)"', g) for n, g in entries if n == "Wallet"), None)
 if wallet_groups is None:
     sys.exit("✗ BridgeCatalog.categories has no Wallet category")
-if "NFTs" not in wallet_groups:
-    sys.exit('✗ Wallet no longer spans the "NFTs" group — OpenSea would fold into no category (prd §638)')
+if "NFTs" in wallet_groups:
+    sys.exit('✗ Wallet spans the "NFTs" group again — it left with the OpenSea seat (prd §638, second amendment)')
 for name in ("Tokens", "L2BEAT"):
     if not re.search(r'name:\s*"%s".*?group:\s*"Wallet"' % name, src, re.S):
         sys.exit(f'✗ "{name}" is no longer a Wallet-group offer (prd §638 moved it there)')
@@ -940,8 +947,10 @@ offered = set(re.findall(r'Offer\(name:\s*"([^"]+)"', src))
 back = sorted(set(retired) & offered)
 if back:
     sys.exit(f"✗ retired source(s) offered in the catalog again: {back} — a seat you can connect and never open (prd §638)")
-# Six, not seven: Stocktwits came back under Wallet the same day (§638's amendment).
-for name in ("Kalshi", "Polymarket", "GeckoTerminal", "Circle x402", "1Claw", "Open Food Facts"):
+# Seven: the six that went with the category (Stocktwits came back under Wallet
+# the same day, §638's amendment) plus OpenSea, which went the other way — it
+# survived §638 by a day and left with its second amendment.
+for name in ("Kalshi", "Polymarket", "GeckoTerminal", "Circle x402", "1Claw", "Open Food Facts", "OpenSea"):
     if name not in retired:
         sys.exit(f'✗ "{name}" is no longer in Corpus.retiredSources — its rows would earn a chip and a room for a seat the catalog does not offer')
 print(f"  ✓ real catalog: {len(entries)} categories, every one names ≥1 real offer; no Markets; {len(retired)} retired seats offered nowhere")
@@ -1051,8 +1060,11 @@ let wallet = CategoryFold.memberSet(of: "Wallet")
 let work = CategoryFold.memberSet(of: "Work")
 
 // --- members / isCategory: the derivation -----------------------------------
-// Wallet spans TWO groups since prd §638 (`Wallet` + `NFTs`), so OpenSea is a
-// member alongside the seats in the Wallet group proper — in CATALOG order.
+// The STUB's Wallet spans TWO groups on purpose, so multi-group folding has an
+// oracle. The shipped Wallet is single-group again since §638's second
+// amendment retired OpenSea, but `Life` still spans six, so the property this
+// fixture proves is very much live — it is fixtured on Wallet only because
+// that is where it was first written. Members come back in CATALOG order.
 check("Wallet spans both category groups",
       CategoryFold.members(of: "Wallet")
         == ["Wallet", "Peer", "0xBow Vault", "Walletbeat", "CardPointers", "Tokens", "OpenSea"])
@@ -1102,8 +1114,9 @@ check("Walletbeat's chip reads as its category",
       CategoryFold.chipLabel(for: "Walletbeat", folded: ["Wallet"]) == "Wallet")
 check("Walletbeat IS a Wallet switcher venue",
       CategoryFold.scopes(category: "Wallet", present: ["Walletbeat", "Peer"]).contains("Walletbeat"))
-// THE §638 SURVIVORS fold into Wallet the same way — OpenSea through the second
-// group, Tokens through the first — and both are venues in Wallet's folder.
+// A member of the SECOND group folds exactly like one of the first (the stub's
+// OpenSea, in the `NFTs` group, against its Tokens) — the shape `Life` relies
+// on in the shipped catalog, where six groups fold into one band.
 check("OpenSea (the NFTs group) folds into Wallet",
       CategoryFold.fold(["All", "OpenSea", "Photos"], category: "Wallet", members: wallet)
         == ["All", "Wallet", "Photos"])

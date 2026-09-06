@@ -87,14 +87,13 @@ struct AppsScreen: View {
     /// "Because you connected" — connecting one app suggests its natural
     /// neighbours in the story carousel, eyebrowed with the reason. Cheap
     /// adjacency, but it reads as the store knowing you: connect GitHub and
-    /// Linear surfaces; connect a Wallet and Tokens/OpenSea/Farcaster do.
+    /// Linear surfaces; connect a Wallet and Tokens/Farcaster do.
     private static let adjacency: [String: [String]] = [
         "GitHub":       ["Linear", "Notion"],
         "Linear":       ["GitHub", "Notion"],
         "Notion":       ["GitHub", "Linear"],
-        "Wallet":       ["Tokens", "OpenSea", "Farcaster"],
-        "Tokens":       ["Wallet", "OpenSea"],
-        "OpenSea":      ["Wallet", "Tokens"],
+        "Wallet":       ["Tokens", "Farcaster"],
+        "Tokens":       ["Wallet"],
         "Farcaster":    ["Bluesky", "Wallet"],
         "Bluesky":      ["Farcaster"],
         "Apple Health": ["Strava"],

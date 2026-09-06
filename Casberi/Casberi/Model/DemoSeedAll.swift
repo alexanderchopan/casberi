@@ -57,7 +57,7 @@ enum DemoSeedAll {
     /// double-seeds a dev install rather than failing loudly. The honest
     /// version of "make it mechanical" here is a check that the stamp moved
     /// when the table did, not a stamp that moves itself.
-    static let version = 5
+    static let version = 6
     private static let versionKey = "demo.fullSeed.version"
 
     /// The three demo-watched tokens — (symbol, name, price, ref index),
@@ -493,8 +493,9 @@ enum DemoSeedAll {
     /// advantage was their name. These are the rooms a demo should lead with,
     /// and they cover every figure the panel can draw.
     ///
-    /// `Pinterest`/`OpenSea` are here so one image room holds a slot and the
-    /// thumbnail WALL is on the panel too — every other figure kind has a room
+    /// `Pinterest` is here so one image room holds a slot and the
+    /// thumbnail WALL is on the panel too (`OpenSea` held the slot beside it
+    /// until its seat was retired, 2026-09-06) — every other figure kind has a room
     /// above the cap, and a demo showing seven of the eight is the one thing
     /// this seed exists to prevent. (`pulse` is deliberately absent: §336
     /// grades a year wall below everything, and a demo that fought that ruling
@@ -503,7 +504,7 @@ enum DemoSeedAll {
         "Photos": 9, "X": 8, "Stocktwits": 7, "Obsidian": 6, "Linear": 6,
         "Snapchat": 5, "YouTube": 5, "Instagram": 4, "Privacy Pools": 4,
         "Farcaster": 4, "Apple Wallet": 3, "TikTok": 3,
-        "Gmail": 2, "Files": 2, "Pinterest": 5, "OpenSea": 3,
+        "Gmail": 2, "Files": 2, "Pinterest": 5,
         // Base Vibenet (2026-08-23) — a landless seat like Cloudflare and
         // Apple Wallet, so its chip needs its OWN visit weight rather than
         // riding a landed row's — `ChipMemory` ranks the source chip strip,
@@ -551,7 +552,7 @@ enum DemoSeedAll {
         // reported the same one missing kind, which is what settled it.
         //
         // At 4 it clears the affinity=3 tail. That evicts one of
-        // TikTok/OpenSea/Apple Wallet/Circle x402, each of whose figure kind is
+        // TikTok/Apple Wallet/Circle x402, each of whose figure kind is
         // already drawn by a room ranked above it — so the cap costs a card and
         // never a KIND, which is the only thing this seed is protecting.
         "PostHog": 4,
@@ -2716,9 +2717,11 @@ enum DemoSeedAll {
     /// Was `markets()` until 2026-09-06 (prd §638): the GeckoTerminal
     /// trending rows, the Open Food Facts scans and the Circle x402 sellers
     /// were seeded here and are gone with their seats. What stays is what
-    /// still has a seat — Stocktwits, Tokens and OpenSea (Wallet now),
-    /// Shopify and Deals (Shopping). The Stocktwits rows left for one commit
-    /// and came back the same day with the seat (§638's amendment).
+    /// still has a seat — Stocktwits and Tokens (Wallet now), Shopify and
+    /// Deals (Shopping). The Stocktwits rows left for one commit and came
+    /// back the same day with the seat (§638's amendment); the OpenSea drops
+    /// went the other way, surviving that ruling by a day and leaving with
+    /// its second amendment.
     private static func watchesAndShops() -> [Thing] {
         var out: [Thing] = []
         let mood: [(String, String, String, Double)] = [
@@ -2797,20 +2800,6 @@ enum DemoSeedAll {
                 days: t.dayOffset, hour: 12) { thing in
                 thing.watchPriceUsd = t.price
                 thing.previewImageURL = "sample:token-\(t.symbol.lowercased())"
-            }
-        }
-        let drops: [(String, Double)] = [
-            ("Terraforms by Mathcastles", 2), ("Opepen Edition", 5),
-            ("Checks — VV Edition", 9), ("Blocks of Base", 16),
-        ]
-        out += drops.enumerated().map { i, d in
-            row(.link, d.0, source: "OpenSea", ref: "demo:opensea:\(i)", days: d.1, hour: 19) { t in
-                t.previewImageURL = art(i)
-                // The collection's own blurb, which `OpenSeaBridge` stamps
-                // onto `summary` (2026-08-17). It is the only thing that
-                // distinguishes one drop's name from another's.
-                t.summary = "\(d.0) — a new collection, described by its own "
-                    + "creator on the marketplace."
             }
         }
         // The price is STRUCTURED here, not just words in `content`
@@ -5099,11 +5088,11 @@ enum DemoSeedAll {
         // the Markets seats for one commit, back the same day because a
         // stock is not the crypto that ruling was about.
         ("Stocktwits", "3 tickers", "Watches tickers you add."),
-        // GeckoTerminal, Open Food Facts, Circle x402, Kalshi, Polymarket
-        // and 1Claw were seats here until 2026-09-06 (prd §638) — the
-        // Markets category is deleted, and a demo that claims a seat the
-        // catalog does not offer is the fake status check D exists to catch.
-        ("OpenSea", "2 chains", "Reads new drops, keyless."),
+        // GeckoTerminal, Open Food Facts, Circle x402, Kalshi, Polymarket,
+        // 1Claw and OpenSea were seats here until 2026-09-06 (prd §638 and
+        // its second amendment) — the Markets category is deleted, and a
+        // demo that claims a seat the catalog does not offer is the fake
+        // status check D exists to catch.
         ("Shopify", "1 store", "Watches a store's new arrivals."),
         ("Deals", "4 sources", "Reads public deal feeds."),
         ("Peer", "Rides your wallet", "Lands settled fills, never trades."),

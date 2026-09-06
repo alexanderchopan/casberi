@@ -125,7 +125,7 @@ enum BridgeCatalog {
             if connectable && !needsSetup { return "One tap" }
             let keyless: Set<String> = ["Wallet", "Tokens", "Peer", "0xBow Privacy Pools", "Railgun", "Safe", "Reddit", "YouTube",
                 "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster",
-                "Bluesky", "Nostr", "OpenSea", "Shopify", "Deals",
+                "Bluesky", "Nostr", "Shopify", "Deals",
                 "Stocktwits", "Hugging Face", "Radicle", "npm", "PyPI", "Altana",
                 "Walletbeat", "L2BEAT", "ENS"]
             if keyless.contains(name) { return "No account" }
@@ -358,8 +358,10 @@ enum BridgeCatalog {
         // away from crypto bullshit but wallets and the other stuff in them
         // are important"). Six seats went with the category — Kalshi,
         // Polymarket, GeckoTerminal, Circle x402, 1Claw and Open Food Facts
-        // — and the three that read as a lens on money you hold (Tokens,
-        // L2BEAT, OpenSea) moved to Wallet. Their bridge files stay in the
+        // — and the ones that read as a lens on money you hold (Tokens,
+        // L2BEAT) moved to Wallet. OpenSea moved with them and was retired
+        // the same day by the ruling's second amendment. Their bridge files
+        // stay in the
         // tree for one release so a connected seat is not stranded, but
         // nothing here offers them, and nothing in the strip draws them
         // (`Corpus.retiredSources`).
@@ -466,12 +468,17 @@ enum BridgeCatalog {
                          "Their Stage 0/1/2 rating — cited, never computed here",
                          "Incidents and upgrades arrive as they're recorded"],
               needsSetup: true, added: day(2026, 8, 21)),
-        // The NFTs group files under WALLET since 2026-09-06 (prd §638) — a
-        // drop is something you might hold, and the category that held it
-        // apart is gone.
-        Offer(name: "OpenSea",     tagline: "New NFT drops in your feed",            group: "NFTs",      connectable: true,
-              summary: "Watch the chains you care about and their newest NFT collections land in your feed as links — the ones with real artwork, not the empty test contracts. Fetched straight from OpenSea's public API, read-only: nothing here buys, sells, or bids.",
-              needsSetup: true),
+        // OPENSEA IS RETIRED (user ruling 2026-09-06, §638's second
+        // amendment: "opensea should not have its own category or exist").
+        // §638 had folded the `NFTs` group into Wallet so the drops seat
+        // survived the category that held it; this finishes the job the
+        // ruling started, and the group goes with the seat rather than
+        // sitting in Wallet with nothing in it. Wallet keeps the NFTs you
+        // HOLD — `WalletNFTShelf`/`WalletNFTPicks` (prd §387) read Alchemy on
+        // the wallet's own sweep and are a different feature entirely; what
+        // goes is following a chain for other people's new drops.
+        // `OpenSeaBridge`/`OpenSeaScreen` stay one release like the other
+        // retired seats, so a connected person is not stranded.
         // Shopping, not Markets (2026-07-17): Bitrefill is your own commerce
         // account — orders and receipts — not a market you watch.
         Offer(name: "Bitrefill",   tagline: "Your gift cards, in reach",             group: "Shopping",  connectable: true,
@@ -1098,7 +1105,8 @@ enum BridgeCatalog {
         // Wallet — seventh, not second — so the 2026-07-23 property this
         // order exists to protect (no two crypto bands up top) held. The
         // band is gone entirely since 2026-09-06 (prd §638): Tokens, L2BEAT
-        // and OpenSea fold into Wallet, the other seven seats are retired,
+        // and (for one day) OpenSea fold into Wallet, the other seven seats
+        // are retired,
         // and the "two crypto bands" problem is closed by there being one.
         //
         // **Unlike §322, a seat DOES change category here.** Every Mail-group
@@ -1108,9 +1116,11 @@ enum BridgeCatalog {
         // nothing, which is the same outcome as a category being renamed and
         // is why the recap is written to tolerate an unknown name.
         // "NFTs" joined Wallet's groups when Markets was deleted (2026-09-06,
-        // prd §638) — OpenSea keeps its own group so a drop is still filed
-        // as what it is, and Wallet is the band that holds it.
-        ("Wallet",  "Wallet",      ["Wallet", "NFTs"]),
+        // prd §638) and left again the same day with OpenSea, its only
+        // offer (§638's second amendment). A group nothing declares is a
+        // heading waiting to render blank — the reason "Home" is gone from
+        // this list too, three rows down.
+        ("Wallet",  "Wallet",      ["Wallet"]),
         ("Work",    "GitHub",      ["Work"]),
         // "Home" is GONE from this list, not merely empty (2026-09-04). Life
         // absorbed it on 2026-07-23 because HomeKit was the lone app in its

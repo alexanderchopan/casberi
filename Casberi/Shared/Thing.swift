@@ -122,6 +122,10 @@ enum Corpus {
     static let retiredSources: Set<String> = [
         "Kalshi", "Polymarket", "GeckoTerminal", "Circle x402",
         "1Claw", "Open Food Facts",
+        // OpenSea joined them 2026-09-06 (§638's second amendment) — it
+        // survived the category's deletion by a day, then went for the same
+        // reason the other six did.
+        "OpenSea",
     ]
 
     /// Does this source get a chip in the strip, a room behind it, and a

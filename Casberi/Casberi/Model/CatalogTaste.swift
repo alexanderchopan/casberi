@@ -59,7 +59,7 @@ enum CatalogTaste {
         Signal(kind: .screenshot,  eyebrow: { String(localized: "\($0) screenshots in here") },     offers: ["Photos"]),
         Signal(kind: .chat,        eyebrow: { String(localized: "You've kept \($0) chats") },       offers: ["Claude", "ChatGPT"]),
         Signal(kind: .event,       eyebrow: { String(localized: "\($0) things on your calendar") }, offers: ["Calendar", "Cal.com"]),
-        Signal(kind: .transaction, eyebrow: { String(localized: "\($0) onchain moves kept") },      offers: ["Tokens", "OpenSea"]),
+        Signal(kind: .transaction, eyebrow: { String(localized: "\($0) onchain moves kept") },      offers: ["Tokens"]),
         Signal(kind: .note,        eyebrow: { String(localized: "You've written \($0) notes") },    offers: ["Obsidian", "Apple Notes", "Day One"]),
         Signal(kind: .product,     eyebrow: { String(localized: "You're watching \($0) things") },  offers: ["Deals", "Shopify"]),
         Signal(kind: .reminder,    eyebrow: { String(localized: "\($0) things to do") },            offers: ["Todoist", "Reminders"]),
