@@ -15,102 +15,85 @@ struct EthValidatorScreen: View {
     @State private var positions: [Int: EthValidatorRead.Position] = [:]
     @FocusState private var fieldFocused: Bool
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+
     var body: some View {
-        BridgeSetupPage(name: "ETH Validators") {
-            // The one setup screen in the family with no header (audit,
-            // 2026-07-31), so its tagline appeared nowhere and the slab note
-            // below had to carry the what-lands fact alone. NOT the §185 case:
-            // Tokens and Stocktwits go headerless on purpose because their
-            // omnibox leads an asset SHELF; this is a wallet seat with a
-            // watchlist, and it simply never got one.
-            BridgeSetupHeader(
-                name: "ETH Validators",
-                mode: .noAccount,
-                intro: "An index is public, so there's nothing to sign in to. Balance, status and rewards land as they change.",
-                connected: !validatorStore.watched.isEmpty)
-            addSection.listRowSeparator(.hidden)
-            if !validatorStore.watched.isEmpty {
-                watchlistSection
-            }
-        }
+        AccountPage(
+            name: "ETH Validators", seatID: "ethvalidator", source: "ETH Validators",
+            state: AccountPageState.of(name: "ETH Validators", seatID: "ethvalidator",
+                                       connected: !validatorStore.watched.isEmpty, store: store),
+            intro: "An index is public, so there's nothing to sign in to. Balance, status and rewards land as they change.",
+            mode: .noAccount,
+            // A VALIDATOR LANDS NOTHING (§484's rowless nine): its balance
+            // folds into the combined total and no row reaches the feed, so
+            // the Activity count and "Who may read it" are absent rather than
+            // reading zero about a seat that is working.
+            lands: false,
+            rows: rows,
+            query: indexField,
+            onRemoveRow: unwatch,
+            // Every watched index goes, so the next foreground can't
+            // re-register the seat off a list the person just disconnected.
+            teardown: {
+                for index in validatorStore.watched.map(\.index) {
+                    validatorStore.remove(index: index)
+                }
+            },
+            sheet: $sheet,
+            act: { addBlock },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
         .onAppear {
             if !validatorStore.watched.isEmpty { Task { await refresh() } }
         }
     }
 
+    // MARK: - The roster
+
+    /// One row per watched validator — its label or index, its status, and
+    /// what it holds where the beacon chain answered. No figure where it did
+    /// not: unreachable is a fact we don't have.
+    private var rows: [AccountPageShape.Row] {
+        validatorStore.watched.map { row in
+            let position = positions[row.index]
+            let held = position.map { WalletValue.token($0.eth, "ETH") }
+            let status = statusLine(position)
+            return AccountPageShape.Row(
+                id: String(row.index),
+                title: row.label.isEmpty ? String(localized: "Validator #\(row.index)") : row.label,
+                subline: held.map { "\(status) · \($0)" } ?? status,
+                weekCount: 0, hasNew: false, isYou: false, avatarURL: nil)
+        }
+    }
+
+    private func unwatch(_ id: String) {
+        guard let index = Int(id) else { return }
+        validatorStore.remove(index: index)
+        EthValidatorRead.registerBridge(store: store)
+        DSHaptic.tap()
+    }
+
+
     // MARK: - Sections
 
-    private var addSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabField(placeholder: String(localized: "Validator index"),
-                            text: $indexField, actionLabel: String(localized: "Watch"),
-                            focus: $fieldFocused, action: watch)
-                BridgeSyncStatusRows(syncing: working,
-                                     syncingLine: String(localized: "Checking the validator…"),
-                                     proof: result)
-                // The what-lands sentence added here earlier the same day is
-                // gone again with the arrival of the header above, whose
-                // tagline — "Your validator balance, in your total" — says it
-                // in primary type (the same edit `SteamScreen` took; a fix and
-                // a duplication can be one line). What survives is the part
-                // the tagline can't carry: WHERE it shows, where to find the
-                // index, and the promise.
-                DSSlabNote(text: "It shows under ETH; your staking client shows the index. Nothing stakes, exits, or moves a balance.")
-            }
-        }
-        .dsSlabSection()
-    }
-
-    private var watchlistSection: some View {
-        Section {
-            ForEach(validatorStore.watched) { row in
-                validatorRow(row)
-            }
-            .onDelete(perform: unwatch)
-        }
-        // The footer that said "Balance folds into your combined wallet total,
-        // under ETH." moved UP into the add slab's note (2026-07-31), where it
-        // is visible BEFORE you watch anything rather than only after — it was
-        // the screen's one what-lands fact, and it lived in a section that
-        // doesn't exist until the watchlist does.
-    }
-
-    private func validatorRow(_ row: EthValidatorStore.Watched) -> some View {
-        let position = positions[row.index]
-        return HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(row.label.isEmpty ? "Validator #\(row.index)" : row.label)
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                Text(statusLine(position))
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-            }
-            Spacer()
-            if let position {
-                Text(WalletValue.token(position.eth, "ETH"))
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
-            }
-        }
-        .dsListCardRow()
-        .swipeActions {
-            Button(role: .destructive) {
-                validatorStore.remove(index: row.index)
-                EthValidatorRead.registerBridge(store: store)
-                DSHaptic.tap()
-            } label: {
-                Label("Unwatch", systemImage: "trash")
-            }
-        }
-        // A swipe has no Mac-mouse equivalent — right-click mirrors it
-        // (Mac polish, 2026-07-28).
-        .contextMenu {
-            Button(role: .destructive) {
-                validatorStore.remove(index: row.index)
-                EthValidatorRead.registerBridge(store: store)
-                DSHaptic.tap()
-            } label: {
-                Label("Unwatch", systemImage: "trash")
-            }
+    @ViewBuilder private var addBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            DSSlabField(placeholder: String(localized: "Validator index"),
+                        text: $indexField, actionLabel: String(localized: "Watch"),
+                        focus: $fieldFocused, action: watch)
+            BridgeSyncStatusRows(syncing: working,
+                                 syncingLine: String(localized: "Checking the validator…"),
+                                 proof: result)
+            // The what-lands sentence added here earlier the same day is
+            // gone again with the arrival of the header above, whose
+            // tagline — "Your validator balance, in your total" — says it
+            // in primary type (the same edit `SteamScreen` took; a fix and
+            // a duplication can be one line). What survives is the part
+            // the tagline can't carry: WHERE it shows, where to find the
+            // index, and the promise.
+            DSSlabNote(text: "It shows under ETH; your staking client shows the index. Nothing stakes, exits, or moves a balance.", plain: true)
         }
     }
 
@@ -160,16 +143,6 @@ struct EthValidatorScreen: View {
             indexField = ""
             EthValidatorRead.registerBridge(store: store)
         }
-    }
-
-    private func unwatch(at offsets: IndexSet) {
-        // Snapshot the indices to drop BEFORE removing any — `remove`
-        // mutates `validatorStore.watched` in place, so reading it mid-loop
-        // after an earlier removal would shift every later offset.
-        let dropped = offsets.map { validatorStore.watched[$0].index }
-        for index in dropped { validatorStore.remove(index: index) }
-        DSHaptic.tap()
-        EthValidatorRead.registerBridge(store: store)
     }
 
     private func refresh() async {
