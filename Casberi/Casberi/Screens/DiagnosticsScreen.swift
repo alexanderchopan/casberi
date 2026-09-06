@@ -85,6 +85,17 @@ struct DiagnosticsScreen: View {
         let b = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
         log("Build \(v) (\(b))")
 
+        // — MetricKit: what the DEVICE saw that nothing here can (2026-09-05) —
+        //
+        // First, because it is the only block on this screen that reports the
+        // shipped Release binary's own crashes, hangs and watchdog kills — the
+        // two classes CLAUDE.md records as unreachable by every harness in this
+        // repo. Everything below it re-runs a path live; this reports history,
+        // and history is what a person opening Diagnostics after a crash came
+        // for. Empty in the Simulator by design — `AppMetrics.report()` says so
+        // in its own words rather than drawing a row of dashes.
+        for line in AppMetrics.report() { log(line) }
+
         // Corpus basics.
         let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []

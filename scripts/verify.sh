@@ -2020,6 +2020,25 @@ harness "Agent reply self-test" "32 assertions, 10 mutations, 7 drift guards —
 # every Mac save landing in an in-memory store and every gate green.
 harness "Cloud-sync self-test" "20 assertions, 6 mutations, 14 drift guards — the tray's sentence, the trap guard, and ⌘Q" "scripts/cloud-sync-selftest.sh" "the cloud-sync self-test failed — run scripts/cloud-sync-selftest.sh"
 
+# MetricKit — the reading of a payload, and the wiring that makes one arrive
+# (prd §620). The strongest harness argument in this block, stronger than the
+# cloud-sync one above: that feature at least COULD run somewhere. **Nothing on
+# any machine here can produce a MetricKit payload.** It is delivered on real
+# hardware only, from a shipped build, at most once every 24h — so the
+# simulator reports an empty read forever and `-metricsProbe` passing there
+# proves only that the read path executes. `AppMetricsDigest.swift` is
+# Foundation-only precisely so this compiles the SHIPPED file verbatim against
+# fixtures, and the drift guards cover what the assertions structurally cannot:
+# the subscriber registration (without it the system keeps nothing and every
+# surface reads empty forever, which is indistinguishable from an app that has
+# not crashed), the one-renderer rule, the honest empty, no network, the
+# Catalyst availability guard, and the signpost call-site rule — MXSignpost
+# snapshots process metrics on every call and Apple's own header warns in
+# capitals against bulk use, so a span reaching a view body would be an
+# instrument that costs what it measures, inside the very spans it exists to
+# protect.
+harness "MetricKit self-test" "11 mutations, 15 drift guards — the payload read, and the signposts that make one worth reading" "scripts/metrics-selftest.sh" "the MetricKit self-test failed — run scripts/metrics-selftest.sh"
+
 # The design system's first mechanical check (prd §299). Every other rule in
 # this file is enforced by a script; the design system was enforced by memory,
 # which is how fourteen data drawings shipped with no entrance and how the

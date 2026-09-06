@@ -322,6 +322,41 @@ enum ProbeHooks {
             NetworkLedger.shared.forget()
             NSLog("Receipts probe: ledger cleared")
         },
+        // `-metricsProbe YES` prints what MetricKit has handed this app — one
+        // `metricKit|` line per line the Diagnostics screen would draw, through
+        // the SAME `AppMetrics.report()`, so the probe is evidence about the
+        // screen rather than a second opinion beside it (the `-todayProbe`
+        // truncation lesson, and `NetworkLedger.resolvedService`'s).
+        //
+        // **On the simulator this reports empty, always, and that is the
+        // correct answer** — MetricKit delivers on real hardware only. So a
+        // pass here is NOT evidence the feature works, exactly as
+        // `-quickActionProbe`'s own comment says of the quick action: it can
+        // only show that the read path runs and that the subscriber is
+        // registered. The reading of a real payload is proven by
+        // `scripts/metrics-selftest.sh`, which compiles `AppMetricsDigest`
+        // verbatim against hand-built fixtures; the DELIVERY half is a device
+        // check, run by opening Diagnostics on a phone.
+        //
+        // `-metricsForget YES` empties the remembered diagnostics first —
+        // declared BEFORE this one because hooks run in list order, so a launch
+        // passing both clears and then reads, which is the useful direction.
+        Hook(key: "metricsForget") { _, _ in
+            AppMetrics.forget()
+            NSLog("metricsProbe: remembered diagnostics cleared (the system's own store is not ours to clear)")
+        },
+        Hook(key: "metricsProbe") { _, _ in
+            let lines = AppMetrics.report()
+            for line in lines {
+                // A crash row carries its stack as embedded newlines; NSLog
+                // would emit that as one unreadable blob, so each frame gets
+                // its own line and stays greppable.
+                for part in line.split(separator: "\n", omittingEmptySubsequences: false) {
+                    NSLog("metricKit| %@", part.trimmingCharacters(in: .whitespaces))
+                }
+            }
+            NSLog("metricsProbe: %d line(s)", lines.count)
+        },
         Hook(key: "receiptsProbe") { _, _ in
             let rows = NetworkLedger.shared.snapshot()
             var undeclared = 0

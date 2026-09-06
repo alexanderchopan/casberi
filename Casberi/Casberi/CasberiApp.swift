@@ -153,6 +153,16 @@ struct CasberiApp: App {
         // for notifications (prd §306) with no view above it. Must be the SAME
         // container the UI runs on — see `SharedStore.live`.
         SharedStore.adopt(container)
+        // MetricKit, for the same reason as the line below it: a diagnostic
+        // payload for the crash that just happened is delivered early in the
+        // NEXT launch, and a subscriber registered later gets nothing — the one
+        // launch where it matters most is the one that would lose it. Costs one
+        // `addSubscriber` call and no work; see `AppMetrics`.
+        AppMetrics.begin()
+        // …and open the launch interval here, the earliest app-owned code, so
+        // the span MetricKit reports matches what `LaunchClock` has always
+        // measured. Closed at `launchTimer init→ready` in RootShell.
+        AppSignposts.beginLaunch()
         // The notification delegate has to be set before the app finishes
         // launching, or a tap that COLD-LAUNCHES the app is delivered before
         // anything is listening and the deep link is lost — the one case a

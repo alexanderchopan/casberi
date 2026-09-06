@@ -362,6 +362,13 @@ struct RootShell: View {
                 let ms = Int(Date().timeIntervalSince(LaunchClock.start) * 1000)
                 NSLog("[Casberi] launchTimer init→ready %dms", ms)
             }
+            // The same instant, reported to MetricKit instead of the console —
+            // so this number arrives from real devices in Release without
+            // anybody holding one (docs/perf-spec.md P0). OUTSIDE the
+            // `LaunchClock.reports` gate on purpose: that gate exists so a
+            // shipped build never LOGS for a real person, and a signpost is not
+            // a log — it is the measurement the gate was blocking.
+            AppSignposts.endLaunch()
             // Spotlight mirrors the store; launch reconciles (covers things
             // the share extension made while the app was closed). The fetch
             // reads the main-actor store, so it stays on the main actor — a
@@ -1881,6 +1888,11 @@ struct RootShell: View {
         // withheld.
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(firstActivation ? 800 : 250))
+            // Bracketed at the CALL SITE, not inside the closure: the sleep
+            // above is the deferral this pass exists to keep, and timing it
+            // would measure the fix rather than the work.
+            AppSignposts.beginForegroundSweep()
+            defer { AppSignposts.endForegroundSweep() }
             runForegroundWork()
         }
         // Resnapshot hand-off state so the thing sheet's "Add to <app>"
@@ -2926,13 +2938,34 @@ struct RootShell: View {
         // sites: there are five of those and they are exactly the kind of list
         // that goes stale, where a wrapper here covers a branch added later for
         // free.
+        //
+        // RELEASE TOO, since 2026-09-05: the same two moments go to MetricKit
+        // as `AskFirstPaint` / `AskSettled` signposts, which is how this span
+        // gets measured on a phone (docs/perf-spec.md P0). ONE wrapper feeds
+        // both instruments — two would be the second-copy drift this codebase
+        // keeps paying for, and here the copies would disagree about which
+        // channel painted first.
+        AppSignposts.beginAsk()
+        defer { AppSignposts.endAsk() }
         #if DEBUG
         let askClock = AskClock(query)
         defer { askClock.settled() }
-        let rawProse = onProseDoc, rawPartial = onPartialDoc
-        let onProseDoc: ([String]) -> Void = { doc in askClock.paint("prose"); rawProse(doc) }
-        let onPartialDoc: ([String]) -> Void = { doc in askClock.paint("partial"); rawPartial(doc) }
         #endif
+        let rawProse = onProseDoc, rawPartial = onPartialDoc
+        let onProseDoc: ([String]) -> Void = { doc in
+            AppSignposts.askFirstPaint()
+            #if DEBUG
+            askClock.paint("prose")
+            #endif
+            rawProse(doc)
+        }
+        let onPartialDoc: ([String]) -> Void = { doc in
+            AppSignposts.askFirstPaint()
+            #if DEBUG
+            askClock.paint("partial")
+            #endif
+            rawPartial(doc)
+        }
         // How long the brief's own compose stands off after painting the
         // cached document, so the rise animation gets the main actor
         // (PERF 2026-08-18; see the `TodayBrief.matches` branch below).
