@@ -223,6 +223,19 @@ struct DSSlabField: View {
     /// addresses, where a capital letter inserted by the keyboard is a wrong
     /// value. A field that holds a NAME somebody is writing says so.
     var autocapitalization: TextInputAutocapitalization = .never
+    /// **A PASTE CONTROL INSIDE THE FIELD (prd §618, 2026-09-05).** Every
+    /// "paste an address" screen asked for a long-press, a menu and a tap for
+    /// the one thing it exists to take. When set, a system `PasteButton`
+    /// sits beside the verb while the field is empty and hands the
+    /// clipboard's string to this closure; the caller validates and previews
+    /// exactly as it would a typed one — the paste FILLS, it never commits.
+    ///
+    /// A `PasteButton` rather than a `UIPasteboard` read for the reason
+    /// `BankrSetupScreen` gives: the system reads the clipboard, so no paste
+    /// banner is raised and the app never sees a clipboard it was not handed.
+    /// It also disables itself when the clipboard holds no text, so an empty
+    /// clipboard shows a dimmed control rather than a verb that does nothing.
+    var paste: ((String) -> Void)? = nil
     let action: () -> Void
 
     private var armed: Bool {
@@ -250,6 +263,19 @@ struct DSSlabField: View {
                 }
             }
             if busy { ProgressView().controlSize(.small) }
+            if let paste, !hasText {
+                PasteButton(payloadType: String.self) { strings in
+                    guard let pasted = strings.first?
+                            .trimmingCharacters(in: .whitespacesAndNewlines),
+                          !pasted.isEmpty else { return }
+                    Task { @MainActor in paste(pasted) }
+                }
+                .labelStyle(.iconOnly)
+                .buttonBorderShape(.capsule)
+                .controlSize(.small)
+                .tint(DS.tint)
+                .transition(.opacity)
+            }
             if clearable, hasText {
                 Button {
                     DSHaptic.tap()

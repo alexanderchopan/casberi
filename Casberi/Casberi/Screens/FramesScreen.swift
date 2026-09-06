@@ -24,15 +24,27 @@ import SwiftUI
 /// what you do repeatedly.
 struct FramesScreen: View {
     @Environment(BridgeStore.self) private var store
-    @Environment(ShellChrome.self) private var chrome
-    @Environment(HomeRoute.self) private var route
 
     @Bindable private var watch = FramesWatch.shared
     @State private var keyAddress: String? = FramesKey.address()
+    /// The read that follows a watch, reported here (prd §618). Reached = the
+    /// sweep stamped a new `readAt`; the demo reaches nothing and is not a
+    /// failure.
+    @State private var reader = DevnetReader(name: FramesIdentity.source) {
+        guard !DemoMode.isActive else { return true }
+        let before = FramesLiveState.shared.readAt
+        await FramesLiveState.shared.refresh()
+        return FramesLiveState.shared.readAt != before
+    }
 
     private static let mark = DS.brandHue(for: FramesIdentity.source) ?? DS.tint
 
-    private var connected: Bool { watch.connected || keyAddress != nil }
+    // WATCHING, not owning a key (prd §618). `|| keyAddress != nil` made the
+    // header pour and "View feed" open an EMPTY room for somebody who had made
+    // a key and watched nothing — a door onto nothing worth seeing (§83).
+    // Disconnect never touched the key, so nothing else needed the key to
+    // count as connected.
+    private var connected: Bool { watch.connected }
 
     var body: some View {
         BridgeSetupPage(name: FramesIdentity.source, computedTitle: FramesIdentity.source) {
@@ -41,7 +53,7 @@ struct FramesScreen: View {
                 mode: .noAccount,
                 // ACTION, not a re-pitch: you reach this from the product
                 // page, which has just said what the chain is.
-                intro: "Paste an address, or start with one that already has something to show.",
+                intro: "Paste an address, or start with one that already has something to show. Watch as many as you like.",
                 connected: connected)
 
             if connected {
@@ -59,10 +71,9 @@ struct FramesScreen: View {
                     // step that is somewhere else.
                     mine: keyAddress,
                     mineDetail: String(localized: "The key that signs here"),
-                    idleNote: watch.addresses.isEmpty
-                        ? String(localized: "Nothing is watched yet.") : nil,
-                    register: { FramesBridge.registerBridge(store: store) },
-                    onWatched: watched)
+                    peek: { await DevnetPeek.read($0, via: FramesRPC.call(method:params:)) },
+                    reader: reader,
+                    register: { FramesBridge.registerBridge(store: store) })
             }
             .dsSlabSection()
             .listRowSeparator(.hidden)
@@ -99,18 +110,8 @@ struct FramesScreen: View {
 
     private static let examples = FramesExample.all
 
-    /// **ONLY THE FIRST WATCH ROUTES**, so a second watch cannot yank the list
-    /// out from under the thumb still using it.
-    ///
-    /// CLOSE, POP, ASK — `RoomDoor`'s order. This screen is RAISED as the
-    /// connect sheet, so `route.path` is the stack behind it and a bare
-    /// `sourceRequest` moves a room the form is still covering.
-    private func watched(_ address: String) {
-        guard watch.addresses.count == 1 else { return }
-        route.closeConnectForm()
-        route.path = []
-        chrome.sourceRequest = FramesIdentity.source
-    }
+    // NO ROUTE ON A WATCH (prd §618) — see `HegotaScreen`; the `RoomDoor` is
+    // the way on, and the read reports here.
 }
 
 /// The addresses worth offering, and there are only two worth offering.

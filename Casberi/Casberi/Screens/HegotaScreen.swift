@@ -31,11 +31,18 @@ import SwiftUI
 /// what you do repeatedly.
 struct HegotaScreen: View {
     @Environment(BridgeStore.self) private var store
-    @Environment(ShellChrome.self) private var chrome
-    @Environment(HomeRoute.self) private var route
 
     @Bindable private var watch = HegotaWatch.shared
     @State private var keyAddress: String? = HegotaKey.address()
+    /// The read that follows a watch, reported here rather than in a room
+    /// nobody has been sent to (prd §618). Reached = the sweep stamped a new
+    /// `readAt`; the demo reaches nothing and is not a failure.
+    @State private var reader = DevnetReader(name: HegotaIdentity.source) {
+        guard !DemoMode.isActive else { return true }
+        let before = HegotaLiveState.shared.readAt
+        await HegotaLiveState.shared.refresh()
+        return HegotaLiveState.shared.readAt != before
+    }
 
     private static let mark = DS.brandHue(for: HegotaIdentity.source) ?? DS.tint
 
@@ -49,7 +56,7 @@ struct HegotaScreen: View {
                 // ACTION, not a re-pitch: you reach this from the product page,
                 // which has just said what Hegotá is. The mode chip carries the
                 // cost. What is left is what to do here.
-                intro: "Paste an address, or start with one that already has something to show.",
+                intro: "Paste an address, or start with one that already has something to show. Watch as many as you like.",
                 connected: connected)
 
             if connected {
@@ -67,10 +74,9 @@ struct HegotaScreen: View {
                     // exists, so it is never a second door onto a first act.
                     mine: keyAddress,
                     mineDetail: String(localized: "The key that signs here"),
-                    idleNote: watch.addresses.isEmpty
-                        ? String(localized: "Nothing is watched yet.") : nil,
-                    register: { HegotaBridge.registerBridge(store: store) },
-                    onWatched: watched)
+                    peek: { await DevnetPeek.read($0, via: HegotaRPC.call(method:params:)) },
+                    reader: reader,
+                    register: { HegotaBridge.registerBridge(store: store) })
             }
             .dsSlabSection()
             .listRowSeparator(.hidden)
@@ -120,20 +126,11 @@ struct HegotaScreen: View {
                       detail: String(localized: "Two named nonce keys")),
     ]
 
-    /// **ONLY THE FIRST WATCH ROUTES**, so a second watch tapped a moment later
-    /// cannot yank the list out from under the thumb still using it.
-    ///
-    /// CLOSE, POP, ASK — `RoomDoor`'s order. This screen is RAISED as the
-    /// connect sheet, so `route.path` is the stack behind it and `sourceRequest`
-    /// alone moves a room the form is still covering. Nil-write when nothing is
-    /// raised.
-    private func watched(_ address: String) {
-        // READ IT NOW. The room reads for itself on appear too, but starting
-        // here means the sweep is usually done by the time the room draws.
-        Task { await HegotaLiveState.shared.refresh() }
-        guard watch.addresses.count == 1 else { return }
-        route.closeConnectForm()
-        route.path = []
-        chrome.sourceRequest = HegotaIdentity.source
-    }
+    // NO ROUTE ON A WATCH (prd §618, 2026-09-05). This screen used to land you
+    // in the room on the first watch — the same tap that, on vibenet, the
+    // 2026-08-28 ruling forbade ("they need to be able to select multiple
+    // before going to the feed"), and that this seat's own harness records
+    // being reported against ("when you select one of the addresses to watch
+    // you can't select the other"). The `RoomDoor` above is the way on; the
+    // read starts here and reports here.
 }

@@ -33,7 +33,10 @@ struct WalletScreen: View {
     @State private var sheetRoute: AddressBookSheetRoute?
 
     var body: some View {
-        BridgeSetupPage(name: "Wallet", title: "Addresses") {
+        // Titled by its own name like every other seat's setup screen (prd
+        // §618) — "Addresses" named the book's content on the one screen that
+        // no longer holds it (§466).
+        BridgeSetupPage(name: "Wallet") {
             // A short header — the family-wide pass that put every "type
             // something to watch it" screen (Vibenet, Hegota, RSS, Tokens,
             // Stocktwits, …) on one shape: identity + mode chip + one action
@@ -55,8 +58,9 @@ struct WalletScreen: View {
                 // roster, and watching a second through fifth, is the address
                 // book's job now).
                 //
-                // The second branch points at the door directly below it, so
-                // "below" resolves in both states.
+                // The second branch points at the address-book door in the
+                // foot, so "below" resolves in both states — it named a door
+                // this screen did not have until prd §618.
                 intro: wallet.addresses.isEmpty
                     ? String(localized: "Paste an address or ENS name below, or connect a wallet app. Watch up to five.")
                     : String(localized: "Watching \(wallet.addresses.count) of \(WalletStore.watchLimit). Add, rename or stop watching in the address book below."),
@@ -113,29 +117,39 @@ struct WalletScreen: View {
         chrome.sourceRequest = "Wallet"
     }
 
-    // MARK: - The door to everyone else (prd §461/§466)
-
-
     // MARK: - The foot
 
-    /// The connection plumbing and the promise. Chains and teardown are the
-    /// one thing here nobody revisits, so they sit last.
+    /// The door to the book, the connection plumbing and the promise. The
+    /// book leads because it is the one thing here somebody revisits (§466:
+    /// the roster, rename, remove, and the second through fifth address all
+    /// live there); chains and teardown sit last.
     private var footSection: some View {
         Section {
             VStack(spacing: DS.Space.s4) {
+                DSSlabDoor(title: "Address book", detail: bookSummary,
+                           systemImage: "person.text.rectangle") {
+                    route.push(.addressBook)
+                }
                 DSSlabDoor(title: "Connection", detail: chainsSummary,
                            systemImage: "network") {
                     route.pushBridge(.walletConnection)
                 }
-                Text("Read-only — watching can never move funds.")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    .frame(maxWidth: .infinity)
+                // The same note component every other seat's foot wears.
+                DSSlabNote(text: String(localized: "Read-only — watching can never move funds."))
             }
         }
         .listRowInsets(EdgeInsets(top: DS.Space.s3, leading: DS.Space.s4,
                                   bottom: 0, trailing: DS.Space.s4))
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
+    }
+
+    private var bookSummary: String {
+        switch book.count {
+        case 0: return String(localized: "Nothing named yet")
+        case 1: return String(localized: "1 named")
+        default: return String(localized: "\(book.count) named")
+        }
     }
 
     private var chainsSummary: String {

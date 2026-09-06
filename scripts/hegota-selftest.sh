@@ -1290,6 +1290,31 @@ need DevnetAccounts.swift.bare "ForEach(examples)" \
 deny DevnetAccounts.swift.bare "examples.filter" \
   "the accounts slab filters its examples again — a watched one disappears and the other half of the room goes with it"
 
+# NO ROUTE ON A WATCH (prd §618, 2026-09-05). Hegotá, Frames and Privacy used
+# to land you in the room on the FIRST watch — the tap vibenet's 2026-08-28
+# ruling forbade ("they need to be able to select multiple before going to the
+# feed"), and the same complaint this harness records against Hegotá two lines
+# up. The RoomDoor is the only way on for all four seats now; a `sourceRequest`
+# written by any of the three is the auto-route returning, and it fails
+# invisibly (the room opens, correctly, at exactly the wrong moment).
+for screen in FramesScreen PrivacyDevnetScreen; do
+  strip_comments "Casberi/Casberi/Screens/$screen.swift" > "$work/$screen.swift.bare"
+done
+for screen in HegotaScreen FramesScreen PrivacyDevnetScreen; do
+  deny "$screen.swift.bare" "chrome.sourceRequest" \
+    "$screen routes to the room on a watch again (prd §618) — the RoomDoor is the only way on"
+done
+# And what replaced the route: the slab starts the read itself and reports it
+# where the person still is, and the field takes a paste in one tap.
+need DevnetAccounts.swift.bare "reader?.kick()" \
+  "the accounts slab no longer starts the read after a watch (prd §618) — the room is reached blank with nothing saying a read is in flight"
+need DevnetAccounts.swift.bare "paste:" \
+  "the accounts slab lost its paste control (prd §618) — the one act these screens exist for is a long-press again"
+# Frames counted a KEY as connected, so the header poured and View feed opened
+# an empty room for somebody watching nothing.
+deny FramesScreen.swift.bare "keyAddress != nil" \
+  "FramesScreen reads as connected on a key alone again (prd §618) — View feed opens an empty room"
+
 # THE FRAMES CAPTION AND ITS LEGEND, as guards rather than as memory. Both
 # were reported from a device as "how does this math add up" and neither is
 # reachable by any other check here: the counts were always correct, so the

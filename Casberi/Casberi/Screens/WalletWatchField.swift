@@ -72,6 +72,10 @@ struct WalletWatchField: View {
                         focus: $addressFieldFocused,
                         isArmed: book.looksLikeAddress(draft)
                                  || NameResolve.looksLikeName(draft),
+                        // The paste fills; the preview, the lookalike and
+                        // checksum notices and the armed verb then treat it
+                        // exactly as typed (prd §618).
+                        paste: { newAddress = $0 },
                         action: watch)
             fieldNotice
             addressPreview

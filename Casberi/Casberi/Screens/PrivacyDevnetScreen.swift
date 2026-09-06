@@ -29,10 +29,15 @@ import SwiftUI
 /// ONCE. The room keeps what you do repeatedly.
 struct PrivacyDevnetScreen: View {
     @Environment(BridgeStore.self) private var store
-    @Environment(HomeRoute.self) private var route
-    @Environment(ShellChrome.self) private var chrome
 
     @Bindable private var watch = PrivacyDevnetWatch.shared
+    /// The read that follows a watch, reported here (prd §618).
+    @State private var reader = DevnetReader(name: PrivacyDevnetIdentity.source) {
+        guard !DemoMode.isActive else { return true }
+        let before = PrivacyDevnetLiveState.shared.readAt
+        await PrivacyDevnetLiveState.shared.refresh()
+        return PrivacyDevnetLiveState.shared.readAt != before
+    }
 
     private static let mark = DS.brandHue(for: PrivacyDevnetIdentity.source) ?? DS.tint
 
@@ -45,7 +50,7 @@ struct PrivacyDevnetScreen: View {
                 mode: .noAccount,
                 // ACTION, not a re-pitch: you reach this from the product page,
                 // which has just said what the chain is. One sentence, §315.
-                intro: "Paste an address to watch, or start with one that already has something to show.",
+                intro: "Paste an address, or start with one that already has something to show. Watch as many as you like.",
                 connected: connected)
 
             if connected {
@@ -59,10 +64,9 @@ struct PrivacyDevnetScreen: View {
                     watch: watch,
                     tint: Self.mark,
                     examples: PrivacyDevnetExample.all,
-                    idleNote: watch.addresses.isEmpty
-                        ? String(localized: "Nothing is watched yet.") : nil,
-                    register: { PrivacyDevnetBridge.registerBridge(store: store) },
-                    onWatched: watched)
+                    peek: { await DevnetPeek.read($0, via: PrivacyDevnetRPC.call(method:params:)) },
+                    reader: reader,
+                    register: { PrivacyDevnetBridge.registerBridge(store: store) })
             }
             .dsSlabSection()
             .listRowSeparator(.hidden)
@@ -98,20 +102,8 @@ struct PrivacyDevnetScreen: View {
         }
     }
 
-    /// **ONLY THE FIRST WATCH ROUTES.** The room is a new place then, and going
-    /// there is the point; on the second you are adding to a list you can see,
-    /// and yanking it away is the 2026-08-28 vibenet report ("after you follow
-    /// one address you can't choose any of the others").
-    ///
-    /// CLOSE, POP, ASK — `RoomDoor`'s order. This screen is RAISED as the
-    /// connect sheet, so `route.path` is the stack behind it and a bare
-    /// `sourceRequest` moves a room the form is still covering.
-    private func watched(_ address: String) {
-        guard watch.addresses.count == 1 else { return }
-        route.closeConnectForm()
-        route.path = []
-        chrome.sourceRequest = PrivacyDevnetIdentity.source
-    }
+    // NO ROUTE ON A WATCH (prd §618) — see `HegotaScreen`; the `RoomDoor` is
+    // the way on, and the read reports here.
 }
 
 /// **THE TWO ADDRESSES THAT HAVE SOMETHING TO SHOW (prd §593d).**

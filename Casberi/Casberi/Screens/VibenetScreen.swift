@@ -45,25 +45,21 @@ import SwiftUI
 /// to ration.
 struct VibenetScreen: View {
     @Environment(BridgeStore.self) private var store
-    @Environment(HomeRoute.self) private var route
 
     @Bindable private var watch = VibenetWatch.shared
     private var connected: Bool { watch.connected }
 
     private static let mark = DS.brandHue(for: VibenetIdentity.source) ?? DS.tint
 
-    /// A chain read is in flight. Shown, never blocking: the point of this
-    /// screen is that you keep picking while it runs.
-    @State private var reading = false
-    /// Another watch landed while a read was running — the address book's
-    /// own `loadPending` shape, and it is what makes picking four accounts
-    /// in four seconds end with one read that saw all four rather than a
-    /// snapshot that stopped at whichever tap won the race.
-    @State private var readPending = false
-    /// Set when a read could not reach vibenet at all. The accounts ARE
-    /// watched (the list is written before any of this), so this says what
-    /// happened rather than pretending the watch failed.
-    @State private var readError: String?
+    /// The read that follows a watch (prd §618) — the `readSoon` loop this
+    /// screen carried since 2026-08-28, lifted into `DevnetReader` so the
+    /// other three seats share it. `compose` returns WITHOUT saving when the
+    /// config is unreachable, so the snapshot stays nil and the room would
+    /// draw the blank page the loop exists to stop; unreachable is said here,
+    /// where the person is.
+    @State private var reader = DevnetReader(name: VibenetIdentity.source) {
+        (await VibenetRoomSource.compose()).configReached
+    }
 
     var body: some View {
         BridgeSetupPage(name: VibenetIdentity.source, computedTitle: VibenetIdentity.source) {
@@ -78,7 +74,12 @@ struct VibenetScreen: View {
                 // is left for this sentence is the only thing the pitch
                 // could not say: what to do here — and, since 2026-08-28,
                 // that it is not a one-shot.
-                intro: "Paste an account address, or watch any of the examples below.",
+                //
+                // ONE SENTENCE, FOUR SEATS (prd §618). The four devnets said
+                // this three different ways; the second clause is what used
+                // to be vibenet's alone, and it belongs to all four now that
+                // none of them routes to the room on a watch.
+                intro: "Paste an address, or start with one that already has something to show. Watch as many as you like.",
                 connected: connected)
 
             // THE DOOR LEADS (R4.5, §460) — and since the 2026-08-28 ruling it
@@ -99,11 +100,9 @@ struct VibenetScreen: View {
                     watch: watch,
                     tint: Self.mark,
                     examples: Self.examples,
-                    syncing: reading,
-                    syncingLine: String(localized: "Reading vibenet…"),
-                    idleNote: readError,
-                    register: { VibenetBridge.registerBridge(store: store) },
-                    onWatched: { _ in watched() })
+                    peek: { await DevnetPeek.read($0, via: VibenetChain.call(method:params:)) },
+                    reader: reader,
+                    register: { VibenetBridge.registerBridge(store: store) })
             }
             .dsSlabSection()
             .listRowSeparator(.hidden)
@@ -113,7 +112,7 @@ struct VibenetScreen: View {
             // different question ("who is using this today") and can fail on
             // its own without taking the examples above down with it.
             Section {
-                VibenetDiscoverySection(onWatched: watched, tint: Self.mark)
+                VibenetDiscoverySection(onWatched: { reader.kick() }, tint: Self.mark)
             }
             .dsSlabSection()
             .listRowSeparator(.hidden)
@@ -146,42 +145,4 @@ struct VibenetScreen: View {
                       title: String(localized: "An established account"),
                       detail: String(localized: "Its keys and what they may do")),
     ]
-
-    /// An address was just watched, from either control. Warms the room. **It
-    /// does not navigate** — see the header doc. The seat is registered by the
-    /// controls themselves, so all this screen owes a watch is the read.
-    private func watched() {
-        readSoon()
-    }
-
-    /// **THE WATCH READS THE CHAIN (2026-08-28).** Watching only wrote the
-    /// address to the list; nothing read vibenet, and the room composes off
-    /// `VibenetState.saved` (the snapshot, never a live read —
-    /// `VibenetRoomSource.card`'s own R4.1 reason). So a freshly watched
-    /// account had no snapshot to compose from, and the room drew NOTHING
-    /// over it until some later foreground sweep happened to run
-    /// `VibenetRoomSource.compose()` for its own reasons — reported as *"it
-    /// also says it's not connected after i do connect it"*.
-    ///
-    /// Serialized rather than one read per tap: picking four accounts in
-    /// four seconds should cost one read that saw four addresses, not four
-    /// racing reads whose last writer decides the snapshot.
-    private func readSoon() {
-        if reading { readPending = true; return }
-        reading = true
-        Task {
-            defer { reading = false }
-            repeat {
-                readPending = false
-                let room = await VibenetRoomSource.compose()
-                // `compose` returns early WITHOUT saving when the config is
-                // unreachable, so the snapshot is still nil and the room
-                // would draw the blank page this whole fix exists to stop.
-                // Say so here, where the person is.
-                readError = room.configReached
-                    ? nil
-                    : String(localized: "Couldn't reach vibenet just now. Your accounts are watched — the room fills in as soon as a read lands.")
-            } while readPending && watch.connected
-        }
-    }
 }

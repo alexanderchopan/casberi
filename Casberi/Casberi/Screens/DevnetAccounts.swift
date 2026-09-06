@@ -89,6 +89,126 @@ struct DevnetExample: Identifiable {
     var id: String { address }
 }
 
+// MARK: - What is there right now
+
+/// The two facts a devnet node will state about any address for free —
+/// how many times it has sent, and what it holds — read once per row and
+/// shown UNDER the example's claim (prd §618, 2026-09-05).
+///
+/// **Why a live line under a dated claim.** `DevnetExample`'s copy says what
+/// an address SHOWED when it was measured, and the sentence under every one of
+/// these slabs says the chain may be reset without notice — so the claim is
+/// honest and can still be stale. This line is the part that cannot be: it is
+/// what the node says now. Where it lands it replaces the dated detail; where
+/// the node cannot be reached the dated detail stands, past tense and all.
+///
+/// Two sequential calls rather than a batch because the four RPC helpers
+/// share a signature and none of them shares a batch, and the point of this
+/// type is to be handed any of them.
+struct DevnetPeek: Equatable {
+    /// The address's nonce — a count of what it SENT, never what it received.
+    let sends: Int
+    /// `eth_getBalance`, raw hex. Nil where the node answered the nonce but
+    /// not the balance.
+    let balanceWeiHex: String?
+
+    var line: String {
+        // A balance that ROUNDS TO ZERO is not a balance (§83's own
+        // corollary: a figure that rounds to nothing makes no claim). At
+        // three places a dust holding renders "0.000 test ETH", which reads
+        // as a stated amount and is worse than saying nothing — so a
+        // rendering with no non-zero digit is dropped rather than shown.
+        let held: String? = balanceWeiHex
+            .flatMap { FramesMoney.eth(fromWeiHex: $0, places: 3) }
+            .flatMap { text in
+                text.contains(where: { $0 != "0" && $0.isNumber }) ? text : nil
+            }
+            .map { String(localized: "\($0) test ETH") }
+        let sent: String
+        switch sends {
+        case 0:  sent = held == nil ? String(localized: "Nothing here right now")
+                                    : String(localized: "Nothing sent yet")
+        case 1:  sent = String(localized: "1 send")
+        default: sent = String(localized: "\(sends) sends")
+        }
+        guard let held else { return sent }
+        return "\(sent) · \(held)"
+    }
+
+    /// One read, through whichever seat's RPC helper is handed in. Nil when
+    /// the nonce did not come back — a balance alone is not a reading.
+    static func read(_ address: String,
+                     via call: (String, [Any]) async -> Any?) async -> DevnetPeek? {
+        guard !DemoMode.isActive else { return nil }
+        guard let hex = await call("eth_getTransactionCount", [address, "latest"]) as? String,
+              let sends = Int(hex.hasPrefix("0x") ? String(hex.dropFirst(2)) : hex, radix: 16)
+        else { return nil }
+        let balance = await call("eth_getBalance", [address, "latest"]) as? String
+        return DevnetPeek(sends: sends, balanceWeiHex: balance)
+    }
+}
+
+// MARK: - The read after a watch
+
+/// What happens between "watched" and "the room has something": one read,
+/// started the moment an address lands, reported on the screen the person is
+/// still looking at (prd §618, 2026-09-05).
+///
+/// **The three jumping screens had nowhere to report it.** Hegotá, Frames and
+/// Privacy routed into the room on the first watch, and their rooms read for
+/// themselves on appear — which meant the common path was: tap Watch, land in
+/// an empty room, wait, with nothing saying a read was in flight. Vibenet had
+/// already solved this (2026-08-28: connecting is picking several, the
+/// `RoomDoor` is the only way on) and carried the read state in its own
+/// screen; this type is that mechanism lifted out so all four seats share it,
+/// and so the slab and a second section (vibenet's discovery list) can drive
+/// the same read.
+///
+/// Coalescing rather than queueing: a second watch during a read marks it
+/// pending and the loop runs once more when the current one lands, so five
+/// taps cost two reads, not five.
+@MainActor
+@Observable
+final class DevnetReader {
+    /// The seat's display name, for the two sentences this type owns.
+    let name: String
+    /// The seat's own read. Returns whether the chain was REACHED — a read
+    /// that landed nothing is still a read; only unreachable is a failure.
+    private let read: @MainActor () async -> Bool
+
+    private(set) var reading = false
+    private(set) var unreachable = false
+    private var pending = false
+
+    init(name: String, read: @escaping @MainActor () async -> Bool) {
+        self.name = name
+        self.read = read
+    }
+
+    var line: String { String(localized: "Reading \(name)…") }
+
+    /// Nil while nothing is wrong. The failure sentence names what is still
+    /// true (the addresses are watched) before what is not, because the
+    /// person's act succeeded and only the network's did not.
+    var proof: BridgeProof? {
+        unreachable
+            ? .failed(String(localized: "Couldn't reach \(name) just now. Your addresses are watched — the room fills in as soon as a read lands."))
+            : nil
+    }
+
+    func kick() {
+        if reading { pending = true; return }
+        reading = true
+        Task {
+            defer { reading = false }
+            repeat {
+                pending = false
+                unreachable = !(await read())
+            } while pending
+        }
+    }
+}
+
 // MARK: - One row
 
 /// The row shape every devnet account wears: a face, a claim, the address,
@@ -207,32 +327,47 @@ struct DevnetAccountsSlab<W: DevnetWatchList>: View {
     var mine: String? = nil
     /// What this phone's row says under its title.
     var mineDetail: String = ""
-    /// A read is in flight — shown, never blocking.
-    var syncing: Bool = false
-    var syncingLine: String = ""
-    /// The line under the field when nothing has been typed and nothing has
-    /// failed. Nil where a roster below already says what is watched.
-    var idleNote: String? = nil
+    /// The seat's RPC, for the live line under each row (`DevnetPeek`). Nil
+    /// draws the dated claims alone.
+    var peek: ((String) async -> DevnetPeek?)? = nil
+    /// The read that follows a watch, and the two lines it can show under the
+    /// field. Owned by the SCREEN (an `@State`), so a second section on the
+    /// same screen can kick the same read.
+    var reader: DevnetReader? = nil
     /// Register the seat. Done HERE, in the control, not left to each
     /// embedder: four screens draw this list and a seat that forgot to
     /// register reads perfectly right up until the catalog disagrees with it.
     let register: () -> Void
     /// Fires only after an address really landed — never after a duplicate or
-    /// a rejected paste.
-    let onWatched: (String) -> Void
+    /// a rejected paste. Optional since §618: the slab reads for itself now,
+    /// and no seat routes on a watch any more.
+    var onWatched: (String) -> Void = { _ in }
 
     @State private var typed = ""
     @FocusState private var focused: Bool
     @State private var result: BridgeProof?
+    /// What the node said about each address it has been asked about, keyed
+    /// lowercase. Read once per address per mount; a row never re-asks.
+    @State private var facts: [String: DevnetPeek] = [:]
 
     private var draft: String {
         typed.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// The address the preview is about, or nil while the field holds nothing
-    /// that is already one. A plain validity check, never a lookup: none of
-    /// these chains has a name registrar, and a live read fired per keystroke
-    /// would be a claim about an account nobody has agreed to watch yet.
+    /// that is already one. RESOLVING is still a plain validity check and
+    /// never a lookup — none of these chains has a name registrar.
+    ///
+    /// **What §618 changed, and what it did not.** This doc used to add "a
+    /// live read fired per keystroke would be a claim about an account nobody
+    /// has agreed to watch yet", and one read now does fire here. The rule it
+    /// was protecting holds: nothing is read PER KEYSTROKE, because this
+    /// property is nil until 42 characters make a whole address, so the read
+    /// happens once, on a complete address the person has typed on purpose.
+    /// It asks the seat's own RPC — the host the rows below already ask and
+    /// the one `NetworkReach` declares for this seat — for two public facts,
+    /// and it is what turns "New address" into "3 sends · 0.5 test ETH", so
+    /// a wrong paste is visible BEFORE it is watched rather than after.
     private var previewAddress: String? {
         W.isValidAddress(draft) ? draft : nil
     }
@@ -244,20 +379,30 @@ struct DevnetAccountsSlab<W: DevnetWatchList>: View {
                         actionLabel: String(localized: "Watch"),
                         focus: $focused,
                         isArmed: previewAddress != nil,
+                        // The paste FILLS the field; the preview and the
+                        // armed verb then do exactly what they do for a
+                        // typed address. A clipboard that is not an address
+                        // gets the same sentence a typed one would.
+                        paste: { pasted in
+                            typed = pasted
+                            result = W.isValidAddress(pasted) ? nil : malformed
+                        },
                         action: watchTyped)
 
             addressPreview
                 .animation(DS.Motion.standard, value: previewAddress)
 
             BridgeSyncStatusRows(
-                syncing: syncing,
-                syncingLine: syncingLine,
-                proof: result ?? (previewAddress == nil ? idleNote.map(BridgeProof.says) : nil))
+                syncing: reader?.reading ?? false,
+                syncingLine: reader?.line ?? "",
+                proof: result ?? reader?.proof)
 
             if let mine {
                 DevnetAccountRow(address: mine,
                                  title: String(localized: "This phone"),
-                                 detail: mineDetail,
+                                 detail: [mineDetail, fact(for: mine)]
+                                    .compactMap { $0 }.filter { !$0.isEmpty }
+                                    .joined(separator: " · "),
                                  watching: watch.isWatching(mine),
                                  tint: tint,
                                  isMine: true) { take(mine) }
@@ -271,14 +416,53 @@ struct DevnetAccountsSlab<W: DevnetWatchList>: View {
                     .foregroundStyle(DS.textSecondary)
                     .padding(.top, DS.Space.s1)
                 ForEach(examples) { example in
+                    // The live line replaces the dated claim once it lands;
+                    // until then, and where the node cannot be reached, the
+                    // claim stands (it is written in the past tense for
+                    // exactly this — see `DevnetExample`).
                     DevnetAccountRow(address: example.address,
                                      title: example.title,
-                                     detail: example.detail,
+                                     detail: fact(for: example.address) ?? example.detail,
                                      watching: watch.isWatching(example.address),
                                      tint: tint) { take(example.address) }
                 }
             }
         }
+        .task { await peekRows() }
+        .task(id: previewAddress) {
+            guard let address = previewAddress else { return }
+            await peekOne(address)
+        }
+    }
+
+    private var malformed: BridgeProof {
+        .failed(String(localized: "That doesn't look like a devnet address — it needs to be 0x followed by 40 hex characters."))
+    }
+
+    private func fact(for address: String) -> String? {
+        facts[address.lowercased()]?.line
+    }
+
+    /// One read per row, all rows at once. Each lands on its own so the
+    /// first answer draws while the rest are still out. The reads run as
+    /// children; the `@State` write happens here, on the task's own actor.
+    private func peekRows() async {
+        guard let peek else { return }
+        let rows = (mine.map { [$0] } ?? []) + examples.map(\.address)
+        await withTaskGroup(of: (String, DevnetPeek?).self) { group in
+            for address in rows where facts[address.lowercased()] == nil {
+                group.addTask { (address, await peek(address)) }
+            }
+            for await (address, read) in group {
+                if let read { facts[address.lowercased()] = read }
+            }
+        }
+    }
+
+    private func peekOne(_ address: String) async {
+        guard let peek, facts[address.lowercased()] == nil,
+              let read = await peek(address) else { return }
+        facts[address.lowercased()] = read
     }
 
     /// What the typed address resolves to, right now — the face costs nothing
@@ -294,7 +478,7 @@ struct DevnetAccountsSlab<W: DevnetWatchList>: View {
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     Text(watch.isWatching(address) ? String(localized: "Already watching")
-                                                   : String(localized: "New address"))
+                                                   : (fact(for: address) ?? String(localized: "New address")))
                         .dsText(.subhead13)
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
@@ -311,7 +495,7 @@ struct DevnetAccountsSlab<W: DevnetWatchList>: View {
     private func watchTyped() {
         let address = draft
         guard W.isValidAddress(address) else {
-            result = .failed(String(localized: "That doesn't look like a devnet address — it needs to be 0x followed by 40 hex characters."))
+            result = malformed
             return
         }
         DSHaptic.tap()
@@ -321,15 +505,22 @@ struct DevnetAccountsSlab<W: DevnetWatchList>: View {
             return
         }
         typed = ""
-        result = nil
-        register()
-        onWatched(address)
+        landed(address)
     }
 
     private func take(_ address: String) {
         guard watch.add(address) else { return }
+        landed(address)
+    }
+
+    /// One place for what follows a watch: register the seat, start the read
+    /// the person can see, tell the screen. No routing — since §618 the
+    /// `RoomDoor` above is the only way on for every seat, so a second tap
+    /// can never yank the list out from under the thumb still using it.
+    private func landed(_ address: String) {
         result = nil
         register()
+        reader?.kick()
         onWatched(address)
     }
 }
