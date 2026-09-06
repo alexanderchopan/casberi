@@ -32,7 +32,6 @@ struct WalletbeatScreen: View {
 	@State private var syncPending = false
 	@State private var result: BridgeProof?
 	@State private var browsing = false
-	@State private var opened: String?
 	@FocusState private var fieldFocused: Bool
 
 	/// Both tiers (prd §421). Following alone is a real connected state — it reads
@@ -45,63 +44,74 @@ struct WalletbeatScreen: View {
 
 	private var connected: Bool { following || !watched.isEmpty }
 
+	/// The page's one presentation (`AccountPage.sheet`).
+	@State private var sheet: AccountPageSheet?
+
 	var body: some View {
-		BridgeSetupPage(name: "Walletbeat") {
-			BridgeSetupHeader(
-				name: "Walletbeat",
-				mode: .noAccount,
-				intro: "Their security incidents, plus a full review of each wallet app you name — their judgments, never ours.",
-				connected: connected)
-
-			if connected {
-				RoomDoor(name: "Walletbeat", source: WalletbeatWatch.source)
-					.listRowSeparator(.hidden)
-			}
-
-			// STATE FIRST, THEN THE ACTS. The registry tier is what this seat IS for somebody
-			// who never names a wallet, and it used to be the last thing on the screen — a
-			// filled primary button below the field, the browse link and two notes, which is
-			// §190's "a screen's one filled block, so it reads as THE verb" with the verb
-			// buried.
-			followSection.listRowSeparator(.hidden)
-
-			// THE STANDING FACTS SIT TOGETHER, ABOVE THE ACTS — what arrives on its own, then
-			// the wallets you named — and the finder follows. The shelf used to sit last, so its
-			// own add slot (a dashed circle whose whole job is to focus the field) was stranded a
-			// screen below the field it focuses; the wallet manager has read this way since §182.
-			//
-			// GATED ON THE WATCH LIST, never on `connected` — the TokenWatch/Stocktwits rule.
-			// Following is a connected state with nothing named, so the shelf drew that lone
-			// dashed slot under "Watching 0 · tap for its review, hold to stop watching" —
-			// gesture copy for rows that do not exist, which is §83's dead control wearing prose.
-			if !watched.isEmpty {
-				rosterSection
-			}
-
-			watchSection.listRowSeparator(.hidden)
-
-			if connected {
-				BridgeDisconnectSection(
-					bridgeID: WalletbeatWatch.seatID,
-					name: WalletbeatWatch.source,
-					teardown: { WalletbeatWatch.removeAll(context: modelContext) }
-				).listRowSeparator(.hidden)
-			}
-		}
+		AccountPage(
+			name: "Walletbeat", seatID: WalletbeatWatch.seatID, source: WalletbeatWatch.source,
+			state: AccountPageState.of(name: "Walletbeat", seatID: WalletbeatWatch.seatID,
+									   connected: connected, store: store),
+			intro: "Their security incidents, plus a full review of each wallet app you name — their judgments, never ours.",
+			mode: .noAccount,
+			// THE SHELF IS THE CHASSIS'S ROSTER NOW, and the defect it was
+			// rebuilt for goes with it: the shelf drew its lone dashed add slot
+			// under "Watching 0 · tap for its review, hold to stop watching" —
+			// gesture copy for rows that do not exist, §83's dead control wearing
+			// prose. A roster with no rows draws no label at all, and the gestures
+			// are the chassis's rather than a caption's.
+			rows: rows,
+			query: queryField,
+			onRemoveRow: unwatch,
+			onOpenRow: { sheet = .card(id: $0) },
+			cardSheet: { id in AnyView(WalletbeatCardScreen(walletID: id)) },
+			teardown: { WalletbeatWatch.removeAll(context: modelContext) },
+			sheet: $sheet,
+			act: {
+				// STATE FIRST, THEN THE ACTS. The registry tier is what this seat
+				// IS for somebody who never names a wallet, and it used to be the
+				// last thing on the screen — a filled primary button below the
+				// field, the browse link and two notes, which is §190's "a screen's
+				// one filled block, so it reads as THE verb" with the verb buried.
+				followBlock
+				watchBlock
+			},
+			more: { EmptyView() },
+			keySheet: { EmptyView() }
+		)
 		.navigationDestination(isPresented: $browsing) {
 			WalletbeatDirectoryScreen()
-		}
-		.sheet(item: $opened) { walletID in
-			WalletbeatCardScreen(walletID: walletID)
 		}
 		.onAppear {
 			following = WalletbeatWatch.following
 			load()
-			// Opening the screen doesn't connect — the person taps a wallet to watch it.
-			// Only refresh if something is already watched: viewing is not consent.
+			// Opening the page doesn't connect — the person taps to watch. Only
+			// refresh if something is already on: viewing is not consent.
 			if connected { Task { await sync() } }
 		}
 	}
+
+	// MARK: - The roster
+
+	/// One row per watched entry, saying where it stands — their judgment,
+	/// never ours. A tap opens the full card; the shelf's hold-to-unwatch is the
+	/// chassis's Remove, with the Mac mirror it never had.
+	private var rows: [AccountPageShape.Row] {
+		watched.filter(\.isLive).compactMap { thing in
+			guard let id = WalletbeatWatch.walletID(from: thing) else { return nil }
+			return AccountPageShape.Row(
+				id: id, title: WalletbeatState.card(id)?.name ?? thing.title,
+				subline: rowSubline(id),
+				weekCount: 0, hasNew: false, isYou: false, avatarURL: nil)
+		}
+	}
+
+	private func unwatch(_ id: String) {
+		WalletbeatWatch.remove(id, context: modelContext)
+		load()
+		WalletbeatWatch.registerBridge(store: store, context: modelContext)
+	}
+
 
 	// MARK: - Sections
 
@@ -118,22 +128,19 @@ struct WalletbeatScreen: View {
 	/// ("incidents arrive on their own…") it would be a list of what ARRIVES, which that
 	/// component's own doc reserves the neutral bullet for. It also leaves the screen's one
 	/// gray sentence for the search's own no-match answer.
-	private var followSection: some View {
-		Section {
-			if following {
-				DSCheckList(lines: [
-					"Following Walletbeat — their security incidents arrive for every wallet they cover."
-				])
-			} else {
-				// The free tier, and the reason it has its own verb: the incidents are about the
-				// whole registry, so there is nothing to name before they can arrive. Before §421
-				// they were gated behind watching a wallet — not a decision anyone took, just the
-				// watch list doubling as the connect act.
-				DSSlabButton(title: String(localized: "Follow the security news"),
-							 systemImage: "eye", action: follow)
-			}
+	@ViewBuilder private var followBlock: some View {
+		if following {
+			DSCheckList(lines: [
+				"Following Walletbeat — their security incidents arrive for every wallet they cover."
+			])
+		} else {
+			// The free tier, and the reason it has its own verb: the incidents are about the
+			// whole registry, so there is nothing to name before they can arrive. Before §421
+			// they were gated behind watching a wallet — not a decision anyone took, just the
+			// watch list doubling as the connect act.
+			DSSlabButton(title: String(localized: "Follow the security news"),
+						 systemImage: "eye", action: follow)
 		}
-		.dsSlabSection()
 	}
 
 	/// Naming a wallet: the ones this device already connected with, then type it, then walk
@@ -144,59 +151,56 @@ struct WalletbeatScreen: View {
 	/// with a blue text link") — then two notes, with the shelf's own add slot stranded below
 	/// all of it. The three ways to find a wallet now sit together, and the read's result
 	/// reports at the end of the block instead of cutting through the middle of it.
-	private var watchSection: some View {
-		Section {
-			VStack(alignment: .leading, spacing: DS.Space.s2) {
-				// ABOVE the field, because it is the answer to the question the field asks.
-				// §419's naming step is a search over the registry, and for anybody who has ever
-				// connected a wallet the app already knew which one — the handshake's peer
-				// metadata names it (prd §430).
-				suggestionRows
+	@ViewBuilder private var watchBlock: some View {
+		VStack(alignment: .leading, spacing: DS.Space.s2) {
+			// ABOVE the field, because it is the answer to the question the field asks.
+			// §419's naming step is a search over the registry, and for anybody who has ever
+			// connected a wallet the app already knew which one — the handshake's peer
+			// metadata names it (prd §430).
+			suggestionRows
 
-				DSSlabField(
-					placeholder: String(localized: "Wallet name"),
-					text: $queryField,
-					actionLabel: String(localized: "Watch"),
-					focus: $fieldFocused,
-					action: watchTyped)
+			DSSlabField(
+				placeholder: String(localized: "Wallet name"),
+				text: $queryField,
+				actionLabel: String(localized: "Watch"),
+				focus: $fieldFocused,
+				action: watchTyped)
 
-				ForEach(hits) { entry in
-					BridgeSearchResultRow(
-						imageURL: nil,
-						fallbackIcon: "Walletbeat",
-						title: entry.name,
-						subtitle: subtitle(entry),
-						action: { watch(entry) })
-				}
-
-				if queryField.trimmingCharacters(in: .whitespaces).count >= 2, hits.isEmpty {
-					// Walletbeat rates a few dozen wallets and there are hundreds in the world, so
-					// "no match" is the COMMON answer and must not read as an error. It no longer
-					// carries the count: the door directly beneath it states it, and saying it twice
-					// two lines apart is the wordiness §315 exists to stop.
-					DSSlabNote(text: String(localized: "Walletbeat doesn't rate that one."))
-				}
-
-				// A DOOR, in the shape every other push on this screen wears — and it states what
-				// stands behind it (`DSSlabDoor`'s own rule), read off the directory rather than
-				// typed, so a snapshot that rates one more wallet cannot leave the label behind.
-				DSSlabDoor(
-					title: String(localized: "Browse every wallet"),
-					detail: "\(WalletbeatDirectory.wallets.count)",
-					systemImage: "square.grid.2x2",
-					action: { browsing = true })
-
-				// LAST in the block, not between the field and the door: this reports on the READ,
-				// which nobody on this screen asked for, so an unreachable host must not cut the
-				// finder in half — which is how a connection error came to read as the browse link
-				// being broken.
-				BridgeSyncStatusRows(
-					syncing: syncing,
-					syncingLine: String(localized: "Reading Walletbeat…"),
-					proof: result)
+			ForEach(hits) { entry in
+				BridgeSearchResultRow(
+					imageURL: nil,
+					fallbackIcon: "Walletbeat",
+					title: entry.name,
+					subtitle: subtitle(entry),
+					action: { watch(entry) })
 			}
+
+			if queryField.trimmingCharacters(in: .whitespaces).count >= 2, hits.isEmpty {
+				// Walletbeat rates a few dozen wallets and there are hundreds in the world, so
+				// "no match" is the COMMON answer and must not read as an error. It no longer
+				// carries the count: the door directly beneath it states it, and saying it twice
+				// two lines apart is the wordiness §315 exists to stop.
+				DSSlabNote(text: String(localized: "Walletbeat doesn't rate that one."), plain: true)
+			}
+
+			// A DOOR, in the shape every other push on this screen wears — and it states what
+			// stands behind it (`DSSlabDoor`'s own rule), read off the directory rather than
+			// typed, so a snapshot that rates one more wallet cannot leave the label behind.
+			DSSlabDoor(
+				title: String(localized: "Browse every wallet"),
+				detail: "\(WalletbeatDirectory.wallets.count)",
+				systemImage: "square.grid.2x2",
+				action: { browsing = true })
+
+			// LAST in the block, not between the field and the door: this reports on the READ,
+			// which nobody on this screen asked for, so an unreachable host must not cut the
+			// finder in half — which is how a connection error came to read as the browse link
+			// being broken.
+			BridgeSyncStatusRows(
+				syncing: syncing,
+				syncingLine: String(localized: "Reading Walletbeat…"),
+				proof: result)
 		}
-		.dsSlabSection()
 	}
 
 	/// The offer, and its GROUNDS in the same breath.
@@ -242,44 +246,14 @@ struct WalletbeatScreen: View {
 		}
 	}
 
-	private var rosterSection: some View {
-		AssetRosterShelf(note: rosterNote, count: watched.count) {
-			ForEach(watched.keyed) { row in
-				if let thing = row.live { rosterSlot(thing) }
-			}
-			AssetRosterAddSlot { fieldFocused = true }
+	/// What a watched wallet's row says — Walletbeat's own kind and rating.
+	/// Their judgment, never ours; "not rated yet" where they have not made
+	/// one, rather than inventing a verdict.
+	private func rowSubline(_ id: String) -> String {
+		guard let entry = WalletbeatDirectory.wallets.first(where: { $0.id == id }) else {
+			return String(localized: "Reading Walletbeat…")
 		}
-		.listRowInsets(EdgeInsets())
-		.listRowBackground(Color.clear)
-		.listRowSeparator(.hidden)
-	}
-
-	@ViewBuilder
-	private func rosterSlot(_ thing: Thing) -> some View {
-		let walletID = WalletbeatWatch.walletID(from: thing)
-		let card = walletID.flatMap { WalletbeatState.card($0) }
-		// 56 matches `AssetRosterSlot.markSize`, spelled rather than read: that static
-		// lives on a generic type whose parameter is being inferred from this very
-		// closure, so referring to it here is unresolvable. `MetricDisc` carries the
-		// same number as its own default for the same reason.
-		AssetRosterSlot(label: card?.name ?? thing.title) {
-			WalletbeatMark(name: card?.name ?? thing.title, walletID: walletID, size: 56)
-		}
-		.onTapGesture {
-			DSHaptic.tap()
-			opened = walletID
-		}
-		.onLongPressGesture {
-			guard let walletID else { return }
-			DSHaptic.tap()
-			WalletbeatWatch.remove(walletID, context: modelContext)
-			load()
-			WalletbeatWatch.registerBridge(store: store, context: modelContext)
-		}
-	}
-
-	private var rosterNote: String {
-		String(localized: "Watching \(watched.count) · tap for its review, hold to stop watching")
+		return subtitle(entry)
 	}
 
 	// MARK: - Search

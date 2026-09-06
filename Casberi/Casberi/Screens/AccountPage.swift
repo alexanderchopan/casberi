@@ -81,6 +81,13 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// repositories has a roster to READ, and a swipe offering to remove one
     /// would be the §83 dead control with a destructive tint on it.
     var onRemoveRow: ((String) -> Void)? = nil
+    /// A SHEET only this seat can compose, raised through the page's ONE
+    /// presentation (`.card`). L2BEAT's risk assessment and Walletbeat's
+    /// review are screens of their own that no other seat has; a second
+    /// `.sheet` modifier on this view is exactly what broke `FeedScreen`'s
+    /// first tap once, so they come through the same door. `AnyView` for
+    /// `rowMenu`'s reason.
+    var cardSheet: ((String) -> AnyView)? = nil
     /// An EXTRA menu item on a roster row, above Remove — for a verb only one
     /// seat has (Tokens' "Move to front", in the manual sort). `AnyView`
     /// rather than a fourth generic parameter, because a generic with no
@@ -155,6 +162,8 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                 SocialProfileCard(profile: profile)
             case .thing(let id):
                 AccountThingSheet(id: id)
+            case .card(let id):
+                cardSheet?(id)
             }
         }
         .task(id: source) { await readCounts() }
@@ -452,12 +461,16 @@ enum AccountPageSheet: Identifiable {
     case key
     case profile(SocialProfile)
     case thing(id: UUID)
+    /// A screen only the adopting seat can compose, keyed by whatever it
+    /// names its own rows with (`AccountPage.cardSheet`).
+    case card(id: String)
     var id: String {
         switch self {
         case .reach: "reach"
         case .key: "key"
         case .profile(let p): "profile:\(p.id)"
         case .thing(let id): "thing:\(id.uuidString)"
+        case .card(let id): "card:\(id)"
         }
     }
 }
