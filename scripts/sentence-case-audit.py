@@ -129,7 +129,15 @@ COMPARED = re.compile(
 
 # A word may carry digits INSIDE it, so `L2BEAT`, `P2SH` and `x402` are one word
 # rather than a letter and a shout. Splitting them was this file's own first bug.
-WORD = re.compile(r"[A-Za-z][A-Za-z0-9]*(?:'[A-Za-z]+)?")
+#
+# **LETTERS ARE UNICODE, not ASCII (2026-09-06).** The class was `[A-Za-z]`, so
+# an accented name broke in half: `Hegotá` tokenized as `Hegot`, which is not a
+# word anybody can add to `KNOWN_PROPER` honestly — it is a fragment of a name.
+# Four shipped sentences naming the chain were unvouchable for that reason
+# alone, and this file's own comment below shows it already wrestling with the
+# same string. `[^\W\d_]` is "a letter in any script"; `[^\W_]` keeps the
+# digits-inside-a-word rule above intact.
+WORD = re.compile(r"[^\W\d_][^\W_]*(?:'[^\W\d_]+)?", re.UNICODE)
 
 # A Swift unicode escape is a CHARACTER, not two words. DECODED rather than
 # stripped, because the commonest one in this tree is `\u{00B7}` — the `·` that
@@ -212,6 +220,11 @@ KNOWN_PROPER: set[str] = {
     "Bitcoin", "Ethereum", "Solana", "Base", "Optimism", "Polygon", "Arbitrum",
     "Gnosis", "Monad", "Robinhood", "HyperEVM", "Etherscan", "Solscan",
     "Ethrex", "Reown", "WalletConnect", "Visa", "Metamask", "Delegator",
+    # The CHAIN is Hegotá; the SEAT is "Hegota Devnet" since §629. The rename
+    # took the accented spelling out of the catalog (which is where proper
+    # nouns are derived from), leaving four sentences that name the network
+    # itself — "Sent test ETH on Hegotá" — with nothing to vouch for them.
+    "Hegotá",
     "Rabby", "SafePal", "Trezor", "Raycast", "Takeout", "SteamID", "Venmo",
     "BNB", "SegWit", "MyActivity", "AuthKey", "Siri", "Mac", "Safari",
     "Spotlight", "Keychain",
