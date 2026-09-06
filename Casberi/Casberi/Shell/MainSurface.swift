@@ -1702,9 +1702,19 @@ struct MainSurface: View {
         // Arriving in a room opens ITS folder (§591 amendment) — every route
         // counts: a venue pick, a swipe, a deep link, the composer. Only a
         // re-tap on an open folder closes it, and only until you leave.
-        .onChange(of: filter.source, initial: true) { _, source in
-            chrome.openFolder = BridgeCatalog.category(forSource: source)
-                .map { ShellChrome.OpenFolder.category($0) }
+        // **ARRIVING IN A ROOM NO LONGER OPENS ITS FOLDER (2026-09-06).** This
+        // set `openFolder` to the room's category on every source change, so
+        // that the old always-visible venue switcher had a row to draw in a
+        // folded seat (§357). With the folder a Mac-dock stack that springs
+        // up on a tap and closes on a pick, auto-opening it on arrival made
+        // every folded room wear its venues row permanently — measured on the
+        // demo census's shots: 80-odd rooms each carrying a second row, and
+        // the social rooms a THIRD (the faces rail), stacked over the feed.
+        // The lit category chip says where you are; a tap on it shows the
+        // venues. A person scope still forces its rail open (below), since a
+        // filter you are standing in must show its own exit.
+        .onChange(of: filter.source, initial: true) { _, _ in
+            _ = BridgeCatalog.category(forSource: filter.source)
         }
         // A scope taken while its own folder is shut re-opens it, or §357's
         // exit is behind a tap nobody knows to make.

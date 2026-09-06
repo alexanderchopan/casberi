@@ -226,10 +226,27 @@ struct SourceChips: View {
     /// content space; a chip's lift is a cosine window over one and a half
     /// pitches around it. Off under Reduce Motion.
     @State private var scrubX: CGFloat?
+    /// THE MAGNIFIER HOLDS WHERE THE FINGER LEFT (2026-09-05, user: "as user
+    /// … scrolls on them they should enlarge like a dock does"). While a
+    /// finger is down the wave sits under it, and the strip moves WITH the
+    /// finger, so the same chip stays under it. After a flick the strip keeps
+    /// moving and the finger is gone — so the magnifier stays parked at the
+    /// release point, in VIEWPORT space, and the chips ripple through it as
+    /// they pass, until the scroll goes idle. That is the dock's own
+    /// picture: icons swelling as they pass the pointer.
+    @State private var waveViewportX: CGFloat?
+    /// Re-renders the strip per scroll frame ONLY while a parked magnifier
+    /// needs the chips' passing positions; zero cost otherwise.
+    @State private var waveTick = 0
     private static let waveReach: CGFloat = 1.6
     private static let waveLift: CGFloat = 0.28
     private func wave(for label: String) -> CGFloat {
-        guard !reduceMotion, let x = scrubX, let frame = chipFrames[label] else { return 1 }
+        guard !reduceMotion, let frame = chipFrames[label] else { return 1 }
+        let x: CGFloat
+        if let scrubX { x = scrubX }
+        else if let waveViewportX { x = waveViewportX + viewport.offset }
+        else { return 1 }
+        _ = waveTick
         let pitch = chipSize + Self.chipGap
         let d = abs(frame.midX - x) / (pitch * Self.waveReach)
         guard d < 1 else { return 1 }
@@ -326,8 +343,14 @@ struct SourceChips: View {
     /// dissolves only while it is actually passing underneath — which is what
     /// the 2026-07-19 ruling asks for ("disappear into it, not into a hard
     /// line") and what the air was mistakenly paying for.
+    /// Where a chip is fully GONE. On the phone that is the bar's trailing
+    /// edge itself (2026-09-06, measured across 89 demo room shots): it used
+    /// to be a ramp's width before it, so a chip whose leading edge sat under
+    /// the octopus was still fully lit, and every room showed a sliver of the
+    /// previous chip's word peeking out from under the bar ("Vi", "Me", "Ni").
+    /// The ramp now runs from the bar's edge outward instead of ending at it.
     private var fadeClear: CGFloat {
-        axis == .vertical ? headTrailingEdge - 8 : headTrailingEdge - Self.fadeRamp
+        axis == .vertical ? headTrailingEdge - 8 : headTrailingEdge
     }
     private static let fadeRamp: CGFloat = 24
     private var stripInset: CGFloat { fadeClear + Self.fadeRamp }
@@ -564,8 +587,17 @@ struct SourceChips: View {
                         ended: { commit in scrubEnded(commit: commit) },
                         finger: { at in
                             // The wave rides ANY finger over the strip — a
-                            // scroll, a tap, a scrub — see `wave(for:)`.
-                            withAnimation(DS.Motion.press) { scrubX = at?.x }
+                            // scroll, a tap, a scrub — see `wave(for:)`. On
+                            // lift the magnifier parks where the finger was
+                            // (viewport space) until the scroll goes idle.
+                            withAnimation(DS.Motion.press) {
+                                if let at {
+                                    scrubX = at.x
+                                    waveViewportX = at.x - viewport.offset
+                                } else {
+                                    scrubX = nil
+                                }
+                            }
                         })
                 }
                 // **PINNED SECTION HEADERS UNDID THE STRIP'S OWN HEIGHT
@@ -627,6 +659,11 @@ struct SourceChips: View {
             } action: { _, new in
                 viewport.offset = new.offset
                 viewport.width = new.width
+                if waveViewportX != nil, scrubX == nil { waveTick &+= 1 }
+            }
+            .onScrollPhaseChange { _, phase in
+                guard phase == .idle, scrubX == nil else { return }
+                withAnimation(DS.Motion.standard) { waveViewportX = nil }
             }
             // The strip's own window x, so a chip's content-space frame can be
             // turned into the anchor a springing folder grows out of.
@@ -922,11 +959,14 @@ struct SourceChips: View {
     /// the word while they are up — "this folder", with the lit venue ringed
     /// in the row: "this venue".
     @ViewBuilder
-    private func categoryCapsule(_ label: String) -> some View {
+    private func categoryCapsule(_ label: String, scale: CGFloat = 1) -> some View {
         let isOn = label == active
         Text(label)
             .dsText(.label12)
             .fontWeight(.semibold)
+            // The word grows with the wave (`chip(_:)`'s `m`); the capsule
+            // around it grows by layout so its glass fill follows.
+            .scaleEffect(scale)
             // `.white`, not `DS.textPrimary`: this sits on the accent, which is
             // a dark blue in BOTH themes — the same blue the composer's lede
             // card wears (one token, `DS.tint`, user 2026-08-16: "make them
@@ -938,9 +978,9 @@ struct SourceChips: View {
             // and the strip simply scrolls further. On the rail the width
             // is fixed, so the word gives instead.
             .minimumScaleFactor(axis == .vertical ? 0.6 : 1)
-            .padding(.horizontal, capsulePadH)
-            .frame(width: axis == .vertical ? Self.railChipWidth : nil, height: iconSize)
-            .wordChipFill(cornerRadius: iconSize / 2, active: isOn, ns: selectionNS, slide: slide)
+            .padding(.horizontal, capsulePadH * scale)
+            .frame(width: axis == .vertical ? Self.railChipWidth : nil, height: iconSize * scale)
+            .wordChipFill(cornerRadius: iconSize * scale / 2, active: isOn, ns: selectionNS, slide: slide)
     }
 
     /// Everything the strip SCROLLS.
@@ -985,6 +1025,14 @@ struct SourceChips: View {
     @ViewBuilder
     private func chip(_ label: String, pinned: Bool = false) -> some View {
         let isActive = label == active
+        // THE MAGNIFICATION IS LAYOUT, NOT A TRANSFORM (measured 2026-09-05):
+        // a `scaleEffect` over a glass fill double-rendered — the container
+        // draws glass at the LAYOUT frame while the content scales — and a
+        // dock magnifies by growing the icon anyway, which is what pushes the
+        // neighbours aside. `m` is the wave under the finger (`wave(for:)`).
+        let m = wave(for: label)
+        let icon = iconSize * m
+        let seatWidth = chipSize * m
         // Through the catalog, not against the label: see `SourcesTray.cell`.
         // The strip and the tray it opens must agree about which seats are in
         // trouble, so this line and that one stay identical.
@@ -1047,13 +1095,14 @@ struct SourceChips: View {
                         .foregroundStyle(isActive ? .white : DS.textPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
-                        .frame(width: iconSize, height: iconSize)
+                        .scaleEffect(m)
+                        .frame(width: icon, height: icon)
                         .clipShape(Circle())
-                        .wordChipFill(cornerRadius: iconSize / 2,
+                        .wordChipFill(cornerRadius: icon / 2,
                                       active: isActive, ns: selectionNS, slide: slide)
                 case Pinboard.room:
                     // The pinned room (2026-08-10) — see `PinnedChipMark`.
-                    PinnedChipMark(size: iconSize)
+                    PinnedChipMark(size: icon)
                 default:
                     // A category chip is a WORD, not a mark (prd §351,
                     // 2026-08-11, overturning the icon-only ruling of
@@ -1074,20 +1123,20 @@ struct SourceChips: View {
                     // from the shortest. A container that grows has neither
                     // problem and needs neither knob.
                     if isCategory {
-                        categoryCapsule(label)
+                        categoryCapsule(label, scale: m)
                     } else {
                         // Reachable only for a label the catalog has never
                         // heard of (an uncategorized source) — every real
                         // catalog offer resolves to one of the ten categories,
                         // so this is a defensive fallback, not the common path
                         // it used to be.
-                        BridgeIcon(name: label, size: iconSize, circular: true)
+                        BridgeIcon(name: label, size: icon, circular: true)
                     }
                 }
             }
             // A capsule takes its width from its own word (or, on the rail,
             // from the rail) — height alone is shared with the circles.
-            .frame(width: isCategory ? nil : iconSize, height: iconSize)
+            .frame(width: isCategory ? nil : icon, height: icon)
             // The identity flip (2026-07-14, user): the chip is where
             // switching sources actually happens, so it's the one true flip
             // moment — the Feed source header dropped its own animated icon
@@ -1210,13 +1259,7 @@ struct SourceChips: View {
                                       style: StrokeStyle(lineWidth: 2.5, dash: [3, 3]))
                 }
             }
-            .frame(width: isCategory ? nil : chipSize, height: chipSize)
-            // THE LIFT (2026-09-05): the chip under a scrubbing finger rises a
-            // step so the hand can feel which one it is on. A scale only, no
-            // vertical travel — the slab clips to its own glass, and a chip
-            // that rose out of it would be cut at the top. Its name floats
-            // above the slab instead (`DockScrubCaption`).
-            .scaleEffect(wave(for: label))
+            .frame(width: isCategory ? nil : seatWidth, height: chipSize)
             // This chip is the travelling fill's SOURCE frame (prd §359) —
             // see `travellingFill`. Word chips only: a mark chip cannot take a
             // tint fill without becoming unrecognisable, so it keeps the ring
@@ -1493,9 +1536,14 @@ private struct WordChipFill: ViewModifier {
                     // were semicircular. One style across both forms is also what
                     // lets the shared group morph between them without a shape
                     // swap mid-flight.
+                    // NO GLASS BLOB since 2026-09-05, measured under the
+                    // magnification wave: the container drew the blob at one
+                    // size and the capsule at another, so a magnified word
+                    // chip showed two shapes. The travel is the matched
+                    // geometry's own; the blob added nothing at 6px of travel
+                    // (§359's own measurement).
                     let fill = Capsule(style: .circular)
                         .fill(DS.tint)
-                        .dsGlassBlob()
                     if reduceMotion {
                         fill
                     } else {

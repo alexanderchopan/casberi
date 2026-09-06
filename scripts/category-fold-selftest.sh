@@ -822,9 +822,12 @@ grep -qE 'if case \.category\(let category\) = chrome\.openFolder' "$MAIN" \
   || { echo "✗ the folder row no longer draws the OPEN folder's category — either it is back"; \
        echo "  to following the room (so a folder you are not standing in cannot be opened)"; \
        echo "  or it is gated to one hardcoded category."; exit 1; }
-grep -qE 'BridgeCatalog\.category\(forSource: source\)' "$MAIN" \
-  || { echo "✗ nothing resolves a room's own category to its folder any more — arriving in a"; \
-       echo "  room would leave no folder open, so its venue switcher never draws (§357)."; exit 1; }
+# REVERSED 2026-09-06 (§621 second amendment): arriving in a room must NOT
+# open its folder — the dock's stack springs up on a tap and closes on a
+# pick, and an auto-open put a venues row over every folded room.
+grep -qE 'chrome\.openFolder = BridgeCatalog\.category\(forSource: source\)' "$TMP/main.nc" \
+  && { echo "✗ arriving in a room opens its folder again — every folded room would wear its"; \
+       echo "  venues row permanently, and the social rooms a third row (the faces rail)."; exit 1; }
 grep -q 'MarketsRoom.isMember' "$TMP/main.nc" \
   && { echo "✗ the switcher is gated on Markets membership again — every category has one."; exit 1; }
 

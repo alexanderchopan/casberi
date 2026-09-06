@@ -156,10 +156,19 @@ struct DockScrubCatcher: UIViewRepresentable {
             g.delegate = self
             g.onBegan = { [weak self, weak scroll] p in
                 guard let scroll else { return }
+                // A press does NOT cancel the scroll's pan on its own
+                // (measured 2026-09-05: recognizers on one view have no
+                // exclusivity between them, so a scrub rubber-banded the
+                // strip under the finger). Disabling scrolling cancels the
+                // pan at once; it comes back when the finger lifts.
+                scroll.isScrollEnabled = false
                 self?.began?(p) { x in scroll.convert(CGPoint(x: x, y: 0), to: nil).x }
             }
             g.onMoved = { [weak self] p in self?.moved?(p) }
-            g.onEnded = { [weak self] commit in self?.ended?(commit) }
+            g.onEnded = { [weak self, weak scroll] commit in
+                scroll?.isScrollEnabled = true
+                self?.ended?(commit)
+            }
             scroll.addGestureRecognizer(g)
             press = g
             let t = Track()
