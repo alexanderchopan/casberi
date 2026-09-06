@@ -2589,53 +2589,57 @@ private struct PagerCover: View {
             let landing = CategoryFold.isCategory(label)
                 ? (CategoryFold.landing(category: label, present: venues) ?? label)
                 : label
-            Group {
+            // **THE MARK IS ON EVERY CARD (user, 2026-09-06: "i think you
+            // should see the icon anytime you are switching").** It used to be
+            // the snapshot OR the mark — a room you had visited showed its
+            // last look, one you hadn't showed its icon — so the icon appeared
+            // only sometimes, which read as inconsistency rather than as two
+            // cases. Now the room's last look is the card's GROUND and the
+            // mark rides on top of it, so a page turn always names where it is
+            // going and still looks like the room it is bringing in.
+            //
+            // The mark still leaves the instant the room lands (§632
+            // amendment): over a snapshot it is a label on a picture, over the
+            // arriving live room it would be the double exposure that started
+            // all this.
+            ZStack {
                 if let look = RoomSnapshots.image(for: landing) {
-                    // THE ROOM'S LAST LOOK (prd §624 amendment) — a card that
-                    // looks like the room, because it is what the room looked
-                    // like. Rooms never visited fall back to the cover below.
                     Image(uiImage: look)
                         .resizable()
                         .scaledToFill()
+                        // A card of rows is busy; the mark needs its own
+                        // ground to read against, and a wash is what a card
+                        // being handed over should look like anyway.
+                        .overlay(Color.black.opacity(chrome.pageDragCommitted ? 0 : 0.45))
                 } else {
-                    // CENTRED, and that was never the problem (user,
-                    // 2026-09-06: "if it didn't fade it would be fine in the
-                    // center … so i was thinking put it to the side, but the
-                    // center may be fine if the transition is better"). It
-                    // was tried on the entering edge for one build; the fault
-                    // was the arriving room fading over it, fixed at the
-                    // insertion above, so the mark keeps the middle where a
-                    // page's own identity belongs.
-                    VStack(spacing: DS.Space.s3) {
-                        // REMOVED, not faded, the moment the room lands.
-                        // `.opacity` was tweened by the commit's own ambient
-                        // `withAnimation`, so the mark still swept across one
-                        // frame of drawn rows; taking it out of the tree has
-                        // no animation to inherit.
-                        if !chrome.pageDragCommitted {
-                            if label == "All" {
-                                Text("All").dsText(.heading34).foregroundStyle(DS.textPrimary)
-                            } else {
-                                BridgeIcon(name: landing, size: DS.Mark.hero, circular: true)
-                                Text(label)
-                                    .dsText(.heading22)
-                                    .foregroundStyle(DS.textPrimary)
-                            }
+                    Color.clear.dsPageBackground()
+                }
+                if !chrome.pageDragCommitted {
+                    // ON THE EDGE THE CARD ENTERS FROM, and this time for a
+                    // measured reason (2026-09-06). Centred, the mark sits in
+                    // the middle of a full-width card that is mostly off
+                    // screen, so it is invisible for the first half of every
+                    // drag and arrives only as the turn completes — which is
+                    // why "not all of the screens do you see an icon" survived
+                    // putting the mark on every card. The card enters from
+                    // `side`, so its leading portion is what you can see
+                    // first; the mark rides there and is legible from the
+                    // moment the card appears, which is what "see the icon
+                    // anytime you are switching" asks for.
+                    let edge: Alignment = side >= 0 ? .leading : .trailing
+                    VStack(alignment: side >= 0 ? .leading : .trailing,
+                           spacing: DS.Space.s3) {
+                        if label == "All" {
+                            Text("All").dsText(.heading34).foregroundStyle(DS.textPrimary)
+                        } else {
+                            BridgeIcon(name: landing, size: DS.Mark.hero, circular: true)
+                            Text(label)
+                                .dsText(.heading22)
+                                .foregroundStyle(DS.textPrimary)
                         }
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    // AND THE MARK LEAVES WHEN THE ROOM LANDS. `.identity`
-                    // above stops the room fading ON TOP of the mark, but the
-                    // room arrives before its own content does — its chart and
-                    // rows take a beat — and through that empty room the mark
-                    // was still legible underneath, which is the same double
-                    // exposure by the other route (seen on a recording of the
-                    // All → Wallet swipe: the wallet mark sitting in the
-                    // middle of a drawn-but-empty Wallet room). The GROUND
-                    // stays, so the room still lands on a page; only the mark
-                    // and its word go, and they go faster than a room takes to
-                    // fill.
-                    .dsPageBackground()
+                    .padding(.horizontal, DS.Space.s6)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: edge)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
