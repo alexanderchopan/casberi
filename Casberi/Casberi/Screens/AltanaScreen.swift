@@ -131,11 +131,12 @@ struct AltanaScreen: View {
         countWeek()
     }
 
-    /// This week's rows per account — the ingest stamps the account address as
-    /// the thing's `authorHandle`.
+    /// This week's rows per account — `AltanaKeystoreSource` stamps the
+    /// account's address as `walletAddress` on every row it lands, which is
+    /// the only field that says which account a key belongs to.
     private func countWeek() {
         weekly = AccountWeek.counts(source: AltanaKeystore.source, seatID: "altana",
-                                    context: modelContext) { $0.authorHandle }
+                                    context: modelContext) { $0.walletAddress }
     }
 
 
