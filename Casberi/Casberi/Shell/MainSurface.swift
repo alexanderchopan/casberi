@@ -2160,7 +2160,21 @@ struct MainSurface: View {
                 }
                     .id(filter.source)
                     .transition(.asymmetric(
-                        insertion: swipeCommit ? .opacity : .move(edge: slideEdge),
+                        // ARRIVES, never materializes (user, 2026-09-06: "when
+                        // content from the new screen materializes it looks
+                        // like an error"). On commit the room used to fade in
+                        // ON TOP of the cover, so for the length of that fade
+                        // the new room's rows were drawn over the cover's mark
+                        // — a double exposure that reads as a rendering fault
+                        // rather than as a page turn. `.identity` puts the
+                        // room there whole, at rest, over a cover that has
+                        // finished its own trip to the same place: for a
+                        // snapshot cover the swap is invisible (it is a
+                        // picture of this very room), and for a mark cover it
+                        // is a clean cut. The cover is what covers a room that
+                        // needs a frame to draw — that is its whole job, and
+                        // fading it was asking it to do the opposite.
+                        insertion: swipeCommit ? .identity : .move(edge: slideEdge),
                         removal: swipeCommit
                             ? .modifier(active: CardFly(progress: 1, direction: slideEdge == .trailing ? -1 : 1),
                                         identity: CardFly(progress: 0, direction: slideEdge == .trailing ? -1 : 1))
@@ -2526,7 +2540,12 @@ private struct PagerDrag<Content: View>: View {
                     .allowsHitTesting(false)
             }
             .scaleEffect(lifted ? 1 - 0.05 * share : 1)
-            .rotationEffect(.degrees(lifted ? Double(x / width) * 7 : 0), anchor: .bottom)
+            // NO TILT (user, 2026-09-06: "the spin in the carousel doesn't
+            // need to flip"). The card used to rotate about its bottom edge
+            // in the direction of travel; a page in a carousel slides beside
+            // its neighbour, it does not tip away from it, and the rotation
+            // was the one part of the lift that read as an effect rather than
+            // as a page. Corners, lit edge, scale and shadow all stay.
             .shadow(color: .black.opacity(lifted ? 0.5 * share : 0), radius: 28, y: 10)
             .offset(x: x)
     }
@@ -2540,7 +2559,9 @@ private struct CardFly: ViewModifier {
     func body(content: Content) -> some View {
         content
             .offset(x: direction * 460 * progress)
-            .rotationEffect(.degrees(Double(direction) * 10 * progress), anchor: .bottom)
+            // No rotation on the way out either — the same ruling as the
+            // drag's own tilt above, kept consistent so the card leaves the
+            // way it travelled.
             .scaleEffect(1 - 0.08 * progress)
             .opacity(1 - 0.4 * progress)
     }
@@ -2574,17 +2595,43 @@ private struct PagerCover: View {
                         .resizable()
                         .scaledToFill()
                 } else {
+                    // CENTRED, and that was never the problem (user,
+                    // 2026-09-06: "if it didn't fade it would be fine in the
+                    // center … so i was thinking put it to the side, but the
+                    // center may be fine if the transition is better"). It
+                    // was tried on the entering edge for one build; the fault
+                    // was the arriving room fading over it, fixed at the
+                    // insertion above, so the mark keeps the middle where a
+                    // page's own identity belongs.
                     VStack(spacing: DS.Space.s3) {
-                        if label == "All" {
-                            Text("All").dsText(.heading34).foregroundStyle(DS.textPrimary)
-                        } else {
-                            BridgeIcon(name: landing, size: DS.Mark.hero, circular: true)
-                            Text(label)
-                                .dsText(.heading22)
-                                .foregroundStyle(DS.textPrimary)
+                        // REMOVED, not faded, the moment the room lands.
+                        // `.opacity` was tweened by the commit's own ambient
+                        // `withAnimation`, so the mark still swept across one
+                        // frame of drawn rows; taking it out of the tree has
+                        // no animation to inherit.
+                        if !chrome.pageDragCommitted {
+                            if label == "All" {
+                                Text("All").dsText(.heading34).foregroundStyle(DS.textPrimary)
+                            } else {
+                                BridgeIcon(name: landing, size: DS.Mark.hero, circular: true)
+                                Text(label)
+                                    .dsText(.heading22)
+                                    .foregroundStyle(DS.textPrimary)
+                            }
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // AND THE MARK LEAVES WHEN THE ROOM LANDS. `.identity`
+                    // above stops the room fading ON TOP of the mark, but the
+                    // room arrives before its own content does — its chart and
+                    // rows take a beat — and through that empty room the mark
+                    // was still legible underneath, which is the same double
+                    // exposure by the other route (seen on a recording of the
+                    // All → Wallet swipe: the wallet mark sitting in the
+                    // middle of a drawn-but-empty Wallet room). The GROUND
+                    // stays, so the room still lands on a page; only the mark
+                    // and its word go, and they go faster than a room takes to
+                    // fill.
                     .dsPageBackground()
                 }
             }

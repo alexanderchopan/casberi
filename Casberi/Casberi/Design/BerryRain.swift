@@ -245,7 +245,16 @@ fileprivate final class BerryRainView: UIView {
         // One shower, one pour, felt (2026-09-06, the haptic grammar) —
         // here rather than at the pulse's writers, so a bump that deals no
         // drops (no bounds yet) feels like nothing, which it is.
-        if !drops.isEmpty { DSHaptic.pour() }
+        //
+        // **OFF THE LAYOUT PASS, and that is not a precaution.** `deal` is
+        // reached from `layoutSubviews`, and `DSHaptic.pour()` mutates
+        // `HapticBus`, an `@Observable` that `RootShell`'s own body reads
+        // through `dsSensoryFeedback()` — so bumping it here invalidates the
+        // shell from inside UIKit's layout of a view the shell contains,
+        // which is the classic re-entrant "modifying state during view
+        // update". A hop to the next run-loop turn puts the write after the
+        // pass that produced it and changes nothing anyone can feel.
+        if !drops.isEmpty { DispatchQueue.main.async { DSHaptic.pour() } }
         let start = CACurrentMediaTime()
         let scale = traitCollection.displayScale
         var batch: [CALayer] = []
