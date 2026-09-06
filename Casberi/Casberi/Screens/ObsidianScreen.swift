@@ -44,7 +44,7 @@ struct ObsidianScreen: View {
                 BridgeSetupHeader(
                     name: "Obsidian",
                     mode: .onThisDevice,
-                    intro: "Name your vault's folder and your notes keep arriving, searchable alongside everything else. Read-only — nothing here edits or writes a note back.")
+                    intro: "Your notes, searchable alongside everything else. Nothing here edits or writes a note back.")
                 vaultSection.listRowSeparator(.hidden)
             }
         }

@@ -63,7 +63,7 @@ struct InstagramImportScreen: View {
             BridgeSetupHeader(
                 name: "Instagram",
                 mode: .oneTimeImport,
-                intro: "Instagram has no live connection — download your export, bring it here, and search your captions, comments, saves and likes. Saved posts get their words and cover picture back from Instagram's own public pages.",
+                intro: "Saved posts get their words and cover picture back from Instagram's public pages.",
                 connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus,
             // not a connection flag: an import has no live connection, so

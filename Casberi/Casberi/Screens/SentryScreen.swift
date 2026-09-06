@@ -64,7 +64,7 @@ struct SentryScreen: View {
                 BridgeSetupHeader(
                     name: "Sentry",
                     mode: .pasteKey,
-                    intro: "Paste a read-only token and three things arrive: an issue that's new, one that regressed, one that escalated. Never an event, a stack trace, or anything about the person who hit it.",
+                    intro: "An issue that's new, regressed, or escalated — nothing else. Never a stack trace or the person who hit it.",
                     connected: configured)
             }
             if !configured {

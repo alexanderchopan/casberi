@@ -69,7 +69,7 @@ struct DayOneImportScreen: View {
             BridgeSetupHeader(
                 name: "Day One",
                 mode: .oneTimeImport,
-                intro: "Day One has no live connection — export your journal, bring it here, and every entry becomes searchable on the day you wrote it.",
+                intro: "Each entry lands on the day you wrote it.",
                 connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus:
             // an import has no live connection to gate on.
@@ -180,7 +180,7 @@ struct JournalImportScreen: View {
             BridgeSetupHeader(
                 name: "Apple Journal",
                 mode: .oneTimeImport,
-                intro: "Journal has no live connection — export it from Settings, bring it here, and every entry becomes searchable on the day you wrote it.",
+                intro: "Each entry lands on the day you wrote it.",
                 connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus:
             // an import has no live connection to gate on.
@@ -270,7 +270,7 @@ struct NotesShareScreen: View {
             BridgeSetupHeader(
                 name: "Apple Notes",
                 mode: .onThisDevice,
-                intro: "Apple offers no export and no read API for Notes, so there is nothing to connect. Share a note and it lands in your feed, findable like everything else.")
+                intro: "Apple offers no export and no read API, so there's nothing to connect — share a note instead.")
             // Not an ImportArchiveSection: there is no export and no pick.
             // These three lines describe the SHARE SHEET, which is the whole
             // of this bridge — so the steps stand alone, in the same component
@@ -278,7 +278,7 @@ struct NotesShareScreen: View {
             Section {
                 BridgeStepLines(steps: ["Open a note in Apple Notes.",
                                         "Tap share, then Casberi.",
-                                        "It lands in your feed as a note — findable like everything else."],
+                                        "It lands in your feed as a note."],
                                 startingAt: 1)
             }
             .dsSlabSection()
@@ -337,7 +337,7 @@ struct BookmarksImportScreen: View {
             BridgeSetupHeader(
                 name: "Bookmarks",
                 mode: .oneTimeImport,
-                intro: "Export your bookmarks from any browser, bring the file here, and they become findable links — folders become tags.",
+                intro: "They land as links, and folders become tags.",
                 connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus:
             // an import has no live connection to gate on.

@@ -544,73 +544,73 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     var setupIntro: String {
         switch self {
         case .readwise:
-            String(localized: "Paste a read-only token and every highlight you've saved becomes searchable here, arriving on its own from then on.")
+            String(localized: "Every highlight you've saved, searchable here — and each new one from then on.")
         case .github:
-            String(localized: "Sign in with GitHub — or paste a token — and the feeds you pick keep arriving, plus any repo or person you watch. Watching here is private.")
+            String(localized: "The feeds you pick, plus any repo or person you watch. Watching here is private.")
         case .todoist:
-            String(localized: "Paste a read-only token and your open tasks keep arriving with their due dates. Nothing here completes, edits, or adds a task.")
+            String(localized: "Your open tasks, with their due dates. Nothing here completes, edits, or adds one.")
         case .raindrop:
-            String(localized: "Paste a read-only token and your bookmarks keep arriving, searchable alongside everything else. Nothing here adds or deletes one.")
+            String(localized: "Your bookmarks, searchable alongside everything else. Nothing here adds or deletes one.")
         case .calcom:
-            String(localized: "Paste a read-only key and your bookings keep arriving before they happen. Nothing here books, moves, or cancels anything.")
+            String(localized: "Your bookings, before they happen. Nothing here books, moves, or cancels anything.")
         case .calendly:
-            String(localized: "Paste a read-only token and your scheduled meetings keep arriving before they happen. Nothing here books, moves, or cancels anything.")
+            String(localized: "Your scheduled meetings, before they happen. Nothing here books, moves, or cancels anything.")
         case .notion:
-            String(localized: "Paste an integration secret and only the pages you explicitly connect arrive — Notion decides what it can see, not us. Nothing here edits a page.")
+            String(localized: "Only the pages you explicitly connect — Notion decides what it can see, not us. Nothing here edits a page.")
         case .linear:
-            String(localized: "Paste a read-only key and the issues assigned to you keep arriving. Nothing here comments, closes, or moves an issue.")
+            String(localized: "The issues assigned to you. Nothing here comments, closes, or moves one.")
         case .bitrefill:
-            String(localized: "Paste a read-only key and your orders and refills keep arriving, with your balance beside them. Nothing here ever buys, pays, or spends.")
+            String(localized: "Your orders and refills, with your balance beside them. Nothing here buys, pays, or spends.")
         case .privacy:
             // CONDUCT. Privacy's key can issue cards and move money; the
             // promise is what this code does, so it is worded as such.
-            String(localized: "Paste an API key and what you spend on your virtual cards keeps arriving. Privacy's key can't be scoped read-only, so nothing here creates, closes, or funds a card.")
+            String(localized: "What you spend on your virtual cards. The key can't be scoped read-only, so nothing here creates, closes, or funds a card.")
         case .oneclaw:
-            String(localized: "Paste an agent key and you'll see what it can reach — which vaults, which paths, when each grant expires. No secret's value is ever read.")
+            String(localized: "What the key can reach — which vaults, which paths, when each grant expires. No secret's value is ever read.")
         case .posthog:
-            String(localized: "Paste a read-only key, watch the metrics you care about, and only what's news arrives: a milestone crossed, a metric falling silent, a deploy you annotated.")
+            String(localized: "Only what's news: a milestone crossed, a metric falling silent, a deploy you annotated.")
         case .stripe:
-            String(localized: "Paste a read-only key and the money that needs you keeps arriving — a dispute and its deadline, a payout, a cancelled subscription, a failed payment.")
+            String(localized: "The money that needs you — a dispute and its deadline, a payout, a cancelled subscription, a failed payment.")
         case .polar:
-            String(localized: "Paste a read-only token and the money that needs you keeps arriving — a dispute and its deadline, a refund, a subscription leaving a healthy state.")
+            String(localized: "The money that needs you — a dispute and its deadline, a refund, a subscription leaving a healthy state.")
         case .dodoPayments:
-            String(localized: "Paste a read-only key and every payment you receive keeps arriving, along with refunds, disputes, and subscriptions that need attention. Nothing here charges, refunds, or cancels anything.")
+            String(localized: "Every payment you receive, plus refunds, disputes, and subscriptions that need attention. Nothing here charges, refunds, or cancels.")
         case .trello:
             // MINTED — the strongest promise in the catalog, and the only one
             // that is structural rather than a box someone ticked.
-            String(localized: "Authorize once and the cards assigned to you keep arriving with their due dates. Trello is asked for a read-only token, so it has no write permission to give.")
+            String(localized: "The cards assigned to you, with their due dates. Trello mints the token read-only, so it has no write permission to give.")
         case .cloudflare:
-            String(localized: "Paste a read-only token and you're told before a certificate, domain or token expires, and when a DNS record changes. No analytics, and nothing about your visitors.")
+            String(localized: "You're told before a certificate, domain or token expires, and when a DNS record changes. No analytics, nothing about your visitors.")
         case .cursor:
             // CONDUCT, and the weakest grade here: this key could start an
             // agent, which spends money AND writes a branch to a repo.
-            String(localized: "Paste a key and your finished cloud agents keep arriving. Cursor's key can't be scoped read-only, so this only ever lists them.")
+            String(localized: "Your finished cloud agents. The key can't be scoped read-only, so this only ever lists them.")
         case .sentry:
-            String(localized: "Paste a read-only token and three things arrive: a new issue, a regression, an escalation. Never an event, a stack trace, or anything about the person who hit it.")
+            String(localized: "Three things arrive: a new issue, a regression, an escalation. Never an event, a stack trace, or the person who hit it.")
         case .vercel:
             // CONDUCT.
-            String(localized: "Paste a token and your deployments keep arriving — what shipped and what broke. Vercel's token can't be scoped read-only, and your environment variables are never read.")
+            String(localized: "Your deployments — what shipped and what broke. The token can't be scoped read-only, and your environment variables are never read.")
         case .pagerduty:
-            String(localized: "Paste a read-only key and your incidents keep arriving — what fired, how urgent, and when it was resolved. Nothing here pages anyone, acknowledges, or resolves.")
+            String(localized: "Your incidents — what fired, how urgent, when it was resolved. Nothing here pages, acknowledges, or resolves.")
         case .gitlab:
-            String(localized: "Paste a read-only token and the issues and merge requests assigned to you keep arriving. Nothing here comments, merges, or closes anything.")
+            String(localized: "The issues and merge requests assigned to you. Nothing here comments, merges, or closes anything.")
         case .appStoreConnect:
             // CONDUCT, and the weakest grade in the catalog: an App Store
             // Connect key carries a ROLE, and no role is read-only for what
             // this reads — the same key could submit a version.
-            String(localized: "Add a key and Apple's verdicts, your customer reviews and expiring builds keep arriving. Apple has no read-only role, so this only ever reads.")
+            String(localized: "Verdicts, reviews and expiring builds land as they happen. Apple offers no read-only role, so this only ever reads.")
         case .jira:
             // CONDUCT. A Jira API token carries the same access as the
             // account it's minted for — Atlassian has no read-only token —
             // so the promise, like Privacy's and Cursor's, is what this code
             // does rather than what the token can't.
-            String(localized: "Paste a token and the issues assigned to you keep arriving with their due dates. Jira has no read-only token, so this only ever reads.")
+            String(localized: "The issues assigned to you, with their due dates. Jira has no read-only token, so this only ever reads.")
         // SCOPED — the person mints a genuinely read-only IAM policy on AWS's
         // own side, which is a real grade this key can carry (Cursor's and
         // App Store Connect's keys cannot). This file's own conduct is still
         // the backstop; see the type doc.
         case .aws:
-            String(localized: "Add a read-only key pair and what needs you keeps arriving — a firing alarm, a failed deploy, a spend anomaly. Give the IAM user a read-only policy; this file only ever reads regardless.")
+            String(localized: "What needs you — a firing alarm, a failed deploy, a spend anomaly. Give the IAM user a read-only policy; this only ever reads regardless.")
         }
     }
 

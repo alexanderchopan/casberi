@@ -51,7 +51,7 @@ struct RSSScreen: View {
             BridgeSetupHeader(
                 name: "RSS",
                 mode: .noAccount,
-                intro: "Paste a site or feed address below, and its posts arrive. No ranking, nothing skipped.",
+                intro: "Every post, in order. No ranking, nothing skipped.",
                 connected: !rss.feeds.isEmpty)
             // The way back to what arrived (§460).
             if !rss.feeds.isEmpty {

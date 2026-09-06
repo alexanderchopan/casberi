@@ -68,7 +68,7 @@ struct BankrSetupScreen: View {
                 BridgeSetupHeader(
                     name: "Bankr",
                     mode: .pasteKey,
-                    intro: "Make a key in a page that opens here. Bankr answers from its own account at bankr.bot, never from the wallets you watch in Casberi.")
+                    intro: "Bankr answers from its own account, never from the wallets you watch here.")
                 setupSection
             }
             if configured { conversationSection }
@@ -118,7 +118,7 @@ struct BankrSetupScreen: View {
                 .labelStyle(.titleAndIcon)
                 .buttonBorderShape(.capsule)
                 BridgeSyncStatusRows(proof: result)
-                DSSlabNote(text: "Casberi only asks Bankr questions — every prompt says answer only — never execute. Answers re-run on Bankr, live markets included, only when you tap.")
+                DSSlabNote(text: "Every prompt says answer only, never execute — and it's asked only when you tap.")
             }
         }
         .dsSlabSection()

@@ -58,7 +58,7 @@ struct GrokSetupScreen: View {
                 BridgeSetupHeader(
                     name: "Grok",
                     mode: .pasteKey,
-                    intro: "Paste a key and Grok can answer questions about your things when the free on-device model isn't enough. It's asked only when you tap for it, never on its own.")
+                    intro: "Answers about your things when the on-device model isn't enough — only when you tap for it.")
                 setupSection
             }
         }

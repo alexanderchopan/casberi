@@ -47,7 +47,7 @@ struct TikTokImportScreen: View {
             BridgeSetupHeader(
                 name: "TikTok",
                 mode: .oneTimeImport,
-                intro: "TikTok has no live connection — request your export in their app, bring it here, and search your captions, comments, saves and likes.",
+                intro: "Your captions, comments, saves and likes, searchable.",
                 connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus,
             // not a connection flag: an import has no live connection, so

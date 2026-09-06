@@ -34,7 +34,6 @@ struct ClaudeImportScreen: View {
             BridgeSetupHeader(
                 name: "Claude",
                 mode: .oneTimeImport,
-                intro: "Claude has no live connection — export your conversations, bring them here, and every chat becomes searchable.",
                 connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus,
             // not a connection flag: an import has no live connection, so

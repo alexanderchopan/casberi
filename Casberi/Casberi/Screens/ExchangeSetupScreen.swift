@@ -77,7 +77,7 @@ struct ExchangeSetupScreen: View {
         BridgeSetupHeader(
             name: venue.display,
             mode: .pasteKey,
-            intro: "Paste a read-only key and your balances and trades keep arriving. \(venue.display) is asked what the key may do before it is ever stored — one that can move money is refused and never written to this \(DS.device).")
+            intro: "Your balances and trades join your combined total.")
         setupSection
     }
 

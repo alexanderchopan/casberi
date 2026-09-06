@@ -61,7 +61,7 @@ struct MailScreen: View {
         BridgeSetupHeader(
             name: provider.source,
             mode: .pasteKey,
-            intro: "Make an app-specific password and your mail becomes searchable here. Read-only over IMAP, and your real account password never enters the app.")
+            intro: "Read-only over IMAP, with an app-specific password — your real one never enters the app.")
         setupSection
     }
 

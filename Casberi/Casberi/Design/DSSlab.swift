@@ -366,13 +366,22 @@ struct DSSlabField: View {
         // already bounded by the card, so the recess was the least load-bearing
         // there; on the ink page, where this field mostly lives, the pour is
         // doing all the work it ever did.
-        .background {
+        // The pour is 150pt tall by construction (every pour is, §524) and a
+        // field is ~56, so it MUST be trimmed by the field's own bounds, not
+        // its own: the first cut clipped the gradient to the gradient's frame,
+        // which `.background` then centred on the field — a 150pt well
+        // bleeding 47pt above and below, drawn straight over the step line
+        // above it on every paste-key screen (user screenshot, 2026-09-05).
+        // `dsSheetSurface` and `FeedLedeCard` wear the same 150pt pour and
+        // read correctly for one reason only: an OUTER clip in the surface's
+        // shape. This is that recipe.
+        .background(alignment: .top) {
             LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
                            startPoint: .top, endPoint: .bottom)
                 .frame(height: 150)
-                .frame(maxHeight: .infinity, alignment: .top)
-                .clipShape(size.shape)
+                .frame(maxWidth: .infinity, alignment: .top)
         }
+        .clipShape(size.shape)
     }
 
     @ViewBuilder private var field: some View {

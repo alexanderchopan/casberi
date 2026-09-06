@@ -21,6 +21,16 @@ SEVEN CHECKS, all static — no build, no simulator:
      on its own?), so a screen that omits it has silently opted out.
   2. INTRO BUDGET — the intro is at most MAX_INTRO_SENTENCES sentences and
      MAX_INTRO_WORDS words. This is the whole prose budget of the screen.
+     The 2026-09-05 sweep halved the family (1,601 → 884 words over 60
+     screens, 621 → 436 over the TokenBridges intros) by one rule: THE INTRO
+     SAYS ONLY WHAT THE TAGLINE, THE MODE CHIP AND THE STEPS DON'T. Forty-five
+     intros opened by restating the chip sitting directly above them ("Paste
+     a read-only key and…" under a "Paste a key" chip; "X has no live
+     connection — export…, bring it here…" under "One-time import" and a
+     step list that says exactly that), and the import intros for ChatGPT,
+     Claude, Gemini and Kindle said nothing the tagline didn't, so they are
+     gone — an intro is optional, and a header with nothing new to say wears
+     none. The budget dropped from 55 to 30 to hold the line.
   3. STEP BUDGET — a `BridgeStepLines` step is at most MAX_STEP_WORDS words.
      Steps say what to DO; reasons belong in error copy, which is the only
      place they can be acted on.
@@ -71,7 +81,7 @@ MODEL = os.path.join(ROOT, "Casberi", "Casberi", "Model")
 # they were reported. Raising one is a product decision, so raise it here and
 # say why, rather than adding an exemption per screen.
 MAX_INTRO_SENTENCES = 2
-MAX_INTRO_WORDS = 55
+MAX_INTRO_WORDS = 30
 MAX_STEP_WORDS = 14
 MAX_SLAB_NOTES = 2
 FOOTER_WORD_FLOOR = 25

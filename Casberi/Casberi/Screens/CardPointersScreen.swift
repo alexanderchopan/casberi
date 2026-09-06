@@ -42,7 +42,7 @@ struct CardPointersScreen: View {
                 BridgeSetupHeader(
                     name: "CardPointers",
                     mode: .signIn,
-                    intro: "Sign in on CardPointers' own page and the offers sitting unused on your cards keep arriving, each with the date it expires.")
+                    intro: "The offers sitting unused on your cards, each with the day it expires.")
                 // The way back to your things (§460).
                 if connected {
                     RoomDoor(name: "CardPointers", source: CardPointersIngest.source)

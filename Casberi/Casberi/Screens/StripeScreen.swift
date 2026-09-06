@@ -61,7 +61,7 @@ struct StripeScreen: View {
                 BridgeSetupHeader(
                     name: "Stripe",
                     mode: .pasteKey,
-                    intro: "Paste a read-only key and the money that needs you keeps arriving: a dispute and its deadline, a payout, a cancelled subscription, a failed payment. Individual charges never land, and nothing here reads a customer's name or card.",
+                    intro: "The money that needs you: a dispute and its deadline, a payout, a cancelled subscription, a failed payment. Never individual charges, or a customer's name or card.",
                     connected: hasKey)
             }
             // The way back to your things (§460).

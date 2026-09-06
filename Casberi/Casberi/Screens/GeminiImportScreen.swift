@@ -35,7 +35,6 @@ struct GeminiImportScreen: View {
             BridgeSetupHeader(
                 name: "Gemini",
                 mode: .oneTimeImport,
-                intro: "Gemini has no live connection — take your activity out of Google Takeout, bring it here, and every prompt becomes searchable.",
                 connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus,
             // not a connection flag: an import has no live connection, so

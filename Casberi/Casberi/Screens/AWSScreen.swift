@@ -61,7 +61,7 @@ struct AWSScreen: View {
                 BridgeSetupHeader(
                     name: "AWS",
                     mode: .pasteKey,
-                    intro: "Add a read-only key pair and what needs you keeps arriving — a firing alarm, a failed deploy, a spend anomaly. This only ever reads.",
+                    intro: "What needs you lands as it happens — a firing alarm, a failed deploy, a spend anomaly.",
                     connected: hasKey)
             }
             if hasKey {

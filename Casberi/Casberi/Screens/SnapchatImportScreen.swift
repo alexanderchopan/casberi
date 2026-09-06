@@ -43,7 +43,7 @@ struct SnapchatImportScreen: View {
             BridgeSetupHeader(
                 name: "Snapchat",
                 mode: .oneTimeImport,
-                intro: "Snapchat has no live connection — request your export, bring it here, and keep your saved chats and memories for good. Only saved chats exist: Snapchat deletes the rest when it's viewed.",
+                intro: "Only saved chats exist: Snapchat deletes the rest once viewed.",
                 connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus,
             // not a connection flag: an import has no live connection, so

@@ -41,7 +41,7 @@ struct FilesScreen: View {
                 BridgeSetupHeader(
                     name: "Files",
                     mode: .onThisDevice,
-                    intro: "Name a folder and what's in it keeps arriving — documents searchable by their text, images by what they say. It stays on this \(DS.device); nothing is copied anywhere.")
+                    intro: "Documents searchable by their text, images by what they say. Nothing leaves this \(DS.device).")
                 folderSection.listRowSeparator(.hidden)
             }
         }

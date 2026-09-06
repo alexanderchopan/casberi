@@ -50,7 +50,7 @@ struct WalletbeatScreen: View {
 			BridgeSetupHeader(
 				name: "Walletbeat",
 				mode: .noAccount,
-				intro: "Follow Walletbeat and the wallet security incidents they publish arrive in your feed. Name the wallet apps you use and each one's full review comes too — their judgments, never ours.",
+				intro: "Their security incidents, plus a full review of each wallet app you name — their judgments, never ours.",
 				connected: connected)
 
 			if connected {

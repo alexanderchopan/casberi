@@ -63,7 +63,7 @@ struct XArchiveImportScreen: View {
             BridgeSetupHeader(
                 name: "X",
                 mode: .oneTimeImport,
-                intro: "X has no live connection — request your archive, bring it here, and search every post, reply and like you ever made. Bookmarks aren't in it: X has never put them there.",
+                intro: "Every post, reply and like you ever made. Bookmarks aren't in it — X has never put them there.",
                 connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus,
             // not a connection flag: an import has no live connection, so

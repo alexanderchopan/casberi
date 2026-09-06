@@ -48,7 +48,7 @@ struct PolarScreen: View {
                 BridgeSetupHeader(
                     name: "Polar",
                     mode: .pasteKey,
-                    intro: "Paste a read-only token and your sales arrive as they happen, alongside the money that needs you: a dispute and its deadline, a refund, a subscription leaving a healthy state. Renewals stay out, and nothing here reads a customer's name or card.",
+                    intro: "Sales as they happen, plus what needs you: a dispute and its deadline, a refund, a subscription going bad. Never a customer's name or card.",
                     connected: hasToken)
             }
             if hasToken {

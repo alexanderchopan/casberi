@@ -46,7 +46,7 @@ struct OpenFoodFactsScreen: View {
             BridgeSetupHeader(
                 name: "Open Food Facts",
                 mode: .noAccount,
-                intro: "Scan a barcode and what's in it lands in your feed. Nothing about you leaves this \(DS.device) but the barcode itself.")
+                intro: "What's in it, from the open food database. Nothing leaves this \(DS.device) but the barcode.")
             if !recent.isEmpty {
                 RoomDoor(name: "Open Food Facts", source: "Open Food Facts")
                     .listRowSeparator(.hidden)

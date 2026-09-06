@@ -42,7 +42,7 @@ struct ENSScreen: View {
             BridgeSetupHeader(
                 name: "ENS",
                 mode: .noAccount,
-                intro: "Follow a name below and it says when it expires — including the ninety days after, when it can still be renewed before anyone else can take it.",
+                intro: "Including the ninety days after expiry, when it can still be renewed before anyone else takes it.",
                 connected: !followed.isEmpty)
             if !followed.isEmpty {
                 RoomDoor(name: "ENS", source: ENSWatch.source)

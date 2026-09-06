@@ -24,7 +24,7 @@ struct OpenSeaScreen: View {
             BridgeSetupHeader(
                 name: "OpenSea",
                 mode: .noAccount,
-                intro: "Pick your chains below, and new collections arrive as they drop. No ranking of ours.",
+                intro: "Every drop on the chains you pick. No ranking of ours.",
                 connected: opensea.connected)
             if opensea.connected {
                 RoomDoor(name: "OpenSea", source: "OpenSea")

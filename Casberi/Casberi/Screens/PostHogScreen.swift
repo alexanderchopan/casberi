@@ -70,7 +70,7 @@ struct PostHogScreen: View {
                 BridgeSetupHeader(
                     name: "PostHog",
                     mode: .pasteKey,
-                    intro: "Paste a read-only key, watch the metrics you care about, and only what's actually news arrives: a milestone crossed, a metric falling silent, a deploy you annotated. Aggregates only — nothing here reads an individual person's profile.",
+                    intro: "Only what's news: a milestone crossed, a metric falling silent, a deploy you annotated. Aggregates only — never a person's profile.",
                     connected: configured && !watched.isEmpty)
             }
             // The way back to your things (§460).

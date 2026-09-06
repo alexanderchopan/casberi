@@ -245,13 +245,13 @@ enum HandleBridge: String {
     var fieldFooter: String {
         switch self {
         case .bluesky:
-            "Type a few letters to find someone, or the full handle — posts are public, so there's no password to give."
+            "A few letters to find someone, or the full handle."
         case .farcaster:
-            "Type a few letters to find someone, or the exact username — casts are public on the open protocol, so there's no password to give."
+            "A few letters to find someone, or the exact username."
         case .nostr:
-            "Paste an npub, a raw hex pubkey, or a name@domain identifier — notes are public on the open protocol, so there's no password to give and nothing to search (Nostr has no directory)."
+            "An npub, a raw hex pubkey, or name@domain — Nostr has no directory to search."
         case .pinterest:
-            "Just the username — your public pins arrive through Pinterest's own feed, so there's no password to give."
+            "Just the username."
         default:
             feedKind?.fieldFooter ?? ""
         }
@@ -275,13 +275,13 @@ enum HandleBridge: String {
     var setupIntro: String {
         switch self {
         case .bluesky:
-            String(localized: "Name someone and their posts arrive, straight from Bluesky's public API. What they like needs a sign-in, which is coming later.")
+            String(localized: "Straight from Bluesky's public API. What they like needs a sign-in, which is coming later.")
         case .farcaster:
-            String(localized: "Name someone and their casts arrive, from the Farcaster team's own public node. Channels and mentions of you can be followed too.")
+            String(localized: "From the Farcaster team's own public node. Channels and mentions of you can be followed too.")
         case .nostr:
-            String(localized: "Name someone and their notes arrive from whichever public relays this \(DS.device) can reach. Nothing here can ever post.")
+            String(localized: "From whichever public relays this \(DS.device) can reach. Nothing here can ever post.")
         case .pinterest:
-            String(localized: "Name someone and their public pins arrive. A secret board never appears in Pinterest's own feed, so it can never appear here.")
+            String(localized: "A secret board never appears in Pinterest's own feed, so it can never appear here.")
         default:
             feedKind?.setupIntro ?? ""
         }

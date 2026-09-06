@@ -16,7 +16,7 @@ struct DealsScreen: View {
             BridgeSetupHeader(
                 name: "Deals",
                 mode: .noAccount,
-                intro: "Turn on the aggregators below, and today's discounts arrive. Nothing here buys anything.")
+                intro: "Today's discounts, priced in the headline. Nothing here buys anything.")
             if deals.connected {
                 RoomDoor(name: "Deals", source: "Deals")
                     .listRowSeparator(.hidden)
@@ -69,7 +69,7 @@ struct DealsScreen: View {
         } footer: {
             // "Read-only." left the end of this line (audit, 2026-07-31) — the
             // footer below spends a whole sentence on it, and says what it means.
-            Text("Turn on a source and its newest deals — each already priced in the headline — land in your feed as products.")
+            Text("Each deal lands as a product.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }

@@ -53,7 +53,7 @@ struct DropboxScreen: View {
                 BridgeSetupHeader(
                     name: "Dropbox",
                     mode: .signIn,
-                    intro: "Sign in on Dropbox's own page and one folder you name keeps arriving — only that folder, never a shared link and never anything shared with you.")
+                    intro: "One folder you name — only that folder, never a shared link or anything shared with you.")
                 connectSection.listRowSeparator(.hidden)
             }
         }

@@ -35,7 +35,7 @@ struct RadicleScreen: View {
             BridgeSetupHeader(
                 name: "Radicle",
                 mode: .noAccount,
-                intro: "Name a repo and its patches and issues arrive as they happen. Radicle has no central host, so the seed you pick is the only thing that can answer you, and it sees what you ask for.",
+                intro: "Patches and issues as they happen. No central host: the seed you pick answers, and sees what you ask for.",
                 connected: radicle.connected)
             if radicle.connected {
                 RoomDoor(name: "Radicle", source: "Radicle")

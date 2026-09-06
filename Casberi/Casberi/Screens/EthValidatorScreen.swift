@@ -26,7 +26,7 @@ struct EthValidatorScreen: View {
             BridgeSetupHeader(
                 name: "ETH Validators",
                 mode: .noAccount,
-                intro: "A validator index is public — anyone can look one up. Add yours and its balance, status and rewards keep arriving.",
+                intro: "An index is public, so there's nothing to sign in to. Balance, status and rewards land as they change.",
                 connected: !validatorStore.watched.isEmpty)
             addSection.listRowSeparator(.hidden)
             if !validatorStore.watched.isEmpty {

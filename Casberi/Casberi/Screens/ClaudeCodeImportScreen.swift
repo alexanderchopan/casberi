@@ -40,7 +40,7 @@ struct ClaudeCodeImportScreen: View {
             BridgeSetupHeader(
                 name: "Claude Code",
                 mode: .oneTimeImport,
-                intro: "Claude Code keeps every session as a file on this Mac — point at the folder and each one becomes searchable, whole.",
+                intro: "Sessions live as files on this Mac — point at the folder and each one is here, whole.",
                 connected: held > 0)
             // The way back to what just landed (§460). Gated on the corpus,
             // not a connection flag: an import has no live connection, so

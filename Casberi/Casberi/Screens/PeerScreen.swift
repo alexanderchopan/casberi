@@ -27,7 +27,7 @@ struct PeerScreen: View {
             BridgeSetupHeader(
                 name: "Peer",
                 mode: .watchedWallets,
-                intro: "Buying crypto with Venmo or Cash App on a wallet you watch lands on its own. Your Venmo side never touches the chain, so it's never seen.",
+                intro: "Venmo and Cash App buys on a wallet you watch. The Venmo side never touches the chain, so it's never seen.",
                 connected: hasWallets)
             if hasWallets {
                 RoomDoor(name: "Peer", source: "Peer")
