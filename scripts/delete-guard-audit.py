@@ -134,6 +134,17 @@ KNOWN_SAFE = {
     ("DropboxBridge.swift", "refresh"):
         "deletes on Dropbox's own explicit `\".tag\" == \"deleted\"` delta "
         "entry, never on absence — that is what the delta cursor is for.",
+    # The `!existing.contains` this matched on is the INSERT dedupe for sleep
+    # and reflections; the delete is driven by `stranded`, whose every member
+    # was required to BE in `existing` — the opposite of absence. And an empty
+    # upstream read cannot reach the delete at all: no workouts means no
+    # activity groups, so no plan, so no `stranded`.
+    ("HealthIngest.swift", "connectAndIngest"):
+        ("collapses a duplicate record of ONE activity (two apps wrote the "
+         "same ride). Candidates are chosen for being PRESENT in `existing` "
+         "and for losing to a winner from the same upstream group, so an "
+         "empty read yields no groups and deletes nothing.",
+         '.filter { $0 != win.ref && existing.contains($0) }'),
 }
 
 

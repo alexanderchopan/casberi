@@ -92,6 +92,23 @@ enum ProbeHooks {
         return out
     }
 
+    /// One Health-riding seat's connect, headless (`-connectStrava`,
+    /// `-connectGarmin`). `healthOn: false` is the point: the Apple Health
+    /// seat takes no rows, so anything counted here can only have come
+    /// through `HealthIngest.riders` — the filter the probe exists to
+    /// exercise. The other riders stay out of the set for the same reason.
+    /// On the simulator the store is empty; expect "0 in".
+    @MainActor
+    private static func riderProbe(_ seat: String, context: ModelContext) async {
+        guard let r = await HealthIngest.connectAndIngest(
+            context: context, healthOn: false, riders: [seat],
+            claimExisting: true, counting: seat) else {
+            NSLog("%@ probe: FAILED (Health unavailable)", seat); return
+        }
+        NSLog("%@ probe: connected, %d in%@", seat, r.added,
+              r.likelyBlocked ? " (access may be off)" : "")
+    }
+
     static func runAll(context: ModelContext) {
         NSLog("[Casberi] probeArgs: %@",
               redactedArgs(Array(ProcessInfo.processInfo.arguments.dropFirst()))
@@ -5090,19 +5107,17 @@ enum ProbeHooks {
                   ScreenshotIngest.backfillDone ? "walked to the end" : "more to walk",
                   limited ? "LIMITED" : (ScreenshotIngest.hasAccess ? "full" : "none"))
         },
-        // `-connectStrava YES` runs the Strava connect — the Health-store
-        // read filtered to workouts Strava wrote (no Strava account
-        // anywhere). On the sim the store is empty: expect "0 in".
+        // `-connectStrava YES` / `-connectGarmin YES` run a RIDER's connect —
+        // the Health-store read filtered to the workouts that app wrote (no
+        // Strava or Garmin account anywhere). Health itself is passed off, so
+        // what the count proves is the FILTER: anything landing here was
+        // attributed to the rider by `HealthIngest.riders`, not swept up as a
+        // workout. On the sim the store is empty: expect "0 in".
         Hook(key: "connectStrava") { _, context in
-            Task { @MainActor in
-                guard let r = await HealthIngest.connectAndIngest(
-                    context: context, healthOn: false, stravaOn: true,
-                    counting: "Strava") else {
-                    NSLog("Strava probe: FAILED (Health unavailable)"); return
-                }
-                NSLog("Strava probe: connected, %d in%@", r.added,
-                      r.likelyBlocked ? " (access may be off)" : "")
-            }
+            Task { @MainActor in await riderProbe("Strava", context: context) }
+        },
+        Hook(key: "connectGarmin") { _, context in
+            Task { @MainActor in await riderProbe("Garmin", context: context) }
         },
         // `-connectHealth YES` runs the plain Apple Health connect — workouts,
         // sleep, and (iOS 18+) State of Mind reflections, the same read

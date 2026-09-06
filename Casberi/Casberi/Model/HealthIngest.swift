@@ -11,6 +11,14 @@ import SwiftData
 /// HealthKit, so the Strava seat is this same ingest filtered to workouts
 /// Strava wrote — labeled "Strava", no Strava account or OAuth anywhere.
 ///
+/// GARMIN rides it the same way (2026-09-06), and adding a second rider is
+/// what turned the `stravaOn: Bool` into the `riders` table below. Garmin's
+/// own developer API is a partner program — you apply as a business, and the
+/// credentials are not embeddable in a client — so Health is not a shortcut
+/// here, it is the only self-serve door. Garmin Connect writes every activity
+/// to HealthKit as "Garmin Connect", which is the same shape Strava's seat
+/// already reads.
+///
 /// Widened 2026-07-28: workouts alone missed most people (no Watch, no
 /// Strava) — sleep and reflections (State of Mind, iOS 18+) are what nearly
 /// everyone's Health app actually holds. HealthKit hides read denials by
@@ -20,6 +28,23 @@ import SwiftData
 /// tell "first connect, empty is plausible" from "asked before, still empty
 /// — access may be off" (`HealthConnectResult.likelyBlocked`).
 enum HealthIngest {
+
+    /// The rider table and every rule about whose record survives live in
+    /// `HealthRiders` — Foundation-only, so `health-riders-selftest.sh` can
+    /// compile and drive them without a simulator. Forwarded here because
+    /// "which seats ride Apple Health" is a fact the BRIDGES ask about, and
+    /// this is the file they already know.
+    static var riders: [(seat: String, writer: String, rank: Int)] { HealthRiders.riders }
+
+    /// HealthKit's own workout, read as one app's record of one activity.
+    /// The four values `HealthRiders` needs, and nothing else.
+    private struct WorkoutRecord: ActivityRecord {
+        let workout: HKWorkout
+        var activityStart: Date { workout.startDate }
+        var activityDuration: TimeInterval { workout.duration }
+        var writerName: String { workout.sourceRevision.source.name }
+        var activityID: String { workout.uuid.uuidString }
+    }
 
     private static var readTypes: Set<HKObjectType> {
         var types: Set<HKObjectType> = [HKObjectType.workoutType()]
@@ -33,8 +58,10 @@ enum HealthIngest {
     }
 
     struct HealthConnectResult {
-        /// New things landed for the CALLING seat only (Apple Health or
-        /// Strava) — what the connect proof counts.
+        /// New things landed for the CALLING seat only (Apple Health, or
+        /// one of the `riders`) — what the connect proof counts. A row
+        /// re-stamped from Apple Health onto a rider counts here too: it is
+        /// new TO THAT SEAT, which is what the proof claims.
         var added: Int
         /// True only when NOTHING came back across every type asked for, on
         /// a REPEAT ask — the one honest signal available that access is
@@ -45,12 +72,18 @@ enum HealthIngest {
     /// Asks for read access (workouts, sleep, and — iOS 18+ — State of Mind
     /// reflections) and ingests recent history for the active Health-backed
     /// seats. Each sample lands ONCE, labeled by the app that wrote it
-    /// (`sourceRevision`): Strava-written workouts → "Strava" when that seat
-    /// is on, everything else → "Apple Health" when that seat is on. Returns
-    /// nil only when Health is unavailable or the system ask itself failed.
+    /// (`sourceRevision`): a workout written by a CONNECTED rider (`riders`)
+    /// → that rider's seat, everything else → "Apple Health" when that seat
+    /// is on. `riders` holds the seat names that are currently connected.
+    ///
+    /// `claimExisting` (a rider's CONNECT, nothing else) additionally re-stamps
+    /// workouts Apple Health already landed onto the rider that now claims
+    /// them — see the fetch below for why a second seat is otherwise dead on
+    /// arrival. Returns nil only when Health is unavailable or the ask failed.
     @MainActor
     static func connectAndIngest(context: ModelContext, healthOn: Bool = true,
-                                 stravaOn: Bool = false,
+                                 riders connectedRiders: Set<String> = [],
+                                 claimExisting: Bool = false,
                                  counting seat: String = "Apple Health") async -> HealthConnectResult? {
         guard HKHealthStore.isHealthDataAvailable() else {
             NSLog("healthConnect: FAILED — HealthKit unavailable on this device")
@@ -80,33 +113,138 @@ enum HealthIngest {
         }
 
         let existing = IngestSupport.existingSourceRefs(context)
-        var added = 0, inserted = 0
 
-        for workout in workouts {
-            let isStrava = workout.sourceRevision.source.name
-                .localizedCaseInsensitiveContains("strava")
-            let source = isStrava && stravaOn ? "Strava" : "Apple Health"
-            guard source == "Strava" || healthOn else { continue }
-            let ref = "hkworkout:\(workout.uuid.uuidString)"
-            guard !existing.contains(ref) else { continue }
-            let thing = Thing(
-                kind: .event,
-                title: title(for: workout),
-                content: detail(for: workout),
-                source: source,
-                capturedAt: workout.startDate,
-                sourceRef: ref
-            )
+        // ONE ACTIVITY, ONE ROW — pick the surviving record per activity
+        // before anything touches the store (`activityGroups`/`writerRank`).
+        // `stranded` names the rows a LOSER already put in the corpus, which
+        // is the state every install that connected two of these seats before
+        // 2026-09-06 is already in.
+        struct Landing {
+            let workout: HKWorkout
+            let source: String
+            let ref: String
+        }
+        func ref(for record: WorkoutRecord) -> String { "hkworkout:\(record.activityID)" }
+        var plan: [(win: Landing, stranded: [String])] = []
+        for group in HealthRiders.activityGroups(workouts.map(WorkoutRecord.init)) {
+            guard let pick = HealthRiders.winner(of: group, connected: connectedRiders,
+                                                 healthOn: healthOn) else { continue }
+            let win = Landing(workout: pick.workout,
+                              source: HealthRiders.source(forWriter: pick.writerName,
+                                                          connected: connectedRiders),
+                              ref: ref(for: pick))
+            let stranded = group.map(ref(for:)).filter { $0 != win.ref && existing.contains($0) }
+            plan.append((win, stranded))
+        }
+
+        // The Health-backed rows already in the corpus, by ref — needed to
+        // CLAIM a row for a rider that just connected, and to collapse a
+        // loser's row onto the winner. Deliberately gated: a plain foreground
+        // sweep has neither job (the winner is already the only row, and its
+        // ref is in `existing`), so it must not pay for this fetch. Three
+        // equality fetches rather than one `contains` predicate — a plain
+        // `$0.source == x` is the shape SwiftData is known-safe on here.
+        let needsLandedRows = claimExisting || plan.contains { !$0.stranded.isEmpty }
+        let landedByRef: [String: Thing] = {
+            guard needsLandedRows else { return [:] }
+            var out: [String: Thing] = [:]
+            for healthSource in ["Apple Health"] + HealthRiders.riders.map(\.seat) {
+                let descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
+                    $0.source == healthSource && $0.sourceRef != nil
+                })
+                for thing in ((try? context.fetch(descriptor)) ?? []).live {
+                    guard let ref = thing.sourceRef, ref.hasPrefix("hkworkout:") else { continue }
+                    out[ref] = thing
+                }
+            }
+            return out
+        }()
+
+        var added = 0, inserted = 0, restamped = 0, collapsed = 0
+
+        /// Write a workout's whole reading onto a row — used both for a fresh
+        /// insert and for re-pointing a loser's row at the winner, so the two
+        /// paths can never describe the same activity differently.
+        func stamp(_ thing: Thing, from landing: Landing) {
+            let workout = landing.workout
+            thing.title = title(for: workout)
+            thing.content = detail(for: workout)
+            thing.source = landing.source
+            // The row says WHICH app's record this is, in both places a
+            // reader can look — a re-pointed loser row whose provenance still
+            // named Strava would contradict its own source line.
+            thing.provenance = Provenance(app: landing.source)
+            thing.capturedAt = workout.startDate
+            thing.sourceRef = landing.ref
             // The numbers, as numbers (2026-08-12, prd §365). They were
             // computed right here and then formatted into the title, so a
             // workout sheet could show a calendar clock and the word "Workout"
             // while the distance it had just measured was unreachable.
             thing.endAt = workout.endDate > workout.startDate ? workout.endDate : nil
             thing.facts = workoutFacts(workout).map(\.encoded)
+        }
+
+        func drop(_ thing: Thing) {
+            SpotlightIndex.remove(ids: [thing.id])
+            context.delete(thing)
+            collapsed += 1
+        }
+
+        for (win, stranded) in plan {
+            if existing.contains(win.ref) {
+                // The winner is already a row. Two jobs and no insert: claim
+                // it for a rider whose seat just connected, and clear away any
+                // loser row standing beside it.
+                //
+                // The claim is why a second seat is not dead on arrival for
+                // the commonest install. Apple Health ingests everything
+                // first, and this ref namespace is shared across sources on
+                // purpose (`existingSourceRefs`'s own doc), so without it
+                // every one of a rider's workouts is skipped as a duplicate:
+                // the connect lands 0, `likelyBlocked` stays false because the
+                // fetch DID return workouts, and the toast says "Synced just
+                // now" over an empty room. ONE DIRECTION ONLY — Apple Health
+                // to a rider that now claims the writer — so disconnecting a
+                // seat never rewrites what it already landed.
+                if claimExisting, win.source != "Apple Health",
+                   let landed = landedByRef[win.ref], landed.isLive,
+                   landed.source == "Apple Health" {
+                    landed.source = win.source
+                    landed.provenance = Provenance(app: win.source)
+                    SpotlightIndex.index([landed])
+                    restamped += 1
+                    if win.source == seat { added += 1 }
+                }
+                for ref in stranded {
+                    guard let loser = landedByRef[ref], loser.isLive else { continue }
+                    drop(loser)
+                }
+                continue
+            }
+
+            // The winner has not landed, but a loser's row is standing in for
+            // this activity. RE-POINT that row rather than inserting a second
+            // one and deleting the first: the row keeps its identity, its
+            // place in the feed, and anything the person did with it.
+            if let ref = stranded.first, let loser = landedByRef[ref], loser.isLive {
+                stamp(loser, from: win)
+                SpotlightIndex.index([loser])
+                restamped += 1
+                if win.source == seat { added += 1 }
+                for extra in stranded.dropFirst() {
+                    guard let dup = landedByRef[extra], dup.isLive else { continue }
+                    drop(dup)
+                }
+                continue
+            }
+
+            let thing = Thing(kind: .event, title: "", source: win.source,
+                              capturedAt: win.workout.startDate)
+            stamp(thing, from: win)
             context.insert(thing)
             SpotlightIndex.index([thing])
             inserted += 1
-            if source == seat { added += 1 }
+            if win.source == seat { added += 1 }
         }
 
         for night in sleepNights where night.asleep > 300 {
@@ -146,7 +284,7 @@ enum HealthIngest {
             }
         }
 
-        if inserted > 0 { context.saveHonestly() }
+        if inserted > 0 || restamped > 0 || collapsed > 0 { context.saveHonestly() }
 
         let totalFetched = workouts.count + sleepNights.count + moods.count
         return HealthConnectResult(added: added, likelyBlocked: totalFetched == 0 && alreadyAsked)

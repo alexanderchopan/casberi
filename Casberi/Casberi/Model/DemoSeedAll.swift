@@ -4496,6 +4496,18 @@ enum DemoSeedAll {
                 t.endAt = t.capturedAt.addingTimeInterval(Double(stats.minutes) * 60)
             }
         }
+        // Garmin rides the same store as Strava, so the demo gives it the
+        // same shape and its own hours — a watch's activities, not a phone's.
+        out += (0..<8).map { i in
+            let stats = workoutStats[(i + 4) % 7]
+            return row(.event, ["Gravel ride", "Threshold intervals", "Open water swim",
+                                "Easy spin", "Brick session"][i % 5],
+                       source: "Garmin", ref: "demo:garmin:\(i)",
+                       days: Double(3 + i * 5), hour: 6, content: "Activity") { t in
+                t.facts = workoutFacts(stats)
+                t.endAt = t.capturedAt.addingTimeInterval(Double(stats.minutes) * 60)
+            }
+        }
         return out
     }
 
@@ -5173,6 +5185,7 @@ enum DemoSeedAll {
         ("Apple Journal", "Imported 20 entries", "Holds the journal you exported."),
         ("Apple Health", "Synced 1h ago", "Reads your workouts."),
         ("Strava", "Rides Apple Health", "Reads activities Strava wrote."),
+        ("Garmin", "Rides Apple Health", "Reads activities Garmin wrote."),
         ("Todoist", "Synced 18m ago", "Reads your tasks."),
         ("Cal.com", "Synced 2h ago", "Reads what people booked."),
         ("Calendly", "Synced 2h ago", "Reads what people booked."),

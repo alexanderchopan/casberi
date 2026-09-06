@@ -84,6 +84,7 @@ extension DS {
         case "voice":               return Color.fixed("#ff375f")   // the voice kind's own pink
         case "apple health":        return Color.fixed("#ff2d55")
         case "strava":              return Color.fixed("#fc4c02")
+        case "garmin":              return Color.fixed("#11aeed")   // the Connect icon's blue — icon-sampled from the bundled mark (the graphite behind it is the ground, the blue is the identity)
         case "todoist":             return Color.fixed("#e44332")
         case "slack":               return Color.fixed("#4a154b")
         case "raindrop":            return Color.fixed("#0db4e7")

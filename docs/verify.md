@@ -146,3 +146,48 @@ Every entry below is **verbatim** as it was written — nothing was summarised, 
 **The polarity fixture was wrong, and the code it tested was wrong the same way.** `AppMetricsDigest.frames` reversed MetricKit's walk and capped from the wrong end, so build 525's crash reports rendered as twelve run-loop frames with the crash point cut off. The tree already begins at the crash point; the fixtures now carry the real shape, including that report's own stack, and a mutation restores the shipped bug and must be caught.
 
 **Its applier's status is read now.** Two mutations went stale in the same fix, the python applier said so, and the `|| mut_fail=1` caller never looked — the third shape of §627, pinned for every harness by `mutation-liveness-audit.py`.
+
+## Health-riders self-test (scripts/health-riders-selftest.sh, 2026-09-06)
+
+Drives `Casberi/Casberi/Model/HealthRiders.swift` — the rider table, the
+measurement ranking, the activity grouping and the winner pick — compiled
+whole and unmodified, because the file is Foundation-only by design. The half
+that touches HealthKit and `Thing` lives in `HealthIngest.swift` and carries no
+judgement of its own: it maps `HKWorkout` onto `ActivityRecord` and does what
+this file decides.
+
+**Why a harness and not a live check — the strongest form of this argument in
+the tree.** Nothing on this machine can produce the input. The simulator ships
+no Health data and a Garmin- or Strava-written workout cannot be seeded there,
+so `-connectStrava` / `-connectGarmin` report "0 in" on every run by
+construction. And the failure that matters most needs TWO apps to have written
+the same ride, which only exists on a real phone belonging to somebody who owns
+the watch. Every failure mode renders perfectly:
+
+- the same ride listed twice, once per seat, doubling the training year
+- two activities somebody really did collapsed into one, and one of them deleted
+- Strava's COPY of a ride surviving over the watch record it came from
+- a connected seat's ride dropped entirely, because the record that won was one
+  that seat is not allowed to land
+- a winner that changes between passes, so a row moves rooms on a sweep
+
+27 assertions, 7 mutations. The mutations are the plausible simplifications:
+promoting Strava to a recorder, dropping the different-writers rail, widening
+the 120s window, ignoring duration, letting an unlandable record win, reversing
+the tie-break, and ranking an unknown writer below everything.
+
+**Drift guards** (things the compiled functions cannot prove about themselves):
+`HealthIngest` still calls `activityGroups` / `winner` / `source(forWriter:)`;
+the rider claim is still one-directional (`landed.source == "Apple Health"`, or
+disconnecting a seat would rewrite its landed rows); the landed-rows fetch
+still filters `.live` at the boundary and every read is `isLive`-guarded
+(liveness corollaries 4 and 5); a rider's CONNECT still passes
+`claimExisting: true` while the foreground sweep still does NOT (or every
+activation pays for a full Health fetch it can never use); and the Garmin offer
+still exists and still declares `unavailableOnMac`.
+
+**What it deliberately does not check.** That HealthKit reports the writer names
+this table matches ("Garmin Connect", "Strava") — that is a fact about other
+people's apps, observable only on a device. If Garmin renames its app, the
+seat silently stops claiming and its workouts fall back to Apple Health, which
+is the safe direction but is still wrong.

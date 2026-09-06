@@ -277,6 +277,12 @@ enum StorePreview {
             "r1 = Row(\"Morning ride · 24.1 km\", \"Event\", \"Strava\", \"7:02 AM\")",
             "r2 = Row(\"Long run · 12 km\", \"Event\", \"Strava\", \"Sun\")",
         ]
+        case "Garmin": [
+            "root = Stack([w])",
+            "w = Widget(\"Activities\", null, [r1, r2])",
+            "r1 = Row(\"Gravel ride · 41.6 km\", \"Event\", \"Garmin\", \"6:14 AM\")",
+            "r2 = Row(\"Open water swim · 1,500 m\", \"Event\", \"Garmin\", \"Sat\")",
+        ]
         case "Cal.com": [
             "root = Stack([w])",
             "w = Widget(\"Booked with you\", null, [r1, r2])",

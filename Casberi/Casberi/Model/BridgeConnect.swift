@@ -30,21 +30,26 @@ enum BridgeConnect {
                 result = await ScheduleIngest.connectReminders(context: context)
                     .map { ($0, "rem", "reminders", "Reads your lists; adds one when you ask.", nil) }
             case "Apple Health":
-                let stravaOn = store.bridges.contains { $0.id == "strava" && $0.status == .connected }
-                if let r = await HealthIngest.connectAndIngest(context: context, stravaOn: stravaOn) {
+                if let r = await HealthIngest.connectAndIngest(
+                    context: context, riders: connectedRiders(store)) {
                     result = (r.added, "hlt", "things",
                              "Reads your workouts, sleep, and reflections.", healthProof(r))
                 } else {
                     result = nil
                 }
-            case "Strava":
-                // Strava's seat is the Health store filtered to workouts
-                // Strava wrote — no Strava account, no OAuth (2026-07-14).
+            case "Strava", "Garmin":
+                // The Health store filtered to the workouts THIS app wrote —
+                // no Strava or Garmin account, no OAuth (2026-07-14; Garmin
+                // joined 2026-09-06, whose own API is partner-only).
+                // `riders` carries the OTHER rider's seat too, so connecting
+                // one never re-labels the other's activities.
                 let healthOn = store.bridges.contains { $0.id == "hlt" && $0.status == .connected }
+                let riders = connectedRiders(store).union([offer.name])
                 if let r = await HealthIngest.connectAndIngest(context: context, healthOn: healthOn,
-                                                                stravaOn: true, counting: "Strava") {
-                    result = (r.added, "strava", "activities",
-                             "Reads the workouts Strava saves to Apple Health.", healthProof(r))
+                                                               riders: riders, claimExisting: true,
+                                                               counting: offer.name) {
+                    result = (r.added, offer.name.lowercased(), "activities",
+                             "Reads the workouts \(offer.name) saves to Apple Health.", healthProof(r))
                 } else {
                     result = nil
                 }
@@ -68,6 +73,16 @@ enum BridgeConnect {
             // twice.
             completion?(true)
         }
+    }
+
+    /// The Health-riding seats (`HealthIngest.riders`) that are connected
+    /// right now — what tells the ingest which workouts to label with a
+    /// rider's name instead of Apple Health's. Keyed off the seat's own id,
+    /// which is its lowercased catalog name for every rider.
+    private static func connectedRiders(_ store: BridgeStore) -> Set<String> {
+        Set(HealthIngest.riders.map(\.seat).filter { seat in
+            store.bridges.contains { $0.id == seat.lowercased() && $0.status == .connected }
+        })
     }
 
     /// Health hides read denials by design — a repeat ask that still comes

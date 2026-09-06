@@ -221,6 +221,7 @@ enum BridgeGlyph {
         case "you":       return "person"
         case "apple health": return "heart"
         case "strava":    return "figure.run"
+        case "garmin":    return "figure.outdoor.cycle"
         case "todoist":   return "checklist"
         case "slack":     return "number"
         case "raindrop":  return "drop"

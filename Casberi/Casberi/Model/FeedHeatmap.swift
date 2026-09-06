@@ -39,6 +39,7 @@ enum FeedHeatmap {
         "Photos":        Label(title: "Your capture year",    unit: "screenshot", units: "screenshots"),
         "Apple Health":  Label(title: "Your training year",   unit: "workout",    units: "workouts"),
         "Strava":        Label(title: "Your training year",   unit: "activity",   units: "activities"),
+        "Garmin":        Label(title: "Your training year",   unit: "activity",   units: "activities"),
         "ChatGPT":       Label(title: "Your chat year",       unit: "chat",       units: "chats"),
         "Claude":        Label(title: "Your chat year",       unit: "chat",       units: "chats"),
         "Gemini":        Label(title: "Your chat year",       unit: "chat",       units: "chats"),

@@ -167,7 +167,7 @@ enum RoomFigure {
 
     static let pulseWorthy: Set<String> = [
         "Day One", "Apple Journal", "Obsidian", "Notion",
-        "Apple Health", "Strava", "ChatGPT", "Claude", "Gemini",
+        "Apple Health", "Strava", "Garmin", "ChatGPT", "Claude", "Gemini",
     ]
 
     static func toneIndex(_ tone: FeedInsight.Tone) -> Int {

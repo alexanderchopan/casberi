@@ -231,6 +231,12 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-x         { background: #000; }      /* their black — the mark is a white glyph and needs the field */
 .ai-tiktok    { background: #000; }      /* their black — the mark is two offset inks (cyan/magenta) and only reads on this field */
 .ai-strava    { background: #fc4c02; font-size: 18px; }
+/* Garmin's tile is the Connect app icon itself — full-bleed square artwork
+   carrying its own graphite field, the same treatment PostHog and Stripe get
+   above and the same face `BridgeIcon` draws in the app. The background is
+   the icon's blue, so a tile still reads as Garmin while the art loads. */
+.ai-garmin    { background: #11aeed; }
+.ai-garmin img { width: 100%; height: 100%; border-radius: inherit; }
 .ai-steam     { background: #1b2838; }
 .ai-obsidian  { background: #7c3aed; }
 .ai-files     { background: #4aa8f0; }

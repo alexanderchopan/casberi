@@ -232,12 +232,16 @@ enum BridgeRefresh {
                 _ = await ScheduleIngest.refreshReminders(context: context)
             }
         }
-        let healthOn = connected("hlt"), stravaOn = connected("strava")
-        if healthOn || stravaOn {
+        // One sweep serves every Health-backed seat — the plain Apple Health
+        // one and each connected rider (Strava, Garmin), which are the same
+        // read labeled by whoever wrote the workout.
+        let healthOn = connected("hlt")
+        let riders = Set(HealthIngest.riders.map(\.seat).filter { connected($0.lowercased()) })
+        if healthOn || !riders.isEmpty {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await HealthIngest.connectAndIngest(context: context,
-                                                        healthOn: healthOn, stravaOn: stravaOn)
+                                                        healthOn: healthOn, riders: riders)
             }
         }
         if connected("music") {

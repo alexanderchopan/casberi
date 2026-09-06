@@ -851,6 +851,17 @@ enum BridgeCatalog {
         Offer(name: "Strava",      tagline: "Every activity, one record",            group: "Fitness",   connectable: true,
               summary: "Rides and runs land in your feed with distance and time — read from Apple Health, where Strava saves them. Turn on Strava's Health sync and everything stays on \(DS.device); no Strava account is asked for.",
               unavailableOnMac: true),
+        // Garmin rides Apple Health exactly as Strava does (2026-09-06), and
+        // for a harder reason: Garmin's own Health/Activity API is a partner
+        // program you apply to as a business, with credentials that cannot
+        // ship inside a client. Garmin Connect writes every activity to
+        // HealthKit, so that read is the whole bridge — and the only honest
+        // thing to promise. Its tagline is deliberately NOT Strava's: two
+        // seats in one shelf saying the same six words is the collision
+        // prd §518 removed from the catalog, arriving from the other side.
+        Offer(name: "Garmin",      tagline: "Watch activities, in your feed",        group: "Fitness",   connectable: true,
+              summary: "Rides, runs and swims land in your feed with distance and time — read from Apple Health, where Garmin Connect saves them. Turn on Garmin Connect's Health sync and everything stays on \(DS.device); no Garmin account is asked for.",
+              added: day(2026, 9, 6), unavailableOnMac: true),
         Offer(name: "Cal.com",     tagline: "Bookings land in your feed",            group: "Schedule",  connectable: true,
               summary: "The meetings people book with you join your things as events, next to your calendar. Connects with an API key from Cal.com settings — it stays in \(DS.device)'s Keychain.",
               needsSetup: true),

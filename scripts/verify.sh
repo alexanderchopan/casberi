@@ -1158,6 +1158,18 @@ harness "Journal-room self-test" "journal-room self-test" "scripts/journal-room-
 # rescales itself, or a month printed with its year as the quantity "2,025".
 harness "Agent-room self-test" "agent-room self-test" "scripts/agent-room-selftest.sh" "the agent-room self-test failed — run scripts/agent-room-selftest.sh"
 
+# The Apple Health riders (Strava/Garmin, 2026-09-06) — the journal harness's
+# reason at its strongest: NOTHING ON THIS MACHINE CAN PRODUCE THE INPUT. The
+# simulator's Health store is empty and cannot be seeded with a Garmin- or
+# Strava-written workout, and the failure that matters most needs TWO apps to
+# have written the same ride, which only happens on a real phone belonging to
+# somebody who owns the watch. Every failure it catches renders perfectly: the
+# same ride listed twice doubling the training year, two real activities
+# collapsed into one with one deleted, Strava's COPY surviving over the
+# recording it came from, or a winner that flips between passes so a row moves
+# rooms on a sweep.
+harness "Health-riders self-test" "health-riders self-test" "scripts/health-riders-selftest.sh" "the health-riders self-test failed — run scripts/health-riders-selftest.sh"
+
 harness "X pure-logic self-test" "X pure-logic self-test" "scripts/x-selftest.sh" "the X logic self-test failed — run scripts/x-selftest.sh"
 
 # The Instagram room's head and the §395 wiring under it. Same reason as the X
