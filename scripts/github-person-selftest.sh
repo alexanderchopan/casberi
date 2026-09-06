@@ -158,8 +158,13 @@ grep -q 'previewImageURL' "$TMP/watch.stripped" \
        echo "  identity, not a picture (2026-08-14)"; exit 1; }
 
 # The field exists and is wired. A parser nothing can reach is a feature nobody has.
-grep -q 'action: watchPerson' "$SCREEN" \
-  || { echo "✗ the setup screen has no Watch verb for a person"; exit 1; }
+# Since prd §639 the screen has ONE watch field for a repo or a person
+# (`action: watchEither`), and `watchEither` is what reaches `watchPerson()` —
+# so both halves are checked: the field's verb, and the verb's hand-off.
+grep -q 'action: watchEither' "$SCREEN" \
+  || { echo "✗ the setup screen has no Watch verb (the one field, prd §639)"; exit 1; }
+grep -q 'watchPerson()' "$SCREEN" \
+  || { echo "✗ the setup screen's Watch verb never reaches watchPerson()"; exit 1; }
 grep -q 'GitHubPersonWatch.add(resolved, context: modelContext)' "$SCREEN" \
   || { echo "✗ the screen's Watch verb no longer lands the watch"; exit 1; }
 

@@ -3,8 +3,11 @@ import SwiftData
 
 /// One screen for every paste-a-token bridge — the steps to find the token,
 /// a field that sends it straight to the Keychain, and proof when things
-/// land. The same shape as RSS and Bluesky: state the way in plainly, then
-/// show it working.
+/// land. ON THE ACCOUNT PAGE since prd §639 (2026-09-06): the header, the
+/// plain rows, the readers row, the roster and the exits are `AccountPage`'s;
+/// this file keeps what is GitHub's or Trello's or Jira's — the door, the
+/// steps, the device flow, the two-stage keys, the watch verbs — and hands
+/// them to the chassis as the act field, the second acts and the key sheet.
 struct TokenSetupScreen: View {
     let bridge: TokenBridge
 
@@ -63,8 +66,17 @@ struct TokenSetupScreen: View {
     /// a wall (mock review 2026-07-16). Paste-only bridges show it plainly.
     @State private var manualPathOpen = false
 
-    /// The credentials door, open (prd §186).
-    @State private var showConnection = false
+    /// The page's one presentation (`AccountPage.sheet`): the reach sheet,
+    /// the key sheet, or a profile.
+    @State private var sheet: AccountPageSheet?
+
+    /// GitHub only — the watched repos and people as the chassis draws them,
+    /// read on appearance and after every watch or remove (a fetch belongs
+    /// in `.task`, never in a body — prd §628).
+    @State private var rows: [AccountPageShape.Row] = []
+    /// GitHub only — the ONE watch field's text: a repo slug or URL, or a
+    /// person. `looksLikeRepo` decides which verb it is.
+    @State private var watchQuery = ""
 
     /// Whether the "Open <page>" door has been tapped this visit — step one,
     /// observed rather than assumed (see `tokenStepsDone`). Not persisted: a
@@ -95,58 +107,79 @@ struct TokenSetupScreen: View {
     @State private var jiraSite: String? = JiraAuth.storedDomain
 
     var body: some View {
-        BridgeSetupPage(name: bridge.rawValue, computedTitle: bridge.rawValue) {
-            if bridge.connected {
-                connectedState
-                // The room, one tap away (2026-08-24). This screen serves the
-                // LARGEST family of seats in the catalog and was the only one
-                // with no door back at all — connect Todoist and the way to
-                // what just landed was: back, back, find the chip. See
-                // `RoomDoor`; it sits directly under the connected state
-                // so it is never something you have to scroll to.
-                RoomDoor(name: bridge.rawValue, source: bridge.source)
-                    .listRowSeparator(.hidden)
-            } else {
-                connectForm
-            }
-            if bridge == .github && bridge.connected {
-                feedsSection
-                watchSection
-            }
-            // The ghost preview retired 2026-07-25 (prd §218): it was the
-            // SAME card the product page shows, and Connect now raises this
-            // form over that page — so the preview it duplicates is literally
-            // still on screen behind the sheet.
-        }
-        .sheet(isPresented: $showConnection) {
-            BridgeConnectionSheet(title: bridge.rawValue) {
-                connectForm
-                removeSection
-            }
-        }
+        AccountPage(
+            name: bridge.rawValue, seatID: bridge.bridgeID, source: bridge.source,
+            state: AccountPageState.of(name: bridge.rawValue, seatID: bridge.bridgeID,
+                                       connected: bridge.connected, store: store),
+            intro: bridge.setupIntro,
+            keyed: true,
+            rows: rows,
+            onRemoveRow: removeWatch,
+            onOpenRow: bridge == .github ? openWatch : nil,
+            teardown: {
+                TokenVault.delete(bridge.tokenKey)
+                bridge.onRemove()
+                trelloKey = nil   // Trello's key goes with it (see `onRemove`)
+            },
+            sheet: $sheet,
+            act: { actField },
+            more: {
+                if bridge == .github && bridge.connected {
+                    feedsSection
+                }
+            },
+            keySheet: { tokenForm }
+        )
         .onAppear {
             if bridge.connected {
                 Task { await sync() }
             }
         }
+        .task(id: "\(bridge.rawValue)\(bridge.connected)") { readRows() }
         .onDisappear { cancelDeviceFlow() }
     }
 
-    /// Connected (prd §186) — identity, live proof, what it can do, and the
-    /// one door back to the form. A keyed bridge stores no account name (only
-    /// the secret, in the Keychain), so this leads with the app's own name
-    /// over a truthful note about HOW it's connected rather than a display
-    /// name we'd have to invent.
-    private var connectedState: some View {
-        BridgeConnectedState(
-            bridgeID: bridge.bridgeID,
-            name: bridge.rawValue,
-            connectionNote: String(localized: "Your \(bridge.credentialNoun) · stored in \(DS.device)'s Keychain"),
-            capabilitiesFallback: [bridge.canLine],
-            openConnection: { showConnection = true }
-        )
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
+    /// The act field, always first (prd §639). Not connected: the connect
+    /// form itself. Needs reconnecting: a new token. Connected: what this
+    /// account can ADD — GitHub watches a repo or a person; every other
+    /// keyed bridge has nothing to add, so its field replaces the key.
+    @ViewBuilder private var actField: some View {
+        if !bridge.connected || BridgeHealth.needsReconnect(bridge.rawValue) != nil {
+            connectForm
+        } else if bridge == .github {
+            DSSlabField(placeholder: String(localized: "Watch a repo or person"),
+                        text: $watchQuery, actionLabel: String(localized: "Watch"),
+                        busy: watching || watchingPerson, action: watchEither)
+            BridgeSyncStatusRows(syncing: watching || watchingPerson,
+                                 syncingLine: watchingPerson
+                                    ? String(localized: "Looking them up…")
+                                    : String(localized: "Looking it up…"),
+                                 proof: watchResult,
+                                 faces: watchFaces, faceFallback: bridge.rawValue)
+            DSSlabNote(text: "Private to \(DS.device) — nobody is followed or notified, and nothing shows on your GitHub account.")
+        } else {
+            DSSlabField(placeholder: String(localized: "Paste a new token"), text: $tokenField,
+                        actionLabel: String(localized: "Replace"),
+                        secure: true, action: connect)
+            BridgeSyncStatusRows(syncing: syncing,
+                                 syncingLine: String(localized: "Fetching your \(bridge.noun)…"),
+                                 proof: result)
+        }
+    }
+
+    /// The "Your key" sheet's content — the token by hand, whole: the door,
+    /// the steps, the field. The same block the not-connected act field
+    /// draws, so a key is replaced through exactly the path it was pasted.
+    @ViewBuilder private var tokenForm: some View {
+        if bridge == .trello {
+            trelloKeyBlock
+            if trelloKey != nil { setupBlock }
+        } else if bridge == .jira {
+            jiraSiteBlock
+            if jiraSite != nil { setupBlock }
+        } else {
+            setupBlock
+        }
     }
 
     /// The connect form. **The steps are still whole** — §186's ruling ("it's
@@ -158,29 +191,26 @@ struct TokenSetupScreen: View {
     /// was frozen when that pass ran, and stayed a Settings page while the
     /// rest of the app moved on.
     ///
-    /// It leads the screen before connecting, and lives behind the Connection
-    /// door after — same sections either way, never rewritten.
+    /// It is the act field before connecting (and again when the key is
+    /// refused), and the Your key sheet after — the same blocks either way,
+    /// never rewritten (prd §639).
     @ViewBuilder private var connectForm: some View {
-        BridgeSetupHeader(name: bridge.rawValue,
-                          mode: deviceFlowOffered ? .signIn : .pasteKey,
-                          intro: bridge.setupIntro,
-                          connected: bridge.connected)
         if deviceFlowOffered {
             // Sign-in is THE path; the token hunt folds away behind a
             // disclosure so the screen leads with one action instead of
             // two competing ones (mock review 2026-07-16). The proof and
             // error rows surface beside sign-in while the manual path —
-            // whose card normally carries them — is folded.
-            signInSection
-            if !manualPathOpen { statusSection }
-            manualPathToggleSection
+            // whose block normally carries them — is folded.
+            signInBlock
+            if !manualPathOpen { statusRows }
+            manualPathToggle
         }
         // Trello's two stages. The token stage only appears once a key is
         // stored, because its door — the authorize link — cannot be built
         // without one, and a door that goes nowhere is a dead control.
         if bridge == .trello {
-            trelloKeySection
-            if trelloKey != nil { setupSection }
+            trelloKeyBlock
+            if trelloKey != nil { setupBlock }
         // Jira's two stages — Trello's shape, though for a different reason:
         // the door below doesn't depend on the site or email at all (it's a
         // fixed page, `TokenBridge.jira.setupURL`), but a token pasted before
@@ -188,10 +218,10 @@ struct TokenSetupScreen: View {
         // site. Staying two stages keeps the "what does this connect to"
         // question answered before the credential that proves it.
         } else if bridge == .jira {
-            jiraSiteSection
-            if jiraSite != nil { setupSection }
+            jiraSiteBlock
+            if jiraSite != nil { setupBlock }
         } else if manualPathOpen || !deviceFlowOffered {
-            setupSection
+            setupBlock
         }
     }
 
@@ -199,30 +229,27 @@ struct TokenSetupScreen: View {
     /// public by design (it ships in the client-side JavaScript of every
     /// Trello Power-Up), which is exactly why it can be pasted here and then
     /// used to build a `scope=read` authorize link on your behalf.
-    private var trelloKeySection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if let url = bridge.setupURL {
-                    DSSlabButton(title: bridge.doorTitle,
-                                 detail: bridge.doorHost,
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        openURL(url)
-                    }
+    private var trelloKeyBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if let url = bridge.setupURL {
+                DSSlabButton(title: bridge.doorTitle,
+                             detail: bridge.doorHost,
+                             systemImage: "arrow.up.right") {
+                    DSHaptic.tap()
+                    openURL(url)
                 }
-                BridgeStepLines(steps: [
-                    String(localized: "Create a Power-Up — name it Casberi. Its API key is on the page."),
-                    String(localized: "Paste the key below."),
-                ], numbered: false)
-                DSSlabField(placeholder: String(localized: "API key"),
-                            text: $trelloKeyField,
-                            actionLabel: trelloKey == nil
-                                ? String(localized: "Next") : String(localized: "Replace"),
-                            action: saveTrelloKey)
-                DSSlabNote(text: "It names the Power-Up, not you. The token below is what reads your cards.")
             }
+            BridgeStepLines(steps: [
+                String(localized: "Create a Power-Up — name it Casberi. Its API key is on the page."),
+                String(localized: "Paste the key below."),
+            ], numbered: false)
+            DSSlabField(placeholder: String(localized: "API key"),
+                        text: $trelloKeyField,
+                        actionLabel: trelloKey == nil
+                            ? String(localized: "Next") : String(localized: "Replace"),
+                        action: saveTrelloKey)
+            DSSlabNote(text: "It names the Power-Up, not you. The token below is what reads your cards.")
         }
-        .dsSlabSection()
     }
 
     private func saveTrelloKey() {
@@ -249,24 +276,21 @@ struct TokenSetupScreen: View {
     /// neither value is minted from the other — they're just two things the
     /// person already knows — so this is one section with two fields and one
     /// verb, the ASC "three slabs, one verb" shape a field shorter.
-    private var jiraSiteSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabField(placeholder: String(localized: "yourteam.atlassian.net"),
-                            text: $jiraDomainField, actionLabel: "",
-                            keyboard: .URL, action: {})
-                DSSlabField(placeholder: String(localized: "you@company.com"),
-                            text: $jiraEmailField,
-                            actionLabel: jiraSite == nil
-                                ? String(localized: "Next") : String(localized: "Replace"),
-                            keyboard: .emailAddress,
-                            isArmed: !jiraDomainField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                && !jiraEmailField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                            action: saveJiraSite)
-                DSSlabNote(text: "Jira needs both to know whose issues \"assigned to you\" means.")
-            }
+    private var jiraSiteBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            DSSlabField(placeholder: String(localized: "yourteam.atlassian.net"),
+                        text: $jiraDomainField, actionLabel: "",
+                        keyboard: .URL, action: {})
+            DSSlabField(placeholder: String(localized: "you@company.com"),
+                        text: $jiraEmailField,
+                        actionLabel: jiraSite == nil
+                            ? String(localized: "Next") : String(localized: "Replace"),
+                        keyboard: .emailAddress,
+                        isArmed: !jiraDomainField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            && !jiraEmailField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                        action: saveJiraSite)
+            DSSlabNote(text: "Jira needs both to know whose issues \"assigned to you\" means.")
         }
-        .dsSlabSection()
     }
 
     private func saveJiraSite() {
@@ -306,43 +330,39 @@ struct TokenSetupScreen: View {
 
     /// Door, steps, field, proof, one sentence — in that order, because that
     /// is the order the person does them in.
-    private var setupSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if let url = doorURL {
-                    // Step one, doing itself (prd §218). This screen used to
-                    // say "Open readwise.io/access_token" in body text and
-                    // then leave you to retype it — an instruction the app
-                    // could have followed on your behalf the whole time. The
-                    // verb+address anatomy (2026-08-14): the big words stay
-                    // short, the host sits beneath them, and the route trail
-                    // lives in the steps.
-                    DSSlabButton(title: doorTitle,
-                                 detail: bridge.doorHost,
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        doorOpened = true
-                        openURL(url)
-                    }
+    private var setupBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if let url = doorURL {
+                // Step one, doing itself (prd §218). This screen used to
+                // say "Open readwise.io/access_token" in body text and
+                // then leave you to retype it — an instruction the app
+                // could have followed on your behalf the whole time. The
+                // verb+address anatomy (2026-08-14): the big words stay
+                // short, the host sits beneath them, and the route trail
+                // lives in the steps.
+                DSSlabButton(title: doorTitle,
+                             detail: bridge.doorHost,
+                             systemImage: "arrow.up.right") {
+                    DSHaptic.tap()
+                    doorOpened = true
+                    openURL(url)
                 }
-                // Numbered only when there is NO door — then the list really
-                // does start at 1. Under a door, numerals starting at 2 sent
-                // the eye hunting for a missing 1 (ruling 2026-08-14).
-                BridgeStepLines(steps: bridge.steps,
-                                startingAt: doorURL == nil ? 1 : 2,
-                                numbered: doorURL == nil,
-                                acknowledges: true,
-                                doneThrough: tokenStepsDone)
-                DSSlabField(placeholder: bridge.placeholder, text: $tokenField,
-                            actionLabel: bridge.connected ? "Update" : "Connect",
-                            secure: true, action: connect)
-                BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: String(localized: "Fetching your \(bridge.noun)…"),
-                                     proof: result)
-                DSSlabNote(text: keychainNote)
             }
+            // Numbered only when there is NO door — then the list really
+            // does start at 1. Under a door, numerals starting at 2 sent
+            // the eye hunting for a missing 1 (ruling 2026-08-14).
+            BridgeStepLines(steps: bridge.steps,
+                            startingAt: doorURL == nil ? 1 : 2,
+                            numbered: doorURL == nil,
+                            acknowledges: true,
+                            doneThrough: tokenStepsDone)
+            DSSlabField(placeholder: bridge.placeholder, text: $tokenField,
+                        actionLabel: bridge.connected ? "Replace" : "Connect",
+                        secure: true, action: connect)
+            BridgeSyncStatusRows(syncing: syncing,
+                                 syncingLine: String(localized: "Fetching your \(bridge.noun)…"),
+                                 proof: result)
         }
-        .dsSlabSection()
     }
 
     /// How far through the token steps we can PROVE someone is (2026-08-04).
@@ -358,87 +378,82 @@ struct TokenSetupScreen: View {
         return doorOpened ? 1 : 0
     }
 
-    /// The screen's one gray sentence (§190's companion rule, finally applied
-    /// here). Three footers used to say this — the Keychain, the recipient,
-    /// and the read-only promise — which is one fact wearing three paragraphs.
-    private var keychainNote: String {
-        String(localized: "Your \(bridge.credentialNoun) stays in \(DS.device)'s Keychain, goes only to \(bridge.rawValue), and only to read.")
-    }
+    /// `keychainNote` is GONE (prd §639): "stays in the Keychain, goes only
+    /// to X, and only to read" is said by the Your key row (where it lives)
+    /// and the What it reaches row (where it goes) — as facts on rows, not a
+    /// gray sentence under a field.
 
     /// The sign-in path — GitHub shows a short code here, you approve it on
     /// github.com, and the token arrives on its own. One row, three phases.
-    private var signInSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                switch devicePhase {
-                case .idle:
-                    DSSlabButton(title: "Sign in with GitHub",
-                                 systemImage: "person.badge.key",
-                                 action: startDeviceFlow)
-                case .requesting:
-                    HStack(spacing: DS.Space.s2) {
-                        ProgressView()
-                        Text("Asking GitHub for a code…")
-                            .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                    }
-                case .waiting(let code):
-                    // The code is the whole moment — big, spaced by GitHub's
-                    // own hyphen, sitting in a well with an explicit Copy button
-                    // so it plainly reads as "copy this and paste it on GitHub"
-                    // (the bare tap-to-copy went unnoticed; user, 2026-07-15).
-                    HStack(spacing: DS.Space.s3) {
-                        Text(code.userCode)
-                            .dsText(.monoCode34)
-                            .foregroundStyle(DS.textPrimary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .minimumScaleFactor(0.6)
-                            .lineLimit(1)
-                        Button(action: { copyCode(code.userCode) }) {
-                            HStack(spacing: DS.Space.s1) {
-                                Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
-                                    .dsSymbolSwap(codeCopied)
-                                    .dsGlyph(13)
-                                Text(codeCopied ? "Copied" : "Copy").dsText(.subhead13).fontWeight(.semibold)
-                            }
-                            .foregroundStyle(codeCopied ? DS.confirm : DS.tint)
-                            .padding(.horizontal, DS.Space.s3)
-                            .frame(minHeight: 34)
-                            .background(DS.gray100, in: Capsule(style: .continuous))
-                            .contentShape(Capsule(style: .continuous))
-                        }
-                        .buttonStyle(PressSpring())
-                    }
-                    .padding(DS.Space.s3)
-                    .frame(maxWidth: .infinity)
-                    .background(DS.surfaceWell, in: DSSlab.shape)
-                    Text("Enter this code on GitHub — approval lands the token here by itself.")
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    // Verb over address, the 2026-08-14 anatomy.
-                    DSSlabButton(title: "Enter it on GitHub",
-                                 detail: "github.com/login/device",
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        openURL(code.verificationURL)
-                    }
-                    HStack(spacing: DS.Space.s2) {
-                        ProgressView()
-                        Text("Waiting for your approval…")
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        Spacer()
-                        Button("Cancel") { cancelDeviceFlow() }
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                            .buttonStyle(.plain)
-                    }
+    private var signInBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            switch devicePhase {
+            case .idle:
+                DSSlabButton(title: "Sign in with GitHub",
+                             systemImage: "person.badge.key",
+                             action: startDeviceFlow)
+            case .requesting:
+                HStack(spacing: DS.Space.s2) {
+                    ProgressView()
+                    Text("Asking GitHub for a code…")
+                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
                 }
-                // The sign-in path's one sentence — the scope, which is the
-                // only fact worth a gray line on a screen about trust. The
-                // "Sign in" header went with the furniture: the button says
-                // what it does (§190).
-                DSSlabNote(text: "GitHub's smallest scope that reaches private issues and PRs.")
+            case .waiting(let code):
+                // The code is the whole moment — big, spaced by GitHub's
+                // own hyphen, sitting in a well with an explicit Copy button
+                // so it plainly reads as "copy this and paste it on GitHub"
+                // (the bare tap-to-copy went unnoticed; user, 2026-07-15).
+                HStack(spacing: DS.Space.s3) {
+                    Text(code.userCode)
+                        .dsText(.monoCode34)
+                        .foregroundStyle(DS.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .minimumScaleFactor(0.6)
+                        .lineLimit(1)
+                    Button(action: { copyCode(code.userCode) }) {
+                        HStack(spacing: DS.Space.s1) {
+                            Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
+                                .dsSymbolSwap(codeCopied)
+                                .dsGlyph(13)
+                            Text(codeCopied ? "Copied" : "Copy").dsText(.subhead13).fontWeight(.semibold)
+                        }
+                        .foregroundStyle(codeCopied ? DS.confirm : DS.tint)
+                        .padding(.horizontal, DS.Space.s3)
+                        .frame(minHeight: 34)
+                        .background(DS.gray100, in: Capsule(style: .continuous))
+                        .contentShape(Capsule(style: .continuous))
+                    }
+                    .buttonStyle(PressSpring())
+                }
+                .padding(DS.Space.s3)
+                .frame(maxWidth: .infinity)
+                .background(DS.surfaceWell, in: DSSlab.shape)
+                Text("Enter this code on GitHub — approval lands the token here by itself.")
+                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                // Verb over address, the 2026-08-14 anatomy.
+                DSSlabButton(title: "Enter it on GitHub",
+                             detail: "github.com/login/device",
+                             systemImage: "arrow.up.right") {
+                    DSHaptic.tap()
+                    openURL(code.verificationURL)
+                }
+                HStack(spacing: DS.Space.s2) {
+                    ProgressView()
+                    Text("Waiting for your approval…")
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    Spacer()
+                    Button("Cancel") { cancelDeviceFlow() }
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .buttonStyle(.plain)
+                }
             }
+            // The sign-in path's one sentence — the scope, which is the
+            // only fact worth a gray line on a screen about trust. The
+            // "Sign in" header went with the furniture: the button says
+            // what it does (§190).
+            DSSlabNote(text: "GitHub's smallest scope that reaches private issues and PRs.")
         }
-        .dsSlabSection()
     }
 
     private func startDeviceFlow() {
@@ -505,93 +520,124 @@ struct TokenSetupScreen: View {
 
     /// The sync proof and honest failures, surfaced beside sign-in while the
     /// manual path (whose card normally carries these rows) is folded away.
-    private var statusSection: some View {
-        Section {
-            BridgeSyncStatusRows(syncing: syncing,
-                                 syncingLine: String(localized: "Fetching your \(bridge.noun)…"),
-                                 proof: result)
-        }
-        .dsSlabSection()
+    private var statusRows: some View {
+        BridgeSyncStatusRows(syncing: syncing,
+                             syncingLine: String(localized: "Fetching your \(bridge.noun)…"),
+                             proof: result)
     }
 
     /// The fold: one quiet row that opens the token-by-hand path. Not a slab —
     /// it's a disclosure over an alternate route, not a control that does
     /// anything, and giving it a slab would put it on level with Sign in.
-    private var manualPathToggleSection: some View {
-        Section {
-            Button {
-                withAnimation(DS.Motion.standard) { manualPathOpen.toggle() }
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Text("Prefer a token by hand?")
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                    Image(systemName: "chevron.down")
-                        .dsGlyph(11)
-                        .foregroundStyle(DS.textTertiary)
-                        .rotationEffect(.degrees(manualPathOpen ? 180 : 0))
-                    Spacer(minLength: 0)
-                }
-                .contentShape(Rectangle())
+    private var manualPathToggle: some View {
+        Button {
+            withAnimation(DS.Motion.standard) { manualPathOpen.toggle() }
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                Text("Prefer a token by hand?")
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                Image(systemName: "chevron.down")
+                    .dsGlyph(11)
+                    .foregroundStyle(DS.textTertiary)
+                    .rotationEffect(.degrees(manualPathOpen ? 180 : 0))
+                Spacer(minLength: 0)
             }
-            .buttonStyle(.plain)
+            .contentShape(Rectangle())
         }
-        .dsSlabSection()
+        .buttonStyle(.plain)
     }
 
     /// GitHub only — the feed picker. One connection, several streams the
     /// person each turns on; toggling re-syncs so a newly-chosen feed lands
     /// now, not next foreground.
     private var feedsSection: some View {
-        // Switch slabs (§190's picker-page shape): each row IS this
-        // connection's verb for one lane, the same as a chain on OpenSea, so
-        // it earns a full block instead of a line in a stacked toggle list.
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                ForEach(GitHubFeed.allCases) { feed in
-                    DSSlabSwitch(title: feed.title, detail: feed.blurb,
-                                 isOn: Binding(
-                                    get: { githubFeeds.isOn(feed) },
-                                    set: { _ in
-                                        githubFeeds.toggle(feed)
-                                        DSHaptic.tap()
-                                        Task { await sync() }
-                                    }))
-                }
-                DSSlabNote(text: "All of it lands under GitHub.")
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            ForEach(GitHubFeed.allCases) { feed in
+                DSSlabSwitch(title: feed.title, detail: feed.blurb,
+                             isOn: Binding(
+                                get: { githubFeeds.isOn(feed) },
+                                set: { _ in
+                                    githubFeeds.toggle(feed)
+                                    DSHaptic.tap()
+                                    Task { await sync() }
+                                }))
             }
+            DSSlabNote(text: "All of it lands under GitHub.")
         }
-        .dsSlabSection()
     }
 
-    /// GitHub only — watch a repo, or a person, without starring, subscribing
-    /// or following on GitHub itself (2026-07-16; the person half is prd §519,
-    /// 2026-08-29). Either watch lands as a thing immediately; deleting it in
-    /// the sheet unwatches it (feed swipes stay read-only).
-    ///
-    /// ONE SECTION, TWO FIELDS, ONE NOTE — deliberately, and not only to stay
-    /// inside §315's note budget: the two are the same act on two subjects,
-    /// and the sentence under them ("private to this device") is the same
-    /// promise about both. Splitting them would state that promise twice and
-    /// invite the two statements to drift apart.
-    private var watchSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabField(placeholder: String(localized: "owner/repo or a GitHub URL"),
-                            text: $watchField, actionLabel: String(localized: "Watch"),
-                            action: watchRepo)
-                DSSlabField(placeholder: String(localized: "A username, or a GitHub profile URL"),
-                            text: $personField, actionLabel: String(localized: "Watch"),
-                            action: watchPerson)
-                BridgeSyncStatusRows(syncing: watching || watchingPerson,
-                                     syncingLine: watchingPerson
-                                        ? String(localized: "Looking them up…")
-                                        : String(localized: "Looking it up…"),
-                                     proof: watchResult,
-                                     faces: watchFaces, faceFallback: bridge.rawValue)
-                DSSlabNote(text: "Private to \(DS.device) — nobody is followed or notified, and nothing shows on your GitHub account.")
-            }
+    /// GitHub only — ONE field watches a repo or a person (prd §639; the
+    /// repo half is 2026-07-16, the person half prd §519). The shape of what
+    /// was pasted decides the verb: a path with an owner AND a name is a
+    /// repo, anything else is an account. Neither verb touches the GitHub
+    /// account — nothing is starred, subscribed or followed.
+    private func watchEither() {
+        let q = watchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return }
+        if TokenSetupScreen.looksLikeRepo(q) {
+            watchField = q
+            watchRepo()
+        } else {
+            personField = q
+            watchPerson()
         }
-        .dsSlabSection()
+    }
+
+    /// "owner/repo", or a github.com URL with two path segments. A bare
+    /// login, an `@login` or a profile URL (one segment) is a person.
+    static func looksLikeRepo(_ q: String) -> Bool {
+        var path = q
+        if let range = path.range(of: "github.com/") {
+            path = String(path[range.upperBound...])
+        }
+        let parts = path.split(separator: "/").map(String.init).filter { !$0.isEmpty }
+        return parts.count >= 2
+    }
+
+    /// The watched repos and people as roster rows. Every watch is a `Thing`
+    /// under GitHub with a `sourceRef`, so the corpus IS the store; the ring
+    /// reads the watch row's own `capturedAt` against the last visit.
+    private func readRows() {
+        guard bridge == .github, bridge.connected else { rows = []; return }
+        var descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == "GitHub" && $0.sourceRef != nil },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        descriptor.fetchLimit = 200
+        let lastLooked = AccountVisits.lastLooked(bridge.bridgeID)
+        rows = ((try? modelContext.fetch(descriptor)) ?? []).compactMap { thing in
+            guard thing.isLive, let ref = thing.sourceRef else { return nil }
+            let isPerson = GitHubLinks.personLogin(fromRef: ref) != nil
+            let isRepo = ref.hasPrefix("gh:watchrepo:")
+            guard isPerson || isRepo else { return nil }
+            let new = lastLooked.map { thing.capturedAt > $0 } ?? false
+            return AccountPageShape.Row(
+                id: ref, title: thing.title,
+                subline: isPerson ? String(localized: "person") : String(localized: "repo"),
+                weekCount: 0, hasNew: new, isYou: false,
+                avatarURL: thing.authorAvatarURL ?? thing.previewImageURL)
+        }
+    }
+
+    /// Removing a watch deletes its row — the watch IS the thing.
+    private func removeWatch(_ ref: String) {
+        let r = ref
+        let doomed = (try? modelContext.fetch(FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.sourceRef == r }))) ?? []
+        SpotlightIndex.remove(ids: doomed.map(\.id))
+        for thing in doomed { modelContext.delete(thing) }
+        modelContext.saveHonestly()
+        readRows()
+    }
+
+    /// A watched repo or person opens on GitHub — its page is the profile.
+    private func openWatch(_ ref: String) {
+        let r = ref
+        guard let thing = (try? modelContext.fetch(FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.sourceRef == r })))?.first, thing.isLive,
+              let url = URL(string: thing.content.trimmingCharacters(in: .whitespacesAndNewlines)),
+              url.scheme?.hasPrefix("http") == true
+        else { return }
+        openURL(url)
     }
 
     private func watchRepo() {
@@ -612,7 +658,9 @@ struct TokenSetupScreen: View {
                 return
             }
             watchField = ""
+            watchQuery = ""
             watchResult = .says(String(localized: "Watching \(thing.title)"))
+            readRows()
             await sync()
         }
     }
@@ -640,17 +688,11 @@ struct TokenSetupScreen: View {
                 return
             }
             personField = ""
+            watchQuery = ""
             watchFaces = [resolved.avatarURL].compactMap { $0 }
             watchResult = .says(String(localized: "Watching \(thing.title)"))
+            readRows()
             await sync()
-        }
-    }
-
-    private var removeSection: some View {
-        BridgeDisconnectSection(bridgeID: bridge.bridgeID, name: bridge.source) {
-            TokenVault.delete(bridge.tokenKey)
-            bridge.onRemove()
-            trelloKey = nil   // Trello's key goes with it (see `onRemove`)
         }
     }
 
@@ -666,6 +708,7 @@ struct TokenSetupScreen: View {
         bridge.onRemove(reconnecting: true)
         TokenVault.set(token, for: bridge.tokenKey)
         tokenField = ""
+        sheet = nil
         DSHaptic.tap()
         Task { await sync(justConnected: true) }
     }

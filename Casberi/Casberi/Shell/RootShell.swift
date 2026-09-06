@@ -3931,8 +3931,10 @@ struct RootShell: View {
         // snapshot the on-device tool path already builds. Bankr gets none: it
         // answers from the wallet and live markets rather than from the
         // candidate list at all, so a corpus search is no use to it.
+        let reader = provider.map { AccountReaders.ID.agent($0.rawValue) }
+            ?? AccountReaders.ID.device
         let corpus = provider == .bankr
-            ? [] : toolSnapshot(terms: Retriever.contentTerms(query))
+            ? [] : toolSnapshot(terms: Retriever.contentTerms(query), reader: reader)
         // The honest line above used to fire whenever the local retrieval came
         // back empty. With tools it fires only for a genuinely empty corpus —
         // an empty retrieval is now exactly the case where a second,
@@ -3956,7 +3958,8 @@ struct RootShell: View {
         }
         let outcome = await AgentAnswer.synthesize(
             query: query,
-            candidates: candidates(hits, terms: Retriever.contentTerms(query)),
+            candidates: candidates(hits, terms: Retriever.contentTerms(query),
+                                   reader: reader),
             history: keyedHistory,
             provider: provider, corpus: corpus,
             systemPrefix: seedSystem,
@@ -4014,11 +4017,16 @@ struct RootShell: View {
     /// agent (AnswerTools) — the newest 2000 things, so a tool's `call` never
     /// reaches SwiftData off its actor. Same evidence shape (title/kind/source/
     /// when + excerpt) the single-shot candidates use.
-    private func toolSnapshot(terms: [String] = []) -> [AnswerTools.Snapshot] {
+    private func toolSnapshot(terms: [String] = [],
+                              reader: String = AccountReaders.ID.device) -> [AnswerTools.Snapshot] {
         var descriptor = FetchDescriptor<Thing>(
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         descriptor.fetchLimit = 2000
-        let all = (try? modelContext.fetch(descriptor)) ?? []
+        // The tools search THIS snapshot, so the reader's subtraction (prd
+        // §639) happens here as well as on the candidates — a search tool
+        // that could reach a shut-out source would undo the candidate filter.
+        let all = AccountReaders.readable((try? modelContext.fetch(descriptor)) ?? [],
+                                          by: reader)
         return all.map { t in
             AnswerTools.Snapshot(id: t.id.uuidString, title: t.title,
                                  kind: t.kind.typeTag, source: t.source,
@@ -4054,9 +4062,17 @@ struct RootShell: View {
 
     /// Retrieved things flattened for the model — the one place the mapping
     /// lives, so every answer path hands the model the same shape.
+    ///
+    /// **And the one place a READER is told what it may see (prd §639).**
+    /// `reader` names who this batch is for — the on-device model by default,
+    /// the keyed agent on the synthesize path — and `AccountReaders.readable`
+    /// subtracts every source whose account page shut that reader out. A
+    /// thing a reader may not read is simply not in its corpus; nothing
+    /// downstream has to know the row exists.
     private func candidates(_ things: [Thing],
-                            terms: [String] = []) -> [OnDeviceModel.Candidate] {
-        things.map {
+                            terms: [String] = [],
+                            reader: String = AccountReaders.ID.device) -> [OnDeviceModel.Candidate] {
+        AccountReaders.readable(things, by: reader).map {
             OnDeviceModel.Candidate(title: $0.title, kind: $0.kind.typeTag,
                                     source: $0.source, when: shortTime($0.capturedAt),
                                     note: answerSnippet($0, terms: terms),

@@ -430,19 +430,14 @@ enum HandleBridge: String {
 /// One screen for every handle-only bridge: state the way in plainly (a
 /// public name, nothing else), then show it working.
 ///
-/// REBUILT 2026-07-23 (prd §184) — the manager pattern the wallet screen
-/// proved (prd §182) generalized to every watch-list bridge, with one split
-/// the wallet didn't need: a face is a PERSON, so watched Farcaster/Bluesky
-/// accounts ride a roster shelf exactly like watched addresses do (faces,
-/// unbounded, one trailing "+" since there's no cap to draw); channels and
-/// feeds are TOPICS, not people, so they stay a square-marked ledger below.
-/// One omnibox both adds and searches — a leading "/" follows a topic on
-/// Farcaster, plain text searches people (and, on Bluesky, feeds too). Every
-/// per-account action (Likes/Mentions, watch-their-wallet, who-they-follow)
-/// moved off the row and onto `SocialProfileCard`, reached by tapping a face —
-/// the same card a post's byline already opens. The "what landed" preview is
-/// gone; the feed already shows that, and a manager manages (prd §182's own
-/// ruling, carried here).
+/// ON THE ACCOUNT PAGE since prd §639 (2026-09-06). §184's roster shelf of
+/// faces, the square-marked topic ledger and the "See in feed" hint are gone:
+/// watched people, channels, feeds and hashtags are ROWS under "Watching · N"
+/// on `AccountPage`, active this week first, one removal verb ("Remove"), and
+/// the Activity row is the way to the room. What this file keeps is what is
+/// the bridge's own: the omnibox and its search, the follow verbs, the
+/// starter-pack doors, Telegram's archive half, and the per-row facts
+/// (`readRows`) the chassis draws.
 struct HandleSetupScreen: View {
     let bridge: HandleBridge
 
@@ -457,11 +452,14 @@ struct HandleSetupScreen: View {
     @State private var query = ""
     @State private var syncing = false
     @State private var result: BridgeProof?
-    /// Bumped once when this screen first turns a connection live — the header
-    /// icon coin-flips to acknowledge the handshake.
-    /// Shown after a first connect, once: a one-tap way to the board where the
-    /// new card just landed. Cleared on tap.
-    @State private var showHomeHint = false
+    /// The page's one presentation (`AccountPage.sheet`): the reach sheet, or
+    /// a profile raised from a roster row.
+    @State private var sheet: AccountPageSheet?
+    /// The roster as the chassis draws it — people, channels, feeds and
+    /// hashtags with this week's count and the new-since-you-looked ring.
+    /// Read on appearance and after every add, remove and sync (a fetch
+    /// belongs in `.task`, never in a body — prd §628).
+    @State private var rows: [AccountPageShape.Row] = []
 
     /// The watched accounts (multi bridges) — a local snapshot refreshed on
     /// each add/remove, since the screen doesn't observe the store directly.
@@ -479,10 +477,6 @@ struct HandleSetupScreen: View {
     /// on the bridges with public search. Cleared on add and on emptying.
     @State private var hits: [UserSearch.Hit] = []
 
-    /// The face tapped on the roster — opens the same profile card a post's
-    /// byline does, carrying every per-account action.
-    @State private var openProfile: SocialProfile?
-
     /// The followed list as an OPML file, for the four feed bridges. nil for
     /// the people bridges (there is no feed to hand anyone) and until a follow
     /// resolves — see `refreshExportURL`.
@@ -494,67 +488,51 @@ struct HandleSetupScreen: View {
     @State private var importStaleness: String?
 
     var body: some View {
-        BridgeSetupPage(name: bridge.rawValue, computedTitle: bridge.rawValue) {
-            BridgeSetupHeader(name: bridge.rawValue,
-                              mode: .noAccount, intro: bridge.setupIntro,
-                              connected: bridge.isConnected)
-            // The way back to your things (§460).
-            if bridge.isConnected {
-                RoomDoor(name: bridge.rawValue, source: bridge.rawValue)
-                    .listRowSeparator(.hidden)
-            }
-            omniSection.listRowSeparator(.hidden)
-            if bridge.isRichSocial {
-                rosterSection
-            } else if bridge.supportsMultiple, !accountNames.isEmpty {
-                accountsSection.listRowSeparator(.hidden)
-            }
-            // Starter packs (item 4, 2026-07-27) — Bluesky's own curated-list
-            // discovery, the honest fix to `FollowImportSheet`'s problem: a
-            // real follow graph runs to thousands, too many to picker through
-            // one checkbox at a time. Its own child view owns its `.sheet`
-            // (not chained onto this screen's body) — a SECOND `.sheet`
-            // modifier stacked on the same view is exactly what broke
-            // `FeedScreen`'s first tap once (see its `FeedSheetRoute` doc
-            // comment); isolating it in a subview sidesteps that class
-            // entirely rather than re-risking it here.
-            if bridge == .bluesky {
-                StarterPacksDoor(onImport: { _ in Task { await sync() } })
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-            } else if bridge == .farcaster {
-                // Farcaster's own pack (2026-08-08) — a pinned list, not a
-                // browse endpoint (Farcaster's client API has none keyless;
-                // see `FarcasterStarterPack`'s doc comment), so this door
-                // opens straight to a face grid instead of a search field.
-                FarcasterPackDoor(onImport: { _ in Task { await sync() } })
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-            }
-            if bridge.importsArchive {
-                archiveSection.listRowSeparator(.hidden)
-                ImportUpkeepSection(source: bridge.rawValue, held: importHeld,
-                                    staleness: importStaleness) { _ in rereadImport() }
-                    .listRowSeparator(.hidden)
-            }
-            topicsSection
-            if showHomeHint {
-                seeInFeedSection.listRowSeparator(.hidden)
-            }
-            if bridge.isConnected {
-                BridgeDisconnectSection(
-                    bridgeID: bridge.bridgeID, name: bridge.rawValue,
-                    teardown: {
-                        bridge.setName("")
-                        accountNames = []
-                    }
-                ).listRowSeparator(.hidden)
-            }
-        }
+        AccountPage(
+            name: bridge.rawValue, seatID: bridge.bridgeID, source: bridge.rawValue,
+            state: AccountPageState.of(name: bridge.rawValue, seatID: bridge.bridgeID,
+                                       connected: bridge.isConnected, store: store),
+            intro: bridge.setupIntro,
+            rows: rows,
+            onRemoveRow: removeRow,
+            onOpenRow: bridge.isRichSocial ? openRow : nil,
+            teardown: {
+                bridge.setName("")
+                accountNames = []
+            },
+            sheet: $sheet,
+            act: { omniBlock },
+            more: {
+                // Starter packs (item 4, 2026-07-27) — Bluesky's own curated-list
+                // discovery, the honest fix to `FollowImportSheet`'s problem: a
+                // real follow graph runs to thousands, too many to picker through
+                // one checkbox at a time. Its own child view owns its `.sheet`
+                // (not chained onto this screen's body) — a SECOND `.sheet`
+                // modifier stacked on the same view is exactly what broke
+                // `FeedScreen`'s first tap once (see its `FeedSheetRoute` doc
+                // comment); isolating it in a subview sidesteps that class
+                // entirely rather than re-risking it here.
+                if bridge == .bluesky {
+                    StarterPacksDoor(onImport: { _ in Task { await sync() } })
+                } else if bridge == .farcaster {
+                    // Farcaster's own pack (2026-08-08) — a pinned list, not a
+                    // browse endpoint (Farcaster's client API has none keyless;
+                    // see `FarcasterStarterPack`'s doc comment), so this door
+                    // opens straight to a face grid instead of a search field.
+                    FarcasterPackDoor(onImport: { _ in Task { await sync() } })
+                }
+                if bridge.importsArchive {
+                    archiveBlock
+                    ImportUpkeepSection(source: bridge.rawValue, held: importHeld,
+                                        staleness: importStaleness) { _ in rereadImport() }
+                }
+            },
+            keySheet: { EmptyView() }
+        )
         // The list changing is the cheap trigger; a finished sync is the other
         // one, since that is when an entry's feed URL actually resolves (a
         // follow added seconds ago has a name and no address yet).
-        .onChange(of: accountNames) { _, _ in refreshExportURL() }
+        .onChange(of: accountNames) { _, _ in refreshExportURL(); readRows() }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.folder]) { result in
             guard case .success(let url) = result else { return }
             Task { await runImport(url) }
@@ -562,6 +540,7 @@ struct HandleSetupScreen: View {
         .onAppear {
             accountNames = bridge.names
             refreshExportURL()
+            readRows()
             if bridge.importsArchive { rereadImport() }
             query = bridge.displayName
             if bridge.isConnected {
@@ -570,7 +549,7 @@ struct HandleSetupScreen: View {
         }
         // The debounced omnibox search — people, and on Bluesky feeds too;
         // already-watched accounts stay out of the results, they're in the
-        // roster above. A leading "/" on Farcaster is a channel name, not a
+        // roster below. A leading "/" on Farcaster is a channel name, not a
         // search, so it skips both.
         .task(id: query) {
             let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -591,291 +570,147 @@ struct HandleSetupScreen: View {
             if let p = await peopleResult { hits = p }
             if let f = await feedResult { feedHits = f }
         }
-        .sheet(item: $openProfile) { p in
-            SocialProfileCard(profile: p)
-        }
     }
 
-    /// Close the loop (delight 2026-07-14, repointed 2026-07-20 — the board
-    /// this used to open onto is gone): the first connect ends with a
-    /// one-tap way to the feed the new card just landed in — so a person
-    /// sees where their connection went, instead of guessing. Every
-    /// connected source always has a feed now (no more pin/hide to gate on),
-    /// so this fires unconditionally on connect (see the call site below).
-    private var seeInFeedSection: some View {
-        Section {
-            Button {
-                showHomeHint = false
-                filter.source = bridge.rawValue
-                filter.tag = "All"
-                // This screen can be RAISED as the connect sheet (prd §219),
-                // and `path` is the stack behind it — so close the sheet too,
-                // or the feed we just navigated to sits under a form that's
-                // still on top of it.
-                route.closeConnectForm()
-                route.path = []
-                DSHaptic.tap()
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: "list.bullet")
-                    Text("See in feed")
-                    Spacer()
-                    Image(systemName: "arrow.right")
-                        .dsGlyph(13)
-                        .foregroundStyle(DS.textTertiary)
-                }
-                .dsText(.body17).foregroundStyle(DS.tint)
-                .contentShape(Rectangle())   // the whole row taps, not just the text
+    // MARK: - The roster (prd §639)
+
+    /// A topic row's id carries its kind, so one remove verb can route to
+    /// the right store: `channel:`, `feed:`, `hashtag:`; a bare id is a
+    /// person or a followed name.
+    private static let channelPrefix = "channel:"
+    private static let feedPrefix = "feed:"
+    private static let hashtagPrefix = "hashtag:"
+
+    /// Every watched thing as a row, with this week's count and the ring.
+    /// ONE fetch — the source's things from the last seven days — grouped by
+    /// author and by channel; the stores supply the rows, the corpus the
+    /// facts about them.
+    private func readRows() {
+        let source = bridge.rawValue
+        let weekStart = Date.now.addingTimeInterval(-7 * 86_400)
+        var descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == source && $0.capturedAt >= weekStart })
+        descriptor.fetchLimit = 2000
+        let things = ((try? modelContext.fetch(descriptor)) ?? []).filter(\.isLive)
+        let lastLooked = AccountVisits.lastLooked(bridge.bridgeID)
+        var byAuthor: [String: (week: Int, new: Bool)] = [:]
+        var byChannel: [String: (week: Int, new: Bool)] = [:]
+        for thing in things {
+            let new = lastLooked.map { thing.capturedAt > $0 } ?? false
+            if let handle = thing.authorHandle?.lowercased(), !handle.isEmpty {
+                let was = byAuthor[handle] ?? (0, false)
+                byAuthor[handle] = (was.week + 1, was.new || new)
             }
-            .buttonStyle(.plain)
-            .dsListCardRow()
+            if let channel = thing.channelName?.lowercased(), !channel.isEmpty {
+                let was = byChannel[channel] ?? (0, false)
+                byChannel[channel] = (was.week + 1, was.new || new)
+            }
         }
+        func fact(_ keys: [String], in book: [String: (week: Int, new: Bool)]) -> (week: Int, new: Bool) {
+            for key in keys.map({ $0.lowercased() }) {
+                if let hit = book[key] { return hit }
+            }
+            return (0, false)
+        }
+        let noun = bridge.noun
+        var out: [AccountPageShape.Row] = []
+        if bridge.isRichSocial {
+            for account in bridge.socialAccounts {
+                let f = fact([account.key, bridge.shortName(account.key), account.title], in: byAuthor)
+                out.append(AccountPageShape.Row(
+                    id: account.key, title: account.title,
+                    subline: AccountPageShape.subline(nouns: noun, weekCount: f.week),
+                    weekCount: f.week, hasNew: f.new,
+                    isYou: account.watches.contains { $0.kind == .mine && $0.on },
+                    avatarURL: account.avatarURL))
+            }
+        } else {
+            for name in accountNames {
+                let display = bridge.shortName(name)
+                let f = fact([name, display], in: byAuthor)
+                // A followed feed that has stopped answering says so — the
+                // RSS ledger's own line (2026-08-05) — in place of the count.
+                let subline = bridge.feedTrouble(name)
+                    ?? AccountPageShape.subline(nouns: noun, weekCount: f.week)
+                out.append(AccountPageShape.Row(
+                    id: name, title: display, subline: subline,
+                    weekCount: f.week, hasNew: f.new, isYou: false, avatarURL: nil))
+            }
+        }
+        // Topics — channels, feeds, hashtags — are rows of the same roster
+        // now (§639 folds §184's two ledgers into one list), told apart by
+        // their subline's noun rather than a second section.
+        if bridge == .farcaster {
+            for channel in FarcasterStore.shared.channels {
+                let f = fact([channel.name], in: byChannel)
+                out.append(AccountPageShape.Row(
+                    id: Self.channelPrefix + channel.name, title: "/\(channel.name)",
+                    subline: AccountPageShape.subline(nouns: String(localized: "channel"), weekCount: f.week),
+                    weekCount: f.week, hasNew: f.new, isYou: false, avatarURL: channel.imageURL))
+            }
+        }
+        if bridge == .bluesky {
+            for feed in BlueskyStore.shared.feeds {
+                let f = fact([feed.name], in: byChannel)
+                out.append(AccountPageShape.Row(
+                    id: Self.feedPrefix + feed.uri, title: feed.name,
+                    subline: AccountPageShape.subline(nouns: String(localized: "feed"), weekCount: f.week),
+                    weekCount: f.week, hasNew: f.new, isYou: false, avatarURL: feed.imageURL))
+            }
+        }
+        if bridge == .nostr {
+            for hashtag in NostrStore.shared.hashtags {
+                let f = fact([hashtag.tag], in: byChannel)
+                out.append(AccountPageShape.Row(
+                    id: Self.hashtagPrefix + hashtag.tag, title: "#\(hashtag.tag)",
+                    subline: AccountPageShape.subline(nouns: String(localized: "hashtag"), weekCount: f.week),
+                    weekCount: f.week, hasNew: f.new, isYou: false, avatarURL: nil))
+            }
+        }
+        rows = out
     }
 
-    /// The plain-name multi bridges' watched list (Substack, Reddit, YouTube,
-    /// Podcasts) — the rich social bridges get a face roster instead
-    /// (`rosterSection`), so this only ever renders the plain row now.
-    private var accountsSection: some View {
-        Section {
-            ForEach(accountNames, id: \.self) { name in
-                HStack(spacing: DS.Space.s3) {
-                    BridgeIcon(name: bridge.rawValue, size: DS.Face.row, circular: true)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(bridge.shortName(name)).dsText(.body17)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        // A followed feed that has stopped answering says so —
-                        // the RSS ledger's own line (2026-08-05). Silent
-                        // otherwise, so the row keeps its plain shape; there
-                        // is no subline to demote here, unlike RSS's URL.
-                        if let trouble = bridge.feedTrouble(name) {
-                            Text(trouble)
-                                .dsText(.label12).foregroundStyle(DS.attention)
-                                .lineLimit(1)
-                        }
-                    }
-                    Spacer()
-                }
-                .swipeActions(edge: .trailing) {
-                    Button(role: .destructive) {
-                        bridge.removeName(name, context: modelContext)
-                        accountNames = bridge.names
-                        DSHaptic.tap()
-                    } label: { Label("Remove", systemImage: "minus.circle") }
-                }
-                // A swipe has no Mac-mouse equivalent — right-click mirrors it
-                // (Mac polish, 2026-07-28).
-                .contextMenu {
-                    Button(role: .destructive) {
-                        bridge.removeName(name, context: modelContext)
-                        accountNames = bridge.names
-                        DSHaptic.tap()
-                    } label: { Label("Remove", systemImage: "minus.circle") }
-                }
-                .dsListCardRow()
-                .listRowSeparator(.hidden)
-            }
-        } header: {
-            Text(accountNames.count == 1 ? "Watching" : "Watching \(accountNames.count)")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
+    /// ONE verb, "Remove", for every row. Unfollowing takes the posts with
+    /// it (prd §286) — each branch prunes exactly as its old ledger did.
+    private func removeRow(_ id: String) {
+        if id.hasPrefix(Self.channelPrefix) {
+            let name = String(id.dropFirst(Self.channelPrefix.count))
+            FarcasterStore.shared.removeChannel(name)
+            SocialTopics.pruneTopic(source: "Farcaster", channel: name,
+                                    watchedHandles: FarcasterStore.shared.usernames,
+                                    context: modelContext)
+        } else if id.hasPrefix(Self.feedPrefix) {
+            let uri = String(id.dropFirst(Self.feedPrefix.count))
+            // Keyed on the feed's NAME, not its uri — `landFeed` stores
+            // `channel: feed.name` (prd §286) — so read it before it goes.
+            let name = BlueskyStore.shared.feeds.first { $0.uri == uri }?.name ?? uri
+            BlueskyStore.shared.removeFeed(uri)
+            SocialTopics.pruneTopic(source: "Bluesky", channel: name,
+                                    watchedHandles: BlueskyStore.shared.handles,
+                                    context: modelContext)
+        } else if id.hasPrefix(Self.hashtagPrefix) {
+            let tag = String(id.dropFirst(Self.hashtagPrefix.count))
+            NostrStore.shared.removeHashtag(tag)
+            // Nostr keys `authorHandle` on the pubkey hex, so the watched
+            // set is the resolved keys (prd §286).
+            SocialTopics.pruneTopic(source: "Nostr", channel: tag,
+                                    watchedHandles: NostrStore.shared.accounts.map(\.pubkeyHex),
+                                    context: modelContext)
+        } else {
+            bridge.removeName(id, context: modelContext)
         }
+        accountNames = bridge.names
+        readRows()
     }
 
-    // MARK: - The roster (prd §184)
-
-    /// Watched people as a shelf of faces — the wallet manager's own roster
-    /// (prd §182), because a watched account is exactly the same shape as a
-    /// watched address: an identity, not a topic. Unbounded (no cap to draw,
-    /// unlike the wallet's five), so it scrolls, and it ends in a trailing
-    /// "+" that focuses the omnibox rather than a ring of dashed empty slots.
-    @ViewBuilder private var rosterSection: some View {
-        if !bridge.socialAccounts.isEmpty {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: DS.Space.s3) {
-                        // Read straight off the @Observable store, so a
-                        // landed avatar or a watch elsewhere re-renders with
-                        // nothing to keep in step.
-                        ForEach(bridge.socialAccounts) { account in
-                            rosterFace(account)
-                        }
-                        addFaceSlot
-                    }
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.vertical, DS.Space.s1)
-                }
-                Text(bridge.socialAccounts.count == 1
-                     ? String(localized: "Watching 1 · tap a face for more")
-                     : String(localized: "Watching \(bridge.socialAccounts.count) · tap a face for more"))
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                    .padding(.horizontal, DS.Space.s4)
-            }
-            .padding(.top, DS.Space.s1)
-            .listRowInsets(EdgeInsets())
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-        }
-    }
-
-    /// One watched person's face — tap opens the same profile card a post's
-    /// byline does (Likes/Mentions, watch-their-wallet, who-they-follow all
-    /// live there now); long-press removes, the roster card's own gesture.
-    private func rosterFace(_ account: SocialAccount) -> some View {
-        VStack(spacing: 6) {
-            if let avatar = account.avatarURL {
-                RemoteThumb(urlString: avatar, size: DS.Face.shelf, fallback: bridge.rawValue, circular: true)
-            } else {
-                BridgeIcon(name: bridge.rawValue, size: DS.Face.shelf, circular: true)
-            }
-            VStack(spacing: 0) {
-                Text(account.title)
-                    .dsText(.label12).fontWeight(.semibold)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                Text(account.subtitle)
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-            }
-            .frame(minHeight: 28, alignment: .top)
-        }
-        .frame(width: 74)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            DSHaptic.tap()
-            openProfile = SocialProfile(source: bridge.rawValue, handle: account.key,
-                                        displayName: account.title, bio: nil,
-                                        avatarURL: account.avatarURL)
-        }
-        .dsTapCard()
-        .contextMenu {
-            Button(role: .destructive) {
-                bridge.removeName(account.key, context: modelContext)
-                DSHaptic.tap()
-            } label: {
-                Label("Remove", systemImage: "trash")
-            }
-        }
-    }
-
-    /// A trailing "+" — no cap here, so it's an invitation rather than the
-    /// wallet's literal empty slot, but the same honest door: it can't watch
-    /// anyone without a name, so it focuses the omnibox.
-    private var addFaceSlot: some View {
-        VStack(spacing: 6) {
-            RoundedRectangle(cornerRadius: DS.Radius.appIcon(56), style: .continuous)
-                .strokeBorder(DS.textTertiary.opacity(0.35),
-                             style: StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
-                .frame(width: 56, height: 56)
-                .overlay {
-                    Image(systemName: "plus")
-                        .dsGlyph(16)
-                        .foregroundStyle(DS.textTertiary)
-                }
-            Text("Watch").dsText(.label12).foregroundStyle(DS.textTertiary)
-                .frame(minHeight: 28, alignment: .top)
-        }
-        .frame(width: 74)
-    }
-
-    // MARK: - Topics (prd §184)
-
-    /// Channels (Farcaster) or feeds (Bluesky) — topics, not people, so they
-    /// stay a square-marked ledger below the roster rather than joining it.
-    @ViewBuilder private var topicsSection: some View {
-        if bridge == .farcaster, !FarcasterStore.shared.channels.isEmpty {
-            Section {
-                ForEach(FarcasterStore.shared.channels) { channel in
-                    topicRow(imageURL: channel.imageURL, title: "/\(channel.name)",
-                            kind: String(localized: "Channel")) {
-                        FarcasterStore.shared.removeChannel(channel.name)
-                        // Unfollowing takes the channel's casts with it —
-                        // leaving them made the feed unfixable short of
-                        // Delete everything (prd §286).
-                        SocialTopics.pruneTopic(
-                            source: "Farcaster", channel: channel.name,
-                            watchedHandles: FarcasterStore.shared.usernames,
-                            context: modelContext)
-                        DSHaptic.tap()
-                    }
-                }
-            } header: {
-                Text("Topics").dsText(.label12).foregroundStyle(DS.textTertiary)
-            }
-            .listRowSeparator(.hidden)
-        }
-        if bridge == .bluesky, !BlueskyStore.shared.feeds.isEmpty {
-            Section {
-                ForEach(BlueskyStore.shared.feeds) { feed in
-                    topicRow(imageURL: feed.imageURL, title: feed.name,
-                            kind: String(localized: "Feed")) {
-                        BlueskyStore.shared.removeFeed(feed.uri)
-                        // Keyed on the feed's NAME, not its uri — `landFeed`
-                        // stores `channel: feed.name` (prd §286).
-                        SocialTopics.pruneTopic(
-                            source: "Bluesky", channel: feed.name,
-                            watchedHandles: BlueskyStore.shared.handles,
-                            context: modelContext)
-                        DSHaptic.tap()
-                    }
-                }
-            } header: {
-                Text("Topics").dsText(.label12).foregroundStyle(DS.textTertiary)
-            }
-            .listRowSeparator(.hidden)
-        }
-        if bridge == .nostr, !NostrStore.shared.hashtags.isEmpty {
-            Section {
-                ForEach(NostrStore.shared.hashtags) { hashtag in
-                    topicRow(imageURL: nil, title: "#\(hashtag.tag)",
-                            kind: String(localized: "Hashtag")) {
-                        NostrStore.shared.removeHashtag(hashtag.tag)
-                        // Nostr keys `authorHandle` on the pubkey hex, so the
-                        // watched set is the resolved keys (prd §286).
-                        SocialTopics.pruneTopic(
-                            source: "Nostr", channel: hashtag.tag,
-                            watchedHandles: NostrStore.shared.accounts.map(\.pubkeyHex),
-                            context: modelContext)
-                        DSHaptic.tap()
-                    }
-                }
-            } header: {
-                Text("Topics").dsText(.label12).foregroundStyle(DS.textTertiary)
-            }
-            .listRowSeparator(.hidden)
-        }
-    }
-
-    /// One topic ledger row — a SQUARE mark (an image when there is one, else
-    /// the bridge glyph), never round: the mark grammar ruling that reads a
-    /// person from a topic at a glance across every ledger (prd §184).
-    private func topicRow(imageURL: String?, title: String, kind: String,
-                          remove: @escaping () -> Void) -> some View {
-        HStack(spacing: DS.Space.s3) {
-            if let imageURL, !imageURL.isEmpty {
-                RemoteThumb(urlString: imageURL, size: 32, fallback: bridge.rawValue, circular: false)
-            } else {
-                BridgeIcon(name: bridge.rawValue, size: DS.Mark.list, circular: false)
-            }
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
-                Text(kind).dsText(.label12).foregroundStyle(DS.textTertiary)
-            }
-            Spacer(minLength: 0)
-        }
-        .dsListCardRow()
-        .swipeActions(edge: .trailing) {
-            Button(role: .destructive, action: remove) {
-                Label("Remove", systemImage: "minus.circle")
-            }
-        }
-        // A swipe has no Mac-mouse equivalent — right-click mirrors it
-        // (Mac polish, 2026-07-28).
-        .contextMenu {
-            Button(role: .destructive, action: remove) {
-                Label("Remove", systemImage: "minus.circle")
-            }
-        }
-        .listRowSeparator(.hidden)
+    /// A person's row opens the same profile card a post's byline does,
+    /// carrying every per-account action (Likes/Mentions, watch-their-wallet,
+    /// who-they-follow). A topic row is a read.
+    private func openRow(_ id: String) {
+        guard let account = bridge.socialAccounts.first(where: { $0.key == id }) else { return }
+        sheet = .profile(SocialProfile(source: bridge.rawValue, handle: account.key,
+                                       displayName: account.title, bio: nil,
+                                       avatarURL: account.avatarURL))
     }
 
     // MARK: - The omnibox (prd §184)
@@ -883,29 +718,23 @@ struct HandleSetupScreen: View {
     /// One field for both jobs: search-as-you-type for people (and, on
     /// Bluesky, feeds), or — on Farcaster, with a leading "/" — follow a
     /// channel by name. Replaces the old separate name/channel/feed fields.
-    private var omniSection: some View {
-        // The slab, its hits, its status, and the screen's ONE sentence (prd
-        // §190). The section header ("Add a username") went with the
-        // furniture: the field's own placeholder already says what to type,
-        // and the slab's verb says what happens.
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabField(placeholder: fieldPlaceholder, text: $query,
-                            actionLabel: omniButtonLabel, action: omniSubmit)
-                ForEach(omniHits) { hit in
-                    BridgeSearchResultRow(
-                        imageURL: hit.imageURL, fallbackIcon: bridge.rawValue,
-                        title: hit.title, subtitle: omniSubtitle(hit),
-                        action: { pick(hit) })
-                }
-                BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: omniSyncingLine,
-                                     proof: result)
-                DSSlabNote(text: omniNote)
-                exportLink
-            }
+    @ViewBuilder private var omniBlock: some View {
+        // The slab, its hits, its status (prd §190). The `omniNote` sentence
+        // under the field is gone with §639 — the header's intro says it
+        // before connecting, and after connecting the reach row and the
+        // readers row say it as facts.
+        DSSlabField(placeholder: fieldPlaceholder, text: $query,
+                    actionLabel: omniButtonLabel, action: omniSubmit)
+        ForEach(omniHits) { hit in
+            BridgeSearchResultRow(
+                imageURL: hit.imageURL, fallbackIcon: bridge.rawValue,
+                title: hit.title, subtitle: omniSubtitle(hit),
+                action: { pick(hit) })
         }
-        .dsSlabSection()
+        BridgeSyncStatusRows(syncing: syncing,
+                             syncingLine: omniSyncingLine,
+                             proof: result)
+        exportLink
     }
 
     /// The off-ramp (2026-08-06).
@@ -948,8 +777,7 @@ struct HandleSetupScreen: View {
     /// one-time act on a file. Both are Telegram, so both live on this seat —
     /// the import sits BELOW the follow field because a channel needs nothing
     /// but a name, while the export needs you to go and generate one first.
-    @ViewBuilder private var archiveSection: some View {
-        Section {
+    @ViewBuilder private var archiveBlock: some View {
             ImportArchiveSection(
                 source: bridge.rawValue,
                 // Telegram Desktop exports from inside the app itself — there
@@ -967,8 +795,6 @@ struct HandleSetupScreen: View {
                 showsMessagesToggle: true
             ) { importing = true }
             BridgeSyncStatusRows(proof: importResult)
-        }
-        .dsSlabSection()
     }
 
     private func rereadImport() {
@@ -1012,26 +838,19 @@ struct HandleSetupScreen: View {
     /// around a field was a third shape inside the second one. The affix
     /// becomes part of the placeholder, which reads the same and draws less.
     private var fieldPlaceholder: String {
+        // Connected, the field is the ADD field (prd §639): it says what it
+        // watches, not how to spell the first one.
+        if bridge.isConnected, bridge.supportsSearch {
+            return bridge == .farcaster
+                ? String(localized: "Watch or find an account, or /channel")
+                : String(localized: "Watch or find an account")
+        }
         if bridge == .farcaster { return String(localized: "@name, or /channel") }
         if bridge == .bluesky { return String(localized: "Handle, or search a feed") }
         if bridge == .nostr { return String(localized: "npub, hex, name@domain, or #hashtag") }
         if let prefix = bridge.fieldPrefix { return prefix + bridge.placeholder }
         if let suffix = bridge.fieldSuffix { return bridge.placeholder + suffix }
         return bridge.placeholder
-    }
-
-    /// The one sentence — the shortest true version of what the three
-    /// footers said. Everything longer moved to the catalog page the person
-    /// arrived from, which already carries this bridge's full promise.
-    private var omniNote: String {
-        switch bridge {
-        case .bluesky, .farcaster, .nostr:
-            return String(localized: "Public posts only — no password, ever.")
-        case .pinterest:
-            return String(localized: "Public pins only — no password, ever.")
-        default:
-            return String(localized: "Read-only — new \(bridge.noun) land in your feed.")
-        }
     }
 
     /// A search hit riding the omnibox — a person, or (Bluesky only) a feed,
@@ -1152,6 +971,7 @@ struct HandleSetupScreen: View {
             if await FarcasterIngest.followChannel(name) != nil {
                 query = ""
                 syncing = false
+                readRows()
                 DSHaptic.tap()
                 await sync()
             } else {
@@ -1163,6 +983,7 @@ struct HandleSetupScreen: View {
 
     private func followFeed(_ feed: BlueskyStore.Feed) {
         BlueskyStore.shared.addFeed(feed)
+        readRows()
         feedHits = []
         hits = []
         query = ""
@@ -1178,6 +999,7 @@ struct HandleSetupScreen: View {
         let tag = NostrStore.normalizeHashtag(raw)
         guard !tag.isEmpty else { return }
         NostrIngest.followHashtag(tag)
+        readRows()
         query = ""
         DSHaptic.tap()
         Task { await sync() }
@@ -1230,14 +1052,12 @@ struct HandleSetupScreen: View {
             : String(localized: "Synced just now")
         if store.registerConnected(id: bridge.bridgeID, name: bridge.rawValue,
                                    proof: proof, can: [bridge.canLine]) {
-            // The first moment this connection goes live: the icon flips, the
-            // haptic fires, and the loop-to-Home hint appears once.
+            // The first moment this connection goes live. The "See in feed"
+            // hint that used to appear here is gone (§639): the Activity row
+            // is always there, and it is the way to the room.
             DSHaptic.success()
-            withAnimation(DS.Motion.standard) {
-                // Every connected source always has its own feed now (no
-                // pin/hide to gate on) — the hint fires unconditionally.
-                showHomeHint = true
-            }
         }
+        // A sync is what fills this week's counts and lights the rings.
+        readRows()
     }
 }

@@ -662,6 +662,11 @@ enum DS {
         /// One rung, so the page you connect from and the page you connect on
         /// introduce themselves at the same size.
         static let hero: CGFloat = 60
+        /// The account page's own head (prd §639): the ONLY mark on the page,
+        /// centered over the name set as display text, with nothing beside
+        /// it — so it earns a rung above `hero`, which sits beside a title in
+        /// a row. One rung, one page family.
+        static let account: CGFloat = 76
     }
 
     // MARK: - Receipt pour  (prd §369, 2026-08-12; INK since 2026-08-29)

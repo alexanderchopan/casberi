@@ -162,15 +162,15 @@ KNOWN_UNBOUNDED: dict[tuple[str, str], str] = {
         "'Delete everything' has to see everything. A limit leaves rows behind "
         "under a verb that promises none — the §83 failure at its most "
         "expensive.",
-    ("Screens/BridgeDetailScreen.swift", "purgeThings"):
-        "Disconnect-and-remove, filtered to one source in Swift. Same shape as "
-        "the two below it: a one-tap teardown on a pushed settings screen, not "
-        "a render path — and a bounded purge leaves rows for a bridge the "
-        "catalog now says is gone.",
+    # `BridgeDetailScreen.purgeThings` left this list on 2026-09-06 (prd §639):
+    # that screen is on `AccountPage` now and disconnects through
+    # `BridgeDisconnectSection`, whose entry below carries the reason.
     ("Screens/BridgeDisconnectSection.swift", "disconnect"):
-        "The shared disconnect row's purge. Reaches every row of the named "
-        "source for `purgeThings`' reason; runs once, on a tap, on a screen "
-        "that is about to dismiss.",
+        "The shared disconnect row's purge — the one-tap teardown on a pushed "
+        "settings screen, filtered to one source in Swift. Reaches every row "
+        "of the named source because a bounded purge leaves rows for a bridge "
+        "the catalog now says is gone; runs once, on a tap, on a screen that "
+        "is about to dismiss.",
     ("Screens/WalletConnectionScreen.swift", "disconnectWallet"):
         "The wallet's own purge, same tap-once teardown shape.",
     ("Screens/DiagnosticsScreen.swift", "run"):

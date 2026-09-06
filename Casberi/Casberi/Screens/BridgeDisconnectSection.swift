@@ -40,6 +40,11 @@ struct BridgeDisconnectSection: View {
     /// exchange leaving your combined total is one; "your things stay" is not
     /// — the dialog below says that by offering the choice.
     var note: String? = nil
+    /// PLAIN on the account page (prd §639): a left-aligned red line on the
+    /// page background rather than a centered card row. The verb, the dialog
+    /// and the keep-or-purge choice are byte-identical either way — only the
+    /// ground changes, which is the whole point of not re-implementing it.
+    var plain = false
 
     @Environment(BridgeStore.self) private var store
     @Environment(\.modelContext) private var modelContext
@@ -54,9 +59,10 @@ struct BridgeDisconnectSection: View {
             } label: {
                 Text("Disconnect \(name)")
                     .dsText(.body17)
-                    .frame(maxWidth: .infinity, alignment: .center)
+                    .frame(maxWidth: .infinity, alignment: plain ? .leading : .center)
+                    .contentShape(Rectangle())
             }
-            .dsListCardRow()
+            .modifier(DisconnectGround(plain: plain))
             // Keep-or-purge — the same choice the generic detail screen offers,
             // so "stop this source" and "clear what it dropped in my feed" are
             // one gesture apart, not two screens apart. The two buttons SAY the
@@ -103,5 +109,23 @@ struct BridgeDisconnectSection: View {
         store.remove(bridgeID)
         DSHaptic.tap()
         dismiss()
+    }
+}
+
+/// The card row everywhere but the account page, where the row is the page:
+/// a plain red line at the row height, no card, no separator.
+private struct DisconnectGround: ViewModifier {
+    let plain: Bool
+    @ViewBuilder func body(content: Content) -> some View {
+        if plain {
+            content
+                .buttonStyle(.plain)
+                .foregroundStyle(DS.destructive)
+                .frame(minHeight: 56)
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+        } else {
+            content.dsListCardRow()
+        }
     }
 }
