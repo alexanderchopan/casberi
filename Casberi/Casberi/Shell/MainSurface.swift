@@ -1799,6 +1799,11 @@ struct MainSurface: View {
     /// The one door every source switch walks through (prd §265): chip taps and
     /// swipes both come here, so direction, the tag reset, and tap-learning
     /// cannot drift between them.
+    /// When the room on screen last CHANGED. A snapshot taken before a room
+    /// has drawn itself is a picture of its predecessor filed under its name
+    /// — see `captureCurrentLook`.
+    @State private var roomArrivedAt: Double = 0
+
     private func go(to label: String) {
         // Picking a source means the WHOLE of that source — a kind filter never
         // survives the tap. Two changes from the old rule (2026-08-01), both
@@ -1834,8 +1839,11 @@ struct MainSurface: View {
         // the cover as this room (measured: All's "last look" was the Wallet
         // cover). A swipe captures at its first move instead (`dragMove`).
         if chrome.pageDragX == 0 {
-            RoomSnapshots.capture(source: filter.source, frame: chrome.pagerFrame)
+            captureCurrentLook()
         }
+        // The new room is on screen from here; anything captured before it has
+        // drawn would be a picture of this one — see `captureCurrentLook`.
+        roomArrivedAt = Date.timeIntervalSinceReferenceDate
         slideEdge = direction(from: filter.source, to: target)
         SwipeClock.step(to: target)
         // THE SLIDE GETS ITS FRAMES (PERF 2026-08-21, corrected 2026-09-01) —
@@ -2023,13 +2031,32 @@ struct MainSurface: View {
     /// finger — a pull that meets nothing must still answer the hand, or the
     /// swipe reads as broken rather than as the last room — and the ring
     /// stays put, since there is no chip for it to lean toward.
+    /// A room's last look, taken ONLY once the room has actually been on
+    /// screen long enough to have drawn itself (2026-09-06, user: "sometimes
+    /// when you swipe you see two sets of text from the same page before it
+    /// lands").
+    ///
+    /// `drawHierarchy(afterScreenUpdates: false)` reads what is on the glass
+    /// RIGHT NOW. Called in the moments after a room switch, the glass still
+    /// holds the room you just left — so the picture filed under the new
+    /// room's name is a picture of the old one, and the next swipe toward it
+    /// draws that content underneath the very room it came from: the same
+    /// rows twice, a few points apart, which is exactly what was reported.
+    /// Half a second is longer than the commit animation and shorter than any
+    /// deliberate swipe; inside it, the room simply keeps whatever look it
+    /// had, which is never wrong, only older.
+    private func captureCurrentLook() {
+        guard Date.timeIntervalSinceReferenceDate - roomArrivedAt > 0.5 else { return }
+        RoomSnapshots.capture(source: filter.source, frame: chrome.pagerFrame)
+    }
+
     private func dragMove(_ t: CGFloat) {
         let target = neighbour(t < 0 ? 1 : -1)
         let free = target != nil
         // The first move of a swipe: the room is still (nearly) at rest, so
-        // this is where its last look is taken — see `go(to:)`.
+        // this is where its last look is taken — see `captureCurrentLook`.
         if chrome.pageDragTarget == nil, chrome.pageDragX == 0 {
-            RoomSnapshots.capture(source: filter.source, frame: chrome.pagerFrame)
+            captureCurrentLook()
         }
         chrome.pageDragX = free ? t : t * 0.3
         chrome.pageDragProgress = free ? min(1, max(-1, -t / Self.dragPitch)) : 0
@@ -2513,12 +2540,15 @@ private struct PagerDrag<Content: View>: View {
                     .allowsHitTesting(false)
             }
             .scaleEffect(lifted ? 1 - 0.05 * share : 1)
-            // NO TILT (user, 2026-09-06: "the spin in the carousel doesn't
-            // need to flip"). The card used to rotate about its bottom edge
-            // in the direction of travel; a page in a carousel slides beside
-            // its neighbour, it does not tip away from it, and the rotation
-            // was the one part of the lift that read as an effect rather than
-            // as a page. Corners, lit edge, scale and shadow all stay.
+            // THE TILT IS BACK, SMALLER (user, 2026-09-06: "it no longer
+            // feels like you are swiping a card in a carousel ... not like a
+            // Tinder card"). It was removed the same day on "the pin in the
+            // carousel doesn't need to flip", which I read as the rotation —
+            // and the rotation turns out to be the whole of what made this
+            // read as a card being dealt rather than a page sliding. 4°, not
+            // the original 7: enough to say "card", short of the flourish
+            // that was called a flip.
+            .rotationEffect(.degrees(lifted ? Double(x / width) * 4 : 0), anchor: .bottom)
             .shadow(color: .black.opacity(lifted ? 0.5 * share : 0), radius: 28, y: 10)
             .offset(x: x)
     }
@@ -2532,9 +2562,9 @@ private struct CardFly: ViewModifier {
     func body(content: Content) -> some View {
         content
             .offset(x: direction * 460 * progress)
-            // No rotation on the way out either — the same ruling as the
-            // drag's own tilt above, kept consistent so the card leaves the
-            // way it travelled.
+            // And on the way out, at the same reduced angle the drag uses, so
+            // the card leaves the way it travelled.
+            .rotationEffect(.degrees(Double(direction) * 6 * progress), anchor: .bottom)
             .scaleEffect(1 - 0.08 * progress)
             .opacity(1 - 0.4 * progress)
     }

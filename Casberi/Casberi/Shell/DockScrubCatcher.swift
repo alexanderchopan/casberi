@@ -139,6 +139,16 @@ struct DockScrubCatcher: UIViewRepresentable {
 
         private func attachIfNeeded() {
             if window == nil {
+                // **HAND SCROLLING BACK ON THE WAY OUT (2026-09-06, user: "I
+                // also can't scroll between the chips on the dock so I'm sort
+                // of stuck in one place").** `onBegan` turns the strip's
+                // scrolling OFF for the length of a scrub and `onEnded` turns
+                // it back on — but a marker torn out of the window mid-press
+                // never sees an end, so the scroll view kept `isScrollEnabled
+                // = false` FOREVER and the dock stopped moving for the rest of
+                // the launch. Nothing about that is recoverable by the person:
+                // there is no gesture that re-enables it.
+                host?.isScrollEnabled = true
                 if let g = press { host?.removeGestureRecognizer(g) }
                 if let t = track { host?.removeGestureRecognizer(t) }
                 press = nil
@@ -182,7 +192,17 @@ struct DockScrubCatcher: UIViewRepresentable {
             t.delaysTouchesBegan = false
             t.delaysTouchesEnded = false
             t.delegate = self
-            t.onFinger = { [weak self] p in self?.finger?(p) }
+            t.onFinger = { [weak self, weak scroll] p in
+                // BELT AND BRACES for the same fault: `Track` sees every
+                // touch, including the ones a cancelled press never reports.
+                // When no finger is down and no press is running, the strip
+                // must be scrollable — asserting that here means a missed
+                // `onEnded` costs one gesture rather than the whole launch.
+                if p == nil, self?.press?.state != .began, self?.press?.state != .changed {
+                    scroll?.isScrollEnabled = true
+                }
+                self?.finger?(p)
+            }
             scroll.addGestureRecognizer(t)
             track = t
             host = scroll

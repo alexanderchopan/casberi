@@ -1076,8 +1076,18 @@ struct SourceChips: View {
             // is fixed, so the word gives instead.
             .minimumScaleFactor(axis == .vertical ? 0.6 : 1)
             .padding(.horizontal, capsulePadH * scale)
-            .frame(width: axis == .vertical ? Self.railChipWidth : nil, height: iconSize * scale)
-            .wordChipFill(cornerRadius: iconSize * scale / 2, active: isOn,
+            // **THE CAPSULE NEVER OUTGROWS ITS SEAT (2026-09-06, user: "also
+            // have clipping at the top and bottom of the active on the dock.
+            // See how it's got black it's not a circle").** The magnification
+            // is layout, so at the wave's peak `iconSize * 1.28` is 58.9pt
+            // inside a 56pt seat — three points over at each end, which the
+            // slab's own `clipShape` cut off, and a capsule with two flat ends
+            // reads as a rendering fault rather than as a chip standing up.
+            // The chip still grows: the seat widens and the word scales. Only
+            // the HEIGHT is bounded, by the one number the bar reserves.
+            .frame(width: axis == .vertical ? Self.railChipWidth : nil,
+                   height: min(iconSize * scale, chipSize))
+            .wordChipFill(cornerRadius: min(iconSize * scale, chipSize) / 2, active: isOn,
                           ns: selectionNS, leanPitch: leanPitch)
     }
 
