@@ -687,7 +687,20 @@ struct RootShell: View {
             }
             if UserDefaults.standard.bool(forKey: "demoProbe") {
                 Task { @MainActor in
+                    // WAIT FOR THE POUR, NOT FOR THREE SECONDS (2026-09-06).
+                    // The count was read at a fixed 3s, and on the Mac the
+                    // pour is still landing then — `verify-mac.sh`'s ≥250
+                    // gate read 276, 180 and 84 on three runs of the same
+                    // seed, and failed two of them. `DemoMode.pourOutstanding`
+                    // is the app's own answer to "is it done"; the ceiling is
+                    // for a pour that never finishes, which is a real failure
+                    // this should then report as a low count rather than hang.
                     try? await Task.sleep(for: .seconds(3))
+                    var waited = 0
+                    while DemoMode.pourOutstanding, waited < 90 {
+                        try? await Task.sleep(for: .seconds(1))
+                        waited += 1
+                    }
                     let count = (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
                     NSLog("[Casberi] demoProbe| active=%@ hasSeen=%@ pending=%@ things=%d",
                           DemoMode.isActive ? "YES" : "NO",

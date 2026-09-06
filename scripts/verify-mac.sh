@@ -531,7 +531,9 @@ sweep demo     -demoEnter YES -deeplink "casberi://feed"
 #
 # What CAN be proven in one launch is proven: the pour finishes, it lands a
 # real corpus rather than a handful of rows, the mode is genuinely active, and
-# the seats registered. `-demoProbe` reports 3s after launch, which is what
+# the seats registered. `-demoProbe` reports once the pour is no longer
+# outstanding (3s minimum, 90s ceiling — 2026-09-06; a fixed 3s read 84 on a
+# Mac still landing rows and failed this gate on a healthy tree), which is what
 # lets one launch carry both halves.
 # **It gates on the CORPUS, not on `poured` — measured 2026-08-17, and the
 # obvious gate was wrong.** A first cut waited for `demoMode: poured N` and
@@ -553,7 +555,10 @@ sweep demo     -demoEnter YES -deeplink "casberi://feed"
 step "Demo furnishes the Mac"
 DEMO_LOG="$OUT/demo-pour.log"
 launch "$DEMO_LOG" -demoEnter YES -demoProbe YES
-if ! wait_for "$DEMO_LOG" "demoProbe\| seats=" 45; then
+# 110, not 45: the probe waits for the pour (3s floor, 90s ceiling) before it
+# reports, so the listener has to outlast the ceiling or it times out on a
+# healthy pour.
+if ! wait_for "$DEMO_LOG" "demoProbe\| seats=" 110; then
   quit_app
   fail "demo probe never reported on Mac in 45s (see $DEMO_LOG) — the first thing a new Mac user sees"
 fi
