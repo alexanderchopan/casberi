@@ -144,9 +144,22 @@ grep -q 'struct PagerDrag' "$TMP/main.nc" \
 grep -q 'chrome.pageDragX = 0' "$TMP/main.nc" \
   || { echo "✗ go(to:) no longer resets the drag in the committing transaction — the incoming"; \
        echo "  room would mount offset by the last finger position."; fail=1; }
-grep -q 'ring.offset(x: slide)' "$TMP/chips.nc" \
-  || { echo "✗ the strip's ring no longer leans with the swipe — the selection stays put"; \
-       echo "  while the room moves, two objects for one gesture."; fail=1; }
+# THE LEAN MOVED INTO ITS OWN LEAF (2026-09-06, prd §632 second amendment) —
+# the ruling is unchanged and the guard follows it rather than the old
+# spelling: both the ring and the fill go through `ChipLean`, `ChipLean` is
+# what reads the progress, and the strip's own body must NOT read it (that is
+# the whole point — a read there rebuilds every chip per touch move).
+grep -q 'struct ChipLean' "$TMP/chips.nc" \
+  || { echo "✗ ChipLean is gone — the selection has nowhere to lean from."; fail=1; }
+[ "$(grep -c 'ChipLean(pitch: leanPitch' "$TMP/chips.nc")" -ge 2 ] \
+  || { echo "✗ the ring or the fill no longer leans with the swipe — the selection stays"; \
+       echo "  put while the room moves, two objects for one gesture."; fail=1; }
+grep -q 'chrome.pageDragProgress \* pitch' "$TMP/chips.nc" \
+  || { echo "✗ ChipLean no longer reads the drag's progress — the lean is inert."; fail=1; }
+grep -q 'private var leanPitch' "$TMP/chips.nc" \
+  && ! grep -q 'chrome.pageDragProgress \* (chipSize' "$TMP/chips.nc" \
+  || { echo "✗ SourceChips computes the LEAN again instead of just its pitch — reading"; \
+       echo "  pageDragProgress in the strip's body rebuilds every chip per touch move."; fail=1; }
 # SCRUB TO PICK (2026-09-05).
 [ -f "Casberi/Casberi/Shell/DockScrubCatcher.swift" ] \
   || { echo "✗ DockScrubCatcher.swift is gone — the dock lost its press-and-slide."; fail=1; }

@@ -41,7 +41,18 @@ enum RoomSnapshots {
                 .first(where: \.isKeyWindow) else { return }
         installMemoryWarning()
         let format = UIGraphicsImageRendererFormat()
-        format.scale = window.screen.scale
+        // **NOT DEVICE SCALE (2026-09-06).** This runs on the FIRST MOVE of a
+        // swipe — the one frame the gesture has to start smoothly on — and at
+        // 3× it was a full-resolution `drawHierarchy` of the whole window on
+        // the main thread, which is the app's own recorded gotcha
+        // ("UIGraphicsImageRenderer defaults to device scale (3×) — pin
+        // format.scale = 1 for downscale renders", CLAUDE.md). A cover is only
+        // ever seen behind a MOVING card, and since §632's amendment it is
+        // replaced the instant the room lands, so it is never read at rest.
+        // Two thirds of the resolution is the whole of what it needs: the draw
+        // and the bitmap both fall to (2/3)² ≈ 44%, taking the eight-room
+        // ceiling from ~10MB a room to ~4.4MB.
+        format.scale = min(2, window.screen.scale)
         format.opaque = true
         let image = UIGraphicsImageRenderer(size: frame.size, format: format).image { _ in
             window.drawHierarchy(in: CGRect(x: -frame.minX, y: -frame.minY,

@@ -127,9 +127,33 @@ struct SheetHaptics: ViewModifier {
     }
 }
 
+/// THE HAPTIC LISTENER, AS ITS OWN LEAF (2026-09-06, the dock's perf pass).
+///
+/// `.sensoryFeedback(trigger:)` READS its counter when the body carrying it is
+/// evaluated, so attaching the whole grammar to `RootShell`'s body made the
+/// shell observe all nine counters — and every tick then invalidated the root.
+/// That is not a rare path: a scrub fires `DSHaptic.selection()` for each chip
+/// the finger crosses, so sliding across eight chips rebuilt the entire shell
+/// eight times in the middle of the gesture it was meant to make feel good.
+///
+/// A zero-size leaf hears the same counters and is the only thing that
+/// re-renders. It must still sit INSIDE the presentation it serves — the
+/// per-presentation rule below is unchanged, and this is what `RootShell`
+/// mounts instead of carrying the modifiers itself.
+struct DSHapticSink: View {
+    var body: some View {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .dsSensoryFeedback()
+    }
+}
+
 extension View {
     /// Attach once at the shell root — the app's whole haptic grammar,
-    /// declared in one place.
+    /// declared in one place. Prefer mounting `DSHapticSink` over putting this
+    /// on a big body: see that view's note.
     func dsSensoryFeedback() -> some View {
         self
             .sensoryFeedback(.selection, trigger: HapticBus.shared.selection)

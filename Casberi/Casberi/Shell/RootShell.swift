@@ -291,7 +291,11 @@ struct RootShell: View {
             updateMacWindowTitle()
         }
         #endif
-        .dsSensoryFeedback()
+        // The grammar is heard by a LEAF, not by this body (2026-09-06) —
+        // `.sensoryFeedback(trigger:)` reads its counter wherever it is
+        // attached, and on the shell that meant every buzz invalidated the
+        // whole shell. See `DSHapticSink`.
+        .background(DSHapticSink())
         .environment(bridges)
         .environment(chrome)
         // Mac menu bar commands (2026-07-28) read `chrome` back through this

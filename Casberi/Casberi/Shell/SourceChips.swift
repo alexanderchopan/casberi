@@ -254,6 +254,14 @@ struct SourceChips: View {
     @State private var waveTick = 0
     private static let waveReach: CGFloat = 1.6
     private static let waveLift: CGFloat = 0.28
+    /// Is any chip close enough to the parked magnifier for the wave to lift
+    /// it? The same window `wave(for:)` applies, asked once for the strip
+    /// rather than once per chip.
+    private func waveReaches(_ x: CGFloat) -> Bool {
+        let reach = (chipSize + Self.chipGap) * Self.waveReach
+        return chipFrames.frames.values.contains { abs($0.midX - x) < reach }
+    }
+
     private func wave(for label: String) -> CGFloat {
         guard !reduceMotion, let frame = chipFrames.frames[label] else { return 1 }
         let x: CGFloat
@@ -273,13 +281,16 @@ struct SourceChips: View {
     /// whole page, so the ring is seen leaving for the chip the turn will
     /// land on before the finger lets go. Horizontal only, and never under
     /// Reduce Motion, where the travelling selection itself is off.
-    private var slide: CGFloat {
-        guard axis == .horizontal, !reduceMotion else { return 0 }
-        // A LEAN, not a move (2026-09-06, measured): at a full pitch the
-        // fill sat squarely over the neighbour and hid its word. Forty
-        // percent says where the swipe is going and leaves the word legible;
-        // the matched geometry travels the rest on commit.
-        return chrome.pageDragProgress * (chipSize + Self.chipGap) * 0.4
+    /// The lean's PITCH — one chip's width plus its gap — and NOT the lean
+    /// itself (2026-09-06, the swipe's perf pass). This used to read
+    /// `chrome.pageDragProgress` here, in the strip's own body, so every
+    /// touch move of a page turn invalidated the whole strip and rebuilt
+    /// every chip (each with its own `wave`) to offset ONE shape by a few
+    /// points. The pitch is static per fold; the progress is read by
+    /// `ChipLean`, the only view that draws the lean. Zero on the rail,
+    /// which has no page turn to lean toward.
+    private var leanPitch: CGFloat {
+        axis == .horizontal ? chipSize + Self.chipGap : 0
     }
 
     /// One value both doors key on, so the pair can't drift onto two different
@@ -732,8 +743,17 @@ struct SourceChips: View {
                 // The parked magnifier re-renders the strip per scroll frame;
                 // only every 4pt of travel, which is the finest step a chip's
                 // size visibly changes at (2026-09-06).
-                if waveViewportX != nil, scrubX == nil,
-                   abs(new.offset - chipFrames.lastWaveOffset) >= 4 {
+                // A PARKED MAGNIFIER ONLY COSTS WHILE SOMETHING IS PASSING
+                // THROUGH IT (2026-09-06). This re-rendered the strip every
+                // 4pt for the whole of a flick's deceleration, including the
+                // long tail after the last chip has swept past the parked
+                // point — where every chip's `wave` returns 1 and the render
+                // draws exactly what it drew before. 8pt is still far finer
+                // than the wave itself (a cosine over ~1.6 pitches, ~100pt),
+                // and the reach test skips the tail outright.
+                if let parked = waveViewportX, scrubX == nil,
+                   abs(new.offset - chipFrames.lastWaveOffset) >= 8,
+                   waveReaches(parked + new.offset) {
                     chipFrames.lastWaveOffset = new.offset
                     waveTick &+= 1
                 }
@@ -1057,7 +1077,8 @@ struct SourceChips: View {
             .minimumScaleFactor(axis == .vertical ? 0.6 : 1)
             .padding(.horizontal, capsulePadH * scale)
             .frame(width: axis == .vertical ? Self.railChipWidth : nil, height: iconSize * scale)
-            .wordChipFill(cornerRadius: iconSize * scale / 2, active: isOn, ns: selectionNS, slide: slide)
+            .wordChipFill(cornerRadius: iconSize * scale / 2, active: isOn,
+                          ns: selectionNS, leanPitch: leanPitch)
     }
 
     /// Everything the strip SCROLLS.
@@ -1176,7 +1197,7 @@ struct SourceChips: View {
                         .frame(width: icon, height: icon)
                         .clipShape(Circle())
                         .wordChipFill(cornerRadius: icon / 2,
-                                      active: isActive, ns: selectionNS, slide: slide)
+                                      active: isActive, ns: selectionNS, leanPitch: leanPitch)
                 case Pinboard.room:
                     // The pinned room (2026-08-10) — see `PinnedChipMark`.
                     PinnedChipMark(size: icon)
@@ -1308,22 +1329,15 @@ struct SourceChips: View {
                     // The active ring is always tint now — the feed sits on the
                     // neutral ink page (user ruling 2026-07-18: full ink), so
                     // there's no source-hue field for a tint ring to melt into.
-                    let ring = Capsule(style: .circular)
-                        .strokeBorder(DS.tint, lineWidth: 2.5)
-                    if reduceMotion {
-                        ring
-                    } else {
-                        // The SAME group as the word chips' fill (prd §412b) —
-                        // see `selectionNS`. Crossing between a word and a mark
-                        // used to fade, because each form was the only member of
-                        // its own group; now the one blue object travels the gap
-                        // and resolves into a ring on arrival.
-                        // The `offset` sits INSIDE the match so a swipe's
-                        // lean (`slide`) is part of the frame the travel
-                        // starts from — outside it, the commit would snap the
-                        // ring back before it moved.
-                        ring.offset(x: slide)
-                            .matchedGeometryEffect(id: ChipSelection.id, in: selectionNS)
+                    //
+                    // The lean, the matched geometry and the Reduce Motion
+                    // branch all moved into `ChipLean` (2026-09-06) — same
+                    // group as the word chips' fill (prd §412b), same reason
+                    // the offset sits INSIDE the match, and now the strip does
+                    // not rebuild to draw it.
+                    ChipLean(pitch: leanPitch, ns: selectionNS) {
+                        Capsule(style: .circular)
+                            .strokeBorder(DS.tint, lineWidth: 2.5)
                     }
                 } else if broken {
                     // DASHED, not merely orange (2026-07-21). "Selected" and
@@ -1548,12 +1562,48 @@ private struct ChipCatchBob: ViewModifier {
 /// already separated, and the wash only warms it. Light mode is what this fixes.
 /// The glass stays under the wash in both, so the material still blurs what
 /// travels beneath the strip — this adds a coat, it does not replace one.
+/// THE SELECTION SHAPE'S LEAN, read where it is drawn (2026-09-06).
+///
+/// The fill and the ring both lean toward the chip a swipe is heading for, and
+/// both used to take that offset as a value computed in `SourceChips`'s own
+/// body — which made the strip observe `chrome.pageDragProgress` and rebuild
+/// every chip on every touch move of a page turn. One leaf reads it now, so
+/// the per-frame cost of the lean is the shape that leans.
+///
+/// Reduce Motion keeps its exact former shape: no offset AND no matched
+/// geometry, since the travelling selection is off there entirely.
+private struct ChipLean<S: View>: View {
+    let pitch: CGFloat
+    let ns: Namespace.ID
+    @ViewBuilder var shape: S
+    @Environment(ShellChrome.self) private var chrome
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        if reduceMotion {
+            shape
+        } else {
+            // A LEAN, not a move (2026-09-06, measured): at a full pitch the
+            // shape sat squarely over the neighbour and hid its word. Forty
+            // percent says where the swipe is going and leaves the word
+            // legible; the matched geometry travels the rest on commit. The
+            // offset sits INSIDE the match so the lean is part of the frame
+            // the travel starts from — outside it, the commit snaps back
+            // before it moves.
+            shape
+                .offset(x: chrome.pageDragProgress * pitch * 0.4)
+                .matchedGeometryEffect(id: ChipSelection.id, in: ns)
+        }
+    }
+}
+
 private struct WordChipFill: ViewModifier {
     let cornerRadius: CGFloat
     let active: Bool
     let ns: Namespace.ID
-    /// A swipe's lean toward the next chip — see `SourceChips.slide`.
-    var slide: CGFloat = 0
+    /// The lean's PITCH — see `SourceChips.leanPitch`. The progress is read
+    /// inside `ChipLean`, so a drag frame costs that leaf and not the strip.
+    var leanPitch: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// The chip's resting wash is the GLASS's own tint rather than a flat
@@ -1626,12 +1676,7 @@ private struct WordChipFill: ViewModifier {
                     // (§359's own measurement).
                     let fill = Capsule(style: .circular)
                         .fill(DS.tint)
-                    if reduceMotion {
-                        fill
-                    } else {
-                        fill.offset(x: slide)
-                            .matchedGeometryEffect(id: ChipSelection.id, in: ns)
-                    }
+                    ChipLean(pitch: leanPitch, ns: ns) { fill }
                 }
             }
             // **THE RESTING CAPSULE IS NEUTRAL, THE ACTIVE ONE IS BLUE
@@ -1671,8 +1716,9 @@ extension View {
     /// drift apart the way their COLOUR did before §358 (the "All" chip had to
     /// be corrected into line with the categories twice).
     func wordChipFill(cornerRadius: CGFloat, active: Bool, ns: Namespace.ID,
-                      slide: CGFloat = 0) -> some View {
-        modifier(WordChipFill(cornerRadius: cornerRadius, active: active, ns: ns, slide: slide))
+                      leanPitch: CGFloat = 0) -> some View {
+        modifier(WordChipFill(cornerRadius: cornerRadius, active: active, ns: ns,
+                              leanPitch: leanPitch))
     }
 }
 
