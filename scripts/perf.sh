@@ -52,14 +52,19 @@ xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
 # re-measured by hand to act on it. A stream is the cheap half of a perf
 # pass; discarding it to keep the log tidy costs the whole diagnosis.
 xcrun simctl spawn "$DEVICE" log stream \
-  --predicate 'process == "Casberi" AND (eventMessage CONTAINS "launchTimer" OR eventMessage CONTAINS "answerProbe(" OR eventMessage CONTAINS "launchPerf" OR eventMessage CONTAINS "askPerf|" OR eventMessage CONTAINS "risePhase|" OR eventMessage CONTAINS "swipePerf|")' \
+  --predicate 'process == "Casberi" AND (eventMessage CONTAINS "launchTimer" OR eventMessage CONTAINS "answerProbe(" OR eventMessage CONTAINS "launchPerf" OR eventMessage CONTAINS "askPerf|" OR eventMessage CONTAINS "risePhase|" OR eventMessage CONTAINS "swipePerf|" OR eventMessage CONTAINS "sweepPass|" OR eventMessage CONTAINS "sweepSlot|")' \
   --style compact > "$LOG" 2>/dev/null &
 LOGPID=$!
 sleep 1
 # launchTimer logs init→ready at first frame; the answer probe fires after
 # -probeDelay (past first frame) so memory is sampled with the app at rest.
+# `-sweepTimer YES` turns on the 16ms main-actor heartbeat for the foreground
+# sweep (SweepClock) so this launch also reports its STALL SHAPE — the reading
+# every real regression in the perf record slipped past while launch/RSS/
+# answer read clean (docs/perf-spec.md P4). Same Release-capable gate the
+# phone's "Measure stalls" switch flips (prd §623).
 PID=$(xcrun simctl launch "$DEVICE" "$BUNDLE" \
-  -onboarded YES -deeplink casberi://home \
+  -onboarded YES -deeplink casberi://home -sweepTimer YES \
   -answerProbe "what did I save about work" -probeDelay 5 2>/dev/null | awk -F': ' '{print $NF}')
 
 # Steady-state memory: sample RSS ~3s in — past first frame, before inference.
@@ -78,6 +83,14 @@ for i in {1..45}; do
   # `log stream` prints, which echoes the predicate text (and thus the bare
   # substring "answerProbe(") before any real event arrives.
   grep -Eq 'answerProbe\(.+\) [0-9]+ms' "$LOG" 2>/dev/null && break
+  sleep 1
+done
+# The sweep report lands on its own clock — a settle of 2.6s after the last
+# slot, and the automatic sweep is paced over several seconds — so give it a
+# bounded window of its own rather than folding it into the answer wait. An
+# absent line is reported below as "not captured", never treated as a pass.
+for i in {1..20}; do
+  grep -q 'sweepPass|' "$LOG" 2>/dev/null && break
   sleep 1
 done
 kill $LOGPID 2>/dev/null || true
@@ -167,6 +180,25 @@ TS=$(date +%Y-%m-%dT%H:%M:%S)
   # the agent, so an empty section here is the normal reading, not a finding.
   # `-composerCycles <n>` exercises the rise; the swipe needs a real gesture or
   # a `casberi://feed/source/<X>` deep link per room.
+  # ── The foreground sweep's stall shape (2026-09-05, prd §623) ─────────
+  # REPORTED, never gated, never a CSV column (the same contract as above).
+  # `sweepPass|` is one line per pass: wall time, hitch count (main-actor
+  # stalls ≥100ms during the sweep, from ANY source), the total and worst
+  # stall, and `saves=` — how many context saves the pass made, each of which
+  # re-emits every live `@Query`. `sweepSlot|` ranks the slots by time
+  # STALLED, worst first; a `(none)` slot is a stall with nothing instrumented
+  # in flight, i.e. a cost this instrument doesn't cover. The three numbers
+  # the history tracks read clean through every real regression on record;
+  # this is the reading that would not have.
+  if grep -q 'sweepPass|' "$LOG" 2>/dev/null; then
+    print -r -- ""
+    print -r -- "foreground sweep (not gated):"
+    grep -o 'sweepPass| .*' "$LOG" | sed 's/^sweepPass| /  /' | tail -1
+    grep -o 'sweepSlot| .*' "$LOG" | sed 's/^sweepSlot| /    /' | head -5
+  else
+    print -r -- ""
+    print -r -- "foreground sweep: not captured (no sweepPass| line within the window)"
+  fi
   for marker in risePhase swipePerf; do
     if grep -q "$marker|" "$LOG" 2>/dev/null; then
       print -r -- ""

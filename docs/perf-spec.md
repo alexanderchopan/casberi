@@ -8,6 +8,8 @@ The dominant cost class — `@Query` materialising the whole corpus on the main 
 
 **The single most important open fact: no number has ever been taken on real hardware in Release.** Every measurement above is Debug on a simulator. "Lightning fast" is a claim about a phone.
 
+*(2026-09-06, prd §623: the INSTRUMENT for that reading now exists and needs nothing attached — Settings → Diagnostics shows this device's own launch, sweep, ask and worst-stall numbers, and "Measure stalls" flips both gates from inside the app. The fact above stands until somebody opens that screen on the phone: an instrument is not a measurement.)*
+
 ## Method (non-negotiable, each rule paid for)
 
 1. **Sample first.** `sample` on the main thread against the sim process is the truth; `perfAccum` wall-clocks span work attributed elsewhere and has misrouted three sessions. `scripts/main-thread-profile.sh` works on the iOS sim build (the "Catalyst only" limit is retired).
@@ -113,8 +115,8 @@ The unbounded-main-actor-fetch class has re-entered at least four times by four 
 
 | Item | State |
 |---|---|
-| P0 device baseline | **Procedure written, needs the phone.** No code required — both instruments already report in Release. |
-| P1 source-room hydration | **Narrowed to one option, blocked on a validation step.** Two of three shapes killed with evidence. |
+| P0 device baseline | **Instrumented, 2026-09-06 (prd §623).** The four spans and the sweep's stall shape are read ON the device from the Diagnostics screen, and "Measure stalls" flips both gates from inside the app — no Xcode, no console. The *reading itself* is still owed: open Diagnostics on the phone. |
+| P1 source-room hydration | **Shipped behind the OS gate, 2026-09-06 (prd §623).** `FeedScreen.sourceRoomLightColumns`: projection on iOS 26+, never on 18.x. Safe by construction; the 18.6 *reproduction* is still unrun (the first arm's override read a string as a Bool and measured the gate twice). |
 | P2 typed-ask path | **Done.** `fullCorpus()` is light-columned. |
 | P3 per-row costs | **Instrumented, deliberately not optimised.** |
 | P4 fetch-bound audit | **Done**, wired into `verify.sh` and discovered by CI. |

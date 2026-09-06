@@ -77,6 +77,9 @@ enum SweepClock {
     private static var inFlight: [String: Int] = [:]
 
     private static var passStart: ContinuousClock.Instant?
+    /// `SaveCensus.count` at `beginPass`, so the report can say how many saves
+    /// the pass made — each one re-emits every live `@Query` (prd §623).
+    private static var savesAtStart = 0
     private static var openWork = 0
     private static var hitches = 0
     private static var hitchTotalMs: Double = 0
@@ -109,6 +112,7 @@ enum SweepClock {
         hitchTotalMs = 0
         hitchMaxMs = 0
         passStart = .now
+        savesAtStart = SaveCensus.count
         NSLog("[Casberi] sweepPerf pass=begin force=%@", force ? "YES" : "NO")
         startMonitor()
     }
@@ -244,6 +248,16 @@ enum SweepClock {
         let lines = compose()
         lastReport = lines
         for line in lines { NSLog("[Casberi] %@", line) }
+        // The device's own copy (prd §623): the pass as ONE reading — worst
+        // stall as the number, count/total/saves and the slot charged the most
+        // as the note — so Diagnostics can show it with no console attached.
+        // Once per pass, from the same lines the log gets.
+        let worstSlot = order.max { (entries[$0]?.hitchMs ?? 0) < (entries[$1]?.hitchMs ?? 0) }
+        var note = String(format: "%d stall%@ totalling %.0fms, %d saves",
+                          hitches, hitches == 1 ? "" : "s", hitchTotalMs,
+                          SaveCensus.count - savesAtStart)
+        if hitches > 0, let worstSlot { note += ", most in \(worstSlot)" }
+        PerfReadings.record("SweepStalls", ms: hitchMaxMs, note: note)
     }
 
     /// The report as lines, so a probe can print it without a second format:
@@ -259,8 +273,8 @@ enum SweepClock {
         guard let passStart else { return ["sweepPass| none (nothing measured)"] }
         let wallMs = ms(ContinuousClock.now - passStart)
         var lines = [String(format:
-            "sweepPass| wall=%.0fms labels=%d hitches=%d hitchTotal=%.0fms worst=%.0fms",
-            wallMs, order.count, hitches, hitchTotalMs, hitchMaxMs)]
+            "sweepPass| wall=%.0fms labels=%d hitches=%d hitchTotal=%.0fms worst=%.0fms saves=%d",
+            wallMs, order.count, hitches, hitchTotalMs, hitchMaxMs, SaveCensus.count - savesAtStart)]
         // Worst first: the report exists to name what to fix, and rank is the
         // whole answer. Ordered by time STALLED, not by wall time — a sweep
         // that waits on a socket for two seconds costs nobody anything, and

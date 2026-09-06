@@ -69,6 +69,22 @@ enum AppSignposts {
     @MainActor private static var askOpen = false
     @MainActor private static var askPaintOpen = false
 
+    // The same stopwatch, read on the device (prd §623). Each `.begin` stamps
+    // a `Date`; each `.end` hands the elapsed span to `PerfReadings`, so what
+    // the Diagnostics screen shows this launch and what MetricKit histograms
+    // tomorrow are one measurement. Not a new signpost call site — the
+    // metrics self-test's closed set is untouched — and the cost is a Date
+    // subtraction plus one bounded defaults write per user event.
+    @MainActor private static var launchBegan: Date?
+    @MainActor private static var sweepBegan: Date?
+    @MainActor private static var askBegan: Date?
+    /// True only for the `askFirstPaint()` call `endAsk` makes itself.
+    @MainActor private static var closingAsk = false
+
+    @MainActor private static func elapsedMs(since t0: Date?) -> Double? {
+        t0.map { Date().timeIntervalSince($0) * 1000 }
+    }
+
     // MARK: - Launch  (init → first content, once per process)
 
     /// Paired with `LaunchClock.start`'s own stamp — called from
@@ -76,6 +92,7 @@ enum AppSignposts {
     @MainActor static func beginLaunch() {
         guard !launchOpen else { return }
         launchOpen = true
+        launchBegan = Date()
         #if canImport(MetricKit)
         mxSignpost(.begin, log: log, name: "Launch")
         #endif
@@ -89,6 +106,7 @@ enum AppSignposts {
         #if canImport(MetricKit)
         mxSignpost(.end, log: log, name: "Launch")
         #endif
+        if let ms = elapsedMs(since: launchBegan) { PerfReadings.record("Launch", ms: ms) }
     }
 
     // MARK: - Foreground sweep  (once per activation)
@@ -101,6 +119,7 @@ enum AppSignposts {
     @MainActor static func beginForegroundSweep() {
         guard !sweepOpen else { return }
         sweepOpen = true
+        sweepBegan = Date()
         #if canImport(MetricKit)
         mxSignpost(.begin, log: log, name: "ForegroundSweep")
         #endif
@@ -112,6 +131,7 @@ enum AppSignposts {
         #if canImport(MetricKit)
         mxSignpost(.end, log: log, name: "ForegroundSweep")
         #endif
+        if let ms = elapsedMs(since: sweepBegan) { PerfReadings.record("ForegroundSweep", ms: ms) }
     }
 
     // MARK: - Ask  (tap → first paint, and tap → settled)
@@ -123,6 +143,7 @@ enum AppSignposts {
         guard !askOpen else { return }
         askOpen = true
         askPaintOpen = true
+        askBegan = Date()
         #if canImport(MetricKit)
         mxSignpost(.begin, log: log, name: "AskSettled")
         mxSignpost(.begin, log: log, name: "AskFirstPaint")
@@ -137,6 +158,12 @@ enum AppSignposts {
         #if canImport(MetricKit)
         mxSignpost(.end, log: log, name: "AskFirstPaint")
         #endif
+        // Reached from an early channel, or from `endAsk` closing it on the
+        // way out because nothing ever painted — the note says which, since
+        // the two are the same number with opposite meanings.
+        if let ms = elapsedMs(since: askBegan) {
+            PerfReadings.record("AskFirstPaint", ms: ms, note: closingAsk ? "no early paint" : "early paint")
+        }
     }
 
     /// Closes `AskFirstPaint` too when no early channel ever fired.
@@ -148,11 +175,14 @@ enum AppSignposts {
     /// interval open instead would drop the sample AND leave an unmatched
     /// `.begin` on `.exclusive` for the next ask to overlap.
     @MainActor static func endAsk() {
+        closingAsk = true
         askFirstPaint()
+        closingAsk = false
         guard askOpen else { return }
         askOpen = false
         #if canImport(MetricKit)
         mxSignpost(.end, log: log, name: "AskSettled")
         #endif
+        if let ms = elapsedMs(since: askBegan) { PerfReadings.record("AskSettled", ms: ms) }
     }
 }

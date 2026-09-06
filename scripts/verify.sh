@@ -2038,6 +2038,13 @@ harness "Cloud-sync self-test" "20 assertions, 6 mutations, 14 drift guards — 
 # instrument that costs what it measures, inside the very spans it exists to
 # protect.
 harness "MetricKit self-test" "11 mutations, 15 drift guards — the payload read, and the signposts that make one worth reading" "scripts/metrics-selftest.sh" "the MetricKit self-test failed — run scripts/metrics-selftest.sh"
+# The phone's own perf numbers, on the phone (prd §623): the digest the
+# Diagnostics screen draws, the ONE switch that flips BOTH measurement gates,
+# and the OS gate keeping the source room's light-column projection off iOS
+# 18.x, where it returns rows the predicate never selected (§592). Every
+# failure it catches is a silently wrong number on a screen meant to be
+# screenshotted and believed.
+harness "Perf-readings self-test" "4 mutations, 16 drift guards — the on-device perf digest, the measurement switch, and the light-column OS gate" "scripts/perf-readings-selftest.sh" "the perf-readings self-test failed — run scripts/perf-readings-selftest.sh"
 
 # The design system's first mechanical check (prd §299). Every other rule in
 # this file is enforced by a script; the design system was enforced by memory,

@@ -357,6 +357,35 @@ enum ProbeHooks {
             }
             NSLog("metricsProbe: %d line(s)", lines.count)
         },
+        // `-perfReadingsProbe YES` prints this device's own perf readings
+        // (prd §623, `Model/PerfReadings.swift`) — one `perfReadings|` line per
+        // line the Diagnostics screen draws, through the SAME
+        // `PerfReadings.lines`, so the probe is evidence about the screen. The
+        // readings persist across launches, so a launch AFTER one that swept
+        // and asked is the one that reads something; `-perfForget YES` empties
+        // them first (declared before, for the clear-then-read order).
+        //
+        // `-perfMeasure YES|NO` flips the "Measure stalls" switch the screen
+        // owns — the same two defaults keys the `-launchTimer`/`-sweepTimer`
+        // arguments set, persisted instead of per-launch — so a headless run
+        // can prove the toggle reaches both gates.
+        Hook(key: "perfForget") { _, _ in
+            PerfReadings.forget()
+            NSLog("perfReadings: cleared")
+        },
+        Hook(key: "perfMeasure") { value, _ in
+            PerfReadings.measuring = ["YES", "1", "true"].contains(value)
+            let d = UserDefaults.standard
+            NSLog("perfMeasure: %@ (launchTimer=%@ sweepTimer=%@)",
+                  PerfReadings.measuring ? "on" : "off",
+                  d.bool(forKey: "launchTimer") ? "YES" : "NO",
+                  d.bool(forKey: "sweepTimer") ? "YES" : "NO")
+        },
+        Hook(key: "perfReadingsProbe") { _, _ in
+            let lines = PerfReadings.lines(PerfReadings.load(), measuring: PerfReadings.measuring)
+            for line in lines { NSLog("perfReadings| %@", line) }
+            NSLog("perfReadingsProbe: %d line(s)", lines.count)
+        },
         Hook(key: "receiptsProbe") { _, _ in
             let rows = NetworkLedger.shared.snapshot()
             var undeclared = 0

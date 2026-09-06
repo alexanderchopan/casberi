@@ -1,6 +1,17 @@
 import Foundation
 import SwiftData
 
+/// How many saves this process has made (prd §623, 2026-09-05). One integer,
+/// always on: `SweepClock` reads it at pass begin and end so a sweep report
+/// carries `saves=N` beside its hitch count — the question "does every bridge
+/// save re-emit the feed's query" needs both numbers on one line, and until
+/// this the saves were not counted anywhere. Main-actor in practice (every
+/// ingest is), and a lost increment under a stray background save costs a
+/// count of one, never a wrong save.
+enum SaveCensus {
+    nonisolated(unsafe) static var count = 0
+}
+
 extension ModelContext {
     /// Saves and reports the outcome instead of swallowing it (RULE,
     /// 2026-07-15). A bare `try? context.save()` was the ingestion layer's
@@ -16,6 +27,7 @@ extension ModelContext {
     func saveHonestly(file: StaticString = #fileID, line: UInt = #line) -> Bool {
         do {
             try save()
+            SaveCensus.count += 1
             return true
         } catch {
             NSLog("[Casberi] save failed at \(file):\(line): \(error)")

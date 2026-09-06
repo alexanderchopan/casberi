@@ -22,6 +22,11 @@ struct DiagnosticsScreen: View {
     @Environment(FeedFilter.self) private var filter: FeedFilter?
     @State private var lines: [String] = []
     @State private var running = false
+    /// The P0 switch (prd §623): `PerfReadings.measuring` writes the same two
+    /// defaults keys the `-launchTimer`/`-sweepTimer` launch arguments set,
+    /// so a Release build with this on behaves exactly like the Xcode-attached
+    /// procedure in `docs/perf-spec.md` — with nothing attached.
+    @State private var measuring = PerfReadings.measuring
 
     var body: some View {
         List {
@@ -54,6 +59,25 @@ struct DiagnosticsScreen: View {
             } footer: {
                 Text("Screenshot this screen and send it back — every line is a real result from this device.")
                     .dsText(.callout15).foregroundStyle(DS.textTertiary)
+            }
+            // The switch sits BELOW the readings it produces, so the line
+            // above it ("Stalls are not being measured — turn on …") points at
+            // something the eye lands on next. Both gates it feeds cache on
+            // first read, hence "next launch" — said on the control, not in
+            // fine print elsewhere (the AgentKeyDetail rule).
+            Section {
+                Toggle(isOn: $measuring) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Measure stalls")
+                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        Text("Times the next launch and counts main-thread stalls during each foreground sweep. Costs a 16ms heartbeat while a sweep runs. Takes effect on the next launch.")
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .tint(DS.tint)
+                .dsListCardRow()
+                .onChange(of: measuring) { _, on in PerfReadings.measuring = on }
             }
         }
         .listStyle(.insetGrouped)
@@ -95,6 +119,16 @@ struct DiagnosticsScreen: View {
         // for. Empty in the Simulator by design — `AppMetrics.report()` says so
         // in its own words rather than drawing a row of dashes.
         for line in AppMetrics.report() { log(line) }
+
+        // — This device's OWN perf numbers, this launch (prd §623) —
+        //
+        // The same spans MetricKit will histogram tomorrow, read off the same
+        // stopwatch today: open → first screen, the foreground sweep, ask →
+        // first paint / settled, and (with the switch below on) the worst
+        // main-thread stall a sweep produced and which slot it was charged
+        // to. Every number in the perf record before this was Debug on a
+        // simulator; these are the phone's.
+        for line in PerfReadings.lines(PerfReadings.load(), measuring: PerfReadings.measuring) { log(line) }
 
         // Corpus basics.
         let all = (try? modelContext.fetch(FetchDescriptor<Thing>(

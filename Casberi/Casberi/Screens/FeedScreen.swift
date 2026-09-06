@@ -383,8 +383,11 @@ struct FeedScreen: View {
     /// the defect back on.
     static var sourceRoomLightColumns: Bool {
         #if DEBUG
-        if let forced = UserDefaults.standard.object(forKey: "sourceRoomLightColumns") as? Bool {
-            return forced
+        // A launch argument lands as a STRING ("YES"), never a Bool — the
+        // first run of the 18.6 arm read `as? Bool`, got nil, and measured
+        // the OS gate twice.
+        if let forced = UserDefaults.standard.string(forKey: "sourceRoomLightColumns") {
+            return ["YES", "1", "true"].contains(forced)
         }
         #endif
         if #available(iOS 26.0, *) { return true }
@@ -5573,6 +5576,13 @@ struct FeedScreen: View {
             // init's own 2026-08-14 refusal of a permanent `fetchLimit`), so
             // the fix here is to run it at the right TIME, never to truncate it.
             guard rowBudget == nil else { return }
+            #if DEBUG
+            // The one reading of what the LIVE query returned (prd §623): a
+            // plain fetch cannot see the predicated-projection defect, and
+            // this net is the exact place it surfaces. Read by the 18.6 arm.
+            NSLog("[Casberi] roomNet| source=%@ query=%d lightColumns=%@",
+                  source, things.count, Self.sourceRoomLightColumns ? "on" : "off")
+            #endif
             if things.isEmpty {
                 // BOUNDED, and the bound is load-bearing (2026-08-31): a
                 // legitimately empty source room is the COMMON case, not a
@@ -5590,6 +5600,10 @@ struct FeedScreen: View {
                 descriptor.fetchLimit = Self.allRoomFetchLimit
                 guard let raw = try? modelContext.fetch(descriptor) else { return }
                 let scoped = raw.filter { $0.source == source }
+                #if DEBUG
+                NSLog("[Casberi] roomNet| source=%@ query=empty plain=%d %@", source, scoped.count,
+                      scoped.isEmpty ? "(empty in the store too)" : "RECOVERED: the live query dropped rows a plain fetch finds")
+                #endif
                 guard !scoped.isEmpty else { return }
                 sourceRoomFallbackSnapshot = scoped
                 return
