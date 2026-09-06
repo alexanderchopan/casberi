@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 /// **THE FOUR DEVNET SETUP SCREENS SHARE ONE ANATOMY (user, 2026-09-04:
 /// "i think they should share common framework and also be better").**
@@ -30,11 +31,20 @@ import SwiftUI
 /// **Why a shared CONTROL and not a shared SCREEN.** `VibenetWatchViews`'s own
 /// header already draws this line and it holds here: `AddressBookScreen`'s
 /// ruling is "copy the structure, not the type" for a screen's LAYOUT, and
-/// this is one control appearing four times. Keeping four screen files also
-/// keeps four `BridgeSetupHeader` calls and four `RoomDoor`s where
-/// `setup-copy-audit.py` can see them — folding the whole body into one
-/// generic view would have moved every intro and every room `source:` out of
-/// the audit's reach, and silently dropped four screens' copy coverage.
+/// this is one control appearing four times. (The second reason this said —
+/// that four screen files keep four `BridgeSetupHeader` calls where
+/// `setup-copy-audit.py` can see them — went with §639: the four seats are on
+/// `AccountPage`, which has no header call to audit and takes the intro as a
+/// parameter. The first reason is the one that was load-bearing anyway.)
+///
+/// **ALL FOUR ARE ON `AccountPage` SINCE §639 (2026-09-06.)** The card is
+/// gone, the roster is the chassis's "Watching · N" — one list, one verb,
+/// "Remove" — and the field is the page's one bar, which filters that roster
+/// as well as adding to it. `DevnetWatchingSection` went with the move: it
+/// existed because three of the four seats had nowhere else to unwatch an
+/// address, which is the dead end the chassis's roster now closes for all
+/// four. That is a stated amendment to §465 ("setup keeps what you do ONCE"):
+/// there is no setup screen any more to keep it out of.
 ///
 /// **The watch list is a PROTOCOL rather than four closures.** The four
 /// `@Observable` singletons already carry byte-identical APIs; a generic over
@@ -300,9 +310,22 @@ struct DevnetAccountRow: View {
     }
 }
 
-// MARK: - The accounts slab
+// MARK: - The act block
 
-/// **Paste at the top, examples under it, in one card.**
+/// **Paste at the top, examples under it — the account page's act slot (prd
+/// §639, 2026-09-06).**
+///
+/// It was `DevnetAccountsSlab` and it was a card. The four devnet seats moved
+/// onto `AccountPage`, where the only filled element on the page is the input
+/// field, so the card is gone and the rows sit on the page's own ground. What
+/// did NOT change is the order the 2026-09-04 ruling fixed — the field first,
+/// the worked examples under it — or the reasoning behind every line below.
+///
+/// **The field is the page's ONE BAR (§639 amendment), so its text is the
+/// screen's.** It adds an address and it filters the roster underneath, which
+/// is why `typed` is a binding rather than local state: the chassis reads the
+/// same string to answer the same keystrokes. A partial address is a filter; a
+/// whole one arms the verb.
 ///
 /// Generic over the seat's watch list so the rows read the real one — see the
 /// file header on why that is a protocol rather than a closure bag.
@@ -312,7 +335,7 @@ struct DevnetAccountRow: View {
 /// malformed address, a duplicate, and — on vibenet — a chain that could not
 /// be reached), and three of the four disagreed on the wording of the first
 /// two.
-struct DevnetAccountsSlab<W: DevnetWatchList>: View {
+struct DevnetAccountsAct<W: DevnetWatchList>: View {
     let watch: W
     /// The seat's own colour, for the `Watch` verb only. Nothing else on the
     /// slab is tinted: the colour says which row is actionable, and a card
@@ -338,12 +361,14 @@ struct DevnetAccountsSlab<W: DevnetWatchList>: View {
     /// embedder: four screens draw this list and a seat that forgot to
     /// register reads perfectly right up until the catalog disagrees with it.
     let register: () -> Void
+    /// The page's one bar. Owned by the SCREEN so the roster below filters on
+    /// the same keystrokes that would add an address (§639 amendment).
+    @Binding var typed: String
     /// Fires only after an address really landed — never after a duplicate or
-    /// a rejected paste. Optional since §618: the slab reads for itself now,
-    /// and no seat routes on a watch any more.
+    /// a rejected paste. Optional since §618: the act block reads for itself
+    /// now, and no seat routes on a watch any more.
     var onWatched: (String) -> Void = { _ in }
 
-    @State private var typed = ""
     @FocusState private var focused: Bool
     @State private var result: BridgeProof?
     /// What the node said about each address it has been asked about, keyed
@@ -374,7 +399,7 @@ struct DevnetAccountsSlab<W: DevnetWatchList>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            DSSlabField(placeholder: String(localized: "0x… devnet address"),
+            DSSlabField(placeholder: placeholder,
                         text: $typed,
                         actionLabel: String(localized: "Watch"),
                         focus: $focused,
@@ -435,6 +460,16 @@ struct DevnetAccountsSlab<W: DevnetWatchList>: View {
         }
     }
 
+    /// Not connected the field is the connect form and says what to paste.
+    /// Connected it is the add verb AND the roster's filter, and the words
+    /// have to say both (§639 amendment) — a person with nine watched
+    /// addresses types to find one at least as often as to add one.
+    private var placeholder: String {
+        watch.addresses.isEmpty
+            ? String(localized: "0x… devnet address")
+            : AccountPageShape.findPlaceholder(String(localized: "an address"))
+    }
+
     private var malformed: BridgeProof {
         .failed(String(localized: "That doesn't look like a devnet address — it needs to be 0x followed by 40 hex characters."))
     }
@@ -486,8 +521,6 @@ struct DevnetAccountsSlab<W: DevnetWatchList>: View {
                 Spacer(minLength: 0)
             }
             .padding(.vertical, DS.Space.s2)
-            .padding(.horizontal, DS.Space.s3)
-            .dsWell()
             .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
         }
     }
@@ -525,57 +558,99 @@ struct DevnetAccountsSlab<W: DevnetWatchList>: View {
     }
 }
 
-// MARK: - The roster
+// MARK: - The roster's facts
 
-/// What you are already watching, with the door out.
+/// What the chassis's "Watching · N" says about each address (prd §639).
 ///
-/// **It stays on the setup screen for three of the four seats, and that is a
-/// stated exception to §465 rather than an oversight.** That ruling puts what
-/// you do REPEATEDLY in the room, which is why vibenet has no roster here —
-/// its accounts live on the room's own face rail. Hegotá, Frames and Privacy
-/// have no equivalent rail yet, so removing this would leave a pasted address
-/// with nowhere at all to be unwatched: a §83 dead end, which is worse than an
-/// inconsistency. When those rooms grow a rail this section leaves with it.
-struct DevnetWatchingSection<W: DevnetWatchList>: View {
-    let watch: W
-    let register: () -> Void
+/// `DevnetWatchingSection` drew this list itself, in a card, with its own
+/// Remove button — three of the four seats carried it because they had nowhere
+/// else to unwatch an address. The list is the account page's now, so what is
+/// left is the part only this family knows: the SUBLINE. On a chain the app
+/// stamps per-address rows for (vibenet) that is a week count like every other
+/// seat's; on the three that do not it is what the node says right now — "3
+/// sends · 0.5 test ETH" — because a row reading "quiet this week" about a
+/// chain we never attribute rows on would be a claim we cannot make.
+///
+/// One read per address per visit, kicked from the screen's `onAppear` and
+/// again when the watch list changes.
+@MainActor
+@Observable
+final class DevnetRosterReader {
+    let seatID: String
+    let source: String
+    private(set) var rows: [AccountPageShape.Row] = []
+    private var facts: [String: DevnetPeek] = [:]
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text(watch.addresses.count == 1
-                 ? String(localized: "Watching")
-                 : String(localized: "Watching \(watch.addresses.count)"))
-                .dsText(.label12).fontWeight(.semibold)
-                .foregroundStyle(DS.textSecondary)
-            ForEach(watch.addresses, id: \.self) { address in
-                HStack(spacing: DS.Space.s3) {
-                    WalletFace(address: address, size: DS.Face.list, circular: true)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(watch.name(for: address) ?? WalletStore.shortAddress(address))
-                            .dsText(.callout15)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        Text(WalletStore.shortAddress(address))
-                            .dsText(.subhead13)
-                            .foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: DS.Space.s2)
-                    Button {
-                        DSHaptic.selection()
-                        watch.remove(address)
-                        register()
-                    } label: {
-                        Text(String(localized: "Remove"))
-                            .dsText(.label12).fontWeight(.semibold)
-                            .foregroundStyle(DS.textTertiary)
-                            .fixedSize()
-                    }
-                    .buttonStyle(.plain)
-                }
+    init(seatID: String, source: String) {
+        self.seatID = seatID
+        self.source = source
+    }
+
+    /// Rebuild the rows, then fill in the live lines as the node answers.
+    /// Ordered as the watch list is ordered — the person's own order.
+    func refresh<W: DevnetWatchList>(watch: W, context: ModelContext,
+                                     peek: ((String) async -> DevnetPeek?)?) async {
+        let addresses = watch.addresses
+        compose(watch: watch, weekly: weekly(context: context))
+        guard let peek else { return }
+        await withTaskGroup(of: (String, DevnetPeek?).self) { group in
+            for address in addresses where facts[address.lowercased()] == nil {
+                group.addTask { (address, await peek(address)) }
+            }
+            for await (address, read) in group {
+                if let read { facts[address.lowercased()] = read }
             }
         }
-        .animation(DS.Motion.standard, value: watch.addresses)
+        compose(watch: watch, weekly: weekly(context: context))
+    }
+
+    /// This week's rows per address, from the corpus. Empty on the three seats
+    /// that land rows without an `authorHandle` — see the type's own doc.
+    private func weekly(context: ModelContext) -> [String: (week: Int, new: Bool)] {
+        let source = self.source
+        let weekStart = Date.now.addingTimeInterval(-7 * 86_400)
+        var descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == source && $0.capturedAt >= weekStart })
+        descriptor.fetchLimit = 2000
+        let things = ((try? context.fetch(descriptor)) ?? []).filter(\.isLive)
+        let lastLooked = AccountVisits.lastLooked(seatID)
+        var book: [String: (week: Int, new: Bool)] = [:]
+        for thing in things {
+            guard let handle = thing.authorHandle?.lowercased(), !handle.isEmpty else { continue }
+            let was = book[handle] ?? (0, false)
+            book[handle] = (was.week + 1, was.new || (lastLooked.map { thing.capturedAt > $0 } ?? false))
+        }
+        return book
+    }
+
+    private func compose<W: DevnetWatchList>(watch: W, weekly: [String: (week: Int, new: Bool)]) {
+        rows = watch.addresses.map { address in
+            let key = address.lowercased()
+            let counted = weekly[key]
+            // The count where the seat stamps one, the node's own line where
+            // it does not, and the address itself where neither answered.
+            let subline: String
+            if let counted {
+                subline = AccountPageShape.subline(nouns: String(localized: "rows"),
+                                                   weekCount: counted.week)
+            } else {
+                subline = facts[key]?.line ?? WalletStore.shortAddress(address)
+            }
+            return AccountPageShape.Row(
+                id: address,
+                title: watch.name(for: address) ?? WalletStore.shortAddress(address),
+                subline: subline,
+                weekCount: counted?.week ?? 0,
+                hasNew: counted?.new ?? false,
+                isYou: false,
+                avatarURL: nil)
+        }
+    }
+
+    /// Drop what the node said about an address that is no longer watched, so
+    /// re-watching it reads fresh rather than replaying a stale line.
+    func forget(_ address: String) {
+        facts.removeValue(forKey: address.lowercased())
     }
 }
 
@@ -603,6 +678,10 @@ struct DevnetExplorerRow: View {
     /// that reason, and the day one is fetched it belongs in `NetworkReach`
     /// instead.
     let url: String
+    /// PLAIN on the account page (prd §639), the way `BridgeDisconnectSection`
+    /// is: the same verb and the same host line, left-aligned on the page's own
+    /// ground instead of centred in a card, because the page has no cards.
+    var plain = false
 
     private var host: String {
         URL(string: url)?.host() ?? url
@@ -616,7 +695,7 @@ struct DevnetExplorerRow: View {
                     UIApplication.shared.open(target)
                 }
             } label: {
-                VStack(spacing: 1) {
+                VStack(alignment: plain ? .leading : .center, spacing: 1) {
                     Text("Open the explorer")
                         .dsText(.body17)
                         .foregroundStyle(DS.tint)
@@ -624,11 +703,26 @@ struct DevnetExplorerRow: View {
                         .dsText(.subhead13)
                         .foregroundStyle(DS.textTertiary)
                 }
-                .frame(maxWidth: .infinity, alignment: .center)
+                .frame(maxWidth: .infinity, alignment: plain ? .leading : .center)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .dsListCardRow()
+            .modifier(ExplorerGround(plain: plain))
+        }
+    }
+}
+
+/// The card row everywhere but the account page, where the row is the page.
+private struct ExplorerGround: ViewModifier {
+    let plain: Bool
+    @ViewBuilder func body(content: Content) -> some View {
+        if plain {
+            content
+                .frame(minHeight: 56)
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+        } else {
+            content.dsListCardRow()
         }
     }
 }

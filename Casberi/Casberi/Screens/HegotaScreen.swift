@@ -1,17 +1,18 @@
 import SwiftUI
+import SwiftData
 
-/// Ethrex Hegotá, connected — watch an address on the frame-transaction devnet.
+/// Ethrex Hegotá, on the account page — watch an address on the
+/// frame-transaction devnet.
 ///
-/// **ONE ANATOMY WITH ITS THREE SIBLINGS (user, 2026-09-04).** Header, room
-/// door, the accounts slab — paste field at the top, examples under it — the
-/// screen's one sentence, the explorer, Disconnect. `DevnetAccounts.swift`
-/// carries the whole argument; what differs here is the data.
+/// **ON `AccountPage` SINCE §639 (2026-09-06)**, with its three siblings. One
+/// anatomy, and it is the chassis's now rather than four screens agreeing;
+/// what differs here is the data.
 ///
 /// **The worked examples are not decoration.** Measured on chain 2026-08-27:
 /// only 11 addresses own coins and only a handful have ever sent on a non-zero
 /// nonce — and, decisively, **no address does both**. A pasted address will
 /// most often show Home and Activity and nothing else, which is a correct blank
-/// that reads as a broken feature. So the screen offers two, one for each half
+/// that reads as a broken feature. So the page offers two, one for each half
 /// of the room, and says what each will show rather than presenting them as
 /// interchangeable. They survive the connect: they are the room's only two
 /// halves and nobody on this chain has both, so watching one and losing the
@@ -25,15 +26,13 @@ import SwiftUI
 /// lost its copy of exactly this door on 2026-09-01 for exactly this reason
 /// and Hegotá's was left behind; the ruling was one screen wide and the
 /// mistake was leaving it that way.
-///
-/// **This screen is the CONNECT ACT and nothing else (prd §465).** It keeps
-/// what you do ONCE — the first address, the disconnect — and the room keeps
-/// what you do repeatedly.
 struct HegotaScreen: View {
     @Environment(BridgeStore.self) private var store
+    @Environment(\.modelContext) private var modelContext
 
     @Bindable private var watch = HegotaWatch.shared
     @State private var keyAddress: String? = HegotaKey.address()
+
     /// The read that follows a watch, reported here rather than in a room
     /// nobody has been sent to (prd §618). Reached = the sweep stamped a new
     /// `readAt`; the demo reaches nothing and is not a failure.
@@ -44,28 +43,33 @@ struct HegotaScreen: View {
         return HegotaLiveState.shared.readAt != before
     }
 
+    /// The page's one bar (§639 amendment).
+    @State private var typed = ""
+    @State private var sheet: AccountPageSheet?
+    @State private var roster = DevnetRosterReader(seatID: HegotaIdentity.seatID,
+                                                   source: HegotaIdentity.source)
+
     private static let mark = DS.brandHue(for: HegotaIdentity.source) ?? DS.tint
 
     private var connected: Bool { watch.connected }
 
     var body: some View {
-        BridgeSetupPage(name: HegotaIdentity.source, computedTitle: HegotaIdentity.source) {
-            BridgeSetupHeader(
-                name: HegotaIdentity.source,
-                mode: .noAccount,
-                // ACTION, not a re-pitch: you reach this from the product page,
-                // which has just said what Hegotá is. The mode chip carries the
-                // cost. What is left is what to do here.
-                intro: "Paste an address, or start with one that already has something to show. Watch as many as you like.",
-                connected: connected)
-
-            if connected {
-                RoomDoor(name: HegotaIdentity.source, source: HegotaIdentity.source)
-                    .listRowSeparator(.hidden)
-            }
-
-            Section {
-                DevnetAccountsSlab(
+        AccountPage(
+            name: HegotaIdentity.source, seatID: HegotaIdentity.seatID,
+            source: HegotaIdentity.source,
+            state: AccountPageState.of(name: HegotaIdentity.source,
+                                       seatID: HegotaIdentity.seatID,
+                                       connected: connected, store: store),
+            // ACTION, not a re-pitch: you reach this from the product page,
+            // which has just said what Hegotá is.
+            intro: "Paste an address, or start with one that already has something to show. Watch as many as you like.",
+            rows: roster.rows,
+            query: typed,
+            onRemoveRow: unwatch,
+            teardown: { HegotaBridge.disconnect(store: store) },
+            sheet: $sheet,
+            act: {
+                DevnetAccountsAct(
                     watch: watch,
                     tint: Self.mark,
                     examples: Self.examples,
@@ -76,35 +80,33 @@ struct HegotaScreen: View {
                     mineDetail: String(localized: "The key that signs here"),
                     peek: { await DevnetPeek.read($0, via: HegotaRPC.call(method:params:)) },
                     reader: reader,
-                    register: { HegotaBridge.registerBridge(store: store) })
-            }
-            .dsSlabSection()
-            .listRowSeparator(.hidden)
+                    register: { HegotaBridge.registerBridge(store: store) },
+                    typed: $typed,
+                    onWatched: { _ in readRows() })
+            },
+            more: {
+                DSSlabNote(text: String(localized: "Test ETH has no value, and the network may be reset without notice."), plain: true)
+                DevnetExplorerRow(url: HegotaIdentity.explorer, plain: true)
+            },
+            keySheet: { EmptyView() }
+        )
+        .onAppear { readRows() }
+        .onChange(of: watch.addresses) { _, _ in readRows() }
+    }
 
-            if !watch.addresses.isEmpty {
-                Section { DevnetWatchingSection(watch: watch) {
-                    HegotaBridge.registerBridge(store: store)
-                } }
-                .dsSlabSection()
-                .listRowSeparator(.hidden)
-            }
-
-            Section {
-                DSSlabNote(text: String(localized: "Test ETH has no value, and the network may be reset without notice."))
-            }
-            .dsSlabSection()
-            .listRowSeparator(.hidden)
-
-            DevnetExplorerRow(url: HegotaIdentity.explorer)
-                .listRowSeparator(.hidden)
-
-            if connected {
-                BridgeDisconnectSection(
-                    bridgeID: HegotaIdentity.seatID, name: HegotaIdentity.source,
-                    teardown: { HegotaBridge.disconnect(store: store) }
-                ).listRowSeparator(.hidden)
-            }
+    private func readRows() {
+        Task {
+            await roster.refresh(watch: watch, context: modelContext,
+                                 peek: { await DevnetPeek.read($0, via: HegotaRPC.call(method:params:)) })
         }
+    }
+
+    /// ONE verb, "Remove" (§639), replacing `DevnetWatchingSection`'s own.
+    private func unwatch(_ address: String) {
+        watch.remove(address)
+        roster.forget(address)
+        HegotaBridge.registerBridge(store: store)
+        readRows()
     }
 
     /// The two worked examples, measured rather than picked.
@@ -131,6 +133,6 @@ struct HegotaScreen: View {
     // 2026-08-28 ruling forbade ("they need to be able to select multiple
     // before going to the feed"), and that this seat's own harness records
     // being reported against ("when you select one of the addresses to watch
-    // you can't select the other"). The `RoomDoor` above is the way on; the
-    // read starts here and reports here.
+    // you can't select the other"). The Activity row is the way on; the read
+    // starts here and reports here.
 }

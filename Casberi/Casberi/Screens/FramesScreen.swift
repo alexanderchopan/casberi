@@ -1,12 +1,13 @@
 import SwiftUI
+import SwiftData
 
-/// The Frames devnet, connected — chain 81410, the reference test network for
-/// EIP-8141 frame transactions (prd §548).
+/// The Frames devnet, on the account page — chain 81410, the reference test
+/// network for EIP-8141 frame transactions (prd §548).
 ///
-/// **ONE ANATOMY WITH ITS THREE SIBLINGS (user, 2026-09-04).** Header, room
-/// door, the accounts slab — paste field at the top, examples under it — the
-/// screen's one sentence, the explorer, Disconnect. `DevnetAccounts.swift`
-/// carries the whole argument; what differs here is the data.
+/// **ON `AccountPage` SINCE §639 (2026-09-06)**, with its three siblings —
+/// one anatomy, and it is the chassis's now rather than four screens agreeing.
+/// What is still this file's is the data: the measured examples, the RPC, and
+/// this phone's own key row.
 ///
 /// **THE ACCOUNT ACT MOVED TO THE ROOM (2026-09-04).** This screen made the
 /// key, on the measurement that a chain four days old holds 18 addresses and
@@ -17,16 +18,14 @@ import SwiftUI
 /// on 2026-09-01 because Top up already lives there — so keeping Create here
 /// left ONE of a chain's three acts on the setup page, which is the split that
 /// makes neither place read as the real one (§190). What remains is a row that
-/// offers to WATCH the key once it exists, which is this screen's own verb.
-///
-/// **This screen is the CONNECT ACT and nothing else (prd §465).** It keeps
-/// what you do ONCE — watch the first address, disconnect — and the room keeps
-/// what you do repeatedly.
+/// offers to WATCH the key once it exists, which is this page's own verb.
 struct FramesScreen: View {
     @Environment(BridgeStore.self) private var store
+    @Environment(\.modelContext) private var modelContext
 
     @Bindable private var watch = FramesWatch.shared
     @State private var keyAddress: String? = FramesKey.address()
+
     /// The read that follows a watch, reported here (prd §618). Reached = the
     /// sweep stamped a new `readAt`; the demo reaches nothing and is not a
     /// failure.
@@ -37,32 +36,39 @@ struct FramesScreen: View {
         return FramesLiveState.shared.readAt != before
     }
 
+    /// The page's one bar (§639 amendment) — adds an address, filters the
+    /// roster underneath.
+    @State private var typed = ""
+    @State private var sheet: AccountPageSheet?
+    @State private var roster = DevnetRosterReader(seatID: FramesIdentity.seatID,
+                                                   source: FramesIdentity.source)
+
     private static let mark = DS.brandHue(for: FramesIdentity.source) ?? DS.tint
 
     // WATCHING, not owning a key (prd §618). `|| keyAddress != nil` made the
-    // header pour and "View feed" open an EMPTY room for somebody who had made
-    // a key and watched nothing — a door onto nothing worth seeing (§83).
+    // header pour and the room door open an EMPTY room for somebody who had
+    // made a key and watched nothing — a door onto nothing worth seeing (§83).
     // Disconnect never touched the key, so nothing else needed the key to
     // count as connected.
     private var connected: Bool { watch.connected }
 
     var body: some View {
-        BridgeSetupPage(name: FramesIdentity.source, computedTitle: FramesIdentity.source) {
-            BridgeSetupHeader(
-                name: FramesIdentity.source,
-                mode: .noAccount,
-                // ACTION, not a re-pitch: you reach this from the product
-                // page, which has just said what the chain is.
-                intro: "Paste an address, or start with one that already has something to show. Watch as many as you like.",
-                connected: connected)
-
-            if connected {
-                RoomDoor(name: FramesIdentity.source, source: FramesIdentity.source)
-                    .listRowSeparator(.hidden)
-            }
-
-            Section {
-                DevnetAccountsSlab(
+        AccountPage(
+            name: FramesIdentity.source, seatID: FramesIdentity.seatID,
+            source: FramesIdentity.source,
+            state: AccountPageState.of(name: FramesIdentity.source,
+                                       seatID: FramesIdentity.seatID,
+                                       connected: connected, store: store),
+            // ACTION, not a re-pitch: you reach this from the product page,
+            // which has just said what the chain is.
+            intro: "Paste an address, or start with one that already has something to show. Watch as many as you like.",
+            rows: roster.rows,
+            query: typed,
+            onRemoveRow: unwatch,
+            teardown: { FramesBridge.disconnect(store: store) },
+            sheet: $sheet,
+            act: {
+                DevnetAccountsAct(
                     watch: watch,
                     tint: Self.mark,
                     examples: Self.examples,
@@ -73,45 +79,43 @@ struct FramesScreen: View {
                     mineDetail: String(localized: "The key that signs here"),
                     peek: { await DevnetPeek.read($0, via: FramesRPC.call(method:params:)) },
                     reader: reader,
-                    register: { FramesBridge.registerBridge(store: store) })
-            }
-            .dsSlabSection()
-            .listRowSeparator(.hidden)
+                    register: { FramesBridge.registerBridge(store: store) },
+                    typed: $typed,
+                    onWatched: { _ in readRows() })
+            },
+            more: {
+                // THE ONE GRAY SENTENCE (§315's budget), spent on the fact that
+                // changes what somebody would DO rather than on the pitch: this
+                // network says of itself that it may be reset without notice,
+                // so an account here is not somewhere to keep anything.
+                DSSlabNote(text: String(localized: "Test ETH has no value, and the network may be reset without notice."), plain: true)
+                DevnetExplorerRow(url: FramesIdentity.explorer, plain: true)
+            },
+            keySheet: { EmptyView() }
+        )
+        .onAppear { readRows() }
+        .onChange(of: watch.addresses) { _, _ in readRows() }
+    }
 
-            if !watch.addresses.isEmpty {
-                Section { DevnetWatchingSection(watch: watch) {
-                    FramesBridge.registerBridge(store: store)
-                } }
-                .dsSlabSection()
-                .listRowSeparator(.hidden)
-            }
-
-            // THE ONE GRAY SENTENCE (§315's budget), spent on the fact that
-            // changes what somebody would DO rather than on the pitch: this
-            // network says of itself that it may be reset without notice, so
-            // an account here is not somewhere to keep anything.
-            Section {
-                DSSlabNote(text: String(localized: "Test ETH has no value, and the network may be reset without notice."))
-            }
-            .dsSlabSection()
-            .listRowSeparator(.hidden)
-
-            DevnetExplorerRow(url: FramesIdentity.explorer)
-                .listRowSeparator(.hidden)
-
-            if connected {
-                BridgeDisconnectSection(
-                    bridgeID: FramesIdentity.seatID, name: FramesIdentity.source,
-                    teardown: { FramesBridge.disconnect(store: store) }
-                ).listRowSeparator(.hidden)
-            }
+    private func readRows() {
+        Task {
+            await roster.refresh(watch: watch, context: modelContext,
+                                 peek: { await DevnetPeek.read($0, via: FramesRPC.call(method:params:)) })
         }
+    }
+
+    /// ONE verb, "Remove" (§639), replacing `DevnetWatchingSection`'s own.
+    private func unwatch(_ address: String) {
+        watch.remove(address)
+        roster.forget(address)
+        FramesBridge.registerBridge(store: store)
+        readRows()
     }
 
     private static let examples = FramesExample.all
 
-    // NO ROUTE ON A WATCH (prd §618) — see `HegotaScreen`; the `RoomDoor` is
-    // the way on, and the read reports here.
+    // NO ROUTE ON A WATCH (prd §618) — the Activity row is the way on, and the
+    // read reports here, on the page the person is still looking at.
 }
 
 /// The addresses worth offering, and there are only two worth offering.

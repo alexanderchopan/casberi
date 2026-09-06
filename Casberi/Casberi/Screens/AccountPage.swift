@@ -72,7 +72,11 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     @Binding var sheet: AccountPageSheet?
     @ViewBuilder var act: () -> Act
     /// Second acts that only exist once the first has happened (GitHub's
-    /// feed picker, a starter-pack door). Drawn under the act field.
+    /// feed picker, a starter-pack door). Drawn under the act field, on the
+    /// page's own ground: the chassis applies `plainAccountRow()` to whatever
+    /// comes back, so an adopter cannot hand back a row with a separator and
+    /// system insets while every row around it has neither. An adopter that
+    /// needs a filled shape here is drawing a slab §639 ruled out.
     @ViewBuilder var more: () -> More
     /// The "Your key" sheet's content — the paste field, from the adopter,
     /// because the verb that stores a key is the bridge's own.
@@ -96,7 +100,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         List {
             header
             actSection
-            more()
+            more().plainAccountRow()
             factRows
             readers
             roster

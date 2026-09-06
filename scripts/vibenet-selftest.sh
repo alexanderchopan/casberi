@@ -199,8 +199,8 @@ WATCHSHEET="Casberi/Casberi/Screens/VibenetWatchSheet.swift"
 [[ -f "$WATCHSHEET" ]] || { echo "✗ $WATCHSHEET not found"; exit 1; }
 strip_comments "$WATCHSHEET" > "$TMP/sheet.nc.swift"
 strip_comments "$FIELD" > "$TMP/watch.nc.swift"
-# The four devnet setup screens share one accounts control since 2026-09-04
-# (`DevnetAccountsSlab` / `DevnetAccountRow`), so two rulings this harness has
+# The four devnet account pages share one accounts control since 2026-09-04
+# (`DevnetAccountsAct` / `DevnetAccountRow`), so two rulings this harness has
 # always asserted about vibenet's own file now live there: a taken row says so
 # and stops being tappable, and nobody hand-rolls a second paste field. The
 # guards follow the rulings to their new address rather than being deleted.
@@ -299,13 +299,14 @@ grep -q 'DevnetAccountRow' "$TMP/watch.nc.swift" \
 # `VibenetWatchSheet` — the ruling is unchanged, its address is not: the
 # lookup is a sheet now rather than an unfold, so the sheet is where the book
 # reaches the shared control.
-# The SHEET still reaches the shared field directly; the SETUP screen reaches
-# it through `DevnetAccountsSlab`, which owns the field for all four devnets
-# (2026-09-04). Two addresses, one ruling: nobody writes a second paste field.
+# The SHEET still reaches the shared field directly; the ACCOUNT PAGE reaches
+# it through `DevnetAccountsAct`, which owns the field for all four devnets
+# (2026-09-04; renamed with the card it stopped being, §639). Two addresses,
+# one ruling: nobody writes a second paste field.
 grep -q 'VibenetWatchField' "$TMP/sheet.nc.swift" \
   || { echo "✗ the watch sheet no longer uses the shared VibenetWatchField (prd §465)"; exit 1; }
-grep -q 'DevnetAccountsSlab' "$TMP/setup.nc.swift" \
-  || { echo "✗ VibenetScreen no longer uses the shared DevnetAccountsSlab — a fourth"; \
+grep -q 'DevnetAccountsAct' "$TMP/setup.nc.swift" \
+  || { echo "✗ VibenetScreen no longer uses the shared DevnetAccountsAct — a fourth"; \
        echo "  hand-rolled paste field is how these screens drifted apart the first time"; exit 1; }
 for f in "$TMP/setup.nc.swift" "$TMP/sheet.nc.swift" "$TMP/card.nc.swift"; do
   grep -q 'DSSlabField' "$f" \

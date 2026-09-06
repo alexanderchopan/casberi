@@ -608,15 +608,24 @@ struct DSSlabSwitch: View {
 /// The screen's one sentence — the promise, centered under its controls.
 /// Every manage page gets exactly one; everything else a footer used to say
 /// moves behind the door or dialog that owns it.
+///
+/// **PLAIN on the account page (prd §639, 2026-09-06):** left, not centred.
+/// Centring is what a card's own sentence does; the account page has no cards
+/// and every other line on it — the readers caption, the roster's labels —
+/// starts at the same margin. One centred paragraph in a left-aligned column
+/// reads as a fragment of some other screen.
 struct DSSlabNote: View {
     let text: String
+    var plain = false
 
     var body: some View {
         Text(LocalizedStringKey(text))
             .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity)
-            .padding(.top, DS.Space.s1)
+            .multilineTextAlignment(plain ? .leading : .center)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: plain ? .leading : .center)
+            .padding(.vertical, plain ? DS.Space.s2 : 0)
+            .padding(.top, plain ? 0 : DS.Space.s1)
     }
 }
 
