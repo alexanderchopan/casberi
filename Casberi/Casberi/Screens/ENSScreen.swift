@@ -48,7 +48,7 @@ struct ENSScreen: View {
             mode: .noAccount,
             rows: rows,
             query: field,
-            onRemoveRow: unfollow,
+            onRemoveRow: removeRow,
             onOpenRow: openName,
             teardown: {
                 ENSWatch.unfollowAll(context: modelContext)
@@ -93,8 +93,10 @@ struct ENSScreen: View {
         sheet = .thing(id: uuid)
     }
 
-    /// ONE verb, "Remove" (§639) — this screen said "Unfollow".
-    private func unfollow(_ id: String) {
+    /// ONE verb, "Remove" (§639) — this screen said "Unfollow". Named apart
+    /// from `unfollow(_ name:)` because both take a `String` and the two mean
+    /// different things: a roster row's id, and the name it stands for.
+    private func removeRow(_ id: String) {
         guard let thing = followed.first(where: { $0.id.uuidString == id }) else { return }
         unfollow(rowName(thing))
     }
