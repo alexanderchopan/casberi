@@ -7508,6 +7508,11 @@ struct FeedScreen: View {
         Text("You're caught up — everything below, you've seen")
             .dsText(.subhead13)
             .foregroundStyle(DS.textTertiary)
+            // Arrives like the rows above it (2026-09-05): the two seams were
+            // the only things in the feed that appeared cold, and the moment
+            // they mark — things landed while you were away — is exactly the
+            // kind §79 lets us animate. `settleIn` honours Reduce Motion.
+            .settleIn()
             .frame(maxWidth: .infinity)
             .padding(.top, DS.Space.s4)
             .padding(.bottom, DS.Space.s2)
@@ -7524,6 +7529,7 @@ struct FeedScreen: View {
             .padding(.horizontal, DS.Space.s3)
             .padding(.vertical, DS.Space.s1)
             .background(DS.fillFaint, in: Capsule(style: .continuous))
+            .settleIn()   // see `caughtUpSeam`
             .frame(maxWidth: .infinity)
             .padding(.vertical, DS.Space.s1)
             .listRowBackground(Color.clear)
@@ -11997,6 +12003,17 @@ struct FeedScreen: View {
         chrome.refreshHue = roomTakesWalletScope
             ? (selectedWallet.map(WalletFace.tint) ?? DS.washHue(for: source))
             : (source == "All" ? nil : DS.washHue(for: source))
+        // WHAT FALLS (prd §619): the sources this pull asks. All → the whole
+        // connected sweep; a folded category → its connected members; a
+        // source's own room → that source. A pull scoped to ONE WALLET keeps
+        // the berries in that wallet's colour (the hue above, §171) — the
+        // roster is emptied so the rain says "which wallet", which no tile
+        // can, rather than "Wallet", which the room already does.
+        chrome.refreshRoster = roomTakesWalletScope && selectedWallet != nil
+            ? []
+            : source == "All" ? BridgeRefresh.roster(store: bridges)
+            : CategoryFold.isCategory(source) ? BridgeRefresh.roster(store: bridges, category: source)
+            : [source]
         // BEFORE the pulse, not after (2026-08-05). The pulse is what re-fires
         // `PredictionBrowseSection`'s `.task(id:)`, i.e. it STARTS the room's
         // reload — so clearing the book cache from inside `refreshFeed()`

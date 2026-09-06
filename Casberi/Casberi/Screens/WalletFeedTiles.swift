@@ -444,6 +444,7 @@ struct WalletBalanceHeadline: View {
             .onChange(of: arrivals.pulse) { _, _ in
                 guard let address = arrivals.address else { return }
                 chrome.refreshHue = WalletFace.tint(for: address)
+                chrome.refreshRoster = []   // berries in the wallet's colour, not tiles (prd §619)
                 chrome.refreshPulse += 1
             }
     }

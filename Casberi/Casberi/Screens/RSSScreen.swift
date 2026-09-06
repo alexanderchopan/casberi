@@ -219,6 +219,7 @@ struct RSSScreen: View {
                     Button(role: .destructive) {
                         if let i = rss.feeds.firstIndex(where: { $0.id == feed.id }) {
                             rss.remove(at: IndexSet(integer: i))
+                            DSHaptic.tap()
                         }
                     } label: {
                         Label("Remove", systemImage: "trash")
@@ -230,6 +231,7 @@ struct RSSScreen: View {
                     Button(role: .destructive) {
                         if let i = rss.feeds.firstIndex(where: { $0.id == feed.id }) {
                             rss.remove(at: IndexSet(integer: i))
+                            DSHaptic.tap()
                         }
                     } label: {
                         Label("Remove", systemImage: "trash")

@@ -17,8 +17,9 @@ final class ShareViewController: UIViewController {
     private func captureAndConfirm() {
         Task { @MainActor in
             let saved = await save()
-            show(confirmation: saved)
-            try? await Task.sleep(for: .milliseconds(900))
+            let pill = show(confirmation: saved)
+            try? await Task.sleep(for: .milliseconds(750))
+            await fadeOut(pill)
             extensionContext?.completeRequest(returningItems: nil)
         }
     }
@@ -110,7 +111,18 @@ final class ShareViewController: UIViewController {
     }
 
     /// A small confirmation pill — Bob's words, no "successfully".
-    private func show(confirmation saved: Bool) {
+    ///
+    /// The pill ARRIVES (2026-09-05): a success/failure haptic and the app's
+    /// own settle-in (0.92 → 1 with a fade, `SettleIn`'s numbers) — this is
+    /// the capture loop's front door, and until now it was the one surface in
+    /// the product with no feedback at all: a flat label that appeared, sat,
+    /// and was gone. UIKit here because the extension has no DS; the spring
+    /// is tuned to read the same as `DS.Motion.standard` at rest. Reduce
+    /// Motion skips the move and keeps the haptic, which is the rule
+    /// everywhere else.
+    @discardableResult
+    private func show(confirmation saved: Bool) -> UIView {
+        UINotificationFeedbackGenerator().notificationOccurred(saved ? .success : .error)
         let label = UILabel()
         label.text = saved ? String(localized: "Saved to Casberi") : String(localized: "Couldn't save")
         label.font = .systemFont(ofSize: 17)
@@ -127,5 +139,27 @@ final class ShareViewController: UIViewController {
             label.widthAnchor.constraint(greaterThanOrEqualToConstant: 200),
             label.heightAnchor.constraint(equalToConstant: 44),
         ])
+        guard !UIAccessibility.isReduceMotionEnabled else { return label }
+        label.alpha = 0
+        label.transform = CGAffineTransform(scaleX: 0.92, y: 0.92)
+        UIView.animate(withDuration: 0.25, delay: 0, usingSpringWithDamping: 0.85,
+                       initialSpringVelocity: 0, options: [.allowUserInteraction]) {
+            label.alpha = 1
+            label.transform = .identity
+        }
+        return label
+    }
+
+    /// The pill leaves the way it came, a beat before the sheet is torn down —
+    /// so the dismissal reads as the confirmation finishing rather than the
+    /// host app snatching it back mid-word.
+    private func fadeOut(_ pill: UIView) async {
+        guard !UIAccessibility.isReduceMotionEnabled else { return }
+        await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
+            UIView.animate(withDuration: 0.18, delay: 0, options: [.curveEaseIn]) {
+                pill.alpha = 0
+                pill.transform = CGAffineTransform(scaleX: 0.96, y: 0.96)
+            } completion: { _ in done.resume() }
+        }
     }
 }

@@ -113,17 +113,13 @@ struct CircleX402Row: View {
     }
 
     @ViewBuilder private var leading: some View {
-        if let url = thing.previewImageURL, let parsed = URL(string: url) {
-            AsyncImage(url: parsed) { phase in
-                if let image = phase.image {
-                    image.resizable().scaledToFill()
-                } else {
-                    BridgeIcon(name: X402Ingest.source, size: faceSize)
-                }
-            }
-            .frame(width: faceSize, height: faceSize)
-            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.appIcon(faceSize),
-                                        style: .continuous))
+        if let url = thing.previewImageURL, URL(string: url) != nil {
+            // `RemoteThumb`, not a bare `AsyncImage` (2026-09-05): the shared
+            // thumb fades a fresh download in over the glyph, serves a cached
+            // one instantly, and falls back to the bridge mark on a dead URL
+            // — the app's remote-image grammar, which this row alone skipped
+            // (it popped in, and re-fetched on every recycle).
+            RemoteThumb(urlString: url, size: faceSize, fallback: X402Ingest.source)
         } else {
             BridgeIcon(name: X402Ingest.source, size: faceSize)
         }

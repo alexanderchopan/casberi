@@ -14,11 +14,83 @@ final class ShellChrome {
     /// doc comment above described a behaviour the app hadn't had in months,
     /// while each page still paid for the scroll observer that computed it.
     var minimized = false
-    /// When `minimized` last flipped — see `minimizesChrome`'s settle window.
-    /// Observation-ignored on purpose: it is written from a scroll callback,
-    /// and an observable write there would invalidate every reader of this
-    /// object on every fold.
+    /// The dock's fold as a CONTINUOUS value (2026-09-05): 0 at rest, 1
+    /// folded, and anything between while a finger is on the feed.
+    ///
+    /// **The fold tracks the scroll; it no longer flips on its direction.**
+    /// `minimized` was a boolean written the moment the offset moved four
+    /// points either way, then animated over a quarter second — so the dock
+    /// could never sit half-folded under a slow drag, and a scroll that
+    /// reversed within that window blinked the chrome twice. This is the
+    /// distance scrolled since the fold last rested, divided by one chip's
+    /// height (`foldTravel`), and the leaf views that draw the dock — the
+    /// strip's mark sizes, the bar's own size, the slab's air — read it
+    /// directly, so a finger moving 20pt moves the dock a third of the way.
+    /// `settleFold` snaps to whichever end is nearer when the scroll goes
+    /// idle, on the standard spring.
+    ///
+    /// `minimized` survives as the boolean the fold implies, with hysteresis
+    /// (`foldOn`/`foldOff`), for the readers that are on or off by nature —
+    /// the bar's teaching words, a face rail's compact step, the keyboard
+    /// walk. It is written only when it changes, so those readers are not
+    /// invalidated on every tick the way the fold's own readers are.
+    ///
+    /// Read from the LEAF that draws, never from a shell body: `RootShell`
+    /// and `MainSurface` are the two most expensive bodies in the app, and a
+    /// value written on every scroll frame must not be a dependency of
+    /// either. `DSDock.SlabInset` and `DSDock.SeatInset` exist for exactly
+    /// that — a padding that follows the fold, evaluated in a modifier of its
+    /// own.
+    var fold: CGFloat = 0
+    /// One chip's height: the scroll distance that folds the dock completely.
+    static let foldTravel: CGFloat = 56
+    /// Under this offset the dock is always open — the top of a room keeps
+    /// its chrome, as it always has.
+    static let foldFloor: CGFloat = 60
+    /// The boolean's hysteresis, so it cannot chatter around the midpoint.
+    static let foldOn: CGFloat = 0.6
+    static let foldOff: CGFloat = 0.4
+
+    /// When `minimized` last flipped. Observation-ignored on purpose: it is
+    /// written from a scroll callback, and an observable write there would
+    /// invalidate every reader of this object on every fold.
     @ObservationIgnored var chromeSettledAt: TimeInterval = 0
+
+    /// One scroll sample from the active room — see `minimizesChrome`.
+    func trackFold(offset new: CGFloat, from old: CGFloat, remaining: CGFloat) {
+        let delta = new - old
+        guard abs(delta) > 0.5 else { return }
+        if new <= Self.foldFloor {
+            applyFold(0, animated: true)
+            return
+        }
+        // The inset clamp, not the finger: folding shrinks the dock, which
+        // lowers the scroll view's maximum offset, and at the very end of the
+        // content UIKit moves the offset UP to meet it — which arrives here as
+        // an upward scroll. A fold that unfolded on its own consequence would
+        // oscillate at the bottom of every room; that is what the old settle
+        // window guarded, made continuous.
+        if remaining < 2 && delta < 0 { return }
+        applyFold(min(1, max(0, fold + delta / Self.foldTravel)), animated: false)
+    }
+
+    /// The scroll went idle: rest at whichever end is nearer.
+    func settleFold() {
+        guard fold > 0, fold < 1 else { return }
+        chromeSettledAt = Date.timeIntervalSinceReferenceDate
+        withAnimation(DS.Motion.standard) { applyFold(fold >= 0.5 ? 1 : 0, animated: false) }
+    }
+
+    private func applyFold(_ value: CGFloat, animated: Bool) {
+        if fold != value {
+            if animated { withAnimation(DS.Motion.standard) { fold = value } } else { fold = value }
+        }
+        let down = minimized ? value > Self.foldOff : value >= Self.foldOn
+        if minimized != down {
+            chromeSettledAt = Date.timeIntervalSinceReferenceDate
+            withAnimation(DS.Motion.standard) { minimized = down }
+        }
+    }
 
     /// The one transient message surface — the glass toast above the bar.
     /// Any screen can flash an outcome ("On your list", "Copied", a denial);
@@ -466,6 +538,15 @@ final class ShellChrome {
     /// only writer since 2026-08-11, and since 2026-08-19 the only thing that
     /// rains at all — the moment bus that used to set this is gone.
     var refreshHue: Color? = nil
+    /// The sources the NEXT `refreshPulse` bump stands for — one tile falls
+    /// per name, in this order (prd §619, 2026-09-05: the rain is the apps
+    /// the pull is asking, not confetti). Set by the pull from
+    /// `BridgeRefresh.roster`; left EMPTY by the wallet-scoped pull and the
+    /// wallet arrival (§171/§501), whose identity is a colour no tile has —
+    /// those keep the berries in `refreshHue`. A writer that bumps the pulse
+    /// without setting this inherits the last roster, which is the right
+    /// default for every in-room bump (the room's sources have not changed).
+    var refreshRoster: [String] = []
 
     /// Mac's ⌘R (Mac polish, 2026-07-28): a trackpad's overscroll gesture is
     /// the only trigger `.refreshable` gives Catalyst, and unlike a real
@@ -744,32 +825,35 @@ extension FocusedValues {
     }
 }
 
+/// One scroll sample, as `minimizesChrome` reads it.
+struct DockScrollSample: Equatable {
+    var offset: CGFloat
+    /// Content left BELOW the viewport, inset included — zero means the scroll
+    /// view is pinned to its maximum offset, which is the one place a fold's
+    /// own inset change moves the offset (see `ShellChrome.trackFold`).
+    var remaining: CGFloat
+}
+
 extension View {
-    /// Attach to a screen's ScrollView: reports scroll direction to the shell.
+    /// Attach to a screen's ScrollView: feeds the dock's fold from the scroll
+    /// (`ShellChrome.fold`), and settles it when the scroll goes idle.
     /// `active: false` mutes the observer without unmounting it — the feed
     /// pager keeps neighbour pages alive (2026-07-16), and three scroll
-    /// observers writing one shared `chrome.minimized` means an off-screen
-    /// page settling at offset 0 can un-minimize the chrome while you scroll
-    /// the visible one.
+    /// observers writing one shared fold means an off-screen page settling at
+    /// offset 0 can un-fold the chrome while you scroll the visible one.
     func minimizesChrome(_ chrome: ShellChrome, active: Bool = true) -> some View {
-        onScrollGeometryChange(for: CGFloat.self) {
-            $0.contentOffset.y
+        onScrollGeometryChange(for: DockScrollSample.self) { geo in
+            DockScrollSample(
+                offset: geo.contentOffset.y,
+                remaining: geo.contentSize.height + geo.contentInsets.bottom
+                    - geo.containerSize.height - geo.contentOffset.y)
         } action: { old, new in
             guard active else { return }
-            guard abs(new - old) > 4 else { return }   // ignore jitter
-            // A fold CHANGES the top inset, and changing a scroll view's inset
-            // reports back here as motion. The 60pt floor already prevents the
-            // pathological case (a fold can only happen mid-content, where the
-            // offset isn't re-clamped), but this settle window makes it
-            // structural rather than incidental: for one animation's length
-            // after a toggle, the chrome ignores what its own toggle did.
-            let now = Date.timeIntervalSinceReferenceDate
-            guard now - chrome.chromeSettledAt > DS.Motion.duration + 0.1 else { return }
-            let down = new > old && new > 60
-            if chrome.minimized != down {
-                chrome.chromeSettledAt = now
-                withAnimation(DS.Motion.standard) { chrome.minimized = down }
-            }
+            chrome.trackFold(offset: new.offset, from: old.offset, remaining: new.remaining)
+        }
+        .onScrollPhaseChange { _, phase in
+            guard active, phase == .idle else { return }
+            chrome.settleFold()
         }
     }
 }

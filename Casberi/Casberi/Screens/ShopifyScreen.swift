@@ -98,6 +98,7 @@ struct ShopifyScreen: View {
                     Button(role: .destructive) {
                         if let i = shopify.shops.firstIndex(where: { $0.id == shop.id }) {
                             shopify.remove(at: IndexSet(integer: i))
+                            DSHaptic.tap()
                         }
                     } label: {
                         Label("Remove", systemImage: "trash")
@@ -109,6 +110,7 @@ struct ShopifyScreen: View {
                     Button(role: .destructive) {
                         if let i = shopify.shops.firstIndex(where: { $0.id == shop.id }) {
                             shopify.remove(at: IndexSet(integer: i))
+                            DSHaptic.tap()
                         }
                     } label: {
                         Label("Remove", systemImage: "trash")

@@ -57,10 +57,6 @@ struct RootShell: View {
     /// drops a navigationDestination push made under a presented cover — the
     /// same drop class as `-openSettings` at launch (audit 2026-07-13); the
     /// user saw it as "Browse the catalog sometimes doesn't work" (2026-07-17).
-    /// Where the onboarding cover said to land once it lifts (§217). Nil means
-    /// the feed — right whenever the fork's tap already produced something to
-    /// look at, which is the whole point of the fork.
-    @State private var landingNode: HomeRoute.Node?
     @AppStorage("privacy.hidePreviews") private var hidePreviews = true
     @AppStorage("firstThingSaved") private var firstThingSaved = false
     /// The bar's teaching grace (2026-07-31). `AgentBar` rests COMPACT now —
@@ -795,8 +791,11 @@ struct RootShell: View {
             if berryDelay > 0 {
                 Task { @MainActor in
                     try? await Task.sleep(for: .seconds(berryDelay))
+                    // The roster a real All-feed pull would set (prd §619),
+                    // so a recording shows the tiles and not the berries.
+                    chrome.refreshRoster = BridgeRefresh.roster(store: bridges)
                     chrome.refreshPulse += 1
-                    NSLog("[Casberi] berryPulse: dealt")
+                    NSLog("[Casberi] berryPulse: dealt \(chrome.refreshRoster.count) tiles")
                 }
             }
             // `-groupProbe YES` — is the REAL app-group container reachable and
@@ -1560,47 +1559,12 @@ struct RootShell: View {
         .sheet(item: $deepLinkPerson) { person in
             rootPresented(SocialProfileCard(profile: person))
         }
-        // The four doors that are NOT a feed (§591) — the panel the agent bar's
-        // TAP raises, where every source used to be. Hosted HERE, beside the
-        // bar that raises it, so it opens over a pushed room (Apps, Settings, a
-        // bridge setup form) the same way it opens over the feed; the chip
-        // strip it complements only exists on `MainSurface`, which is also why
-        // the agent had to become a row in it rather than stay a gesture on a
-        // control that outlives the strip.
-        //
-        // It no longer takes a source list at all. The unfolded-vs-folded
-        // question that governed this call site from 2026-08-10 to §591 — the
-        // grid claimed to show EVERY source, so it could not be handed the
-        // folded order — went with the grid; `ShellChrome.sourceOrder` is
-        // deleted rather than left as state with a writer and no reader.
-        .fullScreenCover(isPresented: Binding(
-            get: { !onboarded }, set: { if !$0 { onboarded = true } }
-        ), onDismiss: {
-            sceneState.filter.source = "All"
-            sceneState.filter.tag = "All"
-            // The demo pours HERE, with the cover out of the way, so the feed
-            // is watched filling rather than revealed already full. Safe to
-            // fire unconditionally — it returns immediately unless a pour is
-            // actually pending.
-            Task { @MainActor in await DemoMode.pourIfNeeded(context: modelContext) }
-            guard let node = landingNode else { return }   // nil = the feed itself
-            landingNode = nil
-            sceneState.route.present(node)
-        }) {
-            // Onboarding is TWO screens since §217 (2026-07-25), and the
-            // second one is the point. The greeting is unchanged — the rain,
-            // the three steps, the same words — but its CTA is "Try it" and it
-            // leads to the fork, where one tap produces real rows from the
-            // person's own life. Before this it landed in a catalog of ~40
-            // apps, so first value cost a choice, a connect and a sync; the
-            // brief, the themes map and the wallet hero all stayed invisible
-            // until a corpus existed. The fork's own escape hatch still opens
-            // the catalog, so nothing is taken from someone who came to browse.
-            rootPresented(HowItWorksSheet(onStart: { node in
-                landingNode = node
-                onboarded = true
-            }))
-        }
+        // THE FIRST-LAUNCH COVER IS GONE (2026-09-05). It was a
+        // `.fullScreenCover` on `!onboarded` presenting `HowItWorksSheet` with
+        // two doors, and it pinned the demo pour to its `onDismiss`. The
+        // greeting is `IntroCover` now, a layer of `shellBase`'s own ZStack
+        // over the feed while the demo pours beneath it — see that file for
+        // why nothing precedes content any more, and `shellBase` for the mount.
     }
 
     /// Split from `shell` (2026-07-28): the scene-phase / redaction / geometry
@@ -2207,7 +2171,6 @@ struct RootShell: View {
                              // early if that first-time reader scrolls before
                              // ever opening the tray.
                              expanded: !sourcesEverOpened && !chrome.minimized,
-                             size: DSDock.agentSize(minimized: chrome.minimized),
                              morphNS: agentMorph,
                              onSources: { toggleDoors() },
                              // NIL since 2026-08-15, the crown-pour ruling's
@@ -2295,8 +2258,27 @@ struct RootShell: View {
                 // (§591 amendment) — see `DSDock.agentBottomInset` for why a
                 // shared bottom padding leaves the bar sitting 6pt low, and why
                 // the number has to follow the fold.
-                .padding(.bottom, DSDock.agentBottomInset(minimized: chrome.minimized))
+                .modifier(DSDock.SeatInset())
                 .transition(.opacity)
+            }
+
+            // THE FIRST SCREEN, over the feed (2026-09-05). A layer here rather
+            // than a `.fullScreenCover`, for the sources panel's own reason
+            // (§394): a cover presents in its own context, and the whole point
+            // of `IntroCover` is that the demo is seen pouring THROUGH it. Last
+            // in the stack so it sits over the dock, the bar and the banner —
+            // there is nothing to reach under it until it lifts.
+            // `rootPresented` is load-bearing here too: a layer of this ZStack
+            // is above the `.environment(...)` injections on `shell`, and the
+            // cover reads `BridgeStore` to begin the demo.
+            if !onboarded {
+                rootPresented(IntroCover {
+                    withAnimation(DS.Motion.standard) { onboarded = true }
+                    sceneState.filter.source = "All"
+                    sceneState.filter.tag = "All"
+                })
+                .zIndex(10)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
             // The agent, full screen (ruling 3 — never a sheet/tray). Grows

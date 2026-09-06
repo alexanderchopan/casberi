@@ -45,6 +45,19 @@ struct DSStamp: View {
         Text(verbatim: word)
             .dsText(.label12)
             .foregroundStyle(ink)
+            // THE TURN (2026-09-05). A stamp whose fact changes under you —
+            // "Pending" becoming "Done", waiting ink becoming confirm green —
+            // used to swap in place, the one state word in the app that
+            // changed with no motion at all. Now the word crossfades, the ink
+            // eases on the same clock, and the word gives one small swell
+            // (1.12, not the dot pulse's 1.5 — a word at 1.5 jumps). Nothing
+            // plays on first appearance; this is change-driven only, so a
+            // stamp that never changes never moves. Reduce Motion: the pulse
+            // is gated inside `pulseOnChange`; a crossfade needs no gate.
+            .contentTransition(.opacity)
+            .animation(DS.Motion.standard, value: word)
+            .animation(DS.Motion.standard, value: weight)
+            .pulseOnChange(of: weight, scale: 1.12)
             // A WORD, NOT A CAPSULE (prd §583, 2026-09-03). The wash and the
             // horizontal padding are deleted with the paper this pill used to
             // sit on: a capsule is a small card, and the ruling that took the

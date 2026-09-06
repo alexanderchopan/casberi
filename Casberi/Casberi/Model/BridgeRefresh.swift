@@ -64,6 +64,19 @@ enum BridgeRefresh {
     /// `force: true` (pull-to-refresh) always runs live, matching the
     /// gesture's own contract of bypassing every other TTL/cache in the
     /// refresh path — only the automatic scenePhase-driven sweep is gated.
+    /// WHO A PULL ASKS (prd §619, 2026-09-05) — the connected seats, in the
+    /// store's own order, by the name `BridgeIcon` draws. This is what the
+    /// refresh shower rains as tiles, so it is defined here beside the sweep
+    /// it describes rather than guessed by the view: "connected" is exactly
+    /// the gate every branch of `refreshAllConnected` reads. Narrowed to one
+    /// category for a folded room's pull; nil means the whole sweep.
+    static func roster(store: BridgeStore, category: String? = nil) -> [String] {
+        store.bridges
+            .filter { $0.status == .connected }
+            .map(\.name)
+            .filter { category == nil || CategoryFold.isMember($0, of: category!) }
+    }
+
     static func refreshAllConnected(context: ModelContext, store: BridgeStore, force: Bool = false) {
         // THE DEMO REACHES NOTHING (2026-08-07). Not a nicety and not merely
         // privacy — the demo marks 60-odd seats connected and watches a wallet

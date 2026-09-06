@@ -103,12 +103,17 @@ extension View {
 
 private struct PulseOnChange<V: Equatable>: ViewModifier {
     let value: V
+    /// How far it swells. 1.5 is a dot's pulse; a word wants far less
+    /// (`DSStamp` uses 1.12) — at 1.5 a label reads as a jump, not a blink.
+    var scale: CGFloat = 1.5
     @State private var up = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
-            .scaleEffect(up ? 1.5 : 1)
+            .scaleEffect(up ? scale : 1)
             .onChange(of: value) {
+                guard !reduceMotion else { return }
                 withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) { up = true }
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(180))
@@ -120,8 +125,8 @@ private struct PulseOnChange<V: Equatable>: ViewModifier {
 
 extension View {
     /// One soft scale pulse whenever `value` changes — ambient "just updated".
-    func pulseOnChange<V: Equatable>(of value: V) -> some View {
-        modifier(PulseOnChange(value: value))
+    func pulseOnChange<V: Equatable>(of value: V, scale: CGFloat = 1.5) -> some View {
+        modifier(PulseOnChange(value: value, scale: scale))
     }
 }
 

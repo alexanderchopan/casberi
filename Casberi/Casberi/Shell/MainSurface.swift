@@ -411,8 +411,11 @@ struct MainSurface: View {
                     // The rest of the chips' offset from the band's edge —
                     // `DSDock.chipBottomInset` is this plus `slabPad` above,
                     // and the bar's own inset is measured from it so the two
-                    // share a centre line (§591d).
-                    .padding(.bottom, chrome.minimized ? DS.Space.s1 : DS.Space.s2)
+                    // share a centre line (§591d). Follows the fold
+                    // continuously, in a body of its own — see
+                    // `ShellChrome.fold` for why this surface must not read
+                    // that value itself.
+                    .modifier(DSDock.SlabInset())
             }
         }
     }
@@ -2283,7 +2286,8 @@ struct MainSurface: View {
             // bumps chrome.refreshPulse — the berry rain falls over the
             // content and the avatar door spins (below). Decorative only;
             // hit-testing is off inside BerryRain.
-            .overlay { BerryRain(trigger: chrome.refreshPulse, hue: chrome.refreshHue) }
+            .overlay { BerryRain(trigger: chrome.refreshPulse, hue: chrome.refreshHue,
+                                 roster: chrome.refreshRoster) }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             // The nav bar itself is hidden now (2026-07-20) — nothing lives
