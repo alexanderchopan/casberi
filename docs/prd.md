@@ -49835,3 +49835,17 @@ Both platforms build, every static audit passes, and **not one pixel of the Mac 
 **(4) A parked magnifier ticked through a flick's whole deceleration.** The wave re-rendered the strip every 4pt for the length of a flick, including the long tail after the last chip has swept past the parked point — where every chip's `wave` returns 1 and the render draws exactly what it drew before. The throttle is 8pt (still far finer than the wave itself, a cosine over ~1.6 pitches ≈ 100pt) and a one-line reach test skips the tail outright.
 
 **The guard moved with the ruling, it was not deleted.** `dock-selftest.sh` pinned the lean by its old spelling (`ring.offset(x: slide)`). It now checks the mechanism instead: `ChipLean` exists, both the ring and the fill go through it, it reads the progress, and — the negative half, which is the actual perf ruling — `SourceChips` must NOT compute the lean itself. Mutation-tested: making the lean inert is caught.
+
+## §633 — A trending token's sheet in the demo was a title over a logo (user: "on the demo the thing sheets do not show prices or anything", 2026-09-06)
+
+**What it drew.** Opening Aerodrome · $AERO in the demo's GeckoTerminal room gave the title, the coin's logo, "From — saved by you" and the dial. No price, no curve, nothing that says what a token IS.
+
+**Three near-misses, each individually reasonable.** (1) `ThingContent`'s price figure lives in `case .product:` only, and every token row — real or seeded, `GeckoTrending` and `TokenWatch` alike — lands as `.link`. So `priceValue` has never drawn for a token, and the seed's own comment claiming `productPrice` would read it was wrong when written. (2) `ThingChart.kind(for:)` finds a token chart by matching a Dexscreener URL in `content`; the real bridge sets one (and says so in its own comment), the demo seed set none, so the row routed nowhere. (3) The `.watchedPulse` fallback that exists precisely for a demo with no network was gated on `source == "Tokens"`, and these rows are `GeckoTerminal`.
+
+**The fix is the third gate, not the first.** The demo's trending rows now carry a seeded pulse under the refs `DemoSeedAll` already stamps on them, and both `TokenPulse.pulse(for:)` and the `.watchedPulse` branch accept `GeckoTerminal` beside `Tokens`. The sheet draws $0.8200, +4.1% · 1D, a curve and its 1D/1W/1M ranges — the same reading a watched token gets.
+
+**Inert in production, and that is checked rather than hoped.** `TokenPulse.refresh()` filters to `source == "Tokens"`, so no GeckoTerminal ref is ever written into `pulses`; and a real trending row matches `TokenChart.route` on its Dexscreener URL first, taking the live `.token` branch and never reaching the fallback. The widened gate can only ever fire on demo-seeded refs.
+
+**`DemoSeedAll.trendingSeeds` is a static now**, for the reason `tokenSeeds` already was: the pulse has to seed the same three refs at the same three prices, and two lists side by side is how that drifts.
+
+**Not done, and deliberately.** The price figure is still `.product`-only. Drawing `priceValue` for a `.link` would put a bare number above the chart that already states the price, which is the same figure twice — the honest fix for a token was always the curve.

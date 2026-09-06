@@ -107,7 +107,8 @@ enum ThingChart {
         // every real route has already failed to match, so a genuine
         // Tokens row with a real Dexscreener content URL always takes the
         // `.token` branch above and never this one.
-        if thing.source == "Tokens", let ref = thing.sourceRef,
+        if thing.source == "Tokens" || thing.source == "GeckoTerminal",
+           let ref = thing.sourceRef,
            TokenPulse.shared.pulse(for: thing) != nil {
             return .watchedPulse(ref: ref)
         }

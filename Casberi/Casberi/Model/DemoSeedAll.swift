@@ -68,6 +68,15 @@ enum DemoSeedAll {
     /// `marketCap` is what fills `TokenRow`'s vitals line ("SOL · $83.1B
     /// cap"); a real Dexscreener read always carries one, so seeding nil left
     /// every demo row's second line blank (2026-08-12).
+    /// The demo's GeckoTerminal trending rows. A STATIC, so `TokenPulse` can
+    /// seed a curve for the same three refs rather than a second list drifting
+    /// beside this one (2026-09-06) — `tokenSeeds` below already works that way.
+    static let trendingSeeds: [(name: String, symbol: String, days: Double, price: Double)] = [
+        ("Aerodrome", "AERO", 0.2, 0.82),
+        ("Curve DAO", "CRV", 0.3, 0.61),
+        ("Jupiter", "JUP", 0.45, 0.47),
+    ]
+
     static let tokenSeeds: [(symbol: String, name: String, price: Double,
                              marketCap: Double, dayOffset: Double)] = [
         ("ETH", "Ethereum", 3_180, 383_000_000_000, 1),
@@ -2801,12 +2810,7 @@ enum DemoSeedAll {
         // where a real trending list is three logos. Curve is on Ethereum, so
         // the three still span the seat's three demo chains (Base, Solana,
         // Ethereum) and no two share one.
-        let trending: [(name: String, symbol: String, days: Double, price: Double)] = [
-            ("Aerodrome", "AERO", 0.2, 0.82),
-            ("Curve DAO", "CRV", 0.3, 0.61),
-            ("Jupiter", "JUP", 0.45, 0.47),
-        ]
-        out += trending.map { t in
+        out += Self.trendingSeeds.map { t in
             row(.link, "\(t.name) · $\(t.symbol)", source: "GeckoTerminal",
                 ref: "demo:gecko:\(t.symbol.lowercased())", days: t.days, hour: 14,
                 tags: ["Trending"]) { thing in

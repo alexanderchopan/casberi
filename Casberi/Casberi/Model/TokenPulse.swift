@@ -35,8 +35,18 @@ final class TokenPulse {
     private init() {}
 
     /// The row's pulse — nil for everything but a watched token.
+    /// GECKOTERMINAL COUNTS TOO (2026-09-06, user: "on the demo the thing
+    /// sheets do not show prices or anything"). A trending row is the same
+    /// shape of thing as a watched one — a token, a ref, a price — and the
+    /// demo seeds both. **Inert in production**: `refresh()` below filters to
+    /// `source == "Tokens"`, so no GeckoTerminal ref is ever written into
+    /// `pulses`, and a REAL trending row carries a Dexscreener URL that
+    /// `TokenChart.route` matches first, so it takes the live `.token` branch
+    /// and never reaches the pulse fallback at all. This only lights up the
+    /// demo, where there is no network and the pulse IS the chart.
     func pulse(for thing: Thing) -> Pulse? {
-        guard thing.source == "Tokens", let ref = thing.sourceRef else { return nil }
+        guard thing.source == "Tokens" || thing.source == "GeckoTerminal",
+              let ref = thing.sourceRef else { return nil }
         return pulses[ref]
     }
 
@@ -95,6 +105,14 @@ final class TokenPulse {
             (ref: "demo:token:\(i)", price: t.price,
              change24h: [0.023, -0.011, 0.084][i % 3], marketCap: t.marketCap,
              phase: Double(i) * 2.1)
+        }
+        // The trending rows carry the same shape and the refs
+        // `DemoSeedAll` stamps on them, so their sheets draw a curve too
+        // rather than a title over a logo (2026-09-06).
+        + DemoSeedAll.trendingSeeds.enumerated().map { i, t in
+            (ref: "demo:gecko:\(t.symbol.lowercased())", price: t.price,
+             change24h: [0.041, -0.027, 0.063][i % 3], marketCap: nil,
+             phase: Double(i) * 1.7 + 0.6)
         }
     }
 
