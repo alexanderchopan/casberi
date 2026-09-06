@@ -2083,6 +2083,16 @@ harness "MetricKit self-test" "11 mutations, 15 drift guards — the payload rea
 # screenshotted and believed.
 harness "Perf-readings self-test" "4 mutations, 16 drift guards — the on-device perf digest, the measurement switch, and the light-column OS gate" "scripts/perf-readings-selftest.sh" "the perf-readings self-test failed — run scripts/perf-readings-selftest.sh"
 
+# The account page (prd §639): the shipped words and order of every migrated
+# setup screen — the state line, the meta line, the row facts, the roster
+# split — plus the two stores behind the page (a private note, and the
+# per-account deny list that decides which reader may be handed a source).
+# Every failure it catches renders as an ordinary page: "0 today" on a seat
+# that reads nothing, a key row showing a character of the key, a reader mark
+# lit for an agent the page shut out, a second removal verb creeping back, or
+# the reader filter wired at the candidates and not at the tool snapshot.
+harness "Account-page self-test" "6 mutations, 12 drift guards — the account page's words, order, note, and who-may-read list" "scripts/account-page-selftest.sh" "the account-page self-test failed — run scripts/account-page-selftest.sh"
+
 # The design system's first mechanical check (prd §299). Every other rule in
 # this file is enforced by a script; the design system was enforced by memory,
 # which is how fourteen data drawings shipped with no entrance and how the

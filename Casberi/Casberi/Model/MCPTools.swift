@@ -33,7 +33,10 @@ enum MCPTools {
     static func searchThings(_ query: String, limit: Int = 10, context: ModelContext) -> [Thing] {
         var descriptor = FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         descriptor.fetchLimit = 500
-        let all = (try? context.fetch(descriptor)) ?? []
+        // A paired client is a READER (prd §639): an account whose page shut
+        // MCP out is not in the corpus this tool searches.
+        let all = AccountReaders.readable((try? context.fetch(descriptor)) ?? [],
+                                          by: AccountReaders.ID.mcp)
 
         let stops: Set<String> = ["about", "my", "the", "a", "in", "from", "for", "of"]
         let terms = query.lowercased()
@@ -68,7 +71,8 @@ enum MCPTools {
     static func weekSynthesis(context: ModelContext) -> String {
         var descriptor = FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         descriptor.fetchLimit = 1000
-        let all = (try? context.fetch(descriptor)) ?? []
+        let all = AccountReaders.readable((try? context.fetch(descriptor)) ?? [],
+                                          by: AccountReaders.ID.mcp)
         let week = all.filter { $0.capturedAt > .now.addingTimeInterval(-7 * 86_400) }
         guard !week.isEmpty else { return "Nothing landed this week." }
 

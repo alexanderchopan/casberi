@@ -2,9 +2,8 @@ import SwiftUI
 import SwiftData
 import Photos
 
-/// A bridge's detail — the app, what it can do (sentences), a one-line proof
-/// it's delivering, and its controls: Reconnect when broken, Pause/Resume, Remove with
-/// keep-or-purge. No "ask before acting" switch, and the reason has narrowed
+/// A bridge's detail — the app, what it can do (sentences), and its
+/// controls: Reconnect when broken, Pause, Disconnect with keep-or-purge. No "ask before acting" switch, and the reason has narrowed
 /// rather than gone away (2026-08-29): no bridge writes back to a SOURCE, so a
 /// per-bridge writes toggle would still be a dead control. The one write this
 /// app can make — Safe's co-signature (prd §425/§426) — is not governed by a
@@ -15,152 +14,72 @@ import Photos
 struct BridgeDetailScreen: View {
     let bridgeID: String
     @Environment(BridgeStore.self) private var store
-    // This window's source filter (per-window since `SceneState`).
-    @Environment(FeedFilter.self) private var filter
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
-    @State private var confirmRemove = false
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
     private var bridge: BridgeApp? {
         store.bridges.first { $0.id == bridgeID }
     }
-    /// This bridge's single most recent thing — a receipt, not content (the
-    /// feed already holds the full record, one "All in Feed" tap away). Was
-    /// three full rows; from the feed's own "Manage" capsule that read as a
-    /// second, worse copy of the feed you'd just scrolled (user, 2026-07-21).
-    /// Cached on appearance rather than re-fetched twice on every body pass.
-    @State private var recent: Thing?
 
-    private func loadRecent(source name: String) {
-        var descriptor = FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.source == name },
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-        )
-        descriptor.fetchLimit = 1
-        recent = (try? modelContext.fetch(descriptor))?.first
-    }
-
+    /// ON THE ACCOUNT PAGE since prd §639 (2026-09-06). This was the one
+    /// manage screen off the chassis, and the one that said "Remove" where
+    /// every other screen says "Disconnect". The "Last delivered" receipt is
+    /// the Activity row now; the keep-or-purge dialog is
+    /// `BridgeDisconnectSection`'s, not a second copy; Pause is the exit row.
+    /// What stays is what only this screen knows: the seat's own capability
+    /// sentences, and the Photos-on-limited-access remedy.
     var body: some View {
         if let bridge {
-            ScrollView {
-                VStack(alignment: .leading, spacing: DS.Space.s4) {
-                    header(bridge)
+            AccountPage(
+                name: bridge.name, seatID: bridge.id, source: bridge.name,
+                state: AccountPageState.of(name: bridge.name, seatID: bridge.id,
+                                           connected: true, store: store),
+                // A seat with no dedicated screen holds no store of its own
+                // to clear — the seat IS the connection.
+                teardown: {},
+                sheet: $sheet,
+                act: { actBlock(bridge) },
+                more: { EmptyView() },
+                keySheet: { EmptyView() }
+            )
+        }
+    }
 
-                    if bridge.status == .attention {
-                        // Photos on LIMITED access isn't broken and can't be
-                        // reconnected out of — the app is seeing exactly the
-                        // photos it was given. The remedy is the system's own
-                        // picker (widen the set) or Settings (full access), so
-                        // that is what this button does instead of a Reconnect
-                        // that would change nothing (honesty rule: no control
-                        // that doesn't do what it says).
-                        if bridge.id == "pho", ScreenshotIngest.accessIsLimited {
-                            photosLimitedRemedy
-                        } else {
-                            // The component, not a glass pill (prd §613). This
-                            // is a manage page's one verb, which is what §190
-                            // made the slab FOR — and glass is the floating
-                            // layer's material by §8, never content's.
-                            DSSlabButton(title: String(localized: "Reconnect"),
-                                         systemImage: "arrow.triangle.2.circlepath") {
-                                store.reconnect(bridge.id)
-                                DSHaptic.success()
-                            }
-                        }
-                    }
-
-                    // Capabilities — sentences, not scopes. They arrive one
-                    // after another (the consent rail is worth a beat).
-                    section("Can") {
-                        ForEach(Array(bridge.can.enumerated()), id: \.element) { i, sentence in
-                            Text(sentence)
-                                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                                .padding(.horizontal, DS.Space.s4)
-                                .padding(.vertical, DS.Space.s3)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .staggerIn(index: i)
-                        }
-                    }
-
-                    // Recent = a receipt, not content: proof the bridge is
-                    // actually delivering (connect ends in proof), never a
-                    // second copy of the feed. Tapping goes straight to the
-                    // real record — this page is about the connection, not
-                    // the things.
-                    // `isLive` beside the unwrap: `recent` is a HELD ref from a
-                    // manual fetch, and this bridge's own per-foreground heal
-                    // deletes upstream-gone rows on the main context while this
-                    // screen is open — `if let` proves it isn't nil, not that
-                    // it's still backed by the store. Reading `.kind`/`.title`
-                    // off a tombstoned model traps inside SwiftData.
-                    if let recent, recent.isLive {
-                        section("Recent") {
-                            Button {
-                                filter.source = bridge.name
-                                filter.tag = "All"
-                                if let url = URL(string: "casberi://feed") { openURL(url) }
-                            } label: {
-                                HStack(spacing: DS.Space.s3) {
-                                    KindGlyph(kind: recent.kind, size: 24)
-                                    VStack(alignment: .leading, spacing: 1) {
-                                        Text("Last delivered")
-                                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                                        Text(recent.title)
-                                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                                            .lineLimit(1)
-                                    }
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .dsGlyph(13)
-                                        .foregroundStyle(DS.textTertiary)
-                                }
-                                .padding(.horizontal, DS.Space.s4)
-                                .padding(.vertical, DS.Space.s3)
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-
-                    // Controls — words say what happens.
-                    HStack(spacing: DS.Space.s3) {
-                        Button(bridge.status == .paused ? "Resume" : "Pause") {
-                            store.togglePause(bridge.id)
-                            DSHaptic.tap()
-                        }
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .frame(maxWidth: .infinity).frame(minHeight: 44)
-                        .background(DS.gray100, in: Capsule(style: .continuous))
-                        .buttonStyle(PressSpring())
-
-                        Button("Remove") { confirmRemove = true }
-                            .dsText(.body17).foregroundStyle(DS.destructive)
-                            .frame(maxWidth: .infinity).frame(minHeight: 44)
-                            .background(DS.gray100, in: Capsule(style: .continuous))
-                            .buttonStyle(PressSpring())
-                    }
+    /// The act slot. A seat needing attention leads with its remedy; a
+    /// healthy one, which has nothing to add, leads with what it reads —
+    /// sentences, not scopes, the store's own.
+    @ViewBuilder private func actBlock(_ bridge: BridgeApp) -> some View {
+        if bridge.status == .attention {
+            // Photos on LIMITED access isn't broken and can't be
+            // reconnected out of — the app is seeing exactly the
+            // photos it was given. The remedy is the system's own
+            // picker (widen the set) or Settings (full access), so
+            // that is what this button does instead of a Reconnect
+            // that would change nothing (honesty rule: no control
+            // that doesn't do what it says).
+            if bridge.id == "pho", ScreenshotIngest.accessIsLimited {
+                photosLimitedRemedy
+            } else {
+                // The component, not a glass pill (prd §613). This
+                // is a manage page's one verb, which is what §190
+                // made the slab FOR — and glass is the floating
+                // layer's material by §8, never content's.
+                DSSlabButton(title: String(localized: "Reconnect"),
+                             systemImage: "arrow.triangle.2.circlepath") {
+                    store.reconnect(bridge.id)
+                    DSHaptic.success()
                 }
-                .padding(DS.Space.s4)
-                .padding(.bottom, ShellMetrics.bottomInset)
             }
-            .scrollIndicators(.hidden)
-            .dsAdaptiveContentWidth()
-            .dsPageBackground()
-            .dsSoftScrollEdges()
-            .onAppear { loadRecent(source: bridge.name) }
-            .navigationTitle(bridge.name)
-            .navigationBarTitleDisplayMode(.inline)
-            .confirmationDialog("Remove \(bridge.name)?",
-                                isPresented: $confirmRemove, titleVisibility: .visible) {
-                Button("Keep its things") {
-                    store.remove(bridge.id); dismiss()
+        } else if !bridge.can.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                ForEach(Array(bridge.can.enumerated()), id: \.element) { i, sentence in
+                    Text(sentence)
+                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .staggerIn(index: i)
                 }
-                Button("Remove its things too", role: .destructive) {
-                    purgeThings(from: bridge.name)
-                    store.remove(bridge.id); dismiss()
-                }
-                Button("Cancel", role: .cancel) {}
             }
         }
     }
@@ -211,49 +130,5 @@ struct BridgeDetailScreen: View {
                 ScreenshotIngest.backfill(context: modelContext)
             }
         }
-    }
-
-    /// This screen's head deliberately carries no brand wash (audited against
-    /// the product/setup pages' `bridgeSetupWash`/`AppDetailScreen.brandWash`
-    /// 2026-08-24): this is the MANAGE screen, whose job is "what it can do,
-    /// a one-line proof it's delivering, its controls" — a health status, not
-    /// a re-sell of identity — so the ring around the mark carries the fact
-    /// that actually belongs here (`bridge.status.color`) instead. The mark
-    /// SIZE still matches `DS.Mark.hero` (was `Face.shelf`, 56 vs 60) per the
-    /// ramp's own rule that a product page and every header introducing the
-    /// same app agree on scale.
-    private func header(_ bridge: BridgeApp) -> some View {
-        HStack(spacing: DS.Space.s3) {
-            BridgeIcon(name: bridge.name, size: DS.Mark.hero, circular: true)
-                .padding(3)
-                .overlay(Circle().strokeBorder(bridge.status.color, lineWidth: 2))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(bridge.name).dsText(.heading22).foregroundStyle(DS.textPrimary)
-                Text(bridge.statusLine)
-                    .dsText(.subhead13)
-                    .foregroundStyle(bridge.status == .connected ? DS.textSecondary : bridge.status.color)
-            }
-            Spacer()
-        }
-    }
-
-    private func section(_ label: String, @ViewBuilder content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text(label)
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-            VStack(spacing: 0) { content() }
-                .dsWell()
-        }
-    }
-
-    private func purgeThings(from source: String) {
-        let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
-        let purged = all.filter { $0.source == source }
-        SpotlightIndex.remove(ids: purged.map(\.id))
-        for thing in purged {
-            modelContext.delete(thing)
-        }
-        modelContext.saveHonestly()
     }
 }
