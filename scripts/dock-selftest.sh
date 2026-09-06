@@ -189,16 +189,20 @@ grep -q 'heldForAgent\|consumeHold' "$TMP/bar.nc" \
 
 # --- 6. the panel offers the agent, and the tray is really gone -------------
 # --- 6. the octopus is a FOLDER, not a tray ---------------------------------
-# IN PLACE since 2026-09-05: the doors open INSIDE the strip's leading seat,
-# drawn by SourceChips from the open folder, and MainSurface hands the row in.
-grep -q 'chrome.openFolder == .doors' "$TMP/chips.nc" \
-  || { echo "✗ SourceChips no longer draws the doors from the open folder — the octopus"; \
-       echo "  must open in place in the strip like every other chip, not a raised tray."; fail=1; }
-grep -q 'doorsStrip: AnyView(' "$TMP/main.nc" \
-  || { echo "✗ MainSurface no longer hands the strip its doors row — the octopus's folder"; \
-       echo "  has nothing to open."; fail=1; }
+# THE FOLDER SPRINGS UP (2026-09-05, the Mac-dock folder): the doors rise out
+# of the octopus as a row ABOVE the dock (`DockSpringRow` in MainSurface's
+# band), anchored to the bar, and the strip draws no folder of its own.
 grep -q 'chrome.openFolder == .doors' "$TMP/main.nc" \
-  && { echo "✗ MainSurface draws the doors ABOVE the dock again — two rows for one folder."; fail=1; }
+  || { echo "✗ MainSurface no longer springs the doors from the open folder — the octopus"; \
+       echo "  must open a row out of the bar like every other chip, not a raised tray."; fail=1; }
+grep -q 'DockSpringRow(' "$TMP/main.nc" \
+  || { echo "✗ MainSurface no longer uses DockSpringRow — the folder does not spring out of"; \
+       echo "  its chip, which is the whole of the Mac-dock ruling."; fail=1; }
+[ -f "Casberi/Casberi/Shell/DockFolderRow.swift" ] \
+  || { echo "✗ DockFolderRow.swift is gone — the springing folder has no row."; fail=1; }
+grep -q 'chrome.openFolder == .doors' "$TMP/chips.nc" \
+  && { echo "✗ SourceChips draws the doors IN the strip again — the folder opens above the"; \
+       echo "  dock now, out of its chip; in-place spent width the row does not have."; fail=1; }
 grep -q 'onAgent:' "$PANEL" \
   || { echo "✗ DoorsStrip lost its agent door — with the hold deleted this is the bar's"; \
        echo "  ONLY route to the agent."; fail=1; }

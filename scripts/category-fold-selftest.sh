@@ -107,6 +107,8 @@ strip_comments "$BOOK"     > "$TMP/book.nc"
 strip_comments "$ROOT"     > "$TMP/root.nc"
 strip_comments "$APP"      > "$TMP/app.nc"
 strip_comments "$CHIPS"    > "$TMP/chips.nc"
+# The springing folder's row (2026-09-05): the venue guards below read this.
+strip_comments "Casberi/Casberi/Shell/DockFolderRow.swift" > "$TMP/folder.nc"
 strip_comments "$FEED"     > "$TMP/feed.nc"
 strip_comments "$RAIL"     > "$TMP/rail.nc"
 strip_comments "$CHROME"   > "$TMP/chrome.nc"
@@ -228,7 +230,7 @@ chip = between("private func chip(_ label:", "private func chipAccessibilityLabe
 # themselves, which is the whole design; the ruling below is about the closed
 # chip). `folderVenue` is its own function past `chip(_:)`'s end and is not in
 # either range.
-capsule = between("private func categoryCapsule(", "if open {", "categoryCapsule(_:)")
+capsule = between("private func categoryCapsule(", "private func chip(_ label:", "categoryCapsule(_:)")
 
 if "contentShape(Circle())" in chip:
     sys.exit("✗ a chip's hit region is a Circle again — the ends of every category\n"
@@ -284,7 +286,7 @@ grep -q 'activeSource' "$TMP/chips.nc" \
 # The switcher is where the folded chip's dashed ring RESOLVES to a seat. Without
 # this the ring says "something in here needs you" and the tap it invites arrives
 # at a row of identical capsules (prd §351's own promise, unkept until 2026-08-11).
-awk '/func folderVenue/,/^    }$/' "$TMP/chips.nc" | grep -q 'DS.attention' \
+awk '/func folderVenue/,/^    }$/' "$TMP/folder.nc" | grep -q 'DS.attention' \
   || { echo "✗ an open folder's venue no longer marks a broken seat — the folded chip's dashed"; \
        echo "  ring would name nothing, and only VoiceOver could say which seat it meant."; exit 1; }
 # Either catalog route counts (2026-09-05): `seatName(forSource:)` is
@@ -293,7 +295,7 @@ awk '/func folderVenue/,/^    }$/' "$TMP/chips.nc" | grep -q 'DS.attention' \
 # graph update — the frame build 522's process-exit watchdog was sampled in.
 # What this guard is about is that the switcher resolves THROUGH THE CATALOG
 # rather than against a raw label, and both spellings do.
-awk '/func folderVenue/,/^    }$/' "$TMP/chips.nc" | grep -qE 'BridgeCatalog\.(offer|seatName)\(forSource: venue\)' \
+awk '/func folderVenue/,/^    }$/' "$TMP/folder.nc" | grep -qE 'BridgeCatalog\.(offer|seatName)\(forSource: venue\)' \
   || { echo "✗ the open folder resolves attention by raw name — the alias family (Privacy Pools"; \
        echo "  against 0xBow Privacy Pools) would silently never light, which is the whole"; \
        echo "  reason the strip and the tray both resolve through the catalog."; exit 1; }
@@ -306,8 +308,8 @@ awk '/func folderVenue/,/^    }$/' "$TMP/chips.nc" | grep -qE 'BridgeCatalog\.(o
 # inside the open chip, drawn by the strip itself. Guarded on the strip, and
 # the old mount must be GONE from MainSurface — a second row above the dock
 # beside the in-place one would be the §482 stack back.
-grep -q 'folderVenue(' "$TMP/chips.nc" \
-  || { echo "✗ SourceChips no longer draws an open folder's venues — a folded category seat has no way out"; exit 1; }
+grep -q 'folderVenue(' "$TMP/folder.nc" \
+  || { echo "✗ DockFolderRow no longer draws an open folder's venues — a folded category seat has no way out"; exit 1; }
 grep -q 'CategoryVenueSwitcher(' "$MAIN" \
   && { echo "✗ MainSurface mounts a venue switcher above the dock again — the folder opens IN PLACE"; \
        echo "  (2026-09-05), and a row above the dock beside it is two rows for one folder."; exit 1; }
@@ -323,10 +325,10 @@ grep -q 'CategoryVenueSwitcher(' "$MAIN" \
 # The switcher must still NAME each venue for anyone who can't read the mark —
 # with the word gone this is the only naming left, so it is a harder requirement
 # than it was, not a softer one.
-awk '/func folderVenue/,/^    }$/' "$TMP/chips.nc" | grep -q 'accessibilityLabel' \
+awk '/func folderVenue/,/^    }$/' "$TMP/folder.nc" | grep -q 'accessibilityLabel' \
   || { echo "✗ the icon-only venue row no longer names its venues to VoiceOver — with the"; \
        echo "  words gone (§358) this is the ONLY thing naming a seat in this control."; exit 1; }
-grep -qE 'sourceRequest = (venueLabel|CategoryFold\.venueLabel)' "$TMP/chips.nc" \
+grep -qE 'onPick\((venueLabel|CategoryFold\.venueLabel)' "$TMP/folder.nc" \
   && { echo "✗ the venue row hands a DISPLAY LABEL to the shell — \"Wallets\" would land in"; \
        echo "  FeedFilter.source, which no Thing, Shape or deep link answers to (§356)."; exit 1; }
 
@@ -348,7 +350,7 @@ grep -qE 'sourceRequest = (venueLabel|CategoryFold\.venueLabel)' "$TMP/chips.nc"
 # keeping BOTH, since that audit reads a literal or a named token and a future
 # refactor that hands the size in as a parameter goes silent there while this
 # still names the file.
-grep -q 'BridgeIcon(name: venue, size: markSize, circular: true)' "$TMP/chips.nc" \
+grep -q 'BridgeIcon(name: venue, size: markSize, circular: true)' "$TMP/folder.nc" \
   || { echo "✗ the venue row's mark is no longer the full-bleed markSize —"; \
        echo "  it draws directly above FaceScopeRail's faces, so a mark inset inside"; \
        echo "  its seat reads as two rows of circles at two sizes (§541/§483)."; exit 1; }
@@ -356,9 +358,10 @@ grep -q 'BridgeIcon(name: venue, size: markSize, circular: true)' "$TMP/chips.nc
 # mark (a fixed step under `iconSize`, which follows `DSDock`'s fold form)
 # rather than on the face rails' two rungs — the row it used to sit above is
 # gone, and the thing it must not step apart from is the chip around it.
-grep -q 'let markSize = iconSize - 10' "$TMP/chips.nc" \
-  || { echo "✗ the venue mark no longer folds with the chip's own mark — a venue that held"; \
-       echo "  its size while the chip around it folded would outgrow its own capsule."; exit 1; }
+grep -qE 'markSize: CGFloat \{ compact \? DS\.Face\.row : DS\.Face\.list \}' "$TMP/folder.nc" \
+  || { echo "✗ the venue row's mark no longer folds on FaceScopeRail.faceSize's own two"; \
+       echo "  rungs — the rail folds 36→26 and a mark row that did not would step apart"; \
+       echo "  from it on every scroll (§483/§541)."; exit 1; }
 # The FOLD SIGNAL is cross-file, so it is guarded where it is passed. Two
 # controls stacked on one screen folding on two different expressions is the
 # drift this whole guard block exists for, one level up from the sizes.
@@ -380,7 +383,7 @@ awk '/DoorsStrip\(compact:/,/onSettings:/' "$TMP/main.nc" | grep -q 'compact: ch
 # on every scroll, and hoisting the floor into a computed property blinds
 # `accessibility-audit.py` check 3 to this very chip — which is what happened
 # while §541 was being written, minutes after that check was widened to catch it.
-awk '/func folderVenue/,/^    }$/' "$TMP/chips.nc" | grep -q 'frame(width: DS.Hit.min, height: DS.Hit.min)' \
+awk '/func folderVenue/,/^    }$/' "$TMP/folder.nc" | grep -q 'frame(width: DS.Hit.min, height: DS.Hit.min)' \
   || { echo "✗ the venue row's seat no longer claims a literal DS.Hit.min footprint —"; \
        echo "  its whole slot IS the tap target (under the floor from §351 to §541), and a"; \
        echo "  size lifted into a property also goes invisible to accessibility check 3."; exit 1; }
@@ -396,15 +399,15 @@ awk '/func folderVenue/,/^    }$/' "$TMP/chips.nc" | grep -q 'frame(width: DS.Hi
 # fill to the lit venue when the folder opens. §541's reason for a fill (a
 # ring collides with attention) is answered the way the chips answer it: the
 # lit venue is never the broken one's ring, since `lit` takes the overlay.
-awk '/func folderVenue/,/^    }$/' "$TMP/chips.nc" | grep -q 'let lit = venue == standing' \
+awk '/func folderVenue/,/^    }$/' "$TMP/folder.nc" | grep -q 'let lit = venue == standing' \
   || { echo "✗ the venue row no longer lights the venue you are STANDING in — with the"; \
        echo "  chip's fill down while the folder is open, nothing would say where you are."; exit 1; }
 # ITS OWN GROUP (§621 amendment, 2026-09-05): the chip's fill stays lit while
 # the folder is open, so the venue ring cannot share the fill's matched id —
 # two sources for one id is undefined — and travels between VENUES instead.
-awk '/func folderVenue/,/^    }$/' "$TMP/chips.nc" | grep -q 'matchedGeometryEffect(id: ChipSelection.venueID, in: selectionNS)' \
-  || { echo "✗ the lit venue's ring is not in the venue group — it would either blink"; \
-       echo "  between venues or contend with the chip's fill for one geometry."; exit 1; }
+awk '/func folderVenue/,/^    }$/' "$TMP/folder.nc" | grep -q 'matchedGeometryEffect(id: "venueSelection", in: selectionNS)' \
+  || { echo "✗ the lit venue's ring is not in the row's own matched group — it would blink"; \
+       echo "  between venues instead of travelling (§412b)."; exit 1; }
 # The scope must live on the shell, or it dies with the room. `MainSurface`
 # gives FeedScreen `.id(filter.source)`, so `@State` here is destroyed on every
 # room change — which is the bug §356 exists to fix.
@@ -815,8 +818,8 @@ grep -q 'PadLayout.readingMaxWidth' "$TMP/topinset.nc" \
 # OPEN folder's category, and the open folder is set from
 # `BridgeCatalog.category(forSource:)` on arrival. Both halves are asserted, so
 # neither can be narrowed to one hardcoded category.
-grep -q 'chrome.openFolder == .category(label)' "$TMP/chips.nc" \
-  || { echo "✗ the strip no longer opens the OPEN folder's chip — either it is back"; \
+grep -qE 'if case \.category\(let category\) = chrome\.openFolder' "$MAIN" \
+  || { echo "✗ the folder row no longer draws the OPEN folder's category — either it is back"; \
        echo "  to following the room (so a folder you are not standing in cannot be opened)"; \
        echo "  or it is gated to one hardcoded category."; exit 1; }
 grep -qE 'BridgeCatalog\.category\(forSource: source\)' "$MAIN" \

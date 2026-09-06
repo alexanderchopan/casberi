@@ -59,14 +59,16 @@ struct DemoBanner: View {
                     .dsText(.label12)
                     .fontWeight(.semibold)
             }
-            .foregroundStyle(DS.attention)
+            // THE BRAND'S PINK (user, 2026-09-05: "make the demo banner be
+            // pink like our brand color") — the octopus's own hue, so the
+            // marking reads as the app speaking rather than as a warning.
+            .foregroundStyle(CasberiMark.pink)
             .padding(.horizontal, DS.Space.s3)
             .frame(minHeight: 30)
-            // A step past the rest-chip wash (user, 2026-09-05: "is it
-            // visible enough?") — this is the one status on the screen that
-            // must be read before any number is believed, so it wears the
-            // attention hue at a quarter rather than a sixth.
-            .background { Capsule(style: .continuous).fill(DS.attention.opacity(0.24)) }
+            // A step past the rest-chip wash (user: "is it visible enough?")
+            // — this is the one status on the screen that must be read before
+            // any number is believed, so it wears the hue at a quarter.
+            .background { Capsule(style: .continuous).fill(CasberiMark.pink.opacity(0.24)) }
             .contentShape(Capsule(style: .continuous))
             .frame(minHeight: DS.Hit.min)
         }
@@ -132,7 +134,7 @@ private struct DemoExplainSheet: View {
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: DS.Space.s4)
+                    .padding(.bottom, DS.Space.s3)
                 DSActVerb(title: "Exit the demo") { leave() }
                 Button {
                     DSHaptic.tap()
@@ -152,7 +154,9 @@ private struct DemoExplainSheet: View {
             .dsPageBackground()
             .navigationBarTitleDisplayMode(.inline)
         }
-        .presentationDetents([.medium])
+        // Sized to its content (user, 2026-09-05: "this tray needs to be
+        // shortened, there is a gap that doesn't need to be there").
+        .presentationDetents([.height(292)])
         .dsPageSheet()
     }
 }

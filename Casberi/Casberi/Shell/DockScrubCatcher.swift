@@ -43,6 +43,13 @@ struct DockScrubCatcher: UIViewRepresentable {
     let moved: (_ at: CGPoint) -> Void
     /// `true` = the finger lifted (choose); `false` = cancelled (let go).
     let ended: (_ commit: Bool) -> Void
+    /// ANY finger over the strip, content space, nil when it lifts (2026-09-05,
+    /// user: "as user drags fingers over the chips and scrolls on them they
+    /// should enlarge like a dock does") — the magnification wave rides this,
+    /// so it plays under a scroll, a tap and a scrub alike. Delivered by a
+    /// recognizer that never recognises (`Track`), so it takes nothing from
+    /// the pan or the buttons.
+    var finger: (_ at: CGPoint?) -> Void = { _ in }
 
     func makeUIView(context: Context) -> Marker {
         let v = Marker()
@@ -52,6 +59,7 @@ struct DockScrubCatcher: UIViewRepresentable {
         v.began = began
         v.moved = moved
         v.ended = ended
+        v.finger = finger
         return v
     }
 
@@ -60,6 +68,27 @@ struct DockScrubCatcher: UIViewRepresentable {
         v.began = began
         v.moved = moved
         v.ended = ended
+        v.finger = finger
+    }
+
+    /// A recognizer that only WATCHES: it reports every touch's location and
+    /// never leaves `.possible`, so UIKit's arbitration ignores it entirely —
+    /// the scroll's pan, the chips' buttons and the scrub's press all see the
+    /// same touches they always did.
+    final class Track: UIGestureRecognizer {
+        var onFinger: ((CGPoint?) -> Void)?
+        override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+            onFinger?(location(in: view))
+        }
+        override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+            onFinger?(location(in: view))
+        }
+        override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+            onFinger?(nil)
+        }
+        override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+            onFinger?(nil)
+        }
     }
 
     final class Press: UILongPressGestureRecognizer {
@@ -93,7 +122,9 @@ struct DockScrubCatcher: UIViewRepresentable {
         var began: ((CGPoint, @escaping (CGFloat) -> CGFloat) -> Void)?
         var moved: ((CGPoint) -> Void)?
         var ended: ((Bool) -> Void)?
+        var finger: ((CGPoint?) -> Void)?
         private var press: Press?
+        private var track: Track?
         private weak var host: UIScrollView?
 
         override func didMoveToWindow() {
@@ -109,7 +140,9 @@ struct DockScrubCatcher: UIViewRepresentable {
         private func attachIfNeeded() {
             if window == nil {
                 if let g = press { host?.removeGestureRecognizer(g) }
+                if let t = track { host?.removeGestureRecognizer(t) }
                 press = nil
+                track = nil
                 host = nil
                 return
             }
@@ -129,12 +162,25 @@ struct DockScrubCatcher: UIViewRepresentable {
             g.onEnded = { [weak self] commit in self?.ended?(commit) }
             scroll.addGestureRecognizer(g)
             press = g
+            let t = Track()
+            t.cancelsTouchesInView = false
+            t.delaysTouchesBegan = false
+            t.delaysTouchesEnded = false
+            t.delegate = self
+            t.onFinger = { [weak self] p in self?.finger?(p) }
+            scroll.addGestureRecognizer(t)
+            track = t
             host = scroll
         }
 
         override func gestureRecognizerShouldBegin(_ g: UIGestureRecognizer) -> Bool {
             guard g === press else { return true }
             return enabled?() ?? false
+        }
+
+        func gestureRecognizer(_ g: UIGestureRecognizer,
+                               shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+            g === track
         }
     }
 }

@@ -315,6 +315,12 @@ struct FeedScreen: View {
             // and a room that is fast and empty is not a trade worth making.
             // If the cost has to come back, it must come back as something
             // that cannot silently drop rows.
+            //
+            // IT CAME BACK THAT WAY on 2026-09-05 (prd §623): the projection is
+            // set again a few lines down, behind `sourceRoomLightColumns` —
+            // yes on iOS 26+, where it has only ever been correct, never on
+            // 18.x, where the report came from. The paragraph above stays
+            // because it is still the reason the gate exists.
             // **BOUNDED SINCE 2026-09-04 (prd §600) — AND THE 2026-08-14
             // REFUSAL ABOVE IS UNTOUCHED, BECAUSE THE HEAD NO LONGER READS
             // THIS QUERY.**
@@ -343,8 +349,46 @@ struct FeedScreen: View {
             var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == source },
                                            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
             d.fetchLimit = min(Self.sourceRoomFetchLimit, rowBudget ?? .max)
+            // **LIGHT COLUMNS ARE BACK, GATED BY OS (prd §623, 2026-09-05).**
+            // The 2026-08-31 note above is the whole reason this is a gate
+            // and not a plain assignment: `propertiesToFetch` + `#Predicate`
+            // is correct on iOS 26 (this project's simulator, months of ship,
+            // and c107a7de's seventeen days) and wrong on 18.6 (the field
+            // report). `sourceRoomLightColumns` says yes only where it has
+            // been seen correct — see its own doc for what the 18.6 runtime
+            // showed on 2026-09-05 — and the COUNT-vs-`things.count` safety
+            // net below this screen is the backstop for a device the gate
+            // misjudges: a short room recovers into the plain fetch rather
+            // than staying empty. The 18.x path is untouched: heavy, and
+            // known-good.
+            if Self.sourceRoomLightColumns { d.propertiesToFetch = Self.lightColumns }
             _things = Query(d)
         }
+    }
+
+    /// Whether a SOURCE room's `@Query` may project to `lightColumns`.
+    ///
+    /// iOS 26 and later only. The combination of `propertiesToFetch` and a
+    /// `#Predicate` on a live query hands back rows the predicate never
+    /// selected on iOS 18.6 (§592's field report, 2026-08-31), and is correct
+    /// on iOS 26 — same binary. Both halves were finally seen on the SAME
+    /// day, 2026-09-05, when an iOS 18.6 simulator runtime was installed
+    /// here for the first time (docs/perf-spec.md P1's unblock step 1): see
+    /// prd §623 for what each runtime showed. A deployment target of 18.0
+    /// means both branches ship.
+    ///
+    /// DEBUG override `-sourceRoomLightColumns YES|NO` forces the projection
+    /// on or off regardless of OS — it is how the 18.6 arm was driven, and
+    /// it is `#if DEBUG` so the shipped binary carries no knob that can turn
+    /// the defect back on.
+    static var sourceRoomLightColumns: Bool {
+        #if DEBUG
+        if let forced = UserDefaults.standard.object(forKey: "sourceRoomLightColumns") as? Bool {
+            return forced
+        }
+        #endif
+        if #available(iOS 26.0, *) { return true }
+        return false
     }
 
     /// The columns a room's derivations actually read.
@@ -12240,10 +12284,13 @@ private struct EmptyFeedPile: View {
     /// of them") — a flagship feature belongs fully unobstructed, not in the
     /// back row where the front row's -10pt overlap clips its bottom edge.
     /// Swapped places with YouTube, which moved back.
-    static let pileApps = ["Notion", "Strava", "ChatGPT", "Photos",
+    // RSS and Files in place of ChatGPT and Claude (user, 2026-09-05: "please
+    // replace claude and chatgpt with rss and folder picker") — the two
+    // doors that need no account and land rows in one tap.
+    static let pileApps = ["Notion", "Strava", "RSS", "Photos",
                            "YouTube", "Reddit",
                            "Gmail", "GitHub", "Farcaster", "Bluesky",
-                           "Claude", "Wallet"]
+                           "Files", "Wallet"]
 
     /// Deterministic per-tile jitter — no randomness in a view body; the
     /// same pile settles identically every launch (and the screen sweep

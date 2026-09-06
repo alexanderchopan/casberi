@@ -865,6 +865,9 @@ enum DS {
         static let standard = Animation.spring(duration: duration, bounce: 0.15)
         /// Slightly longer for the composer bubble (prototype: 260ms).
         static let bubble = Animation.spring(duration: 0.3, bounce: 0.2)
+        /// The dock's folder springing up out of its chip (2026-09-05) —
+        /// livelier than `standard`, because the overshoot IS the personality.
+        static let folder = Animation.spring(duration: 0.42, bounce: 0.32)
         /// Press feedback — faster and livelier than a transition, because a
         /// finger is on the glass and the response has to feel attached to
         /// it. One token so every pressed control dips on the same clock.

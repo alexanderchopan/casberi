@@ -115,6 +115,12 @@ final class ShellChrome {
     }
     var scrub: DockScrub? = nil
 
+    /// The centre, in window space, of the chip whose folder is open
+    /// (2026-09-05, the Mac-dock folder): `DockSpringRow` grows out of this
+    /// point and points its tail at it. Written by the strip on the tap that
+    /// opens a folder, before `openFolder` is set.
+    var folderAnchorX: CGFloat = 0
+
     /// The one transient message surface — the glass toast above the bar.
     /// Any screen can flash an outcome ("On your list", "Copied", a denial);
     /// the shell renders it, so feedback looks the same everywhere.

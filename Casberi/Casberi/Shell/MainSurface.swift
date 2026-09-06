@@ -493,15 +493,53 @@ struct MainSurface: View {
     /// social room, never both — so the two `if`s are alternatives, not a stack.
     @ViewBuilder
     private var roomControls: some View {
-        // **THE FOLDERS OPEN IN THE STRIP NOW (2026-09-05).** Until today a
-        // category chip's venues and the octopus's four doors each opened as a
-        // ROW ABOVE the dock (`CategoryVenueSwitcher`, `DoorsStrip`, drawn
-        // here), so a folder was a second row of chrome appearing over the
-        // first. They open IN PLACE: the tapped chip expands to hold its
-        // venues and its neighbours slide aside, one row ever — see
-        // `SourceChips.categoryCapsule` and its `doorsStrip`. What this band
-        // still carries above the dock is a FILTER within a room, which is a
-        // different kind of control: the social faces.
+        // **THE FOLDERS SPRING UP OUT OF THEIR CHIP (2026-09-05, the Mac-dock
+        // folder — see `DockSpringRow`).** A category's venues and the
+        // octopus's four doors each rise above the dock anchored to the chip
+        // that was tapped, on `DS.Motion.folder`'s spring; the chip itself
+        // never moves, so the word that closes the folder is where the finger
+        // just was. What else this band carries above the dock is a FILTER
+        // within a room, a different kind of control: the social faces.
+        if case .category(let category) = chrome.openFolder {
+            let venues = categoryVenues[category] ?? []
+            if venues.count >= CategoryFold.switcherFloor {
+                DockSpringRow(anchorX: chrome.folderAnchorX) { anchorLocalX in
+                    DockFolderRow(
+                        venues: CategoryFold.scopes(category: category, present: Set(venues)),
+                        standing: filter.source,
+                        compact: chrome.minimized && !showsRail,
+                        anchorLocalX: anchorLocalX) { venue in
+                        chrome.sourceRequest = venue
+                    }
+                }
+                .padding(.horizontal, DS.Space.s4)
+            }
+        }
+        if chrome.openFolder == .doors {
+            // The octopus's centre in window space — the rail's column on a
+            // regular width, then the bar's seat and half its own size.
+            DockSpringRow(anchorX: (isRegular ? PadLayout.railWidth : 0) + DSDock.clusterInset
+                          + DSDock.agentSize(minimized: chrome.minimized) / 2) { _ in
+                DoorsStrip(compact: chrome.minimized && !showsRail,
+                           onAgent: {
+                               chrome.openFolder = nil
+                               chrome.openComposer()
+                           },
+                           onApps: {
+                               chrome.openFolder = nil
+                               route.present(.apps)
+                           },
+                           onAddressBook: {
+                               chrome.openFolder = nil
+                               route.push(.addressBook)
+                           },
+                           onSettings: {
+                               chrome.openFolder = nil
+                               route.present(.settings)
+                           })
+            }
+            .padding(.horizontal, DS.Space.s4)
+        }
         if roomControlsShown {
         socialScopeRail
         // **VIBENET'S FACE RAIL IS FOLDED INTO ITS CROWN (prd §482
@@ -1354,29 +1392,7 @@ struct MainSurface: View {
                     onApps: { route.present(.apps) },
                     onSettings: { route.present(.settings) },
                     refreshSpin: chrome.refreshPulse,
-                    zoomNS: doorNS,
-                    // The octopus's folder, drawn INSIDE the strip when it is
-                    // open (2026-09-05) — the same in-place opening every
-                    // category chip gets. Built here because its four doors
-                    // are the shell's routes.
-                    doorsStrip: AnyView(
-                        DoorsStrip(compact: chrome.minimized && !showsRail,
-                                   onAgent: {
-                                       chrome.openFolder = nil
-                                       chrome.openComposer()
-                                   },
-                                   onApps: {
-                                       chrome.openFolder = nil
-                                       route.present(.apps)
-                                   },
-                                   onAddressBook: {
-                                       chrome.openFolder = nil
-                                       route.push(.addressBook)
-                                   },
-                                   onSettings: {
-                                       chrome.openFolder = nil
-                                       route.present(.settings)
-                                   }))) { label in
+                    zoomNS: doorNS) { label in
             // Compared against the CHIP, not the source: re-tapping the folded
             // Markets chip while standing in Kalshi is a re-tap of the chip
             // you're on, and comparing raw sources would read it as a switch
@@ -1393,7 +1409,7 @@ struct MainSurface: View {
             // it — including the folder of the room you are standing in, which
             // is the "make the second row go away" the amendment started from.
             if CategoryFold.isCategory(label) {
-                withAnimation(DS.Motion.standard) {
+                withAnimation(DS.Motion.folder) {
                     chrome.openFolder =
                         chrome.openFolder == .category(label) ? nil : .category(label)
                 }
@@ -1730,6 +1746,14 @@ struct MainSurface: View {
             chrome.sourceRequest = nil
             go(to: request)
             ChipMemory.visited(request)
+            // A pick closes the folder, like a stack — a beat later, once the
+            // ring has been seen arriving on the venue just chosen.
+            if chrome.openFolder != nil {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(380))
+                    withAnimation(DS.Motion.folder) { chrome.openFolder = nil }
+                }
+            }
         }
         // The keyboard walk stands down inside a pushed room (2026-07-31):
         // Settings and every bridge setup form are full of text fields, and a
