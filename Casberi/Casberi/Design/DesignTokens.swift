@@ -338,6 +338,12 @@ enum DS {
 
     static let glassBg     = Color.adaptive(dark: "#1c1c1e8c", light: "#f9f9f9b8")
     static let glassStroke = Color.adaptive(dark: "#ffffff1a", light: "#0000000f")
+    /// Every glass surface's OPAQUE form under Reduce Transparency (2026-09-06,
+    /// the inclusion pass). A plate one step off the page in both themes, so
+    /// the chrome still reads as chrome without sampling anything beneath
+    /// it. Alpha-free on purpose: the setting's whole request is that nothing
+    /// shows through.
+    static let glassOpaque = Color.adaptive(dark: "#1c1c1e", light: "#f2f2f7")
     static let scrim       = Color.adaptive(dark: "#00000080", light: "#0000004d")
 
     /// The light a glass PANEL is under — the top-leading fall-off that makes a

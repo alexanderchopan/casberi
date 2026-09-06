@@ -89,6 +89,11 @@ final class ShellChrome {
         if minimized != down {
             chromeSettledAt = Date.timeIntervalSinceReferenceDate
             withAnimation(DS.Motion.standard) { minimized = down }
+            // The fold reached an end (2026-09-06, the haptic grammar): the
+            // hysteresis crossing is the one moment the dock is felt to
+            // land, in either direction, and once per crossing by
+            // construction.
+            DSHaptic.snap()
         }
     }
 

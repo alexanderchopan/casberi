@@ -79,7 +79,10 @@ struct AddressIndexBar: View {
                         .dsText(.heading22)
                         .foregroundStyle(DS.textPrimary)
                         .frame(width: 46, height: 46)
-                        .background(.regularMaterial, in: Circle())
+                        // Through the token, not a raw material (2026-09-06):
+                        // the bubble is floating chrome, and the token is
+                        // where Reduce Transparency is honoured.
+                        .dsGlass(cornerRadius: 23)
                         .offset(x: -54, y: touchY - 23)
                         .transition(.opacity.combined(with: .scale(scale: 0.8)))
                         .allowsHitTesting(false)

@@ -1416,9 +1416,13 @@ struct MainSurface: View {
             // it — including the folder of the room you are standing in, which
             // is the "make the second row go away" the amendment started from.
             if CategoryFold.isCategory(label) {
+                let opening = chrome.openFolder != .category(label)
+                // The spring is felt when it opens, not when it shuts
+                // (2026-09-06, the haptic grammar) — the chip's own tick
+                // already marked the tap; this is the folder landing.
+                if opening { DSHaptic.spring() }
                 withAnimation(DS.Motion.folder) {
-                    chrome.openFolder =
-                        chrome.openFolder == .category(label) ? nil : .category(label)
+                    chrome.openFolder = opening ? .category(label) : nil
                 }
                 return
             }
@@ -1992,7 +1996,9 @@ struct MainSurface: View {
             dragCancel()
             return
         }
-        DSHaptic.selection()
+        // The card leaving is the heaviest thing the dock does, and it felt
+        // like a chip tick (2026-09-06, the haptic grammar).
+        DSHaptic.fly()
         // A swipe closes an open folder (spec 2026-09-05): you have left the
         // room it was about. A venue PICK does not — that goes through
         // `go(to:)` directly and keeps the folder open so the ring is seen

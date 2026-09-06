@@ -242,6 +242,13 @@ struct SourceChips: View {
     /// they pass, until the scroll goes idle. That is the dock's own
     /// picture: icons swelling as they pass the pointer.
     @State private var waveViewportX: CGFloat?
+    /// THE POINTER'S WAVE (2026-09-06, the iPad/Mac pass): a cursor resting
+    /// over the strip magnifies the chip under it exactly as a finger does
+    /// — which on a Mac is the whole of what "like the Mac dock" means. The
+    /// hover point arrives in the content `HStack`'s own space, the same
+    /// frame the chips are recorded in, so it feeds `wave(for:)` unchanged.
+    /// Never fires on touch.
+    @State private var hoverX: CGFloat?
     /// Re-renders the strip per scroll frame ONLY while a parked magnifier
     /// needs the chips' passing positions; zero cost otherwise.
     @State private var waveTick = 0
@@ -251,6 +258,7 @@ struct SourceChips: View {
         guard !reduceMotion, let frame = chipFrames.frames[label] else { return 1 }
         let x: CGFloat
         if let scrubX { x = scrubX }
+        else if let hoverX { x = hoverX }
         else if let waveViewportX { x = waveViewportX + viewport.offset }
         else { return 1 }
         _ = waveTick
@@ -372,6 +380,22 @@ struct SourceChips: View {
     /// now, so the padding that buys that position is the difference. Derived
     /// rather than spelled as a literal 16, so it stays correct if `fadeRamp`
     /// or the head's own metrics move.
+    /// The phone strip's melt, as a mask over the scroll's viewport — see
+    /// the `.mask` site. Fully opaque on the rail, whose melt is per chip.
+    @ViewBuilder private var stripMelt: some View {
+        if axis == .horizontal {
+            HStack(spacing: 0) {
+                Color.clear.frame(width: fadeClear)
+                LinearGradient(colors: [.clear, .black],
+                               startPoint: .leading, endPoint: .trailing)
+                    .frame(width: Self.fadeRamp)
+                Color.black
+            }
+        } else {
+            Color.black
+        }
+    }
+
     private var contentLead: CGFloat {
         // On the phone nothing in this view occupies the head's space any more
         // (§591) — the bar is on another layer — so the resting position is
@@ -460,6 +484,9 @@ struct SourceChips: View {
         // (and the whole View graph behind it) out of the capture.
         let clear = fadeClear
         let ramp = Self.fadeRamp
+        // Per-chip melt is the rail's; the phone masks the viewport — see
+        // `stripMelt`.
+        let melts = axis == .vertical
         // ScrollViewReader keeps the ACTIVE chip visible — a deep link
         // (casberi://feed/source/Zerion) can select a chip past the fold,
         // and a filter you can't see reads as no filter at all.
@@ -572,10 +599,20 @@ struct SourceChips: View {
                                         // chips" — no hard line either way, and
                                         // the dissolve still happens over the same
                                         // 24pt. Worth a look on a device.
+                                        // RAIL ONLY since 2026-09-06 — on the
+                                        // phone the melt is the viewport mask
+                                        // below (`stripMelt`), because a per-chip
+                                        // `opacity` never reached a word chip:
+                                        // its capsule is `dsGlass`, iOS 26 hoists
+                                        // glass above app content, and the chip
+                                        // slid under the octopus at full
+                                        // strength (measured: "rkets" standing
+                                        // out from under the bar in every room
+                                        // whose active chip was past the third).
                                         .visualEffect { content, proxy in
                                             let x = proxy.frame(in: .scrollView).minX
                                             return content.opacity(
-                                                Double(min(max((x - clear) / ramp, 0), 1)))
+                                                melts ? Double(min(max((x - clear) / ramp, 0), 1)) : 1)
                                         }
                                 }
                             }
@@ -589,6 +626,16 @@ struct SourceChips: View {
                         .padding(.trailing, DS.Space.s4)
                 }
                 .coordinateSpace(name: Self.contentSpace)
+                // A pointer over the strip — see `hoverX`. `.local` here IS
+                // the content space named above.
+                .onContinuousHover(coordinateSpace: .local) { phase in
+                    withAnimation(DS.Motion.press) {
+                        switch phase {
+                        case .active(let p): hoverX = p.x
+                        case .ended: hoverX = nil
+                        }
+                    }
+                }
                 // The scrub's input, on the content so it can find the
                 // scroll view above it — see `DockScrubCatcher`.
                 .background {
@@ -631,6 +678,17 @@ struct SourceChips: View {
                 // row regardless of how many chips it holds.
                 .fixedSize(horizontal: false, vertical: true)
             }
+            // THE MELT, ON THE VIEWPORT AGAIN (2026-09-06). The row-wide mask
+            // was deleted on 2026-08-24 because the head had moved INSIDE the
+            // scroll and a mask would dissolve it — and §591 then moved the
+            // phone's head to `RootShell`'s layer, so nothing in this scroll
+            // is the head any more and the mask's one objection is gone. It
+            // came back because the per-chip form it was replaced with does
+            // not reach a glass capsule (see the chip's own note). Same
+            // geometry: clear until `fadeClear` — the bar's trailing edge —
+            // then opaque over `fadeRamp`. A mask reaches hoisted glass the
+            // way the slab's own clip does; opacity does not.
+            .mask { stripMelt }
             .onAppear {
                 // Unconditional since §591: "All" is in this run now, so a
                 // strip restored on All must scroll to it like any other room.

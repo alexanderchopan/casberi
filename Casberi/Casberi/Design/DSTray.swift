@@ -437,8 +437,15 @@ extension View {
 /// sheet, and an inner `RoundedRectangle` would draw its own corners inside the
 /// system's — two radii, one of which is a guess at what iOS is doing this year.
 private struct DSGlassSheet: View {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
     var body: some View {
-        if #available(iOS 26.0, *), DSTrayGlass.useSystem {
+        if reduceTransparency {
+            // Reduce Transparency (2026-09-06): the pane is a plate. No
+            // material, no sheen, no depth — those are the light and shading
+            // of a pane, and there is no pane.
+            Rectangle().fill(DS.glassOpaque).ignoresSafeArea()
+        } else if #available(iOS 26.0, *), DSTrayGlass.useSystem {
             systemGlass
         } else {
             recipe

@@ -242,6 +242,10 @@ fileprivate final class BerryRainView: UIView {
         let count = roster.isEmpty ? BerryRain.dropCount(for: bounds.width)
                                    : BerryRain.tileCount(for: bounds.width)
         let drops = BerryRain.deal(seed: pulse, hue: hue, roster: roster, count: count)
+        // One shower, one pour, felt (2026-09-06, the haptic grammar) —
+        // here rather than at the pulse's writers, so a bump that deals no
+        // drops (no bounds yet) feels like nothing, which it is.
+        if !drops.isEmpty { DSHaptic.pour() }
         let start = CACurrentMediaTime()
         let scale = traitCollection.displayScale
         var batch: [CALayer] = []

@@ -231,6 +231,63 @@ if end < 0 or "go(to:" in branch[:end]:
     sys.exit(1)
 GATE
 
+# --- 8. the inclusion pass (2026-09-06, prd §630) ------------------------------
+# Every glass surface honours Reduce Transparency, through the token — so a raw
+# material anywhere else is a surface the setting cannot reach.
+strip_comments "Casberi/Casberi/Design/Glass.swift" > "$TMP/glass.nc"
+strip_comments "Casberi/Casberi/Design/DSTray.swift" > "$TMP/tray.nc"
+[ "$(grep -c 'accessibilityReduceTransparency' "$TMP/glass.nc")" -ge 3 ] \
+  || { echo "✗ Glass.swift no longer reads accessibilityReduceTransparency on each of"; \
+       echo "  dsGlass / dsGlassProminent / dsGlassBlob — a glass surface the setting can't reach."; fail=1; }
+grep -q 'accessibilityReduceTransparency' "$TMP/tray.nc" \
+  || { echo "✗ DSTray's pane no longer goes opaque under Reduce Transparency."; fail=1; }
+grep -q 'func dsOpaqueGlass' "$TMP/glass.nc" \
+  || { echo "✗ dsOpaqueGlass is gone — the opaque form of glass has no one recipe."; fail=1; }
+# Comment-stripped, because two files DOCUMENT a material they no longer draw.
+raw=""
+for f in $(grep -rl 'Material' Casberi/Casberi Casberi/Shared --include='*.swift' 2>/dev/null \
+           | grep -v 'Design/Glass.swift\|Design/DSTray.swift'); do
+  strip_comments "$f" | grep -q '\.regularMaterial\|\.ultraThinMaterial\|\.thinMaterial\|\.thickMaterial' \
+    && raw="$raw $f"
+done
+[ -z "$raw" ] \
+  || { echo "✗ a raw material outside Glass.swift/DSTray.swift — route it through dsGlass so"; \
+       echo "  Reduce Transparency reaches it: $raw"; fail=1; }
+# Money says its direction without colour: the pill's glyph and the down line's dash.
+strip_comments "Casberi/Casberi/Design/TokenChartView.swift" > "$TMP/chart.nc"
+grep -q 'static func directionGlyph' "$TMP/chart.nc" && grep -q 'static func lineDash' "$TMP/chart.nc" \
+  || { echo "✗ TokenChartStyle lost directionGlyph/lineDash — Differentiate Without Colour has no form."; fail=1; }
+[ "$(grep -c 'accessibilityDifferentiateWithoutColor' "$TMP/chart.nc")" -ge 2 ] \
+  || { echo "✗ the delta pill or the price line no longer reads Differentiate Without Colour."; fail=1; }
+# The dock's four feels, each fired from the moment it names.
+strip_comments "Casberi/Casberi/Design/Haptics.swift" > "$TMP/haptics.nc"
+for h in snap spring fly pour; do
+  grep -q "static func $h()" "$TMP/haptics.nc" \
+    || { echo "✗ DSHaptic.$h is gone — the dock's grammar lost a feel."; fail=1; }
+  grep -q "trigger: HapticBus.shared.$h" "$TMP/haptics.nc" \
+    || { echo "✗ HapticBus.$h has no sensoryFeedback mapping — a bump into silence."; fail=1; }
+done
+grep -q 'DSHaptic.snap()' "$TMP/chrome.nc" \
+  || { echo "✗ the fold's hysteresis crossing no longer snaps."; fail=1; }
+grep -q 'DSHaptic.spring()' "$TMP/main.nc" && grep -q 'DSHaptic.fly()' "$TMP/main.nc" \
+  || { echo "✗ MainSurface lost the folder's spring or the card's fly."; fail=1; }
+grep -q 'DSHaptic.pour()' "Casberi/Casberi/Design/BerryRain.swift" \
+  || { echo "✗ the rain no longer pours in the hand."; fail=1; }
+# A pointer magnifies the strip; a trackpad turns the page.
+grep -q 'onContinuousHover' "$TMP/chips.nc" && grep -q 'if let hoverX { x = hoverX }' "$TMP/chips.nc" \
+  || { echo "✗ the strip's hover no longer feeds the magnification wave — the Mac dock read is gone."; fail=1; }
+strip_comments "Casberi/Casberi/Shell/PageSwipeCatcher.swift" > "$TMP/pager.nc"
+grep -q 'allowedScrollTypesMask = .continuous' "$TMP/pager.nc" \
+  || { echo "✗ the pager's pan no longer accepts trackpad scrolls."; fail=1; }
+grep -q 'guard !touchDriven' "$TMP/pager.nc" \
+  || { echo "✗ the pager's scroll-event path lost its touchDriven guard — a finger's move"; \
+       echo "  would arrive twice (touches override + target-action)."; fail=1; }
+# No coach capsule for the dock (user, 2026-09-06: "we don't need that coach
+# tip about the bar, apple would never have that") — a tip above the dock is
+# the chrome explaining itself, which the Mac dock never does.
+grep -q 'DockCoach' "$TMP/root.nc" \
+  && { echo "✗ RootShell mounts a dock coach again — ruled out 2026-09-06 (prd §630)."; fail=1; }
+
 if [ $fail -eq 0 ]; then
   echo "✓ dock self-test"
 else

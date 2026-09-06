@@ -55,6 +55,18 @@ enum TokenChartStyle {
         isFlat(change) ? DS.textTertiary : accent(up: change >= 0, scheme: scheme)
     }
 
+    /// The direction said WITHOUT its colour (2026-09-06): the glyph a delta
+    /// wears under Differentiate Without Colour, and the dash a down line
+    /// takes. Two forms, one rule — a person who cannot read green from red
+    /// still reads a triangle and a broken line. The feed's own `Sparkline`
+    /// has dashed its down line since 2026-07-21 unconditionally; the price
+    /// chart and the delta pill do it on the setting, since there the colour
+    /// is paired with a signed number for everyone else.
+    static func directionGlyph(up: Bool) -> String { up ? "▲" : "▼" }
+    static func lineDash(change: Double, differentiate: Bool) -> [CGFloat] {
+        differentiate && !isFlat(change) && change < 0 ? [6, 4] : []
+    }
+
     static func priceText(_ p: Double) -> String {
         if p >= 1 { return String(format: "$%.2f", p) }
         if p >= 0.01 { return String(format: "$%.4f", p) }
@@ -115,6 +127,11 @@ struct TokenDeltaPill: View {
     /// deeper one.
     var onColor: Bool = false
     @Environment(\.colorScheme) private var scheme
+    /// Differentiate Without Colour (2026-09-06, the inclusion pass): the sign
+    /// already says the direction in text, and under the setting the pill
+    /// says it a second way — a glyph a person who cannot tell the two inks
+    /// apart reads before the sign. See `TokenChartStyle.directionGlyph`.
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var noColor
 
     var body: some View {
         let ink = TokenChartStyle.accent(change: change,
@@ -123,8 +140,10 @@ struct TokenDeltaPill: View {
         // `isFlat`'s 0.05% does for a price.
         let flat = points ? abs(change * 100) < 0.5 : TokenChartStyle.isFlat(change)
         let loud = solid && !flat
-        let value = points ? Self.pointsText(change, flat: flat)
-                           : TokenChartStyle.changeText(change)
+        let number = points ? Self.pointsText(change, flat: flat)
+                            : TokenChartStyle.changeText(change)
+        let value = noColor && !flat
+            ? "\(TokenChartStyle.directionGlyph(up: change > 0)) \(number)" : number
         let text = label.isEmpty ? value : "\(value) · \(label)"
         Text(text)
             .dsText(compact ? .label12 : .subhead13)
@@ -233,6 +252,7 @@ struct TokenChartPlot: View {
     @State private var pulsing = false
     @State private var marksLanded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var noColor
 
     var body: some View {
         // x is Double, not the enumeration's Int: an event mark lands between
@@ -243,7 +263,11 @@ struct TokenChartPlot: View {
                 .interpolationMethod(chart.coarse ? .linear : .catmullRom)
                 .foregroundStyle(accent)
                 .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round,
-                                       lineJoin: .round))
+                                       lineJoin: .round,
+                                       // A down line breaks under Differentiate
+                                       // Without Colour — `TokenChartStyle.lineDash`.
+                                       dash: TokenChartStyle.lineDash(
+                                           change: chart.change, differentiate: noColor)))
             AreaMark(x: .value("t", Double(i)), y: .value("price", close))
                 .interpolationMethod(chart.coarse ? .linear : .catmullRom)
                 .foregroundStyle(LinearGradient(

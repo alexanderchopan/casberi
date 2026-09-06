@@ -62,38 +62,32 @@ extension View {
     /// `DSGlassMetrics.tintDose` for how much, and `RootShell`'s agent-bar call
     /// for when. nil is the neutral default and stays the answer everywhere the
     /// hue would be decoration rather than information.
-    @ViewBuilder
     func dsGlass(cornerRadius: CGFloat,
                  variant: DSGlassVariant = .regular,
                  tint: Color? = nil,
                  glassID: String? = nil, in namespace: Namespace.ID? = nil) -> some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        if #available(iOS 26.0, *) {
-            let base: Glass = variant == .clear ? .clear : .regular
-            let glass = (tint.map { base.tint($0.opacity(DSGlassMetrics.tintDose)) } ?? base)
-                .interactive()
-            if let glassID, let namespace {
-                self
-                    .glassEffect(glass, in: shape)
-                    .glassEffectID(glassID, in: namespace)
-            } else {
-                self.glassEffect(glass, in: shape)
-            }
-        } else {
-            self
-                .background(.ultraThinMaterial, in: shape)
-                // `clear` skips the frosting fill — the material alone, so the
-                // picture behind it stays a picture.
-                .background(variant == .clear ? Color.clear : DS.glassBg, in: shape)
-                .background(tint?.opacity(DSGlassMetrics.tintDose) ?? Color.clear, in: shape)
-                .overlay(shape.strokeBorder(DS.glassStroke, lineWidth: 1))
-                .clipShape(shape)
-                // A lighter cast over pixels: the shadow exists to separate the
-                // control from a busy page, and over a photo on black ground
-                // there is nothing to separate it from.
-                .shadow(color: variant == .clear ? DS.glassShadowClear : DS.glassShadow,
-                        radius: 12, x: 0, y: 8)
-        }
+        modifier(DSGlassModifier(cornerRadius: cornerRadius, variant: variant, tint: tint,
+                                 glassID: glassID, namespace: namespace))
+    }
+
+    /// The OPAQUE form of a glass surface — what every `dsGlass*` call draws
+    /// when Reduce Transparency is on (2026-09-06, the inclusion pass).
+    ///
+    /// The same shape, the same stroke and the same shadow as the material
+    /// recipe, with a plate (`DS.glassOpaque`) where the lens was. Nothing
+    /// samples what is beneath it, which is the whole of what the setting
+    /// asks. The tint keeps its dose so a room-tinted bar still says which
+    /// room it is in. Glass unions and morphs do not survive the swap — a
+    /// plate cannot fuse with a plate — and that is the system's own trade
+    /// (its tab bars go flat under the same setting).
+    func dsOpaqueGlass<S: InsettableShape>(_ shape: S, tint: Color? = nil,
+                                          shadow: Color = DS.glassShadow) -> some View {
+        self
+            .background(DS.glassOpaque, in: shape)
+            .background(tint?.opacity(DSGlassMetrics.tintDose) ?? Color.clear, in: shape)
+            .overlay(shape.strokeBorder(DS.glassStroke, lineWidth: 1))
+            .clipShape(shape)
+            .shadow(color: shadow, radius: 12, x: 0, y: 8)
     }
 
     /// Two glass shapes that are ONE substance (2026-08-06).
@@ -154,6 +148,54 @@ extension View {
     }
 }
 
+/// `dsGlass`'s body, as a modifier so it can read the one environment value
+/// that changes what glass IS: `accessibilityReduceTransparency` (2026-09-06).
+/// The setting is a person's, set in Accessibility, and until this pass not
+/// one of the app's glass surfaces honoured it — the dock, the agent bar,
+/// the doors, the folder rows and the tray all kept lensing the feed under a
+/// setting whose whole point is that they should not.
+private struct DSGlassModifier: ViewModifier {
+    let cornerRadius: CGFloat
+    let variant: DSGlassVariant
+    let tint: Color?
+    let glassID: String?
+    let namespace: Namespace.ID?
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        if reduceTransparency {
+            content.dsOpaqueGlass(shape, tint: tint)
+        } else if #available(iOS 26.0, *) {
+            let base: Glass = variant == .clear ? .clear : .regular
+            let glass = (tint.map { base.tint($0.opacity(DSGlassMetrics.tintDose)) } ?? base)
+                .interactive()
+            if let glassID, let namespace {
+                content
+                    .glassEffect(glass, in: shape)
+                    .glassEffectID(glassID, in: namespace)
+            } else {
+                content.glassEffect(glass, in: shape)
+            }
+        } else {
+            content
+                .background(.ultraThinMaterial, in: shape)
+                // `clear` skips the frosting fill — the material alone, so the
+                // picture behind it stays a picture.
+                .background(variant == .clear ? Color.clear : DS.glassBg, in: shape)
+                .background(tint?.opacity(DSGlassMetrics.tintDose) ?? Color.clear, in: shape)
+                .overlay(shape.strokeBorder(DS.glassStroke, lineWidth: 1))
+                .clipShape(shape)
+                // A lighter cast over pixels: the shadow exists to separate the
+                // control from a busy page, and over a photo on black ground
+                // there is nothing to separate it from.
+                .shadow(color: variant == .clear ? DS.glassShadowClear : DS.glassShadow,
+                        radius: 12, x: 0, y: 8)
+        }
+    }
+}
+
 @available(iOS 26.0, *)
 private struct DSGlassMaterialize: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -167,13 +209,25 @@ extension View {
 
     /// Tinted prominent glass — the one primary action sitting on a glass
     /// surface (the composer's Save). Falls back to a flat tint fill.
-    @ViewBuilder
     func dsGlassProminent(tint: Color, cornerRadius: CGFloat) -> some View {
+        modifier(DSGlassProminent(tint: tint, cornerRadius: cornerRadius))
+    }
+}
+
+private struct DSGlassProminent: ViewModifier {
+    let tint: Color
+    let cornerRadius: CGFloat
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        if #available(iOS 26.0, *) {
-            self.glassEffect(.regular.tint(tint).interactive(), in: shape)
+        // The flat tint IS the opaque form here — a primary action's colour
+        // at full strength — so Reduce Transparency takes the pre-26 path.
+        if #available(iOS 26.0, *), !reduceTransparency {
+            content.glassEffect(.regular.tint(tint).interactive(), in: shape)
         } else {
-            self.background(tint, in: shape)
+            content.background(tint, in: shape)
         }
     }
 }
@@ -582,12 +636,22 @@ extension View {
     /// material's own lensing and specular edge over it, so it takes no tint of
     /// its own. Passing the accent through `dsGlass` instead would wash it to
     /// 20% and lose the one cue that has to be unmistakable.
-    @ViewBuilder
     func dsGlassBlob() -> some View {
-        if #available(iOS 26.0, *) {
-            self.glassEffect(.regular.interactive(), in: Capsule(style: .continuous))
+        modifier(DSGlassBlob())
+    }
+}
+
+private struct DSGlassBlob: ViewModifier {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        // The shape under this is already the accent at full strength, so its
+        // opaque form is itself — the lens is the only thing to take away.
+        if #available(iOS 26.0, *), !reduceTransparency {
+            content.glassEffect(.regular.interactive(), in: Capsule(style: .continuous))
         } else {
-            self
+            content
         }
     }
 }

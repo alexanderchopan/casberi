@@ -4469,6 +4469,7 @@ struct GenFrontPage: View {
     let el: GenEl
     let els: GenEls
     let chapters: Set<String>
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var noColor
     /// Modules that said exactly this last time (prd §386d) — see the Stack
     /// branch's own note. Defaulted so the `qualifies`-only callers and any
     /// non-brief front page need not know about it.
@@ -4840,7 +4841,9 @@ struct GenFrontPage: View {
             let up = el.str(1).hasPrefix("+")
             let flat = el.str(1).isEmpty
             miniSpark(vals, ink: flat ? DS.textTertiary
-                      : TokenChartStyle.accent(change: up ? 1 : -1, scheme: scheme))
+                      : TokenChartStyle.accent(change: up ? 1 : -1, scheme: scheme),
+                      dash: TokenChartStyle.lineDash(change: flat ? 0 : up ? 1 : -1,
+                                                     differentiate: noColor))
         } else if let el = members.compactMap({ els[$0] }).first(where: { $0.comp == "ValueSpark" }),
                   genCSVDoubles(el.str(2)).count >= 4 {
             miniBars(genCSVDoubles(el.str(2)))
@@ -4857,7 +4860,7 @@ struct GenFrontPage: View {
     /// The sparkline DRAWS ITSELF on, left to right — the same arrival the
     /// wallet headline's own curve plays, at the miniature's dose. A line
     /// whose shape is the data must not simply be there (§299).
-    private func miniSpark(_ vals: [Double], ink: Color) -> some View {
+    private func miniSpark(_ vals: [Double], ink: Color, dash: [CGFloat] = []) -> some View {
         let lo = vals.min() ?? 0, hi = vals.max() ?? 1
         let span = max(hi - lo, 0.0001)
         return Canvas { ctx, size in
@@ -4869,7 +4872,8 @@ struct GenFrontPage: View {
                 else { path.addLine(to: CGPoint(x: x, y: y)) }
             }
             ctx.stroke(path, with: .color(ink),
-                       style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                       style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round,
+                                          dash: dash))
         }
         .frame(width: 68, height: 28)
         .mask(alignment: .leading) {
@@ -5526,6 +5530,7 @@ private extension View {
 private struct GenDayLede: View {
     let el: GenEl
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var noColor
 
     /// The sentence with its figure accented — and the plain sentence
     /// whenever the accent can't be placed with certainty. `range(of:)`
@@ -5539,8 +5544,12 @@ private struct GenDayLede: View {
         guard !figure.isEmpty, direction == "up" || direction == "down",
               let range = text.range(of: figure) else { return Text(text) }
         let accent = TokenChartStyle.accent(change: direction == "up" ? 1 : -1, scheme: scheme)
+        // The one delta in the app whose direction lives in its COLOUR alone
+        // — the figure is a bare number inside a sentence — so Differentiate
+        // Without Colour gives it the glyph (2026-09-06).
+        let glyph = noColor ? "\(TokenChartStyle.directionGlyph(up: direction == "up")) " : ""
         return Text(String(text[text.startIndex..<range.lowerBound]))
-            + Text(figure).foregroundStyle(accent)
+            + Text(glyph + figure).foregroundStyle(accent)
             + Text(String(text[range.upperBound...]))
     }
 

@@ -35,6 +35,12 @@ final class HapticBus {
     var success = 0
     var failure = 0
     var lift = 0
+    /// The dock's own four (2026-09-06, the haptic grammar pass) — see
+    /// `DSHaptic.snap/spring/fly/pour`.
+    var snap = 0
+    var spring = 0
+    var fly = 0
+    var pour = 0
     private init() {}
 }
 
@@ -56,6 +62,26 @@ enum DSHaptic {
     /// Picking up a board card — heavier than the selection ticks the same
     /// drag makes crossing slots, so the pickup itself is felt.
     static func lift() { HapticBus.shared.lift += 1 }
+
+    // MARK: - The dock's grammar (2026-09-06)
+    //
+    // The dock is the signature interaction (prd §620/§621), and until this
+    // pass its four moments all felt the same `selection` tick or nothing:
+    // the fold settling, a folder springing up, a room card flying off, the
+    // pull-to-refresh rain. Four moments, four feels, each lighter or softer
+    // in proportion to what the eye sees — a snap is small and crisp, a
+    // spring is soft, a fly is the heaviest thing the dock does, a pour is
+    // soft and a beat long. None of them replaces a tick that names a
+    // CHOICE (a chip, a venue): those stay `selection`.
+
+    /// The fold reached an end — the dock is down, or up again.
+    static func snap() { HapticBus.shared.snap += 1 }
+    /// A folder sprang out of its chip.
+    static func spring() { HapticBus.shared.spring += 1 }
+    /// A room card left the screen — the swipe committed.
+    static func fly() { HapticBus.shared.fly += 1 }
+    /// The refresh rain dealt.
+    static func pour() { HapticBus.shared.pour += 1 }
 }
 
 /// `dsSensoryFeedback()` behind a condition, for a view that is sometimes the
@@ -86,6 +112,18 @@ struct SheetHaptics: ViewModifier {
             .sensoryFeedback(trigger: HapticBus.shared.lift) { _, _ in
                 active ? .impact(weight: .medium) : nil
             }
+            .sensoryFeedback(trigger: HapticBus.shared.snap) { _, _ in
+                active ? .impact(weight: .light, intensity: 0.55) : nil
+            }
+            .sensoryFeedback(trigger: HapticBus.shared.spring) { _, _ in
+                active ? .impact(flexibility: .soft, intensity: 0.7) : nil
+            }
+            .sensoryFeedback(trigger: HapticBus.shared.fly) { _, _ in
+                active ? .impact(weight: .medium, intensity: 0.85) : nil
+            }
+            .sensoryFeedback(trigger: HapticBus.shared.pour) { _, _ in
+                active ? .impact(flexibility: .soft, intensity: 0.5) : nil
+            }
     }
 }
 
@@ -99,5 +137,13 @@ extension View {
             .sensoryFeedback(.success, trigger: HapticBus.shared.success)
             .sensoryFeedback(.error, trigger: HapticBus.shared.failure)
             .sensoryFeedback(.impact(weight: .medium), trigger: HapticBus.shared.lift)
+            .sensoryFeedback(.impact(weight: .light, intensity: 0.55),
+                             trigger: HapticBus.shared.snap)
+            .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.7),
+                             trigger: HapticBus.shared.spring)
+            .sensoryFeedback(.impact(weight: .medium, intensity: 0.85),
+                             trigger: HapticBus.shared.fly)
+            .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.5),
+                             trigger: HapticBus.shared.pour)
     }
 }

@@ -11801,7 +11801,51 @@ struct FeedScreen: View {
     /// headers ("6 events", not "6 things") via the one countLabel rule.
     /// Takes the render's `visible` (the Feed-freeze rule) instead of
     /// re-deriving it.
+    @ViewBuilder
     private func caughtUpFooter(_ rows: [Thing]) -> some View {
+        // A THIN room closes with a shape, not a line (2026-09-06, the
+        // world-class pass): a source that has landed one or two things
+        // used to draw its rows and then the same one-line footer the All
+        // room ends on, and at that count the footer was most of the
+        // screen. The mark and the count say what this room is and how far
+        // along it is; the second line is the one true thing about how it
+        // grows — no "syncing", no "check back", nothing §83 forbids.
+        if !reachedFetchCeiling, source != "All", !Pinboard.isPinnedRoom(source),
+           rows.count <= Self.thinRoomRows {
+            // A ROW's shape, not a centred stack (measured 2026-09-06 on the
+            // demo's Cursor room): a stacked mark-over-two-lines footer sat
+            // ~60pt tall under three rows and its words ended beneath the
+            // dock's melt, so the room closed on an orphan mark. One row of
+            // the list's own anatomy — mark left, two lines right — closes
+            // above the dock without a scroll.
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                BridgeIcon(name: source, size: DS.Mark.row)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("That's everything from \(source) so far · \(countLabel(rows))")
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textSecondary)
+                    Text("New things from \(source) land here.")
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textTertiary)
+                }
+                .multilineTextAlignment(.leading)
+                Spacer(minLength: 0)
+            }
+            .padding(.top, DS.Space.s3)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .accessibilityElement(children: .combine)
+        } else {
+            caughtUpLine(rows)
+        }
+    }
+
+    /// Three rows or fewer is a room still arriving. Four is where the rows
+    /// carry the screen on their own.
+    static let thinRoomRows = 3
+
+    private func caughtUpLine(_ rows: [Thing]) -> some View {
         // At the fetch bound this is NOT the end of the corpus, and saying
         // "that's everything" there would be the §83 fake status in the one
         // place a person is deciding whether anything older exists. The room

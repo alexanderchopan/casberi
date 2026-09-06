@@ -70,6 +70,49 @@ struct PageSwipeCatcher: UIViewRepresentable {
         var onMoved: ((_ translation: CGFloat) -> Void)?
         var onEnded: ((_ translation: CGFloat, _ predicted: CGFloat) -> Void)?
         var onCancelled: (() -> Void)?
+        /// A finger is driving this recognition — the touch overrides below
+        /// deliver, and the scroll-event path stays quiet.
+        private var touchDriven = false
+
+        /// A TRACKPAD swipe turns the page too (2026-09-06, the iPad/Mac
+        /// pass). A pan recognizer accepts indirect scroll events once
+        /// `allowedScrollTypesMask` says so, but those events never reach
+        /// the `touches*` overrides this class delivers from — so they are
+        /// delivered from target-action, which is exactly the path the
+        /// Home board found intermittent on SwiftUI-owned views. This
+        /// recognizer sits on the WINDOW, not a SwiftUI view, and the
+        /// touch path keeps its own delivery; `touchDriven` is the guard
+        /// that keeps a finger's move from arriving twice.
+        override init(target: Any?, action: Selector?) {
+            super.init(target: target, action: action)
+            allowedScrollTypesMask = .continuous
+            addTarget(self, action: #selector(scrolled))
+        }
+
+        @objc private func scrolled() {
+            guard !touchDriven else { return }
+            let t = translation(in: view).x
+            switch state {
+            case .changed:
+                onMoved?(t)
+            case .ended:
+                onEnded?(t, t + velocity(in: view).x * 0.25)
+            case .cancelled, .failed:
+                onCancelled?()
+            default:
+                break
+            }
+        }
+
+        override func reset() {
+            super.reset()
+            touchDriven = false
+        }
+
+        override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+            touchDriven = true
+            super.touchesBegan(touches, with: event)
+        }
 
         override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
             super.touchesMoved(touches, with: event)
