@@ -100,17 +100,14 @@ struct SourceChips: View {
     var minimized: Bool = false
 
     private var folds: Bool { minimized && axis == .horizontal }
-    /// The chip's own icon; the doors beside it are deliberately fixed at 46.
-    /// A capsule chip takes this as its HEIGHT, so every chip in the strip
-    /// shares one vertical rhythm and nothing above or below this view — the
-    /// leading-dissolve mask, the doors, the inset the shell reserves — has to
-    /// know that some chips are now wider than they are tall.
-    private var iconSize: CGFloat { folds ? 40 : 46 }
-    /// The chip's outer slot, ring included. A capsule chip uses this for
-    /// height only and takes its width from its own word.
-    private var chipSize: CGFloat { folds ? 48 : 56 }
-    /// The air inside a capsule, left and right of its content.
-    private var capsulePadH: CGFloat { folds ? DS.Space.s2 : DS.Space.s3 }
+    /// The fold as a POSITION, 0…1 (2026-09-05, `ShellChrome.fold`): the rail
+    /// never folds, so on the vertical axis this is a constant 0. Every size in
+    /// this strip is read off `DSDock`'s fold form, so the chips and the bar
+    /// beside them cannot be different sizes at any point of the travel.
+    private var fold: CGFloat { axis == .horizontal ? chrome.fold : 0 }
+    private var iconSize: CGFloat { DSDock.agentSize(fold: fold) }
+    private var chipSize: CGFloat { DSDock.chipFrame(fold: fold) }
+    private var capsulePadH: CGFloat { DSDock.lerp(DS.Space.s3, DS.Space.s2, fold) }
 
     /// The gap between chips, tightened from `s3` (14) when category chips
     /// became capsules.
@@ -145,6 +142,12 @@ struct SourceChips: View {
     /// "appsDoor" transition and the avatar's "settingsDoor" transition
     /// share one namespace under different ids, same as before the move.
     var zoomNS: Namespace.ID? = nil
+    /// The octopus's folder — the four doors that are not a feed — drawn
+    /// INSIDE the strip when `ShellChrome.openFolder == .doors` (2026-09-05),
+    /// in the leading seat, the way a category chip opens its venues in place.
+    /// Built by `MainSurface`, whose routes the doors are; horizontal only
+    /// (the rail draws its own doors in its head).
+    var doorsStrip: AnyView? = nil
     let onTap: (String) -> Void
 
     @Environment(BridgeStore.self) private var bridges
@@ -189,6 +192,33 @@ struct SourceChips: View {
     @Namespace private var doorGlassNS
     /// Last time the catalogue door actually opened — see `openApps()`.
     @State private var lastAppsOpen: TimeInterval = 0
+
+    // MARK: - Scrub (2026-09-05, `DockScrubCatcher`)
+
+    /// The chip under a scrubbing finger — lifted, and named above the slab.
+    @State private var scrubbing: String?
+    /// Every chip's frame in the strip's CONTENT space, recorded as laid out.
+    /// Content space, not the viewport's: these change when the strip folds
+    /// or a folder opens, never when it scrolls, so recording them costs one
+    /// write per chip per layout rather than one per scroll frame.
+    @State private var chipFrames: [String: CGRect] = [:]
+    private static let contentSpace = "dockStripContent"
+    /// A tap fired by a scrub is one tap, not two: the chip's own `Button`
+    /// cannot fire after a scrub (UIKit cancels its touch when the press
+    /// begins), but the guard costs nothing and says so.
+    @State private var scrubCommittedAt: TimeInterval = 0
+    /// The catcher's content→window converter, held for the scrub's length.
+    @State private var scrubWindowConverter = ScrubConverter()
+
+    /// How far the selection leans toward the neighbour a swipe is heading
+    /// for (2026-09-05, `ShellChrome.pageDragProgress`): one chip's pitch per
+    /// whole page, so the ring is seen leaving for the chip the turn will
+    /// land on before the finger lets go. Horizontal only, and never under
+    /// Reduce Motion, where the travelling selection itself is off.
+    private var slide: CGFloat {
+        guard axis == .horizontal, !reduceMotion else { return 0 }
+        return chrome.pageDragProgress * (chipSize + Self.chipGap)
+    }
 
     /// One value both doors key on, so the pair can't drift onto two different
     /// unions and quietly stop being one shape.
@@ -252,7 +282,7 @@ struct SourceChips: View {
         // screen. Without the subtraction every chip rests 15pt further right
         // than it should and the melt begins 15pt late.
         axis == .vertical ? DS.Space.s4 + chipSize
-                          : DSDock.agentSeat(minimized: folds) - DSDock.slabInset
+                          : DSDock.agentSeat(fold: fold) - DSDock.slabInset
     }
     /// Where a chip has finished dissolving — fully gone by here.
     ///
@@ -445,8 +475,26 @@ struct SourceChips: View {
                         // sliding under them.
                         DSGlassContainer(spacing: Self.chipGap) {
                             HStack(spacing: Self.chipGap) {
+                                // THE OCTOPUS'S FOLDER, IN PLACE (2026-09-05).
+                                // It opens in the leading seat — the doors
+                                // beside the bar that raised them — and the
+                                // run slides aside to make room, exactly as
+                                // a category's venues open inside their chip.
+                                if chrome.openFolder == .doors, let doors = doorsStrip {
+                                    doors
+                                        .transition(reduceMotion ? .opacity
+                                            : .scale(scale: 0.8, anchor: .leading)
+                                                .combined(with: .opacity))
+                                }
                                 ForEach(scrollingLabels, id: \.self) { label in
                                     chip(label)
+                                        // Where this chip is, for the scrub
+                                        // — see `chipFrames`.
+                                        .onGeometryChange(for: CGRect.self) { proxy in
+                                            proxy.frame(in: .named(Self.contentSpace))
+                                        } action: { frame in
+                                            chipFrames[label] = frame
+                                        }
                                         // THE MELT, PER CHIP. The old
                                         // `.mask(leadingFade)` hung on the whole
                                         // ScrollView, which worked only while the
@@ -489,6 +537,16 @@ struct SourceChips: View {
                         // position is expressed relative to it.
                         .padding(.leading, contentLead)
                         .padding(.trailing, DS.Space.s4)
+                }
+                .coordinateSpace(name: Self.contentSpace)
+                // The scrub's input, on the content so it can find the
+                // scroll view above it — see `DockScrubCatcher`.
+                .background {
+                    DockScrubCatcher(
+                        enabled: { true },
+                        began: { at, toWindowX in scrubBegan(at: at, toWindowX: toWindowX) },
+                        moved: { at in scrubMoved(at: at) },
+                        ended: { commit in scrubEnded(commit: commit) })
                 }
                 // **PINNED SECTION HEADERS UNDID THE STRIP'S OWN HEIGHT
                 // (found 2026-08-24, hours after `LazyHStack`+`pinnedViews`
@@ -544,7 +602,62 @@ struct SourceChips: View {
                 // wherever it was, with the lit chip off screen.
                 withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
             }
+            // A folder opening in place grows its chip to the trailing side,
+            // so the chip is brought to the leading edge and its venues get
+            // the run's whole width to open into.
+            .onChange(of: chrome.openFolder) { _, folder in
+                guard case .category(let label) = folder else { return }
+                withAnimation(DS.Motion.standard) { proxy.scrollTo(label, anchor: .leading) }
+            }
         }
+    }
+
+    // MARK: - Scrub
+
+    /// The chip nearest a content-space x — nearest by centre, so a finger
+    /// in the gap between two chips still names one.
+    private func scrubTarget(x: CGFloat) -> (label: String, midX: CGFloat)? {
+        var best: (label: String, midX: CGFloat, distance: CGFloat)?
+        for (label, frame) in chipFrames {
+            let d = abs(frame.midX - x)
+            if let b = best, d >= b.distance { continue }
+            best = (label, frame.midX, d)
+        }
+        return best.map { ($0.label, $0.midX) }
+    }
+
+    private func scrubBegan(at point: CGPoint, toWindowX: @escaping (CGFloat) -> CGFloat) {
+        scrubWindowConverter.value = toWindowX
+        guard let hit = scrubTarget(x: point.x) else { return }
+        DSHaptic.lift()
+        withAnimation(DS.Motion.standard) {
+            scrubbing = hit.label
+            chrome.scrub = ShellChrome.DockScrub(label: hit.label, windowX: toWindowX(hit.midX))
+        }
+    }
+
+    private func scrubMoved(at point: CGPoint) {
+        guard let hit = scrubTarget(x: point.x), hit.label != scrubbing,
+              let toWindowX = scrubWindowConverter.value else { return }
+        DSHaptic.selection()
+        withAnimation(DS.Motion.standard) {
+            scrubbing = hit.label
+            chrome.scrub = ShellChrome.DockScrub(label: hit.label, windowX: toWindowX(hit.midX))
+        }
+    }
+
+    private func scrubEnded(commit: Bool) {
+        let chosen = scrubbing
+        withAnimation(DS.Motion.standard) {
+            scrubbing = nil
+            chrome.scrub = nil
+        }
+        scrubWindowConverter.value = nil
+        guard commit, let chosen else { return }
+        scrubCommittedAt = Date.timeIntervalSinceReferenceDate
+        DSHaptic.selection()
+        tapped = chosen
+        withAnimation(DS.Motion.standard) { onTap(chosen) }
     }
     // `head` was DELETED in §591 along with the `Section` that pinned it. It
     // drew "All" in the strip's fixed head; "All" scrolls now, and the fixed
@@ -770,29 +883,109 @@ struct SourceChips: View {
     /// capsules under a ring system; the switcher is pills inside a glass bar),
     /// and a category chip and the room pill under it are the same spine —
     /// looking related is correct.
+    ///
+    /// **A FOLDER OPENS IN PLACE (2026-09-05).** Tapping a category used to
+    /// put its venues in a second row above the dock (`CategoryVenueSwitcher`
+    /// in `MainSurface.roomControls`) — chrome appearing over chrome, and the
+    /// §482 rule ("never four rows of chips") a policy rather than a shape.
+    /// The chip itself grows now: its word stays at the leading end and the
+    /// venues' marks unfold after it inside the same capsule, the neighbours
+    /// slide aside, and picking a venue is the ring travelling INSIDE the open
+    /// chip. One row, ever, and the row is the folder. The strong fill stands
+    /// down while the folder is open — the lit venue's ring is the selection
+    /// then, and a fill under it would be two claims about one fact (§359).
+    /// On the rail the venues stack under the word instead, since the rail's
+    /// chips have a fixed width and room to spare downward.
     @ViewBuilder
     private func categoryCapsule(_ label: String) -> some View {
-        let isOn = label == active
-        Text(label)
-            .dsText(.label12)
-            .fontWeight(.semibold)
-            // `.white`, not `DS.textPrimary`: this sits on the accent, which is
-            // a dark blue in BOTH themes — the same blue the composer's lede
-            // card wears (one token, `DS.tint`, user 2026-08-16: "make them
-            // same color as the blue we now use in the composer").
-            .foregroundStyle(isOn ? .white : DS.textPrimary)
-            .lineLimit(1)
-            // Nothing to scale on the phone: the capsule is what gives, so
-            // the word keeps its size all the way up the Dynamic Type ramp
-            // and the strip simply scrolls further. On the rail the width
-            // is fixed, so the word gives instead — the same trade "All"
-            // makes inside its circle, and the reason this floor is 0.6
-            // rather than the 0.55 that produced the sizes this pass is
-            // fixing: here it applies to a 68pt box, not a 46pt circle.
-            .minimumScaleFactor(axis == .vertical ? 0.6 : 1)
-            .padding(.horizontal, capsulePadH)
-            .frame(width: axis == .vertical ? Self.railChipWidth : nil, height: iconSize)
-            .wordChipFill(cornerRadius: iconSize / 2, active: isOn, ns: selectionNS)
+        let open = chrome.openFolder == .category(label)
+        let isOn = label == active && !open
+        let venues = open
+            ? CategoryFold.scopes(category: label, present: Set(categoryVenues[label] ?? []))
+            : []
+        let layout = axis == .vertical
+            ? AnyLayout(VStackLayout(spacing: DS.Space.s1))
+            : AnyLayout(HStackLayout(spacing: DS.Space.s1))
+        layout {
+            Text(label)
+                .dsText(.label12)
+                .fontWeight(.semibold)
+                // `.white`, not `DS.textPrimary`: this sits on the accent, which is
+                // a dark blue in BOTH themes — the same blue the composer's lede
+                // card wears (one token, `DS.tint`, user 2026-08-16: "make them
+                // same color as the blue we now use in the composer").
+                .foregroundStyle(isOn ? .white : DS.textPrimary)
+                .lineLimit(1)
+                // Nothing to scale on the phone: the capsule is what gives, so
+                // the word keeps its size all the way up the Dynamic Type ramp
+                // and the strip simply scrolls further. On the rail the width
+                // is fixed, so the word gives instead — the same trade "All"
+                // makes inside its circle, and the reason this floor is 0.6
+                // rather than the 0.55 that produced the sizes this pass is
+                // fixing: here it applies to a 68pt box, not a 46pt circle.
+                .minimumScaleFactor(axis == .vertical ? 0.6 : 1)
+                .frame(height: iconSize)
+            if open {
+                ForEach(venues, id: \.self) { venue in
+                    folderVenue(venue)
+                        .transition(reduceMotion ? .opacity
+                                    : .scale(scale: 0.6).combined(with: .opacity))
+                }
+            }
+        }
+        .padding(.horizontal, capsulePadH)
+        .frame(width: axis == .vertical ? Self.railChipWidth : nil)
+        .wordChipFill(cornerRadius: iconSize / 2, active: isOn, ns: selectionNS, slide: slide)
+    }
+
+    /// One venue inside an open folder: a brand mark in a disc, the ring on
+    /// the one you are standing in. Drawn a step smaller than the chip's own
+    /// mark so the word beside it still leads; targeted at `DS.Hit.min`.
+    private func folderVenue(_ venue: String) -> some View {
+        let lit = venue == standing
+        let seat = BridgeCatalog.seatName(forSource: venue)
+        let broken = bridges.bridges.contains { $0.name == seat && $0.status == .attention }
+        let markSize = iconSize - 10
+        return Button {
+            guard !lit else { return }
+            DSHaptic.selection()
+            // The room moves; the folder stays open, so the ring is seen
+            // arriving on the venue just picked. The same hop the old
+            // switcher took — see `ShellChrome.sourceRequest`.
+            chrome.sourceRequest = venue
+        } label: {
+            BridgeIcon(name: venue, size: markSize, circular: true)
+                .padding(2.5)
+                .overlay {
+                    if lit {
+                        let ring = Capsule(style: .circular)
+                            .strokeBorder(DS.tint, lineWidth: 2.5)
+                        if reduceMotion {
+                            ring
+                        } else {
+                            // The SAME travelling selection the chips share
+                            // (§412b): opening a folder hands the one blue
+                            // object from the chip's fill to this ring, and
+                            // picking a neighbour slides it along the row.
+                            ring.offset(x: slide)
+                                .matchedGeometryEffect(id: ChipSelection.id, in: selectionNS)
+                        }
+                    } else if broken {
+                        Capsule(style: .circular)
+                            .strokeBorder(DS.attention,
+                                          style: StrokeStyle(lineWidth: 2.5, dash: [3, 3]))
+                    }
+                }
+                // DRAWN small, TARGETED 44 — the switcher's own correction.
+                .frame(width: DS.Hit.min, height: DS.Hit.min)
+                .contentShape(Capsule(style: .circular))
+                .dsHover()
+        }
+        .buttonStyle(.plain)
+        .frame(height: iconSize)
+        .dsTooltip(broken ? String(localized: "\(venue), needs reconnecting") : venue)
+        .accessibilityLabel(broken ? String(localized: "\(venue), needs reconnecting") : venue)
+        .accessibilityAddTraits(lit ? .isSelected : [])
     }
 
     /// Everything the strip SCROLLS.
@@ -860,6 +1053,8 @@ struct SourceChips: View {
             attentionSeats.contains($0.name) && $0.status == .attention
         }
         Button {
+            // A scrub that just chose this chip already tapped it.
+            guard Date.timeIntervalSinceReferenceDate - scrubCommittedAt > 0.4 else { return }
             DSHaptic.selection()
             // Marks this change as finger-initiated so the strip does not
             // re-centre under it — see the horizontal strip's `onChange`.
@@ -897,7 +1092,7 @@ struct SourceChips: View {
                         .frame(width: iconSize, height: iconSize)
                         .clipShape(Circle())
                         .wordChipFill(cornerRadius: iconSize / 2,
-                                      active: isActive, ns: selectionNS)
+                                      active: isActive, ns: selectionNS, slide: slide)
                 case Pinboard.room:
                     // The pinned room (2026-08-10) — see `PinnedChipMark`.
                     PinnedChipMark(size: iconSize)
@@ -1039,7 +1234,12 @@ struct SourceChips: View {
                         // used to fade, because each form was the only member of
                         // its own group; now the one blue object travels the gap
                         // and resolves into a ring on arrival.
-                        ring.matchedGeometryEffect(id: ChipSelection.id, in: selectionNS)
+                        // The `offset` sits INSIDE the match so a swipe's
+                        // lean (`slide`) is part of the frame the travel
+                        // starts from — outside it, the commit would snap the
+                        // ring back before it moved.
+                        ring.offset(x: slide)
+                            .matchedGeometryEffect(id: ChipSelection.id, in: selectionNS)
                     }
                 } else if broken {
                     // DASHED, not merely orange (2026-07-21). "Selected" and
@@ -1053,6 +1253,13 @@ struct SourceChips: View {
                 }
             }
             .frame(width: isCategory ? nil : chipSize, height: chipSize)
+            // THE LIFT (2026-09-05): the chip under a scrubbing finger rises a
+            // step so the hand can feel which one it is on. A scale only, no
+            // vertical travel — the slab clips to its own glass, and a chip
+            // that rose out of it would be cut at the top. Its name floats
+            // above the slab instead (`DockScrubCaption`).
+            .scaleEffect(scrubbing == label && !reduceMotion ? 1.12 : 1)
+            .animation(DS.Motion.press, value: scrubbing == label)
             // This chip is the travelling fill's SOURCE frame (prd §359) —
             // see `travellingFill`. Word chips only: a mark chip cannot take a
             // tint fill without becoming unrecognisable, so it keeps the ring
@@ -1087,8 +1294,14 @@ struct SourceChips: View {
         // The long-press peek (2026-08-14, prd §384): the room's head floats
         // up without navigating. "All" sits it out — its room is the whole
         // feed, and a peek that previews everything previews nothing.
+        // **RAIL ONLY since 2026-09-05.** On the phone a press on the strip
+        // is the scrub (`DockScrubCatcher`), which begins before the context
+        // menu's own hold would and cancels the touch under it — so the peek
+        // could never fire there, and a modifier that never fires is left
+        // off rather than left claiming. The rail has a pointer and no
+        // scrub, and keeps it.
         .modifier(ChipPeekModifier(label: label, venues: venues,
-                                   enabled: label != "All",
+                                   enabled: axis == .vertical && label != "All",
                                    onOpen: { onTap(label) }))
         // Names the mark on hover, Mac only (2026-08-01) — see `dsTooltip`.
         // Same string the accessibility label uses, so the two can't drift on
@@ -1257,6 +1470,8 @@ private struct WordChipFill: ViewModifier {
     let cornerRadius: CGFloat
     let active: Bool
     let ns: Namespace.ID
+    /// A swipe's lean toward the next chip — see `SourceChips.slide`.
+    var slide: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// The chip's resting wash is the GLASS's own tint rather than a flat
@@ -1327,7 +1542,8 @@ private struct WordChipFill: ViewModifier {
                     if reduceMotion {
                         fill
                     } else {
-                        fill.matchedGeometryEffect(id: ChipSelection.id, in: ns)
+                        fill.offset(x: slide)
+                            .matchedGeometryEffect(id: ChipSelection.id, in: ns)
                     }
                 }
             }
@@ -1364,7 +1580,15 @@ extension View {
     /// One fill for both word chips, so the circle and the capsule can never
     /// drift apart the way their COLOUR did before §358 (the "All" chip had to
     /// be corrected into line with the categories twice).
-    func wordChipFill(cornerRadius: CGFloat, active: Bool, ns: Namespace.ID) -> some View {
-        modifier(WordChipFill(cornerRadius: cornerRadius, active: active, ns: ns))
+    func wordChipFill(cornerRadius: CGFloat, active: Bool, ns: Namespace.ID,
+                      slide: CGFloat = 0) -> some View {
+        modifier(WordChipFill(cornerRadius: cornerRadius, active: active, ns: ns, slide: slide))
     }
+}
+
+/// The scrub's content→window converter, boxed so the strip can hold a
+/// closure handed over mid-gesture without making it `@State` (a closure has
+/// no equality, and a `@State` closure re-renders on every assignment).
+final class ScrubConverter {
+    var value: ((CGFloat) -> CGFloat)?
 }

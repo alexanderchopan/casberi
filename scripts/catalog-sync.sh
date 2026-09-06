@@ -17,7 +17,7 @@
 #        into the catalog, and the catalog is code-derived. Nothing to check.
 #
 #   3. DECORATIVE MARQUEES — the website hero rain (index.html .rain) and the
-#        onboarding rain (HowItWorksSheet.marqueeApps) — are hand-curated
+#        onboarding rain (IntroCover.marqueeApps) — are hand-curated
 #        SUBSETS by design (the rain has never listed Photos/Wallet/etc.).
 #        We do NOT require completeness, but every name they reference MUST
 #        resolve to a real offer, so a rename/removal/typo can't leave a dead
@@ -31,7 +31,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
-ONBOARD="Casberi/Casberi/Screens/HowItWorksSheet.swift"
+ONBOARD="Casberi/Casberi/Screens/IntroCover.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 INDEX="website/index.html"
 

@@ -153,7 +153,8 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-theme.light` — AppStorage theme override; always pass explicitly for light/dark screenshots (the sim's stored value sticks) → docs/hooks/system.md · prd §204
 - `-trayGlass` — force the pre-26 material RECIPE for the sources tray on an iOS 26 build (Design/DSTray.swift, DSTrayGlass) → docs/hooks/system.md
 - **-startPick AND THE ONBOARDING FORK ARE DELETED** → docs/hooks/system.md · prd §563
-- `-howItWorksCTA` `-demoCTA` — fire the onboarding greeting's primary CTA after a delay (Screens/HowItWorksSheet.swift) → docs/hooks/system.md · prd §217
+- `-howItWorksCTA <s>` — lift the first-launch cover after a delay (Screens/IntroCover.swift; `-demoCTA` is DELETED with the fork's door, 2026-09-05) → docs/hooks/system.md · prd §620
+- **The dock is CONTINUOUS — the fold tracks the scroll, folders open in place, the page follows the finger, press-and-slide picks (2026-09-05)** → docs/hooks/system.md · prd §621
 - **The furnished demo is a MODE you enter and leave, not a dev-only seed** → docs/hooks/system.md · prd §217
 - `-findProbe` — fill the composer and fire Find (prd §215, the composer's deterministic door): runs KeptAskComposers.search → docs/hooks/agent.md · prd §215
 - `-openComposer` `-composerDraft` — open the composer empty (screenshots the ask chips); -composerDraft "<text>" → docs/hooks/agent.md

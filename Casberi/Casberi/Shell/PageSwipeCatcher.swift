@@ -20,6 +20,13 @@ import UIKit
 /// exclusivity machinery still applies, so when this begins it cancels the
 /// scroll pan underneath — a page turn and a scroll can't share one finger.
 ///
+/// **It reports the FINGER, not only the release (2026-09-05).** Every move
+/// while the pan is active goes to `move` as a raw translation, so the room
+/// can follow it and the dock's ring can lean toward the chip the turn is
+/// heading for; the release still decides — `step` past the threshold,
+/// `cancel` short of it — from the recognizer's own touch handlers, for the
+/// reason below.
+///
 /// Three gates keep it honest, all checked at begin time:
 /// - Clearly horizontal (the deck's velocity test), or the scroll keeps it.
 /// - `enabled()` — the shell's own modal/sheet/pushed-room flags — because a
@@ -30,21 +37,29 @@ import UIKit
 struct PageSwipeCatcher: UIViewRepresentable {
     /// Checked at begin time — false means the pager is covered.
     let enabled: () -> Bool
+    /// The finger's horizontal translation while the pan is active.
+    var move: (CGFloat) -> Void = { _ in }
     /// +1 = the next room (leftward pull), -1 = the previous.
     let step: (Int) -> Void
+    /// The pan ended short of a turn, or was cancelled: spring back.
+    var cancel: () -> Void = {}
 
     func makeUIView(context: Context) -> Marker {
         let v = Marker()
         v.backgroundColor = .clear
         v.isUserInteractionEnabled = false
         v.enabled = enabled
+        v.move = move
         v.step = step
+        v.cancel = cancel
         return v
     }
 
     func updateUIView(_ v: Marker, context: Context) {
         v.enabled = enabled
+        v.move = move
         v.step = step
+        v.cancel = cancel
     }
 
     /// Delivers from its OWN touch handlers, never target-action — a stock
@@ -52,7 +67,16 @@ struct PageSwipeCatcher: UIViewRepresentable {
     /// target-action fires only intermittently (the Home board's
     /// drag-to-reorder lesson, 2026-07-13; CLAUDE.md gotchas).
     final class Pan: UIPanGestureRecognizer {
+        var onMoved: ((_ translation: CGFloat) -> Void)?
         var onEnded: ((_ translation: CGFloat, _ predicted: CGFloat) -> Void)?
+        var onCancelled: (() -> Void)?
+
+        override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+            super.touchesMoved(touches, with: event)
+            if state == .began || state == .changed {
+                onMoved?(translation(in: view).x)
+            }
+        }
 
         override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
             let wasActive = state == .began || state == .changed
@@ -63,11 +87,19 @@ struct PageSwipeCatcher: UIViewRepresentable {
             super.touchesEnded(touches, with: event)
             if wasActive { onEnded?(t, predicted) }
         }
+
+        override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+            let wasActive = state == .began || state == .changed
+            super.touchesCancelled(touches, with: event)
+            if wasActive { onCancelled?() }
+        }
     }
 
     final class Marker: UIView, UIGestureRecognizerDelegate {
         var enabled: (() -> Bool)?
+        var move: ((CGFloat) -> Void)?
         var step: ((Int) -> Void)?
+        var cancel: (() -> Void)?
         private var pan: Pan?
         private weak var host: UIWindow?
 
@@ -76,10 +108,16 @@ struct PageSwipeCatcher: UIViewRepresentable {
             if let w = window, pan == nil {
                 let g = Pan()
                 g.delegate = self
+                g.onMoved = { [weak self] t in self?.move?(t) }
+                g.onCancelled = { [weak self] in self?.cancel?() }
                 g.onEnded = { [weak self] t, predicted in
                     // Far enough to be meant — by distance, or by a flick's
-                    // predicted distance.
-                    guard abs(t) > 60 || abs(predicted) > 140 else { return }
+                    // predicted distance. Short of that the room springs
+                    // back to where it was.
+                    guard abs(t) > 60 || abs(predicted) > 140 else {
+                        self?.cancel?()
+                        return
+                    }
                     self?.step?((abs(predicted) > abs(t) ? predicted : t) < 0 ? 1 : -1)
                 }
                 w.addGestureRecognizer(g)

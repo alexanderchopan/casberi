@@ -107,10 +107,61 @@ grep -q 'static func agentSeat' "$DOCK" \
 # states. A 44 among 46s reads as a shrunken chip rather than a distinction,
 # and a bar that did not fold would grow relatively larger exactly when the row
 # got tighter.
-grep -q 'folds ? 40 : 46' "$TMP/chips.nc" \
-  || { echo "✗ SourceChips.iconSize moved off 46/40 — DSDock.agentSize mirrors it and"; \
-       echo "  cannot see it, so the agent bar is now a different size from the chips"; \
-       echo "  it sits beside in the rail."; fail=1; }
+# THE FOLD IS CONTINUOUS (2026-09-05): the strip's mark size is READ off
+# DSDock's fold form rather than mirrored as a literal, so the chips and the
+# bar cannot be different sizes at any point of the travel.
+grep -q 'iconSize: CGFloat { DSDock.agentSize(fold: fold) }' "$TMP/chips.nc" \
+  || { echo "✗ SourceChips.iconSize no longer reads DSDock.agentSize(fold:) — the strip's"; \
+       echo "  marks and the agent bar beside them can drift apart mid-fold."; fail=1; }
+grep -q 'static func agentSize(fold: CGFloat)' "$DOCK" \
+  || { echo "✗ DSDock.agentSize lost its fold form — the continuous fold has no metric."; fail=1; }
+grep -q 'DSDock.agentSize(fold: chrome.fold)' "$TMP/bar.nc" \
+  || { echo "✗ AgentBar no longer sizes itself off ShellChrome.fold — it would jump 46→40"; \
+       echo "  while the chips beside it slide, or RootShell would re-render per scroll tick."; fail=1; }
+grep -q 'DSDock.SeatInset()' "$TMP/root.nc" \
+  || { echo "✗ RootShell no longer seats the bar through DSDock.SeatInset — the bar's"; \
+       echo "  bottom inset would stop following the fold, or the shell body would read it."; fail=1; }
+grep -q 'DSDock.SlabInset()' "$TMP/main.nc" \
+  || { echo "✗ MainSurface no longer pads the slab through DSDock.SlabInset — the slab's air"; \
+       echo "  would stop following the fold, or this surface would read it per tick."; fail=1; }
+strip_comments "Casberi/Casberi/Shell/ShellChrome.swift" > "$TMP/chrome.nc"
+grep -q 'func trackFold' "$TMP/chrome.nc" && grep -q 'func settleFold' "$TMP/chrome.nc" \
+  || { echo "✗ ShellChrome lost trackFold/settleFold — the fold is a direction flip again."; fail=1; }
+grep -q 'chrome.minimized = down' "$TMP/chrome.nc" \
+  && { echo "✗ minimizesChrome writes the boolean from scroll DIRECTION again — the dock"; \
+       echo "  would blink on a reversed scroll instead of following the finger."; fail=1; }
+grep -q 'onScrollPhaseChange' "$TMP/chrome.nc" \
+  || { echo "✗ minimizesChrome no longer settles the fold when the scroll goes idle — a slow"; \
+       echo "  drag could leave the dock half-folded forever."; fail=1; }
+# THE PAGE FOLLOWS THE FINGER (2026-09-05).
+strip_comments "Casberi/Casberi/Shell/PageSwipeCatcher.swift" > "$TMP/pan.nc"
+grep -q 'override func touchesMoved' "$TMP/pan.nc" \
+  || { echo "✗ PageSwipeCatcher no longer reports the finger's moves — the room fires on"; \
+       echo "  release again instead of following the drag."; fail=1; }
+grep -q 'struct PagerDrag' "$TMP/main.nc" \
+  || { echo "✗ MainSurface lost PagerDrag — the room does not follow the finger, or the"; \
+       echo "  offset is read in MainSurface's own body (a re-render per touch move)."; fail=1; }
+grep -q 'chrome.pageDragX = 0' "$TMP/main.nc" \
+  || { echo "✗ go(to:) no longer resets the drag in the committing transaction — the incoming"; \
+       echo "  room would mount offset by the last finger position."; fail=1; }
+grep -q 'ring.offset(x: slide)' "$TMP/chips.nc" \
+  || { echo "✗ the strip's ring no longer leans with the swipe — the selection stays put"; \
+       echo "  while the room moves, two objects for one gesture."; fail=1; }
+# SCRUB TO PICK (2026-09-05).
+[ -f "Casberi/Casberi/Shell/DockScrubCatcher.swift" ] \
+  || { echo "✗ DockScrubCatcher.swift is gone — the dock lost its press-and-slide."; fail=1; }
+strip_comments "Casberi/Casberi/Shell/DockScrubCatcher.swift" > "$TMP/scrub.nc"
+grep -q 'override var state: UIGestureRecognizer.State' "$TMP/scrub.nc" \
+  || { echo "✗ the scrub recognizer no longer delivers from its own state setter — target-action"; \
+       echo "  on SwiftUI-owned views fires intermittently (the Home board's lesson)."; fail=1; }
+grep -q 'while let cur = walk, !(cur is UIScrollView)' "$TMP/scrub.nc" \
+  || { echo "✗ the scrub no longer attaches to the strip's own scroll view — UIKit's"; \
+       echo "  arbitration against the pan and the chip buttons is what makes it safe."; fail=1; }
+grep -q 'scrubCommittedAt' "$TMP/chips.nc" \
+  || { echo "✗ a chip's Button no longer guards against the scrub that just chose it."; fail=1; }
+grep -q 'enabled: axis == .vertical && label != "All"' "$TMP/chips.nc" \
+  || { echo "✗ the chip peek is back on the phone strip, where the scrub's press cancels it"; \
+       echo "  before it can fire — a modifier that never fires, left claiming."; fail=1; }
 grep -q 'minimized ? 40 : 46' "$DOCK" \
   || { echo "✗ DSDock.agentSize no longer matches SourceChips.iconSize (46 at rest, 40"; \
        echo "  folded) — the bar and the chip marks beside it are different sizes."; fail=1; }
@@ -138,9 +189,16 @@ grep -q 'heldForAgent\|consumeHold' "$TMP/bar.nc" \
 
 # --- 6. the panel offers the agent, and the tray is really gone -------------
 # --- 6. the octopus is a FOLDER, not a tray ---------------------------------
+# IN PLACE since 2026-09-05: the doors open INSIDE the strip's leading seat,
+# drawn by SourceChips from the open folder, and MainSurface hands the row in.
+grep -q 'chrome.openFolder == .doors' "$TMP/chips.nc" \
+  || { echo "✗ SourceChips no longer draws the doors from the open folder — the octopus"; \
+       echo "  must open in place in the strip like every other chip, not a raised tray."; fail=1; }
+grep -q 'doorsStrip: AnyView(' "$TMP/main.nc" \
+  || { echo "✗ MainSurface no longer hands the strip its doors row — the octopus's folder"; \
+       echo "  has nothing to open."; fail=1; }
 grep -q 'chrome.openFolder == .doors' "$TMP/main.nc" \
-  || { echo "✗ MainSurface no longer draws DoorsStrip from the open folder — the octopus"; \
-       echo "  must open a row above the dock like every other chip, not a raised tray."; fail=1; }
+  && { echo "✗ MainSurface draws the doors ABOVE the dock again — two rows for one folder."; fail=1; }
 grep -q 'onAgent:' "$PANEL" \
   || { echo "✗ DoorsStrip lost its agent door — with the hold deleted this is the bar's"; \
        echo "  ONLY route to the agent."; fail=1; }

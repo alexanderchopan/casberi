@@ -92,6 +92,29 @@ final class ShellChrome {
         }
     }
 
+    /// The pager's LIVE drag (2026-09-05): the finger's horizontal travel
+    /// while a page turn is in progress, in points, and the same travel as a
+    /// share of one chip's pitch, signed toward the neighbour it is heading
+    /// for (+1 = the next chip along). The room follows `pageDragX`
+    /// (`MainSurface.PagerDrag`) and the strip's selection follows
+    /// `pageDragProgress`, so the ring is seen leaving for the chip the swipe
+    /// will land on before the finger lets go. Both are written on every
+    /// touch move and read only by the leaf views that draw them — never by
+    /// a shell body (see `fold`). `go(to:)` resets both in the transaction
+    /// that commits the turn; a swipe that stops short springs them home.
+    var pageDragX: CGFloat = 0
+    var pageDragProgress: CGFloat = 0
+
+    /// The chip under a scrubbing finger (2026-09-05) — the dock's press-and-
+    /// slide, see `SourceChips`. `windowX` is the chip's centre in window
+    /// space, so the caption above the slab (`MainSurface.DockScrubCaption`)
+    /// can sit over the chip without knowing where the strip is scrolled to.
+    struct DockScrub: Equatable {
+        var label: String
+        var windowX: CGFloat
+    }
+    var scrub: DockScrub? = nil
+
     /// The one transient message surface — the glass toast above the bar.
     /// Any screen can flash an outcome ("On your list", "Copied", a denial);
     /// the shell renders it, so feedback looks the same everywhere.

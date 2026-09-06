@@ -17,6 +17,17 @@ import SwiftUI
 /// Too large and the dock opens with a hole in it that reads as a missing
 /// chip. A constant in each file would drift the moment either one moved.
 enum DSDock {
+    /// **THE FOLD IS CONTINUOUS (2026-09-05).** Every metric below has a
+    /// `fold:` form — the dock's position between rest (0) and folded (1),
+    /// straight off `ShellChrome.fold` — and the `minimized:` form is its two
+    /// endpoints, kept because those endpoints are where the numbers are
+    /// spelled and where the self-test reads them. The fold forms interpolate
+    /// between the endpoints and nothing else, so the two can never disagree
+    /// at either end.
+    static func lerp(_ rest: CGFloat, _ folded: CGFloat, _ fold: CGFloat) -> CGFloat {
+        rest + (folded - rest) * min(1, max(0, fold))
+    }
+
     /// The bar's drawn size — **the same as a chip's own mark** (user,
     /// 2026-09-04: "why not just make it the same size as the All chip next to
     /// it").
@@ -33,11 +44,17 @@ enum DSDock {
     /// value is private to a view in another module-level file); the dock
     /// self-test pins the two together.
     static func agentSize(minimized: Bool) -> CGFloat { minimized ? 40 : 46 }
+    static func agentSize(fold: CGFloat) -> CGFloat {
+        lerp(agentSize(minimized: false), agentSize(minimized: true), fold)
+    }
 
     /// The chip's own FRAME, which is bigger than its mark — it carries the
     /// active ring's room. Centring the bar on the row means centring on this,
     /// not on the mark.
     static func chipFrame(minimized: Bool) -> CGFloat { minimized ? 48 : 56 }
+    static func chipFrame(fold: CGFloat) -> CGFloat {
+        lerp(chipFrame(minimized: false), chipFrame(minimized: true), fold)
+    }
 
     /// The air between the bar's trailing edge and the first chip.
     ///
@@ -73,6 +90,9 @@ enum DSDock {
     /// the only frame of reference both sides share.
     static func agentSeat(minimized: Bool) -> CGFloat {
         clusterInset + agentSize(minimized: minimized) + seam
+    }
+    static func agentSeat(fold: CGFloat) -> CGFloat {
+        clusterInset + agentSize(fold: fold) + seam
     }
 
     /// How far the bar sits off the bottom edge so its centre lands on the
@@ -133,6 +153,15 @@ enum DSDock {
     static func chipBottomInset(minimized: Bool) -> CGFloat {
         slabPad + (minimized ? DS.Space.s1 : DS.Space.s2)
     }
+    static func chipBottomInset(fold: CGFloat) -> CGFloat {
+        lerp(chipBottomInset(minimized: false), chipBottomInset(minimized: true), fold)
+    }
+
+    /// The air under the glass slab — the strip's bottom padding, the part of
+    /// `chipBottomInset` that is not the slab's own vertical pad.
+    static func slabBottomInset(fold: CGFloat) -> CGFloat {
+        chipBottomInset(fold: fold) - slabPad
+    }
 
     static func agentBottomInset(minimized: Bool) -> CGFloat {
         // Centre on centre, not edge on edge: the bar's mark and the chip's
@@ -142,5 +171,27 @@ enum DSDock {
         // fold.
         return chipBottomInset(minimized: minimized)
             + (chipFrame(minimized: minimized) - agentSize(minimized: minimized)) / 2
+    }
+    static func agentBottomInset(fold: CGFloat) -> CGFloat {
+        chipBottomInset(fold: fold) + (chipFrame(fold: fold) - agentSize(fold: fold)) / 2
+    }
+
+    /// The slab's bottom air, following the fold — a modifier of its own so
+    /// the ONLY body that re-evaluates on a scroll tick is this one, not
+    /// `MainSurface`'s (see `ShellChrome.fold`).
+    struct SlabInset: ViewModifier {
+        @Environment(ShellChrome.self) private var chrome
+        func body(content: Content) -> some View {
+            content.padding(.bottom, DSDock.slabBottomInset(fold: chrome.fold))
+        }
+    }
+
+    /// The bar's seat off the bottom edge, following the fold — the same
+    /// reason, for `RootShell`'s body.
+    struct SeatInset: ViewModifier {
+        @Environment(ShellChrome.self) private var chrome
+        func body(content: Content) -> some View {
+            content.padding(.bottom, DSDock.agentBottomInset(fold: chrome.fold))
+        }
     }
 }

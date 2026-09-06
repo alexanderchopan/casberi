@@ -80,8 +80,12 @@ struct AgentBar: View {
     /// the complement of the row it sits in.
     var expanded: Bool = false
     /// The bar's drawn size — `DSDock.agentSize`, so it matches the chip marks
-    /// it sits beside in the rail and folds with them (§591d).
-    var size: CGFloat = DS.Hit.min
+    /// it sits beside in the rail and folds with them (§591d). Read HERE off
+    /// `ShellChrome.fold` (2026-09-05) rather than passed in by `RootShell`,
+    /// so the shell's body is not a dependency of a value written on every
+    /// scroll tick; the bar follows the fold continuously, as the marks do.
+    @Environment(ShellChrome.self) private var chrome
+    private var size: CGFloat { DSDock.agentSize(fold: chrome.fold) }
 
     var morphNS: Namespace.ID?
     /// THE MAGNIFIER IS GONE (2026-08-15, prd §386o, user: "search and the

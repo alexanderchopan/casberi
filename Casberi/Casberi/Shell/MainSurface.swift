@@ -416,6 +416,11 @@ struct MainSurface: View {
                     // `ShellChrome.fold` for why this surface must not read
                     // that value itself.
                     .modifier(DSDock.SlabInset())
+                    // The scrubbed chip's name, floating over the slab
+                    // (2026-09-05). An overlay applied AFTER the slab's clip,
+                    // because the strip clips to its own glass and a caption
+                    // drawn inside it would be cut at the top edge.
+                    .overlay(alignment: .topLeading) { DockScrubCaption() }
             }
         }
     }
@@ -488,35 +493,16 @@ struct MainSurface: View {
     /// social room, never both — so the two `if`s are alternatives, not a stack.
     @ViewBuilder
     private var roomControls: some View {
-        // The octopus's folder (§591 amendment). It sits in the same slot the
-        // room's own row uses — one row, one folder — so the two can never
-        // stack, and it reaches this band rather than a raised tray because the
-        // ruling was that the bar "needs to open the same way the others do in
-        // a strip", "not in a tray".
-        if chrome.openFolder == .doors {
-            DoorsStrip(compact: chrome.minimized && !showsRail,
-                       onAgent: {
-                           chrome.openFolder = nil
-                           chrome.openComposer()
-                       },
-                       onApps: {
-                           chrome.openFolder = nil
-                           route.present(.apps)
-                       },
-                       onAddressBook: {
-                           chrome.openFolder = nil
-                           route.push(.addressBook)
-                       },
-                       onSettings: {
-                           chrome.openFolder = nil
-                           route.present(.settings)
-                       })
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.bottom, DS.Space.s2)
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
-        }
+        // **THE FOLDERS OPEN IN THE STRIP NOW (2026-09-05).** Until today a
+        // category chip's venues and the octopus's four doors each opened as a
+        // ROW ABOVE the dock (`CategoryVenueSwitcher`, `DoorsStrip`, drawn
+        // here), so a folder was a second row of chrome appearing over the
+        // first. They open IN PLACE: the tapped chip expands to hold its
+        // venues and its neighbours slide aside, one row ever — see
+        // `SourceChips.categoryCapsule` and its `doorsStrip`. What this band
+        // still carries above the dock is a FILTER within a room, which is a
+        // different kind of control: the social faces.
         if roomControlsShown {
-            categorySwitcher
         socialScopeRail
         // **VIBENET'S FACE RAIL IS FOLDED INTO ITS CROWN (prd §482
         // amendment, 2026-08-26, user: "we cannot have four rows of chips").**
@@ -547,46 +533,6 @@ struct MainSurface: View {
         // folder says — a filter you are standing in must show you that you are
         // in it, and must show its own exit.
         return chrome.personScope != nil
-    }
-
-    @ViewBuilder
-    private var categorySwitcher: some View {
-        // **THE OPEN FOLDER, NOT THE CURRENT ROOM (§591 amendment).** This read
-        // `BridgeCatalog.category(forSource: filter.source)` while a category
-        // chip's tap switched rooms, so the two questions had one answer. A
-        // folder tap no longer moves the feed, so they diverge: you can open
-        // Social while standing in Kalshi, and this row must then list Social's
-        // seats. `active:` stays `filter.source`, so nothing in the row is lit
-        // in that case — which is the honest drawing, not a gap.
-        if case .category(let category) = chrome.openFolder {
-            let venues = categoryVenues[category] ?? []
-            if venues.count >= CategoryFold.switcherFloor {
-                CategoryVenueSwitcher(
-                    venues: CategoryFold.scopes(category: category, present: Set(venues)),
-                    active: filter.source,
-                    // THE SAME EXPRESSION BOTH FACE RAILS TAKE, deliberately
-                    // spelled rather than derived (prd §541). This control sits
-                    // directly above `socialScopeRail`, whose captioned faces
-                    // fold 36→26 on this signal — so a switcher that did not
-                    // fold put a 36pt mark row above a 26pt face row on every
-                    // scroll, which is §483's own complaint wearing the folded
-                    // state. `!showsRail` carries the same axis gate for the
-                    // same reason the rails give: a surface wide enough for the
-                    // vertical rail is not short of vertical space, and one
-                    // control resizing there reads as a twitch, not a system.
-                    compact: chrome.minimized && !showsRail) { venue in
-                    chrome.sourceRequest = venue
-                }
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.bottom, DS.Space.s2)
-                // On a regular-width surface the horizontal source strip is not
-                // in this inset at all (it is the leading `railInset` there), so
-                // nothing above has reserved the top edge and this takes the air
-                // the strip would otherwise have given it. `showsRail` is the
-                // SOURCE rail, not `WalletScopeRail`.
-                .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
-            }
-        }
     }
 
     /// The wallet face rail — see `WalletScopeRail`, which owns the whole of its
@@ -1408,7 +1354,29 @@ struct MainSurface: View {
                     onApps: { route.present(.apps) },
                     onSettings: { route.present(.settings) },
                     refreshSpin: chrome.refreshPulse,
-                    zoomNS: doorNS) { label in
+                    zoomNS: doorNS,
+                    // The octopus's folder, drawn INSIDE the strip when it is
+                    // open (2026-09-05) — the same in-place opening every
+                    // category chip gets. Built here because its four doors
+                    // are the shell's routes.
+                    doorsStrip: AnyView(
+                        DoorsStrip(compact: chrome.minimized && !showsRail,
+                                   onAgent: {
+                                       chrome.openFolder = nil
+                                       chrome.openComposer()
+                                   },
+                                   onApps: {
+                                       chrome.openFolder = nil
+                                       route.present(.apps)
+                                   },
+                                   onAddressBook: {
+                                       chrome.openFolder = nil
+                                       route.push(.addressBook)
+                                   },
+                                   onSettings: {
+                                       chrome.openFolder = nil
+                                       route.present(.settings)
+                                   }))) { label in
             // Compared against the CHIP, not the source: re-tapping the folded
             // Markets chip while standing in Kalshi is a re-tap of the chip
             // you're on, and comparing raw sources would read it as a switch
@@ -1863,6 +1831,11 @@ struct MainSurface: View {
             swipeBudgetSource = target
             swipeBudgetGeneration &+= 1
             filter.source = target
+            // The drag that brought us here, if any, ends in the same
+            // transaction: the incoming room mounts at rest and the ring's
+            // lean resolves into its travel to the new chip.
+            chrome.pageDragX = 0
+            chrome.pageDragProgress = 0
         }
     }
 
@@ -1963,11 +1936,24 @@ struct MainSurface: View {
 
     /// One step left or right in the strip's order. The swipe's whole job.
     private func step(_ delta: Int) {
-        // Walks CHIPS, not sources (2026-08-10): the folded market seats are
-        // one stop, so a swipe crosses the whole cluster in one step and moving
-        // between venues is the switcher's job. Stepping through the members
-        // instead would make a five-venue fold five swipes wide while showing
-        // one chip, which is the strip lying about how far away things are.
+        guard let target = neighbour(delta) else {
+            // Nothing that way: the rubber-banded room springs home.
+            dragCancel()
+            return
+        }
+        DSHaptic.selection()
+        go(to: target)
+        ChipMemory.visited(filter.source)
+    }
+
+    /// The chip one step along from the room you are in, or nil at either end.
+    ///
+    /// Walks CHIPS, not sources (2026-08-10): the folded market seats are one
+    /// stop, so a swipe crosses the whole cluster in one step and moving
+    /// between venues is the folder's job. Stepping through the members
+    /// instead would make a five-venue fold five swipes wide while showing
+    /// one chip, which is the strip lying about how far away things are.
+    private func neighbour(_ delta: Int) -> String? {
         var labels = chipLabels
         // The room you are standing in may have no chip at all — a deep link
         // (casberi://feed/source/Gmail), a bridge connected but not yet synced,
@@ -1977,10 +1963,31 @@ struct MainSurface: View {
         // `feedLabels` used to make for the pager's pages, kept.
         if !labels.contains(activeChip) { labels.append(activeChip) }
         guard let idx = labels.firstIndex(of: activeChip),
-              labels.indices.contains(idx + delta) else { return }
-        DSHaptic.selection()
-        go(to: labels[idx + delta])
-        ChipMemory.visited(filter.source)
+              labels.indices.contains(idx + delta) else { return nil }
+        return labels[idx + delta]
+    }
+
+    /// One chip's pitch in the strip — how far the ring travels for one whole
+    /// page: a chip's frame plus the gap after it.
+    private static let dragPitch: CGFloat = 56 + DS.Space.s2
+
+    /// The finger moved: the room follows, the ring leans (2026-09-05).
+    ///
+    /// Against the END of the strip the room still moves, at a third of the
+    /// finger — a pull that meets nothing must still answer the hand, or the
+    /// swipe reads as broken rather than as the last room — and the ring
+    /// stays put, since there is no chip for it to lean toward.
+    private func dragMove(_ t: CGFloat) {
+        let free = neighbour(t < 0 ? 1 : -1) != nil
+        chrome.pageDragX = free ? t : t * 0.3
+        chrome.pageDragProgress = free ? min(1, max(-1, -t / Self.dragPitch)) : 0
+    }
+
+    private func dragCancel() {
+        withAnimation(DS.Motion.standard) {
+            chrome.pageDragX = 0
+            chrome.pageDragProgress = 0
+        }
     }
 
 
@@ -2031,14 +2038,27 @@ struct MainSurface: View {
             // List's own scroll view, mounted by FeedScreen), which hands its
             // one-step decision up through `chrome.pageStep` below.
             ZStack {
-                FeedScreen(source: filter.source, isActive: true, nearActive: true,
-                           // Only the room the swipe is going TO — see
-                           // `swipeBudgetSource`.
-                           rowBudget: swipeBudgetSource == filter.source ? swipeRowBudget : nil)
-                    // See `FeedScreen: Equatable` — this is what stops a
-                    // MainSurface render from rebuilding the whole feed
-                    // (measured 15 body builds → 2).
-                    .equatable()
+                // THE ROOM FOLLOWS THE FINGER (2026-09-05). `PagerDrag` offsets
+                // the room by `chrome.pageDragX` while a swipe is in progress,
+                // in a body of its own so this surface is not re-evaluated on
+                // every touch move. On release past the threshold the turn
+                // commits through `go(to:)` as it always did: the outgoing
+                // room continues off the edge it was already heading for (its
+                // held offset plus the move transition), and the incoming one
+                // slides in from the other. Short of the threshold the room
+                // springs home. Only the room being LEFT is on screen during
+                // the drag — the neighbour is not pre-built, for the §258
+                // reason recorded below.
+                PagerDrag {
+                    FeedScreen(source: filter.source, isActive: true, nearActive: true,
+                               // Only the room the swipe is going TO — see
+                               // `swipeBudgetSource`.
+                               rowBudget: swipeBudgetSource == filter.source ? swipeRowBudget : nil)
+                        // See `FeedScreen: Equatable` — this is what stops a
+                        // MainSurface render from rebuilding the whole feed
+                        // (measured 15 body builds → 2).
+                        .equatable()
+                }
                     .id(filter.source)
                     .transition(.asymmetric(
                         insertion: .move(edge: slideEdge),
@@ -2053,7 +2073,9 @@ struct MainSurface: View {
                 PageSwipeCatcher(
                     enabled: { !chrome.walkModalOpen && !chrome.walkSheetOpen
                                && !chrome.walkInPushedRoom },
-                    step: { delta in step(delta) })
+                    move: { t in dragMove(t) },
+                    step: { delta in step(delta) },
+                    cancel: { dragCancel() })
             }
             // Hands the room back its whole query once the slide is over.
             .task(id: filter.source) { await releaseSwipeBudget() }
@@ -2355,5 +2377,54 @@ struct MainSurface: View {
         // between them.
         .safeAreaInset(edge: .leading, spacing: 0) { railInset }
         .tint(DS.tint)
+    }
+}
+
+/// The room following the finger (2026-09-05) — see `MainSurface.surface`.
+/// A view of its own so the ONLY body that re-evaluates on a touch move is
+/// this one; `MainSurface`'s body is the most expensive in the app and must
+/// not depend on a value written sixty times a second.
+private struct PagerDrag<Content: View>: View {
+    @Environment(ShellChrome.self) private var chrome
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        content.offset(x: chrome.pageDragX)
+    }
+}
+
+/// The name of the chip under a scrubbing finger, floating above the dock's
+/// slab (2026-09-05) — see `SourceChips`'s scrub. Positioned from the chip's
+/// window-space centre, converted into this overlay's own space, so it sits
+/// over the chip wherever the strip is scrolled to and never has to know.
+private struct DockScrubCaption: View {
+    @Environment(ShellChrome.self) private var chrome
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        GeometryReader { g in
+            if let scrub = chrome.scrub {
+                let origin = g.frame(in: .global).minX
+                let width = g.size.width
+                Text(scrub.label)
+                    .dsText(.label12)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                    .padding(.horizontal, DS.Space.s3)
+                    .frame(minHeight: 28)
+                    .dsGlass(cornerRadius: DS.Radius.pill)
+                    .fixedSize()
+                    // Kept inside the surface: a chip at the very edge names
+                    // itself inboard rather than half off the screen.
+                    .position(x: min(max(scrub.windowX - origin, 56), width - 56),
+                              y: -DS.Space.s3)
+                    .transition(reduceMotion ? .opacity
+                                             : .scale(scale: 0.8).combined(with: .opacity))
+                    .accessibilityHidden(true)
+            }
+        }
+        .animation(DS.Motion.standard, value: chrome.scrub)
+        .allowsHitTesting(false)
     }
 }
