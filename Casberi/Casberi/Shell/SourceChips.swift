@@ -932,11 +932,11 @@ struct SourceChips: View {
         // The door's glyph fills, colors and pulses when a bridge breaks —
         // all three cues are visual, so the label has to say it too.
         .accessibilityLabel(bridges.attentionCount > 0
-                            ? Text("Apps, needs attention")
-                            : Text("Apps"))
+                            ? Text("Accounts, needs attention")
+                            : Text("Accounts"))
         .dsTooltip(bridges.attentionCount > 0
-                   ? String(localized: "Apps, needs attention")
-                   : String(localized: "Apps"))
+                   ? String(localized: "Accounts, needs attention")
+                   : String(localized: "Accounts"))
         // This strip rides `.safeAreaInset(edge: .top)` on the paged feed
         // TabView (`MainSurface`) — a plain Button's own tap gesture there
         // competes with the TabView(.page)'s internal pan recognizer for the

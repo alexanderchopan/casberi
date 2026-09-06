@@ -49,7 +49,7 @@ struct DoorsStrip: View {
     var body: some View {
         HStack(spacing: 2) {
             door("Settings", act: onSettings) { AvatarDoor() }
-            door("Apps", act: onApps) { AppsDoor() }
+            door("Accounts", act: onApps) { AppsDoor() }
             door("Address book", act: onAddressBook) {
                 // The same glyph both wallet rails draw (§461), so the three
                 // doors onto one screen cannot read as three destinations.
