@@ -37,7 +37,13 @@ enum WalletDeFiAsk {
         // Both protocols, and every open borrow worst-first — the same read
         // and the same flattening the brief's lede wants, so both call
         // `DeFiRisk` rather than keeping a copy each (2026-07-25).
-        let (aave, morpho) = await DeFiRisk.read(addresses: addresses)
+        // Under the demo, the same books the composition card draws — not a
+        // live read that answers "no positions" over a card showing five
+        // (demo census, 2026-09-05), and not a reach from a demo that
+        // reaches nothing.
+        let (aave, morpho) = DemoMode.isActive
+            ? (WalletDemoState.state.positions, WalletDemoState.state.morpho)
+            : await DeFiRisk.read(addresses: addresses)
         let debts = DeFiRisk.debts(aave: aave, morpho: morpho)
         let deposits = morpho.vaults.reduce(0) { $0 + $1.usd }
             + morpho.positions.reduce(0) { $0 + $1.supplyUSD }

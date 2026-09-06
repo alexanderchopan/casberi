@@ -35,6 +35,24 @@ enum SpotlightIndex {
         return attrs
     }
 
+    /// MAIN ACTOR, and it has to be (2026-09-05): both functions read `Thing`s
+    /// out of the app's main `ModelContext`, and neither was isolated, so the
+    /// launch call `await SpotlightIndex.reindexAll(context: modelContext)`
+    /// hopped to the cooperative pool and walked the main context from a
+    /// background thread WHILE the main thread was building the feed off the
+    /// same context. Two crash reports in one afternoon, both `EXC_BAD_ACCESS`
+    /// inside SwiftData under `Thing.tags.getter` on a
+    /// `com.apple.root.user-initiated-qos.cooperative` thread, with the main
+    /// thread in `MainSurface.things.getter` — a `ModelContext` is not
+    /// thread-safe and this was two threads in it at once. It reads exactly
+    /// like the SwiftData liveness class this codebase documents at length,
+    /// and is not it: no delete anywhere, just the wrong thread. Timing-
+    /// dependent, so it had survived every launch cycle the pass runs.
+    /// `index(_:)` itself stays unisolated on purpose: it reads only the
+    /// `Thing`s it is handed, on whichever thread owns THEIR context — the
+    /// Shortcuts intent indexes a row from its own local-only context off the
+    /// main actor, and that is correct. What must be main-isolated is the
+    /// function that walks the MAIN context, below.
     static func index(_ things: [Thing]) {
         guard !things.isEmpty else { return }
         let items = things.map { thing in
@@ -110,6 +128,7 @@ enum SpotlightIndex {
     /// `attributeSet(for:)` reads `title`/`content`/`tags`/`source` off it.
     /// Guarded the way `scanPaged` guards it: every row is re-checked inside
     /// the chunk, immediately before it is read.
+    @MainActor
     static func reindexAll(context: ModelContext, chunk: Int = 500) async {
         let defaults = UserDefaults.standard
         let watermark = defaults.object(forKey: watermarkKey) as? Date

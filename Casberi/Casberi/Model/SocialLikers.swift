@@ -83,6 +83,23 @@ final class SocialLikers {
     /// unchanged — this runs on every foreground pass, and a write per pass
     /// would re-encode the whole book and re-render every social row for no new
     /// information.
+    /// The furnished demo's rolls (2026-09-05, demo census): three posts with
+    /// a likers roll, so the "liked by" line has something to draw. Refs are
+    /// the demo's own, so `forgetDemo` removes exactly these and nothing a
+    /// real sync recorded under a real ref. Not `#if DEBUG` — the demo is a
+    /// Release-reachable mode (`demo-selftest.py` check A).
+    func seedDemo(_ rolls: [(ref: String, handles: [String], total: Int)], when: Date = .now) {
+        for r in rolls {
+            record(ref: r.ref, handles: r.handles, total: r.total, atLeast: false, when: when)
+        }
+    }
+
+    func forgetDemo(refs: [String]) {
+        var changed = false
+        for ref in refs where rolls.removeValue(forKey: ref) != nil { changed = true }
+        if changed { persist() }
+    }
+
     func record(ref: String, handles: [String], total: Int, atLeast: Bool, when: Date) {
         let named = Array(handles.prefix(Self.nameCap))
         guard !ref.isEmpty, !named.isEmpty else { return }

@@ -209,6 +209,14 @@ SKIP_BUMP=1 \
    LAUNCH_CYCLES=0 scripts/verify.sh
    ```
 
+   **A FIFTH check since 2026-09-05, and it is the widest: the demo CENSUS**
+   (`verify.sh` "Demo census", `Shell/DemoCensus.swift`, prd §617) judges every
+   OTHER surface — ask kinds, search, widgets, notify plan, related/links/facts,
+   wallet cards, social rosters, sheet verbs, every furnished room — over the
+   poured demo in one launch, hard-failing a `required` surface that draws
+   nothing. A red row there is a real gap in the demo, never ranking noise; fix
+   the seed (or the reader that bypasses the demo's own state) before shipping.
+
 4. **Re-check `git status` IMMEDIATELY before each archive, not once at the
    start.** Both ship scripts `rsync` the WORKING TREE, so whatever is
    uncommitted at archive time goes into the build — and another Claude session

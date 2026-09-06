@@ -1746,6 +1746,11 @@ struct FeedScreen: View {
         SocialRoom.hasRoster(source)
     }
 
+    /// Whether a source renders as the PLAIN shape — no bespoke head or
+    /// layout of its own — so the demo census can tell "this room leads with
+    /// rows because nothing else is defined for it" from a real gap.
+    static func rendersPlain(_ source: String) -> Bool { Shape(source: source) == .plain }
+
     /// The shape a source takes when its chip is in force.
     private enum Shape {
         case all, photos, wallet, ledger, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, instagram, tiktok, x, x402, appStoreConnect, cursor, cardPointers, walletbeat, l2beat, telegram, vibenet, plain

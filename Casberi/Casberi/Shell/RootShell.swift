@@ -644,6 +644,15 @@ struct RootShell: View {
             // truncation lesson (a joined multi-line message gets cut by the
             // log reader). Waits a beat so a `-demoEnter` on the SAME launch
             // has landed its rows first.
+            // `-demoCensus YES` — every surface, one launch, over the poured
+            // demo (see `Shell/DemoCensus.swift`). Lives beside `-demoEnter`
+            // for its reason: it needs the `BridgeStore`.
+            if UserDefaults.standard.bool(forKey: "demoCensus") {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(3))
+                    await DemoCensus.run(context: modelContext, store: bridges)
+                }
+            }
             if UserDefaults.standard.bool(forKey: "demoProbe") {
                 Task { @MainActor in
                     try? await Task.sleep(for: .seconds(3))

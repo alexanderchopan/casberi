@@ -269,7 +269,21 @@ enum WalletWatch {
         let vizDemo = false
         #endif
         if vizDemo || DemoMode.isActive {
-            return WalletDemoState.state
+            // The Worth-a-look tray reads `warnings`/`flagged`/`activeApprovals`,
+            // and the fixture carried none (demo census, 2026-09-05) — so the
+            // tray under the demo was empty beside an exposure card naming
+            // three spenders. Roll them up the way the live path does, over
+            // the demo's own books and the approval rows the seed lands.
+            var s = WalletDemoState.state
+            let approvals = ((try? context.fetch(FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == "Wallet" }))) ?? [])
+                .live.filter { $0.sourceRef?.hasPrefix("wallet:approval:") ?? false }
+            s.activeApprovals = approvals
+            s.warnings = warnings(positions: s.positions, morpho: s.morpho,
+                                  safePending: WalletDemoState.safePending,
+                                  delegations: [], poisoningCount: 0, spoofedSymbolCount: 0,
+                                  approvalCount: max(approvals.count, s.exposure.spenderCount))
+            return s
         }
         let watched = WalletStore.shared.addresses.map(\.address)
         let targets = scope.map { s in watched.filter { sameAddress($0, s) } } ?? watched
@@ -600,6 +614,21 @@ enum WalletWatch {
 /// plus a spot balance, since the composition strip states the two as one
 /// deposit and a perp account with no spot would hide half of that sum.
 enum WalletDemoState {
+    /// Gas the demo wallet has paid and had sponsored — fixed figures for the
+    /// gas ask, since the live read prices through Alchemy (2026-09-05).
+    static let gasUSD: Double? = 41.20
+    static let gasSponsoredUSD: Double? = 6.80
+
+    /// The Safe ask's counts, from the same seeded snapshot the Safe room
+    /// head composes over (`SafeBridge.seedDemoSnapshot`).
+    static var safePending: [String: SafeBridge.Pending] {
+        var out: [String: SafeBridge.Pending] = [:]
+        for p in SafeBridge.pendingSnapshot() where p.have < p.required {
+            out[p.safeAddress, default: SafeBridge.Pending()].count += 1
+        }
+        return out
+    }
+
     static var state: WalletLiveState {
         var s = WalletLiveState()
         s.positions = [

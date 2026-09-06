@@ -336,6 +336,18 @@ enum DemoMode {
             try? await Task.sleep(for: pourBeat)
         }
         ScratchDefaults.standard.set(false, forKey: pendingKey)
+        // "While I was away?" answers over what landed after the last close.
+        // `AppVisit.seedDemo` stamps that close three hours back, and the
+        // seed's rows sit at fixed hours of fixed days — so at most times of
+        // day nothing at all fell inside the window and the ask said
+        // "Nothing new" over a corpus that had just poured (census
+        // 2026-09-05). Close the window just before the dozen newest rows
+        // instead, so the answer is the same at any hour.
+        let newest = rows.map(\.capturedAt).sorted(by: >)
+        if newest.count >= 12 {
+            AppVisit.markClosed(now: newest[11].addingTimeInterval(-1))
+            AppVisit.markOpened()
+        }
         NSLog("[Casberi] demoMode: poured %d rows", rows.count)
     }
 

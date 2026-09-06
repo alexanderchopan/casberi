@@ -19,7 +19,11 @@ enum SafeAsk {
         let watched = WalletStore.shared.addresses.map(\.address)
         let addresses = await WalletIngest.resolvedAddresses(watched).filter { ENS.isHexAddress($0) }
         guard !addresses.isEmpty else { return nil }
-        let counts = await SafeBridge.pendingCounts(addresses: addresses)
+        // Under the demo, the seeded snapshot the Safe room head reads — the
+        // live queue is a reach, and it answered "no Safe detected" beside a
+        // room showing one (census 2026-09-05).
+        let counts = DemoMode.isActive ? WalletDemoState.safePending
+            : await SafeBridge.pendingCounts(addresses: addresses)
         guard !counts.isEmpty else {
             return String(localized: "No Safe wallets detected.")
         }

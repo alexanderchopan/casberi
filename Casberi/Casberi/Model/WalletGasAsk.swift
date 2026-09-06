@@ -25,8 +25,14 @@ enum WalletGasAsk {
         // mentioning the part that cost nothing — which is the interesting
         // half. Nil for everyone who has never used a paymaster, so the
         // sentence only grows when there's something to say.
-        let sponsored = await WalletGas.sponsoredUSD(addresses: addresses)
-        guard let total = await WalletGas.totalUSD(addresses: addresses) else {
+        // The demo's figures are fixed in `WalletDemoState` (census 2026-09-05)
+        // — the live read prices gas through Alchemy, which a demo must not
+        // reach, and the seeded corpus has no gas ledger to sum.
+        let sponsored = DemoMode.isActive ? WalletDemoState.gasSponsoredUSD
+            : await WalletGas.sponsoredUSD(addresses: addresses)
+        let read = DemoMode.isActive ? WalletDemoState.gasUSD
+            : await WalletGas.totalUSD(addresses: addresses)
+        guard let total = read else {
             if let sponsored {
                 return String(localized:
                     "No gas of your own since you started watching — \(TokenStats.compact(sponsored)) was sponsored for you.")

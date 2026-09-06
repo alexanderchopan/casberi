@@ -3155,6 +3155,158 @@ else
   fi
 fi
 
+# ── 9. Demo CENSUS — every other surface, one launch (HARD FAIL) ────────
+# The FIFTH surface family of the 2026-08-08 parity ruling, and the one that
+# closes the list. Asked directly ("make sure every part of the demo reflects
+# what the app really looks like when populated", 2026-09-05), the honest
+# answer was that steps 6–8 cover four surface families — room heads, sheet
+# anatomies, floors and the All room — and the app draws a great deal more
+# than that over a populated corpus: every ask kind the composer offers,
+# search, the widgets, the notify plan, related/links/facts, the wallet's own
+# cards under the crown, the social rosters and their inbound half, the verbs
+# a sheet offers, and every ROOM the demo furnishes that the head map above
+# never named (~28 named; the demo seeds ~68).
+#
+# Each of those has had a `-…Probe` hook for weeks and NONE ran over the demo,
+# because each is a terminate + launch + poll and nobody strung thirty of them
+# together. `Shell/DemoCensus.swift` calls the same composers in ONE process
+# and prints one line per surface:
+#
+#     demoCensus| <surface> | required|ranked | ok|empty|skipped | <detail>
+#
+# `required` + `empty` FAILS (a pure function of the corpus — no ranking, no
+# model, no network — so a gap draws empty every run); `ranked` + `empty`
+# WARNS (the surface competes for a slot or reads the on-device model);
+# `skipped` is printed and never counted either way (the host cannot meet a
+# precondition — the simulator ships no on-device model). The closing line
+# carries the row count and this step refuses a log whose rows do not match
+# it, so a surface that crashed the census mid-way cannot pass by silence.
+step "Demo census"
+CENSUS_LOG="$OUT/demo-census.log"
+if [[ -z "$POURED" ]]; then
+  print -P "%F{yellow}⚠ demo never finished pouring (see the Demo pour step above) — skipping the census%f"
+else
+  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl spawn "$DEVICE" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "demoCensus"' \
+    --style compact > "$CENSUS_LOG" 2>/dev/null &
+  CSPID=$!
+  sleep 1
+  xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -demoCensus YES >/dev/null 2>&1 || true
+  CENSUS_DONE=""
+  for i in {1..180}; do
+    sleep 1
+    grep -q "demoCensus: done" "$CENSUS_LOG" 2>/dev/null && { CENSUS_DONE=1; break; }
+  done
+  sleep 1
+  kill $CSPID 2>/dev/null || true
+  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  if [[ -z "$CENSUS_DONE" ]]; then
+    fail "the demo census never finished — see $CENSUS_LOG (a partial census would pass by silence, so it fails instead)"
+  fi
+  CENSUS_ROWS=$(grep -c "demoCensus| " "$CENSUS_LOG" || true)
+  CENSUS_SAID=$(grep -o "demoCensus: done ([0-9]* surfaces" "$CENSUS_LOG" | grep -o "[0-9]*" | head -1)
+  if [[ "$CENSUS_ROWS" != "$CENSUS_SAID" ]]; then
+    fail "the census printed $CENSUS_ROWS rows but said $CENSUS_SAID surfaces — see $CENSUS_LOG"
+  fi
+  print -P "%F{cyan}Demo census ($CENSUS_ROWS surfaces):%f"
+  grep -o "demoCensus: begin.*" "$CENSUS_LOG" | head -1 || true
+  # A PLAIN room that leads with rows is a gap only if the app defines an
+  # insight for that source — the sources named in `FeedInsight.swift`'s own
+  # switches (`case "Reddit":`) and the head map `roomInsightReport` carries
+  # (`source == "Stripe"`). A source named in neither leads with rows in the
+  # real app too, so the demo is faithful and the row is INFO, not a failure.
+  # Derived from the two files each run, never a hand list.
+  INSIGHT_NAMED=$(python3 - "$ROOT" <<'PY'
+import re, sys, pathlib
+root = pathlib.Path(sys.argv[1]) / "Casberi/Casberi"
+names = set()
+fi = (root / "Model/FeedInsight.swift").read_text()
+names |= set(re.findall(r'case\s+((?:"[^"]+"\s*,\s*)*"[^"]+")\s*:', fi) and
+             [n for grp in re.findall(r'case\s+((?:"[^"]+"\s*,\s*)*"[^"]+")\s*:', fi)
+              for n in re.findall(r'"([^"]+)"', grp)])
+hm = (root / "Model/FeedHeatmap.swift").read_text()
+start = hm.find("static let labels")
+names |= set(re.findall(r'"([^"]+)":', hm[start:start + 20000]))
+ph = (root / "Shell/ProbeHooks.swift").read_text()
+start = ph.find("static func roomInsightReport(")
+names |= set(re.findall(r'source == "([^"]+)"', ph[start:start + 40000]))
+print("\n".join(sorted(names)))
+PY
+)
+  CENSUS_FAIL=()
+  CENSUS_WARN=()
+  CENSUS_INFO=()
+  CENSUS_SKIP=0
+  while IFS='|' read -r _ name gate verdict detail; do
+    name="${name## }"; name="${name%% }"; gate="${gate// /}"; verdict="${verdict// /}"
+    detail="${detail# }"
+    case "$verdict" in
+      empty)
+        if [[ "$name" == room.* ]] && ! print -r -- "$INSIGHT_NAMED" | grep -qxF -- "${name#room.}"; then
+          CENSUS_INFO+=("$name — $detail")
+          print -P "  %F{blue}· $name%f — $detail (no insight or head names this source; rows-only in the real app too)"
+        elif [[ "$gate" == "required" ]]; then
+          CENSUS_FAIL+=("$name — $detail")
+          print -P "  %F{red}✗ $name%f — $detail"
+        else
+          CENSUS_WARN+=("$name — $detail")
+          print -P "  %F{yellow}⚠ $name%f — $detail"
+        fi ;;
+      skipped) CENSUS_SKIP=$((CENSUS_SKIP + 1)); print -P "  %F{blue}· $name%f — $detail" ;;
+      *) print -P "  %F{green}✓ $name%f — $detail" ;;
+    esac
+  done < <(grep -o "demoCensus| .*" "$CENSUS_LOG")
+  if (( ${#CENSUS_WARN[@]} > 0 )); then
+    print -P "%F{yellow}⚠ ${#CENSUS_WARN[@]} ranked surface(s) drew nothing (warn-only — they compete for a slot or read the model)%f"
+  fi
+  if (( ${#CENSUS_INFO[@]} > 0 )); then
+    print -P "%F{blue}· ${#CENSUS_INFO[@]} plain room(s) lead with rows, as the real app would — no insight is defined for them%f"
+  fi
+  if (( ${#CENSUS_FAIL[@]} == 0 )); then
+    print -P "%F{green}✓ demo census ($((CENSUS_ROWS - CENSUS_SKIP)) judged, $CENSUS_SKIP skipped on this host)%f"
+  else
+    fail "${#CENSUS_FAIL[@]} demo surface(s) draw nothing over the poured demo — see $CENSUS_LOG"
+  fi
+fi
+
+# ── 9a. Demo room SHOTS — the pixels, for the eye (opt-in, never a gate) ─
+# Every step above judges a surface by its composed VALUES; this captures what
+# the rooms actually look like, one screenshot per furnished room in both
+# themes, into $OUT/demo-shots/ with an index.html. Nothing is asserted about a
+# pixel — pixels are the user's ruling, not a gate's — so it is opt-in
+# (DEMO_SHOTS=1) because ~70 rooms × 2 themes × ~1.5s is minutes the standing
+# pass should not pay on every run. The room list is read from the census log
+# (the `room.<source>` rows), so it is the demo's own list, never a hand copy.
+#
+# `casberi://feed/source/<name>` is opened INTO the running app via
+# `simctl openurl` (a launch arg would not reach `onOpenURL`), so it is one
+# launch per theme, not one per room.
+if [[ "${DEMO_SHOTS:-0}" == "1" && -n "$POURED" ]]; then
+  step "Demo room shots"
+  SHOTS="$OUT/demo-shots"
+  mkdir -p "$SHOTS"
+  ROOM_LIST=$(grep -o "demoCensus| room\.[^|]*|" "$CENSUS_LOG" | sed 's/demoCensus| room\.//; s/ *|$//' | sort -u)
+  INDEX="$SHOTS/index.html"
+  print '<!doctype html><meta charset="utf-8"><title>Demo room shots</title><style>body{font:13px -apple-system;margin:16px}figure{display:inline-block;margin:6px;text-align:center}img{width:220px;border-radius:12px}</style>' > "$INDEX"
+  for theme in light dark; do
+    xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+    xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -theme.light $([[ "$theme" == light ]] && echo YES || echo NO) >/dev/null 2>&1 || true
+    sleep 3
+    print "<h2>$theme</h2>" >> "$INDEX"
+    while IFS= read -r room; do
+      [[ -z "$room" ]] && continue
+      enc=$(python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1]))' "$room")
+      xcrun simctl openurl "$DEVICE" "casberi://feed/source/$enc" >/dev/null 2>&1 || true
+      sleep 1.4
+      safe=$(print -r -- "$room" | tr -c 'A-Za-z0-9' '_')
+      xcrun simctl io "$DEVICE" screenshot "$SHOTS/$theme-$safe.png" >/dev/null 2>&1 || true
+      print "<figure><img src=\"$theme-$safe.png\"><figcaption>$room</figcaption></figure>" >> "$INDEX"
+    done <<< "$ROOM_LIST"
+  done
+  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  print -P "%F{green}✓ demo room shots → $INDEX%f"
+fi
+
 # ── Mac verify gate (user rule, 2026-08-21 — launched at the top) ──────────
 # The wait is LAST so the whole iOS pass ran alongside it; wall time is now
 # max(iOS, Mac), and verify-mac.sh (build + cold launches + probes + perf) is

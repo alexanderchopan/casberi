@@ -7285,7 +7285,11 @@ enum ProbeHooks {
     /// there needs a `note(...)` here, or this reports "leads with NOTHING"
     /// about a room that leads with a card (the §219 failure inverted).
     @MainActor
-    static func roomInsightReport(source: String, context: ModelContext) {
+    /// Returns the leader's name (nil when the room leads with rows only) so
+    /// `DemoCensus` can judge every room the demo furnishes through the SAME
+    /// function the room-head step reads, rather than a second copy of it.
+    @discardableResult
+    static func roomInsightReport(source: String, context: ModelContext) -> String? {
         let things = ((try? context.fetch(FetchDescriptor<Thing>(
             predicate: #Predicate { $0.source == source },
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []).live
@@ -7548,6 +7552,7 @@ enum ProbeHooks {
             note("heatmap", nil)
         }
         NSLog("[Casberi] roomInsight: leads with %@", leader ?? "NOTHING (rows only)")
+        return leader
     }
 }
 

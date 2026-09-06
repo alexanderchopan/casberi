@@ -97,7 +97,20 @@ enum DemoSeedAll {
     /// real connected Cloudflare account's OWN cert refs share the same
     /// prefix (`cloudflare:cert:<real zone id>`) and must never be swept up
     /// by `clear`/`teardown`.
+    /// Who liked which demo post — keyed on the posts' own refs (the person's
+    /// own casts wear `fc:demo:`/`bsky:demo:`, see `social()`).
+    static let demoLikerRolls: [(ref: String, handles: [String], total: Int)] = [
+        ("fc:demo:0", ["mia", "sam", "nils"], 32),
+        ("fc:demo:2", ["sam", "uma"], 9),
+        ("bsky:demo:0", ["uma", "nils", "mia"], 18),
+    ]
+
     static let refPrefixes = ["demo:", "sample:demo-shot-", "files:demo/",
+                              // The person's OWN casts and posts wear the real
+                              // bridges' prefixes (see `social()`), so the
+                              // inbound half can find them — and so teardown
+                              // needs these two or they outlive the demo.
+                              "fc:demo:", "bsky:demo:",
                               "import:receipt:", "cloudflare:cert:demo",
                               // Vibenet's demo rows carry the REAL bridge's
                               // ref shape for the same reason Peer's do
@@ -569,6 +582,7 @@ enum DemoSeedAll {
 
         for event in demoMetrics { PostHogState.forget(event) }
         ChipMemory.forgetDemo(Array(demoVisits.keys))
+        SocialLikers.shared.forgetDemo(refs: demoLikerRolls.map(\.ref))
         X402State.forget()
         // The keystore snapshot and its seat evidence (prd §403).
         AltanaState.clear()   // takes the seeded ghosts with it (§410)
@@ -1322,7 +1336,10 @@ enum DemoSeedAll {
         let shots: [(String, [String], Double, Int)] = [
             ("Figma — spacing tokens", ["Figma", "Design system"], 1, 11),
             ("SwiftUI — scroll transitions", ["SwiftUI", "Design system"], 2, 15),
-            ("Lisbon — Alfama walking route", ["Lisbon", "Maps"], 5, 9),
+            // Carries a FUTURE date in its text (census 2026-09-05): the
+            // facts strip lifts dates out of a screenshot's OCR, and no demo
+            // screenshot had one to lift.
+            ("Lisbon — Alfama walking route · \(demoLongDay(9)) 18:40", ["Lisbon", "Maps"], 5, 9),
             ("Espresso dial-in notes", ["Espresso"], 8, 8),
             ("Figma — colour ramp", ["Figma", "Espresso"], 12, 14),
             ("SwiftUI — matchedGeometry demo", ["SwiftUI"], 19, 21),
@@ -1358,7 +1375,11 @@ enum DemoSeedAll {
         // into a gallery, which is exactly what the gate exists to prevent.
         let wordless: [(days: Double, hour: Int, n: Int)] = [(1, 17, 0), (4, 12, 2)]
         out += wordless.enumerated().map { i, w in
-            row(.screenshot, "", source: "Photos", ref: "sample:demo-shot-\(11 + i)",
+            // 13+, not 11+: the eight worded shots above already mint 5…12, so
+            // these two shared refs with two of them and `SyncReconcile`'s
+            // launch dedupe deleted one of each pair on EVERY launch — found
+            // by `-corpusDupeProbe` while chasing a crash (2026-09-05).
+            row(.screenshot, "", source: "Photos", ref: "sample:demo-shot-\(13 + i)",
                 days: w.days, hour: w.hour, content: "") { t in
                 t.ocrAt = .now
                 t.previewImageData = pixels(w.n)
@@ -1598,6 +1619,12 @@ enum DemoSeedAll {
             ("Car maintenance log",
              "Tyres rotated at 41,200. Next service due around 46,000 or spring.",
              48),
+            // Mentions a link the Raindrop and Bookmarks rooms both saved, so
+            // the thing sheet's "points at" ties have one to draw (census
+            // 2026-09-05: no demo link row pointed at anything).
+            ("Concurrency reading",
+             "Re-read the proposals at https://github.com/apple/swift-evolution before the review.",
+             0.4),
         ]
         return notes.enumerated().map { i, n in
             row(.note, n.0, source: "You", ref: "demo:own:\(i)",
@@ -1608,6 +1635,14 @@ enum DemoSeedAll {
     /// X is a `bulkImportSources` room: its rows stay out of ALL and it gets
     /// one receipt there instead. Posts are `.note` (the treemap's kind), likes
     /// are `.link` wearing somebody else's words — the split §308 draws.
+    /// Days back to the same calendar day one year ago — computed, so a leap
+    /// day between now and then cannot shift it off the throwback's match.
+    private static var yearAgoDays: Double {
+        let cal = Calendar.current
+        let then = cal.date(byAdding: .year, value: -1, to: .now) ?? .now
+        return cal.startOfDay(for: .now).timeIntervalSince(cal.startOfDay(for: then)) / 86_400
+    }
+
     private static func xArchive() -> [Thing] {
         var out: [Thing] = [receipt("X", "412 posts · 180 liked", days: 3)]
         // AN ARCHIVE HAS DEPTH, and the demo has to have it too (2026-08-13,
@@ -1635,6 +1670,10 @@ enum DemoSeedAll {
             ("Notes on reading your own archive.", ["Archives"], 430),
             ("An archive is a corpus, not a feed.", ["Archives", "Craft"], 455),
             ("Archives outlive the app that made them.", ["Archives"], 480),
+            // On this day a year ago (census 2026-09-05): the throwback ask
+            // composes only over a bulk-import row sharing today's month and
+            // day in an earlier year, and none did.
+            ("A year ago today: shipped the first import.", ["Shipping", "Archives"], yearAgoDays),
             ("Shipping in public, year three.", ["Shipping"], 505),
             ("Interfaces that age well say less.", ["Interfaces"], 530),
             ("Archives are the only honest analytics.", ["Archives"], 560),
@@ -2492,7 +2531,12 @@ enum DemoSeedAll {
             ("Base fees are basically nothing now.", "/base", "sam", 15, 30),
         ]
         out += casts.enumerated().map { i, c in
-            row(.chat, c.0, source: "Farcaster", ref: "demo:fc:\(i)", days: c.4,
+            // Own casts wear the REAL `fc:` ref shape (2026-09-05, demo census):
+            // `SocialInbound.ownRecentPosts` matches on the bridge's own prefix,
+            // so under `demo:fc:` the inbound half never had an own post to
+            // read from. `refPrefixes` carries `fc:demo:` for teardown.
+            row(.chat, c.0, source: "Farcaster",
+                ref: c.2 == "you" ? "fc:demo:\(i)" : "demo:fc:\(i)", days: c.4,
                 hour: 13 - (i % 4)) { t in
                 t.postText = c.0
                 t.channelName = c.1
@@ -2541,7 +2585,8 @@ enum DemoSeedAll {
             ("Reading, mostly.", "nils", 4, 27),
         ]
         out += posts.enumerated().map { i, p in
-            row(.chat, p.0, source: "Bluesky", ref: "demo:bsky:\(i)", days: p.3,
+            row(.chat, p.0, source: "Bluesky",
+                ref: p.1 == "you" ? "bsky:demo:\(i)" : "demo:bsky:\(i)", days: p.3,
                 hour: 16 - (i % 3),
                 content: "at://did:plc:demo/app.bsky.feed.post/\(i)") { t in
                 t.postText = p.0
@@ -2804,8 +2849,13 @@ enum DemoSeedAll {
             ("Ceramic mug, set of two", "€34", 6, 34), ("Oak chopping board", "€55", 12, 55),
         ]
         out += arrivals.enumerated().map { i, a in
+            // `content` is the product URL, as `ShopifyBridge` lands it — a
+            // sheet's "Open in store" verb derives from it, and the census
+            // found every demo product offering no verb at all (2026-09-05).
+            // `example.com` is the audit's declared demo host.
             row(.product, a.0, source: "Shopify", ref: "demo:shopify:\(i)", days: a.2, hour: 17,
-                content: a.1) { t in
+                content: "https://example.com/products/\(i + 1)") { t in
+                t.summary = a.1
                 t.priceValue = a.3
                 t.priceCurrency = "EUR"
                 t.authorHandle = "Small Things"
@@ -3800,7 +3850,7 @@ enum DemoSeedAll {
             ("New issue: nil unwrap in FeedScreen", "Sentry", "3 events", 6, ["Issue"]),
             ("Deployed casberi-site to production", "Vercel", "Ready in 24s", 1, ["Deploy"]),
             ("Preview ready for pull/412", "Vercel", "Ready in 19s", 3, ["Deploy"]),
-            ("Acknowledged: latency alert", "PagerDuty", "Resolved in 8m", 8, ["Resolved"]),
+            ("Acknowledged: latency alert", "PagerDuty", "Resolved in 8m", 8, ["Resolved", "Alert"]),
             // Cloudflare's rows are readings, not outcomes — its bridge stamps
             // no outcome tag and `WorkStage.outcome` has no case for it, so
             // these two correctly produce no Work reading. Left tagless on
@@ -3859,8 +3909,13 @@ enum DemoSeedAll {
             ("Subscription canceled · Pro monthly", 11, "Churn", nil),
         ]
         out += stripe.enumerated().map { i, s in
+            // The outcome tag stays FIRST — `StripeRoomSource` and
+            // `WorkStage.outcome` key on it. "Alert" rides second on the
+            // dispute (2026-09-05): it is one of the two themes
+            // `BriefLedger.seedDemo` claims the corpus carries, and until
+            // then nothing wore it, so `showtag:Alert` composed nil.
             row(.link, s.title, source: "Stripe", ref: "demo:stripe:\(i)",
-                days: s.days, hour: 13, tags: [s.tag]) { t in
+                days: s.days, hour: 13, tags: [s.tag] + (s.tag == "Dispute" ? ["Alert"] : [])) { t in
                 if let amount = s.amount {
                     t.priceValue = amount
                     t.priceCurrency = "USD"
@@ -4166,6 +4221,12 @@ enum DemoSeedAll {
 
     /// "Sep 12" — the abbreviated month/day Polar prints inside a dispute
     /// title, so the seeded title reads exactly as a landed one would.
+    /// "September 14" — the form `NSDataDetector` resolves to the coming
+    /// occurrence, which `ScreenshotFacts.dates` accepts (future, within a year).
+    private static func demoLongDay(_ daysAhead: Double) -> String {
+        at(-daysAhead, 12).formatted(.dateTime.month(.wide).day())
+    }
+
     private static func demoShortDay(_ daysAhead: Double) -> String {
         at(-daysAhead, 12).formatted(.dateTime.month(.abbreviated).day())
     }
@@ -5049,6 +5110,7 @@ enum DemoSeedAll {
                 return a
             }
         }
+        SocialLikers.shared.seedDemo(demoLikerRolls.map { ($0.ref, $0.handles, $0.total) })
         if BlueskyStore.shared.accounts.isEmpty {
             BlueskyStore.shared.accounts = demoBluesky.map {
                 var a = BlueskyStore.Account(handle: $0.handle)

@@ -32,6 +32,14 @@ enum WidgetPublish {
     /// Deadlines are the one payload that still runs its own fetch, and for a
     /// reason this array cannot fix — see `deadlines(context:)`.
     static func publishAll(things: [Thing], context: ModelContext) {
+        // The §217 demo doctrine, applied to EVERY payload (2026-09-05): the
+        // Today lede already stayed home under the demo (`TodayBrief`'s
+        // `skipLiveReads`), but the day lead, the flow band, the deadlines,
+        // the Safe call and the wallet tile did not — the demo census found a
+        // "money · 3 pictures" lead published from a corpus that is nobody's,
+        // onto the most public surface the OS has, with nothing named to take
+        // it down on exit. Nothing the demo composes reaches a widget.
+        guard !DemoMode.isActive else { return }
         guard let group = UserDefaults(suiteName: SharedStore.appGroup) else { return }
         let things = things.live
         var stale: [String] = []

@@ -20,7 +20,10 @@ enum UniswapAsk {
         let watched = WalletStore.shared.addresses.map(\.address)
         let addresses = await WalletIngest.resolvedAddresses(watched).filter { ENS.isHexAddress($0) }
         guard !addresses.isEmpty else { return nil }
-        guard let book = await UniswapLiquidity.book(addresses: addresses), !book.isEmpty else {
+        let read = DemoMode.isActive
+            ? WalletDemoState.state.uniswap   // the demo's own book (census 2026-09-05)
+            : await UniswapLiquidity.book(addresses: addresses)
+        guard let book = read, !book.isEmpty else {
             return String(localized: "No open Uniswap positions right now.")
         }
         let outOfRange = book.positions.filter { !$0.inRange }
