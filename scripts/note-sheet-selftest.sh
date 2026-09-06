@@ -375,8 +375,10 @@ check("a whole read time is not",
 // keeps, and the only reason any number here can be trusted.
 check("no body means no readings",
       NoteReception.compose(input(words: nil))?.readings.isEmpty == true)
-check("a short body reports words and no read time",
-      NoteReception.compose(input(words: 40))?.readings.count == 1)
+check("a glance is not measured (prd §632) — under the read-time floor, no words cell",
+      NoteReception.compose(input(words: 40))?.readings.isEmpty ?? true)
+check("a real body still counts",
+      NoteReception.compose(input(words: 140))?.readings.first?.text == "140")
 
 // A vault note's own clock, which an entry does not have (an entry's clock is
 // its hero).
@@ -417,10 +419,10 @@ check("a vault with no path still says where it read from",
       NoteReception.compose(input(shape: .note, source: "Obsidian", origin: .vault,
                                   words: 300))?
         .provenance == "Read from your Obsidian vault.")
-check("a device recording says so",
+check("a device note has NO sentence (prd §632) — nothing for it to name",
       NoteReception.compose(input(source: "Voice", origin: .device,
-                                  act: .recorded, words: 31))?
-        .provenance == "Recorded here, on this device.")
+                                  act: .recorded, words: 310))?
+        .provenance == nil)
 check("an export names the source",
       NoteReception.compose(input(words: 318))?
         .provenance == "From your Day One export.")
@@ -466,9 +468,14 @@ check("an entry never states the passage limit",
       NoteReception.compose(input(words: 318, truncatedPassage: true))?.ceiling == nil)
 
 // Nothing honest to say means no card at all — never a spinner, never a zero.
+// TRUE AT LAST (prd §632): this check asserted `!= nil` under its own name
+// saying "has no card", because the device sentence used to be unconditional
+// — so the one record with nothing to measure and nowhere to be from always
+// got a card anyway. With that sentence gone the assertion says what it is
+// called.
 check("a record with nothing to measure and nowhere to be from has no card",
       NoteReception.compose(.init(shape: .entry, source: "", origin: .device,
-                                  now: today)) != nil)
+                                  now: today)) == nil)
 
 print("")
 print("Relative time")
@@ -687,14 +694,15 @@ check("the dateline says you kept it", keptLine.detail.contains("kept at"))
 let keptDevice = NoteReception.compose(.init(
     shape: .entry, source: "You", origin: .device, act: .kept,
     words: 40, writtenAt: date(2026, 5, 14), landedAt: date(2026, 5, 14),
-    now: date(2026, 6, 1)))!
-check("a kept note is not said to have been recorded",
-      keptDevice.provenance == "Kept here, on this device.")
+    now: date(2026, 6, 1)))
+check("a short note typed here has NO reception block at all (prd §632)",
+      keptDevice == nil)
 let recorded = NoteReception.compose(.init(
     shape: .entry, source: "Voice", origin: .device, act: .recorded,
-    words: 40, writtenAt: date(2026, 5, 14), landedAt: date(2026, 5, 14),
+    words: 400, writtenAt: date(2026, 5, 14), landedAt: date(2026, 5, 14),
     now: date(2026, 6, 1)))!
-check("a voice note still is", recorded.provenance == "Recorded here, on this device.")
+check("a long voice note keeps its readings and still says no sentence",
+      recorded.provenance == nil && recorded.readings.first?.text == "400")
 
 if failures > 0 { print("note-sheet-selftest: ✗ \(failures) assertion(s) failed"); exit(1) }
 SWIFT
@@ -923,8 +931,11 @@ mutate "any URL in a note is treated as a wikilink" \
 mutate "a kept note claims you wrote it" \
   'case .kept:     return String(localized: "kept")' \
   'case .kept:     return String(localized: "written")'
-mutate "everything on this device is said to have been recorded" \
-  'return i.act == .recorded' \
-  'return true'
+mutate "the device sentence comes back" \
+  'case .device:' \
+  'case .deviceGone:'
+mutate "a glance is measured again" \
+  'words >= NoteSheet.readTimeFloor {' \
+  'words > 0 {'
 
 echo "note-sheet-selftest: OK — assertions and mutations both pass."

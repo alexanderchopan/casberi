@@ -647,7 +647,11 @@ struct NoteReception: Equatable {
             }
             return out
         }
-        if let words = i.words, words > 0 {
+        // A count under the read-time floor is a glance, not a reading (prd
+        // §632, user on an "8 words" cell: "what the heck is this") — the cell
+        // exists to say how LONG a thing is, and nothing under a hundred words
+        // is. `readTimeFloor` already draws that line for the minutes cell.
+        if let words = i.words, words >= NoteSheet.readTimeFloor {
             // The honesty valve, borrowed verbatim from `SocialCount`'s "97+":
             // a body we clamped is at LEAST this long, and a bare number over
             // a clamped body understates a real note by thousands while
@@ -687,13 +691,12 @@ struct NoteReception: Equatable {
             }
             return String(localized: "Read from your vault at \(path).")
         case .device:
-            // A voice note really was recorded here. A `You` note may have been
-            // typed here or shared in from somewhere else, and nothing in the
-            // record can tell the two apart — so it says the one thing that is
-            // true either way (§399).
-            return i.act == .recorded
-                ? String(localized: "Recorded here, on this device.")
-                : String(localized: "Kept here, on this device.")
+            // NO SENTENCE (prd §632). §399 had this say the one thing true of
+            // every note kept here — which is exactly why it said nothing: a
+            // provenance line earns its place by naming a vault path, an
+            // export file or a date, and a note made on this phone has none of
+            // those. The dateline above it already says when.
+            return nil
         case .export:
             let head: String
             if let file = i.originFile, !file.isEmpty {

@@ -202,7 +202,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-photoHealProbe` `-reingestPhotos` — run the Photos HEAL directly (the pass that OCRs, thumbnails, RETITLES and prunes) and NSLog photoHeal → docs/hooks/system.md
 - `-photoVerbProbe` — what a screenshot's thing sheet OFFERS, and whether each offer can LAND (prd §275, 2026-08-02) → docs/hooks/system.md · prd §275
 - **On-device intelligence, the librarian half** (`-embeddingProbe`) → docs/hooks/system.md · prd §282
-- `-relatedProbe` — what the thing sheet shows UNDER a thing: relatedKept| (the earlier copy) then relatedNear| per neighbour → docs/hooks/system.md
+- `-relatedProbe` — what the thing sheet shows UNDER a thing: relatedKept| (the earlier copy). The embedding neighbours are NOT drawn since prd §632 and are logged as a diagnostic count only → docs/hooks/system.md
 - `-topicMapProbe` — the text treemap (prd §230, 2026-07-30; §247 widened it past Photos; §283 added Files), headless → docs/hooks/rooms.md · prd §230
 - `-roomInsightProbe` — what a source's room LEADS with (prd §247, 2026-07-31) → docs/hooks/rooms.md · prd §247
 - `-stripeRoomProbe` `-posthogRoomProbe` — the two room heads' readings line by line (prd §298, 2026-08-04; one NSLog per line, the -todayProbe truncation → docs/hooks/rooms.md · prd §298

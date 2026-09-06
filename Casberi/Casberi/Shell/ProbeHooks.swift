@@ -4700,9 +4700,11 @@ enum ProbeHooks {
                 } else {
                     NSLog("relatedKept| none")
                 }
+                // The neighbours are no longer SHOWN (prd §632) — the sheet
+                // draws the earlier copy and, for a token, the things that
+                // name it. Reported here as a diagnostic count only.
                 let near = RelatedThings.neighbours(of: subject, in: all)
-                NSLog("relatedProbe: neighbours=%d", near.count)
-                for t in near { NSLog("relatedNear| %@ · %@", t.title, t.source) }
+                NSLog("relatedProbe: neighbours=%d (diagnostic — not drawn since §632)", near.count)
             }
         },
         // `-linksProbe "<title prefix>"` — what the thing sheet's "Points at

@@ -53,8 +53,9 @@ struct ThingSheetView: View {
     @State private var verbResultIsError = false
     @State private var relatedStream = GenStream()
     /// "Related" for tag overlap; "In your things" when a watched token's
-    /// shelf holds the corpus things that mention it (2026-07-14).
-    @State private var relatedTitle = "Related"
+    /// The shelf's only title since prd §632 — the token case, the one
+    /// relatedness the app can prove: things whose own words name this token.
+    @State private var relatedTitle = "In your things"
     /// Naming a wallet transaction's counterparty (2026-07-15) — the address
     /// being named, and the draft. The label enriches every FUTURE transfer
     /// with that counterparty (CounterpartyLabels).
@@ -404,7 +405,8 @@ struct ThingSheetView: View {
                              // wallet — it already has a name (via the Wallet
                              // screen's rename), so the Name disc would just
                              // offer to relabel it through the wrong flow.
-                             onName: MovedStage(thing) == nil ? nameCounterpartyAction : nil)
+                             onName: MovedStage(thing) == nil ? nameCounterpartyAction : nil,
+                             onPin: togglePin)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.12)
                     dialResult
@@ -444,7 +446,7 @@ struct ThingSheetView: View {
                         .padding(.top, DS.Space.s2)
                         .settleIn(delay: 0.1)
                     VerbDial(thing: thing, verbs: sheetVerbs,
-                             onVerb: runVerb, onName: nil)
+                             onVerb: runVerb, onName: nil, onPin: togglePin)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.14)
                     dialResult
@@ -757,12 +759,17 @@ struct ThingSheetView: View {
                     // already plain grey, so the dial changes their shape,
                     // not their weight.
                     VerbDial(thing: thing, verbs: sheetVerbs,
-                             onVerb: runVerb, onName: nil)
+                             onVerb: runVerb, onName: nil, onPin: togglePin)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.2)
                     dialResult
                 }
-                askAboutThis
+                // The only chip left under a dial (prd §632): a saved agent
+                // conversation you can carry on. "Ask about this", "Copy as
+                // context" and the Pin chip are gone — the first two were the
+                // agent bar and the Copy disc said twice, and Pin is a disc now.
+                continueConversation
+                    .padding(.top, DS.Space.s4)
                 if !replies.isEmpty {
                     // One replies renderer (2026-07-16) — the thing sheet and
                     // the in-app walker show a reply identically, however deep
@@ -2210,6 +2217,18 @@ struct ThingSheetView: View {
     }
 
     /// The one verb gate, both layouts: reads pass, writes confirm.
+    /// Pin is a DISC (prd §632, user: "why not just add pin to the row of
+    /// discs that are verbs?") — the dial is the sheet's one verb surface,
+    /// and a chip row under it made Pin look like a peer of two chips that
+    /// were not verbs at all.
+    private func togglePin() {
+        DSHaptic.tap()
+        let pinned = Pinboard.toggle(thing)
+        chrome.pinPulse += 1
+        verbResult = pinned ? String(localized: "Pinned") : String(localized: "Unpinned")
+        verbResultIsError = false
+    }
+
     private func runVerb(_ verb: Verb) {
         if verb.isWrite {
             confirmingVerb = verb
@@ -2390,17 +2409,6 @@ struct ThingSheetView: View {
     /// things, and the shelf may not have finished — a copy verb that silently
     /// omits the related list depending on scroll timing is worse than one
     /// that spends a bounded fetch.
-    private func copyAsContext() {
-        guard thing.isLive else { return }
-        var descriptor = FetchDescriptor<Thing>(
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-        descriptor.fetchLimit = 300   // the shelf's own window
-        let corpus = ((try? modelContext.fetch(descriptor)) ?? []).filter(\.isLive)
-        let related = RelatedThings.neighbours(of: thing, in: corpus)
-        DSPasteboard.copy(AgentContext.render(thing, related: related))
-        verbResult = String(localized: "Copied as context")
-        verbResultIsError = false
-    }
 
     // MARK: - Ask about this (2026-08-06)
 
@@ -2467,72 +2475,6 @@ struct ThingSheetView: View {
         }
     }
 
-    @ViewBuilder
-    private var askAboutThis: some View {
-        if thing.isLive {
-            let subject = thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !subject.isEmpty {
-                HStack(spacing: DS.Space.s2) {
-                    continueConversation
-                    Button {
-                        DSHaptic.tap()
-                        // Dismiss first: the composer rises over the shell, and
-                        // a sheet still up would sit between them.
-                        dismiss()
-                        chrome.ask("What else do I have about \(subject)?",
-                                   withKey: AgentKey.isConfigured)
-                    } label: {
-                        Chip(text: AgentKey.active.map {
-                                String(localized: "Ask \($0.agent) about this")
-                             } ?? String(localized: "Ask about this"),
-                             style: .neutral, glyph: "sparkles")
-                    }
-                    .buttonStyle(.plain)
-                    // The door for every agent this app will never have an API
-                    // for (2026-08-06, `AgentContext`) — a browser chat, a
-                    // terminal agent, whatever shipped last week. No key, no
-                    // network, no provider list.
-                    Button {
-                        DSHaptic.tap()
-                        copyAsContext()
-                    } label: {
-                        Chip(text: "Copy as context", style: .neutral, glyph: "doc.on.doc")
-                    }
-                    .buttonStyle(.plain)
-                    // PIN (2026-08-10). A chip and not a disc, on the rule the
-                    // dial already states: it is capped at four so that adding
-                    // a verb can never turn a sheet into a menu, and a fifth
-                    // disc would evict a derived verb that is more specific to
-                    // this row than pinning is. It belongs in the sheet as well
-                    // as the row's long-press because reading a thing is when
-                    // you learn it is worth keeping.
-                    Button {
-                        DSHaptic.tap()
-                        let pinned = Pinboard.toggle(thing)
-                        chrome.pinPulse += 1
-                        verbResult = pinned ? String(localized: "Pinned")
-                                            : String(localized: "Unpinned")
-                        verbResultIsError = false
-                    } label: {
-                        Chip(text: Pinboard.isPinned(thing)
-                                ? String(localized: "Unpin")
-                                : String(localized: "Pin"),
-                             style: .neutral,
-                             glyph: Pinboard.isPinned(thing) ? "pin.slash" : "pin")
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.top, DS.Space.s4)
-            }
-        }
-    }
-
-    // MARK: - Note links (a vault's own wikilink graph, 2026-07-28)
-
-    /// `linkedNotes` filtered to still-live models, read ONCE at the top —
-    /// the corollary-2 guard (see `ThingRowKeying.swift`): a delete-sync
-    /// heal landing while this sheet is open must not leave the `ForEach`
-    /// below reading a stored property off a tombstoned model.
     private var liveLinkedNotes: [KeyedThing] {
         linkedNotes.filter { $0.thing.isLive }
     }
@@ -2732,61 +2674,28 @@ struct ThingSheetView: View {
     }
 
     private func streamRelated() {
-        // A thing that can't have related items costs no fetch. A watched token
-        // has mentions and a tagged thing has overlap — the old invariant — and
-        // since 2026-08-02 an EMBEDDED thing has neighbours, which is most of
-        // the corpus once the sweep has run. That third arm is the fix for a
-        // real gap: a note or screenshot with no tags got no shelf at all, even
-        // though its vector could always have found company.
-        let typeTags = Set(ThingKind.allCases.map(\.typeTag))
-        let myTags = Set(thing.tags).subtracting(typeTags)
-        let isToken = thing.source == "Tokens"
-        let isEmbedded = thing.embedding.map { !$0.isEmpty } ?? false
-        guard isToken || !myTags.isEmpty || isEmbedded else { return }
-
+        // NO GUESSES UNDER A THING (prd §632, 2026-09-06). The embedding
+        // neighbours and the tag-overlap fallback are gone: cosine similarity
+        // with no confidence floor always filled its slots, and a shelf that
+        // is half right trains the eye to skip it. What survives makes a
+        // claim the app can stand behind — the earlier copy of this exact
+        // thing (`keptBefore`), and for a token, the things that NAME it.
         var descriptor = FetchDescriptor<Thing>(
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
         )
         descriptor.fetchLimit = 300   // relatedness lives in the recent past
         let all = (try? modelContext.fetch(descriptor)) ?? []
 
-        // Have you kept this exact thing before? Deterministic, and asked over
-        // the same fetch — so the answer costs nothing extra.
         if let earlier = RelatedThings.keptBefore(thing, in: all) {
             keptBefore = KeyedThing(earlier)
         }
 
-        // A watched token's relatedness is MENTION, not tags (2026-07-14) —
-        // every watchlist thing shares the Watchlist tag, so tag overlap only
-        // ever surfaced the other watched tokens. The saves, chats, and
-        // screenshots that name this token answer the question a watchlist
-        // can't: why am I watching this? Tag overlap stays as the fallback.
-        let mentions = isToken ? tokenMentions(in: all) : []
-        let related: [Thing]
-        if !mentions.isEmpty {
-            relatedTitle = "In your things"
-            related = mentions
-        } else {
-            // Meaning first (2026-07-14): rank the recent corpus by semantic
-            // similarity to this thing, so a GitHub PR reaches the Linear
-            // ticket, the chat, the note that share NO tag — the cross-source
-            // weaving tag overlap can't find (a feed tag like "Stars" only ever
-            // reaches other GitHub things). Tag overlap stays the fallback when
-            // the on-device embedding is unavailable or this thing isn't
-            // embedded yet — and where there are no tags either, the shelf
-            // simply stays empty, as it did before it could be reached at all.
-            let near = RelatedThings.neighbours(of: thing, in: all)
-            related = near.isEmpty
-                ? Array(all.filter { other in
-                    other.isLive && other.id != thing.id
-                        && !myTags.isEmpty && !myTags.isDisjoint(with: other.tags)
-                }.prefix(6))
-                : near
-        }
-        guard !related.isEmpty else { return }
+        guard thing.source == "Tokens" else { return }
+        let mentions = tokenMentions(in: all)
+        guard !mentions.isEmpty else { return }
 
-        var doc = ["root = Shelf([\(related.indices.map { "c\($0)" }.joined(separator: ", "))])"]
-        for (i, t) in related.enumerated() {
+        var doc = ["root = Shelf([\(mentions.indices.map { "c\($0)" }.joined(separator: ", "))])"]
+        for (i, t) in mentions.enumerated() {
             let title = t.title.replacingOccurrences(of: "\"", with: "")
             doc.append("c\(i) = Chip(\"\(t.source)\", \"\(title)\")")
         }

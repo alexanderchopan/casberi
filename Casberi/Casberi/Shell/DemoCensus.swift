@@ -153,14 +153,7 @@ enum DemoCensus {
         }
 
         // ── Related / links / facts / digests ─────────────────────────────
-        out.append(Surface(name: "related.neighbours", gate: .ranked) {
-            guard EmbeddingIndex.isAvailable else { return .skipped("no embedding model") }
-            let sample = surfaced.prefix(40)
-            let withNeighbours = sample.filter { !RelatedThings.neighbours(of: $0, in: all).isEmpty }.count
-            return withNeighbours > 0
-                ? .ok("\(withNeighbours)/\(sample.count) newest rows have neighbours")
-                : .empty("none of the newest \(sample.count) rows has a neighbour")
-        })
+        // `related.neighbours` retired with the shelf it censused (prd §632).
         out.append(Surface(name: "related.keptBefore", gate: .required) {
             let hits = surfaced.prefix(120).filter { RelatedThings.keptBefore($0, in: all) != nil }.count
             return hits > 0 ? .ok("\(hits) rows have an earlier copy")

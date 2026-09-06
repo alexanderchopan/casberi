@@ -107,6 +107,19 @@ struct VerbDial: View {
     var onVerb: (Verb) -> Void
     /// The Name disc — present only when there's an address to name.
     var onName: (() -> Void)?
+    /// Pin, as a disc (prd §632, user: "why not just add pin to the row of
+    /// discs that are verbs?") — the dial is the sheet's one verb surface, and
+    /// the chip row underneath made Pin look like a peer of two chips that
+    /// were not verbs at all.
+    var onPin: (() -> Void)?
+
+    /// Six discs fit a phone at the resting size; a seventh (four verbs, Name,
+    /// Pin and Share — the wallet's fullest dial) takes the tighter cut rather
+    /// than overflowing the sheet.
+    private var discCount: Int {
+        verbs.count + (onName == nil ? 0 : 1) + (onPin == nil ? 0 : 1) + 1
+    }
+    private var tight: Bool { discCount > 6 }
 
     /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
     /// re-evaluates a LEAF view's body on the model's own observation,
@@ -119,7 +132,7 @@ struct VerbDial: View {
     }
 
     @ViewBuilder private var liveBody: some View {
-        HStack(alignment: .top, spacing: DS.Space.s4 + 2) {
+        HStack(alignment: .top, spacing: tight ? DS.Space.s2 : DS.Space.s4 + 2) {
             ForEach(verbs) { verb in
                 Button { onVerb(verb) } label: {
                     disc(icon: verb.icon, label: Self.dialLabel(for: verb))
@@ -129,6 +142,13 @@ struct VerbDial: View {
             if let onName {
                 Button(action: onName) {
                     disc(icon: "square.and.pencil", label: "Name")
+                }
+                .buttonStyle(.plain)
+            }
+            if let onPin {
+                let pinned = Pinboard.isPinned(thing)
+                Button(action: onPin) {
+                    disc(icon: pinned ? "pin.slash" : "pin", label: pinned ? "Unpin" : "Pin")
                 }
                 .buttonStyle(.plain)
             }
@@ -157,7 +177,7 @@ struct VerbDial: View {
         VStack(spacing: DS.Space.s2 - 2) {
             Circle()
                 .fill(DS.fillLine)
-                .frame(width: 52, height: 52)
+                .frame(width: tight ? 48 : 52, height: tight ? 48 : 52)
                 .overlay {
                     Image(systemName: icon)
                         .dsGlyph(19, weight: .regular)
