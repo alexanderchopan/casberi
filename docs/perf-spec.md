@@ -86,7 +86,18 @@ Extend the same pattern: derive scope from what each branch filters on (never a 
 
 ### P3 — Per-row body costs (scroll, unmeasured)
 
-No instrument covers scroll; these are the two known per-row-per-render costs. Sample a scroll first (method rule 1), then:
+**Six landed 2026-09-06 (prd §626), found by READING rather than sampling.** The rule below — sample before fixing — is right about tuning and was wrong as a reason not to look. A pass over the row bodies found a **quadratic**: `walletbeatWatchedIDs` / `l2beatWatchedIDs` each walked `visible.live` and are read per row, so a room of n rows walked n rows n times. Also an image decoded inside `PostCard`'s body (now `Design/StoredPixels.swift`), `TwitchIngest.liveRefs` rebuilding a `Set` per access in every room, `UserDefaults(suiteName:)` constructed ~6× per row per render, and `isFlagged` allocating three collections to prove a negative. All structural; none measured, because there is still no scroll instrument. Pinned by `scripts/row-cost-audit.py`.
+
+**Still open from that same read, worst first** — each runs per row per body evaluation unless noted:
+
+1. `ThingShareLink`'s body runs `Capture.detectURL` → an `NSDataDetector` over `thing.content`, inside the row's non-escaping `.contextMenu`. **This contradicts the §260 amendment two lines above it in `FeedScreen.swift`**, which states all three detector scans moved out; one came back.
+2. `NotifySweep.classify(thing, now:)` twice per row (`isAlarmClass` is reached from `timeInk` and the accessibility label).
+3. `DS.legibleInk` → `solveInk`, an 8-iteration WCAG binary search recomputing luminance each step, per row carrying a project label. Its own doc warns against a second reader while caching nothing.
+4. `ThingVoice.rowLabel` builds up to 8 localized strings per row **whether or not VoiceOver is running** (`.accessibilityLabel` is not autoclosure'd), and `LiveTimeText`'s own label is then discarded by the parent's `.accessibilityElement(children: .ignore)`.
+5. Two `.task(id:)` keys run a SQL `COUNT` on **every body pass** — `headIdentity` (plus a 16-element array build and `joined`) and the All room's `corpusRevision`.
+6. `NumberFormatter` / `DateFormatter` constructed per call in `DSCount.grouped` and ~15 devnet and wallet call sites.
+
+*Original framing follows.* No instrument covers scroll; these are the two known per-row-per-render costs. Sample a scroll first (method rule 1), then:
 
 - **Verb derivation in the context menu** (`FeedScreen.swift:10006`): `contextMenu(menuItems:)` is non-escaping, so `VerbDerivation.verbs(for:)` — which reads `thing.content` and runs `NSDataDetector` — executes per row per body build. Cache per thing id in `DerivationMemo` keyed by `corpusRevision` (the memo exists and is the right shape: plain class, written during body eval).
 - **`previewImageData != nil` is a disk read** (externalStorage). Today's fix reordered the `&&` chains; the remaining reads can be memoised as a `hasPreview: Set<UUID>` in the same memo. A stored `Bool` column would need a CloudKit deploy — the memo costs nothing, do that.
@@ -118,7 +129,7 @@ The unbounded-main-actor-fetch class has re-entered at least four times by four 
 | P0 device baseline | **Instrumented, 2026-09-06 (prd §623).** The four spans and the sweep's stall shape are read ON the device from the Diagnostics screen, and "Measure stalls" flips both gates from inside the app — no Xcode, no console. The *reading itself* is still owed: open Diagnostics on the phone. |
 | P1 source-room hydration | **Shipped behind the OS gate, 2026-09-06 (prd §623).** `FeedScreen.sourceRoomLightColumns`: projection on iOS 26+, never on 18.x. Safe by construction; the 18.6 *reproduction* is still unrun (the first arm's override read a string as a Bool and measured the gate twice). |
 | P2 typed-ask path | **Done.** `fullCorpus()` is light-columned. |
-| P3 per-row costs | **Instrumented, deliberately not optimised.** |
+| P3 per-row costs | **Six fixed 2026-09-06 (prd §626)**, including a quadratic, and pinned by `row-cost-audit.py`. Six more found in the same read and listed above, still open. Nothing measured — no scroll instrument. |
 | P4 fetch-bound audit | **Done**, wired into `verify.sh` and discovered by CI. |
 | P5.1 `#Index` | **Done.** |
 | P5.2 heavy columns lazy | **Dead** — see P1. |

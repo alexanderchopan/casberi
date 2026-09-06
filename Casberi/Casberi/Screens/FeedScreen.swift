@@ -1604,6 +1604,21 @@ struct FeedScreen: View {
         /// write-during-body / read-later shape `groups` already has, and safe
         /// for the same reason: the sections are evaluated before the footer.
         var windowHasMore = false
+
+        /// The two room-scoped watched-id sets (prd §626), against `key`.
+        ///
+        /// They are read PER ROW, and each one walked `visible.live` — so the
+        /// room's whole corpus, once for every row it draws. That is O(n²) in
+        /// the room's size, and it was the most expensive thing in this file.
+        /// Kept here rather than recomputed because `key` is O(1) to read
+        /// while `derivationKey` is O(n): memoising against the key the
+        /// grouping already set is what makes the per-row read constant.
+        var walletbeatWatched: Set<String> = []
+        var l2beatWatched: Set<String> = []
+        /// Nil until computed for the current `key`. A separate flag rather
+        /// than comparing against `key` alone, because `key` is itself
+        /// optional and `nil == nil` would read as a hit forever.
+        var watchedKey: Int??
     }
     @State private var memo = DerivationMemo()
 
@@ -2208,7 +2223,8 @@ struct FeedScreen: View {
     /// the per-row recomputation is a few hundred string compares, not the
     /// corpus-wide walk this file's perf history warns about.
     private var walletbeatWatchedIDs: Set<String> {
-        Set(visible.live.compactMap { WalletbeatWatch.walletID(from: $0) })
+        refreshWatchedIDs()
+        return memo.walletbeatWatched
     }
 
     /// The chains the person said they use, for the L2BEAT room's milestone rows
@@ -2219,7 +2235,30 @@ struct FeedScreen: View {
     /// Scoped to that room by construction: the only caller is `shapedRow`'s
     /// `.l2beat` case, so this walk costs nothing in any other room.
     private var l2beatWatchedIDs: Set<String> {
-        Set(visible.live.compactMap { L2beatWatch.chainID(from: $0) })
+        refreshWatchedIDs()
+        return memo.l2beatWatched
+    }
+
+    /// Rebuild both watched-id sets, ONCE per body pass (prd §626).
+    ///
+    /// The two callers above are read per row, and each used to walk
+    /// `visible.live` itself — the room's whole corpus per row. This walks it
+    /// once and every later row reads a set. Both are built in the same pass
+    /// because the walk is the cost and the two extractors are prefix checks
+    /// on `sourceRef`; a flag each would save nothing and could disagree.
+    ///
+    /// Write-during-body, like `groups` and `windowHasMore` above, and safe
+    /// for the same reason: `memo` is deliberately not `@Observable`, so
+    /// filling it is memoization rather than state (see `DerivationMemo`).
+    ///
+    /// A stale key can only mean recomputing, never a wrong set.
+    @MainActor
+    private func refreshWatchedIDs() {
+        guard memo.watchedKey != .some(memo.key) else { return }
+        memo.watchedKey = .some(memo.key)
+        let rows = visible.live
+        memo.walletbeatWatched = Set(rows.compactMap { WalletbeatWatch.walletID(from: $0) })
+        memo.l2beatWatched = Set(rows.compactMap { L2beatWatch.chainID(from: $0) })
     }
 
     private var visible: [Thing] {

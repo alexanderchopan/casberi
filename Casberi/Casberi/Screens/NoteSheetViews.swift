@@ -481,7 +481,7 @@ struct NoteSameDayShelf: View {
     }
 
     @ViewBuilder private func thumb(_ thing: Thing) -> some View {
-        if let data = thing.previewImageData, let image = UIImage(data: data) {
+        if let image = StoredPixels.image(for: thing) {   // decoded once — prd §626
             Image(uiImage: image).resizable().scaledToFill()
         } else if let url = thing.previewImageURL, !url.isEmpty {
             RemoteThumb(urlString: url, size: 92, fallback: thing.source)

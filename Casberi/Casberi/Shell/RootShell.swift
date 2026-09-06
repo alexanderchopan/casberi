@@ -1908,6 +1908,13 @@ struct RootShell: View {
             // would measure the fix rather than the work.
             AppSignposts.beginForegroundSweep()
             defer { AppSignposts.endForegroundSweep() }
+            // Every write to an EXISTING row's `previewImageData` happens
+            // inside this sweep, so one flush here covers all of them and no
+            // writer needs to know the cache exists (prd §626). Firing before
+            // the sweep's own late slots land is harmless: `StoredPixels`
+            // remembers only pictures that exist, so an early drop costs one
+            // re-decode and can never show a stale or missing one.
+            defer { StoredPixels.flush() }
             runForegroundWork()
         }
         // Resnapshot hand-off state so the thing sheet's "Add to <app>"

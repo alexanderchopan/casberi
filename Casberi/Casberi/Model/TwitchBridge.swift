@@ -28,7 +28,7 @@ enum TwitchAuth {
         UserDefaults.standard.removeObject(forKey: userKey)
         // Live state dies with the connection — a lingering ref would keep
         // rendering Live + a "current" frame forever (honesty rule).
-        UserDefaults.standard.removeObject(forKey: TwitchIngest.liveKey)
+        TwitchIngest.writeLiveRefs(nil)
     }
 
     // MARK: - Device-code flow
@@ -143,7 +143,30 @@ enum TwitchIngest {
     /// drop out; their things stay as records with their timestamps.
     static let liveKey = "twitch.live.refs"
     static var liveRefs: Set<String> {
-        Set(UserDefaults.standard.stringArray(forKey: liveKey) ?? [])
+        // BUILT ONCE (prd §626). This is a computed property that constructed
+        // a whole `Set` on every access, and two feed readers — `isLive` and
+        // `artRidesBesideIdentity` — reach it per row per body evaluation, in
+        // every room rather than only Twitch's. So a scroll rebuilt this set
+        // once per row per frame to answer a membership test.
+        //
+        // The cache is invalidated at every write below rather than by a
+        // timestamp: the five writers are all in this file, they are the only
+        // code that touches `liveKey`, and a stale live badge is exactly the
+        // §83 fake status this set exists to prevent.
+        if let cached = liveRefsCache { return cached }
+        let built = Set(UserDefaults.standard.stringArray(forKey: liveKey) ?? [])
+        liveRefsCache = built
+        return built
+    }
+    /// Dropped by every writer of `liveKey`. `nonisolated(unsafe)` for the
+    /// reason the rest of this bridge's statics are: written on the main actor
+    /// by the sync and the demo seed, read from view bodies on the same actor.
+    private nonisolated(unsafe) static var liveRefsCache: Set<String>?
+    /// The one place `liveKey` is written, so the cache cannot drift from it.
+    static func writeLiveRefs(_ refs: [String]?) {
+        if let refs { UserDefaults.standard.set(refs, forKey: liveKey) }
+        else { UserDefaults.standard.removeObject(forKey: liveKey) }
+        liveRefsCache = nil
     }
 
     /// The demo's live stream (2026-08-12). `FeedScreen.isLive` gates BOTH
@@ -155,11 +178,11 @@ enum TwitchIngest {
     /// State-owning bridge, so it owns its own seed/forget pair
     /// (`demo-selftest.py` check H).
     static func seedDemo(_ refs: [String]) {
-        UserDefaults.standard.set(refs, forKey: liveKey)
+        writeLiveRefs(refs)
     }
 
     static func forgetDemo() {
-        UserDefaults.standard.removeObject(forKey: liveKey)
+        writeLiveRefs(nil)
     }
 
     /// Followed channels that are LIVE right now — each stream lands once
@@ -182,7 +205,7 @@ enum TwitchIngest {
             // Can't verify who's live → claim nobody is. A failed sync
             // must not freeze yesterday's Live state on screen (honesty
             // rule; review 2026-07-10).
-            UserDefaults.standard.set([String](), forKey: liveKey)
+            writeLiveRefs([])
             return nil
         }
 
@@ -239,7 +262,7 @@ enum TwitchIngest {
             SpotlightIndex.index([thing])
             added += 1
         }
-        UserDefaults.standard.set(liveNow, forKey: liveKey)
+        writeLiveRefs(liveNow)
         if added > 0 || backfill.any { context.saveHonestly() }
         return added
     }

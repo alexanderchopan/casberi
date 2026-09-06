@@ -122,3 +122,11 @@ Every entry below is **verbatim** as it was written — nothing was summarised, 
 **What it deliberately does not check.** Whether the numbers are GOOD — it is a digest test, not a budget. And it cannot reproduce the iOS 18.6 predicated-projection defect the OS gate exists for; see prd §623 for what remains unproven there.
 
 **A defect it found in its own first run.** `need()` piped a comment-stripped copy into `grep -q`, which closes the pipe on its first match; `sed` then died of SIGPIPE on a file long enough to still be streaming, and under `pipefail` a **present** line was reported missing. A here-string fixes it. Generalise: a `grep -q` at the end of a pipe is a truncated reader, and every early-exit reader in a guard is one.
+
+## Row-cost audit (`scripts/row-cost-audit.py`, 2026-09-06) → prd §626
+
+**What it pins.** Five costs that ran per row per body evaluation and were fixed by removing the work: the quadratic watched-id walk, the app-group suite rebuilt per read, `TwitchIngest.liveRefs` rebuilding its `Set` per access, `isFlagged` allocating to prove a negative, and `PostCard` decoding an image in its body. Plus two sweeps: `previewImageData` + `UIImage(data:)` in one statement anywhere outside the three load functions that run once, and the `StoredPixels.flush()` that makes the cache safe. Six mutations, each restoring the pre-fix shape and proven to fail the check.
+
+**Why an audit is the only thing that can hold these.** There is no scroll instrument in this project (`docs/perf-spec.md` P3 says so in its first line), the build is happy either way, every existing self-test passes either way, and the only symptom is "the feed feels slower on a big corpus" — the exact report this codebase has already chased four times down three wrong paths. These fixes were found by reading, and nothing that runs can tell you they are still in place.
+
+**What it deliberately does not check.** That the fixes are FAST — it is a shape check, not a budget, and none of these has a measured before/after. It also cannot see a NEW per-row cost of a shape nobody has met yet; the six still-open findings in P3 are carried as prose there, not as checks here, because a guard for a cost nobody has removed would fail on day one.

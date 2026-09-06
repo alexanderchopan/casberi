@@ -10,6 +10,21 @@ import Security
 enum SharedStore {
     static let appGroup = "group.com.casberi.app"
 
+    /// The app-group suite, made ONCE (prd §626, 2026-09-06).
+    ///
+    /// `UserDefaults(suiteName:)` is not a lookup — it opens the suite and
+    /// builds a search list — and 25 call sites constructed a fresh one per
+    /// read. One of them, `BandRow.newSinceLastSeen`, is on a FEED ROW and is
+    /// reached about six times per row per body evaluation (`isAlarmClass`,
+    /// `timeInk`, the badge, the accessibility label), so a scroll built
+    /// hundreds of suites a frame for a single `Double`.
+    ///
+    /// Optional for the reason the call sites already handle: the suite is nil
+    /// if the entitlement is missing, and a reader must degrade rather than
+    /// trap. Same instance for the life of the process, which is also what
+    /// `UserDefaults` itself assumes.
+    static let groupDefaults: UserDefaults? = UserDefaults(suiteName: appGroup)
+
     /// The app group id the CONTAINER is actually reached by, which is not the
     /// same string on both platforms (measured 2026-08-18, a Release Catalyst
     /// launch against a fresh container).

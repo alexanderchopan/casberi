@@ -596,7 +596,20 @@ final class Thing {
     /// Whether ANY signal is present — the question the row badge and the
     /// sheet's warning stack ask. A non-nil-but-empty string reads as
     /// unflagged here, which is why surfaces ask this instead of `!= nil`.
-    var isFlagged: Bool { !securityFlags.isEmpty }
+    var isFlagged: Bool {
+        // Answered WITHOUT building the array (prd §626). `securityFlags`
+        // allocates a split, a map and a filter, and the row badge asks this
+        // per row per body evaluation — on a corpus where almost nothing is
+        // flagged, so almost every one of those allocations was to prove a
+        // negative. `hasSecurityFlag` already had a nil fast path; this is the
+        // same fast path for the "any at all" question.
+        //
+        // A non-nil string of only separators still reads UNFLAGGED, which is
+        // the behaviour `securityFlags`' own `filter { !$0.isEmpty }` gives
+        // and the reason surfaces ask this instead of `securityFlag != nil`.
+        guard let flags = securityFlag else { return false }
+        return flags.contains { $0 != "," }
+    }
 
     /// Whether one named signal is present. Every surface asks this rather
     /// than comparing `securityFlag` to a literal — the comparison that was

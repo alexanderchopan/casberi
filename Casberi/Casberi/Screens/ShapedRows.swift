@@ -585,8 +585,10 @@ struct BandRow: View {
     /// widget's own `hasNew` guard — otherwise a fresh install would tint
     /// its entire seeded corpus.
     private var newSinceLastSeen: Bool {
-        let stamp = UserDefaults(suiteName: SharedStore.appGroup)?
-            .double(forKey: "widget.lastSeen") ?? 0
+        // `SharedStore.groupDefaults`, not a fresh suite (prd §626): this is
+        // read ~6× per row per body evaluation, and building the suite was the
+        // whole cost.
+        let stamp = SharedStore.groupDefaults?.double(forKey: "widget.lastSeen") ?? 0
         guard stamp > 0 else { return false }
         return thing.capturedAt.timeIntervalSince1970 > stamp
     }
@@ -2719,7 +2721,15 @@ struct PostCard: View {
                 PostImageGrid(urls: thing.imageURLs)
             } else if let media = thing.previewImageURL, !media.isEmpty {
                 PostMedia(urlString: media)
-            } else if let data = thing.previewImageData, let stored = UIImage(data: data) {
+            } else if let stored = StoredPixels.image(for: thing) {
+                // Through `StoredPixels` since prd §626: this is a FEED ROW's
+                // body, and SwiftUI re-evaluates a leaf's body on the model's
+                // own observation (liveness corollary 5) — so the bare
+                // `previewImageData` read plus `UIImage(data:)` that stood here
+                // faulted an external file and built a fresh, undecoded image
+                // on every one of those passes, which during a foreground
+                // sweep is many. Same nil-ness, same picture, decoded once.
+                //
                 // A picture the app already HOLDS rather than fetches
                 // (2026-08-06). Every source this card served until now was a
                 // live network bridge whose media is a URL; an IMPORT has no

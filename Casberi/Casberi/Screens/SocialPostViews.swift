@@ -68,8 +68,7 @@ struct SocialPostContent: View {
     /// post. Several ride a strip that scrolls sideways inside its own lane, so
     /// a four-photo post keeps all four and the page never scrolls horizontally.
     @ViewBuilder private var photos: some View {
-        if images.isEmpty, let data = thing.previewImageData,
-           let stored = UIImage(data: data) {
+        if images.isEmpty, let stored = StoredPixels.image(for: thing) {   // decoded once — prd §626
             // A picture the app already HOLDS rather than fetches (prd §363,
             // catching the sheet up with `PostCard`'s own 2026-08-06 fix). An
             // IMPORT has no URL to give — `ImportMedia` decodes the archive's

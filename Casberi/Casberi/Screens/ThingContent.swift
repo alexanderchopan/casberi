@@ -423,8 +423,8 @@ struct ThingContentView: View {
             // claim it and draw the file as a still nothing could play.
             if let ref = thing.sourceRef, FilesIngest.isVideoRef(ref) {
                 FileVideoContent(ref: ref, name: thing.title, note: thing.content,
-                                 poster: thing.previewImageData.flatMap(UIImage.init(data:)))
-            } else if let data = thing.previewImageData, let image = UIImage(data: data) {
+                                 poster: StoredPixels.image(for: thing))   // decoded once — prd §626
+            } else if let image = StoredPixels.image(for: thing) {   // decoded once — prd §626
                 FilePictureContent(image: image)
                 // The name, size and folder BENEATH the picture (prd §365) —
                 // the delivery anatomy. Before this an image file drew its

@@ -814,6 +814,24 @@ print -P "%F{green}✓ body-publish audit%f"
 # the tree — that was measured at 163 entries, nearly all off-render-path
 # bridge dedupe reads, which is a snooze wearing a registry's clothes
 # (`ref-shape-audit.py`'s refused reverse direction, same reasoning).
+# Five costs that ran PER ROW PER BODY EVALUATION (prd §626), each fixed by
+# removing work and each re-introducible by one plausible edit: a quadratic
+# watched-id walk (O(n^2) in the room's size), an app-group suite rebuilt per
+# read, a Set rebuilt per access, an allocation to prove a negative, and an
+# image decoded inside a row's body. Plus a sweep for the last of those
+# anywhere in the tree.
+#
+# There is NO scroll instrument in this project (docs/perf-spec.md P3), so
+# nothing that RUNS can tell you these are still in place: the build is happy
+# either way, every self-test passes either way, and the only symptom is "the
+# feed feels slower on a big corpus" — the report this repo has already chased
+# four times down three wrong paths.
+step "Row-cost audit"
+python3 "$ROOT/scripts/row-cost-audit.py" --self-test >/dev/null \
+  || fail "the row-cost audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/row-cost-audit.py" \
+  || fail "a per-row-per-render cost is back — see the finding above and prd §626"
+
 step "Fetch-bound audit"
 python3 "$ROOT/scripts/fetch-bound-audit.py" --self-test >/dev/null \
   || fail "the fetch-bound audit's own self-test failed — the check is broken, not the code"
