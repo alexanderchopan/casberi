@@ -16,7 +16,6 @@ struct SentryScreen: View {
     @Environment(BridgeStore.self) private var store
     @Environment(\.openURL) private var openURL
 
-    @State private var showConnection = false
     @State private var hostField = SentryAccount.host
     @State private var tokenField = ""
     /// Bumped whenever the token or org changes, so the derived reads below
@@ -45,109 +44,48 @@ struct SentryScreen: View {
     }
     private var configured: Bool { hasToken && !org.isEmpty }
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+
     var body: some View {
-        BridgeSetupPage(name: "Sentry") {
-            if configured {
-                // Connected (prd §186): the token form and the org picker
-                // retire behind one door. Sentry stores only the token, in the
-                // Keychain, so this leads with its own name over a truthful
-                // note about HOW it is connected.
-                BridgeConnectedState(
-                    bridgeID: TokenBridge.sentry.bridgeID,
-                    name: "Sentry",
-                    connectionNote: String(localized: "Your \(TokenBridge.sentry.credentialNoun) · stored in \(DS.device)'s Keychain"),
-                    capabilitiesFallback: [TokenBridge.sentry.canLine],
-                    openConnection: { showConnection = true })
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            } else {
-                BridgeSetupHeader(
-                    name: "Sentry",
-                    mode: .pasteKey,
-                    intro: "An issue that's new, regressed, or escalated — nothing else. Never a stack trace or the person who hit it.",
-                    connected: configured)
-            }
-            if !configured {
-                tokenSection.listRowSeparator(.hidden)
-                if hasToken, !orgs.isEmpty {
-                    orgSection.listRowSeparator(.hidden)
+        AccountPage(
+            name: "Sentry", seatID: TokenBridge.sentry.bridgeID, source: "Sentry",
+            state: AccountPageState.of(name: "Sentry", seatID: TokenBridge.sentry.bridgeID,
+                                       connected: configured, store: store),
+            intro: "An issue that's new, regressed, or escalated — nothing else. Never a stack trace or the person who hit it.",
+            mode: .pasteKey,
+            keyed: true,
+            teardown: {
+                SentryAccount.clear()
+                TokenVault.delete(TokenBridge.sentry.tokenKey)
+                accountVersion += 1
+            },
+            sheet: $sheet,
+            act: {
+                if configured {
+                    // Which org this token reads, and what the read is doing.
+                    // The token form and the org picker are the "Your key"
+                    // sheet now — one block, reached from the row that says
+                    // where the key lives.
+                    connectedBlock
+                } else {
+                    tokenBlock
+                    if hasToken, !orgs.isEmpty { orgBlock }
                 }
-            } else {
-                // The door leads the connected state, ahead of the details it
-                // is about — see `RoomDoor`. At the bottom it sat below a
-                // section that can run the height of the screen, so the one
-                // control saying "your things are through here" was the one
-                // you had to scroll to find.
-                RoomDoor(name: "Sentry", source: "Sentry")
-                    .listRowSeparator(.hidden)
-                connectedSection.listRowSeparator(.hidden)
+            },
+            more: { EmptyView() },
+            keySheet: {
+                tokenBlock
+                if hasToken, !orgs.isEmpty { orgBlock }
             }
-        }
-        .sheet(isPresented: $showConnection) {
-            BridgeConnectionSheet(title: "Sentry") {
-                tokenSection
-                if hasToken, !orgs.isEmpty { orgSection }
-                removeSection
-            }
-        }
+        )
         .onAppear {
-            // Opening the screen doesn't connect — a stored token and a picked
+            // Opening the page doesn't connect — a stored token and a picked
             // org do. Viewing is not consent.
             if configured { Task { await sync() } }
         }
     }
 
-    // MARK: - Step one: the token
-
-    private var tokenSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if let url = TokenBridge.sentry.setupURL {
-                    // Step one, doing itself (prd §218) — verb over address,
-                    // the 2026-08-14 anatomy.
-                    DSSlabButton(title: TokenBridge.sentry.doorTitle,
-                                 detail: TokenBridge.sentry.doorHost,
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        doorTapped = true
-                        openURL(url)
-                    }
-                }
-                // Unnumbered since 2026-08-14 (the door did step one; a "2"
-                // under it read as a missing-1 riddle); `acknowledges` keeps
-                // the confirm-green check when a step provably lands.
-                BridgeStepLines(steps: [TokenBridge.sentry.steps[0]], startingAt: 2,
-                                numbered: false, acknowledges: true,
-                                doneThrough: stepsDone)
-                // The scopes are the honest ask, and they are why this
-                // bridge's read-only promise is STRUCTURAL rather than kept by
-                // conduct: a token minted with these three physically cannot
-                // resolve an issue or change a project, whatever this app
-                // does. The list IS the promise, so no gray note restates it.
-                DSCheckList(lines: ["org:read", "project:read", "event:read"])
-                BridgeStepLines(steps: [TokenBridge.sentry.steps[1]], startingAt: 3,
-                                numbered: false, acknowledges: true,
-                                doneThrough: stepsDone)
-                // The host has no verb of its own — SAVE below commits both.
-                // An empty-verb field still paints its capsule, so a pre-filled
-                // host would read as a live, tinted, inert button (§83's
-                // disabled-control corollary) if it carried a label.
-                DSSlabField(placeholder: SentryAccount.defaultHost, text: $hostField,
-                            actionLabel: "", keyboard: .URL, action: { })
-                DSSlabField(placeholder: TokenBridge.sentry.placeholder,
-                            text: $tokenField, actionLabel: "Save", secure: true,
-                            action: saveToken)
-                BridgeSyncStatusRows(syncing: resolving,
-                                     syncingLine: String(localized: "Checking the token…"),
-                                     proof: result)
-                // Named because the failure is otherwise a bare 401 that reads
-                // exactly like a bad token — the one setup mistake here that
-                // has nothing to do with what you pasted.
-                DSSlabNote(text: "EU region? Use de.sentry.io. Self-hosted? Use your own domain.")
-            }
-        }
-        .dsSlabSection()
-    }
 
     /// Only OBSERVABLE facts count (the delight pass's rule): the door really
     /// being tapped, and text really arriving in the field. Nothing here infers
@@ -160,49 +98,42 @@ struct SentryScreen: View {
 
     // MARK: - Step two: the organization
 
-    private var orgSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text("Which organization should I read?")
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                ForEach(orgs, id: \.slug) { org in
-                    BridgeSearchResultRow(
-                        imageURL: nil, fallbackIcon: "Sentry",
-                        title: org.name,
-                        subtitle: "\(SentryAccount.host)/\(org.slug)",
-                        action: { pick(org) })
-                }
+    @ViewBuilder private var orgBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Text("Which organization should I read?")
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+            ForEach(orgs, id: \.slug) { org in
+                BridgeSearchResultRow(
+                    imageURL: nil, fallbackIcon: "Sentry",
+                    title: org.name,
+                    subtitle: "\(SentryAccount.host)/\(org.slug)",
+                    action: { pick(org) })
             }
         }
-        .dsSlabSection()
     }
 
     // MARK: - Connected
 
-    private var connectedSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                HStack(spacing: DS.Space.s3) {
-                    // Square, not round — an organization is a topic, not a
-                    // person (the mark grammar ruling, prd §184).
-                    BridgeIcon(name: "Sentry", size: DS.Mark.list, circular: false)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(SentryAccount.orgName.isEmpty ? org : SentryAccount.orgName)
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        Text("\(SentryAccount.host)/\(org)")
-                            .dsText(.label12).foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: 0)
+    @ViewBuilder private var connectedBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(spacing: DS.Space.s3) {
+                // Square, not round — an organization is a topic, not a
+                // person (the mark grammar ruling, prd §184).
+                BridgeIcon(name: "Sentry", size: DS.Mark.list, circular: false)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(SentryAccount.orgName.isEmpty ? org : SentryAccount.orgName)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    Text("\(SentryAccount.host)/\(org)")
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
                 }
-                .dsListCardRow()
-                BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: String(localized: "Reading your issues…"),
-                                     proof: result)
+                Spacer(minLength: 0)
             }
+            BridgeSyncStatusRows(syncing: syncing,
+                                 syncingLine: String(localized: "Reading your issues…"),
+                                 proof: result)
         }
-        .dsSlabSection()
     }
 
 
@@ -269,19 +200,6 @@ struct SentryScreen: View {
         } else {
             result = .failed(String(localized: "Couldn't reach Sentry — check your connection."))
         }
-    }
-    /// The way out — the shared row, behind the Connection door with the form
-    /// it belongs to (prd §186/§608).
-    private var removeSection: some View {
-        BridgeDisconnectSection(
-            bridgeID: TokenBridge.sentry.bridgeID, name: "Sentry",
-            teardown: {
-                TokenVault.delete(TokenBridge.sentry.tokenKey)
-                SentryAccount.clear()
-                orgs = []
-                hostField = SentryAccount.defaultHost
-                accountVersion += 1
-            })
     }
 
 }
