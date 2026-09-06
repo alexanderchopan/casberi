@@ -92,6 +92,7 @@ struct AppleWalletScreen: View {
             String(localized: "It can't spend or move money."),
             String(localized: "Disconnect and everything it brought in is deleted."),
         ], numbered: false)
+    }
 
     // MARK: - Connect
 
@@ -117,6 +118,7 @@ struct AppleWalletScreen: View {
             .foregroundStyle(DS.textSecondary)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
     // MARK: - Balances
 
