@@ -2,18 +2,6 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
-/// The imported X things already in the corpus — newest first. A @Query so the
-/// list updates live after an import and the fetch runs once per store change,
-/// not twice per body pass.
-private let xRecentDescriptor: FetchDescriptor<Thing> = {
-    var d = FetchDescriptor<Thing>(
-        predicate: #Predicate { $0.source == "X" },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-    )
-    d.fetchLimit = 12
-    return d
-}()
-
 /// X, connected — by import, the ChatGPT grade, because X has no free read of
 /// any kind left (prd §280).
 ///
@@ -49,41 +37,38 @@ struct XArchiveImportScreen: View {
     /// parent post we have a permalink for and no words.
     @State private var fetchingContext = false
     @State private var pendingContext = 0
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
-    @Query(xRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        BridgeSetupPage(name: "X") {
+        AccountPage(
+            name: "X", seatID: "x", source: "X",
+            // An import has no live connection, so "is anything here" is the
+            // only honest test of whether this seat is connected at all.
+            state: AccountPageState.of(name: "X", seatID: "x",
+                                       connected: held > 0, store: store),
             // The bookmarks limit rides the intro rather than a footer point
             // (prd §315), and it is the one limit that earns the sentence's
             // second half: bookmarks are the pile an X user most expects this
-            // seat to hold, and they are the one thing it can never have. The
-            // reposts rule left the screen — it changes nothing anyone would
-            // do, and the receipt already counts what was skipped.
-            BridgeSetupHeader(
-                name: "X",
-                mode: .oneTimeImport,
-                intro: "Every post, reply and like you ever made. Bookmarks aren't in it — X has never put them there.",
-                connected: held > 0)
-            // The way back to what just landed (§460). Gated on the corpus,
-            // not a connection flag: an import has no live connection, so
-            // "has anything arrived" is the only honest test of whether
-            // there is a room worth opening.
-            if !recent.isEmpty {
-                RoomDoor(name: "X", source: "X")
-                    .listRowSeparator(.hidden)
-            }
-            archiveSection
-            if pending > 0 || pendingContext > 0 { secondActSection }
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Imported", things: recent.live)
-                    .listRowSeparator(.hidden)
-            }
-            ImportUpkeepSection(source: "X", held: held, staleness: staleness) { gone in
-                reread()
-                result = .says(String(localized: "\(gone) removed"))
-            }
-        }
+            // seat to hold, and they are the one thing it can never have.
+            intro: "Every post, reply and like you ever made. Bookmarks aren't in it — X has never put them there.",
+            mode: .oneTimeImport,
+            teardown: {},
+            sheet: $sheet,
+            act: {
+                archiveBlock
+                if pending > 0 || pendingContext > 0 { secondActBlock }
+            },
+            more: {
+                ImportUpkeepSection(source: "X", held: held,
+                                    staleness: staleness, plain: true) { gone in
+                    reread()
+                    result = .says(String(localized: "\(gone) removed"))
+                }
+            },
+            keySheet: { EmptyView() }
+        )
         .onAppear { reread() }
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.folder]) { outcome in
@@ -95,25 +80,22 @@ struct XArchiveImportScreen: View {
     /// The wait is the reason this screen stages itself at all: X makes you
     /// re-enter your password and then takes up to 24 hours. Someone who taps
     /// "Choose folder" the same minute has nothing to pick.
-    private var archiveSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                ImportArchiveSection(
-                    source: "X",
-                    doorTitle: "Open X settings",
-                    doorURL: URL(string: "https://x.com/settings/download_your_data"),
-                    steps: [
-                        "Tap Request archive and confirm your password.",
-                        "X emails you when it's ready — usually within 24 hours.",
-                        "Save the zip to Files and tap it once to unzip.",
-                    ],
-                    pickTitle: "Choose folder",
-                    alreadyImported: held > 0,
-                    showsMessagesToggle: true) { importing = true }
-                BridgeSyncStatusRows(proof: result)
-            }
+    @ViewBuilder private var archiveBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            ImportArchiveSection(
+                source: "X",
+                doorTitle: "Open X settings",
+                doorURL: URL(string: "https://x.com/settings/download_your_data"),
+                steps: [
+                    "Tap Request archive and confirm your password.",
+                    "X emails you when it's ready — usually within 24 hours.",
+                    "Save the zip to Files and tap it once to unzip.",
+                ],
+                pickTitle: "Choose folder",
+                alreadyImported: held > 0,
+                showsMessagesToggle: true) { importing = true }
+            BridgeSyncStatusRows(proof: result)
         }
-        .dsSlabSection()
     }
 
     /// The second act (2026-08-05), TikTok's split for the same reason: the
@@ -131,35 +113,32 @@ struct XArchiveImportScreen: View {
     /// Each button appears only while it has work, so a room that is entirely
     /// posts, or entirely replies to yourself (filled at import, for free),
     /// never offers a verb with nothing behind it.
-    private var secondActSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if pending > 0 {
-                    DSSlabButton(title: fetching ? "Finding authors…" : "Find authors for \(pending) likes",
-                                 systemImage: "person.crop.circle",
-                                 busy: fetching,
-                                 enabled: !fetching && !fetchingContext) {
-                        DSHaptic.tap()
-                        Task { await runFetch() }
-                    }
+    @ViewBuilder private var secondActBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if pending > 0 {
+                DSSlabButton(title: fetching ? "Finding authors…" : "Find authors for \(pending) likes",
+                             systemImage: "person.crop.circle",
+                             busy: fetching,
+                             enabled: !fetching && !fetchingContext) {
+                    DSHaptic.tap()
+                    Task { await runFetch() }
                 }
-                if pendingContext > 0 {
-                    DSSlabButton(title: fetchingContext ? "Reading replies…" : "Show what \(pendingContext) replies answered",
-                                 systemImage: "arrowshape.turn.up.left",
-                                 busy: fetchingContext,
-                                 enabled: !fetching && !fetchingContext) {
-                        DSHaptic.tap()
-                        Task { await runContextFetch() }
-                    }
-                }
-                // This section's own sentence, and the screen's only one
-                // outside the footer — it is the sole explanation of verbs
-                // that cost network, so it stays beside them rather than
-                // moving to the bottom with the fine print.
-                DSSlabNote(text: "Your archive names the post, not the person, and your reply, not the one it answered. This asks X for both.")
             }
+            if pendingContext > 0 {
+                DSSlabButton(title: fetchingContext ? "Reading replies…" : "Show what \(pendingContext) replies answered",
+                             systemImage: "arrowshape.turn.up.left",
+                             busy: fetchingContext,
+                             enabled: !fetching && !fetchingContext) {
+                    DSHaptic.tap()
+                    Task { await runContextFetch() }
+                }
+            }
+            // This section's own sentence, and the screen's only one
+            // outside the footer — it is the sole explanation of verbs
+            // that cost network, so it stays beside them rather than
+            // moving to the bottom with the fine print.
+            DSSlabNote(text: "Your archive names the post, not the person, and your reply, not the one it answered. This asks X for both.", plain: true)
         }
-        .dsSlabSection()
     }
 
     /// One re-read of everything this screen shows about the corpus — called on
