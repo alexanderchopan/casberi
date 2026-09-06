@@ -82,60 +82,46 @@ No account, no tracking, no ads. No Casberi server holds your things — there i
 
 Casberi isn't another chatbot. It's your own things, in one feed, with an agent that knows them.
 
-### iOS What's New — 1.0.12 (1,246 chars)
+### iOS What's New — 1.0.12 (639 chars)
 
 The live public build is **1.0.11 / build 515**, READY_FOR_SALE, and its What's
 New is frozen: a released version's notes cannot be edited in App Store Connect
 without opening a new version. **1.0.12 (build 524) is the editable one**, and
 these are its notes.
 
-Shape rule, and it is the one the description already follows: **CAPS section
-head, then feature bullets** — a fragment per feature, never a paragraph broken
-into bullets. Nobody reads release notes in prose. The two places that stay
-whole sentences are the ones App Review reads rather than a customer: the
-test-network disclaimer under DEVELOPER NETWORKS (Guideline 3.1.5) and Bankr's
-"only answers" line.
+Two rules, both from the user, 2026-09-06:
 
-Covers everything after build 515, and carries the two bullets 1.0.11 refused
-with a 409 (developer networks, Bankr) — those describe features iOS users
-already have and have never been told about.
+- **Section head, then feature bullets** — a fragment per feature, never a
+  paragraph with a bullet in front of it. Nobody reads release notes in prose.
+- **Three sections, not nine.** A first cut listed everything after build 515
+  (the two watchdog fixes, the room pass, the setup pass, the iCloud folder
+  images) and read as a changelog. What ships is what a person would want
+  told: the developer networks, the names, the agent. The crash fixes are why
+  the train exists and are deliberately unmentioned — say so before adding a
+  "fixes and improvements" line back.
+
+Two lines stay whole sentences because App Review reads them, not a customer:
+the test-network disclaimer (Guideline 3.1.5) and Bankr's "only answers" line.
+
+The developer-networks and Bankr entries are the two 1.0.11 refused with a 409
+— they describe features iOS users already have and have never been told about.
 
 ```
-FIXED
-
-• Background shutdowns — Casberi could be killed by iOS while in the background or the app switcher
-• App-switcher cover — now hides images and open sheets, not only text
-• Source strip — no longer re-reads the whole app catalog on every screen update
-• Connected folders — images no longer stay blank when the files live in iCloud
-
 DEVELOPER NETWORKS
 
-• Ethrex Privacy — shield test funds into a private balance
-• Ethrex Privacy — view what the private balance holds
-• Base Vibenet, Ethrex Hegotá, Frames — make an account, claim from the faucet, send test transactions
+• Base Vibenet, Ethrex Hegotá and Frames — make an account, get test funds from the faucet, send test transactions
+• Ethrex Privacy — move test funds into a private balance, and see what's in it
 
 These are test networks. Nothing on them has a price or a market: no real cryptocurrency or value is transferred, and none of it can reach a live network.
 
-ROOMS
-
-• Every scope on every room — Wallet, Vibenet, Hegotá, Frames, Privacy
-• Empty scopes name what they would hold
-• Bounded lists in source rooms
-• Figures draw what they count
-• Test-network sheets — one fact, one place
-
-SETUP
-
-• One vocabulary and one shape across every connect screen
-• One connect button throughout
-
 NAMES
 
-• .wei and .gwei resolve alongside ENS and .sol
+• Watch a wallet by its .wei or .gwei name, the same way you already can with ENS and .sol
+• Saved addresses show the names they hold
 
 AGENT
 
-• Bankr — answers about your onchain holdings and only answers. It never moves funds or makes transactions on your behalf.
+• Bankr — ask about your onchain holdings. It only answers: it never moves funds or makes transactions on your behalf.
 ```
 
 Also apply to 1.0.12 while it is open: the iOS description above, and the
