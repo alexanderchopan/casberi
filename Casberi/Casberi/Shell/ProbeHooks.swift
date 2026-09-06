@@ -1225,13 +1225,6 @@ enum ProbeHooks {
                 }
             }
         },
-        // `-oneclawProbe YES` walks the 1Claw access read with the STORED key
-        // (connect first via `-tokenBridge "1Claw:<key>"`), logging each step
-        // — scopes, vaults, per-vault grant counts or the honest "unreadable"
-        // — so a missing grant table and an empty one stop looking identical.
-        Hook(key: "oneclawProbe") { _, _ in
-            Task { await OneClawFetch.probe() }
-        },
         // `-privacyProbe YES` reads the STORED Privacy key (connect first via
         // `-tokenBridge "Privacy:<key>"`) and NSLogs the RAW transactions
         // shape — HTTP status, envelope keys, count, and the first txn's
@@ -2422,78 +2415,6 @@ enum ProbeHooks {
                       replies.first.map { " — @\(SocialThread.shortHandle($0.handle)): \(String($0.text.prefix(60)))" } ?? "")
             }
         },
-        // `-openSeaKey <key>` seeds a known-good OpenSea API key, so a headless
-        // run can verify the feed without waiting on the mint endpoint's
-        // 1-key-per-hour limit (the IP the sim shares is easily exhausted).
-        // Runs before `-openSeaFeed` (list order) so the key is in place.
-        Hook(key: "openSeaKey") { key, _ in
-            OpenSeaStore.shared.setKey(key.trimmingCharacters(in: .whitespaces), expiry: nil)
-            NSLog("OpenSea probe: key seeded (%d chars)", key.count)
-        },
-        // `-openSeaFeed <chains|YES>` connects OpenSea (a comma-separated chain
-        // list, or YES for the defaults) and syncs — headless bridge test.
-        Hook(key: "openSeaFeed") { spec, context in
-            let list = spec.split(separator: ",")
-                .compactMap { OpenSeaChain.from(String($0).trimmingCharacters(in: .whitespaces)) }
-            if list.isEmpty { OpenSeaStore.shared.connectDefaults() }
-            else { for c in list { OpenSeaStore.shared.add(c) } }
-            Task { @MainActor in
-                let n = await OpenSeaIngest.refresh(context: context)
-                NSLog("OpenSea probe: %@ new drops", n.map(String.init) ?? "FAILED")
-            }
-        },
-        // `-geckoTrending <chains|YES>` connects GeckoTerminal (a comma-separated
-        // chain list like `ethereum,base,solana`, or YES for the defaults) and
-        // syncs the current trending tokens — headless bridge test.
-        Hook(key: "geckoTrending") { spec, context in
-            let list = spec.split(separator: ",")
-                .compactMap { TrendingChain.from(String($0).trimmingCharacters(in: .whitespaces)) }
-            if list.isEmpty { TrendingStore.shared.connectDefaults() }
-            else { for c in list { TrendingStore.shared.add(c) } }
-            Task { @MainActor in
-                let n = await TrendingIngest.refresh(context: context)
-                NSLog("GeckoTerminal probe: %@ trending in", n.map(String.init) ?? "FAILED")
-            }
-        },
-        // `-x402Lane "<lane[,lane]>|YES"` connects Circle x402 (a comma-separated
-        // list of Circle's own category names, e.g.
-        // `FINANCIAL_ANALYSIS,PREDICTION_MARKETS`, or YES for every lane) and
-        // syncs — headless bridge test. Declared BEFORE `-x402Probe`: hooks run
-        // in list order and the probe must read a watched seat.
-        Hook(key: "x402Lane") { spec, context in
-            let lanes = spec.split(separator: ",")
-                .compactMap { X402Category.from(String($0).trimmingCharacters(in: .whitespaces)) }
-            if lanes.isEmpty { X402Store.shared.connectDefaults() }
-            else { for lane in lanes { X402Store.shared.add(lane) } }
-            Task { @MainActor in
-                let n = await X402Ingest.refresh(context: context)
-                NSLog("Circle x402 probe: %@ listed in", n.map(String.init) ?? "FAILED")
-            }
-        },
-        // `-x402Probe YES` — the directory read PHASE BY PHASE, then one
-        // `x402Row|` line per provider (the `-todayProbe` truncation lesson).
-        // An empty x402 room has five causes that render as one silence — not
-        // connected, the directory unreachable, everything already landed,
-        // nothing in a watched lane, or shape drift — and only the last is a
-        // bug. It also NAMES any category string this build can't map, which
-        // otherwise lands rows in no lane and says nothing about why.
-        Hook(key: "x402Probe") { _, context in
-            Task { @MainActor in await X402Ingest.diagnose(context: context) }
-        },
-        // `-x402Faces <YES|reset>` — the second act: one page read per seller
-        // for its own `og:image`. `reset` clears the asked-once ledger first,
-        // which is the only way to re-ask a seller that answered with nothing
-        // (that decline is remembered on purpose). Reports how many rows gained
-        // a face, which a landed count can't tell you: a room where every
-        // seller's page serves no image is indistinguishable from one where the
-        // pass never ran.
-        Hook(key: "x402Faces") { spec, context in
-            Task { @MainActor in
-                if spec.lowercased() == "reset" { X402Faces.reset() }
-                let n = await X402Faces.heal(context: context)
-                NSLog("x402Faces: %d row(s) gained a face", n)
-            }
-        },
         // `-sentryHost <host>` — the host to read against (declare it BEFORE
         // `-tokenBridge "Sentry:<token>"`: hooks run in list order, and the
         // token's validation must see the host already set). `-sentryOrg
@@ -2814,18 +2735,6 @@ enum ProbeHooks {
                 NSLog("Deals probe: %@ new deals", n.map(String.init) ?? "FAILED")
             }
         },
-        // `-barcodeProbe <code>` looks up a grocery barcode in Open Food Facts
-        // and lands it — headless test of the keyless lookup.
-        Hook(key: "barcodeProbe") { code, context in
-            Task { @MainActor in
-                guard let food = await OpenFoodFacts.lookup(code) else {
-                    NSLog("Barcode probe: FAILED (not found)"); return
-                }
-                let landed = OpenFoodFacts.land(food, context: context) != nil
-                NSLog("Barcode probe: %@ — %@ (%@)", food.name,
-                      landed ? "landed" : "already saved", food.nutriscore ?? "no score")
-            }
-        },
         // `-priceProbe <url>` parses a product page's price/identity and NSLogs
         // it — the price-watch parser, headless (no thing landed).
         Hook(key: "priceProbe") { raw, _ in
@@ -2851,33 +2760,6 @@ enum ProbeHooks {
                 let added = TokenWatch.add(token, context: context)
                 NSLog("Dexscreener probe: %@ (%@)", token.name,
                       added != nil ? "watched" : "already")
-            }
-        },
-        // `-watchMarket <team|event query>` watches a Kalshi market headlessly.
-        Hook(key: "watchMarket") { query, context in
-            Task { @MainActor in
-                guard let market = await KalshiWatch.resolve(query) else {
-                    NSLog("Kalshi probe: FAILED to resolve"); return
-                }
-                let added = KalshiWatch.add(market, context: context)
-                NSLog("Kalshi probe: %@ (%d%% · %@)", market.title,
-                      Int((market.probability * 100).rounded()),
-                      added != nil ? "watched" : "already")
-            }
-        },
-        // `-kalshiBookProbe YES` walks the browse room's read PHASE BY PHASE
-        // and NSLogs one `kalshiBook|` line each — discovery status, the
-        // categories it parsed, then per hydrated event the market count, the
-        // quoted count, and the price-shaped keys actually on the wire.
-        //
-        // One NSLog per line on purpose (the `-todayProbe` truncation lesson).
-        // Built for the 2026-08-03 report — "Kalshi says can't reach order
-        // book" above a fully populated category strip, i.e. above proof the
-        // book HAD been reached — where the room's single sentence covered
-        // three different causes and no launch could tell them apart.
-        Hook(key: "kalshiBookProbe") { _, _ in
-            Task { @MainActor in
-                for line in await KalshiWatch.diagnose() { NSLog("kalshiBook| %@", line) }
             }
         },
         // `-userSearch "<bluesky|farcaster>:<query>"` runs the find-a-person
@@ -5907,13 +5789,17 @@ enum ProbeHooks {
                     }
                 }
             }
-            // OpenSea — 6 collections wearing real remote artwork for the mosaic.
+            // Pinterest — 6 pins wearing real remote artwork for the mosaic.
+            // Was OpenSea until 2026-09-06, when that seat was deleted; the
+            // mosaic needs a room whose rows carry remote images, and Pinterest
+            // is the other one (`DemoSeedAll.demoVisits` names both for exactly
+            // this figure).
             for i in 0..<6 {
-                let ref = "insightdemo:opensea:\(i)"
+                let ref = "insightdemo:pinterest:\(i)"
                 seed(ref) {
-                    let t = Thing(kind: .link, title: "Collection \(i + 1)",
-                                  content: "https://opensea.io/collection/demo\(i)",
-                                  source: "OpenSea",
+                    let t = Thing(kind: .link, title: "Pin \(i + 1)",
+                                  content: "https://www.pinterest.com/pin/demo\(i)",
+                                  source: "Pinterest",
                                   capturedAt: .now.addingTimeInterval(Double(-i) * 3600),
                                   sourceRef: ref)
                     t.previewImageURL = "https://picsum.photos/seed/casberi\(i)/300"
@@ -5921,7 +5807,7 @@ enum ProbeHooks {
                 }
             }
             context.saveHonestly()
-            NSLog("Insight demo: seeded %d things (Reddit leaderboard + OpenSea mosaic)", landed)
+            NSLog("Insight demo: seeded %d things (Reddit leaderboard + Pinterest mosaic)", landed)
         },
         // `-seedVizDemo YES` — plants everything the ROOM HEADS need so each
         // visualization can be photographed from an account that isn't
@@ -7521,10 +7407,6 @@ enum ProbeHooks {
         note("appleWallet", source == AppleWalletBridge.sourceName
              ? AppleWalletRoomSource.compose(things: things).map {
                 "\($0.headline) · \($0.merchants.count) merchants"
-             } : nil)
-        note("x402", source == X402Ingest.source
-             ? X402RoomSource.compose(things: things).map {
-                "\(X402Room.headline($0)) · \($0.sellers) sellers"
              } : nil)
         note("appStoreConnect", source == ASCShape.source
              ? ASCRoomSource.compose(things: things).map {

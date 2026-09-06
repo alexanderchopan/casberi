@@ -3227,16 +3227,14 @@ struct RootShell: View {
             // computed one, so it can never invent a figure.
             if let interim = lastKnownDoc("watchlist") { onPartialDoc(interim) }
             let moves = await TokensAsk.moves(context: modelContext)
-            // Watched prediction markets are a watchlist too (2026-07-28) —
-            // read from PredictionPulse's existing cache, so this costs no
-            // request and can't disagree with the feed rows.
-            let markets = MarketsAsk.moves(context: modelContext)
-            guard !moves.isEmpty || !markets.isEmpty else {
+            // The market half of this ask went with the Kalshi and Polymarket
+            // seats (2026-09-06) — a watchlist is tokens again, as it was
+            // before 2026-07-28.
+            guard !moves.isEmpty else {
                 // Empty MOVES isn't an empty WATCHLIST — offline, every pulse
                 // fetch fails and a "nothing watched" line would be a fake
                 // status (honesty rule). Say which nothing this is.
                 let watchesNothing = TokensAsk.watched(modelContext).isEmpty
-                    && MarketsAsk.watched(modelContext).isEmpty
                 return proseDoc(watchesNothing
                     ? "Nothing watched yet — add one from Apps."
                     : "Couldn't read your watchlist's prices right now — check your connection.")
@@ -3244,8 +3242,7 @@ struct RootShell: View {
             // TokenChip rows alongside the summary — `KeptAskComposers.watchlistDoc`
             // so a typed ask and the kept "How's my watchlist?" chip can never
             // disagree about what's shown.
-            let line = moves.isEmpty ? MarketsAsk.line(markets) : TokensAsk.line(moves)
-            return KeptAskComposers.watchlistDoc(line: line, moves: moves, markets: markets)
+            return KeptAskComposers.watchlistDoc(line: TokensAsk.line(moves), moves: moves)
         }
         // A wallet ask ("how's my wallet") is answered from the live holdings
         // and the forward-only value line — computed, no model (2026-07-15).

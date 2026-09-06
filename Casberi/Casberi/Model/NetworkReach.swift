@@ -213,14 +213,6 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Tokens"),
                  purpose: "Fetches the public price history of a token you watch to draw its chart on \(DS.device). Carries only the token — nothing about you.",
                  hosts: ["api.dexscreener.com", "api.geckoterminal.com"]),
-        Endpoint(service: "GeckoTerminal",
-                 reach: .whenConnected(bridge: "GeckoTerminal"),
-                 purpose: "Fetches the tokens trending on the chains you follow — GeckoTerminal's own public ranking.",
-                 hosts: ["api.geckoterminal.com"]),
-        Endpoint(service: "Circle x402",
-                 reach: .whenConnected(bridge: "Circle x402"),
-                 purpose: "Reads Circle's public directory of services that sell themselves to software by the call. Carries nothing about you — there's no account and no key, and no payment is ever made.",
-                 hosts: ["api.circle.com"]),
         // The thumbnail CDN is listed beside the API because a Daily Paper row
         // draws its cover image, and an image loaded into a row is a real
         // reach even though `NetworkLedger` doesn't record it (its own stated
@@ -498,14 +490,6 @@ enum NetworkReach {
 
         // MARK: Markets
 
-        Endpoint(service: "Kalshi",
-                 reach: .whenConnected(bridge: "Kalshi"),
-                 purpose: "Fetches the live odds of the markets you watch on Kalshi. Public data, read-only.",
-                 hosts: ["api.elections.kalshi.com"]),
-        Endpoint(service: "Polymarket",
-                 reach: .whenConnected(bridge: "Polymarket"),
-                 purpose: "Fetches the live odds and price history of the markets you watch on Polymarket. Public data, read-only.",
-                 hosts: ["gamma-api.polymarket.com", "clob.polymarket.com"]),
         // Yahoo's two chart hosts joined 2026-08-03, the same runtime-built
         // blind spot as the Alchemy row above: `StockChart` tries
         // `"https://\(host).finance.yahoo.com/…"` with host = query1 then
@@ -517,10 +501,6 @@ enum NetworkReach {
                  purpose: "Fetches the posts and price of the tickers you watch, and each ticker's public price history from Yahoo Finance to draw its chart on \(DS.device). Public data — a watched ticker never sees your portfolio.",
                  hosts: ["api.stocktwits.com",
                          "query1.finance.yahoo.com", "query2.finance.yahoo.com"]),
-        Endpoint(service: "OpenSea",
-                 reach: .whenConnected(bridge: "OpenSea"),
-                 purpose: "Fetches the newest NFT collections on the chains you watch. Public data, read-only.",
-                 hosts: ["api.opensea.io"]),
         Endpoint(service: "ENS",
                  reach: .whenConnected(bridge: "ENS"),
                  purpose: "Reads the registrar's own public record for the names you follow — when a name expires, and whether it's been renewed or released. Public data, read-only: nothing here registers or renews.",
@@ -711,10 +691,6 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Deals"),
                  purpose: "Fetches the public deal feeds you follow.",
                  hosts: ["www.dealnews.com", "the deal sites you follow"]),
-        Endpoint(service: "Open Food Facts",
-                 reach: .whenConnected(bridge: "Open Food Facts"),
-                 purpose: "Looks up a grocery barcode in the open food database. Carries only the barcode.",
-                 hosts: ["world.openfoodfacts.org"]),
         Endpoint(service: "Bitrefill",
                  reach: .whenConnected(bridge: "Bitrefill"),
                  purpose: "Reads your Bitrefill orders and balance with an API key you provide.",
@@ -723,10 +699,6 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Privacy"),
                  purpose: "Reads your approved card purchases with an API key you provide. Read-only by conduct — it only ever reads.",
                  hosts: ["api.privacy.com"]),
-        Endpoint(service: "1Claw",
-                 reach: .whenConnected(bridge: "1Claw"),
-                 purpose: "Reads your vault grants with a read key you provide.",
-                 hosts: ["1claw.xyz", "api.1claw.xyz"]),
 
         // MARK: On tap — your own agent key, only when you press it
 

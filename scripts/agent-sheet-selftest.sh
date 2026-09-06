@@ -37,13 +37,12 @@ SOURCE="Casberi/Casberi/Model/AgentSheetSource.swift"
 VIEWS="Casberi/Casberi/Screens/AgentSheetViews.swift"
 VIEW="Casberi/Casberi/Screens/ThingSheetView.swift"
 CONTENT="Casberi/Casberi/Screens/ThingContent.swift"
-CLAW="Casberi/Casberi/Model/OneClawBridge.swift"
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
 GPT="Casberi/Casberi/Model/ChatGPTImport.swift"
 CLAUDE="Casberi/Casberi/Model/ClaudeImport.swift"
 CODE="Casberi/Casberi/Model/ClaudeCodeImport.swift"
 GEMINI="Casberi/Casberi/Model/GeminiImport.swift"
-for f in "$SHEET" "$SOURCE" "$VIEWS" "$VIEW" "$CONTENT" "$CLAW" "$CATALOG" \
+for f in "$SHEET" "$SOURCE" "$VIEWS" "$VIEW" "$CONTENT" "$CATALOG" \
          "$GPT" "$CLAUDE" "$CODE" "$GEMINI"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
@@ -99,16 +98,17 @@ guard "the agent shape yields to the money receipt and the Work receipt" \
   'moneyReceipt == nil, workReading == nil' "$VIEW"
 
 # --- the ingest half --------------------------------------------------------
-# The grant's parts must be STAMPED, or the sheet has to split a display string
-# back apart, which is the very thing WorkStage's central rule forbids.
-guard "1Claw stamps the path pattern" 'thing\.summary = pattern' "$CLAW"
-guard "1Claw stamps the vault" 'thing\.authorHandle = vaultName' "$CLAW"
-guard "1Claw stamps the facet and the permissions" \
-  'tags: \[grantTag\] \+ permissions' "$CLAW"
-# …and the reconcile pass must heal them, or the anatomy reaches only grants
-# created from this build on — indistinguishable from it not working.
-guard "the reconcile pass heals a grant landed before the parts existed" \
-  'grant\.summary = fresh\.summary' "$CLAW"
+# THE INGEST IS GONE (2026-09-06): the 1Claw bridge was deleted with the other
+# retired seats, so nothing stamps a grant's parts any more. Four guards over
+# `OneClawBridge.swift` stood here and are not replaced by nothing — what
+# survives the bridge is the READ, and the read is what still has to work,
+# because a corpus that already holds grant rows still draws their sheets.
+# `AgentSheetSource` owns both halves of that read now, so both are guarded
+# there rather than deleted with the writer.
+guard "a grant row is still recognised by its own ref" \
+  'ref\?\.hasPrefix\("1claw:policy:"\)' "$SOURCE"
+guard "the permissions still come off the row's tags, minus the facet" \
+  'thing\.tags\.filter \{ \$0 != "Grant"' "$SOURCE"
 
 # --- negative guards --------------------------------------------------------
 # Read a COMMENT-STRIPPED copy: these files DOCUMENT what they must no longer do

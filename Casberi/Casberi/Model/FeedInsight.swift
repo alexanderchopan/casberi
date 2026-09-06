@@ -602,7 +602,6 @@ enum FeedInsight {
         let title: String
         let unit: (one: String, many: String)
         switch source {
-        case "OpenSea":     title = "New drops";     unit = ("collection", "collections")
         case "Pinterest":   title = "Your pins";     unit = ("pin", "pins")
         case "Shopify":     title = "New arrivals";  unit = ("product", "products")
         case "YouTube":     title = "Latest uploads"; unit = ("video", "videos")

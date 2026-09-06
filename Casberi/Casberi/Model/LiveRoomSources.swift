@@ -37,11 +37,22 @@ enum LiveRoomSources {
     /// `Thing` ever. **NOT in `venues` below**, which is the mistake that
     /// produced "when i click on hegota it is showing me prediction markets" —
     /// that narrower set draws `PredictionRoomBook`.
-    static let all: Set<String> = ["Kalshi", "Polymarket",
-                                   HegotaIdentity.source, FramesIdentity.source,
+    /// Kalshi and Polymarket were the founding members and left on 2026-09-06
+    /// with their code (prd §638's third amendment). Their rows persist in a
+    /// corpus that has them, but `Corpus.retiredSources` refuses those rows a
+    /// room, so membership here could not reach them anyway.
+    static let all: Set<String> = [HegotaIdentity.source, FramesIdentity.source,
                                    PrivacyDevnetIdentity.source]
 
-    /// **The prediction venues, and ONLY them.**
+    /// **The prediction venues, and ONLY them — now EMPTY, and kept.**
+    ///
+    /// Kalshi and Polymarket, its only two members, were deleted on 2026-09-06.
+    /// The set stays rather than going with them because the LESSON below is
+    /// the file's whole reason for existing, and an empty set states it as
+    /// plainly as a full one: a registry whose membership means several
+    /// unrelated things hands every new member all of them. The next landless
+    /// seat that wants a chip and nothing else adds itself to `all`, sees this
+    /// set empty, and is told exactly why by the text under it.
     ///
     /// Split out of `all` on 2026-08-27, from a device report: adding Hegotá to
     /// this file made its room draw the Kalshi/Polymarket browse book —
@@ -59,7 +70,7 @@ enum LiveRoomSources {
     /// hands every new member all of them. Jobs 3 and 4 read this narrower set,
     /// so the next landless seat inherits a chip and nothing else — which is
     /// the property that makes this a fix rather than a patch.
-    static let predictionVenues: Set<String> = ["Kalshi", "Polymarket"]
+    static let predictionVenues: Set<String> = []
 
     static func has(_ source: String) -> Bool { all.contains(source) }
 

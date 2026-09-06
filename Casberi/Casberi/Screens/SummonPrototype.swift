@@ -102,7 +102,7 @@ struct SummonPrototype: View {
     private var sourceChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: DS.Space.s2) {
-                ForEach(["All", "Farcaster", "Wallet", "Peer", "1Claw", "Photos"], id: \.self) { name in
+                ForEach(["All", "Farcaster", "Wallet", "Peer", "Photos"], id: \.self) { name in
                     Text(name)
                         .dsText(.subhead13)
                         .foregroundStyle(name == "All" ? DS.textPrimary : DS.textTertiary)

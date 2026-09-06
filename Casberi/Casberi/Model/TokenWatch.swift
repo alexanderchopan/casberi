@@ -180,14 +180,30 @@ enum TokenWatch {
     /// carried no `info.imageUrl` (2026-07-18). Keyless, one call to the
     /// per-token endpoint with the chain+address the watch already holds.
     /// GeckoTerminal names its networks differently (`eth`, `polygon_pos`, …),
-    /// so the Dexscreener chain maps through `TrendingChain` to the gecko slug;
-    /// a token on a chain GeckoTerminal doesn't index resolves to nil and keeps
-    /// the glyph. The address is passed through unaltered — never lowercase a
+    /// so the Dexscreener chain maps through `geckoNetwork` below to the gecko
+    /// slug; a token on a chain GeckoTerminal doesn't index resolves to nil and
+    /// keeps the glyph. The address is passed through unaltered — never lowercase a
     /// Solana mint (base58 is case-sensitive). Returns nil for GeckoTerminal's
     /// generic "missing"/dexscreener placeholder (`IngestSupport.tokenLogoURL`
     /// filters both) — a wrong mark is worse than none.
+    /// Dexscreener's chain slug → GeckoTerminal's network id, for the logo
+    /// lookup below and nothing else.
+    ///
+    /// INLINED here on 2026-09-06: it lived on `TrendingChain` in the
+    /// GeckoTerminal bridge, which is deleted with the other retired seats.
+    /// The BRIDGE is gone (nobody follows a chain for trending tokens any
+    /// more); this READ is not — it is how a watched token on the live Tokens
+    /// seat gets its mark, and it has always been a keyless call against a
+    /// public endpoint that has nothing to do with the seat. Same ten chains,
+    /// same spellings; a chain absent here resolves to nil and keeps the glyph.
+    private static let geckoNetwork: [String: String] = [
+        "ethereum": "eth", "base": "base", "solana": "solana", "bsc": "bsc",
+        "arbitrum": "arbitrum", "polygon": "polygon_pos", "optimism": "optimism",
+        "avalanche": "avax", "blast": "blast", "robinhood": "robinhood",
+    ]
+
     private static func geckoLogo(chain: String, address: String) async -> String? {
-        guard let gecko = TrendingChain.from(chain)?.gecko,
+        guard let gecko = geckoNetwork[chain.lowercased()],
               let encoded = address.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
               let root = await IngestSupport.getJSON(
                 "https://api.geckoterminal.com/api/v2/networks/\(gecko)/tokens/\(encoded)")

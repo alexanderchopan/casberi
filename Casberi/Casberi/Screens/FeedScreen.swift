@@ -480,11 +480,6 @@ struct FeedScreen: View {
         case locks(WalletComposition)
         /// A market from the live book, previewed BEFORE it's followed
         /// (prd §234) — so it has no `Thing` yet and can't ride `.thing`.
-        /// Routed here rather than presented by the browse section itself
-        /// because that section lives inside this List's rows, and a `.sheet`
-        /// on a row resolves to the same presenting controller as this one —
-        /// the half-open-then-close bug (ruling 2026-07-28).
-        case market(PredictionPreview)
         /// One Hegotá movement, opened for its FRAME BREAKDOWN (prd §500).
         ///
         /// Routed here for `market`'s two reasons at once: the seat lands no
@@ -629,7 +624,6 @@ struct FeedScreen: View {
             case .worthALook: "worthALook"
             case .deposits: "deposits"
             case .locks: "locks"
-            case .market(let p): "market:\(p.id)"
             case .hegotaMove(let m, _): "hegotaMove:\(m.id)"
             case .hegotaFrame(let m, let i): "hegotaFrame:\(m.id)#\(i)"
             case .hegotaAccount(let a): "hegotaAccount:\(a.address)"
@@ -1469,23 +1463,12 @@ struct FeedScreen: View {
         return String(localized: "Nothing has landed here yet.")
     }
 
-    /// The x402 room's selected lane, or nil for all of it (2026-08-06).
-    ///
-    /// `@State`, so it resets when you leave the room — the same lifetime
-    /// `PredictionBrowseSection.bookView` has, and correct for a VIEW filter:
-    /// it is how you are looking right now, not a setting you configured.
-    /// Which is also what keeps §269 intact — that ruling killed a chip which
-    /// APPEARED as a consequence of agent state, not a control you operate.
-    /// This strip is always there, always shows every lane, and nothing but a
-    /// tap can change it.
-    @State private var x402Lane: String?
-
     /// One publisher (or one writer), when the reading room has been narrowed
     /// to them from its own board (2026-08-23, prd §455).
     ///
     /// `@State`, so it dies with the room — `MainSurface` gives its single
     /// `FeedScreen` an `.id(filter.source)`, and that is the RIGHT lifetime
-    /// here for the reason `x402Lane` has it: this is how you are looking at
+    /// here for the reason the x402 lane filter had: this is how you are looking at
     /// one room right now, not a setting you configured. It is deliberately
     /// NOT the shell-held shape §356 gave the wallet scope, because that scope
     /// spans a whole category of rooms and a publisher exists in exactly one.
@@ -1815,7 +1798,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, ledger, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, instagram, tiktok, x, x402, appStoreConnect, cursor, cardPointers, walletbeat, l2beat, telegram, vibenet, plain
+        case all, photos, wallet, ledger, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, snapchat, files, instagram, tiktok, x, appStoreConnect, cursor, cardPointers, walletbeat, l2beat, telegram, vibenet, plain
 
         /// Rooms whose lead is a GRID of pictures, and which therefore earn the
         /// wide content cap on a regular-width window (2026-08-17).
@@ -1999,15 +1982,6 @@ struct FeedScreen: View {
             // this case failed that check on its first run for exactly
             // that reason.
             case "Base Vibenet":        self = .vibenet
-            // Circle x402, 2026-08-06 — the same defect as the line above, one
-            // day later. It had no case here, so `.plain` drew twenty-two
-            // BandRows wearing one glyph and ONE TIMESTAMP (every seller lands
-            // on the walk that first sees it), while what a call costs sat on
-            // `summary`, visible only inside the sheet. Its own case rather
-            // than joining any existing one: no other room's row leads with a
-            // price, and none of them has a trailing slot that must NOT be a
-            // time.
-            case X402Ingest.source:     self = .x402
             // Its own case rather than joining `.chat` (2026-08-08, prd §340).
             // A Cursor row is a REPORT — an outcome, a repository and a
             // paragraph the agent wrote about what it did — where a chat row
@@ -2088,7 +2062,6 @@ struct FeedScreen: View {
             case _ where MediaShape.isMediaFeed(source): self = .media
             case "Tokens":              self = .tokens
             case "Bitrefill":           self = .bitrefill
-            case "1Claw":               self = .oneclaw
             default:                    self = .plain
             }
         }
@@ -2436,7 +2409,7 @@ struct FeedScreen: View {
                 // Omitted at first, and the symptom was exactly that —
                 // the face lit and the card kept listing every account.
                 chrome.vibenetScope ?? "",
-                x402Lane ?? "", readingScope?.key ?? "",
+                readingScope?.key ?? "",
                 // Bridge state is the one input a corpus revision cannot see —
                 // `sourceHead` reads a Stripe balance, PostHog readings, an ASC
                 // standing, none of which is a `Thing`. A pull is when somebody
@@ -2593,7 +2566,7 @@ struct FeedScreen: View {
     /// by `recomputeHeads` when it computes that one card and by nothing else,
     /// so every other head still describes exactly the rows on screen.
     private func roomScoped(_ rows: [Thing], narrowingToPublisher: Bool = true) -> [Thing] {
-        var out = shape == .x402 ? x402Scoped(rows) : rows
+        var out = rows
         if narrowingToPublisher, let scope = readingScope {
             // `.live` before a stored property is read (corollary 4) —
             // `rows` may be the debounced All snapshot.
@@ -4338,12 +4311,6 @@ struct FeedScreen: View {
         }
     }
 
-    /// The prediction-market rooms lead with the live BOOK (prd §234) — the
-    /// `githubGraphHero` shape (a source room's own non-corpus content, gated
-    /// on the source string), but load-bearing rather than decorative: Kalshi
-    /// and Polymarket have no sync, so without this the room of a freshly
-    /// connected exchange is empty and there is nowhere to find a market to
-    /// follow. Browsing here never writes — a market becomes a Thing (and so
 
     /// What each `FeedSheetRoute` presents.
     ///
@@ -4406,8 +4373,6 @@ struct FeedScreen: View {
             WalletDepositsTray(composition: composition)
         case .locks(let composition):
             WalletLocksTray(composition: composition)
-        case .market(let preview):
-            PredictionPreviewSheet(preview: preview)
         case .hegotaMove(let move, let owner):
             HegotaMoveSheet(move: move, owner: owner,
                             watched: HegotaRoomSource.accounts().map(\.address),
@@ -4869,7 +4834,6 @@ struct FeedScreen: View {
             // remains the lead on the quiet days, which is most of them,
             // and is why it was not simply deleted.
             if source == "GitHub", sourceHeadIsAbsent { githubGraphHero }
-            predictionBook
         }
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
@@ -5323,13 +5287,6 @@ struct FeedScreen: View {
                     && !hidesPastEvents(visible) && !memo.windowHasMore {
                     caughtUpFooter(visible)
                 }
-    }
-
-    /// reaches the All feed) only on an explicit Follow.
-    @ViewBuilder private var predictionBook: some View {
-        if LiveRoomSources.isPredictionVenue(source) {
-            PredictionRoomBook(source: source) { feedSheet = .market($0) }
-        }
     }
 
     // The folded-category venue switcher and the wallet face rail used to be
@@ -5863,7 +5820,6 @@ struct FeedScreen: View {
         // one primary lane, so Prediction markets and Creative have no shelf at
         // all despite having real members, and were unreachable by any means.
         let visible = roomScoped(allVisible)
-        if shape == .x402 { x402LaneStrip }
         // ABOVE THE HEAD, deliberately (2026-08-23, prd §455). This is not a
         // reading about the room, it is a statement about whether the room is
         // COMPLETE — and every reading below it (a board ranking publishers, a
@@ -6046,10 +6002,6 @@ struct FeedScreen: View {
                     // which is the tag filter the room already supports.
                     AppleWalletRoomCard(room: room) { merchant in
                         openMerchant(merchant, in: visible)
-                    }
-                case .x402(let room):
-                    X402RoomCard(room: room) { slug in
-                        openBySourceRef("x402:\(slug)", in: visible)
                     }
                 case .appStoreConnect(let room):
                     AppStoreConnectRoomCard(room: room) { app in
@@ -6866,11 +6818,6 @@ struct FeedScreen: View {
                     groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
                 }
             }
-        case .x402:
-            // Lanes, not days — see `x402Lanes`. No `boundary:`, deliberately:
-            // the new-since divider is a chronological mark, and in a room
-            // where every row shares one timestamp it would land arbitrarily.
-            groupedSections(x402Lanes(visible), nextEventID: nextEventID)
         case .cardPointers:
             // Deadlines, not days — see `cardPointersGroups`. No `boundary:`,
             // for x402's reason one room over: every offer carries the
@@ -6921,10 +6868,6 @@ struct FeedScreen: View {
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .bitrefill:
             bitrefillLedeSection(visible)
-            let days = chronoGroups(visible)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
-        case .oneclaw:
-            oneclawLedeSection(visible)
             let days = chronoGroups(visible)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         default:
@@ -7057,17 +7000,6 @@ struct FeedScreen: View {
     }
 
     /// 1Claw's lede: the key's reach at a glance — the vault count its API
-    /// last reported, and how many grants landed as rows below (counted from
-    /// the same rows, so the two can't disagree). Connected-only: a
-    /// disconnected seat must not wear yesterday's reach as if it were
-    /// current.
-    @ViewBuilder
-    private func oneclawLedeSection(_ visible: [Thing]) -> some View {
-        if TokenBridge.oneclaw.connected, let vaults = OneClawAccess.formatted {
-            let grants = visible.filter { OneClawFetch.isGrantRef($0.sourceRef) }.count
-            ledeSection(OneClawLede(vaults: vaults, grantCount: grants))
-        }
-    }
 
     /// The watchlist's OWN order, not chronology (2026-07-15) — day headers
     /// answer "when did I watch this", a question that stops mattering once
@@ -7971,17 +7903,6 @@ struct FeedScreen: View {
     /// PostHog reading, each held in bridge state. So they get a head each,
     /// and they share one slot in the chain because they can never compete —
     /// every case names exactly one source.
-    /// The lane strip — `PredictionBrowseSection.viewChip` reused verbatim in
-    /// look and behaviour, because that is the app's existing answer to "scope
-    /// this room by one of a known set of categories" and a second visual
-    /// language for the same job would be the drift the design system exists to
-    /// prevent.
-    ///
-    /// Every lane is always listed, in the catalog's own order, whether or not
-    /// anyone sells into it today — a strip whose contents shift under you is a
-    /// status readout, not a control. A lane with nothing in it still answers
-    /// honestly when tapped (the empty room says so), which is a truthful
-    /// answer rather than a missing button.
     /// A feed that has stopped answering, said in the room (2026-08-23, prd
     /// §455). Draws nothing at all when every feed is fine, which is the
     /// common case — see `FeedRoomHealth`.
@@ -8024,95 +7945,9 @@ struct FeedScreen: View {
         }
     }
 
-    @ViewBuilder
-    private var x402LaneStrip: some View {
-        Section {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s2) {
-                    laneChip(nil, label: String(localized: "All"))
-                    ForEach(X402Category.allCases) { lane in
-                        laneChip(lane.display, label: lane.display)
-                    }
-                }
-                .padding(.horizontal, DS.Space.s4)
-            }
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets())
-        }
-    }
 
-    private func laneChip(_ value: String?, label: String) -> some View {
-        let isOn = x402Lane == value
-        return Button {
-            DSHaptic.selection()
-            withAnimation(DS.Motion.standard) { x402Lane = value }
-        } label: {
-            Text(label)
-                .dsText(.subhead13).fontWeight(.semibold)
-                .foregroundStyle(isOn ? .white : DS.textSecondary)
-                .padding(.horizontal, DS.Space.s3).padding(.vertical, 7)
-                .background(Capsule().fill(isOn ? DS.tint : DS.fillFaint))
-        }
-        .buttonStyle(PressSpring())
-    }
 
-    /// The room narrowed to the selected lane. A seller qualifies if it sells
-    /// into that lane AT ALL — the row's `tags` carry every lane it serves, not
-    /// just the primary one its shelf files it under.
-    private func x402Scoped(_ visible: [Thing]) -> [Thing] {
-        guard let lane = x402Lane else { return visible }
-        return visible.live.filter { thing in
-            thing.tags.contains { $0.caseInsensitiveCompare(lane) == .orderedSame }
-        }
-    }
 
-    /// LANES, NOT DAYS (2026-08-06) — the x402 room's real unit.
-    ///
-    /// Every seller here lands on the walk that first sees it, so the whole room
-    /// shares one timestamp: day-grouping produces a single section called
-    /// "Today" holding twenty-two rows, which is a grouping that does no work
-    /// and a divider that says nothing. `.music` made exactly this move for the
-    /// same reason (a listening sitting is its real unit, not a calendar day).
-    ///
-    /// Two orderings, and both replace something arbitrary:
-    ///
-    ///  • **Lanes by how many sellers they hold**, so the shelf you scroll into
-    ///    first is the one with something on it.
-    ///  • **Sellers within a lane by SERVICE COUNT**, matching the head's own
-    ///    ranking — so scrolling the room reads as descending a leaderboard
-    ///    instead of wandering a pile. Before this the order was insertion
-    ///    order, which is to say no order at all.
-    ///
-    /// A seller whose reading isn't stored yet (a fresh install syncs the rows
-    /// but not `X402State`) ranks 0 and falls back to its own arrival rather
-    /// than being dropped — the room still draws, just unranked, which is the
-    /// honest outcome when we haven't walked on this device yet.
-    private func x402Lanes(_ visible: [Thing]) -> [(String, [Thing])] {
-        let services = Dictionary(X402State.sellers.map { ($0.slug, $0.services) },
-                                  uniquingKeysWith: { first, _ in first })
-        func rank(_ thing: Thing) -> Int {
-            guard let ref = thing.sourceRef, ref.hasPrefix("x402:") else { return 0 }
-            return services[String(ref.dropFirst("x402:".count))] ?? 0
-        }
-        var lanes: [String: [Thing]] = [:]
-        // Live at the BOUNDARY, before any stored property is read (corollary 4)
-        // — `visible` may be a debounced snapshot.
-        for thing in visible.live {
-            // The room's own marker names no lane; the first real tag wins. A
-            // row with no lane at all (a seller whose category this build can't
-            // map — quirk 2) gets a shelf rather than vanishing, which is the
-            // same refusal the ingest makes when it lands them.
-            let lane = thing.tags.first { $0.caseInsensitiveCompare("x402") != .orderedSame }
-                ?? String(localized: "Everything else")
-            lanes[lane, default: []].append(thing)
-        }
-        return lanes
-            .map { label, rows in
-                (label, rows.sorted { (rank($0), $0.capturedAt) > (rank($1), $1.capturedAt) })
-            }
-            .sorted { ($0.1.count, $1.0) > ($1.1.count, $0.0) }
-    }
 
     /// The CardPointers room grouped by DEADLINE rather than by day (prd §487)
     /// — the `x402Lanes` shape, for a sharper version of the same reason.
@@ -8236,7 +8071,6 @@ struct FeedScreen: View {
         case dodoPayments(DodoPaymentsRoom)
         case posthog(PostHogRoom)
         case appleWallet(AppleWalletRoom.Card)
-        case x402(X402Room)
         case appStoreConnect(ASCRoom)
         case cursor(CursorRoom)
         // AWS (2026-08-30) — one account, one region, so the value is the
@@ -8362,8 +8196,6 @@ struct FeedScreen: View {
             return PostHogRoomSource.compose(things: visible).map { .posthog($0) }
         case AppleWalletBridge.sourceName:
             return AppleWalletRoomSource.compose(things: visible).map { .appleWallet($0) }
-        case X402Ingest.source:
-            return X402RoomSource.compose(things: visible, lane: x402Lane).map { .x402($0) }
         // The one head here that reads no rows at all — its subject is STATE,
         // and replaying the feed for it would let this card and the connect
         // screen disagree about the same corpus. See `ASCRoomSource.compose`.
@@ -10690,7 +10522,6 @@ struct FeedScreen: View {
         }
         if shape == .chat && thing.mark == .doing { return true }          // TakeawayCard
         if TokenPulse.shared.pulse(for: thing) != nil { return true }      // TokenRow fat anatomy
-        if PredictionPulse.shared.pulse(for: thing) != nil { return true } // PredictionRow, same
         return false
     }
 
@@ -11186,23 +11017,6 @@ struct FeedScreen: View {
                 // something happened to, and `.plain`'s band drew one
                 // identical glyph for every account.
                 VibenetEventRow(thing: thing)
-            case .x402:
-                // The import receipt keeps its plain band — it is our own note
-                // about the sync, not a company selling anything.
-                if Corpus.isImportReceipt(thing) {
-                    BandRow(thing: thing,
-                            emphasized: thing.id == nextEventID,
-                            live: false,
-                            imageOnly: imageOnly,
-                            wideArt: wideArt)
-                } else {
-                    // The lane's biggest seller leads it. `index` is the
-                    // position within the SECTION, and since sections are lanes
-                    // ranked by service count, index 0 is that lane's leader —
-                    // so each shelf gets one landmark instead of reading as an
-                    // undifferentiated run.
-                    CircleX402Row(thing: thing, lead: index == 0)
-                }
             case .appStoreConnect:
                 if thing.tags.contains("Review") {
                     AppReviewRow(thing: thing)
@@ -11266,11 +11080,6 @@ struct FeedScreen: View {
                 // plain band + timestamp — never a faked price.
                 if let pulse = TokenPulse.shared.pulse(for: thing) {
                     TokenRow(thing: thing, pulse: pulse)
-                } else if let odds = PredictionPulse.shared.pulse(for: thing) {
-                    // A watched market wears its odds the same way — and the
-                    // same rule holds: until the pulse lands, the plain band,
-                    // never a faked probability.
-                    PredictionRow(thing: thing, pulse: odds)
                 } else {
                     // The source badge (2026-08-09): a CROSS-SOURCE room asks
                     // for it, a single-source room doesn't — there the room
@@ -12165,7 +11974,6 @@ struct FeedScreen: View {
         // self-reinforcing: the error's obvious remedy is another pull, and
         // another pull reproduced it exactly. Invalidating first makes the
         // reload a genuinely fresh read with nothing to race.
-        if LiveRoomSources.isPredictionVenue(source) { await KalshiWatch.invalidateCache() }
         chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
         await refreshFeed()
     }

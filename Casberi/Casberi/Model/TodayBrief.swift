@@ -683,14 +683,6 @@ enum TodayBrief {
             mark("runway")
             lines += runway
         }
-        // A watched market that resolved — an EVENT, so it follows the pair
-        // rather than joining it (a tile pair is state at a glance; this is
-        // news). Silent on every day nothing settled, like every module here.
-        if scopedToMoney, let resolved = marketResolvedToday(MarketsAsk.moves(context: context), now: now) {
-            ids.append("tmkt")
-            mark("tmkt")
-            lines.append(resolved)
-        }
         // Where the money MOVED — the flow band (§232), closing the money
         // block. Everything the crown says above is money as STATE (the total,
         // its delta, the holdings treemap, the balance curve — all "what you
@@ -2532,36 +2524,6 @@ enum TodayBrief {
         let watched = WalletStore.shared.addresses
         let spine = watched.count == 1 ? (watched.first?.address ?? "") : ""
         return "flow = WalletFlow(\"\(genSafe(WalletRange.week.flowLabel))\", \"\(lanes.joined(separator: ";"))\", \"\(String(format: "%.2f", band.inUSD))\", \"\(String(format: "%.2f", band.outUSD))\", \"\(band.unpricedCount)\", \"\(spine)\")"
-    }
-
-    /// `NextTile(label, title, when, alert, thingID)` — the nearest real
-    /// DEADLINE, plus the overdue tail as its alert line.
-    ///
-    /// Deadlines only, never calendar events: an event's start rides
-    /// `capturedAt`, and folding those in here would rebuild exactly the
-    /// day-planner lane §101 cut ("a person who sees their whole day in
-    /// Casberi stops opening their calendar"). Same scoping the `upcoming`
-    /// composer already holds to.
-    /// A watched market that BECAME A FACT today (2026-07-28) — the one
-    /// prediction-market shape that belongs in this brief without arguing
-    /// with the module doctrine. A market's odds are a STATE (the feed row
-    /// carries those, §216); a market RESOLVING is an EVENT, and the only
-    /// thing in the corpus that turns a probability into an answer. It also
-    /// carries what nothing else can: the odds the day you started watching.
-    ///
-    /// Never a count of markets, never "3 markets moved" — that's the tally
-    /// this file's header forbids. One resolution, or nothing.
-    private static func marketResolvedToday(_ markets: [MarketsAsk.Move], now: Date) -> String? {
-        let cal = Calendar.current
-        guard let just = markets.first(where: { m in
-            m.resolved && m.yesWon != nil && cal.isDate(m.thing.capturedAt, inSameDayAs: now) == false
-                && (m.thing.dueAt.map { cal.isDate($0, inSameDayAs: now) } ?? false)
-        }) ?? markets.first(where: { $0.resolved && $0.yesWon != nil }) else { return nil }
-        // A Row, not a tile: this IS the thing itself (one of the four shapes
-        // the doctrine allows), so it opens to the market it names. The
-        // trailing slot carries the answer — the whole point of the module.
-        let answer = just.yesWon == true ? String(localized: "Yes") : String(localized: "No")
-        return "tmkt = Row(\"\(tileSafe(just.thing.title))\", \"\(just.thing.kind.typeTag)\", \"\(just.thing.source)\", \"\(answer)\", \"\(just.thing.id.uuidString)\")"
     }
 
     private static func nextTile(_ things: [Thing], excluding alerted: Set<UUID> = []) -> String? {

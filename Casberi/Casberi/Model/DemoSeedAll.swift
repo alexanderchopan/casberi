@@ -595,7 +595,12 @@ enum DemoSeedAll {
         for event in demoMetrics { PostHogState.forget(event) }
         ChipMemory.forgetDemo(Array(demoVisits.keys))
         SocialLikers.shared.forgetDemo(refs: demoLikerRolls.map(\.ref))
-        X402State.forget()
+        // The x402 seller reading, by key rather than through its own type:
+        // the bridge is deleted (2026-09-06), and an older pour's blob would
+        // otherwise outlive both the demo and the code that wrote it.
+        for key in ["x402.state.v1", "x402.categories.v1"] {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
         // The keystore snapshot and its seat evidence (prd §403).
         AltanaState.clear()   // takes the seeded ghosts with it (§410)
         AltanaKeystore.evidence.forget(demoWallet)
@@ -4845,8 +4850,9 @@ enum DemoSeedAll {
         ChipMemory.seedDemo(demoVisits)
 
         // (4 was Circle x402's seller treemap, retired with the seat on
-        // 2026-09-06, prd §638. `teardown` still calls `X402State.forget()`
-        // so an older pour's reading does not outlive the demo.)
+        // 2026-09-06, prd §638, and its code deleted the same day. `teardown`
+        // still clears the two defaults keys it wrote, so an older pour's
+        // reading does not outlive the demo — or the bridge.)
 
         // 5 · Cloudflare's estate snapshot — see `seedCloudflareEstate`'s own
         // doc for why the two cert rows alone don't reach the runway figure.

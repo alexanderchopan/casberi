@@ -48,7 +48,7 @@ enum AgentSheetSource {
         AgentSheet.Facts(
             kind: thing.kind.rawValue,
             socialShaped: SocialSheetSource.shape(for: thing) != nil,
-            grantRef: OneClawFetch.isGrantRef(thing.sourceRef),
+            grantRef: Self.isGrantRef(thing.sourceRef),
             // Parsed rather than counted from a field, because the field is
             // exactly what can be missing: a chat landed before `enrichedText`
             // was written carries a count and no body, and one whose importer
@@ -105,12 +105,24 @@ enum AgentSheetSource {
             now: now))
     }
 
+    /// A 1Claw grant row, by its ref.
+    ///
+    /// INLINED here on 2026-09-06, when the 1Claw bridge was deleted with the
+    /// other retired seats. The seat is gone and nothing lands a grant any
+    /// more — but the rows somebody already has do NOT go with it, and a
+    /// sheet that stopped recognising them would degrade a shipped row into
+    /// the generic shape. Two string literals is a cheaper way to keep that
+    /// promise than keeping a bridge alive to answer them.
+    static func isGrantRef(_ ref: String?) -> Bool {
+        ref?.hasPrefix("1claw:policy:") ?? false
+    }
+
     /// The verbs the key was granted, off the row's own tags.
     ///
-    /// `OneClawFetch.grantTag` is the facet naming the SHAPE ("Grant"); every
-    /// other tag on the row is a permission the API reported, stamped in the
-    /// API's own words so nothing here has to translate a security decision.
+    /// "Grant" is the facet naming the SHAPE; every other tag on the row is a
+    /// permission the API reported, stamped in the API's own words so nothing
+    /// here has to translate a security decision.
     static func permissions(for thing: Thing) -> [String] {
-        thing.tags.filter { $0 != OneClawFetch.grantTag && !$0.isEmpty }
+        thing.tags.filter { $0 != "Grant" && !$0.isEmpty }
     }
 }

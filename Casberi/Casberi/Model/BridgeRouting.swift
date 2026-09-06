@@ -29,11 +29,7 @@ enum BridgeRouter {
         case altana
         case exchange(ExchangeBridge.Venue)
         case ethValidators
-        case kalshi
-        case polymarket
         case stocktwits
-        case openSea
-        case geckoTerminal
         /// ENS (prd §534) — keyless with a FOLLOW list on screen, Walletbeat's
         /// exact reason: as `.token` it would inherit `finishesOnConnect ==
         /// true` and the raised sheet would dismiss itself the moment the first
@@ -58,10 +54,6 @@ enum BridgeRouter {
         /// (an account without CardPointers+), which `.token`'s
         /// `finishesOnConnect` would dismiss straight past.
         case cardPointers
-        /// Circle's public x402 directory (2026-08-06) — a watch list of lanes,
-        /// so it must NOT ride `.token`: it has no token at all, and the first
-        /// lane usually wants a second.
-        case circleX402
         case huggingFace
         case radicle
         /// Base's vibenet devnet — a WATCH LIST of addresses on
@@ -79,7 +71,6 @@ enum BridgeRouter {
         case privacyDevnet
         case shopify
         case deals
-        case openFoodFacts
         case icloudMail
         case gmail
         case rss
@@ -314,16 +305,11 @@ enum BridgeRouter {
             // so the Row above and this can't drift apart.
             case .exchange(let venue): venue.rawValue
             case .ethValidators:  "ethvalidators"
-            case .kalshi:         "kalshi"
-            case .polymarket:     "polymarket"
             case .stocktwits:     "stocktwits"
-            case .openSea:        "opensea"
-            case .geckoTerminal:  "geckoterminal"
             case .ens:            "ens"
             case .walletbeat:     "walletbeat"
             case .l2beat:         "l2beat"
             case .cardPointers:   "cardpointers"
-            case .circleX402:     "x402"
             case .huggingFace:    "huggingface"
             case .radicle:        "radicle"
             case .vibenet:        VibenetIdentity.seatID
@@ -332,7 +318,6 @@ enum BridgeRouter {
             case .frames:         FramesIdentity.seatID
             case .shopify:        "shopify"
             case .deals:          "deals"
-            case .openFoodFacts:  "off"
             case .icloudMail:     "icloudmail"
             case .gmail:          "gmail"
             case .rss:            "rss"
@@ -431,16 +416,11 @@ enum BridgeRouter {
         Row(offer: "Binance",   id: "binance",  destination: .exchange(.binance)),
         Row(offer: "Gemini Exchange", id: "geminiExchange", destination: .exchange(.geminiExchange)),
         Row(offer: "ETH Validators", id: "ethvalidators", destination: .ethValidators),
-        Row(offer: "Kalshi",     id: "kalshi",     destination: .kalshi),
-        Row(offer: "Polymarket", id: "polymarket", destination: .polymarket),
         Row(offer: "Stocktwits", id: "stocktwits", destination: .stocktwits),
-        Row(offer: "OpenSea",    id: "opensea",    destination: .openSea),
-        Row(offer: "GeckoTerminal", id: "geckoterminal", destination: .geckoTerminal),
         Row(offer: "ENS",        id: "ens",        destination: .ens),
         Row(offer: "Walletbeat", id: "walletbeat", destination: .walletbeat),
         Row(offer: "L2BEAT",     id: "l2beat",     destination: .l2beat),
         Row(offer: "CardPointers", id: "cardpointers", destination: .cardPointers),
-        Row(offer: "Circle x402", id: "x402", destination: .circleX402),
         Row(offer: "Hugging Face", id: "huggingface", destination: .huggingFace),
         Row(offer: "Radicle",    id: "radicle",    destination: .radicle),
         Row(offer: "Base Vibenet", id: VibenetIdentity.seatID, destination: .vibenet),
@@ -449,7 +429,6 @@ enum BridgeRouter {
         Row(offer: "Frames Devnet", id: FramesIdentity.seatID, destination: .frames),
         Row(offer: "Shopify",    id: "shopify",    destination: .shopify),
         Row(offer: "Deals",      id: "deals",      destination: .deals),
-        Row(offer: "Open Food Facts", id: "off",   destination: .openFoodFacts),
         Row(offer: "iCloud Mail", id: "icloudmail",  destination: .icloudMail),
         Row(offer: "Gmail",       id: "gmail",       destination: .gmail),
         Row(offer: "RSS",       id: "rss",    destination: .rss),
@@ -645,16 +624,11 @@ struct BridgeDestinationView: View {
         case .safe:           SafeScreen()
         case .altana:         AltanaScreen()
         case .ethValidators:  EthValidatorScreen()
-        case .kalshi:         KalshiScreen()
-        case .polymarket:     PolymarketScreen()
         case .stocktwits:     StocktwitsScreen()
-        case .openSea:        OpenSeaScreen()
-        case .geckoTerminal:  GeckoTerminalScreen()
         case .ens:            ENSScreen()
         case .walletbeat:     WalletbeatScreen()
         case .l2beat:         L2beatScreen()
         case .cardPointers:   CardPointersScreen()
-        case .circleX402:     CircleX402Screen()
         case .huggingFace:    HuggingFaceScreen()
         case .radicle:        RadicleScreen()
         case .vibenet:        VibenetScreen()
@@ -663,7 +637,6 @@ struct BridgeDestinationView: View {
         case .frames:         FramesScreen()
         case .shopify:        ShopifyScreen()
         case .deals:          DealsScreen()
-        case .openFoodFacts:  OpenFoodFactsScreen()
         case .icloudMail:     MailScreen(provider: .icloud)
         case .gmail:          MailScreen(provider: .gmail)
         case .rss:            RSSScreen()

@@ -432,14 +432,6 @@ enum BridgeRefresh {
             await BridgeRefresh.stagger(s)
             await TokenPulse.shared.refresh(context: context)
         }
-        // Same shape for watched prediction markets (Kalshi/Polymarket) —
-        // without this a watched market goes dead the moment its own screen
-        // closes, since nothing else ever refetches its odds. It is also
-        // what stamps a settled market and fires its resolution moment.
-        let sp = slot(); Task { @MainActor in
-            await BridgeRefresh.stagger(sp)
-            await PredictionPulse.shared.refresh(context: context)
-        }
         for provider in MailProvider.allCases where provider.connected {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
@@ -564,32 +556,6 @@ enum BridgeRefresh {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 await HegotaLiveState.shared.refresh()
-            }
-        }
-        if OpenSeaStore.shared.connected {
-            let s = slot(); Task { @MainActor in
-                await BridgeRefresh.stagger(s)
-                _ = await OpenSeaIngest.refresh(context: context)
-            }
-        }
-        if TrendingStore.shared.connected {
-            let s = slot(); Task { @MainActor in
-                await BridgeRefresh.stagger(s)
-                _ = await TrendingIngest.refresh(context: context)
-            }
-        }
-        if X402Store.shared.connected {
-            let s = slot(); Task { @MainActor in
-                await BridgeRefresh.stagger(s)
-                _ = await X402Ingest.refresh(context: context)
-                // The second act: a seller's own page for its picture. A
-                // network pass, so it goes behind `dueForHeal` exactly like
-                // Instagram's captions and TikTok's faces — a bounded slice per
-                // interval, self-terminating once every seller has been asked
-                // once. Under no deadline, unlike Snapchat's expiring memories.
-                if BridgeRefresh.dueForHeal("x402.faces") {
-                    _ = await X402Faces.heal(context: context)
-                }
             }
         }
         if HuggingFaceStore.shared.connected {

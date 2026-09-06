@@ -1255,13 +1255,21 @@ need() { [[ -f "$work/$1" ]] || fail "guard points at a file never prepared: $1"
 # and the whole room is unreachable.
 need LiveRoomSources.swift.bare "HegotaIdentity.source" \
   "Hegota left LiveRoomSources — a landless seat with no entry there has no chip and no room"
-# The registry carries TWO sets now and the split IS the fix. Hegota must be in
-# the general one and never in the venue one: gating the browse book on `has`
-# is what drew Kalshi's markets inside the Hegota room on a device.
+# The registry carries TWO sets and the split IS the fix. Hegota must be in the
+# general one and never in the venue one: gating the browse book on `has` is
+# what drew Kalshi's markets inside the Hegota room on a device.
+#
+# The venue set is EMPTY since 2026-09-06 — both venues were deleted — so the
+# second guard here changed shape rather than going away. It used to pin that
+# the book was gated on the narrow set; it now pins that the set is empty, which
+# is the same property one step stronger: with no members, no seat can inherit
+# the book by joining the wrong set, and the FeedScreen gate it guarded is gone
+# along with the book. Hegota's own membership in `all` (above) is untouched,
+# which is the half of the report that was actually about Hegota.
 deny LiveRoomSources.swift.bare 'predictionVenues.*Hegota' \
   "Hegota joined predictionVenues — its room would draw the prediction browse book"
-need FeedScreen.swift.bare "LiveRoomSources.isPredictionVenue(source)" \
-  "the prediction book is gated on the general set again — every landless seat draws Kalshi markets"
+need LiveRoomSources.swift.bare "predictionVenues: Set<String> = \[\]" \
+  "predictionVenues is non-empty again — its members were deleted, so any entry draws a book whose code does not exist"
 # A live sweep in demo mode reads an EMPTY watch list and wipes the fixture.
 need HegotaBridge.swift.bare "DemoMode.isActive" \
   "the sweep no longer stands down in demo mode — it would wipe the seeded fixture"

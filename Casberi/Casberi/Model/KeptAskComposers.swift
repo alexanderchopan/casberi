@@ -438,14 +438,13 @@ enum KeptAskComposers {
     /// 6-shown cap, same route guard), so a kept "How's my watchlist?" and a
     /// typed one can never disagree about what's shown.
     private static func watchlist(context: ModelContext) async -> Result? {
-        // Markets count as a watchlist too (2026-07-28). Before this the ask
-        // was tokens-only, so someone watching five Kalshi markets and no
-        // tokens asked "how's my watchlist?" and was told it was empty —
-        // which was a fake status, not an answer (honesty rule).
-        let markets = MarketsAsk.moves(context: context)
-        guard !TokensAsk.watched(context).isEmpty || !markets.isEmpty else { return nil }
+        // Tokens-only again since 2026-09-06: the market half was Kalshi and
+        // Polymarket, and both seats are deleted. It read markets from
+        // 2026-07-28 because a markets-only watchlist was being told it was
+        // empty — there is no such watchlist to get wrong now.
+        guard !TokensAsk.watched(context).isEmpty else { return nil }
         let moves = await TokensAsk.moves(context: context)
-        guard !moves.isEmpty || !markets.isEmpty else {
+        guard !moves.isEmpty else {
             // Watched, but every pulse fetch failed — not the same as an
             // empty watchlist (honesty rule already paid for in
             // RootShell.answerDocument; this composer was missing it).
@@ -453,34 +452,29 @@ enum KeptAskComposers {
                           doc: ["root = Stack([ins])",
                                 "ins = Insight(\"\(genSafe("Couldn't read your watchlist's prices right now."))\")"])
         }
-        // Tokens lead when there are any (the older, denser read); a
-        // markets-only watchlist speaks in its own voice rather than
-        // borrowing a line about prices.
-        let line = moves.isEmpty ? MarketsAsk.line(markets) : TokensAsk.line(moves)
+        let line = TokensAsk.line(moves)
         return Result(delta: line, digest: line,
-                      doc: watchlistDoc(line: line, moves: moves, markets: markets))
+                      doc: watchlistDoc(line: line, moves: moves))
     }
 
     /// Shared by the kept-ask composer and `RootShell.answerDocument`'s
     /// free-text watchlist branch.
-    static func watchlistDoc(line: String, moves: [TokensAsk.Move],
-                             markets: [MarketsAsk.Move] = []) -> [String] {
+    static func watchlistDoc(line: String, moves: [TokensAsk.Move]) -> [String] {
         let shown = moves.prefix(6).compactMap { m in
             TokenChart.route(from: m.thing.content).map { (move: m, route: $0) }
         }
-        let marketRows = MarketsAsk.rows(markets)
         // One mover earns the FULL scrubbable curve (ChartCard), not a lone
         // chip — the same tall-vs-compact dose split TokenChart draws
         // everywhere else (2026-07-21). Two or more keep the chip list.
         // Markets never displace that: they follow as their own group, so a
         // watchlist holding both reads as two lists, not one blended one.
-        if shown.count == 1, marketRows.isEmpty {
+        if shown.count == 1 {
             let s = shown[0]
             return ["root = Stack([ins, chart])",
                     "ins = Insight(\"\(genSafe(line))\")",
                     "chart = ChartCard(\"\(genSafe(s.move.symbol))\", \"\(s.route.chain)\", \"\(s.route.address)\")"]
         }
-        let kids = ["ins", shown.isEmpty ? nil : "res", marketRows.isEmpty ? nil : "mkt"]
+        let kids = ["ins", shown.isEmpty ? nil : "res"]
             .compactMap(\.self).joined(separator: ", ")
         var doc = ["root = Stack([\(kids)])",
                    "ins = Insight(\"\(genSafe(line))\")"]
@@ -491,7 +485,6 @@ enum KeptAskComposers {
                 doc.append("t\(i) = TokenChip(\"\(genSafe(s.move.symbol))\", \"\(s.route.chain)\", \"\(s.route.address)\", \"\(s.move.thing.id.uuidString)\", \"\")")
             }
         }
-        doc.append(contentsOf: marketRows)
         return doc
     }
 

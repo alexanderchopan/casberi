@@ -40,15 +40,13 @@ ROLL_DIRS = ["Casberi/Casberi/Screens", "Casberi/Casberi/Design",
 # if it cannot meet the skeleton — the curated-set shape `catalog-sync.sh` uses,
 # so the list stays provably complete rather than silently short.
 FEED_ROWS = ["BandRow", "ReadingRow", "ExcerptRow", "MediaRow", "MusicRow",
-             "TokenRow", "PredictionRow"]
+             "TokenRow"]
 
 # A row that trails something other than a time, and why.
 KNOWN_NO_TIME = {
     "TokenRow": "trails the live price (price16) — a watched token's row is "
                 "about what it costs now, and a timestamp would report when we "
                 "last fetched",
-    "PredictionRow": "trails the market's own standing (price16) for the same "
-                     "reason as TokenRow",
 }
 
 def body(src: str, name: str) -> str | None:

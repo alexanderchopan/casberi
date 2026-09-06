@@ -62,9 +62,11 @@ simulator, so a real gap can hard-fail here the way D/E do.
 Building it found four near-misses before it found the one real thing,
 worth recording because each is the kind of false positive a cruder version
 of this check would have shipped: `.x402` is matched via
-`case X402Ingest.source:`, an INDIRECT reference, not a literal — resolved
-by reading the real constant out of `Model/CircleX402Bridge.swift` rather
-than hardcoding "Circle x402" as a second copy that could drift.
+`case X402Ingest.source:` was an INDIRECT reference, not a literal — resolved
+by reading the real constant out of `Model/CircleX402Bridge.swift` rather than
+hardcoding "Circle x402" as a second copy that could drift. (That seat and its
+file were deleted on 2026-09-06; the lesson outlives them, and
+`.appStoreConnect` below is the same shape, still live.)
 `.appStoreConnect` is the same indirection one level deeper —
 `case ASCShape.source:` resolves to a constant defined INSIDE a nested
 `enum ASCShape` in `Model/AppStoreConnectBridge.swift`, so the first cut
@@ -123,15 +125,12 @@ DEMO_FILES = {
     # role: fixtures for F mutate the DEMO side only.
     "FeedScreen": CASBERI / "Screens/FeedScreen.swift",
     "MediaShape": CASBERI / "Model/MediaShape.swift",
-    "CircleX402Bridge": CASBERI / "Model/CircleX402Bridge.swift",
     "AppStoreConnectBridge": CASBERI / "Model/AppStoreConnectBridge.swift",
     # Read-only reference for checks A/H — Safe is the first bridge to own
     # its demo seed in its own file rather than in DemoSeedAll (2026-08-11),
     # since `SafeRoomSource` reads only this file's `private` state.
     "SafeBridge": CASBERI / "Model/SafeBridge.swift",
     # Read-only references for check J — the per-view reads (2026-08-12).
-    "KalshiWatch": CASBERI / "Model/KalshiWatch.swift",
-    "PolymarketBridge": CASBERI / "Model/PolymarketBridge.swift",
     "ThingContent": CASBERI / "Screens/ThingContent.swift",
     "ZerionAPI": CASBERI / "Model/ZerionAPI.swift",
     "WalletIngest": CASBERI / "Model/WalletIngest.swift",
@@ -177,10 +176,11 @@ DEMO_FILES = {
 # files DOCUMENT the rule by naming the gate in prose (the Obsidian/Cursor
 # lesson), so a guard grepping raw source would pass on the explanation alone.
 DEMO_GATED_READS = [
-    ("KalshiWatch", "static func book("),
-    ("KalshiWatch", "static func categories("),
-    ("PolymarketBridge", "static func search("),
-    ("PolymarketBridge", "static func categories("),
+    # Four rows stood here for `KalshiWatch.book`/`.categories` and
+    # `PolymarketBridge.search`/`.categories` — the per-view reads that named
+    # this whole class. Their seats and their code were deleted on 2026-09-06
+    # (§638's third amendment), so the rows go with them; the RULE is unchanged
+    # and every surviving per-view read below is still held to it.
     ("ThingContent", "private func fetch("),
     # The wallet's holdings and its transfer history — read from
     # `WalletWatch.liveState`, a per-view read no sweep gate can see. Added
@@ -715,23 +715,23 @@ SHAPE_NO_SOURCE = {"all"}
 # not a silent skip — the `KNOWN_EXEMPT` pattern this codebase uses
 # everywhere else. Don't add an entry to make a red check green without
 # checking, the same way, that the shape's bridge really doesn't exist.
-KNOWN_UNBACKED_SHAPE = {
-    # The seats behind these two shapes left the catalog on 2026-09-06 (prd
-    # §638 — the Markets category is deleted, 1Claw and Circle x402 with it).
-    # Their bridge files, and so their `Shape` cases, stay in the tree for one
-    # release so a connected seat is not stranded; the demo must NOT seed rows
-    # for a source nobody can connect (check D's own rule, from the other
-    # side). When the bridge code is deleted, the cases go and so do these.
-    "oneclaw",
-    "x402",
+KNOWN_UNBACKED_SHAPE: set[str] = {
+    # EMPTY, and that is this set doing exactly what its own note said it
+    # would: `oneclaw` and `x402` sat here from 2026-09-06 because their seats
+    # had left the catalog while their bridge files stayed one release, and the
+    # note ended "when the bridge code is deleted, the cases go and so do
+    # these". The code was deleted the same day, both `Shape` cases went with
+    # it, and the exemption emptied rather than being carried forward. Kept as
+    # a set so the next seat retired ahead of its code has somewhere to go.
 }
 
 
-def extract_shape_sources(feed_src, media_src, x402_src, asc_src):
+def extract_shape_sources(feed_src, media_src, asc_src):
     """Every FeedScreen.Shape case, and the source name(s) that resolve to
-    it — literal cases read directly, `.x402`/`.media`/`.appStoreConnect`
-    resolved through the real constants/functions they reference so this
-    can't drift from what the switch actually does."""
+    it — literal cases read directly, `.media`/`.appStoreConnect` resolved
+    through the real constants/functions they reference so this can't drift
+    from what the switch actually does. (`.x402` was a third such indirection
+    until its seat and its code were deleted, 2026-09-06.)"""
     clean = strip_comments(feed_src)
     m = re.search(r'private enum Shape \{(.*?)\n    \}', clean, re.DOTALL)
     if not m:
@@ -745,12 +745,6 @@ def extract_shape_sources(feed_src, media_src, x402_src, asc_src):
     for sources_raw, shape in mappings:
         names = re.findall(r'"([^"]+)"', sources_raw)
         shape_sources.setdefault(shape, []).extend(names)
-
-    # `.x402` — `case X402Ingest.source:`, read the real constant.
-    x402_clean = strip_comments(x402_src)
-    x402_m = re.search(r'static let source\s*=\s*"([^"]+)"', x402_clean)
-    if x402_m:
-        shape_sources.setdefault("x402", []).append(x402_m.group(1))
 
     # `.media` — `case _ where MediaShape.isMediaFeed(source):`, read the
     # real predicate's own switch rather than copying its source list.
@@ -779,7 +773,7 @@ def check_f_shape_coverage(files_text):
     simulator, so this can hard-fail the way checks D/E do rather than warn
     the way the panel check does."""
     result = extract_shape_sources(
-        files_text["FeedScreen"], files_text["MediaShape"], files_text["CircleX402Bridge"],
+        files_text["FeedScreen"], files_text["MediaShape"],
         files_text["AppStoreConnectBridge"])
     if result is None:
         check("F · FeedScreen.Shape found", False, True)
@@ -1409,23 +1403,27 @@ def self_test():
 
     ok &= verify_fixture(
         "an ungated per-view read is caught",
-        # Removes the gate from `KalshiWatch.book` the way a refactor would —
-        # the room still compiles, still renders, and quietly reaches the
-        # exchange again. NOT a comment edit: `strip_comments` erases those,
-        # and a fixture hidden behind the defense it tests proves nothing
-        # (check B's own lesson, one check over).
-        lambda f: f.__setitem__("KalshiWatch", f["KalshiWatch"].replace(
-            "if DemoMode.isActive {", "if false {", 1)),
+        # Removes the gate from `ThingContent.fetch` the way a refactor would
+        # — the sheet still compiles, still renders, and quietly scrapes the
+        # page again. NOT a comment edit: `strip_comments` erases those, and a
+        # fixture hidden behind the defense it tests proves nothing (check B's
+        # own lesson, one check over). Re-anchored here on 2026-09-06 when
+        # `KalshiWatch`, the original fixture, was deleted with its seat.
+        lambda f: f.__setitem__("ThingContent", f["ThingContent"].replace(
+            "if DemoMode.isActive { return }", "if false { return }", 1)),
         check_j_per_view_reads_gated, True)
 
     ok &= verify_fixture(
         "a per-view read whose gate moved OUT of the function is caught",
         # The subtler half: `DemoMode` still appears in the file, just not in
         # this function's body. A whole-file grep would pass; the
-        # bracket-matched body check is what catches it.
-        lambda f: f.__setitem__("PolymarketBridge", f["PolymarketBridge"].replace(
-            "if DemoMode.isActive {\n            return Array(PredictionDemoBook.polymarket",
-            "if false {\n            return Array(PredictionDemoBook.polymarket", 1)),
+        # bracket-matched body check is what catches it. Re-anchored on
+        # 2026-09-06 onto `ZerionAPI.holdings` — the wallet's own per-view read,
+        # and the one this check's header cites as the reason it exists — when
+        # `PolymarketBridge`, the original fixture, was deleted with its seat.
+        lambda f: f.__setitem__("ZerionAPI", f["ZerionAPI"].replace(
+            "if DemoMode.isActive { return nil }\n        guard isConfigured,",
+            "if false { return nil }\n        guard isConfigured,", 1)),
         check_j_per_view_reads_gated, True)
 
     # Check M's four fixtures. The first two are the real failure — a
@@ -1616,7 +1614,7 @@ def main():
     if ok:
         seat_names, _ = extract_seat_table(files_text["DemoSeedAll"])
         shape_result = extract_shape_sources(
-            files_text["FeedScreen"], files_text["MediaShape"], files_text["CircleX402Bridge"],
+            files_text["FeedScreen"], files_text["MediaShape"],
             files_text["AppStoreConnectBridge"])
         shape_count = len(shape_result[0]) if shape_result else 0
         print(f"✓ demo guard: {len(DEMO_FACING_FUNCS)} functions Release-reachable, "

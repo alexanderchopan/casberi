@@ -195,13 +195,20 @@ check "shapedSections narrows through roomScoped" \
 #     ONE function — is untouched.
 check "recomputeHeads narrows through the same roomScoped" \
       "$FEED" 'let rows = roomScoped\(base\)' yes
-check "x402Scoped is not applied a second way in shapedSections" \
-      "$FEED" 'shape == \.x402 \? x402Scoped\(allVisible\)' no
+# The x402 room and its lane filter were deleted with the Circle x402 seat
+# (2026-09-06). The guard that the scoping was applied in ONE place is kept as
+# the stronger form — the helper must not come back at all, since the room it
+# scoped no longer exists.
+check "the x402 lane scoping is gone with its room" \
+      "$FEED" 'x402Scoped' no
 
 # A7. The key covers every scope the head describes. A head that survived a
 #     scope change would be a card about rows no longer on screen.
 head_key="$(perl -0777 -ne 'print $1 if /private var headIdentity: String \{(.*?)\n    \}/s' "$FEED_STRIPPED")"
-for term in 'source' 'filter.tag' 'selectedWallet' 'chrome.personScope' 'x402Lane' \
+# `x402Lane` was one of these until 2026-09-06, when the room it scoped was
+# deleted; `readingScope` is the surviving per-room view filter and carries the
+# property this list exists to hold.
+for term in 'source' 'filter.tag' 'selectedWallet' 'chrome.personScope' 'readingScope' \
             'chrome.refreshPulse' 'revision'; do
   if print -r -- "$head_key" | grep -qF -- "$term"; then
     ok "headIdentity covers $term"

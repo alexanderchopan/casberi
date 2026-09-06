@@ -382,30 +382,6 @@ enum StorePreview {
             "r1 = Row(\"shipped the thing. it works. going to bed.\", \"Note\", \"X\", \"Apr 2\")",
             "r2 = Row(\"the best debugging tool is a print statement and a bad attitude\", \"Link\", \"X\", \"Jan 8\")",
         ]
-        case "OpenSea": [
-            "root = Stack([w])",
-            "w = Widget(\"New drops\", null, [r1, r2])",
-            "r1 = Row(\"Fidenza · new collection\", \"Link\", \"OpenSea\", \"now\")",
-            "r2 = Row(\"Base Punks · minting now\", \"Link\", \"OpenSea\", \"1h\")",
-        ]
-        case "GeckoTerminal": [
-            "root = Stack([w])",
-            "w = Widget(\"Trending on Base\", null, [r1, r2])",
-            "r1 = Row(\"Higher · $HIGHER\", \"Link\", \"GeckoTerminal\", \"now\")",
-            "r2 = Row(\"Brett · $BRETT\", \"Link\", \"GeckoTerminal\", \"now\")",
-        ]
-        case "Kalshi": [
-            "root = Stack([w])",
-            "w = Widget(\"Following\", null, [r1, r2])",
-            "r1 = Row(\"Fed cuts rates at the March meeting? · 68%\", \"Link\", \"Kalshi\", \"now\")",
-            "r2 = Row(\"Lakers make the playoffs? · 74%\", \"Link\", \"Kalshi\", \"2h\")",
-        ]
-        case "Polymarket": [
-            "root = Stack([w])",
-            "w = Widget(\"Following\", null, [r1, r2])",
-            "r1 = Row(\"Bitcoin above $150k this year? · 52%\", \"Link\", \"Polymarket\", \"now\")",
-            "r2 = Row(\"Fed cuts rates at the March meeting? · 77%\", \"Link\", \"Polymarket\", \"1h\")",
-        ]
         case "Stocktwits": [
             "root = Stack([w])",
             "w = Widget(\"Watching\", null, [r1, r2])",
@@ -524,12 +500,6 @@ enum StorePreview {
         ]
         // Grants, never secrets: vault, path pattern and permissions. Nothing
         // here ever reads a secret's VALUE — the endpoints called can't.
-        case "1Claw": [
-            "root = Stack([w])",
-            "w = Widget(\"What the key reaches\", null, [r1, r2])",
-            "r1 = Row(\"Prod · secrets/anthropic/* · read, rotate\", \"Link\", \"1Claw\", \"1d\")",
-            "r2 = Row(\"Staging · secrets/stripe/* · read\", \"Link\", \"1Claw\", \"4d\")",
-        ]
         // Only the folder you name — never a shared link, never "shared with
         // me". A text file previews its opening; anything else lands wearing
         // just its size, which is why the second row shows a bare filename.
@@ -555,12 +525,6 @@ enum StorePreview {
             "w = Widget(\"Findable, never in your feed\", null, [r1, r2])",
             "r1 = Row(\"Sofia Reyes\", \"Contact\", \"Contacts\", \"\")",
             "r2 = Row(\"Blue Bottle Coffee\", \"Contact\", \"Contacts\", \"\")",
-        ]
-        case "Open Food Facts": [
-            "root = Stack([w])",
-            "w = Widget(\"Scanned in\", null, [r1, r2])",
-            "r1 = Row(\"Oatly Barista Edition · Nutri-Score C\", \"Product\", \"Open Food Facts\", \"now\")",
-            "r2 = Row(\"Clif Bar, Chocolate Chip · Nutri-Score D\", \"Product\", \"Open Food Facts\", \"1d\")",
         ]
         default:
             nil

@@ -56,10 +56,8 @@ enum ProseLinks {
 /// three places; it's one case here instead.
 enum ThingChart {
     case token(chain: String, address: String)
-    case kalshi(series: String, event: String)
     case stock(ticker: String)
     case postHogMetric(event: String)
-    case polymarket(conditionId: String)
     /// A watched token with NO resolvable Dexscreener route but a real
     /// `TokenPulse` entry already in memory (2026-08-11) — currently only
     /// reachable in demo mode, where `DemoSeedAll.rooms()` deliberately omits
@@ -84,9 +82,6 @@ enum ThingChart {
         if let route = TokenChart.route(from: thing.content) {
             return .token(chain: route.chain, address: route.address)
         }
-        if let route = KalshiMarket.route(from: thing.content) {
-            return .kalshi(series: route.series, event: route.event)
-        }
         if let ticker = StockChart.route(from: thing.content) {
             return .stock(ticker: ticker)
         }
@@ -96,18 +91,11 @@ enum ThingChart {
         if thing.source == "PostHog", let event = PostHogWatch.event(from: thing) {
             return .postHogMetric(event: event)
         }
-        // Same reasoning as PostHog above: a Polymarket event's URL alone
-        // can't identify which of its outcome-markets this row watches
-        // (a multi-candidate event shares one page across many markets), so
-        // the condition id comes off the sourceRef instead.
-        if thing.source == "Polymarket", let id = PolymarketBridge.conditionId(from: thing) {
-            return .polymarket(conditionId: id)
-        }
         // The demo-only fallback above's own reasoning: only reached once
         // every real route has already failed to match, so a genuine
         // Tokens row with a real Dexscreener content URL always takes the
         // `.token` branch above and never this one.
-        if thing.source == "Tokens" || thing.source == "GeckoTerminal",
+        if thing.source == "Tokens",
            let ref = thing.sourceRef,
            TokenPulse.shared.pulse(for: thing) != nil {
             return .watchedPulse(ref: ref)
@@ -251,8 +239,6 @@ struct ThingContentView: View {
                 switch chart {
                 case .token(let chain, let address):
                     TokenChartContent(thing: thing, chain: chain, address: address)
-                case .kalshi(let series, let event):
-                    KalshiMarketContent(series: series, event: event)
                 case .stock(let ticker):
                     StockChartContent(thing: thing, ticker: ticker)
                 case .postHogMetric(let event):
@@ -260,22 +246,9 @@ struct ThingContentView: View {
                     // project's annotations land on it as marks, so a spike
                     // sits beside the deploy that caused it.
                     PostHogMetricContent(thing: thing, event: event)
-                case .polymarket(let conditionId):
-                    PolymarketMarketContent(conditionId: conditionId, url: thing.content)
                 case .watchedPulse(let ref):
                     TokenPulseChartContent(thing: thing, ref: ref)
                 }
-            } else if thing.source == X402Ingest.source {
-                if let url = Capture.detectURL(in: thing.content) {
-                    LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
-                }
-                // A seller leads with its own page, then the catalog it sells:
-                // endpoints with their per-call prices, the chains they settle
-                // on, and a door to their docs. See `X402SellerContent` — this
-                // branch exists because the first attempt put the same idea in
-                // the `default:` case below, which these `.link` rows never
-                // reach, so it was dead code that a grep-based guard passed.
-                X402SellerContent(thing: thing)
             } else if thing.source == "GitHub", thing.sourceRef?.hasPrefix("gh:release:") == true {
                 // A release leads with its preview, then its own notes —
                 // read live, since `enrichedText` is retrieval-only.
@@ -2542,39 +2515,4 @@ private struct GitHubReleaseContent: View {
     }
 }
 
-/// A Kalshi market's odds, drawn natively — the KalshiMarketView read: a
-/// live probability, a delta pill, honest about active vs settled. A market
-/// Kalshi no longer resolves (rare — expired far past close) falls back to
-/// the plain link, never a blank read.
-private struct KalshiMarketContent: View {
-    let series: String
-    let event: String
 
-    var body: some View {
-        KalshiMarketView(series: series, event: event) {
-            if let url = URL(string: "https://kalshi.com/markets/\(series)/\(event)") {
-                LinkPreviewCard(url: url)
-            }
-        }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.bottom, DS.Space.s3)
-    }
-}
-
-/// A Polymarket market's odds and real price curve, drawn natively — see
-/// `PolymarketMarketView`. A market Polymarket's Gamma API no longer
-/// resolves (rare) falls back to the plain link, never a blank read.
-private struct PolymarketMarketContent: View {
-    let conditionId: String
-    let url: String
-
-    var body: some View {
-        PolymarketMarketView(conditionId: conditionId) {
-            if let url = URL(string: url) {
-                LinkPreviewCard(url: url)
-            }
-        }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.bottom, DS.Space.s3)
-    }
-}

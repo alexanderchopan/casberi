@@ -72,7 +72,6 @@ FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 # named the switcher's file now reads the strip, and the properties it pinned
 # (attention resolved through the catalog, a VoiceOver name per venue, a
 # full-bleed mark in a DS.Hit.min seat) are asserted where the venue lives.
-BROWSE="Casberi/Casberi/Screens/PredictionBrowseSection.swift"
 ROOT="Casberi/Casberi/Shell/RootShell.swift"
 APP="Casberi/Casberi/CasberiApp.swift"
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
@@ -88,7 +87,7 @@ CHROME="Casberi/Casberi/Shell/ShellChrome.swift"
 # be fed the folded one) went with the grid they defended — see the block
 # further down that records why.
 TILES="Casberi/Casberi/Screens/WalletFeedTiles.swift"
-for f in "$FOLD" "$MAIN" "$CHIPS" "$FEED" "$BROWSE" "$CATALOG" "$CORPUS" "$ROOT" "$APP" "$RAIL" "$CHROME" "$TILES"; do
+for f in "$FOLD" "$MAIN" "$CHIPS" "$FEED" "$CATALOG" "$CORPUS" "$ROOT" "$APP" "$RAIL" "$CHROME" "$TILES"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -111,7 +110,6 @@ print(src)
 PY
 }
 strip_comments "$MAIN"     > "$TMP/main.nc"
-strip_comments "$BROWSE"   > "$TMP/browse.nc"
 strip_comments "$ROOT"     > "$TMP/root.nc"
 strip_comments "$APP"      > "$TMP/app.nc"
 strip_comments "$CHIPS"    > "$TMP/chips.nc"
@@ -849,42 +847,24 @@ grep -qE 'chrome\.openFolder = BridgeCatalog\.category\(forSource: source\)' "$T
 # were the one place a category was spelled as a type rather than read from the
 # catalog; a shell that reaches for it again has re-grown the exception every
 # folder now runs without. (The guard that `PredictionRoomBook`'s own switcher
-# stood down under the Markets fold went with the fold — neither venue belongs
-# to a category any more, so no folder can draw a switcher above that book.)
+# stood down under the Markets fold went with the fold, and the book itself
+# went with its venues on 2026-09-06.)
 [[ -f "Casberi/Casberi/Model/MarketsRoom.swift" ]] \
   && { echo "✗ MarketsRoom.swift is back — the Markets category was deleted (prd §638)"; exit 1; }
 grep -q 'MarketsRoom' "$TMP/main.nc" \
   && { echo "✗ MainSurface reaches for MarketsRoom again — the type was deleted with the category (prd §638)."; exit 1; }
 
-# The twin price must NOT be gated on the merged scope again. §298's comparison
-# was reachable only from `.all`, which the fold retires — re-gating it would
-# make the one reading an aggregate produces silently disappear.
-grep -qE 'scope == \.all \? await PredictionDisagreement' "$TMP/browse.nc" \
-  && { echo "✗ the twin read is gated on .all again — the fold retires that scope, so"; \
-       echo "  cross-venue disagreement would vanish from every room."; exit 1; }
-grep -qE 'guard bothConnected else' "$TMP/browse.nc" \
-  || { echo "✗ the twin read no longer keys on both venues being connected"; exit 1; }
-grep -qE 'twinPrices = \[:\]' "$TMP/browse.nc" \
-  || { echo "✗ twin prices are never cleared — a disconnected venue's numbers would persist"; exit 1; }
-grep -q 'twinVenue' "$TMP/browse.nc" \
-  || { echo "✗ the twin bar no longer names whose price it is — it would wear the wrong mark"; exit 1; }
-grep -qE 'KalshiWatch\.book\(\s*""' "Casberi/Casberi/Model/PredictionDisagreement.swift" \
-  || { echo "✗ findReverse no longer reads Kalshi's book once with an empty query —"; \
-       echo "  a per-row title query hits a substring scan and matches nothing, ever."; exit 1; }
-python3 - "$TMP/browse.nc" <<'PY2'
-import sys
-src = open(sys.argv[1]).read()
-try:
-    loaded = src.index("loaded = true")
-except ValueError:
-    sys.exit("✗ `loaded = true` not found in PredictionBrowseSection")
-twin = src.find("PredictionDisagreement.find")
-if twin < 0:
-    sys.exit("✗ the twin read is gone from PredictionBrowseSection")
-if twin < loaded:
-    sys.exit("✗ the twin read runs BEFORE the book is committed — six sequential\n"
-             "  searches would hold the skeleton up on every room load.")
-PY2
+# THE PREDICTION BROWSE SECTION IS DELETED (2026-09-06, §638's third
+# amendment), and eight guards over its twin-price read went with it. They are
+# not replaced: the file, the book, both venues and the disagreement read are
+# all gone, so there is no behaviour left to pin. What IS pinned is that they
+# stay gone — `predictionVenues` must be empty, below, or a landless seat
+# inherits a book nothing can draw.
+[[ -f "Casberi/Casberi/Screens/PredictionBrowseSection.swift" ]] \
+  && { echo "✗ PredictionBrowseSection.swift is back — the prediction venues were deleted (prd §638)"; exit 1; }
+grep -qE 'static let predictionVenues: Set<String> = \[\]' "Casberi/Casberi/Model/LiveRoomSources.swift" \
+  || { echo "✗ LiveRoomSources.predictionVenues is non-empty again — Kalshi and Polymarket"; \
+       echo "  were deleted, so any member here draws a book whose code does not exist."; exit 1; }
 
 # THE REAL CATALOG still answers, and every category in it still names at
 # least one real offer — a stub proves the DERIVATION; only this proves the

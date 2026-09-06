@@ -17,7 +17,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     case linear   = "Linear"
     case bitrefill = "Bitrefill"
     case privacy  = "Privacy"
-    case oneclaw  = "1Claw"
     case posthog  = "PostHog"
     case stripe   = "Stripe"
     /// Polar (2026-08-30) — a developer-first Merchant of Record, Stripe's
@@ -71,7 +70,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .linear:   "linear"
         case .bitrefill: "bitrefill"
         case .privacy:  "privacy"
-        case .oneclaw:  "oneclaw"
         case .posthog:  "posthog"
         case .stripe:   "stripe"
         case .polar:    "polar"
@@ -113,7 +111,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .linear:    URL(string: "https://linear.app/settings/api")
         case .bitrefill: URL(string: "https://www.bitrefill.com/account/developers")
         case .privacy:   URL(string: "https://app.privacy.com/account")
-        case .oneclaw:   URL(string: "https://1claw.xyz")
         case .posthog:   URL(string: "https://us.posthog.com/settings/user-api-keys")
         case .stripe:    URL(string: "https://dashboard.stripe.com/apikeys")
         // Polar's own redirect helper — resolves to the signed-in org's
@@ -183,7 +180,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .readwise, .github, .todoist, .raindrop, .calendly, .gitlab,
              .vercel, .sentry, .jira, .cloudflare:
             String(localized: "Get your token")
-        case .calcom, .linear, .bitrefill, .privacy, .oneclaw, .posthog,
+        case .calcom, .linear, .bitrefill, .privacy, .posthog,
              .stripe, .polar, .trello, .cursor, .pagerduty, .appStoreConnect,
              .dodoPayments:
             String(localized: "Get your API key")
@@ -207,10 +204,10 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     /// itself, so numerals starting at 2 sent the eye hunting for a missing 1;
     /// two short lines in reading order need no numbers at all.
     ///
-    /// A step never re-types the field beneath it (§220). Cal.com's and 1Claw's
-    /// steps used to spell out the key prefix — "it starts with cal_live_",
-    /// "it starts with ocv_" — which is exactly what `placeholder` shows a line
-    /// lower (audit, 2026-07-31).
+    /// A step never re-types the field beneath it (§220). Cal.com's steps
+    /// used to spell out the key prefix — "it starts with cal_live_" — which
+    /// is exactly what `placeholder` shows a line lower (audit, 2026-07-31).
+    /// 1Claw's did the same until its seat was deleted (2026-09-06).
     var steps: [String] {
         switch self {
         case .readwise: [
@@ -246,9 +243,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy: [
             "Generate an API key (a paid Privacy plan is required).",
             "Copy it and paste it below."]
-        case .oneclaw: [
-            "Sign in, then create an agent (or open one) and copy its API key.",
-            "Paste it below."]
         // The three scopes are NOT named here — the checklist directly beneath
         // this step is the list, the same fix Stripe took the day before
         // (§220, "a step that was already on screen twice"; audit 2026-07-31).
@@ -383,7 +377,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .linear:   "lin_api_…"
         case .bitrefill: "API key"
         case .privacy:  "API key"
-        case .oneclaw:  "ocv_…"
         case .posthog:  "phx_…"
         case .stripe:   "rk_live_…"
         // No confirmed prefix from Polar's docs — Organization Access
@@ -445,7 +438,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .linear:   "API key"
         case .bitrefill: "API key"
         case .privacy:  "API key"
-        case .oneclaw:  "agent key"
         case .posthog:  "personal API key"
         case .stripe:   "restricted key"
         case .polar:    "organization access token"
@@ -476,7 +468,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .linear:   "issues"
         case .bitrefill: "orders"
         case .privacy:  "purchases"
-        case .oneclaw:  "grants"
         case .posthog:  "updates"
         case .stripe:   "updates"
         case .polar:    "updates"
@@ -565,8 +556,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             // CONDUCT. Privacy's key can issue cards and move money; the
             // promise is what this code does, so it is worded as such.
             String(localized: "What you spend on your virtual cards. The key can't be scoped read-only, so nothing here creates, closes, or funds a card.")
-        case .oneclaw:
-            String(localized: "What the key can reach — which vaults, which paths, when each grant expires. No secret's value is ever read.")
         case .posthog:
             String(localized: "Only what's news: a milestone crossed, a metric falling silent, a deploy you annotated.")
         case .stripe:
@@ -631,7 +620,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .linear:   "Reads issues assigned to you."
         case .bitrefill: "Reads your orders, refills, and balance — nothing here ever buys, pays, or spends."
         case .privacy:  "Reads your card transactions only. Privacy's key can't be scoped read-only, so nothing here creates, closes, or funds a card."
-        case .oneclaw:  "Reads which vaults and secret paths the key can reach — names and permissions only. Nothing here ever reads a secret's value, signs, or spends."
         case .posthog:  "Reads the metrics you watch and your project's annotations. The key is scoped read-only — it cannot ship a flag, edit a dashboard, or write anything back."
         case .stripe:   "Reads disputes, payouts, canceled subscriptions, failed payments, and your balance. The restricted key is read-only — it cannot refund, charge, or pay out."
         case .polar:    "Reads refunds, disputes, subscriptions leaving a healthy state, and your recurring revenue. The token is scoped read-only — it cannot refund, cancel a subscription, or create anything."
@@ -792,7 +780,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // account with a different budget, and the stale bucket must not
         // suppress a real crossing on the new one.
         case .github:    GitHubRateLimit.clear()
-        case .oneclaw:   OneClawAccess.clear()
         case .posthog:   PostHogAccount.clear()
         case .stripe:    StripeAccount.clear()
         // Cleared on BOTH callers, Stripe's exact reasoning: the tracked
@@ -1276,7 +1263,6 @@ enum TokenIngest {
         case .linear:   await linear(token)
         case .bitrefill: await BitrefillFetch.things(token: token)
         case .privacy:  await PrivacyFetch.things(token: token)
-        case .oneclaw:  await OneClawFetch.things(token: token, context: context)
         case .trello:   await trello(token)
         case .cloudflare: await CloudflareFetch.things(token: token)
         case .gitlab:   await gitlab(token)
@@ -1522,7 +1508,7 @@ enum TokenIngest {
     /// precedent set by `todoist()`'s own v1 migration note. Fails CLOSED:
     /// any shape mismatch (a wrong field name, an unexpected type) simply
     /// finds nothing rather than guessing — same honesty rule as every other
-    /// unmeasured bridge in this app (PostHog, 1Claw, Privacy).
+    /// unmeasured bridge in this app (PostHog, Privacy).
     @MainActor
     private static func todoistCompletions(_ token: String, context: ModelContext) async {
         let sinceKey = "todoist.completions.since"
