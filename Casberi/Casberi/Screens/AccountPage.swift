@@ -58,7 +58,11 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// same keystrokes (§639 amendment — one bar, two jobs). The adopter owns
     /// the text because the field is its own; the chassis only reads it.
     var query: String = ""
-    var onRemoveRow: (String) -> Void = { _ in }
+    /// Removing a roster row, where removing one is a thing a person can do.
+    /// NIL where it is not — a seat whose rows are its own apps or its own
+    /// repositories has a roster to READ, and a swipe offering to remove one
+    /// would be the §83 dead control with a destructive tint on it.
+    var onRemoveRow: ((String) -> Void)? = nil
     /// Tap on a row — the person or repo profile where one exists. Rows
     /// with no destination are reads, not controls.
     var onOpenRow: ((String) -> Void)? = nil
@@ -317,24 +321,31 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         }
     }
 
+    @ViewBuilder
     private func rosterRow(_ row: AccountPageShape.Row) -> some View {
-        AccountRosterRow(row: row, fallbackIcon: name,
-                         subline: state.needsReconnecting ? AccountPageShape.pausedSubline : row.subline,
-                         open: onOpenRow.map { open in { open(row.id) } })
-            .swipeActions(edge: .trailing) {
-                Button(role: .destructive) {
-                    onRemoveRow(row.id)
-                    DSHaptic.tap()
-                } label: { Label("Remove", systemImage: "minus.circle") }
-            }
-            // A swipe has no Mac-mouse equivalent — right-click mirrors it.
-            .contextMenu {
-                Button(role: .destructive) {
-                    onRemoveRow(row.id)
-                    DSHaptic.tap()
-                } label: { Label("Remove", systemImage: "minus.circle") }
-            }
-            .plainAccountRow()
+        let line = AccountRosterRow(
+            row: row, fallbackIcon: name,
+            subline: state.needsReconnecting ? AccountPageShape.pausedSubline : row.subline,
+            open: onOpenRow.map { open in { open(row.id) } })
+        if let remove = onRemoveRow {
+            line
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        remove(row.id)
+                        DSHaptic.tap()
+                    } label: { Label("Remove", systemImage: "minus.circle") }
+                }
+                // A swipe has no Mac-mouse equivalent — right-click mirrors it.
+                .contextMenu {
+                    Button(role: .destructive) {
+                        remove(row.id)
+                        DSHaptic.tap()
+                    } label: { Label("Remove", systemImage: "minus.circle") }
+                }
+                .plainAccountRow()
+        } else {
+            line.plainAccountRow()
+        }
     }
 
     // MARK: - 6. Exits

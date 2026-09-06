@@ -31,16 +31,33 @@ import UniformTypeIdentifiers
 /// `ASCJWT.payloadJSON`). It is a real choice, not an omission, so it sits on
 /// the control it governs rather than in a footer.
 ///
-/// Two states, one at a time (the §83 corollary about disabled controls that
-/// still paint a live background): nothing stored → the three fields; a key →
-/// what it can see, what has landed, and Disconnect.
+/// **ON `AccountPage` SINCE §639 (2026-09-06).** Reported of this very screen:
+/// *"these others that are already connected still look like connect pages,
+/// they shouldn't."* It did — `BridgeConnectedState`'s identity card, a room
+/// door, a card of apps and a card of landed rows, which is a connect page
+/// with its form swapped out. Now: the mark, the name, "Reading · 8m ago", and
+/// the apps as the page's own roster.
+///
+/// **The three fields did not shrink and did not move behind a disclosure**
+/// (§186's ruling stands). They are the act field while there is no key, and
+/// the "Your key" sheet once there is — one block, two addresses, so a key is
+/// replaced by exactly the path it was pasted.
+///
+/// **The act slot carries the live read rather than an add field, and that is
+/// the deliberate exception to §639's "adding is always first".** Every other
+/// keyed seat with nothing to add draws "Paste a new token · Replace" there;
+/// this key is three values and a file, so a one-line replace field would be a
+/// control that cannot finish its own act. The replace lives on the "Your key"
+/// row, which is the one place it belongs, and the act slot says what the
+/// connection is doing right now.
 struct AppStoreConnectScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.openURL) private var openURL
 
-    @State private var showConnection = false
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
     @State private var keyField = ""
     @State private var keyIDField = ""
     @State private var issuerField = ""
@@ -55,7 +72,6 @@ struct AppStoreConnectScreen: View {
     @State private var syncing = false
     @State private var result: BridgeProof?
 
-    @State private var recent: [Thing] = []
     @State private var standings: [ASCStanding] = []
 
     /// The file picker, and the one observable fact the staging below rests on.
@@ -85,46 +101,28 @@ struct AppStoreConnectScreen: View {
     }
 
     var body: some View {
-        BridgeSetupPage(name: "App Store Connect") {
-            if hasKey {
-                // Connected (prd §186): the credential form retires behind one
-                // door, and identity, live proof and what this can do take the
-                // screen. This bridge stores only the secret — in the Keychain
-                // — so it leads with its own name over a truthful note about
-                // HOW it is connected, never an account name we would guess.
-                BridgeConnectedState(
-                    bridgeID: bridge.bridgeID,
-                    name: "App Store Connect",
-                    connectionNote: String(localized: "Your \(bridge.credentialNoun) · stored in \(DS.device)'s Keychain"),
-                    capabilitiesFallback: [bridge.canLine],
-                    openConnection: { showConnection = true })
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            } else {
-                BridgeSetupHeader(
-                    name: "App Store Connect",
-                    mode: .pasteKey,
-                    // Trimmed 2026-08-06: the first cut listed the three shapes
-                    // here AND the four reads in the checklist below — two lists of
-                    // nearly the same thing, twenty words apart. The intro sells,
-                    // the checklist bounds.
-                    intro: "Verdicts, reviews and expiring builds land as they happen. Apple offers no read-only role, so this only ever reads.",
-                    connected: hasKey)
-            }
-            // The way back to your things (§460).
-            if hasKey {
-                RoomDoor(name: "App Store Connect", source: ASCShape.source)
-                    .listRowSeparator(.hidden)
-            }
-            if hasKey {
-                appsSection.listRowSeparator(.hidden)
-                if !recent.isEmpty {
-                    RecentThingsSection(header: "Landed", things: recent.live)
-                }
-            } else {
-                keySection.listRowSeparator(.hidden)
-            }
-        }
+        AccountPage(
+            name: "App Store Connect", seatID: bridge.bridgeID, source: ASCShape.source,
+            state: AccountPageState.of(name: "App Store Connect", seatID: bridge.bridgeID,
+                                       connected: hasKey, store: store),
+            // Trimmed 2026-08-06: the first cut listed the three shapes here
+            // AND the four reads in the checklist below — two lists of nearly
+            // the same thing, twenty words apart. The intro sells, the
+            // checklist bounds.
+            intro: "Verdicts, reviews and expiring builds land as they happen. Apple offers no read-only role, so this only ever reads.",
+            keyed: true,
+            rows: appRows,
+            teardown: {
+                TokenVault.delete(ASCAuth.keyVaultKey)
+                ASCAuth.clear()
+                credentialVersion += 1
+                load()
+            },
+            sheet: $sheet,
+            act: { actBlock },
+            more: { EmptyView() },
+            keySheet: { keyForm }
+        )
         // `.data` rather than a `.p8` type: the extension is registered with
         // nobody, so a UTType built from it is a dynamic type no file on disk
         // conforms to — the picker would open with every file grayed out and
@@ -133,15 +131,46 @@ struct AppStoreConnectScreen: View {
             guard case .success(let url) = outcome else { return }
             Task { await readKeyFile(url) }
         }
-        .sheet(isPresented: $showConnection) {
-            BridgeConnectionSheet(title: "App Store Connect") {
-                keySection
-                removeSection
-            }
-        }
         .onAppear {
             load()
             if hasKey { Task { await sync() } }
+        }
+    }
+
+    /// The act slot. No key: the form, whole. A key: what the read is doing —
+    /// see the type's own note on why this seat does not draw a replace field.
+    @ViewBuilder private var actBlock: some View {
+        if hasKey {
+            BridgeSyncStatusRows(syncing: syncing,
+                                 syncingLine: String(localized: "Reading App Store Connect…"),
+                                 proof: result)
+            DSSlabNote(text: "Verdicts, reviews and expiring builds land on their own.", plain: true)
+        } else {
+            keyForm
+        }
+    }
+
+    /// The apps this key reaches — the page's roster, and the answer to the one
+    /// question a role-based credential leaves open: not "did the key work" but
+    /// "does it reach the app I meant".
+    ///
+    /// **Read-only rows, so no Remove** (`AccountPage.onRemoveRow` stays nil):
+    /// an app is not something this seat watches by choice, it is what the key
+    /// reaches, and a swipe offering to drop one would be a control that cannot
+    /// do what it says.
+    ///
+    /// There is deliberately NO star rating here. App Store Connect's API
+    /// publishes individual customer reviews and no aggregate — so any number
+    /// this screen showed would be the mean of the twenty reviews we happened
+    /// to read, presented as your app's rating. That is the §83 fake status in
+    /// the one place a developer would believe it instantly.
+    private var appRows: [AccountPageShape.Row] {
+        standings.map { standing in
+            AccountPageShape.Row(
+                id: standing.appID,
+                title: standing.app.isEmpty ? standing.appID : standing.app,
+                subline: stateLine(standing),
+                weekCount: 0, hasNew: false, isYou: false, avatarURL: nil)
         }
     }
 
@@ -195,150 +224,101 @@ struct AppStoreConnectScreen: View {
 
     // MARK: - Not connected: the three fields
 
-    private var keySection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if let url = bridge.setupURL {
-                    // Step one, doing itself (prd §218) — and it hands the
-                    // filled slab over to the pick once it has been tapped, the
-                    // import family's `pickLeads` staging (§314). One filled
-                    // block at a time, and it is always the next thing to do.
-                    if doorTapped {
-                        DSSlabDoor(title: bridge.doorTitle,
-                                   detail: bridge.doorHost,
-                                   systemImage: "arrow.up.right") { openDoor(url) }
-                    } else {
-                        // Verb over address, the 2026-08-14 anatomy.
-                        DSSlabButton(title: bridge.doorTitle,
-                                     detail: bridge.doorHost,
-                                     systemImage: "arrow.up.right") {
-                            DSHaptic.tap()
-                            openDoor(url)
-                        }
-                    }
-                }
-                // All three steps together. They used to be split around the
-                // checklist — step 2, a list of four, then steps 3 and 4 —
-                // which broke the one sequence on the screen in half and read
-                // as more text than it was. Unnumbered (ruling 2026-08-14):
-                // the door did step one; `acknowledges` keeps the green check.
-                BridgeStepLines(steps: bridge.steps, startingAt: 2,
-                                numbered: false, acknowledges: true,
-                                doneThrough: stepsDone)
-                // The READ BOUNDARY, and the only place it can be stated before
-                // somebody decides to paste. Unlike Stripe's and PostHog's
-                // checklists this is NOT a set of boxes to tick — Apple grants
-                // a ROLE — so it says what the role lets this app see and what
-                // it will never do, which is the whole substitute for a scope
-                // this API doesn't offer. TWO lines, not the four it shipped
-                // with: each pair said one thing across two lines, and on a
-                // screen already carrying a door, three steps and three fields
-                // the halving is the difference between a promise and a wall.
-                DSCheckList(lines: ["Reads review status, reviews and builds",
-                                    "Never submits, releases, replies or sells"])
-                // THE FILE ITSELF (report, 2026-08-14). Apple hands you a
-                // download, and every path from there to a text field runs
-                // through a desktop text editor — which is what the one person
-                // who got this far actually did. The picker is the answer: the
-                // `.p8` is read where it landed, on the device it landed on,
-                // and its own filename answers the Key ID field below.
-                if pickLeads {
-                    DSSlabButton(title: "Choose the .p8 file",
-                                 systemImage: "doc.badge.arrow.up") {
+    @ViewBuilder private var keyForm: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if let url = bridge.setupURL {
+                // Step one, doing itself (prd §218) — and it hands the
+                // filled slab over to the pick once it has been tapped, the
+                // import family's `pickLeads` staging (§314). One filled
+                // block at a time, and it is always the next thing to do.
+                if doorTapped {
+                    DSSlabDoor(title: bridge.doorTitle,
+                               detail: bridge.doorHost,
+                               systemImage: "arrow.up.right") { openDoor(url) }
+                } else {
+                    // Verb over address, the 2026-08-14 anatomy.
+                    DSSlabButton(title: bridge.doorTitle,
+                                 detail: bridge.doorHost,
+                                 systemImage: "arrow.up.right") {
                         DSHaptic.tap()
-                        pickingKey = true
-                    }
-                } else {
-                    DSSlabDoor(title: "Choose the .p8 file",
-                               detail: pickedName.isEmpty
-                                   ? String(localized: "Already downloaded?")
-                                   : pickedName,
-                               systemImage: "doc.badge.arrow.up") { pickingKey = true }
-                }
-                // Three slabs, ONE verb — `DSSlabField`'s empty-`actionLabel`
-                // form, which exists for exactly this (Steam's profile beside
-                // its key, Mail's address beside its app password). A NEXT on
-                // each would be two dead controls and read as three ways to
-                // connect; the verb belongs to the last field, where the act
-                // completes.
-                DSSlabField(placeholder: bridge.placeholder,
-                            text: $keyField, actionLabel: "", secure: true,
-                            action: {})
-                DSSlabField(placeholder: "Key ID",
-                            text: $keyIDField, actionLabel: "",
-                            action: {})
-                // SAVE is armed by the OTHER two fields, not by its own — this
-                // is the field that may legitimately stay empty, so the
-                // default "text isn't empty" rule would leave the verb dark on
-                // a form that is complete (§83's other half: a control that is
-                // inert while everything it needs is present).
-                DSSlabField(placeholder: "Issuer ID",
-                            text: $issuerField, actionLabel: "Save",
-                            isArmed: hasBothRequired,
-                            action: save)
-                // The one piece of fine print on this screen, and it sits on
-                // the control it governs (§315): an empty issuer is a real
-                // choice Apple's own token spec defines, and somebody with an
-                // individual key who feels obliged to invent a value here gets
-                // a 401 they cannot diagnose.
-                DSSlabNote(text: "Leave the Issuer ID empty if your key is an individual key rather than a team's.")
-                BridgeSyncStatusRows(syncing: connecting,
-                                     syncingLine: String(localized: "Checking the key…"),
-                                     proof: result)
-            }
-        }
-        .dsSlabSection()
-    }
-
-    // MARK: - Connected: what Apple can see
-
-    /// The apps this key reaches — the connected state's proof, and the answer
-    /// to the one question a role-based credential leaves open: not "did the
-    /// key work" but "does it reach the app I meant".
-    ///
-    /// There is deliberately NO star rating here. App Store Connect's API
-    /// publishes individual customer reviews and no aggregate — so any number
-    /// this screen showed would be the mean of the twenty reviews we happened
-    /// to read, presented as your app's rating. That is the §83 fake status in
-    /// the one place a developer would believe it instantly.
-    private var appsSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if standings.isEmpty {
-                    Text("Reading your apps…")
-                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
-                } else {
-                    // The NAME ALONE proved reach and said nothing (2026-08-06).
-                    // A role-based credential leaves one question open — not
-                    // "did the key work" but "does it reach the app I meant,
-                    // and where is that app" — and the state was the one thing
-                    // this screen held and never showed. Same standings the
-                    // room head reads, so the two can't disagree.
-                    ForEach(standings, id: \.appID) { standing in
-                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                            Text(standing.app.isEmpty ? standing.appID : standing.app)
-                                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                                .lineLimit(1)
-                            Spacer(minLength: DS.Space.s2)
-                            Text(stateLine(standing))
-                                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                                .lineLimit(1)
-                        }
+                        openDoor(url)
                     }
                 }
-                BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: String(localized: "Reading App Store Connect…"),
-                                     proof: result)
-                DSSlabNote(text: "Verdicts, reviews and expiring builds land on their own.")
             }
+            // All three steps together. They used to be split around the
+            // checklist — step 2, a list of four, then steps 3 and 4 —
+            // which broke the one sequence on the screen in half and read
+            // as more text than it was. Unnumbered (ruling 2026-08-14):
+            // the door did step one; `acknowledges` keeps the green check.
+            BridgeStepLines(steps: bridge.steps, startingAt: 2,
+                            numbered: false, acknowledges: true,
+                            doneThrough: stepsDone)
+            // The READ BOUNDARY, and the only place it can be stated before
+            // somebody decides to paste. Unlike Stripe's and PostHog's
+            // checklists this is NOT a set of boxes to tick — Apple grants
+            // a ROLE — so it says what the role lets this app see and what
+            // it will never do, which is the whole substitute for a scope
+            // this API doesn't offer. TWO lines, not the four it shipped
+            // with: each pair said one thing across two lines, and on a
+            // screen already carrying a door, three steps and three fields
+            // the halving is the difference between a promise and a wall.
+            DSCheckList(lines: ["Reads review status, reviews and builds",
+                                "Never submits, releases, replies or sells"])
+            // THE FILE ITSELF (report, 2026-08-14). Apple hands you a
+            // download, and every path from there to a text field runs
+            // through a desktop text editor — which is what the one person
+            // who got this far actually did. The picker is the answer: the
+            // `.p8` is read where it landed, on the device it landed on,
+            // and its own filename answers the Key ID field below.
+            if pickLeads {
+                DSSlabButton(title: "Choose the .p8 file",
+                             systemImage: "doc.badge.arrow.up") {
+                    DSHaptic.tap()
+                    pickingKey = true
+                }
+            } else {
+                DSSlabDoor(title: "Choose the .p8 file",
+                           detail: pickedName.isEmpty
+                               ? String(localized: "Already downloaded?")
+                               : pickedName,
+                           systemImage: "doc.badge.arrow.up") { pickingKey = true }
+            }
+            // Three slabs, ONE verb — `DSSlabField`'s empty-`actionLabel`
+            // form, which exists for exactly this (Steam's profile beside
+            // its key, Mail's address beside its app password). A NEXT on
+            // each would be two dead controls and read as three ways to
+            // connect; the verb belongs to the last field, where the act
+            // completes.
+            DSSlabField(placeholder: bridge.placeholder,
+                        text: $keyField, actionLabel: "", secure: true,
+                        action: {})
+            DSSlabField(placeholder: "Key ID",
+                        text: $keyIDField, actionLabel: "",
+                        action: {})
+            // SAVE is armed by the OTHER two fields, not by its own — this
+            // is the field that may legitimately stay empty, so the
+            // default "text isn't empty" rule would leave the verb dark on
+            // a form that is complete (§83's other half: a control that is
+            // inert while everything it needs is present).
+            DSSlabField(placeholder: "Issuer ID",
+                        text: $issuerField, actionLabel: "Save",
+                        isArmed: hasBothRequired,
+                        action: save)
+            // The one piece of fine print on this screen, and it sits on
+            // the control it governs (§315): an empty issuer is a real
+            // choice Apple's own token spec defines, and somebody with an
+            // individual key who feels obliged to invent a value here gets
+            // a 401 they cannot diagnose.
+            DSSlabNote(text: "Leave the Issuer ID empty if your key is an individual key rather than a team's.", plain: true)
+        BridgeSyncStatusRows(syncing: connecting,
+                             syncingLine: String(localized: "Checking the key…"),
+                             proof: result)
         }
-        .dsSlabSection()
     }
 
     // MARK: - Actions
 
     private func load() {
-        recent = recentBridgeThings(source: ASCShape.source, context: modelContext)
         standings = ASCState.standing.values.sorted {
             ($0.app.isEmpty ? $0.appID : $0.app) < ($1.app.isEmpty ? $1.appID : $1.app)
         }
@@ -465,19 +445,6 @@ struct AppStoreConnectScreen: View {
         if let alarm = ASCIngest.lastPassAlarm {
             chrome.flash(alarm, tone: .failure, seconds: 3.5)
         }
-    }
-
-    /// The way out — the shared row, behind the Connection door with the form
-    /// it belongs to (prd §186/§608).
-    private var removeSection: some View {
-        BridgeDisconnectSection(bridgeID: bridge.bridgeID,
-                                name: "App Store Connect",
-                                teardown: {
-                                    TokenVault.delete(ASCAuth.keyVaultKey)
-                                    ASCAuth.clear()
-                                    credentialVersion += 1
-                                    load()
-                                })
     }
 
 }
