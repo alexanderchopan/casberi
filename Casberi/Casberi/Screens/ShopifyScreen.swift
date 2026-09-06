@@ -1,17 +1,6 @@
 import SwiftUI
 import SwiftData
 
-/// The Shopify products already in the corpus — newest first. A @Query so the
-/// list grows live as a sync lands products.
-private let shopifyRecentDescriptor: FetchDescriptor<Thing> = {
-    var d = FetchDescriptor<Thing>(
-        predicate: #Predicate { $0.source == "Shopify" },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-    )
-    d.fetchLimit = 12
-    return d
-}()
-
 /// Shopify, connected — stores' new drops in Casberi. The person manages WHICH
 /// stores are followed (paste a store's web address, swipe to remove) and sees
 /// what's landed. New products, restocks, and sale prices arrive as things on
@@ -29,117 +18,100 @@ struct ShopifyScreen: View {
     /// confirm green with the count-up animation.
     @FocusState private var fieldFocused: Bool
 
-    @Query(shopifyRecentDescriptor) private var recent: [Thing]
+
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+    /// This week's products per store, for the roster's subline and its
+    /// active/quiet split. Keyed on the shop's DISPLAY NAME, which is what
+    /// `ShopifyIngest` stamps as the thing's `authorHandle`.
+    @State private var weekly: [String: (week: Int, new: Bool)] = [:]
 
     var body: some View {
-        BridgeSetupPage(name: "Shopify") {
-            BridgeSetupHeader(
-                name: "Shopify",
-                mode: .noAccount,
-                intro: "New products from the store's own public catalog. Nothing here checks out or pays.",
-                connected: shopify.connected)
-            // The way back to what just landed (§460). Gated on the corpus,
-            // not a connection flag: an import has no live connection, so
-            // "has anything arrived" is the only honest test of whether
-            // there is a room worth opening.
-            if !recent.isEmpty {
-                RoomDoor(name: "Shopify", source: "Shopify")
-                    .listRowSeparator(.hidden)
-            }
-            addSection.listRowSeparator(.hidden)
-            if !shopify.shops.isEmpty { followingSection.listRowSeparator(.hidden) }
-            // What landed, newest first. The `@Query` above was declared with a
-            // full descriptor and never read in `body` — a live SwiftData
-            // subscription doing nothing, where every sibling import/watch
-            // screen shows its proof (audit, 2026-07-31).
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Landed", things: recent.live)
-            }
-            if !shopify.shops.isEmpty {
-                BridgeDisconnectSection(
-                    bridgeID: "shopify", name: "Shopify",
-                    teardown: {
-                        ShopifyStore.shared.shops = []
-                    }
-                ).listRowSeparator(.hidden)
-            }
-        }
+        AccountPage(
+            name: "Shopify", seatID: "shopify", source: "Shopify",
+            state: AccountPageState.of(name: "Shopify", seatID: "shopify",
+                                       connected: shopify.connected, store: store),
+            intro: "New products from the store's own public catalog. Nothing here checks out or pays.",
+            mode: .noAccount,
+            rows: rows,
+            query: newStore,
+            onRemoveRow: unfollow,
+            teardown: { ShopifyStore.shared.shops = [] },
+            sheet: $sheet,
+            act: { addBlock },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
         .onAppear {
-            // Opening the screen doesn't connect — the person pastes a store to
+            countWeek()
+            // Opening the page doesn't connect — the person pastes a store to
             // follow it. Only refresh if something's already followed.
             if shopify.connected { Task { await sync() } }
         }
+        .onChange(of: shopify.shops) { _, _ in countWeek() }
     }
 
-    // MARK: - Following
+    // MARK: - The roster
 
-    /// The followed stores as a square-marked ledger (prd §186) — Shopify was
-    /// the manager pattern hiding in a form: paste a store, list below, swipe
-    /// to remove is exactly RSS's shape, so it takes RSS's treatment. Stores
-    /// are SQUARE marks: a shop is a publication you follow, not a person or
-    /// an asset (the §185 mark grammar).
-    private var followingSection: some View {
-        Section {
-            ForEach(shopify.shops) { shop in
-                HStack(spacing: DS.Space.s3) {
-                    BridgeIcon(name: "Shopify", size: DS.Mark.list, circular: false)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(shop.displayName)
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        Text(shop.host)
-                            .dsText(.label12).foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .dsListCardRow()
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        if let i = shopify.shops.firstIndex(where: { $0.id == shop.id }) {
-                            shopify.remove(at: IndexSet(integer: i))
-                            DSHaptic.tap()
-                        }
-                    } label: {
-                        Label("Remove", systemImage: "trash")
-                    }
-                }
-                // A swipe has no Mac-mouse equivalent — right-click mirrors it
-                // (Mac polish, 2026-07-28).
-                .contextMenu {
-                    Button(role: .destructive) {
-                        if let i = shopify.shops.firstIndex(where: { $0.id == shop.id }) {
-                            shopify.remove(at: IndexSet(integer: i))
-                            DSHaptic.tap()
-                        }
-                    } label: {
-                        Label("Remove", systemImage: "trash")
-                    }
-                }
-            }
-        } header: {
-            Text(shopify.shops.count == 1 ? "Following" : "Following \(shopify.shops.count)")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
+    /// One row per followed store. A shop is a publication you follow, and
+    /// what a row says about it is how many products it dropped this week —
+    /// the same grammar every other seat's roster wears, in place of the
+    /// square-marked "Following N" list with its own Remove.
+    private var rows: [AccountPageShape.Row] {
+        shopify.shops.map { shop in
+            let counted = weekly[shop.displayName.lowercased()] ?? (week: 0, new: false)
+            return AccountPageShape.Row(
+                id: shop.id,
+                title: shop.displayName,
+                subline: AccountPageShape.subline(nouns: String(localized: "products"),
+                                                  weekCount: counted.week),
+                weekCount: counted.week, hasNew: counted.new,
+                isYou: false, avatarURL: nil)
         }
     }
+
+    private func unfollow(_ id: String) {
+        guard let i = shopify.shops.firstIndex(where: { $0.id == id }) else { return }
+        shopify.remove(at: IndexSet(integer: i))
+        countWeek()
+    }
+
+    /// This week's products per store. A `fetch` in `onAppear`, never in a
+    /// body or a computed property a body reads (prd §628).
+    private func countWeek() {
+        let since = Date.now.addingTimeInterval(-7 * 86_400)
+        var descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == "Shopify" && $0.capturedAt >= since })
+        descriptor.fetchLimit = 2000
+        let things = ((try? modelContext.fetch(descriptor)) ?? []).filter(\.isLive)
+        let lastLooked = AccountVisits.lastLooked("shopify")
+        var book: [String: (week: Int, new: Bool)] = [:]
+        for thing in things {
+            guard let handle = thing.authorHandle?.lowercased(), !handle.isEmpty else { continue }
+            let was = book[handle] ?? (0, false)
+            book[handle] = (was.week + 1,
+                            was.new || (lastLooked.map { thing.capturedAt > $0 } ?? false))
+        }
+        weekly = book
+    }
+
+
+    // MARK: - Following
 
     // MARK: - Add
 
     /// The omnibox leads (prd §186) — following a store is this screen's
     /// primary act, not an errand below a list.
-    private var addSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-            DSSlabField(placeholder: String(localized: "Store web address"),
-                        text: $newStore, actionLabel: String(localized: "Follow"),
-                        keyboard: .URL, focus: $fieldFocused, action: addStore)
-            BridgeSyncStatusRows(syncing: syncing,
-                                 syncingLine: String(localized: "Reading the store…"),
-                                 proof: lastResult)
-            DSSlabNote(text: "New drops, restocks, and sale prices land in your feed.")
-            }
+    @ViewBuilder private var addBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        DSSlabField(placeholder: String(localized: "Store web address"),
+                    text: $newStore, actionLabel: String(localized: "Follow"),
+                    keyboard: .URL, focus: $fieldFocused, action: addStore)
+        BridgeSyncStatusRows(syncing: syncing,
+                             syncingLine: String(localized: "Reading the store…"),
+                             proof: lastResult)
+        DSSlabNote(text: "New drops, restocks, and sale prices land in your feed.", plain: true)
         }
-        .dsSlabSection()
     }
 
 
