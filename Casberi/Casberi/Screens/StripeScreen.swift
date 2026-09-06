@@ -18,7 +18,6 @@ struct StripeScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.openURL) private var openURL
 
-    @State private var showConnection = false
     @State private var keyField = ""
     /// Bumped whenever the key changes, so the derived reads below
     /// re-evaluate. The Keychain stays the source of truth — mirroring it into
@@ -30,7 +29,6 @@ struct StripeScreen: View {
     @State private var syncing = false
     @State private var result: BridgeProof?
 
-    @State private var recent: [Thing] = []
     /// The balance reading the sweep last stored — mirrored into state so the
     /// card redraws after a sync without re-reading UserDefaults in a body.
     @State private var available: String?
@@ -41,102 +39,85 @@ struct StripeScreen: View {
         return TokenBridge.stripe.connected
     }
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+
     var body: some View {
-        BridgeSetupPage(name: "Stripe") {
-            if hasKey {
-                // Connected (prd §186): the credential form retires behind one
-                // door, and identity, live proof and what this can do take the
-                // screen. This bridge stores only the secret — in the Keychain
-                // — so it leads with its own name over a truthful note about
-                // HOW it is connected, never an account name we would guess.
-                BridgeConnectedState(
-                    bridgeID: TokenBridge.stripe.bridgeID,
-                    name: "Stripe",
-                    connectionNote: String(localized: "Your \(TokenBridge.stripe.credentialNoun) · stored in \(DS.device)'s Keychain"),
-                    capabilitiesFallback: [TokenBridge.stripe.canLine],
-                    openConnection: { showConnection = true })
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            } else {
-                BridgeSetupHeader(
-                    name: "Stripe",
-                    mode: .pasteKey,
-                    intro: "The money that needs you: a dispute and its deadline, a payout, a cancelled subscription, a failed payment. Never individual charges, or a customer's name or card.",
-                    connected: hasKey)
-            }
-            // The way back to your things (§460).
-            if hasKey {
-                RoomDoor(name: "Stripe", source: StripeWatch.source)
-                    .listRowSeparator(.hidden)
-            }
-            if hasKey {
-                balanceSection.listRowSeparator(.hidden)
-                if !recent.isEmpty {
-                    RecentThingsSection(header: "Landed", things: recent.live)
+        AccountPage(
+            name: "Stripe", seatID: TokenBridge.stripe.bridgeID, source: StripeWatch.source,
+            state: AccountPageState.of(name: "Stripe", seatID: TokenBridge.stripe.bridgeID,
+                                       connected: hasKey, store: store),
+            intro: "The money that needs you: a dispute and its deadline, a payout, a cancelled subscription, a failed payment. Never individual charges, or a customer's name or card.",
+            mode: .pasteKey,
+            keyed: true,
+            teardown: {
+                TokenVault.delete(TokenBridge.stripe.tokenKey)
+                accountVersion += 1
+            },
+            sheet: $sheet,
+            act: {
+                if hasKey {
+                    // What the key reads right now. The form is the "Your key"
+                    // sheet, reached from the row that says where it lives.
+                    balanceBlock
+                } else {
+                    keyBlock
                 }
-            } else {
-                keySection.listRowSeparator(.hidden)
-            }
-        }
-        .sheet(isPresented: $showConnection) {
-            BridgeConnectionSheet(title: "Stripe") {
-                keySection
-                removeSection
-            }
-        }
+            },
+            more: { EmptyView() },
+            keySheet: { keyBlock }
+        )
         .onAppear {
             load()
             if hasKey { Task { await sync() } }
         }
     }
 
+
     // MARK: - Step one: the key
 
-    private var keySection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if let url = TokenBridge.stripe.setupURL {
-                    // Step one, doing itself (prd §218) — verb over address,
-                    // the 2026-08-14 anatomy.
-                    DSSlabButton(title: TokenBridge.stripe.doorTitle,
-                                 detail: TokenBridge.stripe.doorHost,
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        openURL(url)
-                    }
+    @ViewBuilder private var keyBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if let url = TokenBridge.stripe.setupURL {
+                // Step one, doing itself (prd §218) — verb over address,
+                // the 2026-08-14 anatomy.
+                DSSlabButton(title: TokenBridge.stripe.doorTitle,
+                             detail: TokenBridge.stripe.doorHost,
+                             systemImage: "arrow.up.right") {
+                    DSHaptic.tap()
+                    openURL(url)
                 }
-                // The next line, then the list it points AT, then the last
-                // line and the field. The scopes used to sit below the field,
-                // which is why the first step had to name all six in prose to
-                // be useful there — the reorder is what let that sentence lose
-                // them (2026-07-31). Unnumbered since 2026-08-14: the door did
-                // step one, and a "2" under it read as a missing-1 riddle.
-                BridgeStepLines(steps: [TokenBridge.stripe.steps[0]], numbered: false)
-                // The permissions are the honest ask, and they're why this
-                // bridge's read-only promise is STRUCTURAL rather than kept by
-                // conduct (the Privacy.com divergence): a restricted key with
-                // these six reads and nothing else physically cannot refund,
-                // charge or pay out, whatever the app does. The list IS the
-                // read-only promise, so the gray note that restated it is gone.
-                DSCheckList(lines: ["Events — read",
-                                    "Disputes — read",
-                                    "Payouts — read",
-                                    "Subscriptions — read",
-                                    "Invoices — read",
-                                    "Balance — read"])
-                BridgeStepLines(steps: [TokenBridge.stripe.steps[1]], numbered: false)
-                // Slabbed with the rest of the family (audit, 2026-07-31) — it
-                // was a `BridgeFieldRow` capsule, the one control on the screen
-                // still wearing the pre-§218 shape.
-                DSSlabField(placeholder: TokenBridge.stripe.placeholder,
-                            text: $keyField, actionLabel: "Save", secure: true,
-                            action: saveKey)
-                BridgeSyncStatusRows(syncing: connecting,
-                                     syncingLine: String(localized: "Checking the key…"),
-                                     proof: result)
             }
+            // The next line, then the list it points AT, then the last
+            // line and the field. The scopes used to sit below the field,
+            // which is why the first step had to name all six in prose to
+            // be useful there — the reorder is what let that sentence lose
+            // them (2026-07-31). Unnumbered since 2026-08-14: the door did
+            // step one, and a "2" under it read as a missing-1 riddle.
+            BridgeStepLines(steps: [TokenBridge.stripe.steps[0]], numbered: false)
+            // The permissions are the honest ask, and they're why this
+            // bridge's read-only promise is STRUCTURAL rather than kept by
+            // conduct (the Privacy.com divergence): a restricted key with
+            // these six reads and nothing else physically cannot refund,
+            // charge or pay out, whatever the app does. The list IS the
+            // read-only promise, so the gray note that restated it is gone.
+            DSCheckList(lines: ["Events — read",
+                                "Disputes — read",
+                                "Payouts — read",
+                                "Subscriptions — read",
+                                "Invoices — read",
+                                "Balance — read"])
+            BridgeStepLines(steps: [TokenBridge.stripe.steps[1]], numbered: false)
+            // Slabbed with the rest of the family (audit, 2026-07-31) — it
+            // was a `BridgeFieldRow` capsule, the one control on the screen
+            // still wearing the pre-§218 shape.
+            DSSlabField(placeholder: TokenBridge.stripe.placeholder,
+                        text: $keyField, actionLabel: "Save", secure: true,
+                        action: saveKey)
+            BridgeSyncStatusRows(syncing: connecting,
+                                 syncingLine: String(localized: "Checking the key…"),
+                                 proof: result)
         }
-        .dsSlabSection()
     }
 
     // MARK: - Connected: the balance
@@ -145,26 +126,23 @@ struct StripeScreen: View {
     /// STATE rather than an event (§216) — so it renders as a card that updates
     /// in place and never lands in the feed as a row. A balance nobody has read
     /// yet shows nothing rather than a fake zero.
-    private var balanceSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if let available {
-                    readout(String(localized: "Available"), available)
-                }
-                if let pending {
-                    readout(String(localized: "On the way"), pending)
-                }
-                if available == nil && pending == nil {
-                    Text("Reading your balance…")
-                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
-                }
-                BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: String(localized: "Reading Stripe…"),
-                                     proof: result)
-                DSSlabNote(text: "Disputes, payouts, cancellations and failed payments land on their own.")
+    @ViewBuilder private var balanceBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if let available {
+                readout(String(localized: "Available"), available)
             }
+            if let pending {
+                readout(String(localized: "On the way"), pending)
+            }
+            if available == nil && pending == nil {
+                Text("Reading your balance…")
+                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+            }
+            BridgeSyncStatusRows(syncing: syncing,
+                                 syncingLine: String(localized: "Reading Stripe…"),
+                                 proof: result)
+            DSSlabNote(text: "Disputes, payouts, cancellations and failed payments land on their own.", plain: true)
         }
-        .dsSlabSection()
     }
 
     /// One figure and what it is. Local to this screen rather than a shared
@@ -185,7 +163,6 @@ struct StripeScreen: View {
     // MARK: - Actions
 
     private func load() {
-        recent = recentBridgeThings(source: StripeWatch.source, context: modelContext)
         let balance = StripeState.balance()
         available = text(balance.available)
         // Money in flight, with the day it lands. "£2,140" answers how much and
@@ -274,17 +251,5 @@ struct StripeScreen: View {
         }
     }
 
-    /// The way out — the shared row, behind the Connection door with the form
-    /// it belongs to (prd §186/§608).
-    private var removeSection: some View {
-        BridgeDisconnectSection(bridgeID: TokenBridge.stripe.bridgeID,
-                                name: "Stripe",
-                                teardown: {
-                                    TokenVault.delete(TokenBridge.stripe.tokenKey)
-                                    StripeAccount.clear()
-                                    accountVersion += 1
-                                    load()
-                                })
-    }
 
 }
