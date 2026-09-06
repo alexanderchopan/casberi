@@ -126,8 +126,17 @@ guard "faces are doors only for thread-capable sources" \
 guard "facesAreDoors is SocialThread.isSocial, not the wider set" \
   'facesAreDoors: Bool \{ SocialThread\.isSocial' "$VIEW"
 # The stored-bytes picture branch (§283's failure, one room over).
+#
+# RE-SPELLED for §626 (2026-09-06). The branch used to read `previewImageData`
+# and build a `UIImage` inline; §626 moved that behind `StoredPixels`, because
+# the property is externalStorage and a fresh `UIImage` in a body throws the
+# decoded bitmap away — so the row paid the whole decode again on every
+# re-evaluation, which the model's own observation triggers constantly.
+# The guard now names the StoredPixels route and NOT the old spelling, on
+# purpose: accepting both would let a regression to a per-body decode pass as
+# green, and the branch existing is only half of what this guard is for.
 guard "a post draws a picture the app already holds" \
-  'thing\.previewImageData, *$|images\.isEmpty, let data = thing\.previewImageData' "$POSTS"
+  'images\.isEmpty, let [A-Za-z]+ = StoredPixels\.image\(for: thing\)' "$POSTS"
 
 # NEGATIVE GUARDS read a COMMENT-STRIPPED copy. Every file here DOCUMENTS what
 # it must no longer do by naming it — `SocialPostViews.swift` explains at

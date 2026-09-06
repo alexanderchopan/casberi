@@ -122,6 +122,23 @@ guard "the probe hook exists" \
 cat > "$WORK/main.swift" <<'SWIFT'
 import Foundation
 
+// STUBS for the two app types SweepClock reaches (prd §623, 2026-09-05). This
+// harness compiles SweepClock.swift Foundation-only, so anything it names has
+// to exist here or nothing compiles at all — which is how this harness went
+// red: §623 gave the clock a saves count and a Diagnostics reading, and the
+// stub file was never widened to match. Deliberately inert: the clock's
+// arithmetic is what is under test, and a stub that DID something would let a
+// mutation pass by being caught in the stub instead of in the code.
+enum SaveCensus {
+    nonisolated(unsafe) static var count = 0
+}
+enum PerfReadings {
+    nonisolated(unsafe) static var recorded: [(String, Double, String)] = []
+    static func record(_ span: String, ms: Double, note: String = "", now: Date = Date()) {
+        recorded.append((span, ms, note))
+    }
+}
+
 var failures = 0
 func check(_ ok: Bool, _ what: String) {
     if ok { print("  ✓ \(what)") } else { print("  ✗ \(what)"); failures += 1 }
