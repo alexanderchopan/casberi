@@ -88,7 +88,7 @@ struct XArchiveImportScreen: View {
                 doorURL: URL(string: "https://x.com/settings/download_your_data"),
                 steps: [
                     "Tap Request archive and confirm your password.",
-                    "X emails you when it's ready — usually within 24 hours.",
+                    "Ready within about 24 hours",
                     "Save the zip to Files and tap it once to unzip.",
                 ],
                 pickTitle: "Choose folder",

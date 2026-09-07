@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Setup page → account page (one template)</title>
+<style>
+  :root{
+    --page:#000; --primary:#fff;
+    --secondary:rgba(235,235,245,.60);
+    --tertiary:rgba(235,235,245,.494);
+    --well:#111113; --field:#141416; --line:rgba(255,255,255,.10);
+    --tint:#0a84ff; --confirm:#30d158; --attention:#ff9f0a;
+    --ink:#0a84ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#111114;color:#fff;
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+    padding:40px 28px 80px}
+  h1{font-size:22px;margin:0 0 6px;letter-spacing:-.01em}
+  .lede{color:rgba(235,235,245,.6);max-width:760px;margin:0 0 34px;font-size:14px}
+  .row{display:flex;gap:34px;align-items:flex-start;flex-wrap:wrap}
+  .col{display:flex;flex-direction:column;gap:10px}
+  .cap{font-size:12px;color:rgba(235,235,245,.5);max-width:360px}
+  .cap b{color:#fff;font-weight:600}
+  .bad b{color:#ff6b6b}
+  .good b{color:#7ee08f}
+
+  /* phone */
+  .phone{width:360px;min-height:760px;border-radius:44px;background:var(--page);
+    overflow:hidden;position:relative;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 30px 60px rgba(0,0,0,.6)}
+  .pour{position:absolute;inset:0 0 auto 0;height:170px;pointer-events:none}
+  .scroll{position:relative;padding:0 0 40px}
+  .scroll::-webkit-scrollbar{width:0}
+  .status{display:flex;justify-content:space-between;padding:14px 22px 2px;font-size:12px;font-weight:600;color:#fff;position:relative}
+  .nav{display:flex;justify-content:flex-end;padding:6px 20px 0;position:relative}
+  .nav a{color:var(--tint);font-size:16px;font-weight:600;text-decoration:none}
+
+  .pad{padding:0 20px;position:relative}
+
+  /* header */
+  .head{text-align:center;padding:14px 20px 12px;position:relative}
+  .mark{width:64px;height:64px;border-radius:16px;margin:0 auto 12px;display:grid;place-items:center;
+    font-weight:700;font-size:26px;color:#fff}
+  .name{font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+  .state{display:flex;gap:7px;align-items:center;justify-content:center;margin-top:8px;font-size:13px;font-weight:500}
+  .dot{width:8px;height:8px;border-radius:50%}
+  .meta{font-size:12px;color:var(--tertiary);margin-top:4px}
+  .mode{font-size:12px;color:var(--tertiary);margin-top:6px;display:flex;gap:6px;justify-content:center;align-items:center}
+  .intro{font-size:15px;color:var(--secondary);margin-top:10px;line-height:1.4}
+
+  /* plain rows — the connected grammar */
+  .prow{display:flex;align-items:center;gap:12px;min-height:56px;padding:0 20px}
+  .disc{width:32px;height:32px;border-radius:50%;background:var(--well);display:grid;place-items:center;
+    color:var(--secondary);font-size:14px;flex:none}
+  .title{white-space:nowrap;font-size:17px;font-weight:600;letter-spacing:-.01em}
+  .fact{margin-left:auto;flex:none;font-size:13px;color:var(--tertiary);text-align:right;max-width:52%;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chev{color:var(--tertiary);font-size:12px;margin-left:8px}
+  .fact.entry{color:var(--secondary)}
+  .fact.ph{color:rgba(235,235,245,.35)}
+  .fact.done{color:var(--confirm)}
+  .verb{color:var(--tint);font-weight:600}
+  .verb.off{color:rgba(235,235,245,.28)}
+
+  .sectionlabel{font-size:13px;color:var(--tertiary);padding:18px 20px 6px}
+
+  /* the ONE filled input */
+  .box{margin:2px 20px 0;background:var(--field);border-radius:14px;padding:12px 14px;
+    font-size:13px;color:var(--secondary);min-height:78px;line-height:1.45}
+  .box.ph{color:rgba(235,235,245,.35)}
+  .caret{display:inline-block;width:1.5px;height:15px;background:var(--tint);vertical-align:-3px;animation:b 1.1s steps(1) infinite}
+  @keyframes b{50%{opacity:0}}
+
+  /* readers */
+  .readers{display:flex;gap:12px;padding:2px 20px 0}
+  .rmark{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:15px;font-weight:700}
+  .dim{opacity:.28}
+  .rcap{font-size:13px;color:var(--secondary);padding:10px 20px 0;line-height:1.4}
+
+  /* roster */
+  .face{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:700;flex:none}
+  .ring{box-shadow:0 0 0 2px var(--tint);}
+  .stack{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .stack .t{font-size:17px;font-weight:600;letter-spacing:-.01em}
+  .stack .s{font-size:13px;color:var(--tertiary)}
+  .exit{padding:0 20px;min-height:56px;display:flex;align-items:center;font-size:17px;color:var(--secondary)}
+  .exit.red{color:#ff453a}
+
+  /* ===== the OLD page's furniture, for the before frame ===== */
+  .cta{margin:6px 20px 0;background:var(--tint);border-radius:14px;padding:12px 14px;display:flex;gap:12px;align-items:center}
+  .cta .g{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.22);display:grid;place-items:center;font-size:12px}
+  .cta .t{font-size:15px;font-weight:600}
+  .cta .s{font-size:12px;color:rgba(255,255,255,.75)}
+  .step{padding:6px 20px;font-size:15px;color:var(--secondary);line-height:1.45}
+  .check{padding:3px 20px;font-size:14px;color:var(--secondary);display:flex;gap:8px}
+  .check i{color:var(--confirm);font-style:normal}
+  .slab{margin:8px 20px 0;background:#1c1c1e;border-radius:14px;padding:13px 14px;display:flex;align-items:center;gap:12px}
+  .slab .t{font-size:15px;font-weight:600}
+  .slab .s{margin-left:auto;font-size:13px;color:var(--tertiary)}
+  .sfield{margin:8px 20px 0;background:#1c1c1e;border-radius:14px;padding:14px;font-size:15px;color:rgba(235,235,245,.35);display:flex}
+  .sfield .v{margin-left:auto;color:var(--tertiary);font-size:14px}
+  .note{padding:10px 20px 0;font-size:12px;color:var(--tertiary);line-height:1.4}
+  .green{padding:12px 20px 0;font-size:14px;color:var(--confirm);line-height:1.45}
+  .steps{padding:10px 20px 10px 64px;display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--secondary);line-height:1.45}
+  .steps .tick{display:inline-block;width:13px;margin-left:-21px;margin-right:8px;color:var(--confirm);font-size:11px;font-weight:700}
+  .steps .tick.sp{color:transparent}
+  .prow.ins{padding-left:64px}
+  .entry{font-size:17px;color:var(--primary)}
+  .entry.ph{color:rgba(235,235,245,.35)}
+  .inote{padding:2px 20px 10px 64px;font-size:13px;color:var(--tertiary);line-height:1.4}
+  .rules{margin-top:44px;max-width:900px}
+  .rules h2{font-size:16px;margin:0 0 10px}
+  .rules ol{margin:0;padding-left:20px;color:rgba(235,235,245,.72);font-size:14px;line-height:1.7}
+  .rules li b{color:#fff}
+  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;margin-bottom:8px;font-weight:600}
+  .t-bad{background:rgba(255,69,58,.16);color:#ff6b6b}
+  .t-good{background:rgba(48,209,88,.16);color:#7ee08f}
+</style></head><body>
+
+<h1>The setup page is the account page</h1>
+<p class="lede">Today a not-connected seat draws six filled blocks in a column; one tap later the same seat draws plain rows on the page ground. Same DNA means the setup state uses the connected grammar — a disc, a title, and either a fact or a field — and keeps <b>one filled input on the screen at a time</b>. Frames: today · the setup page as built · the connected page as built, with the notes box.</p>
+
+<div class="row">
+
+<!-- ============ A · TODAY ============ -->
+<div class="col">
+  <span class="tag t-bad">Today</span>
+  <div class="phone">
+    <div class="pour" style="background:linear-gradient(180deg,rgba(10,132,255,.16),rgba(0,0,0,0) 88%)"></div>
+    <div class="scroll">
+      <div class="status"><span>6:01</span><span style="letter-spacing:1px">▂▄▆ 55</span></div>
+      <div class="nav"><a>Done</a></div>
+      <div class="pad" style="padding-top:14px">
+        <div class="name" style="font-size:30px">Your App Store Connect…</div>
+      </div>
+      <div class="cta"><div class="g">↗</div><div><div class="t">Get your API key</div><div class="s">appstoreconnect.apple.com</div></div></div>
+      <div style="height:10px"></div>
+      <div class="step">Generate a key with the Developer role — the narrowest that works.</div>
+      <div class="step">Download the .p8. Apple only offers it once.</div>
+      <div class="step">The Key ID and Issuer ID are on the same page.</div>
+      <div style="height:8px"></div>
+      <div class="check"><i>✓</i><span>Reads review status, reviews and builds</span></div>
+      <div class="check"><i>✓</i><span>Never submits, releases, replies or sells</span></div>
+      <div class="slab"><span style="color:var(--tint);display:flex"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span><div class="t">Choose the .p8 file</div><div class="s">Already downloaded? ›</div></div>
+      <div class="sfield">Or paste the .p8 contents</div>
+      <div class="sfield">Key ID</div>
+      <div class="sfield">Issuer ID<span class="v">Save</span></div>
+      <div class="note">Leave the Issuer ID empty if your key is an individual key rather than a team's.</div>
+      <div class="green">Apple answered — nothing has changed. A first sync only records where everything stands.</div>
+    </div>
+  </div>
+  <p class="cap bad"><b>Six filled blocks, no header, no state.</b> The name truncates, the mark is missing, and nothing here is shaped like the page one tap away. The green sentence at the bottom is a result nobody can see under a scroll of grey.</p>
+</div>
+
+<!-- ============ B · PROPOSED SETUP ============ -->
+<div class="col">
+  <span class="tag t-good">As built · not connected</span>
+  <div class="phone">
+    <div class="pour" style="background:linear-gradient(180deg,rgba(10,132,255,.16),rgba(0,0,0,0) 88%)"></div>
+    <div class="scroll">
+      <div class="status"><span>6:01</span><span style="letter-spacing:1px">▂▄▆ 55</span></div>
+      <div class="nav"><a>Done</a></div>
+
+      <div class="head">
+        <div class="mark" style="background:linear-gradient(160deg,#1f6feb,#0a84ff)"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3.5" width="15" height="17" rx="3"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4"/></svg></div>
+        <div class="name">App Store Connect</div>
+        <div class="state" style="color:var(--tertiary)"><span class="dot" style="background:var(--tertiary)"></span>Not connected</div>
+        <div class="mode"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="12" r="3.4"/><path d="M11.9 12H21M17.6 12v3M14.8 12v2.2"/></svg> Paste a key</div>
+        <div class="intro">Verdicts, reviews and expiring builds land as they happen. Apple offers no read-only role, so this only ever reads.</div>
+      </div>
+
+      <div class="prow"><div class="disc" style="background:rgba(10,132,255,.14);color:var(--tint)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16 16 8M9 8h7v7"/></svg></div>
+        <div class="title verb">Get your API key</div>
+        <div class="fact">appstoreconnect.apple.com</div></div>
+
+      <div class="steps">
+        <div><span class="tick">✓</span>Generate a key with the Developer role — the narrowest that works.</div>
+        <div><span class="tick">✓</span>Download the .p8. Apple only offers it once.</div>
+        <div><span class="tick sp">✓</span>The Key ID and Issuer ID are on the same page.</div>
+      </div>
+
+      <div class="steps">
+        <div><span class="tick g">✓</span>Reads review status, reviews and builds</div>
+        <div><span class="tick g">✓</span>Never submits, releases, replies or sells</div>
+      </div>
+
+      <div class="prow"><div class="disc"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></div><div class="title">Choose the .p8 file</div>
+        <div class="fact">AuthKey_9F3K2QX8LM.p8</div><span class="chev">›</span></div>
+
+      <div class="prow ins"><div class="entry">••••••••••••••••</div></div>
+      <div class="prow ins"><div class="entry">9F3K2QX8LM</div></div>
+      <div class="prow ins"><div class="entry ph">Issuer ID<span class="caret"></span></div></div>
+      <div class="prow ins"><div class="title verb">Save</div></div>
+      <div class="inote">Leave the Issuer ID empty if your key is an individual key rather than a team's.</div>
+
+      <div class="prow"><div class="disc"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.2 2.4 3.3 5.3 3.3 8.5S14.2 18.1 12 20.5c-2.2-2.4-3.3-5.3-3.3-8.5S9.8 5.9 12 3.5z"/></svg></div><div class="title">What it reaches</div>
+        <div class="fact">api.appstoreconnect.apple.com</div><span class="chev">›</span></div>
+
+      <div class="sectionlabel">Notes</div>
+      <div class="box ph">Add a note — paste anything</div>
+
+      <div class="sectionlabel">Who may read it</div>
+      <div class="readers">
+        <div class="rmark dim" style="background:#1c1c1e"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" stroke="currentColor" stroke-width="0"><path d="M12 3.5c.7 3.6 1.9 4.8 5.5 5.5-3.6.7-4.8 1.9-5.5 5.5-.7-3.6-1.9-4.8-5.5-5.5 3.6-.7 4.8-1.9 5.5-5.5z"/><path d="M17.5 15c.35 1.8.95 2.4 2.75 2.75-1.8.35-2.4.95-2.75 2.75-.35-1.8-.95-2.4-2.75-2.75 1.8-.35 2.4-.95 2.75-2.75z"/></svg></div>
+        <div class="rmark dim" style="background:#111113;color:#fff">C</div>
+        <div class="rmark dim" style="background:#111113;color:#fff"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 3.4v2.2M12 18.4v2.2M3.4 12h2.2M18.4 12h2.2M6 6l1.6 1.6M16.4 16.4 18 18M18 6l-1.6 1.6M7.6 16.4 6 18"/></svg></div>
+      </div>
+      <p class="rcap">Nothing reads this yet. Once it's connected you choose who does.</p>
+      <div style="height:26px"></div>
+    </div>
+  </div>
+  <p class="cap good"><b>Same 56pt row, same disc, same column.</b> The commit is a tint row (colour is the only thing separating it from a door), the door carries the file it read, and the three entries keep their placeholders and lose their boxes. The verb is its own row. Steps and the read boundary drop to the page's quiet rung and inset to the title column.</p>
+</div>
+
+<!-- ============ C · PROPOSED CONNECTED ============ -->
+<div class="col">
+  <span class="tag t-good">As built · connected</span>
+  <div class="phone">
+    <div class="pour" style="background:linear-gradient(180deg,rgba(10,132,255,.16),rgba(0,0,0,0) 88%)"></div>
+    <div class="scroll">
+      <div class="status"><span>6:01</span><span style="letter-spacing:1px">▂▄▆ 55</span></div>
+      <div class="nav"><a>Done</a></div>
+
+      <div class="head">
+        <div class="mark" style="background:linear-gradient(160deg,#1f6feb,#0a84ff)"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3.5" width="15" height="17" rx="3"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4"/></svg></div>
+        <div class="name">App Store Connect</div>
+        <div class="state" style="color:var(--tint)"><span class="dot" style="background:var(--tint)"></span>Reading · 8m ago</div>
+        <div class="meta">Last read 8 minutes ago</div>
+      </div>
+
+      <div class="prow"><div class="disc"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4.5V9h-4.5"/></svg></div><div class="title">Reading App Store Connect…</div></div>
+
+      <div class="prow"><div class="disc"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5.4l3.3 2"/></svg></div><div class="title">Activity</div>
+        <div class="fact">3 today · 11 this week</div><span class="chev">›</span></div>
+      <div class="prow"><div class="disc"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.2 2.4 3.3 5.3 3.3 8.5S14.2 18.1 12 20.5c-2.2-2.4-3.3-5.3-3.3-8.5S9.8 5.9 12 3.5z"/></svg></div><div class="title">What it reaches</div>
+        <div class="fact">api.appstoreconnect.apple.com</div><span class="chev">›</span></div>
+      <div class="prow"><div class="disc"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="12" r="3.4"/><path d="M11.9 12H21M17.6 12v3M14.8 12v2.2"/></svg></div><div class="title">Your key</div>
+        <div class="fact">On this iPhone only</div><span class="chev">›</span></div>
+
+      <div class="sectionlabel">Notes</div>
+      <div class="box">Key belongs to the Casberi team account (issuer 69a6de7…). Regenerate before 14 Mar — Apple expires it silently and the room just goes quiet.<span class="caret"></span></div>
+
+      <div class="sectionlabel">Who may read it</div>
+      <div class="readers">
+        <div class="rmark" style="background:#1c1c1e"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" stroke="currentColor" stroke-width="0" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5c.7 3.6 1.9 4.8 5.5 5.5-3.6.7-4.8 1.9-5.5 5.5-.7-3.6-1.9-4.8-5.5-5.5 3.6-.7 4.8-1.9 5.5-5.5z"/><path d="M17.5 15c.35 1.8.95 2.4 2.75 2.75-1.8.35-2.4.95-2.75 2.75-.35-1.8-.95-2.4-2.75-2.75 1.8-.35 2.4-.95 2.75-2.75z"/></svg></div>
+        <div class="rmark" style="background:#111113;color:#fff"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 3.4v2.2M12 18.4v2.2M3.4 12h2.2M18.4 12h2.2M6 6l1.6 1.6M16.4 16.4 18 18M18 6l-1.6 1.6M7.6 16.4 6 18"/></svg></div>
+        <div class="rmark dim" style="background:#111113;color:#fff"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 3.4v2.2M12 18.4v2.2M3.4 12h2.2M18.4 12h2.2M6 6l1.6 1.6M16.4 16.4 18 18M18 6l-1.6 1.6M7.6 16.4 6 18"/></svg></div>
+      </div>
+      <p class="rcap">The agent and Claude may read this. Shortcuts may not.</p>
+
+      <div class="sectionlabel">Watching · 3</div>
+      <div class="prow"><div class="face ring" style="background:#0a84ff">C</div>
+        <div class="stack"><div class="t">Casberi</div><div class="s">In review · 2 days</div></div></div>
+      <div class="prow"><div class="face" style="background:#2c2c2e">B</div>
+        <div class="stack"><div class="t">Berry</div><div class="s">Ready for sale</div></div></div>
+      <div class="sectionlabel">Quiet · 1</div>
+      <div class="prow"><div class="face" style="background:#2c2c2e">T</div>
+        <div class="stack"><div class="t">Testbed</div><div class="s">No activity this week</div></div></div>
+
+      <div style="height:16px"></div>
+      <div class="exit">Pause reading · keeps everything</div>
+      <div class="exit red">Disconnect</div>
+      <div style="height:26px"></div>
+    </div>
+  </div>
+  <p class="cap good"><b>Notes is a box you can paste into</b> — a labelled field on the page ground, three lines tall, growing to about eight before it scrolls. It replaces the one-line right-aligned field, which truncated anything longer than a phrase and read as a caption rather than a place to put something.</p>
+</div>
+
+</div>
+
+<div class="rules">
+  <h2>The template, as rules</h2>
+  <ol>
+    <li><b>One page, two states.</b> Header · act · facts · readers · notes · roster · exits — the same slots in the same order whether or not the seat is connected. Nothing appears or disappears on connect; the facts fill in.</li>
+    <li><b>No slabs in the act.</b> Every step is a plain row: disc · title · (fact + chevron) or (inline field). A row that opens something out of the app shows its host as the fact.</li>
+    <li><b>One filled element on the page, and it is an input.</b> Notes is a box because a note is pasted; a key stays a one-line secure entry showing dots — which is what it showed inside the box too.</li>
+    <li><b>An entry row keeps its placeholder as its label</b>, filling in with what you type. Half these fields are also the roster's filter (§639 amendment), and a search bar redrawn as "Search ⟩ value" is a settings row pretending to be a finder.</li>
+    <li><b>The steps and the read boundary stay visible, quieted.</b> Not folded into a row: the only two ways to do that are a sheet raised from inside a list row — the trap that broke the feed's first tap — or collapsing the permission boundary out of sight on the screen where you are about to paste a key. They drop to 13pt and inset to the title column instead.</li>
+    <li><b>One verb, once, at the end of the act</b> — plain tint text on the page ground, dim until the required fields are there. No blue CTA slab: the page's only loud element was the step you take first, which is the least important thing on it.</li>
+    <li><b>Progress is shown by facts filling in</b>, not by ticks: the file row shows the filename it read, the Key ID row shows the ten characters it derived.</li>
+  </ol>
+</div>
+</body></html>

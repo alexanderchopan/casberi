@@ -128,16 +128,6 @@ struct PostHogScreen: View {
 
     @ViewBuilder private var keyBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if let url = TokenBridge.posthog.setupURL {
-                // Step one, doing itself (prd §218) — verb over address,
-                // the 2026-08-14 anatomy.
-                DSSlabButton(title: TokenBridge.posthog.doorTitle,
-                             detail: TokenBridge.posthog.doorHost,
-                             systemImage: "arrow.up.right") {
-                    DSHaptic.tap()
-                    openURL(url)
-                }
-            }
             // The next line, then the list it points AT, then the last
             // line and the fields. The scopes used to sit below the
             // fields, which is why the first step had to name all three in
@@ -145,7 +135,18 @@ struct PostHogScreen: View {
             // sentence lose them (the Stripe fix, one screen over;
             // 2026-07-31). Unnumbered since 2026-08-14 (the door did step
             // one; a "2" under it read as a missing-1 riddle).
-            BridgeStepLines(steps: [TokenBridge.posthog.steps[0]], numbered: false)
+            BridgeSetupCard(steps: [TokenBridge.posthog.steps[0]], numbered: false) {
+                if let url = TokenBridge.posthog.setupURL {
+                    // Step one, doing itself (prd §218) — verb over address,
+                    // the 2026-08-14 anatomy.
+                    DSSlabButton(title: TokenBridge.posthog.doorTitle,
+                                 detail: TokenBridge.posthog.doorHost,
+                                 systemImage: "arrow.up.right") {
+                        DSHaptic.tap()
+                        openURL(url)
+                    }
+                }
+            }
             // The scopes are the honest ask, and they're the reason this
             // bridge's read-only promise is STRUCTURAL rather than kept by
             // conduct (the Privacy.com divergence): a key minted with these

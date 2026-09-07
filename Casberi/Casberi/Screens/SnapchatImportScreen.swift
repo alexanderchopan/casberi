@@ -81,7 +81,7 @@ struct SnapchatImportScreen: View {
             ImportArchiveSection(
                 source: "Snapchat",
                 steps: [
-                    "At accounts.snapchat.com, open My Data and submit a request (pick JSON).",
+                    "My Data → request your data, format JSON",
                     "They email a link in a few hours — unzip it in Files.",
                 ],
                 pickTitle: "Choose folder",

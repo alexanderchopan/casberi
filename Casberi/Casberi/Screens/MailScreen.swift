@@ -68,17 +68,18 @@ struct MailScreen: View {
 
     @ViewBuilder private var setupBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if let url = provider.setupURL {
-                // Verb over address, the 2026-08-14 anatomy.
-                DSSlabButton(title: provider.doorTitle,
-                             detail: provider.doorHost,
-                             systemImage: "arrow.up.right") {
-                    DSHaptic.tap()
-                    openURL(url)
+            // Unnumbered: one instruction is not a sequence (§220).
+            BridgeSetupCard(steps: provider.steps, numbered: false) {
+                if let url = provider.setupURL {
+                    // Verb over address, the 2026-08-14 anatomy.
+                    DSSlabButton(title: provider.doorTitle,
+                                 detail: provider.doorHost,
+                                 systemImage: "arrow.up.right") {
+                        DSHaptic.tap()
+                        openURL(url)
+                    }
                 }
             }
-            // Unnumbered: one instruction is not a sequence (§220).
-            BridgeStepLines(steps: provider.steps, numbered: false)
             // Two inputs, one act — the verb rides the password, where
             // connecting actually happens.
             DSSlabField(placeholder: provider.addressPlaceholder, text: $addressField,

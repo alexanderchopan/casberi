@@ -35529,6 +35529,34 @@
         }
       }
     },
+    "Add a note — paste anything" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añade una nota — pega lo que quieras"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "メモを追加 — 貼り付けもできます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "메모 추가 — 붙여넣기도 가능"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "添加备注 — 可直接粘贴"
+          }
+        }
+      }
+    },
     "Add a note…" : {
       "localizations" : {
         "es" : {
@@ -53050,6 +53078,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "创建\n账户"
+          }
+        }
+      }
+    },
+    "Create a Power-Up named Casberi" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Crea un Power-Up llamado Casberi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi という名前の Power-Up を作成"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi라는 이름의 Power-Up 만들기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "创建名为 Casberi 的 Power-Up"
           }
         }
       }
@@ -81348,6 +81404,34 @@
         }
       }
     },
+    "Nothing connected yet. Everything you can add is under All." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todavía no hay nada conectado. En Todo está todo lo que puedes añadir."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ何も接続されていません。追加できるものは「すべて」にあります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 연결된 것이 없습니다. 추가할 수 있는 모든 것은 전체에 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未连接任何账户。可添加的一切都在“全部”中。"
+          }
+        }
+      }
+    },
     "Nothing connects to %@ yet." : {
       "localizations" : {
         "es" : {
@@ -85485,6 +85569,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "一个订阅流，或一个应用"
+          }
+        }
+      }
+    },
+    "One inbox for all your accounts." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una bandeja de entrada para todas tus cuentas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべてのアカウントを、ひとつの受信箱に。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 계정을 하나의 받은편지함에."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "所有账户，一个收件箱。"
           }
         }
       }
@@ -94509,6 +94621,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "读取自你关注的钱包。"
+          }
+        }
+      }
+    },
+    "Read on this %@. Nothing is uploaded." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se lee en este %@. No se sube nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この %@ で読み取ります。アップロードはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 %@에서 읽습니다. 업로드되지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在此 %@ 上读取。不会上传任何内容。"
           }
         }
       }

@@ -15,10 +15,12 @@ import SwiftData
 /// 2. **The act field, always first** — "adding should always be first so a
 ///    user has a way to do what they want to do." Not connected: it IS the
 ///    connect form. Connected: the add/search field. Needs reconnecting:
-///    "Paste a new token".
+///    "Paste a new token". **It draws ROWS, not slabs** (§640,
+///    `Design/DSAccountAct.swift`): the door, the entry and the verb are the
+///    same 56pt row anatomy as the facts below them.
 /// 3. **Plain rows** — Activity (opens the room), What it reaches (the hosts
 ///    and only the hosts), Your key (where it lives, never a character of
-///    it), Notes (inline).
+///    it), then **Notes as a caption over a box you can paste into** (§640).
 /// 4. **Who may read it** — reader marks, lit or dimmed, a caption.
 /// 5. **Watching · N** — the account's own rows, active this week first,
 ///    then Quiet; ONE removal verb, "Remove".
@@ -135,7 +137,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         List {
             header
             actSection
-            more().plainAccountRow()
+            more().dsAccountAct().plainAccountRow()
             factRows
             readers
             roster
@@ -246,9 +248,13 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     // MARK: - 2. The act field
 
     private var actSection: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        VStack(alignment: .leading, spacing: 0) {
             act()
         }
+        // THE ACT DRAWS ROWS, NOT SLABS (prd §640) — one environment flag, so
+        // all 55 screens change with their call sites untouched. See
+        // `Design/DSAccountAct.swift` for what each primitive becomes.
+        .dsAccountAct()
         .padding(.vertical, DS.Space.s2)
         .plainAccountRow()
     }
@@ -279,7 +285,12 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                            opens: true,
                            action: { sheet = .key })
         }
-        notesRow
+        // NOT BEFORE THERE IS AN ACCOUNT (prd §640b, user: "why would we have
+        // a notes field before connected, that doesn't make sense"). A note is
+        // a fact about a seat you have; drawn on a page with no seat it is a
+        // form field asking you to annotate nothing, above the act that would
+        // create the thing to annotate.
+        if state.connected { notesBox }
     }
 
     /// CLOSE THE SHEET, THEN POP, THEN ASK — `RoomDoor`'s three writes in
@@ -292,30 +303,63 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         chrome.sourceRequest = source
     }
 
-    private var notesRow: some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-            AccountFactRow.disc("note.text")
+    /// NOTES IS A BOX (prd §640, user: *"notes should be a little box a user
+    /// can paste into not just some one line to type inline b/c they may have
+    /// an actual note to paste"*).
+    ///
+    /// It shipped as a fact row with a trailing one-to-four-line field, which
+    /// is the shape every OTHER row on this page has — and that was the
+    /// mistake: those rows carry a fact the app knows, and this one is the
+    /// only place on the page a PERSON writes. Right-aligned against a title
+    /// it read as a caption, and anything longer than a phrase truncated into
+    /// the row's remaining half.
+    ///
+    /// A caption over a filled box, like the readers block one section down —
+    /// and the fill is sanctioned rather than a slab creeping back: this page
+    /// has exactly one filled element and it has always been the input.
+    private var notesBox: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text("Notes")
-                .dsText(.heading17).foregroundStyle(DS.textPrimary)
-            Spacer(minLength: DS.Space.s2)
-            TextField(String(localized: "Add a note"), text: $note, axis: .vertical)
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textSecondary)
-                .multilineTextAlignment(.trailing)
-                .lineLimit(1...4)
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            TextField(String(localized: "Add a note — paste anything"),
+                      text: $note, axis: .vertical)
+                .dsText(.callout15)
+                .foregroundStyle(DS.textPrimary)
+                .tint(DS.tint)
+                // Three lines standing empty, ten before it scrolls — enough
+                // that a pasted paragraph is READ here rather than guessed at.
+                .lineLimit(3...10)
                 .textInputAutocapitalization(.sentences)
-                .submitLabel(.done)
-                .onSubmit { AccountNotes.set(note, for: seatID) }
                 .onChange(of: note) { _, now in AccountNotes.set(now, for: seatID) }
+                .padding(.horizontal, DS.Space.s3)
+                .padding(.vertical, DS.Space.s2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                // The §545/§590 recipe: the well tone, and `DS.pourInk`
+                // clipped by the box's own shape to draw the top edge — on an
+                // ink page a recess by tone alone is a 1.03:1 step and the
+                // corner never appears.
+                .background(alignment: .top) {
+                    LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
+                                   startPoint: .top, endPoint: .bottom)
+                        .frame(height: 150)
+                        .frame(maxWidth: .infinity, alignment: .top)
+                }
+                .background(DS.surfaceWell)
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget,
+                                            style: .continuous))
         }
-        .frame(minHeight: AccountFactRow.height)
+        .padding(.vertical, DS.Space.s3)
         .plainAccountRow()
     }
 
     // MARK: - 4. Who may read it
 
+    /// Same rule as the notes box (§640b): who may READ this account is a
+    /// question about an account. Before connecting it drew three dimmed
+    /// marks under a caption saying nothing reads this yet — a control that
+    /// cannot be used, explaining why, on the screen with the least room.
     @ViewBuilder private var readers: some View {
-        if lands { readersBlock }
+        if lands, state.connected { readersBlock }
     }
 
     private var readersBlock: some View {
@@ -585,15 +629,9 @@ struct AccountFactRow: View {
         .contentShape(Rectangle())
     }
 
-    /// The leading disc: a glyph on the well fill, the mark grammar every
-    /// settings row in the app already uses.
-    static func disc(_ glyph: String) -> some View {
-        Image(systemName: glyph)
-            .dsGlyph(14, weight: .medium)
-            .foregroundStyle(DS.textSecondary)
-            .frame(width: 32, height: 32)
-            .background(DS.surfaceWell, in: Circle())
-    }
+    /// The leading disc — `DSActRow`'s, so a fact row and an act row cannot
+    /// drift apart (prd §640; they stand in one column).
+    static func disc(_ glyph: String) -> some View { DSActRow.disc(glyph) }
 }
 
 /// One reader's mark — a brand tile, or the on-device glyph tile. Lit = may
@@ -826,6 +864,10 @@ struct AccountKeySheet<Content: View>: View {
         NavigationStack {
             List {
                 content()
+                    // The same block the act slot draws, so the same grammar
+                    // (prd §640) — this sheet IS where a key is replaced, and
+                    // it is the screen the report arrived on.
+                    .dsAccountAct()
                     .padding(.vertical, DS.Space.s2)
                     .plainAccountRow()
             }

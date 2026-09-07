@@ -238,18 +238,19 @@ struct TokenSetupScreen: View {
     /// used to build a `scope=read` authorize link on your behalf.
     private var trelloKeyBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if let url = bridge.setupURL {
-                DSSlabButton(title: bridge.doorTitle,
-                             detail: bridge.doorHost,
-                             systemImage: "arrow.up.right") {
-                    DSHaptic.tap()
-                    openURL(url)
+            BridgeSetupCard(steps: [
+                String(localized: "Create a Power-Up named Casberi"),
+                String(localized: "Paste the key below."),
+            ], numbered: false) {
+                if let url = bridge.setupURL {
+                    DSSlabButton(title: bridge.doorTitle,
+                                 detail: bridge.doorHost,
+                                 systemImage: "arrow.up.right") {
+                        DSHaptic.tap()
+                        openURL(url)
+                    }
                 }
             }
-            BridgeStepLines(steps: [
-                String(localized: "Create a Power-Up — name it Casberi. Its API key is on the page."),
-                String(localized: "Paste the key below."),
-            ], numbered: false)
             DSSlabField(placeholder: String(localized: "API key"),
                         text: $trelloKeyField,
                         actionLabel: trelloKey == nil
@@ -339,30 +340,31 @@ struct TokenSetupScreen: View {
     /// is the order the person does them in.
     private var setupBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if let url = doorURL {
-                // Step one, doing itself (prd §218). This screen used to
-                // say "Open readwise.io/access_token" in body text and
-                // then leave you to retype it — an instruction the app
-                // could have followed on your behalf the whole time. The
-                // verb+address anatomy (2026-08-14): the big words stay
-                // short, the host sits beneath them, and the route trail
-                // lives in the steps.
-                DSSlabButton(title: doorTitle,
-                             detail: bridge.doorHost,
-                             systemImage: "arrow.up.right") {
-                    DSHaptic.tap()
-                    doorOpened = true
-                    openURL(url)
-                }
-            }
             // Numbered only when there is NO door — then the list really
             // does start at 1. Under a door, numerals starting at 2 sent
             // the eye hunting for a missing 1 (ruling 2026-08-14).
-            BridgeStepLines(steps: bridge.steps,
+            BridgeSetupCard(steps: bridge.steps,
                             startingAt: doorURL == nil ? 1 : 2,
                             numbered: doorURL == nil,
                             acknowledges: true,
-                            doneThrough: tokenStepsDone)
+                            doneThrough: tokenStepsDone) {
+                if let url = doorURL {
+                    // Step one, doing itself (prd §218). This screen used to
+                    // say "Open readwise.io/access_token" in body text and
+                    // then leave you to retype it — an instruction the app
+                    // could have followed on your behalf the whole time. The
+                    // verb+address anatomy (2026-08-14): the big words stay
+                    // short, the host sits beneath them, and the route trail
+                    // lives in the steps.
+                    DSSlabButton(title: doorTitle,
+                                 detail: bridge.doorHost,
+                                 systemImage: "arrow.up.right") {
+                        DSHaptic.tap()
+                        doorOpened = true
+                        openURL(url)
+                    }
+                }
+            }
             DSSlabField(placeholder: bridge.placeholder, text: $tokenField,
                         actionLabel: bridge.connected ? "Replace" : "Connect",
                         secure: true, action: connect)

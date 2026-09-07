@@ -199,6 +199,28 @@ grep -q 'static let account: CGFloat = 76' "$TOKENS" \
 grep -q 'BridgeIcon(name: name, size: DS.Mark.account)' "$TMP/page-bare.swift" \
   || { echo "✗ the header's mark is not on DS.Mark.account"; exit 1; }
 
+# 13. THE ACT DRAWS ROWS (prd §640). The flag that turns every slab primitive
+#     into its row form is set in exactly three places, all on this chassis —
+#     the act slot, its second acts, and the key sheet that draws the same
+#     block. Anywhere else and a slab elsewhere in the app silently becomes a
+#     row, which is a design change nobody made, in a file nobody looked at.
+acts=$(grep -c 'dsAccountAct()' "$TMP/page-bare.swift" || true)
+[[ "$acts" -eq 3 ]] \
+  || { echo "✗ AccountPage sets dsAccountAct() $acts times, expected 3 (act, more, key sheet)"; exit 1; }
+stray=$(grep -rl 'dsAccountAct()' Casberi --include='*.swift' | grep -v 'Screens/AccountPage.swift' \
+        | grep -v 'Design/DSAccountAct.swift' || true)
+[[ -z "$stray" ]] \
+  || { echo "✗ dsAccountAct() is set outside the chassis: $stray — §640: two places, nowhere else"; exit 1; }
+
+# 14. NOTES IS A BOX, not a row (prd §640, user: "they may have an actual note
+#     to paste"). A trailing one-line field truncates anything longer than a
+#     phrase into the row's remaining half, and reads as a caption rather than
+#     a place to put something.
+grep -q 'lineLimit(3\.\.\.10)' "$TMP/page-bare.swift" \
+  || { echo "✗ the Notes field is not the multi-line box §640 ruled (3...10)"; exit 1; }
+grep -q 'multilineTextAlignment(.trailing)' "$TMP/page-bare.swift" \
+  && { echo "✗ the Notes field is right-aligned again — that is the row shape §640 replaced"; exit 1; }
+
 echo "✓ drift guards"
 
 # --- the compiled judgement --------------------------------------------------

@@ -52,7 +52,7 @@ struct ChatGPTImportScreen: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             ImportArchiveSection(
                 source: "ChatGPT",
-                steps: ["In ChatGPT, open Settings → Data controls → Export data.",
+                steps: ["Settings → Data controls → Export data",
                         "OpenAI emails a link — unzip it in Files."],
                 pickTitle: "Choose conversations.json",
                 pickIcon: "square.and.arrow.down",

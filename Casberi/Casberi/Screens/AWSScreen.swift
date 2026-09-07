@@ -86,23 +86,24 @@ struct AWSScreen: View {
 
     @ViewBuilder private var keyBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if let url = bridge.setupURL {
-                if doorTapped {
-                    DSSlabDoor(title: bridge.doorTitle,
-                               detail: bridge.doorHost,
-                               systemImage: "arrow.up.right") { openDoor(url) }
-                } else {
-                    DSSlabButton(title: bridge.doorTitle,
-                                 detail: bridge.doorHost,
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        openDoor(url)
+            BridgeSetupCard(steps: bridge.steps, startingAt: 2,
+                            numbered: false, acknowledges: true,
+                            doneThrough: hasBothRequired ? 4 : 0) {
+                if let url = bridge.setupURL {
+                    if doorTapped {
+                        DSSlabDoor(title: bridge.doorTitle,
+                                   detail: bridge.doorHost,
+                                   systemImage: "arrow.up.right") { openDoor(url) }
+                    } else {
+                        DSSlabButton(title: bridge.doorTitle,
+                                     detail: bridge.doorHost,
+                                     systemImage: "arrow.up.right") {
+                            DSHaptic.tap()
+                            openDoor(url)
+                        }
                     }
                 }
             }
-            BridgeStepLines(steps: bridge.steps, startingAt: 2,
-                            numbered: false, acknowledges: true,
-                            doneThrough: hasBothRequired ? 4 : 0)
             DSCheckList(lines: ["Reads alarms, deploys, cost, and a resource count",
                                 "Never creates, changes, or deletes anything"])
             DSSlabField(placeholder: "Access Key ID (AKIA…)",

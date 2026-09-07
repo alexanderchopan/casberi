@@ -131,7 +131,7 @@ struct WalletbeatScreen: View {
 	@ViewBuilder private var followBlock: some View {
 		if following {
 			DSCheckList(lines: [
-				"Following Walletbeat — their security incidents arrive for every wallet they cover."
+				"Following Walletbeat — every wallet's incidents"
 			])
 		} else {
 			// The free tier, and the reason it has its own verb: the incidents are about the

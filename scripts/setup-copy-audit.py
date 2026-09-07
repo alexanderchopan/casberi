@@ -83,6 +83,19 @@ MODEL = os.path.join(ROOT, "Casberi", "Casberi", "Model")
 MAX_INTRO_SENTENCES = 2
 MAX_INTRO_WORDS = 30
 MAX_STEP_WORDS = 14
+# ONE LINE, MEASURED (prd §640b, user: "each bullet should only be one line
+# no orphan words"). A step or a checklist line renders at 12pt regular inside
+# the guide card, where the widest it can be without wrapping is 290pt on a
+# 390pt screen — measured with `UIFont.systemFont(ofSize: 12)` over the whole
+# catalogue, not guessed. This cap is that bound expressed in characters: the
+# widest surviving string in the tree is 53, and a character count is what a
+# static audit can enforce. It is a PROXY and deliberately slack by one — a
+# string of 54 capital Ws would pass it and wrap — but every real sentence in
+# this family is mixed case, and the alternative (shipping a font metric table
+# into a text audit) buys precision nobody needs. Localised copy is out of
+# scope on purpose: a German step wraps and must, which is why the rule is
+# about the SOURCE copy being tight rather than about no line ever wrapping.
+MAX_STEP_CHARS = 54
 MAX_SLAB_NOTES = 2
 FOOTER_WORD_FLOOR = 25
 
@@ -766,6 +779,9 @@ def audit_source(name: str, src: str, stamped: set = None,
             if w > MAX_STEP_WORDS:
                 findings.append(f"{name}: step is {w} words "
                                 f"(max {MAX_STEP_WORDS}) — {lit[:60]}…")
+            if len(lit) > MAX_STEP_CHARS:
+                findings.append(f"{name}: step wraps to a second line at "
+                                f"{len(lit)} chars (max {MAX_STEP_CHARS}) — {lit[:60]}…")
 
     # `steps:` passed as an array literal to `ImportArchiveSection` too.
     for m in re.finditer(r"ImportArchiveSection\(", body):
@@ -778,6 +794,30 @@ def audit_source(name: str, src: str, stamped: set = None,
             if w > MAX_STEP_WORDS:
                 findings.append(f"{name}: step is {w} words "
                                 f"(max {MAX_STEP_WORDS}) — {lit[:60]}…")
+            if len(lit) > MAX_STEP_CHARS:
+                findings.append(f"{name}: step wraps to a second line at "
+                                f"{len(lit)} chars (max {MAX_STEP_CHARS}) — {lit[:60]}…")
+
+    # 3c: A DOOR ABOVE STEPS IS A CARD (prd §640b). The two together are one
+    # thing — the trip to the provider's site — and drawn as loose siblings
+    # they read as two of the eight blocks the card exists to collapse. Only
+    # adjacency is checked: steps with no door stay plain step lines, which is
+    # the ruling, not an oversight.
+    for m in re.finditer(r"BridgeStepLines\(", body):
+        before = body[max(0, m.start() - 400):m.start()]
+        if "BridgeSetupCard(" in before[-120:]:
+            continue          # the card's own construction
+        if re.search(r"DSSlab(Button|Door)\(", before) and \
+           not re.search(r"DSSlabField\(|DSCheckList\(", before[before.rfind("DSSlab"):]):
+            findings.append(f"{name}: a door sits above BridgeStepLines outside "
+                            f"a BridgeSetupCard — §640b: the trip is one card")
+
+    # 3b: a checklist line is a bullet too, and wraps in the same column.
+    for m in re.finditer(r"DSCheckList\(lines:\s*\[", body):
+        for lit in literals(balanced(body, m.end() - 1)):
+            if len(lit) > MAX_STEP_CHARS:
+                findings.append(f"{name}: checklist line wraps at {len(lit)} "
+                                f"chars (max {MAX_STEP_CHARS}) — {lit[:60]}…")
 
     # 4: the one-gray-sentence rule, mechanised.
     notes = len(re.findall(r"\bDSSlabNote\(", body))
@@ -839,6 +879,23 @@ struct S: View { var body: some View { List {
 } } }
 '''
 
+DIRTY_LOOSE_DOOR = '''
+struct S: View { var body: some View { List {
+    AccountPage(name: "X", seatID: "x", source: "X", mode: .pasteKey, intro: "Short.")
+    DSSlabButton(title: "Get your key", detail: "x.com", systemImage: "arrow.up.right") { go() }
+    BridgeStepLines(steps: ["Copy the key"], startingAt: 2)
+} } }
+'''
+
+DIRTY_WIDE_STEP = '''
+struct S: View { var body: some View { List {
+    AccountPage(name: "X", seatID: "x", source: "X", mode: .pasteKey, intro: "Short.")
+    BridgeStepLines(steps: [
+        "Create a personal access token and copy it into the field",
+    ], startingAt: 2)
+} } }
+'''
+
 DIRTY_FOOTER = '''
 struct S: View { var body: some View { List {
     AccountPage(name: "X", seatID: "x", source: "X", mode: .noAccount, intro: "Short.")
@@ -868,8 +925,8 @@ struct S: View { var body: some View { List {
         name: "X", seatID: "x", source: "X", mode: .oneTimeImport,
         intro: "X has no live connection — download your export, bring it here, and search everything in it. Re-import any time for what's new.")
     BridgeStepLines(steps: [
-        "Choose Download or transfer information, then Some of your information.",
-        "Set Format to JSON, not HTML, then Download to device.",
+        "Download or transfer → Some of your info",
+        "Format JSON, not HTML → Download",
     ], startingAt: 2)
     DSSlabNote(text: "Your token stays in this iPhone's Keychain.")
 } } }
@@ -882,6 +939,8 @@ def self_test() -> bool:
         ("intro too long", DIRTY_LONG_INTRO, "words"),
         ("too many sentences", DIRTY_MANY_SENTENCES, "sentences"),
         ("step too long", DIRTY_LONG_STEP, "step is"),
+        ("a step that wraps", DIRTY_WIDE_STEP, "wraps to a second line"),
+        ("a door loose above its steps", DIRTY_LOOSE_DOOR, "one card"),
         ("footer wall", DIRTY_FOOTER, "footer carries"),
         ("too many notes", DIRTY_NOTES, "DSSlabNotes"),
     ]

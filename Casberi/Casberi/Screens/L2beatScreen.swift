@@ -130,7 +130,7 @@ struct L2beatScreen: View {
 	@ViewBuilder private var followBlock: some View {
 		if following {
 			DSCheckList(lines: [
-				"Following L2BEAT — their incidents arrive for every chain they cover."
+				"Following L2BEAT — incidents for every chain"
 			])
 		} else {
 			DSSlabButton(title: String(localized: "Follow the incidents"),

@@ -80,9 +80,9 @@ struct TikTokImportScreen: View {
                 // format (the lesson §245 paid for with Instagram's HTML
                 // default).
                 steps: [
-                    "In TikTok, open Settings and privacy, then Account, then Download your data.",
-                    "Set the format to JSON, not TXT, then Select all and Request data.",
-                    "Ready in up to 4 days — save it to Files, the link expires.",
+                    "Settings and privacy → Account → Download",
+                    "Format JSON, Select all, Request data",
+                    "Ready in up to 4 days — save it to Files",
                 ],
                 pickTitle: "Choose export",
                 pickIcon: "square.and.arrow.down",

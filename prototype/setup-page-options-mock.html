@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Setup page — three ways to make it short</title>
+<style>
+  :root{--page:#000;--primary:#fff;--secondary:rgba(235,235,245,.60);--tertiary:rgba(235,235,245,.494);
+        --well:#111113;--tint:#0a84ff;--confirm:#30d158;--card:#0f0f11}
+  *{box-sizing:border-box}
+  body{margin:0;background:#111114;color:#fff;font:14px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;padding:36px 26px 70px}
+  h1{font-size:21px;margin:0 0 6px;letter-spacing:-.01em}
+  .lede{color:rgba(235,235,245,.6);max-width:820px;margin:0 0 8px;font-size:14px}
+  .fixed{color:rgba(235,235,245,.6);max-width:820px;margin:0 0 30px;font-size:13px}
+  .fixed b{color:#7ee08f}
+  .row{display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap}
+  .col{display:flex;flex-direction:column;gap:10px;width:344px}
+  .pair{display:flex;gap:14px}
+  .cap{font-size:12.5px;color:rgba(235,235,245,.55);line-height:1.55}
+  .cap b{color:#fff;font-weight:600}
+  .tag{display:inline-block;font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600;
+       background:rgba(10,132,255,.16);color:#7fb6ff;align-self:flex-start}
+
+  .phone{width:344px;min-height:430px;border-radius:40px;background:var(--page);overflow:hidden;position:relative;
+         box-shadow:0 0 0 1px rgba(255,255,255,.08),0 24px 50px rgba(0,0,0,.55)}
+  .phone.half{width:165px;min-height:430px;border-radius:26px}
+  .pour{position:absolute;inset:0 0 auto 0;height:150px;background:linear-gradient(180deg,rgba(10,132,255,.15),rgba(0,0,0,0) 90%)}
+  .in{position:relative;padding:0 0 24px}
+  .status{display:flex;justify-content:space-between;padding:13px 20px 0;font-size:11.5px;font-weight:600}
+  .nav{display:flex;justify-content:flex-end;padding:4px 18px 0}
+  .nav b{color:var(--tint);font-size:15px}
+
+  .head{text-align:center;padding:10px 18px 12px}
+  .mark{width:58px;height:58px;border-radius:15px;margin:0 auto 10px;display:grid;place-items:center;
+        background:linear-gradient(160deg,#1f6feb,#0a84ff)}
+  .name{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+  .state{display:flex;gap:6px;align-items:center;justify-content:center;margin-top:7px;font-size:12.5px;
+         font-weight:500;color:var(--tertiary)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--tertiary)}
+  .intro{font-size:14px;color:var(--secondary);margin-top:8px;line-height:1.35}
+
+  .r{display:flex;align-items:center;gap:11px;min-height:52px;padding:0 18px}
+  .r.ins{padding-left:59px}
+  .disc{width:30px;height:30px;border-radius:50%;background:var(--well);display:grid;place-items:center;
+        color:var(--secondary);flex:none}
+  .disc.t{background:rgba(10,132,255,.15);color:var(--tint)}
+  .t17{font-size:16.5px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+  .t17.v{color:var(--tint)}
+  .t17.ph{color:rgba(235,235,245,.34);font-weight:400}
+  .fact{margin-left:auto;font-size:12.5px;color:var(--tertiary);white-space:nowrap}
+  .chev{color:var(--tertiary);font-size:12px;margin-left:7px}
+  .fine{padding:2px 18px 8px 59px;font-size:12.5px;color:var(--tertiary);white-space:nowrap}
+
+  /* the card */
+  .card{margin:2px 18px 8px;background:var(--card);border-radius:18px;padding:4px 0 10px}
+  .card .r{padding:0 14px}
+  .card .step{display:flex;gap:10px;padding:3px 16px;font-size:12.5px;color:var(--secondary);white-space:nowrap;align-items:baseline}
+  .card .step i{color:var(--tertiary);font-style:normal;font-size:11px;font-weight:700;width:9px}
+  .card .step.done i{color:var(--confirm)}
+
+  .steps{padding:2px 18px 8px 59px;display:flex;flex-direction:column;gap:7px;font-size:12.5px;color:var(--secondary);white-space:nowrap}
+  .steps i{color:var(--tertiary);font-style:normal;font-weight:700;font-size:11px;margin-right:8px}
+  .steps i.g{color:var(--confirm)}
+  .stagelabel{padding:16px 18px 2px;font-size:12.5px;color:var(--tertiary)}
+</style></head><body>
+
+<h1>Setup page — three ways to make it short</h1>
+<p class="lede">All three are App Store Connect, not connected — the longest form in the catalogue, so whatever survives here fits everything else.</p>
+<p class="fixed"><b>Fixed in all three, whichever wins:</b> Notes and Who may read it do not exist until the seat is connected — they are facts about an account, and there is no account yet. Every line of copy is cut to fit one line at 13pt; nothing wraps, nothing orphans. State and mode share one line.</p>
+
+<div class="row">
+
+<!-- A -->
+<div class="col">
+  <span class="tag">A · the steps go behind one row</span>
+  <div class="phone"><div class="pour"></div><div class="in">
+    <div class="status"><span>6:01</span><span>▂▄▆ 55</span></div>
+    <div class="nav"><b>Done</b></div>
+    <div class="head">
+      <div class="mark"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"><rect x="4.5" y="3.5" width="15" height="17" rx="3"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4"/></svg></div>
+      <div class="name">App Store Connect</div>
+      <div class="state"><span class="dot"></span>Not connected · Paste a key</div>
+      <div class="intro">Review verdicts and builds, as they happen.</div>
+    </div>
+    <div class="r"><div class="disc t"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 16 16 8M9 8h7v7"/></svg></div>
+      <div class="t17 v">Get your API key</div><div class="fact">apple.com</div></div>
+    <div class="r"><div class="disc"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 16.6v-4.4M12 8.4h.01"/></svg></div>
+      <div class="t17">How to get it</div><div class="fact">3 steps</div><span class="chev">›</span></div>
+    <div class="r ins"><div class="t17 ph">Paste the .p8 contents</div></div>
+    <div class="r ins"><div class="t17 ph">Key ID</div></div>
+    <div class="r ins"><div class="t17 ph">Issuer ID</div></div>
+    <div class="r ins"><div class="t17 v" style="opacity:.3">Save</div></div>
+    <div class="fine">Individual key? Leave Issuer ID empty.</div>
+  </div></div>
+  <p class="cap"><b>Seven rows, one screen, nothing wraps.</b> The three steps live behind "How to get it" and open where they are useful — while you are looking at Apple's page, not before. Shortest of the three, and the only one with no block of prose at all.</p>
+</div>
+
+<!-- B -->
+<div class="col">
+  <span class="tag">B · the instructions are a card</span>
+  <div class="phone"><div class="pour"></div><div class="in">
+    <div class="status"><span>6:01</span><span>▂▄▆ 55</span></div>
+    <div class="nav"><b>Done</b></div>
+    <div class="head">
+      <div class="mark"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"><rect x="4.5" y="3.5" width="15" height="17" rx="3"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4"/></svg></div>
+      <div class="name">App Store Connect</div>
+      <div class="state"><span class="dot"></span>Not connected · Paste a key</div>
+    </div>
+    <div class="card">
+      <div class="r"><div class="disc t"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 16 16 8M9 8h7v7"/></svg></div>
+        <div class="t17 v">Get your API key</div><span class="chev">›</span></div>
+      <div class="step"><i>1</i>Use the Developer role</div>
+      <div class="step"><i>2</i>Download the .p8 — once only</div>
+      <div class="step"><i>3</i>Key ID is on the same page</div>
+    </div>
+    <div class="r ins"><div class="t17 ph">Paste the .p8 contents</div></div>
+    <div class="r ins"><div class="t17 ph">Key ID</div></div>
+    <div class="r ins"><div class="t17 ph">Issuer ID</div></div>
+    <div class="r ins"><div class="t17 v" style="opacity:.3">Save</div></div>
+    <div class="fine">Individual key? Leave Issuer ID empty.</div>
+  </div></div>
+  <p class="cap"><b>One object for "over there", plain rows for "here".</b> The card is the whole trip to Apple's site — door and steps together — so the page reads as two things, not eight. Once connected the card is simply gone and the page is the account page you already approved.</p>
+</div>
+
+<!-- C -->
+<div class="col" style="width:auto">
+  <span class="tag">C · the page is only ever the next step</span>
+  <div class="pair">
+    <div class="phone half"><div class="pour"></div><div class="in">
+      <div class="status" style="padding:13px 12px 0"><span>6:01</span><span>55</span></div>
+      <div class="nav" style="padding:4px 11px 0"><b>Done</b></div>
+      <div class="head" style="padding:8px 10px 10px">
+        <div class="mark" style="width:46px;height:46px;border-radius:12px"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round"><rect x="4.5" y="3.5" width="15" height="17" rx="3"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4"/></svg></div>
+        <div class="name" style="font-size:20px">App Store<br>Connect</div>
+        <div class="state" style="font-size:11px">Not connected</div>
+      </div>
+      <div class="stagelabel" style="padding:10px 12px 2px">Step 1 of 3</div>
+      <div class="r" style="padding:0 12px"><div class="disc t" style="width:26px;height:26px"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 16 16 8M9 8h7v7"/></svg></div>
+        <div class="t17 v" style="font-size:14px">Get your key</div></div>
+      <div class="fine" style="padding:0 12px 8px 12px;white-space:normal;font-size:11.5px">Use the Developer role.</div>
+    </div></div>
+    <div class="phone half"><div class="pour"></div><div class="in">
+      <div class="status" style="padding:13px 12px 0"><span>6:03</span><span>55</span></div>
+      <div class="nav" style="padding:4px 11px 0"><b>Done</b></div>
+      <div class="head" style="padding:8px 10px 10px">
+        <div class="mark" style="width:46px;height:46px;border-radius:12px"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round"><rect x="4.5" y="3.5" width="15" height="17" rx="3"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4"/></svg></div>
+        <div class="name" style="font-size:20px">App Store<br>Connect</div>
+        <div class="state" style="font-size:11px">Not connected</div>
+      </div>
+      <div class="stagelabel" style="padding:10px 12px 2px">Step 3 of 3</div>
+      <div class="r" style="padding:0 12px"><div class="disc" style="width:26px;height:26px"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></div>
+        <div class="t17" style="font-size:14px">AuthKey.p8</div><span style="color:var(--confirm);margin-left:auto;font-size:12px">✓</span></div>
+      <div class="r" style="padding:0 12px 0 49px"><div class="t17" style="font-size:14px">9F3K2QX8LM</div></div>
+      <div class="r" style="padding:0 12px 0 49px"><div class="t17 ph" style="font-size:14px">Issuer ID</div></div>
+      <div class="r" style="padding:0 12px 0 49px"><div class="t17 v" style="font-size:14px">Save</div></div>
+    </div></div>
+  </div>
+  <p class="cap" style="width:344px"><b>Nothing on screen but the thing to do now.</b> The door, then the file, then the two IDs — each stage replaces the last, so the page is never longer than four rows and the steps stop being text at all. The app already stages this way internally (it tracks which steps are provably done); this makes the staging the whole screen.</p>
+</div>
+
+</div>
+</body></html>

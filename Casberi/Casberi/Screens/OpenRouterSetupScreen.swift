@@ -67,18 +67,19 @@ struct OpenRouterSetupScreen: View {
     @ViewBuilder private var setupBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             // Verb over address, the 2026-08-14 anatomy.
-            DSSlabButton(title: "Get your API key",
-                         detail: "openrouter.ai",
-                         systemImage: "arrow.up.right") {
-                DSHaptic.tap()
-                if let url = URL(string: "https://openrouter.ai/settings/keys") { openURL(url) }
-            }
             // "Paste it below" sat directly above a field placeheld "Paste
             // your OpenRouter key" — §220's own finding, in the family it
             // was never applied to (2026-07-31). With one instruction left
             // the numerals go too, per §220's boundary.
-            BridgeStepLines(steps: ["Create a key and copy it — it's checked with OpenRouter before it saves."],
-                            numbered: false)
+            BridgeSetupCard(steps: ["Create a key — checked before it saves"],
+                            numbered: false) {
+                DSSlabButton(title: "Get your API key",
+                             detail: "openrouter.ai",
+                             systemImage: "arrow.up.right") {
+                    DSHaptic.tap()
+                    if let url = URL(string: "https://openrouter.ai/settings/keys") { openURL(url) }
+                }
+            }
             DSSlabField(placeholder: AgentProvider.openrouter.placeholder, text: $keyDraft,
                         actionLabel: checking ? "Checking…" : (configured ? "Update" : "Connect"),
                         secure: true,

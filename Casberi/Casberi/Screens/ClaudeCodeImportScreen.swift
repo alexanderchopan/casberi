@@ -66,7 +66,7 @@ struct ClaudeCodeImportScreen: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             ImportArchiveSection(
                 source: "Claude Code",
-                steps: ["Open Files and press Command-Shift-Period to show hidden folders.",
+                steps: ["In Files, press ⌘⇧. for hidden folders",
                         "Pick .claude → projects, or one project folder."],
                 pickTitle: "Choose folder",
                 alreadyImported: held > 0) { importing = true }

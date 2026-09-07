@@ -121,6 +121,7 @@ struct ImportArchiveSection: View {
     let pick: () -> Void
 
     @Environment(\.openURL) private var openURL
+    @Environment(\.accountAct) private var accountAct
     @AppStorage(ImportOptions.messagesStorageKey) private var includeMessages = false
     /// Stage 3's re-open. Also true whenever there is nothing imported yet, so
     /// the block is open on a first visit without a second condition.
@@ -137,7 +138,10 @@ struct ImportArchiveSection: View {
     /// status rows inside one slab section, and a `Section` nested in a `VStack`
     /// inside a `List` is not a thing SwiftUI will render.
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        // Flush inside an account page's act (prd §640): the rows below carry
+        // their own 56pt height, and 8pt of air between them here would read
+        // as a gap the identical rows outside this stack do not have.
+        VStack(alignment: .leading, spacing: accountAct ? 0 : DS.Space.s2) {
             if open {
                 openBlock
             } else {
@@ -161,34 +165,35 @@ struct ImportArchiveSection: View {
 
     @ViewBuilder
     private var openBlock: some View {
-        if let doorTitle, let doorURL {
-            // The address rides UNDER the verb (the 2026-08-14 anatomy) — but
-            // the waiting line wins that slot when there is one: "Requested
-            // Tuesday" is news about your own archive, and the host is a fact
-            // you can read off the address bar a second later either way.
-            if pickLeads {
-                DSSlabDoor(title: doorTitle,
-                           detail: waiting ?? host(of: doorURL),
-                           systemImage: "arrow.up.right") { tapDoor(doorURL) }
-            } else {
-                DSSlabButton(title: doorTitle,
-                             detail: host(of: doorURL),
-                             systemImage: "arrow.up.right") {
-                    DSHaptic.tap()
-                    tapDoor(doorURL)
-                }
-            }
-        }
         // Unnumbered under a door (ruling 2026-08-14): the door did step one,
         // so numerals starting at 2 sent the eye hunting for a missing 1.
         // `startingAt` still rides, because `doneThrough` counts in that same
         // numbering — a door that did step one passes 1 even though step one
         // is rendered above rather than in this list.
-        BridgeStepLines(steps: steps,
+        BridgeSetupCard(steps: steps,
                         startingAt: doorTitle == nil ? 1 : 2,
                         numbered: doorTitle == nil,
                         acknowledges: true,
-                        doneThrough: waiting != nil ? 1 : 0)
+                        doneThrough: waiting != nil ? 1 : 0) {
+            if let doorTitle, let doorURL {
+                // The address rides UNDER the verb (the 2026-08-14 anatomy) — but
+                // the waiting line wins that slot when there is one: "Requested
+                // Tuesday" is news about your own archive, and the host is a fact
+                // you can read off the address bar a second later either way.
+                if pickLeads {
+                    DSSlabDoor(title: doorTitle,
+                               detail: waiting ?? host(of: doorURL),
+                               systemImage: "arrow.up.right") { tapDoor(doorURL) }
+                } else {
+                    DSSlabButton(title: doorTitle,
+                                 detail: host(of: doorURL),
+                                 systemImage: "arrow.up.right") {
+                        DSHaptic.tap()
+                        tapDoor(doorURL)
+                    }
+                }
+            }
+        }
         if showsMessagesToggle {
             // ABOVE the pick, still: this is a decision to make before the
             // import runs, not a preference to discover afterwards (§310). What

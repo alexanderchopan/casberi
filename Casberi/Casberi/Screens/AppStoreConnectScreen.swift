@@ -227,33 +227,34 @@ struct AppStoreConnectScreen: View {
 
     @ViewBuilder private var keyForm: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if let url = bridge.setupURL {
-                // Step one, doing itself (prd §218) — and it hands the
-                // filled slab over to the pick once it has been tapped, the
-                // import family's `pickLeads` staging (§314). One filled
-                // block at a time, and it is always the next thing to do.
-                if doorTapped {
-                    DSSlabDoor(title: bridge.doorTitle,
-                               detail: bridge.doorHost,
-                               systemImage: "arrow.up.right") { openDoor(url) }
-                } else {
-                    // Verb over address, the 2026-08-14 anatomy.
-                    DSSlabButton(title: bridge.doorTitle,
-                                 detail: bridge.doorHost,
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        openDoor(url)
-                    }
-                }
-            }
             // All three steps together. They used to be split around the
             // checklist — step 2, a list of four, then steps 3 and 4 —
             // which broke the one sequence on the screen in half and read
             // as more text than it was. Unnumbered (ruling 2026-08-14):
             // the door did step one; `acknowledges` keeps the green check.
-            BridgeStepLines(steps: bridge.steps, startingAt: 2,
+            BridgeSetupCard(steps: bridge.steps, startingAt: 2,
                             numbered: false, acknowledges: true,
-                            doneThrough: stepsDone)
+                            doneThrough: stepsDone) {
+                if let url = bridge.setupURL {
+                    // Step one, doing itself (prd §218) — and it hands the
+                    // filled slab over to the pick once it has been tapped, the
+                    // import family's `pickLeads` staging (§314). One filled
+                    // block at a time, and it is always the next thing to do.
+                    if doorTapped {
+                        DSSlabDoor(title: bridge.doorTitle,
+                                   detail: bridge.doorHost,
+                                   systemImage: "arrow.up.right") { openDoor(url) }
+                    } else {
+                        // Verb over address, the 2026-08-14 anatomy.
+                        DSSlabButton(title: bridge.doorTitle,
+                                     detail: bridge.doorHost,
+                                     systemImage: "arrow.up.right") {
+                            DSHaptic.tap()
+                            openDoor(url)
+                        }
+                    }
+                }
+            }
             // The READ BOUNDARY, and the only place it can be stated before
             // somebody decides to paste. Unlike Stripe's and PostHog's
             // checklists this is NOT a set of boxes to tick — Apple grants

@@ -79,7 +79,7 @@ struct DayOneImportScreen: View {
             act: {
                 ImportArchiveSection(
                     source: "Day One",
-                    steps: ["In Day One, open Settings → Import/Export → Export → JSON.",
+                    steps: ["Settings → Import/Export → Export → JSON",
                             "Save the zip to Files and tap it once to unzip."],
                     pickTitle: "Choose your Day One export",
                     pickIcon: "square.and.arrow.down",
@@ -178,7 +178,7 @@ struct JournalImportScreen: View {
             act: {
                 ImportArchiveSection(
                     source: "Apple Journal",
-                    steps: ["In Journal, tap your profile picture → Export Journal.",
+                    steps: ["Profile picture → Export Journal",
                             "Save the zip to Files and tap it once to unzip."],
                     pickTitle: "Choose the export folder",
                     alreadyImported: held > 0) { importing = true }
@@ -344,7 +344,7 @@ struct BookmarksImportScreen: View {
                 if parsed == nil {
                     ImportArchiveSection(
                         source: "Bookmarks",
-                        steps: ["Chrome: chrome://bookmarks → ⋮ → Export bookmarks.",
+                        steps: ["Chrome: chrome://bookmarks → ⋮ → Export",
                                 "Safari (Mac): File → Export Bookmarks…",
                                 "Save it to Files."],
                         pickTitle: "Choose your bookmarks export",

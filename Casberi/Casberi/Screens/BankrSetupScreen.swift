@@ -96,14 +96,15 @@ struct BankrSetupScreen: View {
             // an account is where somebody who has never heard of Bankr
             // has to start anyway, and a key page is reached from inside
             // it. The step line below says what to do once there.
-            DSSlabButton(title: configured ? "Open Bankr" : "Create an account or sign in",
-                         detail: "bankr.bot",
-                         systemImage: "person.crop.circle") {
-                DSHaptic.tap()
-                web = URL(string: "https://bankr.bot")
+            BridgeSetupCard(steps: ["Sign in, then mint a read-only key"],
+                            numbered: false) {
+                DSSlabButton(title: configured ? "Open Bankr" : "Create an account or sign in",
+                             detail: "bankr.bot",
+                             systemImage: "person.crop.circle") {
+                    DSHaptic.tap()
+                    web = URL(string: "https://bankr.bot")
+                }
             }
-            BridgeStepLines(steps: ["Sign in, then mint a read-only key and paste it below."],
-                            numbered: false)
             DSSlabField(placeholder: AgentProvider.bankr.placeholder, text: $keyDraft,
                         actionLabel: checking ? "Checking…" : (configured ? "Update" : "Connect"),
                         secure: true,

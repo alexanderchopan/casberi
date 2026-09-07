@@ -238,6 +238,9 @@ struct DSSlabField: View {
     var paste: ((String) -> Void)? = nil
     let action: () -> Void
 
+    /// Inside an account page's act this draws its ROW form (prd §640).
+    @Environment(\.accountAct) private var accountAct
+
     private var armed: Bool {
         if let isArmed { return isArmed }
         return alwaysEnabled || !text.trimmingCharacters(in: .whitespaces).isEmpty
@@ -246,6 +249,85 @@ struct DSSlabField: View {
     private var hasText: Bool { !text.isEmpty }
 
     var body: some View {
+        if accountAct { actRow } else { slab }
+    }
+
+    /// THE ENTRY ROW (prd §640) — the field itself, keeping its placeholder
+    /// and its left edge, with the verb moved to a row of its own underneath.
+    ///
+    /// The placeholder stays the label: half these fields are also the
+    /// roster's filter (§639 amendment), and a search bar re-drawn as
+    /// "Search ⟩ value" is a settings row pretending to be a finder. It fills
+    /// in with what you type, which is the same thing a titled row does.
+    private var actRow: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: DS.Space.s3) {
+                if let glyph { DSActRow.disc(glyph) }
+                Group {
+                    if let focus { field.focused(focus) } else { field }
+                }
+                if busy { ProgressView().controlSize(.small) }
+                if let paste, !hasText { pasteButton(paste) }
+                if clearable, hasText { clearButton }
+            }
+            .dsActRowFrame(glyphless: glyph == nil)
+            // The verb is its own row for the reason the slab put it inside
+            // one: it belongs to the act, not to the last input. On a row it
+            // also stops being a 40pt target wedged against a live caret.
+            if let secondaryLabel, secondaryArmed {
+                verbRow(secondaryLabel, live: true, tone: DS.textSecondary,
+                        act: secondaryAction)
+            }
+            if !actionLabel.isEmpty {
+                verbRow(actionLabel, live: armed,
+                        tone: armed ? DS.tint : DS.textTertiary, act: action)
+            }
+        }
+        .animation(DS.Motion.standard, value: secondaryArmed)
+    }
+
+    private func verbRow(_ label: String, live: Bool, tone: Color,
+                         act: @escaping () -> Void) -> some View {
+        Button(action: act) {
+            Text(LocalizedStringKey(label))
+                .dsText(.heading17)
+                .foregroundStyle(tone)
+                .animation(DS.Motion.standard, value: live)
+                .dsActRowFrame(glyphless: true)
+        }
+        .buttonStyle(.plain)
+        .disabled(!live)
+    }
+
+    private func pasteButton(_ paste: @escaping (String) -> Void) -> some View {
+        PasteButton(payloadType: String.self) { strings in
+            guard let pasted = strings.first?
+                    .trimmingCharacters(in: .whitespacesAndNewlines),
+                  !pasted.isEmpty else { return }
+            Task { @MainActor in paste(pasted) }
+        }
+        .labelStyle(.iconOnly)
+        .buttonBorderShape(.capsule)
+        .controlSize(.small)
+        .tint(DS.tint)
+        .transition(.opacity)
+    }
+
+    private var clearButton: some View {
+        Button {
+            DSHaptic.tap()
+            text = ""
+        } label: {
+            Image(systemName: "xmark.circle.fill")
+                .dsGlyph(size.glyphSize, weight: .regular)
+                .foregroundStyle(DS.textTertiary)
+                .dsTapTarget(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("Clear"))
+    }
+
+    private var slab: some View {
         // Spacing unchanged at `s3` — the glyph joins the row every existing
         // slab already lays out, rather than the row being re-tuned around it.
         HStack(spacing: DS.Space.s3) {
@@ -263,32 +345,8 @@ struct DSSlabField: View {
                 }
             }
             if busy { ProgressView().controlSize(.small) }
-            if let paste, !hasText {
-                PasteButton(payloadType: String.self) { strings in
-                    guard let pasted = strings.first?
-                            .trimmingCharacters(in: .whitespacesAndNewlines),
-                          !pasted.isEmpty else { return }
-                    Task { @MainActor in paste(pasted) }
-                }
-                .labelStyle(.iconOnly)
-                .buttonBorderShape(.capsule)
-                .controlSize(.small)
-                .tint(DS.tint)
-                .transition(.opacity)
-            }
-            if clearable, hasText {
-                Button {
-                    DSHaptic.tap()
-                    text = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .dsGlyph(size.glyphSize, weight: .regular)
-                        .foregroundStyle(DS.textTertiary)
-                        .dsTapTarget(Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text("Clear"))
-            }
+            if let paste, !hasText { pasteButton(paste) }
+            if clearable, hasText { clearButton }
             if let secondaryLabel, secondaryArmed {
                 Button(action: secondaryAction) {
                     Text(secondaryLabel)
@@ -448,7 +506,45 @@ struct DSSlabButton: View {
     var enabled = true
     let action: () -> Void
 
+    /// Inside an account page's act this draws its ROW form (prd §640).
+    @Environment(\.accountAct) private var accountAct
+
     var body: some View {
+        if accountAct { actRow } else { slab }
+    }
+
+    /// THE COMMIT ROW (prd §640) — a tinted disc and a tint verb, with the
+    /// address it opens trailing as the row's fact. Colour is the only thing
+    /// separating this from a door, which is `DSSlabDisc`'s own grammar; the
+    /// fill it used to wear is what made a form out of a column of rows.
+    private var actRow: some View {
+        Button(action: action) {
+            HStack(spacing: DS.Space.s3) {
+                if let systemImage {
+                    DSActRow.disc(systemImage, tinted: enabled && !busy)
+                }
+                Text(LocalizedStringKey(title))
+                    .dsText(.heading17)
+                    .foregroundStyle(enabled && !busy ? DS.tint : DS.textTertiary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: DS.Space.s2)
+                if busy { ProgressView().controlSize(.small) }
+                if !detail.isEmpty {
+                    Text(detail)
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
+            .dsActRowFrame(glyphless: systemImage == nil)
+            .animation(DS.Motion.standard, value: busy)
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled || busy)
+    }
+
+    private var slab: some View {
         Button(action: action) {
             HStack(spacing: DS.Space.s3) {
                 if let systemImage {
@@ -531,7 +627,45 @@ struct DSSlabDoor: View {
     var systemImage: String? = nil
     let action: () -> Void
 
+    /// Inside an account page's act this draws its ROW form (prd §640).
+    @Environment(\.accountAct) private var accountAct
+
     var body: some View {
+        if accountAct { actRow } else { slab }
+    }
+
+    /// THE DOOR ROW (prd §640) — ink disc, primary title, the fact behind the
+    /// door trailing, chevron. Identical anatomy to `AccountFactRow`, because
+    /// on the page they stand in one column.
+    private var actRow: some View {
+        Button {
+            DSHaptic.tap()
+            action()
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                if let systemImage { DSActRow.disc(systemImage) }
+                Text(LocalizedStringKey(title))
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: DS.Space.s2)
+                if !detail.isEmpty {
+                    Text(detail)
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                Image(systemName: "chevron.right")
+                    .dsGlyph(12)
+                    .foregroundStyle(DS.textTertiary)
+            }
+            .dsActRowFrame(glyphless: systemImage == nil)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var slab: some View {
         Button {
             DSHaptic.tap()
             action()
@@ -581,7 +715,20 @@ struct DSSlabSwitch: View {
     var detail: String = ""
     @Binding var isOn: Bool
 
+    /// Inside an account page's act this draws its ROW form (prd §640).
+    @Environment(\.accountAct) private var accountAct
+
     var body: some View {
+        if accountAct { toggle.dsActRowFrame(glyphless: true) }
+        else {
+            toggle
+                .padding(.horizontal, DS.Space.s4)
+                .frame(height: DSSlab.height)
+                .background(DS.gray100, in: DSSlab.shape)
+        }
+    }
+
+    private var toggle: some View {
         // `Toggle` rather than a hand-rolled knob: it keeps the switch trait
         // for VoiceOver and the whole label as the target. (Sim gotcha, not a
         // bug: switches ignore a synthetic tap — drive them with a drag
@@ -599,9 +746,6 @@ struct DSSlabSwitch: View {
             }
         }
         .tint(DS.tint)
-        .padding(.horizontal, DS.Space.s4)
-        .frame(height: DSSlab.height)
-        .background(DS.gray100, in: DSSlab.shape)
     }
 }
 
@@ -618,14 +762,22 @@ struct DSSlabNote: View {
     let text: String
     var plain = false
 
+    /// The act is always plain, whatever the call site passes (prd §640) —
+    /// a centred paragraph in a left-aligned column of rows reads as a
+    /// fragment of some other screen, and 56 call sites had to remember.
+    @Environment(\.accountAct) private var accountAct
+
+    private var left: Bool { plain || accountAct }
+
     var body: some View {
         Text(LocalizedStringKey(text))
             .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-            .multilineTextAlignment(plain ? .leading : .center)
+            .multilineTextAlignment(left ? .leading : .center)
             .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: plain ? .leading : .center)
-            .padding(.vertical, plain ? DS.Space.s2 : 0)
-            .padding(.top, plain ? 0 : DS.Space.s1)
+            .frame(maxWidth: .infinity, alignment: left ? .leading : .center)
+            .padding(.leading, accountAct ? DSActRow.inset : 0)
+            .padding(.vertical, left ? DS.Space.s2 : 0)
+            .padding(.top, left ? 0 : DS.Space.s1)
     }
 }
 
@@ -648,6 +800,10 @@ struct DSSlabNote: View {
 /// neutral bullet instead; the checkmark stays for what's actually granted.
 struct DSCheckList: View {
     let lines: [String]
+    /// Quieter and inset inside an act (prd §640): the claim is the same, but
+    /// at `callout15` secondary a six-line list out-weighs every row it sits
+    /// between.
+    @Environment(\.accountAct) private var accountAct
     /// The leading mark. Defaults to the granted-capability checkmark.
     var systemImage = "checkmark"
     /// Its color — confirm green reads as "yes, you have this"; tertiary is the
@@ -662,11 +818,14 @@ struct DSCheckList: View {
                         .dsGlyph(11, weight: .bold)
                         .foregroundStyle(tint ?? DS.confirm)
                     Text(LocalizedStringKey(line))
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .dsText(accountAct ? .subhead13 : .callout15)
+                        .foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
+        .padding(.leading, accountAct ? DSActRow.inset : 0)
+        .padding(.vertical, accountAct ? DS.Space.s2 : 0)
     }
 }
 

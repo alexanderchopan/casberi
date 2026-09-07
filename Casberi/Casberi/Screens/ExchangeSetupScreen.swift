@@ -93,16 +93,17 @@ struct ExchangeSetupScreen: View {
 
     @ViewBuilder private var setupBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if let url = setupURL {
-                // Verb over address, the 2026-08-14 anatomy.
-                DSSlabButton(title: "Get your API key",
-                             detail: doorHost,
-                             systemImage: "arrow.up.right") {
-                    DSHaptic.tap()
-                    openURL(url)
+            BridgeSetupCard(steps: steps, numbered: false) {
+                if let url = setupURL {
+                    // Verb over address, the 2026-08-14 anatomy.
+                    DSSlabButton(title: "Get your API key",
+                                 detail: doorHost,
+                                 systemImage: "arrow.up.right") {
+                        DSHaptic.tap()
+                        openURL(url)
+                    }
                 }
             }
-            BridgeStepLines(steps: steps, numbered: false)
             DSSlabField(placeholder: keyPlaceholder,
                         text: $keyDraft, actionLabel: "", action: connect)
             DSSlabField(placeholder: secretPlaceholder,

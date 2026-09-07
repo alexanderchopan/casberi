@@ -101,15 +101,16 @@ struct PolarScreen: View {
     /// key is replaced by exactly the path it was pasted.
     @ViewBuilder private var tokenBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if let url = TokenBridge.polar.setupURL {
-                DSSlabButton(title: TokenBridge.polar.doorTitle,
-                             detail: TokenBridge.polar.doorHost,
-                             systemImage: "arrow.up.right") {
-                    DSHaptic.tap()
-                    openURL(url)
+            BridgeSetupCard(steps: [TokenBridge.polar.steps[0]], numbered: false) {
+                if let url = TokenBridge.polar.setupURL {
+                    DSSlabButton(title: TokenBridge.polar.doorTitle,
+                                 detail: TokenBridge.polar.doorHost,
+                                 systemImage: "arrow.up.right") {
+                        DSHaptic.tap()
+                        openURL(url)
+                    }
                 }
             }
-            BridgeStepLines(steps: [TokenBridge.polar.steps[0]], numbered: false)
             // The four scopes ARE the read-only promise (Stripe's own
             // reasoning) — a token minted with only these physically
             // cannot refund, cancel, or create anything. Orders joined

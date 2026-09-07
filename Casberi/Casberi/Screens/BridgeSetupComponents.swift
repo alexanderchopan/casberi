@@ -110,6 +110,61 @@ extension View {
 /// governs (`DSSlabNote`) or in the error copy that already states it.
 
 
+/// THE GUIDE CARD — the trip to the other site, as ONE object (prd §640b,
+/// user picked it out of three directions: *"maybe the connect info is on a
+/// card"*).
+///
+/// §640 turned the act into a column of rows and the page got shorter without
+/// getting clearer: the door, three steps, a checklist and three entries were
+/// eight loose blocks reading as one undifferentiated list. The split a
+/// person actually makes is **over there / here** — what you do on the
+/// provider's site, and what you do in this app — and the card is that split
+/// drawn. Everything inside it happens somewhere else; everything below it is
+/// a row on the page you are standing on.
+///
+/// The door keeps its ADDRESS (§613): the verb says what you get, the host
+/// trails it, and it stays on the control so the door is checkable against
+/// the address bar it opens.
+///
+/// One object, so one fill — the card is the `surfaceWell` tone with
+/// `DS.pourInk` over it, clipped to the widget radius (§545's recipe; on ink
+/// the tone alone is a 1.03:1 step and draws no corner).
+struct BridgeSetupCard<Door: View>: View {
+    let steps: [String]
+    var startingAt = 2
+    var numbered = false
+    var acknowledges = false
+    var doneThrough = 0
+    @ViewBuilder var door: () -> Door
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            door()
+            if !steps.isEmpty {
+                BridgeStepLines(steps: steps, inCard: true, startingAt: startingAt,
+                                numbered: numbered, acknowledges: acknowledges,
+                                doneThrough: doneThrough)
+            }
+        }
+        // The card's own margin. The door's disc then starts 14pt in and its
+        // title 60pt in, which is exactly where `BridgeStepLines`'s act inset
+        // puts the step text — one column inside the card, continuous with
+        // the rows outside it.
+        .padding(.horizontal, DS.Space.s3)
+        .padding(.bottom, DS.Space.s1)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+                .fill(DS.surfaceWell)
+                .overlay {
+                    RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+                        .fill(DS.pourInk)
+                }
+        }
+        .padding(.vertical, DS.Space.s2)
+    }
+}
+
 /// The steps that remain after the door (prd §218, 2026-07-25).
 ///
 /// Every keyed bridge's setup used to open with "Open &lt;url&gt;…" set in body
@@ -124,6 +179,11 @@ extension View {
 /// manual page.
 struct BridgeStepLines: View {
     let steps: [String]
+    /// Drawn inside `BridgeSetupCard`, which already carries the indent — the
+    /// numeral column then sits under the door's disc rather than under its
+    /// title, which buys the copy 46pt and is the difference between a step
+    /// that fits one line and one that wraps (prd §640b).
+    var inCard = false
     /// The number the first line wears — 2 when a door did step one.
     var startingAt = 2
     /// Off when what's left after the door isn't a SEQUENCE (prd §220): a lone
@@ -154,6 +214,11 @@ struct BridgeStepLines: View {
     /// once there is really something in the field. Defaults to 0, so the
     /// seventeen screens that don't pass it render exactly as before.
     var doneThrough = 0
+
+    /// Quieter and inset inside an act (prd §640): three steps at
+    /// `callout15` secondary were the largest block of text on a setup page,
+    /// out-weighing the rows they explain.
+    @Environment(\.accountAct) private var accountAct
 
     /// Ticks trail `doneThrough` by one cascade so the checks land in
     /// sequence rather than all at once (set immediately under Reduce Motion).
@@ -202,7 +267,7 @@ struct BridgeStepLines: View {
                         .frame(width: 13, alignment: .trailing)
                     }
                     Text(LocalizedStringKey(text))
-                        .dsText(.callout15)
+                        .dsText(accountAct ? .subhead13 : .callout15)
                         // A finished step recedes; the live one is the sentence
                         // to read. Neither is ever hidden — §186's "the steps
                         // stay whole and visible" is what this component is for.
@@ -212,8 +277,9 @@ struct BridgeStepLines: View {
                 }
             }
         }
-        .padding(.horizontal, DS.Space.s2)
-        .padding(.vertical, DS.Space.s1)
+        .padding(.leading, inCard ? 0 : (accountAct ? DSActRow.inset : DS.Space.s2))
+        .padding(.trailing, DS.Space.s2)
+        .padding(.vertical, accountAct ? DS.Space.s2 : DS.Space.s1)
         .onAppear { ticked = doneThrough }
         .onChange(of: doneThrough) { old, now in
             // Backwards (a field cleared, a key replaced) settles at once —
@@ -330,6 +396,8 @@ struct BridgeSyncStatusRows: View {
     /// "these people arrived," not "a number arrived" (delight 2026-07-14).
     var faces: [String] = []
     var faceFallback: String = ""
+    /// Inset to the title column inside an act (prd §640).
+    @Environment(\.accountAct) private var accountAct
     @State private var shakes = 0
 
     var body: some View {
@@ -337,8 +405,11 @@ struct BridgeSyncStatusRows: View {
             HStack(spacing: DS.Space.s2) {
                 ProgressView().controlSize(.small)
                 Text(syncingLine)
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .dsText(accountAct ? .subhead13 : .callout15)
+                    .foregroundStyle(DS.textTertiary)
             }
+            .padding(.leading, accountAct ? DSActRow.inset : 0)
+            .padding(.vertical, accountAct ? DS.Space.s2 : 0)
             .dsListCardRow()
         } else if let proof {
             let failed = proof.isFailure
@@ -357,9 +428,11 @@ struct BridgeSyncStatusRows: View {
                         CountUpText(text: proof.line)
                     }
                 }
-                .dsText(.callout15)
+                .dsText(accountAct ? .subhead13 : .callout15)
                 .foregroundStyle(failed ? DS.attention : DS.confirm)
             }
+            .padding(.leading, accountAct ? DSActRow.inset : 0)
+            .padding(.vertical, accountAct ? DS.Space.s2 : 0)
             .dsListCardRow()
         }
     }

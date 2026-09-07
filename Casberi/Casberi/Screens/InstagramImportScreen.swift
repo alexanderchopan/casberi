@@ -89,12 +89,12 @@ struct InstagramImportScreen: View {
                 // actually be acted on. A step says what to do; an error
                 // says why it didn't work.
                 steps: [
-                    "Choose Download or transfer information, then Some of your information.",
-                    "Tick Saved, Likes, Posts, Stories, Reels and Comments.",
-                    "Set Format to JSON, not HTML, then Download to device.",
+                    "Download or transfer → Some of your info",
+                    "Tick Saved, Likes, Posts, Stories, Reels",
+                    "Format JSON, not HTML → Download",
                     // "then pick the unzipped folder below" was the button
                     // beneath it read out loud (2026-07-31).
-                    "They email a link in about an hour — unzip it in Files.",
+                    "A link arrives in about an hour",
                 ],
                 pickTitle: "Choose folder",
                 alreadyImported: held > 0,
