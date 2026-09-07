@@ -34,26 +34,36 @@ only door is `-forceBackgroundLaunch YES`, which proves the branch renders and
 proves nothing about the watchdog. A rule nothing can exercise has to be held
 statically or not at all.
 
-Seven checks, static, on a COMMENT-STRIPPED copy — this file and all three
+Eight checks, static, on a COMMENT-STRIPPED copy — this file and all three
 sources document the rule by naming the very symbols that enforce it, so a guard
 reading raw source is satisfied by the prose explaining it (the Obsidian/Cursor
 lesson, and the one `privacy-cover-audit.py` earned first).
 
-  A. The launch is STAMPED, in `didFinishLaunchingWithOptions`. That callback is
-     the only place `applicationState` answers about the LAUNCH rather than
-     about the moment it was asked. No stamp ⇒ the flag is false forever ⇒ the
-     gate is open forever, silently.
-  B. `BackgroundLaunch` STORES the answer. A computed property re-reading
-     `applicationState` would say "not background" the instant the app wakes,
-     which is exactly when the shell must still be withheld.
+  A. The app delegate does NOT stamp the fact. Build 537 did, from
+     `applicationState` inside `didFinishLaunchingWithOptions`, on the premise
+     that the value separates a background launch from a foreground one. It does
+     not: `applicationState` is derived from the app's SCENES, none of which has
+     connected at that callback, so it reads `.background` for EVERY launch —
+     measured on every simulator launch and every line of build 537's Mac logs.
+     The gate then never opened on Mac, where neither of the two mount doors of
+     the day posts for a launch, and the app shipped a blank window.
+  B. The fact is asked of the SCENE and MEMOISED. `connectedScenes` +
+     `activationState` is the per-scene truth (`.background` for a refresh
+     launch, `.foregroundInactive` for a watched one); memoising is what the
+     stored flag used to buy — re-derived later it would say "not background"
+     the instant the app wakes, which is exactly when the shell must still be
+     withheld.
   C. `RootShell`'s mount flag starts from that fact, negated.
   D. `shellBase` is the gate: the shell's content is behind `if shellMounted`.
   E. Nothing ever sets it back to false. Unmounting on background is §614's root
      invalidation wearing a different name — the whole-tree update inside the
      snapshot transaction that made the privacy cover a `UIWindow`.
-  F. BOTH mount doors survive: the scene-phase observer and
-     `willEnterForegroundNotification`. One door is one bug away from a shell
-     that never builds — an app that opens to a blank page.
+  F. ALL FOUR mount doors survive: the scene-phase observer,
+     `willEnterForegroundNotification`, `didBecomeActiveNotification` (the only
+     activation signal a Catalyst LAUNCH posts) and the direct read in `.task`
+     (which waits on no signal at all, so it cannot miss one). Two doors were
+     one bug away from an app that opens to a blank page, and build 537 is that
+     bug: on Mac neither of them fired.
   G. `onOpenURL` and the Spotlight continuation stay OUTSIDE the gated body. A
      deep link arriving at a background-launched process that is being opened
      would be dropped by a handler that is not in the tree, and the loss is
@@ -82,16 +92,40 @@ SHELL = Path("Casberi/Casberi/Shell/RootShell.swift")
 
 STAMP = r"BackgroundLaunch\.record\s*\("
 DID_FINISH = r"didFinishLaunchingWithOptions"
-# STORED, and the `=` is the whole point: a computed `static var … : Bool {`
-# matches any looser spelling of this and is exactly what check B rejects.
-STORED = r"static\s+var\s+isBackgroundLaunch\s*(?::[^={]*)?=\s*\S"
-READS_STATE = r"applicationState\s*==\s*\.background"
+# MEMOISED: a backing `Bool?` that the accessor writes exactly once. This is
+# what the stored flag used to buy — one answer for the life of the process —
+# now that the answer cannot be known until a scene exists.
+MEMO_STORE = r"static\s+var\s+stamped\s*:\s*Bool\?"
+MEMO_WRITE = r"\bstamped\s*=\s*answer\b"
+# The per-scene truth, and the two halves must BOTH be named: `connectedScenes`
+# alone could be counted, `activationState` alone could be read off something
+# else.
+READS_SCENE = (r"connectedScenes", r"activationState")
+# The false premise itself. The fact file may not derive the answer from the
+# APPLICATION's state at all — that is the whole of build 537's defect, and a
+# regression would otherwise look exactly like the code that shipped it.
+APP_STATE_SOURCE = r"applicationState"
 FLAG_INIT = r"@State\s+.*\bshellMounted\s*=\s*!\s*BackgroundLaunch\.isBackgroundLaunch"
 GATE = r"if\s+shellMounted\b"
 UNMOUNT = r"\bshellMounted\s*=\s*false\b"
 MOUNT = r"\bshellMounted\s*=\s*true\b"
 PHASE_DOOR = r"phase\s*!=\s*\.background"
 FOREGROUND_DOOR = r"willEnterForegroundNotification"
+# Door three is the Mac's, and the pattern demands the MOUNT be above the
+# platform guard — `shellMounted = true` on the notification's own line block
+# before `isMacCatalystApp` appears. Checked as an ordering, because a mount
+# below that guard is a mount iOS never takes and Mac takes only by luck.
+# A TEMPERED match: the run between the notification and the mount may not
+# contain `isMacCatalystApp`. Spelling it as "…{0,400}?…isMacCatalystApp"
+# instead passed the very fixture it was written for — the guard moved above
+# the mount, and the trailing `isMacCatalystApp` was found in the NEXT door.
+MAC_DOOR = (r"didBecomeActiveNotification"
+            r"(?:(?!isMacCatalystApp)[\s\S]){0,400}?\bshellMounted\s*=\s*true\b")
+# Door four waits on nothing: it reads the live application state once the view
+# is attached. This is the only door whose correctness does not depend on a
+# notification being posted, which is why every platform takes it.
+DIRECT_DOOR = (r"applicationState\s*!=\s*\.background\s*\{\s*"
+               r"shellMounted\s*=\s*true")
 GATED_BODY = r"private\s+var\s+shellContent\s*:"
 # `\b`, not `\(`: both are written with a TRAILING CLOSURE in this app, so a
 # pattern demanding a parenthesis matches neither and check G would pass over
@@ -175,40 +209,46 @@ def audit(app: str, fact: str, shell: str) -> list[str]:
     shell_lines = shell_s.split("\n")
     findings: list[str] = []
 
-    # --- A. the launch is stamped, in the one callback that can answer -------
-    stamped = re.search(STAMP, app_s)
-    if not stamped:
+    # --- A. the app delegate does NOT stamp the fact -------------------------
+    if re.search(STAMP, app_s):
         findings.append(
-            "nothing calls `BackgroundLaunch.record(…)` — the flag stays false "
-            "for every launch, so the gate is open on a background launch and "
-            "the shell builds under the watchdog again, silently"
+            "the app delegate stamps `BackgroundLaunch.record(...)` again — "
+            "that is build 537's defect exactly: no scene has connected at "
+            "`didFinishLaunchingWithOptions`, so `applicationState` reads "
+            "`.background` for EVERY launch there and the gate closes on a "
+            "launch someone is watching"
         )
-    else:
-        launch_body, err = body_of(app_s.split("\n"), DID_FINISH)
-        if err:
-            findings.append(err)
-        elif launch_body is None or not re.search(STAMP, launch_body):
+    launch_body, err = body_of(app_s.split("\n"), DID_FINISH)
+    if err:
+        findings.append(err)
+    elif launch_body is not None and re.search(APP_STATE_SOURCE, launch_body):
+        findings.append(
+            "`didFinishLaunchingWithOptions` reads `applicationState` — it "
+            "cannot answer about the launch there, and reading it is how the "
+            "Mac shipped a blank window"
+        )
+
+    # --- B. the fact is asked of the SCENE, and memoised ---------------------
+    if re.search(APP_STATE_SOURCE, fact_s):
+        findings.append(
+            "`BackgroundLaunch` reads `applicationState` — the answer must "
+            "come from the SCENE (`connectedScenes` / `activationState`); the "
+            "application's own state is derived from those scenes and reads "
+            "`.background` before any of them connects"
+        )
+    for pattern in READS_SCENE:
+        if not re.search(pattern, fact_s):
             findings.append(
-                "`BackgroundLaunch.record(…)` is not inside "
-                "`didFinishLaunchingWithOptions` — `applicationState` answers "
-                "about the LAUNCH only there; anywhere later it answers about "
-                "the moment it was asked"
+                f"`BackgroundLaunch` never names `{pattern}` — it cannot know "
+                "what it claims to know about the scene it gates"
             )
-
-    # --- B. the answer is STORED, not recomputed -----------------------------
-    if not re.search(STORED, fact_s):
+    if not re.search(MEMO_STORE, fact_s) or not re.search(MEMO_WRITE, fact_s):
         findings.append(
-            "`BackgroundLaunch.isBackgroundLaunch` is not a stored `static var` "
-            "— a computed one re-reads `applicationState` and reports 'not "
-            "background' the instant the app wakes, which is precisely when the "
-            "shell must still be withheld"
+            "`BackgroundLaunch` does not memoise its answer into a `Bool?` — "
+            "re-derived on a later read it reports 'not background' the "
+            "instant the app wakes, which is precisely when the shell must "
+            "still be withheld"
         )
-    if not re.search(READS_STATE, fact_s):
-        findings.append(
-            "`BackgroundLaunch` never compares `applicationState` to "
-            "`.background` — it cannot know what it claims to know"
-        )
-
     # --- C. the mount flag starts from that fact -----------------------------
     if not re.search(FLAG_INIT, shell_s):
         findings.append(
@@ -261,6 +301,20 @@ def audit(app: str, fact: str, shell: str) -> list[str]:
                 "is the one that fires BEFORE the phase moves, i.e. the earliest "
                 "signal on the only path that matters"
             )
+        if not re.search(MAC_DOOR, window):
+            findings.append(
+                "the `didBecomeActiveNotification` mount door is gone, or its "
+                "mount sits below the `isMacCatalystApp` guard — it is the "
+                "ONLY activation signal a Catalyst launch posts, and without "
+                "it the Mac opens to a blank window (build 537)"
+            )
+        if not re.search(DIRECT_DOOR, window):
+            findings.append(
+                "the direct-read mount door in `.task` is gone — it is the one "
+                "door that waits on no notification, so it is the only one "
+                "that cannot be lost by a platform that does not post the "
+                "signal the other three listen for"
+            )
 
     # --- G. the always-live doors stay outside the gate ----------------------
     gated, err = body_of(shell_lines, GATED_BODY)
@@ -290,6 +344,20 @@ APP_CLEAN = """
 class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        application.shortcutItems = []
+        return true
+    }
+}
+"""
+
+# BUILD 537 ITSELF. The stamp is back in `didFinishLaunchingWithOptions`, where
+# it reads `.background` for every launch there is — the shape that shipped, and
+# the shape a future pass is most likely to re-propose, because it reads like
+# the earliest and therefore the most careful place to ask.
+APP_537_STAMP = """
+class AppDelegate: UIResponder, UIApplicationDelegate {
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         BackgroundLaunch.record(application)
         application.shortcutItems = []
         return true
@@ -297,25 +365,45 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 }
 """
 
-# The stamp moved to a callback that runs later. `applicationState` there
-# answers about the moment it was asked, not about the launch.
-APP_LATE_STAMP = """
+# The stamp gone but the false premise left behind: the delegate still decides
+# the launch from the APPLICATION's state, under some other name.
+APP_READS_APP_STATE = """
 class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        LaunchFacts.wasBackground = application.applicationState == .background
         application.shortcutItems = []
         return true
-    }
-
-    func sceneDidBecomeActive(_ scene: UIScene) {
-        BackgroundLaunch.record(UIApplication.shared)
     }
 }
 """
 
-APP_NO_STAMP = APP_CLEAN.replace("        BackgroundLaunch.record(application)\n", "")
-
 FACT_CLEAN = """
+enum BackgroundLaunch {
+    nonisolated(unsafe) private static var stamped: Bool?
+
+    static var isBackgroundLaunch: Bool {
+        if let stamped { return stamped }
+        let answer = resolve()
+        stamped = answer
+        return answer
+    }
+
+    private static func resolve() -> Bool {
+        let scenes = UIApplication.shared.connectedScenes
+        guard !scenes.isEmpty else { return false }
+        return !scenes.contains { scene in
+            scene.activationState == .foregroundActive
+                || scene.activationState == .foregroundInactive
+        }
+    }
+}
+"""
+
+# BUILD 537's fact: the application's state, stored once, in the app delegate.
+# `applicationState` is derived FROM the scenes, so before one connects it is
+# `.background` on every launch — this fixture is the defect verbatim.
+FACT_537 = """
 enum BackgroundLaunch {
     nonisolated(unsafe) private(set) static var isBackgroundLaunch = false
     static func record(_ application: UIApplication) {
@@ -324,12 +412,30 @@ enum BackgroundLaunch {
 }
 """
 
-FACT_COMPUTED = """
+# The scene asked, but the answer re-derived on every read — so it reports
+# "not background" the instant the app wakes, which is when the shell must
+# still be withheld.
+FACT_NOT_MEMOISED = """
 enum BackgroundLaunch {
     static var isBackgroundLaunch: Bool {
-        UIApplication.shared.applicationState == .background
+        let scenes = UIApplication.shared.connectedScenes
+        return !scenes.contains { $0.activationState == .foregroundActive }
     }
-    static func record(_ application: UIApplication) {}
+}
+"""
+
+# Memoised, but the question asked of nothing in particular — a flag somebody
+# else sets. It names neither `connectedScenes` nor `activationState`, so it
+# cannot know what it claims to know.
+FACT_NO_SCENE = """
+enum BackgroundLaunch {
+    nonisolated(unsafe) private static var stamped: Bool?
+    static var isBackgroundLaunch: Bool {
+        if let stamped { return stamped }
+        let answer = ProcessInfo.processInfo.environment["BG"] != nil
+        stamped = answer
+        return answer
+    }
 }
 """
 
@@ -349,6 +455,18 @@ struct RootShell: View {
         .onChange(of: scenePhase) { _, phase in
             if phase != .background { shellMounted = true }
             if phase == .active { handleActivation() } else { handleDeactivation(phase: phase) }
+        }
+        .onReceive(NotificationCenter.default.publisher(
+            for: UIApplication.didBecomeActiveNotification)) { _ in
+            shellMounted = true
+            guard ProcessInfo.processInfo.isMacCatalystApp else { return }
+            handleActivation()
+        }
+        .task {
+            if UIApplication.shared.applicationState != .background { shellMounted = true }
+            guard ProcessInfo.processInfo.isMacCatalystApp,
+                  UIApplication.shared.applicationState == .active else { return }
+            handleActivation()
         }
         .onReceive(NotificationCenter.default.publisher(
             for: UIApplication.willEnterForegroundNotification)) { _ in
@@ -407,6 +525,36 @@ SHELL_NO_PHASE_DOOR = SHELL_CLEAN.replace(
     "            if phase != .background { shellMounted = true }\n", ""
 )
 
+# BUILD 537's SHELL: the two notification doors only. On Mac neither posts for
+# a launch, so this is the blank window verbatim.
+SHELL_537_DOORS = SHELL_CLEAN.replace(
+    """            shellMounted = true
+            guard ProcessInfo.processInfo.isMacCatalystApp else { return }
+""",
+    "            guard ProcessInfo.processInfo.isMacCatalystApp else { return }\n",
+).replace(
+    "            if UIApplication.shared.applicationState != .background { shellMounted = true }\n",
+    "",
+)
+
+# The Mac door's mount pushed BELOW the platform guard — present, greppable,
+# and reached on exactly the platform that already had another door.
+SHELL_MAC_MOUNT_BELOW_GUARD = SHELL_CLEAN.replace(
+    """            shellMounted = true
+            guard ProcessInfo.processInfo.isMacCatalystApp else { return }
+            handleActivation()
+""",
+    """            guard ProcessInfo.processInfo.isMacCatalystApp else { return }
+            shellMounted = true
+            handleActivation()
+""",
+)
+
+SHELL_NO_DIRECT_DOOR = SHELL_CLEAN.replace(
+    "            if UIApplication.shared.applicationState != .background { shellMounted = true }\n",
+    "",
+)
+
 # The link door dragged inside the gate — the silent one. The app still opens;
 # it just opens on the wrong screen, indistinguishable from a mistyped link.
 SHELL_LINK_INSIDE = SHELL_CLEAN.replace(
@@ -446,11 +594,19 @@ SHELL_GLOB_COMMENT = (
 def self_test() -> tuple[int, int]:
     cases = [
         ("clean tree", APP_CLEAN, FACT_CLEAN, SHELL_CLEAN, False),
-        ("no stamp at all", APP_NO_STAMP, FACT_CLEAN, SHELL_CLEAN, True),
-        ("stamp moved out of didFinishLaunching",
-         APP_LATE_STAMP, FACT_CLEAN, SHELL_CLEAN, True),
-        ("the fact recomputed instead of stored",
-         APP_CLEAN, FACT_COMPUTED, SHELL_CLEAN, True),
+        ("build 537: the app delegate stamps the launch again",
+         APP_537_STAMP, FACT_CLEAN, SHELL_CLEAN, True),
+        ("build 537: the fact read from applicationState",
+         APP_CLEAN, FACT_537, SHELL_CLEAN, True),
+        ("build 537: only the two notification doors",
+         APP_CLEAN, FACT_CLEAN, SHELL_537_DOORS, True),
+        ("the delegate reads applicationState under another name",
+         APP_READS_APP_STATE, FACT_CLEAN, SHELL_CLEAN, True),
+        ("the fact re-derived on every read", APP_CLEAN, FACT_NOT_MEMOISED, SHELL_CLEAN, True),
+        ("the fact never asks the scene", APP_CLEAN, FACT_NO_SCENE, SHELL_CLEAN, True),
+        ("the Mac door mounts below its platform guard",
+         APP_CLEAN, FACT_CLEAN, SHELL_MAC_MOUNT_BELOW_GUARD, True),
+        ("the direct-read door deleted", APP_CLEAN, FACT_CLEAN, SHELL_NO_DIRECT_DOOR, True),
         ("the gate removed", APP_CLEAN, FACT_CLEAN, SHELL_NO_GATE, True),
         ("the gate present only in a comment",
          APP_CLEAN, FACT_CLEAN, SHELL_COMMENT_ONLY, True),

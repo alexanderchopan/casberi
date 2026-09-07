@@ -50145,3 +50145,75 @@ Three passes of mockups narrowed it, and each cut landed on the same argument.
 **Mechanical, because nothing here can see it.** This is the third watchdog of this family and every one of them is invisible to the whole pass: `xcodebuild` is clean, all thirty-odd static audits passed on the crashing binary, the screen sweep photographs a healthy app, and **no machine in this repo can background-launch anything** — the simulator will not do it. `-forceBackgroundLaunch YES` proves the closed branch renders and proves nothing about the watchdog, the same bargain `-quickActionProbe` states about itself. So the rule is held statically: `scripts/background-launch-audit.py`, seven checks over comment-stripped source, twelve self-test fixtures including the shape that ships today and the shape that shipped in 534.
 
 **UNSEEN on a device, and the report is the only witness.** Nothing here was built or run — no Xcode on this machine — so the claim is structural: the shell is not in the tree for a scene connected in the background. What is owed at the next real pass is the build, the launch cycles, and one look at a normal foreground launch to confirm the gate opens invisibly (it starts OPEN there, so there should be nothing to see, which is precisely the thing worth checking).
+
+## §642b — The gate asked the wrong object and blanked the Mac: `applicationState` is `.background` on EVERY launch of a scene-based app (verify-mac.sh, 2026-09-07)
+
+**§642 shipped as build 537 with a false premise in its first line, and the premise is the kind that reads like documentation.** `BackgroundLaunch` stamped the launch from `UIApplication.applicationState` inside `didFinishLaunchingWithOptions`, on the stated ground that the value is `.background` for a background launch and `.inactive` for a foreground one, and that this callback is the only place it answers about the LAUNCH rather than about the moment it was asked. The second half is true. The first half is not: **`applicationState` is derived from the app's SCENES, and at `didFinishLaunchingWithOptions` none has connected yet** — so it reads `.background` for every launch there is, foreground ones included.
+
+**Measured, not reasoned, and the measurement was free.** Every one of `verify-mac.sh`'s launch logs for build 537 carries `backgroundLaunch: yes`, and so does every launch on the simulator. The stamp that was supposed to be rare was universal.
+
+**On iOS it shipped as a near-miss; on Mac it shipped as a blank window.** iOS posts `willEnterForegroundNotification` a beat after the launch, so mount door two opened, the shell built, and the whole iOS leg of the pass — screen sweep, demo census, ten cold-launch cycles, forty-three static audits — was green on the defect. **Mac Catalyst posts neither signal for a launch**: `RootShell`'s own note, written 2026-08-01, already records that the scene is `.foregroundActive` before SwiftUI attaches the phase observer, so no transition is ever delivered; and `willEnterForeground` does not post for a launch either. Neither door opened, and the window stayed at bare `DSPageBackground`. `verify-mac.sh`'s connect probe is what caught it — the step that exists to take the door a PERSON takes rather than the route a probe can reach, which is the second time that distinction has paid for itself.
+
+**The fix is to ask the SCENE, and to ask it later.** `UIScene.ActivationState` is the per-scene fact the application-wide value is merely aggregated from: a scene connected for a `BGAppRefreshTask` is `.background`, a scene connected for a launch someone is watching is `.foregroundInactive` and then `.foregroundActive`. `BackgroundLaunch.isBackgroundLaunch` resolves from `UIApplication.shared.connectedScenes` on FIRST READ and memoises the answer — first read is `RootShell`'s `@State` default, i.e. while SwiftUI is building the window group's content for a connected scene, so the set is populated. The memoisation is load-bearing exactly as the stored flag was: re-derived later this would say "not background" the instant the app wakes, which is when the shell must still be withheld. An empty scene set answers `false` — a wrong "yes" there is a permanently blank window, a wrong "no" is only the pre-§642 behaviour, and those two costs are not comparable.
+
+**Two more mount doors, and the fourth is the one that cannot be missed.** Door three is `didBecomeActiveNotification`, the only activation signal a Catalyst launch posts, with the mount ABOVE the `isMacCatalystApp` guard that door already carried for `handleActivation` — a mount below it is a mount iOS never takes. Door four is a direct read in `.task`: if the app is not `.background` once this view is attached, mount. It waits on no notification, so it cannot lose one, which is the failure every other door turned out to have on some platform.
+
+**The general lesson, and it is not about this API.** A fact that does not exist yet cannot be stamped early — it can only be guessed, and a guess written in the earliest callback reads as the most careful choice available. Before stamping anything in `didFinishLaunchingWithOptions`, ask what the value is DERIVED from and whether that thing exists at that moment. The §377 lesson ("check which delegate the current lifecycle delivers it to") is the same lesson one layer up: here the handler was in the right place and the QUESTION was about an object that had not been created.
+
+**Mechanical, amended rather than deleted.** `background-launch-audit.py` goes to eight checks and seventeen fixtures. Check A inverts — the app delegate must NOT stamp the fact, and `didFinishLaunchingWithOptions` may not read `applicationState` at all. Check B now requires the answer to come from `connectedScenes` + `activationState` and to be memoised into a `Bool?`. Check F requires all four doors, and the Mac door's pattern is TEMPERED so the mount must precede the platform guard — its first spelling passed the very fixture written for it, matching an `isMacCatalystApp` in the next door along. Three of the seventeen fixtures are build 537 verbatim: its stamp, its fact, and its two-door shell.
+
+**SEEN this time.** Built for both platforms; a normal simulator launch stamps `backgroundLaunch: no` and paints (`chipLabels`, `firstPaint` 1938ms), `-forceBackgroundLaunch YES` stamps `yes` and then mounts through a door 0.7s later, and `verify-mac.sh`'s connect probe fires again.
+
+## §643 — The inbox frame reaches the screen everyone reads, and the store description is halved (user: "should we update the intro cover and make sure the empty feed say the same thing?", then "way too long", 2026-09-07)
+
+**What was true before.** §630's inbox frame reached exactly ONE string in the
+whole product: `FeedScreen`'s empty invitation. Three surfaces therefore made
+three different claims, and they were ordered worst-first — the intro cover,
+which every first launch reads, said *"Everything you need, in one place."*,
+a sentence that names no noun and fits a notes app, a launcher or a bank
+equally; the empty feed, reached only by somebody who LEFT the demo, carried
+the sharp one; and the store description opened on a catalogue of 100+ apps
+across 16 categories. The design law here is "before shipping a screen, remove
+one thing" and the public face was doing the opposite.
+
+**The cover takes the empty feed's sentence.** `IntroCover` leads with
+*"One inbox for all your accounts."* — the SAME string, not a variant, so the
+two screens cannot drift. Both strings were already in the catalog with all
+four translations, so the swap carried no translation debt. The subline is
+unchanged: it names the two verbs the inbox frame implies, read and ask.
+
+**The spoken form was a fourth literal, and that is how it drifts.** The
+cover's `accessibilityLabel` was one baked sentence repeating the old headline
+verbatim. Changing the drawn words would have left VoiceOver saying the retired
+ones with nothing to catch it. `coverSpoken` composes the label from the three
+strings the screen actually draws, each already translated, so a future copy
+change moves both at once.
+
+**Not a repetition.** The cover's only act starts the demo, so the path is
+cover → furnished demo, and the empty feed is reached only by leaving it. The
+two are never consecutive; §563's "one thing said three times on one screen"
+does not apply across two screens separated by the whole product.
+
+**The description is halved, and the reason is mechanical.** The App Store
+shows roughly three lines before "more", and a description is NOT indexed for
+search — name, subtitle and keywords are. So the opener carries nearly all the
+weight and everything under it is close to free, which makes a 3,983-character
+catalogue dump the worst of both: too long to read, worth nothing to rank.
+iOS is 1,794 characters now and Mac 1,778, opening on the scatter the app
+answers rather than on an inventory. **The catalogue list is gone**; the seat
+count survives as one clause inside CONNECT HONESTLY.
+
+**Three things kept deliberately, against the pull to cut further.** The words
+"productivity app" stay in the opening sentence — this app has been rejected
+under 3.1.1 and 3.1.5, and the category signal is the first thing a reviewer
+scans. The wallet clause keeps "can never trade or move funds". And the Mac
+variant is not the iOS one: `Offer.unavailableOnMac` drops Apple Wallet, Apple
+Health, Strava and HomeKit, so Apple Card, workouts and the fitness category
+are absent there and the Mac copy spends the room on the menu bar and the
+keyboard walk instead. A first cut of this entry's own Mac copy carried
+"workouts" twice, which is exactly the 2026-09-03 failure that made these two
+descriptions separate in the first place.
+
+**Nothing is pushed.** The copy is staged in `docs/store-copy.md` only.
+Description edits answer 409 while a version is In Review; promotional text
+and review notes take a PATCH.

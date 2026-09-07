@@ -80,13 +80,14 @@ struct RootShell: View {
     @State private var hasBeenActive = false
     /// **THE SHELL IS NOT BUILT FOR A SCENE CONNECTED IN THE BACKGROUND**
     /// (prd §642, build 534's watchdog). False only on a background launch —
-    /// see `BackgroundLaunch` for why that fact is stamped in the app delegate
-    /// and why building this tree at 16% CPU is an eight-second bill against a
-    /// ten-second wall. It flips true on the first sign of a foreground and
-    /// never flips back: a mount is the ordinary cold-launch build, one frame
-    /// earlier than the person can see, and UNMOUNTING on background would be
-    /// §614's root-invalidation all over again — the thing the privacy cover
-    /// became a window to avoid.
+    /// see `BackgroundLaunch` for why that fact is read from the SCENE at this
+    /// very line rather than stamped earlier in the app delegate (build 537
+    /// tried the earlier stamp and blanked the Mac), and why building this tree
+    /// at 16% CPU is an eight-second bill against a ten-second wall. It flips
+    /// true on the first sign of a foreground and never flips back: a mount is
+    /// the ordinary cold-launch build, one frame earlier than the person can
+    /// see, and UNMOUNTING on background would be §614's root-invalidation all
+    /// over again — the thing the privacy cover became a window to avoid.
     @State private var shellMounted = !BackgroundLaunch.isBackgroundLaunch
     /// Debounce for `handleActivation`'s two Mac launch-time doors — see its
     /// note. Distant past so the first activation always passes.
@@ -1686,6 +1687,11 @@ struct RootShell: View {
         // refresh cadence, standing in for the phone's constant foregrounds.
         .onReceive(NotificationCenter.default.publisher(
             for: UIApplication.didBecomeActiveNotification)) { _ in
+            // MOUNT DOOR THREE (prd §642, added the day the gate blanked the
+            // Mac). Above the platform guard on purpose: this is the ONE
+            // activation signal a Catalyst launch reliably posts, so on Mac it
+            // is not a third belt but the first door that opens at all.
+            shellMounted = true
             guard ProcessInfo.processInfo.isMacCatalystApp else { return }
             handleActivation()
         }
@@ -1694,6 +1700,14 @@ struct RootShell: View {
         // the scenePhase transition), the state is already .active at attach
         // and the notification will never re-post — read it directly once.
         .task {
+            // MOUNT DOOR FOUR (prd §642), and the one that cannot be missed:
+            // it does not wait for a notification or a transition, it READS the
+            // live state once this view is attached. If the app is foreground
+            // by then, no signal is owed and none can be lost — which is the
+            // failure the other three doors each turned out to have on some
+            // platform. Ungated by platform: a door that only exists on Mac is
+            // how the first cut of this gate shipped.
+            if UIApplication.shared.applicationState != .background { shellMounted = true }
             guard ProcessInfo.processInfo.isMacCatalystApp,
                   UIApplication.shared.applicationState == .active else { return }
             handleActivation()

@@ -62,12 +62,15 @@ enum LaunchClock {
 class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
-        // FIRST, and before any scene or view exists: was this a BACKGROUND
-        // launch? `applicationState` answers truthfully here and nowhere later
-        // (prd §642) — and `RootShell` declines to build the shell at all when
-        // the answer is yes, because doing so is what tripped build 534's
-        // scene-update watchdog.
-        BackgroundLaunch.record(application)
+        // NOTHING STAMPS THE BACKGROUND-LAUNCH FACT HERE, and that absence is
+        // the fix rather than an omission (prd §642). Build 537 read
+        // `application.applicationState` at this line, on the premise that it
+        // separates a background launch from a foreground one. It does not:
+        // `applicationState` is derived from the app's SCENES, none of which
+        // has connected yet at this callback, so it answers `.background` for
+        // EVERY launch — and the shell it gated then never built on Mac, where
+        // neither mount door posts for a launch. `BackgroundLaunch` asks the
+        // SCENE instead, on first read, from `RootShell`.
         application.shortcutItems = [
             UIApplicationShortcutItem(
                 type: QuickAction.dailyBrief,
