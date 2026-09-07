@@ -113,7 +113,10 @@ struct TokenWatchScreen: View {
         orderedWatched.filter(\.isLive).map { thing in
             let pulse = TokenPulse.shared.pulse(for: thing)
             let price = pulse?.closes.last.map { TokenChartStyle.priceText($0) }
-            let change = pulse?.change24h.map { TokenChartStyle.changeText($0) }
+            // `pulse.map`, not `pulse?.change24h.map` — inside an optional
+            // chain `change24h` is already a plain Double, so the chain's own
+            // `?.` is what makes this compile.
+            let change = pulse.map { TokenChartStyle.changeText($0.change24h) }
             let line = [price, change].compactMap { $0 }.joined(separator: " · ")
             return AccountPageShape.Row(
                 id: thing.id.uuidString,

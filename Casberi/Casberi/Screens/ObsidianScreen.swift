@@ -83,6 +83,21 @@ struct ObsidianScreen: View {
     }
 
 
+    /// The picker's outcome. Like Files', it survived the §639 migration
+    /// only as a call site — the section that carried it went with the old
+    /// chassis while the body's `.fileImporter` kept naming it.
+    private func handlePick(_ outcome: Result<URL, Error>) {
+        guard case .success(let url) = outcome else { return }
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        if obsidian.setVault(url: url) {
+            DSHaptic.tap()
+            Task { await sync(justConnected: true) }
+        } else {
+            result = .failed(String(localized: "Couldn't keep access to that folder — try picking it again."))
+        }
+    }
+
     private func sync(justConnected: Bool = false) async {
         guard !syncing else { return }
         syncing = true

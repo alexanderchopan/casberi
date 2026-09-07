@@ -47,10 +47,14 @@ struct SlackScreen: View {
             // WHICH WORKSPACE. Unlike Spotify's identity-less PKCE token,
             // Slack's OAuth response hands over the workspace name honestly,
             // so the page can say whose mentions it reads.
-            if !SlackAuth.teamName.isEmpty {
+            // `teamName` is optional — Slack has handed one over on every
+            // connect observed, but a token stored before it was read has
+            // none, and an empty string is the same absence. One binding
+            // covers both, and the row simply doesn't draw.
+            if let team = SlackAuth.teamName, !team.isEmpty {
                 HStack(spacing: DS.Space.s3) {
                     BridgeIcon(name: "Slack", size: DS.Mark.list, circular: false)
-                    Text(SlackAuth.teamName)
+                    Text(team)
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     Spacer(minLength: 0)
