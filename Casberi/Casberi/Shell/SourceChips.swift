@@ -1266,8 +1266,18 @@ struct SourceChips: View {
             // because those two are the strip's only words and §358's own
             // finding was that treating one and not the other makes the odd one
             // out read as inert.
+            //
+            // **NOR DOES THE PINNED CHIP (user, 2026-09-06: "the pinned pin
+            // flips when tapped… it looks like a glitch").** The word-chip
+            // ruling directly above generalises rather than stopping at words:
+            // the flip is an IDENTITY moment, and identity is what a BRAND MARK
+            // has. The pinned room draws `pin.fill` — a generic SF Symbol the
+            // system uses for the same verb everywhere — so there is no mark
+            // turning to face you, just a symmetric glyph inverting through
+            // itself. Its half-way frame is edge-on and near-invisible, which
+            // is exactly why it reads as a flicker rather than a turn.
             .coinFlip(trigger: "\(isActive)-\(chrome.bloomTicks[label] ?? 0)",
-                      enabled: !isWord)
+                      enabled: !isWord && label != Pinboard.room)
             // The catch bob — a thing landing from this source while the
             // person watches bumps its chip once, the flight's landing
             // generalized to bridge arrivals (delight 2026-07-13).

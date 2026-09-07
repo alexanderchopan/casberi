@@ -2529,6 +2529,33 @@ private struct PagerDrag<Content: View>: View {
         let share = min(1, abs(x) / width)
         let lifted = x != 0 && !reduceMotion
         content
+            // **THE CARD IS OPAQUE, AND THAT IS THE FIX FOR THE DOUBLE TEXT**
+            // (user, 2026-09-06: "still getting the double text… on swipe left
+            // mostly", with a screenshot of one room's rows drawn twice a few
+            // points apart).
+            //
+            // A room paints NO ground of its own — §159 moved the page coat up
+            // to the shell, so a `FeedScreen` is transparent rows and nothing
+            // else. `PagerCover` sits between that shell ground and this card,
+            // holding a PICTURE of the room being turned to, so its rows were
+            // showing straight through the live room's own: the same list
+            // twice, offset by whatever the two scroll positions differed by.
+            // The 2026-09-06 capture guard (`captureCurrentLook`) fixed a
+            // different cause of the same symptom — pictures filed under the
+            // wrong room — and could not touch this one, which is why it was
+            // still reported after that fix.
+            //
+            // The ground goes HERE rather than on the screen (which the design
+            // law forbids re-coating, and which would also coat the chip band
+            // it sits under) and rather than blanking the cover on commit: a
+            // card in a carousel is an opaque thing at every moment of its
+            // trip, so nothing behind it can ever read through it — during the
+            // drag, during the fly-out, and in the frames the arriving room is
+            // still filling in. Flat `themedPage`, not `DSPageBackground`: a
+            // chosen background photo is rendered by the screen itself, one
+            // layer up, and a second full render under an opaque layer is the
+            // waste the shell's own coat comment calls out.
+            .background { DS.themedPage.ignoresSafeArea() }
             // THE CARD (2026-09-06): the dragged room becomes a card as it
             // lifts — corners round, a lit edge appears (a shadow alone is
             // invisible on a black page), it tilts about its bottom edge in
@@ -2567,7 +2594,11 @@ private struct CardFly: ViewModifier {
             // the card leaves the way it travelled.
             .rotationEffect(.degrees(Double(direction) * 6 * progress), anchor: .bottom)
             .scaleEffect(1 - 0.08 * progress)
-            .opacity(1 - 0.4 * progress)
+            // **NO FADE.** It used to leave at 0.6 opacity, which made the
+            // card see-through over the cover underneath it for the whole
+            // flight — the same double exposure the opaque ground above
+            // exists to end, just between the leaving card and the next one.
+            // A card being dealt off a stack does not turn to glass.
     }
 }
 
