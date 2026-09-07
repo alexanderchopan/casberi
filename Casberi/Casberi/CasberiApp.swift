@@ -62,6 +62,12 @@ enum LaunchClock {
 class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        // FIRST, and before any scene or view exists: was this a BACKGROUND
+        // launch? `applicationState` answers truthfully here and nowhere later
+        // (prd §642) — and `RootShell` declines to build the shell at all when
+        // the answer is yes, because doing so is what tripped build 534's
+        // scene-update watchdog.
+        BackgroundLaunch.record(application)
         application.shortcutItems = [
             UIApplicationShortcutItem(
                 type: QuickAction.dailyBrief,

@@ -78,6 +78,16 @@ struct RootShell: View {
     @State private var dropTargetedText = false
     @Environment(\.scenePhase) private var scenePhase
     @State private var hasBeenActive = false
+    /// **THE SHELL IS NOT BUILT FOR A SCENE CONNECTED IN THE BACKGROUND**
+    /// (prd §642, build 534's watchdog). False only on a background launch —
+    /// see `BackgroundLaunch` for why that fact is stamped in the app delegate
+    /// and why building this tree at 16% CPU is an eight-second bill against a
+    /// ten-second wall. It flips true on the first sign of a foreground and
+    /// never flips back: a mount is the ordinary cold-launch build, one frame
+    /// earlier than the person can see, and UNMOUNTING on background would be
+    /// §614's root-invalidation all over again — the thing the privacy cover
+    /// became a window to avoid.
+    @State private var shellMounted = !BackgroundLaunch.isBackgroundLaunch
     /// Debounce for `handleActivation`'s two Mac launch-time doors — see its
     /// note. Distant past so the first activation always passes.
     @State private var lastActivation = Date.distantPast
@@ -1644,6 +1654,14 @@ struct RootShell: View {
         // WINDOW, not a modifier on this tree — see `PrivacyCover`, which
         // carries the two watchdog reports that moved it there.
         .onChange(of: scenePhase) { _, phase in
+            // MOUNT DOOR ONE (prd §642). Any phase that is not `.background`
+            // means a person is about to see this window, so the shell is
+            // built — including `.inactive`, which is where a foreground
+            // transition passes through and therefore the earliest honest
+            // moment. Above the activation branch on purpose: `handleActivation`
+            // drives stores the shell reads, and a build that starts one turn
+            // sooner is a build that has already read them.
+            if phase != .background { shellMounted = true }
             if phase == .active {
                 // The phone's activation door. On Mac Catalyst the LAUNCH
                 // transition never arrives here — the scene is already
@@ -1679,6 +1697,17 @@ struct RootShell: View {
             guard ProcessInfo.processInfo.isMacCatalystApp,
                   UIApplication.shared.applicationState == .active else { return }
             handleActivation()
+        }
+        // MOUNT DOOR TWO (prd §642). UIKit posts this BEFORE the scene phase
+        // moves off `.background`, so on the one path that matters — a
+        // background-launched process the person then opens — the shell starts
+        // building at the earliest signal there is. Belt and braces with the
+        // door above rather than a replacement for it: this notification is
+        // app-wide and the phase is the scene's own, and the flag is idempotent,
+        // so whichever arrives first wins and the second is a no-op.
+        .onReceive(NotificationCenter.default.publisher(
+            for: UIApplication.willEnterForegroundNotification)) { _ in
+            shellMounted = true
         }
         // The quick action's WARM door (2026-08-14). `SceneDelegate` receives
         // the long-press while this view is alive, so the brief opens on the
@@ -2051,7 +2080,33 @@ struct RootShell: View {
         }
     }
 
+    /// The gate (prd §642). One branch or the other, never both — a
+    /// `_ConditionalContent`, so the closed side costs a page of colour and
+    /// nothing else, and the open side is built exactly the way a cold launch
+    /// builds it.
+    ///
+    /// The closed branch still paints `DSPageBackground` rather than
+    /// `Color.clear`: this window is not on screen, but the moment it is asked
+    /// to be, the frame between the mount flag and the first real commit
+    /// should be the app's own page and not a white flash.
+    ///
+    /// **What stays OUTSIDE this gate is the point.** Every handler on
+    /// `shell`/`shellPhaseAware` — `onOpenURL`, the Spotlight continuation, the
+    /// scene-phase observers, the quick-action door — is mounted on a
+    /// background launch exactly as before, so nothing that can arrive while
+    /// the app is awake without a window can be dropped by the gate. What is
+    /// withheld is only the drawing: `MainSurface` and its whole-corpus
+    /// `@Query`, the navigation stack, the dock, the agent cluster.
+    @ViewBuilder
     private var shellBase: some View {
+        if shellMounted {
+            shellContent
+        } else {
+            DSPageBackground()
+        }
+    }
+
+    private var shellContent: some View {
         ZStack(alignment: .bottom) {
             // The first-paint signal (`FirstPaint`), one pixel, never hit.
             FirstPaintMarker()

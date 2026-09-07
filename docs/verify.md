@@ -191,3 +191,13 @@ this table matches ("Garmin Connect", "Strava") — that is a fact about other
 people's apps, observable only on a device. If Garmin renames its app, the
 seat silently stops claiming and its workouts fall back to Apple Health, which
 is the safe direction but is still wrong.
+
+## Background-launch audit (`scripts/background-launch-audit.py`, 2026-09-07) → prd §642
+
+**What it pins.** The shell is not BUILT for a scene connected in the background. Seven checks over comment-stripped source: the launch is stamped in `didFinishLaunchingWithOptions` (A) and the answer is STORED rather than recomputed (B); `RootShell`'s mount flag starts from that fact (C); `shellBase` branches on it (D); nothing ever unmounts (E); both mount doors survive — the scene-phase observer and `willEnterForegroundNotification` (F); and `onOpenURL` and the Spotlight continuation stay OUTSIDE the gated body (G). Twelve self-test fixtures, including the shape that ships today, the shape that shipped in build 534, and a gate that exists only as a comment.
+
+**Why an audit is the only thing that can hold this.** Build 534 was killed by the scene-update watchdog — `0x8BADF00D`, `procRole: Background`, parent `launchd`, 43 seconds old and never on screen — with the main thread inside one SwiftUI graph update and no Casberi frame on the stack. Every gate in this pass was green on that binary: the build is clean, the static audits pass, the screen sweep photographs a healthy app. And **no machine here can background-launch anything** — the simulator will not do it, so `LAUNCH_CYCLES` cannot reach this and neither can the demo census. `-forceBackgroundLaunch YES` opens the closed branch for a screenshot and proves nothing about the watchdog, which is `-quickActionProbe`'s bargain stated again. A rule nothing can exercise is held statically or not at all.
+
+**The two checks worth reading twice.** B, because a computed `isBackgroundLaunch` passes every other check in the file and defeats the whole feature — it would report "not background" the instant the app wakes, which is precisely when the shell must still be withheld. And G, because it is the one failure the gate could introduce and it is silent: a deep link arriving at a background-launched process being opened would be dropped by a handler that is not in the tree, and the app would simply open on the wrong screen.
+
+**What it deliberately does not check.** Whether the closed branch draws the right thing (it paints `DSPageBackground`; that is a look, not a rule), whether the background task should do less work on the main actor (it should, and that is its own entry), and whether the mount is fast once it happens — that is an ordinary cold-launch build, which the relaunch loop already gates.

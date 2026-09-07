@@ -777,6 +777,30 @@ python3 "$ROOT/scripts/privacy-cover-audit.py" \
   || fail "the app-switcher redaction can be raised and not lowered — see the output above"
 print -P "%F{green}✓ privacy cover audit%f"
 
+# The THIRD watchdog of the same family, and the first one nobody was looking
+# at (prd §642). iOS launches this app with nobody there — `WalletBackgroundRefresh`
+# submits a `BGAppRefreshTask` on every background — and a scene-based app still
+# gets its window scene connected, so SwiftUI built the whole shell for a frame
+# that would never be shown. Build 534 died in one graph update:
+# `GraphHost.flushTransactions` → `DynamicBody.updateValue` →
+# `_swift_getGenericMetadata`, `procRole: Background`, "exhausted real (wall
+# clock) time allowance of 10.00 seconds". The arithmetic is the app's own:
+# first paint is 1.3s (§628) and the report reads 16% CPU, so that build is
+# about eight seconds of wall clock against a ten-second wall.
+#
+# Mechanical because NO MACHINE HERE CAN BACKGROUND-LAUNCH AN APP. The
+# simulator will not do it; `-forceBackgroundLaunch YES` proves the branch
+# renders and proves nothing about the watchdog. The build is clean, every
+# other audit passed on the crashing binary, and the screen sweep photographs a
+# perfectly healthy app. A rule nothing can exercise is held statically or not
+# at all.
+step "Background launch audit"
+python3 "$ROOT/scripts/background-launch-audit.py" --self-test >/dev/null \
+  || fail "the background-launch audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/background-launch-audit.py" \
+  || fail "the shell can be built for a scene connected in the background — see the output above"
+print -P "%F{green}✓ background launch audit%f"
+
 # A view body must not write the @Observable state it reads (PERF 2026-09-01).
 # `ShellChrome`'s generated setter mutates unconditionally, so a body that
 # assigns `chrome.x` and reads it back in the same pass invalidates itself for
