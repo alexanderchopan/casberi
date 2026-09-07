@@ -2785,7 +2785,32 @@
       }
     },
     "%@ confirmed this key can't trade or withdraw." : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ confirmó que esta clave no puede operar ni retirar fondos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ が、このキーでは取引も出金もできないことを確認しました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 이 키로는 거래나 출금을 할 수 없음을 확인했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 已确认此密钥无法交易或提现。"
+          }
+        }
+      }
     },
     "%@ conversations" : {
       "localizations" : {
@@ -37223,7 +37248,32 @@
       }
     },
     "Allow all photos" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Permitir todas las fotos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべての写真へのアクセスを許可"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 사진 허용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "允许访问所有照片"
+          }
+        }
+      }
     },
     "Allow all photos in Settings" : {
       "localizations" : {
@@ -59442,7 +59492,32 @@
       }
     },
     "Files sync when you visit or open the app." : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los archivos se sincronizan cuando visitas o abres la app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "訪れたりアプリを開いたりするとファイルが同期されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "방문하거나 앱을 열면 파일이 동기화됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "当你访问或打开应用时，文件会进行同步。"
+          }
+        }
+      }
     },
     "Files the %lld addresses you just added under a new group." : {
       "localizations" : {
@@ -80882,7 +80957,32 @@
       }
     },
     "Notes sync when you visit or open the app." : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las notas se sincronizan cuando visitas o abres la app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "訪れたりアプリを開いたりするとノートが同期されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "방문하거나 앱을 열면 노트가 동기화됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "当你访问或打开应用时，笔记会进行同步。"
+          }
+        }
+      }
     },
     "Note…" : {
       "localizations" : {
@@ -84857,7 +84957,32 @@
       }
     },
     "On automatically. Read-only, never trades." : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Activado automáticamente. Solo lectura, nunca opera."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自動でオンになります。読み取り専用で、取引は行いません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "자동으로 켜집니다. 읽기 전용이며 거래하지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自动开启。只读，绝不交易。"
+          }
+        }
+      }
     },
     "On named keys" : {
       "localizations" : {
@@ -95574,7 +95699,32 @@
       }
     },
     "Reading the deals…" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leyendo las ofertas…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "セール情報を読み込んでいます…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "할인 정보 읽는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取优惠…"
+          }
+        }
+      }
     },
     "Reading the follow list…" : {
       "localizations" : {
@@ -96277,7 +96427,32 @@
       }
     },
     "Reading your mail…" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leyendo tu correo…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "メールを読み込んでいます…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "메일 읽는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取你的邮件…"
+          }
+        }
+      }
     },
     "Reading your notes…" : {
       "localizations" : {
@@ -114258,7 +114433,32 @@
       }
     },
     "The names you filed in the address book stay." : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los nombres que guardaste en la libreta de direcciones se quedan."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アドレス帳に登録した名前はそのまま残ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소록에 저장한 이름은 그대로 남습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你存入地址簿的名字会保留。"
+          }
+        }
+      }
     },
     "The nearest: %@" : {
       "localizations" : {
@@ -121060,7 +121260,32 @@
       }
     },
     "Validator #%lld" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Validador #%lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "バリデーター #%lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "검증인 #%lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "验证者 #%lld"
+          }
+        }
+      }
     },
     "Validator index" : {
       "localizations" : {
@@ -125391,7 +125616,32 @@
       }
     },
     "Watching a wallet is all it takes." : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Basta con seguir un wallet."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットを監視するだけで有効になります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑 하나만 지켜보면 됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "只需关注一个钱包即可。"
+          }
+        }
+      }
     },
     "Watching puts it in this room with your other accounts." : {
       "localizations" : {
@@ -135564,7 +135814,32 @@
       }
     },
     "a feed" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "un feed"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フィード"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "피드"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "订阅流"
+          }
+        }
+      }
     },
     "a feed you follow" : {
       "localizations" : {
@@ -135903,7 +136178,32 @@
       }
     },
     "a ticker" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "un ticker"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ティッカー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "티커"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "股票代码"
+          }
+        }
+      }
     },
     "a token" : {
       "localizations" : {
@@ -136640,7 +136940,32 @@
       }
     },
     "an address" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "una dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "地址"
+          }
+        }
+      }
     },
     "an address we can't name" : {
       "localizations" : {
@@ -136761,7 +137086,32 @@
       }
     },
     "an org or person" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "una organización o persona"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "組織や個人"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "조직이나 사람"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "组织或个人"
+          }
+        }
+      }
     },
     "an unlimited approval for %@" : {
       "localizations" : {
@@ -141021,7 +141371,32 @@
       }
     },
     "models, datasets, Spaces" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "modelos, datasets, Spaces"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "モデル、データセット、Spaces"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모델, 데이터셋, Spaces"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "模型、数据集、Spaces"
+          }
+        }
+      }
     },
     "more" : {
       "localizations" : {
@@ -142053,7 +142428,32 @@
       }
     },
     "not enough yet to compare" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "aún no hay suficiente para comparar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "比較するにはまだ足りません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 비교할 만큼 쌓이지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "数据还不足以比较"
+          }
+        }
+      }
     },
     "not in your book" : {
       "localizations" : {
@@ -142672,7 +143072,32 @@
       }
     },
     "on last week" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "frente a la semana pasada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "先週比"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지난주 대비"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "较上周"
+          }
+        }
+      }
     },
     "on one chain" : {
       "localizations" : {
@@ -143782,7 +144207,32 @@
       }
     },
     "patches, issues" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "parches, incidencias"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "パッチ、課題"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "패치, 이슈"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "补丁、问题"
+          }
+        }
+      }
     },
     "paused" : {
       "localizations" : {
@@ -144009,7 +144459,32 @@
       }
     },
     "posts" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "publicaciones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "投稿"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "게시물"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "帖子"
+          }
+        }
+      }
     },
     "posts you liked, from %@ accounts" : {
       "localizations" : {
@@ -144096,7 +144571,32 @@
       }
     },
     "products" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "productos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "商品"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "제품"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "商品"
+          }
+        }
+      }
     },
     "quiet" : {
       "localizations" : {
@@ -144800,7 +145300,32 @@
       }
     },
     "releases" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "versiones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "リリース"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "릴리스"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "版本"
+          }
+        }
+      }
     },
     "removed a module (%@)" : {
       "localizations" : {
@@ -145223,7 +145748,32 @@
       }
     },
     "rows" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "entradas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アイテム"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "항목"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "记录"
+          }
+        }
+      }
     },
     "runs didn't finish, across %lld repos" : {
       "localizations" : {
@@ -146039,7 +146589,32 @@
       }
     },
     "signs with you" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "firma contigo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一緒に署名します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "함께 서명합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "与你共同签名"
+          }
+        }
+      }
     },
     "since %@" : {
       "localizations" : {
@@ -146686,7 +147261,32 @@
       }
     },
     "takes" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "opiniones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "見解"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "의견"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "观点"
+          }
+        }
+      }
     },
     "ten weeks" : {
       "localizations" : {
@@ -148533,7 +149133,32 @@
       }
     },
     "watching" : {
-
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "siguiendo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "監視中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지켜보는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注中"
+          }
+        }
+      }
     },
     "watching for activity." : {
       "localizations" : {
