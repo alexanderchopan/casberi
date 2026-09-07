@@ -22,7 +22,6 @@ struct ObsidianScreen: View {
             name: "Obsidian", seatID: "obsidian", source: "Obsidian",
             state: AccountPageState.of(name: "Obsidian", seatID: "obsidian",
                                        connected: obsidian.connected, store: store),
-            intro: "Your notes, searchable alongside everything else. Nothing here edits or writes a note back.",
             mode: .onThisDevice,
             teardown: { obsidian.disconnect() },
             sheet: $sheet,

@@ -58,7 +58,6 @@ struct PostHogScreen: View {
             source: PostHogWatch.source,
             state: AccountPageState.of(name: "PostHog", seatID: TokenBridge.posthog.bridgeID,
                                        connected: configured, store: store),
-            intro: "Only what's news: a milestone crossed, a metric falling silent, a deploy you annotated. Aggregates only — never a person's profile.",
             mode: .pasteKey,
             keyed: true,
             rows: rows,

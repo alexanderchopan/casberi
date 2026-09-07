@@ -37,7 +37,6 @@ struct PeerScreen: View {
             name: "Peer", seatID: "peer", source: "Peer",
             state: AccountPageState.of(name: "Peer", seatID: "peer",
                                        connected: hasWallets, store: store),
-            intro: "Venmo and Cash App buys on a wallet you watch. The Venmo side never touches the chain, so it's never seen.",
             mode: .watchedWallets,
             // NOTHING TO TEAR DOWN, and that is the seat (prd §207). This
             // bridge holds no store of its own — it reads whatever wallets are

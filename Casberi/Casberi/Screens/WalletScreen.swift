@@ -71,7 +71,6 @@ struct WalletScreen: View {
             // second branch is gone with the condition that produced it: the
             // book's own door in the act slot says where to add a second, and
             // the state line says whether anything is being read.
-            intro: "Paste an address or ENS name below, or connect a wallet app. Watch up to five.",
             mode: .noAccount,
             // The connect picker, through the page's ONE presentation.
             cardSheet: { _ in

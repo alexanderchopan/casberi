@@ -23,7 +23,6 @@ struct FilesScreen: View {
             name: "Files", seatID: "files", source: "Files",
             state: AccountPageState.of(name: "Files", seatID: "files",
                                        connected: files.connected, store: store),
-            intro: "Documents searchable by their text, images by what they say. Nothing leaves this \(DS.device).",
             mode: .onThisDevice,
             teardown: { files.disconnect() },
             sheet: $sheet,

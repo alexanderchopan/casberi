@@ -32,7 +32,6 @@ struct OpenRouterSetupScreen: View {
             name: "OpenRouter", seatID: "openrouter", source: "OpenRouter",
             state: AccountPageState.of(name: "OpenRouter", seatID: "openrouter",
                                        connected: configured, store: store),
-            intro: "Answers through whichever model you've picked there — only when you tap for it.",
             mode: .pasteKey,
             keyed: true,
             // A KEY THAT ANSWERS LANDS NOTHING. There is no room, no count and

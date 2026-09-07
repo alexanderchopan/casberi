@@ -7,7 +7,7 @@ import SwiftUI
 /// Connect) and the connected route (a seat's Open) read this one table, so
 /// adding a bridge is one row — a missed case can never silently push an
 /// EmptyView. Replaces the three hand-kept switches (AppsScreen's
-/// `SetupDestination` + `connectedDestination`, AppDetailScreen's id/"setup:"
+/// `SetupDestination` + `connectedDestination`, the catalog row's id/"setup:"
 /// routing).
 enum BridgeRouter {
 
@@ -272,21 +272,6 @@ enum BridgeRouter {
             // dismiss — the second button only exists once the first has run.
             case .snapchat, .tiktok:
                 false
-            default:
-                false
-            }
-        }
-
-        /// Connects by handing over a FILE you exported yourself, not by a
-        /// live credential — so there is no "moment you connect" and nothing
-        /// arrives later on its own. Everything in the export lands in one
-        /// pass, each thing dated to when it actually happened. Used by
-        /// `AppDetailScreen` to say which of those two worlds an offer is in.
-        var isFileImport: Bool {
-            switch self {
-            case .chatgpt, .claude, .claudeCode, .gemini, .instagram, .snapchat, .tiktok, .x,
-                 .kindle, .dayOne, .appleJournal, .bookmarks:
-                true
             default:
                 false
             }

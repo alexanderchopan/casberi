@@ -34,7 +34,6 @@ struct PolarScreen: View {
             name: "Polar", seatID: TokenBridge.polar.bridgeID, source: PolarWatch.source,
             state: AccountPageState.of(name: "Polar", seatID: TokenBridge.polar.bridgeID,
                                        connected: hasToken, store: store),
-            intro: "Sales as they happen, plus what needs you: a dispute and its deadline, a refund, a subscription going bad. Never a customer's name or card.",
             mode: .pasteKey,
             keyed: true,
             teardown: {

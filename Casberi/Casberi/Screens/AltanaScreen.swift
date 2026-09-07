@@ -67,9 +67,6 @@ struct AltanaScreen: View {
             name: "Altana", seatID: "altana", source: AltanaKeystore.source,
             state: AccountPageState.of(name: "Altana", seatID: "altana",
                                        connected: connected, store: store),
-            // ACTION, not a re-pitch: the product page one tap back just said
-            // what Altana is and what it reads. What is left is what to do here.
-            intro: "Paste an account address, or watch one of the examples below.",
             mode: .noAccount,
             rows: rows,
             query: addressField,
@@ -97,6 +94,14 @@ struct AltanaScreen: View {
                     watchField
                     discoverySection
                 }
+                // THE CEILING, stated where the decision is made (prd §641's
+                // honesty sweep). Altana's registry publishes WHEN a key's
+                // authority ends and never WHAT it covers, so a keys feed
+                // invites exactly the wrong inference — that you are seeing
+                // a permission list. Unnumbered: a fact, not a step (§220).
+                BridgeStepLines(steps: [
+                    String(localized: "Says when a key stops, never what it may sign."),
+                ], numbered: false)
             },
             more: { EmptyView() },
             keySheet: { EmptyView() }

@@ -39,7 +39,6 @@ struct TikTokImportScreen: View {
             // only honest test of whether this seat is connected at all.
             state: AccountPageState.of(name: "TikTok", seatID: "tiktok",
                                        connected: held > 0, store: store),
-            intro: "Your captions, comments, saves and likes, searchable.",
             mode: .oneTimeImport,
             teardown: {},
             sheet: $sheet,

@@ -194,24 +194,6 @@ enum FeedFollowKind: String, CaseIterable {
         }
     }
 
-    /// The connect screen's one sentence (prd §315) — the mode's consequence
-    /// and the payoff, in that order. Replaced `footerLine`, which said the
-    /// same facts in the footer's tertiary gray at the bottom of the screen.
-    var setupIntro: String {
-        switch self {
-        case .substack:
-            String(localized: "Name a publication and its posts arrive, straight from its own feed. A subscriber-only post stays behind Substack's wall.")
-        case .reddit:
-            String(localized: "Name a subreddit or a person and their public posts arrive, through Reddit's own RSS.")
-        case .youtube:
-            String(localized: "Name a channel and its uploads arrive through YouTube's own feed. Shorts are tagged so you can filter them out.")
-        case .podcasts:
-            String(localized: "Name a show and its episodes arrive through the show's own public feed.")
-        case .telegram:
-            String(localized: "Name a public channel and its posts arrive from the channel's own page. Groups and your own chats are never readable this way.")
-        }
-    }
-
     var canLine: String {
         switch self {
         case .substack: "Reads the Substacks you follow."

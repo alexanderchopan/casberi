@@ -111,7 +111,6 @@ struct TokenSetupScreen: View {
             name: bridge.rawValue, seatID: bridge.bridgeID, source: bridge.source,
             state: AccountPageState.of(name: bridge.rawValue, seatID: bridge.bridgeID,
                                        connected: bridge.connected, store: store),
-            intro: bridge.setupIntro,
             // The §315 mode, back on the page it left with §639: "Not
             // connected" says nothing about what connecting will ask of you,
             // and this seat's answer changes with the bridge (GitHub offers a

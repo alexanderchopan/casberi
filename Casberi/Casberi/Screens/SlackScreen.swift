@@ -27,7 +27,6 @@ struct SlackScreen: View {
             name: "Slack", seatID: "slack", source: "Slack",
             state: AccountPageState.of(name: "Slack", seatID: "slack",
                                        connected: SlackAuth.connected, store: store),
-            intro: "Only messages that name you — never a channel's whole history, and it can never post.",
             mode: .signIn,
             teardown: { SlackAuth.disconnect() },
             sheet: $sheet,

@@ -109,7 +109,6 @@ struct AppStoreConnectScreen: View {
             // AND the four reads in the checklist below — two lists of nearly
             // the same thing, twenty words apart. The intro sells, the
             // checklist bounds.
-            intro: "Verdicts, reviews and expiring builds land as they happen. Apple offers no read-only role, so this only ever reads.",
             mode: .pasteKey,
             keyed: true,
             rows: appRows,

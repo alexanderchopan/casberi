@@ -52,7 +52,6 @@ struct XArchiveImportScreen: View {
             // (prd §315), and it is the one limit that earns the sentence's
             // second half: bookmarks are the pile an X user most expects this
             // seat to hold, and they are the one thing it can never have.
-            intro: "Every post, reply and like you ever made. Bookmarks aren't in it — X has never put them there.",
             mode: .oneTimeImport,
             teardown: {},
             sheet: $sheet,

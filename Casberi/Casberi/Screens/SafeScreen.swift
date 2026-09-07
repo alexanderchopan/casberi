@@ -48,7 +48,6 @@ struct SafeScreen: View {
             name: "Safe", seatID: "safe", source: SafeBridge.sourceName,
             state: AccountPageState.of(name: "Safe", seatID: "safe",
                                        connected: safeCount > 0, store: store),
-            intro: "A transaction waiting on your signature, the moment it's proposed. This phone can be an owner too, so nothing spends without its yes.",
             mode: .watchedWallets,
             // WHO YOU SIGN WITH is the roster. Safe earned its own source in
             // §349's amendment (it used to land under "Wallet"), so there is a
@@ -67,6 +66,18 @@ struct SafeScreen: View {
             act: {
                 connectBlock
                 signerBlock
+                // THE TWO LIMITS THAT MAKE THE SIGNING CLAIM SAFE TO PRINT
+                // (prd §641b, caught by `safetx-selftest.sh` after §641).
+                // They lived in the offer's `features` list, which the product
+                // page drew and which went with it — so the tagline went on
+                // claiming "this phone as a signer" with nothing carrying the
+                // limit. `NetworkReach` states it, but that is a sheet you
+                // tap into, not the screen where you make the key.
+                // Unnumbered: facts, not steps (§220).
+                BridgeStepLines(steps: [
+                    String(localized: "Signs behind Face ID. It can never execute."),
+                    String(localized: "This phone holds no funds."),
+                ], numbered: false)
             },
             more: { EmptyView() },
             keySheet: { EmptyView() }

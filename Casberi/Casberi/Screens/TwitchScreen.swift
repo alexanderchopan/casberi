@@ -29,7 +29,6 @@ struct TwitchScreen: View {
             name: "Twitch", seatID: "twitch", source: "Twitch",
             state: AccountPageState.of(name: "Twitch", seatID: "twitch",
                                        connected: TwitchAuth.connected, store: store),
-            intro: "The channels you follow, when they go live. It can never chat, follow, or subscribe.",
             mode: .signIn,
             teardown: { TwitchAuth.disconnect() },
             sheet: $sheet,

@@ -42020,6 +42020,34 @@
         }
       }
     },
+    "Bankr answers from its own wallet, not yours." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankr responde desde su propia cartera, no la tuya."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankr は自身のウォレットから回答します。あなたのものではありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankr는 자체 지갑으로 답합니다. 당신의 지갑이 아닙니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bankr 用它自己的钱包作答，不是你的。"
+          }
+        }
+      }
+    },
     "Bankr declined this one." : {
       "localizations" : {
         "es" : {
@@ -66179,6 +66207,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "它已无法代此账户操作。"
+          }
+        }
+      }
+    },
+    "It can't see the wallets you watch here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No puede ver las carteras que sigues aquí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここで監視しているウォレットは見えません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기서 지켜보는 지갑은 볼 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它看不到你在这里关注的钱包。"
           }
         }
       }
@@ -102531,6 +102587,34 @@
         }
       }
     },
+    "Says when a key stops, never what it may sign." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dice cuándo caduca una clave, nunca qué puede firmar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "鍵がいつ失効するかは分かりますが、何に署名できるかは分かりません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "키가 언제 만료되는지는 알려주지만, 무엇에 서명할 수 있는지는 알려주지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "只说明密钥何时失效，从不说明它能签署什么。"
+          }
+        }
+      }
+    },
     "Scan a barcode" : {
       "localizations" : {
         "es" : {
@@ -107099,6 +107183,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在签名…"
+          }
+        }
+      }
+    },
+    "Signs behind Face ID. It can never execute." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firma tras Face ID. Nunca puede ejecutar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID の背後で署名します。実行することはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID 뒤에서 서명합니다. 실행은 절대 하지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Face ID 后签名。它永远不会执行。"
           }
         }
       }
@@ -118005,6 +118117,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "本机没有签名密钥。"
+          }
+        }
+      }
+    },
+    "This phone holds no funds." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Este teléfono no guarda fondos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この電話に資金はありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 휴대폰에는 자금이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这部手机不持有任何资金。"
           }
         }
       }

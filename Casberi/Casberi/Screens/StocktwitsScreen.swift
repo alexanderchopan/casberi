@@ -69,7 +69,6 @@ struct StocktwitsScreen: View {
             name: "Stocktwits", seatID: "stocktwits", source: "Stocktwits",
             state: AccountPageState.of(name: "Stocktwits", seatID: "stocktwits",
                                        connected: connected, store: store),
-            intro: "Watch a ticker below by symbol or company name.",
             mode: .noAccount,
             rows: rows,
             query: queryField,

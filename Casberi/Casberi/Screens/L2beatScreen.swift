@@ -49,7 +49,6 @@ struct L2beatScreen: View {
 			name: "L2BEAT", seatID: L2beatWatch.seatID, source: L2beatWatch.source,
 			state: AccountPageState.of(name: "L2BEAT", seatID: L2beatWatch.seatID,
 									   connected: connected, store: store),
-			intro: "Incidents and full risk assessments for the chains you name — their judgments, never ours.",
 			mode: .noAccount,
 			// THE SHELF IS THE CHASSIS'S ROSTER NOW, and the defect it was
 			// rebuilt for goes with it: the shelf drew its lone dashed add slot

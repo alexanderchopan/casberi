@@ -32,7 +32,6 @@ struct HuggingFaceScreen: View {
             name: "Hugging Face", seatID: "huggingface", source: "Hugging Face",
             state: AccountPageState.of(name: "Hugging Face", seatID: "huggingface",
                                        connected: hf.connected, store: store),
-            intro: "New models, datasets and Spaces from the people you follow. Downloads and likes are counts, not news.",
             mode: .noAccount,
             rows: rows,
             query: authorField,

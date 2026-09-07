@@ -23,7 +23,6 @@ struct EthValidatorScreen: View {
             name: "ETH Validators", seatID: "ethvalidator", source: "ETH Validators",
             state: AccountPageState.of(name: "ETH Validators", seatID: "ethvalidator",
                                        connected: !validatorStore.watched.isEmpty, store: store),
-            intro: "An index is public, so there's nothing to sign in to. Balance, status and rewards land as they change.",
             mode: .noAccount,
             // A VALIDATOR LANDS NOTHING (§484's rowless nine): its balance
             // folds into the combined total and no row reaches the feed, so

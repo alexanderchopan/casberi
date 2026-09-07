@@ -284,26 +284,6 @@ enum HandleBridge: String {
         }
     }
 
-    /// The connect screen's one sentence (prd §315). Replaced `footerLine`,
-    /// which carried the same facts at the bottom of the screen in the tier
-    /// `DesignTokens` reserves for timestamps. Each says the mode's
-    /// consequence, then the payoff, then — only where it would otherwise
-    /// read as a bug — the one thing that can never arrive.
-    var setupIntro: String {
-        switch self {
-        case .bluesky:
-            String(localized: "Straight from Bluesky's public API. What they like needs a sign-in, which is coming later.")
-        case .farcaster:
-            String(localized: "From the Farcaster team's own public node. Channels and mentions of you can be followed too.")
-        case .nostr:
-            String(localized: "From whichever public relays this \(DS.device) can reach. Nothing here can ever post.")
-        case .pinterest:
-            String(localized: "A secret board never appears in Pinterest's own feed, so it can never appear here.")
-        default:
-            feedKind?.setupIntro ?? ""
-        }
-    }
-
     var canLine: String {
         switch self {
         case .bluesky:   "Reads public posts — accounts, feeds, mentions."
@@ -509,7 +489,6 @@ struct HandleSetupScreen: View {
             name: bridge.rawValue, seatID: bridge.bridgeID, source: bridge.rawValue,
             state: AccountPageState.of(name: bridge.rawValue, seatID: bridge.bridgeID,
                                        connected: bridge.isConnected, store: store),
-            intro: bridge.setupIntro,
             // The §315 mode, back on the page it left with §639 — every seat
             // here connects on a public name alone, which is the fact that
             // decides whether somebody starts.

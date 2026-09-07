@@ -40,7 +40,6 @@ struct RadicleScreen: View {
             name: "Radicle", seatID: "radicle", source: "Radicle",
             state: AccountPageState.of(name: "Radicle", seatID: "radicle",
                                        connected: radicle.connected, store: store),
-            intro: "Patches and issues as they happen. No central host: the seed you pick answers, and sees what you ask for.",
             mode: .noAccount,
             rows: rows,
             query: repoField,

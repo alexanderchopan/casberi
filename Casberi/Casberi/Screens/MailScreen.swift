@@ -25,7 +25,6 @@ struct MailScreen: View {
             name: provider.source, seatID: provider.bridgeID, source: provider.source,
             state: AccountPageState.of(name: provider.source, seatID: provider.bridgeID,
                                        connected: provider.connected, store: store),
-            intro: "Read-only over IMAP, with an app-specific password — your real one never enters the app.",
             mode: .pasteKey,
             keyed: true,
             teardown: { TokenVault.delete(provider.passwordKey) },

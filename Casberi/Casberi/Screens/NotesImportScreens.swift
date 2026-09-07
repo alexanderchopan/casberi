@@ -72,7 +72,6 @@ struct DayOneImportScreen: View {
             // only honest test of whether this seat is connected at all.
             state: AccountPageState.of(name: "Day One", seatID: "dayone",
                                        connected: held > 0, store: store),
-            intro: "Each entry lands on the day you wrote it.",
             mode: .oneTimeImport,
             teardown: {},
             sheet: $sheet,
@@ -171,7 +170,6 @@ struct JournalImportScreen: View {
             // only honest test of whether this seat is connected at all.
             state: AccountPageState.of(name: "Apple Journal", seatID: "journal",
                                        connected: held > 0, store: store),
-            intro: "Each entry lands on the day you wrote it.",
             mode: .oneTimeImport,
             teardown: {},
             sheet: $sheet,
@@ -252,7 +250,6 @@ struct NotesShareScreen: View {
             // API), so the state line reads "Not connected" honestly and the
             // exits never draw.
             state: .notConnected,
-            intro: "Apple offers no export and no read API, so there's nothing to connect — share a note instead.",
             mode: .onThisDevice,
             // AND IT LANDS NOTHING UNDER ITS OWN NAME. A note shared out of
             // Notes lands under source "You" (`Corpus.earnsRoom` refuses it),
@@ -332,7 +329,6 @@ struct BookmarksImportScreen: View {
             // only honest test of whether this seat is connected at all.
             state: AccountPageState.of(name: "Bookmarks", seatID: "bookmarks",
                                        connected: held > 0, store: store),
-            intro: "They land as links, and folders become tags.",
             mode: .oneTimeImport,
             teardown: {},
             sheet: $sheet,

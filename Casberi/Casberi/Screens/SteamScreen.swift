@@ -23,7 +23,6 @@ struct SteamScreen: View {
             name: "Steam", seatID: "steam", source: "Steam",
             state: AccountPageState.of(name: "Steam", seatID: "steam",
                                        connected: SteamBridge.connected, store: store),
-            intro: "The games you play, as you play them. Nothing here buys, plays, or posts.",
             mode: .pasteKey,
             keyed: true,
             teardown: { SteamBridge.disconnect() },

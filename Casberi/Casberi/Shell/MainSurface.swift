@@ -696,10 +696,6 @@ struct MainSurface: View {
             // instead. No-op on touch, where the sheet still owns it.
             BridgeDestinationView(destination: dest)
                 .connectPushWatcher(dest)
-        case .appDetail(let name):
-            if let offer = BridgeCatalog.offers.first(where: { $0.name == name }) {
-                AppDetailScreen(offer: offer)
-            }
         case .project(let name):
             ProjectDetailScreen(projectName: name)
         case .walletbeatDirectory:

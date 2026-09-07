@@ -46,9 +46,6 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// where the two differ (`RoomDoor`'s rule) — the Activity row opens it.
     let source: String
     let state: AccountPageShape.State
-    /// The one sentence a not-connected page says (§315's budget) — the
-    /// mode's consequence and the payoff. Drawn only while not connected.
-    var intro: String? = nil
     /// HOW this seat connects — the §315 fact the chip on `BridgeSetupHeader`
     /// carried, and the one thing the state line cannot say: "Not connected"
     /// does not tell you whether you are about to paste a key, point at an
@@ -146,11 +143,11 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         .listStyle(.plain)
         .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
-        // THE PAGE'S OWN TOP (§524: every pour is ink). It is the same wash
-        // every setup screen had, and it is here for the reason it was written
-        // for — arriving from the product page's bold wash must not drop to a
-        // bare gray form. §639's first cut left it off, so the three screens
-        // migrated that day were the only pages in the app with no top at all.
+        // THE PAGE'S OWN TOP (§524: every pour is ink). Its ORIGINAL reason
+        // — that arriving from the product page's bold wash must not drop to a
+        // bare gray form — expired with that page (§641); it stays because it
+        // is now this page's own head, and §639's first cut left it off, which
+        // made those three screens the only pages in the app with no top.
         .bridgeSetupWash(name: name)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
@@ -212,13 +209,6 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                 .foregroundStyle(DS.textTertiary)
                 .accessibilityElement(children: .combine)
             }
-            if !state.connected, let intro {
-                Text(LocalizedStringKey(intro))
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, DS.Space.s1)
-            }
         }
         .frame(maxWidth: .infinity)
         .padding(.top, DS.Space.s4)
@@ -262,16 +252,20 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     // MARK: - 3. Plain rows
 
     @ViewBuilder private var factRows: some View {
-        // Activity — the way to the room. Not connected: a fact of "—" and
-        // no door, because there is no room to open yet. Absent entirely for
-        // a seat that lands nothing (see `lands`).
-        if lands {
+        // Activity — the way to the room. NOT DRAWN UNTIL THERE IS A SEAT
+        // (prd §641, the ruling that deleted the product page): it used to
+        // draw "—" with no chevron on the dark page, which is a read that
+        // says nothing, on the screen with the least room — the same defect
+        // §640b removed one row over when it pulled the notes box and the
+        // readers block off a page with no account. Absent entirely for a
+        // seat that lands nothing (see `lands`).
+        if lands, state.connected {
             AccountFactRow(glyph: "clock",
                            title: String(localized: "Activity"),
                            fact: AccountPageShape.activityFact(today: today, week: week,
-                                                               connected: state.connected),
-                           opens: state.connected,
-                           action: state.connected ? openRoom : nil)
+                                                               connected: true),
+                           opens: true,
+                           action: openRoom)
         }
         AccountFactRow(glyph: "network",
                        title: String(localized: "What it reaches"),

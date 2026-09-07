@@ -40,7 +40,6 @@ struct RailgunScreen: View {
             name: "Railgun", seatID: "railgun", source: "Railgun",
             state: AccountPageState.of(name: "Railgun", seatID: "railgun",
                                        connected: hasWallets, store: store),
-            intro: "Shields and unshields on a wallet you watch. What happens inside the pool is never read — that's the point of Railgun.",
             mode: .watchedWallets,
             // NOTHING TO TEAR DOWN, and that is the seat (prd §207). This
             // bridge holds no store of its own — it reads whatever wallets are

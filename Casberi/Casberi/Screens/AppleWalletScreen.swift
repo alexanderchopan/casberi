@@ -44,7 +44,6 @@ struct AppleWalletScreen: View {
             source: AppleWalletBridge.sourceName,
             state: AccountPageState.of(name: "Apple Wallet", seatID: AppleWalletBridge.seatID,
                                        connected: isConnected, store: store),
-            intro: "Apple Card, Apple Cash and Savings, with the merchant's real name. United States only, iOS 17.4 or later.",
             mode: .onThisDevice,
             teardown: {
                 AppleWalletBridge.disconnect(context: modelContext)

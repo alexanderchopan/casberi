@@ -147,8 +147,6 @@ grep -qF 'case .claudeCode:     ClaudeCodeImportScreen()' "$ROUTING" \
   || { echo "✗ the destination opens no screen"; exit 1; }
 grep -qF 'case .claudeCode:     "claudecode"' "$ROUTING" \
   || { echo "✗ the seat id is gone — destination(forID:) can never resolve it"; exit 1; }
-grep -qF '.chatgpt, .claude, .claudeCode, .gemini, .instagram' "$ROUTING" \
-  || { echo "✗ Claude Code no longer reads as a file import — AppDetailScreen would promise things arriving on their own"; exit 1; }
 grep -qF 'mode: .oneTimeImport' "$SCREEN" \
   || { echo "✗ the setup screen lost its mode chip (setup-copy-audit's check 1)"; exit 1; }
 grep -qF 'allowedContentTypes: [.folder]' "$SCREEN" \

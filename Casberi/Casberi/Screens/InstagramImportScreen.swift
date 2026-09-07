@@ -54,7 +54,6 @@ struct InstagramImportScreen: View {
             // only honest test of whether this seat is connected at all.
             state: AccountPageState.of(name: "Instagram", seatID: "instagram",
                                        connected: held > 0, store: store),
-            intro: "Saved posts get their words and cover picture back from Instagram's public pages.",
             mode: .oneTimeImport,
             teardown: {},
             sheet: $sheet,

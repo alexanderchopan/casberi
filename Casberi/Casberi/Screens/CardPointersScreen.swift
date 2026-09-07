@@ -33,7 +33,6 @@ struct CardPointersScreen: View {
             source: CardPointersIngest.source,
             state: AccountPageState.of(name: "CardPointers", seatID: CardPointersAuth.seatKey,
                                        connected: connected, store: store),
-            intro: "The offers sitting unused on your cards, each with the day it expires.",
             mode: .signIn,
             teardown: { CardPointersAuth.disconnect() },
             sheet: $sheet,

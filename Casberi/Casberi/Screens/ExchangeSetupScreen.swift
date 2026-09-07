@@ -47,7 +47,6 @@ struct ExchangeSetupScreen: View {
             name: venue.display, seatID: venue.rawValue, source: venue.display,
             state: AccountPageState.of(name: venue.display, seatID: venue.rawValue,
                                        connected: connected, store: store),
-            intro: "Your balances and trades join your combined total.",
             mode: .pasteKey,
             keyed: true,
             // AN EXCHANGE SEAT LANDS NO `Thing` AT ALL (§484's rowless nine):

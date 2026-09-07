@@ -44,7 +44,6 @@ struct ENSScreen: View {
             name: "ENS", seatID: ENSWatch.seatID, source: ENSWatch.source,
             state: AccountPageState.of(name: "ENS", seatID: ENSWatch.seatID,
                                        connected: !followed.isEmpty, store: store),
-            intro: "Including the ninety days after expiry, when it can still be renewed before anyone else takes it.",
             mode: .noAccount,
             rows: rows,
             query: field,

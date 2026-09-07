@@ -35,7 +35,6 @@ struct SnapchatImportScreen: View {
             // "Only saved chats exist" earns the sentence: it is the limit most
             // likely to read as a bug, because a Snapchat user's mental model
             // is that they had far more conversation than this.
-            intro: "Only saved chats exist: Snapchat deletes the rest once viewed.",
             mode: .oneTimeImport,
             teardown: {},
             sheet: $sheet,

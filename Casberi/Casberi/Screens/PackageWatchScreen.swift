@@ -41,7 +41,6 @@ struct PackageWatchScreen: View {
             source: registry.displayName,
             state: AccountPageState.of(name: registry.displayName, seatID: registry.bridgeID,
                                        connected: connected, store: store),
-            intro: registryIntro,
             mode: .noAccount,
             rows: rows,
             query: nameField,
@@ -122,20 +121,6 @@ struct PackageWatchScreen: View {
 
 
 
-
-    /// The intro's one variable half — npm calls its home a registry and PyPI
-    /// an index, and using either word for both would be wrong in one place.
-    /// The "download counts are never fetched" clause is the §315 survivor of
-    /// the old footer: it is the fact that changes what someone expects to see,
-    /// because a package page leads with that number and this room never will.
-    private var registryIntro: String {
-        switch registry {
-        case .npm:
-            String(localized: "New releases from the public registry. Download counts are never fetched — a tally isn't news.")
-        case .pypi:
-            String(localized: "New releases from the public index. Download counts are never fetched — a tally isn't news.")
-        }
-    }
 
     // MARK: - Actions
 

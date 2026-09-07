@@ -47,7 +47,6 @@ struct StripeScreen: View {
             name: "Stripe", seatID: TokenBridge.stripe.bridgeID, source: StripeWatch.source,
             state: AccountPageState.of(name: "Stripe", seatID: TokenBridge.stripe.bridgeID,
                                        connected: hasKey, store: store),
-            intro: "The money that needs you: a dispute and its deadline, a payout, a cancelled subscription, a failed payment. Never individual charges, or a customer's name or card.",
             mode: .pasteKey,
             keyed: true,
             teardown: {

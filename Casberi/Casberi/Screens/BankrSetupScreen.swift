@@ -59,7 +59,6 @@ struct BankrSetupScreen: View {
             name: "Bankr", seatID: "bankr", source: "Bankr",
             state: AccountPageState.of(name: "Bankr", seatID: "bankr",
                                        connected: configured, store: store),
-            intro: "Bankr answers from its own account, never from the wallets you watch here.",
             mode: .pasteKey,
             keyed: true,
             // A KEY THAT ANSWERS LANDS NOTHING — see `AccountPage.lands`.
@@ -96,6 +95,16 @@ struct BankrSetupScreen: View {
             // an account is where somebody who has never heard of Bankr
             // has to start anyway, and a key page is reached from inside
             // it. The step line below says what to do once there.
+            // THE CEILING, above the door (prd §641's honesty sweep). Bankr
+            // holds a wallet of ITS OWN — that is the whole point of the seat
+            // — and the screen's own "Ask about your wallets" invites the
+            // opposite reading. `NetworkReach` says what the request carries
+            // and not whose account answers it, so this was stated nowhere
+            // once the product page went. Unnumbered: facts, not steps (§220).
+            BridgeStepLines(steps: [
+                String(localized: "Bankr answers from its own wallet, not yours."),
+                String(localized: "It can't see the wallets you watch here."),
+            ], numbered: false)
             BridgeSetupCard(steps: ["Sign in, then mint a read-only key"],
                             numbered: false) {
                 DSSlabButton(title: configured ? "Open Bankr" : "Create an account or sign in",

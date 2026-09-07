@@ -35,14 +35,6 @@ final class HomeRoute {
         case apps
         case settings
         case bridge(BridgeRouter.Destination)
-        /// A catalog offer's product page, keyed by name (the catalog's own
-        /// join key). Pushed through the same path as `.bridge` — not a
-        /// plain `NavigationLink` — so a Connect tapped FROM the product
-        /// page still nests correctly: a plain-link frame isn't tracked by
-        /// this path, so appending to it while one is on top silently drops
-        /// it, same failure class as the Apps/bridge sibling-binding bug
-        /// this whole path replaced.
-        case appDetail(String)
         /// A tag's project view — the same screen the feed's Themes treemap
         /// opens. Pushed by an Ask answer's ProjectTile and the "open work"
         /// navigate intent, so a tag named from the composer lands where a
@@ -143,13 +135,8 @@ final class HomeRoute {
         path.append(.bridge(dest))
     }
 
-    /// Push an offer's product page on top of wherever the stack sits.
-    @MainActor func pushAppDetail(_ offerName: String) {
-        path.append(.appDetail(offerName))
-    }
-
     /// Push any node on top of wherever the stack sits — the general form of
-    /// `pushBridge`/`pushAppDetail`, for a destination that is neither.
+    /// `pushBridge`, for a destination that is not one.
     @MainActor func push(_ node: Node) {
         path.append(node)
     }

@@ -52,7 +52,6 @@ struct SentryScreen: View {
             name: "Sentry", seatID: TokenBridge.sentry.bridgeID, source: "Sentry",
             state: AccountPageState.of(name: "Sentry", seatID: TokenBridge.sentry.bridgeID,
                                        connected: configured, store: store),
-            intro: "An issue that's new, regressed, or escalated — nothing else. Never a stack trace or the person who hit it.",
             mode: .pasteKey,
             keyed: true,
             teardown: {

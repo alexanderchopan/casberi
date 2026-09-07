@@ -270,23 +270,21 @@ struct AppsScreen: View {
         .navigationDestination(item: $probe) { p in
             switch p {
             case .wallet: WalletScreen()
-            case .app(let name):
-                if let offer = BridgeCatalog.offers.first(where: { $0.name == name }) {
-                    AppDetailScreen(offer: offer)
-                }
             }
         }
         #endif
         .onAppear {
-            // A tile on the empty feed's pile landed here wanting its
-            // product page — same double-push the `-openApp` probe proved.
-            // Resolve before pushing: navigationDestination's `if let` falls
-            // through to EmptyView, so an unresolvable name (a renamed offer
-            // outrunning the pile array) would push a blank screen.
+            // A tile on the empty feed's pile landed here wanting its product
+            // page. There is no product page since §641, so it lands where
+            // every other Connect lands — the seat's own setup page, through
+            // the SAME `rowAction` the row it named would run, so a tile and
+            // the row it points at cannot disagree. Resolve first: an
+            // unresolvable name (a renamed offer outrunning the pile array)
+            // simply leaves the catalog standing.
             if let name = route.openOffer {
                 route.openOffer = nil
-                if BridgeCatalog.offers.contains(where: { $0.name == name }) {
-                    route.pushAppDetail(name)
+                if let entry = ranked.first(where: { $0.offer.name == name }) {
+                    rowAction(entry)?()
                 }
             }
             // …and a door that named a CATEGORY lands filtered to it (prd
@@ -320,7 +318,6 @@ struct AppsScreen: View {
             if UserDefaults.standard.bool(forKey: "openWallet") {
                 route.pushBridge(.wallet)
             }
-            if let name = UserDefaults.standard.string(forKey: "openApp") { probe = .app(name) }
             // `-openSetup "<Offer name>"` pushes a bridge's setup screen
             // directly — the token/handle field screens have no deep link.
             // `-connectTap "<Offer name>"` — the door the Connect BUTTON takes.
@@ -854,27 +851,53 @@ struct AppsScreen: View {
         return bridge.id
     }
 
-    /// A catalog cell's tap. Almost every cell PUSHES, as a plain
-    /// `NavigationLink` value — the product page for an app you could add, the
-    /// manager for one that's connected. A wallet-riding seat with no screen
-    /// of its own instead opens the room its rows land in
-    /// (`BridgeRouter.roomSource`), which is a POP, not a push, so it cannot
-    /// be a link value and takes a `Button` wearing the same style.
+    /// A catalog cell's tap. ONE DESTINATION PER ROW (prd §641): until the
+    /// product page was deleted a row had two — the row itself pushed
+    /// `AppDetailScreen` while the capsule beside it opened setup, so the same
+    /// tile meant two things depending on which half of it you hit. Both
+    /// halves run `rowAction` now.
+    ///
+    /// A connected seat with a screen of its own still PUSHES, as a plain
+    /// `NavigationLink` value. Everything else is a `Button`: a wallet-riding
+    /// seat opens the room its rows land in (`BridgeRouter.roomSource`), which
+    /// is a POP and cannot be a link value; an addable seat runs the connect
+    /// where it stands. A row with nowhere to go (a Soon offer, whose capsule
+    /// already says so) is inert rather than pushing a page that only repeated
+    /// the tagline it is sitting on.
     @ViewBuilder
-    private func catalogTap<Label: View>(roomSeat id: String?,
-                                         destination: HomeRoute.Node,
+    private func catalogTap<Label: View>(destination: HomeRoute.Node?,
+                                         action: (() -> Void)?,
                                          @ViewBuilder label: () -> Label) -> some View {
-        if let id {
-            Button {
-                DSHaptic.tap()
-                BridgeRouter.open(seatID: id, route: route, chrome: chrome)
-            } label: {
-                label()
-            }
+        if let action {
+            Button(action: action) { label() }
+        } else if let destination {
+            NavigationLink(value: destination) { label() }
         } else {
-            NavigationLink(value: destination) {
-                label()
-            }
+            label()
+        }
+    }
+
+    /// What tapping this row does — the SAME call the capsule makes, shared so
+    /// the two halves cannot drift apart again.
+    private func rowAction(_ entry: Ranked) -> (() -> Void)? {
+        if let id = roomSeat(entry) {
+            return { DSHaptic.tap(); BridgeRouter.open(seatID: id, route: route, chrome: chrome) }
+        }
+        switch entry.tier {
+        case 0:
+            guard let bridge = entry.bridge else { return nil }
+            return { route.pushBridge(BridgeRouter.destination(forID: bridge.id)) }
+        case 2:
+            guard let bridge = entry.bridge else { return nil }
+            return { BridgeRouter.open(seatID: bridge.id, route: route, chrome: chrome) }
+        case 1:
+            // A seat that needs input goes to its setup page; a one-tap seat
+            // has no page to go to and fires the system ask where it stands.
+            return entry.offer.needsSetup
+                ? { route.openSetup(forOffer: entry.offer.name) }
+                : { attemptConnect(entry.offer) }
+        default:
+            return nil   // Soon — the capsule already says it
         }
     }
 
@@ -886,21 +909,18 @@ struct AppsScreen: View {
     /// live status line a 4-across tile had to push onto the screen behind it,
     /// so the catalog now says what an app DOES before you tap it.
     ///
-    /// The row tap opens the product page for an app you could add, and
-    /// MANAGEMENT for one that's connected (its store pitch already worked).
-    /// A connected row wears the status dot the old strip carried. No rank
-    /// number: a category is not a leaderboard.
+    /// The row tap runs `rowAction` — setup for an app you could add, the room
+    /// or manager for one that's connected (prd §641; it opened a product page
+    /// until that was deleted). A connected row wears the status dot the old
+    /// strip carried. No rank number: a category is not a leaderboard.
     private func appRow(_ entry: Ranked) -> some View {
         let soon = entry.tier == 3
         let isConnected = entry.tier == 0 || entry.tier == 2
-        let destination: HomeRoute.Node = {
-            if isConnected, let bridge = entry.bridge {
-                return .bridge(BridgeRouter.destination(forID: bridge.id))
-            }
-            return .appDetail(entry.offer.name)
-        }()
+        let destination: HomeRoute.Node? = isConnected && entry.bridge != nil
+            ? .bridge(BridgeRouter.destination(forID: entry.bridge!.id))
+            : nil
         return HStack(spacing: DS.Space.s3) {
-            catalogTap(roomSeat: roomSeat(entry), destination: destination) {
+            catalogTap(destination: destination, action: rowAction(entry)) {
                 HStack(spacing: DS.Space.s3) {
                     BridgeIcon(name: entry.offer.name, size: DS.Mark.tile)
                         .saturation(soon ? 0 : 1)
@@ -953,21 +973,12 @@ struct AppsScreen: View {
             // — the row springs slightly under the finger instead of a flat
             // .plain tap. Keeps the plain look, adds the give.
             .buttonStyle(PressSpring())
-            // Long-press peek — the App Store's own gesture: the app's shape,
-            // painted through the real gen-UI engine, with a Connect action,
-            // before you commit. Only on an addable row (tier 1) with a preview
-            // — a connected app shows real things, a Soon app can't be added,
-            // and an actionless menu can suppress the peek entirely.
-            .modifier(PeekPreview(
-                offer: entry.offer,
-                enabled: entry.tier == 1 && StorePreview.doc(for: entry.offer.name) != nil,
-                onConnect: {
-                    if entry.offer.needsSetup {
-                        route.openSetup(forOffer: entry.offer.name)
-                    } else {
-                        attemptConnect(entry.offer)
-                    }
-                }))
+            // (The long-press peek retired with the product page, prd §641 —
+            // it painted a `StorePreview` doc only 74 of 97 offers had, and a
+            // hand-authored preview of a generated surface reads as a ceiling
+            // on a seat that has none: Wallet's was a treemap and two rows for
+            // a seat that lands approvals, delegation warnings, poisoned
+            // transfers, gas, six protocols and the Safe queue.)
             capsule(entry)
         }
         // NO HORIZONTAL INSET OF ITS OWN (prd §590). This `s4` held the row
@@ -1041,9 +1052,9 @@ struct AppsScreen: View {
 
     #if DEBUG
     enum AppsProbe: Identifiable, Hashable {
-        case wallet, app(String)
+        case wallet
         var id: String {
-            switch self { case .wallet: "wallet"; case .app(let n): "app:\(n)" }
+            switch self { case .wallet: "wallet" }
         }
     }
     #endif
@@ -1053,62 +1064,7 @@ struct AppsScreen: View {
 // MARK: - Deck pan (UIKit)
 
 
-/// The App Store's peek gesture, in Casberi's grammar: long-press a shelf row
-/// and the app's shape rises in a preview — painted through the real gen-UI
-/// engine from the same document its product page streams, so the peek never
-/// disagrees with the page. Inert; the real thing arrives when the bridge does.
-private struct PeekPreview: ViewModifier {
-    let offer: BridgeCatalog.Offer
-    let enabled: Bool
-    let onConnect: () -> Void
 
-    func body(content: Content) -> some View {
-        if enabled {
-            content.contextMenu {
-                // A real action — an empty menu can suppress the peek, and
-                // Connect is the honest verb for an addable row (no dead
-                // control: it does exactly what the row's capsule does).
-                Button(action: onConnect) {
-                    Label("Connect", systemImage: "plus.circle")
-                }
-            } preview: {
-                AppPeek(offer: offer)
-            }
-        } else {
-            content
-        }
-    }
-}
-
-/// The peek card — icon, name, tagline, and the preview shape painted whole
-/// (a peek is a glance, not a stream). Preview framing is explicit: fabricated
-/// rows are honest on a store surface only when labelled.
-private struct AppPeek: View {
-    let offer: BridgeCatalog.Offer
-    @State private var stream = GenStream()
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            HStack(spacing: DS.Space.s3) {
-                BridgeIcon(name: offer.name, size: DS.Mark.tile)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(offer.name).dsText(.body17).fontWeight(.semibold)
-                        .foregroundStyle(DS.textPrimary)
-                    Text(LocalizedStringKey(offer.tagline)).dsText(.subhead13)
-                        .foregroundStyle(DS.textSecondary)
-                }
-                Spacer(minLength: 0)
-            }
-            Text("Preview").dsText(.label12).foregroundStyle(DS.textTertiary)
-            GenRender(id: "root", els: stream.els)
-                .allowsHitTesting(false)
-        }
-        .padding(DS.Space.s4)
-        .frame(width: 320, alignment: .leading)
-        .background(DS.surfaceSheet)
-        .onAppear { if let doc = StorePreview.doc(for: offer.name) { stream.paint(doc) } }
-    }
-}
 
 
 extension String: @retroactive Identifiable {

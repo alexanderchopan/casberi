@@ -39,6 +39,7 @@ SIGNER="Casberi/Casberi/Model/SafeSigner.swift"
 KEY="Casberi/Casberi/Model/SignerKey.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
 CARD="Casberi/Casberi/Screens/SafeQueueCard.swift"
+SCREEN="Casberi/Casberi/Screens/SafeScreen.swift"
 VECTORS="scripts/support/safetx-vectors.py"
 for f in "$TX" "$KECCAK" "$SIGNER" "$KEY" "$REACH" "$CARD" "$VECTORS"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
@@ -248,9 +249,16 @@ printf '%s' "$SAFE_OFFER" | grep -qi 'signing always happens in your own Safe ap
 printf '%s' "$SAFE_OFFER" | grep -qi 'sign' \
   || { echo "✗ the Safe offer never mentions signing — the co-signer is unfindable for anyone without a Safe yet"; exit 1; }
 # …and the two honest limits that make the claim safe to print at all.
+#
+# READ OFF THE SCREEN, NOT THE OFFER (prd §641b). Until §641 these lived in the
+# offer's `features` list, which the product page drew; that page and those
+# lists are deleted, so the catalog literal is now name/tagline/group and can
+# never carry a limit again. The RULING is unchanged — the limit travels with
+# the pitch — so this reads the screen the tagline's claim leads to. Checking
+# the offer here would be checking a file that structurally cannot pass.
 for claim in 'never execute' 'Face ID'; do
-  printf '%s' "$SAFE_OFFER" | grep -qi "$claim" \
-    || { echo "✗ the Safe offer claims signing without saying '$claim' — the limit has to travel with the pitch"; exit 1; }
+  grep -qi "$claim" "$SCREEN" \
+    || { echo "✗ SafeScreen claims signing without saying '$claim' — the limit has to travel with the pitch"; exit 1; }
 done
 
 # The key file must reach nothing at all: no network, no model, no view.

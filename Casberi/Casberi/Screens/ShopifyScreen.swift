@@ -31,7 +31,6 @@ struct ShopifyScreen: View {
             name: "Shopify", seatID: "shopify", source: "Shopify",
             state: AccountPageState.of(name: "Shopify", seatID: "shopify",
                                        connected: shopify.connected, store: store),
-            intro: "New products from the store's own public catalog. Nothing here checks out or pays.",
             mode: .noAccount,
             rows: rows,
             query: newStore,

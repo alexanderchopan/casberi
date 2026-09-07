@@ -309,11 +309,11 @@ struct GenRender: View {
         // — everywhere else, a partial line still mounts immediately (the
         // "props fill as tokens arrive" law), which is right for a component
         // that's just growing text, not one deriving LAYOUT from its args.
-        // Scoped to `.block` (agent-answer-only) on purpose, so it's a known
-        // gap: `StorePreview`'s static "Wallet" doc streams a top-level
-        // `TagMap` under slot `.none` (no `genAgentAnswerContext`) and has the
-        // SAME jitter class, unfixed — a one-time product-page preview
-        // animation, not the daily-use surface this was reported against.
+        // Scoped to `.block` (agent-answer-only) on purpose. The one known
+        // gap this left — `StorePreview`'s static "Wallet" doc streaming a
+        // top-level `TagMap` under slot `.none`, same jitter class, unfixed
+        // because it was a one-time product-page animation — closed itself
+        // when the product page and its previews were deleted (prd §641).
         if let el = els[id], slot != .block || el.isComplete {
             AnyView(component(el))
         } else {

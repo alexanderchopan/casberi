@@ -31,7 +31,6 @@ struct ClaudeCodeImportScreen: View {
             // only honest test of whether this seat is connected at all.
             state: AccountPageState.of(name: "Claude Code", seatID: "claudecode",
                                        connected: held > 0, store: store),
-            intro: "Sessions live as files on this Mac — point at the folder and each one is here, whole.",
             mode: .oneTimeImport,
             teardown: {},
             sheet: $sheet,

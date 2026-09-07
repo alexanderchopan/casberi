@@ -52,7 +52,6 @@ struct WalletbeatScreen: View {
 			name: "Walletbeat", seatID: WalletbeatWatch.seatID, source: WalletbeatWatch.source,
 			state: AccountPageState.of(name: "Walletbeat", seatID: WalletbeatWatch.seatID,
 									   connected: connected, store: store),
-			intro: "Their security incidents, plus a full review of each wallet app you name — their judgments, never ours.",
 			mode: .noAccount,
 			// THE SHELF IS THE CHASSIS'S ROSTER NOW, and the defect it was
 			// rebuilt for goes with it: the shelf drew its lone dashed add slot

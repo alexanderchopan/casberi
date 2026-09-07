@@ -69,11 +69,6 @@ struct VibenetScreen: View {
             state: AccountPageState.of(name: VibenetIdentity.source,
                                        seatID: VibenetIdentity.seatID,
                                        connected: connected, store: store),
-            // ACTION, not a re-pitch (R4.4). You reach this screen from the
-            // product page, which just said what vibenet is and what it reads.
-            // What is left for this sentence is the only thing the pitch could
-            // not say: what to do here, and that it is not a one-shot.
-            intro: "Paste an address, or start with one that already has something to show. Watch as many as you like.",
             mode: .noAccount,
             rows: roster.rows,
             query: typed,

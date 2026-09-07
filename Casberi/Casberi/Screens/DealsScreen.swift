@@ -19,7 +19,6 @@ struct DealsScreen: View {
             name: "Deals", seatID: "deals", source: "Deals",
             state: AccountPageState.of(name: "Deals", seatID: "deals",
                                        connected: deals.connected, store: store),
-            intro: "Today's discounts, priced in the headline. Nothing here buys anything.",
             mode: .noAccount,
             teardown: { DealsStore.shared.disconnect() },
             sheet: $sheet,

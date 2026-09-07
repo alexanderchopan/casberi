@@ -45,7 +45,6 @@ struct GrokSetupScreen: View {
             name: "Grok", seatID: "grok", source: "Grok",
             state: AccountPageState.of(name: "Grok", seatID: "grok",
                                        connected: configured, store: store),
-            intro: "Answers about your things when the on-device model isn't enough — only when you tap for it.",
             mode: .pasteKey,
             keyed: true,
             // A KEY THAT ANSWERS LANDS NOTHING. There is no room, no count and

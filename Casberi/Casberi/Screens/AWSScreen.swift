@@ -47,7 +47,6 @@ struct AWSScreen: View {
             name: "AWS", seatID: bridge.bridgeID, source: AWSShape.source,
             state: AccountPageState.of(name: "AWS", seatID: bridge.bridgeID,
                                        connected: hasKey, store: store),
-            intro: "What needs you lands as it happens — a firing alarm, a failed deploy, a spend anomaly.",
             mode: .pasteKey,
             keyed: true,
             teardown: {

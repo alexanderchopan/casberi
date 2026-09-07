@@ -56,7 +56,6 @@ struct RSSScreen: View {
             name: "RSS", seatID: "rss", source: "RSS",
             state: AccountPageState.of(name: "RSS", seatID: "rss",
                                        connected: !rss.feeds.isEmpty, store: store),
-            intro: "Every post, in order. No ranking, nothing skipped.",
             mode: .noAccount,
             rows: rows,
             query: newFeed,

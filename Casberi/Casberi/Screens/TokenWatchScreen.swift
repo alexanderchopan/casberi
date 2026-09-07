@@ -58,7 +58,6 @@ struct TokenWatchScreen: View {
             name: "Tokens", seatID: "tokens", source: "Tokens",
             state: AccountPageState.of(name: "Tokens", seatID: "tokens",
                                        connected: !watched.isEmpty, store: store),
-            intro: "Watch a token below by name, symbol, address, or link.",
             mode: .noAccount,
             rows: rows,
             query: queryField,

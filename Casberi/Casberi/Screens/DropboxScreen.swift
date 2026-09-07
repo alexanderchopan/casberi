@@ -36,7 +36,6 @@ struct DropboxScreen: View {
             name: "Dropbox", seatID: "dropbox", source: "Dropbox",
             state: AccountPageState.of(name: "Dropbox", seatID: "dropbox",
                                        connected: DropboxAuth.connected, store: store),
-            intro: "One folder you name — only that folder, never a shared link or anything shared with you.",
             mode: .signIn,
             teardown: { dropbox.disconnect() },
             sheet: $sheet,
