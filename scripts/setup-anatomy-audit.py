@@ -22,13 +22,16 @@ Every one of those is invisible from a build, from a screenshot, and from the
 copy audit. So they are checks.
 
 CHECKS
-  A. Chassis — a screen with a `BridgeSetupHeader` builds on `BridgeSetupPage`.
-     No raw `List` carrying `.bridgeSetupWash` / `.listStyle(.insetGrouped)`.
-  B. Slot order — the SHARED blocks appear in the canonical order:
-     identity -> room -> (the screen's own acts) -> recent -> upkeep -> exits.
-     A screen's own sections are deliberately NOT ordered by this check: no
-     text rule can tell "the one act" from "a second act", and a lint that
-     guesses is a lint that cries wolf.
+  A. Chassis — an account page draws none of the old chassis's vocabulary
+     (`BridgeSetupPage`, `BridgeSetupHeader`, `BridgeConnectedState`,
+     `RoomDoor`, `RecentThingsSection`) and keeps no chassis modifier of its
+     own (`.bridgeSetupWash` / `.listStyle(.insetGrouped)`).
+  B. DELETED with the slots (prd §639, 2026-09-06). The order is the chassis's
+     now — an adopter fills two closures and hands over data for the rest — so
+     it cannot be got wrong by a screen at all, which is strictly better than a
+     text check that could. §608 made it an audit rather than a type because
+     `setup-copy-audit.py` discovered a screen by its header; that reason went
+     with the header.
   C. `BridgeFieldRow` stays deleted (§190's "two controls for one act").
   D. The proof row takes `proof:` — never `result:` + `resultIsError:`.
   E. Disconnect is `BridgeDisconnectSection`, never a hand-rolled destructive
@@ -51,18 +54,12 @@ SCREENS = os.path.join(ROOT, "Casberi", "Casberi", "Screens")
 # Files that name `BridgeSetupHeader` without being a setup screen: the
 # component that declares it, the chassis that documents it, and the audit
 # fixtures. Each is a conscious "this is not a screen", not a snooze.
-NOT_A_SCREEN = {"BridgeSetupComponents.swift", "BridgeSetupPage.swift"}
+NOT_A_SCREEN = {"BridgeSetupComponents.swift", "AccountPage.swift"}
 
-# The shared blocks, in the order they must appear. A screen fills the ones it
-# has; it never reorders them.
-SLOTS = [
-    ("identity", (r"\bBridgeConnectedState\(", r"\bBridgeSetupHeader\(")),
-    ("room",     (r"\bRoomDoor\(",)),
-    ("recent",   (r"\bRecentThingsSection\(",)),
-    ("upkeep",   (r"\bImportUpkeepSection\(",)),
-    ("explorer", (r"\bDevnetExplorerRow\(",)),
-    ("exit",     (r"\bBridgeDisconnectSection\(",)),
-]
+# The old chassis's own vocabulary, kept as a DENYLIST rather than as an order
+# (see check A). Nothing may draw these again: they are the slab-and-section
+# anatomy §639 replaced, and a screen that brings one back brings the whole
+# shape with it.
 
 # A destructive button whose words are a CONNECTION verb. An item-level delete
 # ("Remove" on one feed, "Unwatch") is a different act and is not matched.
@@ -203,33 +200,38 @@ def audit(files):
     for path in files:
         name = os.path.basename(path)
         raw = open(path, encoding='utf-8').read()
-        if 'BridgeSetupHeader(' not in raw or name in NOT_A_SCREEN:
+        if 'AccountPage(' not in raw or name in NOT_A_SCREEN:
             continue
         code = strip_comments(raw)          # comments AND string bodies gone
         text = strip_comments_only(raw)     # comments gone, strings kept
 
         # --- A. chassis -------------------------------------------------
-        if 'BridgeSetupPage(' not in code:
-            findings.append((name, 0, 'A', 'setup screen does not build on BridgeSetupPage'))
+        #
+        # THE OLD CHASSIS IS GONE (prd §639, 2026-09-06). Every connect screen
+        # is an `AccountPage`, so what A can still catch is a screen that keeps
+        # a chassis modifier of its own — the copy-pasted `List` this check was
+        # written for, which is how two of the sixty-two silently lost one.
+        for old_chassis in ('BridgeSetupPage(', 'BridgeSetupHeader(',
+                            'BridgeConnectedState(', 'RoomDoor(',
+                            'RecentThingsSection('):
+            for m in re.finditer(r'\b' + re.escape(old_chassis), code):
+                findings.append((name, line_of(code, m.start()), 'A',
+                                 'draws ' + old_chassis + ' — the slab-and-section '
+                                 'anatomy §639 replaced'))
         for pat in (r'\.bridgeSetupWash\(', r'\.listStyle\(\.insetGrouped\)'):
             for m in re.finditer(pat, code):
                 findings.append((name, line_of(code, m.start()), 'A',
-                                 'chassis modifier outside BridgeSetupPage: '
+                                 'chassis modifier on an account page: '
                                  + pat.replace('\\', '')))
 
         # --- B. slot order ----------------------------------------------
-        for start, body in page_blocks(code):
-            seen = []
-            for slot, pats in SLOTS:
-                hits = [m.start() for p in pats for m in re.finditer(p, body)]
-                if hits:
-                    seen.append((min(hits), slot))
-            order = [s for _, s in sorted(seen)]
-            want = [s for s, _ in SLOTS if s in order]
-            if order != want:
-                findings.append((name, line_of(code, start), 'B',
-                                 'slots out of order: %s (want %s)'
-                                 % (' > '.join(order), ' > '.join(want))))
+        #
+        # DELETED WITH THE SLOTS (prd §639). The order is the chassis's now —
+        # an adopter fills two closures and hands over data for the rest — so
+        # it cannot be got wrong by a screen at all, which is strictly better
+        # than a text check that could. §608's own doc said the order was an
+        # AUDIT rather than a type because `setup-copy-audit.py` discovered a
+        # screen by its header; that reason went with the header.
 
         # --- C. BridgeFieldRow --------------------------------------------
         for m in re.finditer(r'\bBridgeFieldRow\b', code):
@@ -262,15 +264,12 @@ def audit(files):
 CLEAN = '''
 struct FooScreen: View {
     var body: some View {
-        BridgeSetupPage(name: "Foo") {
-            BridgeSetupHeader(name: "Foo", mode: .pasteKey, intro: "x", connected: on)
-            RoomDoor(name: "Foo", source: "Foo")
-            keySection
-            RecentThingsSection(header: "Landed", things: recent)
-            BridgeDisconnectSection(bridgeID: "foo", name: "Foo") { }
-        }
+        AccountPage(name: "Foo", seatID: "foo", source: "Foo", state: st,
+                    mode: .pasteKey, intro: "x", teardown: { }, sheet: $sheet,
+                    act: { keyBlock }, more: { EmptyView() },
+                    keySheet: { keyBlock })
     }
-    private var keySection: some View {
+    private var keyBlock: some View {
         BridgeSyncStatusRows(syncing: s, syncingLine: "Reading Foo…", proof: proof)
     }
 }
@@ -280,40 +279,19 @@ DIRTY = {
  'A': ('''
 struct FooScreen: View {
     var body: some View {
-        List {
-            BridgeSetupHeader(name: "Foo", mode: .pasteKey, intro: "x")
-        }
+        AccountPage(name: "Foo", seatID: "foo", source: "Foo", state: st,
+                    teardown: { }, sheet: $sheet, act: { EmptyView() },
+                    more: { RoomDoor(name: "Foo", source: "Foo") },
+                    keySheet: { EmptyView() })
         .listStyle(.insetGrouped)
         .bridgeSetupWash(name: "Foo")
     }
 }
 ''', 'A'),
- 'B_room_first': ('''
-struct FooScreen: View {
-    var body: some View {
-        BridgeSetupPage(name: "Foo") {
-            RoomDoor(name: "Foo", source: "Foo")
-            BridgeSetupHeader(name: "Foo", mode: .pasteKey, intro: "x")
-        }
-    }
-}
-''', 'B'),
- 'B_exit_before_recent': ('''
-struct FooScreen: View {
-    var body: some View {
-        BridgeSetupPage(name: "Foo") {
-            BridgeSetupHeader(name: "Foo", mode: .pasteKey, intro: "x")
-            BridgeDisconnectSection(bridgeID: "foo", name: "Foo") { }
-            RecentThingsSection(header: "Landed", things: recent)
-        }
-    }
-}
-''', 'B'),
  'C': ('''
 struct FooScreen: View {
     var body: some View {
-        BridgeSetupPage(name: "Foo") {
-            BridgeSetupHeader(name: "Foo", mode: .pasteKey, intro: "x")
+        AccountPage(name: "Foo", seatID: "foo", source: "Foo", state: st) {
             BridgeFieldRow(placeholder: "Key", text: $k, buttonLabel: "Connect") { }
         }
     }
@@ -322,8 +300,7 @@ struct FooScreen: View {
  'D': ('''
 struct FooScreen: View {
     var body: some View {
-        BridgeSetupPage(name: "Foo") {
-            BridgeSetupHeader(name: "Foo", mode: .pasteKey, intro: "x")
+        AccountPage(name: "Foo", seatID: "foo", source: "Foo", state: st) {
             BridgeSyncStatusRows(result: r, resultIsError: e)
         }
     }
@@ -332,8 +309,7 @@ struct FooScreen: View {
  'E': ('''
 struct FooScreen: View {
     var body: some View {
-        BridgeSetupPage(name: "Foo") {
-            BridgeSetupHeader(name: "Foo", mode: .pasteKey, intro: "x")
+        AccountPage(name: "Foo", seatID: "foo", source: "Foo", state: st) {
             Button("Disconnect", role: .destructive) { Foo.disconnect() }
         }
     }
@@ -342,9 +318,7 @@ struct FooScreen: View {
  'F': ('''
 struct FooScreen: View {
     var body: some View {
-        BridgeSetupPage(name: "Foo") {
-            BridgeSetupHeader(name: "Foo", mode: .pasteKey, intro: "x")
-        }
+        AccountPage(name: "Foo", seatID: "foo", source: "Foo", state: st) { }
     }
     private func go() { proof = .says(String(localized: "Up to date")) }
 }
@@ -352,9 +326,8 @@ struct FooScreen: View {
  'G': ('''
 struct FooScreen: View {
     var body: some View {
-        BridgeSetupPage(name: "Foo") {
-            BridgeSetupHeader(name: "Foo", mode: .pasteKey, intro: "x", flipTrigger: t)
-        }
+        AccountPage(name: "Foo", seatID: "foo", source: "Foo", state: st,
+                    flipTrigger: t) { }
     }
 }
 ''', 'G'),
@@ -370,9 +343,7 @@ struct FooScreen: View {
     // `BridgeFieldRow` was deleted; resultIsError went with it, and
     // flipTrigger too. Do not bring any of them back.
     var body: some View {
-        BridgeSetupPage(name: "Foo") {
-            BridgeSetupHeader(name: "Foo", mode: .pasteKey, intro: "x")
-        }
+        AccountPage(name: "Foo", seatID: "foo", source: "Foo", state: st) { }
     }
 }
 ''',
@@ -382,10 +353,8 @@ struct FooScreen: View {
  'string_holds_slashes': '''
 struct FooScreen: View {
     var body: some View {
-        BridgeSetupPage(name: "Foo") {
-            BridgeSetupHeader(name: "Foo", mode: .pasteKey, intro: "https://x.example")
-            RoomDoor(name: "Foo", source: "Foo")
-        }
+        AccountPage(name: "Foo", seatID: "foo", source: "Foo", state: st,
+                    intro: "https://x.example") { }
     }
 }
 ''',
@@ -393,8 +362,7 @@ struct FooScreen: View {
  'item_level_remove': '''
 struct FooScreen: View {
     var body: some View {
-        BridgeSetupPage(name: "Foo") {
-            BridgeSetupHeader(name: "Foo", mode: .noAccount, intro: "x")
+        AccountPage(name: "Foo", seatID: "foo", source: "Foo", state: st) {
             ForEach(feeds) { f in
                 Button("Remove", role: .destructive) { drop(f) }
             }
@@ -447,7 +415,7 @@ def main() -> int:
     findings = audit(files)
     if not findings:
         n = sum(1 for f in files
-                if 'BridgeSetupHeader(' in open(f, encoding='utf-8').read()
+                if 'AccountPage(' in open(f, encoding='utf-8').read()
                 and os.path.basename(f) not in NOT_A_SCREEN)
         print(f"setup anatomy ✓  ({n} setup screens, 7 checks)")
         return 0

@@ -32,7 +32,6 @@ struct L2beatScreen: View {
 	@State private var syncPending = false
 	@State private var result: BridgeProof?
 	@State private var browsing = false
-	@State private var opened: String?
 	@FocusState private var fieldFocused: Bool
 
 	/// Both tiers. Following alone is a real connected state — it reads the incidents L2BEAT
@@ -42,65 +41,74 @@ struct L2beatScreen: View {
 
 	private var connected: Bool { following || !watched.isEmpty }
 
+	/// The page's one presentation (`AccountPage.sheet`).
+	@State private var sheet: AccountPageSheet?
+
 	var body: some View {
-		BridgeSetupPage(name: "L2BEAT") {
-			BridgeSetupHeader(
-				name: "L2BEAT",
-				mode: .noAccount,
-				intro: "Incidents and full risk assessments for the chains you name — their judgments, never ours.",
-				connected: connected)
-
-			if connected {
-				RoomDoor(name: "L2BEAT", source: L2beatWatch.source)
-					.listRowSeparator(.hidden)
-			}
-
-			// STATE FIRST, THEN THE ACTS. The registry tier is what this seat IS for
-			// somebody who never names a chain, and it used to be the last thing on the
-			// screen — a filled primary button below the field, the browse link and two
-			// notes, which is §190's "a screen's one filled block, so it reads as THE
-			// verb" with the verb buried.
-			followSection.listRowSeparator(.hidden)
-
-			// THE STANDING FACTS SIT TOGETHER, ABOVE THE ACTS — what arrives on its own,
-			// then the chains you named — and the finder follows. The shelf used to sit
-			// last, so its own add slot (a dashed circle whose whole job is to focus the
-			// field) was stranded a screen below the field it focuses; the wallet manager
-			// has read this way round since §182.
-			//
-			// GATED ON THE WATCH LIST, never on `connected` — the TokenWatch/Stocktwits
-			// rule, which this screen and its Walletbeat twin both missed. Following is a
-			// connected state with nothing named, so the shelf drew that lone dashed slot
-			// under "Watching 0 · tap for its assessment, hold to stop watching" — gesture
-			// copy for rows that do not exist, which is §83's dead control wearing prose.
-			if !watched.isEmpty {
-				rosterSection
-			}
-
-			watchSection.listRowSeparator(.hidden)
-
-			if connected {
-				BridgeDisconnectSection(
-					bridgeID: L2beatWatch.seatID,
-					name: L2beatWatch.source,
-					teardown: { L2beatWatch.removeAll(context: modelContext) }
-				).listRowSeparator(.hidden)
-			}
-		}
+		AccountPage(
+			name: "L2BEAT", seatID: L2beatWatch.seatID, source: L2beatWatch.source,
+			state: AccountPageState.of(name: "L2BEAT", seatID: L2beatWatch.seatID,
+									   connected: connected, store: store),
+			intro: "Incidents and full risk assessments for the chains you name — their judgments, never ours.",
+			mode: .noAccount,
+			// THE SHELF IS THE CHASSIS'S ROSTER NOW, and the defect it was
+			// rebuilt for goes with it: the shelf drew its lone dashed add slot
+			// under "Watching 0 · tap for its assessment, hold to stop watching" —
+			// gesture copy for rows that do not exist, §83's dead control wearing
+			// prose. A roster with no rows draws no label at all, and the gestures
+			// are the chassis's rather than a caption's.
+			rows: rows,
+			query: queryField,
+			onRemoveRow: unwatch,
+			onOpenRow: { sheet = .card(id: $0) },
+			cardSheet: { id in AnyView(L2beatCardScreen(chainID: id)) },
+			teardown: { L2beatWatch.removeAll(context: modelContext) },
+			sheet: $sheet,
+			act: {
+				// STATE FIRST, THEN THE ACTS. The registry tier is what this seat
+				// IS for somebody who never names a chain, and it used to be the
+				// last thing on the screen — a filled primary button below the
+				// field, the browse link and two notes, which is §190's "a screen's
+				// one filled block, so it reads as THE verb" with the verb buried.
+				followBlock
+				watchBlock
+			},
+			more: { EmptyView() },
+			keySheet: { EmptyView() }
+		)
 		.navigationDestination(isPresented: $browsing) {
 			L2beatDirectoryScreen()
-		}
-		.sheet(item: $opened) { chainID in
-			L2beatCardScreen(chainID: chainID)
 		}
 		.onAppear {
 			following = L2beatWatch.following
 			load()
-			// Opening the screen doesn't connect — the person taps a chain to watch it. Only
+			// Opening the page doesn't connect — the person taps to watch. Only
 			// refresh if something is already on: viewing is not consent.
 			if connected { Task { await sync() } }
 		}
 	}
+
+	// MARK: - The roster
+
+	/// One row per watched entry, saying where it stands — their judgment,
+	/// never ours. A tap opens the full card; the shelf's hold-to-unwatch is the
+	/// chassis's Remove, with the Mac mirror it never had.
+	private var rows: [AccountPageShape.Row] {
+		watched.filter(\.isLive).compactMap { thing in
+			guard let id = L2beatWatch.chainID(from: thing) else { return nil }
+			return AccountPageShape.Row(
+				id: id, title: L2beatState.best(id)?.name ?? thing.title,
+				subline: rowSubline(id),
+				weekCount: 0, hasNew: false, isYou: false, avatarURL: nil)
+		}
+	}
+
+	private func unwatch(_ id: String) {
+		L2beatWatch.remove(id, context: modelContext)
+		load()
+		L2beatWatch.registerBridge(store: store, context: modelContext)
+	}
+
 
 	// MARK: - Sections
 
@@ -119,18 +127,15 @@ struct L2beatScreen: View {
 	/// component's own doc reserves the neutral bullet for, after Stripe's setup screen put a
 	/// granted scope and a kind of news under one checkmark and made them read as one list.
 	/// It also leaves the screen's one gray sentence for the search's own no-match answer.
-	private var followSection: some View {
-		Section {
-			if following {
-				DSCheckList(lines: [
-					"Following L2BEAT — their incidents arrive for every chain they cover."
-				])
-			} else {
-				DSSlabButton(title: String(localized: "Follow the incidents"),
-							 systemImage: "eye", action: follow)
-			}
+	@ViewBuilder private var followBlock: some View {
+		if following {
+			DSCheckList(lines: [
+				"Following L2BEAT — their incidents arrive for every chain they cover."
+			])
+		} else {
+			DSSlabButton(title: String(localized: "Follow the incidents"),
+						 systemImage: "eye", action: follow)
 		}
-		.dsSlabSection()
 	}
 
 	/// Naming a chain: type it, or walk the whole registry. ONE BLOCK, in that order.
@@ -140,91 +145,61 @@ struct L2beatScreen: View {
 	/// section with a blue text link") — then two notes, with the shelf's own add slot
 	/// stranded below all of it. The two ways to find a chain now sit together, and the read's
 	/// result reports at the end of the block instead of cutting through the middle of it.
-	private var watchSection: some View {
-		Section {
-			VStack(alignment: .leading, spacing: DS.Space.s2) {
-				DSSlabField(
-					placeholder: String(localized: "Chain name"),
-					text: $queryField,
-					actionLabel: String(localized: "Watch"),
-					focus: $fieldFocused,
-					action: watchTyped)
+	@ViewBuilder private var watchBlock: some View {
+		VStack(alignment: .leading, spacing: DS.Space.s2) {
+			DSSlabField(
+				placeholder: String(localized: "Chain name"),
+				text: $queryField,
+				actionLabel: String(localized: "Watch"),
+				focus: $fieldFocused,
+				action: watchTyped)
 
-				ForEach(hits) { project in
-					BridgeSearchResultRow(
-						imageURL: nil,
-						fallbackIcon: "L2BEAT",
-						title: project.name,
-						subtitle: subtitle(project),
-						action: { watch(project) })
-				}
-
-				if queryField.trimmingCharacters(in: .whitespaces).count >= 2, hits.isEmpty {
-					// L2BEAT covers 105 chains and there are far more in the world, so "no
-					// match" is a common answer and must not read as an error. It no longer
-					// carries the count: the door directly beneath it states it, and saying it
-					// twice two lines apart is the wordiness §315 exists to stop.
-					DSSlabNote(text: String(localized: "L2BEAT doesn't cover that one."))
-				}
-
-				// A DOOR, in the shape every other push on this screen wears — and it states
-				// what stands behind it (`DSSlabDoor`'s own rule), which is the fact somebody
-				// deciding whether to walk it wants.
-				DSSlabDoor(
-					title: String(localized: "Browse every chain"),
-					detail: "\(L2beatDirectory.projects.count)",
-					systemImage: "square.grid.2x2",
-					action: { browsing = true })
-
-				// LAST in the block, not between the field and the door: this reports on the
-				// READ, which nobody on this screen asked for, so an unreachable host must not
-				// cut the finder in half — which is how a connection error came to read as the
-				// browse link being broken.
-				BridgeSyncStatusRows(
-					syncing: syncing,
-					syncingLine: String(localized: "Reading L2BEAT…"),
-					proof: result)
+			ForEach(hits) { project in
+				BridgeSearchResultRow(
+					imageURL: nil,
+					fallbackIcon: "L2BEAT",
+					title: project.name,
+					subtitle: subtitle(project),
+					action: { watch(project) })
 			}
-		}
-		.dsSlabSection()
-	}
 
-	private var rosterSection: some View {
-		AssetRosterShelf(note: rosterNote, count: watched.count) {
-			ForEach(watched.keyed) { row in
-				if let thing = row.live { rosterSlot(thing) }
+			if queryField.trimmingCharacters(in: .whitespaces).count >= 2, hits.isEmpty {
+				// L2BEAT covers 105 chains and there are far more in the world, so "no
+				// match" is a common answer and must not read as an error. It no longer
+				// carries the count: the door directly beneath it states it, and saying it
+				// twice two lines apart is the wordiness §315 exists to stop.
+				DSSlabNote(text: String(localized: "L2BEAT doesn't cover that one."), plain: true)
 			}
-			AssetRosterAddSlot { fieldFocused = true }
-		}
-		.listRowInsets(EdgeInsets())
-		.listRowBackground(Color.clear)
-		.listRowSeparator(.hidden)
-	}
 
-	@ViewBuilder
-	private func rosterSlot(_ thing: Thing) -> some View {
-		let chainID = L2beatWatch.chainID(from: thing)
-		let project = chainID.flatMap { L2beatState.best($0) }
-		// 56 matches `AssetRosterSlot.markSize`, spelled rather than read: that static lives
-		// on a generic type whose parameter is being inferred from this very closure.
-		AssetRosterSlot(label: project?.name ?? thing.title) {
-			L2beatMark(name: project?.name ?? thing.title, chainID: chainID, size: 56)
-		}
-		.onTapGesture {
-			DSHaptic.tap()
-			opened = chainID
-		}
-		.onLongPressGesture {
-			guard let chainID else { return }
-			DSHaptic.tap()
-			L2beatWatch.remove(chainID, context: modelContext)
-			load()
-			L2beatWatch.registerBridge(store: store, context: modelContext)
+			// A DOOR, in the shape every other push on this screen wears — and it states
+			// what stands behind it (`DSSlabDoor`'s own rule), which is the fact somebody
+			// deciding whether to walk it wants.
+			DSSlabDoor(
+				title: String(localized: "Browse every chain"),
+				detail: "\(L2beatDirectory.projects.count)",
+				systemImage: "square.grid.2x2",
+				action: { browsing = true })
+
+			// LAST in the block, not between the field and the door: this reports on the
+			// READ, which nobody on this screen asked for, so an unreachable host must not
+			// cut the finder in half — which is how a connection error came to read as the
+			// browse link being broken.
+			BridgeSyncStatusRows(
+				syncing: syncing,
+				syncingLine: String(localized: "Reading L2BEAT…"),
+				proof: result)
 		}
 	}
 
-	private var rosterNote: String {
-		String(localized: "Watching \(watched.count) · tap for its assessment, hold to stop watching")
+	/// What a watched chain's row says — L2BEAT's own stage and how many of the
+	/// five risks they flag, which together are what makes watching it worth
+	/// anything. Their judgment, never ours; silent where they have not staged
+	/// it, rather than inventing a verdict.
+	private func rowSubline(_ id: String) -> String {
+		guard let project = L2beatState.best(id) else {
+			return String(localized: "Reading L2BEAT…")
+		}
+		return subtitle(project)
 	}
 
 	// MARK: - Search

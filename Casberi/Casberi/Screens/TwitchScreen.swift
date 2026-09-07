@@ -20,155 +20,120 @@ struct TwitchScreen: View {
     /// "Copied" so the tap is acknowledged.
     @State private var codeCopied = false
 
-    /// The connection door, open (prd §186).
-    @State private var showConnection = false
+
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
     var body: some View {
-        BridgeSetupPage(name: "Twitch") {
-            if TwitchAuth.connected {
-                // Connected (prd §186). No identity passed: the device flow
-                // caches an opaque user id (`twitch.userid`), not a login
-                // name, so naming the account here would mean a fetch made
-                // purely to decorate a header (measured 2026-07-23).
-                BridgeConnectedState(
-                    bridgeID: "twitch",
-                    name: "Twitch",
-                    // How it connected, and only that (audit, 2026-07-31): the
-                    // note ended "· reads who you follow" two lines above the
-                    // checklist's "Reads channels you follow."
-                    connectionNote: String(localized: "Approved on twitch.tv"),
-                    capabilitiesFallback: ["Reads channels you follow.",
-                                           "Read-only — never chats or follows."],
-                    openConnection: { showConnection = true }
-                )
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                // The way back to your things (§460).
-                RoomDoor(name: "Twitch", source: "Twitch")
-                    .listRowSeparator(.hidden)
-            } else {
-                BridgeSetupHeader(
-                    name: "Twitch",
-                    mode: .signIn,
-                    intro: "Who's live and what they streamed, from the channels you follow.")
-                connectSection.listRowSeparator(.hidden)
-            }
-        }
-        .sheet(isPresented: $showConnection) {
-            BridgeConnectionSheet(title: "Twitch") {
-                connectSection.listRowSeparator(.hidden)
-                removeSection.listRowSeparator(.hidden)
-            }
-        }
+        AccountPage(
+            name: "Twitch", seatID: "twitch", source: "Twitch",
+            state: AccountPageState.of(name: "Twitch", seatID: "twitch",
+                                       connected: TwitchAuth.connected, store: store),
+            intro: "The channels you follow, when they go live. It can never chat, follow, or subscribe.",
+            mode: .signIn,
+            teardown: { TwitchAuth.disconnect() },
+            sheet: $sheet,
+            act: { connectBlock },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
         .onAppear {
             if TwitchAuth.connected { Task { await sync() } }
         }
         .onDisappear { flow?.cancel() }
     }
 
-    @ViewBuilder
-    private var connectSection: some View {
-        Section {
-            if TwitchAuth.connected {
+
+    @ViewBuilder private var connectBlock: some View {
+        if TwitchAuth.connected {
+            // NO SECOND "Connected" ROW. The state line under the name says it
+            // once, in the page's own voice — a green check restating it a row
+            // later is the duplication §639 deleted the identity card for. The
+            // device flow caches an opaque user id, not a login name (measured
+            // 2026-07-23), so there is no account to name here either. What is
+            // left for this state is the status row below, which every state
+            // shares.
+            EmptyView()
+        } else if waiting, let code {
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                // The code is the whole moment — big, in a well with an
+                // explicit Copy button, so it plainly reads as "copy this
+                // and enter it on Twitch". GitHub's identical step learned
+                // this the hard way: a bare tap-to-copy went unnoticed
+                // (user, 2026-07-15), and this screen never got the fix
+                // (audit 2026-07-31).
                 HStack(spacing: DS.Space.s3) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .dsGlyph(20, weight: .regular)
-                        .foregroundStyle(DS.confirm)
-                    Text("Connected — live follows land in your feed.")
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    Spacer()
+                    Text(code.userCode)
+                        .dsText(.monoCode34)
+                        .foregroundStyle(DS.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .minimumScaleFactor(0.6)
+                        .lineLimit(1)
+                        .settleIn()
+                    Button(action: { copyCode(code.userCode) }) {
+                        HStack(spacing: DS.Space.s1) {
+                            Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
+                                .dsSymbolSwap(codeCopied)
+                                .dsGlyph(13)
+                            Text(codeCopied ? "Copied" : "Copy").dsText(.subhead13).fontWeight(.semibold)
+                        }
+                        .foregroundStyle(codeCopied ? DS.confirm : DS.tint)
+                        .padding(.horizontal, DS.Space.s3)
+                        .frame(minHeight: 34)
+                        .background(DS.gray100, in: Capsule(style: .continuous))
+                        .contentShape(Capsule(style: .continuous))
+                    }
+                    .buttonStyle(PressSpring())
                 }
-                .padding(.vertical, DS.Space.s1)
-                .dsListCardRow()
-            } else if waiting, let code {
-                VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    // The code is the whole moment — big, in a well with an
-                    // explicit Copy button, so it plainly reads as "copy this
-                    // and enter it on Twitch". GitHub's identical step learned
-                    // this the hard way: a bare tap-to-copy went unnoticed
-                    // (user, 2026-07-15), and this screen never got the fix
-                    // (audit 2026-07-31).
-                    HStack(spacing: DS.Space.s3) {
-                        Text(code.userCode)
-                            .dsText(.monoCode34)
-                            .foregroundStyle(DS.textPrimary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .minimumScaleFactor(0.6)
-                            .lineLimit(1)
-                            .settleIn()
-                        Button(action: { copyCode(code.userCode) }) {
-                            HStack(spacing: DS.Space.s1) {
-                                Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
-                                    .dsSymbolSwap(codeCopied)
-                                    .dsGlyph(13)
-                                Text(codeCopied ? "Copied" : "Copy").dsText(.subhead13).fontWeight(.semibold)
-                            }
-                            .foregroundStyle(codeCopied ? DS.confirm : DS.tint)
-                            .padding(.horizontal, DS.Space.s3)
-                            .frame(minHeight: 34)
-                            .background(DS.gray100, in: Capsule(style: .continuous))
-                            .contentShape(Capsule(style: .continuous))
-                        }
-                        .buttonStyle(PressSpring())
-                    }
-                    .padding(DS.Space.s3)
-                    .frame(maxWidth: .infinity)
-                    .background(DS.surfaceWell, in: DSSlab.shape)
-                    // The door, as this state's one filled block. It was a
-                    // hand-painted capsule in Twitch purple: a primary control
-                    // never sits on brand color, because two near-match colors
-                    // read as a mistake (`bridgeSetupWash`'s standing rule).
-                    // Gated on the URL actually being there (§83: no dead
-                    // controls). `verificationURL` is optional, so an answer
-                    // without `verification_uri` used to paint a full slab
-                    // whose tap did nothing — the code well above still shows
-                    // what to type, which is the honest fallback.
-                    if let url = code.verificationURL {
-                        // Verb over address, the 2026-08-14 anatomy — the same
-                        // shape GitHub's device flow wears one screen over.
-                        DSSlabButton(title: "Approve on Twitch",
-                                     detail: "twitch.tv/activate",
-                                     systemImage: "arrow.up.right") {
-                            DSHaptic.tap()
-                            openURL(url)
-                        }
-                    }
-                    HStack(spacing: DS.Space.s2) {
-                        ProgressView().controlSize(.small)
-                        Text("Waiting for your approval…")
-                            .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                .padding(DS.Space.s3)
+                .frame(maxWidth: .infinity)
+                .background(DS.surfaceWell, in: DSSlab.shape)
+                // The door, as this state's one filled block. It was a
+                // hand-painted capsule in Twitch purple: a primary control
+                // never sits on brand color, because two near-match colors
+                // read as a mistake (`bridgeSetupWash`'s standing rule).
+                // Gated on the URL actually being there (§83: no dead
+                // controls). `verificationURL` is optional, so an answer
+                // without `verification_uri` used to paint a full slab
+                // whose tap did nothing — the code well above still shows
+                // what to type, which is the honest fallback.
+                if let url = code.verificationURL {
+                    // Verb over address, the 2026-08-14 anatomy — the same
+                    // shape GitHub's device flow wears one screen over.
+                    DSSlabButton(title: "Approve on Twitch",
+                                 detail: "twitch.tv/activate",
+                                 systemImage: "arrow.up.right") {
+                        DSHaptic.tap()
+                        openURL(url)
                     }
                 }
-                .padding(.vertical, DS.Space.s2)
-                .dsListCardRow()
-            } else if waiting {
                 HStack(spacing: DS.Space.s2) {
                     ProgressView().controlSize(.small)
-                    Text("Getting your code…")
+                    Text("Waiting for your approval…")
                         .dsText(.callout15).foregroundStyle(DS.textTertiary)
                 }
-                .padding(.vertical, DS.Space.s1)
-                .dsListCardRow()
-            } else {
-                // The screen's one verb, as the screen's one filled block
-                // (prd §218) — it was a blue text row, which read as a link to
-                // somewhere rather than the act itself.
-                DSSlabButton(title: "Connect Twitch",
-                             systemImage: "person.badge.key",
-                             action: connect)
             }
-            BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Checking who's live…"),
-                                 proof: result)
-            DSSlabNote(text: "On Twitch's own page — a short code, no password. It can never chat, follow, or subscribe.")
+            .padding(.vertical, DS.Space.s2)
+        } else if waiting {
+            HStack(spacing: DS.Space.s2) {
+                ProgressView().controlSize(.small)
+                Text("Getting your code…")
+                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+            }
+            .padding(.vertical, DS.Space.s1)
+        } else {
+            // The screen's one verb, as the screen's one filled block
+            // (prd §218) — it was a blue text row, which read as a link to
+            // somewhere rather than the act itself.
+            DSSlabButton(title: "Connect Twitch",
+                         systemImage: "person.badge.key",
+                         action: connect)
         }
-        .dsSlabSection()
+        BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Checking who's live…"),
+                             proof: result)
+        DSSlabNote(text: "On Twitch's own page — a short code, no password.", plain: true)
     }
 
-    private var removeSection: some View {
-        BridgeDisconnectSection(bridgeID: "twitch", name: "Twitch") {
-            TwitchAuth.disconnect()
-        }
-    }
 
     private func connect() {
         guard flow == nil else { return }   // one flow at a time

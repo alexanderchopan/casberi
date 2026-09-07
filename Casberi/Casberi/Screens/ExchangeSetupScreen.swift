@@ -35,98 +35,96 @@ struct ExchangeSetupScreen: View {
     private var connected: Bool { ExchangeBridge.credentials(venue) != nil }
 
     /// The credentials door, open (prd §186).
-    @State private var showConnection = false
+
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
     var body: some View {
-        // `venue.display`, not `venue.rawValue` — `.geminiExchange`'s raw
-        // value has no space, so it would miss `washHue`'s "gemini exchange"
-        // key; `display` is what every other venue already matches on too.
-        BridgeSetupPage(name: venue.display, computedTitle: venue.display) {
-            if connected {
-                // Connected (prd §186). The identity here is the VERDICT —
-                // the §163 permission check is this bridge's whole point, so
-                // "read-only key, verified" is the fact worth leading with,
-                // and it's one we actually hold: a key that could move money
-                // was never stored in the first place.
-                BridgeConnectedState(
-                    bridgeID: venue.rawValue,
-                    name: venue.display,
-                    identity: String(localized: "Read-only key"),
-                    connectionNote: String(localized: "\(venue.display) confirmed this key can't trade or withdraw · stored in \(DS.device)'s Keychain"),
-                    capabilitiesFallback: [String(localized: "Reads your balances."),
-                                           String(localized: "Adds them to your combined total."),
-                                           String(localized: "Can't place an order, withdraw, or transfer.")],
-                    openConnection: { showConnection = true }
-                )
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            } else {
-                connectForm
-            }
-        }
-        .sheet(isPresented: $showConnection) {
-            BridgeConnectionSheet(title: venue.display) {
-                connectForm
-                if connected { removeSection.listRowSeparator(.hidden) }
-            }
-        }
-    }
-
-    /// The connect form — steps whole, furniture gone (prd §218, 2026-07-25).
-    @ViewBuilder private var connectForm: some View {
-        BridgeSetupHeader(
-            name: venue.display,
+        AccountPage(
+            // `venue.display`, not `venue.rawValue` — `.geminiExchange`'s raw
+            // value has no space, so it would miss `washHue`'s "gemini
+            // exchange" key; `display` is what every other venue matches on.
+            name: venue.display, seatID: venue.rawValue, source: venue.display,
+            state: AccountPageState.of(name: venue.display, seatID: venue.rawValue,
+                                       connected: connected, store: store),
+            intro: "Your balances and trades join your combined total.",
             mode: .pasteKey,
-            intro: "Your balances and trades join your combined total.")
-        setupSection
-    }
-
-    private var removeSection: some View {
-        // No purge dialog here, and that falls out of the data rather than a
-        // flag: an exchange seat lands no `Thing` at all (§484's rowless
-        // nine), so `BridgeDisconnectSection` finds nothing to offer.
-        BridgeDisconnectSection(bridgeID: venue.rawValue, name: venue.display,
-                                teardown: { ExchangeBridge.disconnect(venue) },
-                                note: String(localized: "Its balance leaves your combined total."))
-    }
-
-    private var setupSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if let url = setupURL {
-                    // Verb over address, the 2026-08-14 anatomy.
-                    DSSlabButton(title: "Get your API key",
-                                 detail: doorHost,
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        openURL(url)
-                    }
+            keyed: true,
+            // AN EXCHANGE SEAT LANDS NO `Thing` AT ALL (§484's rowless nine):
+            // it reports a balance into the combined total and nothing reaches
+            // the feed. So there is no Activity count and nothing in the
+            // corpus to shut a reader out of — and, for the same reason,
+            // `BridgeDisconnectSection` finds nothing to offer a purge for.
+            lands: false,
+            teardown: { ExchangeBridge.disconnect(venue) },
+            disconnectNote: String(localized: "Its balance leaves your combined total."),
+            sheet: $sheet,
+            act: {
+                if connected {
+                    // The VERDICT is the identity here — the §163 permission
+                    // check is this bridge's whole point, and it is a fact we
+                    // actually hold: a key that could move money was never
+                    // stored in the first place.
+                    verdictLine
+                } else {
+                    setupBlock
                 }
-                BridgeStepLines(steps: steps, numbered: false)
-                DSSlabField(placeholder: keyPlaceholder,
-                            text: $keyDraft, actionLabel: "", action: connect)
-                DSSlabField(placeholder: secretPlaceholder,
-                            text: $secretDraft,
-                            actionLabel: checking ? "Checking…" : (connected ? "Update" : "Connect"),
-                            secure: true, isArmed: armed, action: connect)
-                BridgeSyncStatusRows(proof: result)
-                // Two sentences, not three paragraphs — but the §163
-                // permission check STAYS said (prd §192 protected this text as
-                // load-bearing trust content, not padding). What left is the
-                // capability line the product page and the connected state
-                // both already carry.
-                //
-                // "— nothing here can place an order, withdraw, or transfer"
-                // left too (audit, 2026-07-31): the sentence above it already
-                // says a key that can move money is handed back, this screen's
-                // connected state carries the clause word for word as its third
-                // capability line, and the doc note at the top of this file
-                // rules that the copy shouldn't be leaning on "Casberi can't
-                // trade" in the first place.
-                DSSlabNote(text: "\(venue.display) is asked what this key can do before it's stored — anything that can move money is refused.")
+            },
+            more: { EmptyView() },
+            keySheet: { setupBlock }
+        )
+    }
+
+    /// What this key was allowed to be.
+    @ViewBuilder private var verdictLine: some View {
+        HStack(spacing: DS.Space.s3) {
+            AccountFactRow.disc("checkmark.shield")
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Read-only key")
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                Text("\(venue.display) confirmed this key can't trade or withdraw.")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            Spacer(minLength: 0)
         }
-        .dsSlabSection()
+    }
+
+
+    @ViewBuilder private var setupBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if let url = setupURL {
+                // Verb over address, the 2026-08-14 anatomy.
+                DSSlabButton(title: "Get your API key",
+                             detail: doorHost,
+                             systemImage: "arrow.up.right") {
+                    DSHaptic.tap()
+                    openURL(url)
+                }
+            }
+            BridgeStepLines(steps: steps, numbered: false)
+            DSSlabField(placeholder: keyPlaceholder,
+                        text: $keyDraft, actionLabel: "", action: connect)
+            DSSlabField(placeholder: secretPlaceholder,
+                        text: $secretDraft,
+                        actionLabel: checking ? "Checking…" : (connected ? "Update" : "Connect"),
+                        secure: true, isArmed: armed, action: connect)
+            BridgeSyncStatusRows(proof: result)
+            // Two sentences, not three paragraphs — but the §163
+            // permission check STAYS said (prd §192 protected this text as
+            // load-bearing trust content, not padding). What left is the
+            // capability line the product page and the connected state
+            // both already carry.
+            //
+            // "— nothing here can place an order, withdraw, or transfer"
+            // left too (audit, 2026-07-31): the sentence above it already
+            // says a key that can move money is handed back, this screen's
+            // connected state carries the clause word for word as its third
+            // capability line, and the doc note at the top of this file
+            // rules that the copy shouldn't be leaning on "Casberi can't
+            // trade" in the first place.
+            DSSlabNote(text: "\(venue.display) is asked what this key can do before it's stored — anything that can move money is refused.", plain: true)
+        }
     }
 
     /// The key page, per venue — checked live 2026-07-25 (Binance/Gemini

@@ -1,15 +1,26 @@
 import SwiftUI
 import SwiftData
 
-/// Stocktwits, connected — watch any stock by its ticker. A watched ticker is
-/// a thing whose sheet draws the live price chart (StockChart/Yahoo), and the
-/// takes traders post about it on Stocktwits land as chat things, each
+/// Stocktwits, on the account page — watch any stock by its ticker. A watched
+/// ticker is a thing whose sheet draws the live price chart (StockChart/Yahoo),
+/// and the takes traders post about it on Stocktwits land as chat things, each
 /// wearing its author's own Bullish/Bearish call. Keyless — Stocktwits'
 /// public streams, the same REST its website reads. Read-only: nothing here
 /// trades, and a watched ticker can never see a portfolio.
+///
+/// **ON `AccountPage` SINCE §639 (2026-09-06).** The watchlist was an
+/// `AssetRosterShelf` — a horizontal shelf of ticker discs under a note line
+/// coaching its own gestures ("Watching 3 · hold to unwatch"). It is the
+/// page's "Watching · N" roster now: one row per ticker, the same list shape
+/// every other seat's watched things wear, with the one removal verb. The
+/// shelf's own coaching goes with it — a swipe and a right-click are the
+/// chassis's, and a control that has to explain itself in a caption was the
+/// thing §639 was fixing.
 struct StocktwitsScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
+    /// The page's one bar (§639 amendment) — the ticker to add, and the filter
+    /// over the tickers already watched.
     @State private var queryField = ""
     @State private var working = false
     @State private var result: BridgeProof?
@@ -21,11 +32,14 @@ struct StocktwitsScreen: View {
     /// Each watched ticker's live day quote (price + change), fetched on
     /// appear from the same Yahoo read the chart sheet does — the row's one
     /// live fact (prd §185). A ticker Yahoo won't serve simply shows its
-    /// watched-since time instead, the honest fallback.
+    /// exchange instead, the honest fallback.
     @State private var quotes: [String: TokenChart] = [:]
     /// A ticker watched while a sync is mid-flight requeues the sync so its
     /// posts land now, not next visit (the GeckoTerminal lesson).
     @State private var syncPending = false
+    /// This week's landed takes per ticker, for the roster's own subline and
+    /// its active/quiet split.
+    @State private var weekly: [String: (week: Int, new: Bool)] = [:]
 
     /// Symbols matching what's typed so far — Stocktwits' own autocomplete
     /// order, unfiltered so the Watch button can reuse `hits.first` as the
@@ -37,64 +51,49 @@ struct StocktwitsScreen: View {
     @State private var hitsQuery = ""
 
     /// What the search rows actually show — already-watched tickers are in
-    /// the watchlist below, so they drop out here for display only.
+    /// the roster below, so they drop out here for display only.
     private var displayHits: [StockWatch.Resolved] {
         let refs = Set(watched.compactMap(\.sourceRef))
         return hits.filter { !refs.contains(StockWatch.symbolRef($0.symbol)) }
     }
 
     @FocusState private var fieldFocused: Bool
-    /// The stock whose chart sheet is open — a tapped disc on the roster
-    /// (prd §185). The shelf states its own gestures in its note line, so
-    /// there's no swipe left here to coach.
-    @State private var openThing: Thing?
+    /// The page's one presentation. A roster row's tap opens its chart, and
+    /// the chassis raises it — see `AccountPageSheet.thing`.
+    @State private var sheet: AccountPageSheet?
+
+    private var connected: Bool { !watched.isEmpty }
 
     var body: some View {
-        BridgeSetupPage(name: "Stocktwits") {
-            // A short header — the family-wide pass that put every "type
-            // something to watch it" screen on one shape (identity + mode
-            // chip + one action sentence, then the omnibox). No "Latest
-            // takes" preview still: the omnibox leads, the roster follows,
-            // the feed already shows what landed (prd §185's other half).
-            BridgeSetupHeader(
-                name: "Stocktwits",
-                mode: .noAccount,
-                intro: "Watch a ticker below by symbol or company name.",
-                connected: !watched.isEmpty)
-            // The way back to your things (§460) — the same door every other
-            // screen in the family carries.
-            if !watched.isEmpty {
-                RoomDoor(name: "Stocktwits", source: "Stocktwits")
-                    .listRowSeparator(.hidden)
-            }
-            addSection.listRowSeparator(.hidden)
-            if !watched.isEmpty {
-                watchlistSection
-            }
-            if !watched.isEmpty {
-                // A watched ticker IS its thing — no separate store to clear;
-                // "Remove its things too" is what drops the watchlist.
-                // Teardown drops the WATCHLIST rows (the watch is access —
-                // a kept watch row would re-register the seat on the next
-                // visit and keep the foreground poll landing posts); the
-                // posts are history and follow the person's own "remove its
-                // things too" choice.
-                BridgeDisconnectSection(bridgeID: "stocktwits", name: "Stocktwits",
-                                        teardown: {
-                                            StockWatch.unwatchAll(context: modelContext)
-                                            load()
-                                        })
-                    .listRowSeparator(.hidden)
-            }
-        }
-        .sheet(item: $openThing) { thing in
-            ThingSheetView(thing: thing)
-        }
+        AccountPage(
+            name: "Stocktwits", seatID: "stocktwits", source: "Stocktwits",
+            state: AccountPageState.of(name: "Stocktwits", seatID: "stocktwits",
+                                       connected: connected, store: store),
+            intro: "Watch a ticker below by symbol or company name.",
+            mode: .noAccount,
+            rows: rows,
+            query: queryField,
+            onRemoveRow: unwatch,
+            onOpenRow: openTicker,
+            // A watched ticker IS its thing — no separate store to clear.
+            // Teardown drops the WATCHLIST rows (the watch is access — a kept
+            // watch row would re-register the seat on the next visit and keep
+            // the foreground poll landing posts); the posts are history and
+            // follow the person's own "remove its things too" choice.
+            teardown: {
+                StockWatch.unwatchAll(context: modelContext)
+                load()
+            },
+            sheet: $sheet,
+            act: { actBlock },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
         .onAppear {
             load()
-            // Opening the screen doesn't connect — watching a ticker does.
+            // Opening the page doesn't connect — watching a ticker does.
             // Only refresh when something's already watched.
-            if !watched.isEmpty {
+            if connected {
                 Task { await sync() }
                 Task { await loadQuotes() }
             }
@@ -109,37 +108,39 @@ struct StocktwitsScreen: View {
         }
     }
 
-    // MARK: - Sections
+    // MARK: - The act field
 
-    private var addSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-            DSSlabField(placeholder: String(localized: "Ticker or company name"),
-                        text: $queryField, actionLabel: String(localized: "Watch"),
-                        focus: $fieldFocused, action: watch)
-            ForEach(displayHits) { stock in
-                BridgeSearchResultRow(
-                    imageURL: nil, fallbackIcon: "Stocktwits",
-                    title: "\(stock.title) · $\(stock.symbol)",
-                    subtitle: subtitle(for: stock),
-                    action: { watchHit(stock) })
-
-            }
-            BridgeSyncStatusRows(syncing: working || syncing,
-                                 syncingLine: working
-                                    ? String(localized: "Finding the ticker…")
-                                    : String(localized: "Syncing takes…"),
-                                 proof: result)
-            // The header's intro sentence is pure action, on purpose — this
-            // note carries the load-bearing honesty fact instead: a take is
-            // its author's opinion, not a rating this app computed. Presenting
-            // somebody's bullish call as though we endorsed it is exactly the
-            // fake status §83 bans, so the fact stays here, beside the field
-            // that starts the watching, rather than crowding the intro.
-            DSSlabNote(text: "Read-only — nothing trades or sees a portfolio. Every bullish or bearish take is its author's.")
-            }
+    @ViewBuilder private var actBlock: some View {
+        DSSlabField(placeholder: connected
+                        ? AccountPageShape.findPlaceholder(String(localized: "a ticker"))
+                        : String(localized: "Ticker or company name"),
+                    text: $queryField, actionLabel: String(localized: "Watch"),
+                    focus: $fieldFocused, action: watch)
+        if !displayHits.isEmpty {
+            Text(AccountPageShape.onLabel("Stocktwits"))
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .padding(.top, DS.Space.s2)
         }
-        .dsSlabSection()
+        ForEach(displayHits) { stock in
+            BridgeSearchResultRow(
+                imageURL: nil, fallbackIcon: "Stocktwits",
+                title: "\(stock.title) · $\(stock.symbol)",
+                subtitle: subtitle(for: stock),
+                action: { watchHit(stock) })
+        }
+        BridgeSyncStatusRows(syncing: working || syncing,
+                             syncingLine: working
+                                ? String(localized: "Finding the ticker…")
+                                : String(localized: "Syncing takes…"),
+                             proof: result)
+        // The intro sentence is pure action, on purpose — this note carries
+        // the load-bearing honesty fact instead: a take is its author's
+        // opinion, not a rating this app computed. Presenting somebody's
+        // bullish call as though we endorsed it is exactly the fake status §83
+        // bans, so the fact stays here, beside the field that starts the
+        // watching.
+        DSSlabNote(text: "Read-only — nothing trades or sees a portfolio. Every bullish or bearish take is its author's.",
+                   plain: true)
     }
 
     /// "NASDAQ · 982K watching" — the exchange names the market, the count
@@ -157,65 +158,55 @@ struct StocktwitsScreen: View {
         return String(n)
     }
 
-    /// The watchlist as a roster of ticker discs (prd §185) — the same shelf
-    /// of circles the wallet's addresses, the social screens' people, and
-    /// Tokens' coins wear. A stock ships no logo, so its mark is the ticker
-    /// itself in a round disc, never a faked one. Tap opens its chart; hold
-    /// unwatches (the thing IS the watch, so unwatching deletes it, and its
-    /// sourceRef leaving the store lets a re-add resolve).
-    private var watchlistSection: some View {
-        AssetRosterShelf(note: rosterNote, count: watched.count) {
-            ForEach(watched.keyed) { row in
-                // Corollary 3 (build 176) — see `ThingRowKeying`.
-                if let thing = row.live { rosterSlot(thing) }
-            }
-            AssetRosterAddSlot { fieldFocused = true }
+    // MARK: - The roster
+
+    /// One row per watched ticker: the COMPANY's name as the title (the ticker
+    /// is in the subline, and printing it twice reads as a stutter), the live
+    /// day quote where Yahoo served one, and this week's takes where it did
+    /// not. No quote renders no figure rather than a placeholder — unreachable
+    /// is a fact we don't have.
+    ///
+    /// Keyed on the thing's id captured while the model is valid, and every
+    /// stored read happens HERE, in one pass, rather than inside a row body
+    /// SwiftUI may re-run against a deleted model (`ThingRowKeying`, corollary
+    /// 3): the chassis is handed values, not models.
+    private var rows: [AccountPageShape.Row] {
+        watched.filter(\.isLive).map { thing in
+            let symbol = ticker(for: thing)
+            let counted = weekly[symbol] ?? (week: 0, new: false)
+            return AccountPageShape.Row(
+                id: thing.id.uuidString,
+                title: companyName(thing, fallback: symbol),
+                subline: subline(symbol: symbol, week: counted.week),
+                weekCount: counted.week, hasNew: counted.new,
+                isYou: false, avatarURL: nil)
         }
-        .listRowInsets(EdgeInsets())
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
     }
 
-    private var rosterNote: String {
-        let n = watched.count
-        return n == 1
-            ? String(localized: "Watching 1 · hold to unwatch")
-            : String(localized: "Watching \(n) · hold to unwatch")
+    /// "$226.10 · +1.2% · 4 takes this week" — the live day quote first (the
+    /// row's one live fact, §185), then the week the whole roster grammar is
+    /// built on. A ticker Yahoo won't serve simply drops the first half; no
+    /// quote renders no figure rather than a placeholder, because unreachable
+    /// is a fact we don't have.
+    private func subline(symbol: String, week: Int) -> String {
+        let counted = AccountPageShape.subline(nouns: String(localized: "takes"), weekCount: week)
+        guard let quote = quotes[symbol] else { return counted }
+        return "\(TokenChartStyle.priceText(quote.price)) · \(TokenChartStyle.changeText(quote.change)) · \(counted)"
     }
 
-    /// One stock on the shelf — its ticker disc, the COMPANY's name as the
-    /// label, and the live day quote when Yahoo served one. The name rather
-    /// than the ticker because the disc already says the ticker, and printing
-    /// it twice reads as a stutter (the wallet roster's own rule, where an
-    /// unnamed wallet drops the address line its name already is). No quote
-    /// renders no figure rather than a placeholder: unreachable is a fact we
-    /// don't have.
-    private func rosterSlot(_ thing: Thing) -> some View {
-        let symbol = ticker(for: thing)
-        let quote = quotes[symbol]
-        return AssetRosterSlot(label: companyName(thing, fallback: symbol),
-                               price: quote?.price,
-                               change: quote?.change) {
-            TickerDisc(ticker: symbol)
-        }
-        .onTapGesture {
-            DSHaptic.tap()
-            openThing = thing
-        }
-        .contextMenu {
-            Button(role: .destructive) {
-                if let i = watched.firstIndex(where: { $0.id == thing.id }) {
-                    unwatch(at: IndexSet(integer: i))
-                }
-            } label: {
-                Label("Unwatch", systemImage: "trash")
-            }
-        }
+    private func openTicker(_ id: String) {
+        guard let uuid = UUID(uuidString: id) else { return }
+        sheet = .thing(id: uuid)
+    }
+
+    private func unwatch(_ id: String) {
+        guard let i = watched.firstIndex(where: { $0.id.uuidString == id }) else { return }
+        unwatch(at: IndexSet(integer: i))
     }
 
     /// The company's own name, off the front of the watch title
     /// ("Apple Inc · $AAPL" → "Apple Inc"). Falls back to the ticker when a
-    /// title doesn't carry one, so a slot is never blank.
+    /// title doesn't carry one, so a row is never blank.
     private func companyName(_ thing: Thing, fallback: String) -> String {
         let name = thing.title.split(separator: "·").first
             .map { $0.trimmingCharacters(in: .whitespaces) } ?? ""
@@ -231,9 +222,9 @@ struct StocktwitsScreen: View {
 
     /// One day-quote per watched ticker, concurrently — the chart sheet's
     /// exact fetch (hosts, UA quirk, symbol mapping all in StockChart), so
-    /// this column can never disagree with the chart behind the row's tap.
+    /// this line can never disagree with the chart behind the row's tap.
     private func loadQuotes() async {
-        let tickers = watched.map(ticker(for:)).filter { !$0.isEmpty }
+        let tickers = watched.filter(\.isLive).map(ticker(for:)).filter { !$0.isEmpty }
         guard !tickers.isEmpty else { return }
         await withTaskGroup(of: (String, TokenChart?).self) { group in
             for t in tickers where quotes[t] == nil {
@@ -245,21 +236,39 @@ struct StocktwitsScreen: View {
         }
     }
 
-
     // MARK: - Actions
 
     private func load() {
         // Unbounded on purpose: the watchlist is bounded by the person's own
         // taps, and a fetch limit here once let accumulating posts push
         // watch rows out of the list while they were still watched (review
-        // 2026-07-15). Landed posts aren't read here at all anymore — the
-        // "Latest takes" preview retired with prd §185.
+        // 2026-07-15).
         let descriptor = FetchDescriptor<Thing>(
             predicate: #Predicate { $0.source == "Stocktwits" },
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
         )
-        let things = (try? modelContext.fetch(descriptor)) ?? []
+        let things = ((try? modelContext.fetch(descriptor)) ?? []).filter(\.isLive)
         watched = things.filter { $0.sourceRef?.hasPrefix("stocktwits:sym:") == true }
+        countWeek(things)
+    }
+
+    /// This week's takes per ticker. A take carries every ticker it names in
+    /// `tags`, the STREAM's symbol first (`StocktwitsIngest`'s own ordering),
+    /// so a post that landed from $AAPL while arguing about $MSFT counts once,
+    /// under the stream the person actually watches. Read in Swift, never as a
+    /// predicate — a `.contains` on a transformable array crashes mid-fetch
+    /// (CLAUDE.md's own rule).
+    private func countWeek(_ things: [Thing]) {
+        let since = Date.now.addingTimeInterval(-7 * 86_400)
+        let lastLooked = AccountVisits.lastLooked("stocktwits")
+        var book: [String: (week: Int, new: Bool)] = [:]
+        for thing in things where thing.capturedAt >= since && thing.kind == .chat {
+            guard let symbol = thing.tags.first?.uppercased(), !symbol.isEmpty else { continue }
+            let was = book[symbol] ?? (0, false)
+            book[symbol] = (was.week + 1,
+                            was.new || (lastLooked.map { thing.capturedAt > $0 } ?? false))
+        }
+        weekly = book
     }
 
     private func unwatch(at offsets: IndexSet) {
@@ -312,6 +321,7 @@ struct StocktwitsScreen: View {
         load()
         StockWatch.registerBridge(store: store, context: modelContext)
         Task { await sync() }
+        Task { await loadQuotes() }
     }
 
     /// Fetch + land the watched tickers' latest takes; the seat's status
@@ -327,7 +337,7 @@ struct StocktwitsScreen: View {
             // registerBridge owns the seat rule — it clears the seat itself
             // when the last watch is gone (disconnect mid-sync included).
             StockWatch.registerBridge(store: store, context: modelContext)
-            guard !watched.isEmpty else { return }
+            guard connected else { return }
             if let added {
                 result = .landed(added)
             } else {

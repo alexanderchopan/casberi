@@ -11,7 +11,6 @@ struct PolarScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.openURL) private var openURL
 
-    @State private var showConnection = false
     @State private var tokenField = ""
     @State private var accountVersion = 0
 
@@ -19,7 +18,6 @@ struct PolarScreen: View {
     @State private var syncing = false
     @State private var result: BridgeProof?
 
-    @State private var recent: [Thing] = []
     @State private var mrr: String?
     @State private var activeSubs: Int?
 
@@ -28,114 +26,62 @@ struct PolarScreen: View {
         return TokenBridge.polar.connected
     }
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+
     var body: some View {
-        BridgeSetupPage(name: "Polar") {
-            if hasToken {
-                // Connected (prd §186): the credential form retires behind one
-                // door, and identity, live proof and what this can do take the
-                // screen. This bridge stores only the secret — in the Keychain
-                // — so it leads with its own name over a truthful note about
-                // HOW it is connected, never an account name we would guess.
-                BridgeConnectedState(
-                    bridgeID: TokenBridge.polar.bridgeID,
-                    name: "Polar",
-                    connectionNote: String(localized: "Your \(TokenBridge.polar.credentialNoun) · stored in \(DS.device)'s Keychain"),
-                    capabilitiesFallback: [TokenBridge.polar.canLine],
-                    openConnection: { showConnection = true })
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            } else {
-                BridgeSetupHeader(
-                    name: "Polar",
-                    mode: .pasteKey,
-                    intro: "Sales as they happen, plus what needs you: a dispute and its deadline, a refund, a subscription going bad. Never a customer's name or card.",
-                    connected: hasToken)
-            }
-            if hasToken {
-                RoomDoor(name: "Polar", source: PolarWatch.source)
-                    .listRowSeparator(.hidden)
-            }
-            if hasToken {
-                readingSection.listRowSeparator(.hidden)
-                if !recent.isEmpty {
-                    RecentThingsSection(header: "Landed", things: recent.live)
+        AccountPage(
+            name: "Polar", seatID: TokenBridge.polar.bridgeID, source: PolarWatch.source,
+            state: AccountPageState.of(name: "Polar", seatID: TokenBridge.polar.bridgeID,
+                                       connected: hasToken, store: store),
+            intro: "Sales as they happen, plus what needs you: a dispute and its deadline, a refund, a subscription going bad. Never a customer's name or card.",
+            mode: .pasteKey,
+            keyed: true,
+            teardown: {
+                TokenVault.delete(TokenBridge.polar.tokenKey)
+                accountVersion += 1
+            },
+            sheet: $sheet,
+            act: {
+                if hasToken {
+                    // What the key is reading right now. The token form is the
+                    // "Your key" sheet, reached from the row that says where
+                    // the key lives.
+                    readingBlock
+                } else {
+                    tokenBlock
                 }
-            } else {
-                tokenSection.listRowSeparator(.hidden)
-            }
-        }
-        .sheet(isPresented: $showConnection) {
-            BridgeConnectionSheet(title: "Polar") {
-                tokenSection
-                removeSection
-            }
-        }
+            },
+            more: { EmptyView() },
+            keySheet: { tokenBlock }
+        )
         .onAppear {
             load()
             if hasToken { Task { await sync() } }
         }
     }
 
-    // MARK: - Step one: the token
-
-    private var tokenSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if let url = TokenBridge.polar.setupURL {
-                    DSSlabButton(title: TokenBridge.polar.doorTitle,
-                                 detail: TokenBridge.polar.doorHost,
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        openURL(url)
-                    }
-                }
-                BridgeStepLines(steps: [TokenBridge.polar.steps[0]], numbered: false)
-                // The four scopes ARE the read-only promise (Stripe's own
-                // reasoning) — a token minted with only these physically
-                // cannot refund, cancel, or create anything. Orders joined
-                // them in §537; a token minted before that has three, which
-                // costs the sales half and nothing else (see `PolarFetch.orders`).
-                DSCheckList(lines: ["Orders — read",
-                                    "Refunds — read",
-                                    "Subscriptions — read",
-                                    "Organizations — read"])
-                BridgeStepLines(steps: [TokenBridge.polar.steps[1]], numbered: false)
-                DSSlabField(placeholder: TokenBridge.polar.placeholder,
-                            text: $tokenField, actionLabel: "Save", secure: true,
-                            action: saveToken)
-                BridgeSyncStatusRows(syncing: connecting,
-                                     syncingLine: String(localized: "Checking the token…"),
-                                     proof: result)
-            }
-        }
-        .dsSlabSection()
-    }
-
-    // MARK: - Connected: the reading
 
     /// The one live figure on the screen, and a STATE rather than an event
     /// (§216) — so it renders as a card that updates in place and never
     /// lands in the feed as a row.
-    private var readingSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if let mrr {
-                    readout(String(localized: "Recurring revenue"), "\(mrr)/mo")
-                }
-                if let activeSubs {
-                    readout(String(localized: "Active subscribers"), "\(activeSubs)")
-                }
-                if mrr == nil && activeSubs == nil {
-                    Text("Reading your revenue…")
-                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
-                }
-                BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: String(localized: "Reading Polar…"),
-                                     proof: result)
-                DSSlabNote(text: "Sales, refunds, disputes and subscriptions leaving a healthy state land on their own. Renewals stay out.")
+    @ViewBuilder private var readingBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if let mrr {
+                readout(String(localized: "Recurring revenue"), "\(mrr)/mo")
             }
+            if let activeSubs {
+                readout(String(localized: "Active subscribers"), "\(activeSubs)")
+            }
+            if mrr == nil && activeSubs == nil {
+                Text("Reading your revenue…")
+                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+            }
+            BridgeSyncStatusRows(syncing: syncing,
+                                 syncingLine: String(localized: "Reading Polar…"),
+                                 proof: result)
+            DSSlabNote(text: "Sales, refunds, disputes and subscriptions leaving a healthy state land on their own. Renewals stay out.", plain: true)
         }
-        .dsSlabSection()
     }
 
     private func readout(_ label: String, _ value: String) -> some View {
@@ -148,10 +94,44 @@ struct PolarScreen: View {
         }
     }
 
+    // MARK: - The key
+
+    /// The connect form — steps whole, furniture gone (prd §218). It is the
+    /// act field with no key, and the "Your key" sheet once there is one, so a
+    /// key is replaced by exactly the path it was pasted.
+    @ViewBuilder private var tokenBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if let url = TokenBridge.polar.setupURL {
+                DSSlabButton(title: TokenBridge.polar.doorTitle,
+                             detail: TokenBridge.polar.doorHost,
+                             systemImage: "arrow.up.right") {
+                    DSHaptic.tap()
+                    openURL(url)
+                }
+            }
+            BridgeStepLines(steps: [TokenBridge.polar.steps[0]], numbered: false)
+            // The four scopes ARE the read-only promise (Stripe's own
+            // reasoning) — a token minted with only these physically
+            // cannot refund, cancel, or create anything. Orders joined
+            // them in §537; a token minted before that has three, which
+            // costs the sales half and nothing else (see `PolarFetch.orders`).
+            DSCheckList(lines: ["Orders — read",
+                                "Refunds — read",
+                                "Subscriptions — read",
+                                "Organizations — read"])
+            BridgeStepLines(steps: [TokenBridge.polar.steps[1]], numbered: false)
+            DSSlabField(placeholder: TokenBridge.polar.placeholder,
+                        text: $tokenField, actionLabel: "Save", secure: true,
+                        action: saveToken)
+            BridgeSyncStatusRows(syncing: connecting,
+                                 syncingLine: String(localized: "Checking the token…"),
+                                 proof: result)
+        }
+    }
+
     // MARK: - Actions
 
     private func load() {
-        recent = recentBridgeThings(source: PolarWatch.source, context: modelContext)
         let reading = PolarState.reading()
         mrr = PolarState.mrrText()
         activeSubs = reading.activeSubscriptions
@@ -217,17 +197,5 @@ struct PolarScreen: View {
         }
     }
 
-    /// The way out — the shared row, behind the Connection door with the form
-    /// it belongs to (prd §186/§608).
-    private var removeSection: some View {
-        BridgeDisconnectSection(bridgeID: TokenBridge.polar.bridgeID,
-                                name: "Polar",
-                                teardown: {
-                                    TokenVault.delete(TokenBridge.polar.tokenKey)
-                                    PolarAccount.clear()
-                                    accountVersion += 1
-                                    load()
-                                })
-    }
 
 }

@@ -57,62 +57,88 @@ struct AltanaScreen: View {
 
     private var draft: String { addressField.trimmingCharacters(in: .whitespacesAndNewlines) }
 
-    var body: some View {
-        BridgeSetupPage(name: "Altana") {
-            BridgeSetupHeader(
-                name: "Altana",
-                mode: .noAccount,
-                // ACTION, not a re-pitch: the product page one tap back just
-                // said what Altana is and what it reads, and the mode chip
-                // carries the cost. What is left is what to do here.
-                intro: "Paste an account address, or watch one of the examples below.",
-                connected: connected)
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+    /// This week's rows per watched account.
+    @State private var weekly: [String: (week: Int, new: Bool)] = [:]
 
-            if connecting || connectError != nil {
-                Section {
+    var body: some View {
+        AccountPage(
+            name: "Altana", seatID: "altana", source: AltanaKeystore.source,
+            state: AccountPageState.of(name: "Altana", seatID: "altana",
+                                       connected: connected, store: store),
+            // ACTION, not a re-pitch: the product page one tap back just said
+            // what Altana is and what it reads. What is left is what to do here.
+            intro: "Paste an account address, or watch one of the examples below.",
+            mode: .noAccount,
+            rows: rows,
+            query: addressField,
+            onRemoveRow: unwatch,
+            // Drops the EXAMPLES and nothing else. `AltanaState` is
+            // deliberately NOT cleared, unlike vibenet's teardown: this seat
+            // also rides the wallets you watch, so wiping the snapshot would
+            // delete a real wallet's own readings to remove somebody else's
+            // example. `reconcileWalletSeats` then re-registers the seat on
+            // the next pass if your own wallet still has evidence, which is
+            // the correct outcome rather than a bug.
+            teardown: {
+                AltanaWatch.shared.removeAll()
+                store.reconcileWalletSeats()
+            },
+            sheet: $sheet,
+            act: {
+                if connecting || connectError != nil {
                     BridgeSyncStatusRows(
                         syncing: connecting,
                         syncingLine: String(localized: "Reading the keystore…"),
                         proof: connectError)
                 }
-                .dsSlabSection()
-                .listRowSeparator(.hidden)
-            }
-
-            if connected, !connecting {
-                RoomDoor(name: "Altana", source: AltanaKeystore.source)
-                    .listRowSeparator(.hidden)
-            }
-
-            if !connecting {
-                Section { watchField }
-                    .dsSlabSection()
-                    .listRowSeparator(.hidden)
-
-                Section { discoverySection }
-                    .dsSlabSection()
-                    .listRowSeparator(.hidden)
-            }
-
-            if connected, !connecting {
-                // Drops the EXAMPLES and nothing else. `AltanaState` is
-                // deliberately NOT cleared, unlike vibenet's teardown: this
-                // seat also rides the wallets you watch, so wiping the snapshot
-                // would delete a real wallet's own readings to remove somebody
-                // else's example. `reconcileWalletSeats` then re-registers the
-                // seat on the next pass if your own wallet still has evidence,
-                // which is the correct outcome rather than a bug.
-                BridgeDisconnectSection(
-                    bridgeID: "altana", name: AltanaKeystore.source,
-                    teardown: {
-                        AltanaWatch.shared.removeAll()
-                        store.reconcileWalletSeats()
-                    }
-                ).listRowSeparator(.hidden)
-            }
+                if !connecting {
+                    watchField
+                    discoverySection
+                }
+            },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
+        .onAppear {
+            countWeek()
+            if !discoveryAttempted { Task { await loadDiscovery() } }
         }
-        .onAppear { if !discoveryAttempted { Task { await loadDiscovery() } } }
+        .onChange(of: watch.addresses) { _, _ in countWeek() }
     }
+
+    // MARK: - The roster
+
+    /// One row per watched account — the chassis's list, with the seat's own
+    /// removal verb replaced by the one verb, "Remove".
+    private var rows: [AccountPageShape.Row] {
+        watch.addresses.map { address in
+            let counted = weekly[address.lowercased()] ?? (week: 0, new: false)
+            return AccountPageShape.Row(
+                id: address,
+                title: watch.name(for: address) ?? WalletStore.shortAddress(address),
+                subline: AccountPageShape.subline(nouns: String(localized: "keys"),
+                                                  weekCount: counted.week),
+                weekCount: counted.week, hasNew: counted.new,
+                isYou: false, avatarURL: nil)
+        }
+    }
+
+    private func unwatch(_ address: String) {
+        watch.remove(address)
+        store.reconcileWalletSeats()
+        countWeek()
+    }
+
+    /// This week's rows per account — `AltanaKeystoreSource` stamps the
+    /// account's address as `walletAddress` on every row it lands, which is
+    /// the only field that says which account a key belongs to.
+    private func countWeek() {
+        weekly = AccountWeek.counts(source: AltanaKeystore.source, seatID: "altana",
+                                    context: modelContext) { $0.walletAddress }
+    }
+
 
     // MARK: - Paste
 

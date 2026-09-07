@@ -11,69 +11,64 @@ struct DealsScreen: View {
     @State private var syncing = false
     @State private var lastResult: String?
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+
     var body: some View {
-        BridgeSetupPage(name: "Deals") {
-            BridgeSetupHeader(
-                name: "Deals",
-                mode: .noAccount,
-                intro: "Today's discounts, priced in the headline. Nothing here buys anything.")
-            if deals.connected {
-                RoomDoor(name: "Deals", source: "Deals")
-                    .listRowSeparator(.hidden)
-            }
-            sourcesSection.listRowSeparator(.hidden)
-            if deals.connected {
-                BridgeDisconnectSection(
-                    bridgeID: "deals", name: "Deals",
-                    teardown: {
-                        DealsStore.shared.disconnect()
-                    }
-                ).listRowSeparator(.hidden)
-            }
-        }
+        AccountPage(
+            name: "Deals", seatID: "deals", source: "Deals",
+            state: AccountPageState.of(name: "Deals", seatID: "deals",
+                                       connected: deals.connected, store: store),
+            intro: "Today's discounts, priced in the headline. Nothing here buys anything.",
+            mode: .noAccount,
+            teardown: { DealsStore.shared.disconnect() },
+            sheet: $sheet,
+            act: { sourcesBlock },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
         .onAppear {
             if deals.connected { Task { await sync() } }
         }
     }
 
-    private var sourcesSection: some View {
-        Section {
-            ForEach(DealSource.allCases) { source in
-                Button {
-                    toggle(source)
-                } label: {
-                    HStack(spacing: DS.Space.s3) {
-                        Text(source.display)
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        Spacer()
-                        if deals.isOn(source) {
-                            Image(systemName: "checkmark")
-                                .dsText(.body17).foregroundStyle(DS.tint)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .dsListCardRow()
-            }
-        } header: {
-            HStack {
-                Text("Sources").dsText(.label12).foregroundStyle(DS.textTertiary)
-                Spacer()
-                if syncing {
-                    ProgressView().controlSize(.small)
-                } else if let lastResult {
-                    Text(lastResult).dsText(.label12).foregroundStyle(DS.textTertiary)
-                }
-            }
-        } footer: {
-            // "Read-only." left the end of this line (audit, 2026-07-31) — the
-            // footer below spends a whole sentence on it, and says what it means.
-            Text("Each deal lands as a product.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
-        }
-    }
 
+    /// The act: which sources are on. Picking them IS connecting here — there
+    /// is no account and nothing to paste — so the list is the act slot, and a
+    /// picked row wears a check rather than a card.
+    @ViewBuilder private var sourcesBlock: some View {
+        ForEach(DealSource.allCases) { source in
+            Button {
+                toggle(source)
+            } label: {
+                HStack(spacing: DS.Space.s3) {
+                    Text(source.display)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Spacer()
+                    if deals.isOn(source) {
+                        Image(systemName: "checkmark")
+                            .dsText(.body17).foregroundStyle(DS.tint)
+                    }
+                }
+                .frame(minHeight: AccountFactRow.height)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        if syncing {
+            HStack(spacing: DS.Space.s2) {
+                ProgressView().controlSize(.small)
+                Text("Reading the deals…")
+                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+            }
+        } else if let lastResult {
+            Text(lastResult)
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+        }
+        // "Read-only." left the end of this line (audit, 2026-07-31) — the
+        // sentence below spends a whole clause on it, and says what it means.
+        DSSlabNote(text: "Each deal lands as a product.", plain: true)
+    }
 
     private func toggle(_ source: DealSource) {
         if deals.isOn(source) {

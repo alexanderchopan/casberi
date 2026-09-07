@@ -46,33 +46,30 @@ struct RSSScreen: View {
     @State private var pendingOPML = PendingOPMLFile.shared
     @FocusState private var fieldFocused: Bool
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+    /// This week's posts per followed feed.
+    @State private var weekly: [String: (week: Int, new: Bool)] = [:]
+
     var body: some View {
-        BridgeSetupPage(name: "RSS") {
-            BridgeSetupHeader(
-                name: "RSS",
-                mode: .noAccount,
-                intro: "Every post, in order. No ranking, nothing skipped.",
-                connected: !rss.feeds.isEmpty)
-            // The way back to what arrived (§460).
-            if !rss.feeds.isEmpty {
-                RoomDoor(name: "RSS", source: "RSS")
-                    .listRowSeparator(.hidden)
-            }
-            omniSection.listRowSeparator(.hidden)
-            if !rss.feeds.isEmpty {
-                ledgerSection.listRowSeparator(.hidden)
-            }
-            if !rss.feeds.isEmpty {
-                BridgeDisconnectSection(
-                    bridgeID: "rss", name: "RSS",
-                    teardown: {
-                        RSSStore.shared.removeAll()
-                    }
-                ).listRowSeparator(.hidden)
-            }
-        }
+        AccountPage(
+            name: "RSS", seatID: "rss", source: "RSS",
+            state: AccountPageState.of(name: "RSS", seatID: "rss",
+                                       connected: !rss.feeds.isEmpty, store: store),
+            intro: "Every post, in order. No ranking, nothing skipped.",
+            mode: .noAccount,
+            rows: rows,
+            query: newFeed,
+            onRemoveRow: unfollow,
+            teardown: { RSSStore.shared.removeAll() },
+            sheet: $sheet,
+            act: { omniBlock },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
         .onAppear {
             refreshExportURL()
+            countWeek()
             // A file handed in via AirDrop/Share Sheet before this screen
             // existed to receive it (RootShell's onOpenURL raised this sheet
             // and parked the URL here) — pick it up once, same as if the
@@ -84,7 +81,10 @@ struct RSSScreen: View {
             // Every visit refreshes — feeds are cheap to poll.
             Task { await sync() }
         }
-        .onChange(of: rss.feeds) { _, _ in refreshExportURL() }
+        .onChange(of: rss.feeds) { _, _ in
+            refreshExportURL()
+            countWeek()
+        }
         .onChange(of: pendingOPML.url) { _, url in
             guard let url else { return }
             pendingOPML.url = nil
@@ -97,29 +97,62 @@ struct RSSScreen: View {
         }
     }
 
+    // MARK: - The roster
+
+    /// One row per followed feed. The square-marked ledger with its own Remove
+    /// is the chassis's roster now; what a row says is what the feed dropped
+    /// this week — or, where the publisher has gone dark, that instead
+    /// (`FeedFreshness.trouble`, three misses and three days rather than one).
+    /// Two states used to render as the same row that simply stopped growing.
+    private var rows: [AccountPageShape.Row] {
+        rss.feeds.map { feed in
+            let counted = weekly[feed.displayName.lowercased()] ?? (week: 0, new: false)
+            let subline = FeedFreshness.trouble(for: feed.url)
+                ?? AccountPageShape.subline(nouns: String(localized: "posts"),
+                                            weekCount: counted.week)
+            return AccountPageShape.Row(
+                id: feed.id.uuidString, title: feed.displayName, subline: subline,
+                weekCount: counted.week, hasNew: counted.new,
+                isYou: false, avatarURL: nil)
+        }
+    }
+
+    private func unfollow(_ id: String) {
+        guard let i = rss.feeds.firstIndex(where: { $0.id.uuidString == id }) else { return }
+        rss.remove(at: IndexSet(integer: i))
+        countWeek()
+    }
+
+    /// This week's posts per feed — `RSSIngest` stamps the feed's display name
+    /// as the thing's `authorHandle`.
+    private func countWeek() {
+        weekly = AccountWeek.counts(source: "RSS", seatID: "rss",
+                                    context: modelContext) { $0.authorHandle }
+    }
+
+
     // MARK: - Add
 
-    private var omniSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabField(placeholder: String(localized: "Site or feed URL"),
-                            text: $newFeed, actionLabel: String(localized: "Follow"),
-                            keyboard: .URL, focus: $fieldFocused, action: addFeed)
-                BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: String(localized: "Reading your feeds…"),
-                                     proof: lastResult)
-                // The note that used to sit here said "A site's own address
-                // works too" beneath a field placeheld "Site or feed URL" —
-                // §220's finding exactly, so it went rather than got tightened
-                // (audit, 2026-07-31).
-                if let opmlParsed {
-                    opmlScopePicker(opmlParsed)
-                } else {
-                    secondaryLinks
-                }
+    @ViewBuilder private var omniBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            DSSlabField(placeholder: rss.feeds.isEmpty
+                            ? String(localized: "Site or feed URL")
+                            : AccountPageShape.findPlaceholder(String(localized: "a feed")),
+                        text: $newFeed, actionLabel: String(localized: "Follow"),
+                        keyboard: .URL, focus: $fieldFocused, action: addFeed)
+            BridgeSyncStatusRows(syncing: syncing,
+                                 syncingLine: String(localized: "Reading your feeds…"),
+                                 proof: lastResult)
+            // The note that used to sit here said "A site's own address
+            // works too" beneath a field placeheld "Site or feed URL" —
+            // §220's finding exactly, so it went rather than got tightened
+            // (audit, 2026-07-31).
+            if let opmlParsed {
+                opmlScopePicker(opmlParsed)
+            } else {
+                secondaryLinks
             }
         }
-        .dsSlabSection()
     }
 
     /// Secondary, not a second slab — this screen's one verb is FOLLOW;
@@ -177,70 +210,6 @@ struct RSSScreen: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.plain)
-        }
-    }
-
-    // MARK: - The ledger
-
-    private var ledgerSection: some View {
-        Section {
-            ForEach(rss.feeds) { feed in
-                HStack(spacing: DS.Space.s3) {
-                    // Square, not round — a publication is a topic, not a
-                    // person (the mark grammar ruling, prd §184).
-                    BridgeIcon(name: "RSS", size: DS.Mark.list, circular: false)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(feed.displayName)
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        // A feed that has stopped answering says so, in place
-                        // of its own address (2026-08-05). The URL is demoted
-                        // detail on this row; a publisher that has gone dark
-                        // outranks it, and until now the two states — "quiet
-                        // publisher" and "dead URL" — rendered as the same
-                        // row that simply stopped growing. Silent unless
-                        // there is something to say; see `FeedFreshness.
-                        // trouble` for why the bar is three misses and three
-                        // days rather than one.
-                        if let trouble = FeedFreshness.trouble(for: feed.url) {
-                            Text(trouble)
-                                .dsText(.label12).foregroundStyle(DS.attention)
-                                .lineLimit(1)
-                        } else {
-                            Text(feed.url)
-                                .dsText(.label12).foregroundStyle(DS.textTertiary)
-                                .lineLimit(1)
-                        }
-                    }
-                    Spacer(minLength: 0)
-                }
-                .dsListCardRow()
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        if let i = rss.feeds.firstIndex(where: { $0.id == feed.id }) {
-                            rss.remove(at: IndexSet(integer: i))
-                            DSHaptic.tap()
-                        }
-                    } label: {
-                        Label("Remove", systemImage: "trash")
-                    }
-                }
-                // A swipe has no Mac-mouse equivalent — right-click mirrors it
-                // (Mac polish, 2026-07-28).
-                .contextMenu {
-                    Button(role: .destructive) {
-                        if let i = rss.feeds.firstIndex(where: { $0.id == feed.id }) {
-                            rss.remove(at: IndexSet(integer: i))
-                            DSHaptic.tap()
-                        }
-                    } label: {
-                        Label("Remove", systemImage: "trash")
-                    }
-                }
-            }
-        } header: {
-            Text(rss.feeds.count == 1 ? "Following" : "Following \(rss.feeds.count)")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
         }
     }
 

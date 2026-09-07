@@ -2,18 +2,6 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
-/// The imported Instagram things already in the corpus — newest first. A
-/// @Query so the list updates live after an import and the fetch runs once per
-/// store change, not twice per body pass.
-private let instagramRecentDescriptor: FetchDescriptor<Thing> = {
-    var d = FetchDescriptor<Thing>(
-        predicate: #Predicate { $0.source == "Instagram" },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-    )
-    d.fetchLimit = 12
-    return d
-}()
-
 /// Instagram, connected — by import, the ChatGPT grade, because a personal
 /// Instagram account has no API at all (prd §245).
 ///
@@ -55,34 +43,31 @@ struct InstagramImportScreen: View {
     /// prd §310). Both read off the import RECEIPT and a count — no new field.
     @State private var staleness: String?
     @State private var held = 0
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
-    @Query(instagramRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        BridgeSetupPage(name: "Instagram") {
-            BridgeSetupHeader(
-                name: "Instagram",
-                mode: .oneTimeImport,
-                intro: "Saved posts get their words and cover picture back from Instagram's public pages.",
-                connected: held > 0)
-            // The way back to what just landed (§460). Gated on the corpus,
-            // not a connection flag: an import has no live connection, so
-            // "has anything arrived" is the only honest test of whether
-            // there is a room worth opening.
-            if !recent.isEmpty {
-                RoomDoor(name: "Instagram", source: "Instagram")
-                    .listRowSeparator(.hidden)
-            }
-            setupSection
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Imported", things: recent.live)
-                    .listRowSeparator(.hidden)
-            }
-            ImportUpkeepSection(source: "Instagram", held: held, staleness: staleness) { gone in
-                reread()
-                result = .says(String(localized: "\(gone) removed"))
-            }
-        }
+        AccountPage(
+            name: "Instagram", seatID: "instagram", source: "Instagram",
+            // An import has no live connection, so "is anything here" is the
+            // only honest test of whether this seat is connected at all.
+            state: AccountPageState.of(name: "Instagram", seatID: "instagram",
+                                       connected: held > 0, store: store),
+            intro: "Saved posts get their words and cover picture back from Instagram's public pages.",
+            mode: .oneTimeImport,
+            teardown: {},
+            sheet: $sheet,
+            act: { setupBlock },
+            more: {
+                ImportUpkeepSection(source: "Instagram", held: held,
+                                    staleness: staleness, plain: true) { gone in
+                    reread()
+                    result = .says(String(localized: "\(gone) removed"))
+                }
+            },
+            keySheet: { EmptyView() }
+        )
         .onAppear { reread() }
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.folder]) { outcome in
@@ -91,34 +76,31 @@ struct InstagramImportScreen: View {
         }
     }
 
-    private var setupSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                ImportArchiveSection(
-                    source: "Instagram",
-                    doorTitle: "Open Instagram",
-                    doorURL: URL(string: "https://accountscenter.instagram.com/info_and_permissions/dyi/"),
-                    // JSON is called out because the default is HTML, and an
-                    // HTML export parses into nothing here. The REASON for that
-                    // ("an HTML export can't be read") left the step in the §315
-                    // pass and lives in `nothingNewLine` — the moment it can
-                    // actually be acted on. A step says what to do; an error
-                    // says why it didn't work.
-                    steps: [
-                        "Choose Download or transfer information, then Some of your information.",
-                        "Tick Saved, Likes, Posts, Stories, Reels and Comments.",
-                        "Set Format to JSON, not HTML, then Download to device.",
-                        // "then pick the unzipped folder below" was the button
-                        // beneath it read out loud (2026-07-31).
-                        "They email a link in about an hour — unzip it in Files.",
-                    ],
-                    pickTitle: "Choose folder",
-                    alreadyImported: held > 0,
-                    showsMessagesToggle: true) { importing = true }
-                BridgeSyncStatusRows(proof: result)
-            }
+    @ViewBuilder private var setupBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            ImportArchiveSection(
+                source: "Instagram",
+                doorTitle: "Open Instagram",
+                doorURL: URL(string: "https://accountscenter.instagram.com/info_and_permissions/dyi/"),
+                // JSON is called out because the default is HTML, and an
+                // HTML export parses into nothing here. The REASON for that
+                // ("an HTML export can't be read") left the step in the §315
+                // pass and lives in `nothingNewLine` — the moment it can
+                // actually be acted on. A step says what to do; an error
+                // says why it didn't work.
+                steps: [
+                    "Choose Download or transfer information, then Some of your information.",
+                    "Tick Saved, Likes, Posts, Stories, Reels and Comments.",
+                    "Set Format to JSON, not HTML, then Download to device.",
+                    // "then pick the unzipped folder below" was the button
+                    // beneath it read out loud (2026-07-31).
+                    "They email a link in about an hour — unzip it in Files.",
+                ],
+                pickTitle: "Choose folder",
+                alreadyImported: held > 0,
+                showsMessagesToggle: true) { importing = true }
+            BridgeSyncStatusRows(proof: result)
         }
-        .dsSlabSection()
     }
 
     /// One re-read of what this screen shows about the corpus — on appear,

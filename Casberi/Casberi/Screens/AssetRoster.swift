@@ -1,78 +1,18 @@
 import SwiftUI
 
-/// The asset roster (prd §185) — the manager pattern's third dialect, after
-/// the wallet's address roster (§182) and the social screens' people roster
-/// (§184). A watched token or stock is an IDENTITY the same way a wallet or a
-/// person is, so it wears the same shelf of circles: mark, name, and its one
-/// live fact whispered underneath.
-///
-/// Ruling 2026-07-23 (user: "circles", then "why wouldn't we do the same
-/// horizontal row treatment"): assets are round — a coin keeps its round art,
-/// and a stock, which ships none, wears a round ticker disc rather than a
-/// square tile or a faked logo. The mark grammar lands as **round is a person
-/// or an asset, square is a topic** (a channel, a feed, a publication, a
-/// contract glyph).
-///
-/// What the shelf costs, accepted with the ruling: the vertical price column
-/// you could scan down, and the native list gestures. Comparison lives in the
-/// feed's movers tile, which is the surface for reading; unwatching moves to
-/// a long-press, which is the roster's own gesture everywhere else in the app.
-
-/// The shelf itself — a horizontal band of slots with one quiet line under it
-/// saying how many and how to work it. Matches the wallet/social rosters'
-/// metrics so all three read as one shelf across the app.
-struct AssetRosterShelf<Content: View>: View {
-    /// "Watching 4 · tap for its chart, hold to unwatch" — the shelf states
-    /// its own gestures, since a shelf can't show a swipe hint.
-    let note: String
-    /// HOW MANY ROWS THE CALLER REALLY HAS, and the shelf DRAWS NOTHING at
-    /// zero (2026-08-29).
-    ///
-    /// A guard here rather than a lint, because the lint was measured and
-    /// refused: a check comparing a shelf's gate against the collection its
-    /// `ForEach` walks reports FIVE findings on a clean tree and none of them
-    /// is real — `TokenWatchScreen` iterates a derived `items` while correctly
-    /// gating on the `watched` it is derived from, which from outside is
-    /// indistinguishable from the bug. A check that cries wolf gets turned off
-    /// within a week, so this moves into the type instead, where it cannot be
-    /// got wrong at all.
-    ///
-    /// THE BUG IT ENDS: `L2beatScreen` and `WalletbeatScreen` gated their
-    /// shelves on `connected`, which is true for somebody FOLLOWING a registry
-    /// who has named nothing — so both drew a lone dashed `AssetRosterAddSlot`
-    /// under "Watching 0 · tap for its assessment, hold to stop watching",
-    /// gesture copy for rows that do not exist (§83's dead control wearing
-    /// prose). Reported 2026-08-29 as *"totally messy … with the thing to
-    /// watch at the bottom"*. Every call site is also gated, and that stays —
-    /// belt and braces, since the gate is what keeps a `Section`'s spacing out
-    /// of the list as well.
-    ///
-    /// It is the row count, NOT `content`'s child count, which a `ViewBuilder`
-    /// cannot report: the trailing add slot means the content is never empty,
-    /// which is exactly why the empty case was invisible.
-    let count: Int
-    @ViewBuilder var content: () -> Content
-
-    var body: some View {
-        if count > 0 { shelf }
-    }
-
-    private var shelf: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s3) {
-                    content()
-                }
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.vertical, DS.Space.s1)
-            }
-            Text(note)
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
-                .padding(.horizontal, DS.Space.s4)
-        }
-        .padding(.top, DS.Space.s1)
-    }
-}
+// THE SHELF IS GONE, THE SLOT SURVIVES (prd §639, 2026-09-06).
+//
+// `AssetRosterShelf`, `AssetRosterAddSlot` and `TickerDisc` were the horizontal
+// roster four watch-list screens drew — Tokens, Stocktwits, PostHog, L2BEAT,
+// Walletbeat — under a caption that coached its own gestures ("Watching 5 ·
+// hold to unwatch"). Every one of those seats is an account page now, and the
+// page has ONE roster: a vertical list with a swipe, a Mac-mirroring
+// right-click, and one verb. Two roster shapes for one job is what §639 was
+// called for.
+//
+// The SLOT stays because `PostHogRoomCard` draws it in the ROOM, which is a
+// different surface with a different job: a horizontal strip of metric discs
+// above the rows they summarise.
 
 /// One asset on the shelf: its round mark, its short name, and — when the
 /// price is known — the live figure over a signed delta. Purely visual; the
@@ -122,66 +62,4 @@ struct AssetRosterSlot<Mark: View>: View {
     }
 }
 
-/// The trailing slot — no cap on a watchlist, so this is an invitation rather
-/// than the wallet's literal empty slot. It can't watch anything without a
-/// query, so it focuses the omnibox above (the honest door).
-struct AssetRosterAddSlot: View {
-    let action: () -> Void
 
-    var body: some View {
-        VStack(spacing: 6) {
-            Circle()
-                .strokeBorder(DS.textTertiary.opacity(0.35),
-                              style: StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
-                .frame(width: AssetRosterSlot<EmptyView>.markSize,
-                       height: AssetRosterSlot<EmptyView>.markSize)
-                .overlay {
-                    Image(systemName: "plus")
-                        .dsGlyph(16)
-                        .foregroundStyle(DS.textTertiary)
-                }
-            Text("Watch")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
-                .frame(minHeight: 52, alignment: .top)
-        }
-        .frame(width: AssetRosterSlot<EmptyView>.slotWidth)
-        .contentShape(Rectangle())
-        .dsHover()
-        .onTapGesture {
-            DSHaptic.tap()
-            action()
-        }
-        .dsTapCard()
-    }
-}
-
-/// A stock's mark — the ticker itself, set in a round disc (prd §185). A
-/// stock ships no logo, and inventing one (or borrowing a generic glyph that
-/// says "stock") would be a mark that names nothing; the ticker IS the
-/// symbol, so it stands as its own face. Long tickers ("BRK.B") shrink to
-/// fit rather than truncate — a half-printed ticker names the wrong company.
-struct TickerDisc: View {
-    let ticker: String
-    var size: CGFloat = 56
-
-    /// The ".X" crypto suffix Stocktwits appends is spelling, not name — the
-    /// disc shows "BTC", the way the row's title already says Bitcoin.
-    private var shown: String {
-        ticker.hasSuffix(".X") ? String(ticker.dropLast(2)) : ticker
-    }
-
-    var body: some View {
-        Circle()
-            .fill(DS.fillFaint)
-            .frame(width: size, height: size)
-            .overlay {
-                Text(shown)
-                    .font(.custom(DSFont.bold, fixedSize: size * 0.30))
-                    .foregroundStyle(DS.textSecondary)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-                    .padding(.horizontal, size * 0.12)
-            }
-    }
-}

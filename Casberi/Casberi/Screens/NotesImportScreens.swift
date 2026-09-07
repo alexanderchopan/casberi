@@ -61,48 +61,44 @@ struct DayOneImportScreen: View {
     @State private var result: BridgeProof?
     @State private var staleness: String?
     @State private var held = 0
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
-    @Query(dayOneRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        BridgeSetupPage(name: "Day One") {
-            BridgeSetupHeader(
-                name: "Day One",
-                mode: .oneTimeImport,
-                intro: "Each entry lands on the day you wrote it.",
-                connected: held > 0)
-            // The way back to what just landed (§460). Gated on the corpus:
-            // an import has no live connection to gate on.
-            if !recent.isEmpty {
-                RoomDoor(name: "Day One", source: "Day One")
-                    .listRowSeparator(.hidden)
-            }
-            Section {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    ImportArchiveSection(
-                        source: "Day One",
-                        steps: ["In Day One, open Settings → Import/Export → Export → JSON.",
-                                "Save the zip to Files and tap it once to unzip."],
-                        pickTitle: "Choose your Day One export",
-                        pickIcon: "square.and.arrow.down",
-                        alreadyImported: held > 0) { importing = true }
-                    BridgeSyncStatusRows(proof: result)
-                    // The one fine print that changes what somebody DOES
-                    // (§315): the folder and the .json both import, and only the
-                    // folder can reach `photos/`.
-                    DSSlabNote(text: "Pick the folder, not the .json, to bring your photos too.")
+        AccountPage(
+            name: "Day One", seatID: "dayone", source: "Day One",
+            // An import has no live connection, so "is anything here" is the
+            // only honest test of whether this seat is connected at all.
+            state: AccountPageState.of(name: "Day One", seatID: "dayone",
+                                       connected: held > 0, store: store),
+            intro: "Each entry lands on the day you wrote it.",
+            mode: .oneTimeImport,
+            teardown: {},
+            sheet: $sheet,
+            act: {
+                ImportArchiveSection(
+                    source: "Day One",
+                    steps: ["In Day One, open Settings → Import/Export → Export → JSON.",
+                            "Save the zip to Files and tap it once to unzip."],
+                    pickTitle: "Choose your Day One export",
+                    pickIcon: "square.and.arrow.down",
+                    alreadyImported: held > 0) { importing = true }
+                BridgeSyncStatusRows(proof: result)
+                // The one fine print that changes what somebody DOES (§315):
+                // the folder and the .json both import, and only the folder
+                // can reach `photos/`.
+                DSSlabNote(text: "Pick the folder, not the .json, to bring your photos too.", plain: true)
+            },
+            more: {
+                ImportUpkeepSection(source: "Day One", held: held,
+                                    staleness: staleness, plain: true) { gone in
+                    reread()
+                    result = .says(String(localized: "\(gone) removed"))
                 }
-            }
-            .dsSlabSection()
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Imported", things: Array(recent))
-                    .listRowSeparator(.hidden)
-            }
-            ImportUpkeepSection(source: "Day One", held: held, staleness: staleness) { gone in
-                reread()
-                result = .says(String(localized: "\(gone) removed"))
-            }
-        }
+            },
+            keySheet: { EmptyView() }
+        )
         .onAppear { reread() }
         // FOLDER OR FILE since 2026-08-17 (prd §398). The `.json` alone still
         // works and still imports every entry — but a scoped grant on a file
@@ -154,14 +150,6 @@ struct DayOneImportScreen: View {
     }
 }
 
-private let dayOneRecentDescriptor: FetchDescriptor<Thing> = {
-    var d = FetchDescriptor<Thing>(
-        predicate: #Predicate { $0.source == "Day One" },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-    )
-    d.fetchLimit = 12
-    return d
-}()
 
 /// Apple Journal, connected — by import of Journal's own export
 /// (iOS 18+): profile button → Export produces a zip of per-entry pages.
@@ -172,48 +160,44 @@ struct JournalImportScreen: View {
     @State private var result: BridgeProof?
     @State private var staleness: String?
     @State private var held = 0
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
-    @Query(journalRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        BridgeSetupPage(name: "Apple Journal") {
-            BridgeSetupHeader(
-                name: "Apple Journal",
-                mode: .oneTimeImport,
-                intro: "Each entry lands on the day you wrote it.",
-                connected: held > 0)
-            // The way back to what just landed (§460). Gated on the corpus:
-            // an import has no live connection to gate on.
-            if !recent.isEmpty {
-                RoomDoor(name: "Apple Journal", source: "Apple Journal")
-                    .listRowSeparator(.hidden)
-            }
-            Section {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    ImportArchiveSection(
-                        source: "Apple Journal",
-                        steps: ["In Journal, tap your profile picture → Export Journal.",
-                                "Save the zip to Files and tap it once to unzip."],
-                        pickTitle: "Choose the export folder",
-                        alreadyImported: held > 0) { importing = true }
-                    BridgeSyncStatusRows(proof: result)
-                    // The note that sat here ("Photos stay in the export for
-                    // now") is DELETED rather than reworded: it stopped being
-                    // true when §398 landed the pictures, and unlike Day One's
-                    // there is no choice left for fine print to govern — this
-                    // screen only ever picks the folder.
+        AccountPage(
+            name: "Apple Journal", seatID: "journal", source: "Apple Journal",
+            // An import has no live connection, so "is anything here" is the
+            // only honest test of whether this seat is connected at all.
+            state: AccountPageState.of(name: "Apple Journal", seatID: "journal",
+                                       connected: held > 0, store: store),
+            intro: "Each entry lands on the day you wrote it.",
+            mode: .oneTimeImport,
+            teardown: {},
+            sheet: $sheet,
+            act: {
+                ImportArchiveSection(
+                    source: "Apple Journal",
+                    steps: ["In Journal, tap your profile picture → Export Journal.",
+                            "Save the zip to Files and tap it once to unzip."],
+                    pickTitle: "Choose the export folder",
+                    alreadyImported: held > 0) { importing = true }
+                BridgeSyncStatusRows(proof: result)
+                // The note that sat here ("Photos stay in the export for now")
+                // is DELETED rather than reworded: it stopped being true when
+                // §398 landed the pictures, and unlike Day One's there is no
+                // choice left for fine print to govern — this seat only ever
+                // picks the folder.
+            },
+            more: {
+                ImportUpkeepSection(source: "Apple Journal", held: held,
+                                    staleness: staleness, plain: true) { gone in
+                    reread()
+                    result = .says(String(localized: "\(gone) removed"))
                 }
-            }
-            .dsSlabSection()
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Imported", things: Array(recent))
-                    .listRowSeparator(.hidden)
-            }
-            ImportUpkeepSection(source: "Apple Journal", held: held, staleness: staleness) { gone in
-                reread()
-                result = .says(String(localized: "\(gone) removed"))
-            }
-        }
+            },
+            keySheet: { EmptyView() }
+        )
         .onAppear { reread() }
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.folder]) { outcome in
@@ -248,14 +232,6 @@ struct JournalImportScreen: View {
     }
 }
 
-private let journalRecentDescriptor: FetchDescriptor<Thing> = {
-    var d = FetchDescriptor<Thing>(
-        predicate: #Predicate { $0.source == "Apple Journal" },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-    )
-    d.fetchLimit = 12
-    return d
-}()
 
 /// Apple Notes — the share-path explainer, not a bridge (prd 55). Apple
 /// offers no export and no read API for Notes, so there is nothing to
@@ -264,51 +240,67 @@ private let journalRecentDescriptor: FetchDescriptor<Thing> = {
 /// your captures.
 struct NotesShareScreen: View {
     @Environment(\.openURL) private var openURL
+    /// The page's one presentation (`AccountPage.sheet`). Nothing on this seat
+    /// raises one today; the chassis's reach sheet does.
+    @State private var sheet: AccountPageSheet?
 
     var body: some View {
-        BridgeSetupPage(name: "Apple Notes") {
-            BridgeSetupHeader(
-                name: "Apple Notes",
-                mode: .onThisDevice,
-                intro: "Apple offers no export and no read API, so there's nothing to connect — share a note instead.")
-            // Not an ImportArchiveSection: there is no export and no pick.
-            // These three lines describe the SHARE SHEET, which is the whole
-            // of this bridge — so the steps stand alone, in the same component
-            // every other screen's steps use.
-            Section {
+        AccountPage(
+            name: "Apple Notes", seatID: "notes", source: "Apple Notes",
+            // NEVER CONNECTED, and that is the screen. This seat registers
+            // nothing and claims no status (Apple offers no export and no read
+            // API), so the state line reads "Not connected" honestly and the
+            // exits never draw.
+            state: .notConnected,
+            intro: "Apple offers no export and no read API, so there's nothing to connect — share a note instead.",
+            mode: .onThisDevice,
+            // AND IT LANDS NOTHING UNDER ITS OWN NAME. A note shared out of
+            // Notes lands under source "You" (`Corpus.earnsRoom` refuses it),
+            // so an Activity row here would count rows that will never exist
+            // and open a room that does not.
+            lands: false,
+            teardown: {},
+            sheet: $sheet,
+            act: {
+                // Not an ImportArchiveSection: there is no export and no pick.
+                // These three lines describe the SHARE SHEET, which is the
+                // whole of this bridge — so the steps stand alone, in the same
+                // component every other screen's steps use.
                 BridgeStepLines(steps: ["Open a note in Apple Notes.",
                                         "Tap share, then Casberi.",
                                         "It lands in your feed as a note."],
                                 startingAt: 1)
-            }
-            .dsSlabSection()
-            Section {
-                // Gated 2026-08-14 (App Store review 2.1(a) on the Mac
-                // build). Nothing claims `mobilenotes` on Mac Catalyst, so
-                // this was a row that did nothing when clicked — the same
-                // defect the review named, on the setup screen for the one
-                // bridge whose whole instruction is "go to Notes".
-                if HandOffState.installedSchemes.contains("mobilenotes") {
-                    Button {
-                        if let url = URL(string: "mobilenotes://") { openURL(url) }
-                    } label: {
-                        HStack(spacing: DS.Space.s3) {
-                            // The list row's own chrome already says this is
-                            // tappable — the chip previews no state, so it's
-                            // neutral (`IconChip`, 2026-08-10, was tint).
-                            IconChip(tone: DS.neutralBadge, size: 28, style: .wash) {
-                                Image(systemName: "arrow.up.right").dsGlyph(15, weight: .regular)
-                            }
-                            Text("Open Notes")
-                                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                            Spacer()
-                        }
+                notesDoor
+            },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
+    }
+
+    /// The door into Notes itself. Gated 2026-08-14 (App Store review 2.1(a)
+    /// on the Mac build): nothing claims `mobilenotes` on Mac Catalyst, so
+    /// this was a row that did nothing when clicked — the same defect the
+    /// review named, on the setup screen for the one bridge whose whole
+    /// instruction is "go to Notes".
+    @ViewBuilder private var notesDoor: some View {
+        if HandOffState.installedSchemes.contains("mobilenotes") {
+            Button {
+                if let url = URL(string: "mobilenotes://") { openURL(url) }
+            } label: {
+                HStack(spacing: DS.Space.s3) {
+                    // The chip previews no state, so it's neutral
+                    // (`IconChip`, 2026-08-10, was tint).
+                    IconChip(tone: DS.neutralBadge, size: 28, style: .wash) {
+                        Image(systemName: "arrow.up.right").dsGlyph(15, weight: .regular)
                     }
-                    .buttonStyle(.plain)
-                    .dsListCardRow()
+                    Text("Open Notes")
+                        .dsText(.body17).foregroundStyle(DS.tint)
+                    Spacer()
                 }
+                .frame(minHeight: 56)
+                .contentShape(Rectangle())
             }
-            .listRowSeparator(.hidden)
+            .buttonStyle(.plain)
         }
     }
 }
@@ -329,53 +321,49 @@ struct BookmarksImportScreen: View {
     @State private var result: BridgeProof?
     @State private var staleness: String?
     @State private var held = 0
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
-    @Query(bookmarksRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        BridgeSetupPage(name: "Bookmarks") {
-            BridgeSetupHeader(
-                name: "Bookmarks",
-                mode: .oneTimeImport,
-                intro: "They land as links, and folders become tags.",
-                connected: held > 0)
-            // The way back to what just landed (§460). Gated on the corpus:
-            // an import has no live connection to gate on.
-            if !recent.isEmpty {
-                RoomDoor(name: "Bookmarks", source: "Bookmarks")
-                    .listRowSeparator(.hidden)
-            }
-            Section {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    // The steps and the FIRST pick are the shared section; the
-                    // scope rows below are this screen's own, because a parsed
-                    // export offers a real either/or (reading list, or all)
-                    // that no other importer has.
-                    if parsed == nil {
-                        ImportArchiveSection(
-                            source: "Bookmarks",
-                            steps: ["Chrome: chrome://bookmarks → ⋮ → Export bookmarks.",
-                                    "Safari (Mac): File → Export Bookmarks…",
-                                    "Save it to Files."],
-                            pickTitle: "Choose your bookmarks export",
-                            pickIcon: "square.and.arrow.down",
-                            alreadyImported: held > 0) { importing = true }
-                    } else {
-                        pickRows
-                    }
-                    BridgeSyncStatusRows(proof: result)
+        AccountPage(
+            name: "Bookmarks", seatID: "bookmarks", source: "Bookmarks",
+            // An import has no live connection, so "is anything here" is the
+            // only honest test of whether this seat is connected at all.
+            state: AccountPageState.of(name: "Bookmarks", seatID: "bookmarks",
+                                       connected: held > 0, store: store),
+            intro: "They land as links, and folders become tags.",
+            mode: .oneTimeImport,
+            teardown: {},
+            sheet: $sheet,
+            act: {
+                // The steps and the FIRST pick are the shared section; the
+                // scope rows below are this screen's own, because a parsed
+                // export offers a real either/or (reading list, or all) that
+                // no other importer has.
+                if parsed == nil {
+                    ImportArchiveSection(
+                        source: "Bookmarks",
+                        steps: ["Chrome: chrome://bookmarks → ⋮ → Export bookmarks.",
+                                "Safari (Mac): File → Export Bookmarks…",
+                                "Save it to Files."],
+                        pickTitle: "Choose your bookmarks export",
+                        pickIcon: "square.and.arrow.down",
+                        alreadyImported: held > 0) { importing = true }
+                } else {
+                    pickRows
                 }
-            }
-            .dsSlabSection()
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Imported", things: Array(recent))
-                    .listRowSeparator(.hidden)
-            }
-            ImportUpkeepSection(source: "Bookmarks", held: held, staleness: staleness) { gone in
-                reread()
-                result = .says(String(localized: "\(gone) removed"))
-            }
-        }
+                BridgeSyncStatusRows(proof: result)
+            },
+            more: {
+                ImportUpkeepSection(source: "Bookmarks", held: held,
+                                    staleness: staleness, plain: true) { gone in
+                    reread()
+                    result = .says(String(localized: "\(gone) removed"))
+                }
+            },
+            keySheet: { EmptyView() }
+        )
         .onAppear { reread() }
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.html]) { outcome in
@@ -440,14 +428,6 @@ struct BookmarksImportScreen: View {
     }
 }
 
-private let bookmarksRecentDescriptor: FetchDescriptor<Thing> = {
-    var d = FetchDescriptor<Thing>(
-        predicate: #Predicate { $0.source == "Bookmarks" },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-    )
-    d.fetchLimit = 12
-    return d
-}()
 
 // MARK: - Shared rows (the import-screen grammar, extracted from ChatGPT's)
 

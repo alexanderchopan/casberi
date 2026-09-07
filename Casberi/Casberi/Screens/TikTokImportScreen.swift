@@ -2,17 +2,6 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
-/// The TikTok things already in the corpus — newest first, so an import's
-/// result is visible on the screen that ran it.
-private let tiktokRecentDescriptor: FetchDescriptor<Thing> = {
-    var d = FetchDescriptor<Thing>(
-        predicate: #Predicate { $0.source == "TikTok" },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-    )
-    d.fetchLimit = 12
-    return d
-}()
-
 /// TikTok, connected — by import of the account's own data export, because
 /// TikTok has no other door (prd §279).
 ///
@@ -39,35 +28,34 @@ struct TikTokImportScreen: View {
     @State private var held = 0
     @State private var fetching = false
     @State private var pending = 0
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
-    @Query(tiktokRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        BridgeSetupPage(name: "TikTok") {
-            BridgeSetupHeader(
-                name: "TikTok",
-                mode: .oneTimeImport,
-                intro: "Your captions, comments, saves and likes, searchable.",
-                connected: held > 0)
-            // The way back to what just landed (§460). Gated on the corpus,
-            // not a connection flag: an import has no live connection, so
-            // "has anything arrived" is the only honest test of whether
-            // there is a room worth opening.
-            if !recent.isEmpty {
-                RoomDoor(name: "TikTok", source: "TikTok")
-                    .listRowSeparator(.hidden)
-            }
-            pickSection
-            if pending > 0 { facesSection }
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Imported", things: Array(recent.live))
-                    .listRowSeparator(.hidden)
-            }
-            ImportUpkeepSection(source: "TikTok", held: held, staleness: staleness) { gone in
-                reread()
-                result = .says(String(localized: "\(gone) removed"))
-            }
-        }
+        AccountPage(
+            name: "TikTok", seatID: "tiktok", source: "TikTok",
+            // An import has no live connection, so "is anything here" is the
+            // only honest test of whether this seat is connected at all.
+            state: AccountPageState.of(name: "TikTok", seatID: "tiktok",
+                                       connected: held > 0, store: store),
+            intro: "Your captions, comments, saves and likes, searchable.",
+            mode: .oneTimeImport,
+            teardown: {},
+            sheet: $sheet,
+            act: {
+                pickBlock
+                if pending > 0 { facesBlock }
+            },
+            more: {
+                ImportUpkeepSection(source: "TikTok", held: held,
+                                    staleness: staleness, plain: true) { gone in
+                    reread()
+                    result = .says(String(localized: "\(gone) removed"))
+                }
+            },
+            keySheet: { EmptyView() }
+        )
         // Both, because the JSON download arrives sometimes as a bare file and
         // sometimes zipped around one — and which the person picks shouldn't be
         // something this screen has to explain.
@@ -82,28 +70,25 @@ struct TikTokImportScreen: View {
     /// No door: TikTok's export is requested inside TikTok's own app, not at a
     /// URL — so the steps number from 1 and the pick is the permanent verb.
     /// The block still collapses once something has been imported (prd §314).
-    private var pickSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                ImportArchiveSection(
-                    source: "TikTok",
-                    // "JSON" is called out because the picker defaults to TXT,
-                    // and a TXT export parses into nothing here — a silent zero
-                    // that reads as a broken importer rather than as the wrong
-                    // format (the lesson §245 paid for with Instagram's HTML
-                    // default).
-                    steps: [
-                        "In TikTok, open Settings and privacy, then Account, then Download your data.",
-                        "Set the format to JSON, not TXT, then Select all and Request data.",
-                        "Ready in up to 4 days — save it to Files, the link expires.",
-                    ],
-                    pickTitle: "Choose export",
-                    pickIcon: "square.and.arrow.down",
-                    alreadyImported: held > 0) { importing = true }
-                BridgeSyncStatusRows(proof: result)
-            }
+    @ViewBuilder private var pickBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            ImportArchiveSection(
+                source: "TikTok",
+                // "JSON" is called out because the picker defaults to TXT,
+                // and a TXT export parses into nothing here — a silent zero
+                // that reads as a broken importer rather than as the wrong
+                // format (the lesson §245 paid for with Instagram's HTML
+                // default).
+                steps: [
+                    "In TikTok, open Settings and privacy, then Account, then Download your data.",
+                    "Set the format to JSON, not TXT, then Select all and Request data.",
+                    "Ready in up to 4 days — save it to Files, the link expires.",
+                ],
+                pickTitle: "Choose export",
+                pickIcon: "square.and.arrow.down",
+                alreadyImported: held > 0) { importing = true }
+            BridgeSyncStatusRows(proof: result)
         }
-        .dsSlabSection()
     }
 
     /// One re-read of what this screen shows about the corpus — on appear,
@@ -116,20 +101,17 @@ struct TikTokImportScreen: View {
 
     /// The second act. Only ever on screen when there is genuinely something
     /// waiting — an empty queue shows no button rather than a dead one.
-    private var facesSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabButton(title: fetching ? "Naming videos…" : "Name \(pending) videos",
-                             systemImage: "arrow.down.circle",
-                             busy: fetching,
-                             enabled: !fetching) {
-                    DSHaptic.tap()
-                    Task { await runFetch() }
-                }
-                DSSlabNote(text: "Saves arrive as bare links. This asks TikTok what each one is. No rush — the videos don't expire.")
+    @ViewBuilder private var facesBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            DSSlabButton(title: fetching ? "Naming videos…" : "Name \(pending) videos",
+                         systemImage: "arrow.down.circle",
+                         busy: fetching,
+                         enabled: !fetching) {
+                DSHaptic.tap()
+                Task { await runFetch() }
             }
+            DSSlabNote(text: "Saves arrive as bare links. This asks TikTok what each one is. No rush — the videos don't expire.", plain: true)
         }
-        .dsSlabSection()
     }
 
 

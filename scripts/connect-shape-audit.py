@@ -14,7 +14,9 @@ a reading does not.
 The defects were arrangement, not copy:
 
   · a shelf drawn over an empty watch list, under gesture copy for rows that do
-    not exist ("Watching 0 · tap for its assessment, hold to stop watching"),
+    not exist ("Watching 0 · tap for its assessment, hold to stop watching") —
+    unrepresentable since §639 deleted the shelf, see the note where its guard
+    used to be,
   · one control drawn as a filled primary slab in one state and a CENTERED gray
     note in the other,
   · a bare blue text link doing a control's job below the identity area — the
@@ -57,7 +59,6 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCREENS = os.path.join(ROOT, "Casberi", "Casberi", "Screens")
-COMPONENT = os.path.join(SCREENS, "AssetRoster.swift")
 
 # A tinted text control that is deliberately NOT a slab. An entry is a
 # conscious ruling, never a snooze, and it carries the reason.
@@ -174,7 +175,7 @@ def check_controls_are_slabs(name, body):
     content-level disclosures ("Show all 12 turns", "Read the rest", "See all 40
     transactions") or a directory row's own verb — both of which §190 exempts by
     name ("a page's own content rows"). Scoped to files carrying a
-    `BridgeSetupHeader` — i.e. the connect family, which is the family with an
+    `AccountPage` — i.e. the connect family, which is the family with an
     identity area for controls to sit below — it reports ONE.
 
     That one shape is the "headed section with a blue text link" §190 lists among
@@ -190,7 +191,7 @@ def check_controls_are_slabs(name, body):
     it was really running file-wide. Caught by this file's own self-test.
     """
     out = []
-    if "BridgeSetupHeader(" not in body:
+    if "AccountPage(" not in body:
         return out
     for b in PLAIN_BUTTON.finditer(body):
         label = b.group(1)
@@ -209,30 +210,19 @@ def check_controls_are_slabs(name, body):
     return out
 
 
-def check_shelf_guard():
-    """The shelf's own zero guard, and every caller passing its count.
-
-    This is the drift guard for the defect the header says was PREVENTED rather
-    than detected. Without it the guard is one careless edit from gone, and its
-    absence is invisible: an empty shelf renders as a perfectly ordinary dashed
-    circle.
-    """
-    out = []
-    src = strip_comments(open(COMPONENT).read())
-    if not re.search(r"if count > 0", src):
-        out.append("AssetRoster.swift: AssetRosterShelf no longer refuses to draw "
-                   "at count 0 — the empty-shelf class is back")
-    if not re.search(r"let count: Int", src):
-        out.append("AssetRoster.swift: AssetRosterShelf no longer takes its row count")
-    for name, body in screens():
-        if name == "AssetRoster.swift":
-            continue
-        for m in re.finditer(r"AssetRosterShelf\(([^)]*)\)", body):
-            if "count:" not in m.group(1):
-                line = body[:m.start()].count("\n") + 1
-                out.append(f"{name}:{line}: AssetRosterShelf without count: — it "
-                           f"cannot refuse to draw over an empty shelf")
-    return out
+# THE SHELF GUARD IS DELETED WITH THE SHELF (prd §639, 2026-09-06).
+#
+# It guarded a defect that was PREVENTED rather than detected: an
+# `AssetRosterShelf` drawing its lone dashed add slot under "Watching 0 · tap
+# for its assessment, hold to stop watching" — gesture copy for rows that do
+# not exist. Both seats that could produce it (L2BEAT, Walletbeat) are account
+# pages now, and so are Tokens, Stocktwits and PostHog; the chassis's roster
+# draws NO label at all when it has no rows, so the shape is unrepresentable
+# rather than merely guarded. `AssetRosterShelf` itself is deleted.
+#
+# Kept as a note rather than as a dead check, because a check whose subject no
+# longer exists reports green forever and certifies nothing — the failure this
+# file's own header is about.
 
 
 def audit():
@@ -241,7 +231,6 @@ def audit():
         findings += check_one_control_one_shape(name, body)
         findings += check_status_last(name, body)
         findings += check_controls_are_slabs(name, body)
-    findings += check_shelf_guard()
     return findings
 
 
@@ -300,7 +289,7 @@ CLEAN_STATUS = '''
 DIRTY_LINK = '''
 struct X: View {
     var body: some View {
-        BridgeSetupHeader(name: "X", mode: .noAccount, intro: "Short.")
+        AccountPage(name: "X", seatID: "x", source: "X", mode: .noAccount, intro: "Short.")
     }
 
     private var watchSection: some View {
@@ -340,7 +329,7 @@ struct X: View {
 COMMENTED = '''
 struct X: View {
     var body: some View {
-        BridgeSetupHeader(name: "X", mode: .noAccount, intro: "Short.")
+        AccountPage(name: "X", seatID: "x", source: "X", mode: .noAccount, intro: "Short.")
     }
 
     // It used to be: Text("Browse all 105").foregroundStyle(DS.tint) in a
@@ -378,12 +367,6 @@ def self_test():
     case("ignores the banned shape quoted in a comment",
          check_controls_are_slabs, COMMENTED, False)
 
-    # The shelf guard has to fail when the guard goes, or it certifies nothing.
-    src = strip_comments(open(COMPONENT).read())
-    mutated = src.replace("if count > 0", "if true")
-    print(f"  {'✓' if 'if count > 0' not in mutated else '✗'} "
-          f"the shelf guard is a real line to remove")
-    ok = ok and ("if count > 0" not in mutated)
     return ok
 
 
@@ -402,5 +385,5 @@ if __name__ == "__main__":
             print("  " + h)
         sys.exit(1)
     print(f"connect-shape-audit: OK — {count} screens; one control one shape, "
-          f"the sync result reports last, every control below the identity area "
-          f"is a slab, and the roster shelf still refuses to draw over nothing.")
+          f"the sync result reports last, and every control below the identity "
+          f"area is a slab.")

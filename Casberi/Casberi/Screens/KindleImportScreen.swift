@@ -12,49 +12,43 @@ struct KindleImportScreen: View {
     @State private var result: BridgeProof?
     @State private var staleness: String?
     @State private var held = 0
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
-    @Query(kindleRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        BridgeSetupPage(name: "Kindle") {
-            BridgeSetupHeader(
-                name: "Kindle",
-                mode: .oneTimeImport,
-                connected: held > 0)
-            // The way back to what just landed (§460). Gated on the corpus,
-            // not a connection flag: an import has no live connection, so
-            // "has anything arrived" is the only honest test of whether
-            // there is a room worth opening.
-            if !recent.isEmpty {
-                RoomDoor(name: "Kindle", source: "Kindle")
-                    .listRowSeparator(.hidden)
-            }
-            Section {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    ImportArchiveSection(
-                        source: "Kindle",
-                        steps: ["Plug your Kindle into \(DS.device)\(DS.isMac ? "" : " (or a Mac)") with its cable.",
-                                "Open the Kindle's drive → documents → My Clippings.txt, and copy it to Files."],
-                        pickTitle: "Choose My Clippings.txt",
-                        pickIcon: "square.and.arrow.down",
-                        alreadyImported: held > 0) { importing = true }
-                    BridgeSyncStatusRows(proof: result)
-                    // Kept: the upkeep footer says an import can be re-run, it
-                    // does not say highlights arrive GROUPED BY BOOK, which is
-                    // the thing somebody is deciding about.
-                    DSSlabNote(text: "Highlights become findable notes, grouped by book.")
+        AccountPage(
+            name: "Kindle", seatID: "kindle", source: "Kindle",
+            // An import has no live connection, so "is anything here" is the
+            // only honest test of whether this seat is connected at all.
+            state: AccountPageState.of(name: "Kindle", seatID: "kindle",
+                                       connected: held > 0, store: store),
+            mode: .oneTimeImport,
+            teardown: {},
+            sheet: $sheet,
+            act: {
+                ImportArchiveSection(
+                    source: "Kindle",
+                    steps: ["Plug your Kindle into \(DS.device)\(DS.isMac ? "" : " (or a Mac)") with its cable.",
+                            "Open the Kindle's drive → documents → My Clippings.txt, and copy it to Files."],
+                    pickTitle: "Choose My Clippings.txt",
+                    pickIcon: "square.and.arrow.down",
+                    alreadyImported: held > 0) { importing = true }
+                BridgeSyncStatusRows(proof: result)
+                // Kept: the upkeep line says an import can be re-run, it does
+                // not say highlights arrive GROUPED BY BOOK, which is the
+                // thing somebody is deciding about.
+                DSSlabNote(text: "Highlights become findable notes, grouped by book.", plain: true)
+            },
+            more: {
+                ImportUpkeepSection(source: "Kindle", held: held,
+                                    staleness: staleness, plain: true) { gone in
+                    reread()
+                    result = .says(String(localized: "\(gone) removed"))
                 }
-            }
-            .dsSlabSection()
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Imported", things: Array(recent))
-                    .listRowSeparator(.hidden)
-            }
-            ImportUpkeepSection(source: "Kindle", held: held, staleness: staleness) { gone in
-                reread()
-                result = .says(String(localized: "\(gone) removed"))
-            }
-        }
+            },
+            keySheet: { EmptyView() }
+        )
         .onAppear { reread() }
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.plainText, .text]) { outcome in
@@ -103,12 +97,3 @@ struct KindleImportScreen: View {
     }
 
 }
-
-private let kindleRecentDescriptor: FetchDescriptor<Thing> = {
-    var d = FetchDescriptor<Thing>(
-        predicate: #Predicate { $0.source == "Kindle" },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-    )
-    d.fetchLimit = 12
-    return d
-}()

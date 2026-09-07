@@ -101,7 +101,12 @@ struct BridgeDetailScreen: View {
                 DSHaptic.tap()
                 presentLimitedPicker()
             }
-            DSSlabDoor(title: String(localized: "Allow all photos in Settings"),
+            // Verb over address (the 2026-08-14 door anatomy) — the route rides
+            // `detail:`, which is also what keeps the big words inside §315's
+            // own door budget. This page left that budget's reach until §639
+            // put it on the same chassis as every other seat's.
+            DSSlabDoor(title: String(localized: "Allow all photos"),
+                       detail: String(localized: "Settings"),
                        systemImage: "gearshape") {
                 if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
             }

@@ -28,53 +28,80 @@ struct PackageWatchScreen: View {
     private var watched: [String] { packages.list(registry) }
     private var connected: Bool { packages.connected(registry) }
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+    /// This week's releases per watched package.
+    @State private var weekly: [String: (week: Int, new: Bool)] = [:]
+
     var body: some View {
-        BridgeSetupPage(name: registry.displayName, computedTitle: registry.displayName) {
-            BridgeSetupHeader(
-                name: registry.displayName,
-                mode: .noAccount,
-                intro: registryIntro,
-                connected: connected)
-            if connected {
-                // `registry.displayName` is what `PackageWatchBridge` stamps as
-                // `source:`, so the door and the rows can never disagree.
-                RoomDoor(name: registry.displayName, source: registry.displayName)
-                    .listRowSeparator(.hidden)
-            }
-            addSection.listRowSeparator(.hidden)
-            if !watched.isEmpty {
-                watchlistSection
-            }
-            if connected {
-                BridgeDisconnectSection(
-                    bridgeID: registry.bridgeID, name: registry.displayName,
-                    teardown: { PackageStore.shared.disconnect(registry) }
-                ).listRowSeparator(.hidden)
-            }
-        }
+        AccountPage(
+            name: registry.displayName, seatID: registry.bridgeID,
+            // `registry.displayName` is what `PackageWatchBridge` stamps as
+            // `source:`, so the Activity row and the rows can never disagree.
+            source: registry.displayName,
+            state: AccountPageState.of(name: registry.displayName, seatID: registry.bridgeID,
+                                       connected: connected, store: store),
+            intro: registryIntro,
+            mode: .noAccount,
+            rows: rows,
+            query: nameField,
+            onRemoveRow: unwatch,
+            teardown: { PackageStore.shared.disconnect(registry) },
+            sheet: $sheet,
+            act: { addBlock },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
         .onAppear {
-            // Opening the screen doesn't connect — watching a package does.
+            countWeek()
+            // Opening the page doesn't connect — watching a package does.
             if connected { Task { await sync() } }
+        }
+        .onChange(of: watched) { _, _ in countWeek() }
+    }
+
+    // MARK: - The roster
+
+    /// One row per watched package. The version last seen is the one fact that
+    /// makes a row worth more than an echo of what was typed, so it leads the
+    /// subline; "Watching" stands until the first read lands, rather than a
+    /// blank or a guessed version.
+    private var rows: [AccountPageShape.Row] {
+        watched.map { name in
+            let counted = weekly[name.lowercased()] ?? (week: 0, new: false)
+            let version = packages.version(registry, name)
+            let released = AccountPageShape.subline(nouns: String(localized: "releases"),
+                                                    weekCount: counted.week)
+            return AccountPageShape.Row(
+                id: name, title: name,
+                subline: version.map { "\($0) · \(released)" } ?? String(localized: "Watching"),
+                weekCount: counted.week, hasNew: counted.new,
+                isYou: false, avatarURL: nil)
         }
     }
 
+    /// This week's releases per package — the ingest stamps the package name
+    /// as the thing's `authorHandle`.
+    private func countWeek() {
+        weekly = AccountWeek.counts(source: registry.displayName, seatID: registry.bridgeID,
+                                    context: modelContext) { $0.authorHandle }
+    }
+
+
     // MARK: - Sections
 
-    private var addSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabField(placeholder: placeholder, text: $nameField,
-                            actionLabel: String(localized: "Watch"),
-                            focus: $fieldFocused, action: watch)
-                BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: String(localized: "Reading the registry…"),
-                                     proof: lastResult)
-                // Names the accepted shapes, because pasting a package page is
-                // how a lot of people will arrive (`normalize` takes the name).
-                DSSlabNote(text: note)
-            }
+    @ViewBuilder private var addBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            DSSlabField(placeholder: placeholder, text: $nameField,
+                        actionLabel: String(localized: "Watch"),
+                        focus: $fieldFocused, action: watch)
+            BridgeSyncStatusRows(syncing: syncing,
+                                 syncingLine: String(localized: "Reading the registry…"),
+                                 proof: lastResult)
+            // Names the accepted shapes, because pasting a package page is
+            // how a lot of people will arrive (`normalize` takes the name).
+            DSSlabNote(text: note, plain: true)
         }
-        .dsSlabSection()
     }
 
     private var placeholder: String {
@@ -93,46 +120,6 @@ struct PackageWatchScreen: View {
         }
     }
 
-    private var watchlistSection: some View {
-        Section {
-            ForEach(watched, id: \.self) { name in
-                HStack(spacing: DS.Space.s3) {
-                    // Square, not round — a package is a topic, not a person
-                    // (the mark grammar ruling, prd §184).
-                    BridgeIcon(name: registry.displayName, size: DS.Mark.list, circular: false)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(name)
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        // The version we last saw, which is the one fact that
-                        // makes this row worth more than an echo of what was
-                        // typed. "Watching" until the first read lands, rather
-                        // than a blank or a guessed version.
-                        Text(packages.version(registry, name) ?? String(localized: "Watching"))
-                            .dsText(.label12).foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .dsListCardRow()
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) { unwatch(name) } label: {
-                        Label("Remove", systemImage: "trash")
-                    }
-                }
-                // A swipe has no Mac-mouse equivalent — right-click mirrors it
-                // (Mac polish, 2026-07-28).
-                .contextMenu {
-                    Button(role: .destructive) { unwatch(name) } label: {
-                        Label("Remove", systemImage: "trash")
-                    }
-                }
-            }
-        } header: {
-            Text(watched.count == 1 ? "Watching" : "Watching \(watched.count)")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
-        }
-    }
 
 
 

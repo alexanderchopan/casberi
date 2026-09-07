@@ -13,7 +13,6 @@ struct PostHogScreen: View {
     @Environment(BridgeStore.self) private var store
     @Environment(\.openURL) private var openURL
 
-    @State private var showConnection = false
     @State private var hostField = PostHogAccount.host
     @State private var keyField = ""
     /// Bumped whenever the key or project changes, so the derived reads below
@@ -39,7 +38,6 @@ struct PostHogScreen: View {
     /// Each metric's current reading, keyed by event name — the discs draw
     /// from this, so the roster and the feed can never disagree.
     @State private var readings: [String: PostHogState.Metric] = [:]
-    @State private var openThing: Thing?
 
     private var hasKey: Bool {
         _ = accountVersion
@@ -51,52 +49,46 @@ struct PostHogScreen: View {
     }
     private var configured: Bool { hasKey && !projectID.isEmpty }
 
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
+
     var body: some View {
-        BridgeSetupPage(name: "PostHog") {
-            if configured {
-                // Connected (prd §186). PostHog's form is THREE stages — key,
-                // project, then the watch list — and only the first two are
-                // set-once configuration, so those go behind the door and the
-                // watch list stays on the screen: it is what you come back to.
-                BridgeConnectedState(
-                    bridgeID: TokenBridge.posthog.bridgeID,
-                    name: "PostHog",
-                    connectionNote: String(localized: "Your \(TokenBridge.posthog.credentialNoun) · stored in \(DS.device)'s Keychain"),
-                    capabilitiesFallback: [TokenBridge.posthog.canLine],
-                    openConnection: { showConnection = true })
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            } else {
-                BridgeSetupHeader(
-                    name: "PostHog",
-                    mode: .pasteKey,
-                    intro: "Only what's news: a milestone crossed, a metric falling silent, a deploy you annotated. Aggregates only — never a person's profile.",
-                    connected: configured && !watched.isEmpty)
+        AccountPage(
+            name: "PostHog", seatID: TokenBridge.posthog.bridgeID,
+            source: PostHogWatch.source,
+            state: AccountPageState.of(name: "PostHog", seatID: TokenBridge.posthog.bridgeID,
+                                       connected: configured, store: store),
+            intro: "Only what's news: a milestone crossed, a metric falling silent, a deploy you annotated. Aggregates only — never a person's profile.",
+            mode: .pasteKey,
+            keyed: true,
+            rows: rows,
+            query: queryField,
+            onRemoveRow: unwatch,
+            onOpenRow: openMetric,
+            teardown: {
+                PostHogAccount.clear()
+                TokenVault.delete(TokenBridge.posthog.tokenKey)
+                accountVersion += 1
+            },
+            sheet: $sheet,
+            act: {
+                // THREE stages, and only the last is what you come back to.
+                // The key and the project are set-once configuration and live
+                // in the "Your key" sheet; the watch field is the act.
+                if !hasKey {
+                    keyBlock
+                } else if projectID.isEmpty {
+                    projectBlock
+                } else {
+                    watchBlock
+                }
+            },
+            more: { EmptyView() },
+            keySheet: {
+                keyBlock
+                if hasKey, projectID.isEmpty { projectBlock }
             }
-            // The way back to your things (§460).
-            if configured {
-                RoomDoor(name: "PostHog", source: PostHogWatch.source)
-                    .listRowSeparator(.hidden)
-            }
-            if !hasKey {
-                keySection.listRowSeparator(.hidden)
-            } else if projectID.isEmpty {
-                projectSection.listRowSeparator(.hidden)
-            } else {
-                watchSection.listRowSeparator(.hidden)
-                if !watched.isEmpty { rosterSection }
-            }
-        }
-        .sheet(isPresented: $showConnection) {
-            BridgeConnectionSheet(title: "PostHog") {
-                keySection
-                if hasKey, projectID.isEmpty { projectSection }
-                removeSection
-            }
-        }
-        .sheet(item: $openThing) { thing in
-            ThingSheetView(thing: thing)
-        }
+        )
         .onAppear {
             load()
             if configured && !watched.isEmpty {
@@ -130,119 +122,97 @@ struct PostHogScreen: View {
         }
     }
 
+
     // MARK: - Step one: the key
 
-    /// The way out — the shared row, behind the Connection door with the form
-    /// it belongs to (prd §186/§608).
-    private var removeSection: some View {
-        BridgeDisconnectSection(bridgeID: TokenBridge.posthog.bridgeID,
-                                name: "PostHog",
-                                teardown: {
-                                    PostHogWatch.unwatchAll(context: modelContext)
-                                    TokenVault.delete(TokenBridge.posthog.tokenKey)
-                                    PostHogAccount.clear()
-                                    projects = []
-                                    accountVersion += 1
-                                    load()
-                                })
-    }
 
-    private var keySection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if let url = TokenBridge.posthog.setupURL {
-                    // Step one, doing itself (prd §218) — verb over address,
-                    // the 2026-08-14 anatomy.
-                    DSSlabButton(title: TokenBridge.posthog.doorTitle,
-                                 detail: TokenBridge.posthog.doorHost,
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        openURL(url)
-                    }
+    @ViewBuilder private var keyBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if let url = TokenBridge.posthog.setupURL {
+                // Step one, doing itself (prd §218) — verb over address,
+                // the 2026-08-14 anatomy.
+                DSSlabButton(title: TokenBridge.posthog.doorTitle,
+                             detail: TokenBridge.posthog.doorHost,
+                             systemImage: "arrow.up.right") {
+                    DSHaptic.tap()
+                    openURL(url)
                 }
-                // The next line, then the list it points AT, then the last
-                // line and the fields. The scopes used to sit below the
-                // fields, which is why the first step had to name all three in
-                // prose to be useful there — the reorder is what let that
-                // sentence lose them (the Stripe fix, one screen over;
-                // 2026-07-31). Unnumbered since 2026-08-14 (the door did step
-                // one; a "2" under it read as a missing-1 riddle).
-                BridgeStepLines(steps: [TokenBridge.posthog.steps[0]], numbered: false)
-                // The scopes are the honest ask, and they're the reason this
-                // bridge's read-only promise is STRUCTURAL rather than kept by
-                // conduct (the Privacy.com divergence): a key minted with these
-                // three physically cannot write, whatever the app does. The
-                // list IS the read-only promise, so the gray note that restated
-                // it is gone.
-                DSCheckList(lines: ["query:read", "annotation:read", "event_definition:read"])
-                BridgeStepLines(steps: [TokenBridge.posthog.steps[1]], numbered: false)
-                // The host has no verb of its own — SAVE below commits both.
-                // A `BridgeFieldRow` with an empty label still paints its
-                // capsule, and a pre-filled host made it read as a live,
-                // tinted, inert button (§83's disabled-control corollary).
-                DSSlabField(placeholder: PostHogAccount.defaultHost, text: $hostField,
-                            actionLabel: "", keyboard: .URL, action: { })
-                // The key field was the last `BridgeFieldRow` here, stacked
-                // directly under the host's `DSSlabField` — two field shapes at
-                // two heights for one act, the most visible seam left by the
-                // §218 slab migration (audit, 2026-07-31). The empty-verb pair
-                // above is exactly the shape `DSSlabField` documents for two
-                // inputs one act needs; SAVE belongs to the last field.
-                DSSlabField(placeholder: TokenBridge.posthog.placeholder,
-                            text: $keyField, actionLabel: "Save", secure: true,
-                            action: saveKey)
-                BridgeSyncStatusRows(syncing: resolving,
-                                     syncingLine: String(localized: "Checking the key…"),
-                                     proof: result)
             }
+            // The next line, then the list it points AT, then the last
+            // line and the fields. The scopes used to sit below the
+            // fields, which is why the first step had to name all three in
+            // prose to be useful there — the reorder is what let that
+            // sentence lose them (the Stripe fix, one screen over;
+            // 2026-07-31). Unnumbered since 2026-08-14 (the door did step
+            // one; a "2" under it read as a missing-1 riddle).
+            BridgeStepLines(steps: [TokenBridge.posthog.steps[0]], numbered: false)
+            // The scopes are the honest ask, and they're the reason this
+            // bridge's read-only promise is STRUCTURAL rather than kept by
+            // conduct (the Privacy.com divergence): a key minted with these
+            // three physically cannot write, whatever the app does. The
+            // list IS the read-only promise, so the gray note that restated
+            // it is gone.
+            DSCheckList(lines: ["query:read", "annotation:read", "event_definition:read"])
+            BridgeStepLines(steps: [TokenBridge.posthog.steps[1]], numbered: false)
+            // The host has no verb of its own — SAVE below commits both.
+            // A `BridgeFieldRow` with an empty label still paints its
+            // capsule, and a pre-filled host made it read as a live,
+            // tinted, inert button (§83's disabled-control corollary).
+            DSSlabField(placeholder: PostHogAccount.defaultHost, text: $hostField,
+                        actionLabel: "", keyboard: .URL, action: { })
+            // The key field was the last `BridgeFieldRow` here, stacked
+            // directly under the host's `DSSlabField` — two field shapes at
+            // two heights for one act, the most visible seam left by the
+            // §218 slab migration (audit, 2026-07-31). The empty-verb pair
+            // above is exactly the shape `DSSlabField` documents for two
+            // inputs one act needs; SAVE belongs to the last field.
+            DSSlabField(placeholder: TokenBridge.posthog.placeholder,
+                        text: $keyField, actionLabel: "Save", secure: true,
+                        action: saveKey)
+            BridgeSyncStatusRows(syncing: resolving,
+                                 syncingLine: String(localized: "Checking the key…"),
+                                 proof: result)
         }
-        .dsSlabSection()
     }
 
     // MARK: - Step two: the project
 
-    private var projectSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text("Which project should I read?")
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                ForEach(projects) { project in
-                    BridgeSearchResultRow(
-                        imageURL: nil, fallbackIcon: "PostHog",
-                        title: project.name,
-                        subtitle: project.org.isEmpty ? PostHogAccount.host : project.org,
-                        action: { pick(project) })
-                }
-                BridgeSyncStatusRows(syncing: resolving,
-                                     syncingLine: String(localized: "Reading your projects…"),
-                                     proof: result)
+    @ViewBuilder private var projectBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Text("Which project should I read?")
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+            ForEach(projects) { project in
+                BridgeSearchResultRow(
+                    imageURL: nil, fallbackIcon: "PostHog",
+                    title: project.name,
+                    subtitle: project.org.isEmpty ? PostHogAccount.host : project.org,
+                    action: { pick(project) })
             }
+            BridgeSyncStatusRows(syncing: resolving,
+                                 syncingLine: String(localized: "Reading your projects…"),
+                                 proof: result)
         }
-        .dsSlabSection()
     }
 
     // MARK: - Step three: watching
 
-    private var watchSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabField(placeholder: String(localized: "Event or metric name"),
-                            text: $queryField, actionLabel: String(localized: "Watch"),
-                            focus: $fieldFocused, action: watchTyped)
-                ForEach(displayHits) { event in
-                    BridgeSearchResultRow(
-                        imageURL: nil, fallbackIcon: "PostHog",
-                        title: event.name,
-                        subtitle: lastSeenLine(event),
-                        action: { watch(event.name) })
-                }
-                BridgeSyncStatusRows(syncing: syncing,
-                                     syncingLine: String(localized: "Reading PostHog…"),
-                                     proof: result)
-                DSSlabNote(text: "Deploys and launches you annotate land on their own.")
+    @ViewBuilder private var watchBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            DSSlabField(placeholder: String(localized: "Event or metric name"),
+                        text: $queryField, actionLabel: String(localized: "Watch"),
+                        focus: $fieldFocused, action: watchTyped)
+            ForEach(displayHits) { event in
+                BridgeSearchResultRow(
+                    imageURL: nil, fallbackIcon: "PostHog",
+                    title: event.name,
+                    subtitle: lastSeenLine(event),
+                    action: { watch(event.name) })
             }
+            BridgeSyncStatusRows(syncing: syncing,
+                                 syncingLine: String(localized: "Reading PostHog…"),
+                                 proof: result)
+            DSSlabNote(text: "Deploys and launches you annotate land on their own.")
         }
-        .dsSlabSection()
     }
 
     /// Events already watched drop out of the hits — they're on the shelf below.
@@ -258,52 +228,35 @@ struct PostHogScreen: View {
 
     // MARK: - The roster
 
-    private var rosterSection: some View {
-        AssetRosterShelf(note: rosterNote, count: watched.count) {
-            ForEach(watched.keyed) { row in
-                // Corollary 3 (build 176) — see `ThingRowKeying`.
-                if let thing = row.live { rosterSlot(thing) }
-            }
-            AssetRosterAddSlot { fieldFocused = true }
+    /// One row per watched metric. The shelf of curve discs and its caption
+    /// coaching its own gestures ("Watching 3 · hold to unwatch") are the
+    /// chassis's roster now, with one removal verb and its Mac mirror.
+    ///
+    /// The reading each row carries is the same one the disc drew: this week
+    /// against the week before, and nothing where there isn't enough series to
+    /// say — a placeholder percentage would be a figure about nothing (§83).
+    private var rows: [AccountPageShape.Row] {
+        watched.filter(\.isLive).map { thing in
+            let event = PostHogWatch.event(from: thing) ?? ""
+            let reading = readings[event]
+            let change = weekChange(reading)
+            let subline = change.map { TokenChartStyle.changeText($0) + " " + String(localized: "on last week") }
+                ?? String(localized: "not enough yet to compare")
+            return AccountPageShape.Row(
+                id: thing.id.uuidString, title: event, subline: subline,
+                weekCount: reading?.series.suffix(7).reduce(0, +) ?? 0,
+                hasNew: false, isYou: false, avatarURL: nil)
         }
-        .listRowInsets(EdgeInsets())
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
     }
 
-    private var rosterNote: String {
-        let n = watched.count
-        return n == 1
-            ? String(localized: "Watching 1 · hold to unwatch")
-            : String(localized: "Watching \(n) · hold to unwatch")
+    private func openMetric(_ id: String) {
+        guard let uuid = UUID(uuidString: id) else { return }
+        sheet = .thing(id: uuid)
     }
 
-    /// One metric on the shelf. The mark is the metric's OWN shape — its
-    /// seven-day curve drawn inside the disc, ringed by how far it's come
-    /// toward its next milestone. A generic glyph would have named nothing
-    /// (the `TickerDisc` reasoning: a stock has no logo, so the ticker IS the
-    /// mark) — and unlike a glyph, this one differs per metric because the
-    /// data differs, and it changes as the week does.
-    private func rosterSlot(_ thing: Thing) -> some View {
-        let event = PostHogWatch.event(from: thing) ?? ""
-        let reading = readings[event]
-        let change = weekChange(reading)
-        return AssetRosterSlot(label: event, change: change) {
-            MetricDisc(series: reading?.series ?? [],
-                       progress: reading.map { PostHogMilestone.progress($0.total) } ?? 0,
-                       change: change)
-        }
-        .onTapGesture {
-            DSHaptic.tap()
-            openThing = thing
-        }
-        .contextMenu {
-            Button(role: .destructive) {
-                unwatch(thing)
-            } label: {
-                Label("Unwatch", systemImage: "trash")
-            }
-        }
+    private func unwatch(_ id: String) {
+        guard let thing = watched.first(where: { $0.id.uuidString == id }) else { return }
+        unwatch(thing)
     }
 
     /// This week against the week before it — nil when there isn't enough

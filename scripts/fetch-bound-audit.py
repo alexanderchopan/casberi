@@ -171,8 +171,11 @@ KNOWN_UNBOUNDED: dict[tuple[str, str], str] = {
         "of the named source because a bounded purge leaves rows for a bridge "
         "the catalog now says is gone; runs once, on a tap, on a screen that "
         "is about to dismiss.",
-    ("Screens/WalletConnectionScreen.swift", "disconnectWallet"):
-        "The wallet's own purge, same tap-once teardown shape.",
+    # `WalletConnectionScreen.disconnectWallet` left this list on 2026-09-06
+    # (prd §639c): that page's Disconnect was a second copy of the one the
+    # Wallet account page grew in §639b — same verb, same dialog, same
+    # keep-or-purge choice — so it is deleted, and the purge it defended now
+    # runs only through `BridgeDisconnectSection.disconnect` above.
     ("Screens/DiagnosticsScreen.swift", "run"):
         "Diagnostics reports on the corpus, so it must read the corpus — a "
         "bounded count is the wrong answer to 'Things: N', and this screen's "

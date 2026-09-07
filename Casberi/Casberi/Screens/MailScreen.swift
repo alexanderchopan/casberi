@@ -16,82 +16,80 @@ struct MailScreen: View {
     @State private var result: BridgeProof?
 
     /// The credentials door, open (prd §186).
-    @State private var showConnection = false
+
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
     var body: some View {
-        BridgeSetupPage(name: provider.source, computedTitle: provider.rawValue) {
-            if provider.connected {
-                // Connected (prd §186): the ADDRESS is the identity — the one
-                // fact worth leading with — and the app-password field that
-                // used to stare from this screen forever moves behind the door.
-                BridgeConnectedState(
-                    bridgeID: provider.bridgeID,
-                    name: provider.source,
-                    identity: provider.address,
-                    connectionNote: String(localized: "App password · stored in \(DS.device)'s Keychain. Read-only over IMAP."),
-                    openConnection: { showConnection = true }
-                )
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                // The way back to your things (§460).
-                RoomDoor(name: provider.source, source: provider.source)
-                    .listRowSeparator(.hidden)
-            } else {
-                connectForm
-            }
-        }
-        .sheet(isPresented: $showConnection) {
-            BridgeConnectionSheet(title: provider.rawValue) {
-                connectForm
-                BridgeDisconnectSection(
-                    bridgeID: provider.bridgeID, name: provider.source,
-                    teardown: { TokenVault.delete(provider.passwordKey) }
-                ).listRowSeparator(.hidden)
-            }
-        }
+        AccountPage(
+            name: provider.source, seatID: provider.bridgeID, source: provider.source,
+            state: AccountPageState.of(name: provider.source, seatID: provider.bridgeID,
+                                       connected: provider.connected, store: store),
+            intro: "Read-only over IMAP, with an app-specific password — your real one never enters the app.",
+            mode: .pasteKey,
+            keyed: true,
+            teardown: { TokenVault.delete(provider.passwordKey) },
+            sheet: $sheet,
+            act: {
+                if provider.connected {
+                    // The ADDRESS is the identity — the one fact worth leading
+                    // with. The app-password field that used to stare from
+                    // this screen forever is the "Your key" sheet now.
+                    addressLine
+                    BridgeSyncStatusRows(syncing: syncing,
+                                         syncingLine: String(localized: "Reading your mail…"),
+                                         proof: result)
+                } else {
+                    setupBlock
+                }
+            },
+            more: { EmptyView() },
+            keySheet: { setupBlock }
+        )
         .onAppear {
             addressField = provider.address
             if provider.connected { Task { await sync() } }
         }
     }
 
-    /// The connect form — steps whole (user ruling 2026-07-23), furniture gone
-    /// (prd §218, 2026-07-25).
-    @ViewBuilder private var connectForm: some View {
-        BridgeSetupHeader(
-            name: provider.source,
-            mode: .pasteKey,
-            intro: "Read-only over IMAP, with an app-specific password — your real one never enters the app.")
-        setupSection
-    }
-
-    private var setupSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if let url = provider.setupURL {
-                    // Verb over address, the 2026-08-14 anatomy.
-                    DSSlabButton(title: provider.doorTitle,
-                                 detail: provider.doorHost,
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        openURL(url)
-                    }
-                }
-                // Unnumbered: one instruction is not a sequence (§220).
-                BridgeStepLines(steps: provider.steps, numbered: false)
-                // Two inputs, one act — the verb rides the password, where
-                // connecting actually happens.
-                DSSlabField(placeholder: provider.addressPlaceholder, text: $addressField,
-                            actionLabel: "", keyboard: .emailAddress, action: connect)
-                DSSlabField(placeholder: provider.passwordPlaceholder, text: $passwordField,
-                            actionLabel: provider.connected ? "Update" : "Connect",
-                            secure: true, isArmed: canConnect, action: connect)
-                BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your inbox…"),
-                                     proof: result)
-                DSSlabNote(text: provider.footer)
+    /// Whose mailbox this reads.
+    @ViewBuilder private var addressLine: some View {
+        if !provider.address.isEmpty {
+            HStack(spacing: DS.Space.s3) {
+                BridgeIcon(name: provider.source, size: DS.Mark.list, circular: false)
+                Text(provider.address)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .lineLimit(1).truncationMode(.middle)
+                Spacer(minLength: 0)
             }
         }
-        .dsSlabSection()
+    }
+
+
+    @ViewBuilder private var setupBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if let url = provider.setupURL {
+                // Verb over address, the 2026-08-14 anatomy.
+                DSSlabButton(title: provider.doorTitle,
+                             detail: provider.doorHost,
+                             systemImage: "arrow.up.right") {
+                    DSHaptic.tap()
+                    openURL(url)
+                }
+            }
+            // Unnumbered: one instruction is not a sequence (§220).
+            BridgeStepLines(steps: provider.steps, numbered: false)
+            // Two inputs, one act — the verb rides the password, where
+            // connecting actually happens.
+            DSSlabField(placeholder: provider.addressPlaceholder, text: $addressField,
+                        actionLabel: "", keyboard: .emailAddress, action: connect)
+            DSSlabField(placeholder: provider.passwordPlaceholder, text: $passwordField,
+                        actionLabel: provider.connected ? "Update" : "Connect",
+                        secure: true, isArmed: canConnect, action: connect)
+            BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your inbox…"),
+                                 proof: result)
+            DSSlabNote(text: provider.footer, plain: true)
+        }
     }
 
     private var canConnect: Bool {

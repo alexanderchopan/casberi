@@ -22,47 +22,36 @@ struct DropboxScreen: View {
     /// result — and a sign-in you dismissed is neither.
     @State private var cancelled = false
 
+    /// Which folder this reads, in words — an empty path is a real choice
+    /// here and means all of Dropbox, so it is named rather than left blank.
     private var folderIdentity: String {
         dropbox.folderPath.isEmpty ? String(localized: "All of Dropbox") : dropbox.folderPath
     }
 
-    /// The connection door, open (prd §186).
-    @State private var showConnection = false
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
     var body: some View {
-        BridgeSetupPage(name: "Dropbox") {
-            if DropboxAuth.connected {
-                BridgeConnectedState(
-                    bridgeID: "dropbox",
-                    name: "Dropbox",
-                    identity: folderIdentity,
-                    // How it connected, and only that (audit, 2026-07-31): the
-                    // note ended "· read-only key, never writes" two lines above
-                    // the checklist that makes the same promise in full.
-                    connectionNote: String(localized: "Signed in on \(DS.device)"),
-                    capabilitiesFallback: ["Reads the folder you named.",
-                                           "Read-only — never edits, shares, or deletes a file."],
-                    openConnection: { showConnection = true }
-                )
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                // The way back to your things (§460).
-                RoomDoor(name: "Dropbox", source: "Dropbox")
-                    .listRowSeparator(.hidden)
-            } else {
-                BridgeSetupHeader(
-                    name: "Dropbox",
-                    mode: .signIn,
-                    intro: "One folder you name — only that folder, never a shared link or anything shared with you.")
-                connectSection.listRowSeparator(.hidden)
-            }
-        }
-        .sheet(isPresented: $showConnection) {
-            BridgeConnectionSheet(title: "Dropbox") {
-                folderSection.listRowSeparator(.hidden)
-                removeSection.listRowSeparator(.hidden)
-            }
-        }
+        AccountPage(
+            name: "Dropbox", seatID: "dropbox", source: "Dropbox",
+            state: AccountPageState.of(name: "Dropbox", seatID: "dropbox",
+                                       connected: DropboxAuth.connected, store: store),
+            intro: "One folder you name — only that folder, never a shared link or anything shared with you.",
+            mode: .signIn,
+            teardown: { dropbox.disconnect() },
+            sheet: $sheet,
+            act: {
+                // Connected, the act is the FOLDER: which one this reads, and
+                // changing it. Not connected, it is the sign-in.
+                if DropboxAuth.connected {
+                    folderBlock
+                } else {
+                    connectBlock
+                }
+            },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
         .onAppear {
             folderField = dropbox.folderPath
             if DropboxAuth.connected { Task { await sync() } }
@@ -70,62 +59,61 @@ struct DropboxScreen: View {
         .onDisappear { flow?.cancel() }
     }
 
-    @ViewBuilder
-    private var connectSection: some View {
-        Section {
-            if connecting {
-                HStack(spacing: DS.Space.s2) {
-                    ProgressView().controlSize(.small)
-                    Text("Waiting for Dropbox…")
-                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
-                }
-                .padding(.vertical, DS.Space.s1)
-                .dsListCardRow()
-            } else {
-                // The screen's one verb, as the screen's one filled block
-                // (prd §218) — it was a blue text row, which read as a link to
-                // somewhere rather than the act itself.
-                DSSlabButton(title: "Connect Dropbox",
-                             systemImage: "person.badge.key",
-                             action: connect)
-                if cancelled {
-                    Text("Sign-in cancelled — nothing was connected.")
-                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+
+    @ViewBuilder private var connectBlock: some View {
+        if connecting {
+            HStack(spacing: DS.Space.s2) {
+                ProgressView().controlSize(.small)
+                Text("Waiting for Dropbox…")
+                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
             }
-            BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your Dropbox…"),
-                                 proof: result)
-            DSSlabNote(text: "On Dropbox's own page — your password never enters this app.")
+            .padding(.vertical, DS.Space.s1)
+        } else {
+            // The screen's one verb, as the screen's one filled block
+            // (prd §218) — it was a blue text row, which read as a link to
+            // somewhere rather than the act itself.
+            DSSlabButton(title: "Connect Dropbox",
+                         systemImage: "person.badge.key",
+                         action: connect)
+            if cancelled {
+                Text("Sign-in cancelled — nothing was connected.")
+                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
-        .dsSlabSection()
+        BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your Dropbox…"),
+                             proof: result)
+        DSSlabNote(text: "On Dropbox's own page — your password never enters this app.", plain: true)
     }
 
-    private var folderSection: some View {
-        Section {
-            // One slab holding the path and its verb (§190/§218) — this was
-            // the last field-plus-side-pill on the screen, sitting in a stack
-            // where everything else had already moved. `alwaysEnabled` because
-            // an empty path is a real choice here, not a missing one: it means
-            // all of Dropbox, which the placeholder promises and the old side
-            // pill went dead on.
-            DSSlabField(placeholder: String(localized: "e.g. /Camera Uploads — blank for everything"),
-                        text: $folderField,
-                        actionLabel: String(localized: "Save"),
-                        alwaysEnabled: true,
-                        action: saveFolder)
-            BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your Dropbox…"),
-                                 proof: result)
-            DSSlabNote(text: "Changing the folder starts a fresh sync there.")
+    @ViewBuilder private var folderBlock: some View {
+        // WHICH FOLDER, in the page's own left-aligned voice — the identity
+        // `BridgeConnectedState` used to carry in a card.
+        HStack(spacing: DS.Space.s3) {
+            Image(systemName: "folder")
+                .dsGlyph(17, weight: .medium)
+                .foregroundStyle(DS.tint)
+            Text(folderIdentity)
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                .lineLimit(1).truncationMode(.middle)
+            Spacer(minLength: 0)
         }
-        .dsSlabSection()
+        // One slab holding the path and its verb (§190/§218) — this was
+        // the last field-plus-side-pill on the screen, sitting in a stack
+        // where everything else had already moved. `alwaysEnabled` because
+        // an empty path is a real choice here, not a missing one: it means
+        // all of Dropbox, which the placeholder promises and the old side
+        // pill went dead on.
+        DSSlabField(placeholder: String(localized: "e.g. /Camera Uploads — blank for everything"),
+                    text: $folderField,
+                    actionLabel: String(localized: "Save"),
+                    alwaysEnabled: true,
+                    action: saveFolder)
+        BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your Dropbox…"),
+                             proof: result)
+        DSSlabNote(text: "Changing the folder starts a fresh sync there.", plain: true)
     }
 
-    private var removeSection: some View {
-        BridgeDisconnectSection(bridgeID: "dropbox", name: "Dropbox") {
-            dropbox.disconnect()
-        }
-    }
 
     private func connect() {
         guard flow == nil else { return }   // one flow at a time

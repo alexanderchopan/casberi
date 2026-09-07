@@ -1,13 +1,13 @@
 import SwiftUI
+import SwiftData
 
-/// Ethrex Privacy, connected — chain 8141, the third ethrex devnet (prd §593).
+/// Ethrex Privacy, on the account page — chain 8141, the third ethrex devnet
+/// (prd §593).
 ///
-/// **ONE ANATOMY WITH ITS THREE SIBLINGS (user, 2026-09-04).** Header, room
-/// door, the accounts slab — paste field at the top, examples under it — the
-/// screen's one sentence, the explorer, Disconnect. What differs between the
-/// four devnet seats is the data: the mark, the measured examples and the
-/// claim each makes, the sentence. `DevnetAccounts.swift` carries the whole
-/// argument.
+/// **ON `AccountPage` SINCE §639 (2026-09-06)**, with its three siblings. What
+/// differs between the four devnet seats is the data: the mark, the measured
+/// examples and the claim each makes, the sentence. `DevnetAccounts.swift`
+/// carries the whole argument.
 ///
 /// **The examples are load-bearing here in a way they are not on the siblings.**
 /// This chain holds 14 type-`0x6` transactions across ~14,000 blocks, and only
@@ -17,20 +17,16 @@ import SwiftUI
 /// real and were read off `rpc1.privacy.ethrex.xyz` on 2026-09-04.
 ///
 /// **THE SEAT MAKES A KEY AND SENDS SINCE §593c, AND THE ACTS ARE NOT HERE.**
-/// This paragraph said the opposite until §593d — that the envelope was
-/// unreproduced so there was no account act to offer — which stopped being
-/// true the day the node taught us its field order. The acts live in the
-/// ROOM, on Home, because §594's line is that an act which WRITES to the chain
-/// moves to Home and an act that changes WHAT YOU ARE LOOKING AT stays with
-/// the view. Watching an address changes the roster, not the chain, so it
-/// stays here.
-///
-/// **This screen is the CONNECT ACT and nothing else (prd §465)** — what you do
-/// ONCE. The room keeps what you do repeatedly.
+/// The acts live in the ROOM, on Home, because §594's line is that an act which
+/// WRITES to the chain moves to Home and an act that changes WHAT YOU ARE
+/// LOOKING AT stays with the view. Watching an address changes the roster, not
+/// the chain, so it stays here.
 struct PrivacyDevnetScreen: View {
     @Environment(BridgeStore.self) private var store
+    @Environment(\.modelContext) private var modelContext
 
     @Bindable private var watch = PrivacyDevnetWatch.shared
+
     /// The read that follows a watch, reported here (prd §618).
     @State private var reader = DevnetReader(name: PrivacyDevnetIdentity.source) {
         guard !DemoMode.isActive else { return true }
@@ -39,77 +35,81 @@ struct PrivacyDevnetScreen: View {
         return PrivacyDevnetLiveState.shared.readAt != before
     }
 
+    /// The page's one bar (§639 amendment).
+    @State private var typed = ""
+    @State private var sheet: AccountPageSheet?
+    @State private var roster = DevnetRosterReader(seatID: PrivacyDevnetIdentity.seatID,
+                                                   source: PrivacyDevnetIdentity.source)
+
     private static let mark = DS.brandHue(for: PrivacyDevnetIdentity.source) ?? DS.tint
 
     private var connected: Bool { watch.connected }
 
     var body: some View {
-        BridgeSetupPage(name: PrivacyDevnetIdentity.source, computedTitle: PrivacyDevnetIdentity.source) {
-            BridgeSetupHeader(
-                name: PrivacyDevnetIdentity.source,
-                mode: .noAccount,
-                // ACTION, not a re-pitch: you reach this from the product page,
-                // which has just said what the chain is. One sentence, §315.
-                intro: "Paste an address, or start with one that already has something to show. Watch as many as you like.",
-                connected: connected)
-
-            if connected {
-                RoomDoor(name: PrivacyDevnetIdentity.source,
-                         source: PrivacyDevnetIdentity.source)
-                    .listRowSeparator(.hidden)
-            }
-
-            Section {
-                DevnetAccountsSlab(
+        AccountPage(
+            name: PrivacyDevnetIdentity.source, seatID: PrivacyDevnetIdentity.seatID,
+            source: PrivacyDevnetIdentity.source,
+            state: AccountPageState.of(name: PrivacyDevnetIdentity.source,
+                                       seatID: PrivacyDevnetIdentity.seatID,
+                                       connected: connected, store: store),
+            // ACTION, not a re-pitch: you reach this from the product page,
+            // which has just said what the chain is. One sentence, §315.
+            intro: "Paste an address, or start with one that already has something to show. Watch as many as you like.",
+            mode: .noAccount,
+            rows: roster.rows,
+            query: typed,
+            onRemoveRow: unwatch,
+            teardown: { PrivacyDevnetBridge.disconnect(store: store) },
+            sheet: $sheet,
+            act: {
+                DevnetAccountsAct(
                     watch: watch,
                     tint: Self.mark,
                     examples: PrivacyDevnetExample.all,
                     peek: { await DevnetPeek.read($0, via: PrivacyDevnetRPC.call(method:params:)) },
                     reader: reader,
-                    register: { PrivacyDevnetBridge.registerBridge(store: store) })
-            }
-            .dsSlabSection()
-            .listRowSeparator(.hidden)
+                    register: { PrivacyDevnetBridge.registerBridge(store: store) },
+                    typed: $typed,
+                    onWatched: { _ in readRows() })
+            },
+            more: {
+                // The seat's one §315 gray sentence, and it is spent on the
+                // thing somebody would otherwise assume. "Privacy devnet"
+                // invites the reading that watching here is private; it is
+                // not, and the chain itself is the reason rather than any
+                // choice of ours.
+                DSSlabNote(text: String(localized: "Addresses on this chain are public — watching one is a read, and it hides nothing about you. Test ETH has no value, and the network may be reset without notice."), plain: true)
+                DevnetExplorerRow(url: PrivacyDevnetIdentity.explorer, plain: true)
+            },
+            keySheet: { EmptyView() }
+        )
+        .onAppear { readRows() }
+        .onChange(of: watch.addresses) { _, _ in readRows() }
+    }
 
-            if !watch.addresses.isEmpty {
-                Section { DevnetWatchingSection(watch: watch) {
-                    PrivacyDevnetBridge.registerBridge(store: store)
-                } }
-                .dsSlabSection()
-                .listRowSeparator(.hidden)
-            }
-
-            // The seat's one §315 gray sentence, and it is spent on the thing
-            // somebody would otherwise assume. "Privacy devnet" invites the
-            // reading that watching here is private; it is not, and the chain
-            // itself is the reason rather than any choice of ours.
-            Section {
-                DSSlabNote(text: String(localized: "Addresses on this chain are public — watching one is a read, and it hides nothing about you. Test ETH has no value, and the network may be reset without notice."))
-            }
-            .dsSlabSection()
-            .listRowSeparator(.hidden)
-
-            DevnetExplorerRow(url: PrivacyDevnetIdentity.explorer)
-                .listRowSeparator(.hidden)
-
-            if connected {
-                BridgeDisconnectSection(
-                    bridgeID: PrivacyDevnetIdentity.seatID,
-                    name: PrivacyDevnetIdentity.source,
-                    teardown: { PrivacyDevnetBridge.disconnect(store: store) }
-                ).listRowSeparator(.hidden)
-            }
+    private func readRows() {
+        Task {
+            await roster.refresh(watch: watch, context: modelContext,
+                                 peek: { await DevnetPeek.read($0, via: PrivacyDevnetRPC.call(method:params:)) })
         }
     }
 
-    // NO ROUTE ON A WATCH (prd §618) — see `HegotaScreen`; the `RoomDoor` is
-    // the way on, and the read reports here.
+    /// ONE verb, "Remove" (§639), replacing `DevnetWatchingSection`'s own.
+    private func unwatch(_ address: String) {
+        watch.remove(address)
+        roster.forget(address)
+        PrivacyDevnetBridge.registerBridge(store: store)
+        readRows()
+    }
+
+    // NO ROUTE ON A WATCH (prd §618) — the Activity row is the way on, and the
+    // read reports here.
 }
 
 /// **THE TWO ADDRESSES THAT HAVE SOMETHING TO SHOW (prd §593d).**
 ///
 /// Lifted out of `PrivacyDevnetScreen` because three surfaces need them now —
-/// the connect screen's example rows, the send picker (which otherwise opens on
+/// the account page's example rows, the send picker (which otherwise opens on
 /// nothing to send TO, the dead end §83 bans wearing a picker's clothes), and
 /// the ROOM'S OWN quiet state, which until §593d dead-ended somebody who
 /// pasted an address of their own into "Nothing on this chain from the address

@@ -2,18 +2,6 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
-/// The imported Claude Code sessions already in the corpus — newest first. A
-/// @Query so the list updates live after an import and the fetch runs once per
-/// store change, not twice per body pass.
-private let claudeCodeRecentDescriptor: FetchDescriptor<Thing> = {
-    var d = FetchDescriptor<Thing>(
-        predicate: #Predicate { $0.source == "Claude Code" },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-    )
-    d.fetchLimit = 12
-    return d
-}()
-
 /// Claude Code, connected — by import, and by a folder rather than a file.
 ///
 /// The transcripts are already on this Mac: `~/.claude/projects` holds one
@@ -32,34 +20,31 @@ struct ClaudeCodeImportScreen: View {
     @State private var result: BridgeProof?
     @State private var staleness: String?
     @State private var held = 0
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
-    @Query(claudeCodeRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        BridgeSetupPage(name: "Claude Code") {
-            BridgeSetupHeader(
-                name: "Claude Code",
-                mode: .oneTimeImport,
-                intro: "Sessions live as files on this Mac — point at the folder and each one is here, whole.",
-                connected: held > 0)
-            // The way back to what just landed (§460). Gated on the corpus,
-            // not a connection flag: an import has no live connection, so
-            // "has anything arrived" is the only honest test of whether
-            // there is a room worth opening.
-            if !recent.isEmpty {
-                RoomDoor(name: "Claude Code", source: "Claude Code")
-                    .listRowSeparator(.hidden)
-            }
-            setupSection
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Imported", things: recent.live)
-                    .listRowSeparator(.hidden)
-            }
-            ImportUpkeepSection(source: "Claude Code", held: held, staleness: staleness) { gone in
-                reread()
-                result = .says(String(localized: "\(gone) removed"))
-            }
-        }
+        AccountPage(
+            name: "Claude Code", seatID: "claudecode", source: "Claude Code",
+            // An import has no live connection, so "is anything here" is the
+            // only honest test of whether this seat is connected at all.
+            state: AccountPageState.of(name: "Claude Code", seatID: "claudecode",
+                                       connected: held > 0, store: store),
+            intro: "Sessions live as files on this Mac — point at the folder and each one is here, whole.",
+            mode: .oneTimeImport,
+            teardown: {},
+            sheet: $sheet,
+            act: { setupBlock },
+            more: {
+                ImportUpkeepSection(source: "Claude Code", held: held,
+                                    staleness: staleness, plain: true) { gone in
+                    reread()
+                    result = .says(String(localized: "\(gone) removed"))
+                }
+            },
+            keySheet: { EmptyView() }
+        )
         .onAppear { reread() }
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.folder]) { outcome in
@@ -77,24 +62,21 @@ struct ClaudeCodeImportScreen: View {
         held = ImportRemoval.count(source: "Claude Code", context: modelContext)
     }
 
-    private var setupSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                ImportArchiveSection(
-                    source: "Claude Code",
-                    steps: ["Open Files and press Command-Shift-Period to show hidden folders.",
-                            "Pick .claude → projects, or one project folder."],
-                    pickTitle: "Choose folder",
-                    alreadyImported: held > 0) { importing = true }
-                BridgeSyncStatusRows(proof: result)
-                // Kept, unlike the sibling importers' notes: this one is not
-                // "you can import again", which the upkeep footer says — it is
-                // that a session which GREW is updated in place rather than
-                // landing twice, and nothing else on screen says it.
-                DSSlabNote(text: "Re-import later and sessions that grew are updated, not duplicated.")
-            }
+    @ViewBuilder private var setupBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            ImportArchiveSection(
+                source: "Claude Code",
+                steps: ["Open Files and press Command-Shift-Period to show hidden folders.",
+                        "Pick .claude → projects, or one project folder."],
+                pickTitle: "Choose folder",
+                alreadyImported: held > 0) { importing = true }
+            BridgeSyncStatusRows(proof: result)
+            // Kept, unlike the sibling importers' notes: this one is not
+            // "you can import again", which the upkeep line says — it is
+            // that a session which GREW is updated in place rather than
+            // landing twice, and nothing else on screen says it.
+            DSSlabNote(text: "Re-import later and sessions that grew are updated, not duplicated.", plain: true)
         }
-        .dsSlabSection()
     }
 
     // MARK: - Run

@@ -114,17 +114,24 @@ done
 grep -q 'onConnectFound(found)' "$FIELDCODE" \
   || { echo "✗ a settled session no longer routes to the picker (WalletWatchField, §466)"; exit 1; }
 # The picker route is bubbled to WHICHEVER host's own single sheet owns it —
-# WalletScreen's own `sheetRoute` for the first address, the book's `bookSheet`
-# for the roster's second through fifth (§466's `AddressBookSheetRoute`
-# reuse). Both must still resolve `.connectPicker`, or a fourth sibling
-# `.sheet` self-dismisses the first tap (FeedScreen's lesson).
-grep -q 'case .connectPicker' "$CODE" \
-  || { echo "✗ WalletScreen's own sheet route no longer resolves .connectPicker (§466)"; exit 1; }
+# and §466's rule is about the SINGLE sheet, not about the spelling of one
+# route case. §639 moved WalletScreen onto `AccountPage`, whose one
+# presentation is the page's own `AccountPageSheet`; the picker rides it
+# through `cardSheet:`, which is that presentation and not a fourth sibling
+# `.sheet` (FeedScreen's lesson, unchanged). The BOOK still owns its own
+# `AddressBookSheetRoute`, so its guard is untouched.
+grep -q 'cardSheet:' "$CODE" \
+  || { echo "✗ WalletScreen no longer raises the picker through the account page's"; \
+       echo "  ONE presentation — a sibling .sheet self-dismisses the first tap (§466/§639)"; exit 1; }
+grep -q 'WalletConnectPickerSheet(shared:' "$CODE" \
+  || { echo "✗ WalletScreen's card sheet no longer resolves the connect picker (§466)"; exit 1; }
 grep -q 'case .connectPicker' "$BOOKSCREEN" \
   || { echo "✗ the book's sheet route no longer resolves .connectPicker — the roster's"; \
        echo "  own connect flow would have nowhere to land (§466)"; exit 1; }
-grep -q 'onConnectFound: { sheetRoute = .connectPicker(\$0) }' "$SCREEN" \
+grep -q 'sheet = .card(id: "connect")' "$CODE" \
   || { echo "✗ WalletScreen no longer wires the field's found accounts to its own sheet (§466)"; exit 1; }
+grep -q 'onConnectFound:' "$CODE" \
+  || { echo "✗ WalletScreen no longer takes the field's found accounts at all (§466)"; exit 1; }
 # The book's own connect row, which is the live door since §511 deleted the
 # roster section that carried a second (and never-read) `onConnectFound:`.
 grep -q 'ConnectWalletRow(onFound: { bookSheet = .connectPicker(\$0) }' "$BOOKSCREEN" \

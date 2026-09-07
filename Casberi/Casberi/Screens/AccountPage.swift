@@ -47,10 +47,28 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// The one sentence a not-connected page says (§315's budget) — the
     /// mode's consequence and the payoff. Drawn only while not connected.
     var intro: String? = nil
+    /// HOW this seat connects — the §315 fact the chip on `BridgeSetupHeader`
+    /// carried, and the one thing the state line cannot say: "Not connected"
+    /// does not tell you whether you are about to paste a key, point at an
+    /// export, or type a name. Drawn only while not connected, because once it
+    /// is connected the answer is in the past and the state line is the news.
+    /// A plain glyph and a word rather than the chip, since the page has no
+    /// chips (the "You" pill is a fact about a person, not furniture).
+    var mode: BridgeSetupMode? = nil
     /// A provider-reported expiry, when one exists. None does today.
     var keyExpires: Date? = nil
     /// Whether a "Your key" row is drawn at all — keyed bridges only.
     var keyed = false
+    /// Whether this seat lands `Thing`s at all.
+    ///
+    /// FALSE for the rowless seats (§484's nine, and every agent key): a
+    /// Venice key answers questions and stores nothing, an exchange reports a
+    /// balance and lands no row. For those the Activity row would read "0
+    /// today · 0 this week" about a seat that will never have a count — the
+    /// §83 number-about-nothing, one row under a state line saying it is
+    /// working — and "Who may read it" would offer to shut readers out of a
+    /// corpus with nothing in it. Both are simply absent instead.
+    var lands = true
     /// The rows under "Watching". The caller composes them from its own
     /// store; the chassis sorts and labels them.
     var rows: [AccountPageShape.Row] = []
@@ -58,10 +76,27 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// same keystrokes (§639 amendment — one bar, two jobs). The adopter owns
     /// the text because the field is its own; the chassis only reads it.
     var query: String = ""
-    var onRemoveRow: (String) -> Void = { _ in }
+    /// Removing a roster row, where removing one is a thing a person can do.
+    /// NIL where it is not — a seat whose rows are its own apps or its own
+    /// repositories has a roster to READ, and a swipe offering to remove one
+    /// would be the §83 dead control with a destructive tint on it.
+    var onRemoveRow: ((String) -> Void)? = nil
     /// Tap on a row — the person or repo profile where one exists. Rows
     /// with no destination are reads, not controls.
     var onOpenRow: ((String) -> Void)? = nil
+    /// An EXTRA menu item on a roster row, above Remove — for a verb only one
+    /// seat has (Tokens' "Move to front", in the manual sort). `AnyView`
+    /// rather than a fourth generic parameter, because a generic with no
+    /// inferable default would force every one of the ~40 call sites to spell
+    /// out a type they do not use.
+    var rowMenu: ((String) -> AnyView)? = nil
+    /// A SHEET only this seat can compose, raised through the page's ONE
+    /// presentation (`.card`). L2BEAT's risk assessment and Walletbeat's
+    /// review are screens of their own that no other seat has; a second
+    /// `.sheet` modifier on this view is exactly what broke `FeedScreen`'s
+    /// first tap once, so they come through the same door. `AnyView` for
+    /// `rowMenu`'s reason.
+    var cardSheet: ((String) -> AnyView)? = nil
     /// The disconnect's teardown — clears the bridge's own store, so the
     /// next foreground can't re-register the seat (`BridgeDisconnectSection`).
     var teardown: () -> Void
@@ -72,7 +107,11 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     @Binding var sheet: AccountPageSheet?
     @ViewBuilder var act: () -> Act
     /// Second acts that only exist once the first has happened (GitHub's
-    /// feed picker, a starter-pack door). Drawn under the act field.
+    /// feed picker, a starter-pack door). Drawn under the act field, on the
+    /// page's own ground: the chassis applies `plainAccountRow()` to whatever
+    /// comes back, so an adopter cannot hand back a row with a separator and
+    /// system insets while every row around it has neither. An adopter that
+    /// needs a filled shape here is drawing a slab §639 ruled out.
     @ViewBuilder var more: () -> More
     /// The "Your key" sheet's content — the paste field, from the adopter,
     /// because the verb that stores a key is the bridge's own.
@@ -96,7 +135,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         List {
             header
             actSection
-            more()
+            more().plainAccountRow()
             factRows
             readers
             roster
@@ -105,6 +144,12 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         .listStyle(.plain)
         .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
+        // THE PAGE'S OWN TOP (§524: every pour is ink). It is the same wash
+        // every setup screen had, and it is here for the reason it was written
+        // for — arriving from the product page's bold wash must not drop to a
+        // bare gray form. §639's first cut left it off, so the three screens
+        // migrated that day were the only pages in the app with no top at all.
+        .bridgeSetupWash(name: name)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
@@ -121,6 +166,10 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                 AccountKeySheet(name: name) { keySheet() }
             case .profile(let profile):
                 SocialProfileCard(profile: profile)
+            case .thing(let id):
+                AccountThingSheet(id: id)
+            case .card(let id):
+                cardSheet?(id)
             }
         }
         .task(id: source) { await readCounts() }
@@ -152,6 +201,14 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                 Text(meta)
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
                     .multilineTextAlignment(.center)
+            }
+            if !state.connected, let mode {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: mode.glyph).dsGlyph(12)
+                    Text(mode.label).dsText(.label12)
+                }
+                .foregroundStyle(DS.textTertiary)
+                .accessibilityElement(children: .combine)
             }
             if !state.connected, let intro {
                 Text(LocalizedStringKey(intro))
@@ -200,13 +257,16 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
 
     @ViewBuilder private var factRows: some View {
         // Activity — the way to the room. Not connected: a fact of "—" and
-        // no door, because there is no room to open yet.
-        AccountFactRow(glyph: "clock",
-                       title: String(localized: "Activity"),
-                       fact: AccountPageShape.activityFact(today: today, week: week,
-                                                           connected: state.connected),
-                       opens: state.connected,
-                       action: state.connected ? openRoom : nil)
+        // no door, because there is no room to open yet. Absent entirely for
+        // a seat that lands nothing (see `lands`).
+        if lands {
+            AccountFactRow(glyph: "clock",
+                           title: String(localized: "Activity"),
+                           fact: AccountPageShape.activityFact(today: today, week: week,
+                                                               connected: state.connected),
+                           opens: state.connected,
+                           action: state.connected ? openRoom : nil)
+        }
         AccountFactRow(glyph: "network",
                        title: String(localized: "What it reaches"),
                        fact: AccountPageShape.reachFact(hosts: hosts),
@@ -254,7 +314,11 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
 
     // MARK: - 4. Who may read it
 
-    private var readers: some View {
+    @ViewBuilder private var readers: some View {
+        if lands { readersBlock }
+    }
+
+    private var readersBlock: some View {
         let available = AccountReaders.available()
         let denied = AccountReaders.denied(seat: seatID)
         return VStack(alignment: .leading, spacing: DS.Space.s2) {
@@ -313,24 +377,41 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         }
     }
 
+    @ViewBuilder
     private func rosterRow(_ row: AccountPageShape.Row) -> some View {
-        AccountRosterRow(row: row, fallbackIcon: name,
-                         subline: state.needsReconnecting ? AccountPageShape.pausedSubline : row.subline,
-                         open: onOpenRow.map { open in { open(row.id) } })
-            .swipeActions(edge: .trailing) {
-                Button(role: .destructive) {
-                    onRemoveRow(row.id)
-                    DSHaptic.tap()
-                } label: { Label("Remove", systemImage: "minus.circle") }
-            }
-            // A swipe has no Mac-mouse equivalent — right-click mirrors it.
-            .contextMenu {
-                Button(role: .destructive) {
-                    onRemoveRow(row.id)
-                    DSHaptic.tap()
-                } label: { Label("Remove", systemImage: "minus.circle") }
-            }
-            .plainAccountRow()
+        let line = AccountRosterRow(
+            row: row, fallbackIcon: name,
+            subline: state.needsReconnecting ? AccountPageShape.pausedSubline : row.subline,
+            open: onOpenRow.map { open in { open(row.id) } })
+        // ONE swipe and ONE menu, with conditional CONTENTS rather than two
+        // shapes of row: a swipe has no Mac-mouse equivalent, so the harness
+        // counts the two and demands they match, and a second pair of
+        // modifiers on a second branch reads to that count as a swipe with no
+        // mirror. A row with nothing to remove simply offers no swipe action.
+        if onRemoveRow != nil || rowMenu != nil {
+            line
+                .swipeActions(edge: .trailing) {
+                    if let remove = onRemoveRow {
+                        Button(role: .destructive) {
+                            remove(row.id)
+                            DSHaptic.tap()
+                        } label: { Label("Remove", systemImage: "minus.circle") }
+                    }
+                }
+                // A swipe has no Mac-mouse equivalent — right-click mirrors it.
+                .contextMenu {
+                    rowMenu?(row.id)
+                    if let remove = onRemoveRow {
+                        Button(role: .destructive) {
+                            remove(row.id)
+                            DSHaptic.tap()
+                        } label: { Label("Remove", systemImage: "minus.circle") }
+                    }
+                }
+                .plainAccountRow()
+        } else {
+            line.plainAccountRow()
+        }
     }
 
     // MARK: - 6. Exits
@@ -375,15 +456,48 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
 }
 
 /// The screen's one presentation.
+///
+/// **`.thing` carries an ID, never a `Thing`** (the liveness class, corollary
+/// 4): a roster row on a watch-list seat IS a thing — a watched ticker, a
+/// followed package — and holding the model across a presentation is how a
+/// sheet opens onto a row a foreground heal deleted underneath it. The sheet
+/// re-reads it, and draws nothing if it has gone.
 enum AccountPageSheet: Identifiable {
     case reach
     case key
     case profile(SocialProfile)
+    case thing(id: UUID)
+    /// A screen only the adopting seat can compose, keyed by whatever it
+    /// names its own rows with (`AccountPage.cardSheet`).
+    case card(id: String)
     var id: String {
         switch self {
         case .reach: "reach"
         case .key: "key"
         case .profile(let p): "profile:\(p.id)"
+        case .thing(let id): "thing:\(id.uuidString)"
+        case .card(let id): "card:\(id)"
+        }
+    }
+}
+
+/// A roster row's own thing sheet, resolved from its id at present time.
+/// Nothing is drawn for a thing that has gone — see `AccountPageSheet`.
+private struct AccountThingSheet: View {
+    let id: UUID
+    @Environment(\.modelContext) private var modelContext
+    @State private var thing: Thing?
+
+    var body: some View {
+        Group {
+            if let thing, thing.isLive {
+                ThingSheetView(thing: thing)
+            }
+        }
+        .task {
+            var descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.id == id })
+            descriptor.fetchLimit = 1
+            thing = (try? modelContext.fetch(descriptor))?.first
         }
     }
 }
@@ -570,6 +684,51 @@ struct AccountRosterRow: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityValue(Text(row.hasNew ? String(localized: "New since you last looked") : ""))
+    }
+}
+
+// MARK: - The roster's week
+
+/// This week's rows per watched thing, and whether any of them arrived since
+/// the page was last looked at (prd §639).
+///
+/// Every seat with a roster wants the same two numbers and was writing the
+/// same fetch to get them — group the source's last seven days by whatever
+/// field the bridge stamps the watched identity into, and compare each row's
+/// clock to `AccountVisits`. Written eight times it drifts eight ways; here it
+/// is one function with the traps already paid for:
+///
+/// * a `#Predicate` never touches an array-typed attribute (`tags.contains`
+///   compiles and then crashes inside CoreData mid-fetch — CLAUDE.md's own
+///   rule), so `key` runs in Swift, after the fetch;
+/// * the fetch is BOUNDED, because a source with a year of rows is a scroll
+///   away from any account page;
+/// * `.filter(\.isLive)` at the boundary, since this hands values onward and
+///   a foreground heal deletes rows while the page is open (corollary 4).
+///
+/// Call it from `onAppear` or a `.task`, never from a body or a computed
+/// property a body reads (prd §628).
+@MainActor
+enum AccountWeek {
+    static func counts(source: String, seatID: String, context: ModelContext,
+                       limit: Int = 2000,
+                       key: (Thing) -> String?) -> [String: (week: Int, new: Bool)] {
+        let since = Date.now.addingTimeInterval(-7 * 86_400)
+        var descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == source && $0.capturedAt >= since })
+        descriptor.fetchLimit = limit
+        let things = ((try? context.fetch(descriptor)) ?? []).filter(\.isLive)
+        let lastLooked = AccountVisits.lastLooked(seatID)
+        var book: [String: (week: Int, new: Bool)] = [:]
+        for thing in things {
+            guard let raw = key(thing) else { continue }
+            let id = raw.lowercased()
+            guard !id.isEmpty else { continue }
+            let was = book[id] ?? (0, false)
+            book[id] = (was.week + 1,
+                        was.new || (lastLooked.map { thing.capturedAt > $0 } ?? false))
+        }
+        return book
     }
 }
 

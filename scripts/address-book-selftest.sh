@@ -559,8 +559,22 @@ grep -q 'addTitle: wallet.canWatchMore ? String(localized: "Add a wallet") : nil
   && { echo "✗ the wallet rail's add slot came back cap-gated — §466 removed it outright, not just at five of five"; exit 1; }
 # THE WAY ONWARD (§460). The roster is a connect page and was the one screen in
 # the catalog's largest family without the door every other one carries.
-grep -q 'RoomDoor(name: "Wallet", source: "Wallet")' "$SCREEN" \
-  || { echo "✗ the roster lost its View feed door (§460)"; exit 1; }
+#
+# §639 makes that door STRUCTURAL rather than a component somebody remembered
+# to place: `AccountPage`'s Activity row IS the way onward, drawn for every
+# seat that lands things, and `RoomDoor` is deleted. So the guard inverts the
+# same way `setup-copy-audit`'s check 7b did — the page must be built on the
+# chassis, naming the source whose room it opens, and must NOT opt out of
+# landing (which is what suppresses the Activity row).
+grep -vE '^[[:space:]]*(//|\*|/\*)' "$SCREEN" > "$TMP/wallet-screen-bare.swift"
+grep -q 'AccountPage(' "$TMP/wallet-screen-bare.swift" \
+  || { echo "✗ the wallet page is off the account chassis — the Activity row IS the"; \
+       echo "  way onward now, and nothing else draws one (§460/§639)"; exit 1; }
+grep -q 'source: "Wallet"' "$TMP/wallet-screen-bare.swift" \
+  || { echo "✗ the wallet page no longer names the source whose room its Activity row opens (§460)"; exit 1; }
+grep -q 'lands: false' "$TMP/wallet-screen-bare.swift" \
+  && { echo "✗ the wallet page declares it lands nothing — that suppresses the Activity"; \
+       echo "  row, i.e. the View feed door §460 required"; exit 1; }
 
 # §439's wallet-to-wallet reading lives in the MODEL alone now — its bracket
 # and sentence left with the spine (§497).

@@ -19,88 +19,78 @@ struct SlackScreen: View {
     /// result — and a sign-in you dismissed is neither.
     @State private var cancelled = false
 
-    /// The connection door, open (prd §186).
-    @State private var showConnection = false
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
     var body: some View {
-        BridgeSetupPage(name: "Slack") {
-            if SlackAuth.connected {
-                BridgeConnectedState(
-                    bridgeID: "slack",
-                    name: "Slack",
-                    identity: SlackAuth.teamName,
-                    connectionNote: String(localized: "Signed in on \(DS.device) · search only, no server ever holds a secret"),
-                    capabilitiesFallback: ["Looks up mentions of you.",
-                                           "Read-only — never posts, reads files, or browses channels."],
-                    openConnection: { showConnection = true }
-                )
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                // The way back to your things (§460).
-                RoomDoor(name: "Slack", source: "Slack")
-                    .listRowSeparator(.hidden)
-            } else {
-                BridgeSetupHeader(
-                    name: "Slack",
-                    mode: .signIn,
-                    intro: "Only messages that name you — never a channel's whole history, and it can never post.")
-                connectSection.listRowSeparator(.hidden)
-            }
-        }
-        .sheet(isPresented: $showConnection) {
-            BridgeConnectionSheet(title: "Slack") {
-                removeSection.listRowSeparator(.hidden)
-            }
-        }
+        AccountPage(
+            name: "Slack", seatID: "slack", source: "Slack",
+            state: AccountPageState.of(name: "Slack", seatID: "slack",
+                                       connected: SlackAuth.connected, store: store),
+            intro: "Only messages that name you — never a channel's whole history, and it can never post.",
+            mode: .signIn,
+            teardown: { SlackAuth.disconnect() },
+            sheet: $sheet,
+            act: { connectBlock },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
         .onAppear {
             if SlackAuth.connected { Task { await sync() } }
         }
         .onDisappear { flow?.cancel() }
     }
 
-    @ViewBuilder
-    private var connectSection: some View {
-        Section {
-            if connecting {
-                HStack(spacing: DS.Space.s2) {
-                    ProgressView().controlSize(.small)
-                    Text("Waiting for Slack…")
-                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
-                }
-                .padding(.vertical, DS.Space.s1)
-                .dsListCardRow()
-            } else {
-                // The screen's one verb, as the screen's one filled block
-                // (prd §218) — it was a blue text row, which read as a link to
-                // somewhere rather than the act itself.
-                DSSlabButton(title: "Connect Slack",
-                             systemImage: "at",
-                             action: connect)
-                if cancelled {
-                    Text("Sign-in cancelled — nothing was connected.")
-                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+
+    @ViewBuilder private var connectBlock: some View {
+        if SlackAuth.connected {
+            // WHICH WORKSPACE. Unlike Spotify's identity-less PKCE token,
+            // Slack's OAuth response hands over the workspace name honestly,
+            // so the page can say whose mentions it reads.
+            if !SlackAuth.teamName.isEmpty {
+                HStack(spacing: DS.Space.s3) {
+                    BridgeIcon(name: "Slack", size: DS.Mark.list, circular: false)
+                    Text(SlackAuth.teamName)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
                 }
             }
-            BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Checking your mentions…"),
+            BridgeSyncStatusRows(syncing: syncing,
+                                 syncingLine: String(localized: "Checking your mentions…"),
                                  proof: result)
-            // Says what LANDS before what's safe (audit, 2026-07-31) — this
-            // named PKCE, the missing password, the absent server and the
-            // search-only scope, and never once said what a mention becomes
-            // once it's here. The scope's own clause then said "Casberi can
-            // look up your mentions and nothing else", which is the first
-            // sentence again; the SCOPE (prd §192) is what it's there for, and
-            // that survives whole.
-            DSSlabNote(text: "On Slack's own page — no password ever touches the app.")
+        } else if connecting {
+            HStack(spacing: DS.Space.s2) {
+                ProgressView().controlSize(.small)
+                Text("Waiting for Slack…")
+                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+            }
+            .padding(.vertical, DS.Space.s1)
+        } else {
+            // The screen's one verb, as the screen's one filled block
+            // (prd §218) — it was a blue text row, which read as a link to
+            // somewhere rather than the act itself.
+            DSSlabButton(title: "Connect Slack",
+                         systemImage: "at",
+                         action: connect)
+            if cancelled {
+                Text("Sign-in cancelled — nothing was connected.")
+                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
-        .dsSlabSection()
+        BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Checking your mentions…"),
+                             proof: result)
+        // Says what LANDS before what's safe (audit, 2026-07-31) — this
+        // named PKCE, the missing password, the absent server and the
+        // search-only scope, and never once said what a mention becomes
+        // once it's here. The scope's own clause then said "Casberi can
+        // look up your mentions and nothing else", which is the first
+        // sentence again; the SCOPE (prd §192) is what it's there for, and
+        // that survives whole.
+        DSSlabNote(text: "On Slack's own page — no password ever touches the app.", plain: true)
     }
 
-    private var removeSection: some View {
-        BridgeDisconnectSection(bridgeID: "slack", name: "Slack") {
-            SlackAuth.disconnect()
-        }
-    }
 
     private func connect() {
         guard flow == nil else { return }   // one flow at a time

@@ -13,124 +13,75 @@ struct ObsidianScreen: View {
     @State private var result: BridgeProof?
 
     /// The connection door, open (prd §186).
-    @State private var showConnection = false
+
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
     var body: some View {
-        BridgeSetupPage(name: "Obsidian") {
-            if obsidian.connected {
-                // Connected (prd §186): the VAULT is the identity — this
-                // screen was already closest to right, naming the folder it
-                // reads; now the picker demotes behind the door with it.
-                BridgeConnectedState(
-                    bridgeID: "obsidian",
-                    name: "Obsidian",
-                    identity: obsidian.vaultName.isEmpty
-                        ? String(localized: "Vault") : obsidian.vaultName,
-                    // How it connected, and only that (audit, 2026-07-31): the
-                    // note ended "· read-only, never modified" two lines above
-                    // the checklist's "Read-only — never edits a note."
-                    connectionNote: String(localized: "A folder on \(DS.device)"),
-                    capabilitiesFallback: ["Reads the vault you picked.",
-                                           "Keeps up with edits, and drops notes you delete.",
-                                           "Read-only — never edits a note."],
-                    openConnection: { showConnection = true }
-                )
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                // The way back to your things (§460).
-                RoomDoor(name: "Obsidian", source: "Obsidian")
-                    .listRowSeparator(.hidden)
-            } else {
-                BridgeSetupHeader(
-                    name: "Obsidian",
-                    mode: .onThisDevice,
-                    intro: "Your notes, searchable alongside everything else. Nothing here edits or writes a note back.")
-                vaultSection.listRowSeparator(.hidden)
-            }
-        }
-        .sheet(isPresented: $showConnection) {
-            BridgeConnectionSheet(title: "Obsidian") {
-                vaultSection.listRowSeparator(.hidden)
-                removeSection.listRowSeparator(.hidden)
-            }
-            // A SECOND `.fileImporter`, not a stray duplicate (same bug as
-            // FilesScreen, 2026-07-29). "Change" lives inside this sheet's
-            // own content, and a system document picker presents from
-            // whichever view controller is FRONTMOST — with the sheet up,
-            // that's this one, not the base List underneath it. The importer
-            // attached down there (below) still owns the FIRST connect,
-            // before any sheet exists to cover it; this one owns every
-            // reconnect afterward. Same binding, same handler — only the
-            // presenting context differs.
-            .fileImporter(isPresented: $picking, allowedContentTypes: [.folder],
-                          onCompletion: handlePick)
-        }
+        AccountPage(
+            name: "Obsidian", seatID: "obsidian", source: "Obsidian",
+            state: AccountPageState.of(name: "Obsidian", seatID: "obsidian",
+                                       connected: obsidian.connected, store: store),
+            intro: "Your notes, searchable alongside everything else. Nothing here edits or writes a note back.",
+            mode: .onThisDevice,
+            teardown: { obsidian.disconnect() },
+            sheet: $sheet,
+            act: { vaultBlock },
+            more: { EmptyView() },
+            keySheet: { EmptyView() }
+        )
+        // ONE `.fileImporter` now, and that is the §639 dividend — see
+        // `FilesScreen`, which carried the identical pair for the identical
+        // reason. The Connection sheet is gone, so there is only ever one
+        // presenting context for the picker.
         .fileImporter(isPresented: $picking, allowedContentTypes: [.folder], onCompletion: handlePick)
         .onAppear {
             if obsidian.connected { Task { await sync() } }
         }
     }
 
-    private func handlePick(_ outcome: Result<URL, Error>) {
-        guard case .success(let url) = outcome else { return }
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        if obsidian.setVault(url: url) {
-            DSHaptic.tap()
-            Task { await sync(justConnected: true) }
-        } else {
-            result = .failed(String(localized: "Couldn't keep access to that folder — try picking it again."))
-        }
-    }
 
-    private var vaultSection: some View {
-        Section {
-            if obsidian.connected {
-                HStack(spacing: DS.Space.s3) {
-                    Image(systemName: "folder")
-                        .dsGlyph(17, weight: .medium)
-                        .foregroundStyle(DS.tint)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(obsidian.vaultName.isEmpty ? "Vault" : obsidian.vaultName)
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        Text("Connected — notes sync when you visit or open the app.")
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    }
-                    Spacer()
-                    Button("Change") { picking = true }
-                        .dsText(.callout15).fontWeight(.semibold)
-                        .foregroundStyle(DS.tint)
-                        .buttonStyle(.plain)
+    @ViewBuilder private var vaultBlock: some View {
+        if obsidian.connected {
+            HStack(spacing: DS.Space.s3) {
+                Image(systemName: "folder")
+                    .dsGlyph(17, weight: .medium)
+                    .foregroundStyle(DS.tint)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(obsidian.vaultName.isEmpty ? "Vault" : obsidian.vaultName)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    // NOT "Connected —": the state line under the name says
+                    // that once, in the page's own voice (§639).
+                    Text("Notes sync when you visit or open the app.")
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 }
-                .padding(.vertical, DS.Space.s1)
-                .dsListCardRow()
-            } else {
-                // The screen's one verb, as the screen's one filled block
-                // (prd §218) — it was a blue text row, which read as a link to
-                // somewhere rather than the act itself.
-                DSSlabButton(title: "Choose your vault folder",
-                             systemImage: "folder.badge.plus") { picking = true }
+                Spacer()
+                Button("Change") { picking = true }
+                    .dsText(.callout15).fontWeight(.semibold)
+                    .foregroundStyle(DS.tint)
+                    .buttonStyle(.plain)
             }
-            BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your notes…"),
-                                 proof: result)
-            // Says what LANDS before what's safe — see `SteamScreen` (audit,
-            // 2026-07-31). "beside everything else" left the same day: the
-            // header three rows up is already "Your vault, beside your things".
-            // What lands, then what's safe — `SteamScreen`'s ordering (audit,
-            // 2026-07-31). The edit/delete sentence is here rather than in the
-            // intro because it changes what someone would DO: it is the answer
-            // to "will this go stale?", and before 2026-08-06 the honest
-            // answer was yes.
-            DSSlabNote(text: "A vault is a folder of Markdown — usually iCloud Drive → Obsidian.")
+            .padding(.vertical, DS.Space.s1)
+        } else {
+            // The screen's one verb, as the screen's one filled block
+            // (prd §218) — it was a blue text row, which read as a link to
+            // somewhere rather than the act itself.
+            DSSlabButton(title: "Choose your vault folder",
+                         systemImage: "folder.badge.plus") { picking = true }
         }
-        .dsSlabSection()
+        BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your notes…"),
+                             proof: result)
+        // Says what LANDS before what's safe — see `SteamScreen` (audit,
+        // 2026-07-31). "beside everything else" left the same day: the
+        // header three rows up is already "Your vault, beside your things".
+        // What lands, then what's safe — `SteamScreen`'s ordering (audit,
+        // 2026-07-31). The edit/delete sentence is here rather than in the
+        // intro because it changes what someone would DO: it is the answer
+        // to "will this go stale?", and before 2026-08-06 the honest
+        // answer was yes.
+        DSSlabNote(text: "A vault is a folder of Markdown — usually iCloud Drive → Obsidian.", plain: true)
     }
 
-    private var removeSection: some View {
-        BridgeDisconnectSection(bridgeID: "obsidian", name: "Obsidian") {
-            obsidian.disconnect()
-        }
-    }
 
     private func sync(justConnected: Bool = false) async {
         guard !syncing else { return }

@@ -2,17 +2,6 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
-/// The Snapchat things already in the corpus — newest first, so an import's
-/// result is visible on the screen that ran it.
-private let snapchatRecentDescriptor: FetchDescriptor<Thing> = {
-    var d = FetchDescriptor<Thing>(
-        predicate: #Predicate { $0.source == "Snapchat" },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-    )
-    d.fetchLimit = 12
-    return d
-}()
-
 /// Snapchat, connected — by import of the account's own data export.
 ///
 /// Two acts, not one, and the split is the honest part: picking the folder
@@ -32,44 +21,44 @@ struct SnapchatImportScreen: View {
     @State private var held = 0
     @State private var fetching = false
     @State private var pending = 0
+    /// The page's one presentation (`AccountPage.sheet`).
+    @State private var sheet: AccountPageSheet?
 
-    @Query(snapchatRecentDescriptor) private var recent: [Thing]
 
     var body: some View {
-        BridgeSetupPage(name: "Snapchat") {
-            // "Only saved chats exist" earns the second sentence: it is the
-            // limit most likely to read as a bug, because a Snapchat user's
-            // mental model is that they had far more conversation than this.
-            BridgeSetupHeader(
-                name: "Snapchat",
-                mode: .oneTimeImport,
-                intro: "Only saved chats exist: Snapchat deletes the rest once viewed.",
-                connected: held > 0)
-            // The way back to what just landed (§460). Gated on the corpus,
-            // not a connection flag: an import has no live connection, so
-            // "has anything arrived" is the only honest test of whether
-            // there is a room worth opening.
-            if !recent.isEmpty {
-                RoomDoor(name: "Snapchat", source: "Snapchat")
-                    .listRowSeparator(.hidden)
-            }
-            pickSection
-            if pending > 0 { picturesSection }
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Imported", things: Array(recent.live))
-                    .listRowSeparator(.hidden)
-            }
-            // Snapchat computed `held` and `staleness` on appear from the day
-            // §310 landed and rendered NEITHER — so it was the one import room
-            // with no way back out and no word about its own age, while its
-            // three siblings had both. Found while restyling the family
-            // (prd §314): a screen that reads state and never draws it looks
-            // exactly like a screen that has nothing to say.
-            ImportUpkeepSection(source: "Snapchat", held: held, staleness: staleness) { gone in
-                reread()
-                result = .says(String(localized: "\(gone) removed"))
-            }
-        }
+        AccountPage(
+            name: "Snapchat", seatID: "snapchat", source: "Snapchat",
+            // An import has no live connection, so "is anything here" is the
+            // only honest test of whether this seat is connected at all.
+            state: AccountPageState.of(name: "Snapchat", seatID: "snapchat",
+                                       connected: held > 0, store: store),
+            // "Only saved chats exist" earns the sentence: it is the limit most
+            // likely to read as a bug, because a Snapchat user's mental model
+            // is that they had far more conversation than this.
+            intro: "Only saved chats exist: Snapchat deletes the rest once viewed.",
+            mode: .oneTimeImport,
+            teardown: {},
+            sheet: $sheet,
+            act: {
+                pickBlock
+                if pending > 0 { picturesBlock }
+            },
+            more: {
+                // Snapchat computed `held` and `staleness` on appear from the
+                // day §310 landed and rendered NEITHER — so it was the one
+                // import room with no way back out and no word about its own
+                // age, while its three siblings had both. Found while
+                // restyling the family (prd §314): a screen that reads state
+                // and never draws it looks exactly like a screen that has
+                // nothing to say.
+                ImportUpkeepSection(source: "Snapchat", held: held,
+                                    staleness: staleness, plain: true) { gone in
+                    reread()
+                    result = .says(String(localized: "\(gone) removed"))
+                }
+            },
+            keySheet: { EmptyView() }
+        )
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.folder]) { outcome in
             guard case .success(let url) = outcome else { return }
@@ -87,21 +76,18 @@ struct SnapchatImportScreen: View {
     ///
     /// The third step was "Pick the unzipped folder below", above a button
     /// titled "Choose the export folder" (§220, 2026-07-31).
-    private var pickSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                ImportArchiveSection(
-                    source: "Snapchat",
-                    steps: [
-                        "At accounts.snapchat.com, open My Data and submit a request (pick JSON).",
-                        "They email a link in a few hours — unzip it in Files.",
-                    ],
-                    pickTitle: "Choose folder",
-                    alreadyImported: held > 0) { importing = true }
-                BridgeSyncStatusRows(proof: result)
-            }
+    @ViewBuilder private var pickBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            ImportArchiveSection(
+                source: "Snapchat",
+                steps: [
+                    "At accounts.snapchat.com, open My Data and submit a request (pick JSON).",
+                    "They email a link in a few hours — unzip it in Files.",
+                ],
+                pickTitle: "Choose folder",
+                alreadyImported: held > 0) { importing = true }
+            BridgeSyncStatusRows(proof: result)
         }
-        .dsSlabSection()
     }
 
     /// One re-read of what this screen shows about the corpus — on appear,
@@ -114,20 +100,17 @@ struct SnapchatImportScreen: View {
 
     /// The second act. Only ever on screen when there is genuinely something
     /// waiting — an empty queue shows no button rather than a dead one.
-    private var picturesSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabButton(title: fetching ? "Fetching pictures…" : "Fetch \(pending) pictures",
-                             systemImage: "arrow.down.circle",
-                             busy: fetching,
-                             enabled: !fetching) {
-                    DSHaptic.tap()
-                    Task { await runFetch() }
-                }
-                DSSlabNote(text: "Memories arrive as links that Snapchat kills 7 days after the export. Photos are fetched; videos stay as dated entries.")
+    @ViewBuilder private var picturesBlock: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            DSSlabButton(title: fetching ? "Fetching pictures…" : "Fetch \(pending) pictures",
+                         systemImage: "arrow.down.circle",
+                         busy: fetching,
+                         enabled: !fetching) {
+                DSHaptic.tap()
+                Task { await runFetch() }
             }
+            DSSlabNote(text: "Memories arrive as links that Snapchat kills 7 days after the export. Photos are fetched; videos stay as dated entries.", plain: true)
         }
-        .dsSlabSection()
     }
 
     // MARK: - Run

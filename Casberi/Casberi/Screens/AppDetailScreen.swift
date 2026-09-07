@@ -1,10 +1,44 @@
 import SwiftUI
 import SwiftData
 
-/// An app's product page — the App-Store move: tap an app in the catalog and
-/// see what it is, what lands in your feed, and a Connect button, before you
-/// commit. Identity rides the brand COLOR (legal everywhere); the honest
-/// availability state is stated plainly, never faked.
+/// An app's product page — tap an app in the catalog and see what it is, what
+/// lands in your feed, and the verb, before you commit.
+///
+/// **ON THE ACCOUNT PAGE'S ANATOMY SINCE §639c (2026-09-06).** User ruling:
+/// *"it needs to be every page in the catalogue has the DNA."* §639b put all
+/// 55 setup screens on `AccountPage`; this page is the one every one of them
+/// is reached THROUGH, and it was still wearing the App Store product-page
+/// shape it was built with — a left-aligned hero mark beside a stack of
+/// eyebrow, name, tagline and button, over `label12` section captions in a
+/// `ScrollView`. Two pages one tap apart, agreeing about nothing a person
+/// reads first.
+///
+/// So the head is the chassis's head — one centred mark, the name, a dot and
+/// a state line — and the body is a plain `List` of rows on the page's own
+/// ground. **What is NOT copied is the point of the split**: the product page
+/// carries the PITCH (what it does, what lands, the verb) and the account page
+/// carries the ACT, which is why every migrated screen's `intro` is written as
+/// action rather than a re-pitch — "you reach this from the product page,
+/// which has just said what it is". Collapsing the two would have made those
+/// 52 sentences wrong.
+///
+/// Three consequences worth naming:
+///
+/// - **The state line comes from `AccountPageState.of`, the one derivation**,
+///   so this page's dot, the account page's dot and the catalog row's cannot
+///   disagree. It is drawn only for a CONNECTABLE offer: a "Soon" app is not
+///   a seat you failed to connect, and its capsule already says so.
+/// - **The group takes the meta slot** — the account page's own `label12`
+///   tertiary line under the state — rather than an eyebrow above the name.
+///   Same anatomy, this page's own fact in it.
+/// - **The wash is `bridgeSetupWash`**, not a second copy of the recipe. This
+///   page's own `brandWash` was 360pt where that one is 300, so the handoff
+///   the setup wash exists for ("arriving from the product page's bold wash
+///   must not drop to a bare gray form") was between two washes that did not
+///   match. One definition now; the ink ruling (§524) is unchanged.
+///
+/// The `connectBloom` is untouched and still blooms the app's real colour —
+/// that is a moment, not a background.
 struct AppDetailScreen: View {
     @Environment(ShellChrome.self) private var chrome
     let offer: BridgeCatalog.Offer
@@ -33,67 +67,35 @@ struct AppDetailScreen: View {
     /// `.attention` bridge also satisfies: the Fix path opens the same sheet,
     /// and it should close when the connection is actually working again.
     private var liveConnected: Bool { bridge?.status == .connected }
-    // signalColor, not the tile hue: this paints the inline feed icon, where
-    // Tokens' near-black tile would vanish on the dark page (its identity
-    // there is the glyph's green). The wash keeps asking DS.washHue itself.
-    private var brand: Color { BridgeGlyph.signalColor(for: offer.name) }
-
-    /// The page's own top, washed down from it — INK since 2026-08-29
-    /// (`DS.pourInk`, whose doc carries the ruling).
-    ///
-    /// **This was the loudest colour in the app** and it is the one the ink
-    /// pass most changes: `DS.washHue(for:)` at FULL strength for the first
-    /// 30% of 360pt, so a product page opened on a slab of the app's brand
-    /// (user ruling 2026-07-13: "bold, not a film" — the page opens on its
-    /// color). It is also the one where the argument for colour was
-    /// strongest, and it still lost on the ruling's own terms: the brand is
-    /// stated by the tile at the top of this page, at full saturation, in the
-    /// one element that IS the app's identity. The wash was the same fact
-    /// again, forty times larger, and next to a catalogue of sixty apps it is
-    /// what made moving between two of them read as changing skins.
-    ///
-    /// **Two things were deleted with the colour, deliberately.** The nil arm
-    /// (a hueless app got no wash at all, so ChatGPT and X pages had no top
-    /// while Stripe's had a purple one — that asymmetry cannot exist once the
-    /// wash makes no claim), and the 0.3 hold, which existed to make a
-    /// saturated hue read as a band rather than a fade. Ink needs no hold.
-    ///
-    /// The `connectBloom` below is UNTOUCHED and still blooms the app's real
-    /// colour: that is a moment, not a background — the same line
-    /// `AddressBookViews` drew when its own pour went to ink and the face
-    /// reveal kept its hue.
-    private var brandWash: some View {
-        LinearGradient(colors: [DS.pourInk, DS.pourInk.opacity(0)],
-                       startPoint: .top, endPoint: .bottom)
-            .frame(height: 360)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .ignoresSafeArea(edges: .top)
-    }
-
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: DS.Space.s6) {
-                header
-                whatItDoes
-                // Retires once connected (2026-07-23) — found live: the old
-                // code kept a static "what lands" teaser row on screen even
-                // after connecting, the same defect §189 fixed on the manage
-                // pages (a form that never changes state). The promise is
-                // redeemed the moment Open replaces Connect; the real feed
-                // answers the question this section exists to ask.
-                if !connected {
-                    whatLands
-                }
+        List {
+            header
+            actSection
+            whatItDoes
+            // Retires once connected (2026-07-23) — found live: the old
+            // code kept a static "what lands" teaser row on screen even
+            // after connecting, the same defect §189 fixed on the manage
+            // pages (a form that never changes state). The promise is
+            // redeemed the moment Open replaces Connect; the real feed
+            // answers the question this section exists to ask.
+            if !connected {
+                whatLands
             }
-            .padding(DS.Space.s4)
-            .padding(.bottom, ShellMetrics.bottomInset)
+            // The floating agent bar sits over the last row otherwise. The
+            // account page has no equivalent because its last row is an exit
+            // nobody scrolls past; this page's is a streamed preview.
+            Color.clear
+                .frame(height: ShellMetrics.bottomInset)
+                .plainAccountRow()
         }
+        .listStyle(.plain)
+        .listSectionSpacing(.compact)
+        .scrollContentBackground(.hidden)
         .scrollIndicators(.hidden)
-        // The app's hue washes down from the top — the same atmosphere the
-        // thing sheet and a source feed wear, so opening a product page reads
-        // as stepping into that app's world (delight, 2026-07-12). One fixed
-        // recipe, under the content; hueless apps stay pure page, honestly.
-        .background(alignment: .top) { brandWash }
+        // THE SAME TOP THE ACCOUNT PAGE POURS (§524: every pour is ink), from
+        // the same definition — see this file's own doc for why it is no
+        // longer a second copy of the recipe.
+        .bridgeSetupWash(name: offer.name)
         // The connect payoff blooms over the content, then recedes.
         // The payoff must carry light — Tokens blooms its glyph green, not
         // its near-black tile (signalColor's whole point). An app with no
@@ -106,7 +108,9 @@ struct AppDetailScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .navigationTitle(offer.name)
+        // The header IS the title — the chassis's rule, and it was already
+        // true here: a nav title said the name one line above the name.
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         // The form's job is done the moment the connection goes live, so it
         // leaves — and the payoff lands HERE, on the page that made the
@@ -128,24 +132,83 @@ struct AppDetailScreen: View {
         }
     }
 
-    // MARK: - Header (big icon + name + action, App Store product-page shape)
+    // MARK: - 1. Header (the chassis's head, §639c)
 
+    /// One centred mark, the name, a dot and a state line, the group, the
+    /// tagline. The same six-element head `AccountPage` draws, with this
+    /// page's own facts in the meta and intro slots.
     private var header: some View {
-        HStack(alignment: .top, spacing: DS.Space.s4) {
-            BridgeIcon(name: offer.name, size: DS.Mark.hero)
-                // The mark coin-flips as its page opens — the same greeting the
-                // thing-sheet and feed-switch icons give (delight, 2026-07-12).
-                .coinFlip(trigger: offer.name)
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Text(LocalizedStringKey(offer.group))
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                Text(offer.name).dsText(.heading22).foregroundStyle(DS.textPrimary)
-                Text(LocalizedStringKey(offer.tagline)).dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                actionButton.padding(.top, DS.Space.s2)
-                walletSeatStanding
+        VStack(spacing: DS.Space.s2) {
+            BridgeIcon(name: offer.name, size: DS.Mark.account)
+                // The mark settles in as its page opens — the chassis's own
+                // greeting, replacing this page's coin flip so the two pages
+                // do not announce themselves differently.
+                .settleIn()
+            Text(offer.name)
+                .dsText(.heading34).foregroundStyle(DS.textPrimary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+            // A "Soon" app is not a seat somebody failed to connect, and its
+            // capsule already says what it is. Drawing "Not connected" over
+            // it would be a status about a connection that does not exist.
+            if offer.connectable {
+                HStack(spacing: DS.Space.s2) {
+                    Circle().fill(stateTone).frame(width: 8, height: 8)
+                    Text(AccountPageShape.stateLine(state))
+                        .dsText(.subhead13).fontWeight(.medium)
+                        .foregroundStyle(stateTone)
+                }
+                .accessibilityElement(children: .combine)
             }
-            Spacer(minLength: 0)
+            Text(LocalizedStringKey(offer.group))
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                .multilineTextAlignment(.center)
+            Text(LocalizedStringKey(offer.tagline))
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, DS.Space.s1)
         }
+        .frame(maxWidth: .infinity)
+        .padding(.top, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+        .plainAccountRow()
+    }
+
+    /// ONE derivation with the account page and the catalog row (§639c) — the
+    /// three cannot disagree about a seat's dot.
+    private var state: AccountPageShape.State {
+        guard let seatID else { return .notConnected }
+        // `bridge != nil`, NOT this page's `connected` — that one excludes a
+        // paused seat, which is what the Connect capsule wants and the exact
+        // opposite of what the line wants: a paused seat is set up, and the
+        // whole point of the state line is to say "Paused" rather than
+        // "Not connected".
+        return AccountPageState.of(name: offer.name, seatID: seatID,
+                                   connected: bridge != nil, store: store)
+    }
+
+    private var stateTone: Color {
+        switch state {
+        case .reading:           DS.tint
+        case .needsReconnecting: DS.attention
+        case .notConnected, .paused: DS.textTertiary
+        }
+    }
+
+    // MARK: - 2. The act
+
+    /// The verb, and what a wallet-riding seat has already found under it —
+    /// the chassis's act slot, first block after the head.
+    private var actSection: some View {
+        VStack(spacing: DS.Space.s2) {
+            actionButton
+            walletSeatStanding
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, DS.Space.s2)
+        .plainAccountRow()
     }
 
     /// The product page's action — the SAME honest capsule verbs as the Apps
@@ -220,6 +283,7 @@ struct AppDetailScreen: View {
             // which works by accident and stops working in any language.
             Text(line)
                 .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s1)
         }
@@ -270,8 +334,10 @@ struct AppDetailScreen: View {
 
     private var whatItDoes: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
+            // subhead13 tertiary — the caption grammar every block on the
+            // account page uses ("Who may read it", "Watching · 5").
             Text("What it does")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
             Text(LocalizedStringKey(offer.effectiveSummary))
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -284,6 +350,8 @@ struct AppDetailScreen: View {
                     .padding(.top, DS.Space.s1)
             }
         }
+        .padding(.vertical, DS.Space.s3)
+        .plainAccountRow()
     }
 
     /// Pre-connect only (the caller gates on `!connected`) — once real things
@@ -291,7 +359,7 @@ struct AppDetailScreen: View {
     private var whatLands: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             Text("What lands in your feed")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
             // The preview (option 4): the app's shape, streamed through the
             // real engine — the App Store screenshot, generated. Inert; the
             // real thing arrives when the bridge does.
@@ -327,5 +395,7 @@ struct AppDetailScreen: View {
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
             }
         }
+        .padding(.vertical, DS.Space.s3)
+        .plainAccountRow()
     }
 }
