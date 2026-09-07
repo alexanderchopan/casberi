@@ -11236,7 +11236,12 @@ struct FeedScreen: View {
 
     private var invitationState: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Let's fill this feed.")
+            // THE INBOX FRAME (user ruling 2026-09-06, arrived via the deck:
+            // "manager" was dropped as forced — "we aren't changing passwords
+            // or account details" — for "one inbox for all your accounts").
+            // The headline says what the empty screen BECOMES, in the app's
+            // own noun, rather than naming the container it already is.
+            Text("One inbox for all your accounts.")
                 .dsText(.heading34)
                 .foregroundStyle(DS.textPrimary)
                 .settleIn()
