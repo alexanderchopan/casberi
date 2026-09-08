@@ -168,6 +168,23 @@ grep -q 'abs(x) / width' "$TMP/main.nc" \
 grep -q 'let p = min(1, abs(chrome.pageDragProgress))' "$TMP/main.nc" \
   || { echo "✗ PagerCover no longer runs on the drag's progress — the two halves of the"; \
        echo "  carousel would disagree about when a turn is a turn, which is §648's cause."; fail=1; }
+# THE BAND'S SCRIM RAMPS OVER A FIXED LENGTH, NOT A FRACTION OF ITSELF (prd
+# §649 amendment, 2026-09-08). The mask was `location: 0.25` — a quarter of the
+# band's OWN height — so the softness grew with the number of rows stacked in
+# it. Measured off the report's screenshot: a three-row Social band is 218pt, so
+# the quarter was a 54pt ramp that covered the whole first control row and let a
+# line of feed text read between the strips. `DS.Space.s6` is not a chosen
+# number — it is what the fraction already yields for the 96pt dock-only band,
+# so the case the old rule got right is unchanged. A fraction coming back is the
+# defect itself, and nothing else here can see it: the band paints, the app
+# works, and only a screenshot of a THREE-row room shows it.
+grep -q 'location: 0.25' "$TMP/main.nc" \
+  && { echo "✗ the band's scrim is back on a FRACTION of its own height — a stacked band"; \
+       echo "  goes see-through in proportion to how much it holds (§649 amendment)."; fail=1; }
+grep -q 'frame(height: DS.Space.s6)' "$TMP/main.nc" \
+  || { echo "✗ the band's scrim lost its fixed-length ramp — either it is a fraction again"; \
+       echo "  or the soft edge where the band meets the feed is gone entirely, and that"; \
+       echo "  edge is the whole of the 2026-08-23 airiness ruling."; fail=1; }
 # THE LEAN MOVED INTO ITS OWN LEAF (2026-09-06, prd §632 second amendment) —
 # the ruling is unchanged and the guard follows it rather than the old
 # spelling: both the ring and the fill go through `ChipLean`, `ChipLean` is

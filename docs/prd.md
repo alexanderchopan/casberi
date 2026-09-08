@@ -51108,3 +51108,59 @@ rather than as chrome the page slides under"). That trade is the user's to make.
 the change; it is a reordering of two siblings in a `VStack(spacing: 0)`, so
 each row keeps its own paddings and the band's height is unchanged, but which
 paddings meet has changed and nobody has looked at the result.
+
+## §649 amendment — the scrim's ramp is a fixed length, and the trade §649 hedged on does not exist (user: "fix the scrim", 2026-09-08)
+
+**§649 reported this and did not fix it**, on the ground that a fixed ramp
+"makes a three-row band a near-opaque plate, which is exactly what that scrim's
+own comment argues against." Asked to fix it, the measurement dissolves the
+trade. Recording that, because the hedge was the wrong call and the reason it
+was wrong is reusable: **an objection quoted from a comment is not a
+measurement, and this one was weighed against a number nobody had taken.**
+
+**What was wrong.** `bandContent`'s mask ran `location: 0.25` — the ramp was a
+quarter of the band's OWN HEIGHT. So the softness grew with the number of rows
+stacked in the band, which is backwards: the more this chrome holds, the more of
+it went see-through.
+
+**Measured off the report's screenshot** (1320×2868, scale 3.36, a 393pt
+screen), Social with three rows:
+
+| | |
+|---|---|
+| venue capsule | 2136–2292px |
+| gap | 2292–2352px — **feed text legible here** |
+| face rail | 2352–2508px |
+| gap | 2508–2544px |
+| dock slab | 2544–2736px |
+
+Band top 2136px to the screen bottom is **218pt**, so the quarter was a **54pt
+ramp**: it covered the whole first control row and did not reach full opacity
+until the top of the second. That is precisely the line of feed text sitting
+between the strips in the report.
+
+**The number is not chosen.** `DS.Space.s6` (24pt) is what the fraction already
+yields for a **dock-only band**, which measures 96pt on the same screenshot
+(dock slab 192px plus the bottom safe area). So the one-row case — where the old
+rule was right — is unchanged to the point, and only the stacked case moves, to
+the same edge the dock alone has always had.
+
+**The 2026-08-23 airiness argument survives and is why there is still a ramp.**
+"A flat opaque block that deep reads as a second header" is about the EDGE where
+the band meets the feed, and 24pt is that edge. The gaps BETWEEN the strips are
+interior to one control cluster, and a feed row legible in them is the collision
+this scrim exists to stop, not airiness. The change in solid area is far smaller
+than §649's hedge implied: **75% → 89%** for a three-row band, and unchanged for
+a one-row one.
+
+**A fixed ramp is also steadier.** The band's height changes on its own — a row
+appears, the dock folds under a scroll — and a fractional ramp re-lengthed on
+every one of those. This one does not move.
+
+**Guarded in `dock-selftest.sh`:** `location: 0.25` may not come back, and the
+fixed `.frame(height: DS.Space.s6)` ramp may not go — the second because
+deleting the ramp entirely would also satisfy the first, and that would take the
+soft edge the airiness ruling is actually about. Both mutation-proven.
+
+**UNSEEN on a device.** Every number above is read off the reporter's own
+screenshot rather than watched, and no session has rendered the result.

@@ -297,16 +297,56 @@ struct MainSurface: View {
             // The mask runs the other way for the same reason the stack does:
             // solid against the bottom edge where the chips sit, clearing
             // upward into the feed.
+            //
+            // **THE RAMP IS A FIXED LENGTH, NOT A FRACTION OF THE BAND** (prd
+            // §649 amendment, 2026-09-08). It was `location: 0.25` — a quarter
+            // of the band's OWN HEIGHT — so the softness grew with the number
+            // of rows stacked in it, which is exactly backwards: the more this
+            // band holds, the more of it went see-through.
+            //
+            // MEASURED off the report's own screenshot (1320×2868, scale 3.36,
+            // a 393pt screen), Social with three rows:
+            //
+            //   venue capsule   2136–2292px
+            //   gap             2292–2352px   ← feed text legible here
+            //   face rail       2352–2508px
+            //   gap             2508–2544px
+            //   dock slab       2544–2736px
+            //
+            // Band 2136px → screen bottom = 218pt, so the quarter was a **54pt**
+            // ramp: it covered the whole first control row and did not reach
+            // full opacity until the top of the second. That is the line of feed
+            // text sitting between the strips in the report.
+            //
+            // **s6 (24pt) is not a chosen number — it is what the fraction
+            // already yields for a dock-only band**, which measures 96pt on the
+            // same screenshot (dock slab 192px + the bottom safe area). So the
+            // one-row case, where the old rule was right, is unchanged to the
+            // point; only the stacked case moves, and it moves to the same edge
+            // the dock alone has always had.
+            //
+            // **The 2026-08-23 airiness argument survives this and is why the
+            // ramp stays at all.** "A flat opaque block that deep reads as a
+            // second header" is about the EDGE where the band meets the feed,
+            // and a 24pt ramp is that edge. The gaps BETWEEN the strips are
+            // interior to one control cluster, and a feed row legible in them is
+            // the collision this scrim exists to stop, not airiness. The change
+            // in solid area is smaller than that argument suggests: 75% → 89%
+            // for a three-row band.
+            //
+            // A fixed ramp is also steadier. The band's height changes on its
+            // own — a row appears, the dock folds under a scroll — and a
+            // fractional ramp re-lengthed on every one of those; this one does
+            // not move.
             .background(alignment: .bottom) {
                 DS.page
                     .mask(alignment: .bottom) {
-                        LinearGradient(
-                            stops: [
-                                .init(color: .black.opacity(0), location: 0),
-                                .init(color: .black, location: 0.25),
-                                .init(color: .black, location: 1),
-                            ],
-                            startPoint: .top, endPoint: .bottom)
+                        VStack(spacing: 0) {
+                            LinearGradient(colors: [.black.opacity(0), .black],
+                                           startPoint: .top, endPoint: .bottom)
+                                .frame(height: DS.Space.s6)
+                            Color.black
+                        }
                     }
                     .ignoresSafeArea(edges: .bottom)
                     .allowsHitTesting(false)
