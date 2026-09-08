@@ -520,22 +520,21 @@ struct RootShell: View {
                         ))) ?? []
                         for thing in music { thing.previewImageURL = nil }
                     }
-                    if migrationsStored < 3 {
-                        // One-time rename (2026-07-13): the token-watch bridge is
-                        // "Tokens" now, not "Dexscreener" — its chart blends three
-                        // vendors (commit a2618a2). Things captured before the rename
-                        // kept the old source and "dexscreener:" sourceRef prefix, so
-                        // the feed still headed them "Dexscreener". Rewrite both.
-                        let staleTokens = (try? modelContext.fetch(FetchDescriptor<Thing>(
-                            predicate: #Predicate { $0.source == "Dexscreener" }
-                        ))) ?? []
-                        for thing in staleTokens {
-                            thing.source = "Tokens"
-                            if let ref = thing.sourceRef, ref.hasPrefix("dexscreener:") {
-                                thing.sourceRef = "tokens:" + String(ref.dropFirst("dexscreener:".count))
-                            }
-                        }
-                    }
+                    // MIGRATION v3 IS GONE, AND ITS ABSENCE IS THE FIX (prd
+                    // §650, 2026-09-08) — the second of this family, and the
+                    // one that also moved a ref. It renamed the token-watch
+                    // seat's rows from "Dexscreener" to "Tokens" and rewrote
+                    // their `dexscreener:` ref prefix to `tokens:`, once per
+                    // install. §647's finding applies unchanged: the store
+                    // mirrors to CloudKit, so a row that arrives after the
+                    // stamp is written keeps BOTH old strings forever. The
+                    // source half read as §647's own symptom (no seat, so no
+                    // fold and no mark); the ref half is worse, because it
+                    // renders perfectly — `TokenWatch.add`'s already-watching
+                    // guard misses the row and the same coin lands a SECOND
+                    // time. `Corpus.renamedSources` carries the prefix pair now
+                    // and `SourceRename.sweep` above rewrites both at EVERY
+                    // launch. `migrationsCurrent` stays 9, for §647's reason.
                     if migrationsStored < 4 {
                         // One-time heal (2026-07-28): Day One backslash-escapes
                         // markdown-special punctuation ("4\.8"); the import never

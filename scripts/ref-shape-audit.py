@@ -63,13 +63,21 @@ CONSUMER = re.compile(r'hasPrefix\(\s*"([^"\n]+)"\s*\)')
 # Consumers that legitimately match a prefix nothing produces any more. Each
 # entry is a conscious ruling, and the reason is the part that gets skipped
 # when nothing enforces it.
-KNOWN_UNPRODUCED = {
-    "dexscreener:":
-        "a MIGRATION. `RootShell` rewrites rows landed under the old "
-        "`dexscreener:` namespace to `tokens:`, so the only things it can "
-        "match are already in somebody's store and no code produces the shape "
-        "any more. Deleting this consumer would strand those rows forever.",
-}
+#
+# EMPTY SINCE §650 (2026-09-08), and the way it emptied is the interesting part.
+# Its one entry excused `hasPrefix("dexscreener:")` in migration v3 — a one-shot
+# that rewrote rows landed under the old token-watch namespace. §650 deleted
+# that migration, because a one-shot cannot be complete against a
+# CloudKit-mirrored store, and moved the rule into `Corpus.renamedSources` as
+# DATA (`refPrefix: .init(old: "dexscreener:", current: "tokens:")`), applied by
+# `SourceRename.sweep` at every launch. So the rule did not go away — it stopped
+# being a `hasPrefix` literal, which is the only thing this audit can see, and
+# the exemption was left excusing nothing. THAT is what the loop below caught,
+# unprompted, in the same pass that deleted the migration: an exemption whose
+# justification has been removed is exactly as dead as a consumer whose producer
+# has, and it fails here rather than sitting as a comment nobody re-reads. The
+# namespace is now governed by `source-alias-audit.py`'s checks H and I instead.
+KNOWN_UNPRODUCED = {}
 
 
 def strip_comments(src):

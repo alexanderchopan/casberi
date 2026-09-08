@@ -80,6 +80,7 @@ at all.
 | Ruling | What it said | Changed by |
 |---|---|---|
 | §629 | The two ethrex seats are renamed, and migration v9 — a one-time pass gated on the `migrations.version` stamp — rewrites the rows already landed under the old names | amended by §647 (the rename stands; the repair could not. The store mirrors to CloudKit, so rows arrive after a one-shot has run and it never runs again — every one of those kept the old name, resolved to no seat, and reached a device as an unfoldable chip with a blank mark. `Corpus.renamedSources` makes RESOLUTION tolerant and `SourceRename.sweep` converges the corpus at every launch; v9 is deleted so there is one mechanism, not two) |
+| §647 | `Corpus.renamedSources` is a source→source table, and `SourceRename.sweep` converges the corpus off it at every launch | amended by §650 (the mechanism stands whole; the table's SHAPE widens. Migration v3 — the same one-shot, one seat over — also moved the rows' ref namespace (`dexscreener:` → `tokens:`), which a source→source entry cannot express, so an entry now carries an optional `refPrefix` pair and the sweep rewrites both strings. That half matters more than the name: the ref failure RENDERS PERFECTLY, and `TokenWatch.add`'s already-watching guard misses the row, so the same coin lands twice. §647's "two entries today" is three) |
 | §529 | Bankr gains a second verb that can ACT, and an offer banner that says so at the head of the Wallet room | amended by §582 (Apple's macOS 1.0.11 review named that banner under 3.1.5, and the measured delta says why it had to: the acting verb landed 2026-08-29 and iOS 1.0.9 was cut 08-28, so it is new since every approved version — and unlike the devnet sends it is on production networks, where the faucet-token argument has nothing to say. The banner, the acting copy and the key-page deep link go; the seat stays as an ordinary answering agent) |
 | §529 amendment (2026-08-31) | The answer-only prompt prefix is DELETED — a sentence in a prompt is not a permission, and the key's own scope is what bounds Bankr | reversed by §582 (the reasoning stands and the copy still says it; the conclusion was wrong. The rail is not a claim about Bankr, it is a statement about Casberi — this app does not ask an agent to move money — and dropping it left that stated nowhere in the code) |
 | §545 | The vibenet roster moves onto the room's own Accounts scope, and `VibenetAddressBookScreen` is deleted with its route | amended by §562 (the ruling stands; the deleted screen took `VibenetWatchSheet`'s ONLY presenter with it, so the roster could be renamed and unwatched from and not added to, and §479's discovery is in the empty branch — the moment you watch one account the lookup is off the screen for good. The door is restored as a head row routed through `FeedSheetRoute.vibenetWatch`, and five §517 guards re-pointed in the same move turned out to be dead) |
@@ -51164,3 +51165,146 @@ soft edge the airiness ruling is actually about. Both mutation-proven.
 
 **UNSEEN on a device.** Every number above is read off the reporter's own
 screenshot rather than watched, and no session has rendered the result.
+## §650 — The same one-shot, one seat over, and this one also moved the ref (2026-09-08)
+
+**§647 deliberately left this one alone and said why.** Migration v3 in
+`RootShell` is the same shape §647 ruled cannot work here: a pass over the corpus
+gated on the `migrations.version` stamp, i.e. once per install, against a store
+that mirrors to CloudKit. It renamed the token-watch seat's rows from
+"Dexscreener" to "Tokens" — the rename in a2618a2 (2026-07-13), when the chart
+stopped being one vendor's — and rewrote their `dexscreener:` `sourceRef` prefix
+to `tokens:`. Every row that lands after the stamp is written keeps BOTH old
+strings, for good.
+
+**§647's stated reason for leaving it was the ref.** A plain source→source alias
+would make resolution tolerant and make `SourceRename.sweep` rewrite the source,
+and it would NOT rewrite the prefix — so the row would converge HALF-WAY. That
+was the right thing to notice, and the question it left open was whether the
+stale prefix is harmful. **It is, and worse than the name.**
+
+**What the ref half actually breaks.** Four consumers match the `tokens:`
+namespace EXACTLY, and a row still keyed `dexscreener:` is invisible to all four:
+
+- `TokenWatch.add` guards on `IngestSupport.hasSourceRef(source: "Tokens", ref:
+  "tokens:<chain>:<addr>")` before inserting. It misses the old row, so watching
+  a coin you already watch **lands it a second time** — a duplicate in the
+  watchlist with no explanation on screen.
+- `TokenWatchScreen.displayHits` drops already-watched tokens from the search
+  list by the same string, so the app actively OFFERS the duplicate watch.
+- `TokenQuickRoute.watchedThing` fetches `sourceRef == "tokens:\(id)"`; a
+  holdings-cell tap on a coin you do watch answers nil and the sheet reads it as
+  merely held.
+- `SyncReconcile.dedupeBySourceRef` keys on the whole ref, so the old row and its
+  new-named twin never collapse — which is how the duplicate survives.
+
+**The ranking that matters: the ref half RENDERS PERFECTLY.** §647's failure was
+loud — a bare unfoldable chip wearing a blank mark, which is what got it
+reported from a device. Converge the source only and that symptom goes away
+entirely: the row finds its seat, its category, its fold, its room and its mark,
+and the duplicate watchlist entry that remains looks like an ordinary row
+somebody added twice. A half-fix here is worse than no fix, because it removes
+the evidence and keeps the defect.
+
+**So the table carries the prefix pair.** `Corpus.renamedSources` becomes
+`[String: Corpus.Rename]` — `current`, plus an optional `refPrefix` holding
+`old`/`current`. **One optional PAIR rather than two optional strings**, so
+"both halves or neither" is something the type cannot express wrongly instead of
+a rule an audit has to police. `canonicalSource` reads `.current` and the catalog
+join is one word longer; every other reader is unchanged. This AMENDS §647: the
+mechanism it ruled for stands exactly, and only the table's shape widens — its
+"two entries today" is three, and its `SourceRename.sweep` now rewrites both
+strings in the one pass. **Migration v3 is DELETED**, for §647's own reason that
+two mechanisms for one fact is how they drift; `migrationsCurrent` stays 9.
+
+**Why the sweep may key on `source ==` alone and still be right about the ref.**
+The fetch finds rows by the old source and rewrites the prefix off what comes
+back, which is only sound if no build ever wrote the NEW source beside the OLD
+prefix. Checked, not assumed: a2618a2 moved `Thing.source` and the ref prefix in
+the same commit, so the two have never disagreed in a row this app wrote. The
+alternative — a second fetch predicated on the ref prefix — is refused for
+migration v6's own recorded reason: `sourceRef` is optional, combining `?? ""`
+with `.starts(with:)` inside a `#Predicate` has no precedent in this tree, and a
+sweep that runs on every launch is a worse place to find out whether it traps
+than a one-shot was. A future rename that lets source and ref drift apart must
+key on the ref, and owes its own note.
+
+**`scripts/source-alias-audit.py` grows three checks (nine, all mutation-proven).**
+**G** — a declared pair must be APPLIED by the sweep; a pair sitting in the table
+that nothing acts on is this bug with a fix's paperwork filed. **H** — every
+CURRENT prefix must be a namespace the tree really writes (the ref analogue of
+check A: rewriting rows into a dead namespace moves them from one place no
+consumer matches to another). **I** — no OLD prefix may be a namespace the tree
+still writes (the analogue of check B: aliasing a live namespace would rewrite
+correct rows every launch, for good). H and I read ref literals in the one form
+every ref here is written in — a string literal STARTING with the namespace —
+which is stated as their ceiling, not as completeness. The self-test also gained
+a **dead-mutation guard**: each mutated input is compared against the unmutated
+one, because a mutation whose anchor has drifted changes nothing, audits the
+clean tree, and reports `DID NOT FIRE` against the CHECK — sending the next
+reader to debug working code.
+
+**Migrations v1 and v6 have the same hole and are judged separately — both stay.**
+Neither fits a source→source table, and not merely as a matter of taste:
+
+- **v1** (`"You"` → `"Voice"`, conditional on `kind == .voice`, 2026-07-06).
+  "You" is a LIVE source — every capture you make yourself lands under it — so an
+  unconditional alias would move the entire self-capture corpus into Voice. Note
+  that check B would NOT catch this, because "You" is not an `Offer(name:)`; the
+  table is only safe for sources that are seat names. Its exposure is also
+  effectively nil: the rename predates the first TestFlight upload by a day, and
+  no shipped build carried the iCloud entitlement until build 231, so there are
+  no rows of this shape in any zone.
+- **v6** (`"Wallet"` + a `wallet:safe` ref → Safe, 2026-08-11). "Wallet" IS a live
+  offer name, so check B refuses it outright — correctly, since aliasing it would
+  move every wallet row into Safe. It needs the ref prefix as a MATCH CONDITION,
+  which is a different field with a different meaning from §650's rewrite target,
+  and folding both into one struct would make the table mean two things. Its hole
+  is REAL — 2026-08-11 is inside the window where sync runs, so a Safe row landing
+  from another device after the stamp keeps `source == "Wallet"` — but the
+  consequence is milder by a category: "Wallet" resolves to a live seat, so the
+  row keeps a category, a fold, a mark and a room, and is merely in the Wallet
+  room rather than the Safe one. A CONDITIONAL rename table is its own mechanism
+  and deserves its own ruling rather than a rider on this one.
+
+**An adjacent finding, reported and NOT fixed.** §647 justified keying
+`SourceRename.sweepSeats` by seat id on the grounds that "an id never changes."
+That is false: a2618a2 re-keyed this seat `"dexscreener"` → `"tokens"` along with
+its name. A `BridgeStore` record written before that date is therefore
+unreachable from `sweepSeats` — no entry can find it, and adding one would not
+help, because the key itself moved. `AppsScreen` joins a stored bridge to its
+offer BY NAME, so such a record leaves **Tokens reading disconnected while its own
+phantom is still inside `connectedCount`**. Left for a separate call, with the
+reasons stated rather than implied: `BridgeStore` is a local JSON file that does
+NOT mirror, so §647's entire argument does not apply to it and a one-shot WOULD
+be complete there; the repair is a RE-KEY, an operation `BridgeStore` does not
+have (renaming the record alone yields a seat that looks connected whose
+Disconnect removes nothing — a §83 dead control traded for a wrong label); and it
+can only exist on a device that connected the seat in the six days between the
+first TestFlight upload (2026-07-07) and the rename. Worth doing; not worth doing
+as a silent rider on a ruling about the corpus.
+
+**An existing guard caught the deletion, unprompted, and that is worth
+recording.** `ref-shape-audit.py` carried one `KNOWN_UNPRODUCED` entry — an
+exemption excusing `hasPrefix("dexscreener:")` on the grounds that it was
+migration v3 and the rows it matched were already in somebody's store. Deleting
+v3 removed the only consumer, so the exemption was left excusing nothing, and
+that audit's own reverse check failed the pass. Its table is empty now, with the
+reasoning kept as a comment: the rule did not go away, it stopped being a
+`hasPrefix` literal — which is the only shape that audit can see — and became
+data in `Corpus.renamedSources`, governed by checks H and I instead. **An
+exemption whose justification has been removed is exactly as dead as a consumer
+whose producer has**, and the value of failing on it rather than leaving a stale
+comment is that this was found in the same pass that caused it.
+
+**What was verified, exactly.** `scripts/verify.sh` ran green through its entire
+static head and was then STOPPED on the pure-logic harness leg at the author's
+request (38 of 99 harnesses left to run; the other 61 were unchanged and already
+stamped). Green before the stop: the catalog sync, all 36 audits — this one, plus
+ref-shape, mutation-liveness, query-read, background-launch, SwiftData liveness,
+Mac parity and the rest — the harness-key self-test, demo parity and check
+completeness. Nothing failed at any point. The iOS **build** was run separately
+and completed clean, which also makes this the first evidence that §647's own
+code compiles at all — that entry shipped explicitly unbuilt. Not run: the 38
+remaining logic harnesses, the Catalyst compile, the Mac leg, `CasberiTests`, and
+the simulator relaunch/census steps. **A full pass is still owed before this
+ships**, and the author holds it.

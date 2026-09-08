@@ -174,17 +174,65 @@ enum Corpus {
     /// one; `scripts/source-alias-audit.py` fails the build otherwise, because
     /// an alias pointing at nothing is the exact bug it exists to close, wearing
     /// a fix's clothes.
-    static let renamedSources: [String: String] = [
+    ///
+    /// ## Some renames moved the ref NAMESPACE too (prd §650, 2026-09-08)
+    ///
+    /// A seat's rows are keyed by a `sourceRef` in the seat's own namespace,
+    /// and a rename that took the namespace with it leaves the row wrong in a
+    /// SECOND way that the name alone does not describe. Converging only the
+    /// source would land a row half-way — right seat, right room, right mark,
+    /// and still invisible to every consumer that matches the ref exactly.
+    /// So an entry may carry the prefix pair, and `SourceRename.sweep` rewrites
+    /// both in the one pass.
+    static let renamedSources: [String: Rename] = [
         // prd §629, 2026-09-06 — the two ethrex seats took the family grammar
-        // ("<chain> Devnet") and dropped the operator prefix.
-        "Ethrex Hegot\u{00e1}": "Hegota Devnet",
-        "Ethrex Privacy": "Privacy Devnet",
+        // ("<chain> Devnet") and dropped the operator prefix. The NAME only —
+        // verified against f8a5eea9, which touches no ref literal: the rows
+        // are keyed `hegota:` and `privacydevnet:`, and no `ethrex…`
+        // namespace has ever existed, so there is nothing to move.
+        "Ethrex Hegot\u{00e1}": Rename(current: "Hegota Devnet"),
+        "Ethrex Privacy": Rename(current: "Privacy Devnet"),
+        // prd §650, 2026-09-08 — the token-watch seat became "Tokens" when its
+        // chart stopped being one vendor's (commit a2618a2, 2026-07-13). That
+        // commit moved the ref prefix in the same breath, which is why this
+        // entry has one and the two above do not.
+        "Dexscreener": Rename(current: "Tokens",
+                              refPrefix: .init(old: "dexscreener:", current: "tokens:")),
     ]
+
+    /// A renamed seat: what it answers to now, and — when the rename moved the
+    /// rows' ref namespace as well — the `sourceRef` prefix pair.
+    ///
+    /// The pair is ONE optional value rather than two optional strings so that
+    /// "both halves or neither" is a thing the type refuses to express wrongly,
+    /// not a rule an audit has to police.
+    struct Rename: Sendable {
+        /// The seat's name today. MUST be a live `Offer(name:)` — check A.
+        let current: String
+        /// The rows' ref namespace, when it moved with the name. `nil` when
+        /// only the name changed, which is the ordinary case.
+        let refPrefix: RefPrefix?
+
+        struct RefPrefix: Sendable {
+            /// The namespace rows were keyed under before the rename. Must be
+            /// written NOWHERE in the tree today — check I; aliasing a live
+            /// namespace would rewrite rows that are already correct.
+            let old: String
+            /// The namespace they are keyed under now. Must be a namespace the
+            /// tree really writes — check H.
+            let current: String
+        }
+
+        init(current: String, refPrefix: RefPrefix? = nil) {
+            self.current = current
+            self.refPrefix = refPrefix
+        }
+    }
 
     /// The name a source answers to today. Identity for everything the table
     /// has never heard of, which is every source but the handful above.
     static func canonicalSource(_ source: String) -> String {
-        renamedSources[source] ?? source
+        renamedSources[source]?.current ?? source
     }
 
     /// Does this source get a chip in the strip, a room behind it, and a

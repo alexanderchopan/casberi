@@ -983,7 +983,7 @@ enum BridgeCatalog {
         // Written only where nothing already answers, so a live offer name can
         // never be displaced by an alias — the same "an exact match always
         // wins" property the two passes above are ordered for.
-        for (old, new) in Corpus.renamedSources where map[old] == nil { map[old] = new }
+        for (old, rename) in Corpus.renamedSources where map[old] == nil { map[old] = rename.current }
         return map
     }()
 
