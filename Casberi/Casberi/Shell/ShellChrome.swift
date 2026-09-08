@@ -606,8 +606,38 @@ final class ShellChrome {
     @MainActor
     func rain(sources: [String]) {
         refreshRoster = sources
+        roomRevision &+= 1
         refreshPulse &+= 1
     }
+
+    /// **A LIST CHANGED, AND THAT IS NOT A SHOWER (prd §655 amendment,
+    /// 2026-09-08).** `refreshPulse` was doing two jobs: it deals the rain AND
+    /// it is the term `FeedScreen`'s memoised room head recomputes on. Six
+    /// sites bumped it for the second reason only — vibenet's unwatch, its key
+    /// revoke, its two watch sheets and `onWatched`, plus Privacy Devnet's
+    /// example watch — and each therefore dealt a shower nobody asked for. The
+    /// unwatch bumped TWICE (a local trim, then the chain read), so removing an
+    /// address rained twice, seconds apart: the exact stutter "one gesture, one
+    /// shower" (2026-07-28) was written against, arriving by a route that
+    /// ruling did not cover, and celebrating a REMOVAL while it did.
+    ///
+    /// So the two jobs are two counters. This one moves the head and draws
+    /// nothing. `rain` bumps it too, because a pull is both.
+    ///
+    /// **The rule for choosing**: rain when sources were really ASKED (the
+    /// pull) or when something ARRIVED — money, a key, a faucet claim, a send
+    /// landing (§553's "the pour IS the confirmation"). Call this instead when
+    /// a LIST changed. Watching an address is not an arrival, and unwatching
+    /// one is the opposite of a celebration.
+    @MainActor
+    func refreshRooms() { roomRevision &+= 1 }
+
+    /// The term a memoised room head recomputes on — bumped by `rain` and by
+    /// `refreshRooms`, never written directly. Ethrex Hegotá is why this
+    /// cannot simply be the corpus revision: it lands NO row, ever, so its
+    /// revision is frozen at zero and its head would be computed once and
+    /// memoised forever (a black room, reported from a device three times).
+    private(set) var roomRevision = 0
 
     /// Mac's ⌘R (Mac polish, 2026-07-28): a trackpad's overscroll gesture is
     /// the only trigger `.refreshable` gives Catalyst, and unlike a real

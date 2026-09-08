@@ -37,7 +37,14 @@ Obsidian/Cursor lesson this repo has paid for four times.
 is the fake status §83 bans, and its return would mean the colour path came
 back with it.
 
-**(5) No shower stands for nothing on purpose.** `rain(sources: [])` is a
+**(5) `roomRevision` is `private(set)` and nobody bumps it either.** The §655
+amendment split the two jobs `refreshPulse` was doing: it dealt the rain AND it
+keyed `FeedScreen`'s memoised room head. Six sites bumped it for the second
+reason only, so a watch, an unwatch and a key revoke each dealt a shower nobody
+asked for — and the unwatch bumped TWICE, so REMOVING an address rained twice,
+seconds apart. `refreshRooms()` moves the head and draws nothing.
+
+**(6) No shower stands for nothing on purpose.** `rain(sources: [])` is a
 literal empty roster, which deals nothing — reachable honestly (no source
 connected) but never worth WRITING, since a caller that knows the set is empty
 should not be dealing a shower at all.
@@ -94,8 +101,15 @@ def audit_text(name, text):
             out.append(f"{name}: refreshRoster is not private(set) — a writer can bump without naming what falls")
         if not re.search(r"func\s+rain\s*\(\s*sources\s*:", body):
             out.append(f"{name}: rain(sources:) is missing — there is no door left that names the roster")
+        if not re.search(r"private\(set\)\s+var\s+roomRevision\b", body):
+            out.append(f"{name}: roomRevision is not private(set) — a list change can deal a shower again")
+        if not re.search(r"func\s+refreshRooms\s*\(", body):
+            out.append(f"{name}: refreshRooms() is missing — a list change has nowhere to go but the rain")
     else:
-        # (3) nobody else bumps the pulse
+        # (3) nobody else bumps the pulse, or the revision behind its door
+        for m in re.finditer(r"\broomRevision\s*(?:\+=|&\+=|=[^=])", body):
+            line = body[:m.start()].count("\n") + 1
+            out.append(f"{name}:{line}: bumps roomRevision directly — use chrome.refreshRooms()")
         for m in re.finditer(r"\brefreshPulse\s*(?:\+=|&\+=|=[^=])", body):
             line = body[:m.start()].count("\n") + 1
             out.append(f"{name}:{line}: bumps refreshPulse directly — deal a shower through chrome.rain(sources:)")
@@ -153,16 +167,40 @@ final class ShellChrome {
     @MainActor
     func rain(sources: [String]) {
         refreshRoster = sources
+        roomRevision &+= 1
         refreshPulse &+= 1
     }
+    @MainActor
+    func refreshRooms() { roomRevision &+= 1 }
+    private(set) var roomRevision = 0
 }
 """
 
 OPEN_ROSTER = CLEAN_OWNER.replace("private(set) var refreshRoster", "var refreshRoster")
+OPEN_REVISION = CLEAN_OWNER.replace("private(set) var roomRevision", "var roomRevision")
+NO_ROOMS_DOOR = CLEAN_OWNER.replace("    @MainActor\n    func refreshRooms() { roomRevision &+= 1 }\n", "")
 NO_DOOR = """
 final class ShellChrome {
     var refreshPulse = 0
     private(set) var refreshRoster: [String] = []
+    @MainActor
+    func refreshRooms() { roomRevision &+= 1 }
+    private(set) var roomRevision = 0
+}
+"""
+
+# A list changed and the caller reached past the door to say so.
+BARE_REVISION = """
+private func onWatched() {
+    chrome.roomRevision += 1
+}
+"""
+
+# The shape the amendment blesses: a list change draws nothing.
+ROOMS_CALLER = """
+private func unwatch() {
+    chrome.refreshRooms()
+    Task { chrome.refreshRooms() }
 }
 """
 
@@ -222,6 +260,10 @@ def self_test():
         ("passes the shipped chrome", OWNER, CLEAN_OWNER, 0),
         ("flags  a publicly writable roster", OWNER, OPEN_ROSTER, 1),
         ("flags  a chrome with no rain door", OWNER, NO_DOOR, 1),
+        ("flags  a publicly writable roomRevision", OWNER, OPEN_REVISION, 1),
+        ("flags  a chrome with no refreshRooms door", OWNER, NO_ROOMS_DOOR, 1),
+        ("flags  a caller bumping roomRevision directly", "A.swift", BARE_REVISION, 1),
+        ("passes a list change dealt through refreshRooms", "A.swift", ROOMS_CALLER, 0),
         ("passes a caller naming its seat", "A.swift", CLEAN_CALLER, 0),
         ("flags  a bare pulse bump AND its hue", "A.swift", BARE_BUMP, 2),
         ("flags  a direct roster write and its bump", "A.swift", ROSTER_WRITE, 2),

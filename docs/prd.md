@@ -51800,3 +51800,19 @@ The `load()` fetch stays unbounded (see above — an X person cannot be found by
 
 **Also removed:** a 273-byte file in the repo root named after a fragment of a `sed` command and containing three mangled copies of one Swift line, left by a botched substitution on 2026-09-05. It named `WalletRiskSource.holders`, which exists nowhere in the tree. **The remote is public**, so junk in the root is world-readable.
 
+
+## §655 amendment — a list changing is not a shower, and the pulse was doing two jobs (user: "you decide and act", 2026-09-08)
+
+§655 closed by leaving two findings standing rather than deciding them: vibenet's unwatch bumped the pulse TWICE, so it dealt two showers seconds apart — the exact stutter "one gesture, one shower" (2026-07-28) was written against, arriving by a route that ruling did not cover — and it rained at all, over a REMOVAL. Handed the call, the answer is that both are one bug and neither is really about vibenet.
+
+**`ShellChrome.refreshPulse` was doing two unrelated jobs.** It deals the rain, and it is the term `FeedScreen`'s memoised room head recomputes on — a second job it acquired for a good reason that is recorded three lines from the key itself: Ethrex Hegotá lands NO row, ever, so its corpus revision is frozen at zero, its head was computed once while the sweep had not returned, memoised as nil, and never recomputed. A permanently black room, reported from a device three times before anybody found it. The fix was to fold the pulse into the key, and it worked.
+
+**What nobody weighed is the other direction.** Once the pulse is the invalidation term, every site that needs a head recomputed has to bump the pulse — and the pulse is `TileRain`'s only trigger. So six sites that change a LIST and nothing else (vibenet's unwatch, its key revoke, its two watch sheets and `onWatched`, plus Privacy Devnet's example watch) each dealt a shower as a side effect of asking a room to re-read itself. §655 made those showers coherent by naming their seat; it did not ask whether they should exist. They should not.
+
+**Two jobs, two counters.** `roomRevision` moves the head and draws nothing; `refreshRooms()` is its door and both are `private(set)`/guarded the way §655 made the roster. `rain(sources:)` bumps both, because a pull genuinely is both. The head's key reads `roomRevision`, so Hegotá's black room stays fixed — every rain still re-keys it, and now so does every list change, including the ones that used to be paid for with a shower.
+
+**The rule for choosing, so the next seat does not have to re-derive it: rain when sources were really ASKED (the pull) or when something ARRIVED — money, a key, a faucet claim, a send landing (§553's "the pour IS the confirmation"). Call `refreshRooms()` when a LIST changed.** Watching an address is not an arrival; unwatching one is the opposite of a celebration. The one site this rule reclassifies AGAINST the obvious reading is `.vibenetCreate`, which keeps its shower — an account was MADE, which is the same arrival Hegotá's key sheet and Frames' `makeKey` already rain for, and the fact that the code path happens to be the watch-and-recompose half does not change what the person just did. Its sibling `.vibenetWatch` is byte-identical code twenty lines away and does NOT rain, which is the whole distinction in one screen.
+
+Mechanical as checks 5 and 6 of `scripts/rain-tiles-audit.py`: `roomRevision` must be `private(set)`, `refreshRooms()` must exist, and no caller may bump either counter directly. Nineteen self-test fixtures now, including a caller reaching past the door and a list change dealt correctly.
+
+**Unseen.** That the removed showers are the right ones to remove is a judgement about grammar, not a measurement — nothing here can prove a person wanted no rain on an unwatch. What IS proven is that the unwatch dealt two of them, which no reading defends.

@@ -546,6 +546,14 @@ properties it forbids, so a raw grep fires on the prose explaining it. The
 self-test has fixtures for both (`COMMENTED_CALLER`, `STRINGED_CALLER`) and for
 a legitimate READ of the pulse, which is what `MainSurface` does every body pass.
 
+Checks 5 and 6 came with the §655 amendment, which split the two jobs
+`refreshPulse` was doing — dealing the rain, and keying `FeedScreen`'s memoised
+room head. Six sites bumped it for the second reason alone, so changing a watch
+list dealt a shower as a side effect; the unwatch bumped twice, so removing an
+address rained twice, seconds apart. `roomRevision` moves the head and draws
+nothing, `refreshRooms()` is its door, and neither counter may be bumped from
+outside `ShellChrome`.
+
 **What it deliberately does not check.** Whether the seat a caller names is the
 RIGHT seat — a Frames card raining Hegotá's tile passes. Whether the tiles read
 well: `BridgeIcon`'s glyph fallback for a seat with no bundled asset (Wallet is

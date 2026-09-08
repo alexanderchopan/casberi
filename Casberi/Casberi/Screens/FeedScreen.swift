@@ -709,14 +709,17 @@ struct FeedScreen: View {
                 readAt: saved.readAt, pulse: saved.pulse)
             VibenetState.save(trimmed)
         }
-        // NAMED, not inherited (prd §655): these bumps exist to move the
-        // room's memoised head, but the pulse is `TileRain`'s only trigger,
-        // so each one deals a shower too — and without a roster that shower
-        // was the last pull's whole sweep falling over a vibenet unwatch.
-        chrome.rain(sources: [VibenetIdentity.source])
+        // **NO SHOWER HERE, AND TWICE OVER (§655 amendment).** These two
+        // bumps exist to move the room's memoised head — nothing has arrived.
+        // While they went through `rain` they dealt TWO showers seconds apart
+        // (the local trim, then the chain read), which is the stutter "one
+        // gesture, one shower" forbids, over a REMOVAL, which is not a thing
+        // to celebrate at all. `refreshRooms` moves the head and draws nothing,
+        // so both calls are now free.
+        chrome.refreshRooms()
         Task {
             _ = await VibenetRoomSource.compose()
-            chrome.rain(sources: [VibenetIdentity.source])
+            chrome.refreshRooms()
         }
     }
 
@@ -954,7 +957,7 @@ struct FeedScreen: View {
         guard PrivacyDevnetWatch.shared.add(address) else { return }
         PrivacyDevnetBridge.registerBridge(store: bridges)
         Task { await PrivacyDevnetLiveState.shared.refresh() }
-        chrome.rain(sources: [PrivacyDevnetIdentity.source])
+        chrome.refreshRooms()   // a watch list changed; nothing arrived (§655 amendment)
     }
 
     /// Send on Ethrex Privacy.
@@ -1283,7 +1286,7 @@ struct FeedScreen: View {
             // create branch needed (2026-08-30): read the chain now, then bump
             // the term this screen's memoised head recomputes on.
             _ = await VibenetRoomSource.compose()
-            chrome.rain(sources: [VibenetIdentity.source])
+            chrome.refreshRooms()   // a revoke is a removal (§655 amendment)
         } catch let f as VibenetSend.Failure {
             chrome.flash(vibenetSendFailureText(f), tone: .failure)
         } catch {
@@ -2455,7 +2458,7 @@ struct FeedScreen: View {
                 // arrival. Acceptable because a sweep that changes a reading
                 // almost always lands the row that changed it, and because the
                 // alternative is recomputing the whole chain on a timer.
-                String(chrome.refreshPulse),
+                String(chrome.roomRevision),
                 // **THE ONE SEAT THAT BREAKS THE RESIDUAL ABOVE.** That note
                 // is right about every other bridge: a sweep that changes a
                 // reading almost always lands the row that changed it, so the
@@ -4844,6 +4847,9 @@ struct FeedScreen: View {
                 // the term this screen's memoised head recomputes on.
                 Task {
                     _ = await VibenetRoomSource.compose()
+                    // An account was MADE — the one arrival this sheet
+                    // produces, and the same moment Hegotá's key sheet and
+                    // Frames' makeKey already rain for (§655 amendment).
                     chrome.rain(sources: [VibenetIdentity.source])
                 }
             }
@@ -4862,7 +4868,7 @@ struct FeedScreen: View {
                 // same dismissal asked for twice.
                 Task {
                     _ = await VibenetRoomSource.compose()
-                    chrome.rain(sources: [VibenetIdentity.source])
+                    chrome.refreshRooms()   // a watch list changed (§655 amendment)
                 }
             }
         case .vibenetAuthorize(let account, let epoch, let sequence, let editing):
@@ -6349,7 +6355,7 @@ struct FeedScreen: View {
                                     onWatched: {
                                         Task {
                                             _ = await VibenetRoomSource.compose()
-                                            chrome.rain(sources: [VibenetIdentity.source])
+                                            chrome.refreshRooms()
                                         }
                                     },
                                     onRequestWatch: { feedSheet = .vibenetWatch },
