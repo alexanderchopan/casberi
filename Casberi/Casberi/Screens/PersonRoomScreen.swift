@@ -31,6 +31,45 @@ struct PersonRoomScreen: View {
     @State private var sheetThing: Thing?
     @State private var filter: Filter = .all
 
+    /// How far the window has been opened, in `RowWindow` steps.
+    ///
+    /// **THE ROOM WAS UNBOUNDED, AND THIS SHEET IS WHERE BUILD 539 DIED (prd
+    /// §657).** `merged` is every row the corpus holds about one person — an X
+    /// archive lands 10,000 posts (§307) and a decade of conversation with one
+    /// correspondent is a large fraction of them — and all of it was drawn into
+    /// ONE `List` section, inside a sheet a finger can drag. `RowWindow`'s doc
+    /// carries the stack; the short of it is that UIKit re-runs a sheet's whole
+    /// `List` update synchronously on every drag offset, SwiftUI resolves each
+    /// row's index by a linear walk, and backgrounded that render gets ~16% of
+    /// a core against a ten-second wall.
+    ///
+    /// MONOTONIC for the life of the screen, and it deliberately does NOT reset
+    /// when `filter` changes — the feed's own ruling (`FeedScreen.windowSteps`):
+    /// a window that collapses under the person would undo their scrolling
+    /// every time they glanced at the Onchain slice. It is a CAP, so a wider
+    /// window still draws at most `budget` rows of whichever slice is showing.
+    @State private var windowSteps = 0
+
+    /// The merged, sorted room — built when its INPUTS change, not on every
+    /// body pass (`/code-review` finding, 2026-09-08, prd §657).
+    ///
+    /// `merged` concatenates two arrays, filters both `.live` and sorts the
+    /// result on `capturedAt`. Sorting is n log n COMPARISONS, each one a
+    /// stored-property read on a live SwiftData model — at the ten thousand
+    /// rows an X archive lands (§307) that is well over a hundred thousand
+    /// property accesses, and a body evaluation is exactly what a sheet drag
+    /// causes per offset change. So `RowWindow` bounded the term SwiftUI
+    /// spends (the list diff, now constant) and left this one growing with the
+    /// corpus on the very same path. Both terms are bounded now: this is
+    /// rebuilt on the three events that can change it (each fetch landing, and
+    /// a filter change), and the body reads it.
+    ///
+    /// HELD RAW MODEL REFS, so `.live` is spelled AT THE HANDOFF in `body`
+    /// (liveness corollary 4, build 177): a delete-sync heal can tombstone a
+    /// row while this room is open, and the cache is deliberately behind the
+    /// store between rebuilds.
+    @State private var mergedRows: [Thing] = []
+
     private enum Filter: String, CaseIterable {
         case all = "Everything", posts = "Posts", chain = "Onchain"
     }
@@ -55,7 +94,13 @@ struct PersonRoomScreen: View {
     }
 
     var body: some View {
-        List {
+        // ONE READ OF THE ROOM'S ARRAY FOR THE WHOLE BODY (prd §646's rule,
+        // applied here for §657). `mergedRows` is the memoised merge — see its
+        // own note for why the sort must not run per body pass — and `.live`
+        // is its handoff guard. Bound once, then answered from: the rows, the
+        // opener and the empty state all read this one value.
+        let window = RowWindow.slice(mergedRows.live, steps: windowSteps)
+        return List {
             Section {
                 header
                 if let bio = shown.bio, !bio.isEmpty {
@@ -87,7 +132,7 @@ struct PersonRoomScreen: View {
             // A manual fetch, not a `@Query` — DERIVED, so `ForEach` keys off
             // `.keyed` and each row reads `$0.thing`, never the raw array's
             // own `Thing.id` (the ForEach-identity crash class, CLAUDE.md).
-            ForEach(merged.keyed) { item in
+            ForEach(window.shown.keyed) { item in
                 if item.thing.isLive {
                     row(for: item.thing)
                         .listRowBackground(Color.clear)
@@ -100,7 +145,36 @@ struct PersonRoomScreen: View {
                 }
             }
 
-            if !loading && merged.isEmpty {
+            // A TAP, never an appearance trigger — the feed's `olderRow`
+            // records the measurement: `List` realizes rows ahead of the
+            // viewport, so growing on `.onAppear` re-renders, appears again and
+            // runs away. A tap fires once per request and cannot feed its own
+            // trigger.
+            if window.more {
+                Button {
+                    // Silent unless this presentation carries a listener —
+                    // `DSHaptic` is a counter bump on a shared bus and the
+                    // mapping is a VIEW modifier, so a sheet covers the one
+                    // `RootShell` mounts. The `.person` route attaches
+                    // `DSHapticSink` for exactly this call (`Haptics.swift`,
+                    // and `RootShell.rootPresented`'s own note); PUSHED, this
+                    // room is already under the shell's copy.
+                    DSHaptic.tap()
+                    withAnimation(DS.Motion.standard) { windowSteps += 1 }
+                } label: {
+                    Text("Show older")
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.tint)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, DS.Space.s4)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
+
+            if !loading && window.shown.isEmpty {
                 Text("Nothing here yet.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .listRowBackground(Color.clear)
@@ -113,6 +187,9 @@ struct PersonRoomScreen: View {
         .navigationTitle(shown.title)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $sheetThing) { thing in ThingSheetView(thing: thing) }
+        // The picker swaps WHICH rows are merged, so the cache is rebuilt —
+        // `windowSteps` deliberately is not reset (see its own note).
+        .onChange(of: filter) { _, _ in mergedRows = merged }
         .task { await load() }
     }
 
@@ -206,6 +283,10 @@ struct PersonRoomScreen: View {
             posts = ((try? modelContext.fetch(postDescriptor)) ?? [])
                 .sorted { $0.capturedAt > $1.capturedAt }
         }
+        // Draw what we have before the awaits below — the posts are the room
+        // for every source but Farcaster, and this is where they used to
+        // appear when the body merged for itself.
+        mergedRows = merged
 
         async let profileFetch = SocialPeople.profile(handle: handle, source: src)
 
@@ -229,6 +310,7 @@ struct PersonRoomScreen: View {
                         ((t.walletAddress.map { addressSet.contains($0.lowercased()) } ?? false)
                          || (t.counterpartyAddress.map { addressSet.contains($0.lowercased()) } ?? false))
                 }.sorted { $0.capturedAt > $1.capturedAt }
+                mergedRows = merged
             }
         }
 
