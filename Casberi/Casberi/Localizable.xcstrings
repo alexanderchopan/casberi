@@ -93652,6 +93652,34 @@
         }
       }
     },
+    "Pull request closed without merging on %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pull request cerrada sin fusionar el %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@にプルリクエストがマージされずにクローズされました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 풀 리퀘스트가 병합되지 않고 닫혔습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "拉取请求于 %@ 未合并即被关闭。"
+          }
+        }
+      }
+    },
     "Pull request merged" : {
       "localizations" : {
         "es" : {
@@ -93676,6 +93704,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "拉取请求已合并"
+          }
+        }
+      }
+    },
+    "Pull request merged on %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pull request fusionada el %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@にプルリクエストがマージされました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 풀 리퀘스트가 병합되었습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "拉取请求已于 %@ 合并。"
           }
         }
       }
