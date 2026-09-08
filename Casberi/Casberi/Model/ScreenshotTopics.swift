@@ -522,16 +522,31 @@ enum ScreenshotTopics {
         sweeping.insert(source)
         defer { sweeping.remove(source) }
 
-        let descriptor: FetchDescriptor<Thing> = spec.needsOCR
+        var descriptor: FetchDescriptor<Thing> = spec.needsOCR
             ? FetchDescriptor(predicate: #Predicate {
                 $0.source == source && $0.topicsAt == nil && $0.ocrAt != nil })
             : FetchDescriptor(predicate: #Predicate {
                 $0.source == source && $0.topicsAt == nil })
+        // A SLICE, not the backlog (PERF 2026-09-08). This fetched EVERY
+        // unstamped row of the source — fully hydrated, no projection (the
+        // predicate forbids one, §623) — and took the first `limit` in Swift.
+        // On a bulk-import room that is the whole import on the main actor,
+        // every foreground, until seventy-five passes have drained it:
+        // sampled on the 6k X fixture at 848 of 1,558 main-thread samples in
+        // the three seconds after first paint, the single largest cost in the
+        // window a person starts scrolling in. Newest first, so what a person
+        // is looking at is stamped first, and four slices deep so the
+        // in-memory filter below still finds `limit` eligible rows. Rows the
+        // filter rejects are STAMPED (below), so the slice advances rather
+        // than re-fetching the same rejected head forever.
+        descriptor.sortBy = [SortDescriptor(\.capturedAt, order: .reverse)]
+        descriptor.fetchLimit = limit * 4
         // Kind filter runs in memory — #Predicate can't compare Codable enums.
         // The import receipt is excluded with it: it's the app's own row about
         // an import, and reading "312 saved · 1,204 comments" for topics would
         // put the app's voice in a map of the person's words.
-        let rows = Array(((try? context.fetch(descriptor)) ?? [])
+        let fetched = ((try? context.fetch(descriptor)) ?? []).filter(\.isLive)
+        let rows = Array(fetched
             .filter { spec.kinds.contains($0.kind) && !Corpus.isImportReceipt($0) }
             .prefix(limit))
 
@@ -546,6 +561,18 @@ enum ScreenshotTopics {
         // tagger runs, and this is the first read of a stored property since.
         for (thing, topics) in zip(rows, extracted) where thing.isLive {
             thing.ocrTopics = topics
+            thing.topicsAt = now
+            changed += 1
+        }
+        // A row the spec will never extract from (a kind it does not read, an
+        // import receipt) is stamped as looked-at with no topics — which is
+        // what `ocrTopics == []` already means everywhere it is read. Without
+        // this the bounded slice above could fill with rejects and never move
+        // past them. Only rows this pass fetched, re-checked live after the
+        // await (corollary 6).
+        let taken = Set(rows.map(\.id))
+        for thing in fetched where thing.isLive && !taken.contains(thing.id)
+            && !(spec.kinds.contains(thing.kind) && !Corpus.isImportReceipt(thing)) {
             thing.topicsAt = now
             changed += 1
         }

@@ -254,6 +254,12 @@ struct SourceChips: View {
     @State private var waveTick = 0
     private static let waveReach: CGFloat = 1.6
     private static let waveLift: CGFloat = 0.28
+    /// How far a finger or a pointer moves before the wave is re-laid under
+    /// it (PERF 2026-09-08). The wave is a cosine over ~100pt, so 3pt is far
+    /// below anything the eye resolves, and `DS.Motion.press` springs the
+    /// chips between steps; what it removes is a strip rebuild per touch
+    /// event at 120Hz.
+    private static let fingerStep: CGFloat = 3
     /// Is any chip close enough to the parked magnifier for the wave to lift
     /// it? The same window `wave(for:)` applies, asked once for the strip
     /// rather than once per chip.
@@ -640,11 +646,14 @@ struct SourceChips: View {
                 // A pointer over the strip — see `hoverX`. `.local` here IS
                 // the content space named above.
                 .onContinuousHover(coordinateSpace: .local) { phase in
-                    withAnimation(DS.Motion.press) {
-                        switch phase {
-                        case .active(let p): hoverX = p.x
-                        case .ended: hoverX = nil
-                        }
+                    switch phase {
+                    case .active(let p):
+                        // Stepped like the finger (PERF 2026-09-08): a
+                        // pointer reports every sub-point of travel.
+                        guard abs((hoverX ?? -.infinity) - p.x) >= Self.fingerStep else { return }
+                        withAnimation(DS.Motion.press) { hoverX = p.x }
+                    case .ended:
+                        withAnimation(DS.Motion.press) { hoverX = nil }
                     }
                 }
                 // The scrub's input, on the content so it can find the
@@ -660,11 +669,28 @@ struct SourceChips: View {
                             // scroll, a tap, a scrub — see `wave(for:)`. On
                             // lift the magnifier parks where the finger was
                             // (viewport space) until the scroll goes idle.
-                            withAnimation(DS.Motion.press) {
-                                if let at {
-                                    scrubX = at.x
-                                    waveViewportX = at.x - viewport.offset
-                                } else {
+                            //
+                            // **NO STATE WRITE PER TOUCH MOVE WHILE
+                            // SCROLLING (PERF 2026-09-08).** This wrote two
+                            // `@State` values on every touch move — and a
+                            // finger dragging the strip moves WITH the
+                            // content, so `scrubX` (content space) barely
+                            // changes while `waveViewportX` (viewport space)
+                            // changes every move. Each write rebuilt the whole
+                            // strip, every chip and its glass, at touch rate,
+                            // for the length of every scroll: the dock's own
+                            // "swipe through the nav bar" was a body pass per
+                            // touch event. The viewport x is now kept in the
+                            // frame box until the lift that parks it, and the
+                            // content x is written only when it has moved
+                            // past `fingerStep`.
+                            if let at {
+                                chipFrames.fingerViewportX = at.x - viewport.offset
+                                guard abs((scrubX ?? -.infinity) - at.x) >= Self.fingerStep else { return }
+                                withAnimation(DS.Motion.press) { scrubX = at.x }
+                            } else {
+                                withAnimation(DS.Motion.press) {
+                                    waveViewportX = chipFrames.fingerViewportX
                                     scrubX = nil
                                 }
                             }
@@ -751,10 +777,17 @@ struct SourceChips: View {
                 // draws exactly what it drew before. 8pt is still far finer
                 // than the wave itself (a cosine over ~1.6 pitches, ~100pt),
                 // and the reach test skips the tail outright.
+                // …and at most once per frame (PERF 2026-09-08): a flick
+                // delivers scroll samples faster than the display draws, and
+                // 8pt at 1,500pt/s is ~190 strip rebuilds a second. One
+                // rebuild per 16ms is every frame the wave can be seen in.
+                let now = Date.timeIntervalSinceReferenceDate
                 if let parked = waveViewportX, scrubX == nil,
                    abs(new.offset - chipFrames.lastWaveOffset) >= 8,
+                   now - chipFrames.lastWaveTime >= 0.016,
                    waveReaches(parked + new.offset) {
                     chipFrames.lastWaveOffset = new.offset
+                    chipFrames.lastWaveTime = now
                     waveTick &+= 1
                 }
             }
@@ -796,8 +829,12 @@ struct SourceChips: View {
     }
 
     private func scrubMoved(at point: CGPoint) {
-        // The wave follows the finger every move; the name only on a change.
-        withAnimation(DS.Motion.press) { scrubX = point.x }
+        // The wave follows the finger every `fingerStep` (PERF 2026-09-08 —
+        // it was every move, a strip rebuild per touch event); the name only
+        // on a change.
+        if abs((scrubX ?? -.infinity) - point.x) >= Self.fingerStep {
+            withAnimation(DS.Motion.press) { scrubX = point.x }
+        }
         guard let hit = scrubTarget(x: point.x), hit.label != scrubbing,
               let toWindowX = scrubWindowConverter.value else { return }
         DSHaptic.selection()
@@ -1765,4 +1802,9 @@ struct ScrollViewportSample: Equatable {
 final class ChipFrameBox {
     var frames: [String: CGRect] = [:]
     var lastWaveOffset: CGFloat = 0
+    /// When the parked wave last re-rendered the strip (PERF 2026-09-08).
+    var lastWaveTime: TimeInterval = 0
+    /// The finger's viewport x while it is down — read at the lift that parks
+    /// the magnifier, never written to state per move (PERF 2026-09-08).
+    var fingerViewportX: CGFloat = 0
 }

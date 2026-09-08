@@ -2348,6 +2348,17 @@ struct FeedScreen: View {
         return Corpus.revision(in: modelContext)
     }
 
+    /// The All snapshot task's key: the corpus revision AND whether the room
+    /// is under the swipe's transient bound (PERF 2026-09-08) — see the task.
+    private struct AllSnapshotTaskKey: Equatable {
+        let revision: Corpus.Revision
+        let bounded: Bool
+    }
+
+    private var allSnapshotTaskKey: AllSnapshotTaskKey {
+        AllSnapshotTaskKey(revision: corpusRevision, bounded: rowBudget != nil)
+    }
+
     // MARK: - The room's head, memoised
 
     /// The registry answers a room's head is chosen from (PERF 2026-08-21,
@@ -5571,7 +5582,15 @@ struct FeedScreen: View {
         // source-filtered query that, unlike the All room's, carries no
         // `fetchLimit` at all: a bulk-imported room is thousands of rows,
         // materialised to key a task that does nothing.
-        .task(id: corpusRevision) {
+        // …AND on the swipe budget lifting (PERF 2026-09-08). The bound is a
+        // parameter change that re-arms the query at 1,200 rows, but it
+        // changes no corpus revision — so a room entered bounded (every swipe
+        // into All, and since today every launch) seeded this snapshot from
+        // the 150-row query and then kept it until the next save landed: the
+        // head, the footer and the list all describing 150 rows over a room
+        // holding 1,200. `AllSnapshotTaskKey` carries the bound, so the lift
+        // re-runs the debounced branch and the snapshot follows the query.
+        .task(id: allSnapshotTaskKey) {
             guard source == "All", filter.tag == "All" else { return }
             guard debouncedAllSnapshot != nil else {
                 let first = liveVisible()              // first paint: no delay
@@ -5617,6 +5636,20 @@ struct FeedScreen: View {
         // `things` exists to enforce.
         .task(id: safetyNetKey) {
             guard source == "All", filter.tag == "All", scenePhase == .active else { return }
+            // A ROOM THAT IS ALREADY DRAWING ROWS CAN WAIT (PERF 2026-09-08).
+            // `things.count` below is a fetch plus a per-model snapshot of the
+            // whole 1,200-row window (§646), and this task fires at mount, on
+            // every foreground, and again when the launch budget lifts — i.e.
+            // inside the seconds a person starts scrolling in. Sampled on the
+            // 6k fixture at 194 of 1,083 main-thread samples across a launch.
+            // The bug this net exists for renders as an EMPTY room, so when
+            // the snapshot already holds rows the check is deferred past the
+            // launch window; an empty room still checks at once. A newer key
+            // cancels the sleep, which re-arms the check rather than losing it.
+            if debouncedAllSnapshot.map({ !$0.isEmpty }) ?? false {
+                try? await Task.sleep(for: .seconds(3))
+                guard !Task.isCancelled else { return }
+            }
             // NEVER against a transiently bounded query — see `safetyNetKey`.
             // While the swipe budget is set, `things` holds 150 rows by our own
             // instruction, so the comparison below cannot mean what it is

@@ -166,6 +166,10 @@ The unbounded-main-actor-fetch class has re-entered at least four times by four 
 
 **Sixth instance of the comment-matching lesson.** The audit's own first cut of check 3 was a file-wide grep and **survived its mutation**, because `RootShell` names the instrumentation string in a comment two lines above the log line it guards. Comment-stripping is not fussiness in this repo; it is the default.
 
+## 2026-09-08 addendum (prd §648)
+
+`ForegroundSweep`'s 60ms median measures the synchronous head of the sweep only. The awaited slots after it — `healTopics`, `AgentOpenCache.warm`, the 600-row insight block — are where the post-launch main-thread time goes (sampled: 54% + 39% of the three seconds after first paint on the 6k fixture). Sample the seconds AFTER first paint, not the launch alone. Fixed the first two; the third is open. The swipe's structural fix is that the room swaps after the flight, not that the build got cheaper.
+
 ## Order of execution
 
 P0 (one session, re-ranks everything) → P2 (small, pattern exists, guard exists) → P1 measurement then chosen shape → P3 behind a scroll sample → P4 audit alongside any of it → P5 as its gates open.

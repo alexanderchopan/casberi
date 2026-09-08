@@ -247,7 +247,19 @@ import SwiftData
     @MainActor
     static func scanPaged(context: ModelContext, contextSource src: String?,
                           now: Date, chunk: Int = 1500) async -> AgentChipFacts {
-        let all = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
+        // LIGHT COLUMNS (PERF 2026-09-08). This fetch carries no predicate, so
+        // the projection is the All room's proven-safe configuration and not
+        // the iOS 18.6 predicate defect (`FeedScreen.sourceRoomLightColumns`).
+        // Without it the warm-up hydrated every row's inline text —
+        // `content`/`enrichedText`/`postText`, up to 8KB a row — on the main
+        // actor four seconds after launch, for an accumulator that reads six
+        // light columns. Sampled on the 6k fixture: 611 of 1,558 main-thread
+        // samples in the three seconds after first paint, the fetch itself,
+        // not the chunked scan below it. `absorb` reads exactly this set.
+        var descriptor = FetchDescriptor<Thing>()
+        descriptor.propertiesToFetch = [\.source, \.capturedAt, \.authorHandle, \.mark,
+                                        \.dueAt, \.tags]
+        let all = (try? context.fetch(descriptor)) ?? []
         var acc = Accumulator(contextSource: src, now: now)
         var i = 0
         while i < all.count {

@@ -982,10 +982,67 @@ struct MainSurface: View {
         if !force, let lastFreeze,
            Date().timeIntervalSince(lastFreeze) < Self.freezeCoalesce { return }
         lastFreeze = Date()
-        let computed = computedChips()
-        liveChips = computed.labels
-        frozenChips = computed.labels
-        categoryVenues = computed.venues
+        walkChips(freeze: true, debounced: false)
+    }
+
+    /// Which walk is the latest — a slower, older walk landing after a newer
+    /// one must not overwrite it (the guarded-timer shape this app uses
+    /// wherever a later task must not clear a newer value).
+    @State private var chipWalkGeneration = 0
+    /// The newest generation whose result has been applied — see `walkChips`.
+    @State private var chipWalkApplied = 0
+
+    /// One walk of the store for the strip, OFF the main thread, applied on
+    /// it (PERF 2026-09-08, `ChipWalker`).
+    ///
+    /// **What moved.** `computedChips()` walked the store synchronously — one
+    /// indexed fetch per candidate seat plus a 400-row read of this surface's
+    /// own query — and on a cold launch it ran twice before the first frame
+    /// (the first body pass inline, then `onAppear`'s freeze). Both are gone
+    /// from the paint's path: the first frame reads `ChipOrderCache`, this
+    /// walk runs on a `ModelActor`, and its answer waits for `FirstPaint`
+    /// before it is applied, so the state write that re-renders the strip
+    /// can never land in front of the first pixel.
+    ///
+    /// **Debounced for the arrival watcher.** `refreshLiveChips` fires on
+    /// every corpus revision — ~30 times in a cold-launch bridge burst — and
+    /// each used to be a full walk on main. A refresh now waits 300ms for the
+    /// burst to quiet; the generation check drops every superseded walk.
+    /// A freeze (launch, foreground) walks at once.
+    private func walkChips(freeze: Bool, debounced: Bool) {
+        chipWalkGeneration &+= 1
+        let generation = chipWalkGeneration
+        // Read on main, handed over as plain names.
+        let seeds = Set(store.bridges.map(\.name))
+        Task { @MainActor in
+            if debounced {
+                try? await Task.sleep(for: .milliseconds(300))
+                guard generation == chipWalkGeneration else { return }
+            }
+            let walkT0 = Date()
+            guard let walk = await ChipWalker.walk(seeds: seeds) else { return }
+            PerfReadings.record("ChipsWalk", ms: Date().timeIntervalSince(walkT0) * 1000)
+            await FirstPaint.painted()
+            // Drop a result OLDER than the last one applied — never one merely
+            // older than the last one REQUESTED. The first cut did the latter,
+            // and a cold launch's walk was thrown away every time: the bridge
+            // burst bumps the generation with every save, so the launch walk
+            // always found a newer request waiting and the strip sat on its
+            // cache (or, with no cache, on the synchronous fallback) for the
+            // whole burst. Measured on the 6k fixture: no `chipLabels:` line in
+            // nine seconds, and the fallback's 54–119ms walk on every launch.
+            guard generation > chipWalkApplied else { return }
+            chipWalkApplied = generation
+            let computed = assembleChips(ordered: walk.newest, hasPinned: walk.hasPinned)
+            liveChips = computed.labels
+            if freeze { frozenChips = computed.labels }
+            categoryVenues = computed.venues
+            ChipOrderCache.save(.init(labels: computed.labels, venues: computed.venues,
+                                      sources: computed.sources))
+            #if DEBUG
+            NSLog("[Casberi] chipLabels: %@", chipLabels.joined(separator: ", "))
+            #endif
+        }
     }
 
     /// Refresh the live set WITHOUT re-freezing — a source arriving or leaving
@@ -993,14 +1050,13 @@ struct MainSurface: View {
     /// slot in `chipLabels`), but re-freezing here would slide the strip under
     /// a thumb, which is the one thing the freeze exists to prevent.
     private func refreshLiveChips() {
-        let computed = computedChips()
-        liveChips = computed.labels
         // The venue list is NOT frozen with the order (unlike `frozenChips`):
         // it decides which scopes the switcher offers, and a seat that just
         // landed its first row must be reachable from inside the room the same
         // foreground — the fold is what took away its own chip, so if this
-        // waited it would be a source with no door at all.
-        categoryVenues = computed.venues
+        // waited it would be a source with no door at all. `walkChips` applies
+        // `categoryVenues` on every walk, frozen or not.
+        walkChips(freeze: false, debounced: true)
     }
 
     /// The seats behind every folded category chip, in LEARNED order, keyed by
@@ -1041,7 +1097,12 @@ struct MainSurface: View {
         var walked: (labels: [String], venues: [String: [String]], sources: [String])?
         func walk() -> (labels: [String], venues: [String: [String]], sources: [String]) {
             if let walked { return walked }
-            let fresh = computedChips()
+            // The first body pass of a launch paints the order the strip wore
+            // LAST time (PERF 2026-09-08, `ChipOrderCache`) — the store walk
+            // this used to run inline here sat between `init` and the first
+            // pixel, and `onAppear` ran it a second time. The background walk
+            // (`walkChips`) corrects the cache once the frame is on screen.
+            let fresh = fallbackChips()
             walked = fresh
             return fresh
         }
@@ -1149,7 +1210,35 @@ struct MainSurface: View {
     /// The tap-learned promotion that sat on top of this from 2026-07-21 is
     /// gone (user, 2026-09-06, prd §634) — see `computedChips`. One order, and
     /// it is one a person can state after a single look at the strip.
-    private var computedChipLabels: [String] { computedChips().labels }
+    private var computedChipLabels: [String] { fallbackChips().labels }
+
+    /// What the strip reads before the first background walk lands — the
+    /// cached order, or on a launch with no cache the one synchronous walk —
+    /// resolved AT MOST ONCE per mount (PERF 2026-09-08).
+    ///
+    /// **A plain box, written during body evaluation, and that is the fix for
+    /// a launch that never painted.** The first cut resolved this per body
+    /// pass, and on a cache-less launch each pass walked the store AND
+    /// recorded a `PerfReadings` line — a `UserDefaults` write that this
+    /// surface's own `@AppStorage` observes. A body that writes what it
+    /// observes re-runs forever: the first commit never finished, the window
+    /// stayed white, the main thread sat at 105% (sampled: every frame inside
+    /// `_firstCommitBlock` → `MainSurface.body`). Memoisation, not state —
+    /// `FeedScreen.memo`'s rule — so nothing here can schedule a render.
+    private func fallbackChips()
+        -> (labels: [String], venues: [String: [String]], sources: [String]) {
+        if let held = chipFallback.value { return held }
+        let fresh: (labels: [String], venues: [String: [String]], sources: [String])
+        if let cached = ChipOrderCache.load(), !cached.labels.isEmpty {
+            fresh = (cached.labels, cached.venues, cached.sources)
+        } else {
+            fresh = computedChips()
+        }
+        chipFallback.value = fresh
+        return fresh
+    }
+
+    @State private var chipFallback = ChipFallbackBox()
 
     /// The strip's labels AND the market seats behind its folded chip, from ONE
     /// walk (2026-08-10).
@@ -1197,16 +1286,30 @@ struct MainSurface: View {
         // It is the measurement that decides whether the strip needs to paint
         // from a persisted order at all; do not add that persistence before
         // reading this line.
+        //
+        // **THE FALLBACK ONLY, since 2026-09-08.** This synchronous walk is
+        // reached on the first body pass of a launch that has no
+        // `ChipOrderCache` yet — the first launch ever — and nowhere else.
+        // Every other walk runs on `ChipWalker`, off the main thread, and
+        // lands through `walkChips`; the assembly below is shared with it
+        // (`assembleChips`) so the two cannot drift.
         var ordered: [String] = []
-        // And handed to the Diagnostics screen as a reading (prd §628): the
-        // 2026-08-11 pass measured this walk at 0.5–0.9s cold on the SIM, and
-        // it sits on the launch path. `SwipeClock.span` reports under a flag;
-        // this reports always, once per activation, bounded.
-        let walkT0 = Date()
+        // No `PerfReadings.record` here (it is a defaults write, and this
+        // can run inside a body pass — see `fallbackChips`); the background
+        // walk records the reading.
         for (name, _) in SwipeClock.span("newestPerSource", { newestPerSource() }) {
             ordered.append(name)
         }
-        PerfReadings.record("ChipsWalk", ms: Date().timeIntervalSince(walkT0) * 1000)
+        return assembleChips(ordered: ordered, hasPinned: Pinboard.hasAny(in: modelContext))
+    }
+
+    /// The pure half of `computedChips`: the walked order plus everything the
+    /// strip decides on main — the connected live-room seats, the pinned
+    /// room, the catalog fold and the stored category order. Shared by the
+    /// synchronous fallback and the background walk (PERF 2026-09-08).
+    private func assembleChips(ordered walked: [String], hasPinned: Bool)
+        -> (labels: [String], venues: [String: [String]], sources: [String]) {
+        var ordered = walked
         var seen = Set(ordered)
         // A LIVE-room source earns its chip by being CONNECTED, not by having
         // landed anything (prd §234, `LiveRoomSources`): Kalshi and Polymarket
@@ -1250,7 +1353,7 @@ struct MainSurface: View {
         // It disappears again when you unpin the last thing, and that is
         // correct: the room's whole content is your own list, so an empty one
         // has nothing to explain.
-        let pinned = Pinboard.hasAny(in: modelContext) ? [Pinboard.room] : []
+        let pinned = hasPinned ? [Pinboard.room] : []
         // EVERY catalog category folds into its own chip, ALWAYS (prd §351,
         // 2026-08-11 — generalizes what was one Markets-specific fold applied
         // above a floor of 2). Applied LAST, over the finished list, so the
@@ -1854,11 +1957,6 @@ struct MainSurface: View {
     /// The one door every source switch walks through (prd §265): chip taps and
     /// swipes both come here, so direction, the tag reset, and tap-learning
     /// cannot drift between them.
-    /// When the room on screen last CHANGED. A snapshot taken before a room
-    /// has drawn itself is a picture of its predecessor filed under its name
-    /// — see `captureCurrentLook`.
-    @State private var roomArrivedAt: Double = 0
-
     private func go(to label: String) {
         // Picking a source means the WHOLE of that source — a kind filter never
         // survives the tap. Two changes from the old rule (2026-08-01), both
@@ -1886,19 +1984,11 @@ struct MainSurface: View {
             target = label
         }
         guard target != filter.source else { return }
-        // The room's last look, for the carousel's card (prd §624 amendment):
-        // read off the glass BEFORE the switch, while this room is still the
-        // one on screen — and only when it is at REST. A swipe's commit
-        // arrives with the room already dragged aside and the next room's
-        // cover on the glass, so a capture here would store a picture of
-        // the cover as this room (measured: All's "last look" was the Wallet
-        // cover). A swipe captures at its first move instead (`dragMove`).
-        if chrome.pageDragX == 0 {
-            captureCurrentLook()
-        }
-        // The new room is on screen from here; anything captured before it has
-        // drawn would be a picture of this one — see `captureCurrentLook`.
-        roomArrivedAt = Date.timeIntervalSinceReferenceDate
+        // The room's last look is NOT taken here any more (PERF 2026-09-08):
+        // a `drawHierarchy` on the tap's own frame blocked the slide's first
+        // frames exactly as it blocked a swipe's first move. Every room is
+        // captured AT REST instead, a beat after it arrives — see
+        // `captureRestingLook`.
         slideEdge = direction(from: filter.source, to: target)
         SwipeClock.step(to: target)
         // THE SLIDE GETS ITS FRAMES (PERF 2026-08-21, corrected 2026-09-01) —
@@ -1941,7 +2031,8 @@ struct MainSurface: View {
     /// builds it. That is also why it must be part of `FeedScreen`'s
     /// `Equatable`: clearing it is a parameter change, and a parameter change
     /// is the only thing that re-runs `init` and re-arms the query.
-    @State private var swipeRowBudget: Int?
+    // Set from the first frame (PERF 2026-09-08) — see `releaseSwipeBudget`.
+    @State private var swipeRowBudget: Int? = MainSurface.swipeRowBudgetRows
 
     /// WHICH room that bound belongs to (PERF 2026-09-01).
     ///
@@ -1960,7 +2051,10 @@ struct MainSurface: View {
     ///
     /// Cleared with the bound, so the two can never disagree about which room
     /// is being entered.
-    @State private var swipeBudgetSource: String?
+    // The landing room (`FeedFilter.source`'s default). A launch that lands
+    // elsewhere — a deep link, `-feedSource` — simply mounts unbounded, as
+    // every room did before.
+    @State private var swipeBudgetSource: String? = "All"
 
     /// Which swipe the current budget belongs to, so a fast second swipe can
     /// never have the FIRST one's timer clear its bound out from under it.
@@ -1986,6 +2080,14 @@ struct MainSurface: View {
     private func releaseSwipeBudget() async {
         guard swipeRowBudget != nil else { return }
         let generation = swipeBudgetGeneration
+        // A LAUNCH is bounded too (PERF 2026-09-08): the All room's first
+        // mount used to materialise its whole 1,200-row window and shape it
+        // before the first pixel, for a first paint that shows thirty rows.
+        // `swipeRowBudget` starts set for the landing room, so the first
+        // build is the same 150-row build a swipe pays; the full window
+        // follows once the frame is on screen. On a swipe this returns at
+        // once.
+        await FirstPaint.painted()
         // Just past `DS.Motion.standard`'s own settle — long enough that the
         // full fetch lands after the last animated frame, short enough that the
         // head follows the room rather than trailing it.
@@ -2043,17 +2145,50 @@ struct MainSurface: View {
         if chrome.openFolder != nil {
             withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
         }
+        // THE FLIGHT FIRST, THE ROOM AFTER (PERF 2026-09-08).
+        //
+        // The commit used to swap the room in the same transaction that
+        // started the card's flight, so the incoming room's whole first
+        // build — its query, its shaping, its first thirty row bodies — ran
+        // on the main thread INSIDE the frames the fly-off and the cover's
+        // slide needed. SwiftUI drives those frames from the main thread
+        // (the BerryRain lesson, CLAUDE.md), so the card froze mid-air for
+        // the length of the build and jumped: every swipe stuttered by
+        // construction, and the budget, the memoised heads and the cheaper
+        // capture each made the stutter shorter without touching its cause.
+        //
+        // Now the release animates the drag state to its END — the card off
+        // the edge it was heading for, the cover at rest — over an idle main
+        // thread, and the room swaps one `flightMs` later, under a cover that
+        // is either a picture of the very room arriving (a visited room) or
+        // its mark on the page. The swap is `.identity` both ways: the old
+        // card is already off screen, and the new room appears whole over
+        // its cover the instant it is built. The build's cost is unchanged;
+        // it simply no longer runs while anything is moving.
         swipeCommit = true
-        chrome.pageDragCommitted = true
-        go(to: target)
+        let side: CGFloat = delta > 0 ? -1 : 1
+        let width = max(chrome.pagerFrame.width, 1)
+        withAnimation(DS.Motion.standard) {
+            chrome.pageDragCommitted = true
+            chrome.pageDragX = side * width
+            chrome.pageDragProgress = CGFloat(delta)
+        }
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(450))
+            try? await Task.sleep(for: .milliseconds(Self.flightMs))
+            go(to: target)
+            ChipMemory.visited(filter.source)
+            // The cover leaves once the room has had its first frame over it.
+            try? await Task.sleep(for: .milliseconds(250))
             swipeCommit = false
             chrome.pageDragTarget = nil
             chrome.pageDragCommitted = false
         }
-        ChipMemory.visited(filter.source)
     }
+
+    /// How long the released card flies before the room underneath swaps —
+    /// `DS.Motion.standard`'s own settle, so the swap lands on the first
+    /// still frame after it.
+    private static let flightMs = 280
 
     /// The chip one step along from the room you are in, or nil at either end.
     ///
@@ -2086,33 +2221,42 @@ struct MainSurface: View {
     /// finger — a pull that meets nothing must still answer the hand, or the
     /// swipe reads as broken rather than as the last room — and the ring
     /// stays put, since there is no chip for it to lean toward.
-    /// A room's last look, taken ONLY once the room has actually been on
-    /// screen long enough to have drawn itself (2026-09-06, user: "sometimes
-    /// when you swipe you see two sets of text from the same page before it
-    /// lands").
+    /// A room's last look, taken AT REST — never on a gesture (PERF
+    /// 2026-09-08).
     ///
-    /// `drawHierarchy(afterScreenUpdates: false)` reads what is on the glass
-    /// RIGHT NOW. Called in the moments after a room switch, the glass still
-    /// holds the room you just left — so the picture filed under the new
-    /// room's name is a picture of the old one, and the next swipe toward it
-    /// draws that content underneath the very room it came from: the same
-    /// rows twice, a few points apart, which is exactly what was reported.
-    /// Half a second is longer than the commit animation and shorter than any
-    /// deliberate swipe; inside it, the room simply keeps whatever look it
-    /// had, which is never wrong, only older.
-    private func captureCurrentLook() {
-        guard Date.timeIntervalSinceReferenceDate - roomArrivedAt > 0.5 else { return }
+    /// It was taken on the FIRST MOVE of every swipe (and on a chip tap):
+    /// `drawHierarchy` over the whole window, synchronously, on the one frame
+    /// the gesture has to start smoothly on — §632's second amendment halved
+    /// its resolution and left it on that frame. Now it runs from a task
+    /// keyed on the room, ~0.9s after arrival, when the room has drawn its
+    /// rows and its head: nothing is moving, nobody is waiting, and a
+    /// 20–40ms draw is invisible.
+    ///
+    /// **Skipped, not deferred, when it would be wrong or felt.** A drag in
+    /// flight or a card underneath (a picture of the cover would be filed
+    /// as this room — the 2026-09-06 double-text report), a pushed room or a
+    /// sheet over the pager (the capture would be of them), the scene not
+    /// active, or a feed already scrolled (`chrome.fold > 0` — the draw
+    /// would land mid-scroll as a hitch, and a snapshot of the top of a room
+    /// the person has left the top of is stale on arrival anyway). A room
+    /// with no look shows its mark on the page, which is the carousel's
+    /// documented fallback.
+    ///
+    /// The 2026-09-06 "two sets of text" guard (capture only after the room
+    /// has been on screen half a second) is kept by construction: the sleep
+    /// is longer than that, and a source change cancels the task.
+    private func captureRestingLook() async {
+        try? await Task.sleep(for: .milliseconds(900))
+        guard !Task.isCancelled, scenePhase == .active, route.path.isEmpty,
+              chrome.pageDragX == 0, chrome.pageDragTarget == nil,
+              !chrome.walkModalOpen, !chrome.walkSheetOpen,
+              chrome.fold == 0 else { return }
         RoomSnapshots.capture(source: filter.source, frame: chrome.pagerFrame)
     }
 
     private func dragMove(_ t: CGFloat) {
         let target = neighbour(t < 0 ? 1 : -1)
         let free = target != nil
-        // The first move of a swipe: the room is still (nearly) at rest, so
-        // this is where its last look is taken — see `captureCurrentLook`.
-        if chrome.pageDragTarget == nil, chrome.pageDragX == 0 {
-            captureCurrentLook()
-        }
         chrome.pageDragX = free ? t : t * 0.3
         chrome.pageDragProgress = free ? min(1, max(-1, -t / Self.dragPitch)) : 0
         if chrome.pageDragTarget != target { chrome.pageDragTarget = target }
@@ -2130,10 +2274,11 @@ struct MainSurface: View {
         }
     }
 
-    /// True for the body pass that commits a SWIPE (2026-09-06): the card
-    /// underneath is already showing the next room's cover, so the incoming
-    /// room fades in over it rather than sliding in from the edge, and the
-    /// outgoing room FLIES off as a card (`CardFly`) rather than sliding.
+    /// True from a swipe's release until its cover leaves (2026-09-06; the
+    /// swap deferred 2026-09-08): the card underneath is already showing the
+    /// next room's cover and the outgoing card has already flown, so the
+    /// swap is a cut both ways — the incoming room appears whole over its
+    /// cover, and nothing slides in from an edge.
     @State private var swipeCommit = false
 
 
@@ -2231,9 +2376,13 @@ struct MainSurface: View {
                         // needs a frame to draw — that is its whole job, and
                         // fading it was asking it to do the opposite.
                         insertion: swipeCommit ? .identity : .move(edge: slideEdge),
+                        // The outgoing card has already FLOWN by the time a
+                        // swipe's swap lands (PERF 2026-09-08, `step`): the
+                        // drag state carried it off the edge over an idle main
+                        // thread, so its removal is a cut off screen, never a
+                        // transition running beside the build.
                         removal: swipeCommit
-                            ? .modifier(active: CardFly(progress: 1, direction: slideEdge == .trailing ? -1 : 1),
-                                        identity: CardFly(progress: 0, direction: slideEdge == .trailing ? -1 : 1))
+                            ? .identity
                             : .move(edge: slideEdge == .trailing ? .leading : .trailing)))
             }
             // The swipe input, mounted ONCE at the shell — never inside the
@@ -2243,8 +2392,12 @@ struct MainSurface: View {
             // the pager.
             .background {
                 PageSwipeCatcher(
+                    // …and while a released card is still in flight (PERF
+                    // 2026-09-08): the room swaps at the end of the flight,
+                    // and a pan begun before it would step from the room
+                    // being left.
                     enabled: { !chrome.walkModalOpen && !chrome.walkSheetOpen
-                               && !chrome.walkInPushedRoom },
+                               && !chrome.walkInPushedRoom && !chrome.pageDragCommitted },
                     move: { t in dragMove(t) },
                     step: { delta in step(delta) },
                     cancel: { dragCancel() })
@@ -2268,6 +2421,9 @@ struct MainSurface: View {
             }
             // Hands the room back its whole query once the slide is over.
             .task(id: filter.source) { await releaseSwipeBudget() }
+            // The room's last look for the carousel, taken at rest — see
+            // `captureRestingLook`. A source change cancels a pending one.
+            .task(id: filter.source) { await captureRestingLook() }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // The strip FLOATS over the feed rather than sitting above it
             // (2026-07-20). It was a VStack sibling, which meant nothing ever
@@ -2678,25 +2834,11 @@ private struct PagerDrag<Content: View>: View {
     }
 }
 
-/// The outgoing room's exit after a swipe commits — it keeps going the way
-/// the finger sent it, tilting further and fading, off the edge.
-private struct CardFly: ViewModifier {
-    let progress: CGFloat
-    let direction: CGFloat
-    func body(content: Content) -> some View {
-        content
-            .offset(x: direction * 460 * progress)
-            // And on the way out, at the same reduced angle the drag uses, so
-            // the card leaves the way it travelled.
-            .rotationEffect(.degrees(Double(direction) * 6 * progress), anchor: .bottom)
-            .scaleEffect(1 - 0.08 * progress)
-            // **NO FADE.** It used to leave at 0.6 opacity, which made the
-            // card see-through over the cover underneath it for the whole
-            // flight — the same double exposure the opaque ground above
-            // exists to end, just between the leaving card and the next one.
-            // A card being dealt off a stack does not turn to glass.
-    }
-}
+// `CardFly` — the removal transition that flew the outgoing card — is GONE
+// (PERF 2026-09-08). The flight is the drag state animating to its end
+// (`step`), which `PagerDrag` already draws: the same tilt, the same shrink,
+// no fade (a card being dealt off a stack does not turn to glass), and it
+// runs before the room swaps rather than beside the build.
 
 /// The next room's cover, under the card being dragged (2026-09-06). Its
 /// mark and word on the page, growing from 0.92 to 1 as the drag commits,
@@ -2823,4 +2965,10 @@ private struct DockScrubCaption: View {
         .animation(DS.Motion.standard, value: chrome.scrub)
         .allowsHitTesting(false)
     }
+}
+
+/// `MainSurface.fallbackChips`'s memo — a class, never `@State` data, so a
+/// write from a body pass schedules nothing (PERF 2026-09-08).
+final class ChipFallbackBox {
+    var value: (labels: [String], venues: [String: [String]], sources: [String])?
 }
