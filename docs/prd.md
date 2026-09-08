@@ -51324,6 +51324,259 @@ ships**, and the author holds it.
 
 **Not measured on a device, and the Mac's numbers are not usable as numbers.** Green: iOS build; `query-read`, `body-publish`, `swiftdata-liveness`, `fetch-bound`, `row-cost`, `background-launch`, `privacy-cover`, `mac-parity`, `prd-index`, `catalog-sync`; `dock`, `room-perf`, `category-order`, `category-fold`, `chatimport`, `x`, `sweep-clock`, `obsidian`, `agent-room`, `journal-room` self-tests. The Catalyst compile is the ship's `verify.sh`. **Still open, in order:** the chip tap's slide still builds the room inside its own transition (the swipe's deferral could take it, as a design call — a tap dealing the card the carousel's way); the source-room staleness net's `things.isEmpty`; the 600-row `insightFetch` and `KeptAskStore.refreshDigests` in the deferred block (158 of 1,083 samples); the fold re-laying every glass chip per scroll frame for the 56pt of fold travel, by design; and `FeedScreen`'s per-room `@Query` remount on every room change, which is the structural ceiling — a swipe that keeps the room mounted needs a room that does not observe the store on its own.
 
+## §652 — The Safe room, six passes deep: the batch is read at last, the head names people, and "ready to execute" stops being a promise nobody can keep (user: "a user really liked the Safe experience — how can we improve that room even more?", 2026-09-07)
+
+Reported as praise, which is the hardest brief: nothing is broken, so the work
+is finding what the surface still cannot say. Six changes, and **four of them
+are honesty fixes on sentences that shipped as promises this app could not
+keep** — the kind that render perfectly and are wrong.
+
+### 1 · The batch is READ. `multiSend` was 96% of the traffic and 100% of the refusals
+
+§238 measured a real Safe's last 100 transactions and found **96 were
+`multiSend`**, because every Safe web-app action touching more than one thing
+bundles that way. The FEED row has described batches since that day
+(`describeBatch`, off the service's own `valueDecoded`). **The SIGN block never
+did** — the one screen in this app where somebody authorizes money answered
+`multiSend` with *"Casberi won't summarise a batch — read it in your Safe app
+before signing"*, on 96 rows out of 100. Honest, and a refusal to do the job on
+almost every real case. The co-signer (§425) has therefore been, on the common
+transaction, a Sign button under a sentence saying we could not tell you what
+you were signing.
+
+**The refusal doctrine is why this was safe to change, not an exception to it.**
+`multiSend`'s payload is a PACKED concatenation with an explicit length per
+entry — `operation ‖ to ‖ value ‖ dataLength ‖ data`, 1 + 20 + 32 + 32 + n —
+so walking it is arithmetic, not interpretation: every entry lands exactly on
+the next one's first byte or the walk does not close. Each inner call then goes
+through the SAME `SafeCalldata.read` a lone call gets, so an unknown selector
+inside a batch arrives as `.undecoded` exactly as it would on its own. What
+changed is the GRANULARITY of the refusal, not its existence — the screen now
+says which of the five it read and which it could not, instead of refusing all
+five because one of them might be unreadable.
+
+- **`case batch` carries `[BatchCall]`.** `isDecoded` keeps its meaning ("may I
+  name this at all", true for any batch); `isFullyReadable` is the new, sharper
+  question, false for a batch with any unreadable call and false for an EMPTY
+  one — because `[]` is what the walk returns when it fails.
+- **Every structural failure returns `[]`, never a partial list.** A truncated
+  entry, a length past the buffer, an unknown operation byte, a walk that does
+  not land exactly on the end. A list of the entries it got before losing the
+  thread is the fluent-wrong-summary in its worst form: every line on screen
+  true, and the total false. `[]` renders as the sentence this case shipped
+  with, so a payload we cannot follow fails toward the old behaviour.
+- **The ABI offset is READ, not assumed to be `0x20`** — a hardcoded 0x20
+  misreads a legal payload the encoder placed elsewhere.
+- **An inner `DELEGATECALL` is the sharpest fact this decoder can surface**, and
+  it is drawn ABOVE the call's own sentence in `DS.destructive`: it runs
+  somebody else's code in the Safe's OWN storage, so it can rewrite the owner
+  list and the threshold whatever the rest of the batch appears to do. (Safe
+  delegatecalls the multiSend contract itself — that is the OUTER operation and
+  is ordinary. The flag is only ever read about the entries inside.)
+- **Two caps, for two different reasons.** `maxBatchCalls` (512) is the
+  decoder's refusal — a payload claiming more is refused WHOLE, never truncated
+  (§238 measured 114 in one real batch, so the bound had to clear reality with
+  room). `batchDrawCap` (25) is a display bound and states how many it is not
+  drawing; nothing is ever silently absent.
+- **`reading(_:)` split into one `sentence(for:to:value:hash:)`** used by a lone
+  transaction and by a call inside a batch alike. Two functions would eventually
+  describe the same bytes two ways depending how deep they sat, and the batch is
+  where a wrong summary is least likely to be noticed.
+
+### 2 · The head names PEOPLE, and the doc that forbade it was right when written
+
+§238's finding was that a Safe is the only object in this app where other people
+act on your behalf and you wait on them, so the integer "2 of 3" throws away the
+one thing a person needs — **who to go ask**. `SafeQueueCard` has drawn the full
+lit/dim roster since that day. The ROOM HEAD could not, and said so in
+`SafeRoom.stateLabel`'s own doc: *"this card holds no owner roster … so '2
+others' would be a claim about who, made from a number that only says how many
+more."*
+
+That reasoning was exactly right about the DATA, and the data was the only thing
+missing: `roster` computes the outstanding owners every pass from the same
+`confirmations` array the counts come from, and threw them away.
+`TrackEntry.unsignedOwners` keeps them — one array of hex per pending
+transaction, **no request, no new `Thing` field, no CloudKit deploy** — and
+`SafeRoomSource` names them through the same `WalletIngest.knownLabel` chain the
+sheet uses. So a person who has named their co-signers reads *"Waiting on
+alice.eth and 1 other"* at the glance surface.
+
+**The arithmetic form is NOT deleted**, and that is the load-bearing half:
+an empty roster means the owner list did not read this pass, so falling back to
+the count is what keeps a failed read from rendering as "waiting on nobody"
+beside a fraction saying two signatures are missing. `trackPending` will not
+overwrite a known roster with an empty one for the same reason. The old doc is
+amended in place rather than replaced — it records why the claim was forbidden,
+which is the only way a future pass can tell an amended ruling from a lost one.
+
+### 3 · "Ready to execute" was a promise this app could not keep
+
+A Safe executes exactly ONE transaction per nonce, **in order**. A threshold met
+at position N+2 waits on the two in front of it. The headline, the lede caption,
+the state note and the FEED ROW TITLE all said *"fully signed — ready to
+execute"* about it — which sends somebody to their Safe app to press a button
+that is not there. §83's dead control, in a sentence.
+
+`Entry.blockedBy` is the gap between this entry's nonce and the Safe's own next
+one; `isExecutable` is `isReady && blockedBy == nil`. **`isReady` deliberately
+keeps its old meaning** — "can more signatures be added", which is what the
+ranking and the awaits-you arithmetic need and which stays true whatever the
+queue does — and `isExecutable` carries the WORDS. Both the head and
+`SafeBridge.rowFace` read the same property, so the feed row and the room head
+one line above it cannot disagree (§349's own finding: *"the head one line above
+it said something else"*). A blocked row loses the `Ready to execute` tag too,
+since that tag is what raises the delight moment and marks the row actionable.
+
+**Nil is not zero, in both directions**: an unknown nonce claims nothing about
+the queue and stays executable, because a caption that is merely missing is
+better than one asserted from a number we do not have.
+
+### 4 · The guard, stated at last
+
+`SafeConfig` has read `guardAddr` since 2026-07-30, `syncConfig` alerts when it
+CHANGES, and **nothing has ever said a guard is in place**. A guard set before
+this app first looked was invisible forever. That is §292/§293's finding
+verbatim — *"both existed only as CHANGE ALERTS, and an alert scrolls away with
+the stream; nothing ever stated the standing inventory"* — one field over, on
+the Safe surface that had escaped it.
+
+It is the MIRROR of a module and is drawn beside it: a module moves funds with
+NO signature, a guard sits in front of every transaction and can refuse them
+all, including the owner-management transaction that would remove it. **Not an
+alarm, and the copy and the tint both carry that** — a guard is a rule the
+owners chose, and wording it like the module line would cost that line the
+urgency that is its whole point. Free: the same persisted config snapshots
+`knownModules` already reads.
+
+### 5 · Gnosis Chain can be signed on, and the refusal's premise was about one file
+
+`SafeSigner` refused `gno` because *"`WalletApprovals` carries no Gnosis host, so
+the rail could not run there — and a chain where the cross-check cannot run is a
+chain this app must not sign on."* **The RULE is untouched and is the whole
+safety argument.** Its premise was a fact about one FILE: `GnosisPayBridge` has
+swept Gnosis Chain on every wallet pass since 2026-07-26 through two hosts it
+MEASURED and `NetworkReach` discloses. This matters more than a sixth chain
+usually would — **a Gnosis Pay account IS a Safe on Gnosis Chain (§222)**, so
+every card account this app already reads sat on the one chain it refused to
+sign for.
+
+The read is borrowed from the bridge that owns the hosts rather than inlined,
+because `SafeSigner`'s conduct guard requires every host it names to be Safe's
+own — that guard is what keeps the one-POST promise checkable, and a technicality
+that let a host in would hollow it. `NetworkReach`'s Gnosis purpose now says a
+signature cross-check happens there.
+
+**UNMEASURED**: those hosts are proven for `eth_getLogs` and
+`eth_getBlockByNumber`, not for `eth_call`. If they refuse it the read fails,
+`prepare` returns `.chainUnreadable`, and the app DECLINES — the same answer it
+gave before, reached the same way. The worst case of being wrong is today's
+behaviour.
+
+### 6 · Two sentences that said nothing
+
+- **The co-signer roster** said *"signs with you"* under every name — true of all
+  of them and therefore about none of them. It reads the queue now: *"2
+  transactions are waiting on them"*, or *"signed everything pending"*. It never
+  says the all-clear from an empty read: the no-queue case falls back to the
+  standing fact, because an owner list that did not answer is indistinguishable
+  from an owner who owes nothing. Computed ONCE for the roster, not per row
+  (§626).
+- **`SafeAsk`** answered a bare count. It now adds what the lead transaction IS
+  and what it waits on, plus the module and guard lines — the same sentences the
+  card draws, through the same `SafeRoomSource.compose`, so the ask and the card
+  cannot say different things about one queue.
+
+### Declined, with reasons
+
+- **A "ready to execute" lock-screen alarm.** §644 ruled eleven days ago that
+  this app does not compete for the lock screen. "Your signature is needed" earns
+  its alarm because no co-signer's app can page you and only you can act;
+  "ready" needs ANY owner, and after change 3 it is not even always actionable.
+  §238 already gave that moment a toast and berry rain, which is the right
+  register.
+- **A named-module table** (Allowance, Zodiac Delay/Roles). The Zodiac modules
+  are per-instance proxies with no canonical address, so a table cannot name
+  them at all; the Allowance module's address would have been RECALLED, not
+  measured — Safe's API and the Alchemy demo key both answered `429 Monthly
+  quota exceeded` for the whole session, so nothing could be verified. A recalled
+  constant on the surface that says *"this can move funds without a signature"*
+  is exactly the class this repo refuses. The guard work above is what that
+  effort became.
+- **Propose-a-rejection from the phone.** The natural pair to signing, and a
+  second outbound WRITE — a new proposal, not a confirmation — which reopens
+  §425's whole conduct argument. Its own pass.
+- **Per-signer speed or reliability readings.** §238 ruled out anything gamified:
+  this is other people's money, wrong register entirely.
+
+### Verification
+
+**A CRASH THE FIRST CUT SHIPPED, found by testing rather than by reading.**
+`args.count >= offset + 32` TRAPS when the offset word is near `Int.max` —
+Swift's `+` is checked, so an overflow is a process kill, not a wrong answer.
+These bytes come off a proposal in Safe's transaction service, **which any
+co-signer can write**, so a crafted offset was a way to terminate the app from
+outside, on the screen where somebody is about to authorize money. Every bound
+in the walker is a subtraction now (`offset <= args.count - 32`), which cannot
+overflow because each left side is a real array count the guard above has
+already bounded. Three fixtures pin it at `Int.max` (the offset, the payload
+length, an inner `dataLength`) and three mutations restore the additive form —
+`mutate` counts a trap as caught, since it treats any non-zero exit as the
+harness dying. **Nothing here reads it: the build is clean, the audits are
+static, and the sim never sees a hostile proposal.** It was found by handing
+the walker `Int.max` on the suspicion that a checked `+` on an attacker-chosen
+word is a crash — the standing lesson being that a decoder's bounds are worth
+one adversarial input each.
+
+`safetx-selftest.sh`: **27 new assertions and 14 new mutations**, all caught
+(30 mutations in the file, all green). Findings from the harness itself, all
+the same shape and all recorded rather than quietly fixed:
+
+1. **A partial-list mutation SURVIVED** because the fixture that was meant to
+   catch it used a SINGLE bad entry — so `calls` was still empty when the walker
+   bailed, and `return calls` and `return []` were the same bytes. A good entry
+   comes first now. *A fixture only tests the rule it names if it FAILS that rule
+   and passes every other one*, fourth instance.
+2. **The value-word mutation SURVIVED** because every fixture carried value 0,
+   which reads the same however far off the word boundary you are. One entry
+   carries a real value now.
+3. **One mutation was REMOVED with its reason written down**: `guard i ==
+   payload.count` after the loop is unreachable as a failure given the in-loop
+   bound, so `<=` behaves identically and the mutation changes nothing while
+   printing a passing line — the dead-mutation trap. The guard stays as an
+   assertion about a future edit to the bounds arithmetic; claiming a mutation
+   proved it would be false.
+4. **THE DEAD-ANCHOR TRAP IN A QUIETER FORM, three times in one hour.** The
+   overflow fix rewrote three bounds checks, and each rewrite silently orphaned
+   the mutation guarding it. `mutate` does fail on an anchor it cannot find —
+   but under `set -e` the heredoc's own `exit 1` kills the script before that
+   message prints, so a drifted anchor reads as **a run that simply stopped
+   with a ✓ as its last line**, and the exit code is the only tell. Every
+   anchor is now checked against the shipped source in ONE pass BEFORE any
+   mutation runs, naming every casualty at once instead of one per
+   fifteen-minute cycle; mutation-proven by drifting an anchor by two
+   characters. The standing rule gains a corollary: **a mutation harness must
+   prove its anchors still exist before it proves anything else**, because the
+   failure mode of a stale one is silence, not a red line.
+
+`wallet-rooms-selftest.sh`: 26 new assertions over the roster phrasing, the
+empty-roster fallback, `blockedBy`/`isExecutable`, the headline/lede/state-note
+agreement and the guard line. A new drift guard pins SafeSigner's rail COUNT to
+its reader arms, mutation-proven (a seventh rail fails the pass), so a chain can
+never be added without a cross-check that can run on it.
+
+Green: iOS build, Mac Catalyst build, and fifteen static audits including
+network-reach, catalog-sync, liveness, row-cost, query-read, setup-copy,
+account-page and demo.
+
+**NOT SEEN ON A DEVICE OR A SIMULATOR, and nothing was measured live** — Safe's
+transaction service and the Alchemy demo key both returned `429 Monthly quota
+exceeded` for this whole session, so the walker is proven against constructed
+payloads and the packed format, never against a real batch off the wire. The
+demo seed carries the new facts (Sam and Mia as outstanding owners, `safeNonce:
+42` so `demo1` draws "behind 1 earlier transaction"), which is where to look
+first.
+
 ## §651 amendment — every route into a room deals a card, a flick mid-flight lands the pending room, and a cold launch's insight block waits (user: "do all", 2026-09-08)
 
 **The chip tap dealt nothing.** After §651 the swipe swapped the room after its flight and the tap still swapped inside its own slide — the one route left building the room in the frames that moved it. `MainSurface.deal(to:)` is the carousel's turn for every route now: a swipe, a tap on All or Pinned, a venue picked in a folder, a room's own switcher all reach it through `go(to:)` once the label is resolved. The card flies off the edge the room lies beyond (`direction(from:to:)` decides the side), the next room's cover comes to rest beneath it — a tap names the cover itself, since no drag did — and `land(_:)` swaps the room `flightMs` later. One motion, and the build never runs while anything is moving. Traced: a tap from Wallet to All, step→rows 101ms, after the flight.

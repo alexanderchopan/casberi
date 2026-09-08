@@ -505,6 +505,19 @@ grep -q 'if let destination {' "$CARD_SAFE" \
   || { echo "✗ the Safe card's tap is no longer gated on having somewhere to go"; exit 1; }
 # The card must draw the state line, or a nonce collision is computed and never
 # said — the one fact nothing else in this app surfaces.
+# THE TINT AND THE WORDS MUST AGREE (2026-09-07, prd §652). A fully-signed
+# transaction behind two earlier ones cannot be sent, and painting it
+# confirm-green says "all good" in colour while the sentence beside it says the
+# opposite — the encoding-versus-words failure `stateLabel`'s own doc exists to
+# prevent, arriving from the other direction. Green is for what can be acted on.
+grep -q 'entry.awaitsYou ? DS.tint : entry.isExecutable ? DS.confirm' "$CARD_SAFE" \
+  || { echo "✗ the Safe row's state tint no longer keys on isExecutable — a blocked transaction would read as green while its own words say it cannot be sent"; exit 1; }
+# …and the row must draw the guard line the room now composes, or the standing
+# fact is computed and never seen (the §311 failure: a reading nothing renders
+# is indistinguishable from being fine).
+grep -q 'SafeRoom.guardNote(room)' "$CARD_SAFE" \
+  || { echo "✗ the Safe room card no longer draws the guard line — a guard would be read, diffed and never stated"; exit 1; }
+
 grep -q 'SafeRoom.stateNote(room)' "$CARD_SAFE" \
   || { echo "✗ the Safe card no longer draws the state note — rival transactions would be detected and never mentioned"; exit 1; }
 grep -q 'room.isContested(entry)' "$CARD_SAFE" \
@@ -1440,10 +1453,11 @@ print("")
 print("Safe — ranking is your-turn first, then ready, then oldest first")
 func safeEntry(_ ref: String, have: Int = 1, required: Int = 3, yourTurn: Bool = false,
                submittedAt: Date? = nil, nonce: Int? = nil,
-               safe: String = "0xSafe", description: String = "a transfer") -> SafeRoom.Entry {
+               safe: String = "0xSafe", description: String = "a transfer",
+               waitingOn: [String] = [], safeNonce: Int? = nil) -> SafeRoom.Entry {
     SafeRoom.Entry(ref: ref, safeAddress: safe, have: have, required: required,
                    yourTurn: yourTurn, submittedAt: submittedAt, descriptionText: description,
-                   nonce: nonce)
+                   nonce: nonce, waitingOn: waitingOn, safeNonce: safeNonce)
 }
 check("your turn always outranks waiting on others, even when it arrived later",
       SafeRoom.ordered([safeEntry("a", yourTurn: false, submittedAt: day(-9)),
@@ -1502,6 +1516,106 @@ check("the ready count the headline couldn't carry lands in the state note",
       SafeRoom.stateNote(safeRoomBoth)?.contains("ready to execute") == true)
 check("the state note never restates a headline that already led with ready",
       SafeRoom.stateNote(safeRoomReady) == nil)
+
+print("")
+print("Safe — the head names PEOPLE, and the queue decides what 'ready' means (2026-09-07)")
+// §238 ruled this bridge is about who to go ask, and the head could only ever
+// say "2 more signatures needed" because the tracking store kept counts and no
+// roster. It keeps the outstanding owners now, so the sentence names them.
+check("one outstanding owner is named",
+      SafeRoom.stateLabel(safeEntry("a", have: 2, required: 3, waitingOn: ["alice.eth"]))
+        == "Waiting on alice.eth")
+check("two are one name and a count, never a list that truncates mid-row",
+      SafeRoom.stateLabel(safeEntry("a", have: 1, required: 3,
+                                    waitingOn: ["alice.eth", "bob.eth"]))
+        == "Waiting on alice.eth and 1 other")
+check("three or more count the rest",
+      SafeRoom.stateLabel(safeEntry("a", have: 0, required: 3,
+                                    waitingOn: ["alice.eth", "bob.eth", "carol.eth"]))
+        == "Waiting on alice.eth and 2 others")
+// AN EMPTY ROSTER IS A READ THAT DID NOT ANSWER, never a transaction nobody
+// owes. Falling back to the count is what keeps a failed owner read from
+// rendering as "waiting on nobody" beside a fraction saying two are missing.
+check("an empty roster falls back to the signature count, never to silence",
+      SafeRoom.stateLabel(safeEntry("a", have: 1, required: 3))
+        == "2 more signatures needed")
+check("…and the phrase itself is nil rather than empty when nothing is known",
+      SafeRoom.waitingOnPhrase(safeEntry("a", have: 1, required: 3)) == nil)
+// YOUR TURN AND READY BOTH OUTRANK THE ROSTER. Naming somebody else while the
+// missing signature is yours points at the wrong person.
+check("your own turn is never rendered as waiting on somebody else",
+      SafeRoom.stateLabel(safeEntry("a", have: 1, required: 3, yourTurn: true,
+                                    waitingOn: ["alice.eth"])) == "Your turn")
+
+// A THRESHOLD MET IS NOT A TRANSACTION THAT CAN BE SENT. A Safe executes one
+// per nonce in order, so "Ready to execute" at position N+2 sends somebody to
+// press a button that is not there — the honesty rule's dead control, in a
+// sentence.
+check("a fully-signed transaction at the front is executable",
+      safeEntry("a", have: 3, required: 3, nonce: 42, safeNonce: 42).isExecutable)
+check("a fully-signed transaction behind two others is NOT executable",
+      !safeEntry("a", have: 3, required: 3, nonce: 44, safeNonce: 42).isExecutable)
+check("…and it is still 'ready' for the ranking, which asks a different question",
+      safeEntry("a", have: 3, required: 3, nonce: 44, safeNonce: 42).isReady)
+check("…and it says how many are in front of it",
+      safeEntry("a", have: 3, required: 3, nonce: 44, safeNonce: 42).blockedBy == 2)
+check("a transaction with no known position claims nothing about the queue",
+      safeEntry("a", have: 3, required: 3, nonce: nil, safeNonce: 42).blockedBy == nil
+        && safeEntry("a", have: 3, required: 3, nonce: 44, safeNonce: nil).blockedBy == nil)
+check("…and an unknown position is EXECUTABLE, not blocked — nil is not zero",
+      safeEntry("a", have: 3, required: 3, nonce: nil).isExecutable)
+check("a blocked transaction says so instead of promising an execution",
+      SafeRoom.stateLabel(safeEntry("a", have: 3, required: 3, nonce: 43, safeNonce: 42))
+        == "Fully signed — behind 1 earlier transaction")
+let safeBlockedRoom = SafeRoom.compose(
+    entries: [safeEntry("a", have: 3, required: 3, nonce: 44, safeNonce: 42)], safeCount: 1)
+check("a headline never promises 'ready to execute' when nothing can be sent",
+      !SafeRoom.headline(safeBlockedRoom).contains("ready to execute")
+        && SafeRoom.headline(safeBlockedRoom).contains("waiting its turn"))
+check("…and the plural agrees with itself",
+      SafeRoom.headline(SafeRoom.compose(
+        entries: [safeEntry("a", have: 3, required: 3, nonce: 44, safeNonce: 42),
+                  safeEntry("b", have: 2, required: 2, nonce: 45, safeNonce: 42)],
+        safeCount: 1)).contains("waiting their turn"))
+check("…and the lede caption agrees with the headline above it",
+      SafeRoom.lede(safeBlockedRoom)?.caption == "fully signed, waiting their turn")
+check("…while a front-of-queue one still promises it",
+      SafeRoom.headline(SafeRoom.compose(
+        entries: [safeEntry("a", have: 3, required: 3, nonce: 42, safeNonce: 42)],
+        safeCount: 1)).contains("ready to execute"))
+// The second sentence exists to say there is something to GO AND DO.
+check("the state note counts only what can actually be sent",
+      SafeRoom.stateNote(SafeRoom.compose(
+        entries: [safeEntry("a", have: 1, required: 3, yourTurn: true, nonce: 42, safeNonce: 42),
+                  safeEntry("b", have: 3, required: 3, nonce: 44, safeNonce: 42)],
+        safeCount: 1)) == nil)
+
+print("")
+print("Safe — the guard, stated at last (2026-09-07)")
+// `SafeConfig` has read `guardAddr` since 2026-07-30 and only ever alerted
+// when it CHANGED. An alert scrolls away; nothing said a guard was in place.
+// Same finding §292/§293 made about modules and delegates, one field over.
+check("a guard on the only Safe needs no name",
+      SafeRoom.guardNote(SafeRoom.compose(entries: [], safeCount: 1,
+                                          guardSafes: ["Treasury"]))
+        == "A guard checks every transaction on this Safe")
+check("…and IS named once more than one Safe is watched",
+      SafeRoom.guardNote(SafeRoom.compose(entries: [], safeCount: 3,
+                                          guardSafes: ["Treasury"]))?
+        .contains("Treasury") == true)
+check("two guards are counted rather than listed",
+      SafeRoom.guardNote(SafeRoom.compose(entries: [], safeCount: 3,
+                                          guardSafes: ["Treasury", "Payroll"]))?
+        .contains("2 of your Safes") == true)
+check("no guard says nothing at all",
+      SafeRoom.guardNote(SafeRoom.compose(entries: [], safeCount: 2)) == nil)
+// NOT AN ALARM, and the words carry that. A guard is a rule the owners chose;
+// a module is a way funds leave with no signature. Wording them alike would
+// cost the module line the urgency that is its whole point.
+check("the guard line never borrows the module line's language",
+      SafeRoom.guardNote(SafeRoom.compose(entries: [], safeCount: 1,
+                                          guardSafes: ["Treasury"]))?
+        .contains("without a signature") == false)
 
 print("")
 print("Safe — rival transactions at one nonce (2026-08-17)")

@@ -4929,16 +4929,30 @@ enum DemoSeedAll {
         // of them can execute. `demo0` sits 5 days back so the brief's stuck-
         // signature lede (`SafeRoom.stuckFloor`, 3 days) has something true to
         // say in the demo rather than shipping unseen.
+        // The OUTSTANDING OWNERS are the demo's own people (2026-09-07) —
+        // `seedAddressBook` names Sam and Mia at these very addresses, so the
+        // head reads "Waiting on Sam and 1 other" rather than short hex, which
+        // is the §238 people ruling actually visible instead of merely coded.
+        // `safeNonce: 42` is the second half: the Safe executes 42 next, so
+        // `demo1` is fully signed at 43 and CANNOT be sent — it draws "Fully
+        // signed — behind 1 earlier transaction" where it used to promise
+        // "ready to execute", which is the queue honesty fix on screen.
+        let sam = counterpartyAddress(for: "Sam")
+        let mia = counterpartyAddress(for: "Mia")
         SafeBridge.seedDemoSnapshot(safeAddress: demoWallet, pending: [
             (ref: "wallet:safe:eth:demo0", have: 2, required: 3, yourTurn: true, daysAgo: 5,
-             descriptionText: "a transfer of 1,500 USDC to payroll.eth", nonce: 42),
+             descriptionText: "a transfer of 1,500 USDC to payroll.eth", nonce: 42,
+             unsignedOwners: [demoWallet]),
             (ref: "wallet:safe:eth:demo1", have: 3, required: 3, yourTurn: false, daysAgo: 4,
-             descriptionText: "a transfer of 900 USDC to vendor.eth", nonce: 43),
+             descriptionText: "a transfer of 900 USDC to vendor.eth", nonce: 43,
+             unsignedOwners: []),
             (ref: "wallet:safe:eth:demo2", have: 1, required: 3, yourTurn: false, daysAgo: 9,
-             descriptionText: "an approval for Uniswap to spend 2,000 USDC", nonce: 44),
+             descriptionText: "an approval for Uniswap to spend 2,000 USDC", nonce: 44,
+             unsignedOwners: [sam, mia]),
             (ref: "wallet:safe:eth:demo3", have: 1, required: 3, yourTurn: false, daysAgo: 6,
-             descriptionText: "a revoke of Uniswap's spending approval", nonce: 44),
-        ])
+             descriptionText: "a revoke of Uniswap's spending approval", nonce: 44,
+             unsignedOwners: [mia]),
+        ], safeNonce: 42)
 
         // 8 · The watched social accounts (2026-08-11). The social rooms grew
         // a face rail (§362, the same control the wallets wear) which gates on

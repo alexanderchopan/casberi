@@ -373,7 +373,7 @@ enum NetworkReach {
         // this host is only reached after connecting, which is false.
         Endpoint(service: "Gnosis Pay",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads your Gnosis Pay card spending off Gnosis Chain's public chain, for the wallets you watch — the amount and the moment, which is all the chain carries.",
+                 purpose: "Reads your Gnosis Pay card spending off Gnosis Chain's public chain, for the wallets you watch — the amount and the moment, which is all the chain carries. Also asks a Gnosis Chain Safe for its own hash of a transaction before this phone will sign it.",
                  hosts: ["rpc.gnosischain.com", "rpc.gnosis.gateway.fm"]),
         // Both ether.fi entries reach under WALLET, not their own seats, for
         // Gnosis Pay's reason above: each seat appears only once there's

@@ -210,6 +210,25 @@ for host in $(printf '%s' "$SIGNER_CODE" | grep -oE 'https://[a-z0-9.-]+' | sort
   [[ "$host" == "https://api.safe.global" ]] \
     || { echo "✗ SafeSigner.swift reaches $host — it may reach api.safe.global and nothing else"; exit 1; }
 done
+# EVERY RAIL MUST HAVE A READER (2026-09-07). The entire safety argument for
+# signing on a chain is that `getTransactionHash` can be read back from the
+# Safe there — "a chain where the cross-check cannot run is a chain this app
+# must not sign on". A rail added with no reader case would compile fine and
+# would sign against a hash only this app has ever computed, so the count of
+# rails and the count of reader arms are pinned to each other.
+RAIL_COUNT=$(printf '%s' "$SIGNER_CODE" | grep -c 'Rail(seg:')
+[[ "$RAIL_COUNT" -eq 6 ]] \
+  || { echo "✗ SafeSigner's rail list changed ($RAIL_COUNT rails) — every rail must have a Reader that can run the getTransactionHash cross-check, and adding one is a decision, not a line"; exit 1; }
+printf '%s' "$SIGNER_CODE" | grep -q 'case .gnosisChain:' \
+  || { echo "✗ the Gnosis rail lost its reader — it would sign against a hash only this app computed"; exit 1; }
+# …and it borrows the hosts from the bridge that already owns and discloses
+# them, rather than naming one here (which the host guard above forbids, and
+# which would add an undisclosed reach).
+printf '%s' "$SIGNER_CODE" | grep -q 'GnosisPayBridge.read(method: "eth_call"' \
+  || { echo "✗ the Gnosis cross-check no longer goes through GnosisPayBridge's disclosed hosts"; exit 1; }
+grep -q 'own hash of a transaction before this phone will sign it' "$REACH" \
+  || { echo "✗ NetworkReach no longer says the Gnosis hosts are reached for a signature cross-check — the privacy screen understates what this app does"; exit 1; }
+
 # …and the write must be disclosed on the privacy screen, in words.
 grep -qi 'signature is sent to Safe' "$REACH" \
   || { echo "✗ NetworkReach no longer says a signature is SENT — the privacy screen understates what this app does"; exit 1; }
@@ -521,9 +540,9 @@ let enableModule = "0x610b5925"
 check("enableModule is named — a module moves funds outside the threshold entirely",
       SafeCalldata.read(data: enableModule, to: SAFE, value: "0", safe: SAFE)
         == .enableModule(module: "0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD"))
-check("multiSend is a batch, and is deliberately NOT itemised",
+check("a multiSend whose payload is empty is a batch of nothing, not a lie",
       SafeCalldata.read(data: "0x8d80ff0a" + String(repeating: "0", count: 64),
-                        to: SAFE, value: "0", safe: SAFE) == .batch)
+                        to: SAFE, value: "0", safe: SAFE) == .batch([]))
 check("an unknown selector is UNDECODED and carries its four bytes",
       SafeCalldata.read(data: "0xdeadbeef" + String(repeating: "0", count: 64),
                         to: USDC, value: "0", safe: SAFE) == .undecoded(selector: "0xdeadbeef"))
@@ -544,7 +563,165 @@ check("fewer than four bytes of data is undecoded, not a crash",
 check(".undecoded is the only reading the surface may not state as fact",
       SafeCalldata.undecoded(selector: "0xdeadbeef").isDecoded == false
         && SafeCalldata.send.isDecoded == true
-        && SafeCalldata.batch.isDecoded == true)
+        && SafeCalldata.batch([]).isDecoded == true)
+
+// --- THE BATCH WALK (2026-09-07) -------------------------------------------
+// §238 measured 96 of a real Safe's last 100 transactions as `multiSend`, so
+// this is the shape a co-signer actually meets. Until this pass the sign
+// block answered every one of them with "Casberi won't summarise a batch",
+// which is honest and is a refusal to do the job on almost every real case.
+//
+// The refusal DOCTRINE is what these checks pin: a payload that does not walk
+// exactly must return `[]` and never the entries it thinks it got, because a
+// partial list is the fluent-wrong-summary in its most dangerous form — every
+// line on screen true, and the total false.
+print("the multiSend walk — itemised, or refused whole")
+
+func packedEntry(op: Int, to: String, value: Int, data: String) -> String {
+    let d = data.hasPrefix("0x") ? String(data.dropFirst(2)) : data
+    return String(format: "%02x", op) + String(to.dropFirst(2))
+        + String(format: "%064x", value) + String(format: "%064x", d.count / 2) + d
+}
+func multiSend(_ entries: [String]) -> String {
+    let packed = entries.joined()
+    let pad = String(repeating: "0", count: (64 - packed.count % 64) % 64)
+    return "0x8d80ff0a" + String(format: "%064x", 32)
+        + String(format: "%064x", packed.count / 2) + packed + pad
+}
+let ONE_TRANSFER = packedEntry(op: 0, to: USDC, value: 0, data: TRANSFER_CALLDATA)
+
+let twoTransfers = SafeCalldata.read(data: multiSend([ONE_TRANSFER, ONE_TRANSFER]),
+                                     to: SAFE, value: "0", safe: SAFE)
+check("two packed transfers walk into two calls",
+      twoTransfers.batchCalls.count == 2)
+check("…and each inner call is read by the SAME decoder a lone one gets",
+      twoTransfers.batchCalls.allSatisfy {
+          $0.reading == .erc20Transfer(recipient: "0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD",
+                                       amount: "1000000")
+      })
+check("…and a batch every call of which read is fully readable",
+      twoTransfers.isFullyReadable)
+check("…and the destination comes off the PACKED entry, not the outer `to`",
+      twoTransfers.batchCalls.first?.to == EIP55.checksum(USDC))
+// A NON-ZERO VALUE, because every other entry here carries zero and a zero
+// reads the same however far off the word boundary you are. The value word
+// starts at byte 21 of the entry — one byte early and it begins on the last
+// byte of the address, which is a real number and a wrong one. This assertion
+// is what makes the "value word read one byte over" mutation fail; without it
+// the mutation SURVIVED, because nothing here had a value to get wrong.
+let withValue = SafeCalldata.read(
+    data: multiSend([packedEntry(op: 0, to: TO, value: 1, data: ""),
+                     packedEntry(op: 0, to: USDC, value: 0, data: TRANSFER_CALLDATA)]),
+    to: SAFE, value: "0", safe: SAFE)
+check("a native-coin value inside a batch reads EXACTLY, off byte 21",
+      withValue.batchCalls.first?.value == "1"
+        && withValue.batchCalls.first?.reading == .send)
+check("…and the entry beside it is unaffected",
+      withValue.batchCalls.last?.value == "0"
+        && withValue.batchCalls.last?.reading
+            == .erc20Transfer(recipient: "0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD",
+                              amount: "1000000"))
+
+// An inner DELEGATECALL runs somebody else's code in the SAFE's own storage,
+// so it can rewrite the owner list whatever the rest of the batch claims. It
+// is the sharpest fact this decoder can surface and it must survive the walk.
+let delegated = SafeCalldata.read(
+    data: multiSend([packedEntry(op: 1, to: USDC, value: 0, data: TRANSFER_CALLDATA)]),
+    to: SAFE, value: "0", safe: SAFE)
+check("an inner DELEGATECALL is carried, not flattened to a call",
+      delegated.batchCalls.first?.isDelegateCall == true)
+check("…and an ordinary inner call is not marked as one",
+      twoTransfers.batchCalls.first?.isDelegateCall == false)
+check("an operation that is neither CALL nor DELEGATECALL refuses the batch",
+      SafeCalldata.read(data: multiSend([packedEntry(op: 2, to: USDC, value: 0,
+                                                     data: TRANSFER_CALLDATA)]),
+                        to: SAFE, value: "0", safe: SAFE) == .batch([]))
+
+// THE PARTIAL CASE, which is the one the surface has to get right: nameable,
+// listable, and NOT complete.
+let mixed = SafeCalldata.read(
+    data: multiSend([ONE_TRANSFER,
+                     packedEntry(op: 0, to: USDC, value: 0,
+                                 data: "0xdeadbeef" + String(repeating: "0", count: 64))]),
+    to: SAFE, value: "0", safe: SAFE)
+check("a batch with one unreadable call still walks and still lists",
+      mixed.batchCalls.count == 2)
+check("…and the unreadable one arrives as .undecoded, exactly as it would alone",
+      mixed.batchCalls.last?.reading == .undecoded(selector: "0xdeadbeef"))
+check("…and the batch is nameable but NOT fully readable",
+      mixed.isDecoded && !mixed.isFullyReadable)
+
+// EVERY structural failure returns `[]`. A list of the entries the walk got
+// before losing the thread is precisely the summary this decoder refuses.
+let goodPacked = ONE_TRANSFER + ONE_TRANSFER
+func rawMultiSend(lengthOverride: Int? = nil, offsetOverride: Int? = nil,
+                  packed: String = goodPacked) -> String {
+    let pad = String(repeating: "0", count: (64 - packed.count % 64) % 64)
+    return "0x8d80ff0a" + String(format: "%064x", offsetOverride ?? 32)
+        + String(format: "%064x", lengthOverride ?? packed.count / 2) + packed + pad
+}
+check("a length running past the buffer refuses the WHOLE batch",
+      SafeCalldata.read(data: rawMultiSend(lengthOverride: goodPacked.count / 2 + 64),
+                        to: SAFE, value: "0", safe: SAFE) == .batch([]))
+// TWO GOOD ENTRIES then a stray byte, so a walker returning what it already
+// has would return two real calls — the failure this must catch is a batch
+// that renders two true lines and is not the transaction being signed.
+check("a truncated final entry refuses the whole batch, never the first N",
+      SafeCalldata.read(data: rawMultiSend(packed: goodPacked + "00"),
+                        to: SAFE, value: "0", safe: SAFE) == .batch([]))
+check("an offset pointing past the arguments refuses",
+      SafeCalldata.read(data: rawMultiSend(offsetOverride: 4096),
+                        to: SAFE, value: "0", safe: SAFE) == .batch([]))
+// A CRAFTED OFFSET MUST NOT TRAP. Swift's `+` is checked, so the first cut's
+// `args.count >= offset + 32` CRASHED THE PROCESS on an offset near Int.max —
+// and these bytes come off a proposal in Safe's transaction service, which any
+// co-signer can write, so it was a way to kill the app from outside. Every
+// bound is a subtraction now. Found by testing the walker against Int.max, not
+// by reading it.
+let INT_MAX_WORD = String(repeating: "0", count: 48) + "7fffffffffffffff"
+check("an offset near Int.max refuses instead of trapping",
+      SafeCalldata.read(data: "0x8d80ff0a" + INT_MAX_WORD + String(repeating: "0", count: 64),
+                        to: SAFE, value: "0", safe: SAFE) == .batch([]))
+check("a payload length near Int.max refuses instead of trapping",
+      SafeCalldata.read(data: "0x8d80ff0a" + String(format: "%064x", 32) + INT_MAX_WORD
+                              + String(repeating: "0", count: 64),
+                        to: SAFE, value: "0", safe: SAFE) == .batch([]))
+check("an inner dataLength near Int.max refuses instead of trapping",
+      SafeCalldata.read(
+        data: multiSend([String(format: "%02x", 0) + String(USDC.dropFirst(2))
+                         + String(format: "%064x", 0)
+                         + String(repeating: "0", count: 48) + "7fffffffffffffff"]),
+        to: SAFE, value: "0", safe: SAFE) == .batch([]))
+// A GOOD ENTRY FIRST, then the bad one — and that ordering is the whole test.
+// With the bad entry alone the walker's `calls` is still empty when it bails,
+// so returning `calls` and returning `[]` are the same bytes and a mutation
+// swapping them SURVIVES. This harness shipped exactly that mistake and the
+// mutation pass named it within the minute.
+check("an inner dataLength wider than the payload refuses the calls already walked",
+      SafeCalldata.read(
+        data: multiSend([ONE_TRANSFER,
+                         String(format: "%02x", 0) + String(USDC.dropFirst(2))
+                         + String(format: "%064x", 0)
+                         + String(format: "%064x", 4096)]),
+        to: SAFE, value: "0", safe: SAFE) == .batch([]))
+// The OFFSET IS READ, not assumed to be 0x20. A hardcoded 0x20 misreads a
+// legal payload the encoder chose to place elsewhere.
+let shifted = "0x8d80ff0a" + String(format: "%064x", 64) + String(repeating: "0", count: 64)
+    + String(format: "%064x", goodPacked.count / 2) + goodPacked
+    + String(repeating: "0", count: (64 - goodPacked.count % 64) % 64)
+check("the ABI offset is READ — a payload placed past 0x20 still walks",
+      SafeCalldata.read(data: shifted, to: SAFE, value: "0", safe: SAFE).batchCalls.count == 2)
+
+// A batch inside a batch is legal and terminates without a depth counter: an
+// inner payload is contained in its parent's and each entry costs 85 bytes of
+// header, so the length strictly decreases.
+let nested = SafeCalldata.read(
+    data: multiSend([packedEntry(op: 0, to: SAFE, value: 0, data: multiSend([ONE_TRANSFER]))]),
+    to: SAFE, value: "0", safe: SAFE)
+check("a nested batch is walked, not refused",
+      nested.batchCalls.first?.reading.batchCalls.count == 1)
+check("…and an empty batch is never 'fully readable' — [] is the refusal",
+      !SafeCalldata.batch([]).isFullyReadable)
 
 print("the selectors are derived, and one of them is the cross-check rail")
 // `getTransactionHash` is the call §5 makes on the Safe itself. Its selector
@@ -767,6 +944,32 @@ echo "  ✓ all six fixtures match scripts/support/safetx-vectors.py's own outpu
 echo ""
 echo "mutations (each must be caught):"
 
+# EVERY MUTATION'S ANCHOR MUST STILL EXIST IN THE SHIPPED SOURCE, checked in
+# one pass BEFORE any of them runs (2026-09-07).
+#
+# `mutate` already fails on an anchor it cannot find — but under `set -e` the
+# heredoc's own `exit 1` kills the script before that message is printed, so a
+# drifted anchor reads as a run that simply stopped, with the last line being a
+# ✓. That happened three times in one hour while the overflow fix below was
+# being written: each rewrite of a bounds check silently orphaned the mutation
+# guarding it. This is the dead-mutation trap ("a drifted anchor makes a
+# mutation change nothing, pass, and report SURVIVED") in its quieter form —
+# here it does not even report. Checking up front names every casualty at once
+# instead of one per fifteen-minute run.
+python3 - "$TX" "$0" <<'ANCHORS'
+import re, sys
+src, sh = open(sys.argv[1]).read(), open(sys.argv[2]).read()
+dead = [m.group(1) for m in
+        re.finditer(r"mutate \"([^\"]+)\" \\\s*\n\s*'(.*?)' \\\s*\n\s*'(.*?)'\s*\n", sh, re.S)
+        if m.group(2) not in src]
+if dead:
+    print("\u2717 mutation anchors no longer in the shipped source — these mutations test NOTHING:")
+    for d in dead:
+        print(f"    {d}")
+    sys.exit(1)
+ANCHORS
+[[ $? -eq 0 ]] || exit 1
+
 mutate() {
   local name="$1" frm="$2" to="$3"
   cp "$TX" "$TMP/SafeTransaction.swift"
@@ -893,6 +1096,96 @@ mutate "a dirty address word is accepted in calldata" \
             return EIP55.checksum(' \
   'guard true else { return nil }
             return EIP55.checksum('
+
+# --- THE BATCH WALK (2026-09-07) --------------------------------------------
+# Every one of these produces a batch that renders perfectly and is not the
+# transaction being signed. §238 measured 96 of 100 real Safe transactions as
+# `multiSend`, so these are mutations on the COMMON path, not an exotic one.
+
+# THE PARTIAL LIST — the single most dangerous failure this walker can have.
+# Returning what it got before losing the thread means every line on screen is
+# true and the total is false, which is exactly the fluent-wrong-summary
+# `SafeCalldata` exists to refuse.
+mutate "a truncated entry returns the calls it already got" \
+  'guard payload.count - i >= 85 else { return [] }' \
+  'guard payload.count - i >= 85 else { return calls }'
+
+mutate "an inner dataLength past the buffer returns a partial list" \
+  'dataLength <= payload.count - i - 85 else { return [] }' \
+  'dataLength <= payload.count - i - 85 else { return calls }'
+
+# NOT MUTATED, DELIBERATELY, and this is the reason written down rather than a
+# gap: `guard i == payload.count` after the loop is UNREACHABLE as a failure.
+# The in-loop bound is `payload.count >= i + 85 + dataLength`, so after
+# `i += 85 + dataLength` we always have `i <= payload.count`, and the `while
+# i < payload.count` condition exits only at exactly `==`. So no input can
+# make that guard fire, `guard i <= payload.count` behaves identically, and a
+# mutation swapping them SURVIVES while changing nothing — which is the
+# dead-mutation trap this repo records (a drifted or inert mutation prints a
+# passing line and certifies nothing). The guard stays in the source because
+# it pins the invariant the bounds arithmetic above it must keep; it is an
+# assertion about a future edit, not a check with a failing input today, and
+# claiming a mutation proved it would be false.
+
+# The ABI offset assumed rather than read. A legal payload placed elsewhere is
+# then read from the wrong bytes.
+mutate "the ABI offset is assumed to be 0x20" \
+  'guard let offset = int(Array(args[0..<32])), offset >= 0,' \
+  'guard let offset = Optional(32), offset >= 0,'
+
+# The declared length ignored, so trailing padding is walked as entry data.
+mutate "the payload length is not bounds-checked" \
+  'length <= args.count - offset - 32 else { return [] }' \
+  'length >= 0 else { return [] }'
+
+# The entry header is 1 + 20 + 32 + 32 = 85 bytes. Any other stride reads every
+# field of every entry from the wrong place.
+mutate "the packed entry header is mis-sized" \
+  'i += 85 + dataLength' \
+  'i += 84 + dataLength'
+
+mutate "the value word is read one byte over" \
+  'let value = decimal(Array(payload[(i + 21)..<(i + 53)]))' \
+  'let value = decimal(Array(payload[(i + 20)..<(i + 52)]))'
+
+# THE OVERFLOW TRAP. Swift's `+` is checked, so an additive bound on a word an
+# attacker chooses is a CRASH, not a wrong answer — and this calldata comes off
+# a proposal anyone who can write to the Safe's transaction service controls.
+# `mutate` treats a non-zero exit as caught, which is exactly what a trap is.
+mutate "the ABI offset bound goes back to an addition that can trap" \
+  'offset <= args.count - 32 else { return [] }' \
+  'args.count >= offset + 32 else { return [] }'
+
+mutate "the payload length bound goes back to an addition that can trap" \
+  'length <= args.count - offset - 32 else { return [] }' \
+  'args.count >= offset + 32 + length else { return [] }'
+
+mutate "the inner dataLength bound goes back to an addition that can trap" \
+  'dataLength <= payload.count - i - 85 else { return [] }' \
+  'payload.count >= i + 85 + dataLength else { return [] }'
+
+# An unknown operation byte accepted. Safe's multiSend defines 0 and 1; a
+# third value means these are not the bytes this decoder thinks they are.
+mutate "an unknown operation byte is accepted" \
+  'guard operation == 0 || operation == 1 else { return [] }' \
+  'guard operation >= 0 else { return [] }'
+
+# DELEGATECALL flattened to an ordinary call — the warning disappears from a
+# call that can rewrite the owner list.
+mutate "an inner DELEGATECALL is reported as a plain call" \
+  'var isDelegateCall: Bool { operation == 1 }' \
+  'var isDelegateCall: Bool { false }'
+
+# A batch containing an unreadable call claimed as fully read: the screen then
+# lists four sentences and drops the one that says it could not read the fifth.
+mutate "a batch with an unreadable call claims to be fully read" \
+  'return !calls.isEmpty && calls.allSatisfy { $0.reading.isFullyReadable }' \
+  'return true'
+
+# An EMPTY batch — the walk's own refusal — presented as fully read.
+mutate "an unwalkable batch is presented as fully read" \
+  'return !calls.isEmpty && calls.allSatisfy' \
+  'return calls.isEmpty || calls.allSatisfy'
 
 # removeOwner's linked-list cursor named as the owner being removed.
 mutate "removeOwner reads its list cursor as the owner" \

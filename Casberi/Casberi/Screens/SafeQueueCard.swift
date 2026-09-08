@@ -398,6 +398,10 @@ struct SafeSignBlock: View {
             Text(verbatim: reading(ready))
                 .dsText(.callout15).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
+            // THE BATCH, ITEMISED (2026-09-07). §238 measured 96 of a real
+            // Safe's last 100 transactions as `multiSend`, so this is not a
+            // branch for an exotic case — it is the one most people meet.
+            batchList(ready)
             // An N-of-N Safe is stated, never REFUSED over (prd §426
             // amendment). Declining to sign here would be the lock itself: in
             // a 2-of-2 that names this phone, our refusal is what stops the
@@ -445,15 +449,103 @@ struct SafeSignBlock: View {
     /// It composes only from what `SafeCalldata` READ out of the bytes — never
     /// from the title or from the service's `dataDecoded`.
     private func reading(_ ready: SafeSigner.Ready) -> String {
-        switch ready.reading {
+        // A BATCH IS THE ONE READING THAT IS NOT ONE SENTENCE. It gets a
+        // count here and a line per call below; the count is stated even
+        // when the walk failed, because "a batch" with no number is the
+        // uninformative refusal this pass exists to end.
+        if case .batch(let calls) = ready.reading {
+            guard !calls.isEmpty else {
+                return String(localized: "A batch of several calls. Casberi couldn't read the batch itself — open it in your Safe app before signing.")
+            }
+            let unreadable = calls.filter { !$0.reading.isFullyReadable }.count
+            let head = calls.count == 1
+                ? String(localized: "A batch of 1 call.")
+                : String(localized: "A batch of \(calls.count) calls.")
+            guard unreadable > 0 else { return head }
+            return unreadable == 1
+                ? head + " " + String(localized: "Casberi couldn't read 1 of them — check it in your Safe app before signing.")
+                : head + " " + String(localized: "Casberi couldn't read \(unreadable) of them — check them in your Safe app before signing.")
+        }
+        return sentence(for: ready.reading, to: ready.tx.to,
+                        value: ready.tx.value, hash: ready.safeTxHash)
+    }
+
+    /// The drawn calls of a batch, one line each, and the count of any this
+    /// list does not draw.
+    ///
+    /// **The cap is a display bound, never a silent one.** A batch longer than
+    /// this states how many are not shown and sends the reader to the Safe
+    /// app; nothing is simply absent. `SafeCalldata.maxBatchCalls` (512) is
+    /// the decoder's own refusal bound and is a different number for a
+    /// different reason — that one is "we did not understand these bytes",
+    /// this one is "a phone screen cannot carry this many lines".
+    private static let batchDrawCap = 25
+
+    @ViewBuilder private func batchList(_ ready: SafeSigner.Ready) -> some View {
+        let calls = ready.reading.batchCalls
+        if !calls.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                ForEach(Array(calls.prefix(Self.batchDrawCap).enumerated()), id: \.offset) { index, call in
+                    batchRow(index: index, call: call, ready: ready)
+                }
+                if calls.count > Self.batchDrawCap {
+                    let hidden = calls.count - Self.batchDrawCap
+                    Text(verbatim: hidden == 1
+                         ? String(localized: "1 more call isn't shown here. Open it in your Safe app before signing.")
+                         : String(localized: "\(hidden) more calls aren't shown here. Open them in your Safe app before signing."))
+                        .dsText(.subhead13).foregroundStyle(DS.attention)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    /// One call inside a batch. The number leads because a person checking a
+    /// batch against their own Safe app is matching positions, and the
+    /// delegatecall warning sits ABOVE the sentence rather than after it —
+    /// what the call claims to do is not the point when it can rewrite the
+    /// owner list regardless.
+    @ViewBuilder private func batchRow(index: Int, call: SafeCalldata.BatchCall,
+                                       ready: SafeSigner.Ready) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Text(verbatim: "\(index + 1)")
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                .frame(minWidth: 16, alignment: .trailing)
+            VStack(alignment: .leading, spacing: 2) {
+                if call.isDelegateCall {
+                    // The sharpest fact this decoder can state. A delegatecall
+                    // runs someone else's code in the SAFE's own storage, so
+                    // it can rewrite owners and threshold whatever else the
+                    // batch appears to do.
+                    Text("Runs code as the Safe itself — it can change the owners.")
+                        .dsText(.subhead13).foregroundStyle(DS.destructive)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Text(verbatim: sentence(for: call.reading, to: call.to,
+                                        value: call.value, hash: ready.safeTxHash))
+                    .dsText(.subhead13)
+                    .foregroundStyle(call.reading.isFullyReadable ? DS.textSecondary : DS.attention)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    /// One reading as one sentence, for a lone transaction and for a call
+    /// inside a batch alike — ONE function, because two would eventually
+    /// describe the same bytes two different ways depending on how deep they
+    /// sat, and the batch is where a wrong summary is least likely to be
+    /// noticed.
+    private func sentence(for reading: SafeCalldata, to: String,
+                          value: String, hash: String) -> String {
+        switch reading {
         case .send:
-            return String(localized: "Sends \(ready.tx.value) wei to \(WalletStore.shortAddress(ready.tx.to)).")
+            return String(localized: "Sends \(value) wei to \(WalletStore.shortAddress(to)).")
         case .rejection:
             return String(localized: "Cancels whatever else is proposed at this position. Moves nothing.")
         case .erc20Transfer(let recipient, let amount):
-            return String(localized: "Transfers \(amount) base units of \(WalletStore.shortAddress(ready.tx.to)) to \(WalletStore.shortAddress(recipient)).")
+            return String(localized: "Transfers \(amount) base units of \(WalletStore.shortAddress(to)) to \(WalletStore.shortAddress(recipient)).")
         case .erc20Approve(let spender, let amount):
-            return String(localized: "Lets \(WalletStore.shortAddress(spender)) spend up to \(amount) base units of \(WalletStore.shortAddress(ready.tx.to)).")
+            return String(localized: "Lets \(WalletStore.shortAddress(spender)) spend up to \(amount) base units of \(WalletStore.shortAddress(to)).")
         case .erc20TransferFrom(let from, let recipient, _):
             return String(localized: "Moves tokens from \(WalletStore.shortAddress(from)) to \(WalletStore.shortAddress(recipient)).")
         case .addOwner(let owner, let threshold):
@@ -468,10 +560,20 @@ struct SafeSignBlock: View {
             return String(localized: "Lets \(WalletStore.shortAddress(module)) move funds without any signature at all.")
         case .setGuard(let guardAddress):
             return String(localized: "Puts \(WalletStore.shortAddress(guardAddress)) in front of every transaction.")
-        case .batch:
-            return String(localized: "A batch of several calls. Casberi won't summarise a batch — read it in your Safe app before signing.")
+        case .batch(let calls):
+            // Reached only for a batch NESTED inside a batch — the outer one
+            // is answered by `reading(_:)` above, which draws the list. A
+            // nested batch is named and counted, and its own calls are not
+            // flattened into the parent's numbering: the positions a person
+            // is matching against their Safe app are the outer ones.
+            guard !calls.isEmpty else {
+                return String(localized: "A batch inside this batch, which Casberi couldn't read. Open it in your Safe app.")
+            }
+            return calls.count == 1
+                ? String(localized: "A batch of 1 call inside this one.")
+                : String(localized: "A batch of \(calls.count) calls inside this one.")
         case .undecoded(let selector):
-            return String(localized: "Casberi can't read what this does. It calls \(selector) on \(WalletStore.shortAddress(ready.tx.to)). Hash \(ready.safeTxHash).")
+            return String(localized: "Casberi can't read what this does. It calls \(selector) on \(WalletStore.shortAddress(to)). Hash \(hash).")
         }
     }
 

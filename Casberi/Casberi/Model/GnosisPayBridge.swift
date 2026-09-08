@@ -346,6 +346,30 @@ enum GnosisPayBridge {
 
     // MARK: - RPC reads (Gnosis Chain public hosts, first that answers wins)
 
+    /// A read-only JSON-RPC call on Gnosis Chain, for a caller outside this
+    /// file (2026-09-07, prd §425 amendment).
+    ///
+    /// Exposed for ONE caller: `SafeSigner`'s hash cross-check, which refused
+    /// Gnosis Chain outright because "`WalletApprovals` carries no Gnosis
+    /// host, so the rail could not run there — and a chain where the
+    /// cross-check cannot run is a chain this app must not sign on." That
+    /// premise was true of `WalletApprovals` and never true of this app: these
+    /// two hosts are measured (see this file's own header), disclosed in
+    /// `NetworkReach`, and already swept on every wallet pass.
+    ///
+    /// It lives HERE rather than as a host literal in `SafeSigner` on purpose.
+    /// That file's conduct guard requires every host it names to be Safe's
+    /// own, which is what keeps the one-POST promise checkable; a chain read
+    /// borrowed from the bridge that already owns and discloses the host
+    /// leaves that guard intact and adds no new disclosure to make.
+    ///
+    /// READ ONLY, and that is structural rather than promised: `call` builds
+    /// its own body and this wrapper hands it only a method and params, so no
+    /// caller can turn it into a write without editing this file.
+    static func read(method: String, params: [Any]) async -> Any? {
+        await call(method: method, params: params)
+    }
+
     private static func call(method: String, params: [Any]) async -> Any? {
         let body: [String: Any] = ["id": 1, "jsonrpc": "2.0",
                                    "method": method, "params": params]

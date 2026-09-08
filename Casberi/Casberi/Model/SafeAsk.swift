@@ -31,8 +31,21 @@ enum SafeAsk {
         guard total > 0 else {
             return String(localized: "Nothing pending on your Safe.")
         }
-        return total == 1
+        let head = total == 1
             ? String(localized: "1 signature needed across your Safes.")
             : String(localized: "\(total) signatures needed across your Safes.")
+        // WHAT it is and WHO it waits on, when the room head knows — the same
+        // sentences the Safe card draws, so the ask and the card cannot say
+        // different things about one queue (§349's "the head one line above
+        // it said something else"). Costs nothing: `compose` reads the
+        // tracking store `SafeBridge.sync` already keeps.
+        guard let room = SafeRoomSource.compose(), let lead = room.lead else { return head }
+        var out = head + " " + SafeRoom.subject(lead) + " — " + SafeRoom.stateLabel(lead).lowercased() + "."
+        // The two standing facts that outrank a queue: funds that can move
+        // with no signature at all, and a rule sitting in front of every
+        // transaction. Both are free off the same persisted config snapshots.
+        if let note = SafeRoom.note(room) { out += " " + note + "." }
+        if let guardNote = SafeRoom.guardNote(room) { out += " " + guardNote + "." }
+        return out
     }
 }

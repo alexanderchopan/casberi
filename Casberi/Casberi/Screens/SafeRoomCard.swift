@@ -87,6 +87,21 @@ struct SafeRoomCard: View {
                 .padding(.top, DS.Space.s1)
             }
 
+            // The guard line, in a plainer register than the module one
+            // above it (2026-09-07). A guard is a rule the owners CHOSE, not
+            // a way out for funds — one tint for both would say they are the
+            // same kind of news and cost the module line its urgency.
+            if let guardNote = SafeRoom.guardNote(room) {
+                Label {
+                    Text(guardNote).dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                } icon: {
+                    Image(systemName: "shield.lefthalf.filled")
+                        .foregroundStyle(DS.textTertiary)
+                        .dsGlyph(11, weight: .regular)
+                }
+                .padding(.top, DS.Space.s1)
+            }
+
             // The state line — a nonce collision, or the fully-signed count
             // the headline couldn't carry. Deliberately NOT orange: §238 ruled
             // a rival pair is stated plainly, because it is how Safes work and
@@ -267,7 +282,13 @@ struct SafeRoomCard: View {
     /// The state's colour, matching the ring's own fill so the mark and the
     /// word can never disagree.
     private func stateTint(_ entry: SafeRoom.Entry) -> Color {
-        entry.awaitsYou ? DS.tint : entry.isReady ? DS.confirm : DS.textSecondary
+        // `isExecutable`, NOT `isReady` (2026-09-07, prd §652). A threshold met
+        // behind two earlier transactions is fully signed and cannot be sent —
+        // painting it confirm-green would say "all good" in colour while the
+        // words beside it say the opposite, which is the encoding-versus-words
+        // failure `stateLabel`'s own doc exists to prevent, arriving from the
+        // other direction. Green is reserved for the state somebody can act on.
+        entry.awaitsYou ? DS.tint : entry.isExecutable ? DS.confirm : DS.textSecondary
     }
 
     /// Spelled out rather than read off the row: the disc carries the met/unmet

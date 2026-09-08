@@ -358,13 +358,15 @@ enum SafeBridge {
     static func seedDemoSnapshot(safeAddress: String,
                                  pending: [(ref: String, have: Int, required: Int,
                                            yourTurn: Bool, daysAgo: Double, descriptionText: String,
-                                           nonce: Int?)]) {
+                                           nonce: Int?, unsignedOwners: [String])],
+                                 safeNonce: Int? = nil) {
         rememberDetected(chains[0], safeAddress)
         for p in pending {
             trackPending(ref: p.ref, seg: chains[0].seg, safeAddress: safeAddress, ownerAddress: safeAddress,
                         have: p.have, required: p.required, yourTurn: p.yourTurn,
                         submittedAt: Date.now.addingTimeInterval(-p.daysAgo * 86_400),
-                        descriptionText: p.descriptionText, nonce: p.nonce)
+                        descriptionText: p.descriptionText, nonce: p.nonce,
+                        unsignedOwners: p.unsignedOwners, safeNonce: safeNonce)
         }
     }
 
@@ -425,6 +427,32 @@ enum SafeBridge {
             else { return nil }
             return SafeModules(seg: parts[0], safeAddress: parts[1], modules: config.modules,
                                threshold: config.threshold, ownerCount: config.owners.count)
+        }
+    }
+
+    struct SafeGuard {
+        let seg: String
+        let safeAddress: String
+        let guardAddress: String
+    }
+
+    /// Every detected Safe running a transaction GUARD, off the same persisted
+    /// config snapshots `knownModules` reads (2026-09-07). Costs no network.
+    ///
+    /// `guardAddr` has been read and diffed since 2026-07-30 and the standing
+    /// fact was never exposed to any surface — `syncConfig` alerts on a
+    /// CHANGE and an alert scrolls away, which is the §292/§293 finding about
+    /// modules and delegates, one field over.
+    static func knownGuards() -> [SafeGuard] {
+        let detected = (UserDefaults.standard.array(forKey: detectedKey) as? [String]) ?? []
+        return detected.compactMap { entry in
+            let parts = entry.split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2,
+                  let data = UserDefaults.standard.data(forKey: configSnapshotKey(parts[0], parts[1])),
+                  let config = try? JSONDecoder().decode(SafeConfig.self, from: data),
+                  let guardAddr = config.guardAddr
+            else { return nil }
+            return SafeGuard(seg: parts[0], safeAddress: parts[1], guardAddress: guardAddr)
         }
     }
 
@@ -737,7 +765,13 @@ enum SafeBridge {
             }
 
             guard let pending = await pendingQueue(chain: chain, address: safeAddress) else { continue }
-            let currentNonce = await safeDetail(chain: chain, address: safeAddress)?.nonce
+            // ONE read for both facts. `safeDetail` is coalesced with a 60s
+            // TTL so a second call was free, but two call sites for one fact
+            // is how a nonce and an owner list end up describing different
+            // moments of the same Safe.
+            let detail = await safeDetail(chain: chain, address: safeAddress)
+            let currentNonce = detail?.nonce
+            let owners = detail?.config.owners ?? []
             let facts = await prefetchFacts(chain: chain, txs: pending)
             for tx in pending {
                 guard let safeTxHash = tx["safeTxHash"] as? String else { continue }
@@ -762,7 +796,8 @@ enum SafeBridge {
                 // address doesn't tell us which of its N owners you are.
                 let yourTurn = candidate.viaOwner.map { !hasSigned(tx, owner: $0) } ?? false
                 let face = rowFace(have: have, required: required, yourTurn: yourTurn,
-                                   knowsYou: candidate.viaOwner != nil, description: description)
+                                   knowsYou: candidate.viaOwner != nil, description: description,
+                                   nonce: tx["nonce"] as? Int, safeNonce: currentNonce)
                 if !existing.contains(ref) {
                     let thing = Thing(kind: .transaction, title: face.title,
                                       source: sourceName, sourceRef: ref)
@@ -791,10 +826,17 @@ enum SafeBridge {
                 // nonce) can land its own closing thing, and so
                 // `SafeRoomSource` always reads this pass's live counts
                 // rather than whatever was true when the thing first landed.
+                // WHO is still outstanding, from the same `confirmations` the
+                // counts above come from — `roster` is the one reader of that
+                // array, so the head and the sheet cannot disagree about who
+                // has signed (§238's people rule, finally reaching the head).
+                let outstanding = roster(owners: owners, tx: tx, you: candidate.viaOwner)
+                    .filter { !$0.signed }.map { $0.address.lowercased() }
                 trackPending(ref: ref, seg: chain.seg, safeAddress: safeAddress, ownerAddress: candidate.viaOwner,
                             have: have, required: required, yourTurn: yourTurn,
                             submittedAt: ClaudeImport.parseDate(tx["submissionDate"] as? String),
-                            descriptionText: description, nonce: tx["nonce"] as? Int)
+                            descriptionText: description, nonce: tx["nonce"] as? Int,
+                            unsignedOwners: outstanding, safeNonce: currentNonce)
             }
             added += await resolveTracking(context: context, chain: chain, safeAddress: safeAddress,
                                            pending: pending, currentNonce: currentNonce, existing: existing)
@@ -863,11 +905,31 @@ enum SafeBridge {
     /// and then the feed row and the room head above it would disagree about
     /// the same transaction.
     static func rowFace(have: Int, required: Int, yourTurn: Bool, knowsYou: Bool,
-                        description: String) -> (title: String, tags: [String]) {
+                        description: String, nonce: Int? = nil, safeNonce: Int? = nil) -> (title: String, tags: [String]) {
         let entry = SafeRoom.Entry(ref: "", safeAddress: "", have: have, required: required,
                                    yourTurn: yourTurn, submittedAt: nil,
-                                   descriptionText: description, nonce: nil)
+                                   descriptionText: description, nonce: nonce,
+                                   safeNonce: safeNonce)
         if entry.isReady {
+            // A THRESHOLD MET IS NOT A TRANSACTION THAT CAN BE SENT
+            // (2026-09-07). A Safe executes one transaction per nonce, in
+            // order, so a fully-signed one at position N+2 waits on the two
+            // in front of it — and telling somebody it is "ready to execute"
+            // sends them to their Safe app to press a button that is not
+            // there. The room head above this row learned the same lesson in
+            // the same pass; both read `SafeRoom.Entry.isExecutable`, so
+            // there is one answer rather than two that can disagree (the
+            // §349 finding: "the head one line above it said something
+            // else").
+            if let blocked = entry.blockedBy {
+                let title = blocked == 1
+                    ? String(localized: "Fully signed — \(description) is behind 1 earlier transaction")
+                    : String(localized: "Fully signed — \(description) is behind \(blocked) earlier transactions")
+                // NO "Ready to execute" TAG: that tag is what raises the
+                // delight moment and marks the row as actionable, and neither
+                // is true while something sits in front of it.
+                return (title, [])
+            }
             return (String(localized: "Fully signed — \(description) is ready to execute"),
                     ["Ready to execute"])
         }
@@ -920,6 +982,26 @@ enum SafeBridge {
         /// neighbours, so an entry written before this shipped decodes fine
         /// and picks the nonce up on the next sync pass.
         var nonce: Int?
+        /// The owners who have NOT signed this yet, lowercased (2026-09-07).
+        ///
+        /// §238 ruled this bridge is about PEOPLE — "who to go ask" is the
+        /// only thing a fraction cannot say — and `SafeQueueCard` has drawn
+        /// the full lit/dim roster since that day. The ROOM HEAD could not,
+        /// and said so in `SafeRoom.stateLabel`'s own doc: "this card holds
+        /// no owner roster … so '2 others' would be a claim about who, made
+        /// from a number that only says how many more." That was true because
+        /// this field did not exist, not because the fact was unavailable —
+        /// `roster` computes it every pass from the same `confirmations` the
+        /// counts come from. Keeping it costs one array of hex per pending
+        /// transaction and no request at all.
+        var unsignedOwners: [String]?
+        /// The SAFE's own current nonce at the last sync (2026-09-07) — the
+        /// position it will execute next, which is what turns this
+        /// transaction's own `nonce` from a bare number into a place in a
+        /// queue. Stored per entry rather than per Safe so `SafeRoom` stays
+        /// Foundation-only with one store to read; it is rewritten every pass
+        /// for every entry, so the copies cannot drift.
+        var safeNonce: Int?
     }
     private static let trackingKey = "wallet.safe.tracking.v1"
 
@@ -941,7 +1023,8 @@ enum SafeBridge {
     /// (`seg`/`safeAddress`/`ownerAddress`) are set once and never rewritten.
     private static func trackPending(ref: String, seg: String, safeAddress: String, ownerAddress: String?,
                                      have: Int, required: Int, yourTurn: Bool,
-                                     submittedAt: Date?, descriptionText: String, nonce: Int? = nil) {
+                                     submittedAt: Date?, descriptionText: String, nonce: Int? = nil,
+                                     unsignedOwners: [String] = [], safeNonce: Int? = nil) {
         var tracking = loadTracking()
         var entry = tracking[ref] ?? TrackEntry(seg: seg, safeAddress: safeAddress, ownerAddress: ownerAddress)
         entry.have = have
@@ -950,6 +1033,13 @@ enum SafeBridge {
         entry.submittedAt = submittedAt
         entry.descriptionText = descriptionText
         entry.nonce = nonce
+        // EMPTY IS NOT "NOBODY IS OUTSTANDING". A pass that could not read the
+        // owner list must not overwrite a roster it already has with silence —
+        // that would render as "waiting on nobody" beside a count saying two
+        // signatures are missing. So an empty read leaves the last known
+        // roster in place, and only a real one replaces it.
+        if !unsignedOwners.isEmpty { entry.unsignedOwners = unsignedOwners }
+        if let safeNonce { entry.safeNonce = safeNonce }
         tracking[ref] = entry
         saveTracking(tracking)
     }
@@ -972,6 +1062,11 @@ enum SafeBridge {
         /// `SafeRoom` never treats an unknown position as a rival, so the
         /// gap costs a missing warning and never a false one.
         let nonce: Int?
+        /// Owners who have not signed yet — see `TrackEntry.unsignedOwners`.
+        /// Empty means "not known", never "nobody".
+        let unsignedOwners: [String]
+        /// The Safe's own next-to-execute nonce — see `TrackEntry.safeNonce`.
+        let safeNonce: Int?
     }
 
     /// Every pending transaction this app is currently watching for a
@@ -982,9 +1077,32 @@ enum SafeBridge {
             PendingSnapshot(ref: ref, safeAddress: e.safeAddress, ownerAddress: e.ownerAddress,
                             have: e.have ?? 0, required: e.required ?? 0, yourTurn: e.yourTurn ?? false,
                             submittedAt: e.submittedAt, descriptionText: e.descriptionText ?? "",
-                            nonce: e.nonce)
+                            nonce: e.nonce, unsignedOwners: e.unsignedOwners ?? [],
+                            safeNonce: e.safeNonce)
         }
     }
+
+    /// How many live pending transactions each owner has yet to sign, keyed by
+    /// lowercased address (2026-09-07) — for the account page's roster, which
+    /// said "signs with you" under every name and so said nothing about any of
+    /// them.
+    ///
+    /// Reads the same tracking store the room head does, so it costs one
+    /// UserDefaults read and no network. An owner absent from the map owes
+    /// nothing THAT WE KNOW OF — see the caller, which will not turn that into
+    /// an all-clear unless there is a queue for them to have cleared.
+    static func outstandingCounts() -> [String: Int] {
+        var out: [String: Int] = [:]
+        for entry in pendingSnapshot() {
+            for owner in entry.unsignedOwners { out[owner.lowercased(), default: 0] += 1 }
+        }
+        return out
+    }
+
+    /// How many pending transactions are tracked at all — the denominator the
+    /// roster needs to tell "signed everything" apart from "we never read the
+    /// owner list".
+    static func pendingCountForRoster() -> Int { pendingSnapshot().count }
 
     /// "under a day" / "a day" / "N days" — composes into both the executed
     /// and replaced closing sentences below.

@@ -35,6 +35,17 @@ struct SafeScreen: View {
     /// Nil until the read answers; an unreachable read says so rather than
     /// drawing an all-clear.
     @State private var signerStanding: SafeSigner.StandingReport?
+    /// What the pending queue owes each co-signer, and how many transactions
+    /// there are to owe anything on.
+    ///
+    /// **Held in `@State`, refreshed on appear and after a sync, NEVER read
+    /// from the body.** Both numbers come off `SafeBridge`'s tracking store,
+    /// which is a `UserDefaults` read plus a JSON decode — cheap once and a
+    /// per-row cost inside a computed property the body evaluates (prd §626,
+    /// and §628's rule that a fetch belongs in `onAppear`/`.task` and never in
+    /// something a body reads). The first cut of this feature did exactly that
+    /// and decoded the store once per roster row per render.
+    @State private var queueReading: (outstanding: [String: Int], pending: Int) = ([:], 0)
 
     private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
     private var walletCount: Int { WalletStore.shared.addresses.count }
@@ -89,6 +100,7 @@ struct SafeScreen: View {
             if hasWallets { Task { await sync() } }
             signerAddress = SignerKey.address()
             signerPresence = SignerKey.presence()
+            readQueue()
             if SignerKey.exists {
                 Task { signerStanding = await SafeSigner.standing() }
             }
@@ -325,16 +337,45 @@ struct SafeScreen: View {
     /// address book / Farcaster where possible; short hex otherwise, never a
     /// guessed identity. Empty when no Safe is detected, so nothing claims a
     /// roster that isn't there.
+    /// Reads the queue once. Called from `onAppear` and after a sync — the two
+    /// moments it can have changed — never from a body.
+    private func readQueue() {
+        queueReading = (SafeBridge.outstandingCounts(), SafeBridge.pendingCountForRoster())
+    }
+
     private var rows: [AccountPageShape.Row] {
         coSigners.map { address in
             AccountPageShape.Row(
                 id: address,
                 title: WalletIngest.knownLabel(for: address) ?? WalletStore.shortAddress(address),
-                subline: String(localized: "signs with you"),
+                subline: sublineFor(address),
                 weekCount: 0, hasNew: false,
                 isYou: address.caseInsensitiveCompare(signerAddress ?? "") == .orderedSame,
                 avatarURL: nil)
         }
+    }
+
+    /// What this co-signer is actually doing right now.
+    ///
+    /// Every row said "signs with you" — true of all of them, and therefore
+    /// about none of them. The queue already knows who is holding what up
+    /// (`SafeBridge.PendingSnapshot.unsignedOwners`, kept for the room head),
+    /// so the roster can say it for free: no request, no new field, no
+    /// CloudKit deploy.
+    ///
+    /// **It never says "signed everything" from an empty read.** An owner
+    /// list that did not answer this pass leaves `unsignedOwners` empty, which
+    /// is indistinguishable from an owner who owes nothing — so the all-clear
+    /// is only drawn when there IS a live queue to have signed, and the
+    /// no-queue case falls back to the standing fact.
+    private func sublineFor(_ address: String) -> String {
+        let waiting = queueReading.outstanding[address.lowercased()] ?? 0
+        if waiting == 1 { return String(localized: "1 transaction is waiting on them") }
+        if waiting > 1 { return String(localized: "\(waiting) transactions are waiting on them") }
+        guard queueReading.pending > 0 else {
+            return String(localized: "signs with you")
+        }
+        return String(localized: "signed everything pending")
     }
 
     /// Every OTHER owner across the detected Safes — your own watched wallets
@@ -353,6 +394,8 @@ struct SafeScreen: View {
         syncing = true
         defer { syncing = false }
         let added = await SafeBridge.syncNow(context: modelContext)
+        // The sync is the other moment the queue can have changed.
+        readQueue()
         if let added {
             lastResult = .landed(added)
         } else {

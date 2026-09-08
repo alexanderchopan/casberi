@@ -25,17 +25,27 @@ enum SafeRoomSource {
         guard safeCount > 0 else { return nil }
         let entries = SafeBridge.pendingSnapshot().map(entry)
         let room = SafeRoom.compose(entries: entries, safeCount: safeCount,
-                                    moduleSafes: moduleSafes())
+                                    moduleSafes: moduleSafes(),
+                                    guardSafes: guardSafes())
         // A quiet Safe with no module risk has nothing this card would say
         // beyond "nothing pending" — the `RailgunRoom.isEmpty` shape: one
         // fact is a sentence, not a card.
-        return (room.pendingCount > 0 || room.moduleCount > 0) ? room : nil
+        return (room.pendingCount > 0 || room.moduleCount > 0 || room.guardCount > 0) ? room : nil
     }
 
+    @MainActor
     private static func entry(_ s: SafeBridge.PendingSnapshot) -> SafeRoom.Entry {
         SafeRoom.Entry(ref: s.ref, safeAddress: s.safeAddress, have: s.have, required: s.required,
                        yourTurn: s.yourTurn, submittedAt: s.submittedAt,
-                       descriptionText: s.descriptionText, nonce: s.nonce)
+                       descriptionText: s.descriptionText, nonce: s.nonce,
+                       // NAMED HERE, never in `SafeRoom` — that file is
+                       // Foundation-only so the harness can compile it whole,
+                       // and the naming chain reaches SwiftData. Same split
+                       // `moduleSafes` already makes, and the same chain, so a
+                       // co-signer named in the address book reads the same
+                       // way at the head as in the sheet.
+                       waitingOn: s.unsignedOwners.map(label(for:)),
+                       safeNonce: s.safeNonce)
     }
 
     /// The module-carrying Safes, each named the way every other Safe surface
@@ -48,6 +58,28 @@ enum SafeRoomSource {
         SafeBridge.knownModules()
             .filter { !$0.modules.isEmpty }
             .map { SafeRoom.ModuleSafe(label: label(for: $0.safeAddress), count: $0.modules.count) }
+    }
+
+    /// The Safes carrying a transaction GUARD, named the same way.
+    ///
+    /// **A guard was read, alerted on, and never once stated.** `SafeConfig`
+    /// has carried `guardAddr` since 2026-07-30 and `syncConfig` lands an
+    /// alert when it changes — and that is the whole of it: nothing anywhere
+    /// says a guard is in place right now. That is the §292/§293 finding
+    /// verbatim ("both existed only as CHANGE ALERTS, and an alert scrolls
+    /// away with the stream; nothing ever stated the standing inventory"),
+    /// applied to the one Safe fact that had escaped it.
+    ///
+    /// It is the MIRROR of a module and belongs beside it. A module can move
+    /// funds with no signature; a guard sits in front of every transaction and
+    /// can refuse them all — including, in the worst case, the owner-management
+    /// transaction that would remove it. Neither is presented as an alarm: a
+    /// guard is a normal thing to run (spending policies, allowlists), and the
+    /// person who set it knows. The point is that somebody reading this room
+    /// should not have to remember it.
+    @MainActor
+    private static func guardSafes() -> [String] {
+        SafeBridge.knownGuards().map { label(for: $0.safeAddress) }
     }
 
     @MainActor
@@ -111,6 +143,7 @@ enum SafeRoomSource {
         let snapshot = SafeBridge.pendingSnapshot()
         var out: [String] = [
             "safeRoom| safeCount=\(safeCount) moduleCount=\(moduleCount)"
+                + " guardCount=\(SafeBridge.knownGuards().count)"
                 + " tracked=\(snapshot.count) rowCap=\(rowCap)"
                 + " fallbackRef=\(fallbackRef(things: things) ?? "none")",
         ]
@@ -131,11 +164,20 @@ enum SafeRoomSource {
         out.append("footnote=\(SafeRoom.footnote(room, drawn: min(rowCap, room.entries.count)) ?? "none")")
         out.append("stuckLine=\(SafeRoom.stuckLine(room, now: now) ?? "none")")
         out.append("totals| pending=\(room.pendingCount) awaitsYou=\(room.awaitsYouCount)"
-                   + " ready=\(room.readyCount) contested=\(room.contestedCount)")
+                   + " ready=\(room.readyCount) executable=\(room.executableCount)"
+                   + " contested=\(room.contestedCount) guards=\(room.guardCount)")
+        out.append("guardNote=\(SafeRoom.guardNote(room) ?? "none")")
         for entry in room.entries.prefix(rowCap) {
             out.append("safeRoomRow| \(SafeRoom.waitLabel(entry, now: now)) · \(entry.have)/\(entry.required)"
-                       + " ready=\(entry.isReady) awaitsYou=\(entry.awaitsYou)"
+                       + " ready=\(entry.isReady) executable=\(entry.isExecutable)"
+                       + " blockedBy=\(entry.blockedBy.map(String.init) ?? "none")"
+                       + " awaitsYou=\(entry.awaitsYou)"
                        + " contested=\(room.isContested(entry))"
+                       // The roster is printed because "Waiting on alice.eth"
+                       // and "2 more signatures needed" render as two designs
+                       // and are one code path: an empty roster is a read that
+                       // did not answer, not a transaction nobody owes.
+                       + " waitingOn=[\(entry.waitingOn.joined(separator: ", "))]"
                        + " · \(entry.descriptionText)")
         }
         return out

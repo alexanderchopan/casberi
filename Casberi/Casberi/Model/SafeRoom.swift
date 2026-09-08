@@ -101,9 +101,24 @@ struct SafeRoom: Equatable {
         /// didn't carry one, and a nil nonce is never a rival: an unknown
         /// position cannot be proven to collide with anything.
         let nonce: Int?
+        /// The owners still to sign, ALREADY NAMED — address-book name,
+        /// Farcaster handle, else short hex, resolved by `SafeRoomSource`
+        /// through the same `WalletIngest.knownLabel` chain every other Safe
+        /// surface uses. Labels rather than addresses because this file is
+        /// Foundation-only by design and must never reach the naming chain
+        /// itself.
+        ///
+        /// EMPTY MEANS NOT KNOWN, never "nobody" — a pass that could not read
+        /// the owner list leaves it empty, and every reader below falls back
+        /// to the signature COUNT rather than claiming an empty roster.
+        let waitingOn: [String]
+        /// The Safe's own next-to-execute nonce, so this entry's `nonce`
+        /// becomes a place in a queue rather than a bare number.
+        let safeNonce: Int?
 
         init(ref: String, safeAddress: String, have: Int, required: Int, yourTurn: Bool,
-             submittedAt: Date?, descriptionText: String, nonce: Int? = nil) {
+             submittedAt: Date?, descriptionText: String, nonce: Int? = nil,
+             waitingOn: [String] = [], safeNonce: Int? = nil) {
             self.ref = ref
             self.safeAddress = safeAddress
             self.have = have
@@ -112,7 +127,31 @@ struct SafeRoom: Equatable {
             self.submittedAt = submittedAt
             self.descriptionText = descriptionText
             self.nonce = nonce
+            self.waitingOn = waitingOn
+            self.safeNonce = safeNonce
         }
+
+        /// How many transactions must execute before this one can — the gap
+        /// between this entry's queue position and the Safe's own next nonce.
+        ///
+        /// Nil when either number is unknown, and nil (not zero) is the right
+        /// answer there: a blocked transaction that says nothing is a missing
+        /// caption, while an unblocked one asserted from a number we do not
+        /// have is a person told to go and execute something that cannot run.
+        var blockedBy: Int? {
+            guard let nonce, let safeNonce, nonce > safeNonce else { return nil }
+            return nonce - safeNonce
+        }
+
+        /// The threshold is met AND nothing sits in front of it — the only
+        /// state in which "ready to execute" is literally true.
+        ///
+        /// `isReady` deliberately does NOT fold this in: it answers "can any
+        /// more signatures be added", which is what the ranking and the
+        /// awaits-you arithmetic need, and which stays true whatever the
+        /// queue does. This answers "may somebody go and send it", which is
+        /// what the WORDS on screen promise.
+        var isExecutable: Bool { isReady && blockedBy == nil }
 
         /// The threshold is met — nothing further can be signed, and what
         /// this waits on is an execution. `required > 0` guards the unread
@@ -160,13 +199,37 @@ struct SafeRoom: Equatable {
     /// once in `compose` rather than recomputed per row, since the card asks
     /// per ring.
     let contestedKeys: Set<String>
+    /// The Safes running a transaction GUARD, named (2026-09-07).
+    ///
+    /// The MIRROR of `moduleSafes` and drawn beside it. A module moves funds
+    /// with NO signature; a guard sits in front of every transaction and can
+    /// refuse them all — including, at the limit, the owner-management
+    /// transaction that would remove it. `SafeBridge` has read this field
+    /// since 2026-07-30 and only ever alerted when it CHANGED, so a guard set
+    /// before this app first looked was invisible forever.
+    ///
+    /// **Not an alarm, and the copy must not make it one.** Running a guard is
+    /// a normal, deliberate choice (a spending policy, an allowlist), and the
+    /// person who set it knows they did. The reason to state it is that
+    /// somebody reading this room should not have to remember.
+    let guardSafes: [String]
 
     var moduleCount: Int { moduleSafes.reduce(0) { $0 + $1.count } }
+    var guardCount: Int { guardSafes.count }
     var pendingCount: Int { entries.count }
     /// Transactions whose missing signature is genuinely yours.
     var awaitsYouCount: Int { entries.filter(\.awaitsYou).count }
     /// Transactions fully signed and waiting only on an execution.
     var readyCount: Int { entries.filter(\.isReady).count }
+    /// Fully signed AND at the front of the queue — the ones somebody can
+    /// actually go and send right now (2026-09-07).
+    ///
+    /// Split from `readyCount` because the headline PROMISES an action ("ready
+    /// to execute") and a threshold met behind two earlier transactions cannot
+    /// be acted on. `readyCount` keeps its old meaning for the RANKING, which
+    /// is about whether more signatures can be added; this one carries the
+    /// WORDS, which are about whether anybody can do anything.
+    var executableCount: Int { entries.filter(\.isExecutable).count }
     var lead: Entry? { entries.first }
 
     func isContested(_ entry: Entry) -> Bool {
@@ -181,10 +244,12 @@ struct SafeRoom: Equatable {
     // MARK: - Composing
 
     static func compose(entries raw: [Entry], safeCount: Int,
-                        moduleSafes: [ModuleSafe] = []) -> SafeRoom {
+                        moduleSafes: [ModuleSafe] = [],
+                        guardSafes: [String] = []) -> SafeRoom {
         let contested = contestedKeys(in: raw)
         return SafeRoom(entries: ordered(raw, contested: contested), safeCount: safeCount,
-                        moduleSafes: moduleSafes, contestedKeys: contested)
+                        moduleSafes: moduleSafes, contestedKeys: contested,
+                        guardSafes: guardSafes)
     }
 
     /// Every queue position carrying more than one live transaction.
@@ -286,8 +351,12 @@ struct SafeRoom: Equatable {
                             caption: String(localized: "waiting on your signature"),
                             numeric: Double(n))
         case .ready(let n):
+            // Same rule as the headline: the caption may only promise an
+            // action for transactions that are actually at the front.
             return RoomLede(figure: n.formatted(),
-                            caption: String(localized: "fully signed, ready to execute"),
+                            caption: room.executableCount > 0
+                                ? String(localized: "fully signed, ready to execute")
+                                : String(localized: "fully signed, waiting their turn"),
                             numeric: Double(n))
         case .pending(let n):
             return RoomLede(figure: n.formatted(),
@@ -305,6 +374,15 @@ struct SafeRoom: Equatable {
                 ? String(localized: "Your signature is needed on 1 transaction")
                 : String(localized: "Your signature is needed on \(n) transactions")
         case .ready(let n):
+            // "Ready to execute" is a promise somebody will act on, so it is
+            // made only about transactions at the front of the queue. When
+            // every fully-signed one sits behind an earlier transaction, the
+            // headline says what is actually true instead.
+            guard room.executableCount > 0 else {
+                return n == 1
+                    ? String(localized: "1 transaction is fully signed — waiting its turn in the queue")
+                    : String(localized: "\(n) transactions are fully signed — waiting their turn in the queue")
+            }
             return n == 1
                 ? String(localized: "1 transaction is fully signed — ready to execute")
                 : String(localized: "\(n) transactions are fully signed — ready to execute")
@@ -350,6 +428,29 @@ struct SafeRoom: Equatable {
             : String(localized: "\(total) modules on \(only.label) can move funds without a signature")
     }
 
+    /// The guard line — the standing fact, in the register a normal setting
+    /// deserves.
+    ///
+    /// It NAMES the Safe on the same rule `note` uses: with more than one Safe
+    /// watched, "a guard checks every transaction" says a thing is true and
+    /// not where, which sends somebody to open all of them.
+    ///
+    /// Deliberately NOT tinted like the module line. A module is a way funds
+    /// leave without a signature; a guard is a rule the owners chose. Drawing
+    /// them in one colour would say they are one kind of news, and the module
+    /// line would lose the urgency that is its whole point.
+    static func guardNote(_ room: SafeRoom) -> String? {
+        guard !room.guardSafes.isEmpty else { return nil }
+        if room.guardSafes.count > 1 {
+            return String(localized:
+                "\(room.guardSafes.count) of your Safes run a guard that checks every transaction")
+        }
+        guard room.safeCount > 1, let only = room.guardSafes.first else {
+            return String(localized: "A guard checks every transaction on this Safe")
+        }
+        return String(localized: "A guard checks every transaction on \(only)")
+    }
+
     /// The third line: the highest-priority state fact the headline could not
     /// carry. Nil whenever the headline already covers everything, so this
     /// slot can never restate what is already on screen.
@@ -370,10 +471,13 @@ struct SafeRoom: Equatable {
         }
         // Ready is only ever news here when the headline led with your turn;
         // otherwise the headline said it already.
-        guard room.awaitsYouCount > 0, room.readyCount > 0 else { return nil }
-        return room.readyCount == 1
+        // Only the SENDABLE ones are worth a second sentence: this slot exists
+        // to tell somebody there is something to go and do, and a fully-signed
+        // transaction stuck behind two others is not that.
+        guard room.awaitsYouCount > 0, room.executableCount > 0 else { return nil }
+        return room.executableCount == 1
             ? String(localized: "1 other is fully signed — ready to execute")
-            : String(localized: "\(room.readyCount) others are fully signed — ready to execute")
+            : String(localized: "\(room.executableCount) others are fully signed — ready to execute")
     }
 
     /// What the row is ABOUT — `SafeBridge.describe`'s own rendering, cached
@@ -400,20 +504,76 @@ struct SafeRoom: Equatable {
     /// then reinforced by the tint — §83's honesty rule applied to an
     /// encoding rather than to a control.
     ///
-    /// The waiting form counts SIGNATURES, never people: this card holds no
-    /// owner roster (that is `SafeQueueCard`'s, one screen deeper), so "2
-    /// others" would be a claim about who, made from a number that only says
-    /// how many more. A transaction whose `confirmationsRequired` never
-    /// parsed arrives as 0/0 and gets the bare word — the `isReady` guard's
-    /// own reasoning, one rung down.
+    /// **The waiting form NAMES PEOPLE since 2026-09-07, and until then could
+    /// not.** This doc used to say the opposite — "the waiting form counts
+    /// SIGNATURES, never people: this card holds no owner roster (that is
+    /// `SafeQueueCard`'s, one screen deeper), so '2 others' would be a claim
+    /// about who, made from a number that only says how many more" — and that
+    /// reasoning was exactly right about the DATA available at the time. The
+    /// claim was forbidden because the tracking store kept counts and no
+    /// roster, so the only honest sentence was arithmetic.
+    ///
+    /// `SafeBridge.TrackEntry.unsignedOwners` now keeps the outstanding owners
+    /// themselves, taken from the same `confirmations` array the counts come
+    /// from, and `SafeRoomSource` names them through the same chain the sheet
+    /// uses. So the claim is no longer made from a number — and §238's whole
+    /// finding ("a Safe is the only object in this app where other people act
+    /// on your behalf and you wait on them; the integer throws away the one
+    /// thing a person needs, which is who to go ask") finally reaches the
+    /// glance surface instead of only the sheet one tap deeper.
+    ///
+    /// The ARITHMETIC FORM IS NOT DELETED, and that is deliberate: an empty
+    /// roster means the owner list did not read this pass, and falling back to
+    /// the count is what keeps a failed read from rendering as "waiting on
+    /// nobody". A transaction whose `confirmationsRequired` never parsed
+    /// arrives as 0/0 and gets the bare word — the `isReady` guard's own
+    /// reasoning, one rung down.
     static func stateLabel(_ entry: Entry) -> String {
         if entry.awaitsYou { return String(localized: "Your turn") }
-        if entry.isReady { return String(localized: "Ready to execute") }
+        if entry.isReady {
+            // FULLY SIGNED IS NOT THE SAME AS SENDABLE. A Safe executes one
+            // transaction per nonce in order, so a threshold met at position
+            // N+2 waits on the two in front of it — and "Ready to execute" on
+            // that row is the honesty rule's dead control in sentence form:
+            // it sends somebody to their Safe app to press a button that is
+            // not there yet.
+            if let blocked = entry.blockedBy {
+                return blocked == 1
+                    ? String(localized: "Fully signed — behind 1 earlier transaction")
+                    : String(localized: "Fully signed — behind \(blocked) earlier transactions")
+            }
+            return String(localized: "Ready to execute")
+        }
         let short = entry.required - entry.have
         guard entry.required > 0, short > 0 else { return String(localized: "Waiting") }
+        // WHO, when we know who.
+        if let named = waitingOnPhrase(entry) { return named }
         return short == 1
             ? String(localized: "1 more signature needed")
             : String(localized: "\(short) more signatures needed")
+    }
+
+    /// "Waiting on alice.eth" / "Waiting on alice.eth and 2 others" — the
+    /// sentence §238 wanted at the head and could not have.
+    ///
+    /// **One name, then a count.** Naming two runs to "Waiting on alice.eth
+    /// and bob.eth", which fits; naming three does not fit a row that also
+    /// carries a position and a wait, and a list that truncates at a
+    /// screen-width boundary is worse than a count that never does. So the
+    /// FIRST outstanding owner is named and the rest are counted — and the
+    /// first is chosen by the order `SafeRoomSource` hands them over, which is
+    /// the Safe's own owner order, so it is stable between passes rather than
+    /// rotating under a person watching one row.
+    ///
+    /// Nil whenever the roster is empty (not read this pass) — the caller
+    /// falls back to the signature count, which is always true.
+    static func waitingOnPhrase(_ entry: Entry) -> String? {
+        let names = entry.waitingOn.filter { !$0.isEmpty }
+        guard let first = names.first else { return nil }
+        let others = names.count - 1
+        if others == 0 { return String(localized: "Waiting on \(first)") }
+        if others == 1 { return String(localized: "Waiting on \(first) and 1 other") }
+        return String(localized: "Waiting on \(first) and \(others) others")
     }
 
     /// The queue POSITION, for a row that contests one — the pairing the card

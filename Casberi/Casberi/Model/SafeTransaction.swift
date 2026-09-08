@@ -422,13 +422,55 @@ enum SafeCalldata: Equatable {
     case changeThreshold(threshold: String)
     case enableModule(module: String)
     case setGuard(guardAddress: String)
-    /// A batch. Deliberately NOT itemised: `multiSend`'s payload is a packed
-    /// concatenation of sub-calls, and half-decoding a batch is exactly the
-    /// fluent-wrong-summary this enum exists to refuse.
-    case batch
+    /// A batch — `multiSend`'s packed payload, WALKED (2026-09-07).
+    ///
+    /// **This case carried no calls until 2026-09-07, and that made the sign
+    /// block useless on the common transaction.** §238 measured a real Safe's
+    /// last 100 transactions and found **96 were `multiSend`**, because every
+    /// Safe web-app action touching more than one thing bundles that way. So
+    /// the one screen where somebody authorizes money said "Casberi won't
+    /// summarise a batch — read it in your Safe app" on 96 rows out of 100:
+    /// honest, and a refusal to do the job on almost every real case.
+    ///
+    /// The refusal doctrine is UNCHANGED and is why this is safe to itemise.
+    /// `multiSend`'s payload is a PACKED concatenation with an explicit length
+    /// per entry — `operation ‖ to ‖ value ‖ dataLength ‖ data`, 1 + 20 + 32 +
+    /// 32 + n bytes — so walking it is arithmetic, not interpretation: every
+    /// entry either lands exactly on the next entry's first byte or the walk
+    /// does not close, and a walk that does not close returns `[]` rather than
+    /// the entries it thinks it got. Each inner call is then read by the SAME
+    /// `read(data:to:value:safe:)` that reads a lone one, so an inner call
+    /// this enum cannot name arrives as `.undecoded` exactly as it would on
+    /// its own. What changed is the granularity of the refusal, not its
+    /// existence: the surface now says which of the five it could read and
+    /// which it could not, instead of refusing all five because one of them
+    /// might be unreadable.
+    ///
+    /// An EMPTY array means the payload did not walk — the honest fallback,
+    /// and identical on screen to the sentence this case shipped with.
+    case batch([BatchCall])
     /// The selector is real, the meaning is not known. Carries the four bytes
     /// so the surface can show them.
     case undecoded(selector: String)
+
+    /// One entry inside a `multiSend` payload.
+    ///
+    /// `operation` is kept as a NUMBER rather than a bool because 1 is
+    /// `DELEGATECALL`, and an inner delegatecall is the sharpest fact this
+    /// decoder can surface: it runs somebody else's code in the SAFE'S OWN
+    /// storage, so it can rewrite the owner list and the threshold whatever
+    /// the rest of the batch appears to do. Safe delegatecalls the multiSend
+    /// contract itself — that is the OUTER operation and is ordinary — so
+    /// this flag is only ever read about the entries INSIDE.
+    struct BatchCall: Equatable {
+        let operation: Int
+        let to: String
+        let value: String
+        let reading: SafeCalldata
+
+        /// An inner `DELEGATECALL`. Stated wherever this call is drawn.
+        var isDelegateCall: Bool { operation == 1 }
+    }
 
     /// The four-byte selectors, DERIVED from their signatures at first use
     /// rather than pasted as magic hex — the same rule
@@ -491,7 +533,10 @@ enum SafeCalldata: Equatable {
         case selector("setGuard(address)"):
             if let a = address(0) { return .setGuard(guardAddress: a) }
         case selector("multiSend(bytes)"):
-            return .batch
+            // `[]` when the payload does not walk — see `batchCalls`. It
+            // renders as the sentence this case shipped with, so a payload
+            // this decoder cannot follow fails toward the old behaviour.
+            return .batch(batchCalls(args: args, safe: safe))
         default:
             break
         }
@@ -500,6 +545,117 @@ enum SafeCalldata: Equatable {
         // amount we had to invent.
         return .undecoded(selector: sel)
     }
+
+    /// The most entries this decoder will walk before refusing the batch.
+    ///
+    /// §238 measured **114** entries in one real batch, so the bound is not
+    /// theoretical and had to clear it with room. A payload claiming more than
+    /// this is refused whole rather than truncated: a batch drawn as its first
+    /// 512 calls, with the rest silently absent, is the fluent-wrong-summary
+    /// in its worst form — every line on screen true, and the total false.
+    static let maxBatchCalls = 512
+
+    /// Walks `multiSend(bytes)`'s packed payload.
+    ///
+    /// The ABI head is a single dynamic `bytes` argument: word 0 is the OFFSET
+    /// to the payload (read, never assumed to be 0x20 — the encoder is free to
+    /// place it elsewhere and a hardcoded 0x20 would misread a legal payload),
+    /// and the word at that offset is its byte length.
+    ///
+    /// Inside, entries are packed with NO padding between them:
+    ///
+    ///     operation  1 byte    uint8   0 = CALL, 1 = DELEGATECALL
+    ///     to        20 bytes   address
+    ///     value     32 bytes   uint256
+    ///     dataLength 32 bytes  uint256
+    ///     data       dataLength bytes
+    ///
+    /// **Every failure returns `[]`, never a partial list.** A truncated
+    /// entry, a length running past the buffer, a length wider than the
+    /// payload could hold, or a walk that does not land exactly on the end all
+    /// mean this function did not understand the bytes — and a list of the
+    /// entries it got before losing the thread is precisely the summary that
+    /// is fluent and wrong. The caller renders `[]` as "read it in your Safe
+    /// app", which is what this case did for everything before it walked.
+    ///
+    /// A nested batch terminates without a depth counter: an inner payload is
+    /// contained in its parent's and each entry costs 85 bytes of header, so
+    /// the length strictly decreases at every level.
+    static func batchCalls(args: [UInt8], safe: String) -> [BatchCall] {
+        // The offset word, then the length word it points at.
+        //
+        // **EVERY BOUND IS WRITTEN AS A SUBTRACTION, NEVER AN ADDITION**, and
+        // that is a fix rather than a style. `args.count >= offset + 32` TRAPS
+        // when `offset` is near `Int.max` — Swift's `+` is checked, so an
+        // overflow is a crash, not a wrong answer. These bytes come off a
+        // proposal in the Safe transaction service, which any co-signer can
+        // write, so a crafted offset word was a way to kill the app from
+        // outside. Caught by testing the walker against `Int.max` rather than
+        // by reading it; `int()` refuses anything wider than 64 bits, which is
+        // what made the remaining range reachable at all.
+        //
+        // Subtracting is safe here because every left side is a real array
+        // count and the guard above it has already put the right side inside
+        // that count.
+        guard args.count >= 32 else { return [] }
+        guard let offset = int(Array(args[0..<32])), offset >= 0,
+              offset <= args.count - 32 else { return [] }
+        guard let length = int(Array(args[offset..<(offset + 32)])), length >= 0,
+              length <= args.count - offset - 32 else { return [] }
+        let payload = Array(args[(offset + 32)..<(offset + 32 + length)])
+
+        var calls: [BatchCall] = []
+        var i = 0
+        while i < payload.count {
+            // 1 + 20 + 32 + 32 — the fixed header before this entry's data.
+            guard payload.count - i >= 85 else { return [] }
+            let operation = Int(payload[i])
+            // Anything but CALL or DELEGATECALL is not an operation this
+            // decoder knows, and a batch carrying one is not one it may
+            // summarise.
+            guard operation == 0 || operation == 1 else { return [] }
+            let to = EIP55.checksum(hex(Array(payload[(i + 1)..<(i + 21)])))
+            let value = decimal(Array(payload[(i + 21)..<(i + 53)]))
+            // Same subtraction rule: `i + 85 + dataLength` traps on a crafted
+            // length word, and `payload.count - i - 85` cannot, because the
+            // guard above has already proven it is not negative.
+            guard let dataLength = int(Array(payload[(i + 53)..<(i + 85)])), dataLength >= 0,
+                  dataLength <= payload.count - i - 85 else { return [] }
+            let data = hex(Array(payload[(i + 85)..<(i + 85 + dataLength)]))
+            calls.append(BatchCall(operation: operation, to: to, value: value,
+                                   reading: read(data: data, to: to, value: value, safe: safe)))
+            guard calls.count <= maxBatchCalls else { return [] }
+            i += 85 + dataLength
+        }
+        // The walk must land EXACTLY on the end. `i > payload.count` is
+        // unreachable given the bounds above; the check states the invariant
+        // the loop rests on rather than trusting it silently.
+        guard i == payload.count else { return [] }
+        return calls
+    }
+
+    /// A 32-byte word as an `Int`, or nil when it does not fit one.
+    ///
+    /// Used ONLY for lengths and offsets into a buffer we already hold, never
+    /// for money — an amount goes through `decimal`, which cannot overflow. A
+    /// length claiming more than `Int.max` is a length this walk refuses, and
+    /// that is the correct answer rather than a truncated one.
+    private static func int(_ word: [UInt8]) -> Int? {
+        guard word.count == 32, word.prefix(24).allSatisfy({ $0 == 0 }) else { return nil }
+        var out = 0
+        for byte in word.suffix(8) {
+            let (shifted, overflow) = out.multipliedReportingOverflow(by: 256)
+            guard !overflow else { return nil }
+            let (sum, carried) = shifted.addingReportingOverflow(Int(byte))
+            guard !carried else { return nil }
+            out = sum
+        }
+        return out
+    }
+
+    /// `0x`-prefixed lowercase hex — `SafeABI.hex` under a local name so this
+    /// file's own walker reads in one vocabulary.
+    private static func hex(_ bytes: [UInt8]) -> String { SafeABI.hex(bytes) }
 
     /// A 32-byte word as a decimal string. Long division by 10 on the bytes,
     /// because uint256 has no Swift integer to land in.
@@ -520,8 +676,40 @@ enum SafeCalldata: Equatable {
 
     /// Whether this reading is one the surface may state as fact. False for
     /// `.undecoded`, which must be shown as a selector and a hash instead.
+    ///
+    /// A `.batch` is decoded in this sense whatever it contains — the surface
+    /// may always say "a batch of N calls" — and `isFullyReadable` below is
+    /// the sharper question of whether every call inside it read.
     var isDecoded: Bool {
         if case .undecoded = self { return false }
         return true
+    }
+
+    /// Whether the surface may present this reading as the WHOLE story
+    /// (2026-09-07).
+    ///
+    /// `isDecoded` answers "may I name this at all"; this answers "have I
+    /// read all of it". They differ on exactly one case and it is the common
+    /// one: a batch whose entries walked but one of whose inner calls hit an
+    /// unknown selector is nameable ("a batch of 5 calls"), listable line by
+    /// line, and NOT complete — so the screen states the four it read and
+    /// says plainly that it could not read the fifth.
+    ///
+    /// An EMPTY batch is not fully readable: `[]` is what `batchCalls`
+    /// returns when the payload did not walk.
+    var isFullyReadable: Bool {
+        switch self {
+        case .undecoded: return false
+        case .batch(let calls):
+            return !calls.isEmpty && calls.allSatisfy { $0.reading.isFullyReadable }
+        default: return true
+        }
+    }
+
+    /// The calls inside a batch, empty for every other reading — so a caller
+    /// listing them does not have to unwrap the case itself.
+    var batchCalls: [BatchCall] {
+        if case .batch(let calls) = self { return calls }
+        return []
     }
 }

@@ -36,23 +36,81 @@ enum SafeSigner {
     /// A Safe transaction-service segment paired with the chain id its
     /// domain separator carries and the RPC network the rail reads on.
     ///
-    /// `gno` (Gnosis Chain) is deliberately ABSENT, and absent rather than
-    /// guessed: `WalletApprovals` carries no Gnosis host, so the rail could
-    /// not run there — and a chain where the cross-check cannot run is a
-    /// chain where this app must not sign. `SafeBridge` still READS Gnosis
-    /// Safes exactly as before; only signing declines, and it says so.
+    /// **A chain is here ONLY if the cross-check can run on it.** That is the
+    /// whole rule and it has not changed: a chain where `getTransactionHash`
+    /// cannot be read is a chain this app must not sign on, because the local
+    /// encoder would be the only witness to what is being authorized.
+    ///
+    /// `gno` (Gnosis Chain) was absent under that rule until 2026-09-07, when
+    /// it turned out the rule was being applied to a fact about ONE FILE —
+    /// "`WalletApprovals` carries no Gnosis host" — rather than about the app.
+    /// `GnosisPayBridge` has read Gnosis Chain on every wallet pass since
+    /// 2026-07-26 through hosts it measured and `NetworkReach` discloses, so
+    /// the cross-check has somewhere to run and the refusal no longer follows.
+    /// See the rail's own comment for what remains unmeasured.
     private struct Rail {
         let seg: String
         let chainId: Int
-        /// The `WalletApprovals` network id — its measured keyless hosts.
-        let network: String
+        /// The `WalletApprovals` network id — its measured keyless hosts. Nil
+        /// for a chain read through another bridge's own hosts; see
+        /// `reader`.
+        let network: String?
+        /// Where the cross-check's `eth_call` goes. The rail exists ONLY so
+        /// that question has an answer — a chain with no reader is a chain
+        /// this app refuses to sign on.
+        let reader: Reader
+
+        init(seg: String, chainId: Int, network: String? = nil, reader: Reader = .walletApprovals) {
+            self.seg = seg
+            self.chainId = chainId
+            self.network = network
+            self.reader = reader
+        }
     }
+
+    /// Whose measured, disclosed hosts answer this chain's `eth_call`.
+    ///
+    /// Two cases rather than a host list, because this file may not name a
+    /// host that is not Safe's own — that is what makes the one-POST conduct
+    /// guard checkable (`scripts/safetx-selftest.sh`). Each case delegates to
+    /// the bridge that already owns its hosts and already discloses them on
+    /// the privacy screen.
+    private enum Reader {
+        /// `WalletApprovals`' keyless per-chain hosts — five EVM chains.
+        case walletApprovals
+        /// `GnosisPayBridge`'s two measured Gnosis Chain hosts.
+        case gnosisChain
+    }
+
     private static let rails: [Rail] = [
         Rail(seg: "eth",  chainId: 1,     network: "eth-mainnet"),
         Rail(seg: "base", chainId: 8453,  network: "base-mainnet"),
         Rail(seg: "arb1", chainId: 42161, network: "arb-mainnet"),
         Rail(seg: "oeth", chainId: 10,    network: "opt-mainnet"),
         Rail(seg: "pol",  chainId: 137,   network: "matic-mainnet"),
+        // GNOSIS CHAIN, ADDED 2026-09-07 — and the reason it was absent is
+        // exactly the reason it may now be here.
+        //
+        // The original refusal said: "`WalletApprovals` carries no Gnosis
+        // host, so the rail could not run there — and a chain where the
+        // cross-check cannot run is a chain where this app must not sign."
+        // The RULE is untouched and is the whole safety argument. What changed
+        // is that its premise was about one file: `GnosisPayBridge` has swept
+        // Gnosis Chain on every wallet pass since 2026-07-26 through two hosts
+        // it MEASURED (`rpc.gnosischain.com`, `rpc.gnosis.gateway.fm`, both
+        // disclosed in `NetworkReach`), so the cross-check does have somewhere
+        // to run.
+        //
+        // This matters more than a sixth chain usually would: a Gnosis Pay
+        // account IS a Safe on Gnosis Chain (prd §222), so every card account
+        // this app already reads sat on the one chain it refused to sign for.
+        //
+        // UNMEASURED: those hosts are proven for `eth_getLogs` and
+        // `eth_getBlockByNumber`, not for `eth_call`. If they refuse it the
+        // read fails, `prepare` returns `.chainUnreadable`, and the app
+        // DECLINES — the same answer it gave before, reached the same way. So
+        // the worst case of being wrong here is today's behaviour.
+        Rail(seg: "gno",  chainId: 100,   reader: .gnosisChain),
     ]
 
     static func canSign(onSegment seg: String) -> Bool {
@@ -328,9 +386,15 @@ enum SafeSigner {
     }
 
     private static func call(_ rail: Rail, to: String, data: String) async -> String? {
-        await WalletApprovals.rpcRead(
-            network: rail.network, method: "eth_call",
-            params: [["to": to, "data": data], "latest"]) as? String
+        let params: [Any] = [["to": to, "data": data], "latest"]
+        switch rail.reader {
+        case .walletApprovals:
+            guard let network = rail.network else { return nil }
+            return await WalletApprovals.rpcRead(
+                network: network, method: "eth_call", params: params) as? String
+        case .gnosisChain:
+            return await GnosisPayBridge.read(method: "eth_call", params: params) as? String
+        }
     }
 
     // MARK: - The signature, and the only place it leaves

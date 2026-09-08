@@ -3604,9 +3604,29 @@ enum ProbeHooks {
                     }
                     switch await SafeSigner.prepare(seg: seg, safeTxHash: hash) {
                     case .success(let ready):
-                        NSLog("signer| %@ READY have=%d/%d reading=%@ decoded=%@",
+                        // `fully=` is the field to read on a real Safe: §238
+                        // measured 96 of 100 transactions as `multiSend`, so
+                        // most rows here are batches, and `decoded=yes
+                        // fully=no` is the shape of a batch this app can name
+                        // and cannot fully read. A batch printing calls=0 is
+                        // one whose payload did not walk — the refusal — and
+                        // is what a `multiSend` looked like before 2026-09-07.
+                        NSLog("signer| %@ READY have=%d/%d reading=%@ decoded=%@ fully=%@ calls=%d",
                               hash, ready.have, ready.required,
-                              String(describing: ready.reading), ready.reading.isDecoded ? "yes" : "no")
+                              String(describing: ready.reading),
+                              ready.reading.isDecoded ? "yes" : "no",
+                              ready.reading.isFullyReadable ? "yes" : "no",
+                              ready.reading.batchCalls.count)
+                        // ONE LINE PER CALL — the `-todayProbe` truncation
+                        // lesson: a batch folded into one NSLog is a line the
+                        // log truncates in the middle of exactly the call
+                        // nobody could read.
+                        for (i, call) in ready.reading.batchCalls.enumerated() {
+                            NSLog("signerCall| %@ #%d op=%d%@ to=%@ value=%@ %@",
+                                  hash, i + 1, call.operation,
+                                  call.isDelegateCall ? " DELEGATECALL" : "",
+                                  call.to, call.value, String(describing: call.reading))
+                        }
                     case .failure(let refusal):
                         NSLog("signer| %@ REFUSED %@", hash, String(describing: refusal))
                     }
