@@ -312,6 +312,18 @@ struct IntroCover: View {
 
     // MARK: - The cover
 
+    /// The cover spoken as ONE label, composed from the three strings it
+    /// draws rather than repeated as a fourth literal (2026-09-07). The
+    /// headline changed with the inbox frame and the old label was a single
+    /// baked sentence carrying the old words, which is exactly how a spoken
+    /// form drifts from a drawn one. Every piece here is already in the
+    /// catalog with all four translations, so composing costs nothing.
+    private var coverSpoken: String {
+        [String(localized: "One inbox for all your accounts."),
+         String(localized: "Read it all together, or one app at a time. Ask your agents about any of it."),
+         String(localized: "This is a demo.")].joined(separator: " ")
+    }
+
     var body: some View {
         ZStack {
             // OPAQUE. See the type's own note: a live feed behind this is a
@@ -342,7 +354,16 @@ struct IntroCover: View {
                     CasberiMark(size: 56)
                         .padding(.bottom, DS.Space.s3)
                         .accessibilityHidden(true)
-                    Text("Everything you need, in one place.")
+                    // THE INBOX FRAME (user ruling 2026-09-06, prd §643) —
+                    // the same sentence the empty feed leads with
+                    // (`FeedScreen.emptyInvitation`), said HERE because this
+                    // is the screen everyone reads and that one is reached
+                    // only by someone who left the demo. It replaced
+                    // "Everything you need, in one place.", which named no
+                    // noun and fit a notes app, a launcher or a bank equally.
+                    // Both strings were already in the catalog, so the swap
+                    // carried no translation debt.
+                    Text("One inbox for all your accounts.")
                         .dsText(.heading34)
                         .foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -415,7 +436,7 @@ struct IntroCover: View {
         // The first scroll leaves the cover, not the rows under it.
         .gesture(DragGesture(minimumDistance: 24).onChanged { _ in start() })
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Everything you need, in one place. Read it all together, or one app at a time. Ask your agents about any of it. This is a demo."))
+        .accessibilityLabel(Text(coverSpoken))
         // What activating DOES, not how — VoiceOver already says how on each
         // platform, and "double-tap" would be wrong under a pointer.
         .accessibilityHint(Text("Starts the demo now"))

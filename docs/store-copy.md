@@ -1,6 +1,6 @@
 # App Store copy
 
-Written and read back through the App Store Connect API on 2026-09-03. Field
+Last applied 2026-09-07 (iOS). Read back through the App Store Connect API on 2026-09-03. Field
 editability while a version is in review is recorded in the
 `store-metadata-editable-in-review` memory: promotional text and review notes
 take a PATCH, description / What's New / keywords / subtitle answer 409.
@@ -8,108 +8,42 @@ take a PATCH, description / What's New / keywords / subtitle answer 409.
 Caps: description 4000, What's New 4000, review notes 4000, keywords 100,
 promotional text 170, subtitle 30.
 
-## ⚠️ THE RECORD IS BEHIND THE STORE (2026-09-08)
+## iOS — APPLIED 2026-09-07 (§643)
 
-**iOS 1.0.12's copy was pushed to App Store Connect on 2026-09-08, and the
-subtitle was moved to the inbox frame. Neither string is in this file.**
+The description below is LIVE on iOS. The user applied it by hand on
+2026-09-07, the day it was written. **This heading said "Pending, apply to
+1.0.12" for four days after the copy had moved on**, which is the whole reason
+the §643 session had to re-derive what was live rather than read it here — so
+when a field is applied, change this heading in the same breath.
 
-Two separate failures, and the second is the one to fix first:
-
-1. **§643's halved description was never written here.** That entry closes
-   *"Nothing is pushed. The copy is staged in `docs/store-copy.md` only"* and
-   measures the new copy at 1,794 characters (iOS) and 1,778 (Mac). This file
-   was last touched by the §628/§629 commits and holds the **3,999-character**
-   iOS description and the **3,994-character** Mac one — the 100+ app catalogue
-   dump §643 ruled against. The halved text exists in no file, no stash and no
-   branch.
-2. **So what is live is unknown to the repo.** Either the halved copy went up
-   and has no record here, or the old copy did and §643's ruling never
-   shipped. Only App Store Connect can say which.
-
-**OWED — paste the LIVE strings in, read back through the ASC API
-(`scripts/appstoreconnect-selftest.sh`'s credentials), not from memory:**
-
-- [ ] iOS 1.0.12 description, with its measured character count
-- [ ] Mac description, if it changed
-- [ ] **Subtitle** — `docs/app-store-submission.md` still records
-      `One home for your things` (24). The subtitle is one of the three fields
-      Apple actually INDEXES for search (name, subtitle, keywords), which is
-      §643's own point about the description being the field that is not.
-- [ ] Keywords, if they moved off the 2026-09-03 string below
-
-**Nothing below this block has been verified as live since 2026-09-03.** The
-section headings are left as they were written rather than re-labelled from a
-guess — a heading that says "Live" on unverified text is worse than one that is
-merely stale.
-
-## Pending — iOS, apply to 1.0.12
-
-iOS 1.0.11 was In Review on 2026-09-03, so its description and What's New could
-not be changed. Both below are finished and measured; paste them into the next
-version. The Mac equivalents are already live on 1.0.11.
-
-Also pending on iOS, both refused with 409 and both already applied on Mac:
+Still pending on iOS, refused with 409 on 2026-09-03 and already applied on Mac:
 
 - keywords: `feed,reader,rss,notes,journal,dashboard,tracker,agent,assistant,ai,private,portfolio,wallet,crypto`
   (98 chars — the old string led with `wallet,crypto`, which is the first thing
   a reviewer scans on an app that was just rejected under Guideline 3.1.5;
   reordering costs nothing, since keyword order does not affect search ranking)
 
-### iOS description (3,999 chars)
+### iOS description (1,794 chars)
 
-Casberi is a productivity app: one private feed for everything your apps produce, and an agent that answers from it.
+Everything you build is scattered across apps, wallets and agents. Casberi is a productivity app that puts all your accounts in one private feed, with an agent that answers from it. No account, no servers, no tracking.
 
-Connect once, and posts, transactions, deploys, releases, workouts, events, screenshots and notes land in one feed on your iPhone. Ask about any of it in plain words; the answer comes from your own things, never invented.
+TRY IT BEFORE YOU CONNECT ANYTHING
+One tap fills Casberi with sample data, so you can feel the whole app first.
 
-New here? Start with the demo: one tap fills Casberi with sample data before you connect anything.
+ONE FEED
+A deploy failing, an incident resolving, a dispute deadline, App Review's verdict — beside your posts, your workouts and your notes. Read it all together, or one app at a time. No dashboard tour every morning. In the US, Apple Card, Apple Cash and Savings land with the merchant's real name, read on this iPhone and never uploaded.
 
-Every app connects its own honest way — a tap for Apple apps, a read-only key for services, an import where there's no API, a pasted address for wallets. Never a password.
+ASK IT
+The agent searches your things, follows leads across sources, and shows exactly which things it read. Answers draw real charts. With Apple Intelligence it runs on Apple's on-device model, or bring your own key and it stays in your Keychain.
 
-THE CATALOG — 100+ APPS, BY CATEGORY
-
-• Work — GitHub, GitLab, Jira, Stripe, Sentry, Vercel, PagerDuty, Cloudflare, AWS, PostHog, Slack, Linear, Notion, Trello, Polar, Radicle, App Store Connect, npm, PyPI, Hugging Face
-• Wallet — Apple Wallet, Coinbase, Kraken, Binance, Gemini, Safe, ENS, ether.fi, Gnosis Pay, Peer, Railgun, 0xBow Privacy Pools, ETH Validators, Walletbeat, Altana, Dodo Payments, CardPointers
-• Developer networks — Base Vibenet, Hegota Devnet, Frames Devnet
-• Network — X, Instagram, TikTok, Snapchat, Telegram, Farcaster, Bluesky, Nostr
-• Agent — ChatGPT, Claude, Claude Code, Gemini, Grok, Cursor, Venice, Bankr, OpenRouter, 1Claw
-• Markets — Tokens, Kalshi, Polymarket, Stocktwits, GeckoTerminal, L2BEAT, Circle x402
-• Reading — RSS, Substack, Readwise, Kindle, Bookmarks
-• Notes — Apple Notes, Apple Journal, Day One, Obsidian
-• Schedule — Calendar, Reminders, Todoist, Cal.com, Calendly
-• Watching & Listening — YouTube, Twitch, Apple Music, Podcasts
-• Shopping — Shopify, Privacy, Bitrefill, Deals, Open Food Facts
-• Saves & Images — Reddit, Raindrop, Pinterest
-• Fitness — Apple Health, Strava
-• Mail — Gmail, iCloud Mail
-• Storage — Files, Dropbox
-• Plus — Photos, Contacts, HomeKit, OpenSea, Steam. More join weekly.
-
-WORK, ACTUALLY COVERED
-A deploy failing, an error regressing, an incident resolving, a dispute deadline, App Review's verdict — all in one feed. No dashboard tour every morning.
-
-ASK YOUR THINGS
-The agent searches your things, follows leads across sources, and shows exactly which things it read. Answers draw real charts. With Apple Intelligence it's Apple's on-device model; optionally bring your own key — it stays in your Keychain. Bankr answers about your onchain holdings; it never moves funds or transacts for you.
-
-YOUR APPLE CARD, IN THE FEED (US)
-Apple Card, Apple Cash and Savings land with the merchant's real name — read on this iPhone, never uploaded. Casberi speaks up when a subscription's price rises or quietly stops.
-
-WATCH ANY WALLET
-Paste an address or a name (ENS, .sol), or connect read-only through WalletConnect — watching can never trade or move funds. Holdings as a treemap with Aave, Morpho, Uniswap, Hyperliquid and Aerodrome positions; approvals ranked by dollars at stake, with a path to revoke.
-
-DEVELOPER NETWORKS
-Base Vibenet, Hegota Devnet and Frames are test networks. Make an account, claim from the faucet, send test transactions and explore each one. Nothing on them has a price or a market: no real cryptocurrency or value is transferred, and none of it can reach a live network.
-
-BRING YOUR ARCHIVES
-Import your X, Instagram, TikTok, Snapchat and Telegram exports, plus ChatGPT, Claude and Gemini conversations — then search them like memory: "my posts from 2019".
+CONNECT HONESTLY
+Over 90 apps across work, wallet, social, reading, notes, schedule, fitness, mail and storage. A tap for Apple apps. A read-only key for services. An import where there is no API. A pasted address for wallets, which can never trade or move funds. Never a password.
 
 CAPTURE WITHOUT FRICTION
-Share from any app and it lands instantly. Screenshots flow in on their own, searchable by what's in them. Voice notes transcribe; links get read for you.
-
-FOUND EVERYWHERE
-Spotlight, Siri and Shortcuts reach your things. Visual Intelligence matches what your camera sees to what you've saved.
+Share from any app and it lands instantly. Screenshots flow in on their own and become searchable by what is in them. Voice notes transcribe. Import your X, Instagram, TikTok and Snapchat archives, plus ChatGPT and Claude conversations, then search them like memory.
 
 YOURS, ACTUALLY
-No account, no tracking, no ads. No Casberi server holds your things — there is no backend at all. Optional sync through your own iCloud. Export everything to one file; delete everything for real.
+There is no Casberi server and no backend at all. No account, no ads, no tracking. Optional sync through your own iCloud. Export everything to one file. Delete everything for real.
 
 Casberi isn't another chatbot. It's your own things, in one feed, with an agent that knows them.
 
@@ -118,65 +52,48 @@ Casberi isn't another chatbot. It's your own things, in one feed, with an agent 
 • Developer networks — Base Vibenet, Hegota Devnet and Frames are test networks: make an account, claim from the faucet and send test transactions. Nothing on them has a price or a market; no real cryptocurrency or value is transferred, and none of it can reach a live network.
 
 • Bankr — answers about your onchain holdings and only answers. It never moves funds or makes transactions on your behalf.
-## Live — macOS 1.0.11
+## Mac — BLOCKED, In Review (§643)
+
+macOS 1.0.11 is In Review as of 2026-09-07, so its **description and What's New
+answer 409** and the copy below cannot be applied yet. Apply it the moment the
+review clears; until then the Mac listing still carries the 3,994-character
+catalogue version, so the two platforms deliberately disagree and that is
+recorded rather than fixed.
+
+**Promotional text is NOT blocked.** It takes a PATCH while a version is In
+Review (`store-metadata-editable-in-review`), so the new 154-character line at
+the foot of this file can go to Mac today, ahead of the description.
 
 The Mac description is NOT the iOS one. `BridgeCatalog.Offer.unavailableOnMac`
 drops Apple Wallet, Apple Health, Strava and HomeKit on Catalyst, so the Mac
 copy must never list them, and the seat count is 99 against iOS's 103. The two
 descriptions were byte-identical until 2026-09-03, which is how the Mac listing
-came to advertise four seats the Mac app does not have.
+came to advertise four seats the Mac app does not have. Four differences in the
+copy below, each deliberate: no Apple Card block, "reading" where iOS says
+"workouts", no fitness in the category list, and a menu-bar-and-keyboard line
+where the Apple Card sentence sits on iOS.
 
-### Mac description (3,994 chars)
+### Mac description (1,778 chars)
 
-Casberi is a productivity app for Mac: one private feed for everything your apps produce, and an agent that answers from it.
+Everything you build is scattered across apps, wallets and agents. Casberi is a productivity app for Mac that puts all your accounts in one private feed, with an agent that answers from it. No account, no servers, no tracking.
 
-It isn't another client for them. Connect once, and posts, transactions, deploys, releases, events, screenshots and notes land in one feed. Ask about any of it in plain words; answers come from your own things, never invented.
+TRY IT BEFORE YOU CONNECT ANYTHING
+One tap fills Casberi with sample data, so you can feel the whole app first.
 
-New here? Start with the demo: one tap fills Casberi with sample data before you connect anything.
+ONE FEED
+A deploy failing, an incident resolving, a dispute deadline, App Review's verdict — beside your posts, your reading and your notes. Read it all together, or one app at a time. No dashboard tour every morning. Rooms answer to the menu bar and the keyboard; a row copies, previews with Space, and drags out to any app.
 
-Every app connects its own honest way — a tap for Apple apps, a read-only key for services, an import where there's no API, an address for wallets. Never a password.
+ASK IT
+The agent searches your things, follows leads across sources, and shows exactly which things it read. Answers draw real charts. With Apple Intelligence it runs on Apple's on-device model, or bring your own key and it stays in your Keychain.
 
-THE CATALOG — 99 APPS, BY CATEGORY
-
-• Work — GitHub, GitLab, Jira, Stripe, Sentry, Vercel, PagerDuty, Cloudflare, AWS, PostHog, Slack, Linear, Notion, Trello, Polar, Radicle, App Store Connect, npm, PyPI, Hugging Face
-• Wallet — Coinbase, Kraken, Binance, Gemini, Safe, ENS, ether.fi, Gnosis Pay, Peer, Railgun, 0xBow Privacy Pools, ETH Validators, Walletbeat, Altana, Dodo Payments, CardPointers
-• Developer networks — Base Vibenet, Hegota Devnet, Frames Devnet
-• Network — X, Instagram, TikTok, Snapchat, Telegram, Farcaster, Bluesky, Nostr
-• Agent — ChatGPT, Claude, Claude Code, Gemini, Grok, Cursor, Venice, Bankr, OpenRouter, 1Claw
-• Markets — Tokens, Kalshi, Polymarket, Stocktwits, GeckoTerminal, L2BEAT, Circle x402
-• Reading — RSS, Substack, Readwise, Kindle, Bookmarks
-• Notes — Apple Notes, Apple Journal, Day One, Obsidian
-• Schedule — Calendar, Reminders, Todoist, Cal.com, Calendly
-• Watching & Listening — YouTube, Twitch, Apple Music, Podcasts
-• Shopping — Shopify, Privacy, Bitrefill, Deals, Open Food Facts
-• Saves & Images — Reddit, Raindrop, Pinterest
-• Mail — Gmail, iCloud Mail
-• Storage — Files, Dropbox
-• Plus — Photos, Contacts, OpenSea, Steam and your own wallet addresses. More weekly.
-
-WORK, ACTUALLY COVERED
-A deploy failing, an error regressing, an incident resolving and how long it lasted, a dispute deadline, App Review's verdict — all in one feed, each as a reading rather than a raw event. No dashboard tour each morning.
-
-ASK YOUR THINGS
-The agent searches your things, follows leads across sources, and shows which ones it read. Answers draw real charts from your own numbers. With Apple Intelligence it's Apple's on-device model; or bring your own key — it stays in your Keychain, and Casberi records what it billed. Bankr answers about your onchain holdings; it never moves funds or transacts for you.
-
-WATCH ANY WALLET
-Paste an address or a name (ENS, .sol), or connect read-only through WalletConnect — watching can never trade or move funds. Holdings as a treemap, with Aave, Morpho, Uniswap, Hyperliquid and Aerodrome positions alongside; approvals ranked by the dollars at stake, with a path to revoke.
-
-DEVELOPER NETWORKS
-Base Vibenet, Hegota Devnet and Frames are public test networks. Make an account, claim from the faucet, send test transactions and read back what the chain did — frames, lanes, gas, queue. Nothing on them has a price or a market: no real cryptocurrency or value is transferred, and none of it can reach a live network.
-
-BRING YOUR ARCHIVES
-Import your X, Instagram, TikTok, Snapchat and Telegram exports, plus ChatGPT, Claude and Gemini conversations — then search them like memory: "my posts from 2019".
+CONNECT HONESTLY
+Over 90 apps across work, wallet, social, reading, notes, schedule, mail and storage. A tap for Apple apps. A read-only key for services. An import where there is no API. A pasted address for wallets, which can never trade or move funds. Never a password.
 
 CAPTURE WITHOUT FRICTION
-Share from any app and it lands instantly. Screenshots from your iPhone flow in on their own, searchable by the words inside them. Voice notes transcribe; links get read.
-
-FOUND EVERYWHERE
-Spotlight, Siri and Shortcuts reach your things. Agents on this Mac can read them too, over a local connection you switch on yourself — loopback only, token-gated, off by default.
+Share from any app and it lands instantly. Screenshots flow in on their own and become searchable by what is in them. Voice notes transcribe. Import your X, Instagram, TikTok and Snapchat archives, plus ChatGPT and Claude conversations, then search them like memory.
 
 YOURS, ACTUALLY
-No account, no tracking, no ads. No Casberi server holds your things — there is no backend. Optional sync through your own iCloud. Export everything to one file; delete everything for real.
+There is no Casberi server and no backend at all. No account, no ads, no tracking. Optional sync through your own iCloud. Export everything to one file. Delete everything for real.
 
 Casberi isn't another chatbot. It's your own things, in one feed, with an agent that knows them.
 
@@ -196,6 +113,6 @@ The wallet rebuilt, three developer networks, and the biggest type on a screen n
 • Design — the chip strip is ink at rest, so the selected chip is the only blue; state words like Pending, Final and Locked lost their pill; trays and sheets are consistent throughout.
 • Fixed — the app could get stuck behind grey placeholder bars after a dismissed system alert or a glance at the app switcher, which read as loading forever. Returning now always clears it. Images in a connected folder no longer stay blank when the files live in iCloud.
 
-### Promotional text — both platforms (169 chars)
+### Promotional text — both platforms (154 chars)
 
-Everything your apps produce — deploys, posts, transactions, events, notes — in one private feed, with an agent that answers from it. No account, no server, no tracking.
+Everything you build is scattered across apps, wallets and agents. Casberi puts all your accounts in one private feed, with an agent that answers from it.
