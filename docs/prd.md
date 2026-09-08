@@ -238,6 +238,8 @@ marks chronological position within the pair.
 | §608 (the slot-order audit) | a setup screen's six blocks keep one order, enforced by `setup-anatomy-audit.py` reading each screen's body | §639b — on `AccountPage` the order is the chassis's (two closures and data), so a screen cannot reorder it, and there are no screens left off the chassis; check B is deleted with the slots and check A became a denylist of the old chassis's own vocabulary |
 | §190 / §613 (below the identity area, every control is a slab) | a manage page's controls are one height, one radius, one fill — the tinted commit and the ink door, each with a glyph disc | §640 — INSIDE an account page's act (and its key sheet) they draw ROWS instead: same disc, same 56pt height, no fill. The slab is untouched everywhere it was written for — the wallet manager, the devnet rooms' Send/Top up, the trays' compact filters |
 | §234 / §235 (the prediction rooms as seats) | Kalshi and Polymarket are catalog seats whose rooms head with a live book and a settled-markets record | §638 — retired seats: no catalog entry, no chip, no room; the bridge files stay one release so a connected seat is not stranded, then go |
+| §306 (the three notification classes) | alarms, arrivals and the daily whisper each ship ON, and the permission prompt is deferred to the first real alarm so it carries its own reason | amended by §644 — the deferral stands and is why the defaults were wrong: the grant is earned by a dispute and was then spent on ordinary arrivals and a 07:30 push nobody chose. Arrivals and the whisper are opt-IN; alarms stay on, because they are what the prompt asks for |
+| §632 (nothing under a thing is a guess) | the related shelf, two chips and the provenance sentence are cut; what the sheet leaves is eyebrow, title, the thing, where it came from, the dial, the earlier copy | amended by §645 — the finding is untouched and is what licenses the change: every word the sheet now draws has a human author. What moves is "the thing", which may be the words themselves rather than a card that links to them |
 
 ## 1. Thesis
 
@@ -50217,3 +50219,208 @@ descriptions separate in the first place.
 **Nothing is pushed.** The copy is staged in `docs/store-copy.md` only.
 Description edits answer 409 while a version is In Review; promotional text
 and review notes take a PATCH.
+
+## §644 — The app does not compete for the lock screen: two of three notification classes were riding in on a grant given for the third (user: "we're not smart enough on device and they're already getting notifications from every other app and every other place — we would just be another one in the noise", 2026-09-08)
+
+**The ruling, in the user's frame.** Casberi does not bid for attention it
+cannot infer well. A person's lock screen already carries forty apps asking for
+it, and an app whose whole claim is that everything lands in one place gains
+nothing by becoming the forty-first buzz. **Attention the app cannot judge is
+attention it does not claim.**
+
+**What this closes before it opened.** A "Needs you" room was proposed in the
+same session — a dock lane fed by `NotifySweep.classify`'s `.alarm` class, on
+the reasoning that §643 put the word *inbox* on three surfaces while §455 had
+ruled the feed a corpus and declined read/unread. That lane is DECLINED, and
+the reason is not the surface: it is that the classifier underneath is not good
+enough to be believed, which is the same judgement §632 made four days earlier
+when it cut the related shelf (*"the on device intelligence isn't yet smart
+enough to show things that actually matter"*). A lane is a shelf with a room
+around it. **§455's declination therefore stands unamended** — the feed is a
+corpus, "inbox" means everything arrives here, and the cover's subline already
+names the two verbs that follow (read, ask).
+
+**And the shipped defaults contradicted the ruling, which is the half worth
+recording.** `Notifications.Settings` shipped `alarms = true, arrivals = true,
+whisper = true`. Read that against `askIfNeeded`, which is disciplined and was
+disciplined for a stated reason (§306: *"The ask happens the first time an
+alarm-class event ACTUALLY EXISTS — never at launch… asking at the first real
+dispute means the prompt carries its own reason"*). Both halves are right on
+their own and the pair is not: **the grant is earned by a dispute and then
+spent on ordinary arrivals and a 07:30 daily push nobody chose.** Two classes
+were riding in on a permission given for the third, and the person who said yes
+to the one had no idea they were saying yes to three.
+
+`arrivals` and `whisper` default `false` now. `alarms` stays `true`, and the
+asymmetry is the point rather than a compromise: alarms are what the prompt
+ASKS for, so defaulting them off would leave somebody who granted permission at
+a dispute hearing nothing about the next one — a switch that silently does
+nothing, which is §83. Both other rows already say plainly what they do
+(`AccountDetailSheet.notifyCard`: *"Money in, and likes or replies on your own
+posts"*, and the whisper's own hour picker), so turning one on is one tap by
+somebody who wants it.
+
+**Nothing else moves.** The three classes, the collapse rules, quiet hours, the
+time-sensitive pair and the whole of `NotifyPlan` are untouched — this changes
+which classes are ON when nobody has chosen, not what any of them do.
+`notify-selftest.sh` compiles `NotifyPlan.swift`, which holds no defaults, so
+no harness asserted the old values and none asserts the new ones; the switch a
+person actually sets has always been the stored value, and `Settings` only
+supplies the answer for a key nobody has written.
+
+**Amends §306** — its classes and its ask survive exactly; what changes is that
+two of them no longer arrive switched on behind the third.
+
+**Ceiling, stated.** This is a defaults change and defaults only govern the
+people who install after it. Anybody already running a build has written
+`notify.arrivals` / `notify.whisper` the moment they opened that settings card,
+and a stored value wins over any default — so the fix reaches new installs and
+leaves everyone else exactly where their own choice put them. Migrating them
+would mean overwriting a setting somebody may have set deliberately, which is
+worse than the noise.
+
+## §645 — The sheet draws the words the app holds: `enrichedText` stops being retrieval-only, and the four carve-outs stop being carve-outs (user: "I feel like the answer might be in making the reading experience richer, and by reading I mean any feed not necessarily the feed itself, but the thing sheets when you open them up" / "I don't necessarily think new features are what is needed", 2026-09-08)
+
+**The rule this reverses.** `Thing.enrichedText` has been RETRIEVAL-ONLY since
+the 2026-07-15 ruling: the corpus may store body text so the answer path and
+the embedding index can reach it, and no view may draw it without a named
+exception. Four exceptions exist, and each was written as a one-off —
+**§320** (Obsidian: *"the vault bridge read somebody's notes, indexed them, and
+showed nobody the note"*), **§366** (Kindle: *"the words you marked the passage
+for were gone"*), **§367** (the conversation), **§455** (articles: *"the feed
+bridge reads your articles, indexes them, and shows nobody the article. A
+reader that already paid for the fetch and then withholds it is the strangest
+possible outcome"*). `ThingContent.swift` calls the fourth *"the fourth NAMED
+carve-out, not a reversal."*
+
+Four carve-outs in eight weeks, each arrived at independently, each reported as
+a defect rather than proposed as a feature, is not a rule with exceptions. It
+is a rule that is wrong. **The sheet draws the words the app holds; storing
+text a person cannot read is what now needs an argument.**
+
+**What this does NOT license, and the line is the whole reason it can be
+written this widely.** Nothing a MODEL wrote. `-digestProbe`'s own note stands
+verbatim — *"a summary lands in `enrichedText`, which is retrieval-only by the
+2026-07-15 ruling and therefore invisible on every screen… Nothing a model
+wrote is displayed by this feature"* — and that half of the old ruling is
+promoted from a side effect into the stated exception. §632 cut the related
+shelf two days ago on the finding that on-device inference here cannot carry a
+confidence floor, and §644 declined a whole surface on the same finding; a
+generated summary is that same guess with better manners. What this ruling
+draws is the PUBLISHER's words, the PERSON's words, and what is on their own
+screen — three things with an author who is not us.
+
+### The four passes, in order
+
+Full mechanics, call sites and harnesses: `docs/reading-spec.md`.
+
+**1 — A saved link draws the text it already has.** `LinkTitle.enrich` has run
+`fetchPage` on every pasted link for a year, so a saved link's lede is sitting
+in `enrichedText` right now. `ThingContent`'s article branch gates on
+`FeedArticleText.sources`, which is `["RSS", "Substack"]`, so it is not drawn.
+This is a DRAW GATE and nothing else: no fetch, no host, no `NetworkReach`
+entry, no schema change, therefore no CloudKit deploy (the 2026-08-01 rule).
+
+**2 — A screenshot draws its own transcript.** `ScreenshotOCR` prefers
+`RecognizeDocumentsRequest` on iOS 26 and returns a READING-ORDERED transcript
+— paragraphs held together, table cells kept in their rows (§282) — capped into
+`content`. That text titles the row (`ScreenshotTitle.from`), grounds the
+model's proposed name (`ScreenshotNaming.grounded`), answers questions, and
+feeds the facts row's dates; `ScreenshotContent` takes `assetID` and `stored`
+and draws a picture at `maxHeight: 280`. **Reading a screenshot means
+pinch-zooming it.** Drawn now as a row you open — never open by default, and
+never at all under a word floor, because the OCR of a home screen is nav chrome
+and a transcript under every picture is the §632 shelf wearing a new noun.
+
+**3 — Next and previous, past the journal.** `NoteSheetSource.neighbours` gives
+`.entry` rows two doors and §399 said why: *"so a journal can be read AS a
+journal instead of one sheet at a time."* That sentence is true of every
+reading room and reaches exactly one. **The design constraint that makes this
+honest rather than convenient: the walk follows the order of the list you
+opened from.** `FeedSheetRoute.thing` is reached from a feed that may be scoped
+to a source, filtered by kind, or narrowed by a search, and neighbours computed
+on a global `capturedAt` would offer a row the list behind you does not
+contain. The route carries its scope as a VALUE — never a `[Thing]`, which is
+CLAUDE.md corollary 4 and build 177's own crash — and where a scope cannot be
+reconstructed the doors are simply absent. An absent door is honest; a wrong
+one is not.
+
+**4 — Listen, once the audio session is settled.** `ArticleListenButton` and
+`ArticleSpeech.shared` are already generic — one synthesizer app-wide, a
+`speakingID` so a second article's button does not say "Stop", an
+`onDisappear` stop so *"a sound the person cannot turn off"* cannot happen.
+Moving it is a rename. **The decision under it is not**: the voice dies with
+the sheet, so you cannot start something and put the phone in your pocket,
+which is most of what listening is for. That needs an `AVAudioSession`
+category, background audio and `MPNowPlayingInfoCenter`. Settle it BEFORE the
+button spreads, or the result is one half-feature copied nine times.
+
+### The finding under all four, which outranks them
+
+**What this app calls "the article" is a lede.** `LinkTitle.parseReadable` is
+not a readability extractor: it takes the meta description plus at most SIX
+paragraphs from the content region, de-dupes, and **caps at 1,200 characters
+with an ellipsis** — *"capped so it stays a lede, not a mirror of the page"*,
+which was the correct bound when the text existed only to be searched. One
+implementation, three call sites, and `ArticleBody` draws its output at
+`reading20` under a comment reading *"on an article the body IS the thing."*
+Beside it, `FeedArticleText.thinSummary = 400` means an article whose publisher
+summary reaches 400 characters is never fetched at all. Both numbers are
+lede-sized.
+
+So widening the SOURCE gate before raising the CAP would spread a 1,200-
+character excerpt across ninety-five seats and call it reading. The cap is
+therefore last in the order and first in importance: passes 1–3 draw text that
+already exists, and this one changes what the app goes and gets.
+
+### Kept from §455, deliberately
+
+The three abstentions stay, with their reasons, and membership stays a NAMED
+list rather than "any http URL": YouTube's link is a watch page (a scrape adds
+recommendation titles — other people's video names in this video's text),
+Reddit's prose is the COMMENTS (*"strangers' words filed under a row that is
+not theirs"*, §83's shape), and a podcast page is the show notes the feed
+already handed us.
+
+**Amends §632** — that ruling's summary, *"Nothing on the sheet is a guess"*,
+is not weakened by any of this and is the reason all four passes qualify: every
+one draws text with a human author. What it amends is the sentence after it —
+§632 listed what the sheet leaves as *"eyebrow, title, the thing, where it came
+from, the dial, the earlier copy"*, and "the thing" is now allowed to be the
+words rather than a card that links to them.
+
+## §643 amendment — the copy was pushed, and it was never in the file this entry said it was staged in (2026-09-08)
+
+**Two corrections, and the second is the one that costs something.**
+
+**It is pushed.** §643 closes *"Nothing is pushed. The copy is staged in
+`docs/store-copy.md` only."* iOS 1.0.12's copy went to App Store Connect on
+2026-09-08 and the subtitle moved to the inbox frame in the same pass.
+
+**And it was never staged there.** `docs/store-copy.md` was last written by the
+§628/§629 commits and holds the **3,999-character** iOS description and the
+**3,994-character** Mac one — the 100+ app catalogue dump §643 ruled against.
+The halved text §643 measures at 1,794 and 1,778 characters exists in no file,
+no stash and no branch in this repo. So the entry asserted a state of the tree
+that the tree contradicted the day it was written, and nothing could see it:
+the copy docs are prose, no audit reads them, and §643's own closing line is
+the only thing that ever claimed the file had been updated.
+
+**The consequence is that the repo does not know what is on the store.** Either
+the halved copy went up and has no record here, or the old copy did and §643's
+ruling never shipped; only ASC can say which. `docs/store-copy.md` now opens
+with that gap stated and a checklist, and `docs/app-store-submission.md` marks
+its subtitle (`One home for your things`, 24) as the string that was replaced.
+**Neither is filled in from memory** — a store-copy doc carrying invented text
+is worse than one carrying an admitted hole, because the next session pastes
+from it.
+
+**Worth stating because §643 itself made the argument**: the entry's whole
+mechanical case is that a description is NOT indexed for search and that
+*"name, subtitle and keywords are"* — so it spent its length halving the one
+field that does not rank and left the record of the two that do behind. The
+subtitle is the field to read back first.
+
+**Standing lesson, third time in this repo**: an entry that says what it did to
+a FILE is checkable, and this one was not checked. Where a ruling's outcome is
+a file's contents, the commit that carries the entry carries the file.

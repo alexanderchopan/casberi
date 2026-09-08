@@ -8,6 +8,40 @@ take a PATCH, description / What's New / keywords / subtitle answer 409.
 Caps: description 4000, What's New 4000, review notes 4000, keywords 100,
 promotional text 170, subtitle 30.
 
+## ⚠️ THE RECORD IS BEHIND THE STORE (2026-09-08)
+
+**iOS 1.0.12's copy was pushed to App Store Connect on 2026-09-08, and the
+subtitle was moved to the inbox frame. Neither string is in this file.**
+
+Two separate failures, and the second is the one to fix first:
+
+1. **§643's halved description was never written here.** That entry closes
+   *"Nothing is pushed. The copy is staged in `docs/store-copy.md` only"* and
+   measures the new copy at 1,794 characters (iOS) and 1,778 (Mac). This file
+   was last touched by the §628/§629 commits and holds the **3,999-character**
+   iOS description and the **3,994-character** Mac one — the 100+ app catalogue
+   dump §643 ruled against. The halved text exists in no file, no stash and no
+   branch.
+2. **So what is live is unknown to the repo.** Either the halved copy went up
+   and has no record here, or the old copy did and §643's ruling never
+   shipped. Only App Store Connect can say which.
+
+**OWED — paste the LIVE strings in, read back through the ASC API
+(`scripts/appstoreconnect-selftest.sh`'s credentials), not from memory:**
+
+- [ ] iOS 1.0.12 description, with its measured character count
+- [ ] Mac description, if it changed
+- [ ] **Subtitle** — `docs/app-store-submission.md` still records
+      `One home for your things` (24). The subtitle is one of the three fields
+      Apple actually INDEXES for search (name, subtitle, keywords), which is
+      §643's own point about the description being the field that is not.
+- [ ] Keywords, if they moved off the 2026-09-03 string below
+
+**Nothing below this block has been verified as live since 2026-09-03.** The
+section headings are left as they were written rather than re-labelled from a
+guess — a heading that says "Live" on unverified text is worse than one that is
+merely stale.
+
 ## Pending — iOS, apply to 1.0.12
 
 iOS 1.0.11 was In Review on 2026-09-03, so its description and What's New could

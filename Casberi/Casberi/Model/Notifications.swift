@@ -23,10 +23,23 @@ enum Notifications {
     /// Per-class switches, the whisper's hour, and quiet hours. Stored in the
     /// app group so the background task reads the same values the settings
     /// screen writes.
+    ///
+    /// **ONLY THE CLASS THE GRANT WAS ASKED FOR IS ON BY DEFAULT (prd §644,
+    /// 2026-09-08).** All three shipped `true`, and `askIfNeeded` presents the
+    /// system prompt at the first real ALARM — so the permission was earned by
+    /// a dispute and then spent on ordinary arrivals and a 07:30 push nobody
+    /// chose. Two of the three classes were riding in on a grant given for the
+    /// third. Arrivals and the whisper are opt-IN now; both rows say plainly
+    /// what they do (`AccountDetailSheet.notifyCard`), so turning one on is one
+    /// tap by somebody who wants it.
+    ///
+    /// `alarms` stays `true` because it IS what the prompt asks for: a person
+    /// who granted permission at a dispute and then heard nothing about the
+    /// next one would have a switch that silently did nothing (§83).
     struct Settings: Sendable, Equatable {
         var alarms = true
-        var arrivals = true
-        var whisper = true
+        var arrivals = false
+        var whisper = false
         var whisperMinute = 7 * 60 + 30      // 07:30
         var quiet = NotifyRules.Quiet.default
 

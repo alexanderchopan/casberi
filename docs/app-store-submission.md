@@ -29,6 +29,14 @@ Casberi
 ```
 One home for your things
 ```
+
+> **⚠️ STALE — the subtitle was changed on 2026-09-08.** It was moved to the
+> inbox frame when 1.0.12's copy was pushed (prd §643, §643 amendment), and
+> the string above is the one it replaced. **The live string is not recorded
+> anywhere in this repo** — read it back through the App Store Connect API and
+> paste it here and in `docs/store-copy.md`. This is not cosmetic: subtitle is
+> one of the three fields Apple indexes for search, so it is the line the
+> keyword budget below is written against.
 *(24)* — Alternatives: `Everything you make, one home` (29) · `Your things, private, on-device` (30)
 
 ### Promotional text  *(≤170 — editable anytime without review)*
