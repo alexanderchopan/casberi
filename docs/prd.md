@@ -51605,7 +51605,7 @@ first.
 
 ### 2 · The entry row holds out its hand on return
 
-`AccountPage` stamps `doorOpened` the first time its door opens and hands it down as `accountDoorOpened`. An empty `DSSlabField` inside the act then shows the same system `PasteButton` §618 gave the address fields, filling the field. No dismiss is caught — the row lights on first open, so it is there whether the sheet is down or parked at half. The system reads the clipboard; the app never does, and the control dims itself while the clipboard holds no text. Mail's address row lights too, beside its password row; the person picks, and that beat a heuristic about which row is "the key".
+`AccountPage` stamps `doorOpened` the first time its door opens and hands it down as `accountDoorOpened`. An empty `DSSlabField` inside the act then shows the same system `PasteButton` §618 gave the address fields, filling the field. No dismiss is caught — the row lights on first open, so it is there whether the sheet is down or parked at half. The system reads the clipboard; the app never does, and the control dims itself while the clipboard holds no text. **SECRET rows only** — `secure`, which is a type rather than a heuristic: Jira's page has a site, an email and a token, and lighting all three would offer to put an API key in a domain. (An earlier draft of this paragraph said Mail's address row lights too; it does not — that field passes no `secure:`, and the review's own fix four paragraphs down is what governs.)
 
 ### 3 · The catalogue verb says the price
 
@@ -51619,6 +51619,7 @@ A dark row said "Connect" whether the tap would raise one system sheet or send y
 - **Keeping the controller alive across dismissals** to restore scroll position: the per-app data store already restores the login, and the door URL is the key page for most seats. Not worth a retained controller.
 - **Lighting only "the key row"** by placeholder heuristics: see §2.
 - **The cost as a subline**: overruled by the 2026-07-16 ruling, which this entry keeps.
+- **"Resume" as a paused seat's verb** (user, 2026-09-08: *"i like connect better"*). §653's first cut sent a paused, already-credentialed seat down `Offer.mode` and it wore "Add key", which is the §83 regression the review caught: the key is not missing. The fix is `.connect` — the word that makes no specific claim, and the one that row carried before this pass. A verb of its own was weighed for accuracy and declined: a paused seat is one tap from reading again, and a state that resolves itself does not earn a word in a closed set.
 
 ### The review's findings, applied the same hour
 
@@ -51652,6 +51653,29 @@ Checked in the simulator on Stripe: the door opens the sheet full; a drag lands 
 
 **Unseen.** The 02:45 firing itself: the agent is bootstrapped and `launchctl print` shows it loaded, and the wrapper was run by hand once to write the first row, but no scheduled firing has happened yet. The first morning's `verify.sh` readback is the proof.
 
+
+## §655 — The last confetti is gone: every shower in the app is the app's own tiles, and a shower names what it stands for (user: "there are a few places in the app like Wallet where the confetti is literally confetti and not app tiles … Wallet for example should be app tiles of just the wallet icon. any confetti should be app tiles", 2026-09-08)
+
+**The ruling.** `BerryRain` has ONE branch now. §619 replaced sixteen falling circles with one tile per source the pull is asking, and deliberately kept the circles alive for a single case: a pull or an arrival scoped to one WATCHED WALLET rained in that wallet's own face colour (§171, §501), on the reasoning that "which wallet" is an identity no tile carries. That reasoning was correct about the colour and wrong about the cost. One surface raining confetti reads as confetti everywhere — the eye does not know that this shower is the principled exception — and the wallet's face stop is already said at full strength, three times, by the crown's retint (§159, `chrome.pourHue`), the wallet's rail seat and its rows. So what the rain gave up is a fourth telling of something already on screen, and what it gained is one grammar with no exception to explain.
+
+**The inventory, which is the actual finding.** The user named Wallet; Wallet was two of ten sites. `ShellChrome.refreshRoster` was ordinary stored state, and its doc said as much — *"a writer that bumps the pulse without setting this inherits the last roster, which is the right default for every in-room bump"*. That is true of an in-room PULL and false of everything else, because walking into a room does not clear the roster. So:
+
+- **Two sites raining berries ON PURPOSE** — the wallet arrival (`WalletFeedTiles`) and the wallet-scoped pull (`FeedScreen.performPull`), both setting `refreshRoster = []` with a comment citing §619. These are what the user saw.
+- **EIGHT sites raining the LAST PULL'S ROSTER**, none of them intending anything of the kind: Hegotá's faucet pour and its key sheet, vibenet's faucet claim, Frames' key-create and top-up, Privacy Devnet's key-create and top-up, and both of `DevnetSendConsole`'s send endings. Pull on All, walk into the Hegotá room, top up: Photos and Gmail and Strava fall over a devnet faucet claim. Every one of these set the HUE and the PULSE by hand and simply did not mention the roster, which does not mean "no tiles" — it means "whatever was there".
+- **Six more bumps that are not celebrations at all** — vibenet's unwatch, key revoke, the two watch sheets and `onWatched`, plus Privacy Devnet's example watch. They exist to move a memoised room head, and the pulse is `BerryRain`'s only trigger, so each one deals a shower too, of the same inherited set.
+
+**The fix is a door, not a sweep.** `ShellChrome.rain(sources:)` sets the roster and bumps the pulse together, `refreshRoster` is `private(set)`, and every one of the sixteen sites names the seat it stands for. A shower can no longer stand for a set nobody asked about, because there is no way to bump without saying what falls. Named `rain` and not `pour` because `pourHue`/`pourDose` next door are §524's PAGE pour — a wash at the top of a surface — and the two have nothing to do with each other.
+
+**`refreshHue` is DELETED, and that is the honest consequence rather than tidying.** With tiles falling everywhere, nothing renders it: a tile carries its own brand. A stored value that every writer sets and no view reads is the fake status §83 bans, and leaving it would have kept the whole confetti path one edit from returning. `DevnetSendSheet` gained a `seat` parameter for the same reason its `tint` could not serve — `venue` is the shortened word a person reads ("Hegotá", "vibenet") and a tile needs the catalog spelling ("Hegota Devnet", "Base Vibenet") or `BridgeIcon` falls back to a blank glyph.
+
+**An empty roster deals NOTHING.** Not berries, not a fallback — no source was asked, so no tile falls. It is reachable only with nothing connected, where the avatar door still spins and `refreshFeed`'s own `DSHaptic.success()` still lands, so the gesture is answered. Wallet has no bundled `brand-wallet` asset, so its tile is `BridgeIcon`'s glyph fallback — a solid brand fill with a white glyph, rendered once per process through `ImageRenderer` — which is an app tile in every way that matters here.
+
+**Two things left standing, deliberately, as findings rather than edits.** The vibenet unwatch bumps TWICE (a local trim, then the chain read), so it deals two showers seconds apart — the exact stutter "one gesture, one shower" (2026-07-28) was written against, arriving by a route that rule did not cover. And it rains at all, over a REMOVAL. Both are grammar rulings the user owns; naming the seat makes them coherent without deciding them.
+
+**`BerryRain` IS `TileRain`, and the old name was wrong twice (user, 2026-09-08: "rename berry rain if you want to. the apps' mark is not a berri it is an octopus").** It rained no berries after §619 gave it tiles — and it never had a claim to the name in the first place, which is the correction worth recording: **the app's mark is an OCTOPUS**, and this file's own deleted drop palette was commented "the icon's berry blues". The new name says what falls and rhymes with `TileDrop`, the onboarding heap the doc already described it as rhyming with. The DEBUG hook goes with it — **`-rainPulse`, was `-berryPulse`**, which is the string to grep in anything written before today; `scripts/design-ramp-audit.py` held the file PATH as a literal, so a rename that stopped at the symbols would have silently dropped a file from that audit's sweep.
+
+**Unseen.** The tiles themselves render on a device: this pass is a build plus the static gates. `BerryRain`'s deal is deterministic per pulse, so a recording reproduces — `-berryPulse <s>` still plays it headless, and now logs a count that can be zero.
+
 ## §654a — The Frames devnet restarted, the envelope did NOT move, and the alarm was mine (2026-09-08, the night §654's nightly first ran)
 
 **The ruling.** A devnet restart is a re-measure of the pinned material, never a presumption that the encoder is broken. `live-integrations.sh`'s Frames genesis and pinned transaction are re-pinned to the chain that exists now; `frames-tx-selftest.sh` gains **vector 1R**, a live post-restart transaction whose keccak is the chain's own hash, restoring the claim the old vectors could no longer make; and the restart row now says what to check before alarming anybody.
@@ -51672,6 +51696,96 @@ Checked in the simulator on Stripe: the door opens the sheet full; a drag lands 
 
 **Unseen.** No build and no simulator — the shipping session held the tree for most of this, so this is `swiftc` harnesses and curl only. The re-pinned Frames rows have been through a full live run and are green; the corrected vibenet row has been run on its own section.
 
+## §656 — The two devnets moved and neither seat was broken: vibenet's document swapped account stacks, Frames restarted, and the honest fix was three comments (user: "i want to fix vibenet and frames before we ship", 2026-09-08)
+
+§654's nightly found two live breaks the morning of a ship, and the instruction was to fix them before uploading. **Measured, both seats were already doing the right thing, and the work turned out to be recording that rather than changing it** — which is written down here because the obvious reading of both findings is that something is broken, and acting on that reading would have damaged working code.
+
+### Vibenet: a different stack, not a dead one
+
+The contracts document at `api.vibes.base.org/api/vibenet/contracts` no longer carries an `eip8130` object. Gone: `Keystore`, `P256Authenticator`, `WebAuthnAuthenticator`, `DelegateAuthenticator`, `PolicyManager`, `SessionPolicy`, `DefaultAccount`, `CanonicalHighRatePayerAccount`. In their place is an ERC-4337 stack — `entryPointV06`, `coinbaseSmartWalletV11`, `coinbaseSmartWalletFactoryV11` — plus `activationRegistry`, `policyRegistry`, `b20Factory` and the validity contracts, with `usdv`, `nfv`, `vibecheck` and `faucetAddress` all still present at new addresses.
+
+**Four measurements decided it.** `eth_chainId` still answers 84538453, so this is the same chain and not a reset. The deterministic Keystore at `0x813012Bd8D971928475235BBac6F0488c4A100AC` answers `eth_getCode` with **10,675 bytes** — the document stopped naming it and the contract kept serving, which is verbatim the failure `VibenetBridge` was rebuilt around on 2026-09-04 ("absence of a thing where we happened to look, read as absence of the thing"). `readOnlyFallback` reads the four surviving fields, so the new token addresses land. And `fetch`'s merge prefers a parsed address over a cached one, so nothing stale survives where the document speaks.
+
+So the seat reads the chain correctly and reports that it cannot sign — through copy that was already written for this exact case, in `VibenetLedger` ("Your accounts are here and reading fine, but this app doesn't have the signing contract's address…") and `VibenetSend.noAccountStackSentence`. **The change is one comment** in `VibenetBridge.swift` naming the new stack and saying the code needed nothing, because the tempting fix — pinning authenticator literals — is what the file's header has forbidden since the seat shipped, and the addresses are per-chain deployments nobody outside the document can name.
+
+### Frames: restarted, and re-measured by the session that found it
+
+Chain 81410 kept its id, moved to genesis `0x4225d878…27ab`, and fell to ~14,000 blocks; `frames-tx-selftest.sh`'s vector 1 answers `null`. The app itself needs nothing — it reads live and the chain id matches — so the defect was in the harness, whose header claimed its vectors' "keccak matches the RPC's own hash" of a chain that no longer exists.
+
+**The §654a session fixed it properly and this entry exists partly to correct me.** I sampled every 40th block of the restarted chain, found three transactions of types 0x0 and 0x2, and wrote into the harness that there was no type-0x06 population left to re-measure — "not a smaller one, none". That was a sampling miss stated as a fact about the chain: vector 1R's transaction sits in block 7693, which my stride stepped over, and it answers `type=0x6` with the nonce it encodes. The paragraph is deleted. **A stride sample can only ever lower-bound a population, and a negative from one is not a finding** — the same shape as the §553 amendment this file already carries, arrived at from the other side.
+
+The header now says only what is true: vectors 1 and 2 describe a retired generation and still prove the encoder, and vector 1R restores the live claim. Their block records the open question honestly — one of four re-measured transactions carries an 800-byte payload and does not reproduce, and the app cannot produce that shape because every frame it builds passes empty data.
+
+### Not done, and why
+
+Neither seat's *capability* was restored: vibenet still cannot sign, because the addresses that would let it are not published anywhere this app may read, and inventing them is the one thing the file forbids. That is a real reduction in what the seat can do, caused upstream, reported honestly in the room rather than papered over. If the authenticators reappear in the document, or a way to discover them from Keystore logs is found (none were emitted in the last 4,000 blocks), the seat signs again with no code change at all.
+
+## §657 — A sheet drag laid out a room of ten thousand rows, and the watchdog counted wall clock (crash report `Casberi-2026-09-08-194301.ips`, build 539, iOS 18.6.2, 2026-09-08)
+
+**The fourth `0x8BADF00D` of §614's family, and the first one a finger started.**
+
+`EXC_CRASH / SIGKILL`, FRONTBOARD, "scene-update watchdog transgression: exhausted real (wall clock) time allowance of 10.00 seconds", `ProcessVisibility: Background`, `WatchdogVisibility: Background`. The process was 55 seconds old. Its own CPU statistics carry the arithmetic, the same way 511 and 521 did: **10.358s of application CPU at 16%**.
+
+### The stack is a finger
+
+```
+-[_UISheetInteraction handlePan:]
+  → -[UISheetPresentationController sheetInteraction:didChangeOffset:]
+  → -[_UISheetLayoutInfo _layout] → -[UISheetPresentationController _sheetLayoutInfoLayout:]
+  → -[UIView(Hierarchy) layoutBelowIfNeeded]        ← SYNCHRONOUS, per offset change
+  → _UIHostingView.layoutSubviews → ViewRendererHost.render → Update.dispatchActions
+  → UICollectionViewListCoordinatorBase.update(_:to:transaction:performDiff:)
+  → ListCoreDataSource.visitContent(atRow:visitor:)
+  → ListDiffable.rowIndex(at:) → ListDiffable.sectionIndex(atOffset:)
+  → Collection.index(atOffset:) → BidirectionalCollection.index(_:offsetBy:)
+  → ShadowSectionCollection.index(after:) → swift_bridgeObjectRelease
+```
+
+Three facts stack up, and none of them is a bug on its own:
+
+1. **UIKit lays a sheet's hosting view out synchronously on every drag offset change.** A drag to dismiss is enough; a resizable detent is not required.
+2. **SwiftUI's `List` resolves each row's index by a LINEAR WALK of its shadow collection.** `visitContent(atRow:)` over every row, each one calling `index(_:offsetBy:)`, makes one content update O(rows × sections). At thirty rows it is free. At thousands it is seconds of CPU.
+3. **A backgrounded app gets about 16% of a core.** §614 measured that throttle and this report repeats it exactly. A render costing a second and a half of CPU takes more than ten seconds of wall clock, and the watchdog counts wall clock.
+
+### What was actually unbounded
+
+`PersonRoomScreen` — the room behind a tapped face, presented as a sheet from `FeedScreen.sheetContent`'s `.person` route. It drew `merged` — **every row the corpus holds about one person, posts and onchain moves, in ONE `List` section, with no bound anywhere**. §307 raised the X import caps to 10,000 posts and §309 did the same for Instagram, TikTok and Snapchat, so after an archive import a decade of conversation with one correspondent is thousands of rows in that one section. The `load()` fetch that fills it is unscoped by design (an X archive puts a handle on `parent` and inside the words, so the room is narrowed in Swift after an unbounded fetch, and it cannot be otherwise) — but what is fetched and what is DRAWN are different questions, and only the second one is paid on every frame of a drag.
+
+Every other `List` in the app is bounded already: `FeedScreen` by `windowed(_:)` and `allRoomFetchLimit`, the fourteen others by what they list (a catalog, a week of receipts, an address book). This room was the one outlier, and it was the one behind a sheet.
+
+### The fix, and the rule it follows
+
+`Model/RowWindow.swift` — the flat row window, Foundation-only so a harness can compile it whole: `RowWindow.rowTarget` (30) rows, one more screenful per "Show older" tap, and a `more` flag that is false when the list exactly fills the budget, so the opener is never a control that reveals nothing (§83). `PersonRoomScreen` draws through it.
+
+`FeedScreen` keeps its own `windowed(_:)` and is deliberately NOT refactored onto this: that one windows GROUPS and carries a day's worth of rules this has no business knowing (whole days wherever they fit, a single day bigger than the budget truncated rather than allowed to unbound the room). This is the flat case.
+
+Two rulings carried over from the feed rather than re-decided:
+
+- **A TAP, never `.onAppear`.** `List` realizes rows ahead of the viewport, so growth on appearance re-renders, appears again, and runs away — the feed measured it driving `feedList` from 12% to 60% of main-thread samples.
+- **Monotonic, and it does not reset when the room's filter changes.** A window that collapsed under the person would undo their scrolling every time they glanced at the Onchain slice. It is a CAP, so a wide window over a narrow slice still draws that slice whole.
+
+**The lesson is `PrivacyCover`'s, one surface over**: making the render faster raises the row count at which this happens and does not change that it happens. Not drawing the rows does.
+
+### The review pass — three findings on the fix itself, all three fixed
+
+`/code-review` on the diff, and two of the three are the kind of thing that reads as fine and is not.
+
+**The window bounded the SwiftUI term and left the app's own term growing.** `merged` concatenates two arrays, filters both `.live` and sorts on `capturedAt` — n log n COMPARISONS, each a stored-property read on a live model, so ten thousand rows is well over a hundred thousand property accesses. And a body evaluation is exactly what a sheet drag causes per offset change. So the list diff became constant while this sat on the same path, growing with the corpus: half the fix, wearing the whole fix's write-up. `mergedRows` is the memoised merge now, rebuilt on the three events that can change it (each fetch landing, and a filter change), with `.live` spelled at the handoff in `body` because a `@State`-held raw ref is deliberately behind the store between rebuilds (liveness corollary 4).
+
+**The opener's haptic was silent on the room's own primary door.** `DSHaptic.tap()` is a counter bump on a shared bus and the mapping is a VIEW modifier, so the one `RootShell` mounts is covered by any sheet — `RootShell.rootPresented`'s own note states it ("a root sheet that is not a tray and fires its own `DSHaptic` calls needs one"), and this room is not a `DSTray`. Pushed from the roster it buzzed; opened from a face tap — the door the crash came through — it did nothing. `DSHapticSink` is mounted on the `.person` route only, so the pushed path cannot end up with two listeners buzzing twice.
+
+**The harness's negative sweeps read raw source.** Both guarded files document §657 by naming the shape they must no longer have, so prose explaining the rule would have failed the pass — the Obsidian/Cursor lesson, paid for twice already in `category-fold-selftest.sh` and `ondevice-selftest.sh`. They read a comment-stripped copy now; the positive greps still read the raw file, because a rule spelled only in a comment is not wiring.
+
+### Mechanical, because nothing here can reach it
+
+`scripts/row-window-selftest.sh` (wired into `verify.sh`) compiles `RowWindow.swift` unmodified and proves the arithmetic — the bound holds, growth stays linear, the opener appears when and only when rows were held back, a negative step cannot underflow the budget — plus eight drift guards on the wiring: that the room slices through `RowWindow`, that its `ForEach` draws the window's rows, that the merge stays memoised, that growth is a TAP, that the `.person` sheet mounts a haptic listener, and three negative ones (`ForEach(merged`, a body that merges for itself, and `.onAppear` growth) read against a comment-stripped copy. Twelve mutations, twelve caught — including a positive check that prose naming the retired shapes does NOT false-fire.
+
+It cannot prove the fix. The build was clean on the crashing binary, every static audit passed on it, and **no simulator backgrounds an app under a CPU quota** — so this is `-quickActionProbe`'s bargain again: the harness proves the room draws a bounded list, and the ten-second wall is a device fact.
+
+### Not done, and why
+
+The `load()` fetch stays unbounded (see above — an X person cannot be found by a predicate). `WalletHistoryScreen` draws an unbounded `@Query` grouped by day and is the same shape; it is PUSHED, not presented, so it is not this crash, and windowing it is a separate change with its own reading to get right. Recorded here so the next person does not have to rediscover it.
+
 ## §654b — The rule sheet was 99.9% full, so three sessions' honest index lines broke the gate; one 12KB entry moves to docs/ (2026-09-08)
 
 **The ruling.** `CLAUDE.md`'s SwiftData liveness entry moves to **`docs/liveness.md`**, verbatim, leaving a five-line index entry that keeps the rule and points at the record. The file drops from 103,100 bytes to **91,519**, and the budget gate has 10,881 bytes of headroom again.
@@ -51685,3 +51799,4 @@ Checked in the simulator on Stripe: the door opens the sheet full; a drag lands 
 **The general point, which outlives this fix.** A budget at 99.94% is not a budget, it is a tripwire with the next honest contributor's name on it. The gate should be met with headroom, and the way to make headroom in a rule sheet is to move a long-form record to `docs/` — never to compress a rule until it stops saying what it means.
 
 **Also removed:** a 273-byte file in the repo root named after a fragment of a `sed` command and containing three mangled copies of one Swift line, left by a botched substitution on 2026-09-05. It named `WalletRiskSource.holders`, which exists nowhere in the tree. **The remote is public**, so junk in the root is world-readable.
+

@@ -1,9 +1,15 @@
 import SwiftUI
 
 /// The store's capsule verbs (docs/handoff-apps-page.md) — honest, always:
-/// Allow / Sign in / Add key / Import / Connect / Pair / Watch / Automatic /
-/// Fix / Open / Soon, never "GET". Shared by the Apps chart and the app
-/// product page so the same state always wears the same word.
+/// Allow / Sign in / Add key / Import / Connect / Watch / Automatic / Fix /
+/// Open / Soon, never "GET". Drawn in one place, `AppsScreen.capsule`, so the
+/// same state always wears the same word.
+///
+/// `pair` is GONE (prd §653 review): its only producer went with the product
+/// page (§641), and the doc line that still named it — "Claude → Pair" — was
+/// describing a row that reads "Import". An enum case nothing can produce is
+/// the honesty rule's dead control with no pixels, and it outlived the fact
+/// it stated by two months.
 ///
 /// **THE VERB SAYS THE PRICE (prd §653, 2026-09-08).** A dark row used to say
 /// "Connect" whether the tap would raise one system sheet or send you to a
@@ -27,7 +33,7 @@ import SwiftUI
 /// seat wears is `WalletSeatStanding.verb(watched:)`, and the sentence that
 /// answers the question the word raises is `WalletSeatStanding.line`.
 enum CapsuleVerb {
-    case connect, pair, watch, automatic, fix, open, soon
+    case connect, watch, automatic, fix, open, soon
     case allow, signIn, addKey, importFile
 
     var label: String {
@@ -37,7 +43,6 @@ enum CapsuleVerb {
         case .signIn:  "Sign in"
         case .addKey:  "Add key"
         case .importFile: "Import"
-        case .pair:    "Pair"
         case .watch:   "Watch"
         case .automatic: "Automatic"
         case .fix:     "Fix"
@@ -48,7 +53,7 @@ enum CapsuleVerb {
 
     var background: Color {
         switch self {
-        case .connect, .pair, .watch, .allow, .signIn, .addKey, .importFile: DS.tint
+        case .connect, .watch, .allow, .signIn, .addKey, .importFile: DS.tint
         case .automatic:      DS.fillFaint
         case .fix:            DS.attention
         case .open:           DS.confirm.opacity(0.15)
@@ -58,7 +63,7 @@ enum CapsuleVerb {
 
     var foreground: Color {
         switch self {
-        case .connect, .pair, .watch, .fix, .allow, .signIn, .addKey, .importFile: .white
+        case .connect, .watch, .fix, .allow, .signIn, .addKey, .importFile: .white
         // Secondary, not tertiary: `soon` is inert and reads disabled, and
         // this one is a live state you can still tap through.
         case .automatic:            DS.textSecondary

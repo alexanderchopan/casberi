@@ -477,19 +477,132 @@ that column happens to mean.
 own `mode:` literal to `AccountPage` for the §315 chip. Two declarations of how a
 seat connects is the shape that drifts — the first life of that table
 (`Offer.qualifier`) missed Instagram, Snapchat and TikTok and nothing read it.
-Five checks: every screen with a literal name and a literal mode agrees with the
-catalogue; every `TokenBridge` seat is a pasted key but GitHub (a sign-in while
-its device-flow id ships); every `HandleBridge` seat is a handle; every name in
-the five seat sets is a real offer (the first draft named "Vibenet" and "Frames";
-the offers are "Base Vibenet" and "Frames Devnet"); nothing a screen declares is
-one-tap in the catalogue.
+Six checks: every screen with a resolvable name and a literal mode agrees with
+the catalogue; every `TokenBridge` seat is a pasted key but GitHub (a sign-in
+while its device-flow id ships); every `HandleBridge` seat is a handle; every
+name in the five seat sets is a real offer (the first draft named "Vibenet" and
+"Frames"; the offers are "Base Vibenet" and "Frames Devnet"); nothing a screen
+declares is one-tap in the catalogue; and **nothing rests on the fallback
+unchecked** (check F).
 
-**What it deliberately does not check.** Screens whose `AccountPage` name is an
-expression — the parameterised ones (`ExchangeSetupScreen`, `MailScreen`,
-`PackageWatchScreen`, the four devnet screens) — are reported as skipped, not
-passed; their seats fall to the sets or the `.pasteKey` default. And it
-re-states `Offer.mode`'s precedence in five Python lines, so a reordering of the
-Swift `if` chain is invisible to it while the sets stay disjoint. Its
-`--self-test` mutates a copy of the tree six ways and requires each to add a
-problem beyond the base, so a red tree reports the seat that drifted rather than
-"the check is broken".
+**Check F, and why "skipped, and said so" was not enough (added by §653's own
+review).** The first cut reported the eight expression-named screens
+(`ExchangeSetupScreen`, `MailScreen`, `PackageWatchScreen`, the four devnet
+screens, `HandleSetupScreen`) as skipped — honest, and still a hole: 14
+connectable seats were left resting on `Offer.mode`'s final `return .pasteKey`
+with nothing agreeing, so a new keyless registry entry or a new devnet would
+have worn "Add key" silently. That is the Instagram/Snapchat/TikTok failure one
+indirection over. `EXPRESSION_SEATS` now names which seats each of those screens
+draws, so they are CHECKED rather than skipped (48 declarations → 60), and check
+F refuses any connectable+needsSetup offer that no set, no screen and no enum
+sweep asserts. The table is a second declaration, so it is guarded from both
+ends: check D refuses a name that is not an offer, check F refuses an offer no
+entry names — rename a seat and both fire. `HandleSetupScreen` is deliberately
+absent from the table because check C sweeps its whole enum, which is stronger
+than a list.
+
+**What it deliberately does not check.** It re-states `Offer.mode`'s precedence
+in five Python lines, so a reordering of the Swift `if` chain is invisible to it
+while the sets stay disjoint. Its `--self-test` mutates a copy of the tree eight
+ways and requires each to add a problem beyond the base, so a red tree reports
+the seat that drifted rather than "the check is broken". Two of the eight are
+the review's: an offer renamed out from under every assertion (F), and a mode
+drifting on an EXPRESSION-named screen (A) — the second is the case that used
+to be invisible, and it is the proof the table earns its place.
+
+## Rain-tiles audit (scripts/rain-tiles-audit.py, 2026-09-08)
+
+Guards prd §655: `TileRain` has ONE branch (source tiles), and a shower is
+dealt only through `ShellChrome.rain(sources:)`, which names what falls.
+
+**Why a script and not a rule.** The confetti half is the visible half and the
+easy half. The half that actually shipped wrong is invisible to every other
+check here: `refreshRoster` was ordinary stored state, so a writer that bumped
+`refreshPulse` without setting it inherited the LAST PULL'S roster. Eight sites
+did exactly that — both devnet send endings, four faucet/key-create moments,
+Hegotá's key sheet — and the result compiles, renders smoothly, honours Reduce
+Motion, passes the motion audit and the ramp audit, and stands for the wrong
+set of apps. Pull on All, walk into the Hegotá room, tap top up, and Photos and
+Gmail and Strava fall over a devnet faucet claim. Nothing degrades except the
+one thing the shower is for.
+
+Five checks, each mutation-tested by a fixture in `--self-test`:
+
+1. **No confetti in the layer** — `TileRain.swift` declares no drop colour
+   palette, sets no `dot.backgroundColor`, and `Drop.tile` is non-optional. The
+   optional is the tell: a colourless drop being representable is how the berry
+   branch comes back.
+2. **`refreshRoster` is `private(set)`** — the door is the guarantee.
+3. **Nobody bumps `refreshPulse` or assigns `refreshRoster` outside
+   `ShellChrome`.**
+4. **`refreshHue` appears nowhere** — a stored value every writer set and no
+   view read is §83's fake status, and its return brings the colour path back.
+5. **No `rain(sources: [])`** — an empty roster deals nothing, which is honest
+   when reached (nothing connected) and never worth writing.
+
+Comments and string literals are stripped first. This is the Obsidian/Cursor
+lesson earned a fifth time: the callers document the rule by naming the very
+properties it forbids, so a raw grep fires on the prose explaining it. The
+self-test has fixtures for both (`COMMENTED_CALLER`, `STRINGED_CALLER`) and for
+a legitimate READ of the pulse, which is what `MainSurface` does every body pass.
+
+**What it deliberately does not check.** Whether the seat a caller names is the
+RIGHT seat — a Frames card raining Hegotá's tile passes. Whether the tiles read
+well: `BridgeIcon`'s glyph fallback for a seat with no bundled asset (Wallet is
+one) is the intent, but only a device proves it looks like an app tile.
+
+## Row-window self-test (scripts/row-window-selftest.sh, 2026-09-08) — prd §657
+
+The bound that keeps a long list from costing a sheet drag ten seconds of wall
+clock. Build 539 died `0x8BADF00D` scene-update — `ProcessVisibility:
+Background`, 10.358s of application CPU at **16%** — with a `_UISheetInteraction
+handlePan:` at the bottom of the stack and a full `List` content update at the
+top. Three facts, none of them a bug alone: UIKit lays a sheet's hosting view
+out **synchronously on every drag offset change** (a drag to dismiss is enough,
+no resizable detent required); SwiftUI's `List` resolves each row's index by a
+**linear walk** of its shadow collection, making one update O(rows × sections);
+and a backgrounded app runs at ~16% of a core, the same throttle §614 measured,
+so a render costing 1.5s of CPU exceeds the ten-second wall.
+
+`PersonRoomScreen` — the room behind a tapped face, presented as a sheet from
+`FeedScreen`'s `.person` route — drew every row the corpus holds about one
+person in ONE unbounded `List` section. After an X archive (§307: 10,000 posts)
+that is thousands. Every other `List` in the app was already bounded; this was
+the outlier, and it was the one behind a sheet.
+
+**What it checks.** `Model/RowWindow.swift` is Foundation-only, so the harness
+compiles it WHOLE AND UNMODIFIED and drives the shipped logic: the slice never
+exceeds the budget, growth is one screenful per step and stays linear, the
+"Show older" opener is drawn when and only when rows were held back (§83 — a
+control that reveals nothing is a dead control), a list that exactly fills the
+budget offers none, a wide window over a narrow slice still draws it whole (what
+makes the person room's monotonic `windowSteps` safe across a filter change),
+and a negative step floors at one screenful. Eight drift guards read the wiring
+the compiled functions cannot prove about themselves — that the room slices
+through `RowWindow`, that its `ForEach` draws the window's rows, that the merge
+stays MEMOISED (`merged` sorts n log n stored-property reads, and a body that
+merges for itself pays that per drag frame), that growth is a TAP, that the
+`.person` sheet mounts a `DSHapticSink` (a sheet covers the shell's listener, so
+without one the opener's tap is silent on the room's primary door), and three
+NEGATIVE ones — `ForEach(merged`, a body merging for itself, `.onAppear` growth.
+The negative sweeps read a COMMENT-STRIPPED copy, because both guarded files
+document §657 by naming the shape they must no longer have (the Obsidian/Cursor
+lesson, paid for twice before in `category-fold-selftest.sh` and
+`ondevice-selftest.sh`); the positive greps read raw source, because a rule
+spelled only in a comment is not wiring. Twelve mutations, twelve caught, plus a
+positive check that prose naming the retired shapes does not false-fire.
+
+**What it deliberately does not check.** That the fix works. The build was
+clean on the crashing binary and every static audit passed on it; **no simulator
+backgrounds an app under a CPU quota**, so this is `-quickActionProbe`'s
+bargain — the harness proves the room draws a bounded list, and the ten-second
+wall is a device fact.
+
+**Known and not done.** `PersonRoomScreen.load()` still fetches unbounded (an X
+person cannot be found by a `#Predicate` — the handle sits on `parent`, inside
+the words, and on `authorHandle` only for likes), which is a one-per-open cost
+and not the per-frame one. `WalletHistoryScreen` draws an unbounded `@Query`
+grouped by day and is the same shape; it is PUSHED, not presented, so it is not
+this crash.
+
+**The review pass.** `/code-review` on the fix found three things, all fixed and all now guarded above: the window bounded SwiftUI's list-diff term and left `merged`'s own n log n sort growing with the corpus on the same per-frame path (memoised into `mergedRows`, `.live` at the handoff); the opener's `DSHaptic.tap()` was silent on the room's primary door, because a sheet covers `RootShell`'s listener and this room is not a `DSTray`; and the harness's own negative sweeps read raw source, against the rule this repo has already paid for twice.

@@ -86,7 +86,7 @@ struct VibenetContracts: Equatable, Codable {
     /// `activationRegistry`, `policyRegistry` and the b20/validity contracts,
     /// with no `eip8130` object anywhere. Measured the same day: chain id is
     /// still 84538453, so this is the same chain and not a reset; the
-    /// deterministic Keystore still answers `eth_getCode` with 21,352 bytes;
+    /// deterministic Keystore still answers `eth_getCode` with 10,675 bytes;
     /// and `usdv`, `nfv`, `vibecheck` and `faucetAddress` are all still named,
     /// at new addresses, which `readOnlyFallback` reads and `fetch`'s merge
     /// prefers over the cached ones. So reads follow the chain, and signing

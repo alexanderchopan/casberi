@@ -63,7 +63,28 @@ struct DSWebSheet: View {
     /// Opens at `.large` on every door — a fresh sheet per URL, so nothing
     /// carries the last one's height over.
     @State private var detent: PresentationDetent = .large
-    @Environment(\.dismiss) private var dismiss
+    /// The presenter closes this sheet by clearing its own item, rather than
+    /// the content calling `@Environment(\.dismiss)`. That is the tidier
+    /// ownership and it is the shape kept — but it is NOT a fix for the
+    /// behaviour below, and the first version of this comment claimed it was.
+    ///
+    /// **MEASURED, AND STILL TRUE: DONE COLLAPSES BOTH SHEETS.** Opened from a
+    /// key sheet on Venice, tapping this controller's Done lands on the account
+    /// page with the key sheet gone, not back on the key sheet. Swapping
+    /// `dismiss()` for a presenter-owned close changed nothing, which is what
+    /// identifies the cause: `SFSafariViewController` runs its OWN dismissal
+    /// for that button, and hosted as a sheet's content the thing it dismisses
+    /// is the presentation it is embedded in. Only presenting it through UIKit
+    /// rather than embedding it would separate the two, and that is a larger
+    /// change than this bought.
+    ///
+    /// **It costs a tap, not the feature**, which is why it is recorded rather
+    /// than chased: the designed return leg is the DRAG, and that is verified
+    /// working from both doors — pulled to half from a key sheet, the key row
+    /// and its paste chip sit live above the page (prd §653). Done is the exit
+    /// for somebody who is finished, and it exits to a page whose "Your key"
+    /// row reopens the sheet in one tap.
+    let onDone: () -> Void
 
     var body: some View {
         #if targetEnvironment(macCatalyst)
@@ -72,7 +93,7 @@ struct DSWebSheet: View {
         // caller ever forgets.
         Color.clear.onAppear { UIApplication.shared.open(url) }
         #else
-        SafariView(url: url, onDone: { dismiss() })
+        SafariView(url: url, onDone: onDone)
             .ignoresSafeArea()
             .presentationDetents([.medium, .large], selection: $detent)
             .presentationBackgroundInteraction(.enabled(upThrough: .medium))

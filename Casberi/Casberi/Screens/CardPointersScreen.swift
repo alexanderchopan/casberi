@@ -95,9 +95,14 @@ struct CardPointersScreen: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            // In-app (§653) — the code to type sits on the page behind,
+            // readable at the half detent, which is the whole reason a device
+            // flow's door must not leave the app. It carries `url:` rather
+            // than a closure: a closure calling this screen's own `openURL`
+            // resolves ABOVE the page and cannot be caught.
             DSSlabButton(title: "Open the approval page",
                          systemImage: "safari",
-                         action: { open(pending.verificationURLComplete) })
+                         url: URL(string: pending.verificationURLComplete))
         } else if needsPlus {
             // A real answer with a real door, not a failure. This account
             // signed in fine; it simply cannot read anything.
@@ -111,7 +116,7 @@ struct CardPointersScreen: View {
             if let upgradeURL {
                 DSSlabButton(title: "See CardPointers+",
                              systemImage: "arrow.up.forward",
-                             action: { open(upgradeURL) })
+                             url: URL(string: upgradeURL))
             }
         } else {
             DSSlabButton(title: "Connect CardPointers",
@@ -137,8 +142,13 @@ struct CardPointersScreen: View {
                 }
                 return
             }
-            await MainActor.run { pending = code }
-            open(code.verificationURLComplete)
+            // ONE hop, not two: the door now raises the page's own sheet, and
+            // a `@State` write belongs on the main actor — the old call sat
+            // outside this hop because `openURL` forgave it.
+            await MainActor.run {
+                pending = code
+                open(code.verificationURLComplete)
+            }
             await waitForApproval(code)
         }
     }
@@ -213,8 +223,18 @@ struct CardPointersScreen: View {
         }
     }
 
+    /// The ONE door with no row to carry a `url:` — the automatic trip out the
+    /// moment a code is minted. It raises the page's own presentation directly
+    /// (prd §653's `AccountPageSheet.web`, the same destination
+    /// `AccountPage.doorAction` reaches) rather than this screen's `openURL`,
+    /// which resolves above the page and would background the app. Mac keeps
+    /// the system action, as `doorAction` does there.
     private func open(_ raw: String) {
         guard let url = URL(string: raw) else { return }
+        #if targetEnvironment(macCatalyst)
         openURL(url)
+        #else
+        sheet = .web(url)
+        #endif
     }
 }

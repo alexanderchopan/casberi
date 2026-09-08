@@ -74,8 +74,12 @@ enum BridgeCatalog {
         /// the same slot, no wallpaper (`CapsuleVerb.init(mode:)`).
         ///
         /// The sets below are the screens' own `mode:` literals, gathered
-        /// (`scripts/catalog-mode-audit.py` proves each screen with a literal
-        /// name agrees). `TokenBridge` seats are all pasted keys but GitHub,
+        /// (`scripts/catalog-mode-audit.py` proves EVERY screen agrees —
+        /// including the eight that name their seat with an expression, through
+        /// its `EXPRESSION_SEATS` table — and its check F refuses any
+        /// connectable seat whose answer would come from the `.pasteKey`
+        /// fallback below with nothing else asserting it).
+        /// `TokenBridge` seats are all pasted keys but GitHub,
         /// which signs in while its device-flow id ships (§315's own rule);
         /// `HandleBridge` seats are all handles.
         var mode: BridgeSetupMode? {

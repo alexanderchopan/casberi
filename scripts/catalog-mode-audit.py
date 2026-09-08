@@ -19,8 +19,18 @@ Checks, all static:
      seat leaves a dead entry otherwise — the source-alias lesson).
   E. Nothing a screen declares is `nil` in the catalogue: a seat WITH a screen
      is never the one-tap case.
+  F. Every connectable seat that needs setup is ASSERTED by something — a
+     literal screen, an expression screen's `EXPRESSION_SEATS` entry, or the
+     `TokenBridge`/`HandleBridge` sweeps. Without it the eight expression-named
+     screens were merely "skipped, and said so", which left 14 seats resting on
+     `Offer.mode`'s `.pasteKey` FALLBACK with nothing agreeing: add a keyless
+     registry entry or a new devnet and its row says "Add key", silently. That
+     is the first table's Instagram/Snapchat/TikTok failure one indirection
+     over, so it gets a check rather than a sentence (prd §653 review).
 
-Skipped, and said so: screens whose `AccountPage` name is an expression.
+`EXPRESSION_SEATS` is a second declaration and could itself drift, which is why
+it is checked from BOTH ends: check D refuses a name that is not an offer, and
+check F refuses an offer that no entry names. Rename a seat and both fire.
 
 Usage: scripts/catalog-mode-audit.py [--self-test]
 """
@@ -31,6 +41,22 @@ CATALOG = "Casberi/Casberi/Model/BridgeCatalog.swift"
 SCREENS = "Casberi/Casberi/Screens"
 TOKENS = "Casberi/Casberi/Model/TokenBridges.swift"
 HANDLES = "Casberi/Casberi/Screens/HandleSetupScreen.swift"
+
+# The seats each EXPRESSION-NAMED screen draws — the ones whose `AccountPage`
+# name is `venue.display`, `provider.source`, `registry.displayName` or an
+# identity constant, so no regex can read them off the call. The screen's own
+# `mode:` literal is still read from source; only WHICH seats it covers is
+# stated here. `HandleSetupScreen` is absent on purpose: check C sweeps the
+# whole `HandleBridge` enum, which is stronger than a list.
+EXPRESSION_SEATS = {
+    "ExchangeSetupScreen.swift": ["Binance", "Coinbase", "Kraken", "Gemini Exchange"],
+    "FramesScreen.swift": ["Frames Devnet"],
+    "HegotaScreen.swift": ["Hegota Devnet"],
+    "MailScreen.swift": ["Gmail", "iCloud Mail"],
+    "PackageWatchScreen.swift": ["npm", "PyPI"],
+    "PrivacyDevnetScreen.swift": ["Privacy Devnet"],
+    "VibenetScreen.swift": ["Base Vibenet"],
+}
 
 SET_NAMES = {
     "signInSeats": "signIn", "importSeats": "oneTimeImport",
@@ -80,8 +106,12 @@ def catalog_mode(name, offers, sets):
 
 
 def screen_declarations(root):
-    """(file, name, mode) for every literal AccountPage( call; skipped files."""
-    found, skipped = [], []
+    """(file, name, mode) for every AccountPage( call.
+
+    A literal name is read off the call. An expression name is resolved through
+    `EXPRESSION_SEATS`, so those screens are CHECKED rather than skipped; a file
+    with neither is returned in `unresolved` and reported."""
+    found, unresolved = [], []
     for fn in sorted(os.listdir(os.path.join(root, SCREENS))):
         if not fn.endswith(".swift"):
             continue
@@ -90,11 +120,18 @@ def screen_declarations(root):
             window = src[m.end():m.end() + 1200]
             name = re.match(r"\s*name: \"([^\"]+)\"", window)
             mode = re.search(r"\bmode: \.(\w+)", window)
-            if name and mode:
+            if not mode:
+                continue
+            if name:
                 found.append((fn, name.group(1), mode.group(1)))
-            elif mode:
-                skipped.append(fn)
-    return found, skipped
+            elif fn in EXPRESSION_SEATS:
+                for seat in EXPRESSION_SEATS[fn]:
+                    found.append((fn, seat, mode.group(1)))
+            elif fn == os.path.basename(HANDLES):
+                pass  # check C sweeps the whole enum, which is stronger
+            else:
+                unresolved.append(fn)
+    return found, sorted(set(unresolved))
 
 
 def enum_names(src, enum):
@@ -110,14 +147,21 @@ def run(root):
     offers = parse_offers(cat)
     sets = parse_sets(cat)
 
-    # D. Every set entry is an offer.
+    # D. Every set entry is an offer — and so is every seat an expression
+    #    screen's entry claims, since that table is a second declaration too.
     for mode, names in sets.items():
         for n in sorted(names):
             if n not in offers:
                 problems.append("D  `%s` is in the %s set and is not an offer" % (n, mode))
+    for fn, names in sorted(EXPRESSION_SEATS.items()):
+        for n in names:
+            if n not in offers:
+                problems.append("D  `%s` is named for %s in EXPRESSION_SEATS and is not an offer" % (n, fn))
 
-    # A / E. Literal screens.
-    found, skipped = screen_declarations(root)
+    # A / E. Every screen whose seats can be resolved.
+    found, unresolved = screen_declarations(root)
+    for fn in unresolved:
+        problems.append("F  %s names its seat with an expression and has no EXPRESSION_SEATS entry" % fn)
     for fn, name, mode in found:
         if name not in offers:
             continue  # a sheet/room the catalogue does not list (audited elsewhere)
@@ -144,7 +188,25 @@ def run(root):
         if want != "noAccount":
             problems.append("C  HandleBridge `%s`: screen says .noAccount, catalogue says .%s" % (n, want))
 
-    return problems, found, sorted(set(skipped))
+    # F. NOTHING RESTS ON THE FALLBACK UNCHECKED. `Offer.mode` returns
+    #    `.pasteKey` for any connectable seat that needs setup and is in none of
+    #    the five sets, so a seat nothing else asserts wears "Add key" on the
+    #    strength of a default. Every one must be named by a screen (literal or
+    #    through EXPRESSION_SEATS) or swept by B / C.
+    asserted = {name for _, name, _ in found}
+    asserted |= set(enum_names(read(root, TOKENS), "TokenBridge"))
+    asserted |= set(enum_names(read(root, HANDLES), "HandleBridge"))
+    # Naming a seat in one of the five sets IS an assertion — that is where
+    # `Offer.mode` reads it from. Only the seats that reach the final
+    # `return .pasteKey` need a second voice.
+    asserted |= set().union(*sets.values())
+    for n, (connectable, needs) in sorted(offers.items()):
+        if connectable and needs and n not in asserted:
+            problems.append("F  `%s` connects with setup, sits in no seat set, and no screen "
+                            "or enum sweep names it — its \"Add key\" comes from "
+                            "`Offer.mode`'s fallback with nothing agreeing" % n)
+
+    return problems, found, unresolved
 
 
 def self_test():
@@ -184,6 +246,12 @@ def self_test():
     mutate(CATALOG, '"Farcaster", "Bluesky"', '"Farcaster"', "C")
     mutate(CATALOG, '"Dropbox", "Slack"', '"Dropbox", "Slack", "Nobody"', "D")
     mutate(os.path.join(SCREENS, "StripeScreen.swift"), 'name: "Stripe"', 'name: "Photos"', "E")
+    # F, both ways: a seat no screen and no sweep names, and an expression
+    # screen whose mode drifts from the catalogue (which check A can only see
+    # BECAUSE the expression table resolves it — this is the case that used to
+    # be silently "skipped").
+    mutate(CATALOG, 'Offer(name: "Trello"', 'Offer(name: "Trelloo"', "F")
+    mutate(os.path.join(SCREENS, "MailScreen.swift"), "mode: .pasteKey", "mode: .noAccount", "A")
     print("catalog-mode-audit: self-test OK")
 
 
@@ -191,9 +259,11 @@ if __name__ == "__main__":
     if "--self-test" in sys.argv:
         self_test()
         sys.exit(0)
-    problems, found, skipped = run(ROOT)
+    problems, found, unresolved = run(ROOT)
     for p in problems:
         print("✗ " + p)
-    print("catalog-mode-audit: %d literal screens checked, %d expression-named skipped (%s)"
-          % (len(found), len(skipped), ", ".join(skipped)))
+    print("catalog-mode-audit: %d seat declarations checked across screens, "
+          "%d expression-named unresolved%s"
+          % (len(found), len(unresolved),
+             (" (%s)" % ", ".join(unresolved)) if unresolved else ""))
     sys.exit(1 if problems else 0)

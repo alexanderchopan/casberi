@@ -160,7 +160,14 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             // this row holds the sheet's height under the act, so a scroll
             // can bring the act clear of the sheet, the rows below pushed
             // under it. Gone the moment the sheet is.
-            if doorUp {
+            //
+            // PHONE ONLY, on the same condition the detents are real under
+            // (`DSWebSheet.dsPageSheet`): where the system sizes sheets as
+            // fixed pages — iPad — no detent is honoured and background
+            // interaction never engages, so this row would be half a screen
+            // of empty list inside a page nobody can touch, and removing it
+            // on dismiss would jerk the offset.
+            if doorUp, !DSSheetSize.sizesSheets {
                 Color.clear
                     .containerRelativeFrame(.vertical) { height, _ in height / 2 }
                     .plainAccountRow()
@@ -193,7 +200,15 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             case .reach:
                 AccountReachSheet(name: name, hosts: hosts)
             case .key:
-                AccountKeySheet(name: name) { AccountDoorHost { keySheet() } }
+                // THE HOST WRAPS THE SHEET, NOT ITS ROW. `AccountKeySheet`
+                // renders what it is handed as a `List` row, so a host placed
+                // inside it hung its own `.sheet` off a row — the shape
+                // CLAUDE.md records as paid for three times (a presentation
+                // attached inside a row resolves to the row's controller and
+                // can tear itself down mid-transition). Outside, the modifier
+                // lands on the key sheet's `NavigationStack`, which is the
+                // same position this page's own `.sheet` occupies.
+                AccountDoorHost { AccountKeySheet(name: name) { keySheet() } }
             case .profile(let profile):
                 SocialProfileCard(profile: profile)
             case .thing(let id):
@@ -201,7 +216,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             case .card(let id):
                 cardSheet?(id)
             case .web(let url):
-                DSWebSheet(url: url)
+                DSWebSheet(url: url) { sheet = nil }
             }
         }
         .task(id: source) { await readCounts() }
@@ -216,12 +231,18 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// door stays the system action (`DSWebSheet`'s own reasoning).
     private var doorAction: OpenURLAction {
         OpenURLAction { url in
+            guard let scheme = url.scheme?.lowercased(),
+                  scheme == "http" || scheme == "https" else { return .systemAction }
+            // THE RETURN LEG IS NOT THE SHEET'S (prd §653). Mac opens the door
+            // in a real browser window beside the app, which is the platform
+            // where the trip out works BEST — so the stamp is set on both
+            // sides of this branch and only the presentation differs. Setting
+            // it after the `#if` would have left the Mac's paste row dark
+            // forever, and `mac-parity-audit.py` cannot see that class.
+            doorOpened = true
             #if targetEnvironment(macCatalyst)
             return .systemAction
             #else
-            guard let scheme = url.scheme?.lowercased(),
-                  scheme == "http" || scheme == "https" else { return .systemAction }
-            doorOpened = true
             sheet = .web(url)
             return .handled
             #endif

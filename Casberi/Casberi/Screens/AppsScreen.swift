@@ -1043,7 +1043,19 @@ struct AppsScreen: View {
                 // Otherwise THE VERB SAYS THE PRICE (prd §653): Sign in, Add
                 // key, Import, or Connect for the free ones — `Offer.mode`,
                 // the same fact the setup screen's chip draws.
-                VerbCapsule(verb: walletSeatVerb(entry.offer) ?? CapsuleVerb(mode: entry.offer.mode)) {
+                //
+                // EXCEPT A PAUSED SEAT, which lands in this tier too (see
+                // `rankedAll`) and has already paid the price: a paused Stripe
+                // wearing "Add key" promises a step the screen it opens does
+                // not ask for — it says "Update" — and a paused Dropbox
+                // wearing "Sign in" is the §83 claim-about-nothing. Connect is
+                // the word that makes no specific claim, which is what this
+                // row said before §653. "Resume" was weighed and DECLINED
+                // (user, 2026-09-08: "i like connect better") — a paused seat
+                // is one tap from reading again, and a verb of its own for a
+                // state that resolves itself is furniture.
+                VerbCapsule(verb: walletSeatVerb(entry.offer)
+                            ?? (entry.bridge == nil ? CapsuleVerb(mode: entry.offer.mode) : .connect)) {
                     route.openSetup(forOffer: entry.offer.name)
                 }
             } else {
