@@ -1126,6 +1126,24 @@ done
   || fail "check never run by verify.sh: ${UNWIRED[*]} — add it below with a comment saying what it catches"
 print -P "%F{green}✓ check completeness ($(ls "$ROOT"/scripts/*-selftest.sh "$ROOT"/scripts/*-selftest.py "$ROOT"/scripts/*-audit.py "$ROOT"/scripts/*-audit.sh 2>/dev/null | wc -l | tr -d ' ') wired)%f"
 
+# **AND THE OTHER WAY: A CHECK THE PASS RUNS MUST EXIST.** The guard above
+# globs the disk and fails on a check nothing runs. Its mirror went unwritten,
+# and on 2026-09-08 a commit took one session's harness wiring, ledger entry and
+# index lines without the three untracked files doing the work (`git add -A`
+# picks untracked files up; a plain `git commit -a` does not). HEAD then wired a
+# harness that was not in the repo. **Nobody's build could see it** — every
+# working tree had both halves, so only a fresh clone failed, and it failed
+# here, confusingly, at the completeness step above. Check 2 is framed
+# HEAD-against-HEAD so it never sees your uncommitted work: writing a harness
+# and wiring it before committing is fine, and it fires only when the COMMITTED
+# tree is broken for everyone else. Mutation-tested against 08b98bc0 itself.
+step "Harness-exists audit"
+python3 "$ROOT/scripts/harness-exists-audit.py" --self-test >/dev/null \
+  || fail "the harness-exists audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/harness-exists-audit.py" \
+  || fail "verify.sh runs a script that is not there (see above) — commit it, or fix the citation"
+print -P "%F{green}✓ harness-exists audit%f"
+
 # ── The seven the guard above found unwired (2026-08-12) ────────────
 # Each existed in `scripts/` and had never once run in this pass. Grouped
 # rather than scattered so the gap they came from stays legible.

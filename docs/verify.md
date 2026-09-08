@@ -614,3 +614,40 @@ grouped by day and is the same shape; it is PUSHED, not presented, so it is not
 this crash.
 
 **The review pass.** `/code-review` on the fix found three things, all fixed and all now guarded above: the window bounded SwiftUI's list-diff term and left `merged`'s own n log n sort growing with the corpus on the same per-frame path (memoised into `mergedRows`, `.live` at the handoff); the opener's `DSHaptic.tap()` was silent on the room's primary door, because a sheet covers `RootShell`'s listener and this room is not a `DSTray`; and the harness's own negative sweeps read raw source, against the rule this repo has already paid for twice.
+
+## Harness-exists audit (scripts/harness-exists-audit.py, 2026-09-08)
+
+The missing half of the check-completeness guard. That guard globs the disk and
+fails on a check the pass never RUNS. This is the reverse: a check the pass runs
+that **is not in the repository**.
+
+**It broke main for ten minutes on 2026-09-08, and no local build could see it.**
+A commit took one session's `verify.sh` harness wiring, its ledger entry and its
+CLAUDE.md index lines, but not the three files doing the work, because those were
+still untracked — `git add -A` picks untracked files up and a plain `git commit -a`
+does not. HEAD then wired a harness that was not in the repo and cited a fix it
+did not contain. Every session's own build stayed green throughout, because every
+working tree had both halves; only a fresh clone would have failed, and it would
+have failed at the completeness step above with a confusing error. Same class as
+build 176's "caller without callee"; scripts are where it is cheap and exact.
+
+1. **Every cited script exists on disk** — a rename or deletion that left a call
+   behind. The ordinary, local form.
+2. **Every script HEAD's `verify.sh` cites exists at HEAD.** Framed
+   HEAD-against-HEAD on purpose: it never sees uncommitted work, so writing a
+   harness and wiring it before committing does not fail the pass. It fires only
+   when the COMMITTED tree is inconsistent — precisely when everyone else is
+   broken and nobody local can tell. Deliberately NOT "cited and untracked",
+   which would fire on ordinary mid-work and push people toward `git add` in a
+   repo whose shared index makes that the dangerous move.
+
+Comments are stripped first: a retired script named in a comment is history, not
+a call, and cannot break a run (the Obsidian/Cursor lesson, a sixth time).
+
+**Mutation-tested against the real failure**, not a fixture: replayed in a
+detached worktree at `08b98bc0`, both checks fire and name
+`scripts/row-window-selftest.sh`.
+
+**Ceilings.** Reads `verify.sh` only, not `verify-mac.sh` or the nightly
+wrappers. Cannot see a script reached through a variable. Says nothing about
+whether a cited script WORKS — only that it is there to be run.
