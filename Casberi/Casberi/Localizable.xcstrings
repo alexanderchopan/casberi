@@ -36117,6 +36117,34 @@
         }
       }
     },
+    "Add key" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añadir clave"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "キーを追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "키 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "添加密钥"
+          }
+        }
+      }
+    },
     "Add someone" : {
       "localizations" : {
         "es" : {
@@ -37691,6 +37719,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "三者都随交易一同签名。窗口期由链强制执行；备注是公开且永久的。"
+          }
+        }
+      }
+    },
+    "Allow" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Permitir"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "許可"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "허용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "允许"
           }
         }
       }
@@ -65208,6 +65264,34 @@
         }
       }
     },
+    "Import" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Importar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取り込む"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가져오기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "导入"
+          }
+        }
+      }
+    },
     "Import an OPML file" : {
       "localizations" : {
         "es" : {
@@ -87819,6 +87903,34 @@
         }
       }
     },
+    "Open in Safari" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abrir en Safari"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safari で開く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safari에서 열기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Safari 中打开"
+          }
+        }
+      }
+    },
     "Open in Safe" : {
       "localizations" : {
         "es" : {
@@ -107041,6 +107153,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "签名"
+          }
+        }
+      }
+    },
+    "Sign in" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Iniciar sesión"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "サインイン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "로그인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "登录"
           }
         }
       }
