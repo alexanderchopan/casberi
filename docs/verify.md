@@ -330,3 +330,53 @@ fixtures are shaped from measured pages but are still fixtures, and the
 measurement itself needs the network, which no harness here may touch. And
 nothing renders: how 8,000 characters SIT under a preview card is a device
 question.
+
+## Query-read audit (`scripts/query-read-audit.py`, 2026-09-08) → prd §646
+
+**Reading a `@Query` array is a FETCH PLUS A PER-MODEL `Codable` SNAPSHOT, and
+it is not cached between reads.** Build 537 died `0x8BADF00D` process-exit —
+"failed to terminate gracefully after 5.0s", 5.588s of application CPU at 16%,
+99 seconds into a cold launch — and it is the one watchdog of §614's family
+whose report symbolicates: against 537's own dSYM the main thread is
+`FeedScreen.roomBody.getter` at the `Corpus.hasSurfaced(things)` term, with
+`_SwiftData_SwiftUI` → `SwiftData` → `Encodable.encode(to:)` → `memmove`
+underneath it. On iOS 18.6, the reporting device, a source room's query carries
+no `propertiesToFetch` at all (`sourceRoomLightColumns` is iOS 26+, §623), so
+each row arrives with its heavy inline text.
+
+**The count was the finding, not the line.** A built page materialised the same
+array four times per body pass — twice for `safetyNetKey`, which two
+`.task(id:)` modifiers share, once for the emptiness test, once for the rows —
+on every page `everBuilt` has latched, on every one of the ~30 graph updates a
+cold-launch bridge burst fires.
+
+**Three checks, over comment-stripped source.** (1) A `.task(id:)` /
+`.onChange(of:)` key may not read a `@Query` inline: there is nowhere to put a
+guard in an argument expression. (2) A member USED as such a key must have an
+early return above its read — `corpusRevision` states that ruling and
+`safetyNetKey` owed it twice over. (3) A member may not read the same `@Query`
+twice.
+
+**Mutation-probed against `FeedScreen.swift` itself**: an inline `things.count`
+key, `safetyNetKey` losing its guard, and a second read returning to `roomBody`
+all go 0 → 1.
+
+**The exclusions cost real iterations and are fixtures now.** Reads inside
+`.task` / `.onChange` CLOSURES are events, not body passes — the two staleness
+nets read the live query in theirs on purpose, and counting those reported
+`listBody` as four. A ternary, and two mutually exclusive `return`s, are ONE
+read: `feedThings` and `WalletHistoryScreen.visible` were the check's first two
+false findings. A parameter named after the query is not the query. And a
+stored property has no body, so the `@Query` declaration itself adopted the next
+member's braces on the first run.
+
+**CHECK 3 WOULD NOT HAVE CAUGHT 537.** Its four reads were spread across four
+MEMBERS and three reached the query through an accessor rather than by name, so
+no per-member text check could see the total. Checks 1 and 2 hold the two shapes
+that shipped; check 3 is a ratchet against the obvious regression, not a proof.
+
+**What no check here can see**, as with every watchdog in this family: the build
+is clean, every other audit passed on the crashing binary, the screen sweep
+photographs a healthy app, and no simulator asks an app to terminate under a
+real CPU quota. The crash report is the instrument, and the dSYM is what made
+this one readable — an argument for keeping archives per build rather than one.
