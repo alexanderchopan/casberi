@@ -494,13 +494,42 @@ struct MainSurface: View {
     /// social room, never both — so the two `if`s are alternatives, not a stack.
     @ViewBuilder
     private var roomControls: some View {
+        // **THE FOLDER TOUCHES THE DOCK; THE FACES SIT ABOVE IT** (user,
+        // 2026-09-08: "on socials we can't have the avatars in between rows!
+        // the rows of sources need to be by the doc and the faces can be above
+        // the row not the other way around" — prd §649).
+        //
+        // The two are different kinds of control and the order is not a taste
+        // question, because ONE OF THEM POINTS. `DockSpringRow` draws a tail —
+        // a rounded diamond at its `.bottomLeading`, offset to the tapped
+        // chip's x — and springs from `UnitPoint(y: 1.15)`, i.e. out of a point
+        // BELOW itself. With the face rail stacked underneath, that diamond
+        // aimed at a row of avatars and the folder appeared to spring out of
+        // them. The folder is the dock's own chip opened; a filter within the
+        // room it lands you in is a separate object and belongs further from
+        // the hand.
+        //
+        // So the faces are emitted FIRST (this is a `VStack`, top to bottom)
+        // and the two spring rows last, against the dock. They remain mutually
+        // exclusive — `openFolder` is a category or the doors, never both — so
+        // exactly one row ever sits between the faces and the dock.
+        if roomControlsShown {
+        socialScopeRail
+        // **VIBENET'S FACE RAIL IS FOLDED INTO ITS CROWN (prd §482
+        // amendment, 2026-08-26, user: "we cannot have four rows of chips").**
+        // It and the value chips under the sparkline were both a strip of
+        // this room's accounts — one above the crown, one below it — and only
+        // the lower one said what each account was worth. The scoping moved
+        // down into those chips, which costs a row of chrome and loses
+        // nothing. Wallet's rail is untouched: its crown carries no
+        // per-account strip to fold into.
+        }
         // **THE FOLDERS SPRING UP OUT OF THEIR CHIP (2026-09-05, the Mac-dock
         // folder — see `DockSpringRow`).** A category's venues and the
         // octopus's four doors each rise above the dock anchored to the chip
         // that was tapped, on `DS.Motion.folder`'s spring; the chip itself
         // never moves, so the word that closes the folder is where the finger
-        // just was. What else this band carries above the dock is a FILTER
-        // within a room, a different kind of control: the social faces.
+        // just was.
         if case .category(let category) = chrome.openFolder {
             let venues = categoryVenues[category] ?? []
             if venues.count >= CategoryFold.switcherFloor {
@@ -537,17 +566,6 @@ struct MainSurface: View {
                            })
             }
             .padding(.horizontal, DS.Space.s4)
-        }
-        if roomControlsShown {
-        socialScopeRail
-        // **VIBENET'S FACE RAIL IS FOLDED INTO ITS CROWN (prd §482
-        // amendment, 2026-08-26, user: "we cannot have four rows of chips").**
-        // It and the value chips under the sparkline were both a strip of
-        // this room's accounts — one above the crown, one below it — and only
-        // the lower one said what each account was worth. The scoping moved
-        // down into those chips, which costs a row of chrome and loses
-        // nothing. Wallet's rail is untouched: its crown carries no
-        // per-account strip to fold into.
         }
     }
 

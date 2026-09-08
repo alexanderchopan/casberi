@@ -356,9 +356,13 @@ grep -qE 'onPick\((venueLabel|CategoryFold\.venueLabel)' "$TMP/folder.nc" \
 # keeping BOTH, since that audit reads a literal or a named token and a future
 # refactor that hands the size in as a parameter goes silent there while this
 # still names the file.
+# (The two rows swapped places in §649 — the faces are above the folder now, not
+# below it. The rule is unchanged and so is its reason: they are ADJACENT rows of
+# circles either way, and two adjacent rows of circles at two sizes is what was
+# reported. Only the word "above" would have gone stale.)
 grep -q 'BridgeIcon(name: venue, size: markSize, circular: true)' "$TMP/folder.nc" \
   || { echo "✗ the venue row's mark is no longer the full-bleed markSize —"; \
-       echo "  it draws directly above FaceScopeRail's faces, so a mark inset inside"; \
+       echo "  it draws directly beside FaceScopeRail's faces, so a mark inset inside"; \
        echo "  its seat reads as two rows of circles at two sizes (§541/§483)."; exit 1; }
 # The venue mark lives INSIDE the chip now, so it folds with the chip's own
 # mark (a fixed step under `iconSize`, which follows `DSDock`'s fold form)
@@ -473,6 +477,27 @@ grep -q 'roomControls' "$MAIN" \
   || { echo "✗ MainSurface.roomControls no longer carries the social rail — a rail"; \
        echo "  rail mounted anywhere else either scrolls away or (back on FeedScreen) is"; \
        echo "  destroyed by every venue change, the §357 bug returned."; exit 1; }
+# …AND IN THIS ORDER: THE FOLDER TOUCHES THE DOCK, THE FACES SIT ABOVE IT
+# (prd §649, 2026-09-08, user: "on socials we can't have the avatars in between
+# rows! the rows of sources need to be by the doc and the faces can be above
+# the row not the other way around").
+#
+# Not a taste question, because ONE OF THESE ROWS POINTS. `DockSpringRow` draws
+# a tail — a rounded diamond at its `.bottomLeading`, offset to the tapped
+# chip's x — and its transition springs from `UnitPoint(y: 1.15)`, i.e. out of
+# a point BELOW itself. Emitted first, it had the face rail underneath it, so
+# the diamond aimed at a row of avatars and the folder appeared to spring out
+# of them rather than out of the chip it was opened from. A `VStack` builds top
+# to bottom, so the faces must come first in this file and the spring rows last.
+#
+# Line order in the COMMENT-STRIPPED copy, because the source documents this
+# rule by naming both symbols in the prose above them.
+_facesLine=$(grep -nE '^[[:space:]]*socialScopeRail$' "$TMP/main.nc" | head -1 | cut -d: -f1)
+_springLine=$(grep -n 'DockSpringRow(anchorX:' "$TMP/main.nc" | head -1 | cut -d: -f1)
+[ -n "$_facesLine" ] && [ -n "$_springLine" ] && [ "$_facesLine" -lt "$_springLine" ] \
+  || { echo "✗ the dock folder no longer sits directly on the dock — with the face rail"; \
+       echo "  under it, DockSpringRow's tail points at a row of avatars and the folder"; \
+       echo "  reads as springing out of them, not out of its chip (§649)."; exit 1; }
 # …and NOT on FeedScreen, which is the regression §357 exists to prevent: any
 # top inset there is inside the `.id(filter.source)` subtree, so it travels
 # with the room and dies on every move it commands. (`walletSwitcherBar` and

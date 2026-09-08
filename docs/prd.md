@@ -51050,3 +51050,61 @@ wrote it, so the amounts above are computed from the code's own constants
 (60pt threshold, 66pt pitch, 393pt screen) and not watched. **4° at commit is
 the amount §632 asked for and nobody has yet seen it arrive there** — check it
 reads as a card and not as a flourish before trusting it.
+
+## §649 — The dock's folder must touch the dock: the faces move above it (user: "on socials we can't have the avatars in between rows! the rows of sources need to be by the doc and the faces can be above the row not the other way around", 2026-09-08)
+
+**The report.** In the Social room three rows stack above the feed: the open
+category folder (Farcaster and Bluesky, as marks), the face rail of watched
+accounts, and the dock. The folder was on top and the avatars sat between it and
+the dock.
+
+**The ruling is the user's, and it is right for a reason the report does not
+have to name: ONE OF THESE ROWS POINTS.** `DockSpringRow` draws a tail — a
+rounded diamond at its `.bottomLeading`, offset to the tapped chip's x — and its
+transition springs from `UnitPoint(y: 1.15)`, out of a point BELOW itself. That
+is the whole grammar of §621's Mac-dock folder: a category's venues rise out of
+the chip you pressed, and the chip never moves, so the word that closes the
+folder is where your finger already is. With the face rail stacked underneath,
+**the diamond aimed at a row of avatars** — the folder appeared to spring out of
+the faces rather than out of its chip, and the one thing the tail exists to say
+was false.
+
+So the order is structural, not a taste: the folder is the dock's own chip
+opened and belongs against the dock. A face rail is a FILTER WITHIN the room the
+folder lands you in — a different kind of control, on a different subject, and
+the one that belongs further from the hand. `roomControls` emits the faces
+first and the two spring rows last (a `VStack` builds top to bottom); the spring
+rows stay mutually exclusive — `openFolder` is a category or the doors, never
+both — so exactly one row ever sits between the faces and the dock.
+
+**Nothing else changes.** Both rails keep their own sizes, fold behaviour and
+paddings; §357's ruling (a control that persists across a room change mounts on
+the shell, never on the screen) is untouched, and both controls are still in
+`roomControls`, which is the whole of what §357 asked.
+
+**Guarded in `category-fold-selftest.sh`**, beside the §357 check that already
+demands the social rail be in `roomControls` at all: the `socialScopeRail` line
+must come BEFORE the first `DockSpringRow(anchorX:` in the comment-stripped
+copy. Proven against the previous order. The neighbouring §541/§483 guard — the
+venue mark must match `FaceScopeRail`'s own rung — is untouched and its reason
+survives the swap intact: they are ADJACENT rows of circles either way, and two
+adjacent rows of circles at two sizes is what that check was written for. Only
+the word "above" in its message went stale, and it is corrected in the same
+commit rather than left to be believed.
+
+**Reported alongside, NOT fixed here, because it is a separate ruling.** The
+band's scrim (`bandContent`'s mask, §591's inversion of the 2026-08-23 scrim)
+clears over the top **25% of the band's own height** — a fraction, not a fixed
+ramp. With one row that is a few points of soft edge; with three rows stacked it
+is roughly a whole row of see-through, which is why a line of feed text is
+legible in the gap between the top two strips in the report's screenshot. A
+fixed ramp (`VStack { LinearGradient().frame(height: …); Color.black }`) would
+make a one-row band and a three-row band get the same edge, but it also makes a
+three-row band a near-opaque plate, which is exactly what that scrim's own
+comment argues against ("a flat opaque block that deep reads as a second header
+rather than as chrome the page slides under"). That trade is the user's to make.
+
+**UNSEEN on a device.** No Xcode and no Swift toolchain in the session that made
+the change; it is a reordering of two siblings in a `VStack(spacing: 0)`, so
+each row keeps its own paddings and the band's height is unchanged, but which
+paddings meet has changed and nobody has looked at the result.
