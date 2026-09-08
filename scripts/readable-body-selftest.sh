@@ -76,6 +76,59 @@ PY
 grep -q 'ReadableBody.limit' "$PARSE" \
   || { echo "✗ ReadableParse no longer uses the shared bound"; exit 1; }
 
+# WHICH HOSTS A SCRAPE IS FAIR ON (prd §645 pass 5 item 4). The rule is a long
+# doc comment on `FeedArticleText`, and a rule with no guard is a rule that
+# gets re-broken — this repo's own standing finding. Two halves, both read from
+# a COMMENT-STRIPPED copy, because that doc names every abstention it excludes.
+check_article() {
+  local article="$1" label="$2" nc
+  nc=$(mktemp "$TMP/article.XXXXXX")
+  python3 - "$article" > "$nc" <<'PY'
+import re, sys
+src = re.sub(r"/\*.*?\*/", "", open(sys.argv[1]).read(), flags=re.S)
+print("\n".join(l for l in src.splitlines() if not l.strip().startswith("//")))
+PY
+  local line
+  line=$(grep 'static let sources' "$nc" || true)
+  if [[ -z "$line" ]]; then
+    echo "✗ ${label}: FeedArticleText.sources is gone — membership is the one"
+    echo "  thing that keeps a scrape off a host nobody chose"; return 1
+  fi
+  # The three abstentions. Each passes the fairness rule and abstains for its
+  # OWN stated reason (a watch page, strangers' comments, a player) — so each
+  # is a separate decision and a wholesale widening must not quietly take them.
+  local seat
+  for seat in YouTube Reddit Podcasts; do
+    if print -r -- "$line" | grep -q "\"$seat\""; then
+      echo "✗ ${label}: $seat is back in FeedArticleText.sources — its page is"
+      echo "  not an article, and the type doc says why in its own words"
+      return 1
+    fi
+  done
+  # Membership stays a NAMED list. "any http URL" is the shape §5.3 forbids.
+  if print -r -- "$line" | grep -qE 'Set<String>\(\)|allCases|\.isEmpty'; then
+    echo "✗ ${label}: FeedArticleText.sources stopped being a named list"
+    return 1
+  fi
+  # The receipts label travels with the row. It used to be re-derived after the
+  # fetch with a fallback to "RSS", which was harmless while every member was a
+  # feed and is a WRONG DISCLOSURE now that a bookmark is one.
+  if grep -q '?? "RSS"' "$nc"; then
+    echo "✗ ${label}: the sweep falls back to \"RSS\" when it labels a reach —"
+    echo "  a scrape of somebody's saved page would be filed on the receipts"
+    echo "  screen under a bridge they may not have connected"
+    return 1
+  fi
+  grep -q 'return (ref, url, thing.source)' "$nc" || {
+    echo "✗ ${label}: the sweep no longer carries each row's own source into"
+    echo "  the fetch loop"; return 1; }
+  return 0
+}
+check_article "$ARTICLE" "the shipped tree" || exit 1
+echo "the fairness rule"
+echo "  ✓ sources is a named list, and the three abstentions are still out"
+echo "  ✓ each reach is labelled with its own row's source"
+
 # --- the driver -------------------------------------------------------------
 cat > "$TMP/stub.swift" <<'SWIFT'
 import Foundation
@@ -300,6 +353,41 @@ mutate "the short-piece floor dropped" ReadableParse.swift \
 mutate "the nothing-readable floor dropped" ReadableParse.swift \
   'guard text.count >= 40 else { return nil }' \
   'guard !text.isEmpty else { return nil }'
+
+# The membership guards, mutated. A separate loop because these are drift
+# guards over source text — the driver above cannot run them.
+mutate_article() {
+  local name="$1" from="$2" to="$3"
+  rm -rf "$WORK"; mkdir -p "$WORK"
+  cp "$ARTICLE" "$WORK/FeedArticleText.swift"
+  MUT_FROM="$from" MUT_TO="$to" python3 - "$WORK/FeedArticleText.swift" <<'PY'
+import os, sys
+path = sys.argv[1]
+src = open(path).read()
+frm, to = os.environ["MUT_FROM"], os.environ["MUT_TO"]
+if frm not in src:
+    sys.stderr.write("ANCHOR-MISSING\n"); sys.exit(2)
+open(path, "w").write(src.replace(frm, to, 1))
+PY
+  if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$WORK/FeedArticleText.swift"; then
+    echo "  ✗ $name — the mutation did not apply (the shipped source moved,"
+    echo "    so this guard has been testing nothing)"; exit 1
+  fi
+  if check_article "$WORK/FeedArticleText.swift" "MUTANT" >/dev/null 2>&1; then
+    echo "  ✗ $name — the guards still passed, so nothing was testing this"; exit 1
+  fi
+  echo "  ✓ $name"
+}
+
+# 10. An abstention taken back wholesale — the plausible "we widened it anyway".
+mutate_article "YouTube back in the source list" \
+  '"RSS", "Substack", "Bookmarks", "Raindrop"' \
+  '"RSS", "Substack", "Bookmarks", "Raindrop", "YouTube"'
+
+# 11. The receipts label back to a fallback, which mislabels a bookmark's host.
+mutate_article "the receipts label back to a fallback" \
+  'return (ref, url, thing.source)' \
+  'return (ref, url, "RSS")'
 
 echo
 echo "✓ readable-body self-test: assertions and mutations all passed"

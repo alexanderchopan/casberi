@@ -12,7 +12,7 @@ pass 5's own opening measurement then **inverted A.5's prediction**: the small
 paragraph limit was not protecting the excerpt from chrome, it was guaranteeing
 the excerpt WAS chrome. See §645 amendment 2. **Pass 4 (Listen everywhere) is DECLINED** — user, 2026-09-08, see §645
 amendment 3; the decision §4 put ahead of it is not being taken, so the pass is
-closed rather than deferred. Passes 2 and 3 are unbuilt, as is A.5's item 4. Every file, line and constant is read off the tree at 2026-09-08 and
+closed rather than deferred. Passes 2 and 3 are unbuilt. **A.5's item 4 is answered** — see §645 amendment 4. Every file, line and constant is read off the tree at 2026-09-08 and
 is cited so the next session can check rather than trust.
 
 ---
@@ -37,7 +37,7 @@ Order of work, and it is not the order of size:
 | 2 | A screenshot's transcript | stored | — | — |
 | 3 | Next / previous | — | two bounded reads | — |
 | 4 | Listen, everywhere — **DECLINED 2026-09-08** | — | — | — |
-| 5 | The 1,200-character cap — **BUILT 2026-09-08**, except item 4 (widening `sources`), left open as a ruling | | changes what is fetched | — |
+| 5 | The 1,200-character cap — **BUILT 2026-09-08**, item 4 included | | changes what is fetched | — |
 
 No pass adds a `Thing` property, so **no CloudKit deploy** (the 2026-08-01
 rule). Pass 5 is the only one that changes what the app asks a publisher's

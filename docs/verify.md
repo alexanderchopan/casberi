@@ -380,3 +380,22 @@ is clean, every other audit passed on the crashing binary, the screen sweep
 photographs a healthy app, and no simulator asks an app to terminate under a
 real CPU quota. The crash report is the instrument, and the dSYM is what made
 this one readable — an argument for keeping archives per build rather than one.
+
+### Readable-body self-test, amended (2026-09-08) → prd §645 amendment 4
+
+The harness gained the half A.5's own harness section did not name: **which
+hosts a scrape is fair on.** The rule is a long doc comment on
+`FeedArticleText`, and a rule with no guard is a rule that gets re-broken.
+
+Read comment-stripped, because that doc names every abstention it excludes:
+`sources` must stay a NAMED list (not `allCases`, not an empty-set wildcard),
+the three abstentions (YouTube, Reddit, Podcasts) must stay out of it — they
+pass the fairness rule and abstain for their own separate reason, so a
+wholesale widening must not take them by accident — and each fetched row's
+own `source` must travel into the fetch loop. That last one is a DISCLOSURE
+guard, not tidiness: the sweep used to re-find the row after the fetch and fall
+back to `"RSS"` when a heal had deleted it, which was harmless while every
+member was a feed and files a reach to somebody's saved page under a bridge
+they may not have connected once a bookmark is one (§205, build 214). Two more
+mutations, both drift-only — the driver cannot run them, so they re-enter the
+guards rather than the binary.

@@ -50791,3 +50791,50 @@ and back: GitHub's starred and watched repo rows carry `repoLanguage`, so
 `GitHubStarContent` claims them before the article arm; Hugging Face papers and
 TikTok captions are prose and are meant to be drawn; a row whose body is a bare
 link with no `summary` never shows content at all (`linkOnlyBody`).
+
+## §645 amendment 4 — which hosts a scrape is fair on, answered in writing (A.5 item 4, 2026-09-08)
+
+A.5's last item was left open in amendment 2 because the spec itself says it
+carries a question §455 never had to answer. Answered now, and the answer is a
+RULE rather than a set, because the set is what gets edited:
+
+> **1.** A page the PERSON chose, one at a time — pasted, shared, bookmarked,
+> saved to Raindrop.
+> **2.** A page a PUBLISHER they chose sent them, whose whole point is prose —
+> RSS, Substack.
+> **Not:** a page that arrived because SOMEBODY ELSE linked it — a link in a
+> social post, a Slack message, a Reddit thread's target. The person chose the
+> PERSON, not that host.
+
+**Limb 1 is not new ground, which is what makes it safe.** `LinkTitle.enrich`
+has scraped every pasted link for a year and the share extension stores
+Safari's own reader text; `Bookmarks` and `Raindrop` are the IMPORTED FORM of a
+decision the app already acts on, so admitting them changes the volume and not
+the kind. **Limb 3 is the half that decides future seats** and it rules out
+most of the catalog on purpose.
+
+`sources` is `["RSS", "Substack", "Bookmarks", "Raindrop"]`. **The three
+abstentions are untouched and are a different question** — YouTube, Reddit and
+Podcasts all PASS the fairness rule and abstain because their pages are not
+articles (a watch page, strangers' comments filed under a row that is not
+theirs, a player with no prose). Conflating the two would have taken them by
+accident, so the type doc now separates them explicitly and
+`readable-body-selftest.sh` fails if any of the three reappears.
+
+**A wrong disclosure the widening created, found and fixed in the same
+change.** The sweep named the receipts service by re-finding the row AFTER the
+fetch, `?? "RSS"` when it had been deleted under the await. Harmless while
+every member was a feed. With a bookmark in the set it would file a reach to
+somebody's saved page under a bridge they may not have connected — on the one
+screen that exists to be checkable (§205, build 214). Each row's source now
+travels into the fetch loop in the `pending` tuple, read while the row is
+certainly live, and the fallback is gone. Both halves are guarded.
+
+**The cost, named.** Bookmarks imports up to 2,000 rows at once. The sweep's
+thirty-day `window` means almost none of a historic import is ever swept —
+bookmarks carry their original date — so the background volume barely moves.
+The tap has no window by design (§455), so opening an old bookmark fetches it,
+which is the behaviour somebody opening a saved page is asking for.
+`NetworkReach` is structurally unable to name these hosts (§289): they are the
+person's own pages, so the `NetworkLedger.record` call site is the disclosure,
+which is exactly why the label bug above mattered.

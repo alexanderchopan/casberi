@@ -20,7 +20,30 @@ import SwiftData
 /// never got it, because they arrive named and `LinkTitle.enrich` bails on
 /// anything already wearing a real title.
 ///
-/// TWO SOURCES, AND THE OTHER THREE ARE DELIBERATE ABSTENTIONS:
+/// WHICH HOSTS A SCRAPE IS FAIR ON (prd §645 pass 5 item 4, 2026-09-08). §455
+/// never had to answer this: the two sources were feeds, and a feed is a
+/// publisher you chose. Drawing the body (pass 1) made the question real, so
+/// the rule is written here rather than left in the shape of a `Set`:
+///
+///   1. **A page the PERSON chose, one at a time.** A link they pasted, shared,
+///      bookmarked or saved to Raindrop. This is not new ground — `LinkTitle.
+///      enrich` has scraped every pasted link for a year and the share
+///      extension stores Safari's own reader text — so `Bookmarks` and
+///      `Raindrop` are the imported form of a decision the app already acts on.
+///   2. **A page a PUBLISHER they chose sent them, whose whole point is
+///      prose.** RSS and Substack.
+///
+/// **And what is NOT fair, which is the half that decides future seats: a page
+/// that arrived because SOMEBODY ELSE linked it.** A link in a social post, a
+/// Slack message, a Reddit thread's target. The person chose the PERSON, not
+/// that host, and reaching it on the strength of a stranger's action is a
+/// request they did not ask for. That rules out most of the catalog on
+/// purpose, and it is a rule rather than a taste: a new seat joins this set
+/// only if it can be read as limb 1 or limb 2.
+///
+/// THE THREE ABSTENTIONS BELOW ARE A DIFFERENT QUESTION and survive
+/// unchanged — YouTube, Reddit and Podcasts all pass limb 2, and abstain
+/// because their pages are not articles:
 ///   * RSS and Substack land ARTICLES — a page whose whole point is prose.
 ///   * YouTube's link is a watch page. Its description is in `summary`,
 ///     straight from the feed; scraping the page adds player chrome and
@@ -48,9 +71,9 @@ import SwiftData
 /// to the size of the corpus.
 enum FeedArticleText {
 
-    /// The bridges whose rows link to an article. See the type doc for why the
-    /// other three abstain.
-    static let sources: Set<String> = ["RSS", "Substack"]
+    /// The sources whose rows link to a page it is fair to read. See the type
+    /// doc for the rule, and for why the three feed bridges below it abstain.
+    static let sources: Set<String> = ["RSS", "Substack", "Bookmarks", "Raindrop"]
 
     struct Report {
         var enriched = 0
@@ -296,7 +319,7 @@ enum FeedArticleText {
         // Keyed by REF, not by row: a CloudKit merge or a re-follow can hand
         // the same article a new `Thing`, and re-fetching a publisher's page
         // for a story we already read is exactly what the ledger prevents.
-        let pending = rows.compactMap { thing -> (ref: String, url: URL)? in
+        let pending = rows.compactMap { thing -> (ref: String, url: URL, service: String)? in
             // `readableURL` is the shared rule (2026-08-23) — see its doc for
             // why the tap and this pass must agree on WHAT is readable while
             // disagreeing about when. The ledger check stays here: it is the
@@ -306,16 +329,19 @@ enum FeedArticleText {
                   (attempts[ref] ?? 0) < maxAttempts,
                   let url = readableURL(for: thing)
             else { return nil }
-            return (ref, url)
+            // The SOURCE travels with the row, read here while it is certainly
+            // live (prd §645 pass 5 item 4). It named the service for the
+            // receipts screen by re-finding the row after the fetch, falling
+            // back to "RSS" when it had been deleted — harmless while every
+            // member of `sources` was a feed, and a WRONG DISCLOSURE now that
+            // a bookmark is one: a reach to somebody's saved page filed under
+            // a bridge they may not even have connected.
+            return (ref, url, thing.source)
         }
         report.considered = pending.count
         var failRun = 0
 
-        for (ref, url) in pending.prefix(limit ?? perPass) {
-            // The source the row belongs to, read BEFORE the fetch — it names
-            // the service for the receipts screen, and the row can be gone by
-            // the time the fetch returns.
-            let service = rows.first { $0.isLive && $0.sourceRef == ref }?.source ?? "RSS"
+        for (ref, url, service) in pending.prefix(limit ?? perPass) {
             let body = await LinkTitle.fetchReadable(url, as: service)
             // Up to eight seconds passed. The row is re-found by ref rather
             // than held across the suspension (CLAUDE.md corollary 6).
