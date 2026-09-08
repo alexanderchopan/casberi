@@ -1984,38 +1984,82 @@ struct MainSurface: View {
             target = label
         }
         guard target != filter.source else { return }
-        // The room's last look is NOT taken here any more (PERF 2026-09-08):
-        // a `drawHierarchy` on the tap's own frame blocked the slide's first
-        // frames exactly as it blocked a swipe's first move. Every room is
-        // captured AT REST instead, a beat after it arrives — see
-        // `captureRestingLook`.
+        deal(to: target)
+    }
+
+    /// The room the flight will land on, once the card is off the edge —
+    /// nil when nothing is in flight. See `deal(to:)`.
+    @State private var pendingLanding: String?
+    /// Which deal the pending landing belongs to, so a superseded flight's
+    /// timer cannot land or clear a newer one (the guarded-timer shape).
+    @State private var flightGeneration = 0
+
+    /// EVERY ROUTE INTO A ROOM DEALS A CARD (2026-09-08, prd §651 pass 2 —
+    /// the chip tap was the one route still building the room inside its own
+    /// slide). A swipe, a tap on All or Pinned, a venue picked in a folder,
+    /// and a room's own switcher all come here after `go(to:)` has resolved
+    /// the label: the card on screen flies off the edge the room lies beyond
+    /// while the next room's cover comes to rest beneath it, and the real room
+    /// swaps in `flightMs` later, over an idle main thread, under a cover that
+    /// is a picture of the very room arriving (or its mark on the page). One
+    /// motion for the carousel, and the build never runs while it is moving.
+    ///
+    /// A deal begun mid-flight LANDS the pending room first (`settleFlight`),
+    /// so a person flicking through three rooms is never ignored — the second
+    /// flick pays the first room's build as a cut and starts from the room
+    /// it was heading for, which is what a stack of cards does.
+    private func deal(to target: String) {
+        settleFlight()
+        let toward = direction(from: filter.source, to: target)
+        let side: CGFloat = toward == .trailing ? -1 : 1
+        let width = max(chrome.pagerFrame.width, 1)
+        swipeCommit = true
+        pendingLanding = target
+        flightGeneration &+= 1
+        let generation = flightGeneration
+        // A tap has no drag behind it, so the cover is named here; a swipe's
+        // `dragMove` named it on the first move and it stays as it is.
+        if chrome.pageDragTarget == nil { chrome.pageDragTarget = target }
+        withAnimation(DS.Motion.standard) {
+            chrome.pageDragCommitted = true
+            chrome.pageDragX = side * width
+            chrome.pageDragProgress = toward == .trailing ? 1 : -1
+        }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(Self.flightMs))
+            guard generation == flightGeneration else { return }
+            settleFlight()
+            // The cover leaves once the room has had its first frame over it.
+            try? await Task.sleep(for: .milliseconds(250))
+            guard generation == flightGeneration else { return }
+            swipeCommit = false
+            chrome.pageDragTarget = nil
+            chrome.pageDragCommitted = false
+        }
+    }
+
+    /// Land the pending room now, if one is in flight. Idempotent.
+    private func settleFlight() {
+        guard let target = pendingLanding else { return }
+        pendingLanding = nil
+        land(target)
+        ChipMemory.visited(target)
+    }
+
+    /// The switch itself — the one transaction every room change has always
+    /// walked through: the budget, the source, the drag reset.
+    private func land(_ target: String) {
         slideEdge = direction(from: filter.source, to: target)
         SwipeClock.step(to: target)
         // THE SLIDE GETS ITS FRAMES (PERF 2026-08-21, corrected 2026-09-01) —
-        // see `swipeRowBudget` and `swipeBudgetSource`.
-        //
-        // ALL THREE WRITES IN ONE TRANSACTION, and that is a fix rather than
-        // tidying. They were two: the bound was set first, on its own, so
-        // SwiftUI ran a WHOLE EXTRA body pass of this surface with
-        // `filter.source` still naming the room being LEFT — which rebuilt
-        // that room's body and re-armed its `@Query`, on the main actor,
-        // inside the frames the slide needs, for a room about to be thrown
-        // away. Measured on a swipe between two rooms: one full outgoing
-        // `FeedScreen` body build, removed by coalescing.
-        //
-        // The old comment's reasoning — "set BEFORE the source changes so the
-        // incoming `init` already carries the bound" — is preserved exactly:
-        // in the single body pass this now produces, the bound and the new
-        // source land together, so the incoming room's very first `init`
-        // still carries it.
+        // see `swipeRowBudget` and `swipeBudgetSource`. ALL THREE WRITES IN
+        // ONE TRANSACTION with the source, so the incoming room's very first
+        // `init` carries the bound and the outgoing room is never rebuilt.
         withAnimation(DS.Motion.standard) {
             swipeRowBudget = Self.swipeRowBudgetRows
             swipeBudgetSource = target
             swipeBudgetGeneration &+= 1
             filter.source = target
-            // The drag that brought us here, if any, ends in the same
-            // transaction: the incoming room mounts at rest and the ring's
-            // lean resolves into its travel to the new chip.
             chrome.pageDragX = 0
             chrome.pageDragProgress = 0
         }
@@ -2145,44 +2189,10 @@ struct MainSurface: View {
         if chrome.openFolder != nil {
             withAnimation(DS.Motion.standard) { chrome.openFolder = nil }
         }
-        // THE FLIGHT FIRST, THE ROOM AFTER (PERF 2026-09-08).
-        //
-        // The commit used to swap the room in the same transaction that
-        // started the card's flight, so the incoming room's whole first
-        // build — its query, its shaping, its first thirty row bodies — ran
-        // on the main thread INSIDE the frames the fly-off and the cover's
-        // slide needed. SwiftUI drives those frames from the main thread
-        // (the BerryRain lesson, CLAUDE.md), so the card froze mid-air for
-        // the length of the build and jumped: every swipe stuttered by
-        // construction, and the budget, the memoised heads and the cheaper
-        // capture each made the stutter shorter without touching its cause.
-        //
-        // Now the release animates the drag state to its END — the card off
-        // the edge it was heading for, the cover at rest — over an idle main
-        // thread, and the room swaps one `flightMs` later, under a cover that
-        // is either a picture of the very room arriving (a visited room) or
-        // its mark on the page. The swap is `.identity` both ways: the old
-        // card is already off screen, and the new room appears whole over
-        // its cover the instant it is built. The build's cost is unchanged;
-        // it simply no longer runs while anything is moving.
-        swipeCommit = true
-        let side: CGFloat = delta > 0 ? -1 : 1
-        let width = max(chrome.pagerFrame.width, 1)
-        withAnimation(DS.Motion.standard) {
-            chrome.pageDragCommitted = true
-            chrome.pageDragX = side * width
-            chrome.pageDragProgress = CGFloat(delta)
-        }
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(Self.flightMs))
-            go(to: target)
-            ChipMemory.visited(filter.source)
-            // The cover leaves once the room has had its first frame over it.
-            try? await Task.sleep(for: .milliseconds(250))
-            swipeCommit = false
-            chrome.pageDragTarget = nil
-            chrome.pageDragCommitted = false
-        }
+        // THE FLIGHT FIRST, THE ROOM AFTER (PERF 2026-09-08) — `deal(to:)`,
+        // reached through `go(to:)` so a folded chip label resolves the same
+        // way a tap's does.
+        go(to: target)
     }
 
     /// How long the released card flies before the room underneath swaps —
@@ -2255,6 +2265,15 @@ struct MainSurface: View {
     }
 
     private func dragMove(_ t: CGFloat) {
+        // A finger arriving mid-flight lands the pending room as a cut and
+        // starts this drag from it (2026-09-08) — see `deal(to:)`.
+        if chrome.pageDragCommitted {
+            flightGeneration &+= 1
+            settleFlight()
+            swipeCommit = false
+            chrome.pageDragCommitted = false
+            chrome.pageDragTarget = nil
+        }
         let target = neighbour(t < 0 ? 1 : -1)
         let free = target != nil
         chrome.pageDragX = free ? t : t * 0.3
@@ -2392,12 +2411,8 @@ struct MainSurface: View {
             // the pager.
             .background {
                 PageSwipeCatcher(
-                    // …and while a released card is still in flight (PERF
-                    // 2026-09-08): the room swaps at the end of the flight,
-                    // and a pan begun before it would step from the room
-                    // being left.
                     enabled: { !chrome.walkModalOpen && !chrome.walkSheetOpen
-                               && !chrome.walkInPushedRoom && !chrome.pageDragCommitted },
+                               && !chrome.walkInPushedRoom },
                     move: { t in dragMove(t) },
                     step: { delta in step(delta) },
                     cancel: { dragCancel() })

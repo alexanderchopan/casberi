@@ -1890,6 +1890,16 @@ struct RootShell: View {
               // Behind the first paint (2026-09-06): this fetch's transformable
               // decoding was 61% of the main thread in the pre-paint window.
               await FirstPaint.painted()
+              // A COLD LAUNCH WAITS A BEAT MORE (PERF 2026-09-08, prd §651).
+              // Nothing below is drawn by the feed — the insight line feeds
+              // the agent, the digests feed the kept-ask chips, the brief and
+              // the widgets are read later — and the block sampled at 158 of
+              // 1,083 main-thread samples across a launch (`insightFetch600`
+              // hydrates 600 rows with their inline text, and the composers
+              // read it), landing in the seconds a person starts scrolling in.
+              // On a later foreground the corpus is warm and this runs as it
+              // always did.
+              if firstActivation { try? await Task.sleep(for: .seconds(2.5)) }
               await SweepClock.measure("insight.recompute") {
                 // Bounded (2026-07-24): insight/kept-ask/whisper read
                 // only recent activity, so this needn't materialize the
