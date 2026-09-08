@@ -508,6 +508,21 @@ step "Catalog sync"
 "$ROOT/scripts/catalog-sync.sh" || fail "catalog surfaces drifted — run scripts/catalog-sync.sh"
 print -P "%F{green}✓ catalog sync%f"
 
+# A RENAMED SEAT'S OLD ROWS MUST STILL RESOLVE (prd §647). An offer's name is
+# also its rows' `Thing.source`, so renaming a seat strands every row already
+# landed under the old name: no catalog offer, therefore no category (its chip
+# escapes `CategoryFold` and draws as a bare circle beside a row of category
+# words) and no mark (`BridgeGlyph`'s blank `app` fallback). This checks the
+# alias table resolves, that the join and every source→identity resolver read
+# it, and that the convergence sweep stays OUTSIDE the migration version gate —
+# a one-shot cannot be complete against a CloudKit-mirrored store, which is how
+# §629's rename reached a device looking exactly like a rendering fault.
+step "Source alias audit"
+"$ROOT/scripts/source-alias-audit.py" --self-test >/dev/null \
+  || fail "the source-alias audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/source-alias-audit.py" || fail "a renamed source resolves to no seat — see the output above"
+print -P "%F{green}✓ source alias audit%f"
+
 # Keeps the "What this app reaches" registry complete (prd §205): every host
 # the app calls must be disclosed in NetworkReach.swift or the explicit
 # non-reach denylist — an undisclosed fetch host fails here.

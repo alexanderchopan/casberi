@@ -422,6 +422,16 @@ struct RootShell: View {
                 // here is visible, and on the main actor it queued the first
                 // commit behind itself.
                 await FirstPaint.painted()
+                // EVERY LAUNCH, BEFORE THE DEDUPE (prd §647, 2026-09-08): the
+                // rows of a seat that was RENAMED converge onto its current
+                // name. This is deliberately NOT one of the migrations below —
+                // see `SourceRename` for why a version-stamped one-shot could
+                // not have been complete against a CloudKit-mirrored store, and
+                // reached a device as a bare unfoldable chip wearing no mark.
+                // Before the dedupe so an old-named row and its new-named twin,
+                // which share a `sourceRef`, collapse in the same pass.
+                SourceRename.sweep(context: modelContext)
+                SourceRename.sweepSeats(bridges)
                 #if DEBUG
                 // `[wall]` because these now yield: the figure is elapsed
                 // time across the suspensions, not main-actor time held, and
@@ -633,27 +643,17 @@ struct RootShell: View {
                         // lists — a dead control that opens nothing.
                         bridges.remove("homekit")
                     }
-                    if migrationsStored < 9 {
-                        // One-time rename (2026-09-06, prd §629): the two
-                        // ethrex seats are "Hegota Devnet" and "Privacy
-                        // Devnet" now, and an offer's name is also its rows'
-                        // `source` and its bridge record's name. Rows keep
-                        // their source string forever, so without this every
-                        // row landed before the rename resolves to no seat —
-                        // no chip, no category, no mark — and the seat itself
-                        // reads as disconnected on the Apps screen. Same
-                        // predicate shape as v1's "You" → "Voice".
-                        let renames = [("Ethrex Hegot\u{00e1}", HegotaIdentity.source),
-                                       ("Ethrex Privacy", PrivacyDevnetIdentity.source)]
-                        for (old, new) in renames {
-                            let rows = (try? modelContext.fetch(FetchDescriptor<Thing>(
-                                predicate: #Predicate { $0.source == old }
-                            ))) ?? []
-                            for thing in rows where thing.isLive { thing.source = new }
-                        }
-                        bridges.rename(HegotaIdentity.seatID, to: HegotaIdentity.source)
-                        bridges.rename(PrivacyDevnetIdentity.seatID, to: PrivacyDevnetIdentity.source)
-                    }
+                    // MIGRATION v9 IS GONE, AND ITS ABSENCE IS THE FIX (prd
+                    // §647, 2026-09-08). It renamed the two ethrex seats'
+                    // rows (§629) exactly once per install, which is the wrong
+                    // shape for a store that mirrors to CloudKit: every row that
+                    // arrived after the stamp was written kept the old name
+                    // forever, resolved to no seat, and drew as a bare chip with
+                    // no mark. `SourceRename.sweep` above does the same work off
+                    // `Corpus.renamedSources` at EVERY launch, so a straggler is
+                    // caught whenever it lands. `migrationsCurrent` stays 9 on
+                    // purpose — the stamp is a stored value on real devices, and
+                    // nothing is gained by moving it.
                     modelContext.saveHonestly()
                     UserDefaults.standard.set(migrationsCurrent, forKey: migrationsKey)
                 }

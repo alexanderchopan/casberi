@@ -25,7 +25,13 @@ struct BridgeIcon: View {
         // and the failure renders as the generic glyph rather than as an
         // error. Folding is a no-op for every existing brand, all of which are
         // ASCII, and it makes the asset name typeable.
-        "brand-" + name.lowercased()
+        // A RENAMED SEAT'S OLD NAME RESOLVES TO ITS MARK (prd §647,
+        // 2026-09-08). This view is handed `thing.source` at 64 call sites, and
+        // a row landed before a rename keeps the old string forever — so
+        // without this it falls to `BridgeGlyph.symbol`'s `app` glyph, a blank
+        // rounded square, on every row of a seat that is sitting right there
+        // wearing its real mark two rooms over. See `Corpus.renamedSources`.
+        "brand-" + Corpus.canonicalSource(name).lowercased()
             .folding(options: .diacriticInsensitive, locale: Locale(identifier: "en_US_POSIX"))
             .replacingOccurrences(of: " ", with: "-")
             .replacingOccurrences(of: ".", with: "")

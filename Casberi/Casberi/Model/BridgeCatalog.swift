@@ -971,6 +971,19 @@ enum BridgeCatalog {
             }
         }
         for offer in allOffers.reversed() { map[offer.name] = offer.name }
+        // RENAMED SEATS, LAST AND NON-DESTRUCTIVELY (prd §647, 2026-09-08).
+        // A row keeps its `source` string forever, so a seat that was renamed
+        // leaves rows behind that resolve to no offer at all — no category, so
+        // the chip escapes `CategoryFold` and sits in the dock as a bare circle
+        // beside a row of category words, wearing `BridgeGlyph`'s blank `app`
+        // fallback. `Corpus.renamedSources` is the one table that says which
+        // string means which seat; see its own doc for why the one-shot
+        // migration that used to be the whole answer could not be.
+        //
+        // Written only where nothing already answers, so a live offer name can
+        // never be displaced by an alias — the same "an exact match always
+        // wins" property the two passes above are ordered for.
+        for (old, new) in Corpus.renamedSources where map[old] == nil { map[old] = new }
         return map
     }()
 

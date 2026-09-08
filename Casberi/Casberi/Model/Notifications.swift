@@ -289,7 +289,9 @@ enum Notifications {
         // for a mark that was sitting right there. Found the moment a devnet
         // gained a notification; it would have been just as true of any future
         // seat with an accent in its name.
-        let asset = "brand-" + name.lowercased()
+        // …and through `canonicalSource` (prd §647), for the same reason one
+        // rung up: a notification's source may be a seat's PRE-RENAME name.
+        let asset = "brand-" + Corpus.canonicalSource(name).lowercased()
             .folding(options: .diacriticInsensitive, locale: Locale(identifier: "en_US_POSIX"))
             .replacingOccurrences(of: " ", with: "-")
             .replacingOccurrences(of: ".", with: "")

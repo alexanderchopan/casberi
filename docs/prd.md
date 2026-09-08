@@ -79,6 +79,7 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §629 | The two ethrex seats are renamed, and migration v9 — a one-time pass gated on the `migrations.version` stamp — rewrites the rows already landed under the old names | amended by §647 (the rename stands; the repair could not. The store mirrors to CloudKit, so rows arrive after a one-shot has run and it never runs again — every one of those kept the old name, resolved to no seat, and reached a device as an unfoldable chip with a blank mark. `Corpus.renamedSources` makes RESOLUTION tolerant and `SourceRename.sweep` converges the corpus at every launch; v9 is deleted so there is one mechanism, not two) |
 | §529 | Bankr gains a second verb that can ACT, and an offer banner that says so at the head of the Wallet room | amended by §582 (Apple's macOS 1.0.11 review named that banner under 3.1.5, and the measured delta says why it had to: the acting verb landed 2026-08-29 and iOS 1.0.9 was cut 08-28, so it is new since every approved version — and unlike the devnet sends it is on production networks, where the faucet-token argument has nothing to say. The banner, the acting copy and the key-page deep link go; the seat stays as an ordinary answering agent) |
 | §529 amendment (2026-08-31) | The answer-only prompt prefix is DELETED — a sentence in a prompt is not a permission, and the key's own scope is what bounds Bankr | reversed by §582 (the reasoning stands and the copy still says it; the conclusion was wrong. The rail is not a claim about Bankr, it is a statement about Casberi — this app does not ask an agent to move money — and dropping it left that stated nowhere in the code) |
 | §545 | The vibenet roster moves onto the room's own Accounts scope, and `VibenetAddressBookScreen` is deleted with its route | amended by §562 (the ruling stands; the deleted screen took `VibenetWatchSheet`'s ONLY presenter with it, so the roster could be renamed and unwatched from and not added to, and §479's discovery is in the empty branch — the moment you watch one account the lookup is off the screen for good. The door is restored as a head row routed through `FeedSheetRoute.vibenetWatch`, and five §517 guards re-pointed in the same move turned out to be dead) |
@@ -50898,3 +50899,88 @@ that A.3 names up front — the scope dropped on the way into the route, and the
 receipt filter lost. **Not seen on a device or a simulator**: clean iOS build,
 the new harness, `note-sheet-selftest.sh` (whose §399 guards were re-pointed
 rather than deleted), and the liveness and mutation-liveness audits.
+
+## §647 — A renamed seat's old rows had no seat at all, and a one-shot migration could never have caught them (device report: "there is a random tile in the nav bar. looks like ethers gegota and should be in the wallet room! icon missing too", 2026-09-08)
+
+**The report, and what it was looking at.** A screenshot of a room of Hegotá
+receipts — "Sent test ETH on Hegotá", "Claimed test ETH from the Hegotá
+faucet" — with the dock underneath showing category words (Life, Social, Media,
+Reading) and, sitting among them, one chip that was not a word: a bare circle
+that had escaped the fold. Every row in the room wore the same blank rounded
+square where its mark should be. Both are one fault with one cause.
+
+**The cause.** An offer's name is also its rows' `Thing.source`. §629 renamed
+the two ethrex seats ("Ethrex Hegotá" → "Hegota Devnet", "Ethrex Privacy" →
+"Privacy Devnet"), and a row keeps the string it landed with forever — so
+`BridgeCatalog.offer(forSource:)` answers nil for an old row and from there it
+has NO SEAT. `CategoryFold` resolves membership through
+`BridgeCatalog.category(forSource:)`, so the chip cannot fold and draws its own
+circle beside a row of category words; `BridgeGlyph.symbol` falls to `default`,
+which is `app` — a rounded-square outline, i.e. the blank tile in the rows.
+§629 named this failure exactly and shipped migration v9 against it.
+
+**So the finding is not that the migration was missing. It is that its SHAPE
+cannot work here.** Migration v9 is one pass over the corpus gated on the
+`migrations.version` stamp in `UserDefaults` — once per install, ever. **This
+store mirrors to CloudKit.** A row landed on another device, or sitting unmerged
+in the iCloud zone, arrives whenever it arrives; every one that lands after the
+stamp is written keeps the old name for good, because the migration has already
+run and will never run again. A second device still on an older build re-lands
+them indefinitely. The migration did not merely miss rows — it answered a
+question about data that had not arrived yet, which is a class of bug that looks
+fixed on the machine it was written on and is permanently broken everywhere the
+rows actually come from.
+
+**The fix is two layers, and one of them alone is not enough.**
+
+1. **Resolution is TOLERANT.** `Corpus.renamedSources` (declared beside
+   `retiredSources`, for that table's own stated reason — the share extension
+   cannot see `BridgeCatalog`, and a rename is the same kind of fact) maps an
+   old name to the seat it answers to now. `BridgeCatalog.seatNameBySource`
+   folds it in at build time, last and only where nothing already answers, so a
+   live offer name can never be displaced by an alias. Every source→identity
+   resolver reads it too — `BridgeIcon.assetName`, `BridgeGlyph.symbol`,
+   `BridgeGlyph.glyphTint`, `DS.brandHue`, `Notifications.brandAsset`. A row
+   that syncs in mid-session therefore gets its category, its fold and its mark
+   on the frame it lands, with nothing having swept anything.
+2. **The corpus CONVERGES.** `SourceRename.sweep` runs at every launch off that
+   same table — never a version stamp — and rewrites stragglers, saving its own
+   work rather than riding a caller's save the way the one-shot rode the
+   migration block's. It runs BEFORE `SyncReconcile.dedupeBySourceRef`, so an
+   old-named row and its new-named twin (they share a `sourceRef`) collapse in
+   the same pass. Bounded: one `fetchCount` per table entry — two today — on an
+   indexed `source ==` predicate, with the fetch skipped when the count is zero,
+   which in the steady state is every launch. **NOT MEASURED on a device**; the
+   claim is structural, and that is the only claim it is entitled to make.
+
+**Why layer 2 is still needed once layer 1 exists.** Display is tolerant, but a
+ROOM is entered by `Thing.source`, and the surfaces that decide what a room
+draws compare that string to a seat's own identity — `FeedScreen`'s room heads
+(`source == HegotaIdentity.source`), the venue switcher's scopes. Teaching each
+of those the alias is the cross-file promise `Thing.swift`'s own corollary 4 was
+written about. So the strings converge and only display is forgiving. The
+consequence to know: between an old-named row arriving and the next launch, the
+Wallet switcher can show two scopes that both READ "Hegota Devnet" — one per
+underlying string. That window is one launch, and it is the honest cost of not
+making every room comparison alias-aware.
+
+**Migration v9 is DELETED rather than left beside the sweep**, because two
+mechanisms for one fact is how they drift; `migrationsCurrent` stays 9, since
+the stamp is a stored value on real devices and moving it buys nothing. This
+amends §629: the rename itself stands exactly as ruled, and only its repair
+mechanism changes — that entry's "the old accented literal survives in exactly
+one place, the migration's own predicate" is no longer true, since the literal
+now lives in `Corpus.renamedSources`, which is read rather than run.
+
+**`scripts/source-alias-audit.py`** (six checks, all six mutation-proven, wired
+into `verify.sh`): every alias VALUE is a real `Offer(name:)`; no alias KEY is a
+live offer name or a retired source; the join reads the table; all five identity
+resolvers canonicalise; and the sweep is called OUTSIDE the migration gate — the
+last one being the ruling itself, made mechanical. Checks E and F read a
+comment-stripped copy, because these files document the rule by naming the very
+symbols the checks grep for.
+
+**Not verified on a device or a simulator** — this session had no Xcode and no
+Swift toolchain. What it stands on: the audit and its self-test (run, green),
+and the reading of the two failure paths above. **The build is unverified and
+must be run before this ships.**

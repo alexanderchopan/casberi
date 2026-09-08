@@ -108,7 +108,7 @@ enum BridgeGlyph {
     /// seat chips) substitute this where non-nil, since a near-black hue
     /// carries no light of its own.
     static func glyphTint(for name: String) -> Color? {
-        switch name.lowercased() {
+        switch Corpus.canonicalSource(name).lowercased() {
         // DS.confirm's dark value — re-typed fixed because the mark must not
         // shift per scheme; keep in step if the confirm green is ever tuned.
         case "tokens": return Color.fixed("#30d158")
@@ -138,7 +138,11 @@ enum BridgeGlyph {
     }
 
     static func symbol(for name: String) -> String {
-        switch name.lowercased() {
+        // Through `canonicalSource` (prd §647): a row landed before a seat was
+        // renamed keeps the old string forever, and `default` here is `app` —
+        // a blank rounded square, which is what the whole failure LOOKS like on
+        // a device. See `Corpus.renamedSources`.
+        switch Corpus.canonicalSource(name).lowercased() {
         case "calendar":  return "calendar"
         case "gmail", "mail": return "envelope"
         case "icloud mail": return "envelope.badge"

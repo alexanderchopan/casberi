@@ -128,6 +128,65 @@ enum Corpus {
         "OpenSea",
     ]
 
+    /// Sources whose SEAT WAS RENAMED, and the name it answers to now
+    /// (prd §647, 2026-09-08).
+    ///
+    /// An offer's name is also its rows' `source` string, so renaming a seat
+    /// strands every row landed under the old one: `BridgeCatalog.offer(forSource:)`
+    /// answers nil, so the row resolves to NO SEAT — no category (its chip
+    /// escapes the fold and sits in the dock as a bare circle beside a row of
+    /// category words), no mark (`BridgeGlyph.symbol`'s `app` fallback, a blank
+    /// rounded square), and the seat itself reads as disconnected on the Apps
+    /// screen. Reported from a device exactly that way: *"there is a random tile
+    /// in the nav bar. looks like ethers gegota and should be in the wallet
+    /// room! icon missing too"*.
+    ///
+    /// **A ONE-SHOT MIGRATION CANNOT BE THE ANSWER, AND THAT IS THE WHOLE
+    /// REASON THIS TABLE EXISTS.** §629's rename shipped as migration v9 in
+    /// `RootShell` — a single pass over the corpus, gated on a `UserDefaults`
+    /// version stamp, i.e. once per install. The store MIRRORS TO CLOUDKIT: a
+    /// row landed on another device, or sitting in the iCloud zone unmerged,
+    /// arrives whenever it arrives, and every one that lands after that stamp
+    /// is written keeps the old name FOREVER — the migration has already run
+    /// and will never run again. A second device still on an older build
+    /// re-lands them indefinitely. So the migration was not merely incomplete;
+    /// its shape could not be complete, because it answers a question about
+    /// data that had not arrived yet.
+    ///
+    /// What replaces it is two layers, and both are needed:
+    ///
+    ///   • **Resolution is tolerant.** `canonicalSource` below folds an old name
+    ///     onto its seat, and `BridgeCatalog.seatNameBySource` reads it — so a
+    ///     row that arrives mid-session gets its category, its fold and its mark
+    ///     on the frame it lands, with nothing having swept anything.
+    ///   • **The corpus converges.** `SourceRename.sweep` runs at EVERY launch
+    ///     off this same table (never a version stamp), so stragglers are
+    ///     rewritten rather than merely rendered correctly. That matters because
+    ///     a room is entered by `Thing.source` and a `source ==` comparison
+    ///     against a seat's own identity — `FeedScreen`'s room heads, the venue
+    ///     switcher's scopes — cannot be made tolerant without teaching every
+    ///     one of them the alias.
+    ///
+    /// Declared HERE, beside `retiredSources`, for that table's own stated
+    /// reason: the share extension cannot see `BridgeCatalog`, and a rename is
+    /// the same KIND of fact — one rule about source strings, read by every
+    /// surface. A key must NOT be a live offer name and every value MUST be
+    /// one; `scripts/source-alias-audit.py` fails the build otherwise, because
+    /// an alias pointing at nothing is the exact bug it exists to close, wearing
+    /// a fix's clothes.
+    static let renamedSources: [String: String] = [
+        // prd §629, 2026-09-06 — the two ethrex seats took the family grammar
+        // ("<chain> Devnet") and dropped the operator prefix.
+        "Ethrex Hegot\u{00e1}": "Hegota Devnet",
+        "Ethrex Privacy": "Privacy Devnet",
+    ]
+
+    /// The name a source answers to today. Identity for everything the table
+    /// has never heard of, which is every source but the handful above.
+    static func canonicalSource(_ source: String) -> String {
+        renamedSources[source] ?? source
+    }
+
     /// Does this source get a chip in the strip, a room behind it, and a
     /// `casberi://feed/source/…` door pointing at it? Read by every surface
     /// that offers a source as a destination, so the answer is declared once.

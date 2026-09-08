@@ -19,7 +19,10 @@ extension DS {
     /// a fill, not an identity, so surfaces that WEAR the hue (the thing
     /// sheet's wash) ask this and stay pure ink on nil (ruling 2026-07-10).
     static func brandHue(for source: String) -> Color? {
-        switch source.lowercased() {
+        // Through `canonicalSource` (prd §647) — one line here answers for
+        // `brandColor`, the icon stand-in's fill and every wash that reads a
+        // source's hue, so a renamed seat's old rows do not go grey.
+        switch Corpus.canonicalSource(source).lowercased() {
         case "calendar":            return Color.fixed("#ff3b30")
         case "gmail", "mail":       return Color.fixed("#ea4335")
         case "icloud mail":         return Color.fixed("#3693f3")
