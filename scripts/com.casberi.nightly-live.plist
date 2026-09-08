@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Nightly live-integrations pass (keyless third-party drift — the four devnet
+  seats' shape baselines above all). Copy to ~/Library/LaunchAgents/ and
+  bootstrap it:
+
+    cp scripts/com.casberi.nightly-live.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.casberi.nightly-live.plist
+
+  02:45, before the 03:20 Mac pass: curl-only, a few minutes, no build and no
+  simulator, so the two never contend for anything — but a devnet row that
+  fires while xcodebuild saturates the machine is a row whose 15s timeouts
+  read as outages.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.casberi.nightly-live</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>-lc</string>
+        <string>/Users/alexanderchopan/Developer/casberi/scripts/nightly-live.sh</string>
+    </array>
+
+    <!-- -lc: a login shell, so python3/git/curl resolve as in a terminal. -->
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key><integer>2</integer>
+        <key>Minute</key><integer>45</integer>
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/alexanderchopan/Developer/casberi</string>
+
+    <key>StandardOutPath</key>
+    <string>/Users/alexanderchopan/Developer/casberi/scripts/output/nightly-live.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/alexanderchopan/Developer/casberi/scripts/output/nightly-live.stderr.log</string>
+
+    <!-- Missed runs are SKIPPED, not queued — same as nightly-mac. -->
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

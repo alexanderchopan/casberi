@@ -18,6 +18,10 @@
 #     Portfolio) live in the IN-APP pre-release probes, never here — so this can
 #     run nightly without touching the shared-key budget.
 #   * No build, no sim, no computer-use — safe for scheduled/non-interactive runs.
+#   * SCHEDULED since 2026-09-08 (prd §654): `scripts/nightly-live.sh` runs this
+#     at 02:45 via `com.casberi.nightly-live` and writes one ledger row per night
+#     to scripts/output/nightly-live.log, which verify.sh reads back and REPORTS.
+#     Before that, every drift row here printed to a terminal nobody opened.
 #
 # Pairs with (does NOT replace): the heavy in-app end-to-end probes
 # (-peerProbe / -approvalProbe / -prepareProbe) that land real things and DO
@@ -893,59 +897,222 @@ PY
 fi
 
 hr
-# ── ethrex `privacy` devnet — a DISCOVERY row, not a regression row ──────────
-# ethrex names a devnet by the capability it tests and stands up a full quartet
-# per name (`{faucet,rpc1..3,dora}.<devnet>.ethrex.xyz`). We hold two: `hegota`
-# (§500) and `frames` (§548). A third appeared — `privacy` — and this app has
-# no seat for it, which is exactly why this row is shaped backwards from every
-# other one in this file.
+# ── Privacy devnet (ethrex `privacy`, chain 8141) — a REGRESSION row since 2026-09-08 ──
+# This block was a DISCOVERY row (2026-09-02): the app had no seat here, so
+# unreachable was the normal answer and reachable was the news. Then §593a/§629
+# built the seat — `PrivacyDevnetBridge`, its own 8-field type-0x6 encoder,
+# a Roots scope off EIP-8272 — and the row kept asking "is there a chain to
+# measure?" of a chain the app was already signing for, and would have warned
+# "a NEW chain, run the probe" every night for as long as anybody let it. It
+# is shaped like the Frames block now, for the same reason that block exists:
+# the seat reads a devnet that documents itself as resettable without notice,
+# and when the wire moves the room does not break, it goes QUIET.
 #
-# **THE POLARITY IS INVERTED ON PURPOSE.** Everywhere else, unreachable is the
-# failure. Nothing here depends on this host, so unreachable is the NORMAL
-# answer and costs nothing; it is REACHABLE that is the news, because it means
-# there is a chain to measure and a decision to make. A row that shouted every
-# night about a devnet we do not read would be turned off within a week.
-#
-# It answers one question and leaves the rest to
-# `scripts/support/privacy-devnet-probe.py`, which is the instrument for the
-# first real measurement: is this Hegotá re-hosted (our seat's hosts moved) or
-# a new chain (a third seat)? Chain id settles it, and nothing else here can.
-print -P "%F{cyan}ethrex privacy devnet%f (discovery — no seat reads this yet)"
+# Everything pinned below was MEASURED on 2026-09-08 (head 0x11905), not read
+# off a spec. The two `PrivacyDevnetTransaction` fixtures and the §593a
+# broadcast vector are the sample, because they are the exact bytes the
+# harness proves the encoder against: a reset that removes them is what makes
+# `privacy-tx-selftest.sh` a green check over a chain that no longer exists.
+print -P "%F{45}Privacy devnet%f (keyless, EIP-8141 frames + EIP-8272 roots)"
+PV="https://rpc1.privacy.ethrex.xyz"
+PV_TX="0x3b87ac123b82cb860e82ee864d418a0953d9de53780a7e9e89626e859bb03820"   # §593a's own broadcast
+PV_FX_RICH="0xfa32623718a4ac87bca85daa2f62af32522f4e2f763adec8ac2fbde5aeb5cf0f" # privacy-tx-fixtures fx_rich
+PV_FX_SIMPLE="0xd4bf5b4d8d71d1cae6c2fe947daaa644f7b5770586f542ebe8ddc09b0040a51e"
 
-priv_up=0
-priv_id=""
+# 1. All three hosts, and the chain id the encoder PINS (8141 = 0x1fcd). The
+#    old discovery row's one live question — is this Hegotá re-hosted? — is
+#    answered by the same read: 0x301824 here would be Hegotá's id.
+pv_up=0; pv_other=""
 for h in rpc1 rpc2 rpc3; do
   id=$(raw "https://$h.privacy.ethrex.xyz" '{"id":1,"jsonrpc":"2.0","method":"eth_chainId","params":[]}' \
         | python3 -c 'import sys,json;print(json.load(sys.stdin).get("result",""))' 2>/dev/null)
-  if [[ -n "$id" ]]; then (( priv_up++ )); priv_id="$id"; fi
+  if [[ "$id" == "0x1fcd" ]]; then (( pv_up++ )); elif [[ -n "$id" ]]; then pv_other="$id"; fi
 done
-
-if (( priv_up == 0 )); then
-  pass "privacy devnet — not reachable from here (expected; no seat depends on it)"
+if (( pv_up == 3 )); then
+  pass "Privacy — all three RPC hosts serve chain 8141"
+elif (( pv_up > 0 )); then
+  warn "Privacy — only $pv_up of 3 hosts answered with chain 8141 (the seat retries, so this is survivable)"
+elif [[ -n "$pv_other" ]]; then
+  fail "Privacy — the hosts now serve chain $((pv_other)) ($pv_other), not 8141; PrivacyDevnetChain.chainID signs for a chain that is gone"
 else
-  if [[ "$priv_id" == "0x301824" ]]; then
-    # The bad case, and the only one that touches shipped code: Hegotá moved
-    # house. The seat's three RPC hosts, its explorer and its faucet are all
-    # spelled `hegota.*` in `HegotaIdentity`/`HegotaRPC` and in NetworkReach.
-    warn "privacy devnet — $priv_up host(s) up serving chain 3151908, WHICH IS HEGOTÁ'S: the seat's hosts have moved, and NetworkReach names the old ones"
+  fail "Privacy — no host served chain 8141; the whole seat reads nothing"
+fi
+
+if (( pv_up > 0 )); then
+  # 2. **The genesis hash** — `PrivacyDevnetChain.genesis`, the only sound
+  #    reset signal (a reset re-dates genesis while every other read answers
+  #    perfectly with nothing). The app stamps a relaunch off the same value;
+  #    this row is the one that tells a PERSON, and tells them the pinned
+  #    fixtures now describe a chain that no longer exists.
+  pvgen=$(raw "$PV" '{"id":1,"jsonrpc":"2.0","method":"eth_getBlockByNumber","params":["0x0",false]}' \
+           | python3 -c 'import sys,json;print((json.load(sys.stdin).get("result") or {}).get("hash",""))' 2>/dev/null)
+  if [[ "$pvgen" == "0x7ca0f7358d127dc4a68983050eb88837a5f384225254d1b009fa87fbcd0f2332" ]]; then
+    pass "Privacy — same chain as when the seat was built (genesis unchanged)"
+  elif [[ -n "$pvgen" ]]; then
+    warn "Privacy — THE DEVNET RESTARTED (genesis is now $pvgen); PrivacyDevnetChain.genesis, both privacy-tx fixtures and seedDemo describe a chain that no longer exists — re-measure"
   else
-    warn "privacy devnet — $priv_up host(s) up serving chain $((priv_id)) ($priv_id); a NEW chain, so Hegotá's seat is untouched and there is a third devnet to measure — run scripts/support/privacy-devnet-probe.py"
+    warn "Privacy — the genesis header did not read; the restart check could not run"
   fi
 
-  # Do the two predeploys the Hegotá seat reads exist here? This is the cheapest
-  # signal for how much of that seat would port: no vault means no Coins scope,
-  # no 0x8250 means no Nonces scope, whatever else the chain turns out to be.
-  for pair in "0x0000000000000000000000000000000000008312:UTXO vault" \
-              "0x0000000000000000000000000000000000008250:keyed nonces"; do
-    addr="${pair%%:*}"; what="${pair#*:}"
-    code=$(raw "https://rpc1.privacy.ethrex.xyz" \
-      "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getCode\",\"params\":[\"$addr\",\"latest\"]}" \
-      | python3 -c 'import sys,json;print(json.load(sys.stdin).get("result",""))' 2>/dev/null)
-    if [[ -n "$code" && "$code" != "0x" ]]; then
-      pass "privacy devnet — $what predeploy carries code (that reading would port)"
+  # 3. **THE ENVELOPE'S OWN FIELD NAMES.** The reader (`PrivacyDevnetBridge`)
+  #    takes `frames[].gasLimit` and `frames[].stateLimit` — NOT Hegotá's
+  #    `executionGasLimit`/`stateGasLimit`, NOT Frames' `gasLimit`-only —
+  #    plus `nonceKeys` and `recentRootReferences[]{sourceId,root,slot}`. A
+  #    rename on any of these gets silently nil, and a frame drawn with a nil
+  #    budget looks like one that had none.
+  pvshape=$(raw "$PV" "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionByHash\",\"params\":[\"$PV_FX_RICH\"]}" \
+             | python3 -c '
+import sys, json
+r = (json.load(sys.stdin).get("result") or {})
+if not r: print("gone"); raise SystemExit
+f = (r.get("frames") or [{}])[0]
+rr = (r.get("recentRootReferences") or [{}])[0]
+print(":".join([
+  r.get("type",""),
+  "frames" if r.get("frames") else "-",
+  "sigs" if r.get("signatures") else "-",
+  "gasLimit" if "gasLimit" in f else ("executionGasLimit" if "executionGasLimit" in f else "-"),
+  "stateLimit" if "stateLimit" in f else ("stateGasLimit" if "stateGasLimit" in f else "-"),
+  "nonceKeys" if isinstance(r.get("nonceKeys"), list) else "-",
+  "roots" if all(k in rr for k in ("sourceId","root","slot")) else "-",
+]))' 2>/dev/null)
+  case "$pvshape" in
+    gone|"")
+      warn "Privacy — the pinned rich fixture (fx_rich) is gone (a reset, most likely); the envelope's field names are unverified tonight" ;;
+    0x6:frames:sigs:gasLimit:stateLimit:nonceKeys:roots)
+      pass "Privacy — a type-0x6 still carries frames, signatures, gasLimit+stateLimit per frame, nonceKeys and {sourceId,root,slot} roots — the names the reader takes" ;;
+    *:*:*:executionGasLimit:*|*:*:*:*:stateGasLimit:*)
+      fail "Privacy — a frame's budgets are now spelled Hegotá's way ($pvshape); every frame in the room draws with no budget" ;;
+    *:*:*:*:*:*:-)
+      fail "Privacy — recentRootReferences no longer carry sourceId/root/slot ($pvshape); the Roots scope reads nothing" ;;
+    *)
+      fail "Privacy — the type-0x6 shape moved ($pvshape); the encoder signs a list the chain no longer hashes" ;;
+  esac
+
+  # 4. **The receipt.** `payer` is what sets `sponsored`, `gasUsed` is the
+  #    move's cost. **`frameReceipts` IS SERVED HERE** — two entries with
+  #    gasUsed/status/stateGasUsed on the §593a vector, measured 2026-09-08 —
+  #    where the reader's comment still says "no per-frame breakdown is served
+  #    on this chain (measured)" and passes nil for both. That is prd §654's
+  #    open item, not a drift: this row holds the SERVED shape so the day the
+  #    reader is taught to use it, or the day the chain stops serving it, is
+  #    visible either way.
+  pvrcpt=$(raw "$PV" "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionReceipt\",\"params\":[\"$PV_TX\"]}" \
+            | python3 -c '
+import sys, json
+r = (json.load(sys.stdin).get("result") or {})
+if not r: print("gone"); raise SystemExit
+fr = r.get("frameReceipts") or []
+print(":".join([
+  str(len(fr)),
+  "status" if fr and "status" in fr[0] else "-",
+  "payer" if r.get("payer") else "-",
+  "gasUsed" if r.get("gasUsed") else "-",
+  "stateGasUsed" if any("stateGasUsed" in x for x in fr) else "-",
+]))' 2>/dev/null)
+  case "$pvrcpt" in
+    gone|"") warn "Privacy — the §593a vector's receipt did not read; payer and cost are unverified tonight" ;;
+    2:status:payer:gasUsed:stateGasUsed) pass "Privacy — the receipt still names its payer and cost, and serves 2 frameReceipts with status/stateGasUsed (unread by the room — §654)" ;;
+    *:*:-:*:*) fail "Privacy — the receipt no longer names a payer; every sponsored move reads as self-paid" ;;
+    0:*) warn "Privacy — frameReceipts are no longer served ($pvrcpt); the reader's nil-breakdown premise is true again" ;;
+    *) fail "Privacy — the receipt shape moved ($pvrcpt); the room's cost and payer reads are off the wire" ;;
+  esac
+
+  # 5. **WHAT THE CHAIN ADDED** — Hegotá's row 6, for this chain. Every row
+  #    above is a regression check against a hand-named list and blind to an
+  #    addition. Baselines are what the chain SERVED on 2026-09-08 (not what
+  #    the app reads — a read-set baseline reports the unread fields as news
+  #    every night and is switched off within a week). Sample: the three
+  #    pinned transactions plus the newest EIP-7708 Transfer emitters, so a
+  #    new type moving value shows up; a type that moves nothing is invisible
+  #    here, as on Hegotá.
+  pv_new=$(python3 - "$PV" "$PV_TX" "$PV_FX_RICH" "$PV_FX_SIMPLE" <<'PY' 2>/dev/null
+import json,sys,urllib.request
+host=sys.argv[1]; pinned=sys.argv[2:]
+def call(m,p):
+    r=urllib.request.urlopen(urllib.request.Request(host,
+        json.dumps({"id":1,"jsonrpc":"2.0","method":m,"params":p}).encode(),
+        {"Content-Type":"application/json"}),timeout=25)
+    return json.load(r).get("result")
+try:
+    logs=call("eth_getLogs",[{"address":"0xfffffffffffffffffffffffffffffffffffffffe",
+        "topics":["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"],
+        "fromBlock":"0x0","toBlock":"latest"}]) or []
+except Exception:
+    logs=[]
+seen=[]
+for l in reversed(logs):
+    h=l.get("transactionHash")
+    if h and h not in seen: seen.append(h)
+    if len(seen)>=15: break
+for h in pinned:
+    if h not in seen: seen.append(h)
+KNOWN_TYPES={"0x0","0x1","0x2","0x3","0x4","0x6"}
+KNOWN_FRAME={"data","flags","gasLimit","mode","stateLimit","to","value"}
+KNOWN_FRAMERECEIPT={"gasUsed","logs","stateGasUsed","status"}
+KNOWN_ROOT={"root","slot","sourceId"}
+newtypes=set(); newkeys=set(); typed=0
+for h in seen:
+    try:
+        tx=call("eth_getTransactionByHash",[h]) or {}
+    except Exception:
+        continue
+    t=(tx.get("type") or "").lower()
+    if t and t not in KNOWN_TYPES: newtypes.add(t)
+    if t!="0x6": continue
+    typed+=1
+    for f in tx.get("frames") or []:
+        newkeys |= {"frame."+k for k in f.keys()} - {"frame."+k for k in KNOWN_FRAME}
+    for r in tx.get("recentRootReferences") or []:
+        newkeys |= {"root."+k for k in r.keys()} - {"root."+k for k in KNOWN_ROOT}
+    try:
+        rc=call("eth_getTransactionReceipt",[h]) or {}
+    except Exception:
+        rc={}
+    for f in rc.get("frameReceipts") or []:
+        newkeys |= {"receipt."+k for k in f.keys()} - {"receipt."+k for k in KNOWN_FRAMERECEIPT}
+print(f"{len(seen)} {typed} {','.join(sorted(newtypes)) or '-'} {','.join(sorted(newkeys)) or '-'}")
+PY
+)
+  if [[ -n "$pv_new" ]]; then
+    read -r pv_sampled pv_typed pv_newtypes pv_newkeys <<< "$pv_new"
+    if [[ "$pv_newtypes" != "-" ]]; then
+      warn "Privacy — transaction type(s) nobody has seen before: $pv_newtypes (the seat reads 0x6 and treats everything else as legacy)"
     else
-      warn "privacy devnet — $what predeploy has NO code here; the matching Hegotá scope cannot draw on this chain"
+      pass "Privacy — no unfamiliar transaction type among $pv_sampled sampled ($pv_typed type-0x6)"
     fi
+    if [[ "$pv_newkeys" != "-" ]]; then
+      warn "Privacy — new field(s) on frame / frameReceipt / root objects: $pv_newkeys — read them, then widen the baseline in this file"
+    else
+      pass "Privacy — frames, frameReceipts and root references carry the same fields they did on 2026-09-08"
+    fi
+  else
+    warn "Privacy — the shape walk did not complete"
+  fi
+
+  # 6. The EIP-8272 recent-roots predeploy the Roots scope reads (144 bytes of
+  #    code on 2026-09-04). No code means the scope has nothing to draw.
+  pvcode=$(raw "$PV" '{"id":1,"jsonrpc":"2.0","method":"eth_getCode","params":["0x0000000000000000000000000000000000008272","latest"]}' \
+            | python3 -c 'import sys,json;print(json.load(sys.stdin).get("result",""))' 2>/dev/null)
+  if [[ -n "$pvcode" && "$pvcode" != "0x" ]]; then
+    pass "Privacy — the 0x…8272 recent-roots predeploy still carries code"
+  elif [[ -n "$pvcode" ]]; then
+    fail "Privacy — the 0x…8272 predeploy has NO code; the Roots scope cannot draw"
+  else
+    warn "Privacy — the predeploy code did not read"
+  fi
+
+  # 7. The faucet is up. A GET on the claim endpoint 404s by design — answers
+  #    without spending the one claim per source IP per hour (Frames' rule).
+  pvf=$(curl -s -m 12 -o /dev/null -w '%{http_code}' https://faucet.privacy.ethrex.xyz/api/claim 2>/dev/null)
+  if [[ "$pvf" == "404" || "$pvf" == "405" ]]; then
+    pass "Privacy — the faucet service is answering (no claim spent)"
+  elif [[ -z "$pvf" || "$pvf" == "000" ]]; then
+    warn "Privacy — the faucet host did not answer; a new account cannot be funded"
+  else
+    warn "Privacy — the faucet's claim endpoint answered $pvf to a GET (expected 404)"
+  fi
+fi
 
 # ── THE DEMO FIXTURE'S VALUES, READ BACK OFF THE CHAIN ───────────────────────
 #
@@ -963,9 +1130,11 @@ else
 # the bug was — which is the argument for a check that asks the chain.
 #
 # WARN-ONLY, like every row here: a devnet that moves on is not a build failure.
+# (Until 2026-09-08 this block sat INSIDE the discovery row's predeploy loop,
+# so it ran twice per night and only when that row chose to look.)
 print -P "%F{cyan}ethrex privacy demo fixture%f (are the seeded values still the chain's own?)"
 priv_addr="0x062901d23f7e2d3bf9949c8a8cfd2c7a5ae3f980"
-priv_bal=$(raw "https://rpc1.privacy.ethrex.xyz" \
+priv_bal=$(raw "$PV" \
   "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"$priv_addr\",\"latest\"]}" \
   | sed -n 's/.*"result":"\([^"]*\)".*/\1/p')
 if [ -z "$priv_bal" ]; then
@@ -973,13 +1142,21 @@ if [ -z "$priv_bal" ]; then
 elif [ "$priv_bal" = "0x638168433fac308" ]; then
   pass "privacy fixture — the demo balance is still this address's own"
 else
-  warn "privacy fixture — demo claims 0x638168433fac308, chain says $priv_bal; seedDemo is describing a state that has moved"
+  # WORDED WITHOUT A CAUSE, deliberately (2026-09-08). This row cannot separate
+  # "the balance moved since it was read" from "it was never this address's" —
+  # measured on the first nightly: `eth_getBalance` answers 0x799c26c0a173f91
+  # for this address at EVERY block height, genesis included, while a control
+  # address does differ between block 0 and latest, so the historical read this
+  # question needs is not available here for this account. Both readings matter
+  # and one of them is the §593a-class defect the block above exists for, so
+  # the row names the discrepancy and leaves the diagnosis to a person.
+  warn "privacy fixture — demo claims 0x638168433fac308, chain says $priv_bal; either seedDemo's balance has moved or it was never read off this chain (this node answers the same value at every height, so the row cannot tell which)"
 fi
 # Each seeded nullifier must appear on one of the two transactions the fixture
 # itself names. This is the exact check that would have caught the fabrication.
-priv_keys=$(for h in 0xfa32623718a4ac87bca85daa2f62af32522f4e2f763adec8ac2fbde5aeb5cf0f \
+priv_keys=$(for h in "$PV_FX_RICH" \
                      0xeda9b1c8231c7ba375c831d63655acc813cf8c7d3ac2b095b23e3011d7b2999a; do
-  raw "https://rpc1.privacy.ethrex.xyz" \
+  raw "$PV" \
     "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionByHash\",\"params\":[\"$h\"]}"
 done)
 priv_missing=0
@@ -999,8 +1176,6 @@ elif [ "$priv_missing" -eq 0 ]; then
   pass "privacy fixture — all 4 seeded nullifiers are on the transactions the fixture names"
 else
   warn "privacy fixture — $priv_missing of 4 seeded nullifiers appear on NEITHER named transaction; a value in seedDemo was not read off this chain"
-fi
-  done
 fi
 
 hr
@@ -1057,7 +1232,22 @@ PY2
         warn "vibenet — config is missing: $vibe_gaps (commit $vibe_commit); the readings that depend on them go quiet, not broken"
       fi ;;
     MISSING:*)
-      fail "vibenet — the config no longer names ${vibe_shape#MISSING:}; every read in the room is built from these" ;;
+      # **NOT A FAILURE, and the old wording was FACTUALLY WRONG (2026-09-08,
+      # prd §654a/§656).** It read "every read in the room is built from
+      # these", which is not true of the eip8130 four: the room's READS come
+      # off `usdv`, `nfv`, `vibecheck` and `faucetAddress`, all top-level and
+      # all still served (at new addresses, which `fetch`'s merge prefers).
+      # What the eip8130 four gate is SIGNING, and their absence is a state
+      # this app was built for on 2026-09-04 — `parse` falls to
+      # `readOnlyFallback`, `canSign` goes false, `VibenetSend` throws
+      # `noAccountStack` before any prompt, and `VibenetLedger` writes the
+      # sentence. Measured 2026-09-08 when the document dropped the whole
+      # namespace for a different account stack: chain id unchanged (so not a
+      # reset), the deterministic Keystore still answering `eth_getCode`, every
+      # read still resolving. A handled degradation reported as a red run is
+      # how a row gets muted, and this one must not be — its real news is that
+      # SIGNING IS OFF until the deployment names a stack again.
+      warn "vibenet — the config names no ${vibe_shape#MISSING:}; the room still READS (usdv/nfv/vibecheck are top-level and served) but SIGNING is off — readOnlyFallback, canSign false, VibenetSend refuses before the prompt (§654a)" ;;
     *)
       warn "vibenet — the contracts config did not parse as the shape the app expects" ;;
   esac
@@ -1142,7 +1332,13 @@ PY2
         && pass "vibenet — USDV Transfer logs still carry 3 topics with the amount in data ($vlogs in the last 100k blocks)" \
         || fail "vibenet — a USDV Transfer now carries $vtopics topics; the amount decode reads the wrong word"
     else
-      warn "vibenet — no USDV Transfer in the last 100k blocks; the ledger's shape is unverified tonight"
+      # **A REDEPLOYED TOKEN LOOKS EXACTLY LIKE THIS (2026-09-08, §654a).**
+      # When the contracts document moves `usdv` to a new address, the app
+      # follows it (the merge prefers the document) and the new deployment has
+      # no history yet — so silence here is the expected first state, not a
+      # dead read. Said in the row because the next reader's instinct is to go
+      # looking for a chain that stopped, and the chain is fine.
+      warn "vibenet — no USDV Transfer in the last 100k blocks; the ledger's shape is unverified tonight (expected right after a redeploy to a new address — check the config row above before chasing a dead chain)"
     fi
   else
     warn "vibenet — the token-shape walk did not complete"
@@ -1159,7 +1355,7 @@ hr
 # without notice.
 print -P "%F{45}Frames devnet%f (keyless, EIP-8141)"
 FR="https://rpc1.frames.ethrex.xyz"
-FR_TX="0x70c8c2b7c44ff8f046e1ebb7c925a80724aaad7f65f85d82e97c724cdbfc9bc6"
+FR_TX="0x7b75f255ab1ecc85bd7bb4610606ee92204688b6a902c2a0a7834c06e7b7be63"   # re-pinned after the 2026-09-08 restart
 
 # 1. All three hosts, and the chain id the encoder PINS (81410 = 0x13e02). A
 #    host answering for another chain is a signature sent to the wrong place.
@@ -1184,10 +1380,15 @@ if (( fr_up > 0 )); then
   #    on this chain it is expected, so it warns.
   fgen=$(raw "$FR" '{"id":1,"jsonrpc":"2.0","method":"eth_getBlockByNumber","params":["0x0",false]}' \
           | python3 -c 'import sys,json;print((json.load(sys.stdin).get("result") or {}).get("hash",""))' 2>/dev/null)
-  if [[ "$fgen" == "0x372a923bfd2599ef23e1c13c530d2ccba6064d934ac4516cfb647d5c2fee241d" ]]; then
-    pass "Frames — same chain as when the seat was built (genesis unchanged)"
+  if [[ "$fgen" == "0x4225d87803ea7b0da245a4390c18e8afe373cb0eb1482e218e1cdc200cfc27ab" ]]; then
+    pass "Frames — genesis matches the pinned post-restart chain (re-pinned 2026-09-08, §654a; NOT the chain the seat was built on)"
   elif [[ -n "$fgen" ]]; then
-    warn "Frames — THE DEVNET RESTARTED (genesis is now $fgen); the pinned harness vectors describe a chain that no longer exists and must be re-measured"
+    # It has restarted once already (2026-09-08, prd §654a) and the envelope
+    # came back UNCHANGED — the shipped encoder reproduced 3 of 3 live
+    # empty-data transfers byte-exactly, which is the only shape the app
+    # builds. So a restart is a re-measure of the pinned material, not a
+    # presumption that signing is broken; check before alarming anybody.
+    warn "Frames — THE DEVNET RESTARTED AGAIN (genesis is now $fgen); re-pin FR_TX and the genesis here, re-measure frames-tx-selftest's vectors, and re-run the encoder against a live transfer before assuming the envelope moved (it did not on 2026-09-08)"
   else
     warn "Frames — the genesis header did not read; the restart check could not run"
   fi
@@ -1242,9 +1443,15 @@ print(":".join([
 ]))' 2>/dev/null)
   case "$frcpt" in
     gone|"") warn "Frames — the pinned receipt did not read; per-frame outcomes are unverified tonight" ;;
-    2:status:payer:-) pass "Frames — the receipt still decomposes into per-frame outcomes and names its payer" ;;
-    *:status:payer:stateGasUsed)
-      warn "Frames — receipts now carry stateGasUsed; the room can draw its second gas bar and FramesRead's caveat should be re-measured" ;;
+    2:status:payer:stateGasUsed)
+      # ARRIVED 2026-09-08 with the restart, and NON-ZERO (0x2cd30 measured).
+      # §548 recorded its absence; the room still weights its frame strip by
+      # execution gas alone, which CLAUDE.md says is correct only while the
+      # second dimension is always zero. It no longer is — the drawing half is
+      # owed (prd §654a) and is a room change, not this row's business.
+      pass "Frames — the receipt decomposes into per-frame outcomes, names its payer, and carries stateGasUsed (non-zero since the restart; the room does not draw it yet — §654a)" ;;
+    2:status:payer:-)
+      warn "Frames — stateGasUsed has GONE from the receipts; it arrived with the 2026-09-08 restart, so its disappearance means another reset or a client downgrade" ;;
     *) fail "Frames — the receipt shape moved ($frcpt); a row can no longer say what each frame did" ;;
   esac
 

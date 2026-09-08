@@ -116,7 +116,7 @@ if "inFlight" not in fn:
     sys.exit(1)
 if "thing.isLive" not in fn:
     print("✗ fetchOnOpen no longer re-checks liveness — it holds a Thing across")
-    print("  an eight-second await (CLAUDE.md corollary 6)")
+    print("  an eight-second await (docs/liveness.md corollary 6)")
     sys.exit(1)
 PY
 # `enrichedText` is retrieval-only by the 2026-07-15 ruling and this is a NAMED

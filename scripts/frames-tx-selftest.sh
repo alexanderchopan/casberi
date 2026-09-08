@@ -27,6 +27,19 @@
 # swap — the lesson `safetx-selftest.sh` paid for, where all five spec vectors
 # left the same fields at zero and swapping two reproduced every hash.
 #
+# **THE CHAIN THOSE FIXTURES CAME FROM WAS RESET (2026-09-08).** Vectors 1 and
+# 2 were measured against a generation of chain 81410 that no longer exists:
+# the chain id is unchanged, genesis moved to 0x4225d878…27ab, the head fell to
+# ~14,000 blocks, and vector 1's transaction now answers `null`. They still
+# prove the ENCODER, which is what ships — they are real ethrex type-0x06 bytes
+# and a wrong encoder still fails them — but their "keccak matches the RPC's
+# own hash" claim can no longer be re-derived from a node.
+#
+# VECTOR 1R below restores exactly that claim against the chain that exists
+# now, and its own block is the record of what was re-measured, including the
+# one data-carrying transaction that does not reproduce and is left open (prd
+# §654a). Read that block rather than this paragraph for the current state.
+#
 # Pure, local, deterministic — no network, no simulator, no key.
 set -euo pipefail
 # Absolute, captured BEFORE the cd below: the mutation fan-out re-invokes this
@@ -700,6 +713,53 @@ check("vector 1 re-encodes byte for byte", RLP.hex(FramesTransaction.encoded(v1)
 check("vector 1's keccak is the transaction hash the RPC reports",
       keccakHex(FramesTransaction.encoded(v1)) == HASH1)
 check("the type byte is the measured 0x06", FramesTransaction.txType == 0x06)
+
+// ============ VECTOR 1R — THE SAME PROOF, ON THE CHAIN THAT EXISTS NOW
+// (2026-09-08, prd §654a). The Frames devnet RESTARTED: genesis moved to
+// 0x4225d878…, the head fell from 56,503 blocks to ~14,000, and vector 1's
+// transaction above answers `null`. Vectors 1 and 2 still prove the ENCODER —
+// they are stored bytes and a wrong encoder still fails them — but their
+// headline claim, "keccak matching the RPC's own hash", became unverifiable
+// against a chain nobody can query. This vector restores it.
+//
+// **THE ENVELOPE DID NOT MOVE ACROSS THE RESTART, and that was measured, not
+// assumed**: four live type-0x06 transactions were rebuilt from the RPC's own
+// JSON and run through this encoder, and three reproduced byte-exactly. The
+// fourth is the ONLY transaction on that chain carrying a payload (800 bytes
+// in frame 1); every other field on it is structurally identical to the three
+// that match, and it is unexplained — not an RLP long-string bug (1..65536
+// were checked against the spec) and not a truncated render (no data length
+// from 1 to 4096 reproduces its hash). It is recorded rather than hidden.
+//
+// It blocks nothing, because THE APP CANNOT PRODUCE THAT SHAPE: every frame
+// `FramesTransaction` builds passes `data: Data()` — the plain transfer and
+// the stitched multi-leg path alike — so the empty-data transfer is the only
+// thing this seat ever signs, and that is the shape which reproduces 3 of 3.
+// If a future pass gives Frames a data-carrying frame, THIS is the open
+// question it must close first.
+let s1r = hx("0x2c835d53b4c19cb1dd6c7cf28c4b87240f7e5a15")
+let v1r = FramesTransaction.Fields(
+    chainID: 0x13e02, nonce: 0x11, sender: s1r,
+    frames: [
+        .init(mode: 1, flags: 0x03, target: s1r,
+              executionGas: 0x186a0, stateGas: 0x3d090, value: Data(), data: Data()),
+        .init(mode: 2, flags: 0x00, target: hx("0xfcebeee7116422243d98a585d5337f116ea3ed16"),
+              executionGas: 0x186a0, stateGas: 0x3d090, value: hx("0x11c37937e08000"), data: Data()),
+    ],
+    signatures: [
+        .init(scheme: 1, signer: s1r, msg: Data(),
+              signature: hx("0x008a1d6fcb467b17b40a8fd350948a6e3e5592ed9b43f174515c89fc885c45fbe61046dd308d58152b647e0a4b8179d7a450bf114ff350d6daf2effff55653beef")),
+    ],
+    maxPriorityFeePerGas: 0x3b9aca00, maxFeePerGas: 0x2540be400,
+    maxFeePerBlobGas: 0, blobVersionedHashes: [])
+check("vector 1R's keccak is the POST-RESTART chain's own transaction hash",
+      keccakHex(FramesTransaction.encoded(v1r))
+        == "0x7b75f255ab1ecc85bd7bb4610606ee92204688b6a902c2a0a7834c06e7b7be63")
+// The signer is written LITERALLY here where HegotaSend writes it EMPTY. That
+// divergence survived the restart, and it is the one an encoder shared between
+// the two chains would get silently wrong.
+check("vector 1R still carries a literal signer, not Hegota's empty one",
+      RLP.hex(FramesTransaction.encoded(v1r)).contains("942c835d53b4c19cb1dd6c7cf28c4b87240f7e5a1580b841"))
 
 // ============ VECTOR 2 — real, a different sender, a different fee ceiling
 // and a DIFFERENT gas pair (0x13880/0x30d40, where v1 is 0x186a0/0x3d090), so
@@ -1409,7 +1469,7 @@ check("a fee-sized delta is still visible",
         .contains("210"))
 
 if fails > 0 { print("  \(fails) assertion(s) failed"); exit(1) }
-print("  ok   encoder: 2 real vectors byte-exact, keccak == the chain's own hash")
+print("  ok   encoder: 3 real vectors byte-exact, keccak == the chain's own hash (1 on the post-restart chain)")
 SWIFT
 
 build_run() {
@@ -1747,4 +1807,4 @@ if (( MUT_OK + MUT_FAILS != MUTN )); then
 fi
 (( MUT_FAILS == 0 )) || { echo "  $MUT_FAILS mutation(s) failed"; exit 1; }
 echo "  ok   drift guards: the envelope stays seven fields and never grows Hegotá's three"
-echo "✓ frames transaction self-test passed — encoder, 2 real vectors, $MUTN mutations"
+echo "✓ frames transaction self-test passed — encoder, 3 real vectors (1 post-restart), $MUTN mutations"

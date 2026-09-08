@@ -75,7 +75,7 @@ src = open(sys.argv[1]).read()
 m = re.search(r"case thing\(Thing, walk: ([^)]*)\)", src)
 if m and "[" in m.group(1):
     print("✗ FeedSheetRoute.thing carries an ARRAY — a held [Thing] handed")
-    print("  onward is CLAUDE.md corollary 4 and build 177 exactly")
+    print("  onward is docs/liveness.md corollary 4 and build 177 exactly")
     sys.exit(1)
 PY
 # The row tap uses the live filter; the heroes and shelves do not.
