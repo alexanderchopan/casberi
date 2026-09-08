@@ -1634,6 +1634,20 @@ harness "Files security-scope self-test" "files-scope self-test" "scripts/files-
 # reading aloud never reaches the network.
 harness "Feed-reading pure-logic self-test" "feed-reading self-test" "scripts/feed-reading-selftest.sh" "the feed-reading self-test failed — run scripts/feed-reading-selftest.sh"
 
+# The draw condition, and only it (prd §645 pass 1, 2026-09-08). Separate from
+# the harness above on purpose: that one guards the FETCH — one shared
+# eligibility rule so neither the tap nor the sweep downloads a podcast's audio
+# file to read as text — and every guard in it is POSITIVE, i.e. still true of
+# the condition this pass replaced. What §645 adds is a NEGATIVE rule about a
+# different question ("has a body" may not consult a source list), and a lone
+# negative buried among positives about the opposite question is how a rule
+# gets deleted as a tidy-up. The reversion it catches renders as a perfectly
+# ordinary sheet: put `sources.contains(thing.source)` back in front and
+# ninety-five seats silently stop drawing words they are still holding — no
+# crash, no empty frame, no build error, and the ask keeps working because the
+# words are still in the store. That bug was invisible for exactly one year.
+harness "Reading-draw self-test" "reading-draw self-test" "scripts/reading-draw-selftest.sh" "the reading-draw self-test failed — run scripts/reading-draw-selftest.sh"
+
 # Radicle (prd §400, 2026-08-18). The ONLY proof this bridge has: nothing on
 # this host can open a patch, merge one or close an issue, so no probe and no
 # sweep can ever exercise its landing paths — one degree weaker than Stripe's

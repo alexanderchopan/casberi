@@ -257,8 +257,7 @@ struct ThingContentView: View {
                 // A starred / watched repo leads with its preview, then the
                 // language dot and the "since you starred" line.
                 GitHubStarContent(thing: thing)
-            } else if FeedArticleText.sources.contains(thing.source),
-                      FeedArticleText.hasBody(thing)
+            } else if FeedArticleText.hasBody(thing)
                         || FeedArticleText.readableURL(for: thing) != nil {
                 // THE ARTICLE, AT LAST (2026-08-21). `FeedArticleText` has
                 // fetched the readable body of every RSS and Substack link since
@@ -275,10 +274,17 @@ struct ThingContentView: View {
                 // nobody the article. A reader that already paid for the fetch
                 // and then withholds it is the strangest possible outcome.
                 //
-                // Membership is `FeedArticleText.sources` itself, never a
-                // literal pair: the fetcher's own list decides who has a body
-                // to draw, so a third source added there is drawn here the same
-                // day rather than fetched into silence.
+                // THE TWO HALVES ANSWER DIFFERENT QUESTIONS (2026-09-08, prd
+                // §645 pass 1). "Has a body?" is source-independent — if the
+                // app already holds the words, the sheet draws them, and that
+                // is the whole rule. "Could get one?" is the FETCH, and it
+                // stays two sources wide: `readableURL` checks
+                // `FeedArticleText.sources` internally, so the fetch arm is
+                // unchanged by the split. For a year the condition asked only
+                // the second question, so ninety-five seats that had already
+                // been scraped by `LinkTitle.enrich` — every link anyone ever
+                // pasted — fell to a preview card and a door out to Safari
+                // while their lede sat in the store.
                 //
                 // The preview card stays ABOVE it — the article's own art and
                 // its door out to the site are not replaced by its text.

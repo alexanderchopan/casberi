@@ -45,7 +45,18 @@ struct ArticleBody: View {
 
     @ViewBuilder private var liveBody: some View {
         let body = (thing.enrichedText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        if !body.isEmpty {
+        // THE DUPLICATE TEST (2026-09-08, prd §645 pass 1). `summaryBlock`
+        // has carried this test since it shipped; the body never needed it
+        // because the two sets could not overlap — only RSS and Substack
+        // reached here, and `readableURL` skips a row whose summary is
+        // already substance. Drawing every source that HAS words makes them
+        // overlap: a publisher whose `<description>` was the article, and an
+        // OEmbed link whose only retrieval text is its own title, would
+        // otherwise show the same paragraph twice, one row apart, at two
+        // different sizes.
+        let dupe = body == (thing.summary ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            || body == thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !body.isEmpty, !dupe {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 ArticleListenButton(id: thing.id.uuidString, text: body)
                 // Defaults, unlike the generic branch: on an article the body

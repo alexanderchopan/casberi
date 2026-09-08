@@ -87,6 +87,7 @@ deliberately does not check are in `docs/verify.md`.
 - **verify.sh's audit list is provably complete now** → docs/verify.md
 - **Live-integrations heartbeat (scripts/live-integrations.sh, 2026-07-17)** → docs/verify.md
 - **Demo census — every other surface, one launch (Shell/DemoCensus.swift + verify.sh "Demo census", 2026-09-05; `DEMO_SHOTS=1` for the room screenshots)** → docs/verify.md · prd §617
+- **Reading-draw self-test (scripts/reading-draw-selftest.sh, 2026-09-08) — the sheet's `.link` arm asks TWO questions now: *has a body* (source-independent, `FeedArticleText.hasBody`) draws, *could get one* (`readableURL`) fetches and keeps its two-source list. The reversion it catches renders as a perfectly ordinary sheet and was invisible for a year** → docs/verify.md · prd §645
 - **Health-riders self-test (scripts/health-riders-selftest.sh, 2026-09-06) — the Strava/Garmin seats and the activity dedupe, for logic no machine here can produce the input for: the sim's Health store is empty and cannot be seeded, and the worst failure needs TWO apps to have written one ride** → docs/verify.md
 - **MetricKit self-test (scripts/metrics-selftest.sh, 2026-09-05) — the one check for logic no machine here can exercise, because no machine here can make a payload** → docs/verify.md · prd §622
 

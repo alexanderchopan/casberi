@@ -203,3 +203,63 @@ is the safe direction but is still wrong.
 **The two checks worth reading twice.** B, because a computed `isBackgroundLaunch` passes every other check in the file and defeats the whole feature — it would report "not background" the instant the app wakes, which is precisely when the shell must still be withheld. And G, because it is the one failure the gate could introduce and it is silent: a deep link arriving at a background-launched process being opened would be dropped by a handler that is not in the tree, and the app would simply open on the wrong screen.
 
 **What it deliberately does not check.** Whether the closed branch draws the right thing (it paints `DSPageBackground`; that is a look, not a rule), whether the background task should do less work on the main actor (it should, and that is its own entry), and whether the mount is fast once it happens — that is an ordinary cold-launch build, which the relaunch loop already gates.
+
+## Reading-draw self-test (`scripts/reading-draw-selftest.sh`, 2026-09-08) → prd §645
+
+**What it guards.** One condition — `ThingContent.kindSwitch`'s `.link` arm —
+and the rule that it asks TWO questions, not one:
+
+- **has a body** → `FeedArticleText.hasBody`, which reads nothing but
+  `enrichedText`. **Source-independent**, and that is the whole ruling.
+- **could get one** → `FeedArticleText.readableURL`, which checks
+  `FeedArticleText.sources` internally and stays two sources wide, so the
+  FETCH — and therefore `NetworkReach` — is untouched by the widening.
+
+**Why it is a separate file from `feed-reading-selftest.sh`,** which already
+guards this exact pair. That harness asserts the FETCH: one shared eligibility
+rule so neither the tap nor the background sweep downloads a podcast's audio
+enclosure to read its first 512KB as text. Every guard in it is POSITIVE
+(`readableURL` must be named here, and here, and here) and **every one of them
+is still true of the condition §645 replaced** — so it would have watched the
+reversion happen and printed green. What §645 adds is a NEGATIVE rule about a
+different question, and a lone negative buried among positives about the
+opposite question is how a rule gets deleted as a tidy-up.
+
+**The failure it exists to catch, and why it is worth a file.** Put
+`sources.contains(thing.source)` back in front of the condition and ninety-five
+seats silently stop drawing words they are still holding. There is no crash, no
+empty frame, no build error, and the answer path keeps working because the
+words are still in the store — so an ask about a saved article still answers
+correctly while the sheet shows a preview card and a door out to Safari. That
+is not a hypothetical shape: it is exactly what shipped from 2026-08-21 to
+2026-09-08, undetected for a year of the fetch's life, and it is the argument
+for pinning it rather than trusting the branch to stay split.
+
+**How it reads the source.** The `.link` arm is SLICED out of a 2,500-line view
+file — from the `} else if …FeedArticleText.` line to the next closing brace at
+the same indent — because the sheet has neighbouring branches that legitimately
+name a source (`thing.source == "GitHub"`, twice, immediately above), and a
+whole-file grep would either miss the reversion or fire on those. **A missing
+slice is a failure, not a silent pass over zero bytes** (the
+`dead-mutations-print-a-passing-line` shape). The negative guards read a
+**comment-stripped** copy: the branch's own comment says "`readableURL` checks
+`FeedArticleText.sources` internally", so a raw grep fires on the prose
+explaining the rule — the Obsidian/Cursor lesson, fifth time.
+
+**Five guards, eight mutations.** The draw names no source list (nor
+`thing.source` by another spelling); the draw is still ASKED (deleting
+`hasBody` satisfies the first guard perfectly and draws nothing); the fetch arm
+survives and `readableURL` keeps its membership; the preview card stays ABOVE
+the body (§455's rule, now reaching ninety-five more seats); and `ArticleBody`
+tests the body against BOTH `summary` and `title` before drawing it. Mutation 1
+restores the old condition verbatim. Mutation 8 is the only one that reaches
+`FeedArticleText.swift` itself — the widened draw is safe only because the
+fetch stayed narrow, so that file is copied into the mutation tree too rather
+than read from the shipped path.
+
+**What it cannot prove, stated rather than implied.** `ThingContent` is a
+SwiftUI view and cannot be compiled Foundation-only, so nothing here RUNS the
+branch — these are drift guards over source text. Whether the drawn lede reads
+as an article or as a nav scrap is a question about `LinkTitle`'s extractor
+against real pages: eleven of them were measured for the §645 amendment (three
+of the five that drew anything drew chrome), and it needs the network.

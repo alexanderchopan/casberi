@@ -50424,3 +50424,83 @@ subtitle is the field to read back first.
 **Standing lesson, third time in this repo**: an entry that says what it did to
 a FILE is checkable, and this one was not checked. Where a ruling's outcome is
 a file's contents, the commit that carries the entry carries the file.
+
+## §645 amendment — pass 1 is built, and the words it drew are mostly not an article (2026-09-08)
+
+`docs/reading-spec.md` A.1 shipped as written. `ThingContent.kindSwitch`'s
+`.link` arm now asks two questions instead of one: **has a body** (source-
+independent, `FeedArticleText.hasBody`, which reads nothing but `enrichedText`)
+and **could get one** (`FeedArticleText.readableURL`, which keeps its
+two-source membership internally, so the FETCH is unchanged and there is no
+`NetworkReach` question). `scripts/reading-draw-selftest.sh` pins the negative
+half with eight mutations, and is wired into `verify.sh` beside
+`feed-reading-selftest.sh` rather than into it — that harness's guards are all
+POSITIVE and every one of them is still true of the condition this pass
+replaced, so the new rule would have had nothing holding it.
+
+**Nothing moved on contact with the compiler.** §426's precedent held better
+here than it did there: the branch was at the cited line, the condition read
+exactly as quoted, `hasBody`/`readableURL` had the cited signatures, and the
+build was clean first time. Two things the spec did not say, both found by
+reading the tree rather than by the compiler:
+
+1. **The duplicate test needs `title` as well as `summary`.** §1 rule 2 says
+   "repeats `summary` or `title`"; A.1's step said only `summary`. The title
+   half is not decorative — `OEmbed.enrichedText` composes
+   "title · author on provider" and returns the TITLE ALONE for a response with
+   no author name, so a pasted link that resolved through oEmbed would draw its
+   own headline again as a paragraph, one row below itself, at `reading20`.
+2. **`enrichedText` on a `.link` row is not always prose, and three seats now
+   reach the sheet with something that is not.** None of them is model-written,
+   so §0's one exception is intact — but §83 is not about authorship, it is
+   about what the row shows. Named, because "the ceiling is somewhere in the
+   long tail" is the sentence §641b was written to stop:
+   · **App Store Connect reviews** — `enrichedText` is the reviewer's
+     TERRITORY, one word ("Japan"), deliberately kept off the title as noise.
+     Drawn full-width as a paragraph it is worse than noise.
+   · **Cursor pull requests** — one appended sentence per verdict,
+     "Pull request merged 2026-09-06T11:04:22Z.", an ISO stamp read aloud.
+   · **Walletbeat incidents** — the summary (which `summaryBlock` already draws
+     directly above) followed by raw citation URLs, so the duplicate test
+     cannot see it: it is the summary PLUS something, not the summary.
+   L2BEAT's and Walletbeat's WATCH rows are the counter-example and the reason
+   this is not a reversal: their `enrichedText` is every risk explanation those
+   two organisations wrote, one per line, and drawing it is the whole point of
+   the rule. **OWED, not fixed here**: the honest repair is at the source — a
+   one-word field belongs on `tags`, not in a body — and doing it inside a pass
+   whose commit boundary is "this alone" is how a pass stops being revertable.
+
+**The measurement the pass 1 → next-pass decision needed** (user, mid-build:
+*"tell me what the drawn text actually looks like on five or six real saved
+links"*). Eleven real pages through the SHIPPED extractor — `parseReadable`,
+`contentRegion`, `metaDescription`, `paragraphs`, `firstCapture` compiled
+verbatim out of `LinkTitle.swift` against a `URLSession` driver, so this is
+what `enrichedText` actually holds, not a model of it:
+
+| | pages | |
+|---|---|---|
+| fetch failed (403 / paywall / bot wall) | 4 | Stratechery, Ars Technica, NYT, x.com |
+| returned nil — the sheet draws nothing | 2 | a YouTube watch page, a Hacker News item |
+| **read as an article** | **2** | Wikipedia, simonwillison.net |
+| **read as chrome** | **3** | a Verge section index, a Verge article, a GitHub repo page |
+
+**Of the five pages that drew anything, three drew scraps.** The Verge article
+led with its lede and then ran "Close News Posts from this topic will be added
+to your daily email digest and your homepage feed" three times over; the GitHub
+repo page drew its file listing, every directory name twice ("stdlib stdlib
+test test"), plus "Fork 10.8k Star 70.3k". So **pass 5 goes next, not pass 3**
+— the user's own condition, set before the numbers came back.
+
+**And one thing pass 5 should not assume.** A.5 opens by saying `contentRegion`
+returns the WHOLE page when it finds no `<main>`/`<article>` marker, and that
+raising the paragraph limit therefore makes a miss worse. True, and not the
+whole miss: **simonwillison.net found NO marker and drew clean prose, while
+GitHub found a `<main>` and drew a file listing.** The marker is not the
+predictor. Both articles that read well also hit the 1,200 cap mid-sentence,
+which is the other half of pass 5 and needs no measurement to justify.
+
+**Not seen on a device or a simulator** (the standing rule): proven by a clean
+iOS build, the new harness and its eight mutations, `feed-reading-selftest.sh`,
+`swiftdata-liveness-audit.py` and `mutation-liveness-audit.py`. What no check
+here can see is how a 1,200-character wall of scraped prose SITS under a
+preview card on a real sheet.

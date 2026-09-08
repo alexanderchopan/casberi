@@ -5,9 +5,13 @@ guess), §644 (the app does not compete for the lock screen), §455 / §320 /
 §366 / §367 (the four carve-outs this replaces), §282 (screenshot OCR reads
 structure), §399 (the journal's neighbour doors).
 
-**Grade: SPEC ONLY.** Nothing below is built. Every file, line and constant is
-read off the tree at 2026-09-08 and is cited so the next session can check
-rather than trust.
+**Grade: PASS 1 BUILT, 2-5 SPEC ONLY (2026-09-08).** Pass 1 shipped as A.1
+wrote it — see the §645 amendment for the two things it did not say and for
+the eleven-page measurement of what the drawn text actually reads like. **That
+measurement redirects the order: pass 5 goes next, not pass 3**, because three
+of the five pages that drew anything drew chrome. Everything else below is
+unbuilt. Every file, line and constant is read off the tree at 2026-09-08 and
+is cited so the next session can check rather than trust.
 
 ---
 
@@ -27,7 +31,7 @@ Order of work, and it is not the order of size:
 
 | | Pass | Draws | Fetches | Schema |
 |---|---|---|---|---|
-| 1 | A saved link's text | stored | — | — |
+| 1 | A saved link's text — **BUILT 2026-09-08** | stored | — | — |
 | 2 | A screenshot's transcript | stored | — | — |
 | 3 | Next / previous | — | two bounded reads | — |
 | 4 | Listen, everywhere | — | — | — |
