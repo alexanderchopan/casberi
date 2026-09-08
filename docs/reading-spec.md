@@ -375,3 +375,213 @@ than the cap, asserting the text does NOT end in `…`.
 Passes 1–3 are drawing and plumbing over stored text. 4 is a capability
 decision. 5 is the only one that changes the app's own reads, and it is the one
 that makes the word "article" true.
+
+---
+
+# Appendix A — the build handoff
+
+**Written for a session that has Xcode, a simulator and `scripts/verify.sh`.**
+This spec was authored on Linux with no Swift toolchain, so nothing in it has
+been compiled. §426 is the precedent for what that is worth: every constant in
+that spec survived contact, and two real things moved anyway — a flag that
+governed nothing, and five fixtures that could not catch two transpositions.
+**Expect something here to move. When it does, amend the entry rather than
+working around it.**
+
+## A.0 Rules for every pass
+
+- **One pass per commit.** Each is independently shippable and independently
+  revertable; a combined commit hides which one broke a launch.
+- **`scripts/verify.sh`, not the audits you remember.** The standing rule
+  (CLAUDE.md): a build shipped an undisclosed host because three audits were
+  run by hand and green and the fourth was never invoked.
+- **Read `$OUT/step-times.tsv` before aiming any work at the suite.**
+- **The liveness corollaries apply to every view added here.** A `View` struct
+  storing a `Thing` guards its own body (corollary 5); a `ForEach` content
+  closure re-checks inside itself (corollary 3); an array is filtered `.live`
+  at the boundary that hands it out (corollary 4). `swiftdata-liveness-audit.py`
+  will say so, but the whole point of that audit's history is that it was
+  written after each crash, not before.
+- **A new harness is discovered by `verify.sh`** if it is named
+  `scripts/*-selftest.sh`, and **must have a `--self-test`** — a check that
+  cannot demonstrate it catches anything certifies nothing.
+- **Any negative guard reads a comment-stripped copy.** Every file here
+  documents its rule by naming the thing it must no longer do; a raw grep fires
+  on the prose explaining the rule. This repo has paid for that four times.
+
+## A.1 — A saved link draws the text it already has
+
+**Files:** `Casberi/Casberi/Screens/ThingContent.swift` (one branch).
+
+**The edit.** In `kindSwitch`'s `.link` case, the article arm currently reads
+
+```
+} else if FeedArticleText.sources.contains(thing.source),
+          FeedArticleText.hasBody(thing)
+            || FeedArticleText.readableURL(for: thing) != nil {
+```
+
+Split it. The DRAW test is source-independent; only the FETCH test keeps the
+source list:
+
+```
+} else if FeedArticleText.hasBody(thing)
+            || FeedArticleText.readableURL(for: thing) != nil {
+```
+
+`readableURL` already gates on `sources` internally (`FeedArticleText.swift:105`),
+so the fetch arm is unchanged by this edit and stays two sources wide until A.5.
+`hasBody` reads nothing but `enrichedText`, so every row that has words now
+draws them.
+
+**One thing to add, which the old condition made unnecessary.** The two sets
+never overlapped before, so nothing tested the body against `summary`. Give
+`ArticleBody` the duplicate test `summaryBlock` already carries
+(`ThingContent.swift:198`): if the trimmed `enrichedText` equals the trimmed
+`summary`, draw nothing — otherwise a row whose publisher summary WAS the
+scrape shows the same paragraph twice.
+
+**Harness:** a drift guard in a new `scripts/reading-draw-selftest.sh` — the
+`.link` branch's draw condition must not name `FeedArticleText.sources`,
+read from a comment-stripped copy. Mutation: restore the old condition, assert
+the guard fires.
+
+**Verify:** `scripts/verify.sh`. Then, on the simulator, with a pasted link in
+the corpus: `-openThing "<title prefix>"` and read the sheet. A link saved
+before this build already has its words, so no re-ingest is needed — which is
+also the fastest proof the pass did what it claims.
+
+**Commit boundary:** this alone. It is the smallest change in the spec and it
+reaches the most rows.
+
+## A.2 — A screenshot draws its own transcript
+
+**Files:** `ThingContent.swift` (`ScreenshotContent`, and its call site at
+line 232), plus one new Foundation-only model file.
+
+**Measure first.** Run `-photoHealProbe YES` against a real library and read the
+`photoHealRow|` lines: each carries an OCR character count and the current
+title. **The word floor is set from that distribution, not guessed** — you are
+looking for the number that separates a recipe from a home screen. Record the
+number you measured and what you measured it on; a floor with no measurement
+behind it is the thing §632 cut.
+
+**The model.** `Model/ScreenshotText.swift`, Foundation-only:
+
+```
+enum ScreenshotText {
+    static let wordFloor = <measured>
+    /// nil when there is nothing worth a row.
+    static func reading(_ transcript: String) -> (words: Int, text: String)?
+}
+```
+
+Pure by contract so `scripts/screenshot-text-selftest.sh` can compile it whole.
+
+**The view.** `ScreenshotContent` takes `assetID` and `stored` today; it needs
+the transcript, so pass `thing.content` at the call site rather than reaching
+for the model inside a leaf. Under the image, a `DisclosureGroup`-shaped row in
+the sheet's existing grammar — title `heading17`, trailing `subhead13` count —
+**collapsed by default**, drawing at `reading20` with `textSelection(.enabled)`
+when open.
+
+**Harness:** `scripts/screenshot-text-selftest.sh`. Fixtures: a recipe (clears),
+a home screen's chrome (does not), a wordless photo (nil), a settings pane
+(does not). Mutations that matter: the floor removed (every picture grows a
+row), and the nil case turned into an empty row (a row that says nothing).
+
+**Verify:** `verify.sh`, then `-openThing` on a screenshot with real text and
+one without. **The second is the check** — the wordless one must draw no row at
+all, not an empty one.
+
+## A.3 — Next and previous, past the journal
+
+**Files:** `Model/NoteSheetSource.swift` (or a new `Model/SheetNeighbours.swift`
+if it outgrows that file), `Screens/FeedScreen.swift` (`FeedSheetRoute`, and its
+six construction sites), `Screens/ThingSheetView.swift`, `NoteSheetViews.swift`
+(`NoteNeighbourDoors`, which is already generic and only needs renaming).
+
+**The scope type.** A value, and this is the part the compiler will have
+opinions about:
+
+```
+enum WalkScope: Hashable {
+    case source(String)
+    case kind(String)
+    case none          // no doors
+}
+```
+
+**`FeedSheetRoute.thing` carries it.** `case thing(Thing, walk: WalkScope)`.
+Its `id` (`FeedScreen.swift:621`) must fold the scope in, or two opens of the
+same thing from different rooms are one identity to SwiftUI. **Never a
+`[Thing]`** — corollary 4, build 177.
+
+Six construction sites (`FeedScreen.swift` 6376, 8469, 9347, 9494, 11490 and the
+`OnThisDay` pair). The two anniversary doors and anything opened from a hero
+take `.none`: they are not a list.
+
+**`neighbours` generalises.** Same two `FetchDescriptor`s, same
+`fetchLimit = 2`, same `.live` and `Corpus.isImportReceipt` skip
+(`NoteSheetSource.swift:434`) — the predicate comes from the scope instead of
+being hardcoded to `source ==`.
+
+**Harness:** the scope→predicate mapping is pure. Two mutations, both of which
+render perfectly and are silent: the scope dropped on the way into the route
+(doors that walk the whole corpus), and the receipt filter lost (the case §399
+paid for — a door onto our own sync note from inside somebody's diary).
+
+**Verify:** `verify.sh`, then open a thing from an All feed, from a source room,
+and from a search result. The third is the one to watch: it must show no doors
+unless its scope is expressible.
+
+## A.4 — Listen
+
+**Decide before you build.** The `AVAudioSession` question is not a detail of
+this pass, it is the pass. If background audio is in, the target gains the
+capability, `ArticleSpeech` gains `MPNowPlayingInfoCenter`, and
+`ArticleListenButton`'s `onDisappear` stop is **replaced** rather than removed
+— a voice that outlives its sheet needs a control that also does. If background
+audio is out, say so in the entry and keep Listen on articles only; a Listen
+control on nine surfaces that all die on dismiss is one half-feature copied
+nine times.
+
+**Then:** rename the type out of `ArticleBody.swift` (it stops being about
+articles), mount it wherever a body is drawn.
+
+**Unverifiable here and on a simulator both.** A sim does not lock, does not
+route to AirPods, and does not show a now-playing card worth trusting. Device
+check, and the entry says so.
+
+## A.5 — The cap
+
+**This pass opens with a measurement, not an edit, and skipping it is how it
+goes wrong.** `contentRegion` (`LinkTitle.swift:103`) looks for `<main`,
+`<article`, an id or `role="main"`, and **returns the whole page when it finds
+none**. Raising the paragraph limit makes that miss WORSE: on a page with no
+marker, paragraph 40 is the footer. So:
+
+1. Run `-linkBodyProbe <url>` across a spread of real pages — a blog, a news
+   site, a docs page, a paywall, a page with no `<main>`. Record the miss rate.
+2. Only then raise `maxParagraphs` and the 1,200 cap
+   (`LinkTitle.swift:101`). Both are read by three call sites and move together.
+3. Reconsider `thinSummary = 400` (`FeedArticleText.swift:77`) — its reasoning
+   is a retrieval argument, and for reading an opening is not the piece.
+4. Then widen `FeedArticleText.sources` (`:53`). **Keep the three abstentions
+   and their reasons** (§5.3), and answer in writing the question §455 never
+   had to: which hosts a scrape is fair on.
+5. **Every widened call site names its service to
+   `NetworkLedger.record(host:as:)`** before the fetch, as `fetchOnOpen` already
+   does. These are the person's own publishers, so `NetworkReach` structurally
+   cannot name them (§289) — the call site is the only disclosure, and an
+   undisclosed reach is build 214.
+
+**Harness:** `parseReadable` is pure and reachable. The fixture that matters is
+an article longer than the cap, asserting the text does **not** end in `…`.
+
+## A.6 — When each pass lands
+
+Append an amendment under §645 naming the pass, what moved from this spec, and
+what was measured (the word floor, the miss rate, the audio decision). The
+standing lesson from the §643 amendment applies: **where a ruling's outcome is
+a file's contents, the commit that carries the entry carries the file.**
