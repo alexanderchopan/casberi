@@ -144,6 +144,30 @@ grep -q 'struct PagerDrag' "$TMP/main.nc" \
 grep -q 'chrome.pageDragX = 0' "$TMP/main.nc" \
   || { echo "✗ go(to:) no longer resets the drag in the committing transaction — the incoming"; \
        echo "  room would mount offset by the last finger position."; fail=1; }
+# THE CARD IS KEYED TO THE TURN, NOT TO THE SCREEN (prd §648, 2026-09-08).
+# Every card signal in `PagerDrag` — corner, lit edge, scale, tilt, shadow —
+# used to be scaled by `abs(x) / pagerFrame.width`, the fraction of the SCREEN
+# crossed. A turn commits at 60pt, which on a 393pt screen is 0.153, so at the
+# moment the page turned the tilt was 0.61° and the shadow was black at 0.076
+# on a black page: the whole vocabulary was there and keyed to a distance the
+# gesture never reaches. Reported as "the rooms don't seem to be moving like a
+# card when you swipe". `pageDragProgress` reaches 1 at 66pt and `PagerCover`
+# already read it, so the two halves of one carousel were on two ramps — that
+# disagreement is the finding, and this is what stops it recurring. Nothing
+# else can see it: the build is clean, the app turns pages perfectly, and a
+# screenshot cannot photograph a ramp.
+grep -q 'let lift = reduceMotion ? 0 : min(1, abs(chrome.pageDragProgress))' "$TMP/main.nc" \
+  || { echo "✗ PagerDrag no longer keys the card to the drag's COMMIT PROGRESS — if it is"; \
+       echo "  back on a fraction of the screen width, the card reaches 15% of every signal"; \
+       echo "  at the moment the page turns and reads as a plain slide (§648)."; fail=1; }
+grep -q 'heading \* 4 \* lift' "$TMP/main.nc" \
+  || { echo "✗ the tilt is no longer on the same ramp as the rest of the card — §632's 4° is"; \
+       echo "  the ruling, and it is only reached if it rides the turn."; fail=1; }
+grep -q 'abs(x) / width' "$TMP/main.nc" \
+  && { echo "✗ the screen-width share is back in PagerDrag — that is the §648 defect itself."; fail=1; }
+grep -q 'let p = min(1, abs(chrome.pageDragProgress))' "$TMP/main.nc" \
+  || { echo "✗ PagerCover no longer runs on the drag's progress — the two halves of the"; \
+       echo "  carousel would disagree about when a turn is a turn, which is §648's cause."; fail=1; }
 # THE LEAN MOVED INTO ITS OWN LEAF (2026-09-06, prd §632 second amendment) —
 # the ruling is unchanged and the guard follows it rather than the old
 # spelling: both the ring and the fill go through `ChipLean`, `ChipLean` is

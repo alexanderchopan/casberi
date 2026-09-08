@@ -162,6 +162,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **-startPick AND THE ONBOARDING FORK ARE DELETED** → docs/hooks/system.md · prd §563
 - `-howItWorksCTA <s>` — lift the first-launch cover after a delay (Screens/IntroCover.swift; `-demoCTA` is DELETED with the fork's door, 2026-09-05) → docs/hooks/system.md · prd §620
 - **The dock is CONTINUOUS — the fold tracks the scroll, folders open in place, the page follows the finger, press-and-slide picks (2026-09-05)** → docs/hooks/system.md · prd §621
+- **A room swipe: TRAVEL follows the finger, CARDNESS follows the TURN (2026-09-08). The card's corner/edge/scale/tilt/shadow rode `abs(x)/screenWidth`, and a turn commits at 60pt — so the tilt shipped at 0.61° of its ruled 4°. On `pageDragProgress`, the ramp `PagerCover` already used** → prd §648
 - **The furnished demo is a MODE you enter and leave, not a dev-only seed** → docs/hooks/system.md · prd §217
 - `-findProbe` — fill the composer and fire Find (prd §215, the composer's deterministic door): runs KeptAskComposers.search → docs/hooks/agent.md · prd §215
 - `-openComposer` `-composerDraft` — open the composer empty (screenshots the ask chips); -composerDraft "<text>" → docs/hooks/agent.md

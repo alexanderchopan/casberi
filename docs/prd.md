@@ -50984,3 +50984,69 @@ symbols the checks grep for.
 Swift toolchain. What it stands on: the audit and its self-test (run, green),
 and the reading of the two failure paths above. **The build is unverified and
 must be run before this ships.**
+
+## §648 — The card's whole vocabulary was keyed to a distance the swipe never travels (user: "the rooms don't seem to be moving like a card when you swipe", 2026-09-08)
+
+**The report.** After §632's carousel pass — the opaque card, the lit edge, the
+tilt restored at 4°, the cover underneath — a page turn still read as a page
+sliding.
+
+**The arithmetic, which is the whole entry.** Every card signal in `PagerDrag`
+was scaled by `share = abs(pageDragX) / pagerFrame.width` — the fraction of the
+SCREEN the finger had crossed. **The gesture never crosses much of it.** A turn
+commits at 60pt of travel (`PageSwipeCatcher.Marker`'s own threshold, or a flick
+at 140 predicted), so on a 393pt screen `share` at the moment of the turn is
+**0.153**, and the card at that instant was:
+
+| signal | at full share | at the commit |
+|---|---|---|
+| corner radius | 28pt | **4.3pt** |
+| lit edge | white 0.22 | **white 0.034** |
+| scale | 0.95 | **0.992** |
+| tilt | 4° | **0.61°** |
+| shadow | black 0.5 | **black 0.076**, on a black page |
+
+Four of the five are below anything an eye resolves. Nothing was missing and
+nothing was too subtle by choice: the vocabulary was complete and hung on a
+distance nobody ever drags to, **because the page turns first**. §632's
+amendment restored the tilt at 4° on the reasoning that the rotation "is the
+whole of what made this read as a card being dealt" — and it was, and it
+shipped delivering 0.61°.
+
+**The cause, stated precisely: the two halves of one carousel were on two
+ramps.** `PagerCover` — the card underneath — has always keyed its scale and
+corner to `min(1, abs(pageDragProgress))`, which is `-t / dragPitch` and reaches
+1 at **66pt**, within a few points of the commit threshold. So the incoming card
+completed its treatment in 66pt while the outgoing one completed its in 393. The
+finding is not that the card was drawn too faintly; it is that the card and the
+card behind it disagreed about when a turn is a turn.
+
+**The ruling. TRAVEL FOLLOWS THE FINGER; CARDNESS FOLLOWS THE TURN.** The
+offset stays 1:1 with the hand — that is §621's "the page follows the finger"
+and it is untouched. Corner, edge, scale, tilt and shadow move onto
+`pageDragProgress`, the ramp the cover already used, so both halves of the
+carousel now say "committed" at the same moment. The 4° is unchanged: §632's
+amendment ruled that number and this only makes a swipe reach it.
+
+**At the end of the strip there is now no card at all, deliberately.**
+`pageDragProgress` is 0 when no neighbour exists, so the rubber-band pull — which
+already moves at a third of the finger, and under which `PagerCover` draws
+nothing — stays flat. Lifting a card off a stack that is not there is the
+honest-motion form of a dead control (§83): the pull still answers the hand,
+and it no longer promises a room that is not coming.
+
+**Reduce Motion is unchanged** — it slides flat, as it did.
+
+**Guarded in `scripts/dock-selftest.sh`** beside the other pager rules: the card
+must key to the commit progress, the tilt must ride the same ramp, the
+screen-width share may not come back, and `PagerCover` may not leave the shared
+ramp either. Three of the four fire against build 537's own shape, and the
+fourth against a mutation that moves the cover off progress. Nothing else could
+see this: the build is clean, the app turns pages correctly, the audits are
+static, and a screenshot cannot photograph a ramp.
+
+**UNSEEN on a device.** No Xcode and no Swift toolchain in the session that
+wrote it, so the amounts above are computed from the code's own constants
+(60pt threshold, 66pt pitch, 393pt screen) and not watched. **4° at commit is
+the amount §632 asked for and nobody has yet seen it arrive there** — check it
+reads as a card and not as a flourish before trusting it.

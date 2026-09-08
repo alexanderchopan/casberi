@@ -2521,9 +2521,44 @@ private struct PagerDrag<Content: View>: View {
 
     var body: some View {
         let x = chrome.pageDragX
-        let width = max(chrome.pagerFrame.width, 1)
-        let share = min(1, abs(x) / width)
-        let lifted = x != 0 && !reduceMotion
+        // **TRAVEL FOLLOWS THE FINGER; CARDNESS FOLLOWS THE TURN** (user,
+        // 2026-09-08: "the rooms don't seem to be moving like a card when you
+        // swipe" — prd §648).
+        //
+        // Every one of the five card signals below used to be scaled by
+        // `abs(x) / pagerFrame.width` — the fraction of the SCREEN the finger
+        // had crossed. **The gesture never crosses much of it.** A turn
+        // commits at 60pt of travel (`PageSwipeCatcher.Marker`'s own
+        // threshold, or a flick at 140 predicted), which on a 393pt screen is
+        // a share of 0.153 — so at the moment the page turned, the corner
+        // radius was 4.3pt, the lit edge was white at 0.034, the scale was
+        // 0.992, the tilt was 0.61° and the shadow was black at 0.076 on a
+        // black page. Four of those five are below anything an eye resolves.
+        // The card vocabulary was all there and keyed to a distance nobody
+        // ever drags to, because the page turns first.
+        //
+        // `pageDragProgress` is the value that already means "how far toward
+        // turning": `-t / dragPitch`, reaching 1 at 66pt, i.e. within a few
+        // points of the commit threshold. **`PagerCover` has been reading it
+        // all along** — its own scale and corner run on `p`, so the two halves
+        // of one carousel were on two different ramps, one completing in 66pt
+        // and the other in 393. They share one now, which is the actual
+        // finding: not that the card was too subtle, but that it and the card
+        // behind it disagreed about when a turn is a turn.
+        //
+        // **At the END of the strip there is no card, and now it does not
+        // pretend there is one.** `pageDragProgress` is 0 when no neighbour
+        // exists (see `dragMove`), so the rubber-band pull — which already
+        // moves at a third of the finger, and under which `PagerCover` draws
+        // nothing — stays flat. Lifting a card off a stack that is not there
+        // was the honest-motion version of a dead control.
+        //
+        // Reduce Motion still slides flat, as before.
+        let lift = reduceMotion ? 0 : min(1, abs(chrome.pageDragProgress))
+        // The direction of travel, for the tilt. Taken from the offset rather
+        // than from the progress so a rubber-band pull and a real turn agree
+        // about which way the card is leaning.
+        let heading: Double = x < 0 ? -1 : 1
         content
             // **THE CARD IS OPAQUE, AND THAT IS THE FIX FOR THE DOUBLE TEXT**
             // (user, 2026-09-06: "still getting the double text… on swipe left
@@ -2557,13 +2592,13 @@ private struct PagerDrag<Content: View>: View {
             // invisible on a black page), it tilts about its bottom edge in
             // the direction of travel, shrinks a hair and casts a shadow.
             // Under Reduce Motion it slides flat, as before.
-            .clipShape(RoundedRectangle(cornerRadius: lifted ? 28 * share : 0, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 28 * lift, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 28 * share, style: .continuous)
-                    .strokeBorder(.white.opacity(lifted ? 0.22 * share : 0), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 28 * lift, style: .continuous)
+                    .strokeBorder(.white.opacity(0.22 * lift), lineWidth: 1)
                     .allowsHitTesting(false)
             }
-            .scaleEffect(lifted ? 1 - 0.05 * share : 1)
+            .scaleEffect(1 - 0.05 * lift)
             // THE TILT IS BACK, SMALLER (user, 2026-09-06: "it no longer
             // feels like you are swiping a card in a carousel ... not like a
             // Tinder card"). It was removed the same day on "the pin in the
@@ -2572,8 +2607,15 @@ private struct PagerDrag<Content: View>: View {
             // read as a card being dealt rather than a page sliding. 4°, not
             // the original 7: enough to say "card", short of the flourish
             // that was called a flip.
-            .rotationEffect(.degrees(lifted ? Double(x / width) * 4 : 0), anchor: .bottom)
-            .shadow(color: .black.opacity(lifted ? 0.5 * share : 0), radius: 28, y: 10)
+            // The DEGREES are unchanged — 4°, the number ruled in §632's
+            // amendment ("enough to say card, short of the flourish that was
+            // called a flip"). What changes is that a swipe now reaches it:
+            // it was chosen against a full-width drag and delivered 0.61° at
+            // the distance a turn actually takes. **UNSEEN on a device** — 4°
+            // at commit is the amount that ruling asked for, but nobody has
+            // watched it arrive there.
+            .rotationEffect(.degrees(heading * 4 * lift), anchor: .bottom)
+            .shadow(color: .black.opacity(0.5 * lift), radius: 28, y: 10)
             .offset(x: x)
     }
 }
