@@ -678,7 +678,11 @@ struct NoteOtherYearsList: View {
 /// A missing neighbour draws NOTHING rather than a disabled control: the first
 /// entry in a journal really has nothing before it, and greying out a door onto
 /// a thing that does not exist is furniture.
-struct NoteNeighbourDoors: View {
+/// Renamed from `NoteNeighbourDoors` (prd §645 pass 3, 2026-09-08): it was
+/// always generic — a pair of `KeyedThing`s and a callback — and it now serves
+/// every room rather than a journal's entries. The name was the only thing
+/// about it that said otherwise.
+struct WalkDoors: View {
     let previous: KeyedThing?
     let next: KeyedThing?
     var onOpen: (Thing) -> Void

@@ -466,7 +466,12 @@ struct FeedScreen: View {
     /// worked because the machinery had quieted. One enum route behind one
     /// `.sheet(item:)` removes the contention entirely.
     private enum FeedSheetRoute: Identifiable {
-        case thing(Thing)
+        /// A row, and the LIST it was opened from (prd §645 pass 3). The scope
+        /// is a VALUE — never a `[Thing]`, which is corollary 4 and build 177
+        /// exactly — so the neighbour doors rebuild the predicate rather than
+        /// hold the array. `.none` wherever the list cannot be rebuilt, which
+        /// is every hero and shelf door below.
+        case thing(Thing, walk: WalkScope)
         case token(TokenQuickRoute)
         case allocation
         case worthALook
@@ -618,7 +623,10 @@ struct FeedScreen: View {
 
         var id: String {
             switch self {
-            case .thing(let t): "thing:\(t.id.uuidString)"
+            // The scope is folded in, or the same thing opened from two
+            // different rooms is ONE identity to SwiftUI and the second open
+            // reuses the first's doors.
+            case .thing(let t, let walk): "thing:\(t.id.uuidString)@\(walk.key)"
             case .token(let r): "token:\(r.id)"
             case .allocation: "allocation"
             case .worthALook: "worthALook"
@@ -4371,7 +4379,7 @@ struct FeedScreen: View {
     @ViewBuilder
     private func sheetContent(_ route: FeedSheetRoute) -> some View {
         switch route {
-        case .thing(let thing):
+        case .thing(let thing, let walk):
             // Zoom transition DROPPED for thing opens (2026-07-30, prd
             // ruling 232): a beta tester on build 225 hit a deterministic crash
             // opening any photo ("every photo, instantly, every time")
@@ -6491,7 +6499,7 @@ struct FeedScreen: View {
             }
         } else if let anniversary {
             insightSection {
-                OnThisDayHero(echo: anniversary) { feedSheet = .thing(anniversary.thing) }
+                OnThisDayHero(echo: anniversary) { feedSheet = .thing(anniversary.thing, walk: .none) }
             }
         } else if let topicMap {
             insightSection { TopicMapHero(map: topicMap) }
@@ -8584,7 +8592,7 @@ struct FeedScreen: View {
                                     subtitle: FeedHeatmap.subtitle(label, total: year.total),
                                     year: year, minColumns: label.columns,
                                     onThisDay: echo,
-                                    onTapOnThisDay: { feedSheet = echo.map { .thing($0.thing) } })
+                                    onTapOnThisDay: { feedSheet = echo.map { .thing($0.thing, walk: .none) } })
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())
@@ -8835,7 +8843,9 @@ struct FeedScreen: View {
                             // caller that does paint a ground.
                             onColor: false,
                             onOpenMark: { id in
-                                feedSheet = visible.first { $0.id == id }.map(FeedSheetRoute.thing)
+                                // `.none`: a mark on a hero is not a list.
+                                feedSheet = visible.first { $0.id == id }
+                                    .map { .thing($0, walk: .none) }
                             })
                     }
                     // Whose the number is (prd §212) — only unscoped and only
@@ -9462,7 +9472,7 @@ struct FeedScreen: View {
                                      tone: .failure)
                         return
                     }
-                    feedSheet = .thing(thing)
+                    feedSheet = .thing(thing, walk: .none)
                 }
                 .id(Self.approvalsAnchor)
                 .modifier(rowEntrance(2))
@@ -9609,7 +9619,7 @@ struct FeedScreen: View {
                         if let thing = row.live {
                             Button {
                                 DSHaptic.selection()
-                                feedSheet = .thing(thing)
+                                feedSheet = .thing(thing, walk: .none)
                             } label: {
                                 WalletRow(mark: .kind(thing.kind),
                                           title: thing.title,
@@ -11604,8 +11614,27 @@ struct FeedScreen: View {
     /// exists (iPhone, an iPad mini in portrait, Slide Over), and the sheet
     /// path below is then exactly the one this app has always taken.
     private func openThing(_ thing: Thing) {
-        guard !detail.present(thing) else { return }
-        feedSheet = .thing(thing)
+        let walk = rowWalk
+        guard !detail.present(thing, walk: walk) else { return }
+        feedSheet = .thing(thing, walk: walk)
+    }
+
+    /// The scope a row tap carries (prd §645 pass 3) — the room and the kind
+    /// filter this list is actually showing.
+    ///
+    /// **`narrowed` is the whole safety of it.** `liveVisible` applies four
+    /// more filters that no `source ==` predicate can rebuild: the pinned
+    /// room's membership is `pinnedAt != nil` rather than a source, and the
+    /// wallet, vibenet and person scopes narrow to a subset the room's own
+    /// chip chose. In any of those the doors are ABSENT, which A.3 rule 4
+    /// says plainly: an absent door is honest, a door onto a row the list does
+    /// not hold is not.
+    private var rowWalk: WalkScope {
+        WalkScope.feed(source: source, tag: filter.tag,
+                       narrowed: Pinboard.isPinnedRoom(source)
+                           || (roomTakesWalletScope && selectedWallet != nil)
+                           || (SocialRoom.hasRoster(source) && chrome.personScope != nil)
+                           || (shape == .vibenet && chrome.vibenetScope != nil))
     }
 
     /// A day group as a native section: the day's rows share ONE sheet card

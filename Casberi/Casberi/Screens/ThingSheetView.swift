@@ -28,6 +28,11 @@ struct ThingSheetView: View {
     /// the eyebrow's own line instead of a separate ~44pt bar above it —
     /// the "dead top zone" a pushed presentation otherwise leaves (2026-07-23,
     /// user critique of the Worth-a-look detail screen).
+    /// Which list this sheet was opened from (prd §645 pass 3). `.none` — the
+    /// default — draws no next/previous doors, which is the honest answer for
+    /// every caller that has no list behind it: a deep link, a Spotlight
+    /// hand-off, a search result, an agent's citation, a room head.
+    var walk: WalkScope = .none
     var onBack: (() -> Void)? = nil
     /// True when this view is rendered IN PLACE rather than presented — the
     /// detail pane at rest, which holds the newest record with no selection
@@ -183,6 +188,11 @@ struct ThingSheetView: View {
     /// this same sheet over the target, the recursive shape already used
     /// elsewhere in this app (e.g. `-agentThingProbe`'s Stack push).
     @State private var walkingToNote: KeyedThing?
+    /// The scope a walked-to sheet inherits, so next/previous keeps following
+    /// the SAME list two doors in. Only the neighbour doors set it; every
+    /// other walk in this file (a quote, a parent, a vault link, an "on this
+    /// date" row) leaves it `.none`, because those leave the list.
+    @State private var walkingToScope: WalkScope = .none
     /// The earlier copy of this thing, when there is one (prd §282) — keyed,
     /// not raw, because it is a `Thing` held in `@State` and a heal landing
     /// under this open sheet must never leave the row reading a dead model.
@@ -217,8 +227,10 @@ struct ThingSheetView: View {
     /// clock `dismissWhenSettled` reads to tell a fast tap from a settled one.
     private let presentedAt = Date()
 
-    init(thing: Thing, onBack: (() -> Void)? = nil, inlineRest: Bool = false) {
+    init(thing: Thing, walk: WalkScope = .none,
+         onBack: (() -> Void)? = nil, inlineRest: Bool = false) {
         self.thing = thing
+        self.walk = walk
         self.onBack = onBack
         self.inlineRest = inlineRest
         // The same crash guard `FeedScreen.standsAlone` earned (2026-07-24,
@@ -467,7 +479,10 @@ struct ThingSheetView: View {
                                 displayName: nil, bio: nil,
                                 avatarURL: thing.authorAvatarURL))
                         },
-                        onOpenThing: { walkingToNote = KeyedThing($0) })
+                        onOpenThing: {
+                            walkingToScope = .none
+                            walkingToNote = KeyedThing($0)
+                        })
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.06)
                 } else if let purchaseReading {
@@ -791,6 +806,7 @@ struct ThingSheetView: View {
                         Text("More from this book")
                             .dsText(.label12).foregroundStyle(DS.textTertiary)
                         NoteSiblingList(rows: siblingPassages) {
+                            walkingToScope = .none
                             walkingToNote = KeyedThing($0)
                         }
                     }
@@ -805,6 +821,7 @@ struct ThingSheetView: View {
                             .dsText(.label12).foregroundStyle(DS.textTertiary)
                             .padding(.horizontal, DS.Space.s4)
                         NoteSameDayShelf(rows: sameDayThings) {
+                            walkingToScope = .none
                             walkingToNote = KeyedThing($0)
                         }
                         .padding(.horizontal, DS.Space.s4)
@@ -820,6 +837,7 @@ struct ThingSheetView: View {
                         Text("On this date")
                             .dsText(.label12).foregroundStyle(DS.textTertiary)
                         NoteOtherYearsList(rows: otherYears) {
+                            walkingToScope = .none
                             walkingToNote = KeyedThing($0)
                         }
                     }
@@ -830,8 +848,9 @@ struct ThingSheetView: View {
                 // shelves, because it is the way OUT of this entry and
                 // everything above is about the entry itself.
                 if previousEntry != nil || nextEntry != nil {
-                    NoteNeighbourDoors(previous: previousEntry, next: nextEntry) {
+                    WalkDoors(previous: previousEntry, next: nextEntry) {
                         walkingToNote = KeyedThing($0)
+                        walkingToScope = walk
                     }
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s4)
@@ -946,15 +965,27 @@ struct ThingSheetView: View {
                     // `NoteSheetSource.yearSpan`.
                     otherYears = NoteSheetSource
                         .otherYears(of: thing, context: modelContext).keyed
-                    // THE ENTRIES EITHER SIDE (prd §399) — two more bounded
-                    // reads, so a journal can be read AS a journal instead of
-                    // one sheet at a time. `.entry` only: a vault note's
-                    // `capturedAt` is a file's modification time, so its "next"
-                    // would be whatever you last edited.
-                    let sides = NoteSheetSource.neighbours(of: thing, context: modelContext)
-                    previousEntry = sides.previous.map(KeyedThing.init)
-                    nextEntry = sides.next.map(KeyedThing.init)
                 }
+            }
+            // THE ROWS EITHER SIDE (prd §399, widened by §645 pass 3) — two
+            // bounded reads, so a room can be read AS a list instead of one
+            // sheet at a time.
+            //
+            // §399 mounted this for `.entry` shapes ONLY, on the reasoning
+            // that a vault note's `capturedAt` is a file's modification time,
+            // so its "next" would be whatever you last edited. **That
+            // objection does not survive the scope.** The door no longer
+            // promises "the next thing you wrote"; it promises THE NEXT ROW IN
+            // THE LIST YOU OPENED FROM, and that list is ordered by the very
+            // same `capturedAt`. A door that matches the list behind it is
+            // honest whatever the column happens to mean — and a door that
+            // does not is the one thing pass 3 forbids, which is why `walk`
+            // gates this rather than a shape.
+            if walk.walks {
+                let sides = NoteSheetSource.neighbours(of: thing, scope: walk,
+                                                       context: modelContext)
+                previousEntry = sides.previous.map(KeyedThing.init)
+                nextEntry = sides.next.map(KeyedThing.init)
             }
             // HOW IT LANDED (prd §363), in two passes and deliberately so: the
             // stored snapshot composes in the first frame so the block never
@@ -1075,7 +1106,13 @@ struct ThingSheetView: View {
         // Walking a vault's own wikilink graph (2026-07-28) — a plain
         // re-presentation of this same sheet over the linked note.
         .sheet(item: $walkingToNote) { note in
-            ThingSheetView(thing: note.thing)
+            // `walkingToScope` rather than `walk`: the neighbour doors set it
+            // to this sheet's own scope so a walk keeps following the list two
+            // doors in, and every OTHER walk in this file (a quote, a parent,
+            // a vault wikilink, an "on this date" row) leaves it `.none`
+            // because those leave the list — a door onto a row the list does
+            // not hold is exactly what §645 pass 3 forbids.
+            ThingSheetView(thing: note.thing, walk: walkingToScope)
         }
         // The screenshot at full size (2026-08-02). A cover, not a sheet, for
         // two reasons: the picture IS the screen here and a detented sheet
@@ -1566,6 +1603,7 @@ struct ThingSheetView: View {
                   wikilinks: prose.wikilinks) { target in
             guard let match = NoteLinks.resolve([target], context: modelContext).first
             else { return }
+            walkingToScope = .none
             walkingToNote = KeyedThing(match)
         }
     }
@@ -2536,6 +2574,7 @@ struct ThingSheetView: View {
     /// opening a sheet over a tombstone.
     private func walkTo(_ tie: ThingLinks.Tie) {
         guard let target = ThingLinksSource.resolve(tie, context: modelContext) else { return }
+        walkingToScope = .none
         walkingToNote = KeyedThing(target)
     }
 
@@ -2553,6 +2592,7 @@ struct ThingSheetView: View {
                 // see `ThingRowKeying`).
                 if let linked = note.live {
                     Button {
+                        walkingToScope = .none
                         walkingToNote = note
                     } label: {
                         HStack(spacing: DS.Space.s2) {
@@ -2651,6 +2691,7 @@ struct ThingSheetView: View {
     private var keptBeforeRow: some View {
         if let earlier = keptBefore, let copy = earlier.live {
             Button {
+                walkingToScope = .none
                 walkingToNote = earlier
             } label: {
                 HStack(spacing: DS.Space.s2) {

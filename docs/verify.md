@@ -399,3 +399,51 @@ member was a feed and files a reach to somebody's saved page under a bridge
 they may not have connected once a bookmark is one (§205, build 214). Two more
 mutations, both drift-only — the driver cannot run them, so they re-enter the
 guards rather than the binary.
+
+## Feed-walk self-test (`scripts/feed-walk-selftest.sh`, 2026-09-08) → prd §645 pass 3
+
+**What it drives.** `Casberi/Casberi/Model/SheetWalk.swift` — `WalkScope` and
+`SheetWalk.eligible` — Foundation-only by design and compiled whole and
+unmodified. The FETCH stays in `NoteSheetSource` where SwiftData is; what is
+here is the part that DECIDES, which is the part that can be wrong quietly.
+
+**The rule.** §399 gave a journal's entries a door either side, computed on the
+row's own source. §645 pass 3 gives every room those doors, and the constraint
+that makes it honest is that **the walk follows the order of the list you
+opened from** — not the row's source, and not the corpus. A neighbour computed
+on a global `capturedAt` within a source hands back a row the list behind you
+does not contain, which reads as a bug and is one.
+
+**Why the decision is in Swift and not in the predicate.** Three of the tests
+cannot be pushed down: two are a source string against a set
+(`Corpus.bulkImportSources`, `Corpus.searchOnlySources`), and the kind test
+rides `tags`, where a pushed-down `.contains` on an array-typed attribute is a
+documented SIGSEGV (CLAUDE.md, 2026-07-21). So the fetch is bounded
+(`SheetWalk.fetchWindow`, raised from §399's 2 because a run of rows can now be
+rejected) and the rule runs over values.
+
+**Failures it catches, all of which draw a perfectly ordinary pair of
+chevrons**: the scope dropped on the way into the route, so the doors walk the
+whole corpus from inside a room (the failure A.3 names first); the
+import-receipt filter lost, which §399 paid for by hand — a door onto our own
+note about a sync, from inside somebody's diary; the All room walking into a
+bulk import's dump, which that list deliberately hides; a kind-filtered room
+walking rows of every other kind; and a room narrowed by something no
+`source ==` predicate can rebuild — the pinned room (membership is
+`pinnedAt != nil`), a wallet, person or vibenet scope — drawing doors at all.
+**An absent door is honest; a door onto a row the list does not hold is not.**
+
+**The drift half** pins what the pure file cannot see: `FeedSheetRoute.thing`
+carries the scope BY VALUE and never a `[Thing]` (corollary 4, build 177), its
+`id` folds the scope in — or the same thing opened from two rooms is ONE
+identity to SwiftUI and the second open reuses the first's doors — the iPad
+pane is handed the scope too, and the sheet gates on `walk.walks` rather than
+on a note shape.
+
+**One §399 rule was deliberately overturned**, and it is worth knowing which:
+that pass mounted the doors for `.entry` shapes ONLY, because a vault note's
+`capturedAt` is a file's modification time, so its "next" would be whatever you
+last edited. The door no longer promises "the next thing you wrote" — it
+promises the next row in the list you opened from, and that list is ordered by
+the very same column. A door that matches the list behind it is honest whatever
+that column happens to mean.

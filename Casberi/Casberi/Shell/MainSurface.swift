@@ -1433,7 +1433,7 @@ struct MainSurface: View {
                 // put a hard black column beside the poured feed, which is
                 // the no-hairlines law broken with a background instead of a
                 // stroke.
-                ThingSheetView(thing: thing, onBack: { detail.clear() })
+                ThingSheetView(thing: thing, walk: detail.walk, onBack: { detail.clear() })
                     .id(thing.id)
                     // Fill the column BEFORE the ink goes on: `dsInk`'s black
                     // is a `.background`, which sizes to its content — without

@@ -50838,3 +50838,63 @@ which is the behaviour somebody opening a saved page is asking for.
 `NetworkReach` is structurally unable to name these hosts (§289): they are the
 person's own pages, so the `NetworkLedger.record` call site is the disclosure,
 which is exactly why the label bug above mattered.
+
+## §645 amendment 5 — pass 3: the doors walk the list you opened from, not the corpus (2026-09-08)
+
+§399 gave a journal's entries a door either side. Every reading room has the
+same shape and none of them had the doors. Pass 3 gives them the doors, and the
+constraint that makes it honest is A.3's, unchanged: **the walk follows the
+order of the LIST you opened from.**
+
+`FeedSheetRoute.thing` carries a `WalkScope` — the room's source and the kind
+filter, **as VALUES, never a `[Thing]`** (corollary 4, build 177, which A.3
+names explicitly) — and its `id` folds the scope in, or the same thing opened
+from two rooms is one identity to SwiftUI and the second open reuses the first's
+doors. `NoteSheetSource.neighbours` takes the scope; the §399 overload survives
+for callers with no list behind them. `ThingSheetView` gains `walk`, defaulting
+to `.none`, so every other call site — a deep link, a Spotlight hand-off, a
+search result, an agent's citation, a room head — draws no doors and is correct
+without being touched. `NoteNeighbourDoors` is `WalkDoors`: it was always
+generic, and the name was the only thing about it that said otherwise.
+
+**Three things moved on contact, all recorded here rather than worked around
+(A.6).**
+
+1. **`WalkScope` is a STRUCT, not A.3's three-case enum.** The feed has TWO
+   independent filters that compose — `FeedFilter.source` and `FeedFilter.tag`
+   (§269's agent kind filter) — and a room can be both at once. An enum needs a
+   fourth case to say so and a fifth the day a third filter lands; two
+   optionals and a `walks` flag cannot go out of date.
+2. **The decision could not live in the predicate.** Three of its tests cannot
+   be pushed down to SQL: two are a source string against a set
+   (`bulkImportSources`, `searchOnlySources`), and the kind test rides `tags`,
+   where a pushed-down `.contains` on an array attribute is the documented
+   2026-07-21 SIGSEGV. So `SheetWalk.eligible` runs in Swift over values and
+   §399's `fetchLimit = 2` became a wider bounded window — two was enough when
+   the only rejectable row was one import receipt.
+3. **The feed narrows in four more ways than A.3 counted**, and none can be
+   rebuilt from a source and a kind: the pinned room (membership is
+   `pinnedAt != nil`, not a source — the bug that shipped an empty room on
+   2026-08-10), and the wallet, person and vibenet scopes. In any of them the
+   doors are ABSENT, which is rule 4 exactly: an absent door is honest, a door
+   onto a row the list does not hold is not.
+
+**And one §399 ruling is overturned on purpose.** That pass mounted the doors
+for `.entry` shapes only, because a vault note's `capturedAt` is a file's
+modification time, so its "next" would be whatever you last edited — a fact
+about your editor. **The objection does not survive the scope.** The door no
+longer promises "the next thing you wrote"; it promises the next row in the
+list you opened from, and that list is ordered by the very same column. A door
+that matches the list behind it is honest whatever the column means; a door
+that does not is the one thing this pass forbids.
+
+**The iPad pane is plumbed too** (`PadDetailSelection.walk`), because
+`openThing` hands the row to the pane before it ever reaches the sheet route —
+without it the doors would be missing on exactly the device with room to draw
+them.
+
+`scripts/feed-walk-selftest.sh`: 24 assertions, 8 mutations, including both
+that A.3 names up front — the scope dropped on the way into the route, and the
+receipt filter lost. **Not seen on a device or a simulator**: clean iOS build,
+the new harness, `note-sheet-selftest.sh` (whose §399 guards were re-pointed
+rather than deleted), and the liveness and mutation-liveness audits.

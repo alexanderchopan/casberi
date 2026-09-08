@@ -203,10 +203,15 @@ guard "the photograph is drawn by the redaction-aware well" \
 # The two bounded reads, and that the sheet actually asks for them.
 guard "the sheet reads the same date in other years" \
   'NoteSheetSource\s*$|otherYears\(of: thing' "$VIEW"
-guard "the sheet reads the entries either side" \
-  'NoteSheetSource\.neighbours\(of: thing' "$VIEW"
+# The neighbour read and its doors are no longer a NOTE feature (prd §645
+# pass 3): every room gets them, gated on the WalkScope the sheet was opened
+# with rather than on a note shape. Guarded here still, because §399's
+# behaviour must survive the widening — the doors and the read both exist, and
+# the read is the scoped overload.
+guard "the sheet reads the rows either side" \
+  'NoteSheetSource\.neighbours\(of: thing, scope: walk' "$VIEW"
 guard "both shelves are drawn" 'NoteOtherYearsList\(rows: otherYears' "$VIEW"
-guard "the neighbour doors are drawn" 'NoteNeighbourDoors\(previous:' "$VIEW"
+guard "the walk doors are drawn" 'WalkDoors\(previous:' "$VIEW"
 # Bounded, never a walk: one `fetchLimit = 1` read per candidate year, capped.
 guard "the other-years read is capped" 'static let yearSpan = 12' "$SOURCE"
 guard "each year is a single-row read" 'd\.fetchLimit = 1' "$SOURCE"

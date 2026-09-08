@@ -433,21 +433,60 @@ enum NoteSheetSource {
     @MainActor
     static func neighbours(of thing: Thing, context: ModelContext)
         -> (previous: Thing?, next: Thing?) {
-        let source = thing.source
+        neighbours(of: thing,
+                   scope: WalkScope(source: thing.source, typeTag: nil, walks: true),
+                   context: context)
+    }
+
+    /// The same two bounded reads, following the LIST the sheet was opened
+    /// from rather than the row's own source (prd §645 pass 3, 2026-09-08).
+    ///
+    /// **The scope is why this generalises safely.** Neighbours computed on a
+    /// global `capturedAt` within a source hand back a row the list behind you
+    /// does not contain — which reads as a bug and is one. `WalkScope` carries
+    /// the room and the kind filter as VALUES (never a `[Thing]`; corollary 4
+    /// is this exact shape), and `SheetWalk.eligible` applies the parts a
+    /// `#Predicate` cannot: two source-set tests SQL cannot push down, and a
+    /// kind test that rides `tags`, where a pushed-down `.contains` on an
+    /// array attribute is a documented SIGSEGV.
+    ///
+    /// The overload above keeps §399's original contract — a journal entry's
+    /// own source — for every caller that has no list to speak of.
+    @MainActor
+    static func neighbours(of thing: Thing, scope: WalkScope, context: ModelContext)
+        -> (previous: Thing?, next: Thing?) {
+        guard scope.walks, thing.isLive else { return (nil, nil) }
         let when = thing.capturedAt
-        let id = thing.id
+        let id = thing.id.uuidString
         func one(_ before: Bool) -> Thing? {
-            var d = FetchDescriptor<Thing>(
-                predicate: before
+            // FOUR predicates rather than one built from optionals: a
+            // `#Predicate` closing over an optional and branching inside
+            // itself is what SwiftData cannot push down, and pushing down is
+            // the entire reason these are bounded reads.
+            let predicate: Predicate<Thing>
+            if let source = scope.source {
+                predicate = before
                     ? #Predicate { $0.source == source && $0.capturedAt < when }
-                    : #Predicate { $0.source == source && $0.capturedAt > when },
+                    : #Predicate { $0.source == source && $0.capturedAt > when }
+            } else {
+                predicate = before
+                    ? #Predicate { $0.capturedAt < when }
+                    : #Predicate { $0.capturedAt > when }
+            }
+            var d = FetchDescriptor<Thing>(
+                predicate: predicate,
                 sortBy: [SortDescriptor(\.capturedAt, order: before ? .reverse : .forward)])
-            // Two, not one: an import receipt shares the room and would
-            // otherwise be offered as the next entry — a door onto our own note
-            // about a sync, from inside somebody's diary.
-            d.fetchLimit = 2
-            return ((try? context.fetch(d)) ?? []).live
-                .first { $0.id != id && !Corpus.isImportReceipt($0) }
+            d.fetchLimit = SheetWalk.fetchWindow
+            return ((try? context.fetch(d)) ?? []).live.first {
+                SheetWalk.eligible(
+                    SheetWalk.Row(id: $0.id.uuidString,
+                                  source: $0.source,
+                                  tags: $0.tags,
+                                  isReceipt: Corpus.isImportReceipt($0),
+                                  showsInAll: Corpus.showsInAll($0),
+                                  searchOnly: Corpus.searchOnlySources.contains($0.source)),
+                    scope: scope, from: id)
+            }
         }
         return (one(true), one(false))
     }

@@ -220,6 +220,12 @@ final class PadDetailSelection {
     /// What the pane is showing. nil = the pane's own resting state.
     var thing: Thing?
 
+    /// Which list that thing was opened from, so the pane's own next/previous
+    /// doors walk it (prd §645 pass 3). A VALUE beside the model, never an
+    /// array — corollary 4. `.none` for every caller that hands over a row
+    /// with no list behind it, which is the default and the safe answer.
+    var walk: WalkScope = .none
+
     /// True only while the shell is ACTUALLY rendering a pane. Written by
     /// `MainSurface` from its measured width; read by every row-tap site, so
     /// no caller has to know the breakpoint or re-derive the size class.
@@ -257,14 +263,14 @@ final class PadDetailSelection {
     /// gets false must present its own sheet exactly as it always did, which
     /// is what keeps iPhone (and a narrow iPad) on the original path.
     @discardableResult
-    func present(_ thing: Thing) -> Bool {
+    func present(_ thing: Thing, walk: WalkScope = .none) -> Bool {
         guard paneActive, thing.isLive else { return false }
-        withAnimation(DS.Motion.standard) { self.thing = thing }
+        withAnimation(DS.Motion.standard) { self.thing = thing; self.walk = walk }
         return true
     }
 
     func clear() {
-        withAnimation(DS.Motion.standard) { thing = nil }
+        withAnimation(DS.Motion.standard) { thing = nil; walk = .none }
     }
 
     /// Drops a selection whose model died under us (see the class note).

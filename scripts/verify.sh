@@ -1686,6 +1686,23 @@ harness "Reading-draw self-test" "reading-draw self-test" "scripts/reading-draw-
 # lengths depending on whether you pasted it or shared it.
 harness "Readable-body self-test" "readable-body self-test" "scripts/readable-body-selftest.sh" "the readable-body self-test failed — run scripts/readable-body-selftest.sh"
 
+# Next and previous, following the list you opened from (prd §645 pass 3,
+# 2026-09-08). Every failure it catches draws a perfectly ordinary pair of
+# chevrons: the scope dropped on the way into the route, so the doors walk the
+# whole corpus from inside a room; the import-receipt filter lost, which §399
+# paid for by hand (a door onto our own note about a sync, from inside
+# somebody's diary); the All room walking into a bulk import's dump, which that
+# list deliberately hides; a kind-filtered room walking rows of every other
+# kind; a room narrowed by something no `source ==` predicate can rebuild
+# (pinned, a wallet, a person, a vibenet account) drawing doors at all; and the
+# scope left out of the route's `id`, so the same thing opened from two rooms
+# is ONE identity to SwiftUI and the second open reuses the first's doors. Its
+# drift half pins what the pure file cannot see: that the route carries the
+# scope BY VALUE and never a `[Thing]` (corollary 4, build 177), that the iPad
+# pane is handed it too, and that the sheet gates on it rather than on a note
+# shape.
+harness "Feed-walk self-test" "feed-walk self-test" "scripts/feed-walk-selftest.sh" "the feed-walk self-test failed — run scripts/feed-walk-selftest.sh"
+
 # Radicle (prd §400, 2026-08-18). The ONLY proof this bridge has: nothing on
 # this host can open a patch, merge one or close an issue, so no probe and no
 # sweep can ever exercise its landing paths — one degree weaker than Stripe's
