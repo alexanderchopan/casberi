@@ -138,10 +138,18 @@ enum CursorPullRequests {
             // ruling). This is what makes "what merged last week" answerable
             // without a new stored property.
             if let at {
-                let stamp = ISO8601DateFormatter().string(from: at)
+                // A DATE A PERSON WOULD WRITE, not an ISO stamp (prd §645
+                // amendment 3, 2026-09-08). This line was
+                // "Pull request merged 2026-09-06T11:04:22Z." on the reasoning
+                // that nothing renders `enrichedText` — true when it was
+                // written, and false since §645 pass 1, which draws a `.link`
+                // row's body on the sheet. It is also the better retrieval
+                // text either way: "what merged last week" has nothing to
+                // match in a machine stamp, and an embedding of one is noise.
+                let stamp = at.formatted(date: .abbreviated, time: .omitted)
                 let line = merged
-                    ? "Pull request merged \(stamp)."
-                    : "Pull request closed without merging \(stamp)."
+                    ? String(localized: "Pull request merged on \(stamp).")
+                    : String(localized: "Pull request closed without merging on \(stamp).")
                 thing.enrichedText = [thing.enrichedText, line]
                     .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n")
             }

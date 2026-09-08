@@ -50735,3 +50735,59 @@ on both binaries, and no simulator run backgrounds an app under a real CPU quota
 or asks it to terminate. The reports are the instrument; the dSYM is what made
 one of them readable, which is an argument for keeping archives per build rather
 than one.
+## §645 amendment 3 — the owed honesty fix, one wrong claim corrected, and Listen is DECLINED (user: "we don't need audio everywhere", 2026-09-08)
+
+**Listen everywhere is declined.** §645's pass 4 and `docs/reading-spec.md` §4
+are closed, not deferred. The spec put a decision ahead of that pass — the
+voice dies with the sheet, and fixing it means an `AVAudioSession` category,
+background audio in the target's capabilities and `MPNowPlayingInfoCenter` so
+the lock screen can pause it — and the ruling is that the app is not taking
+that on. It sits well beside §644: an app that has just declined to compete for
+the lock screen with notifications does not arrive there as a now-playing card
+instead. **`ArticleListenButton` stays exactly where it is** — mounted from
+`ArticleBody` only, stopping on `onDisappear`, which is the correct behaviour
+for a control whose voice cannot outlive its sheet. The rule §4 would have had
+to replace stands unreplaced.
+
+**The owed fix from amendment 1, and it is TWO seats, not three.** Amendment 1
+named App Store Connect reviews, Cursor pull requests and **Walletbeat
+incidents**. The Walletbeat claim is **wrong** and is withdrawn: a Walletbeat
+row never reaches `ThingContentView` at all. `ThingSheetView.contentShown`
+requires `walletbeatShape == nil && l2beatShape == nil`, so both registries'
+rows draw their own anatomy (§419 / §428) and the `.link` arm is not on their
+path. The praise amendment 1 gave those two seats as the counter-example is
+withdrawn on the same evidence — their risk explanations are not drawn through
+`ArticleBody` either. The error is worth naming rather than quietly deleting:
+the amendment reasoned from what a field CONTAINED and never checked whether
+the view that would draw it is reached, which is the same shape as §377 —
+registering and handling are different questions.
+
+The two real seats are fixed at the source, as amendment 1 said they should be:
+
+- **App Store Connect reviews.** The reviewer's territory moved from
+  `enrichedText` to `tags`. It was parked in a field documented as invisible,
+  on reasoning that is still correct — useful to search, noise in a title — and
+  pass 1 made that field visible, so a review's whole drawn body was one word
+  full-width at `reading20`. A tag is what it always was. **Owed and stated**:
+  the API hands over a three-letter code, so the tag reads "USA" and the search
+  is for the code rather than for "Japan". That was equally true of the old
+  field, so nothing regressed; a code→name map is separate work, and inventing
+  one in the filter surface would be a guess.
+- **Cursor pull requests.** `"Pull request merged 2026-09-06T11:04:22Z."`
+  became a date a person would write. Same cause — the line was written when
+  nothing rendered the field — and the machine stamp was the worse choice even
+  for the job it was written for: "what merged last week" has nothing to match
+  in an ISO string, and an embedding of one is noise.
+
+**Nothing general was added, deliberately.** A length floor on `ArticleBody`
+("draw a body only past N characters") would have covered both seats in one
+line and is exactly the unearned guess §632 cut — the two bodies are wrong
+because they are FIELDS, not because they are short, and the fix for a field in
+the wrong column is to move it.
+
+**Checked, not assumed, this time.** The audit that produced this entry walked
+every `.link`-kind writer of `enrichedText` to `ThingSheetView.contentShown`
+and back: GitHub's starred and watched repo rows carry `repoLanguage`, so
+`GitHubStarContent` claims them before the article arm; Hugging Face papers and
+TikTok captions are prose and are meant to be drawn; a row whose body is a bare
+link with no `summary` never shows content at all (`linkOnlyBody`).

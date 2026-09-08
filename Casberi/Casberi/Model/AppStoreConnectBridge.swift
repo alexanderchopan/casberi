@@ -1052,10 +1052,21 @@ enum ASCIngest {
         // display names people chose, not handles that resolve anywhere.
         let nickname = ASCFetch.string(attributes, "reviewerNickname")
         if !nickname.isEmpty { thing.authorHandle = nickname }
-        // Territory rides retrieval only. It is genuinely useful to search
-        // ("reviews from Japan") and genuinely noise in a title.
+        // Territory rides a TAG, not `enrichedText` (prd §645 amendment 3,
+        // 2026-09-08). It was on `enrichedText` on the reasoning that it is
+        // useful to search and noise in a title — both still true, and the
+        // field it was parked in stopped being invisible: since §645 pass 1
+        // the sheet DRAWS a `.link` row's `enrichedText`, so a review's whole
+        // body was one word set full-width at `reading20`. A tag is what this
+        // always was — a filter dimension — and it is searched the same way.
+        //
+        // OWED, and stated rather than hidden: the API's `territory` is a
+        // three-letter code, so the tag reads "USA", and the search this
+        // enables is for the code rather than for "Japan". That was equally
+        // true of the old field; a code→name map is a separate piece of work,
+        // and inventing one here would put a guess in the filter surface.
         let territory = ASCFetch.string(attributes, "territory")
-        if !territory.isEmpty { thing.enrichedText = territory }
+        if !territory.isEmpty { thing.tags.append(territory) }
         return thing
     }
 
