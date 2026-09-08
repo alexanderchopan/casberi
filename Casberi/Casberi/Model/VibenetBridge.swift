@@ -77,6 +77,23 @@ struct VibenetContracts: Equatable, Codable {
     /// **this chain can be READ and not SIGNED FOR**. Collapsing the two — which
     /// is what this file did for a day — turns a chain serving every request
     /// into a room that refuses to look at it.
+    ///
+    /// **IT HAPPENED AGAIN ON 2026-09-08 AND THIS CODE NEEDED NO CHANGE (prd
+    /// §656)** — recorded because the obvious reading of the new document is
+    /// that this seat is broken, and it is not. The document now names a
+    /// DIFFERENT account stack rather than merely omitting one: `entryPointV06`,
+    /// `coinbaseSmartWalletV11`, `coinbaseSmartWalletFactoryV11`,
+    /// `activationRegistry`, `policyRegistry` and the b20/validity contracts,
+    /// with no `eip8130` object anywhere. Measured the same day: chain id is
+    /// still 84538453, so this is the same chain and not a reset; the
+    /// deterministic Keystore still answers `eth_getCode` with 21,352 bytes;
+    /// and `usdv`, `nfv`, `vibecheck` and `faucetAddress` are all still named,
+    /// at new addresses, which `readOnlyFallback` reads and `fetch`'s merge
+    /// prefers over the cached ones. So reads follow the chain, and signing
+    /// says the sentence `VibenetLedger` already writes for it. Do not "fix"
+    /// this by inventing authenticator literals — that is what the whole file
+    /// header forbids, and the addresses are per-chain deployments nobody
+    /// outside the document can name.
     let p256Authenticator: String?
     let webAuthnAuthenticator: String?
     let delegateAuthenticator: String?

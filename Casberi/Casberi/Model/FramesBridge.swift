@@ -667,6 +667,14 @@ extension FramesLiveState {
     /// own numbers — and they immediately showed two things no invented
     /// fixture would have.
     ///
+    /// **The chain those numbers came from was reset on or before 2026-09-08
+    /// (prd §656): same chain id, new genesis, head back to ~14k blocks.** The
+    /// figures stay exactly as they are and the demo is not wrong — a demo is a
+    /// fixture, and these are the numbers a real chain produced, which is the
+    /// only property this rule ever asked of them. The note is here so the next
+    /// reader who tries to re-derive them from a node, finds nothing, and
+    /// concludes the seed is invented, stops at this paragraph instead.
+    ///
     /// **One: the balance overflows the obvious type.** This address holds
     /// 99,999.999762 ETH, a genesis-funded dev account, which as wei does not
     /// fit a `UInt64` — the reason `FramesMoney` exists and the reason
