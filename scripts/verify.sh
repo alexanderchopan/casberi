@@ -821,6 +821,25 @@ python3 "$ROOT/scripts/body-publish-audit.py" \
   || fail "a view body writes the observable state it reads — see the output above"
 print -P "%F{green}✓ body-publish audit%f"
 
+# THE SAME FAMILY, COUNTED RATHER THAN SHAPED (prd §646). Reading a `@Query`
+# array is a fetch AND a per-model `Codable` snapshot, and it is not cached
+# between reads — so build 537 materialised one room FOUR times per body pass
+# (twice for `safetyNetKey`, which two `.task(id:)` modifiers share, once for
+# the emptiness test, once for the rows) and died `0x8BADF00D` process-exit with
+# 5.588s of application CPU at 16%. It is the one watchdog of that family whose
+# report symbolicates, and it named `FeedScreen.roomBody.getter` exactly.
+# Nothing else here can see it: the build is clean, every other audit passed on
+# the crashing binary, and no simulator asks an app to terminate under a real
+# CPU quota. Mutation-probed against FeedScreen.swift itself — an inline
+# `things.count` key, `safetyNetKey` losing its guard, and a second read
+# returning to `roomBody` all go 0 → 1.
+step "Query-read audit"
+python3 "$ROOT/scripts/query-read-audit.py" --self-test >/dev/null \
+  || fail "the query-read audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/query-read-audit.py" \
+  || fail "a view materialises its @Query more than it needs to — see the output above"
+print -P "%F{green}✓ query-read audit%f"
+
 # An UNBOUNDED whole-corpus `FetchDescriptor<Thing>` on a main-actor path is
 # this codebase's most-repeated performance bug: it has re-entered at least
 # four times by four different routes (the kept-ask branches, the Composer's

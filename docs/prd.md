@@ -50220,6 +50220,29 @@ descriptions separate in the first place.
 Description edits answer 409 while a version is In Review; promotional text
 and review notes take a PATCH.
 
+## §643 amendment — iOS is applied, Mac is blocked on the description ONLY (2026-09-07)
+
+The entry above closed with "nothing is pushed". That held for about an hour:
+the user applied the iOS description by hand the same day, and reported the Mac
+one refused because macOS 1.0.11 is In Review.
+
+**Half of "Mac is blocked" is wrong, and the half that is wrong is the useful
+one.** In Review blocks description, What's New, keywords and subtitle, which
+all answer 409. It does NOT block **promotional text** or review notes, which
+take a PATCH (`store-metadata-editable-in-review`). So the new 154-character
+promotional line can reach the Mac listing today, ahead of the description, and
+the two platforms need not read differently at the top of the page while the
+review runs.
+
+**The doc's own heading was four days stale and cost this session real work.**
+`docs/store-copy.md` said "Pending — iOS, apply to 1.0.12" while describing copy
+that had since been superseded, so the state had to be re-derived from the API
+record and the user's own paste rather than read off the file. The headings are
+now the state (`## iOS — APPLIED <date>`, `## Mac — BLOCKED, In Review`), and
+the rule is written into the file itself: a field that is applied changes its
+heading in the same breath. This is the `fix-recorded-once-lives-twice` shape —
+a record that describes an intention is read later as a fact.
+
 ## §644 — The app does not compete for the lock screen: two of three notification classes were riding in on a grant given for the third (user: "we're not smart enough on device and they're already getting notifications from every other app and every other place — we would just be another one in the noise", 2026-09-08)
 
 **The ruling, in the user's frame.** Casberi does not bid for attention it
@@ -50589,3 +50612,126 @@ unchanged and that is correct** — no call site was widened, so there is no new
 host and no build-214 exposure; `thinSummary` changes only WHICH rows an
 already-ledgered call site fetches. What no check here can see is how 8,000
 characters sit under a preview card on a real sheet.
+
+## §646 — The room materialised its own query four times a body pass, and the fourth of the watchdog family died on the first of them (two crash reports, 2026-09-08)
+
+**Two reports, two different failures, and only one of them can be named.**
+
+**Build 537, the one that symbolicates.** `0x8BADF00D`, `WatchdogEvent:
+process-exit` — *"Failed to terminate gracefully after 5.0s"*,
+`WatchdogVisibility: Foreground`, 99 seconds into a cold launch, **5.588s of
+application CPU at 16%**. Unlike §614's pair this one carries Casberi frames,
+and against 537's own dSYM (the archive's uuid matches the report's slice
+exactly) they resolve to one expression:
+
+```
+FeedScreen.roomBody.getter (FeedScreen.swift:4892)   →   |
+  _SwiftData_SwiftUI  →  SwiftData  →  Encodable.encode(to:)  →  memmove
+```
+
+Line 4892 was `|| Corpus.hasSurfaced(things)` — the third term of
+`roomHasContent`, the emptiness test §592 put there. The frames underneath it
+are the whole diagnosis: the `@Query` getter re-fetching **and `Codable`-
+snapshotting every model it returns**. On **iOS 18.6**, which is the reporting
+device, a source room's query carries no `propertiesToFetch` at all
+(`sourceRoomLightColumns` is iOS 26+ — a predicated partial fetch drops rows on
+18.6, §623), so each of those rows is materialised with its heavy inline text
+and then encoded.
+
+**The count is the finding, not the line.** A built page evaluated the room's
+`@Query` **four times per body pass**: twice for `safetyNetKey` (two `.task(id:)`
+modifiers share it, so SwiftUI evaluates it once each), once for
+`roomHasContent`, and once for the `visible` the rows are drawn from. `everBuilt`
+latches, so every page the pager has ever built keeps paying all four on every
+graph update — and a cold launch fires one graph update per bridge save, ~30 of
+them in a burst. The line that died is simply the first read of the four.
+
+**Two fixes, both subtractions.**
+
+*`roomBody` binds the array once.* `let rows = visible` at the top, and the
+emptiness test answers from it — a room with anything to draw plainly has
+content, and `rows` is what `populatedRoom` is about to draw. `Corpus
+.hasSurfaced(rows)` rather than `!rows.isEmpty`, because `feedThings`
+deliberately does not surface-filter the PINNED room (a contact you pinned is
+one you asked to keep in front of you) and a bare `isEmpty` would flip a
+contacts-only pinboard from the empty state to rows. **Strictly ≤ the old cost
+in every case**: a room with rows reads once instead of twice; a room that is
+genuinely empty still falls through to `Corpus.hasSurfaced(things)`, and that
+read costs nothing precisely because the query it materialises is empty; a room
+narrowed to empty by a tag or a scope reads twice, which is what it read before.
+It is also **more** aligned with §592 than what it replaces: that ruling says the
+test must read what the room DRAWS, and `visible` resolves through
+`sourceRoomFallbackSnapshot` before it ever reaches `things` — so the rescue is
+honoured by the FIRST term now, and the untrusted query is asked last.
+
+*`safetyNetKey` stops keying tasks that cannot run.* This is `corpusRevision`'s
+own ruling — *"the room guard lives HERE rather than at the `.task(id:)` below,
+so a per-source room doesn't even run the COUNT"* — owed to this key too, and
+owed twice over since two tasks share it. `served` is exactly the conjunction of
+the guards the two task bodies already apply; when it is false both return
+before touching anything, so `|idle` is a free key, and because it differs from
+both `|rows` and `|empty` crossing the boundary in either direction still
+restarts the nets. **Behaviour unchanged, read not paid.**
+
+**It also takes two reads off the BACKGROUNDING path**, which matters for the
+other report: leaving the app moves `scenePhase`, the body re-evaluates, and
+until now that pass materialised the room twice for two tasks that were both
+about to return — main-thread work inside the exact scene update §614's watchdog
+is timing.
+
+**A doc premise died with it, and it was load-bearing.** `safetyNetKey` justified
+its own read with *"it costs nothing to ask: `roomBody` already reads `things` on
+this pass, so the query is materialised either way"*. True when written, false
+the moment `roomBody` stopped reading it. A shared read is only free while
+somebody else is paying for it — the `fix-recorded-once-lives-twice` shape,
+arriving as a subsidy rather than as a duplicate.
+
+**Build 534's report, and what it does NOT say.** The second file is a different
+kill: `0x8BADF00D` **scene-update** watchdog, 10s wall clock, `ProcessVisibility:
+Foreground` with `WatchdogVisibility: Background`, on a process ten hours old.
+The whole main thread is one **layout** pass rooted at `RootGeometry.value
+.getter` — root geometry moved (the backgrounding resize) and the entire tree
+re-laid out with cold layout caches, through the shell's three `safeAreaInset`s
+into a ScrollView-based screen. It is the first of this family that is layout
+rather than a body or environment update. **No Casberi frame appears on it and
+534's dSYM no longer exists** (the archive holds 537), so it names no view and
+this entry does not pretend to have fixed it. §614's fix removed one *cause* of
+root invalidation on background; UIKit's own snapshot resize still forces a full
+re-layout, so the only lever there is making that layout cheaper — which is what
+the four-reads-to-one change above begins, and is not evidence of having
+finished.
+
+*`listRevision` takes the array instead of fetching one.* Its non-All arm read
+`things.count` — a full materialisation of the room, on every body pass, **to
+key an animation**. It is `rows.count` now, the same array `listBody` binds and
+draws. That is a real change of meaning and it is the meaning the All arm has
+always had: the count of what is ON SCREEN, not the count the query returned
+before the room's scope narrowed it. So the screen holds ONE read for the whole
+pass — `listBody` binds it, `roomBody` draws it, `listRevision` animates against
+it, and `roomHead` needs none (its heads are memoised in `.task(id: headKey)`).
+
+**Mechanical, as `scripts/query-read-audit.py`.** Three checks over
+comment-stripped source: a `.task(id:)`/`.onChange(of:)` key may not read a
+`@Query` inline (there is nowhere to put a guard in an argument expression); a
+member USED as such a key must have an early return above its read; and a member
+may not read the same `@Query` twice. Mutation-probed against `FeedScreen.swift`
+itself — an inline `things.count` key, `safetyNetKey` losing its guard, and a
+second read returning to `roomBody` all go 0 → 1 — and its own self-test carries
+the exclusions that cost real iterations to find: reads inside `.task`/`.onChange`
+CLOSURES are events and not body passes (the two staleness nets read the live
+query in theirs on purpose, and counting those reported `listBody` as four), a
+ternary or two mutually exclusive `return`s are ONE read (`feedThings` and
+`WalletHistoryScreen.visible` were the check's first two false findings), and a
+parameter named after the query is not the query.
+
+**Check 3 would not have caught 537, and the entry says so.** The four reads
+were spread across four MEMBERS and three of them reached the query through an
+accessor rather than by name, so no per-member text check could see the total.
+Checks 1 and 2 hold the two shapes that shipped; check 3 is a ratchet against
+the obvious regression, not a proof of the property.
+
+**Unreachable by the pass, again.** The build is clean, every static audit passes
+on both binaries, and no simulator run backgrounds an app under a real CPU quota
+or asks it to terminate. The reports are the instrument; the dSYM is what made
+one of them readable, which is an argument for keeping archives per build rather
+than one.

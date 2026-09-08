@@ -2267,8 +2267,21 @@ struct FeedScreen: View {
     /// animation on every merge while the main thread was already saturated —
     /// the "slow-motion" first load. The debounced snapshot changes at most
     /// once per 250ms, so the list settles into place instead of thrashing.
-    private var listRevision: Int {
-        guard source == "All", filter.tag == "All" else { return things.count }
+    ///
+    /// **IT TAKES THE ARRAY, IT DOES NOT FETCH ONE (prd §646, 2026-09-08).**
+    /// The non-All arm below read `things.count` — the `@Query` getter, so a
+    /// full materialisation of the room on every body pass, to key an
+    /// ANIMATION. It is `rows.count` now: the array `listBody` already binds
+    /// and already draws. That is a real change of meaning and it is the
+    /// meaning the All arm has always had — the count of what is ON SCREEN,
+    /// not the count the query returned before the room's scope narrowed it —
+    /// so the two arms finally answer the same question. What it costs is
+    /// exactness in one direction only: a scope change that swaps which rows
+    /// are drawn without changing HOW MANY now animates as no change, where the
+    /// raw query count would also have said nothing, since the query is not
+    /// what a scope narrows.
+    private func listRevision(_ rows: [Thing]) -> Int {
+        guard source == "All", filter.tag == "All" else { return rows.count }
         // Never `things.count` here (PERF 2026-08-11) — see `corpusRevision`.
         // Before the snapshot exists there is nothing on screen to animate
         // against anyway, so 0 is the honest starting value.
@@ -2526,11 +2539,19 @@ struct FeedScreen: View {
     /// the mount. That is the reported sequence: a Wallet room drawing rows,
     /// one tap, and an empty room that stays empty until you leave it.
     ///
-    /// It costs nothing to ask: `roomBody` already reads `things` on this pass
-    /// (`Corpus.hasSurfaced`), so the query is materialised either way, and the
-    /// value flips at most twice in a room's life. A room that is HONESTLY
-    /// empty re-runs one bounded fetch and returns without writing anything —
-    /// the net's own `guard !scoped.isEmpty` is what makes that free.
+    /// A room that is HONESTLY empty re-runs one bounded fetch and returns
+    /// without writing anything — the net's own `guard !scoped.isEmpty` is what
+    /// makes that free — and the value flips at most twice in a room's life.
+    ///
+    /// **IT NO LONGER COSTS NOTHING TO ASK, AND THAT PREMISE WAS THIS KEY'S
+    /// (build 537's watchdog, 2026-09-08).** This paragraph used to read "it
+    /// costs nothing: `roomBody` already reads `things` on this pass
+    /// (`Corpus.hasSurfaced`), so the query is materialised either way". That
+    /// was true when it was written and is false now: `roomBody` binds the
+    /// room's array ONCE and answers its own emptiness test from it, so on
+    /// every pass where the room has rows nothing else reads `things` at all.
+    /// A shared read is only free while somebody else is paying for it; the
+    /// guard in the body below is what replaces the subsidy.
     /// **THE EMPTINESS TERM SHORT-CIRCUITS ON WHAT IS ALREADY DRAWN (PERF
     /// 2026-09-04, prd §600).** This key is evaluated on EVERY body pass — that
     /// is what a `.task(id:)` key is — and `things.isEmpty` is the `@Query`
@@ -2547,10 +2568,37 @@ struct FeedScreen: View {
     /// expensive read just stops happening whenever there is anything on
     /// screen, which is the case a person is in while they scroll.
     private var safetyNetKey: String {
+        let base = "\(scenePhase)" + (rowBudget == nil ? "|full" : "|bounded")
+        // **A KEY FOR TWO TASKS THAT CANNOT RUN MUST NOT MATERIALISE THE ROOM
+        // (crash report 2026-09-08, build 537).** This is `corpusRevision`'s own
+        // ruling — "the room guard lives HERE rather than at the `.task(id:)`
+        // below, so a per-source room doesn't even run the COUNT" — owed to this
+        // key too, and it is the more expensive of the two: `things.isEmpty` is
+        // the `@Query` getter, TWO tasks share this key so SwiftUI evaluates it
+        // twice, and every page the pager has ever built keeps evaluating it
+        // (`everBuilt` latches) on every graph update.
+        //
+        // `served` is exactly the conjunction of the guards the two task bodies
+        // already apply — the All net wants `source == "All" && filter.tag ==
+        // "All"`, the per-source net wants a non-All, non-pinned room, and both
+        // want `scenePhase == .active` and `rowBudget == nil`. When it is false
+        // both bodies return before touching anything, so the key's value is
+        // free; `|idle` differs from both `|rows` and `|empty`, so crossing the
+        // boundary in either direction still changes the key and still restarts
+        // the nets. Behaviour is unchanged; the read is not paid.
+        //
+        // It also takes the read off the BACKGROUNDING path, which is where the
+        // other half of this pair of reports died: leaving the app moves
+        // `scenePhase`, the body re-evaluates, and until now that pass
+        // materialised the room twice for two tasks that were both about to
+        // return — main-thread work inside the exact scene update the
+        // scene-update watchdog is timing (§614's family).
+        let served = scenePhase == .active && rowBudget == nil
+            && (source == "All" ? filter.tag == "All" : !Pinboard.isPinnedRoom(source))
+        guard served else { return base + "|idle" }
         let drawn = (debouncedAllSnapshot.map { !$0.isEmpty } ?? false)
             || (sourceRoomFallbackSnapshot.map { !$0.isEmpty } ?? false)
-        return "\(scenePhase)" + (rowBudget == nil ? "|full" : "|bounded")
-            + (drawn || !things.isEmpty ? "|rows" : "|empty")
+        return base + (drawn || !things.isEmpty ? "|rows" : "|empty")
     }
 
     /// The room's own narrowing, as ONE rule — the lane strip scopes everything
@@ -4864,7 +4912,7 @@ struct FeedScreen: View {
     /// reason (see just below) — pulling one branch out was not enough, since
     /// the cost is the whole chain rather than any one arm of it.
     @ViewBuilder
-    private var roomBody: some View {
+    private func roomBody(_ rows: [Thing]) -> some View {
         // **THE EMPTINESS TEST READS WHAT THE ROOM DRAWS (2026-09-03, prd
         // §592, user: "i clicked on activity and this is what happened" over a
         // demo Wallet room full of transactions).**
@@ -4884,10 +4932,64 @@ struct FeedScreen: View {
         //
         // ONE-DIRECTIONAL, like the snapshot term beside it: a NON-EMPTY
         // fallback proves content and short-circuits, and an empty or absent
-        // one still asks `hasSurfaced`. That ordering also keeps the PERF
-        // property the note below claims — the rescue path never pays for a
-        // `Corpus.surfaced` allocation it does not need.
-        let roomHasContent = (debouncedAllSnapshot.map { !$0.isEmpty } ?? false)
+        // one still asks `hasSurfaced`.
+        //
+        // §592's OWN RULING IS WHAT MOVED THE ROWS TERM TO THE FRONT
+        // (2026-09-08): the heading above says the test must read what the room
+        // DRAWS, and `rows` is literally that array — `visible`, which
+        // `feedThings` already resolves through `sourceRoomFallbackSnapshot`
+        // before it ever reaches `things`. So the rescue is honoured by the
+        // FIRST term now rather than by the second, and the term that reads the
+        // untrusted query is last instead of third.
+        //
+        // **ONE READ OF THE ROOM'S ARRAY PER BODY PASS, AND THIS LINE IS WHERE
+        // A SHIPPED BUILD DIED (crash report 2026-09-08, build 537).** A
+        // `0x8BADF00D` process-exit watchdog — "failed to terminate gracefully
+        // after 5.0s", 5.588s of application CPU at 16% — symbolicated against
+        // 537's own dSYM to `FeedScreen.roomBody.getter` at exactly this
+        // expression, and the frames below it are `_SwiftData_SwiftUI` →
+        // `SwiftData` → `Encodable.encode(to:)` → `memmove`: the `@Query`
+        // getter re-fetching AND `Codable`-snapshotting every model it returns.
+        // On iOS 18.6 a source room's query carries no `propertiesToFetch`
+        // (`sourceRoomLightColumns` is iOS 26+ — a predicated partial fetch
+        // drops rows on 18.6, prd §623), so each of those rows is materialised
+        // with its heavy inline text.
+        //
+        // `things` was read here even though the branch below reads the room's
+        // array anyway, and each read re-materialises (the §600 measurement:
+        // "asking it materialised the room every time, twice per pass"). So the
+        // fix is not a cheaper test, it is ONE array: `rows` is what
+        // `populatedRoom` is about to draw, and a room that has anything to
+        // draw plainly has content.
+        //
+        // ≤ THE OLD COST IN EVERY CASE BUT ONE, and half of it in the two hot
+        // ones. A room WITH rows now reads once instead of twice. A room that
+        // is genuinely empty falls through to `Corpus.hasSurfaced(things)` as
+        // before — and that read costs nothing precisely because the query it
+        // materialises is empty. A room narrowed to empty by a tag or a scope
+        // reads twice, which is what it read before.
+        //
+        // THE EXCEPTION, stated rather than glossed: the three seats whose
+        // branches below return before they ever reach the rows (Frames,
+        // Hegotá, the privacy devnet) previously paid one short-circuiting
+        // `contains` and now pay `visible`'s `Corpus.surfaced` allocation too.
+        // It is free in fact and not in principle — each of those seats lands
+        // no `Thing` EVER, so the array it allocates over is empty — and it is
+        // written down here because a premise that stops being true is exactly
+        // what this change had to go and correct one property up.
+        //
+        // `Corpus.hasSurfaced(rows)` rather than `!rows.isEmpty`, so the answer
+        // is unchanged for the PINNED room: `feedThings` deliberately does not
+        // surface-filter that one (a contact you pinned is one you asked to
+        // keep in front of you), so a pinboard holding only contacts would flip
+        // from the empty state to rows on a bare `isEmpty`. For every other
+        // room `rows` is already surfaced, so this is true on the first element.
+        //
+        // `rows` is HANDED IN by `listBody` rather than bound here, so the
+        // animation key beside the List reads the same array instead of
+        // fetching its own (see `listRevision`).
+        let roomHasContent = Corpus.hasSurfaced(rows)
+            || (debouncedAllSnapshot.map { !$0.isEmpty } ?? false)
             || (sourceRoomFallbackSnapshot.map { !$0.isEmpty } ?? false)
             || Corpus.hasSurfaced(things)
         if !roomHasContent && !LiveRoomSources.has(source) {
@@ -5160,7 +5262,10 @@ struct FeedScreen: View {
             // all share this one filter pass instead of each re-deriving
             // it from `feedThings` (the Feed-freeze rule, perf pass
             // 2026-07-13, extended to `visible` itself).
-            let visible = self.visible
+            // `rows`, bound once at the top of `roomBody` — NOT `self.visible`
+            // again, which is a second `@Query` materialisation of the same
+            // array (build 537's watchdog, see there).
+            let visible = rows
             if visible.isEmpty && !keepsChromeWhenEmpty {
                 Group { filteredEmptyState }
                     .listRowBackground(Color.clear)
@@ -5385,10 +5490,23 @@ struct FeedScreen: View {
     }
 
     private func listBody(_ proxy: ScrollViewProxy) -> some View {
-        List {
+        // **ONE READ OF THE ROOM'S ARRAY FOR THE WHOLE SCREEN (prd §646,
+        // 2026-09-08, build 537's watchdog).** Reading a `@Query` property is a
+        // fetch AND a per-model `Codable` snapshot, and it is not cached between
+        // reads — so each spelling of `visible` or `things` below the List was
+        // its own materialisation of the same array, on every page `everBuilt`
+        // has latched, on every one of the ~30 graph updates a cold-launch
+        // bridge burst fires. The room's contents are ONE value now: bound here,
+        // handed to the body that draws it and to the key that animates it.
+        //
+        // `roomHead` deliberately takes nothing — it reads neither `visible` nor
+        // `things` (its heads are computed in `.task(id: headKey)` and memoised,
+        // PERF 2026-08-21), which is what makes one binding enough.
+        let rows = visible
+        return List {
             roomHead
                 .id(Self.roomTopAnchor)
-            roomBody
+            roomBody(rows)
 
             // Room for the floating bar.
             Color.clear.frame(height: ShellMetrics.bottomInset - 40)
@@ -5408,7 +5526,7 @@ struct FeedScreen: View {
             guard isActive else { return }
             Task { await performPull() }
         }
-        .animation(DS.Motion.standard, value: listRevision)   // new things rise in (debounced for All)
+        .animation(DS.Motion.standard, value: listRevision(rows))   // new things rise in (debounced for All)
         .scrollContentBackground(.hidden)
         // Width buys COLUMNS in a picture room and LINE LENGTH everywhere else
         // (2026-08-17). The 700pt reading cap is right for prose and wrong for
