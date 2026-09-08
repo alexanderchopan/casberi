@@ -17,7 +17,6 @@ struct SafeScreen: View {
     // This window's stack (per-window since `SceneState`).
     @Environment(HomeRoute.self) private var route
     @Environment(ShellChrome.self) private var chrome
-    @Environment(\.openURL) private var openURL
     @State private var syncing = false
     @State private var lastResult: BridgeProof?
     /// Whether `lastResult` is a failure — see `PrivacyPoolsScreen` (audit,
@@ -222,11 +221,8 @@ struct SafeScreen: View {
                     .fixedSize(horizontal: false, vertical: true)
                 if needsASafe {
                     DSSlabDoor(title: String(localized: "Set up a Safe"),
-                               systemImage: "arrow.up.right") {
-                        if let url = URL(string: "https://app.safe.global/new-safe/create") {
-                            openURL(url)
-                        }
-                    }
+                               systemImage: "arrow.up.right",
+                               url: URL(string: "https://app.safe.global/new-safe/create"))
                 }
                 standingLines
                 Button { confirmDeleteSigner = true } label: {

@@ -59,31 +59,34 @@ enum BridgeCatalog {
             return now.timeIntervalSince(added) < 7 * 24 * 60 * 60
         }
 
-        /// A one-word honest hook for the row badge and the story eyebrow —
-        /// derived from HOW the bridge connects, never marketing. "One tap"
-        /// (a system-permission bridge — a single grant, no fields), "No
-        /// account" (keyless — a handle or address, no sign-in, public
-        /// feeds), or "Import" (a one-time export you point at). Everything
-        /// else stays unbadged: a row earns a badge only when the fact
-        /// differentiates it. Never applied to a connected row (its subline
-        /// already carries live status).
-        var qualifier: String? {
-            if connectable && !needsSetup { return "One tap" }
-            let keyless: Set<String> = ["Wallet", "Tokens", "Peer", "0xBow Privacy Pools", "Railgun", "Safe", "Reddit", "YouTube",
-                "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster",
-                "Bluesky", "Nostr", "Shopify", "Deals",
-                "Stocktwits", "Hugging Face", "Radicle", "npm", "PyPI", "Altana",
-                "Walletbeat", "L2BEAT", "ENS"]
-            if keyless.contains(name) { return "No account" }
-            // Instagram and Snapchat were missed here when they landed
-            // (2026-07-31) and TikTok would have been missed the same way:
-            // all three connect by pointing at an export, which is exactly
-            // what this badge is for, and all three were showing none.
-            let imports: Set<String> = ["ChatGPT", "Claude", "Gemini",
-                "Day One", "Apple Journal", "Kindle", "Bookmarks",
-                "Instagram", "Snapchat", "TikTok", "X"]
-            if imports.contains(name) { return "Import" }
-            return nil
+        /// HOW THIS OFFER CONNECTS — the closed set every setup screen's
+        /// `mode:` chip draws (§315), answered here for the CATALOGUE ROW
+        /// (prd §653, 2026-09-08). `nil` is the one-tap case: a system
+        /// permission, one grant, no fields.
+        ///
+        /// This replaces `qualifier`, which had been DEAD since 2026-07-16:
+        /// the row badge it fed died that day (user: *"'no account' repeatedly
+        /// under the names... extra text the user doesn't need"*) and the
+        /// Discover eyebrow it also fed went with the product page (§641), so
+        /// for seven weeks it computed three words nobody drew. §653 puts the
+        /// cost back on the row WITHOUT a second line: the capsule's VERB
+        /// says it — Allow / Sign in / Add key / Import / Connect — one slot,
+        /// the same slot, no wallpaper (`CapsuleVerb.init(mode:)`).
+        ///
+        /// The sets below are the screens' own `mode:` literals, gathered
+        /// (`scripts/catalog-mode-audit.py` proves each screen with a literal
+        /// name agrees). `TokenBridge` seats are all pasted keys but GitHub,
+        /// which signs in while its device-flow id ships (§315's own rule);
+        /// `HandleBridge` seats are all handles.
+        var mode: BridgeSetupMode? {
+            guard connectable else { return nil }
+            if !needsSetup { return nil }
+            if BridgeSetupMode.signInSeats.contains(name) { return .signIn }
+            if BridgeSetupMode.importSeats.contains(name) { return .oneTimeImport }
+            if BridgeSetupMode.onDeviceSeats.contains(name) { return .onThisDevice }
+            if BridgeSetupMode.walletRidingSeats.contains(name) { return .watchedWallets }
+            if BridgeSetupMode.noAccountSeats.contains(name) { return .noAccount }
+            return .pasteKey
         }
     }
 
@@ -996,4 +999,95 @@ enum BridgeCatalog {
         return offers.filter { !taken.contains($0.name) }
             .sorted { $0.name < $1.name }
     }
+}
+
+/// How a bridge connects, as a closed set (prd §315, 2026-08-06). LIVES IN
+/// THE MODEL since §653: the catalogue row derives its verb from it
+/// (`Offer.mode`), and the harnesses that compile this file alone need it.
+///
+/// The chip answers the question a connect screen never used to answer until
+/// the bottom of a gray wall: **what am I in for, and does anything arrive on
+/// its own afterwards?** Reported of Instagram — *"we need to be clear on some
+/// of these: instagram doesn't allow a live sync you must download etc"*. The
+/// fact was in the copy (the footer's lede opened "One-time import"), 145 words
+/// down the screen, in the tier `DesignTokens` reserves for timestamps.
+///
+/// CLOSED on purpose. A free-form label per screen is what the footers already
+/// were, and they drifted into seven registers saying overlapping things. Six
+/// cases cover all 44 setup screens; a seventh should be argued for in the PRD
+/// before it is added, because the value here is that the same words mean the
+/// same thing on every screen.
+///
+/// The chip states the METHOD. The cadence — whether anything keeps arriving —
+/// rides the intro sentence, because it only surprises for the imports, and a
+/// chip that said "keeps arriving" on thirty-five screens would be furniture.
+enum BridgeSetupMode {
+    /// You point at an export you downloaded. Nothing arrives on its own.
+    case oneTimeImport
+    /// Public reads, no sign-in and no key — a handle, an address, a feed URL.
+    case noAccount
+    /// A sign-in that happens on the service's own page.
+    case signIn
+    /// A token or key, pasted.
+    case pasteKey
+    /// No connection of its own: it reads the wallets already watched.
+    case watchedWallets
+    /// A system permission on this device — no account anywhere.
+    case onThisDevice
+
+    var label: String {
+        switch self {
+        case .oneTimeImport:  return String(localized: "One-time import")
+        case .noAccount:      return String(localized: "No account")
+        case .signIn:         return String(localized: "Sign in on their site")
+        case .pasteKey:       return String(localized: "Paste a key")
+        case .watchedWallets: return String(localized: "Reads your wallets")
+        case .onThisDevice:   return String(localized: "On this device")
+        }
+    }
+
+    var glyph: String {
+        switch self {
+        case .oneTimeImport:  return "arrow.down.doc"
+        case .noAccount:      return "globe"
+        case .signIn:         return "person.badge.key"
+        case .pasteKey:       return "key"
+        case .watchedWallets: return "wallet.bifold"
+        case .onThisDevice:   return "iphone"
+        }
+    }
+
+    // MARK: - Which seat is which (the screens' own `mode:` literals, gathered)
+
+    /// A sign-in on the provider's page — the OAuth seats, and GitHub while
+    /// its device-flow client id ships. Every one is a `.signIn` on its own
+    /// screen; `catalog-mode-audit.py` holds the two in step.
+    static let signInSeats: Set<String> = ["Dropbox", "Slack", "Twitch", "CardPointers", "GitHub"]
+
+    /// A one-time export you point at. Instagram and Snapchat were missed in
+    /// this list's first life (2026-07-31) and TikTok would have been missed
+    /// the same way; the audit is why that cannot recur.
+    static let importSeats: Set<String> = ["ChatGPT", "Claude", "Claude Code", "Gemini",
+        "Day One", "Apple Journal", "Kindle", "Bookmarks",
+        "Instagram", "Snapchat", "TikTok", "X"]
+
+    /// A system permission or a folder on this device, behind a setup screen
+    /// (the pure one-tap grants have no screen and are `mode == nil`).
+    static let onDeviceSeats: Set<String> = ["Apple Wallet", "Files", "Obsidian", "Apple Notes"]
+
+    /// Reads the wallets already watched — no connection of its own (§515):
+    /// `WalletSeatStanding.seats`, by offer name (that table is by seat id and
+    /// is not compiled by the harnesses that compile this file). Altana is
+    /// listed there too and is a `.noAccount` on its own screen — it rides
+    /// the wallets AND takes a key of its own, and the catalogue row asks
+    /// `WalletSeatStanding` first either way.
+    static let walletRidingSeats: Set<String> = ["Peer", "0xBow Privacy Pools", "Railgun", "Safe",
+        "Gnosis Pay", "ether.fi"]
+
+    /// A handle, an address, a feed URL — public reads, no key.
+    static let noAccountSeats: Set<String> = ["Wallet", "Tokens", "Reddit", "YouTube",
+        "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster", "Bluesky", "Nostr",
+        "Telegram", "Shopify", "Deals", "Stocktwits", "Hugging Face", "Radicle",
+        "npm", "PyPI", "Altana", "Walletbeat", "L2BEAT", "ENS", "Frames Devnet", "Hegota Devnet",
+        "Base Vibenet", "ETH Validators", "Privacy Devnet"]
 }

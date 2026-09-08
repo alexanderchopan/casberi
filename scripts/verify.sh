@@ -523,6 +523,19 @@ step "Source alias audit"
 "$ROOT/scripts/source-alias-audit.py" || fail "a renamed source resolves to no seat — see the output above"
 print -P "%F{green}✓ source alias audit%f"
 
+# The catalogue row's verb and the setup screen's mode chip are ONE fact (prd
+# §653): a dark row says its price — Allow / Sign in / Add key / Import /
+# Connect — from `Offer.mode`, and each screen passes its own `mode:` literal.
+# Two declarations of how a seat connects is the shape that drifts; the first
+# life of that table missed three imports and nothing read it. Checks every
+# literal-named screen, every TokenBridge and HandleBridge seat, and that each
+# set entry is a real offer.
+step "Catalog mode audit"
+"$ROOT/scripts/catalog-mode-audit.py" --self-test >/dev/null \
+  || fail "the catalog-mode audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/catalog-mode-audit.py" || fail "a seat's catalogue verb and its setup screen's mode disagree — see the output above"
+print -P "%F{green}✓ catalog mode audit%f"
+
 # Keeps the "What this app reaches" registry complete (prd §205): every host
 # the app calls must be disclosed in NetworkReach.swift or the explicit
 # non-reach denylist — an undisclosed fetch host fails here.

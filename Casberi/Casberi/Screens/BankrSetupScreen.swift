@@ -16,10 +16,12 @@ import SwiftData
 /// in the background — which is most of a new person's first experience of the
 /// feature, spent outside the app.
 ///
-/// Both doors open `DSWebSheet` instead. **Passkeys are what make that work**:
-/// `SFSafariViewController` runs the system's own passkey UI against the same
-/// iCloud Keychain Safari uses, so signing up with Face ID inside this sheet is
-/// what happens in Safari. Casberi reads nothing — not a keystroke, not a
+/// The door opens `DSWebSheet` instead — as every account page's door does
+/// since §653; this seat was where it started (§529). **Passkeys and Password
+/// AutoFill are what make that work**: `SFSafariViewController` runs the
+/// system's own passkey UI and the keyboard's AutoFill against the same
+/// iCloud Keychain Safari uses, so signing up with Face ID inside this sheet
+/// is what happens in Safari. Casberi reads nothing — not a keystroke, not a
 /// cookie, not the page. The key still comes back by paste, and only Bankr can
 /// remove that last step (see prd §529: a "Connect with Bankr" button is
 /// theirs to build, not ours to fake).
@@ -49,7 +51,6 @@ struct BankrSetupScreen: View {
     @State private var checking = false
     @State private var result: BridgeProof?
     @State private var configured = AgentKey.isConfigured(.bankr)
-    @State private var web: URL?
 
     /// The page's one presentation (`AccountPage.sheet`).
     @State private var sheet: AccountPageSheet?
@@ -83,7 +84,6 @@ struct BankrSetupScreen: View {
             },
             keySheet: { setupBlock }
         )
-        .dsWebSheet($web)
     }
 
     /// The connect form — steps whole, furniture gone (prd §218).
@@ -109,27 +109,20 @@ struct BankrSetupScreen: View {
                             numbered: false) {
                 DSSlabButton(title: configured ? "Open Bankr" : "Create an account or sign in",
                              detail: "bankr.bot",
-                             systemImage: "person.crop.circle") {
-                    DSHaptic.tap()
-                    web = URL(string: "https://bankr.bot")
-                }
+                             systemImage: "person.crop.circle",
+                             url: URL(string: "https://bankr.bot"))
             }
             DSSlabField(placeholder: AgentProvider.bankr.placeholder, text: $keyDraft,
                         actionLabel: checking ? "Checking…" : (configured ? "Update" : "Connect"),
                         secure: true,
                         isArmed: !checking && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty,
+                        // The last step of the errand, made one tap — the
+                        // field's own §618 paste, always on here (this seat is
+                        // an errand from the first tap), rather than the
+                        // standalone `PasteButton` that §653's return-leg
+                        // paste would have doubled.
+                        paste: { keyDraft = $0 },
                         action: connect)
-            // The last step of the errand, made one tap. `PasteButton`
-            // reads the clipboard through the system rather than through
-            // us, so it raises no paste banner and Casberi never sees a
-            // clipboard it wasn't handed.
-            PasteButton(payloadType: String.self) { strings in
-                guard let pasted = strings.first?.trimmingCharacters(in: .whitespacesAndNewlines),
-                      !pasted.isEmpty else { return }
-                Task { @MainActor in keyDraft = pasted }
-            }
-            .labelStyle(.titleAndIcon)
-            .buttonBorderShape(.capsule)
             BridgeSyncStatusRows(proof: result)
             DSSlabNote(text: "Every prompt says answer only, never execute — and it's asked only when you tap.", plain: true)
         }

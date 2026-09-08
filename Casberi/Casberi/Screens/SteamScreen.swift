@@ -7,7 +7,6 @@ import SwiftData
 struct SteamScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
-    @Environment(\.openURL) private var openURL
     @State private var keyField = ""
     @State private var profileField = ""
     @State private var syncing = false
@@ -83,12 +82,8 @@ struct SteamScreen: View {
             BridgeSetupCard(steps: steps, numbered: false) {
                 DSSlabButton(title: "Get your API key",
                              detail: "steamcommunity.com",
-                             systemImage: "arrow.up.right") {
-                    DSHaptic.tap()
-                    if let url = URL(string: "https://steamcommunity.com/dev/apikey") {
-                        openURL(url)
-                    }
-                }
+                             systemImage: "arrow.up.right",
+                             url: URL(string: "https://steamcommunity.com/dev/apikey"))
             }
             // Two inputs, ONE act — so only the second slab wears the
             // verb, and it stays inert until both are filled.

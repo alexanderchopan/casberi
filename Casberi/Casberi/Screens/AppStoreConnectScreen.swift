@@ -54,7 +54,6 @@ struct AppStoreConnectScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @Environment(ShellChrome.self) private var chrome
-    @Environment(\.openURL) private var openURL
 
     /// The page's one presentation (`AccountPage.sheet`).
     @State private var sheet: AccountPageSheet?
@@ -188,11 +187,6 @@ struct AppStoreConnectScreen: View {
         return keyIDField.isEmpty ? 3 : 4
     }
 
-    private func openDoor(_ url: URL) {
-        doorTapped = true
-        openURL(url)
-    }
-
     /// Read the `.p8` where it landed. The security-scoped read is the same
     /// shape every import screen uses; what is different is the size guard —
     /// this is a 250-byte file, and a picker that will happily open anything
@@ -242,15 +236,14 @@ struct AppStoreConnectScreen: View {
                     if doorTapped {
                         DSSlabDoor(title: bridge.doorTitle,
                                    detail: bridge.doorHost,
-                                   systemImage: "arrow.up.right") { openDoor(url) }
+                                   systemImage: "arrow.up.right", url: url,
+                                   onOpen: { doorTapped = true })
                     } else {
                         // Verb over address, the 2026-08-14 anatomy.
                         DSSlabButton(title: bridge.doorTitle,
                                      detail: bridge.doorHost,
-                                     systemImage: "arrow.up.right") {
-                            DSHaptic.tap()
-                            openDoor(url)
-                        }
+                                     systemImage: "arrow.up.right", url: url,
+                                     onOpen: { doorTapped = true })
                     }
                 }
             }

@@ -1,9 +1,21 @@
 import SwiftUI
 
 /// The store's capsule verbs (docs/handoff-apps-page.md) — honest, always:
-/// Connect / Pair / Watch / Automatic / Fix / Open / Soon, never "GET". Shared
-/// by the Apps chart and the app product page so the same state always wears
-/// the same word.
+/// Allow / Sign in / Add key / Import / Connect / Pair / Watch / Automatic /
+/// Fix / Open / Soon, never "GET". Shared by the Apps chart and the app
+/// product page so the same state always wears the same word.
+///
+/// **THE VERB SAYS THE PRICE (prd §653, 2026-09-08).** A dark row used to say
+/// "Connect" whether the tap would raise one system sheet or send you to a
+/// developer console for a key, and the person found out which on the next
+/// screen. The cost word cannot be a second line — the 2026-07-16 ruling
+/// killed exactly that badge as wallpaper ("'no account' repeatedly under the
+/// names") — so it takes the one slot the row already has: `allow` is a
+/// permission sheet, `signIn` a sign-in on their site, `addKey` a key you
+/// fetch and paste, `importFile` an export you point at, and `connect` stays
+/// for the free ones (a handle, an address, a feed). Which one is
+/// `BridgeCatalog.Offer.mode`, the same fact the setup screen's §315 chip
+/// draws, held in step by `scripts/catalog-mode-audit.py`.
 ///
 /// `watch` and `automatic` are the wallet-riding seats' pair (prd §515). Those
 /// seven have no connection to make — their sweeps run for every watched
@@ -16,10 +28,15 @@ import SwiftUI
 /// answers the question the word raises is `WalletSeatStanding.line`.
 enum CapsuleVerb {
     case connect, pair, watch, automatic, fix, open, soon
+    case allow, signIn, addKey, importFile
 
     var label: String {
         switch self {
         case .connect: "Connect"
+        case .allow:   "Allow"
+        case .signIn:  "Sign in"
+        case .addKey:  "Add key"
+        case .importFile: "Import"
         case .pair:    "Pair"
         case .watch:   "Watch"
         case .automatic: "Automatic"
@@ -31,7 +48,7 @@ enum CapsuleVerb {
 
     var background: Color {
         switch self {
-        case .connect, .pair, .watch: DS.tint
+        case .connect, .pair, .watch, .allow, .signIn, .addKey, .importFile: DS.tint
         case .automatic:      DS.fillFaint
         case .fix:            DS.attention
         case .open:           DS.confirm.opacity(0.15)
@@ -41,7 +58,7 @@ enum CapsuleVerb {
 
     var foreground: Color {
         switch self {
-        case .connect, .pair, .watch, .fix: .white
+        case .connect, .pair, .watch, .fix, .allow, .signIn, .addKey, .importFile: .white
         // Secondary, not tertiary: `soon` is inert and reads disabled, and
         // this one is a live state you can still tap through.
         case .automatic:            DS.textSecondary
@@ -62,6 +79,26 @@ extension CapsuleVerb {
         switch standing {
         case .watch:     self = .watch
         case .automatic: self = .automatic
+        }
+    }
+}
+
+extension CapsuleVerb {
+    /// A dark setup seat's verb, from how it connects (prd §653). `nil` is
+    /// the one-tap grant, which is `allow` — the tap raises the system sheet.
+    init(mode: BridgeSetupMode?) {
+        switch mode {
+        case nil:              self = .allow
+        case .signIn:          self = .signIn
+        case .pasteKey:        self = .addKey
+        case .oneTimeImport:   self = .importFile
+        // On-device seats WITH a screen (Files, Obsidian, Apple Wallet) push
+        // it — a folder pick or a consent page, not one grant — so Connect.
+        case .onThisDevice:    self = .connect
+        case .noAccount:       self = .connect
+        // Never reached from the catalogue — a riding seat wears
+        // `WalletSeatStanding.verb` (§515) before this is asked.
+        case .watchedWallets:  self = .watch
         }
     }
 }

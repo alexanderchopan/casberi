@@ -240,6 +240,15 @@ struct DSSlabField: View {
 
     /// Inside an account page's act this draws its ROW form (prd §640).
     @Environment(\.accountAct) private var accountAct
+    /// THE RETURN LEG (prd §653). Once the page's door has opened in-app, an
+    /// empty SECRET row (`secure`) offers the same system `PasteButton` §618
+    /// gives the address fields — the key was just copied one sheet up, and
+    /// the row it belongs in should already be holding out its hand when the
+    /// sheet drops. Secret rows only: Jira's page has a site, an email and a
+    /// token, GitHub's a repo finder, and a paste chip on each would offer to
+    /// put an API key in a domain. The system reads the clipboard, never
+    /// this app; the button dims itself while the clipboard holds no text.
+    @Environment(\.accountDoorOpened) private var doorOpened
 
     private var armed: Bool {
         if let isArmed { return isArmed }
@@ -267,7 +276,11 @@ struct DSSlabField: View {
                     if let focus { field.focused(focus) } else { field }
                 }
                 if busy { ProgressView().controlSize(.small) }
-                if let paste, !hasText { pasteButton(paste) }
+                if let paste, !hasText {
+                    pasteButton(paste)
+                } else if doorOpened, secure, !hasText {
+                    pasteButton { text = $0 }
+                }
                 if clearable, hasText { clearButton }
             }
             .dsActRowFrame(glyphless: glyph == nil)
@@ -505,12 +518,40 @@ struct DSSlabButton: View {
     var busy = false
     var enabled = true
     let action: () -> Void
+    /// A DOOR'S ADDRESS, carried by the control (prd §653). A door that
+    /// opens a page passes `url:` instead of an action, and the slab opens
+    /// it from ITS OWN `openURL` — which, inside an account page, is the
+    /// page's in-app sheet rather than a trip to Safari. A closure calling
+    /// the screen's `openURL` could never be caught that way: the screen
+    /// reads its environment from ABOVE the page.
+    private var url: URL? = nil
+    private var onOpen: () -> Void = {}
+
+    init(title: String, detail: String = "", systemImage: String? = nil,
+         busy: Bool = false, enabled: Bool = true, action: @escaping () -> Void) {
+        self.title = title; self.detail = detail; self.systemImage = systemImage
+        self.busy = busy; self.enabled = enabled; self.action = action
+    }
+
+    /// The door form. A nil `url` is an inert control, drawn as one (§83).
+    init(title: String, detail: String = "", systemImage: String? = nil,
+         busy: Bool = false, enabled: Bool = true, url: URL?,
+         onOpen: @escaping () -> Void = {}) {
+        self.title = title; self.detail = detail; self.systemImage = systemImage
+        self.busy = busy; self.enabled = enabled && url != nil
+        self.action = {}; self.url = url; self.onOpen = onOpen
+    }
 
     /// Inside an account page's act this draws its ROW form (prd §640).
     @Environment(\.accountAct) private var accountAct
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         if accountAct { actRow } else { slab }
+    }
+
+    private func fire() {
+        if let url { DSHaptic.tap(); onOpen(); openURL(url) } else { action() }
     }
 
     /// THE COMMIT ROW (prd §640) — a tinted disc and a tint verb, with the
@@ -518,7 +559,7 @@ struct DSSlabButton: View {
     /// separating this from a door, which is `DSSlabDisc`'s own grammar; the
     /// fill it used to wear is what made a form out of a column of rows.
     private var actRow: some View {
-        Button(action: action) {
+        Button(action: fire) {
             HStack(spacing: DS.Space.s3) {
                 if let systemImage {
                     DSActRow.disc(systemImage, tinted: enabled && !busy)
@@ -542,10 +583,11 @@ struct DSSlabButton: View {
         }
         .buttonStyle(.plain)
         .disabled(!enabled || busy)
+        .dsDoorWayOut(url)
     }
 
     private var slab: some View {
-        Button(action: action) {
+        Button(action: fire) {
             HStack(spacing: DS.Space.s3) {
                 if let systemImage {
                     DSSlabDisc(systemImage: systemImage, onFill: true,
@@ -591,6 +633,7 @@ struct DSSlabButton: View {
         }
         .buttonStyle(.plain)
         .disabled(!enabled || busy)
+        .dsDoorWayOut(url)
     }
 
     /// One line, shrinking a little before it would ever wrap — a verb the eye
@@ -626,22 +669,44 @@ struct DSSlabDoor: View {
     var detail: String = ""
     var systemImage: String? = nil
     let action: () -> Void
+    /// The door's address, when it opens a page — see `DSSlabButton.url`.
+    private var url: URL? = nil
+    private var onOpen: () -> Void = {}
+    /// A nil `url` is an inert control, drawn as one (§83) — the sibling's
+    /// guard, which this door's first cut lacked.
+    private var inert = false
+
+    init(title: String, detail: String = "", systemImage: String? = nil,
+         action: @escaping () -> Void) {
+        self.title = title; self.detail = detail; self.systemImage = systemImage
+        self.action = action
+    }
+
+    init(title: String, detail: String = "", systemImage: String? = nil,
+         url: URL?, onOpen: @escaping () -> Void = {}) {
+        self.title = title; self.detail = detail; self.systemImage = systemImage
+        self.action = {}; self.url = url; self.onOpen = onOpen
+        self.inert = url == nil
+    }
 
     /// Inside an account page's act this draws its ROW form (prd §640).
     @Environment(\.accountAct) private var accountAct
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         if accountAct { actRow } else { slab }
+    }
+
+    private func fire() {
+        DSHaptic.tap()
+        if let url { onOpen(); openURL(url) } else { action() }
     }
 
     /// THE DOOR ROW (prd §640) — ink disc, primary title, the fact behind the
     /// door trailing, chevron. Identical anatomy to `AccountFactRow`, because
     /// on the page they stand in one column.
     private var actRow: some View {
-        Button {
-            DSHaptic.tap()
-            action()
-        } label: {
+        Button(action: fire) {
             HStack(spacing: DS.Space.s3) {
                 if let systemImage { DSActRow.disc(systemImage) }
                 Text(LocalizedStringKey(title))
@@ -663,13 +728,13 @@ struct DSSlabDoor: View {
             .dsActRowFrame(glyphless: systemImage == nil)
         }
         .buttonStyle(.plain)
+        .disabled(inert)
+        .opacity(inert ? 0.5 : 1)
+        .dsDoorWayOut(url)
     }
 
     private var slab: some View {
-        Button {
-            DSHaptic.tap()
-            action()
-        } label: {
+        Button(action: fire) {
             HStack(spacing: DS.Space.s3) {
                 if let systemImage {
                     DSSlabDisc(systemImage: systemImage)
@@ -699,6 +764,9 @@ struct DSSlabDoor: View {
             .contentShape(DSSlab.shape)
         }
         .buttonStyle(.plain)
+        .disabled(inert)
+        .opacity(inert ? 0.5 : 1)
+        .dsDoorWayOut(url)
     }
 }
 
@@ -839,5 +907,38 @@ extension View {
                                       bottom: 0, trailing: DS.Space.s4))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
+    }
+}
+
+extension View {
+    /// THE WAY OUT (prd §653, user: "even though there's a sheet, we still
+    /// need to have a hyperlink for them in case they want to go outside the
+    /// app"). A door opens its page beside the account page; a long press
+    /// on the same door opens it in Safari instead. The in-app sheet's own
+    /// toolbar carries the same exit (its compass), so a person is never one
+    /// tap from being trapped in a sheet. Mac has no in-app sheet — the door
+    /// there already IS the browser — so the menu is not drawn.
+    @ViewBuilder
+    func dsDoorWayOut(_ url: URL?) -> some View {
+        #if targetEnvironment(macCatalyst)
+        self
+        #else
+        if let url {
+            contextMenu {
+                Button {
+                    UIApplication.shared.open(url)
+                } label: {
+                    Label("Open in Safari", systemImage: "safari")
+                }
+                Button {
+                    DSPasteboard.copy(url.absoluteString)
+                } label: {
+                    Label("Copy address", systemImage: "link")
+                }
+            }
+        } else {
+            self
+        }
+        #endif
     }
 }

@@ -11,7 +11,6 @@ import SwiftData
 struct PostHogScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
-    @Environment(\.openURL) private var openURL
 
     @State private var hostField = PostHogAccount.host
     @State private var keyField = ""
@@ -140,10 +139,7 @@ struct PostHogScreen: View {
                     // the 2026-08-14 anatomy.
                     DSSlabButton(title: TokenBridge.posthog.doorTitle,
                                  detail: TokenBridge.posthog.doorHost,
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        openURL(url)
-                    }
+                                 systemImage: "arrow.up.right", url: url)
                 }
             }
             // The scopes are the honest ask, and they're the reason this

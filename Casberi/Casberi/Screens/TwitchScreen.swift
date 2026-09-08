@@ -8,7 +8,6 @@ import SwiftData
 struct TwitchScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
-    @Environment(\.openURL) private var openURL
     @State private var code: TwitchAuth.DeviceCode?
     @State private var waiting = false
     @State private var syncing = false
@@ -101,10 +100,7 @@ struct TwitchScreen: View {
                     // shape GitHub's device flow wears one screen over.
                     DSSlabButton(title: "Approve on Twitch",
                                  detail: "twitch.tv/activate",
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        openURL(url)
-                    }
+                                 systemImage: "arrow.up.right", url: url)
                 }
                 HStack(spacing: DS.Space.s2) {
                     ProgressView().controlSize(.small)

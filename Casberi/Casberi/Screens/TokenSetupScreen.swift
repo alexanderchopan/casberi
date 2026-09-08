@@ -244,10 +244,7 @@ struct TokenSetupScreen: View {
                 if let url = bridge.setupURL {
                     DSSlabButton(title: bridge.doorTitle,
                                  detail: bridge.doorHost,
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        openURL(url)
-                    }
+                                 systemImage: "arrow.up.right", url: url)
                 }
             }
             DSSlabField(placeholder: String(localized: "API key"),
@@ -357,11 +354,8 @@ struct TokenSetupScreen: View {
                     // lives in the steps.
                     DSSlabButton(title: doorTitle,
                                  detail: bridge.doorHost,
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        doorOpened = true
-                        openURL(url)
-                    }
+                                 systemImage: "arrow.up.right", url: url,
+                                 onOpen: { doorOpened = true })
                 }
             }
             DSSlabField(placeholder: bridge.placeholder, text: $tokenField,
@@ -440,12 +434,12 @@ struct TokenSetupScreen: View {
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 // Verb over address, the 2026-08-14 anatomy.
+                // In-app (§653) — the code to type sits on the page behind,
+                // readable at the half detent, where Safari would hide it.
                 DSSlabButton(title: "Enter it on GitHub",
                              detail: "github.com/login/device",
-                             systemImage: "arrow.up.right") {
-                    DSHaptic.tap()
-                    openURL(code.verificationURL)
-                }
+                             systemImage: "arrow.up.right",
+                             url: code.verificationURL)
                 HStack(spacing: DS.Space.s2) {
                     ProgressView()
                     Text("Waiting for your approval…")

@@ -467,3 +467,27 @@ last edited. The door no longer promises "the next thing you wrote" — it
 promises the next row in the list you opened from, and that list is ordered by
 the very same column. A door that matches the list behind it is honest whatever
 that column happens to mean.
+
+## Catalog-mode audit (scripts/catalog-mode-audit.py, 2026-09-08) — prd §653
+
+**What it catches.** The catalogue row's verb (Allow / Sign in / Add key / Import
+/ Connect) comes from `BridgeCatalog.Offer.mode`; every setup screen passes its
+own `mode:` literal to `AccountPage` for the §315 chip. Two declarations of how a
+seat connects is the shape that drifts — the first life of that table
+(`Offer.qualifier`) missed Instagram, Snapchat and TikTok and nothing read it.
+Five checks: every screen with a literal name and a literal mode agrees with the
+catalogue; every `TokenBridge` seat is a pasted key but GitHub (a sign-in while
+its device-flow id ships); every `HandleBridge` seat is a handle; every name in
+the five seat sets is a real offer (the first draft named "Vibenet" and "Frames";
+the offers are "Base Vibenet" and "Frames Devnet"); nothing a screen declares is
+one-tap in the catalogue.
+
+**What it deliberately does not check.** Screens whose `AccountPage` name is an
+expression — the parameterised ones (`ExchangeSetupScreen`, `MailScreen`,
+`PackageWatchScreen`, the four devnet screens) — are reported as skipped, not
+passed; their seats fall to the sets or the `.pasteKey` default. And it
+re-states `Offer.mode`'s precedence in five Python lines, so a reordering of the
+Swift `if` chain is invisible to it while the sets stay disjoint. Its
+`--self-test` mutates a copy of the tree six ways and requires each to add a
+problem beyond the base, so a red tree reports the seat that drifted rather than
+"the check is broken".

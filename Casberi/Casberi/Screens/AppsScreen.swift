@@ -945,9 +945,9 @@ struct AppsScreen: View {
                         // The qualifier badge died here (user, 2026-07-16:
                         // "'no account' repeatedly under the names... extra
                         // text the user doesn't need") — every addable row
-                        // wearing one made it wallpaper. The qualifier still
-                        // serves as a Discover eyebrow, where ONE card states
-                        // its reason.
+                        // wearing one made it wallpaper. The cost lives in the
+                        // CAPSULE's verb since §653 (Allow / Sign in / Add key
+                        // / Import), the slot the row already had.
                         //
                         // A connected row's subline is its live status line
                         // ("3 games in") — rolled up through the numeric-text
@@ -1039,11 +1039,17 @@ struct AppsScreen: View {
                 // not move — every one of these still has somewhere real to go
                 // (its own screen, or the addresses it reads) — only the claim
                 // the word makes changes.
-                VerbCapsule(verb: walletSeatVerb(entry.offer) ?? .connect) {
+                //
+                // Otherwise THE VERB SAYS THE PRICE (prd §653): Sign in, Add
+                // key, Import, or Connect for the free ones — `Offer.mode`,
+                // the same fact the setup screen's chip draws.
+                VerbCapsule(verb: walletSeatVerb(entry.offer) ?? CapsuleVerb(mode: entry.offer.mode)) {
                     route.openSetup(forOffer: entry.offer.name)
                 }
             } else {
-                VerbCapsule(verb: .connect) { attemptConnect(entry.offer) }
+                // One system sheet — the tap IS the grant, so the word is
+                // Allow (§653), not a Connect that hides which kind it is.
+                VerbCapsule(verb: .allow) { attemptConnect(entry.offer) }
             }
         default:
             VerbCapsule(verb: .soon)

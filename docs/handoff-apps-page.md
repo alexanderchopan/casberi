@@ -62,7 +62,8 @@ Top to bottom, one scroll:
    rank number (17pt bold tertiary, 20pt column) · 44pt BridgeIcon ·
    name (17pt semibold) + one-line subline · trailing capsule.
    - Rank order: (1) connected-but-broken → "Fix" (attention capsule);
-     (2) connectable not connected → "Connect" / Claude → "Pair" (tint capsule,
+     (2) connectable not connected → the PRICE as the verb (prd §653): "Allow" /
+     "Sign in" / "Add key" / "Import" / "Connect" for the free ones, Claude → "Pair" (tint capsule,
      white text); (3) connected healthy → "Open" (confirm-dim capsule);
      (4) coming → "Soon" (fillFaint, tertiary text; row title dims to secondary,
      icon well goes fillFaint/gray glyph).

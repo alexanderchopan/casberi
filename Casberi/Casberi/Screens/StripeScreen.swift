@@ -16,7 +16,6 @@ struct StripeScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @Environment(ShellChrome.self) private var chrome
-    @Environment(\.openURL) private var openURL
 
     @State private var keyField = ""
     /// Bumped whenever the key changes, so the derived reads below
@@ -89,10 +88,7 @@ struct StripeScreen: View {
                     // the 2026-08-14 anatomy.
                     DSSlabButton(title: TokenBridge.stripe.doorTitle,
                                  detail: TokenBridge.stripe.doorHost,
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        openURL(url)
-                    }
+                                 systemImage: "arrow.up.right", url: url)
                 }
             }
             // The permissions are the honest ask, and they're why this

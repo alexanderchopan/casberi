@@ -18,7 +18,6 @@ import SwiftData
 /// out of.
 struct VeniceSetupScreen: View {
     @Environment(BridgeStore.self) private var store
-    @Environment(\.openURL) private var openURL
     @State private var keyDraft = ""
     @State private var checking = false
     @State private var result: BridgeProof?
@@ -74,10 +73,8 @@ struct VeniceSetupScreen: View {
                             numbered: false) {
                 DSSlabButton(title: "Get your API key",
                              detail: "venice.ai",
-                             systemImage: "arrow.up.right") {
-                    DSHaptic.tap()
-                    if let url = URL(string: "https://venice.ai/settings/api") { openURL(url) }
-                }
+                             systemImage: "arrow.up.right",
+                             url: URL(string: "https://venice.ai/settings/api"))
             }
             DSSlabField(placeholder: AgentProvider.venice.placeholder, text: $keyDraft,
                         actionLabel: checking ? "Checking…" : (configured ? "Update" : "Connect"),

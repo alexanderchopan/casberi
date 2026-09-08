@@ -90,6 +90,20 @@ extension EnvironmentValues {
     }
 }
 
+private struct AccountDoorOpenedKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// True once the account page has opened its provider door in-app (prd
+    /// §653) — the entry rows read it to offer the paste the person came
+    /// back to make. Set by `AccountPage` alone.
+    var accountDoorOpened: Bool {
+        get { self[AccountDoorOpenedKey.self] }
+        set { self[AccountDoorOpenedKey.self] = newValue }
+    }
+}
+
 extension View {
     /// Marks a subtree as an account page's act. Set in exactly two places
     /// (`AccountPage.actSection` and `AccountKeySheet`); nothing else may set

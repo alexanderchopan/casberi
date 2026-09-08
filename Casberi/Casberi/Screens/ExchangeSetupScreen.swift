@@ -22,7 +22,6 @@ struct ExchangeSetupScreen: View {
     let venue: ExchangeBridge.Venue
 
     @Environment(BridgeStore.self) private var store
-    @Environment(\.openURL) private var openURL
     @State private var keyDraft = ""
     @State private var secretDraft = ""
     @State private var checking = false
@@ -97,10 +96,7 @@ struct ExchangeSetupScreen: View {
                     // Verb over address, the 2026-08-14 anatomy.
                     DSSlabButton(title: "Get your API key",
                                  detail: doorHost,
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        openURL(url)
-                    }
+                                 systemImage: "arrow.up.right", url: url)
                 }
             }
             DSSlabField(placeholder: keyPlaceholder,

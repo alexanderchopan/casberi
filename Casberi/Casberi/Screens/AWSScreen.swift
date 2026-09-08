@@ -13,7 +13,6 @@ struct AWSScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @Environment(ShellChrome.self) private var chrome
-    @Environment(\.openURL) private var openURL
 
     @State private var accessKeyIDField = ""
     @State private var secretKeyField = ""
@@ -76,11 +75,6 @@ struct AWSScreen: View {
     }
 
 
-    private func openDoor(_ url: URL) {
-        doorTapped = true
-        openURL(url)
-    }
-
     // MARK: - Not connected: the three fields
 
     @ViewBuilder private var keyBlock: some View {
@@ -92,14 +86,13 @@ struct AWSScreen: View {
                     if doorTapped {
                         DSSlabDoor(title: bridge.doorTitle,
                                    detail: bridge.doorHost,
-                                   systemImage: "arrow.up.right") { openDoor(url) }
+                                   systemImage: "arrow.up.right", url: url,
+                                   onOpen: { doorTapped = true })
                     } else {
                         DSSlabButton(title: bridge.doorTitle,
                                      detail: bridge.doorHost,
-                                     systemImage: "arrow.up.right") {
-                            DSHaptic.tap()
-                            openDoor(url)
-                        }
+                                     systemImage: "arrow.up.right", url: url,
+                                     onOpen: { doorTapped = true })
                     }
                 }
             }

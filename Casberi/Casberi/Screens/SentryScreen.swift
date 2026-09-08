@@ -14,7 +14,6 @@ import SwiftData
 struct SentryScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
-    @Environment(\.openURL) private var openURL
 
     @State private var hostField = SentryAccount.host
     @State private var tokenField = ""
@@ -104,11 +103,8 @@ struct SentryScreen: View {
                     // the 2026-08-14 anatomy.
                     DSSlabButton(title: TokenBridge.sentry.doorTitle,
                                  detail: TokenBridge.sentry.doorHost,
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        doorTapped = true
-                        openURL(url)
-                    }
+                                 systemImage: "arrow.up.right", url: url,
+                                 onOpen: { doorTapped = true })
                 }
             }
             // The scopes are the honest ask, and they are why this

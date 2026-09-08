@@ -126,14 +126,45 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     @State private var note = ""
     /// Bumped by a reader toggle so the static `AccountReaders` read re-runs.
     @State private var readersTick = 0
+    /// THE DOOR OPENED IN-APP (prd §653). Sticky for the page's life: the
+    /// paste the person came back to make is offered from the first return
+    /// on, whether the sheet is down or parked at half height over the rows.
+    @State private var doorOpened = false
 
     private var seat: BridgeApp? { store.bridges.first { $0.id == seatID } }
     private var hosts: [String] { AccountReach.hosts(for: name) }
 
     var body: some View {
+        pageList
+            // NOT scrolled to the act when the sheet drops to half. It was
+            // tried both ways — `ScrollViewReader.scrollTo` and
+            // `ScrollPosition.scrollTo(id:)` on a "room" row under the act —
+            // and the request is accepted (`viewID` reads "room") while the
+            // List does not move under a presented sheet, on the iOS 26
+            // simulator. A finger scroll does; the room row below is what
+            // gives it somewhere to go.
+    }
+
+    private var doorUp: Bool {
+        if case .web = sheet { return true }
+        return false
+    }
+
+    private var pageList: some View {
         List {
             header
             actSection
+            // THE ROOM UNDER THE HALF SHEET (prd §653). A medium detent
+            // covers the bottom half, and the act — the entry row the person
+            // came back to paste into — lives there. While the door is up
+            // this row holds the sheet's height under the act, so a scroll
+            // can bring the act clear of the sheet, the rows below pushed
+            // under it. Gone the moment the sheet is.
+            if doorUp {
+                Color.clear
+                    .containerRelativeFrame(.vertical) { height, _ in height / 2 }
+                    .plainAccountRow()
+            }
             more().dsAccountAct().plainAccountRow()
             factRows
             readers
@@ -162,13 +193,15 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             case .reach:
                 AccountReachSheet(name: name, hosts: hosts)
             case .key:
-                AccountKeySheet(name: name) { keySheet() }
+                AccountKeySheet(name: name) { AccountDoorHost { keySheet() } }
             case .profile(let profile):
                 SocialProfileCard(profile: profile)
             case .thing(let id):
                 AccountThingSheet(id: id)
             case .card(let id):
                 cardSheet?(id)
+            case .web(let url):
+                DSWebSheet(url: url)
             }
         }
         .task(id: source) { await readCounts() }
@@ -176,6 +209,23 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         // The visit is stamped on the way OUT: the ring a row wears is "since
         // you last looked", and looking is only over once you leave.
         .onDisappear { AccountVisits.stamp(seatID) }
+    }
+
+    /// The in-app door (prd §653). Mac Catalyst has no Safari controller and
+    /// a real browser window to leave open beside the app, so there every
+    /// door stays the system action (`DSWebSheet`'s own reasoning).
+    private var doorAction: OpenURLAction {
+        OpenURLAction { url in
+            #if targetEnvironment(macCatalyst)
+            return .systemAction
+            #else
+            guard let scheme = url.scheme?.lowercased(),
+                  scheme == "http" || scheme == "https" else { return .systemAction }
+            doorOpened = true
+            sheet = .web(url)
+            return .handled
+            #endif
+        }
     }
 
     // MARK: - 1. Header
@@ -241,6 +291,19 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             act()
         }
+        // EVERY DOOR IN THE ACT OPENS BESIDE THE PAGE (prd §653). A slab that
+        // carries its `url:` opens it through this environment, so a "Get
+        // your API key" lands as the in-app Safari sheet — half or full
+        // height, the rows beneath still live — instead of backgrounding the
+        // app. Only web pages: an app scheme or a mailto: keeps the system
+        // action. THE ACT ONLY, not the list: a feed tile in `more()` or a
+        // "Renew on ENS" is a link to leave by, and catching it would also
+        // light every paste row for a copy that was never a key. The key
+        // sheet has its own host (`AccountDoorHost`) — a presented sheet does
+        // not inherit this (verified in the simulator: the door there
+        // opened real Safari until it got one).
+        .environment(\.openURL, doorAction)
+        .environment(\.accountDoorOpened, doorOpened)
         // THE ACT DRAWS ROWS, NOT SLABS (prd §640) — one environment flag, so
         // all 55 screens change with their call sites untouched. See
         // `Design/DSAccountAct.swift` for what each primitive becomes.
@@ -508,6 +571,8 @@ enum AccountPageSheet: Identifiable {
     /// A screen only the adopting seat can compose, keyed by whatever it
     /// names its own rows with (`AccountPage.cardSheet`).
     case card(id: String)
+    /// A provider's page, opened beside the rows (prd §653, `DSWebSheet`).
+    case web(URL)
     var id: String {
         switch self {
         case .reach: "reach"
@@ -515,6 +580,7 @@ enum AccountPageSheet: Identifiable {
         case .profile(let p): "profile:\(p.id)"
         case .thing(let id): "thing:\(id.uuidString)"
         case .card(let id): "card:\(id)"
+        case .web(let url): "web:\(url.absoluteString)"
         }
     }
 }

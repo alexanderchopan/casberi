@@ -9,7 +9,6 @@ struct PolarScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @Environment(ShellChrome.self) private var chrome
-    @Environment(\.openURL) private var openURL
 
     @State private var tokenField = ""
     @State private var accountVersion = 0
@@ -104,10 +103,7 @@ struct PolarScreen: View {
                 if let url = TokenBridge.polar.setupURL {
                     DSSlabButton(title: TokenBridge.polar.doorTitle,
                                  detail: TokenBridge.polar.doorHost,
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        openURL(url)
-                    }
+                                 systemImage: "arrow.up.right", url: url)
                 }
             }
             // The four scopes ARE the read-only promise (Stripe's own

@@ -88,7 +88,10 @@ KNOWN_NON_REACH=(
   # in NetworkReach (the "ether.fi" and "ether.fi Cash" entries).
   app.ether.fi
   # Setup doors — `setupURL`/`openURL` only, never fetched. Each is the page
-  # that mints the key you then paste, opened in your browser.
+  # that mints the key you then paste, opened in the in-app Safari sheet
+  # since prd §653 (Safari's engine and its own store; still nothing this
+  # app requests, reads or receives) — or in Safari itself from the door's
+  # long press, and always on the Mac.
   app.privacy.com app.raindrop.io calendly.com linear.app www.notion.so
   venice.ai bankr.bot www.kraken.com portal.cdp.coinbase.com
   www.binance.com exchange.gemini.com console.x.ai

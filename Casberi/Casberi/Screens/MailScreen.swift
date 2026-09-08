@@ -9,7 +9,6 @@ struct MailScreen: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
-    @Environment(\.openURL) private var openURL
     @State private var addressField = ""
     @State private var passwordField = ""
     @State private var syncing = false
@@ -73,10 +72,7 @@ struct MailScreen: View {
                     // Verb over address, the 2026-08-14 anatomy.
                     DSSlabButton(title: provider.doorTitle,
                                  detail: provider.doorHost,
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        openURL(url)
-                    }
+                                 systemImage: "arrow.up.right", url: url)
                 }
             }
             // Two inputs, one act — the verb rides the password, where

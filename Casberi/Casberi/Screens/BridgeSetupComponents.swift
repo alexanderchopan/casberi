@@ -16,61 +16,9 @@ func recentBridgeThings(source: String, context: ModelContext) -> [Thing] {
     return (try? context.fetch(descriptor)) ?? []
 }
 
-/// How a bridge connects, as a closed set (prd §315, 2026-08-06).
-///
-/// The chip answers the question a connect screen never used to answer until
-/// the bottom of a gray wall: **what am I in for, and does anything arrive on
-/// its own afterwards?** Reported of Instagram — *"we need to be clear on some
-/// of these: instagram doesn't allow a live sync you must download etc"*. The
-/// fact was in the copy (the footer's lede opened "One-time import"), 145 words
-/// down the screen, in the tier `DesignTokens` reserves for timestamps.
-///
-/// CLOSED on purpose. A free-form label per screen is what the footers already
-/// were, and they drifted into seven registers saying overlapping things. Six
-/// cases cover all 44 setup screens; a seventh should be argued for in the PRD
-/// before it is added, because the value here is that the same words mean the
-/// same thing on every screen.
-///
-/// The chip states the METHOD. The cadence — whether anything keeps arriving —
-/// rides the intro sentence, because it only surprises for the imports, and a
-/// chip that said "keeps arriving" on thirty-five screens would be furniture.
-enum BridgeSetupMode {
-    /// You point at an export you downloaded. Nothing arrives on its own.
-    case oneTimeImport
-    /// Public reads, no sign-in and no key — a handle, an address, a feed URL.
-    case noAccount
-    /// A sign-in that happens on the service's own page.
-    case signIn
-    /// A token or key, pasted.
-    case pasteKey
-    /// No connection of its own: it reads the wallets already watched.
-    case watchedWallets
-    /// A system permission on this device — no account anywhere.
-    case onThisDevice
-
-    var label: String {
-        switch self {
-        case .oneTimeImport:  return String(localized: "One-time import")
-        case .noAccount:      return String(localized: "No account")
-        case .signIn:         return String(localized: "Sign in on their site")
-        case .pasteKey:       return String(localized: "Paste a key")
-        case .watchedWallets: return String(localized: "Reads your wallets")
-        case .onThisDevice:   return String(localized: "On this device")
-        }
-    }
-
-    var glyph: String {
-        switch self {
-        case .oneTimeImport:  return "arrow.down.doc"
-        case .noAccount:      return "globe"
-        case .signIn:         return "person.badge.key"
-        case .pasteKey:       return "key"
-        case .watchedWallets: return "wallet.bifold"
-        case .onThisDevice:   return "iphone"
-        }
-    }
-}
-
+// `BridgeSetupMode` — the closed set of ways a bridge connects (§315) — moved
+// to `Model/BridgeCatalog.swift` in §653, where the catalogue row derives its
+// verb from it and the Foundation-only harnesses can compile it.
 
 extension View {
     /// A setup screen's own top — INK since 2026-08-29 (`DS.pourInk`).

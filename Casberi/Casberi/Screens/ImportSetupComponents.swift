@@ -120,7 +120,6 @@ struct ImportArchiveSection: View {
     var showsMessagesToggle = false
     let pick: () -> Void
 
-    @Environment(\.openURL) private var openURL
     @Environment(\.accountAct) private var accountAct
     @AppStorage(ImportOptions.messagesStorageKey) private var includeMessages = false
     /// Stage 3's re-open. Also true whenever there is nothing imported yet, so
@@ -183,14 +182,13 @@ struct ImportArchiveSection: View {
                 if pickLeads {
                     DSSlabDoor(title: doorTitle,
                                detail: waiting ?? host(of: doorURL),
-                               systemImage: "arrow.up.right") { tapDoor(doorURL) }
+                               systemImage: "arrow.up.right", url: doorURL,
+                               onOpen: markDoor)
                 } else {
                     DSSlabButton(title: doorTitle,
                                  detail: host(of: doorURL),
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        tapDoor(doorURL)
-                    }
+                                 systemImage: "arrow.up.right", url: doorURL,
+                                 onOpen: markDoor)
                 }
             }
         }
@@ -219,10 +217,10 @@ struct ImportArchiveSection: View {
         }
     }
 
-    private func tapDoor(_ url: URL) {
+    /// The door itself opens the page (in-app, §653); this stamps the ask.
+    private func markDoor() {
         ImportRequestMark.mark(source)
         waiting = ImportRequestMark.waitingLine(source)
-        openURL(url)
     }
 
     /// The address under the door's verb — DERIVED from the URL, never a
