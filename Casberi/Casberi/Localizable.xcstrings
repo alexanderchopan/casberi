@@ -18901,6 +18901,34 @@
         }
       }
     },
+    "%lld more calls aren't shown here. Open them in your Safe app before signing." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aquí no se muestran %lld llamadas más. Ábrelas en tu app de Safe antes de firmar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここに表示されていない呼び出しがあと%lld件あります。署名する前にSafeアプリで開いてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기에 표시되지 않은 호출이 %lld개 더 있어요. 서명하기 전에 Safe 앱에서 확인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还有 %lld 个调用未在此显示。签名前请在 Safe 应用中打开。"
+          }
+        }
+      }
+    },
     "%lld more currencies — not drawn" : {
       "localizations" : {
         "es" : {
@@ -20565,6 +20593,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的 %lld / %lld 个区域未被读取——这里没有相关信息。"
+          }
+        }
+      }
+    },
+    "%lld of your Safes run a guard that checks every transaction" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld de tus Safes usan un guard que revisa cada transacción"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld個のSafeが、すべてのトランザクションを検査するガードを実行しています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개의 Safe가 모든 트랜잭션을 검사하는 guard를 실행합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 %lld 个 Safe 运行着检查每笔交易的 guard"
           }
         }
       }
@@ -24489,6 +24545,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%lld 笔交易已完成签名 — 可以执行"
+          }
+        }
+      }
+    },
+    "%lld transactions are fully signed — waiting their turn in the queue" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld transacciones están firmadas por completo — esperando su turno en la cola"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld件のトランザクションが署名完了 — キューで順番待ちです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld건의 트랜잭션이 서명 완료 — 대기열에서 순서를 기다리는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 笔交易已完成签名 — 正在队列中等待轮到它们"
+          }
+        }
+      }
+    },
+    "%lld transactions are waiting on them" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld transacciones están esperándolos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld件のトランザクションが彼らを待っています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld건의 트랜잭션이 그들을 기다리고 있어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "有 %lld 笔交易在等待他们"
           }
         }
       }
@@ -28692,6 +28804,34 @@
         }
       }
     },
+    "1 more call isn't shown here. Open it in your Safe app before signing." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aquí no se muestra 1 llamada más. Ábrela en tu app de Safe antes de firmar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここに表示されていない呼び出しがあと1件あります。署名する前にSafeアプリで開いてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기에 표시되지 않은 호출이 1개 더 있어요. 서명하기 전에 Safe 앱에서 확인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还有 1 个调用未在此显示。签名前请在 Safe 应用中打开。"
+          }
+        }
+      }
+    },
     "1 more currency — not drawn" : {
       "localizations" : {
         "es" : {
@@ -31016,6 +31156,62 @@
         }
       }
     },
+    "1 transaction is fully signed — waiting its turn in the queue" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 transacción está firmada por completo — esperando su turno en la cola"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1件のトランザクションが署名完了 — キューで順番待ちです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1건의 트랜잭션이 서명 완료 — 대기열에서 순서를 기다리는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 笔交易已完成签名 — 正在队列中等待轮到它"
+          }
+        }
+      }
+    },
+    "1 transaction is waiting on them" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 transacción está esperándolos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1件のトランザクションが彼らを待っています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1건의 트랜잭션이 그들을 기다리고 있어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "有 1 笔交易在等待他们"
+          }
+        }
+      }
+    },
     "1 transfer looks like address poisoning" : {
       "localizations" : {
         "es" : {
@@ -32054,6 +32250,174 @@
         }
       }
     },
+    "A batch inside this batch, which Casberi couldn't read. Open it in your Safe app." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un lote dentro de este lote, que Casberi no pudo leer. Ábrelo en tu app de Safe."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このバッチの中にあるバッチで、Casberiは読み取れませんでした。Safeアプリで開いてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 배치 안의 배치로, Casberi가 읽지 못했어요. Safe 앱에서 열어 보세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这个批次中还有一个批次，Casberi 无法读取。请在 Safe 应用中打开。"
+          }
+        }
+      }
+    },
+    "A batch of %lld calls inside this one." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un lote de %lld llamadas dentro de este."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この中にある%lld件の呼び出しのバッチ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 안에 있는 호출 %lld개의 배치."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "其中包含 %lld 个调用的批次。"
+          }
+        }
+      }
+    },
+    "A batch of %lld calls." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un lote de %lld llamadas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld件の呼び出しのバッチ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "호출 %lld개의 배치."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 个调用的批次。"
+          }
+        }
+      }
+    },
+    "A batch of 1 call inside this one." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un lote de 1 llamada dentro de este."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この中にある1件の呼び出しのバッチ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 안에 있는 호출 1개의 배치."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "其中包含 1 个调用的批次。"
+          }
+        }
+      }
+    },
+    "A batch of 1 call." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un lote de 1 llamada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1件の呼び出しのバッチ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "호출 1개의 배치."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 个调用的批次。"
+          }
+        }
+      }
+    },
+    "A batch of several calls. Casberi couldn't read the batch itself — open it in your Safe app before signing." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un lote de varias llamadas. Casberi no pudo leer el lote en sí — ábrelo en tu app de Safe antes de firmar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "複数の呼び出しのバッチ。Casberiはバッチ自体を読み取れませんでした — 署名する前にSafeアプリで開いてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여러 호출의 배치예요. Casberi가 배치 자체를 읽지 못했어요 — 서명하기 전에 Safe 앱에서 열어 보세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "包含多个调用的批次。Casberi 无法读取该批次本身 — 签名前请在 Safe 应用中打开。"
+          }
+        }
+      }
+    },
     "A batch of several calls. Casberi won't summarise a batch — read it in your Safe app before signing." : {
       "localizations" : {
         "es" : {
@@ -32600,6 +32964,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "帧化交易以编号步骤执行工作，每一步都有自己的预算。这里一步也没有执行过 — 普通转账不含任何步骤。"
+          }
+        }
+      }
+    },
+    "A guard checks every transaction on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un guard revisa cada transacción en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@のすべてのトランザクションをガードが検査します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@의 모든 트랜잭션을 guard가 검사합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "guard 检查 %@ 上的每笔交易"
+          }
+        }
+      }
+    },
+    "A guard checks every transaction on this Safe" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un guard revisa cada transacción en este Safe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このSafeのすべてのトランザクションをガードが検査します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 Safe의 모든 트랜잭션을 guard가 검사합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "guard 检查此 Safe 上的每笔交易"
           }
         }
       }
@@ -45025,6 +45445,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Casberi 无法在这条链上签名——它无法向该链上的 Safe 复核哈希，也不会为自己单独算出的哈希签名。"
+          }
+        }
+      }
+    },
+    "Casberi couldn't read %lld of them — check them in your Safe app before signing." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi no pudo leer %lld de ellas — revísalas en tu app de Safe antes de firmar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberiはそのうち%lld件を読み取れませんでした — 署名する前にSafeアプリで確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi가 그중 %lld개를 읽지 못했어요 — 서명하기 전에 Safe 앱에서 확인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 无法读取其中 %lld 个 — 签名前请在 Safe 应用中查看。"
+          }
+        }
+      }
+    },
+    "Casberi couldn't read 1 of them — check it in your Safe app before signing." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi no pudo leer 1 de ellas — revísala en tu app de Safe antes de firmar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberiはそのうち1件を読み取れませんでした — 署名する前にSafeアプリで確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi가 그중 1개를 읽지 못했어요 — 서명하기 전에 Safe 앱에서 확인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 无法读取其中 1 个 — 签名前请在 Safe 应用中查看。"
           }
         }
       }
@@ -62306,6 +62782,62 @@
         }
       }
     },
+    "Fully signed — %@ is behind %lld earlier transactions" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firmado por completo — %@ está detrás de %lld transacciones anteriores"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名完了 — %@ は先行する%lld件のトランザクションの後ろです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명 완료 — %@은(는) 앞선 트랜잭션 %lld건 뒤에 있어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "签名已完成 — %@ 排在 %lld 笔更早的交易之后"
+          }
+        }
+      }
+    },
+    "Fully signed — %@ is behind 1 earlier transaction" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firmado por completo — %@ está detrás de 1 transacción anterior"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名完了 — %@ は先行する1件のトランザクションの後ろです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명 완료 — %@은(는) 앞선 트랜잭션 1건 뒤에 있어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "签名已完成 — %@ 排在 1 笔更早的交易之后"
+          }
+        }
+      }
+    },
     "Fully signed — %@ is ready to execute" : {
       "localizations" : {
         "es" : {
@@ -62330,6 +62862,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "签名已完成 — %@ 已准备好执行"
+          }
+        }
+      }
+    },
+    "Fully signed — behind %lld earlier transactions" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firmado por completo — detrás de %lld transacciones anteriores"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名完了 — 先行する%lld件のトランザクションの後ろです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명 완료 — 앞선 트랜잭션 %lld건 뒤에 있어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "签名已完成 — 排在 %lld 笔更早的交易之后"
+          }
+        }
+      }
+    },
+    "Fully signed — behind 1 earlier transaction" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firmado por completo — detrás de 1 transacción anterior"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名完了 — 先行する1件のトランザクションの後ろです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명 완료 — 앞선 트랜잭션 1건 뒤에 있어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "签名已完成 — 排在 1 笔更早的交易之后"
           }
         }
       }
@@ -101705,6 +102293,34 @@
         }
       }
     },
+    "Runs code as the Safe itself — it can change the owners." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ejecuta código como el propio Safe — puede cambiar a los propietarios."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe自身としてコードを実行します — 所有者を変更できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 자체로 코드를 실행해요 — 소유자를 바꿀 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以 Safe 本身的身份运行代码 — 它可以更改所有者。"
+          }
+        }
+      }
+    },
     "Runway low" : {
       "localizations" : {
         "es" : {
@@ -122518,6 +123134,62 @@
         }
       }
     },
+    "Waiting on %@ and %lld others" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esperando a %@ y %lld más"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ と他%lld人を待っています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 외 %lld명을 기다리는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待 %@ 和其他 %lld 人"
+          }
+        }
+      }
+    },
+    "Waiting on %@ and 1 other" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esperando a %@ y 1 más"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ と他1人を待っています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 외 1명을 기다리는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待 %@ 和其他 1 人"
+          }
+        }
+      }
+    },
     "Waiting on export compliance" : {
       "localizations" : {
         "es" : {
@@ -139823,6 +140495,34 @@
         }
       }
     },
+    "fully signed, waiting their turn" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "firmadas por completo, esperando su turno"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名完了、順番待ち"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명 완료, 순서 대기 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已完成签名，等待轮到它们"
+          }
+        }
+      }
+    },
     "funds" : {
       "localizations" : {
         "es" : {
@@ -146864,6 +147564,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已签名 %lld 次"
+          }
+        }
+      }
+    },
+    "signed everything pending" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ha firmado todo lo pendiente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保留中のすべてに署名済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대기 중인 항목에 모두 서명함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已签署所有待处理项"
           }
         }
       }
