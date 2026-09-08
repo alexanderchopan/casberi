@@ -208,14 +208,32 @@ head_key="$(perl -0777 -ne 'print $1 if /private var headIdentity: String \{(.*?
 # `x402Lane` was one of these until 2026-09-06, when the room it scoped was
 # deleted; `readingScope` is the surviving per-room view filter and carries the
 # property this list exists to hold.
+#
+# `chrome.refreshPulse` was this list's bridge-state term until 2026-09-08
+# (prd §655 amendment). The pulse was doing two unrelated jobs — it deals the
+# rain AND it was the term this memo recomputed on — so six sites that only
+# changed a LIST had to bump it, and each dealt a shower as a side effect. The
+# jobs are two counters now: `roomRevision` moves the head and draws nothing,
+# `refreshPulse` deals the rain. `rain()` bumps BOTH, so `roomRevision` alone
+# still covers every case the pulse term covered here.
 for term in 'source' 'filter.tag' 'selectedWallet' 'chrome.personScope' 'readingScope' \
-            'chrome.refreshPulse' 'revision'; do
+            'chrome.roomRevision' 'revision'; do
   if print -r -- "$head_key" | grep -qF -- "$term"; then
     ok "headIdentity covers $term"
   else
     fail "headIdentity does not cover $term"
   fi
 done
+
+# …and the pulse must NOT come back into the key. It would re-couple the two
+# jobs the amendment separated: every shower would invalidate every memoised
+# head, which is the recompute-on-a-gesture cost this memo exists to avoid,
+# and it would do it silently — the screen stays correct, only slower.
+if print -r -- "$head_key" | grep -qF -- 'refreshPulse'; then
+  fail "headIdentity keys on refreshPulse again (prd §655 amendment: the rain counter is not the head's)"
+else
+  ok "headIdentity does not key on the rain counter"
+fi
 
 # A8. The key's content term is a COUNT, never the query's own `.count`. That
 #     property is the `@Query` getter and materialises every row it counts —
